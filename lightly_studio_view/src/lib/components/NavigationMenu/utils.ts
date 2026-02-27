@@ -70,7 +70,10 @@ export function getMenuItem(
  * then continues to a leaf by always selecting the first child.
  * Returns an array [root, child, ..., target, ..., leaf] or null if not found.
  */
-export function findNavigationCollections(root: CollectionView, targetId: string): CollectionView[] | null {
+export function findNavigationPath(
+    root: CollectionView,
+    targetId: string
+): CollectionView[] | null {
     const pathToTarget = findPathToTarget(root, targetId);
     if (!pathToTarget) return null;
 

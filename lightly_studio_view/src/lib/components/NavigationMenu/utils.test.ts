@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { findNavigationCollections, buildBreadcrumbLevels } from './utils';
+import { findNavigationPath, buildBreadcrumbLevels } from './utils';
 import { SampleType, type CollectionView } from '$lib/api/lightly_studio_local';
 
 const makeCollection = (
@@ -15,10 +15,10 @@ const makeCollection = (
     children
 });
 
-describe('findNavigationCollections', () => {
+describe('findNavigationPath', () => {
     it('returns [root] when target is root', () => {
         const root = makeCollection('root');
-        const result = findNavigationCollections(root, 'root');
+        const result = findNavigationPath(root, 'root');
         expect(result).toEqual([root]);
     });
 
@@ -26,7 +26,7 @@ describe('findNavigationCollections', () => {
         const child = makeCollection('child', SampleType.VIDEO);
         const root = makeCollection('root', SampleType.IMAGE, [child]);
 
-        const result = findNavigationCollections(root, 'child');
+        const result = findNavigationPath(root, 'child');
         expect(result).toEqual([root, child]);
     });
 
@@ -35,7 +35,7 @@ describe('findNavigationCollections', () => {
         const child = makeCollection('child', SampleType.VIDEO, [grandchild]);
         const root = makeCollection('root', SampleType.IMAGE, [child]);
 
-        const result = findNavigationCollections(root, 'grandchild');
+        const result = findNavigationPath(root, 'grandchild');
         expect(result).toEqual([root, child, grandchild]);
     });
 
@@ -43,7 +43,7 @@ describe('findNavigationCollections', () => {
         const child = makeCollection('child', SampleType.VIDEO);
         const root = makeCollection('root', SampleType.IMAGE, [child]);
 
-        const result = findNavigationCollections(root, 'nonexistent');
+        const result = findNavigationPath(root, 'nonexistent');
         expect(result).toBeNull();
     });
 
@@ -52,13 +52,13 @@ describe('findNavigationCollections', () => {
         const child2 = makeCollection('child-2', SampleType.ANNOTATION);
         const root = makeCollection('root', SampleType.IMAGE, [child1, child2]);
 
-        const result = findNavigationCollections(root, 'child-2');
+        const result = findNavigationPath(root, 'child-2');
         expect(result).toEqual([root, child2]);
     });
 
     it('returns null when root has no children and target is different', () => {
         const root = makeCollection('root');
-        const result = findNavigationCollections(root, 'other');
+        const result = findNavigationPath(root, 'other');
         expect(result).toBeNull();
     });
 });
