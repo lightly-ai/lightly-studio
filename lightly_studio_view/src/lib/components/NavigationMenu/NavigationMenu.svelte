@@ -5,6 +5,7 @@
     import { LayoutDashboard } from '@lucide/svelte';
     import { type CollectionView } from '$lib/api/lightly_studio_local';
     import MenuItem from '../MenuItem/MenuItem.svelte';
+    import { BreadcrumbSeparator } from '$lib/components/ui/breadcrumb';
     import { useGlobalStorage } from '$lib/hooks/useGlobalStorage';
     import useAuth from '$lib/hooks/useAuth/useAuth';
     const {
@@ -33,47 +34,12 @@
     // Get datasetId from URL params (always available in routes where NavigationMenu is used)
     const datasetId = $derived(page.params.dataset_id!);
 
-    const buildMenu = (): NavigationMenuItem[] => {
-        const menuItem = getMenuItem(
-            collection.sample_type,
-            pageId,
-            datasetId,
-            collection.sample_type.toLowerCase(),
-            collection.collection_id
-        );
-
-        function buildItems(children: CollectionView[] | undefined): NavigationMenuItem[] {
-            if (!children) return [];
-
-            return children.map((child_collection) => {
-                const item = getMenuItem(
-                    child_collection.sample_type,
-                    pageId,
-                    datasetId, // Same datasetId for all children
-                    child_collection.sample_type.toLowerCase(),
-                    child_collection.collection_id
-                );
-
-                return {
-                    ...item,
-                    children: buildItems(child_collection.children ?? [])
-                };
-            });
-        }
-
-        return [menuItem, ...buildItems(collection.children)];
-    };
-
-    const menuItems: NavigationMenuItem[] = $derived(buildMenu());
-
     const currentCollectionId = $derived(page.params.collection_id);
 
     const navigationPath = $derived(
         currentCollectionId ? findNavigationPath(collection, currentCollectionId) : null
     );
 
-    // TODO(Michal, 02/2026): Remove the eslint disable comment once used.
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     const breadcrumbLevels: BreadcrumbLevel[] = $derived(
         buildBreadcrumbLevels(navigationPath, collection, pageId, datasetId)
     );
@@ -81,7 +47,7 @@
     const { user } = useAuth();
 </script>
 
-<div class="flex gap-2">
+<div class="flex items-center gap-1">
     {#if user}
         <MenuItem
             item={{
@@ -94,7 +60,10 @@
         />
     {/if}
 
-    {#each menuItems as item (item.id)}
-        <MenuItem {item} />
+    {#each breadcrumbLevels as level, index (level.selected.id)}
+        <MenuItem
+            item={level.selected}
+            siblings={level.siblings.length > 1 ? level.siblings : []}
+        />
     {/each}
 </div>
