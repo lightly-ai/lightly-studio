@@ -14,6 +14,7 @@ from sqlmodel import Session
 from lightly_studio.models.annotation.annotation_base import AnnotationCreate, AnnotationType
 from lightly_studio.models.annotation_label import AnnotationLabelCreate
 from lightly_studio.plugins.base_operator import BaseOperator, OperatorResult
+from lightly_studio.plugins.operator_context import ExecutionContext, OperatorScope
 from lightly_studio.plugins.parameter import BaseParameter, FloatParameter, StringParameter
 from lightly_studio.resolvers import (
     annotation_label_resolver,
@@ -64,14 +65,20 @@ class LightlyTrainObjectDetectionInferenceOperator(BaseOperator):
             ),
         ]
 
+    @property
+    def supported_scopes(self) -> list[OperatorScope]:
+        """Return the list of scopes this operator can be triggered from."""
+        return [OperatorScope.IMAGE]
+
     def execute(
         self,
         *,
         session: Session,
-        collection_id: UUID,
+        context: ExecutionContext,
         parameters: dict[str, Any],
     ) -> OperatorResult:
         """Execute the operator with the given parameters."""
+        collection_id = context.collection_id
         model_name = str(parameters.get(PARAM_MODEL_NAME, DEFAULT_MODEL_NAME))
         score_threshold = float(parameters.get(PARAM_SCORE_THRESHOLD, DEFAULT_SCORE_THRESHOLD))
         input_tag = str(parameters.get(PARAM_INPUT_TAG, DEFAULT_INPUT_TAG))
