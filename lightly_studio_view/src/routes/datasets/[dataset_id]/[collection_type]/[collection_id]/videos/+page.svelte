@@ -14,6 +14,23 @@
     import { get } from 'svelte/store';
     import { selectRangeByAnchor } from '$lib/utils/selectRangeByAnchor';
 
+    // Helper for int and float range comparison
+    function isIntRangeUnchanged(
+        val: { min: number; max: number },
+        bound: { min: number; max: number }
+    ) {
+        return val.min === bound.min && val.max === bound.max;
+    }
+    function isFloatRangeUnchanged(
+        val: { min: number; max: number },
+        bound: { min: number; max: number },
+        epsilon = 1e-6
+    ) {
+        return (
+            Math.abs(val.min - bound.min) < epsilon && Math.abs(val.max - bound.max) < epsilon
+        );
+    }
+
     const { data: propsData } = $props();
 
     const collectionId = $derived($page.params.collection_id!);
@@ -36,23 +53,6 @@
         const values = $videoBoundsValues;
         if (!bounds || !values) {
             return undefined;
-        }
-
-        // Helper for int and float range comparison
-        function isIntRangeUnchanged(
-            val: { min: number; max: number },
-            bound: { min: number; max: number }
-        ) {
-            return val.min === bound.min && val.max === bound.max;
-        }
-        function isFloatRangeUnchanged(
-            val: { min: number; max: number },
-            bound: { min: number; max: number },
-            epsilon = 1e-6
-        ) {
-            return (
-                Math.abs(val.min - bound.min) < epsilon && Math.abs(val.max - bound.max) < epsilon
-            );
         }
 
         const widthUnchanged = isIntRangeUnchanged(values.width, bounds.width);
