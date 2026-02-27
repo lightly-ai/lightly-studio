@@ -35,7 +35,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Added cloud storage support for COCO object detection and instance segmentation annotations.
 - Add “View Video” button in the frame details view to open video details for the selected frame.
 - Example script for LightlyTrain training and inference plugins.
-- PostgreSQL support as a database backend.
 
 ### Changed
 
