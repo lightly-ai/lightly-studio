@@ -26,9 +26,7 @@
         bound: { min: number; max: number },
         epsilon = 1e-6
     ) {
-        return (
-            Math.abs(val.min - bound.min) < epsilon && Math.abs(val.max - bound.max) < epsilon
-        );
+        return Math.abs(val.min - bound.min) < epsilon && Math.abs(val.max - bound.max) < epsilon;
     }
 
     const { data: propsData } = $props();
