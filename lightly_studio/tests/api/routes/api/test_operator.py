@@ -11,10 +11,7 @@ from sqlmodel import Session
 
 import lightly_studio.api.routes.api.operator as operator_routes_module
 import lightly_studio.plugins.operator_registry as operator_registry_module
-from lightly_studio.api.routes.api.operator import (
-    OperatorContextRequest,
-    _build_filter_from_context,
-)
+from lightly_studio.api.routes.api.operator import OperatorContextRequest
 from lightly_studio.api.routes.api.status import (
     HTTP_STATUS_NOT_FOUND,
     HTTP_STATUS_OK,
@@ -31,7 +28,7 @@ from lightly_studio.resolvers.image_filter import ImageFilter
 from lightly_studio.resolvers.sample_resolver.sample_filter import SampleFilter
 from lightly_studio.resolvers.video_frame_resolver.video_frame_filter import VideoFrameFilter
 from lightly_studio.resolvers.video_resolver.video_filter import VideoFilter
-from tests.helpers_resolvers import create_collection
+from tests import helpers_resolvers
 
 
 @pytest.fixture
@@ -204,7 +201,9 @@ def test_execute_operator__context_collection_id_overrides_route(
     """context.collection_id takes precedence over the route collection_id."""
     isolated_operator_registry.register(ContextCapturingOperator())
     operator_id = _get_operator_id_by_name(isolated_operator_registry, "context-capturing")
-    sub_collection = create_collection(session=db_session, sample_type=SampleType.IMAGE)
+    sub_collection = helpers_resolvers.create_collection(
+        session=db_session, sample_type=SampleType.IMAGE
+    )
 
     response = test_client.post(
         f"/api/operators/collections/{collection_id}/{operator_id}/execute",
@@ -240,7 +239,9 @@ def test_execute_operator__scope_mismatch(
     """An operator that doesn't support the collection's scope returns 422."""
     isolated_operator_registry.register(ImageScopeOperator())
     operator_id = _get_operator_id_by_name(isolated_operator_registry, "image-only")
-    video_collection = create_collection(session=db_session, sample_type=SampleType.VIDEO)
+    video_collection = helpers_resolvers.create_collection(
+        session=db_session, sample_type=SampleType.VIDEO
+    )
 
     response = test_client.post(
         f"/api/operators/collections/{collection_id}/{operator_id}/execute",
@@ -259,7 +260,9 @@ def test_execute_operator__context_filter_passed_through(
     """When sample_id is absent, context.filter is forwarded unchanged to the operator."""
     isolated_operator_registry.register(ContextCapturingOperator())
     operator_id = _get_operator_id_by_name(isolated_operator_registry, "context-capturing")
-    image_collection = create_collection(session=db_session, sample_type=SampleType.IMAGE)
+    image_collection = helpers_resolvers.create_collection(
+        session=db_session, sample_type=SampleType.IMAGE
+    )
 
     response = test_client.post(
         f"/api/operators/collections/{collection_id}/{operator_id}/execute",
@@ -281,7 +284,9 @@ def test_execute_operator__sample_id_builds_image_filter(
 ) -> None:
     isolated_operator_registry.register(ContextCapturingOperator())
     operator_id = _get_operator_id_by_name(isolated_operator_registry, "context-capturing")
-    image_collection = create_collection(session=db_session, sample_type=SampleType.IMAGE)
+    image_collection = helpers_resolvers.create_collection(
+        session=db_session, sample_type=SampleType.IMAGE
+    )
 
     response = test_client.post(
         f"/api/operators/collections/{collection_id}/{operator_id}/execute",
@@ -306,7 +311,9 @@ def test_execute_operator__sample_id_builds_video_filter(
 ) -> None:
     isolated_operator_registry.register(ContextCapturingOperator())
     operator_id = _get_operator_id_by_name(isolated_operator_registry, "context-capturing")
-    video_collection = create_collection(session=db_session, sample_type=SampleType.VIDEO)
+    video_collection = helpers_resolvers.create_collection(
+        session=db_session, sample_type=SampleType.VIDEO
+    )
 
     response = test_client.post(
         f"/api/operators/collections/{collection_id}/{operator_id}/execute",
@@ -331,7 +338,7 @@ def test_execute_operator__sample_id_builds_video_frame_filter(
 ) -> None:
     isolated_operator_registry.register(ContextCapturingOperator())
     operator_id = _get_operator_id_by_name(isolated_operator_registry, "context-capturing")
-    video_frame_collection = create_collection(
+    video_frame_collection = helpers_resolvers.create_collection(
         session=db_session, sample_type=SampleType.VIDEO_FRAME
     )
 
@@ -353,14 +360,18 @@ def test_execute_operator__sample_id_builds_video_frame_filter(
 def test_build_filter_from_context__no_sample_id__returns_passthrough() -> None:
     image_filter = ImageFilter()
     ctx = OperatorContextRequest(filter=image_filter)
-    result = _build_filter_from_context(context=ctx, sample_type=SampleType.IMAGE)
+    result = operator_routes_module._build_filter_from_context(
+        context=ctx, sample_type=SampleType.IMAGE
+    )
     assert result is image_filter
 
 
 def test_build_filter_from_context__sample_id_image_collection() -> None:
     sample_id = uuid4()
     ctx = OperatorContextRequest(sample_id=sample_id)
-    result = _build_filter_from_context(context=ctx, sample_type=SampleType.IMAGE)
+    result = operator_routes_module._build_filter_from_context(
+        context=ctx, sample_type=SampleType.IMAGE
+    )
     assert isinstance(result, ImageFilter)
     assert result.sample_filter == SampleFilter(sample_ids=[sample_id])
 
@@ -368,7 +379,9 @@ def test_build_filter_from_context__sample_id_image_collection() -> None:
 def test_build_filter_from_context__sample_id_video_collection() -> None:
     sample_id = uuid4()
     ctx = OperatorContextRequest(sample_id=sample_id)
-    result = _build_filter_from_context(context=ctx, sample_type=SampleType.VIDEO)
+    result = operator_routes_module._build_filter_from_context(
+        context=ctx, sample_type=SampleType.VIDEO
+    )
     assert isinstance(result, VideoFilter)
     assert result.sample_filter == SampleFilter(sample_ids=[sample_id])
 
@@ -376,7 +389,9 @@ def test_build_filter_from_context__sample_id_video_collection() -> None:
 def test_build_filter_from_context__sample_id_video_frame_collection() -> None:
     sample_id = uuid4()
     ctx = OperatorContextRequest(sample_id=sample_id)
-    result = _build_filter_from_context(context=ctx, sample_type=SampleType.VIDEO_FRAME)
+    result = operator_routes_module._build_filter_from_context(
+        context=ctx, sample_type=SampleType.VIDEO_FRAME
+    )
     assert isinstance(result, VideoFrameFilter)
     assert result.sample_filter == SampleFilter(sample_ids=[sample_id])
 
@@ -384,7 +399,9 @@ def test_build_filter_from_context__sample_id_video_frame_collection() -> None:
 def test_build_filter_from_context__sample_id_group_collection() -> None:
     sample_id = uuid4()
     ctx = OperatorContextRequest(sample_id=sample_id)
-    result = _build_filter_from_context(context=ctx, sample_type=SampleType.GROUP)
+    result = operator_routes_module._build_filter_from_context(
+        context=ctx, sample_type=SampleType.GROUP
+    )
     assert isinstance(result, GroupFilter)
     assert result.sample_filter == SampleFilter(sample_ids=[sample_id])
 
@@ -392,7 +409,9 @@ def test_build_filter_from_context__sample_id_group_collection() -> None:
 def test_build_filter_from_context__sample_id_annotation_collection() -> None:
     sample_id = uuid4()
     ctx = OperatorContextRequest(sample_id=sample_id)
-    result = _build_filter_from_context(context=ctx, sample_type=SampleType.ANNOTATION)
+    result = operator_routes_module._build_filter_from_context(
+        context=ctx, sample_type=SampleType.ANNOTATION
+    )
     assert isinstance(result, AnnotationsFilter)
     assert result.sample_ids == [sample_id]
 
@@ -400,7 +419,9 @@ def test_build_filter_from_context__sample_id_annotation_collection() -> None:
 def test_build_filter_from_context__sample_id_caption_collection() -> None:
     sample_id = uuid4()
     ctx = OperatorContextRequest(sample_id=sample_id)
-    result = _build_filter_from_context(context=ctx, sample_type=SampleType.CAPTION)
+    result = operator_routes_module._build_filter_from_context(
+        context=ctx, sample_type=SampleType.CAPTION
+    )
     assert isinstance(result, AnnotationsFilter)
     assert result.sample_ids == [sample_id]
 
