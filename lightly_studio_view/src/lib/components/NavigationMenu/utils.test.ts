@@ -16,29 +16,6 @@ const makeCollection = (
 });
 
 describe('findNavigationPath', () => {
-    it('returns [root] when target is root', () => {
-        const root = makeCollection('root');
-        const result = findNavigationPath(root, 'root');
-        expect(result).toEqual([root]);
-    });
-
-    it('returns [root, child] when target is a direct child', () => {
-        const child = makeCollection('child', SampleType.VIDEO);
-        const root = makeCollection('root', SampleType.IMAGE, [child]);
-
-        const result = findNavigationPath(root, 'child');
-        expect(result).toEqual([root, child]);
-    });
-
-    it('returns full path for deeply nested target', () => {
-        const grandchild = makeCollection('grandchild', SampleType.VIDEO_FRAME);
-        const child = makeCollection('child', SampleType.VIDEO, [grandchild]);
-        const root = makeCollection('root', SampleType.IMAGE, [child]);
-
-        const result = findNavigationPath(root, 'grandchild');
-        expect(result).toEqual([root, child, grandchild]);
-    });
-
     it('returns null when target is not found', () => {
         const child = makeCollection('child', SampleType.VIDEO);
         const root = makeCollection('root', SampleType.IMAGE, [child]);
@@ -47,19 +24,33 @@ describe('findNavigationPath', () => {
         expect(result).toBeNull();
     });
 
-    it('finds target among multiple siblings', () => {
-        const child1 = makeCollection('child-1', SampleType.VIDEO);
+    it('extends path from target to leaf via first children', () => {
+        const grandchild = makeCollection('grandchild', SampleType.VIDEO_FRAME);
+        const child = makeCollection('child', SampleType.VIDEO, [grandchild]);
+        const root = makeCollection('root', SampleType.IMAGE, [child]);
+
+        const result = findNavigationPath(root, 'root');
+        expect(result).toEqual([root, child, grandchild]);
+    });
+
+    it('always follows the first child when extending to leaf', () => {
+        const gc1 = makeCollection('gc-1', SampleType.VIDEO_FRAME);
+        const gc2 = makeCollection('gc-2', SampleType.ANNOTATION);
+        const child = makeCollection('child', SampleType.VIDEO, [gc1, gc2]);
+        const root = makeCollection('root', SampleType.IMAGE, [child]);
+
+        const result = findNavigationPath(root, 'root');
+        expect(result).toEqual([root, child, gc1]);
+    });
+
+    it('does not extend when target is already a leaf', () => {
+        const gc = makeCollection('gc', SampleType.VIDEO_FRAME);
+        const child1 = makeCollection('child-1', SampleType.VIDEO, [gc]);
         const child2 = makeCollection('child-2', SampleType.ANNOTATION);
         const root = makeCollection('root', SampleType.IMAGE, [child1, child2]);
 
         const result = findNavigationPath(root, 'child-2');
         expect(result).toEqual([root, child2]);
-    });
-
-    it('returns null when root has no children and target is different', () => {
-        const root = makeCollection('root');
-        const result = findNavigationPath(root, 'other');
-        expect(result).toBeNull();
     });
 });
 
