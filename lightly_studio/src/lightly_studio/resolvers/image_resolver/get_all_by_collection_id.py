@@ -35,7 +35,7 @@ class GetAllSamplesByCollectionIdResult(BaseModel):
 def _get_load_options() -> LoaderOption:
     """Get common load options for the sample relationship."""
     return selectinload(ImageTable.sample).options(
-        joinedload(SampleTable.tags),
+        selectinload(SampleTable.tags),
         # Ignore type checker error below as it's a false positive caused by TYPE_CHECKING.
         joinedload(SampleTable.metadata_dict),  # type: ignore[arg-type]
         selectinload(SampleTable.captions),
@@ -43,6 +43,7 @@ def _get_load_options() -> LoaderOption:
             joinedload(AnnotationBaseTable.annotation_label),
             joinedload(AnnotationBaseTable.object_detection_details),
             joinedload(AnnotationBaseTable.segmentation_details),
+            selectinload(AnnotationBaseTable.sample).options(selectinload(SampleTable.tags)),
         ),
     )
 
