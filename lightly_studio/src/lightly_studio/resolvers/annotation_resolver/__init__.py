@@ -17,6 +17,9 @@ from lightly_studio.resolvers.annotation_resolver.get_all import get_all
 from lightly_studio.resolvers.annotation_resolver.get_all_by_collection_name import (
     get_all_by_collection_name,
 )
+from lightly_studio.resolvers.annotation_resolver.get_all_by_object_track_id import (
+    get_all_by_object_track_id,
+)
 from lightly_studio.resolvers.annotation_resolver.get_all_with_payload import (
     get_all_with_payload,
 )
@@ -42,6 +45,7 @@ __all__ = [
     "get_adjacent_annotations",
     "get_all",
     "get_all_by_collection_name",
+    "get_all_by_object_track_id",
     "get_all_with_payload",
     "get_by_id",
     "get_by_id_with_payload",
