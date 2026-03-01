@@ -94,8 +94,7 @@ export class SamplesPage {
 
         if (await clearButton.isVisible()) {
             const clearResponsePromise = this.page.waitForResponse(
-                (response) =>
-                    response.url().includes('/images/list') && response.status() === 200
+                (response) => response.url().includes('/images/list') && response.status() === 200
             );
             await clearButton.click();
             await clearResponsePromise;
