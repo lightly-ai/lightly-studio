@@ -100,7 +100,12 @@ export function createResizeDrag({
         })
         .on('end', () => {
             const { x, y, width, height } = getCurrentBbox();
-            if (onDragEnd) {
+            const bboxChanged =
+                x !== dragStartBbox.x ||
+                y !== dragStartBbox.y ||
+                width !== dragStartBbox.width ||
+                height !== dragStartBbox.height;
+            if (onDragEnd && bboxChanged) {
                 onDragEnd({ x, y, width, height });
             }
             onInteractionEnd?.();
