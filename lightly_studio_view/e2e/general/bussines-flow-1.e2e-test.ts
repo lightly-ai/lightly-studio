@@ -103,9 +103,6 @@ test.describe('bussines-flow1', () => {
         await samplesPage.pressTag(catsTagName);
         expect(await samplesPage.getSamples().count()).toBe(cocoDataset.defaultPageSize);
 
-        // Clear the search input by typing empty string and pressing Enter.
-        // The first sample should be the default one.
-        await samplesPage.textSearch('');
         await samplesPage.doubleClickFirstSample();
         await expect(sampleDetailsPage.getSampleName()).toHaveText(cocoDataset.firstSampleName);
     });

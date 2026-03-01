@@ -438,7 +438,7 @@
         }
     }
 
-    function clearImageSearch() {
+    function clearSearch() {
         activeImage = null;
         query_text = '';
         submittedQueryText = '';
@@ -545,7 +545,7 @@
                                             <Search
                                                 class="absolute left-2 top-[50%] h-4 w-4 translate-y-[-50%] text-muted-foreground"
                                             />
-                                            {#if activeImage}
+                                            {#if activeImage || submittedQueryText}
                                                 <div
                                                     class="flex h-10 w-full items-center rounded-md border border-input bg-background px-3 py-2 pl-8 text-sm {dragOver
                                                         ? 'ring-2 ring-primary'
@@ -554,21 +554,26 @@
                                                     <span
                                                         class="mr-2 flex items-center gap-2 truncate text-muted-foreground"
                                                     >
-                                                        {#if previewUrl}
-                                                            <img
-                                                                src={previewUrl}
-                                                                alt="Search preview"
-                                                                class="h-6 w-6 rounded object-cover"
-                                                            />
+                                                        {#if activeImage}
+                                                            {#if previewUrl}
+                                                                <img
+                                                                    src={previewUrl}
+                                                                    alt="Search preview"
+                                                                    class="h-6 w-6 rounded object-cover"
+                                                                />
+                                                            {:else}
+                                                                <ImageIcon class="h-4 w-4" />
+                                                            {/if}
+                                                            {activeImage}
                                                         {:else}
-                                                            <ImageIcon class="h-4 w-4" />
+                                                            {submittedQueryText}
                                                         {/if}
-                                                        {activeImage}
                                                     </span>
                                                     <button
                                                         class="ml-auto hover:text-foreground"
-                                                        onclick={clearImageSearch}
-                                                        title="Clear image search"
+                                                        onclick={clearSearch}
+                                                        title="Clear search"
+                                                        data-testid="search-clear-button"
                                                     >
                                                         <X class="h-4 w-4" />
                                                     </button>
@@ -650,7 +655,7 @@
                                         <Search
                                             class="absolute left-2 top-[50%] h-4 w-4 translate-y-[-50%] text-muted-foreground"
                                         />
-                                        {#if activeImage}
+                                        {#if activeImage || submittedQueryText}
                                             <div
                                                 class="flex h-10 w-full items-center rounded-md border border-input bg-background px-3 py-2 pl-8 text-sm {dragOver
                                                     ? 'ring-2 ring-primary'
@@ -659,21 +664,25 @@
                                                 <span
                                                     class="mr-2 flex items-center gap-2 truncate text-muted-foreground"
                                                 >
-                                                    {#if previewUrl}
-                                                        <img
-                                                            src={previewUrl}
-                                                            alt="Search preview"
-                                                            class="h-6 w-6 rounded object-cover"
-                                                        />
+                                                    {#if activeImage}
+                                                        {#if previewUrl}
+                                                            <img
+                                                                src={previewUrl}
+                                                                alt="Search preview"
+                                                                class="h-6 w-6 rounded object-cover"
+                                                            />
+                                                        {:else}
+                                                            <ImageIcon class="h-4 w-4" />
+                                                        {/if}
+                                                        {activeImage}
                                                     {:else}
-                                                        <ImageIcon class="h-4 w-4" />
+                                                        {submittedQueryText}
                                                     {/if}
-                                                    {activeImage}
                                                 </span>
                                                 <button
                                                     class="ml-auto hover:text-foreground"
-                                                    onclick={clearImageSearch}
-                                                    title="Clear image search"
+                                                    onclick={clearSearch}
+                                                    title="Clear search"
                                                 >
                                                     <X class="h-4 w-4" />
                                                 </button>

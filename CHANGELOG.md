@@ -17,6 +17,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- Added `✕` button to clear an active text search, matching the existing image search behaviour.
+
 ### Security
 
 ## \[0.4.9\] - 2026-02-27
