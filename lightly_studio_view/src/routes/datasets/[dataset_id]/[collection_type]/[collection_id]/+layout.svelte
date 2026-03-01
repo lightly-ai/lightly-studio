@@ -573,6 +573,7 @@
                                                         class="ml-auto hover:text-foreground"
                                                         onclick={clearSearch}
                                                         title="Clear search"
+                                                        data-testid="search-clear-button"
                                                     >
                                                         <X class="h-4 w-4" />
                                                     </button>

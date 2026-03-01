@@ -90,17 +90,26 @@ export class SamplesPage {
      * // Clears the search and reloads all samples
      */
     async textSearch(searchTerm: string): Promise<void> {
-        const responsePromise =
-            searchTerm.trim() === ''
-                ? this.page.waitForResponse(
-                      (response) =>
-                          response.url().includes('/images/list') && response.status() === 200
-                  )
-                : this.page.waitForResponse(
-                      (response) =>
-                          response.url().includes(`query_text=${searchTerm}`) &&
-                          response.status() === 200
-                  );
+        const clearButton = this.page.getByTestId('search-clear-button');
+
+        if (await clearButton.isVisible()) {
+            const clearResponsePromise = this.page.waitForResponse(
+                (response) =>
+                    response.url().includes('/images/list') && response.status() === 200
+            );
+            await clearButton.click();
+            await clearResponsePromise;
+        }
+
+        if (searchTerm.trim() === '') {
+            await this.getSamples().first().waitFor({ state: 'attached', timeout: 10000 });
+            return;
+        }
+
+        const responsePromise = this.page.waitForResponse(
+            (response) =>
+                response.url().includes(`query_text=${searchTerm}`) && response.status() === 200
+        );
 
         const searchInput = this.page.getByTestId('text-embedding-search-input');
         await expect(searchInput).toBeVisible();
