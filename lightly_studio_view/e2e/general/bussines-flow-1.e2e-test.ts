@@ -103,7 +103,6 @@ test.describe('bussines-flow1', () => {
         await samplesPage.pressTag(catsTagName);
         expect(await samplesPage.getSamples().count()).toBe(cocoDataset.defaultPageSize);
 
-        await page.getByTestId('search-clear-button').click();
         await samplesPage.doubleClickFirstSample();
         await expect(sampleDetailsPage.getSampleName()).toHaveText(cocoDataset.firstSampleName);
     });
