@@ -57,6 +57,7 @@ export class CaptionUtils {
         );
         await this.page.getByTestId('header-reverse-action-button').click();
         await responsePromise;
+        await this.page.waitForLoadState('networkidle');
     }
 
     async updateNthCaption(index: number, text: string) {
