@@ -15,7 +15,8 @@
         isEditingMode,
         collectionId,
         annotationId,
-        onUpdate
+        onUpdate,
+        trackId
     }: {
         label: string;
         value: string;
@@ -23,6 +24,7 @@
         collectionId: string;
         annotationId: string;
         onUpdate?: () => void;
+        trackId?: number | null;
     } = $props();
 
     const result = useAnnotationLabels({ collectionId });
@@ -80,5 +82,10 @@
         {/snippet}
     </SelectList>
 {:else}
-    <span class="break-all text-sm" data-testid={`annotation-metadata-label`}>{currentValue}</span>
+    <span class="break-all text-sm" data-testid={`annotation-metadata-label`}>
+        {currentValue}
+        {#if trackId != null}
+            <span class="font-mono text-xs opacity-80">#{trackId}</span>
+        {/if}
+    </span>
 {/if}

@@ -20,7 +20,7 @@
     const isFromVideos = $derived(Boolean(page.url.searchParams.get('from_video')));
 
     const navigateToFrames = (collectionId: string) => {
-        return routeHelpers.toFrames(datasetId, collectionType, collectionId, isFromVideos);
+        return routeHelpers.toFrames(datasetId, collectionType, collectionId);
     };
 
     const { query: sampleAdjacentQuery } = $derived(

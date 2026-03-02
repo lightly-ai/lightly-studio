@@ -20,10 +20,12 @@ from av.video.frame import VideoFrame as AVVideoFrame
 from av.video.stream import VideoStream
 from labelformat.model.instance_segmentation_track import (
     InstanceSegmentationTrackInput,
+    SingleInstanceSegmentationTrack,
     VideoInstanceSegmentationTrack,
 )
 from labelformat.model.object_detection_track import (
     ObjectDetectionTrackInput,
+    SingleObjectDetectionTrack,
     VideoObjectDetectionTrack,
 )
 from sqlmodel import Session
@@ -33,11 +35,13 @@ from lightly_studio.core import labelformat_helpers, loading_log
 from lightly_studio.models.annotation.annotation_base import (
     AnnotationCreate,
 )
+from lightly_studio.models.annotation.object_track import ObjectTrackCreate
 from lightly_studio.models.collection import SampleType
 from lightly_studio.models.video import VideoCreate, VideoFrameCreate
 from lightly_studio.resolvers import (
     annotation_resolver,
     collection_resolver,
+    object_track_resolver,
     sample_resolver,
     video_frame_resolver,
     video_resolver,
@@ -280,17 +284,25 @@ def load_video_annotations_from_labelformat(
             )
         frame_number_to_id = {frame.frame_number: frame.sample_id for frame in frames}
 
+        object_track_map = _create_object_tracks(
+            session=session,
+            video_annotation=video_annotation,
+            dataset_id=dataset_id,
+        )
+
         if isinstance(video_annotation, VideoInstanceSegmentationTrack):
             annotations_to_create = _process_video_annotations_instance_segmentation(
                 frame_number_to_id=frame_number_to_id,
                 video_annotation=video_annotation,
                 label_map=label_map,
+                object_track_map=object_track_map,
             )
         elif isinstance(video_annotation, VideoObjectDetectionTrack):
             annotations_to_create = _process_video_annotations_object_detection(
                 frame_number_to_id=frame_number_to_id,
                 video_annotation=video_annotation,
                 label_map=label_map,
+                object_track_map=object_track_map,
             )
         else:
             raise ValueError(f"Unsupported annotation type: {type(video_annotation)}")
@@ -474,24 +486,89 @@ def _resolve_video_paths_from_labelformat(
     return video_paths
 
 
+def _create_object_tracks(
+    session: Session,
+    video_annotation: VideoInstanceSegmentationTrack | VideoObjectDetectionTrack,
+    dataset_id: UUID,
+) -> dict[int, UUID]:
+    """Create an ObjectTrackTable entry for each tracked object in the video.
+
+    Args:
+        session: Database session.
+        video_annotation: The labelformat video annotation containing objects.
+        dataset_id: UUID of the root collection (dataset).
+
+    Returns:
+        Mapping from object index (position in video_annotation.objects) to the
+        UUID of the created object track. Objects without track ID in the annotation are not
+        included in the mapping.
+    """
+    object_track_map: dict[int, UUID] = {}
+    tracks_to_create: list[ObjectTrackCreate] = []
+    object_indices: list[int] = []
+    for obj_idx, obj_raw in enumerate(video_annotation.objects):
+        obj: SingleInstanceSegmentationTrack | SingleObjectDetectionTrack = obj_raw  # type: ignore[assignment]
+        object_track_number = obj.object_track_id
+        if object_track_number is None:
+            # Skip objects without track ID and do not create tracks for them
+            continue
+
+        tracks_to_create.append(
+            ObjectTrackCreate(
+                object_track_number=object_track_number,
+                dataset_id=dataset_id,
+            )
+        )
+        object_indices.append(obj_idx)
+
+        if len(tracks_to_create) >= SAMPLE_BATCH_SIZE:
+            created_track_ids = object_track_resolver.create_many(
+                session=session, tracks=tracks_to_create
+            )
+            if len(created_track_ids) != len(object_indices):
+                raise RuntimeError(
+                    f"Expected {len(object_indices)} created object tracks but got "
+                    f"{len(created_track_ids)}."
+                )
+            for idx, track_id in zip(object_indices, created_track_ids):
+                object_track_map[idx] = track_id
+            tracks_to_create = []
+            object_indices = []
+
+    if tracks_to_create:
+        created_track_ids = object_track_resolver.create_many(
+            session=session, tracks=tracks_to_create
+        )
+        if len(created_track_ids) != len(object_indices):
+            raise RuntimeError(
+                f"Expected {len(object_indices)} created object tracks but got "
+                f"{len(created_track_ids)}."
+            )
+        for idx, track_id in zip(object_indices, created_track_ids):
+            object_track_map[idx] = track_id
+
+    return object_track_map
+
+
 def _process_video_annotations_instance_segmentation(
     frame_number_to_id: dict[int, UUID],
     video_annotation: VideoInstanceSegmentationTrack,
     label_map: dict[int, UUID],
+    object_track_map: dict[int, UUID],
 ) -> list[AnnotationCreate]:
     """Process instance segmentation annotations for a single video."""
     annotations = []
     for frame_number, frame_id in frame_number_to_id.items():
-        for obj in video_annotation.objects:
+        for obj_idx, obj in enumerate(video_annotation.objects):
             segmentation = obj.segmentations[frame_number]
             if segmentation is not None:
-                annotations.append(
-                    labelformat_helpers.get_segmentation_annotation_create(
-                        parent_sample_id=frame_id,
-                        annotation_label_id=label_map[obj.category.id],
-                        segmentation=segmentation,
-                    )
+                annotation = labelformat_helpers.get_segmentation_annotation_create(
+                    parent_sample_id=frame_id,
+                    annotation_label_id=label_map[obj.category.id],
+                    segmentation=segmentation,
+                    object_track_id=object_track_map.get(obj_idx),
                 )
+                annotations.append(annotation)
     return annotations
 
 
@@ -499,18 +576,19 @@ def _process_video_annotations_object_detection(
     frame_number_to_id: dict[int, UUID],
     video_annotation: VideoObjectDetectionTrack,
     label_map: dict[int, UUID],
+    object_track_map: dict[int, UUID],
 ) -> list[AnnotationCreate]:
-    """Process instance segmentation annotations for a single video."""
+    """Process object detection annotations for a single video."""
     annotations = []
     for frame_number, frame_id in frame_number_to_id.items():
-        for obj in video_annotation.objects:
+        for obj_idx, obj in enumerate(video_annotation.objects):
             box = obj.boxes[frame_number]
             if box is not None:
-                annotations.append(
-                    labelformat_helpers.get_object_detection_annotation_create(
-                        parent_sample_id=frame_id,
-                        annotation_label_id=label_map[obj.category.id],
-                        box=box,
-                    )
+                annotation = labelformat_helpers.get_object_detection_annotation_create(
+                    parent_sample_id=frame_id,
+                    annotation_label_id=label_map[obj.category.id],
+                    box=box,
+                    object_track_id=object_track_map.get(obj_idx),
                 )
+                annotations.append(annotation)
     return annotations

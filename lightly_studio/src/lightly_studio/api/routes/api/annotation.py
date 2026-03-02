@@ -198,9 +198,12 @@ def get_annotation(
         Path(title="collection Id", description="The ID of the collection"),
     ],  # We need collection_id because otherwise the path would not match
     annotation_id: Annotated[UUID, Path(title="Annotation ID")],
-) -> AnnotationBaseTable:
+) -> AnnotationView:
     """Retrieve an existing annotation from the database."""
-    return annotations_service.get_annotation_by_id(session=session, annotation_id=annotation_id)
+    annotation = annotations_service.get_annotation_by_id(
+        session=session, annotation_id=annotation_id
+    )
+    return AnnotationView.from_annotation_table(annotation=annotation)
 
 
 @annotations_router.delete("/annotations/{annotation_id}")

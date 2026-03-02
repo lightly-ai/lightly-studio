@@ -26,6 +26,15 @@ def test_get_segmentation_annotation_create__with_multipolygon() -> None:
         annotation_type=AnnotationType.INSTANCE_SEGMENTATION,
     )
 
+    object_track_id = uuid4()
+    annotation_with_track = labelformat_helpers.get_segmentation_annotation_create(
+        parent_sample_id=parent_sample_id,
+        annotation_label_id=annotation_label_id,
+        segmentation=multipolygon,
+        annotation_type=AnnotationType.INSTANCE_SEGMENTATION,
+        object_track_id=object_track_id,
+    )
+
     assert annotation.parent_sample_id == parent_sample_id
     assert annotation.annotation_label_id == annotation_label_id
     assert annotation.annotation_type == AnnotationType.INSTANCE_SEGMENTATION
@@ -34,6 +43,9 @@ def test_get_segmentation_annotation_create__with_multipolygon() -> None:
     assert annotation.width == 20
     assert annotation.height == 20
     assert annotation.segmentation_mask is None  # MultiPolygon doesn't have RLE
+    assert annotation.object_track_id is None
+
+    assert annotation_with_track.object_track_id == object_track_id
 
 
 def test_get_segmentation_annotation_create__with_binary_mask() -> None:
@@ -84,6 +96,15 @@ def test_get_object_detection_annotation_create() -> None:
         confidence=None,
     )
 
+    object_track_id = uuid4()
+    annotation_with_track = labelformat_helpers.get_object_detection_annotation_create(
+        parent_sample_id=parent_sample_id,
+        annotation_label_id=annotation_label_id,
+        box=box,
+        confidence=None,
+        object_track_id=object_track_id,
+    )
+
     # Verify annotation properties
     assert annotation.parent_sample_id == parent_sample_id
     assert annotation.annotation_label_id == annotation_label_id
@@ -93,6 +114,9 @@ def test_get_object_detection_annotation_create() -> None:
     assert annotation.width == 20
     assert annotation.height == 20
     assert annotation.confidence is None
+    assert annotation.object_track_id is None
+
+    assert annotation_with_track.object_track_id == object_track_id
 
 
 def test_get_object_detection_annotation_create__with_confidence() -> None:

@@ -1,10 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { writable, type Writable } from 'svelte/store';
-import {
-    SampleType,
-    type VideoFilter,
-    type VideoFrameFilter
-} from '$lib/api/lightly_studio_local';
+import { SampleType, type VideoFilter, type VideoFrameFilter } from '$lib/api/lightly_studio_local';
 import type { TextEmbedding } from '$lib/hooks/useGlobalStorage';
 import { useAdjacentFrames } from './useAdjacentFrames';
 

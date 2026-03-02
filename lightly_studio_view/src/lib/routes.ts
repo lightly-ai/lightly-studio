@@ -116,16 +116,24 @@ export const routes = {
             sampleId: string,
             fromVideos?: boolean
         ) => {
-            const path = `/datasets/${datasetId}/${collectionType}/${collectionId}/frames/${sampleId}?from_video=true`
+            const path = `/datasets/${datasetId}/${collectionType}/${collectionId}/frames/${sampleId}?from_video=true`;
 
             if (fromVideos) {
-                return `${path}?from_video=true`
+                return `${path}?from_video=true`;
             }
 
             return path;
         },
         groups: (datasetId: string, collectionType: string, collectionId: string) =>
-            `/datasets/${datasetId}/${collectionType}/${collectionId}/groups`
+            `/datasets/${datasetId}/${collectionType}/${collectionId}/groups`,
+        groupDetails: (
+            datasetId: string,
+            collectionType: string,
+            collectionId: string,
+            groupId: string
+        ) => {
+            return `/datasets/${datasetId}/${collectionType}/${collectionId}/groups/${groupId}`;
+        }
     }
 };
 
@@ -170,11 +178,25 @@ export const routeHelpers = {
         collectionType: string,
         collectionId: string,
         sampleId: string,
-        isFromVideos?: boolean,
+        isFromVideos?: boolean
     ) => {
-        return routes.collection.framesDetails(datasetId, collectionType, collectionId, sampleId, isFromVideos);
+        return routes.collection.framesDetails(
+            datasetId,
+            collectionType,
+            collectionId,
+            sampleId,
+            isFromVideos
+        );
     },
     toGroups: (datasetId: string, collectionType: string, collectionId: string) => {
         return routes.collection.groups(datasetId, collectionType, collectionId);
+    },
+    toGroupDetails: (
+        datasetId: string,
+        collectionType: string,
+        collectionId: string,
+        groupId: string
+    ) => {
+        return routes.collection.groupDetails(datasetId, collectionType, collectionId, groupId);
     }
 };

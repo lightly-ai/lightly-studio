@@ -11,6 +11,7 @@ from pydantic import BaseModel
 from lightly_studio.api.routes.api.status import HTTP_STATUS_NOT_FOUND
 from lightly_studio.db_manager import SessionDep
 from lightly_studio.plugins.base_operator import OperatorResult
+from lightly_studio.plugins.operator_context import ExecutionContext
 from lightly_studio.plugins.operator_registry import RegisteredOperatorMetadata, operator_registry
 from lightly_studio.plugins.parameter import BaseParameter
 
@@ -69,9 +70,11 @@ def execute_operator(
             detail=f"Operator '{operator_id}' not found",
         )
 
+    context = ExecutionContext(collection_id=collection_id, filter=None)
+
     # Execute the operator
     return operator.execute(
         session=session,
-        collection_id=collection_id,
+        context=context,
         parameters=request.parameters,
     )

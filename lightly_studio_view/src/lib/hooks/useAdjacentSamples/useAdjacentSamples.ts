@@ -6,7 +6,7 @@ import type {
     ImageFilter,
     SampleType,
     VideoFilter,
-    VideoFrameAdjacentFilter,
+    VideoFrameAdjacentFilter
 } from '$lib/api/lightly_studio_local/types.gen';
 
 export type AdjacentSamplesRequestBody =

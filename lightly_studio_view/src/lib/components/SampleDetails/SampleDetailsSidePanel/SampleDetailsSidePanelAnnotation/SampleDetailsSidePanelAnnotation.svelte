@@ -133,7 +133,14 @@
                         class="flex w-full items-center gap-2 text-sm font-medium leading-5"
                         data-testid="sample-details-pannel-annotation-name"
                     >
-                        <div class="min-w-0 flex-1">
+                        <div class="h-4">
+                            <AnnotationColorLegend
+                                labelName={annotationLabelName}
+                                className="h-4 w-4"
+                                selected={isSelected}
+                            />
+                        </div>
+                        <div class="flex flex-col justify-center gap-1">
                             {#if $isEditingMode}
                                 <div
                                     role="button"
@@ -185,19 +192,19 @@
                                     </SelectList>
                                 </div>
                             {:else}
-                                <span class="h-full min-w-0 flex-1 truncate"
-                                    >{annotationLabelName}</span
-                                >
+                                <div class="flex w-full min-w-0 flex-1 flex-col gap-1">
+                                    <span class="truncate">{annotationLabelName}</span>
+                                </div>
                             {/if}
                         </div>
                     </div>
                 </div>
-                <div class="flex flex-col items-end justify-between gap-2 self-stretch pl-1">
+                <div class="flex flex-col items-end justify-center gap-2 self-stretch pl-1">
                     <div class="flex gap-3">
                         {#if $isEditingMode && annotation.annotation_type != 'object_detection'}
                             {#if isLocked}
                                 <Lock
-                                    class="size-6 text-muted-foreground"
+                                    class="size-4 text-muted-foreground"
                                     onclick={(e) => {
                                         e.stopPropagation();
                                         onToggleLock?.(e);
@@ -205,7 +212,7 @@
                                 />
                             {:else}
                                 <Unlock
-                                    class="size-6"
+                                    class="size-4"
                                     onclick={(e) => {
                                         e.stopPropagation();
                                         onToggleLock?.(e);
@@ -215,35 +222,40 @@
                         {/if}
                         {#if isHidden}
                             <EyeOff
-                                class="size-6 text-muted-foreground"
+                                class="size-4 text-muted-foreground"
                                 onclick={onToggleShowAnnotation}
                             />
                         {:else}
-                            <Eye class="size-6" onclick={onToggleShowAnnotation} />
+                            <Eye class="size-4" onclick={onToggleShowAnnotation} />
                         {/if}
 
                         {#if $isEditingMode}
                             <DeleteAnnotationPopUp onDelete={onDeleteAnnotation}>
-                                <Trash2 class="size-6" />
+                                <Trash2 class="size-4" />
                             </DeleteAnnotationPopUp>
                         {/if}
                     </div>
                 </div>
             </div>
-            <div class="flex w-full items-center justify-between pt-1">
+            {#if annotation.object_track_number != null}
+                <div class="pt-1">
+                    <span class="text-xs text-muted-foreground">
+                        Object Track ID: {annotation.object_track_number}
+                    </span>
+                </div>
+            {/if}
+            <div
+                class={cn(
+                    'flex w-full items-center justify-between',
+                    annotation.object_track_number != null ? 'pt-0' : 'pt-1'
+                )}
+            >
                 <span class="flex h-full items-center justify-center text-xs text-muted-foreground">
                     {formatAnnotationType(annotation.annotation_type)}
                     {#if getAnnotationDimensions(annotation)}
                         ({getAnnotationDimensions(annotation)})
                     {/if}
                 </span>
-                <div class={$isEditingMode ? '' : 'pr-1'}>
-                    <AnnotationColorLegend
-                        labelName={annotationLabelName}
-                        className="h-4 w-4"
-                        selected={isSelected}
-                    />
-                </div>
             </div>
         </div>
     </button>
