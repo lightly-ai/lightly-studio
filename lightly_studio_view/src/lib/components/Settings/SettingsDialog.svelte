@@ -138,7 +138,7 @@
     <Dialog.Portal>
         <Dialog.Overlay />
         <Dialog.Content
-            class="max-h-[85vh] overflow-y-scroll border-border bg-background sm:max-w-[500px]"
+            class="max-h-[85vh] overflow-y-auto border-border bg-background dark:[color-scheme:dark] sm:max-w-[500px]"
         >
             <form onsubmit={handleFormSubmit}>
                 <Dialog.Header>
