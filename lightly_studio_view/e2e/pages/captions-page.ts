@@ -9,9 +9,10 @@ export class CaptionsPage {
         this.captionUtils = new CaptionUtils(page);
     }
 
-    async goto() {
+    async goto(menuLevel: number = 1) {
         await this.page.goto('/');
         await expect(this.page.getByTestId('sample-grid-item').first()).toBeVisible();
+        await this.page.getByTestId('navigation-menu').getByRole('button').nth(menuLevel).hover();
         await this.page.getByTestId('navigation-menu-captions').click();
         // Wait for the captions grid to be visible
         await expect(this.getNthGridItem(0)).toBeVisible();
@@ -20,7 +21,7 @@ export class CaptionsPage {
     async gotoVideoFrameCaptions() {
         await this.page.goto('/');
 
-        await this.page.getByTestId('navigation-menu-frames').hover();
+        await this.page.getByTestId('navigation-menu-level-2').hover();
         await this.page.getByTestId('navigation-menu-captions').click();
 
         // Wait for the captions grid to be visible

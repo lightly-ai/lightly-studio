@@ -46,7 +46,7 @@
     const { user } = useAuth();
 </script>
 
-<div class="flex gap-2">
+<div class="flex gap-2" data-testid="navigation-menu">
     {#if user}
         <MenuItem
             item={{
