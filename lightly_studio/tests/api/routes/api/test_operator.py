@@ -16,7 +16,7 @@ from lightly_studio.api.routes.api.status import (
     HTTP_STATUS_OK,
 )
 from lightly_studio.plugins.base_operator import BaseOperator, OperatorResult
-from lightly_studio.plugins.operator_context import OperatorScope
+from lightly_studio.plugins.operator_context import ExecutionContext, OperatorScope
 from lightly_studio.plugins.operator_registry import OperatorRegistry
 from lightly_studio.plugins.parameter import BaseParameter, BoolParameter, StringParameter
 
@@ -186,14 +186,14 @@ class TestOperator(BaseOperator):
         self,
         *,
         session: Session,
-        collection_id: UUID,
+        context: ExecutionContext,
         parameters: dict[str, Any],
     ) -> OperatorResult:
         """Execute the operator with the given parameters.
 
         Args:
             session: Database session.
-            collection_id: ID of the collection to operate on.
+            context: Execution context containing collection_id and optional filter.
             parameters: Parameters passed to the operator.
 
         Returns:
@@ -201,7 +201,11 @@ class TestOperator(BaseOperator):
         """
         return OperatorResult(
             success=bool(parameters.get("test flag")),
-            message=str(parameters.get("test str")) + " " + str(session) + " " + str(collection_id),
+            message=str(parameters.get("test str"))
+            + " "
+            + str(session)
+            + " "
+            + str(context.collection_id),
         )
 
 
