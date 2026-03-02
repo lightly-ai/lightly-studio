@@ -157,9 +157,6 @@
                 onClickSelectList={() => {
                     setAnnotationId(annotation.sample_id);
                 }}
-                onDelete={() => {
-                    setAnnotationId(annotation.sample_id);
-                }}
             />
         {/each}
     </div>
