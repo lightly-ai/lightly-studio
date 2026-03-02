@@ -1768,8 +1768,8 @@ wheels = [
 
 [[package]]
 name = "labelformat"
-version = "0.1.11"
-source = { git = "https://github.com/lightly-ai/labelformat.git?rev=0ce36bf10dcf43ff7828e38e50107316adf45911#0ce36bf10dcf43ff7828e38e50107316adf45911" }
+version = "0.1.12"
+source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "fsspec" },
     { name = "numpy", version = "1.26.4", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.10'" },
@@ -1779,6 +1779,10 @@ dependencies = [
     { name = "pydantic-xml" },
     { name = "pyyaml" },
     { name = "tqdm" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/d5/02/34f9f636d35b97ff5a4b1972cce1c286f916ab77d49bedb2d21b70ffd4a3/labelformat-0.1.12.tar.gz", hash = "sha256:164a8de5e90ddedb6453e8710434a37b9422e139f7a8538538176d375688a1b1", size = 36447, upload-time = "2026-02-27T14:04:33.341Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/1c/2f/c14ee850a39fc534eea2358e4ab3f8ff30e8470248e2cf8704beee7cc39f/labelformat-0.1.12-py3-none-any.whl", hash = "sha256:a922c572eb30a347e9e2faee35495eae00dcde2217d91d95d50aefc8e7d4dea7", size = 53542, upload-time = "2026-02-27T14:04:34.621Z" },
 ]
 
 [[package]]
@@ -1855,7 +1859,7 @@ wheels = [
 
 [[package]]
 name = "lightly-studio"
-version = "0.4.8"
+version = "0.4.9"
 source = { editable = "." }
 dependencies = [
     { name = "annotated-types" },
@@ -1941,7 +1945,7 @@ requires-dist = [
     { name = "faster-coco-eval", specifier = ">=1.6.5" },
     { name = "fsspec", specifier = ">=2023.1.0" },
     { name = "gcsfs", marker = "extra == 'cloud-storage'", specifier = ">=2023.1.0" },
-    { name = "labelformat", git = "https://github.com/lightly-ai/labelformat.git?rev=0ce36bf10dcf43ff7828e38e50107316adf45911" },
+    { name = "labelformat", specifier = ">=0.1.12" },
     { name = "lightly-edge-sdk", marker = "extra == 'lightly-edge'", specifier = ">=1.0.3.post1", index = "https://europe-west3-python.pkg.dev/boris-250909/lightly-pypi/simple/" },
     { name = "lightly-mundig", specifier = "==0.1.10" },
     { name = "open-clip-torch", specifier = ">=2.20.0" },
