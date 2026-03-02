@@ -27,7 +27,7 @@ class OperatorContextRequest(BaseModel):
     """Client-supplied execution context for scoped operator calls."""
 
     collection_id: UUID | None = None
-    filter: AnyFilter = None
+    context_filter: AnyFilter = None
 
 
 class ExecuteOperatorRequest(BaseModel):
@@ -84,14 +84,8 @@ def execute_operator(
         )
 
     context = request.context
-
     if context is None:
-        # Execute the operator
-        return operator.execute(
-            session=session,
-            context=ExecutionContext(collection_id=collection_id),
-            parameters=request.parameters,
-        )
+        context = OperatorContextRequest(collection_id=None, context_filter=None)
 
     # The context may specify a focused sub-collection; fall back to the route collection.
     collection_id = context.collection_id or collection_id
@@ -120,6 +114,8 @@ def execute_operator(
     # Execute the operator
     return operator.execute(
         session=session,
-        context=ExecutionContext(collection_id=collection_id, filter=context.filter),
+        context=ExecutionContext(
+            collection_id=collection_id, context_filter=context.context_filter
+        ),
         parameters=request.parameters,
     )

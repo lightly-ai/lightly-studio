@@ -29,7 +29,7 @@ class ExecutionContext:
     """
 
     collection_id: UUID
-    filter: AnyFilter = None
+    context_filter: AnyFilter = None
 
 
 class OperatorScope(str, Enum):

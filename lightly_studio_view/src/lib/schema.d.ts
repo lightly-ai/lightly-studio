@@ -2728,17 +2728,12 @@ export interface components {
         /**
          * OperatorContextRequest
          * @description Client-supplied execution context for scoped operator calls.
-         *
-         *     If ``sample_id`` is provided, the API translates it to a sample-id filter
-         *     before invoking the operator.
          */
         OperatorContextRequest: {
             /** Collection Id */
             collection_id?: string | null;
-            /** Sample Id */
-            sample_id?: string | null;
-            /** Filter */
-            filter?: components["schemas"]["ImageFilter"] | components["schemas"]["VideoFilter"] | components["schemas"]["VideoFrameFilter"] | components["schemas"]["AnnotationsFilter"] | components["schemas"]["GroupFilter"] | components["schemas"]["SampleFilter"] | null;
+            /** Context Filter */
+            context_filter?: components["schemas"]["ImageFilter"] | components["schemas"]["VideoFrameFilter"] | components["schemas"]["VideoFilter"] | components["schemas"]["AnnotationsFilter"] | components["schemas"]["GroupFilter"] | components["schemas"]["SampleFilter"] | null;
         };
         /** OperatorResult */
         OperatorResult: {

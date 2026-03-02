@@ -323,7 +323,7 @@ class ContextCapturingOperator(BaseOperator):
         parameters: dict[str, Any],
     ) -> OperatorResult:
         _, _ = session, parameters
-        filter_type = type(context.filter).__name__ if context.filter else "None"
+        filter_type = type(context.context_filter).__name__ if context.context_filter else "None"
         return OperatorResult(success=True, message=f"{context.collection_id}:{filter_type}")
 
 
