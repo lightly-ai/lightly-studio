@@ -6,6 +6,7 @@ from lightly_studio.resolvers.sample_resolver.create_many import create_many
 from lightly_studio.resolvers.sample_resolver.get_by_id import get_by_id
 from lightly_studio.resolvers.sample_resolver.get_filtered_samples import get_filtered_samples
 from lightly_studio.resolvers.sample_resolver.get_many_by_id import get_many_by_id
+from lightly_studio.resolvers.sample_resolver.get_sample_details import get_sample_details
 
 __all__ = [
     "count_by_collection_id",
@@ -14,4 +15,5 @@ __all__ = [
     "get_by_id",
     "get_filtered_samples",
     "get_many_by_id",
+    "get_sample_details",
 ]
