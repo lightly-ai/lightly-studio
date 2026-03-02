@@ -11,6 +11,8 @@
     import { useSettings } from '$lib/hooks/useSettings';
     import { useDeleteCaption } from '$lib/hooks/useDeleteCaption/useDeleteCaption';
     import { useCreateCaption } from '$lib/hooks/useCreateCaption/useCreateCaption';
+    import { useGlobalStorage } from '$lib/hooks/useGlobalStorage';
+    import { addCaptionDeleteToUndoStack } from '$lib/services/addCaptionDeleteToUndoStack';
     import { createQuery } from '@tanstack/svelte-query';
     import {
         getVideoByIdOptions,
@@ -36,7 +38,7 @@
     } = $props();
 
     const { gridViewSampleRenderingStore } = useSettings();
-    const { isEditingMode } = page.data.globalStorage;
+    const { isEditingMode, addReversibleAction } = useGlobalStorage();
 
     let objectFit = $derived($gridViewSampleRenderingStore); // Use store value directly
 
@@ -64,12 +66,22 @@
     });
 
     const { deleteCaption } = useDeleteCaption();
+    const { createCaption } = useCreateCaption();
+    const captions = $derived(item.captions as CaptionView[]);
 
-    const onDeleteCaption = async (sampleId: string) => {
-        if (!item) return;
+    const onDeleteCaption = async (captionId: string) => {
+        const caption = captions.find((c) => c.sample_id === captionId);
+        if (!caption) return;
 
         try {
-            await deleteCaption(sampleId);
+            addCaptionDeleteToUndoStack({
+                text: caption.text ?? '',
+                parentSampleId: item.sample_id,
+                addReversibleAction,
+                createCaption,
+                refetch: onUpdate
+            });
+            await deleteCaption(captionId);
             toast.success('Caption deleted successfully');
             onUpdate();
         } catch (error) {
@@ -78,7 +90,6 @@
         }
     };
 
-    const { createCaption } = useCreateCaption();
     const onCreateCaption = async (sampleId: string, text: string): Promise<boolean> => {
         try {
             await createCaption({ parent_sample_id: sampleId, text });
@@ -103,8 +114,6 @@
     function isFrameView() {
         return sampleType === SampleType.VIDEO_FRAME;
     }
-
-    const captions = $derived(item.captions as CaptionView[]);
 </script>
 
 <div style={`height: ${maxHeight}; max-height: ${maxHeight};`}>

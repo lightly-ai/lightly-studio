@@ -8,6 +8,7 @@
     import { page } from '$app/state';
     import { Button } from '$lib/components/ui';
     import { useDeleteAnnotation } from '$lib/hooks/useDeleteAnnotation/useDeleteAnnotation';
+    import * as Popover from '$lib/components/ui/popover/index.js';
     import { toast } from 'svelte-sonner';
     import { useAnnotationDeleteNavigation } from '$lib/hooks/useAnnotationDeleteNavigation/useAnnotationDeleteNavigation';
 
@@ -60,6 +61,8 @@
             collectionType
         })
     );
+
+    let showDeleteConfirmation = $state(false);
 </script>
 
 <Card className="h-full">
@@ -73,12 +76,36 @@
             {@render children()}
 
             {#if $isEditingMode}
-                <Button
-                    variant="destructive"
-                    class="w-full"
-                    data-testid="delete-annotation-trigger"
-                    onclick={handleDeleteAnnotation}>Delete annotation</Button
-                >
+                <Popover.Root bind:open={showDeleteConfirmation}>
+                    <Popover.Trigger>
+                        <Button variant="destructive" class="w-full" data-testid="delete-annotation-trigger">
+                            Delete annotation
+                        </Button>
+                    </Popover.Trigger>
+                    <Popover.Content>
+                        You are going to delete this annotation. This action cannot be undone.
+                        <div class="mt-2 flex justify-end gap-2">
+                            <Button
+                                variant="destructive"
+                                size="sm"
+                                data-testid="confirm-delete-annotation"
+                                onclick={(e: MouseEvent) => {
+                                    e.stopPropagation();
+                                    handleDeleteAnnotation();
+                                    showDeleteConfirmation = false;
+                                }}>Delete</Button
+                            >
+                            <Button
+                                variant="outline"
+                                size="sm"
+                                onclick={(e: MouseEvent) => {
+                                    e.stopPropagation();
+                                    showDeleteConfirmation = false;
+                                }}>Cancel</Button
+                            >
+                        </div>
+                    </Popover.Content>
+                </Popover.Root>
             {/if}
         </div>
     </CardContent>
