@@ -191,7 +191,7 @@ def test_execute_operator__context_collection_id_overrides_route(
     collection_id: UUID,
     isolated_operator_registry: OperatorRegistry,
 ) -> None:
-    """context.collection_id takes precedence over the route collection_id."""
+    """context.collection_id overrides the route collection_id; context_filter is forwarded."""
     isolated_operator_registry.register(ContextCapturingOperator())
     operator_id = _get_operator_id_by_name(isolated_operator_registry, "context-capturing")
     sub_collection = helpers_resolvers.create_collection(
@@ -200,11 +200,17 @@ def test_execute_operator__context_collection_id_overrides_route(
 
     response = test_client.post(
         f"/api/operators/collections/{collection_id}/{operator_id}/execute",
-        json={"parameters": {}, "context": {"collection_id": str(sub_collection.collection_id)}},
+        json={
+            "parameters": {},
+            "context": {
+                "collection_id": str(sub_collection.collection_id),
+                "context_filter": {"width": {"min": 10}},
+            },
+        },
     )
 
     assert response.status_code == HTTP_STATUS_OK
-    assert response.json()["message"].startswith(str(sub_collection.collection_id))
+    assert response.json()["message"] == f"{sub_collection.collection_id}:ImageFilter"
 
 
 def test_execute_operator__context_collection_not_found(
