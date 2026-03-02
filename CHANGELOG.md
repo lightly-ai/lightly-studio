@@ -17,6 +17,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- Added `✕` button to clear an active text search, matching the existing image search behaviour.
 - Fixed spurious "Annotation updated successfully" toast appearing when clicking a bounding box without moving or resizing it.
 
 ### Security
