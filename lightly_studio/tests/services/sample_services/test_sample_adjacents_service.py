@@ -15,6 +15,7 @@ from lightly_studio.resolvers.annotations.annotations_filter import (
 )
 from lightly_studio.resolvers.image_filter import ImageFilter
 from lightly_studio.resolvers.sample_resolver.sample_filter import SampleFilter
+from lightly_studio.resolvers.video_frame_resolver import VideoFrameAdjacentFilter
 from lightly_studio.resolvers.video_frame_resolver.video_frame_filter import (
     VideoFrameFilter,
 )
@@ -116,8 +117,10 @@ def test_get_adjacent_samples__delegates_to_video_frame_resolver(
     )
 
     sample_id = uuid4()
-    filters = VideoFrameFilter(
-        sample_filter=SampleFilter(collection_id=uuid4()),
+    filters = VideoFrameAdjacentFilter(
+        video_frame_filter=VideoFrameFilter(
+            sample_filter=SampleFilter(collection_id=uuid4()),
+        )
     )
     request = AdjacentRequest(
         sample_type=SampleType.VIDEO_FRAME,
@@ -209,7 +212,9 @@ def test_get_adjacent_samples__raises_for_video_frame_with_wrong_filter_type(
         filters=ImageFilter(sample_filter=SampleFilter(collection_id=uuid4())),
     )
 
-    with pytest.raises(ValueError, match="Invalid filter provided. Expected VideoFrameFilter"):
+    with pytest.raises(
+        ValueError, match="Invalid filter provided. Expected VideoFrameAdjacentFilter"
+    ):
         get_adjacent_samples(
             session=db_session,
             sample_id=uuid4(),
