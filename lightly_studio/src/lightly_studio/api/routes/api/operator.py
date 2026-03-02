@@ -8,44 +8,26 @@ from uuid import UUID
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 
-from lightly_studio.api.routes.api.status import HTTP_STATUS_NOT_FOUND
+from lightly_studio.api.routes.api.status import (
+    HTTP_STATUS_NOT_FOUND,
+    HTTP_STATUS_UNPROCESSABLE_ENTITY,
+)
 from lightly_studio.db_manager import SessionDep
 from lightly_studio.plugins import operator_context
 from lightly_studio.plugins.base_operator import OperatorResult
-from lightly_studio.plugins.operator_context import ExecutionContext
+from lightly_studio.plugins.operator_context import AnyFilter, ExecutionContext
 from lightly_studio.plugins.operator_registry import RegisteredOperatorMetadata, operator_registry
 from lightly_studio.plugins.parameter import BaseParameter
 from lightly_studio.resolvers import collection_resolver
-from lightly_studio.resolvers.annotations.annotations_filter import AnnotationsFilter
-from lightly_studio.resolvers.group_resolver.group_filter import GroupFilter
-from lightly_studio.resolvers.image_filter import ImageFilter
-from lightly_studio.resolvers.sample_resolver.sample_filter import SampleFilter
-from lightly_studio.resolvers.video_frame_resolver.video_frame_filter import VideoFrameFilter
-from lightly_studio.resolvers.video_resolver.video_filter import VideoFilter
 
 operator_router = APIRouter(prefix="/operators", tags=["operators"])
 
-HTTP_STATUS_UNPROCESSABLE = 422
-
 
 class OperatorContextRequest(BaseModel):
-    """Client-supplied execution context for scoped operator calls.
-
-    If ``sample_id`` is provided, the API translates it to a sample-id filter
-    before invoking the operator.
-    """
+    """Client-supplied execution context for scoped operator calls."""
 
     collection_id: UUID | None = None
-    sample_id: UUID | None = None
-    filter: (
-        ImageFilter
-        | VideoFilter
-        | VideoFrameFilter
-        | AnnotationsFilter
-        | GroupFilter
-        | SampleFilter
-        | None
-    ) = None
+    filter: AnyFilter = None
 
 
 class ExecuteOperatorRequest(BaseModel):
@@ -127,7 +109,7 @@ def execute_operator(
     )
     if not any(scope in operator.supported_scopes for scope in collection_scopes):
         raise HTTPException(
-            status_code=HTTP_STATUS_UNPROCESSABLE,
+            status_code=HTTP_STATUS_UNPROCESSABLE_ENTITY,
             detail=(
                 f"Operator '{operator_id}' does not support scope(s) "
                 f"{[scope.value for scope in collection_scopes]}. "
@@ -135,15 +117,9 @@ def execute_operator(
             ),
         )
 
-    # Construct the filter: if sample_id is provided it is preferred against the provided filter.
-
-    effective_filter = context.filter
-    if context.sample_id is not None:
-        effective_filter = SampleFilter(sample_ids=[context.sample_id])
-
     # Execute the operator
     return operator.execute(
         session=session,
-        context=ExecutionContext(collection_id=collection_id, filter=effective_filter),
+        context=ExecutionContext(collection_id=collection_id, filter=context.filter),
         parameters=request.parameters,
     )

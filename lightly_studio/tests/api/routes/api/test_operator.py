@@ -244,58 +244,6 @@ def test_execute_operator__scope_mismatch(
     assert response.status_code == HTTP_STATUS_UNPROCESSABLE_ENTITY
 
 
-def test_execute_operator__context_filter_passed_through(
-    test_client: TestClient,
-    db_session: Session,
-    collection_id: UUID,
-    isolated_operator_registry: OperatorRegistry,
-) -> None:
-    """When sample_id is absent, context.filter is forwarded unchanged to the operator."""
-    isolated_operator_registry.register(ContextCapturingOperator())
-    operator_id = _get_operator_id_by_name(isolated_operator_registry, "context-capturing")
-    image_collection = helpers_resolvers.create_collection(
-        session=db_session, sample_type=SampleType.IMAGE
-    )
-
-    response = test_client.post(
-        f"/api/operators/collections/{collection_id}/{operator_id}/execute",
-        json={
-            "parameters": {},
-            "context": {"collection_id": str(image_collection.collection_id), "filter": {}},
-        },
-    )
-
-    assert response.status_code == HTTP_STATUS_OK
-    assert response.json()["message"].endswith(":ImageFilter")
-
-
-def test_execute_operator__sample_id_builds_sample_filter(
-    test_client: TestClient,
-    db_session: Session,
-    collection_id: UUID,
-    isolated_operator_registry: OperatorRegistry,
-) -> None:
-    isolated_operator_registry.register(ContextCapturingOperator())
-    operator_id = _get_operator_id_by_name(isolated_operator_registry, "context-capturing")
-    image_collection = helpers_resolvers.create_collection(
-        session=db_session, sample_type=SampleType.IMAGE
-    )
-
-    response = test_client.post(
-        f"/api/operators/collections/{collection_id}/{operator_id}/execute",
-        json={
-            "parameters": {},
-            "context": {
-                "collection_id": str(image_collection.collection_id),
-                "sample_id": str(uuid4()),
-            },
-        },
-    )
-
-    assert response.status_code == HTTP_STATUS_OK
-    assert response.json()["message"].endswith(":SampleFilter")
-
-
 @dataclass
 class TestOperator(BaseOperator):
     name: str = "test operator"

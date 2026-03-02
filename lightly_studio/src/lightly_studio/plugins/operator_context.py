@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from enum import Enum
+from typing import Union
 from uuid import UUID
 
 from lightly_studio.models.collection import SampleType
@@ -13,6 +14,10 @@ from lightly_studio.resolvers.image_filter import ImageFilter
 from lightly_studio.resolvers.sample_resolver.sample_filter import SampleFilter
 from lightly_studio.resolvers.video_frame_resolver.video_frame_filter import VideoFrameFilter
 from lightly_studio.resolvers.video_resolver.video_filter import VideoFilter
+
+AnyFilter = Union[
+    ImageFilter, VideoFrameFilter, VideoFilter, AnnotationsFilter, GroupFilter, SampleFilter, None
+]
 
 
 @dataclass
@@ -24,15 +29,7 @@ class ExecutionContext:
     """
 
     collection_id: UUID
-    filter: (
-        ImageFilter
-        | VideoFrameFilter
-        | VideoFilter
-        | AnnotationsFilter
-        | GroupFilter
-        | SampleFilter
-        | None
-    ) = None
+    filter: AnyFilter = None
 
 
 class OperatorScope(str, Enum):
