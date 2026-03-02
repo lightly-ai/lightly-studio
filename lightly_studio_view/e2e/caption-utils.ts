@@ -45,7 +45,6 @@ export class CaptionUtils {
 
         const captionCountBefore = await this.getCaptionCount();
         await captionField.getByTestId('delete-caption-button').click();
-        await this.page.getByTestId('confirm-delete-caption-button').click();
         await expect(this.page.getByTestId('caption-field')).toHaveCount(captionCountBefore - 1);
     }
 
