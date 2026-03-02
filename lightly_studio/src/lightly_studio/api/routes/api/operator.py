@@ -10,7 +10,6 @@ from pydantic import BaseModel
 
 from lightly_studio.api.routes.api.status import HTTP_STATUS_NOT_FOUND
 from lightly_studio.db_manager import SessionDep
-from lightly_studio.models.collection import SampleType
 from lightly_studio.plugins import operator_context
 from lightly_studio.plugins.base_operator import OperatorResult
 from lightly_studio.plugins.operator_context import ExecutionContext
@@ -38,7 +37,15 @@ class OperatorContextRequest(BaseModel):
 
     collection_id: UUID | None = None
     sample_id: UUID | None = None
-    filter: ImageFilter | VideoFilter | VideoFrameFilter | None = None
+    filter: (
+        ImageFilter
+        | VideoFilter
+        | VideoFrameFilter
+        | AnnotationsFilter
+        | GroupFilter
+        | SampleFilter
+        | None
+    ) = None
 
 
 class ExecuteOperatorRequest(BaseModel):
@@ -129,9 +136,10 @@ def execute_operator(
         )
 
     # Construct the filter: if sample_id is provided it is preferred against the provided filter.
-    effective_filter = _build_filter_from_context(
-        context=context, sample_type=collection.sample_type
-    )
+
+    effective_filter = context.filter
+    if context.sample_id is not None:
+        effective_filter = SampleFilter(sample_ids=[context.sample_id])
 
     # Execute the operator
     return operator.execute(
@@ -139,32 +147,3 @@ def execute_operator(
         context=ExecutionContext(collection_id=collection_id, filter=effective_filter),
         parameters=request.parameters,
     )
-
-
-def _build_filter_from_context(
-    context: OperatorContextRequest,
-    sample_type: SampleType,
-) -> ImageFilter | VideoFilter | VideoFrameFilter | GroupFilter | AnnotationsFilter | None:
-    """Build the typed filter to pass to the operator.
-
-    If ``context.sample_id`` is set, wraps it in a ``SampleFilter`` and returns the
-    appropriate typed filter for the collection. Otherwise passes ``context.filter``
-    through unchanged.
-    """
-    if context.sample_id is None:
-        return context.filter
-
-    if sample_type in {SampleType.ANNOTATION, SampleType.CAPTION}:
-        return AnnotationsFilter(sample_ids=[context.sample_id])
-
-    sample_filter = SampleFilter(sample_ids=[context.sample_id])
-    result: VideoFilter | VideoFrameFilter | ImageFilter | GroupFilter | None = None
-    if sample_type == SampleType.VIDEO:
-        result = VideoFilter(sample_filter=sample_filter)
-    elif sample_type == SampleType.VIDEO_FRAME:
-        result = VideoFrameFilter(sample_filter=sample_filter)
-    elif sample_type == SampleType.IMAGE:
-        result = ImageFilter(sample_filter=sample_filter)
-    elif sample_type == SampleType.GROUP:
-        result = GroupFilter(sample_filter=sample_filter)
-    return result

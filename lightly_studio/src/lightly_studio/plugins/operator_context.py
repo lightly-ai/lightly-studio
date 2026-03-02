@@ -10,6 +10,7 @@ from lightly_studio.models.collection import SampleType
 from lightly_studio.resolvers.annotations.annotations_filter import AnnotationsFilter
 from lightly_studio.resolvers.group_resolver.group_filter import GroupFilter
 from lightly_studio.resolvers.image_filter import ImageFilter
+from lightly_studio.resolvers.sample_resolver.sample_filter import SampleFilter
 from lightly_studio.resolvers.video_frame_resolver.video_frame_filter import VideoFrameFilter
 from lightly_studio.resolvers.video_resolver.video_filter import VideoFilter
 
@@ -24,7 +25,13 @@ class ExecutionContext:
 
     collection_id: UUID
     filter: (
-        ImageFilter | VideoFrameFilter | VideoFilter | AnnotationsFilter | GroupFilter | None
+        ImageFilter
+        | VideoFrameFilter
+        | VideoFilter
+        | AnnotationsFilter
+        | GroupFilter
+        | SampleFilter
+        | None
     ) = None
 
 

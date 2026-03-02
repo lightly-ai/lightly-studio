@@ -2738,7 +2738,7 @@ export interface components {
             /** Sample Id */
             sample_id?: string | null;
             /** Filter */
-            filter?: components["schemas"]["ImageFilter"] | components["schemas"]["VideoFilter"] | components["schemas"]["VideoFrameFilter"] | null;
+            filter?: components["schemas"]["ImageFilter"] | components["schemas"]["VideoFilter"] | components["schemas"]["VideoFrameFilter"] | components["schemas"]["AnnotationsFilter"] | components["schemas"]["GroupFilter"] | components["schemas"]["SampleFilter"] | null;
         };
         /** OperatorResult */
         OperatorResult: {
