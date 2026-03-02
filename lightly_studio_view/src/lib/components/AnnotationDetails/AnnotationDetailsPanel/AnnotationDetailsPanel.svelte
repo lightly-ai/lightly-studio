@@ -10,7 +10,6 @@
     import { useDeleteAnnotation } from '$lib/hooks/useDeleteAnnotation/useDeleteAnnotation';
     import { toast } from 'svelte-sonner';
     import { useAnnotationDeleteNavigation } from '$lib/hooks/useAnnotationDeleteNavigation/useAnnotationDeleteNavigation';
-    import DeleteAnnotationPopUp from '$lib/components/DeleteAnnotationPopUp/DeleteAnnotationPopUp.svelte';
 
     const {
         annotation,
@@ -74,13 +73,12 @@
             {@render children()}
 
             {#if $isEditingMode}
-                <DeleteAnnotationPopUp onDelete={handleDeleteAnnotation}>
-                    <Button
-                        variant="destructive"
-                        class="w-full"
-                        data-testid="delete-annotation-trigger">Delete annotation</Button
-                    >
-                </DeleteAnnotationPopUp>
+                <Button
+                    variant="destructive"
+                    class="w-full"
+                    data-testid="delete-annotation-trigger"
+                    onclick={handleDeleteAnnotation}>Delete annotation</Button
+                >
             {/if}
         </div>
     </CardContent>

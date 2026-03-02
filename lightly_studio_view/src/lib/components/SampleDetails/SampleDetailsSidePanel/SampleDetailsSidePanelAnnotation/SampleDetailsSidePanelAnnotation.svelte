@@ -11,7 +11,6 @@
     import { useGlobalStorage } from '$lib/hooks/useGlobalStorage';
     import { addAnnotationLabelChangeToUndoStack } from '$lib/services/addAnnotationLabelChangeToUndoStack';
     import { useUpdateAnnotationsMutation } from '$lib/hooks/useUpdateAnnotationsMutation/useUpdateAnnotationsMutation';
-    import DeleteAnnotationPopUp from '$lib/components/DeleteAnnotationPopUp/DeleteAnnotationPopUp.svelte';
     import AnnotationColorLegend from '$lib/components/AnnotationColorLegend/AnnotationColorLegend.svelte';
 
     const {
@@ -43,12 +42,6 @@
         isLocked?: boolean;
         onToggleLock?: (e: MouseEvent) => void;
     } = $props();
-
-    $effect(() => {
-        if (showDeleteConfirmation) {
-            return onDelete?.();
-        }
-    });
 
     const formatAnnotationType = (annotationType: string) => {
         switch (annotationType) {
@@ -110,7 +103,7 @@
         return item ? item : { value: annotationLabelName, label: annotationLabelName };
     });
 
-    let showDeleteConfirmation = $state(false);
+
 </script>
 
 <div
@@ -230,9 +223,15 @@
                         {/if}
 
                         {#if $isEditingMode}
-                            <DeleteAnnotationPopUp onDelete={onDeleteAnnotation}>
+                            <button
+                                type="button"
+                                onclick={(e) => {
+                                    e.stopPropagation();
+                                    onDeleteAnnotation(e);
+                                }}
+                            >
                                 <Trash2 class="size-4" />
-                            </DeleteAnnotationPopUp>
+                            </button>
                         {/if}
                     </div>
                 </div>

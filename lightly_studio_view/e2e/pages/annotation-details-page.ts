@@ -35,10 +35,6 @@ export class AnnotationDetailsPage {
         return this.page.getByTestId('delete-annotation-trigger');
     }
 
-    getAnnotationConfirmDeleteButton() {
-        return this.page.getByTestId('confirm-delete-annotation');
-    }
-
     getAnnotationHeight() {
         return this.page.getByTestId('annotation-metadata-height');
     }
