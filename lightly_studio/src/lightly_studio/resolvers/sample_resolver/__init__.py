@@ -9,8 +9,8 @@ from lightly_studio.resolvers.sample_resolver.get_many_by_id import get_many_by_
 from lightly_studio.resolvers.sample_resolver.get_sample_details import (
     get_sample_details,
 )
-from lightly_studio.resolvers.sample_resolver.get_sample_type import (
-    get_sample_type,
+from lightly_studio.resolvers.sample_resolver.get_sample_type_by_id import (
+    get_sample_type_by_id,
 )
 
 __all__ = [
@@ -21,5 +21,5 @@ __all__ = [
     "get_filtered_samples",
     "get_many_by_id",
     "get_sample_details",
-    "get_sample_type",
+    "get_sample_type_by_id",
 ]
