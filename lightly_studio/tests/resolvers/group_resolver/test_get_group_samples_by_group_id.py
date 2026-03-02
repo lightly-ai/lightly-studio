@@ -5,7 +5,7 @@ from lightly_studio.resolvers import collection_resolver, group_resolver
 from tests.helpers_resolvers import ImageStub, create_collection, create_images
 
 
-def test_get_group_samples(db_session: Session) -> None:
+def test_get_group_samples_by_group_id(db_session: Session) -> None:
     # Create collections
     group_col = create_collection(session=db_session, sample_type=SampleType.GROUP)
     components = collection_resolver.create_group_components(
@@ -43,7 +43,7 @@ def test_get_group_samples(db_session: Session) -> None:
     assert back_image.sample_id in sample_ids
 
 
-def test_get_group_samples__partial_group(db_session: Session) -> None:
+def test_get_group_samples_by_group_id__partial_group(db_session: Session) -> None:
     # Create collections
     group_col = create_collection(session=db_session, sample_type=SampleType.GROUP)
     components = collection_resolver.create_group_components(
@@ -74,7 +74,7 @@ def test_get_group_samples__partial_group(db_session: Session) -> None:
     assert samples[0].sample_id == front_image.sample_id
 
 
-def test_get_group_samples__empty_result(db_session: Session) -> None:
+def test_get_group_samples_by_group_id__empty_result(db_session: Session) -> None:
     # Create collections
     group_col = create_collection(session=db_session, sample_type=SampleType.GROUP)
     components = collection_resolver.create_group_components(
@@ -100,7 +100,7 @@ def test_get_group_samples__empty_result(db_session: Session) -> None:
     assert len(samples) == 0
 
 
-def test_get_group_samples__multiple_groups(db_session: Session) -> None:
+def test_get_group_samples_by_group_id__multiple_groups(db_session: Session) -> None:
     # Create collections
     group_col = create_collection(session=db_session, sample_type=SampleType.GROUP)
     components = collection_resolver.create_group_components(
