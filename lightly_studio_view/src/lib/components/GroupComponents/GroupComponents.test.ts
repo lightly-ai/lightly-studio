@@ -11,7 +11,7 @@ describe('GroupComponents', () => {
             }
         });
 
-        const items = container.querySelectorAll('.image-item');
+        const items = container.querySelectorAll('.group-item');
         expect(items).toHaveLength(3);
     });
 
@@ -23,7 +23,7 @@ describe('GroupComponents', () => {
             }
         });
 
-        const items = container.querySelectorAll('.image-item');
+        const items = container.querySelectorAll('.group-item');
         expect(items[0]).toHaveClass('opacity-50');
         expect(items[0]).not.toHaveClass('outline');
         expect(items[1]).toHaveClass('outline');
@@ -41,7 +41,7 @@ describe('GroupComponents', () => {
             }
         });
 
-        const items = container.querySelectorAll('.image-item');
+        const items = container.querySelectorAll('.group-item');
         expect(items[0]).not.toHaveClass('opacity-50');
         expect(items[1]).toHaveClass('opacity-50');
         expect(items[2]).toHaveClass('opacity-50');
@@ -58,7 +58,7 @@ describe('GroupComponents', () => {
             }
         });
 
-        const items = container.querySelectorAll('.image-item');
+        const items = container.querySelectorAll('.group-item');
         await user.click(items[1] as HTMLElement);
 
         expect(onclick).toHaveBeenCalledWith(1);
@@ -76,7 +76,7 @@ describe('GroupComponents', () => {
             }
         });
 
-        const items = container.querySelectorAll('.image-item');
+        const items = container.querySelectorAll('.group-item');
         (items[2] as HTMLElement).focus();
         await user.keyboard('{Enter}');
 
@@ -95,7 +95,7 @@ describe('GroupComponents', () => {
             }
         });
 
-        const items = container.querySelectorAll('.image-item');
+        const items = container.querySelectorAll('.group-item');
         (items[0] as HTMLElement).focus();
         await user.keyboard('{Space}');
         await user.keyboard('{Escape}');
@@ -112,7 +112,7 @@ describe('GroupComponents', () => {
             }
         });
 
-        const items = container.querySelectorAll('.image-item');
+        const items = container.querySelectorAll('.group-item');
 
         await user.click(items[0] as HTMLElement);
         (items[1] as HTMLElement).focus();
@@ -126,7 +126,7 @@ describe('GroupComponents', () => {
             }
         });
 
-        const items = container.querySelectorAll('.image-item');
+        const items = container.querySelectorAll('.group-item');
         expect(items[0]).toHaveClass('opacity-50');
         expect(items[1]).toHaveClass('opacity-50');
     });

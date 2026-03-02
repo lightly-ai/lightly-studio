@@ -19,7 +19,7 @@
     <div class="flex w-[200px] flex-col gap-4 p-4">
         {#each Array.from({ length: itemsCount }, (_, index) => index) as index}
             <div
-                class="image-item overflow-hidden {index === selectedIndex
+                class="group-item overflow-hidden {index === selectedIndex
                     ? 'rounded opacity-100 outline outline-4 outline-offset-2 outline-primary/80'
                     : 'opacity-50'} [&_img]:transition-transform [&_img]:duration-300 [&_img]:ease-in-out hover:[&_img]:scale-125"
                 role="button"

@@ -11,18 +11,18 @@
     });
 
     const imageItems = [
-        { src: 'https://picsum.photos/190?random=1', type: 'image' },
-        { src: 'https://picsum.photos/190?random=2', type: 'image' },
-        { src: 'https://picsum.photos/190?random=3', type: 'image' },
-        { src: 'https://picsum.photos/190?random=4', type: 'image' },
-        { src: 'https://picsum.photos/190?random=5', type: 'image' }
+        'https://picsum.photos/190?random=1',
+        'https://picsum.photos/190?random=2',
+        'https://picsum.photos/190?random=3',
+        'https://picsum.photos/190?random=4',
+        'https://picsum.photos/190?random=5'
     ];
 
     const videoItems = [
-        { src: 'https://www.w3schools.com/html/mov_bbb.mp4', type: 'video' },
-        { src: 'https://www.w3schools.com/html/movie.mp4', type: 'video' },
-        { src: 'https://www.w3schools.com/html/mov_bbb.mp4', type: 'video' },
-        { src: 'https://www.w3schools.com/html/movie.mp4', type: 'video' }
+        'https://www.w3schools.com/html/mov_bbb.mp4',
+        'https://www.w3schools.com/html/movie.mp4',
+        'https://www.w3schools.com/html/mov_bbb.mp4',
+        'https://www.w3schools.com/html/movie.mp4'
     ];
 </script>
 
@@ -38,7 +38,7 @@
         onclick={(index) => (selectedImageIndex = index)}
     >
         {#snippet renderItem({ index })}
-            <Image src={imageItems[index].src} />
+            <Image src={imageItems[index]} />
         {/snippet}
     </GroupComponents>
 </Story>
@@ -50,7 +50,7 @@
         onclick={(index) => (selectedVideoIndex = index)}
     >
         {#snippet renderItem({ index })}
-            <VideoPreview src={videoItems[index].src} />
+            <VideoPreview src={videoItems[index]} />
         {/snippet}
     </GroupComponents>
 </Story>
