@@ -6,8 +6,7 @@
     import VideoFrameAnnotationItem from '../VideoFrameAnnotationItem/VideoFrameAnnotationItem.svelte';
     import { page } from '$app/state';
 
-    let { videoFrame, index, size }: { videoFrame: VideoFrameView; index: number; size: number } =
-        $props();
+    let { videoFrame, size }: { videoFrame: VideoFrameView; size: number } = $props();
 
     const datasetId = $derived(page.params.dataset_id!);
     const collectionType = $derived(page.params.collection_type!);
@@ -20,8 +19,7 @@
                     datasetId,
                     collectionType,
                     collectionId,
-                    videoFrame.sample_id,
-                    index
+                    videoFrame.sample_id
                 )
             );
         }

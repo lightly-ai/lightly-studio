@@ -28,7 +28,7 @@
     {rootCollection}
     section="Videos"
     subsection="Video"
+    index={$sampleAdjacentQuery?.data?.current_sample_position}
     navigateTo={(collectionId) => routeHelpers.toVideos(datasetId, collectionType, collectionId)}
-    index={($sampleAdjacentQuery?.data?.current_sample_position ?? 1) - 1}
     totalCount={$sampleAdjacentQuery?.data?.total_count}
 />
