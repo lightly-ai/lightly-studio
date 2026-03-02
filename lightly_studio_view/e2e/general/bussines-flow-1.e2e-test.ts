@@ -103,6 +103,13 @@ test.describe('bussines-flow1', () => {
         await samplesPage.pressTag(catsTagName);
         expect(await samplesPage.getSamples().count()).toBe(cocoDataset.defaultPageSize);
 
+        // We need to wait after clicking the clear button for the grid view to be updated
+        const clearResponsePromise = page.waitForResponse(
+            (response) => response.url().includes('/images/list') && response.status() === 200
+        );
+        await page.getByTestId('search-clear-button').click();
+        await clearResponsePromise;
+
         await samplesPage.doubleClickFirstSample();
         await expect(sampleDetailsPage.getSampleName()).toHaveText(cocoDataset.firstSampleName);
     });
