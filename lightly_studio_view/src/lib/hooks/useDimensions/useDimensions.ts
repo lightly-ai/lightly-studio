@@ -3,19 +3,15 @@ import { loadDimensionBounds } from '$lib/services/loadDimensionBounds';
 import { useSessionStorage } from '$lib/hooks/useSessionStorage/useSessionStorage';
 import { get, writable } from 'svelte/store';
 
-const dimensionsBounds = useSessionStorage<DimensionBounds>('lightlyStudio_dimensions_bounds', {
-    min_width: 0,
-    max_width: 0,
-    min_height: 0,
-    max_height: 0
-});
+const dimensionsBounds = useSessionStorage<DimensionBounds | null>(
+    'lightlyStudio_dimensions_bounds',
+    null
+);
 
-const dimensionsValues = useSessionStorage<DimensionBounds>('lightlyStudio_dimensions_values', {
-    min_width: 0,
-    max_width: 0,
-    min_height: 0,
-    max_height: 0
-});
+const dimensionsValues = useSessionStorage<DimensionBounds | null>(
+    'lightlyStudio_dimensions_values',
+    null
+);
 
 const updateDimensionsValues = (bounds: DimensionBounds) => {
     dimensionsValues.set(bounds);
@@ -24,12 +20,16 @@ const updateDimensionsValues = (bounds: DimensionBounds) => {
 const updateDimensionsBounds = (bounds: DimensionBounds) => {
     dimensionsBounds.set(bounds);
 };
-const isInitialized = writable(false as boolean);
+const lastCollectionId = writable<string | null>(null);
 
 const loadInitialDimensionBounds = async (collection_id: string) => {
-    if (get(isInitialized)) {
+    if (get(lastCollectionId) === collection_id) {
         return;
     }
+
+    lastCollectionId.set(collection_id);
+    dimensionsBounds.set(null);
+    dimensionsValues.set(null);
 
     const { data: dimensionBoundsData } = await loadDimensionBounds({
         collection_id: collection_id
@@ -39,8 +39,6 @@ const loadInitialDimensionBounds = async (collection_id: string) => {
         dimensionsBounds.set(dimensionBoundsData);
         dimensionsValues.set(dimensionBoundsData);
     }
-
-    isInitialized.set(true);
 };
 
 export const useDimensions = (collection_id?: string) => {
