@@ -12,6 +12,7 @@ from lightly_studio.resolvers.image_resolver.get_dimension_bounds import get_dim
 from lightly_studio.resolvers.image_resolver.get_many_by_id import get_many_by_id
 from lightly_studio.resolvers.image_resolver.get_sample_ids import get_sample_ids
 from lightly_studio.resolvers.image_resolver.get_samples_excluding import get_samples_excluding
+from lightly_studio.resolvers.image_resolver.get_view_by_id import get_view_by_id
 
 __all__ = [
     "create_many",
@@ -24,4 +25,5 @@ __all__ = [
     "get_many_by_id",
     "get_sample_ids",
     "get_samples_excluding",
+    "get_view_by_id",
 ]
