@@ -5,11 +5,10 @@ from __future__ import annotations
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from typing import Any
-from uuid import UUID
 
 from sqlmodel import Session
 
-from lightly_studio.plugins.operator_context import OperatorScope
+from lightly_studio.plugins.operator_context import ExecutionContext, OperatorScope
 from lightly_studio.plugins.parameter import BaseParameter
 
 
@@ -53,18 +52,18 @@ class BaseOperator(ABC):
         self,
         *,
         session: Session,
-        collection_id: UUID,
+        context: ExecutionContext,
         parameters: dict[str, Any],
     ) -> OperatorResult:
         """Execute the operator with the given parameters.
 
         Args:
             session: Database session.
-            collection_id: ID of the collection to operate on.
+            context: Execution context containing collection_id and optional filter.
             parameters: Parameters passed to the operator.
 
         Returns:
-            Dictionary with 'success' (bool) and 'message' (str) keys.
+            An OperatorResult with success flag and message.
         """
         # TODO (Jonas 11/2025): The parameters dict should be validated against self.parameters,
         # for now we leave it to the operator implementation.
