@@ -21,7 +21,7 @@ export class CaptionsPage {
         await this.page.goto('/');
         const menuButton = this.page
             .getByTestId('navigation-menu')
-            .getByRole('button')
+            .getByRole('link')
             .nth(menuLevel);
 
         // If this button IS the captions button, click it directly (no dropdown).
