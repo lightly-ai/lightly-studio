@@ -551,10 +551,10 @@
                                                         ? 'ring-2 ring-primary'
                                                         : ''}"
                                                 >
-                                                    <span
-                                                        class="mr-2 flex items-center gap-2 truncate text-muted-foreground"
-                                                    >
-                                                        {#if activeImage}
+                                                    {#if activeImage}
+                                                        <span
+                                                            class="mr-2 flex items-center gap-2 truncate text-muted-foreground"
+                                                        >
                                                             {#if previewUrl}
                                                                 <img
                                                                     src={previewUrl}
@@ -565,10 +565,18 @@
                                                                 <ImageIcon class="h-4 w-4" />
                                                             {/if}
                                                             {activeImage}
-                                                        {:else}
+                                                        </span>
+                                                    {:else}
+                                                        <button
+                                                            type="button"
+                                                            class="mr-2 min-w-0 flex-1 cursor-text truncate text-left text-muted-foreground"
+                                                            onclick={() => {
+                                                                submittedQueryText = '';
+                                                            }}
+                                                        >
                                                             {submittedQueryText}
-                                                        {/if}
-                                                    </span>
+                                                        </button>
+                                                    {/if}
                                                     <button
                                                         class="ml-auto hover:text-foreground"
                                                         onclick={clearSearch}
@@ -661,10 +669,10 @@
                                                     ? 'ring-2 ring-primary'
                                                     : ''}"
                                             >
-                                                <span
-                                                    class="mr-2 flex items-center gap-2 truncate text-muted-foreground"
-                                                >
-                                                    {#if activeImage}
+                                                {#if activeImage}
+                                                    <span
+                                                        class="mr-2 flex items-center gap-2 truncate text-muted-foreground"
+                                                    >
                                                         {#if previewUrl}
                                                             <img
                                                                 src={previewUrl}
@@ -675,14 +683,23 @@
                                                             <ImageIcon class="h-4 w-4" />
                                                         {/if}
                                                         {activeImage}
-                                                    {:else}
+                                                    </span>
+                                                {:else}
+                                                    <button
+                                                        type="button"
+                                                        class="mr-2 min-w-0 flex-1 cursor-text truncate text-left text-muted-foreground"
+                                                        onclick={() => {
+                                                            submittedQueryText = '';
+                                                        }}
+                                                    >
                                                         {submittedQueryText}
-                                                    {/if}
-                                                </span>
+                                                    </button>
+                                                {/if}
                                                 <button
                                                     class="ml-auto hover:text-foreground"
                                                     onclick={clearSearch}
                                                     title="Clear search"
+                                                    data-testid="search-clear-button"
                                                 >
                                                     <X class="h-4 w-4" />
                                                 </button>
