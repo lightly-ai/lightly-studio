@@ -1,14 +1,13 @@
 import { render } from '@testing-library/svelte';
 import { describe, it, expect, vi } from 'vitest';
 import userEvent from '@testing-library/user-event';
-import GroupComponents from './GroupComponents.svelte';
+import GroupComponentsTestWrapper from './GroupComponents.test-wrapper.svelte';
 
 describe('GroupComponents', () => {
     it('renders correct number of items', () => {
-        const { container } = render(GroupComponents, {
+        const { container } = render(GroupComponentsTestWrapper, {
             props: {
-                itemsCount: 3,
-                renderItem: ({ index }: { index: number }) => `Item ${index}`
+                itemsCount: 3
             }
         });
 
@@ -17,29 +16,28 @@ describe('GroupComponents', () => {
     });
 
     it('applies selected class to selected item', () => {
-        const { container } = render(GroupComponents, {
+        const { container } = render(GroupComponentsTestWrapper, {
             props: {
                 itemsCount: 3,
-                selectedIndex: 1,
-                renderItem: ({ index }: { index: number }) => `Item ${index}`
+                selectedIndex: 1
             }
         });
 
         const items = container.querySelectorAll('.image-item');
         expect(items[0]).toHaveClass('opacity-50');
-        expect(items[0]).not.toHaveClass('selected');
-        expect(items[1]).toHaveClass('selected');
+        expect(items[0]).not.toHaveClass('outline');
+        expect(items[1]).toHaveClass('outline');
+        expect(items[1]).toHaveClass('opacity-100');
         expect(items[1]).not.toHaveClass('opacity-50');
         expect(items[2]).toHaveClass('opacity-50');
-        expect(items[2]).not.toHaveClass('selected');
+        expect(items[2]).not.toHaveClass('outline');
     });
 
     it('applies opacity-50 to non-selected items', () => {
-        const { container } = render(GroupComponents, {
+        const { container } = render(GroupComponentsTestWrapper, {
             props: {
                 itemsCount: 3,
-                selectedIndex: 0,
-                renderItem: ({ index }: { index: number }) => `Item ${index}`
+                selectedIndex: 0
             }
         });
 
@@ -53,11 +51,10 @@ describe('GroupComponents', () => {
         const user = userEvent.setup();
         const onclick = vi.fn();
 
-        const { container } = render(GroupComponents, {
+        const { container } = render(GroupComponentsTestWrapper, {
             props: {
                 itemsCount: 3,
-                onclick,
-                renderItem: ({ index }: { index: number }) => `Item ${index}`
+                onclick
             }
         });
 
@@ -72,11 +69,10 @@ describe('GroupComponents', () => {
         const user = userEvent.setup();
         const onclick = vi.fn();
 
-        const { container } = render(GroupComponents, {
+        const { container } = render(GroupComponentsTestWrapper, {
             props: {
                 itemsCount: 3,
-                onclick,
-                renderItem: ({ index }: { index: number }) => `Item ${index}`
+                onclick
             }
         });
 
@@ -92,11 +88,10 @@ describe('GroupComponents', () => {
         const user = userEvent.setup();
         const onclick = vi.fn();
 
-        const { container } = render(GroupComponents, {
+        const { container } = render(GroupComponentsTestWrapper, {
             props: {
                 itemsCount: 3,
-                onclick,
-                renderItem: ({ index }: { index: number }) => `Item ${index}`
+                onclick
             }
         });
 
@@ -111,26 +106,23 @@ describe('GroupComponents', () => {
     it('works without onclick handler', async () => {
         const user = userEvent.setup();
 
-        const { container } = render(GroupComponents, {
+        const { container } = render(GroupComponentsTestWrapper, {
             props: {
-                itemsCount: 2,
-                renderItem: ({ index }: { index: number }) => `Item ${index}`
+                itemsCount: 2
             }
         });
 
         const items = container.querySelectorAll('.image-item');
 
-        // Should not throw
         await user.click(items[0] as HTMLElement);
         (items[1] as HTMLElement).focus();
         await user.keyboard('{Enter}');
     });
 
     it('defaults selectedIndex to -1 when not provided', () => {
-        const { container } = render(GroupComponents, {
+        const { container } = render(GroupComponentsTestWrapper, {
             props: {
-                itemsCount: 2,
-                renderItem: ({ index }: { index: number }) => `Item ${index}`
+                itemsCount: 2
             }
         });
 

@@ -17,11 +17,11 @@
 
 <LayoutCard>
     <div class="flex w-[200px] flex-col gap-4 p-4">
-        {#each Array(itemsCount) as _, index}
+        {#each Array.from({ length: itemsCount }, (_, index) => index) as index}
             <div
                 class="image-item overflow-hidden {index === selectedIndex
-                    ? 'selected'
-                    : 'opacity-50'}"
+                    ? 'rounded opacity-100 outline outline-4 outline-offset-2 outline-primary/80'
+                    : 'opacity-50'} [&_img]:transition-transform [&_img]:duration-300 [&_img]:ease-in-out hover:[&_img]:scale-125"
                 role="button"
                 tabindex="0"
                 onclick={() => onclick?.(index)}
@@ -32,17 +32,3 @@
         {/each}
     </div>
 </LayoutCard>
-
-<style>
-    .selected {
-        @apply rounded opacity-100 outline outline-4 outline-offset-2 outline-primary/80;
-    }
-
-    .image-item :global(img) {
-        @apply transition-transform duration-300 ease-in-out;
-    }
-
-    .image-item:hover :global(img) {
-        @apply scale-125;
-    }
-</style>
