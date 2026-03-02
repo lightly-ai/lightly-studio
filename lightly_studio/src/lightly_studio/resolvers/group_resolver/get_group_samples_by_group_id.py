@@ -1,4 +1,4 @@
-"""Implementation of get_group_components resolver function."""
+"""Implementation of get_group_samples_by_group_id resolver function."""
 
 from __future__ import annotations
 
@@ -30,9 +30,6 @@ def get_group_samples_by_group_id(
     Returns:
         A sequence of SampleTable objects representing all component samples that belong
         to the specified group sample. Returns an empty sequence if no components are found.
-
-    Raises:
-        ValueError: If the group sample does not exist in the database.
 
     """
     # Get component samples
