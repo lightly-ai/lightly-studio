@@ -14,7 +14,7 @@ from tests.helpers_resolvers import (
 )
 
 
-def test_get_view_basic(db_session: Session) -> None:
+def test_get_view_by_id(db_session: Session) -> None:
     """Test getting view for an image."""
     collection = create_collection(session=db_session)
     image = create_image(
@@ -34,7 +34,7 @@ def test_get_view_basic(db_session: Session) -> None:
     assert result.sample.sample_id == image.sample_id
 
 
-def test_get_view_with_annotations(db_session: Session) -> None:
+def test_get_view_by_id__with_annotations(db_session: Session) -> None:
     """Test getting view for an image with annotations."""
     collection = create_collection(session=db_session)
     image = create_image(
@@ -62,7 +62,7 @@ def test_get_view_with_annotations(db_session: Session) -> None:
     assert result.annotations[0].annotation_label.annotation_label_name == "test_label"
 
 
-def test_get_view_with_tags(db_session: Session) -> None:
+def test_get_view_by_id__with_tags(db_session: Session) -> None:
     """Test getting view for an image with tags."""
     collection = create_collection(session=db_session)
     image = create_image(
@@ -90,7 +90,7 @@ def test_get_view_with_tags(db_session: Session) -> None:
     assert result.tags[0].tag_id == tag.tag_id
 
 
-def test_get_view_with_metadata(db_session: Session) -> None:
+def test_get_view_by_id__with_metadata(db_session: Session) -> None:
     """Test getting view for an image with metadata."""
     collection = create_collection(session=db_session)
     image = create_image(
@@ -113,7 +113,7 @@ def test_get_view_with_metadata(db_session: Session) -> None:
     assert result.metadata_dict.data["test_key"] == "test_value"
 
 
-def test_get_view_with_captions(db_session: Session) -> None:
+def test_get_view_by_id__with_captions(db_session: Session) -> None:
     """Test getting view for an image with captions."""
     collection = create_collection(session=db_session)
     image = create_image(
@@ -136,7 +136,7 @@ def test_get_view_with_captions(db_session: Session) -> None:
     assert result.captions[0].text == "test caption"
 
 
-def test_get_view_empty_collections(db_session: Session) -> None:
+def test_get_view_by_id__empty_collections(db_session: Session) -> None:
     """Test getting view for an image with no annotations, tags, captions, or metadata."""
     collection = create_collection(session=db_session)
     image = create_image(
