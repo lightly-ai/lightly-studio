@@ -8,8 +8,17 @@
         isEmpty,
         hasNextPage,
         isFetchingNextPage,
-        onLoadMore
+        onLoadMore,
+        navigateToGroupDetails
     }: ComponentProps<typeof GroupsGrid> = $props();
 </script>
 
-<GroupsGrid {groups} {isLoading} {isEmpty} {hasNextPage} {isFetchingNextPage} {onLoadMore} />
+<GroupsGrid
+    {groups}
+    {isLoading}
+    {isEmpty}
+    {hasNextPage}
+    {isFetchingNextPage}
+    {onLoadMore}
+    {navigateToGroupDetails}
+/>

@@ -19,12 +19,7 @@
     }
 </script>
 
-<div
-    class="relative select-none dark:[color-scheme:dark]"
-    role="button"
-    tabindex="0"
-    {...containerProps}
->
+<div class="relative select-none dark:[color-scheme:dark]" {...containerProps}>
     <div
         class="relative overflow-hidden rounded-lg"
         style="width: {formatSize(width)}; height: {formatSize(height)};"
