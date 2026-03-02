@@ -1,4 +1,4 @@
-"""Implementation of get_samples_excluding function for images."""
+"""Implementation of get_view_by_id function for image."""
 
 from __future__ import annotations
 
@@ -24,7 +24,7 @@ def get_view_by_id(session: Session, sample_id: UUID) -> ImageView:
     Returns:
         The view for the given image table.
     """
-    image = image_resolver.get_by_id(session, sample_id)
+    image = image_resolver.get_by_id(session=session, sample_id=sample_id)
 
     if image is None:
         raise ValueError(f"Image with sample_id '{sample_id}' not found.")
