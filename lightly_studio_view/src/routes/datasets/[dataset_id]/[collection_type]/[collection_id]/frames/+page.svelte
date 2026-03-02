@@ -162,7 +162,7 @@
                     onSelect={handleSampleSelect}
                 >
                     {#snippet item()}
-                        <VideoFrameItem videoFrame={items[index]} {index} size={sampleSize} />
+                        <VideoFrameItem videoFrame={items[index]} size={sampleSize} />
                     {/snippet}
                 </SampleGridItem>
             {/if}

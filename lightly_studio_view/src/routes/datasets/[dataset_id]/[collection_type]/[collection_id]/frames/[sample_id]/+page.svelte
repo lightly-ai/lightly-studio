@@ -10,53 +10,18 @@
     import SampleDetailsPanel from '$lib/components/SampleDetails/SampleDetailsPanel.svelte';
     import MetadataSegment from '$lib/components/MetadataSegment/MetadataSegment.svelte';
     import { page } from '$app/state';
-    import VideoFrameNavigation from '$lib/components/VideoFrameNavigation/VideoFrameNavigation.svelte';
     import ViewVideoButton from '$lib/components/ViewVideoButton/ViewVideoButton.svelte';
+    import FrameDetailsNavigation from '$lib/components/FrameDetailsNavigation/FrameDetailsNavigation.svelte';
 
     const { data }: { data: PageData } = $props();
-    const { frameIndex, frameAdjacents, collection_id, sampleId } = $derived(data);
+    const { collection_id, sampleId } = $derived(data);
     const { refetch, videoFrame } = $derived(useFrame(sampleId));
 
     const sample = $derived($videoFrame.data);
 
     const datasetId = $derived(page.params.dataset_id!);
+
     const collectionType = $derived(page.params.collection_type!);
-
-    function goToNextFrame() {
-        if (frameIndex == null || !sample) return null;
-        if (!frameAdjacents) return null;
-
-        const sampleNext = $frameAdjacents?.sampleNext;
-        if (!sampleNext) return null;
-
-        goto(
-            routeHelpers.toFramesDetails(
-                datasetId,
-                collectionType,
-                collection_id,
-                sampleNext.sample_id,
-                frameIndex + 1
-            )
-        );
-    }
-
-    function goToPreviousFrame() {
-        if (frameIndex == null || !sample) return null;
-        if (!frameAdjacents) return null;
-
-        const samplePrevious = $frameAdjacents?.samplePrevious;
-        if (!samplePrevious) return null;
-
-        goto(
-            routeHelpers.toFramesDetails(
-                datasetId,
-                collectionType,
-                collection_id,
-                samplePrevious.sample_id,
-                frameIndex - 1
-            )
-        );
-    }
 
     const handleEscape = () => {
         goto(routeHelpers.toFrames(datasetId, collectionType, collection_id));
@@ -84,7 +49,7 @@
         {handleEscape}
     >
         {#snippet breadcrumb({ collection: rootCollection })}
-            <FrameDetailsBreadcrumb {rootCollection} {frameIndex} />
+            <FrameDetailsBreadcrumb {rootCollection} {sampleId} collectionId={collection_id} />
         {/snippet}
 
         {#snippet metadataValue()}
@@ -97,14 +62,7 @@
             {/if}
         {/snippet}
         {#snippet children()}
-            {#if frameAdjacents}
-                <VideoFrameNavigation
-                    hasPrevious={!!$frameAdjacents?.samplePrevious}
-                    hasNext={!!$frameAdjacents?.sampleNext}
-                    onPrevious={goToPreviousFrame}
-                    onNext={goToNextFrame}
-                />
-            {/if}
+            <FrameDetailsNavigation />
         {/snippet}
     </SampleDetailsPanel>
 {/if}
