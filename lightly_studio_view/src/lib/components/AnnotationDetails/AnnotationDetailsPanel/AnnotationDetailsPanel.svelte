@@ -78,7 +78,11 @@
             {#if $isEditingMode}
                 <Popover.Root bind:open={showDeleteConfirmation}>
                     <Popover.Trigger>
-                        <Button variant="destructive" class="w-full" data-testid="delete-annotation-trigger">
+                        <Button
+                            variant="destructive"
+                            class="w-full"
+                            data-testid="delete-annotation-trigger"
+                        >
                             Delete annotation
                         </Button>
                     </Popover.Trigger>

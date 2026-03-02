@@ -1,6 +1,5 @@
 <script lang="ts">
     import { toast } from 'svelte-sonner';
-    import { page } from '$app/state';
     import { Card, CardContent } from '$lib/components';
     import type { CaptionView, SampleView, VideoView } from '$lib/api/lightly_studio_local';
     import type { ImageSample } from '$lib/services/types';

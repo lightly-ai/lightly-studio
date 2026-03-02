@@ -1,5 +1,8 @@
 import { describe, it, expect, vi } from 'vitest';
-import { addCaptionDeleteToUndoStack, CAPTION_DELETE_GROUP_ID } from './addCaptionDeleteToUndoStack';
+import {
+    addCaptionDeleteToUndoStack,
+    CAPTION_DELETE_GROUP_ID
+} from './addCaptionDeleteToUndoStack';
 import type { CreateCaptionResponse } from '$lib/api/lightly_studio_local';
 import type { ReversibleAction } from '$lib/hooks/useReversibleActions';
 

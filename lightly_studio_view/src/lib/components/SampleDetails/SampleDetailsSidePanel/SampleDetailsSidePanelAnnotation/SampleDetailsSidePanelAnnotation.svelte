@@ -24,7 +24,6 @@
         onChangeAnnotationLabel,
         canHighlight = false,
         onClickSelectList,
-        onDelete,
         isLocked = false,
         onToggleLock
     }: {
@@ -38,7 +37,6 @@
         isHidden?: boolean;
         canHighlight?: boolean;
         onClickSelectList?: () => void;
-        onDelete?: () => void;
         isLocked?: boolean;
         onToggleLock?: (e: MouseEvent) => void;
     } = $props();
@@ -102,8 +100,6 @@
         const item = items.find((i) => i.value === annotationLabelName);
         return item ? item : { value: annotationLabelName, label: annotationLabelName };
     });
-
-
 </script>
 
 <div
@@ -223,15 +219,13 @@
                         {/if}
 
                         {#if $isEditingMode}
-                            <button
-                                type="button"
+                            <Trash2
+                                class="size-4"
                                 onclick={(e) => {
                                     e.stopPropagation();
                                     onDeleteAnnotation(e);
                                 }}
-                            >
-                                <Trash2 class="size-4" />
-                            </button>
+                            />
                         {/if}
                     </div>
                 </div>
