@@ -16,8 +16,12 @@ from lightly_studio.resolvers.video_frame_resolver.get_by_id import (
 from lightly_studio.resolvers.video_frame_resolver.get_table_fields_bounds import (
     get_table_fields_bounds,
 )
+from lightly_studio.resolvers.video_frame_resolver.video_frame_adjacent_filter import (
+    VideoFrameAdjacentFilter,
+)
 
 __all__ = [
+    "VideoFrameAdjacentFilter",
     "count_video_frames_annotations",
     "create_many",
     "get_adjacent_video_frames",
