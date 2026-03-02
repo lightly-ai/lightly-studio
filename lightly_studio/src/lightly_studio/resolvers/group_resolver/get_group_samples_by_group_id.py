@@ -23,9 +23,6 @@ def get_group_samples_by_group_id(
     through the SampleGroupLinkTable. Group samples are composite samples that contain
     multiple component samples (e.g., a group of related images or frames).
 
-    The function performs a SQL join between SampleTable and SampleGroupLinkTable to find
-    all samples where the parent_sample_id matches the provided group_id.
-
     Args:
         session: The database session used to execute the query.
         group_id: The UUID of the parent group sample whose components should be retrieved.
