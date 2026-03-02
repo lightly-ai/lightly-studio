@@ -2,11 +2,11 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from typing import Any
-from uuid import UUID
 
 from sqlmodel import Session
 
 from lightly_studio.plugins.base_operator import BaseOperator, OperatorResult
+from lightly_studio.plugins.operator_context import ExecutionContext, OperatorScope
 from lightly_studio.plugins.operator_registry import OperatorRegistry
 from lightly_studio.plugins.parameter import BaseParameter, BoolParameter, StringParameter
 from tests.helpers_resolvers import create_collection
@@ -34,9 +34,10 @@ def test_operator_registry__dummy_operators(db_session: Session) -> None:
     assert operator == input_operator
 
     collection = create_collection(session=db_session)
+    context = ExecutionContext(collection_id=collection.collection_id, filter=None)
     result = operator.execute(
         session=db_session,
-        collection_id=collection.collection_id,
+        context=context,
         parameters={"test flag": True, "test str": "test value"},
     )
 
@@ -62,18 +63,23 @@ class TestOperator(BaseOperator):
             StringParameter(name="test str", required=True),
         ]
 
+    @property
+    def supported_scopes(self) -> list[OperatorScope]:
+        """Return the list of scopes this operator can be triggered from."""
+        return [OperatorScope.ROOT]
+
     def execute(
         self,
         *,
         session: Session,
-        collection_id: UUID,
+        context: ExecutionContext,
         parameters: dict[str, Any],
     ) -> OperatorResult:
         """Execute the operator with the given parameters.
 
         Args:
             session: Database session.
-            collection_id: ID of the collection to operate on.
+            context: Execution context containing collection_id and optional filter.
             parameters: Parameters passed to the operator.
 
         Returns:
@@ -81,5 +87,9 @@ class TestOperator(BaseOperator):
         """
         return OperatorResult(
             success=bool(parameters.get("test flag")),
-            message=str(parameters.get("test str")) + " " + str(session) + " " + str(collection_id),
+            message=str(parameters.get("test str"))
+            + " "
+            + str(session)
+            + " "
+            + str(context.collection_id),
         )
