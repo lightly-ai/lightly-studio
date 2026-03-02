@@ -261,7 +261,7 @@ def test_get_adjacent_video_frames__filters_by_parent_video_tags(test_db: Sessio
 
     result = video_frame_resolver.get_adjacent_video_frames(
         session=test_db,
-        sample_id=video_b.frame_sample_ids[-1],
+        sample_id=video_b.frame_sample_ids[0],
         filters=VideoFrameAdjacentFilter(
             video_frame_filter=VideoFrameFilter(
                 sample_filter=SampleFilter(
@@ -278,10 +278,10 @@ def test_get_adjacent_video_frames__filters_by_parent_video_tags(test_db: Sessio
     )
 
     assert result is not None
-    assert result.previous_sample_id == video_b.frame_sample_ids[-2]
-    assert result.sample_id == video_b.frame_sample_ids[-1]
-    assert result.next_sample_id is None
-    assert result.current_sample_position == len(video_b.frame_sample_ids)
+    assert result.previous_sample_id is None
+    assert result.sample_id == video_b.frame_sample_ids[0]
+    assert result.next_sample_id == video_b.frame_sample_ids[1]
+    assert result.current_sample_position == 1
     assert result.total_count == len(video_b.frame_sample_ids)
 
 
@@ -321,7 +321,7 @@ def test_get_adjacent_video_frames__filters_by_parent_video_annotations(test_db:
 
     result = video_frame_resolver.get_adjacent_video_frames(
         session=test_db,
-        sample_id=video_b.frame_sample_ids[1],
+        sample_id=video_b.frame_sample_ids[0],
         filters=VideoFrameAdjacentFilter(
             video_frame_filter=VideoFrameFilter(
                 sample_filter=SampleFilter(
@@ -338,10 +338,10 @@ def test_get_adjacent_video_frames__filters_by_parent_video_annotations(test_db:
     )
 
     assert result is not None
-    assert result.previous_sample_id == video_b.frame_sample_ids[0]
-    assert result.sample_id == video_b.frame_sample_ids[1]
-    assert result.next_sample_id is None
-    assert result.current_sample_position == 2
+    assert result.previous_sample_id is None
+    assert result.sample_id == video_b.frame_sample_ids[0]
+    assert result.next_sample_id == video_b.frame_sample_ids[1]
+    assert result.current_sample_position == 1
     assert result.total_count == len(video_b.frame_sample_ids)
 
 

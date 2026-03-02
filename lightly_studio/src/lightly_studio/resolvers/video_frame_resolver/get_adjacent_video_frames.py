@@ -46,11 +46,15 @@ def get_adjacent_video_frames(
     if filters.video_text_embedding and video_collection_id is None:
         raise ValueError("Collection ID must be resolvable when video_text_embedding is provided.")
 
-    embedding_model_id, distance_expr = similarity_utils.get_distance_expression(
-        session=session,
-        collection_id=video_collection_id or collection_id,
-        text_embedding=filters.video_text_embedding,
-    )
+    embedding_model_id: UUID | None = None
+    distance_expr: ColumnElement[float] | None = None
+
+    if filters.video_text_embedding and video_collection_id:
+        embedding_model_id, distance_expr = similarity_utils.get_distance_expression(
+            session=session,
+            collection_id=video_collection_id,
+            text_embedding=filters.video_text_embedding,
+        )
 
     ordering_expression: list[ColumnElement[Any]] = list(_default_ordering_expression())
 
