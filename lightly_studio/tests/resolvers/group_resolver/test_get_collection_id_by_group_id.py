@@ -7,7 +7,7 @@ from lightly_studio.resolvers import collection_resolver, group_resolver
 from tests.helpers_resolvers import ImageStub, create_collection, create_images
 
 
-def test_get_collection_id_by_group(db_session: Session) -> None:
+def test_get_collection_id_by_group_id(db_session: Session) -> None:
     # Create collections
     group_col = create_collection(session=db_session, sample_type=SampleType.GROUP)
     components = collection_resolver.create_group_components(
@@ -40,7 +40,7 @@ def test_get_collection_id_by_group(db_session: Session) -> None:
     assert collection_id == group_col.collection_id
 
 
-def test_get_collection_id_by_group__non_existent_group(db_session: Session) -> None:
+def test_get_collection_id_by_group_id__non_existent_group(db_session: Session) -> None:
     # Call get_collection_id_by_group with a non-existent group ID
     non_existent_id = uuid4()
     collection_id = group_resolver.get_collection_id_by_group_id(
@@ -51,7 +51,7 @@ def test_get_collection_id_by_group__non_existent_group(db_session: Session) -> 
     assert collection_id is None
 
 
-def test_get_collection_id_by_group__multiple_groups(db_session: Session) -> None:
+def test_get_collection_id_by_group_id__multiple_groups(db_session: Session) -> None:
     # Create two group collections
     group_col_1 = create_collection(session=db_session, sample_type=SampleType.GROUP)
     group_col_2 = create_collection(session=db_session, sample_type=SampleType.GROUP)
