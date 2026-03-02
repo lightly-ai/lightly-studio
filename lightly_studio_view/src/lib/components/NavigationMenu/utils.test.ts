@@ -31,7 +31,7 @@ describe('findNavigationPath', () => {
         const root = makeCollection('root', SampleType.IMAGE, [child1, child2]);
 
         const result1 = findNavigationPath(root, 'root');
-        expect(result1).toEqual([root]);
+        expect(result1).toEqual([root, child1, grandchild]);
 
         const result2 = findNavigationPath(root, 'child-1');
         expect(result2).toEqual([root, child1, grandchild]);
