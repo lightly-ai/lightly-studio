@@ -53,6 +53,7 @@
                             sibling.isSelected && 'bg-accent'
                         )}
                         href={sibling.href}
+                        data-testid={`navigation-dropdown-${sibling.title.toLowerCase()}`}
                     >
                         {#if sibling.icon}
                             <sibling.icon class="size-4 shrink-0" />
