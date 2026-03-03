@@ -76,7 +76,9 @@ def test_get_all_by_object_track_id__filter_by_annotation_type(
     dataset_id = collection.collection_id
     label = create_annotation_label(session=test_db, dataset_id=dataset_id, label_name="label")
 
-    image_sample = create_image(session=test_db, collection_id=dataset_id, file_path_abs="/tmp/1.png")
+    image_sample = create_image(
+        session=test_db, collection_id=dataset_id, file_path_abs="/tmp/1.png"
+    )
 
     track_id = object_track_resolver.create_many(
         session=test_db,
