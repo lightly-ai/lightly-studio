@@ -1337,7 +1337,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/operators/collections/{collection_id}/{operator_id}/execute": {
+    "/api/operators/{operator_id}/execute": {
         parameters: {
             query?: never;
             header?: never;
@@ -2345,7 +2345,7 @@ export interface components {
         ExecuteOperatorRequest: {
             /** Parameters */
             parameters: Record<string, never>;
-            context?: components["schemas"]["OperatorContextRequest"] | null;
+            context: components["schemas"]["OperatorContextRequest"];
         };
         /**
          * ExportBody
@@ -5724,7 +5724,6 @@ export interface operations {
             header?: never;
             path: {
                 operator_id: string;
-                collection_id: string;
             };
             cookie?: never;
         };

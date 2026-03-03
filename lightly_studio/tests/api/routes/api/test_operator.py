@@ -131,8 +131,8 @@ def test_execute_operator__operator_not_found(
     unknown_operator_id = "missing"
 
     response = test_client.post(
-        f"/api/operators/collections/{collection_id}/{unknown_operator_id}/execute",
-        json={"parameters": {"x": 1}},
+        f"/api/operators/{unknown_operator_id}/execute",
+        json={"parameters": {"x": 1}, "context": {"collection_id": str(collection_id)}},
     )
 
     assert response.status_code == HTTP_STATUS_NOT_FOUND
@@ -150,8 +150,11 @@ def test_execute_operator__successful(
     operator_id = _get_operator_id_by_name(isolated_operator_registry, "success")
 
     response = test_client.post(
-        f"/api/operators/collections/{collection_id}/{operator_id}/execute",
-        json={"parameters": {"test flag": True, "test str": "Some text"}},
+        f"/api/operators/{operator_id}/execute",
+        json={
+            "parameters": {"test flag": True, "test str": "Some text"},
+            "context": {"collection_id": str(collection_id)},
+        },
     )
 
     assert response.status_code == HTTP_STATUS_OK
@@ -177,7 +180,7 @@ def test_execute_operator__context_collection_not_found(
     operator_id = _get_operator_id_by_name(isolated_operator_registry, "test operator")
 
     response = test_client.post(
-        f"/api/operators/collections/{collection_id}/{operator_id}/execute",
+        f"/api/operators/{operator_id}/execute",
         json={"parameters": {}, "context": {"collection_id": collection_id}},
     )
 
@@ -197,7 +200,7 @@ def test_execute_operator__scope_mismatch(
     )
 
     response = test_client.post(
-        f"/api/operators/collections/{video_collection.collection_id}/{operator_id}/execute",
+        f"/api/operators/{operator_id}/execute",
         json={"parameters": {}, "context": {"collection_id": str(video_collection.collection_id)}},
     )
 
@@ -217,7 +220,7 @@ def test_execute_operator__filter_is_passed_through(
     expected_filter = ImageFilter(width=FilterDimensions(min=100, max=200))
 
     response = test_client.post(
-        f"/api/operators/collections/{collection_id}/{operator_id}/execute",
+        f"/api/operators/{operator_id}/execute",
         json={
             "parameters": {},
             "context": {
