@@ -24,5 +24,4 @@ __all__ = [
     "get_many_by_id",
     "get_sample_ids",
     "get_samples_excluding",
-    "get_views_by_ids",
 ]
