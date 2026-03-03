@@ -1,21 +1,4 @@
-"""Example combining a group dataset with operators for every supported scope.
-
-Demonstrates how operators are surfaced contextually in the GUI depending on which
-sub-collection (images, videos, frames, groups) the user is currently viewing.
-
-Dataset layout (MIDV-style):
-  - photo         — IMAGE sub-collection
-  - scan_upright  — IMAGE sub-collection
-  - clips_video   — VIDEO sub-collection  (frames accessible via the Frames view)
-
-Registered operators:
-  - ROOT             Export Dataset Manifest        (dataset-level summary)
-  - IMAGE            Flag Low-Quality Images        (image collections / single image)
-  - VIDEO_FRAME      Sample Keyframes               (frame collections / single frame)
-  - VIDEO            Extract Video Metadata         (video collections / single video)
-  - GROUP            Validate Group Completeness    (group items)
-  - IMAGE+FRAME      Compute Embedding Statistics   (images and frames alike)
-"""
+"""Example of a group dataset with operators for each supported scope."""
 
 from __future__ import annotations
 
@@ -31,102 +14,48 @@ from lightly_studio import db_manager
 from lightly_studio.plugins.base_operator import BaseOperator, OperatorResult
 from lightly_studio.plugins.operator_context import ExecutionContext, OperatorScope
 from lightly_studio.plugins.operator_registry import operator_registry
-from lightly_studio.plugins.parameter import (
-    BaseParameter,
-    BoolParameter,
-    FloatParameter,
-    IntParameter,
-    StringParameter,
-)
-
-
-# ---------------------------------------------------------------------------
-# ROOT — dataset-level
-# Applicable: dataset home / root collection view.
-# Not applicable: any typed sub-collection (images, videos, frames, groups).
-# ---------------------------------------------------------------------------
+from lightly_studio.plugins.parameter import BaseParameter
 
 
 @dataclass
-class ExportDatasetManifestOperator(BaseOperator):
-    """Export a top-level manifest summarising every sub-collection in the dataset."""
+class DemoRootOperator(BaseOperator):
+    """Demo operator for the ROOT scope."""
 
-    name: str = "Export Dataset Manifest [ROOT]"
-    description: str = (
-        "Writes a JSON manifest listing all sub-collections and their sample counts. "
-        "Only applicable at the root/dataset level."
-    )
+    name: str = "Demo ROOT"
+    description: str = "Applicable on root collections."
 
     @property
     def parameters(self) -> list[BaseParameter]:
         """Return operator parameters."""
-        return [
-            StringParameter(
-                name="output_path",
-                required=True,
-                default="/tmp/manifest.json",
-                description="File path where the manifest JSON will be written.",
-            ),
-        ]
+        return []
 
     @property
     def supported_scopes(self) -> list[OperatorScope]:
-        """Support root scope only."""
+        """Support root scope."""
         return [OperatorScope.ROOT]
 
     def execute(
         self,
-        *,
-        session: Session,  # noqa: ARG002
+        session: Session,
         context: ExecutionContext,
         parameters: dict[str, Any],
     ) -> OperatorResult:
         """Execute the operator."""
-        output_path = parameters.get("output_path", "/tmp/manifest.json")
-        return OperatorResult(
-            success=True,
-            message=(
-                f"Dataset manifest for collection {context.collection_id} "
-                f"written to '{output_path}'."
-            ),
-        )
-
-
-# ---------------------------------------------------------------------------
-# IMAGE — image sub-collections
-# Applicable: Samples page (full collection, filtered subset, or single image).
-# Not applicable: Videos, Frames, Groups pages.
-# ---------------------------------------------------------------------------
+        _, _ = session, parameters
+        return OperatorResult(success=True, message=f"ROOT executed on {context.collection_id}.")
 
 
 @dataclass
-class FlagLowQualityImagesOperator(BaseOperator):
-    """Tag images whose quality score falls below a configurable threshold."""
+class DemoImageOperator(BaseOperator):
+    """Demo operator for the IMAGE scope."""
 
-    name: str = "Flag Low-Quality Images [IMAGE]"
-    description: str = (
-        "Assigns a tag to every image in scope whose estimated quality score is below "
-        "the threshold. Respects the active filter — run on the full collection, a "
-        "filtered subset, or a single selected image."
-    )
+    name: str = "Demo IMAGE"
+    description: str = "Applicable on image collections."
 
     @property
     def parameters(self) -> list[BaseParameter]:
         """Return operator parameters."""
-        return [
-            FloatParameter(
-                name="quality_threshold",
-                required=True,
-                default=0.4,
-                description="Images with a quality score below this value will be flagged (0–1).",
-            ),
-            StringParameter(
-                name="tag_name",
-                required=True,
-                default="low-quality",
-                description="Tag that will be assigned to flagged images.",
-            ),
-        ]
+        return []
 
     @property
     def supported_scopes(self) -> list[OperatorScope]:
@@ -135,58 +64,30 @@ class FlagLowQualityImagesOperator(BaseOperator):
 
     def execute(
         self,
-        *,
-        session: Session,  # noqa: ARG002
+        session: Session,
         context: ExecutionContext,
         parameters: dict[str, Any],
     ) -> OperatorResult:
         """Execute the operator."""
-        threshold = parameters.get("quality_threshold", 0.4)
-        tag = parameters.get("tag_name", "low-quality")
-        scope = "filtered subset" if context.context_filter is not None else "full collection"
+        _, _ = session, parameters
+        has_filter = context.context_filter is not None
         return OperatorResult(
             success=True,
-            message=(
-                f"Flagged images below quality {threshold} with tag '{tag}' "
-                f"across {scope} of collection {context.collection_id}."
-            ),
+            message=f"IMAGE executed on {context.collection_id} (filter={has_filter}).",
         )
 
 
-# ---------------------------------------------------------------------------
-# VIDEO_FRAME — frame sub-collections
-# Applicable: Frames page (full frame collection, filtered frames, or single frame).
-# Not applicable: Samples, Videos, Groups pages.
-# ---------------------------------------------------------------------------
-
-
 @dataclass
-class SampleKeyframesOperator(BaseOperator):
-    """Select a representative set of keyframes from the frames in scope."""
+class DemoVideoFrameOperator(BaseOperator):
+    """Demo operator for the VIDEO_FRAME scope."""
 
-    name: str = "Sample Keyframes [FRAME]"
-    description: str = (
-        "Picks up to N keyframes per video from the frames currently in scope and "
-        "assigns them a tag. Use with a filter to restrict to specific frames."
-    )
+    name: str = "Demo FRAME"
+    description: str = "Applicable on video-frame collections."
 
     @property
     def parameters(self) -> list[BaseParameter]:
         """Return operator parameters."""
-        return [
-            IntParameter(
-                name="max_frames_per_video",
-                required=True,
-                default=10,
-                description="Maximum number of keyframes to select per video.",
-            ),
-            StringParameter(
-                name="tag_name",
-                required=True,
-                default="keyframe",
-                description="Tag assigned to selected keyframes.",
-            ),
-        ]
+        return []
 
     @property
     def supported_scopes(self) -> list[OperatorScope]:
@@ -195,53 +96,30 @@ class SampleKeyframesOperator(BaseOperator):
 
     def execute(
         self,
-        *,
-        session: Session,  # noqa: ARG002
+        session: Session,
         context: ExecutionContext,
         parameters: dict[str, Any],
     ) -> OperatorResult:
         """Execute the operator."""
-        max_frames = parameters.get("max_frames_per_video", 10)
-        tag = parameters.get("tag_name", "keyframe")
-        scope = "filtered frames" if context.context_filter is not None else "all frames"
+        _, _ = session, parameters
+        has_filter = context.context_filter is not None
         return OperatorResult(
             success=True,
-            message=(
-                f"Sampled up to {max_frames} keyframes per video from {scope}, "
-                f"tagged as '{tag}' in collection {context.collection_id}."
-            ),
+            message=f"FRAME executed on {context.collection_id} (filter={has_filter}).",
         )
 
 
-# ---------------------------------------------------------------------------
-# VIDEO — video sub-collections
-# Applicable: Videos page (full collection, filtered subset, or single video).
-# Not applicable: Samples, Frames, Groups pages.
-# ---------------------------------------------------------------------------
-
-
 @dataclass
-class ExtractVideoMetadataOperator(BaseOperator):
-    """Read and store duration, frame-rate, and resolution for every video in scope."""
+class DemoVideoOperator(BaseOperator):
+    """Demo operator for the VIDEO scope."""
 
-    name: str = "Extract Video Metadata [VIDEO]"
-    description: str = (
-        "Reads duration, frame-rate, and resolution for every video in scope and "
-        "stores the values as sample metadata. Works on the full collection, a filtered "
-        "subset, or a single selected video."
-    )
+    name: str = "Demo VIDEO"
+    description: str = "Applicable on video collections."
 
     @property
     def parameters(self) -> list[BaseParameter]:
         """Return operator parameters."""
-        return [
-            BoolParameter(
-                name="overwrite_existing",
-                required=False,
-                default=False,
-                description="If true, overwrites metadata that was already extracted.",
-            ),
-        ]
+        return []
 
     @property
     def supported_scopes(self) -> list[OperatorScope]:
@@ -250,58 +128,30 @@ class ExtractVideoMetadataOperator(BaseOperator):
 
     def execute(
         self,
-        *,
-        session: Session,  # noqa: ARG002
+        session: Session,
         context: ExecutionContext,
         parameters: dict[str, Any],
     ) -> OperatorResult:
         """Execute the operator."""
-        overwrite = parameters.get("overwrite_existing", False)
-        scope = "filtered subset" if context.context_filter is not None else "full collection"
+        _, _ = session, parameters
+        has_filter = context.context_filter is not None
         return OperatorResult(
             success=True,
-            message=(
-                f"Extracted video metadata for {scope} of collection "
-                f"{context.collection_id} (overwrite={overwrite})."
-            ),
+            message=f"VIDEO executed on {context.collection_id} (filter={has_filter}).",
         )
 
 
-# ---------------------------------------------------------------------------
-# GROUP — group items
-# Applicable: Groups page.
-# Not applicable: Samples, Videos, Frames pages.
-# ---------------------------------------------------------------------------
-
-
 @dataclass
-class ValidateGroupCompletenessOperator(BaseOperator):
-    """Check that every group in scope has all required component slots filled."""
+class DemoGroupOperator(BaseOperator):
+    """Demo operator for the GROUP scope."""
 
-    name: str = "Validate Group Completeness [GROUP]"
-    description: str = (
-        "Verifies that every group in scope contains a sample for each defined "
-        "component (e.g. photo, scan_upright, clips_video). Incomplete groups are "
-        "optionally tagged for review."
-    )
+    name: str = "Demo GROUP"
+    description: str = "Applicable on group collections."
 
     @property
     def parameters(self) -> list[BaseParameter]:
         """Return operator parameters."""
-        return [
-            BoolParameter(
-                name="tag_incomplete",
-                required=False,
-                default=True,
-                description="Tag groups that are missing one or more components.",
-            ),
-            StringParameter(
-                name="tag_name",
-                required=False,
-                default="incomplete-group",
-                description="Tag assigned to incomplete groups (if tag_incomplete is enabled).",
-            ),
-        ]
+        return []
 
     @property
     def supported_scopes(self) -> list[OperatorScope]:
@@ -310,59 +160,26 @@ class ValidateGroupCompletenessOperator(BaseOperator):
 
     def execute(
         self,
-        *,
-        session: Session,  # noqa: ARG002
+        session: Session,
         context: ExecutionContext,
         parameters: dict[str, Any],
     ) -> OperatorResult:
         """Execute the operator."""
-        tag_incomplete = parameters.get("tag_incomplete", True)
-        tag = parameters.get("tag_name", "incomplete-group")
-        action = f"tagging incomplete groups as '{tag}'" if tag_incomplete else "reporting only"
-        return OperatorResult(
-            success=True,
-            message=(
-                f"Validated group completeness for collection {context.collection_id} "
-                f"({action})."
-            ),
-        )
-
-
-# ---------------------------------------------------------------------------
-# IMAGE + VIDEO_FRAME — images and frames alike
-# Applicable: Samples page AND Frames page.
-# Not applicable: Videos, Groups pages.
-# ---------------------------------------------------------------------------
+        _, _ = session, parameters
+        return OperatorResult(success=True, message=f"GROUP executed on {context.collection_id}.")
 
 
 @dataclass
-class ComputeEmbeddingStatisticsOperator(BaseOperator):
-    """Compute per-sample embedding statistics for images and frames in scope."""
+class DemoImageAndFrameOperator(BaseOperator):
+    """Demo operator for IMAGE + VIDEO_FRAME scopes."""
 
-    name: str = "Compute Embedding Statistics [IMAGE + FRAME]"
-    description: str = (
-        "Calculates mean, variance, and nearest-neighbour distance for the embeddings "
-        "of every sample in scope. Works on both the Samples page (images) and the "
-        "Frames page (video frames)."
-    )
+    name: str = "Demo IMAGE + FRAME"
+    description: str = "Applicable on both image and video-frame collections."
 
     @property
     def parameters(self) -> list[BaseParameter]:
         """Return operator parameters."""
-        return [
-            IntParameter(
-                name="n_neighbors",
-                required=False,
-                default=5,
-                description="Number of nearest neighbours to consider for distance stats.",
-            ),
-            BoolParameter(
-                name="include_metadata",
-                required=False,
-                default=True,
-                description="Store the computed statistics as sample metadata.",
-            ),
-        ]
+        return []
 
     @property
     def supported_scopes(self) -> list[OperatorScope]:
@@ -371,22 +188,16 @@ class ComputeEmbeddingStatisticsOperator(BaseOperator):
 
     def execute(
         self,
-        *,
-        session: Session,  # noqa: ARG002
+        session: Session,
         context: ExecutionContext,
         parameters: dict[str, Any],
     ) -> OperatorResult:
         """Execute the operator."""
-        n_neighbors = parameters.get("n_neighbors", 5)
-        include_metadata = parameters.get("include_metadata", True)
-        scope = "filtered subset" if context.context_filter is not None else "full collection"
+        _, _ = session, parameters
+        has_filter = context.context_filter is not None
         return OperatorResult(
             success=True,
-            message=(
-                f"Computed embedding statistics ({n_neighbors} neighbours) for {scope} "
-                f"of collection {context.collection_id} "
-                f"(metadata={'stored' if include_metadata else 'not stored'})."
-            ),
+            message=f"IMAGE+FRAME executed on {context.collection_id} (filter={has_filter}).",
         )
 
 
@@ -394,27 +205,20 @@ class ComputeEmbeddingStatisticsOperator(BaseOperator):
 # Setup
 # ---------------------------------------------------------------------------
 
-# Read environment variables
 env = Env()
 env.read_env()
 
-# Cleanup an existing database
 db_manager.connect(cleanup_existing=True)
 
-# Register all scope-demo operators
-operator_registry.register(operator=ExportDatasetManifestOperator())
-operator_registry.register(operator=FlagLowQualityImagesOperator())
-operator_registry.register(operator=SampleKeyframesOperator())
-operator_registry.register(operator=ExtractVideoMetadataOperator())
-operator_registry.register(operator=ValidateGroupCompletenessOperator())
-operator_registry.register(operator=ComputeEmbeddingStatisticsOperator())
+operator_registry.register(operator=DemoRootOperator())
+operator_registry.register(operator=DemoImageOperator())
+operator_registry.register(operator=DemoVideoFrameOperator())
+operator_registry.register(operator=DemoVideoOperator())
+operator_registry.register(operator=DemoGroupOperator())
+operator_registry.register(operator=DemoImageAndFrameOperator())
 
-# Define data path
 dataset_path = env.path("EXAMPLES_MIDV_PATH", "/path/to/midv/dataset")
 
-# Create a group dataset with IMAGE and VIDEO sub-collections so that each operator
-# scope can be exercised from the GUI (Samples → IMAGE, Videos → VIDEO,
-# Frames → VIDEO_FRAME, Groups → GROUP, root view → ROOT).
 dataset = ls.GroupDataset.create(
     components=[
         ("photo", ls.SampleType.IMAGE),

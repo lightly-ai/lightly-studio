@@ -3295,6 +3295,11 @@ export interface components {
         /**
          * VideoFrameAdjacentFilter
          * @description Aggregate filters for adjacent video frame lookups.
+         *
+         *     Attributes:
+         *         video_frame_filter: Frame-level filters (required collection_id).
+         *         video_filter: Parent-video filters (required collection_id).
+         *         video_text_embedding: Text embedding to order parent videos; needs video collection_id.
          */
         VideoFrameAdjacentFilter: {
             video_frame_filter: components["schemas"]["VideoFrameFilter"];
@@ -5741,7 +5746,9 @@ export interface operations {
     };
     execute_operator: {
         parameters: {
-            query?: never;
+            query: {
+                collection_id: string;
+            };
             header?: never;
             path: {
                 operator_id: string;
