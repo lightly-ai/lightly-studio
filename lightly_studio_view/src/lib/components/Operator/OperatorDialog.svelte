@@ -22,9 +22,11 @@
         isSampleDetailsRoute,
         isFrameDetailsRoute,
         isVideoDetailsRoute,
+        isAnnotationDetailsRoute,
         isSamplesRoute,
         isVideoFramesRoute,
-        isVideosRoute
+        isVideosRoute,
+        isAnnotationsRoute
     } from '$lib/routes';
     import { useImageFilters } from '$lib/hooks/useImageFilters/useImageFilters';
     import { useVideoFilters } from '$lib/hooks/useVideoFilters/useVideoFilters';
@@ -49,11 +51,13 @@
 
     const routeId = $derived(page.route.id);
     const currentSampleId = $derived(page.params.sampleId || page.params.sample_id || null);
+    const currentAnnotationId = $derived(page.params.annotationId || null);
 
     const isSampleDetail = $derived(isSampleDetailsRoute(routeId));
     const isFrameDetail = $derived(isFrameDetailsRoute(routeId));
     const isVideoDetail = $derived(isVideoDetailsRoute(routeId));
-    const isOnDetailPage = $derived(isSampleDetail || isFrameDetail || isVideoDetail);
+    const isAnnotationDetail = $derived(isAnnotationDetailsRoute(routeId));
+    const isOnDetailPage = $derived(isSampleDetail || isFrameDetail || isVideoDetail || isAnnotationDetail);
 
     const { imageFilter } = useImageFilters();
     const { videoFilter } = useVideoFilters();
@@ -64,6 +68,7 @@
         if (isSamplesRoute(routeId)) return $imageFilter !== null;
         if (isVideosRoute(routeId)) return $videoFilter !== null;
         if (isVideoFramesRoute(routeId)) return $frameFilter !== null;
+        if (isAnnotationsRoute(routeId)) return false;
         return false;
     });
 
@@ -74,12 +79,17 @@
               ? 'Current frame'
               : isVideoDetail
                 ? 'Current video'
-                : isFilterActive
-                  ? 'Filtered collection'
-                  : 'Full collection'
+                : isAnnotationDetail
+                  ? 'Current annotation'
+                  : isFilterActive
+                    ? 'Filtered collection'
+                    : 'Full collection'
     );
 
     const contextFilter = $derived.by(() => {
+        if (isAnnotationDetail && currentAnnotationId) {
+            return { annotation_ids: [currentAnnotationId] };
+        }
         if (isOnDetailPage && currentSampleId) {
             return { sample_ids: [currentSampleId] };
         }

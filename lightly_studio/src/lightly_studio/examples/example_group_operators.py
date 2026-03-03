@@ -15,6 +15,27 @@ from lightly_studio.plugins.base_operator import BaseOperator, OperatorResult
 from lightly_studio.plugins.operator_context import ExecutionContext, OperatorScope
 from lightly_studio.plugins.operator_registry import operator_registry
 from lightly_studio.plugins.parameter import BaseParameter
+from lightly_studio.resolvers import collection_resolver, sample_resolver
+from lightly_studio.resolvers.sample_resolver.sample_filter import SampleFilter
+
+
+def _collection_info(session: Session, context: ExecutionContext) -> tuple[str, int]:
+    """Return (sample_type value, sample count after filter)."""
+    collection = collection_resolver.get_by_id(
+        session=session, collection_id=context.collection_id
+    )
+    sample_type = collection.sample_type.value if collection else "unknown"
+    if isinstance(context.context_filter, SampleFilter):
+        sf = SampleFilter(
+            collection_id=context.collection_id,
+            sample_ids=context.context_filter.sample_ids,
+        )
+        count = sample_resolver.get_filtered_samples(session=session, filters=sf).total_count
+    else:
+        count = sample_resolver.count_by_collection_id(
+            session=session, collection_id=context.collection_id
+        )
+    return sample_type, count
 
 
 @dataclass
@@ -41,8 +62,12 @@ class DemoRootOperator(BaseOperator):
         parameters: dict[str, Any],
     ) -> OperatorResult:
         """Execute the operator."""
-        _, _ = session, parameters
-        return OperatorResult(success=True, message=f"ROOT executed on {context.collection_id}.")
+        _ = parameters
+        sample_type, count = _collection_info(session, context)
+        return OperatorResult(
+            success=True,
+            message=f"ROOT executed on {context.collection_id} (type={sample_type}, n={count}).",
+        )
 
 
 @dataclass
@@ -69,11 +94,11 @@ class DemoImageOperator(BaseOperator):
         parameters: dict[str, Any],
     ) -> OperatorResult:
         """Execute the operator."""
-        _, _ = session, parameters
-        has_filter = context.context_filter is not None
+        _ = parameters
+        sample_type, count = _collection_info(session, context)
         return OperatorResult(
             success=True,
-            message=f"IMAGE executed on {context.collection_id} (filter={has_filter}).",
+            message=f"IMAGE executed on {context.collection_id} (type={sample_type}, n={count}).",
         )
 
 
@@ -101,11 +126,11 @@ class DemoVideoFrameOperator(BaseOperator):
         parameters: dict[str, Any],
     ) -> OperatorResult:
         """Execute the operator."""
-        _, _ = session, parameters
-        has_filter = context.context_filter is not None
+        _ = parameters
+        sample_type, count = _collection_info(session, context)
         return OperatorResult(
             success=True,
-            message=f"FRAME executed on {context.collection_id} (filter={has_filter}).",
+            message=f"FRAME executed on {context.collection_id} (type={sample_type}, n={count}).",
         )
 
 
@@ -133,11 +158,45 @@ class DemoVideoOperator(BaseOperator):
         parameters: dict[str, Any],
     ) -> OperatorResult:
         """Execute the operator."""
-        _, _ = session, parameters
-        has_filter = context.context_filter is not None
+        _ = parameters
+        sample_type, count = _collection_info(session, context)
         return OperatorResult(
             success=True,
-            message=f"VIDEO executed on {context.collection_id} (filter={has_filter}).",
+            message=f"VIDEO executed on {context.collection_id} (type={sample_type}, n={count}).",
+        )
+
+
+@dataclass
+class DemoAnnotationOperator(BaseOperator):
+    """Demo operator for the ANNOTATION scope."""
+
+    name: str = "Demo ANNOTATION"
+    description: str = "Applicable on annotation collections."
+
+    @property
+    def parameters(self) -> list[BaseParameter]:
+        """Return operator parameters."""
+        return []
+
+    @property
+    def supported_scopes(self) -> list[OperatorScope]:
+        """Support annotation scope."""
+        return [OperatorScope.ANNOTATION]
+
+    def execute(
+        self,
+        session: Session,
+        context: ExecutionContext,
+        parameters: dict[str, Any],
+    ) -> OperatorResult:
+        """Execute the operator."""
+        _ = parameters
+        sample_type, count = _collection_info(session, context)
+        return OperatorResult(
+            success=True,
+            message=(
+                f"ANNOTATION executed on {context.collection_id} (type={sample_type}, n={count})."
+            ),
         )
 
 
@@ -165,8 +224,12 @@ class DemoGroupOperator(BaseOperator):
         parameters: dict[str, Any],
     ) -> OperatorResult:
         """Execute the operator."""
-        _, _ = session, parameters
-        return OperatorResult(success=True, message=f"GROUP executed on {context.collection_id}.")
+        _ = parameters
+        sample_type, count = _collection_info(session, context)
+        return OperatorResult(
+            success=True,
+            message=f"GROUP executed on {context.collection_id} (type={sample_type}, n={count}).",
+        )
 
 
 @dataclass
@@ -193,11 +256,13 @@ class DemoImageAndFrameOperator(BaseOperator):
         parameters: dict[str, Any],
     ) -> OperatorResult:
         """Execute the operator."""
-        _, _ = session, parameters
-        has_filter = context.context_filter is not None
+        _ = parameters
+        sample_type, count = _collection_info(session, context)
         return OperatorResult(
             success=True,
-            message=f"IMAGE+FRAME executed on {context.collection_id} (filter={has_filter}).",
+            message=(
+                f"IMAGE+FRAME executed on {context.collection_id} (type={sample_type}, n={count})."
+            ),
         )
 
 
@@ -214,6 +279,7 @@ operator_registry.register(operator=DemoRootOperator())
 operator_registry.register(operator=DemoImageOperator())
 operator_registry.register(operator=DemoVideoFrameOperator())
 operator_registry.register(operator=DemoVideoOperator())
+operator_registry.register(operator=DemoAnnotationOperator())
 operator_registry.register(operator=DemoGroupOperator())
 operator_registry.register(operator=DemoImageAndFrameOperator())
 
