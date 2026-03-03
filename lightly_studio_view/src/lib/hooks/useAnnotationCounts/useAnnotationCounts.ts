@@ -1,10 +1,9 @@
 import { createQuery } from '@tanstack/svelte-query';
 import { countAnnotationsByCollectionOptions } from '$lib/api/lightly_studio_local/@tanstack/svelte-query.gen';
+import { isReadableStore } from '$lib/hooks/utils/isReadableStore';
+import { derived, type Readable } from 'svelte/store';
 
-export const useAnnotationCounts = ({
-    collectionId,
-    options
-}: {
+type UseAnnotationCountsParams = {
     collectionId: string;
     options?: {
         filtered_labels?: string[];
@@ -15,9 +14,16 @@ export const useAnnotationCounts = ({
             max_height?: number;
         };
     };
-}) =>
-    createQuery(
-        countAnnotationsByCollectionOptions({
+    enabled?: boolean;
+};
+
+const createAnnotationCountsQueryOptions = ({
+    collectionId,
+    options,
+    enabled
+}: UseAnnotationCountsParams) => {
+    return {
+        ...countAnnotationsByCollectionOptions({
             path: { collection_id: collectionId },
             query: {
                 ...(options?.filtered_labels && { filtered_labels: options.filtered_labels }),
@@ -30,5 +36,17 @@ export const useAnnotationCounts = ({
                     max_height: options.dimensions.max_height
                 })
             }
-        })
-    );
+        }),
+        enabled
+    };
+};
+
+export const useAnnotationCounts = (
+    paramsInput: UseAnnotationCountsParams | Readable<UseAnnotationCountsParams>
+) => {
+    const options = isReadableStore<UseAnnotationCountsParams>(paramsInput)
+        ? derived(paramsInput, ($params) => createAnnotationCountsQueryOptions($params))
+        : createAnnotationCountsQueryOptions(paramsInput);
+
+    return createQuery(options);
+};

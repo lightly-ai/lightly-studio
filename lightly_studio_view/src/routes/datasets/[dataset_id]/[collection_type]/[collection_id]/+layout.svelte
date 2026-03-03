@@ -21,8 +21,9 @@
         ChartNetwork,
         GripVertical
     } from '@lucide/svelte';
-    import { onDestroy, onMount } from 'svelte';
-    import { get, writable } from 'svelte/store';
+    import { onDestroy, onMount, untrack } from 'svelte';
+    import { get, toStore, writable } from 'svelte/store';
+    import { isEqual } from 'lodash-es';
     import { toast } from 'svelte-sonner';
     import { Header } from '$lib/components';
     import MenuDialogHost from '$lib/components/Header/MenuDialogHost.svelte';
@@ -32,6 +33,7 @@
     import { useHideAnnotations } from '$lib/hooks/useHideAnnotations';
     import { useAnnotationLabels } from '$lib/hooks/useAnnotationLabels/useAnnotationLabels';
     import { useDimensions } from '$lib/hooks/useDimensions/useDimensions';
+    import { useImageFilters } from '$lib/hooks/useImageFilters/useImageFilters';
     import {
         isAnnotationDetailsRoute,
         isAnnotationsRoute,
@@ -75,11 +77,13 @@
 
     const datasetId = $derived(page.params.dataset_id!);
     const collectionId = $derived(page.params.collection_id!);
+    const collectionIdStore = toStore(() => collectionId);
 
     // Use hideAnnotations hook
     const { handleKeyEvent } = useHideAnnotations();
 
     const { retrieveParentCollection, collections } = useGlobalStorage();
+    const { updateSampleIds: updateImageSampleIds } = useImageFilters();
 
     const parentCollection = $derived.by(() =>
         retrieveParentCollection($collections, collectionId)
@@ -131,13 +135,40 @@
             return;
         }
 
+        // Read gridType without tracking to prevent this effect from re-triggering itself
+        const currentGridType = untrack(() => gridType);
+
+        // Skip if nothing changed to avoid cascading reactive updates
+        if (
+            currentGridType === nextGridType &&
+            lastVisitedGridContext?.collectionId === collectionId
+        ) {
+            return;
+        }
+
+        const collectionChanged =
+            !!lastVisitedGridContext?.collectionId &&
+            lastVisitedGridContext.collectionId !== collectionId;
+        const gridTypeChanged = currentGridType !== nextGridType;
+
+        if (collectionChanged || gridTypeChanged) {
+            updateImageSampleIds([]);
+        }
+
         if (
             lastVisitedGridContext &&
-            lastVisitedGridContext.gridType !== nextGridType &&
-            lastVisitedGridContext.collectionId
+            lastVisitedGridContext.collectionId &&
+            lastVisitedGridContext.collectionId !== collectionId
         ) {
             clearSelectedSamples(lastVisitedGridContext.collectionId);
             clearSelectedSampleAnnotationCrops(lastVisitedGridContext.collectionId);
+        }
+
+        if (gridTypeChanged && !collectionChanged) {
+            // Reset selection when switching grids within the same collection so sample_ids
+            // from plot selections do not leak into the next grid query.
+            clearSelectedSamples(collectionId);
+            clearSelectedSampleAnnotationCrops(collectionId);
         }
 
         gridType = nextGridType;
@@ -148,7 +179,7 @@
 
         // Temporary hack to remember where the user was when navigating
         // TODO: also remember state of tags, labels, metadata filters etc. Possible store it in pagestate
-        setLastGridType(gridType);
+        setLastGridType(nextGridType);
     });
 
     let query_text = $state($textEmbedding ? $textEmbedding.queryText : '');
@@ -169,13 +200,21 @@
         }
     }
 
-    const hasEmbeddingsQuery = $derived(useHasEmbeddings({ collectionId }));
+    const hasEmbeddingsQuery = useHasEmbeddings(
+        toStore(() => ({
+            collectionId
+        }))
+    );
     const hasEmbeddings = $derived(!!$hasEmbeddingsQuery.data);
 
-    const { metadataValues } = $derived.by(() => useMetadataFilters(collectionId));
-    const { dimensionsValues } = $derived.by(() => useDimensions(collectionId));
+    const { metadataValues } = useMetadataFilters(collectionIdStore);
+    const { dimensionsValues } = useDimensions(collectionIdStore);
 
-    const annotationLabels = $derived(useAnnotationLabels({ collectionId: collectionId ?? '' }));
+    const annotationLabels = useAnnotationLabels(
+        toStore(() => ({
+            collectionId
+        }))
+    );
     const { showPlot, setShowPlot, filteredSampleCount, filteredAnnotationCount } =
         useGlobalStorage();
 
@@ -217,44 +256,67 @@
     const { videoFramesBoundsValues } = useVideoFramesBounds();
     const { videoBoundsValues } = useVideoBounds();
 
-    const annotationCounts = $derived.by(() => {
-        if (
-            isVideoFrames ||
-            (isAnnotations && parentCollection?.sampleType == SampleType.VIDEO_FRAME)
-        ) {
-            return useVideoFrameAnnotationCounts({
-                collectionId: datasetId,
-                filter: {
-                    annotations_labels: annotationsLabels,
-                    video_filter: {
-                        sample_filter: {
-                            metadata_filters: metadataFilters
-                        },
-                        ...$videoFramesBoundsValues
-                    }
-                }
-            });
-        } else if (isVideos) {
-            return useVideoAnnotationCounts({
-                collectionId,
-                filter: {
-                    video_frames_annotations_labels: annotationsLabels,
-                    video_filter: {
-                        sample_filter: {
-                            metadata_filters: metadataFilters
-                        },
-                        ...$videoBoundsValues
-                    }
-                }
-            });
-        }
-        return useAnnotationCounts({
+    const useVideoFrameCounts = $derived(
+        isVideoFrames || (isAnnotations && parentCollection?.sampleType == SampleType.VIDEO_FRAME)
+    );
+    const useVideoCounts = $derived(isVideos);
+    const useImageCounts = $derived(
+        (isSamples || isAnnotations || isGroups) && !useVideoFrameCounts
+    );
+
+    const imageAnnotationCounts = useAnnotationCounts(
+        toStore(() => ({
             collectionId: datasetId,
             options: {
                 filtered_labels: annotationsLabels,
                 dimensions: $dimensionsValues ?? undefined
-            }
-        });
+            },
+            enabled: useImageCounts && !useVideoCounts
+        }))
+    );
+
+    const videoAnnotationCounts = useVideoAnnotationCounts(
+        toStore(() => ({
+            collectionId,
+            filter: {
+                video_frames_annotations_labels: annotationsLabels,
+                video_filter: {
+                    sample_filter: {
+                        metadata_filters: metadataFilters
+                    },
+                    ...$videoBoundsValues
+                }
+            },
+            enabled: useVideoCounts
+        }))
+    );
+
+    const videoFrameAnnotationCounts = useVideoFrameAnnotationCounts(
+        toStore(() => ({
+            collectionId: datasetId,
+            filter: {
+                annotations_labels: annotationsLabels,
+                video_filter: {
+                    sample_filter: {
+                        metadata_filters: metadataFilters
+                    },
+                    ...$videoFramesBoundsValues
+                }
+            },
+            enabled: useVideoFrameCounts
+        }))
+    );
+
+    const annotationCountsData: AnnotationCount[] | undefined = $derived.by(() => {
+        if (useVideoFrameCounts) {
+            return $videoFrameAnnotationCounts.data as AnnotationCount[] | undefined;
+        }
+
+        if (useVideoCounts) {
+            return $videoAnnotationCounts.data as AnnotationCount[] | undefined;
+        }
+
+        return $imageAnnotationCounts.data as AnnotationCount[] | undefined;
     });
 
     type AnnotationCount = {
@@ -275,12 +337,9 @@
 
     // Use effect to update the writable store when query data or selection changes
     $effect(() => {
-        const countsData = $annotationCounts.data;
+        const countsData = annotationCountsData;
         if (countsData) {
-            const filtersWithSelection = getAnnotationFilters(
-                countsData as AnnotationCount[],
-                selectedAnnotationFilter
-            );
+            const filtersWithSelection = getAnnotationFilters(countsData, selectedAnnotationFilter);
             annotationFilters.set(filtersWithSelection);
         }
     });
@@ -308,7 +367,7 @@
     };
 
     const totalAnnotations = $derived.by(() => {
-        const countsData = $annotationCounts.data;
+        const countsData = annotationCountsData;
         if (!countsData) return 0;
         return countsData.reduce((sum, item) => sum + Number(item.total_count), 0);
     });
@@ -466,9 +525,14 @@
             setError(String(message));
             return;
         }
+        const newEmbedding = $embedTextQuery.data || [];
+        const current = get(textEmbedding);
+        if (current && current.queryText === query_text && isEqual(current.embedding, newEmbedding)) {
+            return;
+        }
         setTextEmbedding({
             queryText: query_text,
-            embedding: $embedTextQuery.data || []
+            embedding: newEmbedding
         });
     });
 

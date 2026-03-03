@@ -4,7 +4,9 @@ import type { ReadImagesError, ReadImagesResponse } from '$lib/api/lightly_studi
 import { readImages, type ReadImagesRequest } from '$lib/api/lightly_studio_local';
 import type { DimensionBounds } from '$lib/services/loadDimensionBounds';
 import { createMetadataFilters } from '$lib/hooks/useMetadataFilters/useMetadataFilters';
+import { isReadableStore } from '$lib/hooks/utils/isReadableStore';
 import type { MetadataValues } from '$lib/services/types';
+import { derived, get, type Readable } from 'svelte/store';
 
 // Define mode-aware parameter types.
 interface ClassifierSamples {
@@ -157,6 +159,8 @@ const buildRequestBody = (params: ImagesInfiniteParams, pageParam: number): Read
 };
 
 const isQueryEnabled = (params: ImagesInfiniteParams): boolean => {
+    if (!params.collection_id) return false;
+
     if (params.mode === 'classifier') {
         // For classifier mode, classifier samples need to exist (even if empty arrays)
         // This ensures the query runs and can show the empty state
@@ -167,13 +171,22 @@ const isQueryEnabled = (params: ImagesInfiniteParams): boolean => {
     return true;
 };
 
-export const useImagesInfinite = (params: ImagesInfiniteParams) => {
-    const samplesOptions = createImagesInfiniteOptions(params);
-    const samples = createInfiniteQuery(samplesOptions);
+export const useImagesInfinite = (
+    paramsInput: ImagesInfiniteParams | Readable<ImagesInfiniteParams>
+) => {
+    const options = isReadableStore<ImagesInfiniteParams>(paramsInput)
+        ? derived(paramsInput, ($p) => createImagesInfiniteOptions($p))
+        : createImagesInfiniteOptions(paramsInput);
+
+    const samples = createInfiniteQuery(options);
     const client = useQueryClient();
 
     const refresh = () => {
-        client.invalidateQueries({ queryKey: samplesOptions.queryKey });
+        const currentParams = isReadableStore<ImagesInfiniteParams>(paramsInput)
+            ? get(paramsInput)
+            : paramsInput;
+        const currentOptions = createImagesInfiniteOptions(currentParams);
+        client.invalidateQueries({ queryKey: currentOptions.queryKey });
     };
 
     return {
