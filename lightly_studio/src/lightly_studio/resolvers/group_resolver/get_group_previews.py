@@ -125,15 +125,6 @@ def get_group_previews_video(
         sample_ids=list(sample_id_to_group_id.keys()),
     )
     return {
-        sample_id_to_group_id[video.sample_id]: VideoView(
-            sample_id=video.sample_id,
-            file_name=video.file_name,
-            file_path_abs=video.file_path_abs,
-            width=video.width,
-            height=video.height,
-            fps=video.fps,
-            duration_s=video.duration_s,
-            sample=SampleView.model_validate(video.sample),
-        )
+        sample_id_to_group_id[video.sample_id]: VideoView.from_video_table(video=video)
         for video in videos
     }

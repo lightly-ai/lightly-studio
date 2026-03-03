@@ -65,6 +65,35 @@ class VideoView(SQLModel):
     frame: Optional["FrameView"] = None
     similarity_score: Optional[float] = None
 
+    @classmethod
+    def from_video_table(
+        cls,
+        video: VideoTable,
+        frame: Optional["VideoFrameTable"] = None,
+        similarity_score: Optional[float] = None,
+    ) -> "VideoView":
+        """Create a VideoView from a VideoTable."""
+        frame_view = None
+        if frame:
+            frame_view = FrameView(
+                frame_number=frame.frame_number,
+                frame_timestamp_s=frame.frame_timestamp_s,
+                sample_id=frame.sample_id,
+                sample=SampleView.model_validate(frame.sample),
+            )
+        return cls(
+            width=video.width,
+            height=video.height,
+            duration_s=video.duration_s,
+            fps=video.fps,
+            file_name=video.file_name,
+            file_path_abs=video.file_path_abs,
+            sample_id=video.sample_id,
+            sample=SampleView.model_validate(video.sample),
+            frame=frame_view,
+            similarity_score=similarity_score,
+        )
+
 
 class VideoViewsWithCount(BaseModel):
     """Response model for counted videos."""
