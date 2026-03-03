@@ -3,7 +3,7 @@ from __future__ import annotations
 from collections.abc import Generator
 from dataclasses import dataclass
 from typing import Any
-from uuid import UUID
+from uuid import UUID, uuid4
 
 import pytest
 from fastapi.testclient import TestClient
@@ -14,11 +14,15 @@ import lightly_studio.plugins.operator_registry as operator_registry_module
 from lightly_studio.api.routes.api.status import (
     HTTP_STATUS_NOT_FOUND,
     HTTP_STATUS_OK,
+    HTTP_STATUS_UNPROCESSABLE_ENTITY,
 )
+from lightly_studio.models.collection import SampleType
 from lightly_studio.plugins.base_operator import BaseOperator, OperatorResult
 from lightly_studio.plugins.operator_context import ExecutionContext, OperatorScope
 from lightly_studio.plugins.operator_registry import OperatorRegistry
 from lightly_studio.plugins.parameter import BaseParameter, BoolParameter, StringParameter
+from lightly_studio.resolvers.image_filter import FilterDimensions, ImageFilter
+from tests import helpers_resolvers
 
 
 @pytest.fixture
@@ -164,6 +168,70 @@ def _get_operator_id_by_name(registry: OperatorRegistry, target_name: str) -> st
     raise AssertionError(f"Operator named '{target_name}' not found in registry metadata.")
 
 
+def test_execute_operator__context_collection_not_found(
+    test_client: TestClient,
+    isolated_operator_registry: OperatorRegistry,
+) -> None:
+    collection_id = str(uuid4())
+    isolated_operator_registry.register(TestOperator())
+    operator_id = _get_operator_id_by_name(isolated_operator_registry, "test operator")
+
+    response = test_client.post(
+        f"/api/operators/collections/{collection_id}/{operator_id}/execute",
+        json={"parameters": {}, "context": {"collection_id": collection_id}},
+    )
+
+    assert response.status_code == HTTP_STATUS_NOT_FOUND
+
+
+def test_execute_operator__scope_mismatch(
+    test_client: TestClient,
+    db_session: Session,
+    isolated_operator_registry: OperatorRegistry,
+) -> None:
+    """An operator that doesn't support the collection's scope returns 422."""
+    isolated_operator_registry.register(ImageScopeOperator())
+    operator_id = _get_operator_id_by_name(isolated_operator_registry, "image-only")
+    video_collection = helpers_resolvers.create_collection(
+        session=db_session, sample_type=SampleType.VIDEO
+    )
+
+    response = test_client.post(
+        f"/api/operators/collections/{video_collection.collection_id}/{operator_id}/execute",
+        json={"parameters": {}, "context": {"collection_id": str(video_collection.collection_id)}},
+    )
+
+    assert response.status_code == HTTP_STATUS_UNPROCESSABLE_ENTITY
+
+
+def test_execute_operator__filter_is_passed_through(
+    test_client: TestClient,
+    collection_id: UUID,
+    isolated_operator_registry: OperatorRegistry,
+) -> None:
+    """The context_filter provided in the request is forwarded to the operator."""
+    operator = ImageScopeOperator()
+    isolated_operator_registry.register(operator)
+    operator_id = _get_operator_id_by_name(isolated_operator_registry, "image-only")
+
+    expected_filter = ImageFilter(width=FilterDimensions(min=100, max=200))
+
+    response = test_client.post(
+        f"/api/operators/collections/{collection_id}/{operator_id}/execute",
+        json={
+            "parameters": {},
+            "context": {
+                "collection_id": str(collection_id),
+                "context_filter": {"width": {"min": 100, "max": 200}},
+            },
+        },
+    )
+
+    assert response.status_code == HTTP_STATUS_OK
+    assert operator.captured_context is not None
+    assert operator.captured_context.context_filter == expected_filter
+
+
 @dataclass
 class TestOperator(BaseOperator):
     name: str = "test operator"
@@ -184,7 +252,6 @@ class TestOperator(BaseOperator):
 
     def execute(
         self,
-        *,
         session: Session,
         context: ExecutionContext,
         parameters: dict[str, Any],
@@ -213,3 +280,30 @@ class EmptyParamsOperator(TestOperator):
     @property
     def parameters(self) -> list[BaseParameter]:
         return []
+
+
+@dataclass
+class ImageScopeOperator(BaseOperator):
+    """Operator that only supports IMAGE scope — used to test scope mismatch."""
+
+    name: str = "image-only"
+    description: str = "supports only image scope"
+    captured_context: ExecutionContext | None = None
+
+    @property
+    def parameters(self) -> list[BaseParameter]:
+        return []
+
+    @property
+    def supported_scopes(self) -> list[OperatorScope]:
+        return [OperatorScope.IMAGE]
+
+    def execute(
+        self,
+        session: Session,
+        context: ExecutionContext,
+        parameters: dict[str, Any],
+    ) -> OperatorResult:
+        _, _ = session, parameters
+        self.captured_context = context
+        return OperatorResult(success=True, message="ok")
