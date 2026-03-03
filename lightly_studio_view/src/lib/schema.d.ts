@@ -1718,7 +1718,7 @@ export interface components {
         AdjacentRequest: {
             sample_type: components["schemas"]["SampleType"];
             /** Filters */
-            filters: components["schemas"]["ImageFilter"] | components["schemas"]["VideoFilter"] | components["schemas"]["VideoFrameFilter"] | components["schemas"]["AnnotationsFilter"];
+            filters: components["schemas"]["ImageFilter"] | components["schemas"]["VideoFilter"] | components["schemas"]["VideoFrameAdjacentFilter"] | components["schemas"]["AnnotationsFilter"];
             /** Text Embedding */
             text_embedding?: number[] | null;
         };
@@ -2345,7 +2345,7 @@ export interface components {
         ExecuteOperatorRequest: {
             /** Parameters */
             parameters: Record<string, never>;
-            context: components["schemas"]["OperatorContextRequest"];
+            context?: components["schemas"]["OperatorContextRequest"] | null;
         };
         /**
          * ExportBody
@@ -3291,6 +3291,16 @@ export interface components {
             /** Annotation Frames Label Ids */
             annotation_frames_label_ids?: string[] | null;
             sample_filter?: components["schemas"]["SampleFilter"] | null;
+        };
+        /**
+         * VideoFrameAdjacentFilter
+         * @description Aggregate filters for adjacent video frame lookups.
+         */
+        VideoFrameAdjacentFilter: {
+            video_frame_filter: components["schemas"]["VideoFrameFilter"];
+            video_filter?: components["schemas"]["VideoFilter"] | null;
+            /** Video Text Embedding */
+            video_text_embedding?: number[] | null;
         };
         /**
          * VideoFrameAnnotationDetailsView
