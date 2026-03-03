@@ -1,4 +1,4 @@
-"""Implementation of get_group_samples_by_group_id resolver function."""
+"""Implementation of get_group_components_by_group_id resolver function."""
 
 from __future__ import annotations
 
@@ -12,7 +12,7 @@ from lightly_studio.models.group import (
 from lightly_studio.models.sample import SampleTable
 
 
-def get_group_samples_by_group_id(
+def get_group_components_by_group_id(
     session: Session,
     group_id: UUID,
 ) -> list[SampleTable]:

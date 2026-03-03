@@ -34,7 +34,7 @@ def test_get_group_samples_by_group_id(db_session: Session) -> None:
     )[0]
 
     # Call get_group_samples
-    samples = group_resolver.get_group_samples_by_group_id(session=db_session, group_id=group_id)
+    samples = group_resolver.get_group_components_by_group_id(session=db_session, group_id=group_id)
 
     # Verify results
     assert len(samples) == 2
@@ -67,7 +67,7 @@ def test_get_group_samples_by_group_id__partial_group(db_session: Session) -> No
     )[0]
 
     # Call get_group_samples
-    samples = group_resolver.get_group_samples_by_group_id(session=db_session, group_id=group_id)
+    samples = group_resolver.get_group_components_by_group_id(session=db_session, group_id=group_id)
 
     # Verify results
     assert len(samples) == 1
@@ -92,7 +92,7 @@ def test_get_group_samples_by_group_id__empty_result(db_session: Session) -> Non
 
     # Call get_group_samples with a non-existent group ID (using front_image's sample_id)
     # This should return empty list as front_image is not a group sample
-    samples = group_resolver.get_group_samples_by_group_id(
+    samples = group_resolver.get_group_components_by_group_id(
         session=db_session, group_id=front_image.sample_id
     )
 
@@ -132,7 +132,7 @@ def test_get_group_samples_by_group_id__multiple_groups(db_session: Session) -> 
     )
 
     # Test first group
-    samples_0 = group_resolver.get_group_samples_by_group_id(
+    samples_0 = group_resolver.get_group_components_by_group_id(
         session=db_session, group_id=group_ids[0]
     )
     assert len(samples_0) == 2
@@ -141,7 +141,7 @@ def test_get_group_samples_by_group_id__multiple_groups(db_session: Session) -> 
     assert back_images[0].sample_id in sample_ids_0
 
     # Test second group
-    samples_1 = group_resolver.get_group_samples_by_group_id(
+    samples_1 = group_resolver.get_group_components_by_group_id(
         session=db_session, group_id=group_ids[1]
     )
     assert len(samples_1) == 2
