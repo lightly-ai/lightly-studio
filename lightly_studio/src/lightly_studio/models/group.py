@@ -92,8 +92,8 @@ class GroupComponentView(BaseModel):
         Returns:
             GroupComponentView with image data populated.
         """
-        # TODO(Kondrat 03/25): Replace manual ImageView construction with ImageView.from_image_table()
-        # once that factory method is implemented in ImageView
+        # TODO(Kondrat 03/25): Replace manual ImageView construction with
+        # ImageView.from_image_table() once that factory method is implemented
         return cls(
             component_name=component_name,
             image=ImageView(
@@ -122,8 +122,8 @@ class GroupComponentView(BaseModel):
         Returns:
             GroupComponentView with video data populated.
         """
-        # TODO(Kondrat 03/25): Replace manual VideoView construction with VideoView.from_video_table()
-        # once that factory method is implemented in VideoView
+        # TODO(Kondrat 03/25): Replace manual VideoView construction with
+        # VideoView.from_video_table() once that factory method is implemented
         return cls(
             component_name=component_name,
             image=None,
