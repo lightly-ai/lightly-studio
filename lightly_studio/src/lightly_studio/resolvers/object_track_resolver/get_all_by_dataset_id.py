@@ -15,8 +15,5 @@ def get_all_by_dataset_id(
     dataset_id: UUID,
 ) -> Sequence[ObjectTrackTable]:
     """Retrieve all object tracks for a given dataset."""
-    stmt = (
-        select(ObjectTrackTable)
-        .where(col(ObjectTrackTable.dataset_id) == dataset_id)
-    )
+    stmt = select(ObjectTrackTable).where(col(ObjectTrackTable.dataset_id) == dataset_id)
     return session.exec(stmt).all()

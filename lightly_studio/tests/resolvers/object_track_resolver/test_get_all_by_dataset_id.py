@@ -17,9 +17,11 @@ def test_get_all_by_dataset_id(test_db: Session) -> None:
     collection_2 = create_collection(session=test_db)
     track_ids = object_track_resolver.create_many(
         session=test_db,
-        tracks=[ObjectTrackCreate(object_track_number=99, dataset_id=collection.collection_id),
-                ObjectTrackCreate(object_track_number=100, dataset_id=collection.collection_id),
-                ObjectTrackCreate(object_track_number=101, dataset_id=collection_2.collection_id)],
+        tracks=[
+            ObjectTrackCreate(object_track_number=99, dataset_id=collection.collection_id),
+            ObjectTrackCreate(object_track_number=100, dataset_id=collection.collection_id),
+            ObjectTrackCreate(object_track_number=101, dataset_id=collection_2.collection_id),
+        ],
     )
     assert len(track_ids) == 3
 
