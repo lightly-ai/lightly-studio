@@ -45,8 +45,19 @@ export class CaptionUtils {
 
         const captionCountBefore = await this.getCaptionCount();
         await captionField.getByTestId('delete-caption-button').click();
-        await this.page.getByTestId('confirm-delete-caption-button').click();
         await expect(this.page.getByTestId('caption-field')).toHaveCount(captionCountBefore - 1);
+    }
+
+    async undoLastCaptionDelete() {
+        const responsePromise = this.page.waitForResponse(
+            (response) =>
+                response.request().method() === 'POST' &&
+                response.url().includes('/captions') &&
+                response.status() === 200
+        );
+        await this.page.getByTestId('header-reverse-action-button').click();
+        await responsePromise;
+        await this.page.waitForLoadState('networkidle');
     }
 
     async updateNthCaption(index: number, text: string) {
