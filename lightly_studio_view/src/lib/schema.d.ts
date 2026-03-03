@@ -1353,7 +1353,7 @@ export interface paths {
          *     Args:
          *         operator_id: The ID of the operator to execute.
          *         collection_id: The ID of the collection to operate on.
-         *         request: The execution request containing parameters.
+         *         request: The execution request containing parameters and optional context.
          *         session: Database session.
          *
          *     Returns:
@@ -2345,6 +2345,7 @@ export interface components {
         ExecuteOperatorRequest: {
             /** Parameters */
             parameters: Record<string, never>;
+            context?: components["schemas"]["OperatorContextRequest"] | null;
         };
         /**
          * ExportBody
@@ -2723,6 +2724,19 @@ export interface components {
             width: number;
             /** Height */
             height: number;
+        };
+        /**
+         * OperatorContextRequest
+         * @description Client-supplied execution context for scoped operator calls.
+         */
+        OperatorContextRequest: {
+            /**
+             * Collection Id
+             * Format: uuid
+             */
+            collection_id: string;
+            /** Context Filter */
+            context_filter?: components["schemas"]["ImageFilter"] | components["schemas"]["VideoFrameFilter"] | components["schemas"]["VideoFilter"] | components["schemas"]["AnnotationsFilter"] | components["schemas"]["GroupFilter"] | components["schemas"]["SampleFilter"] | null;
         };
         /** OperatorResult */
         OperatorResult: {
