@@ -12,7 +12,6 @@ from lightly_studio.resolvers.image_resolver.get_dimension_bounds import get_dim
 from lightly_studio.resolvers.image_resolver.get_many_by_id import get_many_by_id
 from lightly_studio.resolvers.image_resolver.get_sample_ids import get_sample_ids
 from lightly_studio.resolvers.image_resolver.get_samples_excluding import get_samples_excluding
-from lightly_studio.resolvers.image_resolver.get_views_by_ids import get_views_by_ids
 
 __all__ = [
     "create_many",
