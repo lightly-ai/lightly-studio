@@ -2345,7 +2345,7 @@ export interface components {
         ExecuteOperatorRequest: {
             /** Parameters */
             parameters: Record<string, never>;
-            context?: components["schemas"]["OperatorContextRequest"] | null;
+            context: components["schemas"]["OperatorContextRequest"];
         };
         /**
          * ExportBody

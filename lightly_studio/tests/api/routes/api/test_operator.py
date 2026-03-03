@@ -180,7 +180,7 @@ def test_execute_operator__context_collection_not_found(
     operator_id = _get_operator_id_by_name(isolated_operator_registry, "test operator")
 
     response = test_client.post(
-        f"/api/operators/collections/{collection_id}/{operator_id}/execute",
+        f"/api/operators/{operator_id}/execute",
         json={"parameters": {}, "context": {"collection_id": collection_id}},
     )
 
@@ -200,7 +200,7 @@ def test_execute_operator__scope_mismatch(
     )
 
     response = test_client.post(
-        f"/api/operators/collections/{video_collection.collection_id}/{operator_id}/execute",
+        f"/api/operators/{operator_id}/execute",
         json={"parameters": {}, "context": {"collection_id": str(video_collection.collection_id)}},
     )
 
@@ -220,7 +220,7 @@ def test_execute_operator__filter_is_passed_through(
     expected_filter = ImageFilter(width=FilterDimensions(min=100, max=200))
 
     response = test_client.post(
-        f"/api/operators/collections/{collection_id}/{operator_id}/execute",
+        f"/api/operators/{operator_id}/execute",
         json={
             "parameters": {},
             "context": {
