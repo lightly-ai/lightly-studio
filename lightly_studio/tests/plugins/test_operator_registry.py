@@ -34,7 +34,7 @@ def test_operator_registry__dummy_operators(db_session: Session) -> None:
     assert operator == input_operator
 
     collection = create_collection(session=db_session)
-    context = ExecutionContext(collection_id=collection.collection_id, filter=None)
+    context = ExecutionContext(collection_id=collection.collection_id, context_filter=None)
     result = operator.execute(
         session=db_session,
         context=context,
