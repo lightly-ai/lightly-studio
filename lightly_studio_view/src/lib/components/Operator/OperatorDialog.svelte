@@ -18,6 +18,17 @@
         buildInitialParameters,
         getParameterConfig
     } from './parameterTypeConfig';
+    import {
+        isSampleDetailsRoute,
+        isFrameDetailsRoute,
+        isVideoDetailsRoute,
+        isSamplesRoute,
+        isVideoFramesRoute,
+        isVideosRoute
+    } from '$lib/routes';
+    import { useImageFilters } from '$lib/hooks/useImageFilters/useImageFilters';
+    import { useVideoFilters } from '$lib/hooks/useVideoFilters/useVideoFilters';
+    import { useFramesFilter } from '$lib/hooks/useFramesFilter/useFramesFilter';
 
     interface Props {
         operatorMetadata: RegisteredOperatorMetadata | null;
@@ -35,6 +46,48 @@
     let executionSuccess = $state<string | undefined>(undefined);
 
     const collectionId = $derived(page.params.collection_id);
+
+    const routeId = $derived(page.route.id);
+    const currentSampleId = $derived(page.params.sampleId || page.params.sample_id || null);
+
+    const isSampleDetail = $derived(isSampleDetailsRoute(routeId));
+    const isFrameDetail = $derived(isFrameDetailsRoute(routeId));
+    const isVideoDetail = $derived(isVideoDetailsRoute(routeId));
+    const isOnDetailPage = $derived(isSampleDetail || isFrameDetail || isVideoDetail);
+
+    const { imageFilter } = useImageFilters();
+    const { videoFilter } = useVideoFilters();
+    const { frameFilter } = useFramesFilter();
+
+    const isFilterActive = $derived.by(() => {
+        if (isOnDetailPage) return false;
+        if (isSamplesRoute(routeId)) return $imageFilter !== null;
+        if (isVideosRoute(routeId)) return $videoFilter !== null;
+        if (isVideoFramesRoute(routeId)) return $frameFilter !== null;
+        return false;
+    });
+
+    const scopeLabel = $derived(
+        isSampleDetail
+            ? 'Current image'
+            : isFrameDetail
+              ? 'Current frame'
+              : isVideoDetail
+                ? 'Current video'
+                : isFilterActive
+                  ? 'Filtered collection'
+                  : 'Full collection'
+    );
+
+    const contextFilter = $derived.by(() => {
+        if (isOnDetailPage && currentSampleId) {
+            return { sample_ids: [currentSampleId] };
+        }
+        if (isSamplesRoute(routeId)) return $imageFilter ?? undefined;
+        if (isVideosRoute(routeId)) return $videoFilter ?? undefined;
+        if (isVideoFramesRoute(routeId)) return $frameFilter ?? undefined;
+        return undefined;
+    });
 
     function resetExecutionState() {
         executionError = undefined;
@@ -99,7 +152,13 @@
         try {
             const response = await executeOperator({
                 path: { operator_id: operator.id },
-                body: { parameters, context: { collection_id: collectionId } }
+                body: {
+                    parameters,
+                    context: {
+                        collection_id: collectionId,
+                        ...(contextFilter !== undefined && { context_filter: contextFilter })
+                    }
+                }
             });
 
             if (response.error) {
@@ -146,6 +205,19 @@
             <Dialog.Description>
                 Configure the parameters for this operator and click Execute to run it.
             </Dialog.Description>
+            <div class="mt-1 flex items-center gap-2 text-sm">
+                <span class="text-muted-foreground">Scope:</span>
+                <span
+                    class="inline-flex items-center rounded-full px-2 py-1 text-xs font-medium
+                    {isOnDetailPage
+                        ? 'bg-primary text-primary-foreground'
+                        : isFilterActive
+                          ? 'bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-400'
+                          : 'bg-secondary text-secondary-foreground'}"
+                >
+                    {scopeLabel}
+                </span>
+            </div>
         </Dialog.Header>
 
         {#if isLoadingParameters}

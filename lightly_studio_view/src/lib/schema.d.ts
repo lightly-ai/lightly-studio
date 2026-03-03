@@ -2746,6 +2746,15 @@ export interface components {
             message: string;
         };
         /**
+         * OperatorScope
+         * @description Scope in which an operator can be triggered.
+         *
+         *     Operators declare which scopes they support via ``BaseOperator.supported_scopes``.
+         *     The UI uses this to surface operators contextually by media type.
+         * @enum {string}
+         */
+        OperatorScope: "root" | "image" | "video_frame" | "video" | "annotation" | "group" | "caption";
+        /**
          * Paginated
          * @description Paginated query parameters.
          */
@@ -2842,6 +2851,8 @@ export interface components {
             operator_id: string;
             /** Name */
             name: string;
+            /** Supported Scopes */
+            supported_scopes: components["schemas"]["OperatorScope"][];
         };
         /**
          * SampleAnnotationDetailsView
