@@ -116,7 +116,7 @@ export const routes = {
             sampleId: string,
             fromVideos?: boolean
         ) => {
-            const path = `/datasets/${datasetId}/${collectionType}/${collectionId}/frames/${sampleId}?from_video=true`;
+            const path = `/datasets/${datasetId}/${collectionType}/${collectionId}/frames/${sampleId}`;
 
             if (fromVideos) {
                 return `${path}?from_video=true`;
