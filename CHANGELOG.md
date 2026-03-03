@@ -12,6 +12,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 
 - Restructured the navigation menu to follow the dataset structure. This makes the menu work with group datasets.
+- Simplified `VideoDataset` import in README and docs quickstart examples to use `ls.VideoDataset` instead of a separate import line.
 
 ### Deprecated
 
