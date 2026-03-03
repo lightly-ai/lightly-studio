@@ -9,21 +9,30 @@ export class CaptionsPage {
         this.captionUtils = new CaptionUtils(page);
     }
 
-    async goto() {
+    /**
+     * Navigates to the captions page via the navigation menu.
+     *
+     * If the button at `menuLevel` is the captions button itself (no siblings),
+     * it clicks directly. Otherwise it hovers to open the dropdown and selects captions.
+     *
+     * @param menuLevel - Zero-based index of the menu button to interact with.
+     */
+    async goto(menuLevel: number = 1) {
         await this.page.goto('/');
-        await expect(this.page.getByTestId('sample-grid-item').first()).toBeVisible();
-        await this.page.getByTestId('navigation-menu-captions').click();
-        // Wait for the captions grid to be visible
-        await expect(this.getNthGridItem(0)).toBeVisible();
-    }
+        const menuButton = this.page
+            .getByTestId('navigation-menu')
+            .getByRole('link')
+            .nth(menuLevel);
 
-    async gotoVideoFrameCaptions() {
-        await this.page.goto('/');
+        // If this button IS the captions button, click it directly (no dropdown).
+        // Otherwise, hover to open the dropdown and select captions from it.
+        if ((await menuButton.getAttribute('data-testid')) === 'navigation-menu-captions') {
+            await menuButton.click();
+        } else {
+            await menuButton.hover();
+            await this.page.getByTestId('navigation-dropdown-captions').click();
+        }
 
-        await this.page.getByTestId('navigation-menu-frames').hover();
-        await this.page.getByTestId('navigation-menu-captions').click();
-
-        // Wait for the captions grid to be visible
         await expect(this.getNthGridItem(0)).toBeVisible();
     }
 
