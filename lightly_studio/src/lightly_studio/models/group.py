@@ -1,6 +1,6 @@
 """Group table definition."""
 
-from typing import Optional, Union
+from typing import TYPE_CHECKING, Optional, Union
 from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict
@@ -11,6 +11,10 @@ from sqlmodel import Field, Relationship, SQLModel
 from lightly_studio.models.image import ImageView
 from lightly_studio.models.sample import SampleTable, SampleView
 from lightly_studio.models.video import VideoView
+
+if TYPE_CHECKING:
+    from lightly_studio.models.image import ImageTable
+    from lightly_studio.models.video import VideoTable
 
 
 class GroupTable(SQLModel, table=True):
@@ -52,3 +56,85 @@ class GroupViewsWithCount(BaseModel):
     samples: list[GroupView] = PydanticField(..., alias="data")
     total_count: int
     next_cursor: Optional[int] = PydanticField(None, alias="nextCursor")
+
+
+class GroupComponentView(BaseModel):
+    """GroupComponentView representation.
+
+    Represents a group component with its name and associated media (image or video).
+    A component is always either an image or a video, never both.
+
+    A "GroupComponent" is a sample that has the following relationships:
+    - Collection relationship (samples.collection_id → collections.collection_id): The component
+      belongs to a collection/dataset.
+    - Group relationship (via SampleGroupLinkTable): The component is linked to a parent group
+      sample through the SampleGroupLinkTable join table, where the component is referenced
+      by sample_id and the parent group by parent_sample_id.
+    - Content relationship: Each sample's actual content (media file information) is stored in
+      either ImageTable or VideoTable, linked via sample_id as a foreign key. A sample_id exists
+      in SampleTable and exactly one of ImageTable/VideoTable - never both. ImageTable stores
+      image-specific data (file_name, file_path_abs, width, height), while VideoTable stores
+      video-specific data (file_name, file_path_abs, width, height, fps, duration_s).
+    """
+
+    component_name: str
+    image: Optional[ImageView] = None
+    video: Optional[VideoView] = None
+
+    @classmethod
+    def from_image_table(cls, image: "ImageTable", component_name: str) -> "GroupComponentView":
+        """Create a GroupComponentView from an ImageTable.
+
+        Args:
+            image: ImageTable instance with loaded sample relationship.
+            component_name: Name of the component from the collection.
+
+        Returns:
+            GroupComponentView with image data populated.
+        """
+        # TODO: Replace manual ImageView construction with ImageView.from_image_table()
+        # once that factory method is implemented in ImageView
+        return cls(
+            component_name=component_name,
+            image=ImageView(
+                sample_id=image.sample_id,
+                file_name=image.file_name,
+                file_path_abs=image.file_path_abs,
+                width=image.width,
+                height=image.height,
+                sample=SampleView.model_validate(image.sample),
+                annotations=[],
+                tags=[],
+                metadata_dict=None,
+                captions=[],
+            ),
+            video=None,
+        )
+
+    @classmethod
+    def from_video_table(cls, video: "VideoTable", component_name: str) -> "GroupComponentView":
+        """Create a GroupComponentView from a VideoTable.
+
+        Args:
+            video: VideoTable instance with loaded sample relationship.
+            component_name: Name of the component from the collection.
+
+        Returns:
+            GroupComponentView with video data populated.
+        """
+        # TODO: Replace manual VideoView construction with VideoView.from_video_table()
+        # once that factory method is implemented in VideoView
+        return cls(
+            component_name=component_name,
+            image=None,
+            video=VideoView(
+                sample_id=video.sample_id,
+                file_name=video.file_name,
+                file_path_abs=video.file_path_abs,
+                width=video.width,
+                height=video.height,
+                fps=video.fps,
+                duration_s=video.duration_s,
+                sample=SampleView.model_validate(video.sample),
+            ),
+        )

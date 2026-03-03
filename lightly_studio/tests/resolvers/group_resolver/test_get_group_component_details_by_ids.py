@@ -3,9 +3,9 @@
 from sqlmodel import Session
 
 from lightly_studio.models.collection import SampleType
+from lightly_studio.models.group import GroupComponentView
 from lightly_studio.resolvers import collection_resolver
 from lightly_studio.resolvers.group_resolver.get_group_component_details_by_ids import (
-    GroupComponentView,
     get_group_component_details_by_ids,
 )
 from tests.helpers_resolvers import ImageStub, create_collection, create_images
