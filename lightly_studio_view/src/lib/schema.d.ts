@@ -2730,8 +2730,11 @@ export interface components {
          * @description Client-supplied execution context for scoped operator calls.
          */
         OperatorContextRequest: {
-            /** Collection Id */
-            collection_id?: string | null;
+            /**
+             * Collection Id
+             * Format: uuid
+             */
+            collection_id: string;
             /** Context Filter */
             context_filter?: components["schemas"]["ImageFilter"] | components["schemas"]["VideoFrameFilter"] | components["schemas"]["VideoFilter"] | components["schemas"]["AnnotationsFilter"] | components["schemas"]["GroupFilter"] | components["schemas"]["SampleFilter"] | null;
         };

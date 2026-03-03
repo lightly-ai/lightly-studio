@@ -26,14 +26,19 @@ operator_router = APIRouter(prefix="/operators", tags=["operators"])
 class OperatorContextRequest(BaseModel):
     """Client-supplied execution context for scoped operator calls."""
 
-    collection_id: UUID | None = None
+    collection_id: UUID
+    """The collection_id the operator shall be executed on."""
+
     context_filter: AnyFilter = None
+    """The filter for the provided collection."""
 
 
 class ExecuteOperatorRequest(BaseModel):
     """Request model for executing an operator."""
 
     parameters: dict[str, Any]
+    # TODO (Jonas, 3/2026): The context will become non optional,
+    # when removing the collection_id form the route.
     context: OperatorContextRequest | None = None
 
 
@@ -60,6 +65,7 @@ def get_operator_parameters(operator_id: str) -> list[BaseParameter]:
 )
 def execute_operator(
     operator_id: str,
+    # TODO (Jonas, 3/2026): The collection_id will be moved to the request body.
     collection_id: UUID,
     request: ExecuteOperatorRequest,
     session: SessionDep,
@@ -85,15 +91,14 @@ def execute_operator(
 
     context = request.context
     if context is None:
-        context = OperatorContextRequest(collection_id=None, context_filter=None)
+        context = OperatorContextRequest(collection_id=collection_id, context_filter=None)
 
     # The context may specify a focused sub-collection; fall back to the route collection.
-    collection_id = context.collection_id or collection_id
     collection = collection_resolver.get_by_id(session=session, collection_id=collection_id)
     if collection is None:
         raise HTTPException(
             status_code=HTTP_STATUS_NOT_FOUND,
-            detail=f"Collection '{collection_id}' not found",
+            detail=f"Collection '{context.collection_id}' not found",
         )
 
     # Get the scopes for the collection and validate against the scopes supported by the operator.
@@ -115,7 +120,7 @@ def execute_operator(
     return operator.execute(
         session=session,
         context=ExecutionContext(
-            collection_id=collection_id, context_filter=context.context_filter
+            collection_id=context.collection_id, context_filter=context.context_filter
         ),
         parameters=request.parameters,
     )
