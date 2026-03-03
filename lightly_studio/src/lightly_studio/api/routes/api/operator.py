@@ -94,7 +94,7 @@ def execute_operator(
         context = OperatorContextRequest(collection_id=collection_id, context_filter=None)
 
     # The context may specify a focused sub-collection; fall back to the route collection.
-    collection = collection_resolver.get_by_id(session=session, collection_id=collection_id)
+    collection = collection_resolver.get_by_id(session=session, collection_id=context.collection_id)
     if collection is None:
         raise HTTPException(
             status_code=HTTP_STATUS_NOT_FOUND,
