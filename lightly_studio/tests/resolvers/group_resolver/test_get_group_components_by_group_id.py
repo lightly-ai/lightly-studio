@@ -1,3 +1,5 @@
+import uuid
+
 from sqlmodel import Session
 
 from lightly_studio.models.collection import SampleType
@@ -5,7 +7,7 @@ from lightly_studio.resolvers import collection_resolver, group_resolver
 from tests.helpers_resolvers import ImageStub, create_collection, create_images
 
 
-def test_get_group_samples_by_group_id(db_session: Session) -> None:
+def test_get_group_components_by_group_id(db_session: Session) -> None:
     # Create collections
     group_col = create_collection(session=db_session, sample_type=SampleType.GROUP)
     components = collection_resolver.create_group_components(
@@ -43,7 +45,7 @@ def test_get_group_samples_by_group_id(db_session: Session) -> None:
     assert back_image.sample_id in sample_ids
 
 
-def test_get_group_samples_by_group_id__partial_group(db_session: Session) -> None:
+def test_get_group_components_by_group_id__partial_group(db_session: Session) -> None:
     # Create collections
     group_col = create_collection(session=db_session, sample_type=SampleType.GROUP)
     components = collection_resolver.create_group_components(
@@ -74,33 +76,18 @@ def test_get_group_samples_by_group_id__partial_group(db_session: Session) -> No
     assert samples[0].sample_id == front_image.sample_id
 
 
-def test_get_group_samples_by_group_id__empty_result(db_session: Session) -> None:
-    # Create collections
-    group_col = create_collection(session=db_session, sample_type=SampleType.GROUP)
-    components = collection_resolver.create_group_components(
-        session=db_session,
-        parent_collection_id=group_col.collection_id,
-        components=[("front", SampleType.IMAGE)],
-    )
-
-    # Create component sample
-    front_image = create_images(
-        db_session=db_session,
-        collection_id=components["front"].collection_id,
-        images=[ImageStub(path="front_0.jpg")],
-    )[0]
-
-    # Call get_group_samples with a non-existent group ID (using front_image's sample_id)
-    # This should return empty list as front_image is not a group sample
+def test_get_group_components_by_group_id__empty_result(db_session: Session) -> None:
+    # Call get_group_samples with a non-existent group ID (using a random UUID)
+    # This should return empty list as the group does not exist
     samples = group_resolver.get_group_components_by_group_id(
-        session=db_session, group_id=front_image.sample_id
+        session=db_session, group_id=uuid.uuid4()
     )
 
     # Verify results - should be empty
     assert len(samples) == 0
 
 
-def test_get_group_samples_by_group_id__multiple_groups(db_session: Session) -> None:
+def test_get_group_components_by_group_id__multiple_groups(db_session: Session) -> None:
     # Create collections
     group_col = create_collection(session=db_session, sample_type=SampleType.GROUP)
     components = collection_resolver.create_group_components(
