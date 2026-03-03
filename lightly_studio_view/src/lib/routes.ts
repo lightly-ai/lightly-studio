@@ -62,6 +62,14 @@ export const isGroupsRoute = (routeId: string | null): boolean => {
     return routeId ? routeId == APP_ROUTES.groups : false;
 };
 
+export const isFrameDetailsRoute = (routeId: string | null): boolean => {
+    return routeId ? routeId == APP_ROUTES.framesDetails : false;
+};
+
+export const isVideoDetailsRoute = (routeId: string | null): boolean => {
+    return routeId ? routeId == APP_ROUTES.videoDetails : false;
+};
+
 // Route structure: /datasets/{dataset_id}/{collection_type}/{collection_id}
 export const routes = {
     home: () => `/`,
