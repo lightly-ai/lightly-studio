@@ -37,9 +37,7 @@ class ExecuteOperatorRequest(BaseModel):
     """Request model for executing an operator."""
 
     parameters: dict[str, Any]
-    # TODO (Jonas, 3/2026): The context will become non optional,
-    # when removing the collection_id form the route.
-    context: OperatorContextRequest | None = None
+    context: OperatorContextRequest
 
 
 @operator_router.get("")
@@ -60,13 +58,9 @@ def get_operator_parameters(operator_id: str) -> list[BaseParameter]:
     return operator.parameters
 
 
-@operator_router.post(
-    "/collections/{collection_id}/{operator_id}/execute", response_model=OperatorResult
-)
+@operator_router.post("/{operator_id}/execute", response_model=OperatorResult)
 def execute_operator(
     operator_id: str,
-    # TODO (Jonas, 3/2026): The collection_id will be moved to the request body.
-    collection_id: UUID,
     request: ExecuteOperatorRequest,
     session: SessionDep,
 ) -> OperatorResult:
@@ -74,8 +68,7 @@ def execute_operator(
 
     Args:
         operator_id: The ID of the operator to execute.
-        collection_id: The ID of the collection to operate on.
-        request: The execution request containing parameters and optional context.
+        request: The execution request containing parameters and context.
         session: Database session.
 
     Returns:
@@ -90,8 +83,6 @@ def execute_operator(
         )
 
     context = request.context
-    if context is None:
-        context = OperatorContextRequest(collection_id=collection_id, context_filter=None)
 
     # The context may specify a focused sub-collection; fall back to the route collection.
     collection = collection_resolver.get_by_id(session=session, collection_id=context.collection_id)
