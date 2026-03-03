@@ -4,15 +4,12 @@ from sqlmodel import Session
 
 from lightly_studio.models.collection import SampleType
 from lightly_studio.models.group import GroupComponentView
-from lightly_studio.resolvers import collection_resolver
-from lightly_studio.resolvers.group_resolver.get_group_component_details_by_ids import (
-    get_group_component_details_by_ids,
-)
+from lightly_studio.resolvers import collection_resolver, group_resolver
 from tests.helpers_resolvers import ImageStub, create_collection, create_images
 from tests.resolvers.video.helpers import VideoStub, create_video
 
 
-def test_get_group_component_details_by_ids_single_image(db_session: Session) -> None:
+def test_get_group_component_details_by_ids__single_image(db_session: Session) -> None:
     """Test getting group component details for a single image sample."""
     collection = create_collection(session=db_session, sample_type=SampleType.IMAGE)
     collection.group_component_name = "front"
@@ -26,7 +23,9 @@ def test_get_group_component_details_by_ids_single_image(db_session: Session) ->
         images=[ImageStub(path="test.jpg")],
     )[0]
 
-    results = get_group_component_details_by_ids(session=db_session, sample_ids=[image.sample_id])
+    results = group_resolver.get_group_component_details_by_ids(
+        session=db_session, sample_ids=[image.sample_id]
+    )
 
     assert len(results) == 1
     assert isinstance(results[0], GroupComponentView)
@@ -40,7 +39,7 @@ def test_get_group_component_details_by_ids_single_image(db_session: Session) ->
     assert results[0].video is None
 
 
-def test_get_group_component_details_by_ids_single_video(db_session: Session) -> None:
+def test_get_group_component_details_by_ids__single_video(db_session: Session) -> None:
     """Test getting group component details for a single video sample."""
     collection = create_collection(session=db_session, sample_type=SampleType.VIDEO)
     collection.group_component_name = "camera"
@@ -54,7 +53,9 @@ def test_get_group_component_details_by_ids_single_video(db_session: Session) ->
         video=VideoStub(path="test.mp4"),
     )
 
-    results = get_group_component_details_by_ids(session=db_session, sample_ids=[video.sample_id])
+    results = group_resolver.get_group_component_details_by_ids(
+        session=db_session, sample_ids=[video.sample_id]
+    )
 
     assert len(results) == 1
     assert isinstance(results[0], GroupComponentView)
@@ -70,7 +71,7 @@ def test_get_group_component_details_by_ids_single_video(db_session: Session) ->
     assert results[0].image is None
 
 
-def test_get_group_component_details_by_ids_multiple_images(db_session: Session) -> None:
+def test_get_group_component_details_by_ids__multiple_images(db_session: Session) -> None:
     """Test getting group component details for multiple image samples."""
     collection = create_collection(session=db_session, sample_type=SampleType.IMAGE)
     collection.group_component_name = "front"
@@ -85,7 +86,9 @@ def test_get_group_component_details_by_ids_multiple_images(db_session: Session)
     )
 
     sample_ids = [img.sample_id for img in images]
-    results = get_group_component_details_by_ids(session=db_session, sample_ids=sample_ids)
+    results = group_resolver.get_group_component_details_by_ids(
+        session=db_session, sample_ids=sample_ids
+    )
 
     assert len(results) == 3
     for i, result in enumerate(results):
@@ -95,7 +98,7 @@ def test_get_group_component_details_by_ids_multiple_images(db_session: Session)
         assert result.video is None
 
 
-def test_get_group_component_details_by_ids_mixed_types(db_session: Session) -> None:
+def test_get_group_component_details_by_ids__mixed_types(db_session: Session) -> None:
     """Test getting group component details for mixed image and video samples."""
     image_collection = create_collection(session=db_session, sample_type=SampleType.IMAGE)
     image_collection.group_component_name = "front"
@@ -120,7 +123,7 @@ def test_get_group_component_details_by_ids_mixed_types(db_session: Session) -> 
         video=VideoStub(path="test.mp4"),
     )
 
-    results = get_group_component_details_by_ids(
+    results = group_resolver.get_group_component_details_by_ids(
         session=db_session, sample_ids=[image.sample_id, video.sample_id]
     )
 
@@ -145,24 +148,26 @@ def test_get_group_component_details_by_ids_mixed_types(db_session: Session) -> 
     assert results[1].image is None
 
 
-def test_get_group_component_details_by_ids_empty_list(db_session: Session) -> None:
+def test_get_group_component_details_by_ids__empty_list(db_session: Session) -> None:
     """Test getting group component details with empty sample_ids list."""
-    results = get_group_component_details_by_ids(session=db_session, sample_ids=[])
+    results = group_resolver.get_group_component_details_by_ids(session=db_session, sample_ids=[])
 
     assert results == []
 
 
-def test_get_group_component_details_by_ids_nonexistent(db_session: Session) -> None:
+def test_get_group_component_details_by_ids__nonexistent(db_session: Session) -> None:
     """Test getting group component details for non-existent sample IDs."""
     import uuid
 
     non_existent_ids = [uuid.uuid4(), uuid.uuid4()]
-    results = get_group_component_details_by_ids(session=db_session, sample_ids=non_existent_ids)
+    results = group_resolver.get_group_component_details_by_ids(
+        session=db_session, sample_ids=non_existent_ids
+    )
 
     assert results == []
 
 
-def test_get_group_component_details_by_ids_preserves_order(db_session: Session) -> None:
+def test_get_group_component_details_by_ids__preserves_order(db_session: Session) -> None:
     """Test that results are returned in the same order as input sample_ids."""
     collection = create_collection(session=db_session, sample_type=SampleType.IMAGE)
     collection.group_component_name = "front"
@@ -178,7 +183,9 @@ def test_get_group_component_details_by_ids_preserves_order(db_session: Session)
 
     # Request in reverse order
     sample_ids = [img.sample_id for img in reversed(images)]
-    results = get_group_component_details_by_ids(session=db_session, sample_ids=sample_ids)
+    results = group_resolver.get_group_component_details_by_ids(
+        session=db_session, sample_ids=sample_ids
+    )
 
     assert len(results) == 5
     for i, result in enumerate(results):
@@ -186,7 +193,7 @@ def test_get_group_component_details_by_ids_preserves_order(db_session: Session)
         assert result.image.sample_id == sample_ids[i]
 
 
-def test_get_group_component_details_by_ids_no_component_name(db_session: Session) -> None:
+def test_get_group_component_details_by_ids__no_component_name(db_session: Session) -> None:
     """Test getting group component details when collection has no group_component_name."""
     collection = create_collection(session=db_session, sample_type=SampleType.IMAGE)
     # Don't set group_component_name, it should default to None
@@ -197,14 +204,16 @@ def test_get_group_component_details_by_ids_no_component_name(db_session: Sessio
         images=[ImageStub(path="test.jpg")],
     )[0]
 
-    results = get_group_component_details_by_ids(session=db_session, sample_ids=[image.sample_id])
+    results = group_resolver.get_group_component_details_by_ids(
+        session=db_session, sample_ids=[image.sample_id]
+    )
 
     assert len(results) == 1
     assert results[0].component_name == ""
     assert results[0].image is not None
 
 
-def test_get_group_component_details_by_ids_multiple_collections(db_session: Session) -> None:
+def test_get_group_component_details_by_ids__multiple_collections(db_session: Session) -> None:
     """Test getting group component details for samples from different collections."""
     # Create parent group collection with multiple components
     group_col = create_collection(session=db_session, sample_type=SampleType.GROUP)
@@ -226,7 +235,7 @@ def test_get_group_component_details_by_ids_multiple_collections(db_session: Ses
         images=[ImageStub(path="back.jpg")],
     )[0]
 
-    results = get_group_component_details_by_ids(
+    results = group_resolver.get_group_component_details_by_ids(
         session=db_session, sample_ids=[front_image.sample_id, back_image.sample_id]
     )
 

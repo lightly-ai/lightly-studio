@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-from collections.abc import Sequence
 from uuid import UUID
 
 from sqlmodel import Session, col, select
@@ -13,7 +12,7 @@ from lightly_studio.resolvers import image_resolver, video_resolver
 
 
 def get_group_component_details_by_ids(
-    session: Session, sample_ids: Sequence[UUID]
+    session: Session, sample_ids: list[UUID]
 ) -> list[GroupComponentView]:
     """Get group component details for a list of sample IDs.
 
@@ -24,8 +23,8 @@ def get_group_component_details_by_ids(
     Returns:
         List of GroupComponentView objects with component names and media information.
     """
-    images = image_resolver.get_many_by_id(session, list(sample_ids))
-    videos = video_resolver.get_many_by_id(session, list(sample_ids))
+    images = image_resolver.get_many_by_id(session=session, sample_ids=sample_ids)
+    videos = video_resolver.get_many_by_id(session=session, sample_ids=sample_ids)
 
     # Fetch all unique collection IDs
     collection_ids = {image.sample.collection_id for image in images} | {
