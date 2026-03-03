@@ -1352,8 +1352,7 @@ export interface paths {
          *
          *     Args:
          *         operator_id: The ID of the operator to execute.
-         *         collection_id: The ID of the collection to operate on.
-         *         request: The execution request containing parameters and optional context.
+         *         request: The execution request containing parameters and context.
          *         session: Database session.
          *
          *     Returns:
@@ -5746,9 +5745,7 @@ export interface operations {
     };
     execute_operator: {
         parameters: {
-            query: {
-                collection_id: string;
-            };
+            query?: never;
             header?: never;
             path: {
                 operator_id: string;
