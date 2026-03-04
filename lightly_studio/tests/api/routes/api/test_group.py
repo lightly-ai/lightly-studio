@@ -424,3 +424,220 @@ def test_get_all_groups__returns_first_sample_with_images_and_videos(
     # Verify sample_count is present and correct (each group has 2 samples: 1 image + 1 video)
     assert all("sample_count" in group for group in result["data"])
     assert all(group["sample_count"] == 2 for group in result["data"])
+
+
+def test_get_group_components_by_group_id(test_client: TestClient, db_session: Session) -> None:
+    """Test GET group components endpoint."""
+    # Create group collection with multiple components
+    group_col = create_collection(session=db_session, sample_type=SampleType.GROUP)
+    components = collection_resolver.create_group_components(
+        session=db_session,
+        parent_collection_id=group_col.collection_id,
+        components=[("front", SampleType.IMAGE), ("back", SampleType.IMAGE)],
+    )
+
+    # Create component samples
+    front_image = create_images(
+        db_session=db_session,
+        collection_id=components["front"].collection_id,
+        images=[ImageStub(path="front_0.jpg")],
+    )[0]
+    back_image = create_images(
+        db_session=db_session,
+        collection_id=components["back"].collection_id,
+        images=[ImageStub(path="back_0.jpg")],
+    )[0]
+
+    # Create a group
+    group_id = group_resolver.create_many(
+        session=db_session,
+        collection_id=group_col.collection_id,
+        groups=[{front_image.sample_id, back_image.sample_id}],
+    )[0]
+
+    # Act
+    response = test_client.get(f"/api/groups/{group_id}/components")
+
+    # Assert
+    assert response.status_code == HTTP_STATUS_OK
+    result = response.json()
+    assert len(result) == 2
+
+    # Verify component names
+    component_names = {comp["collection"]["group_component_name"] for comp in result}
+    assert component_names == {"front", "back"}
+
+    # Verify component details by name
+    components_by_name = {comp["collection"]["group_component_name"]: comp for comp in result}
+
+    assert components_by_name["front"]["details"]["sample_id"] == str(front_image.sample_id)
+    assert components_by_name["front"]["details"]["file_name"] == "front_0.jpg"
+    assert components_by_name["front"]["details"]["type"] == "image"
+
+    assert components_by_name["back"]["details"]["sample_id"] == str(back_image.sample_id)
+    assert components_by_name["back"]["details"]["file_name"] == "back_0.jpg"
+    assert components_by_name["back"]["details"]["type"] == "image"
+
+
+def test_get_group_components_by_group_id__with_videos(
+    test_client: TestClient, db_session: Session
+) -> None:
+    """Test GET group components endpoint with video components."""
+    # Create group collection with image and video components
+    group_col = create_collection(session=db_session, sample_type=SampleType.GROUP)
+    components = collection_resolver.create_group_components(
+        session=db_session,
+        parent_collection_id=group_col.collection_id,
+        components=[("front", SampleType.IMAGE), ("camera", SampleType.VIDEO)],
+    )
+
+    # Create component samples
+    front_image = create_images(
+        db_session=db_session,
+        collection_id=components["front"].collection_id,
+        images=[ImageStub(path="front_0.jpg")],
+    )[0]
+    video_ids = create_videos(
+        session=db_session,
+        collection_id=components["camera"].collection_id,
+        videos=[VideoStub(path="camera_0.mp4")],
+    )
+
+    # Create a group
+    group_id = group_resolver.create_many(
+        session=db_session,
+        collection_id=group_col.collection_id,
+        groups=[{front_image.sample_id, video_ids[0]}],
+    )[0]
+
+    # Act
+    response = test_client.get(f"/api/groups/{group_id}/components")
+
+    # Assert
+    assert response.status_code == HTTP_STATUS_OK
+    result = response.json()
+    assert len(result) == 2
+
+    # Verify component names
+    component_names = {comp["collection"]["group_component_name"] for comp in result}
+    assert component_names == {"front", "camera"}
+
+    # Verify component details by name
+    components_by_name = {comp["collection"]["group_component_name"]: comp for comp in result}
+
+    assert components_by_name["front"]["details"]["sample_id"] == str(front_image.sample_id)
+    assert components_by_name["front"]["details"]["type"] == "image"
+
+    assert components_by_name["camera"]["details"]["sample_id"] == str(video_ids[0])
+    assert components_by_name["camera"]["details"]["file_name"] == "camera_0.mp4"
+    assert components_by_name["camera"]["details"]["type"] == "video"
+
+
+def test_get_group_components_by_group_id__partial_group(
+    test_client: TestClient, db_session: Session
+) -> None:
+    """Test GET group components endpoint with partial group (not all components present)."""
+    # Create group collection with multiple components
+    group_col = create_collection(session=db_session, sample_type=SampleType.GROUP)
+    components = collection_resolver.create_group_components(
+        session=db_session,
+        parent_collection_id=group_col.collection_id,
+        components=[("front", SampleType.IMAGE), ("back", SampleType.IMAGE)],
+    )
+
+    # Create only front component sample
+    front_image = create_images(
+        db_session=db_session,
+        collection_id=components["front"].collection_id,
+        images=[ImageStub(path="front_0.jpg")],
+    )[0]
+
+    # Create a partial group (only has front component)
+    group_id = group_resolver.create_many(
+        session=db_session,
+        collection_id=group_col.collection_id,
+        groups=[{front_image.sample_id}],
+    )[0]
+
+    # Act
+    response = test_client.get(f"/api/groups/{group_id}/components")
+
+    # Assert
+    assert response.status_code == HTTP_STATUS_OK
+    result = response.json()
+    assert len(result) == 1
+
+    component = result[0]
+    assert component["collection"]["group_component_name"] == "front"
+    assert component["details"]["sample_id"] == str(front_image.sample_id)
+    assert component["details"]["type"] == "image"
+
+
+def test_get_group_components_by_group_id__nonexistent_group(
+    test_client: TestClient,
+) -> None:
+    """Test GET group components endpoint with non-existent group ID."""
+    import uuid
+
+    # Act
+    non_existent_id = uuid.uuid4()
+    response = test_client.get(f"/api/groups/{non_existent_id}/components")
+
+    # Assert - should return empty list for non-existent group
+    assert response.status_code == HTTP_STATUS_OK
+    result = response.json()
+    assert result == []
+
+
+def test_get_group_components_by_group_id__multiple_groups(
+    test_client: TestClient, db_session: Session
+) -> None:
+    """Test GET group components endpoint returns only components for specified group."""
+    # Create group collection
+    group_col = create_collection(session=db_session, sample_type=SampleType.GROUP)
+    components = collection_resolver.create_group_components(
+        session=db_session,
+        parent_collection_id=group_col.collection_id,
+        components=[("front", SampleType.IMAGE), ("back", SampleType.IMAGE)],
+    )
+
+    # Create samples for two groups
+    front_images = create_images(
+        db_session=db_session,
+        collection_id=components["front"].collection_id,
+        images=[ImageStub(path="front_0.jpg"), ImageStub(path="front_1.jpg")],
+    )
+    back_images = create_images(
+        db_session=db_session,
+        collection_id=components["back"].collection_id,
+        images=[ImageStub(path="back_0.jpg"), ImageStub(path="back_1.jpg")],
+    )
+
+    # Create two groups
+    group_ids = group_resolver.create_many(
+        session=db_session,
+        collection_id=group_col.collection_id,
+        groups=[
+            {front_images[0].sample_id, back_images[0].sample_id},
+            {front_images[1].sample_id, back_images[1].sample_id},
+        ],
+    )
+
+    # Act - Request components for first group
+    response = test_client.get(f"/api/groups/{group_ids[0]}/components")
+
+    # Assert
+    assert response.status_code == HTTP_STATUS_OK
+    result = response.json()
+    assert len(result) == 2
+
+    # Verify we got components from the first group only
+    sample_ids = {comp["details"]["sample_id"] for comp in result}
+
+    # Should contain samples from first group
+    assert str(front_images[0].sample_id) in sample_ids
+    assert str(back_images[0].sample_id) in sample_ids
+
+    # Should NOT contain samples from second group
+    assert str(front_images[1].sample_id) not in sample_ids
+    assert str(back_images[1].sample_id) not in sample_ids
