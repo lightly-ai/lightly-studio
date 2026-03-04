@@ -72,9 +72,7 @@ class GroupComponentView(BaseModel):
       by sample_id and the parent group by parent_sample_id.
     - Content relationship: Each sample's actual content (media file information) is stored in
       either ImageTable or VideoTable, linked via sample_id as a foreign key. A sample_id exists
-      in SampleTable and exactly one of ImageTable/VideoTable - never both. ImageTable stores
-      image-specific data (file_name, file_path_abs, width, height), while VideoTable stores
-      video-specific data (file_name, file_path_abs, width, height, fps, duration_s).
+      in SampleTable and exactly one of ImageTable/VideoTable - never both. 
     """
 
     component_name: str
