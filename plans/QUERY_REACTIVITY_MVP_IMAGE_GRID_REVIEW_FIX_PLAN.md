@@ -24,11 +24,11 @@ Out of scope:
 
 File: `lightly_studio_view/src/routes/datasets/[dataset_id]/[collection_type]/[collection_id]/+layout.svelte`
 
-- [ ] Decide and document intended behavior for grid transitions in the same collection:
+- [x] Decide and document intended behavior for grid transitions in the same collection:
   - Option A (recommended): clear selected samples when `gridType` changes (previous behavior).
   - Option B: keep selection across grids and explicitly clear `sample_ids` when entering images.
-- [ ] Implement chosen behavior so stale `sample_ids` do not leak into image queries after groups -> images navigation.
-- [ ] Add/update a short comment describing the chosen reset rule.
+- [x] Implement chosen behavior so stale `sample_ids` do not leak into image queries after groups -> images navigation.
+- [x] Add/update a short comment describing the chosen reset rule.
 
 ## 2) Make collection-dependent hooks react to route param changes (P1)
 
@@ -40,17 +40,17 @@ Files:
 - `lightly_studio_view/src/lib/hooks/useDimensions/useDimensions.ts`
 - `lightly_studio_view/src/lib/hooks/useTags/useTags.ts`
 
-- [ ] Remove `untrack(() => collectionId)` / `untrack(() => collection_id)` freezes that bind hooks to initial params.
-- [ ] Use one stable top-level hook instance with reactive params (store-backed params pattern) where needed.
+- [x] Remove `untrack(() => collectionId)` / `untrack(() => collection_id)` freezes that bind hooks to initial params.
+- [x] Use one stable top-level hook instance with reactive params (store-backed params pattern) where needed.
 - [ ] Verify metadata/dimensions/tags are correct after param-only navigation between collections.
-- [ ] Keep the "no hook creation inside reactive runes" rule intact.
+- [x] Keep the "no hook creation inside reactive runes" rule intact.
 
 ## 3) Remove debug instrumentation from production path (P2)
 
 File: `lightly_studio_view/src/routes/datasets/[dataset_id]/[collection_type]/[collection_id]/+layout.svelte`
 
-- [ ] Remove `_rc`, `_log`, and all temporary debug `console.log` calls.
-- [ ] Keep idempotency guards that were introduced for loop prevention.
+- [x] Remove `_rc`, `_log`, and all temporary debug `console.log` calls.
+- [x] Keep idempotency guards that were introduced for loop prevention.
 
 ## 4) Apply hook-style cleanup for new Readable support (P2)
 
@@ -63,10 +63,20 @@ Files:
 - `lightly_studio_view/src/lib/hooks/useVideoFrameAnnotationsCount/useVideoFrameAnnotationsCount.ts`
 - `lightly_studio_view/src/lib/hooks/useImagesInfinite/useImagesInfinite.ts`
 
-- [ ] Extract duplicated `isReadable` guard to a shared utility (or align on one local helper pattern).
-- [ ] Replace `any` with `unknown` in runtime type guards.
-- [ ] Keep public hook APIs backward compatible.
+- [x] Extract duplicated `isReadable` guard to a shared utility (or align on one local helper pattern).
+- [x] Replace `any` with `unknown` in runtime type guards.
+- [x] Keep public hook APIs backward compatible.
 
 ## 5) Validation
 
-- [ ] Run `npm run check` in `lightly_studio_view`.
+- [x] Run `npm run check` in `lightly_studio_view`.
+
+## Findings (2026-03-04)
+
+- Implemented Option A: sample selection now resets on same-collection grid transitions, and image `sample_ids` are explicitly cleared on grid/context changes to prevent stale filter leakage.
+- Removed all temporary layout debug instrumentation (`_rc`, `_log`, debug `console.log`) while keeping idempotency guards.
+- Replaced collection-id freezes with reactive store-backed params in layout and samples page.
+- Extended `useMetadataFilters`, `useDimensions`, and `useTags` to support `string | Readable<string>` collection IDs so hooks react to param-only navigation without hook re-instantiation.
+- Added shared `isReadableStore` utility and reused it in the Readable-capable query hooks to remove duplicated runtime guards and avoid `any`.
+- Validation: `npm run check` in `lightly_studio_view` passed (`svelte-check found 0 errors and 0 warnings`).
+- Remaining gap: manual verification for metadata/dimensions/tags correctness across param-only collection navigation is still pending.
