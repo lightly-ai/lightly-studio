@@ -6,6 +6,7 @@ from pathlib import Path
 from pytest_mock import MockerFixture
 from sqlmodel import Session
 
+from lightly_studio.core.annotation import CreateInstanceSegmentation
 from lightly_studio.core.dataset_query import ImageSampleField
 from lightly_studio.core.dataset_query.dataset_query import DatasetQuery
 from lightly_studio.core.image.image_dataset import ImageDataset
@@ -185,6 +186,49 @@ class TestDatasetExport:
             samples=mocker.ANY,
             output_json=Path("coco_export.json"),
         )
+
+    def test_to_coco_instance_segmentations(
+        self,
+        tmp_path: Path,
+        patch_collection: None,  # noqa: ARG002
+    ) -> None:
+        dataset = ImageDataset.create(name="test_dataset")
+        create_images(
+            db_session=dataset.session,
+            collection_id=dataset.dataset_id,
+            images=[ImageStub(path="image0.jpg", width=10, height=10)],
+        )
+
+        samples = list(dataset)
+        samples[0].add_annotation(
+            CreateInstanceSegmentation.from_rle_mask(
+                label="dog",
+                sample_2d=samples[0],
+                segmentation_mask=[2, 3, 7, 2, 86],
+            )
+        )
+
+        output_json = tmp_path / "task_inst_seg_1.json"
+        dataset.export().to_coco_instance_segmentations(output_json=output_json)
+
+        # Load the generated JSON and verify its content
+        with open(output_json) as f:
+            coco_data = json.load(f)
+        assert coco_data == {
+            "images": [
+                {"id": 0, "file_name": "image0.jpg", "width": 10, "height": 10},
+            ],
+            "categories": [{"id": 0, "name": "dog"}],
+            "annotations": [
+                {
+                    "image_id": 0,
+                    "category_id": 0,
+                    "segmentation": {"counts": [20, 2, 8, 2, 8, 1, 59], "size": [10, 10]},
+                    "bbox": [2.0, 0.0, 3.0, 2.0],
+                    "iscrowd": 1,
+                },
+            ],
+        }
 
 
 def test_to_coco_object_detections(

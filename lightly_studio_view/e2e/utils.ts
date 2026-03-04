@@ -69,7 +69,8 @@ export const test = base.extend<Pages>({
     captionsVideoFramePage: async ({ page }, use) => {
         // Set up the fixture.
         const captionsPage = new CaptionsPage(page);
-        await captionsPage.gotoVideoFrameCaptions();
+        // For a video dataset, captions are on the third menu level (index 2).
+        await captionsPage.goto(2);
 
         // Use the fixture value in the test.
         await use(captionsPage);

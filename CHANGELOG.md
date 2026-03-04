@@ -9,7 +9,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- `Dataset.export()` now supports instance segmentation export to COCO using `to_coco_instance_segmentations()`.
+
 ### Changed
+
+- Restructured the navigation menu to follow the dataset structure. This makes the menu work with group datasets.
 
 ### Deprecated
 
@@ -17,7 +21,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- Fixed crosshair helper lines in annotation draw mode so vertical and horizontal lines remain the same thickness when zooming.
+- Settings dialog is now scrollable on small screens.
+- Added `✕` button to clear an active text search, matching the existing image search behaviour.
 - Fixed spurious "Annotation updated successfully" toast appearing when clicking a bounding box without moving or resizing it.
+- Improved deletion UX in sample details and captions list views: replaced confirmation popups with immediate deletion and Ctrl+Z undo support.
 
 ### Security
 
