@@ -11,7 +11,7 @@ from lightly_studio.models.group import GroupComponentView
 from lightly_studio.resolvers import image_resolver, video_resolver
 
 
-def get_group_component_details_by_ids(
+def get_group_component_views_by_ids(
     session: Session, sample_ids: list[UUID]
 ) -> list[GroupComponentView]:
     """Get group component details for a list of sample IDs.
