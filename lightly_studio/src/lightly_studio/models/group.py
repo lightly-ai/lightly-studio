@@ -87,6 +87,7 @@ class GroupComponentView(BaseModel):
         Args:
             image: ImageTable instance with loaded sample relationship.
             collection: ComponentCollectionView instance with collection data.
+            similarity_score: Optional similarity score to include in the ImageView.
 
         Returns:
             GroupComponentView with image data populated.
@@ -111,6 +112,8 @@ class GroupComponentView(BaseModel):
         Args:
             video: VideoTable instance with loaded sample relationship.
             collection: ComponentCollectionView instance with collection data.
+            similarity_score: Optional similarity score to include in the VideoView.
+            frame: Optional FrameView instance to include in the VideoView.
 
         Returns:
             GroupComponentView with video data populated.
