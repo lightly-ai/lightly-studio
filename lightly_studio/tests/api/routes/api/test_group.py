@@ -1,3 +1,5 @@
+import uuid
+
 from fastapi.testclient import TestClient
 from sqlmodel import Session
 
@@ -577,8 +579,6 @@ def test_get_group_components_by_group_id__nonexistent_group(
     test_client: TestClient,
 ) -> None:
     """Test GET group components endpoint with non-existent group ID."""
-    import uuid
-
     # Act
     non_existent_id = uuid.uuid4()
     response = test_client.get(f"/api/groups/{non_existent_id}/components")
