@@ -9,6 +9,7 @@
         SampleView,
         VideoFrameView
     } from '$lib/api/lightly_studio_local';
+    import { SampleAnnotations } from '..';
 
     const {
         sample,
@@ -35,16 +36,28 @@
     );
 </script>
 
-<svg
-    style="position: absolute; top: 0; left: 0; pointer-events: none"
-    viewBox={`0 0 ${sampleWidth} ${sampleHeight}`}
-    preserveAspectRatio={sampleImageObjectFit === 'contain' ? 'xMidYMid meet' : 'xMidYMid slice'}
-    {width}
-    {height}
->
-    <g class="sample-annotation" class:invisible={$isHidden}>
-        {#each annotationsWithVisuals as annotation (annotation.sample_id)}
-            <SampleAnnotation {annotation} {showLabel} imageWidth={sampleWidth} />
-        {/each}
-    </g>
-</svg>
+{#if !showLabel}
+    <SampleAnnotations
+        sample={{
+            width: sampleWidth,
+            height: sampleHeight,
+            annotations: annotations
+        }}
+    />
+{:else}
+    <svg
+        style="position: absolute; top: 0; left: 0; pointer-events: none"
+        viewBox={`0 0 ${sampleWidth} ${sampleHeight}`}
+        preserveAspectRatio={sampleImageObjectFit === 'contain'
+            ? 'xMidYMid meet'
+            : 'xMidYMid slice'}
+        {width}
+        {height}
+    >
+        <g class="sample-annotation" class:invisible={$isHidden}>
+            {#each annotationsWithVisuals as annotation (annotation.sample_id)}
+                <SampleAnnotation {annotation} {showLabel} imageWidth={sampleWidth} />
+            {/each}
+        </g>
+    </svg>
+{/if}

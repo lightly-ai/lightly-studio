@@ -7,7 +7,6 @@
     const {
         sample,
         objectFit,
-        sampleSize,
         displayTextOnImage
     }: {
         sample: ImageView;
@@ -18,12 +17,7 @@
 </script>
 
 <SampleImage {sample} {objectFit} />
-<SampleAnnotations
-    {sample}
-    containerWidth={sampleSize}
-    sampleImageObjectFit={objectFit}
-    containerHeight={sampleSize}
-/>
+<SampleAnnotations {sample} />
 
 {#if sample.similarity_score !== undefined && sample.similarity_score !== null}
     <div
