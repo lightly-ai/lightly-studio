@@ -96,18 +96,7 @@ class GroupComponentView(BaseModel):
         # ImageView.from_image_table() once that factory method is implemented
         return cls(
             component_name=component_name,
-            image=ImageView(
-                sample_id=image.sample_id,
-                file_name=image.file_name,
-                file_path_abs=image.file_path_abs,
-                width=image.width,
-                height=image.height,
-                sample=SampleView.model_validate(image.sample),
-                annotations=[],
-                tags=[],
-                metadata_dict=None,
-                captions=[],
-            ),
+            image=ImageView.from_image_table(image=image),
             video=None,
         )
 
