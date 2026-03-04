@@ -66,7 +66,7 @@ class GroupComponentView(BaseModel):
 
     A "GroupComponent" is a sample that has the following relationships:
     - Collection relationship (samples.collection_id → collections.collection_id): The component
-      belongs to a collection/dataset.
+      sample belongs to a component collection.
     - Group relationship (via SampleGroupLinkTable): The component is linked to a parent group
       sample through the SampleGroupLinkTable join table, where the component is referenced
       by sample_id and the parent group by parent_sample_id.
