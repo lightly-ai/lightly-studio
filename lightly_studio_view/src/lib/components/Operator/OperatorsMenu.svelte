@@ -1,10 +1,27 @@
 <script lang="ts">
+    import { page } from '$app/state';
     import { onMount } from 'svelte';
-    import { getOperators, type RegisteredOperatorMetadata } from '$lib/api/lightly_studio_local';
+    import {
+        getOperators,
+        type RegisteredOperatorMetadata,
+        OperatorScope
+    } from '$lib/api/lightly_studio_local';
+    import { useCollection } from '$lib/hooks/useCollection/useCollection';
     import { LoaderCircle as Loader2, AlertCircle, ChevronRight } from '@lucide/svelte';
     import * as Dialog from '$lib/components/ui/dialog';
     import { useOperatorsDialog } from '$lib/hooks/useOperatorsDialog/useOperatorsDialog';
     import OperatorDialog from '$lib/components/Operator/OperatorDialog.svelte';
+    import {
+        isSamplesRoute,
+        isSampleDetailsRoute,
+        isVideosRoute,
+        isVideoDetailsRoute,
+        isVideoFramesRoute,
+        isFrameDetailsRoute,
+        isGroupsRoute,
+        isAnnotationsRoute,
+        isAnnotationDetailsRoute
+    } from '$lib/routes';
 
     let operators: RegisteredOperatorMetadata[] = $state([]);
     let selectedOperatorId: string | undefined = $state(undefined);
@@ -44,6 +61,35 @@
         closeOperatorsDialog();
         isOperatorDialogOpen = true;
     };
+
+    // Derive the current media-type scope from the route so we can split
+    // applicable vs. not-applicable operators.
+    const routeId = $derived(page.route.id);
+    const collectionId = $derived(page.params.collection_id as string | undefined);
+
+    const currentScope = $derived.by((): OperatorScope | null => {
+        if (isSamplesRoute(routeId) || isSampleDetailsRoute(routeId)) return OperatorScope.IMAGE;
+        if (isVideosRoute(routeId) || isVideoDetailsRoute(routeId)) return OperatorScope.VIDEO;
+        if (isVideoFramesRoute(routeId) || isFrameDetailsRoute(routeId)) return OperatorScope.VIDEO_FRAME;
+        if (isAnnotationsRoute(routeId) || isAnnotationDetailsRoute(routeId)) return OperatorScope.ANNOTATION;
+        if (isGroupsRoute(routeId)) return OperatorScope.GROUP;
+        return null;
+    });
+
+    const { collection: collectionQuery } = $derived.by(() =>
+        useCollection({ collectionId: collectionId ?? '' })
+    );
+
+    const isRootCollection = $derived($collectionQuery.data?.parent_collection_id === null);
+
+    const isApplicable = (operator: RegisteredOperatorMetadata): boolean => {
+        if (currentScope === null) return true;
+        if (isRootCollection && operator.supported_scopes.includes(OperatorScope.ROOT)) return true;
+        return operator.supported_scopes.includes(currentScope);
+    };
+
+    const applicableOperators = $derived(operators.filter((op) => isApplicable(op)));
+    const inapplicableOperators = $derived(operators.filter((op) => !isApplicable(op)));
 </script>
 
 <Dialog.Root
@@ -85,7 +131,7 @@
                     <div class="p-4 text-sm text-muted-foreground">No plugins available.</div>
                 {:else}
                     <ul class="divide-y divide-border">
-                        {#each operators as operator}
+                        {#each applicableOperators as operator}
                             <li>
                                 <button
                                     type="button"
@@ -102,6 +148,26 @@
                             </li>
                         {/each}
                     </ul>
+
+                    {#if inapplicableOperators.length > 0}
+                        <div class="border-t border-border">
+                            <p class="px-3 pb-1 pt-3 text-xs font-medium text-muted-foreground/60">
+                                Not applicable in current view
+                            </p>
+                            <ul class="divide-y divide-border">
+                                {#each inapplicableOperators as operator}
+                                    <li>
+                                        <div
+                                            class="flex w-full cursor-not-allowed items-center justify-between gap-2 p-3 text-left text-sm opacity-40"
+                                        >
+                                            <span class="font-medium">{operator.name}</span>
+                                            <ChevronRight class="size-4" />
+                                        </div>
+                                    </li>
+                                {/each}
+                            </ul>
+                        </div>
+                    {/if}
                 {/if}
             </div>
         </Dialog.Content>

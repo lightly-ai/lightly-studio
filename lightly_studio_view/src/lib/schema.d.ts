@@ -1352,8 +1352,7 @@ export interface paths {
          *
          *     Args:
          *         operator_id: The ID of the operator to execute.
-         *         collection_id: The ID of the collection to operate on.
-         *         request: The execution request containing parameters and optional context.
+         *         request: The execution request containing parameters and context.
          *         session: Database session.
          *
          *     Returns:
@@ -2746,6 +2745,15 @@ export interface components {
             message: string;
         };
         /**
+         * OperatorScope
+         * @description Scope in which an operator can be triggered.
+         *
+         *     Operators declare which scopes they support via ``BaseOperator.supported_scopes``.
+         *     The UI uses this to surface operators contextually by media type.
+         * @enum {string}
+         */
+        OperatorScope: "root" | "image" | "video_frame" | "video" | "annotation" | "group" | "caption";
+        /**
          * Paginated
          * @description Paginated query parameters.
          */
@@ -2842,6 +2850,8 @@ export interface components {
             operator_id: string;
             /** Name */
             name: string;
+            /** Supported Scopes */
+            supported_scopes: components["schemas"]["OperatorScope"][];
         };
         /**
          * SampleAnnotationDetailsView
