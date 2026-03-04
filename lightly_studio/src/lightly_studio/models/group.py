@@ -78,8 +78,8 @@ class GroupComponentView(BaseModel):
     @classmethod
     def from_image_table(
         cls,
-        image: "ImageTable",
         collection: ComponentCollectionView,
+        image: "ImageTable",
         similarity_score: Optional[float] = None,
     ) -> "GroupComponentView":
         """Create a GroupComponentView from an ImageTable.
@@ -102,10 +102,10 @@ class GroupComponentView(BaseModel):
     @classmethod
     def from_video_table(
         cls,
-        video: "VideoTable",
         collection: ComponentCollectionView,
-        similarity_score: Optional[float] = None,
+        video: "VideoTable",
         frame: Optional["FrameView"] = None,
+        similarity_score: Optional[float] = None,
     ) -> "GroupComponentView":
         """Create a GroupComponentView from a VideoTable.
 
