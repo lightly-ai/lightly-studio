@@ -19,25 +19,6 @@ from lightly_studio.resolvers import collection_resolver, sample_resolver
 from lightly_studio.resolvers.sample_resolver.sample_filter import SampleFilter
 
 
-def _collection_info(session: Session, context: ExecutionContext) -> tuple[str, int]:
-    """Return (sample_type value, sample count after filter)."""
-    collection = collection_resolver.get_by_id(
-        session=session, collection_id=context.collection_id
-    )
-    sample_type = collection.sample_type.value if collection else "unknown"
-    if isinstance(context.context_filter, SampleFilter):
-        sf = SampleFilter(
-            collection_id=context.collection_id,
-            sample_ids=context.context_filter.sample_ids,
-        )
-        count = sample_resolver.get_filtered_samples(session=session, filters=sf).total_count
-    else:
-        count = sample_resolver.count_by_collection_id(
-            session=session, collection_id=context.collection_id
-        )
-    return sample_type, count
-
-
 @dataclass
 class DemoRootOperator(BaseOperator):
     """Demo operator for the ROOT scope."""
@@ -63,7 +44,7 @@ class DemoRootOperator(BaseOperator):
     ) -> OperatorResult:
         """Execute the operator."""
         _ = parameters
-        sample_type, count = _collection_info(session, context)
+        sample_type, count = _collection_info(session=session, context=context)
         return OperatorResult(
             success=True,
             message=f"ROOT executed on {context.collection_id} (type={sample_type}, n={count}).",
@@ -95,7 +76,7 @@ class DemoImageOperator(BaseOperator):
     ) -> OperatorResult:
         """Execute the operator."""
         _ = parameters
-        sample_type, count = _collection_info(session, context)
+        sample_type, count = _collection_info(session=session, context=context)
         return OperatorResult(
             success=True,
             message=f"IMAGE executed on {context.collection_id} (type={sample_type}, n={count}).",
@@ -127,7 +108,7 @@ class DemoVideoFrameOperator(BaseOperator):
     ) -> OperatorResult:
         """Execute the operator."""
         _ = parameters
-        sample_type, count = _collection_info(session, context)
+        sample_type, count = _collection_info(session=session, context=context)
         return OperatorResult(
             success=True,
             message=f"FRAME executed on {context.collection_id} (type={sample_type}, n={count}).",
@@ -159,7 +140,7 @@ class DemoVideoOperator(BaseOperator):
     ) -> OperatorResult:
         """Execute the operator."""
         _ = parameters
-        sample_type, count = _collection_info(session, context)
+        sample_type, count = _collection_info(session=session, context=context)
         return OperatorResult(
             success=True,
             message=f"VIDEO executed on {context.collection_id} (type={sample_type}, n={count}).",
@@ -191,7 +172,7 @@ class DemoAnnotationOperator(BaseOperator):
     ) -> OperatorResult:
         """Execute the operator."""
         _ = parameters
-        sample_type, count = _collection_info(session, context)
+        sample_type, count = _collection_info(session=session, context=context)
         return OperatorResult(
             success=True,
             message=(
@@ -225,7 +206,7 @@ class DemoGroupOperator(BaseOperator):
     ) -> OperatorResult:
         """Execute the operator."""
         _ = parameters
-        sample_type, count = _collection_info(session, context)
+        sample_type, count = _collection_info(session=session, context=context)
         return OperatorResult(
             success=True,
             message=f"GROUP executed on {context.collection_id} (type={sample_type}, n={count}).",
@@ -257,7 +238,7 @@ class DemoImageAndFrameOperator(BaseOperator):
     ) -> OperatorResult:
         """Execute the operator."""
         _ = parameters
-        sample_type, count = _collection_info(session, context)
+        sample_type, count = _collection_info(session=session, context=context)
         return OperatorResult(
             success=True,
             message=(
@@ -265,6 +246,28 @@ class DemoImageAndFrameOperator(BaseOperator):
             ),
         )
 
+
+def _collection_info(session: Session, context: ExecutionContext) -> tuple[str, int]:
+    """Return (sample_type value, sample count after filter).
+
+    ``context_filter`` may be deserialized as any filter subtype by Pydantic's
+    union matching (e.g. AnnotationsFilter instead of SampleFilter when both
+    carry ``sample_ids``).  Use ``getattr`` so the count works regardless of
+    which concrete type was selected.
+    """
+    collection = collection_resolver.get_by_id(
+        session=session, collection_id=context.collection_id
+    )
+    sample_type = collection.sample_type.value if collection else "unknown"
+    sample_ids = getattr(context.context_filter, "sample_ids", None)
+    if sample_ids is not None:
+        sf = SampleFilter(collection_id=context.collection_id, sample_ids=sample_ids)
+        count = sample_resolver.get_filtered_samples(session=session, filters=sf).total_count
+    else:
+        count = sample_resolver.count_by_collection_id(
+            session=session, collection_id=context.collection_id
+        )
+    return sample_type, count
 
 # ---------------------------------------------------------------------------
 # Setup
