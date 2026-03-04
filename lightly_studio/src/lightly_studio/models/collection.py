@@ -57,6 +57,17 @@ class ComponentCollectionView(CollectionBase):
     group_component_name: str
     group_component_index: int
 
+    @classmethod
+    def from_collection_table(cls, collection: "CollectionTable") -> "ComponentCollectionView":
+        """Create a ComponentCollectionView from a CollectionTable."""
+        return cls(
+            name=collection.name,
+            parent_collection_id=collection.parent_collection_id,
+            sample_type=collection.sample_type,
+            group_component_name=collection.group_component_name or "",
+            group_component_index=collection.group_component_index or 0,
+        )
+
 
 class CollectionViewWithCount(CollectionView):
     """Collection view with total sample count."""
