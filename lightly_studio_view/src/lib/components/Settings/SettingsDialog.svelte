@@ -137,7 +137,9 @@
 <Dialog.Root open={$isSettingsDialogOpen} onOpenChange={(isOpen) => setOpen(isOpen)}>
     <Dialog.Portal>
         <Dialog.Overlay />
-        <Dialog.Content class="border-border bg-background sm:max-w-[500px]">
+        <Dialog.Content
+            class="max-h-[85vh] overflow-y-auto border-border bg-background dark:[color-scheme:dark] sm:max-w-[500px]"
+        >
             <form onsubmit={handleFormSubmit}>
                 <Dialog.Header>
                     <Dialog.Title class="text-foreground">Settings</Dialog.Title>
@@ -270,7 +272,7 @@
                         </div>
                         <div class="grid grid-cols-2 items-center gap-4">
                             <Label for="toggle-edit-mode" class="text-right text-foreground">
-                                Toolbar segmentation mask
+                                Toolbar instance segmentation
                             </Label>
                             <button
                                 id="toggle-edit-mode"

@@ -119,14 +119,16 @@
 
     const datasetId = $derived(page.params.dataset_id);
     const collectionType = $derived(page.params.collection_type ?? page.data.collectionType);
+    const currentAnnotationId = $derived(
+        annotationLabelContext.annotationId ?? sample.annotations[0]?.sample_id ?? ''
+    );
 
     const { gotoNextAnnotation } = $derived.by(() =>
         useAnnotationDeleteNavigation({
+            annotationId: currentAnnotationId,
             collectionId,
             datasetId,
-            collectionType,
-            annotationIndex: page.data.annotationIndex,
-            annotationAdjacents: page.data.annotationAdjacents
+            collectionType
         })
     );
 

@@ -2,10 +2,11 @@
 
 from __future__ import annotations
 
-from collections.abc import Sequence
+import uuid
+from collections.abc import Generator, Sequence
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Generator
+from typing import Any
 from uuid import UUID
 
 import pytest
@@ -59,11 +60,13 @@ def test_db() -> Generator[Session, None, None]:
 
 def create_collection(
     session: Session,
-    collection_name: str = "example_tag",
+    collection_name: str | None = None,
     parent_collection_id: UUID | None = None,
     sample_type: SampleType = SampleType.IMAGE,
 ) -> CollectionTable:
     """Helper function to create a collection."""
+    if collection_name is None:
+        collection_name = f"test_collection_{uuid.uuid4().hex[:8]}"
     return collection_resolver.create(
         session=session,
         collection=CollectionCreate(
@@ -237,6 +240,7 @@ class AnnotationDetails:
         width: Width of the annotation.
         height: Height of the annotation.
         segmentation_mask: Segmentation mask for instance and semantic segmentation annotations.
+        object_track_id: Optional object track id.
     """
 
     sample_id: UUID
@@ -248,6 +252,7 @@ class AnnotationDetails:
     width: int = 20
     height: int = 20
     segmentation_mask: list[int] | None = None
+    object_track_id: UUID | None = None
 
 
 def create_annotations(
@@ -268,6 +273,7 @@ def create_annotations(
             parent_sample_id=annotation.sample_id,
             annotation_label_id=annotation.annotation_label_id,
             annotation_type=annotation.annotation_type,
+            object_track_id=annotation.object_track_id,
             segmentation_mask=annotation.segmentation_mask,
             confidence=annotation.confidence,
             x=annotation.x,

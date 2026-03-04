@@ -3,11 +3,11 @@
 from __future__ import annotations
 
 import logging
-from collections.abc import Mapping
+from collections.abc import Iterable, Mapping
 from pathlib import Path
-from typing import Iterable
 from uuid import UUID
 
+import fsspec
 import yaml
 from labelformat.formats import (
     COCOInstanceSegmentationInput,
@@ -290,10 +290,8 @@ class ImageDataset(BaseSampleDataset[ImageSample]):
                 If provided, all samples will be tagged with this name.
             embed: If True, generate embeddings for the newly added samples.
         """
-        annotations_json = Path(annotations_json).absolute()
-        images_path = Path(images_path).absolute()
-
-        if not annotations_json.is_file() or annotations_json.suffix != ".json":
+        fs, fs_path = fsspec.core.url_to_fs(url=annotations_json)
+        if not fs.isfile(fs_path) or not str(annotations_json).endswith(".json"):
             raise FileNotFoundError(f"COCO annotations json file not found: '{annotations_json}'")
 
         label_input: COCOObjectDetectionInput | COCOInstanceSegmentationInput

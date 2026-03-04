@@ -1,6 +1,6 @@
 """This module defines the Video and VideoFrame model for the application."""
 
-from typing import List, Optional
+from typing import Optional
 from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict
@@ -8,6 +8,7 @@ from pydantic import Field as PydanticField
 from sqlalchemy.orm import Mapped
 from sqlmodel import Field, Relationship, SQLModel
 
+from lightly_studio.models.collection import SampleType
 from lightly_studio.models.range import FloatRange, IntRange
 from lightly_studio.models.sample import SampleTable, SampleView
 
@@ -43,7 +44,7 @@ class VideoTable(VideoBase, table=True):
 
     __tablename__ = "video"
     sample_id: UUID = Field(foreign_key="sample.sample_id", primary_key=True)
-    frames: Mapped[List["VideoFrameTable"]] = Relationship(
+    frames: Mapped[list["VideoFrameTable"]] = Relationship(
         sa_relationship_kwargs={"lazy": "select"}, back_populates="video"
     )
     sample: Mapped["SampleTable"] = Relationship()
@@ -52,6 +53,7 @@ class VideoTable(VideoBase, table=True):
 class VideoView(SQLModel):
     """Video class when retrieving."""
 
+    type: SampleType = SampleType.VIDEO
     width: int
     height: int
     duration_s: Optional[float] = None
@@ -69,7 +71,7 @@ class VideoViewsWithCount(BaseModel):
 
     model_config = ConfigDict(populate_by_name=True)
 
-    samples: List[VideoView] = PydanticField(..., alias="data")
+    samples: list[VideoView] = PydanticField(..., alias="data")
     total_count: int
     next_cursor: Optional[int] = PydanticField(None, alias="nextCursor")
 
@@ -134,7 +136,7 @@ class VideoFrameViewsWithCount(BaseModel):
 
     model_config = ConfigDict(populate_by_name=True)
 
-    samples: List[VideoFrameView] = PydanticField(..., alias="data")
+    samples: list[VideoFrameView] = PydanticField(..., alias="data")
     total_count: int
     next_cursor: Optional[int] = PydanticField(None, alias="nextCursor")
 

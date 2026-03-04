@@ -2,7 +2,8 @@
 
 from __future__ import annotations
 
-from typing import Iterable, Literal, Protocol
+from collections.abc import Iterable
+from typing import Literal, Protocol
 from uuid import UUID
 
 from labelformat.model.binary_mask_segmentation import BinaryMaskSegmentation
@@ -34,6 +35,7 @@ def get_segmentation_annotation_create(
     annotation_type: Literal[
         AnnotationType.INSTANCE_SEGMENTATION, AnnotationType.SEMANTIC_SEGMENTATION
     ] = AnnotationType.INSTANCE_SEGMENTATION,
+    object_track_id: UUID | None = None,
 ) -> AnnotationCreate:
     """Get a AnnotationCreate instance for the provided labelformat instance segmentation.
 
@@ -42,6 +44,7 @@ def get_segmentation_annotation_create(
         annotation_label_id: ID of the label for the annotation.
         segmentation: Instance segmentation in labelformat.
         annotation_type: Instance or Semantic segmentation type.
+        object_track_id: The track ID of the object (indicating that it is part of a track).
 
     Returns:
         The AnnotationCreate instance for the provided details.
@@ -65,6 +68,7 @@ def get_segmentation_annotation_create(
         width=int(width),
         height=int(height),
         segmentation_mask=segmentation_rle,
+        object_track_id=object_track_id,
     )
 
 
@@ -73,6 +77,7 @@ def get_object_detection_annotation_create(
     annotation_label_id: UUID,
     box: BoundingBox,
     confidence: float | None = None,
+    object_track_id: UUID | None = None,
 ) -> AnnotationCreate:
     """Get a AnnotationCreate instance for the provided labelformat object detection.
 
@@ -81,6 +86,7 @@ def get_object_detection_annotation_create(
         annotation_label_id: ID of the label for the annotation.
         box: Object detection box in labelformat.
         confidence: The confidence of the detection (indicating that it is a prediction).
+        object_track_id: The track ID of the object (indicating that it is part of a track).
 
     Returns:
         The AnnotationCreate instance for the provided details.
@@ -95,6 +101,7 @@ def get_object_detection_annotation_create(
         width=int(width),
         height=int(height),
         confidence=confidence,
+        object_track_id=object_track_id,
     )
 
 

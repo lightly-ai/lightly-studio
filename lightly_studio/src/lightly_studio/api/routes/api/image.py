@@ -2,11 +2,11 @@
 
 from __future__ import annotations
 
+from typing import Annotated
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Path, Query
 from pydantic import BaseModel, Field
-from typing_extensions import Annotated
 
 from lightly_studio.api.routes.api.collection import get_and_validate_collection_id
 from lightly_studio.api.routes.api.status import (
@@ -14,15 +14,11 @@ from lightly_studio.api.routes.api.status import (
 )
 from lightly_studio.api.routes.api.validators import Paginated
 from lightly_studio.db_manager import SessionDep
-from lightly_studio.models.annotation.annotation_base import AnnotationView
-from lightly_studio.models.caption import CaptionView
 from lightly_studio.models.collection import CollectionTable
 from lightly_studio.models.image import (
     ImageView,
     ImageViewsWithCount,
 )
-from lightly_studio.models.metadata import SampleMetadataView
-from lightly_studio.models.sample import SampleView
 from lightly_studio.resolvers import (
     image_resolver,
 )
@@ -75,33 +71,7 @@ def read_images(
     )
     return ImageViewsWithCount(
         samples=[
-            ImageView(
-                file_name=image.file_name,
-                file_path_abs=image.file_path_abs,
-                sample_id=image.sample_id,
-                annotations=[
-                    AnnotationView.from_annotation_table(annotation=annotation)
-                    for annotation in image.sample.annotations
-                ],
-                captions=[CaptionView.model_validate(caption) for caption in image.sample.captions],
-                tags=[
-                    ImageView.ImageViewTag(
-                        tag_id=tag.tag_id,
-                        name=tag.name,
-                        kind=tag.kind,
-                        created_at=tag.created_at,
-                        updated_at=tag.updated_at,
-                    )
-                    for tag in image.sample.tags
-                ],
-                metadata_dict=SampleMetadataView.model_validate(image.sample.metadata_dict)
-                if image.sample.metadata_dict
-                else None,
-                width=image.width,
-                height=image.height,
-                sample=SampleView.model_validate(image.sample),
-                similarity_score=score,
-            )
+            ImageView.from_image_table(image=image, similarity_score=score)
             for image, score in zip(result.samples, scores)
         ],
         total_count=result.total_count,
@@ -136,34 +106,8 @@ def read_image(
     image = image_resolver.get_by_id(session=session, sample_id=sample_id)
     if not image:
         raise HTTPException(status_code=HTTP_STATUS_NOT_FOUND, detail="Sample not found")
-    # TODO(Michal, 10/2025): Add SampleView to ImageView and then use a response model
-    # instead of manual conversion.
-    return ImageView(
-        file_name=image.file_name,
-        file_path_abs=image.file_path_abs,
-        sample_id=image.sample_id,
-        annotations=[
-            AnnotationView.from_annotation_table(annotation=annotation)
-            for annotation in image.sample.annotations
-        ],
-        captions=[CaptionView.model_validate(caption) for caption in image.sample.captions],
-        tags=[
-            ImageView.ImageViewTag(
-                tag_id=tag.tag_id,
-                name=tag.name,
-                kind=tag.kind,
-                created_at=tag.created_at,
-                updated_at=tag.updated_at,
-            )
-            for tag in image.sample.tags
-        ],
-        metadata_dict=SampleMetadataView.model_validate(image.sample.metadata_dict)
-        if image.sample.metadata_dict
-        else None,
-        width=image.width,
-        height=image.height,
-        sample=SampleView.model_validate(image.sample),
-    )
+
+    return ImageView.from_image_table(image=image)
 
 
 class SampleAdjacentsParams(BaseModel):

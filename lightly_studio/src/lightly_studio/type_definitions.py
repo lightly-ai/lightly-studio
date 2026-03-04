@@ -1,7 +1,7 @@
 """Common type definitions for the lightly_studio package."""
 
 from pathlib import Path
-from typing import Any, Tuple, TypeVar, Union
+from typing import Any, TypeVar, Union
 from uuid import UUID
 
 from sqlmodel.sql.expression import Select, SelectOfScalar
@@ -23,14 +23,14 @@ QueryType = TypeVar(
     SelectOfScalar[SampleTable],
     SelectOfScalar[SampleEmbeddingTable],
     SelectOfScalar[GroupTable],
-    Select[Tuple[VideoTable, VideoFrameTable]],
+    Select[tuple[VideoTable, VideoFrameTable]],
     SelectOfScalar[VideoFrameTable],
-    Select[Tuple[Any, int]],
-    Select[Tuple[UUID, int]],
-    Select[Tuple[AnnotationBaseTable, Any]],
-    Select[Tuple[ImageTable, float]],
-    Select[Tuple[GroupTable, float]],
-    Select[Tuple[VideoTable, VideoFrameTable, float]],
+    Select[tuple[Any, int]],
+    Select[tuple[UUID, int]],
+    Select[tuple[AnnotationBaseTable, Any]],
+    Select[tuple[ImageTable, float]],
+    Select[tuple[GroupTable, float]],
+    Select[tuple[VideoTable, VideoFrameTable, float]],
 )
 
 PathLike = Union[str, Path]

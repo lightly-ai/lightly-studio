@@ -1,6 +1,6 @@
 """Utility functions for building database queries."""
 
-from typing import List, Optional
+from typing import Optional
 from uuid import UUID
 
 from pydantic import BaseModel
@@ -21,7 +21,7 @@ class VideoFilter(BaseModel):
     height: Optional[FilterDimensions] = None
     fps: Optional[FloatRange] = None
     duration_s: Optional[FloatRange] = None
-    annotation_frames_label_ids: Optional[List[UUID]] = None
+    annotation_frames_label_ids: Optional[list[UUID]] = None
     sample_filter: Optional[SampleFilter] = None
 
     def apply(self, query: QueryType) -> QueryType:

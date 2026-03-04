@@ -7,6 +7,7 @@
     import { useDeleteCaption } from '$lib/hooks/useDeleteCaption/useDeleteCaption';
     import { useGlobalStorage } from '$lib/hooks/useGlobalStorage';
     import { useCollectionWithChildren } from '$lib/hooks/useCollection/useCollection';
+    import { addCaptionDeleteToUndoStack } from '$lib/services/addCaptionDeleteToUndoStack';
     import { page } from '$app/state';
     import { toast } from 'svelte-sonner';
 
@@ -18,7 +19,7 @@
 
     let { captions, refetch, sampleId }: SampleDetailsCaptionSegmentProps = $props();
 
-    const { isEditingMode } = useGlobalStorage();
+    const { isEditingMode, addReversibleAction } = useGlobalStorage();
 
     const { deleteCaption } = useDeleteCaption();
     const { createCaption } = useCreateCaption();
@@ -27,9 +28,19 @@
         useCollectionWithChildren({ collectionId: datasetId })
     );
 
-    const handleDeleteCaption = async (sampleId: string) => {
+    const handleDeleteCaption = async (captionId: string) => {
+        const caption = captions?.find((c) => c.sample_id === captionId);
+        if (!caption) return;
+
         try {
-            await deleteCaption(sampleId);
+            addCaptionDeleteToUndoStack({
+                text: caption.text ?? '',
+                parentSampleId: sampleId,
+                addReversibleAction,
+                createCaption,
+                refetch
+            });
+            await deleteCaption(captionId);
             toast.success('Caption deleted successfully');
             refetch();
         } catch (error) {

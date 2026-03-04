@@ -96,11 +96,22 @@
         boundingBox.width,
         boundingBox.height
     ]);
+
+    const showAnnotationLabel = $derived(
+        showLabel &&
+            (highlight === 'auto' || highlight === 'active') &&
+            annotation.annotation_type !== 'semantic_segmentation'
+    );
 </script>
 
 <g data-annotation-label={label} data-testid="sample-annotation" data-annotation-id={annotationId}>
-    {#if showLabel && (highlight === 'auto' || highlight === 'active')}
-        <SampleAnnotationLabel coordinates={[boundingBox.x, boundingBox.y]} {colorText} {label} />
+    {#if showAnnotationLabel}
+        <SampleAnnotationLabel
+            coordinates={[boundingBox.x, boundingBox.y]}
+            {colorText}
+            {label}
+            trackId={annotation.object_track_number}
+        />
     {/if}
 
     {#if segmentationMask}
@@ -124,7 +135,7 @@
             {onMove}
             {onDragEnd}
         />
-    {:else}
+    {:else if annotation.annotation_type !== 'semantic_segmentation'}
         <SampleAnnotationBox
             {bbox}
             {annotationId}

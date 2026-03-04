@@ -6,6 +6,8 @@ export type AnnotationLabelContext = {
     // Selected annotation ID.
     annotationId?: string | null;
     currentAnnotationBoundingBox?: BoundingBox | null;
+    lockedAnnotationIds?: Set<string>;
+    isAnnotationLocked?: (annotationId?: string | null) => boolean;
 
     // Selected annotation label.
     annotationLabel?: string | null;
@@ -30,7 +32,10 @@ const CONTEXT_KEY = 'annotation-label';
 export function createAnnotationLabelContext(
     initialValue: AnnotationLabelContext = {}
 ): AnnotationLabelContext {
-    const context: AnnotationLabelContext = $state(initialValue);
+    const context: AnnotationLabelContext = $state({
+        lockedAnnotationIds: new Set<string>(),
+        ...initialValue
+    });
 
     setContext(CONTEXT_KEY, context);
     return context;
@@ -46,6 +51,8 @@ export function useAnnotationLabelContext(): {
     setIsDrawing: (value: boolean) => void;
     setIsErasing: (value: boolean) => void;
     setIsDragging: (value: boolean) => void;
+    setLockedAnnotationIds: (ids: Set<string>) => void;
+    isAnnotationLocked: (annotationId?: string | null) => boolean;
 } {
     const context = getContext<AnnotationLabelContext>(CONTEXT_KEY);
 
@@ -73,6 +80,15 @@ export function useAnnotationLabelContext(): {
         context.lastCreatedAnnotationId = id;
     }
 
+    function setLockedAnnotationIds(ids: Set<string>) {
+        context.lockedAnnotationIds = ids;
+    }
+
+    function isAnnotationLocked(annotationId?: string | null) {
+        if (!annotationId) return false;
+        return context.lockedAnnotationIds?.has(annotationId) ?? false;
+    }
+
     function setIsDrawing(value: boolean) {
         context.isDrawing = value;
     }
@@ -94,6 +110,8 @@ export function useAnnotationLabelContext(): {
         setLastCreatedAnnotationId,
         setIsDrawing,
         setIsErasing,
-        setIsDragging
+        setIsDragging,
+        setLockedAnnotationIds,
+        isAnnotationLocked
     };
 }

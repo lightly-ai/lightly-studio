@@ -1,6 +1,6 @@
 """Utility functions for building database queries."""
 
-from typing import List, Optional
+from typing import Optional
 
 from pydantic import BaseModel
 from sqlmodel import col, select
@@ -16,7 +16,7 @@ class VideoCountAnnotationsFilter(BaseModel):
     """Encapsulates filter parameters for querying video frame annotations counter."""
 
     video_filter: Optional[VideoFilter] = None
-    video_frames_annotations_labels: Optional[List[str]] = None
+    video_frames_annotations_labels: Optional[list[str]] = None
 
     def apply(self, query: QueryType) -> QueryType:
         """Apply the filters to the given query."""

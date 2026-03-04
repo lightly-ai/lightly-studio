@@ -46,7 +46,12 @@ test.describe('captions-page-flow', () => {
         expect(await captionsPage.getCaptionCount()).toEqual(1);
         expect(await captionsPage.getNthCaptionInput(0)).toEqual('caption');
 
-        // Deleting the last caption also hides the sample
+        // Undo the deletion — the caption should be restored
+        await captionsPage.undoLastCaptionDelete();
+        expect(await captionsPage.getCaptionCount()).toEqual(2);
+
+        // Re-delete both captions to clean up
+        await captionsPage.deleteNthCaption(1);
         await captionsPage.deleteNthCaption(0);
         expect(await captionsPage.getCaptionCount()).toEqual(0);
         expect(await captionsPage.getGridItemCount()).toEqual(0);

@@ -2,11 +2,10 @@
 
 from __future__ import annotations
 
-from typing import List
+from typing import Annotated
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Path, Query
-from typing_extensions import Annotated
 
 from lightly_studio.api.routes.api.status import (
     HTTP_STATUS_INTERNAL_SERVER_ERROR,
@@ -26,7 +25,7 @@ EmbeddingManagerDep = Annotated[
 
 
 @text_embedding_router.get(
-    "/text_embedding/for_collection/{collection_id}", response_model=List[float]
+    "/text_embedding/for_collection/{collection_id}", response_model=list[float]
 )
 def embed_text(
     embedding_manager: EmbeddingManagerDep,

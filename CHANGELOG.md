@@ -17,26 +17,65 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
-- Selection now resets when switching between grid views, while filters persist.
+- Restructured the navigation menu to follow the dataset structure. This makes the menu work with group datasets.
 
 ### Deprecated
 
 ### Removed
 
+### Fixed
+
+- Fixed crosshair helper lines in annotation draw mode so vertical and horizontal lines remain the same thickness when zooming.
+- Settings dialog is now scrollable on small screens.
+- Added `✕` button to clear an active text search, matching the existing image search behaviour.
+- Fixed spurious "Annotation updated successfully" toast appearing when clicking a bounding box without moving or resizing it.
+- Improved deletion UX in sample details and captions list views: replaced confirmation popups with immediate deletion and Ctrl+Z undo support.
+
+### Security
+
+## \[0.4.9\] - 2026-02-27
+
+### Added
+
+- Semantic segmentation labeling support:
+    - Load semantic segmentation from Pascal VOC format
+    - Visualize and label semantic segmentation in the GUI
+- Object tracking support:
+    - Loading videos with object track annotations from youtube-vis format via `dataset.add_videos_from_youtube_vis`.
+    - Visualize object track-IDs in the GUI (available for object detection and instance segmentation).
+- Hotkeys: 
+    - Added `Escape` shortcut support in the embedding plot to clear the current selection.
+    - Added Shift+click range selection in grid views.
+- Added cloud storage support for COCO object detection and instance segmentation annotations.
+- Add “View Video” button in the frame details view to open video details for the selected frame.
+- Example script for LightlyTrain training and inference plugins.
+
+### Changed
+
+- Selection now resets when switching between grid views, while filters persist.
+- Embedding model weights are now saved to the user cache by default. The cache dir can be changed via `LIGHTLY_STUDIO_MODEL_CACHE_DIR`.
+
+### Removed
+
+- Removed Python 3.8 support.
 - Removed the redundant `Hide Embeddings` button from the toolbar when the embedding plot is open (the `✕` close control remains in the plot panel).
+- Removed unused `MetadataFilters` component in favor of `CombinedMetadataDimensionsFilters`.
 
 ### Fixed
 
 - Fixed right-click `Copy image` in grid and detail views to copy images from the GUI.
-- Fixed annotation details mask editing to keep focus stable without annoying recentering after every edit and always select the shown annotation.
+- Improved image sample listing performance (up to 3x faster) by optimizing ORM loading.
+- Fixed annotation details mask editing to keep focus stable.
 - Fixed embedding plot UI stability and improved legend/control layout for narrow windows.
 - Fixed instance-segmentation brush/eraser edits occasionally being applied to the wrong sample after navigating between samples.
 - Fixed sample-details navigation so keyboard and button navigation keep active tool behavior deterministic across samples.
 - Fixed embedding plot selection UX so rectangle/lasso overlays disappear after selection while selected samples remain highlighted.
+- Fixed embedding plot so old selections are cleared when you change other filters, keeping the grid and plot in sync.
 - Fixed outdated `VideoDataset` import path in README and docs quickstart examples.
 - Fixed caption creation UX in edit mode: clicking `+` now opens a focused input draft, captions are created only on explicit save/Enter, and spaces in the draft input are handled correctly.
-
-### Security
+- Fixed metadata float filter sliders to avoid max-value truncation and reduced UI slowdowns for large numeric ranges by capping slider tick density.
+- Fixed auto-refresh side panel after annotation changes.
+- Fixed video frame slider not updating current frame when dragging.
 
 ## \[0.4.8\] - 2026-02-11
 

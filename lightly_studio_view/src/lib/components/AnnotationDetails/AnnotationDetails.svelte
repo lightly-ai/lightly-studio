@@ -22,14 +22,12 @@
     };
 
     const {
-        annotationIndex,
         annotationDetails,
         parentSample,
         parentSampleDetails,
         refetch,
         collectionId
     }: {
-        annotationIndex?: number;
         annotationDetails: AnnotationDetailsWithPayloadView;
         parentSample: SampleProperties;
         parentSampleDetails: Snippet;
@@ -86,7 +84,7 @@
         <AnnotationDetailsNavigation />
     {/snippet}
     {#snippet breadcrumb({ collection: rootCollection })}
-        <AnnotationDetailsBreadcrumb {rootCollection} {annotationIndex} />
+        <AnnotationDetailsBreadcrumb {rootCollection} />
     {/snippet}
     {#snippet selectableBox()}
         <AnnotationDetailsSelectableBox {collectionId} sampleId={annotation.sample_id} />

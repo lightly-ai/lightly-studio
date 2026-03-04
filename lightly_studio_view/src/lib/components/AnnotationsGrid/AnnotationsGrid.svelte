@@ -160,18 +160,14 @@
 
     function handleOnDoubleClick(event: MouseEvent) {
         const annotationId = (event.currentTarget as HTMLElement).dataset.annotationId!;
-        const sampleId = (event.currentTarget as HTMLElement).dataset.sampleId!;
-        const index = (event.currentTarget as HTMLElement).dataset.index!;
 
         if (datasetId && collectionType) {
             goto(
                 routeHelpers.toSampleWithAnnotation({
                     datasetId,
                     collectionType,
-                    sampleId,
                     annotationId: annotationId,
-                    collectionId: collection_id,
-                    annotationIndex: Number(index)
+                    collectionId: collection_id
                 })
             );
         }

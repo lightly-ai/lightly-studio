@@ -2,12 +2,11 @@
 
 from __future__ import annotations
 
-from typing import List
+from typing import Annotated
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Path, Query
 from pydantic import BaseModel
-from typing_extensions import Annotated
 
 from lightly_studio.api.routes.api.status import (
     HTTP_STATUS_CONFLICT,
@@ -43,7 +42,7 @@ def get_and_validate_collection_id(
     return collection
 
 
-@collection_router.get("/collections", response_model=List[CollectionView])
+@collection_router.get("/collections", response_model=list[CollectionView])
 def read_collections(
     session: SessionDep,
     paginated: Annotated[Paginated, Query()],
@@ -64,7 +63,7 @@ def read_dataset(
 
 
 @collection_router.get(
-    "/collections/{collection_id}/hierarchy", response_model=List[CollectionView]
+    "/collections/{collection_id}/hierarchy", response_model=list[CollectionView]
 )
 def read_collection_hierarchy(
     session: SessionDep,
@@ -74,7 +73,7 @@ def read_collection_hierarchy(
     return collection_resolver.get_hierarchy(session=session, dataset_id=collection_id)
 
 
-@collection_router.get("/collections/overview", response_model=List[CollectionOverviewView])
+@collection_router.get("/collections/overview", response_model=list[CollectionOverviewView])
 def read_collections_overview(session: SessionDep) -> list[CollectionOverviewView]:
     """Retrieve collections with metadata for dashboard display."""
     return collection_resolver.get_collections_overview(session=session)

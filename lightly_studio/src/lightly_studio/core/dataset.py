@@ -4,7 +4,8 @@ from __future__ import annotations
 
 import logging
 from abc import ABC, abstractmethod
-from typing import Generic, Iterator
+from collections.abc import Iterator
+from typing import Generic
 from uuid import UUID
 
 from typing_extensions import Self, TypeVar

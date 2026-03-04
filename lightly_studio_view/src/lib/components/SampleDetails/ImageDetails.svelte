@@ -15,12 +15,10 @@
     const {
         sampleId,
         collection,
-        sampleIndex,
         children
     }: {
         sampleId: string;
         collection: Collection;
-        sampleIndex?: number;
         children: Snippet | undefined;
     } = $props();
 
@@ -63,7 +61,7 @@
             <SampleDetailsNavigation />
         {/if}
         {#snippet breadcrumb({ collection: rootCollection })}
-            <SampleDetailsBreadcrumb {rootCollection} {sampleIndex} />
+            <SampleDetailsBreadcrumb {rootCollection} />
         {/snippet}
         {#snippet metadataValue()}
             <SampleMetadata sample={sampleImage} />

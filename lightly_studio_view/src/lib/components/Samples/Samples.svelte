@@ -183,7 +183,6 @@
 
     function handleOnDoubleClick(event: MouseEvent) {
         const sampleId = (event.currentTarget as HTMLElement).dataset.sampleId!;
-        const index = (event.currentTarget as HTMLElement).dataset.index!;
 
         if (datasetId && collectionType) {
             goto(
@@ -191,8 +190,7 @@
                     sampleId,
                     datasetId,
                     collectionType,
-                    collectionId: collection_id,
-                    sampleIndex: Number(index)
+                    collectionId: collection_id
                 })
             );
         }

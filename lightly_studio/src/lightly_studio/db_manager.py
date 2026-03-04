@@ -15,16 +15,16 @@ from __future__ import annotations
 import atexit
 import logging
 import re
+from collections.abc import Generator
 from contextlib import contextmanager
 from enum import Enum
 from pathlib import Path
-from typing import Generator
+from typing import Annotated
 
 from fastapi import Depends
 from sqlalchemy import StaticPool, text
 from sqlalchemy.engine import Engine
 from sqlmodel import Session, SQLModel, create_engine
-from typing_extensions import Annotated
 
 import lightly_studio.api.db_tables  # noqa: F401, required for SQLModel to work properly
 from lightly_studio.dataset.env import LIGHTLY_STUDIO_DATABASE_URL
@@ -113,12 +113,15 @@ class DatabaseEngine:
         session = Session(self._engine, close_resets_only=False)
         try:
             yield session
-            session.commit()
 
-            # Commit the persistent session to ensure it sees the latest data changes.
-            # This prevents the persistent session from having stale data when it's used
-            # after operations in short-lived sessions have modified the database.
-            self.get_persistent_session().commit()
+            if session.in_transaction():
+                session.commit()
+
+            # Commit the persistent session if it has an active transaction.
+            # This ensures the session sees the latest data changes made by short-lived sessions.
+            persistent_session = self.get_persistent_session()
+            if persistent_session.in_transaction():
+                persistent_session.commit()
         except Exception:
             session.rollback()
             raise

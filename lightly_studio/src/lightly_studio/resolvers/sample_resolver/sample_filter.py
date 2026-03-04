@@ -1,6 +1,6 @@
 """SampleFilter class."""
 
-from typing import List, Optional
+from typing import Optional
 from uuid import UUID
 
 from pydantic import BaseModel
@@ -20,10 +20,10 @@ class SampleFilter(BaseModel):
     """Encapsulates filter parameters for querying samples."""
 
     collection_id: Optional[UUID] = None
-    annotation_label_ids: Optional[List[UUID]] = None
-    tag_ids: Optional[List[UUID]] = None
-    metadata_filters: Optional[List[MetadataFilter]] = None
-    sample_ids: Optional[List[UUID]] = None
+    annotation_label_ids: Optional[list[UUID]] = None
+    tag_ids: Optional[list[UUID]] = None
+    metadata_filters: Optional[list[MetadataFilter]] = None
+    sample_ids: Optional[list[UUID]] = None
     has_captions: Optional[bool] = None
 
     def apply(self, query: QueryType) -> QueryType:

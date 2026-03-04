@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 from collections.abc import Sequence
-from typing import Tuple
 from uuid import UUID
 
 import cv2
@@ -25,7 +24,7 @@ from lightly_studio.models.embedding_model import EmbeddingModelCreate
 MAX_BATCH_SIZE: int = 1
 
 
-class _ImageFileDatasetEdge(Dataset[Tuple[bytes, int, int]]):
+class _ImageFileDatasetEdge(Dataset[tuple[bytes, int, int]]):
     """Dataset wrapping image file paths for processing."""
 
     def __init__(

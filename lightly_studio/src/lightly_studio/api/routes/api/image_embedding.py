@@ -7,12 +7,11 @@ import os
 import shutil
 import tempfile
 from pathlib import Path
-from typing import List
+from typing import Annotated
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, File, HTTPException, Query, UploadFile
 from fastapi import Path as FastAPIPath
-from typing_extensions import Annotated
 
 from lightly_studio.api.routes.api.status import HTTP_STATUS_INTERNAL_SERVER_ERROR
 from lightly_studio.dataset.embedding_manager import (
@@ -30,7 +29,7 @@ EmbeddingManagerDep = Annotated[
 
 
 @image_embedding_router.post(
-    "/image_embedding/from_file/for_collection/{collection_id}", response_model=List[float]
+    "/image_embedding/from_file/for_collection/{collection_id}", response_model=list[float]
 )
 def embed_image_from_file(
     embedding_manager: EmbeddingManagerDep,

@@ -2,12 +2,12 @@
 
 from __future__ import annotations
 
+from typing import Annotated
 from uuid import UUID
 
 from fastapi import APIRouter, Path
 from fastapi.params import Body
 from pydantic import BaseModel
-from typing_extensions import Annotated
 
 from lightly_studio.db_manager import SessionDep
 from lightly_studio.models.annotation.annotation_base import (

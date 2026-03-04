@@ -4,7 +4,7 @@ Instance segmentation combines object detection and semantic segmentation,
 identifying objects and providing pixel-level masks for each instance.
 """
 
-from typing import TYPE_CHECKING, List, Optional
+from typing import TYPE_CHECKING, Optional
 from uuid import UUID, uuid4
 
 from sqlalchemy import ARRAY, Column, Integer
@@ -41,7 +41,7 @@ class SegmentationAnnotationTable(SQLModel, table=True):
     # TODO(Kondrat 06/2025): We need to fix logic in the loader,
     # because it shouldn't be optional.
     # lightly_studio/collection/loader.py#L148
-    segmentation_mask: Optional[List[int]] = Field(
+    segmentation_mask: Optional[list[int]] = Field(
         default=None, sa_column=Column(ARRAY(Integer), nullable=True)
     )
 
@@ -53,4 +53,4 @@ class SegmentationAnnotationView(SQLModel):
     y: int
     width: int
     height: int
-    segmentation_mask: Optional[List[int]] = None
+    segmentation_mask: Optional[list[int]] = None

@@ -27,7 +27,7 @@
         metadataItem?: Snippet;
     };
     let {
-        annotationsIdsToHide = $bindable<Set<string>>(),
+        annotationsIdsToHide = $bindable<Set<string>>(new Set()),
         sample,
         onUpdate,
         onRemoveTag,

@@ -39,7 +39,12 @@ export function createMoveDrag({
         })
         .on('end', () => {
             const currentBbox = getCurrentBbox();
-            if (onDragEnd) {
+            const bboxChanged =
+                currentBbox.x !== dragStartBbox.x ||
+                currentBbox.y !== dragStartBbox.y ||
+                currentBbox.width !== dragStartBbox.width ||
+                currentBbox.height !== dragStartBbox.height;
+            if (onDragEnd && bboxChanged) {
                 onDragEnd(currentBbox);
             }
             onInteractionEnd?.();

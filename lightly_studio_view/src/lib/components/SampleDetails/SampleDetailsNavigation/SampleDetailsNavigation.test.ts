@@ -1,31 +1,16 @@
 import { fireEvent, render } from '@testing-library/svelte';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { readable } from 'svelte/store';
 import SampleDetailsNavigation from './SampleDetailsNavigation.svelte';
 
 const { gotoMock, mockPage } = vi.hoisted(() => ({
     gotoMock: vi.fn(),
     mockPage: {
-        data: {
-            sampleIndex: 3,
-            sampleAdjacents: {
-                subscribe: (run: (value: unknown) => void) => {
-                    run({
-                        samplePrevious: {
-                            sample_id: 'sample-2',
-                            sample: { collection_id: 'collection-1' }
-                        },
-                        sampleNext: {
-                            sample_id: 'sample-4',
-                            sample: { collection_id: 'collection-1' }
-                        }
-                    });
-                    return () => {};
-                }
-            }
-        },
         params: {
             dataset_id: 'dataset-1',
-            collection_type: 'images'
+            collection_type: 'images',
+            collection_id: 'collection-1',
+            sampleId: 'sample-3'
         }
     }
 }));
@@ -44,6 +29,17 @@ vi.mock('$lib/contexts/SampleDetailsAnnotation.svelte', () => ({
     })
 }));
 
+vi.mock('$lib/hooks/useAdjacentImages/useAdjacentImages', () => ({
+    useAdjacentImages: () => ({
+        query: readable({
+            data: {
+                previous_sample_id: 'sample-2',
+                next_sample_id: 'sample-4'
+            }
+        })
+    })
+}));
+
 describe('SampleDetailsNavigation', () => {
     beforeEach(() => {
         gotoMock.mockReset();
@@ -56,7 +52,7 @@ describe('SampleDetailsNavigation', () => {
 
         expect(gotoMock).toHaveBeenCalledTimes(1);
         expect(gotoMock).toHaveBeenCalledWith(
-            '/datasets/dataset-1/images/collection-1/samples/sample-4/4',
+            '/datasets/dataset-1/images/collection-1/samples/sample-4',
             { invalidateAll: true }
         );
     });

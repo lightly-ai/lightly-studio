@@ -1,13 +1,14 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { useSegmentationMaskEraser } from './useSegmentationMaskEraser';
 import type { AnnotationView } from '$lib/api/lightly_studio_local';
+import type { AnnotationLabelContext } from '$lib/contexts/SampleDetailsAnnotation.svelte';
 
 import {
     computeBoundingBoxFromMask,
     encodeBinaryMaskToRLE
 } from '$lib/components/SampleAnnotation/utils';
 
-const annotationLabelContext = {
+const annotationLabelContext: AnnotationLabelContext = {
     isDrawing: true,
     annotationId: 'annotation-id'
 };

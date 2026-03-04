@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 from collections.abc import Sequence
-from typing import Tuple
 from uuid import UUID
 
 from sqlmodel import Session
@@ -13,7 +12,7 @@ from lightly_studio.models.collection import CollectionCreate, CollectionTable, 
 from lightly_studio.resolvers import collection_resolver
 
 # Define a type alias for group component definitions as (component_name, component_type)
-GroupComponentDefinition: TypeAlias = Tuple[str, SampleType]
+GroupComponentDefinition: TypeAlias = tuple[str, SampleType]
 
 
 def create_group_components(

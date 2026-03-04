@@ -13,7 +13,6 @@
     import { page } from '$app/state';
 
     const {
-        annotationIndex,
         collection,
         annotationDetails,
         updateAnnotation,
@@ -21,7 +20,6 @@
     }: {
         collection: Collection;
         annotationDetails: AnnotationDetailsWithPayloadView;
-        annotationIndex?: number;
         updateAnnotation: (input: AnnotationUpdateInput) => Promise<void>;
         refetch: () => void;
     } = $props();
@@ -37,7 +35,6 @@
     {annotationDetails}
     {updateAnnotation}
     {refetch}
-    {annotationIndex}
     collectionId={collection.collection_id!}
     parentSample={{
         width: image.width,

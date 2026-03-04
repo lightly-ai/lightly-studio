@@ -1,7 +1,6 @@
 """This module defines the AnnotationLabel model for the application."""
 
 from datetime import datetime, timezone
-from typing import List
 from uuid import UUID, uuid4
 
 from sqlalchemy.orm import Mapped
@@ -44,6 +43,6 @@ class AnnotationLabelTable(AnnotationLabelBase, table=True):
         default_factory=lambda: datetime.now(timezone.utc),
         index=True,
     )
-    annotations: Mapped[List["AnnotationBaseTable"]] = Relationship(
+    annotations: Mapped[list["AnnotationBaseTable"]] = Relationship(
         back_populates="annotation_label",
     )

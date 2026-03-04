@@ -16,7 +16,6 @@ from dataclasses import dataclass
 
 import os
 from pathlib import Path
-import tempfile
 from typing import Optional
 import urllib
 
@@ -35,7 +34,7 @@ DOWNLOADABLE_MODEL_URL: dict[str, str] = {
     "PE-Core-G14-448": "perception_encoder/core/PE-Core-G14-448.pt",
 }
 
-def download_checkpoint(model_name: str) -> str:
+def download_checkpoint(model_name: str, download_dir: Path) -> str:
     """Downloads a checkpoint and returns the local path to it.
 
     Supports checkpoints from:
@@ -50,7 +49,6 @@ def download_checkpoint(model_name: str) -> str:
     model_url = DOWNLOADABLE_MODEL_URL[model_name]
     model_url = urllib.parse.urljoin(DOWNLOADABLE_MODEL_BASE_URL, model_url)
 
-    download_dir = Path(tempfile.gettempdir())
     model_name_with_suffix = os.path.basename(urllib.parse.urlparse(model_url).path)
     local_ckpt_path = download_dir / model_name_with_suffix
 
@@ -60,8 +58,8 @@ def download_checkpoint(model_name: str) -> str:
     )
     return str(local_ckpt_path)
 
-def fetch_pe_checkpoint(name: str, path: Optional[str] = None) -> str:
-    return download_checkpoint(model_name=name)
+def fetch_pe_checkpoint(name: str, download_dir: Path) -> str:
+    return download_checkpoint(model_name=name, download_dir=download_dir)
 
 
 @dataclass

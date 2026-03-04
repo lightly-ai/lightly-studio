@@ -15,6 +15,7 @@ from PIL import Image
 from torch.utils.data import DataLoader, Dataset
 from tqdm import tqdm
 
+from lightly_studio.dataset.env import LIGHTLY_STUDIO_MODEL_CACHE_DIR
 from lightly_studio.models.embedding_model import EmbeddingModelCreate
 from lightly_studio.vendor.perception_encoder.vision_encoder import pe, transforms
 
@@ -94,9 +95,10 @@ class _VideoFileDataset(Dataset[torch.Tensor]):
         however this comes with performance drop.
         """
         fs, fs_path = fsspec.core.url_to_fs(url=video_path)
-        with fs.open(path=fs_path, mode="rb") as video_file, container.open(
-            file=video_file
-        ) as video_container:
+        with (
+            fs.open(path=fs_path, mode="rb") as video_file,
+            container.open(file=video_file) as video_container,
+        ):
             video_stream = video_container.streams.video[DEFAULT_VIDEO_CHANNEL]
             duration_pts = video_stream.duration
             time_base = float(video_stream.time_base)
@@ -133,7 +135,10 @@ class PerceptionEncoderEmbeddingGenerator(ImageEmbeddingGenerator, VideoEmbeddin
         This method loads the Perception Encoder Core model and its tokenizer. The model
         checkpoint is downloaded and cached locally for future use.
         """
-        self._model, model_path = pe.CLIP.from_config(MODEL_NAME, pretrained=True)
+        LIGHTLY_STUDIO_MODEL_CACHE_DIR.mkdir(parents=True, exist_ok=True)
+        self._model, model_path = pe.CLIP.from_config(
+            name=MODEL_NAME, pretrained=True, download_dir=LIGHTLY_STUDIO_MODEL_CACHE_DIR
+        )
         self._preprocess = transforms.get_image_transform(self._model.image_size)
         self._tokenizer = transforms.get_text_tokenizer(self._model.context_length)
 
@@ -208,12 +213,15 @@ class PerceptionEncoderEmbeddingGenerator(ImageEmbeddingGenerator, VideoEmbeddin
 
         embeddings = np.empty((total_images, self._model.output_dim), dtype=np.float32)
         position = 0
-        with tqdm(
-            total=total_images,
-            desc="Generating embeddings",
-            unit=" images",
-            disable=not show_progress,
-        ) as progress_bar, torch.no_grad():
+        with (
+            tqdm(
+                total=total_images,
+                desc="Generating embeddings",
+                unit=" images",
+                disable=not show_progress,
+            ) as progress_bar,
+            torch.no_grad(),
+        ):
             for images_tensor in loader:
                 imgs = images_tensor.to(self._device, non_blocking=True)
                 batch_embeddings = self._model.encode_image(imgs, normalize=True).cpu().numpy()
@@ -250,9 +258,10 @@ class PerceptionEncoderEmbeddingGenerator(ImageEmbeddingGenerator, VideoEmbeddin
 
         embeddings = np.empty((total_videos, self._model.output_dim), dtype=np.float32)
         position = 0
-        with tqdm(
-            total=total_videos, desc="Generating embeddings", unit=" videos"
-        ) as progress_bar, torch.no_grad():
+        with (
+            tqdm(total=total_videos, desc="Generating embeddings", unit=" videos") as progress_bar,
+            torch.no_grad(),
+        ):
             for videos_tensor in loader:
                 videos = videos_tensor.to(self._device, non_blocking=True)
                 batch_embeddings = self._model.encode_video(videos, normalize=True).cpu().numpy()

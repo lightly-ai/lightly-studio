@@ -2,13 +2,14 @@
 
 from __future__ import annotations
 
-from typing import Dict, Literal, Sequence
+from collections.abc import Sequence
+from typing import Literal
 from uuid import UUID
 
 from pydantic import BaseModel
 
 AnnotationsClassName = str
-AnnotationClassToTarget = Dict[AnnotationsClassName, float]
+AnnotationClassToTarget = dict[AnnotationsClassName, float]
 
 
 class SelectionConfig(BaseModel):

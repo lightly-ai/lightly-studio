@@ -3,27 +3,40 @@
     import { routeHelpers } from '$lib/routes';
     import DetailsBreadcrumb from '../DetailsBreadcrumb/DetailsBreadcrumb.svelte';
     import { page } from '$app/state';
+    import { useAdjacentFrames } from '$lib/hooks/useAdjacentFrames/useAdjacentFrames';
 
     const {
         rootCollection,
-        frameIndex
+        sampleId,
+        collectionId
     }: {
         rootCollection: CollectionView;
-        frameIndex?: number | null | undefined;
+        sampleId: string;
+        collectionId: string;
     } = $props();
     // Get datasetId and collectionType from URL params
     const datasetId = $derived(page.params.dataset_id!);
     const collectionType = $derived(page.params.collection_type!);
+    const isFromVideos = $derived(Boolean(page.url.searchParams.get('from_video')));
 
     const navigateToFrames = (collectionId: string) => {
         return routeHelpers.toFrames(datasetId, collectionType, collectionId);
     };
+
+    const { query: sampleAdjacentQuery } = $derived(
+        useAdjacentFrames({
+            sampleId,
+            collectionId,
+            fromVideos: isFromVideos
+        })
+    );
 </script>
 
 <DetailsBreadcrumb
     {rootCollection}
-    index={frameIndex}
     section="Frames"
     subsection="Frame"
     navigateTo={navigateToFrames}
+    index={$sampleAdjacentQuery?.data?.current_sample_position}
+    totalCount={$sampleAdjacentQuery?.data?.total_count}
 />

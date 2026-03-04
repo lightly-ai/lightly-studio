@@ -6,12 +6,12 @@ from collections.abc import Generator
 from datetime import datetime, timezone
 from pathlib import Path as PathlibPath
 from tempfile import TemporaryDirectory
+from typing import Annotated
 
 from fastapi import APIRouter, Depends, Path
 from fastapi.responses import PlainTextResponse, StreamingResponse
 from pydantic import BaseModel
 from sqlmodel import Field
-from typing_extensions import Annotated
 
 from lightly_studio.api.routes.api import collection as collection_api
 from lightly_studio.core.dataset_query.dataset_query import DatasetQuery

@@ -10,6 +10,7 @@ from lightly_studio.models.annotation.annotation_base import AnnotationBaseTable
 from lightly_studio.models.annotation.object_detection import (
     ObjectDetectionAnnotationTable,
 )
+from lightly_studio.models.annotation.object_track import ObjectTrackTable
 from lightly_studio.models.annotation.segmentation import SegmentationAnnotationTable
 from lightly_studio.models.annotation_label import AnnotationLabelTable
 from lightly_studio.models.caption import CaptionTable
@@ -97,6 +98,7 @@ def delete_dataset(
     _delete_annotation_labels(session=session, root_collection_id=root_collection_id)
     _delete_tags(session=session, collection_ids=collection_ids)
     _delete_embedding_models(session=session, collection_ids=collection_ids)
+    _delete_object_tracks(session=session, collection_ids=collection_ids)
     session.commit()  # Required before deleting collections.
 
     # 6. Delete collections (with individual commits due to self-referential FKs).
@@ -177,6 +179,15 @@ def _delete_annotation_base(session: Session, sample_ids: list[UUID]) -> None:
         return
     session.exec(  # type: ignore[call-overload]
         delete(AnnotationBaseTable).where(col(AnnotationBaseTable.sample_id).in_(sample_ids))
+    )
+
+
+def _delete_object_tracks(session: Session, collection_ids: list[UUID]) -> None:
+    """Delete object tracks for the given collections."""
+    if not collection_ids:
+        return
+    session.exec(  # type: ignore[call-overload]
+        delete(ObjectTrackTable).where(col(ObjectTrackTable.dataset_id).in_(collection_ids))
     )
 
 

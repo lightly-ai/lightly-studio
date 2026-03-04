@@ -8,6 +8,7 @@ from uuid import UUID
 from sqlalchemy import String, cast, func
 from sqlmodel import Session, col, select
 
+from lightly_studio import db_vector
 from lightly_studio.models.sample import SampleTable
 from lightly_studio.models.sample_embedding import (
     SampleEmbeddingCreate,
@@ -91,45 +92,47 @@ def get_all_by_collection_id(
     return list(session.exec(query).all())
 
 
-def get_hash_by_sample_ids(
+def get_hash_by_collection_id(
     session: Session,
-    sample_ids_ordered: list[UUID],
+    collection_id: UUID,
     embedding_model_id: UUID,
 ) -> tuple[str, list[UUID]]:
-    """Return a combined hash and the ordered sample IDs with stored embeddings.
+    """Return a combined hash and ordered sample IDs with embeddings for a collection.
+
+    The cache key is derived from the first dimension of each embedding vector,
+    which is database-agnostic (works with both DuckDB and PostgreSQL).
 
     Args:
         session: Database session.
-        sample_ids_ordered: Sample IDs to consider, order defines deterministic hash.
+        collection_id: The collection ID to consider.
         embedding_model_id: Embedding model identifier.
 
     Returns:
         Tuple of (combined hash, ordered sample IDs that have stored embeddings).
     """
-    if not sample_ids_ordered:
-        return "empty", []
+    first_dim_col = db_vector.vector_element(SampleEmbeddingTable.embedding, 1).label("first_dim")
 
     rows = session.exec(
         select(
             SampleEmbeddingTable.sample_id,
-            func.hash(SampleEmbeddingTable.embedding).label("hash_column"),
+            first_dim_col,
         )
-        .where(col(SampleEmbeddingTable.sample_id).in_(set(sample_ids_ordered)))
+        .join(SampleTable, col(SampleEmbeddingTable.sample_id) == col(SampleTable.sample_id))
+        .where(SampleTable.collection_id == collection_id)
         .where(SampleEmbeddingTable.embedding_model_id == embedding_model_id)
+        .order_by(col(SampleEmbeddingTable.sample_id).asc())
     ).all()
 
-    # Mypy does not get that 'hash_column' is an attribute of the returned rows
-    sample_id_to_hash = {row.sample_id: row.hash_column for row in rows}  # type: ignore[attr-defined]
-    sample_ids_of_samples_with_embeddings = [
-        sample_id for sample_id in sample_ids_ordered if sample_id in sample_id_to_hash
-    ]
-    hashes_ordered = [
-        sample_id_to_hash[sample_id] for sample_id in sample_ids_of_samples_with_embeddings
-    ]
-
+    sample_ids: list[UUID] = []
     hasher = hashlib.sha256()
-    hasher.update("".join(str(h) for h in hashes_ordered).encode("utf-8"))
-    return hasher.hexdigest(), sample_ids_of_samples_with_embeddings
+
+    for row in rows:
+        sample_ids.append(row.sample_id)  # type: ignore[attr-defined]
+        hasher.update(str(row.first_dim).encode("utf-8"))  # type: ignore[attr-defined]
+
+    if not sample_ids:
+        return "empty", []
+    return hasher.hexdigest(), sample_ids
 
 
 def get_embedding_count(session: Session, collection_id: UUID, embedding_model_id: UUID) -> int:

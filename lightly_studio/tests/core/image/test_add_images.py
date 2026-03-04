@@ -60,19 +60,29 @@ def test_load_into_collection_from_paths(db_session: Session, tmp_path: Path) ->
     assert samples[0].sample.collection_id == collection.collection_id
 
 
+@pytest.mark.parametrize(
+    "images_path",
+    [
+        "/",
+        "/some/path/to/images",
+        "/some/path/to/images/with/trailing/slash/",
+        "s3://test-bucket/images",
+        "gs://test-bucket/images/with/trailing/slash/",
+    ],
+)
 def test_load_into_collection_from_labelformat__obj_det(
-    db_session: Session, tmp_path: Path
+    db_session: Session,
+    images_path: str,
 ) -> None:
     # Arrange
     collection = helpers_resolvers.create_collection(db_session)
-    PILImage.new("RGB", (100, 200)).save(tmp_path / "image.jpg")
     label_input = _get_labelformat_input_obj_det(filename="image.jpg")
 
     sample_ids = add_images.load_into_dataset_from_labelformat(
         session=db_session,
         dataset_id=collection.collection_id,
         input_labels=label_input,
-        images_path=tmp_path,
+        images_path=images_path,
     )
 
     # Assert samples
@@ -83,7 +93,7 @@ def test_load_into_collection_from_labelformat__obj_det(
 
     assert samples[0].sample_id == sample_ids[0]
     assert samples[0].file_name == "image.jpg"
-    assert samples[0].file_path_abs == str((tmp_path / "image.jpg").absolute())
+    assert samples[0].file_path_abs == images_path.rstrip("/\\") + "/image.jpg"
     assert samples[0].width == 100
     assert samples[0].height == 200
     assert samples[0].sample.collection_id == collection.collection_id
@@ -99,7 +109,19 @@ def test_load_into_collection_from_labelformat__obj_det(
     assert anns[0].object_detection_details.height == 20.0
 
 
-def test_load_into_collection_from_labelformat__ins_seg(db_session: Session) -> None:
+@pytest.mark.parametrize(
+    "images_path",
+    [
+        "/",
+        "/some/path/to/images",
+        "/some/path/to/images/with/trailing/slash/",
+        "s3://test-bucket/images",
+        "gs://test-bucket/images/with/trailing/slash/",
+    ],
+)
+def test_load_into_collection_from_labelformat__ins_seg(
+    db_session: Session, images_path: str
+) -> None:
     class TestLabelInput(InstanceSegmentationInput):
         def __init__(self) -> None:
             self.categories = [Category(id=0, name="dog")]
@@ -136,7 +158,7 @@ def test_load_into_collection_from_labelformat__ins_seg(db_session: Session) -> 
         session=db_session,
         dataset_id=collection.collection_id,
         input_labels=TestLabelInput(),
-        images_path=Path("/test_path/"),
+        images_path=images_path,
     )
 
     # Assert samples
@@ -147,7 +169,7 @@ def test_load_into_collection_from_labelformat__ins_seg(db_session: Session) -> 
 
     assert samples[0].sample_id == sample_ids[0]
     assert samples[0].file_name == "image.jpg"
-    assert samples[0].file_path_abs == "/test_path/image.jpg"
+    assert samples[0].file_path_abs == images_path.rstrip("/\\") + "/image.jpg"
     assert samples[0].width == 10
     assert samples[0].height == 10
     assert samples[0].sample.collection_id == collection.collection_id

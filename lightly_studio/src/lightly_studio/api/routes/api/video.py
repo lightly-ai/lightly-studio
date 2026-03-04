@@ -1,11 +1,10 @@
 """API routes for collection videos."""
 
-from typing import List, Optional
+from typing import Annotated, Optional
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, Path
 from pydantic import BaseModel, Field
-from typing_extensions import Annotated
 
 from lightly_studio.api.routes.api.validators import Paginated, PaginatedWithCursor
 from lightly_studio.db_manager import SessionDep
@@ -25,14 +24,14 @@ video_router = APIRouter(prefix="/collections/{collection_id}/video", tags=["vid
 class VideoFieldsBoundsBody(BaseModel):
     """The body to retrieve the fields bounds."""
 
-    annotations_frames_labels_id: Optional[List[UUID]] = None
+    annotations_frames_labels_id: Optional[list[UUID]] = None
 
 
 class ReadVideosRequest(BaseModel):
     """Request body for reading videos."""
 
     filter: Optional[VideoFilter] = Field(None, description="Filter parameters for videos")
-    text_embedding: Optional[List[float]] = Field(None, description="Text embedding to search for")
+    text_embedding: Optional[list[float]] = Field(None, description="Text embedding to search for")
 
 
 class ReadVideoCountAnnotationsRequest(BaseModel):
@@ -43,12 +42,12 @@ class ReadVideoCountAnnotationsRequest(BaseModel):
     )
 
 
-@video_router.post("/annotations/count", response_model=List[CountAnnotationsView])
+@video_router.post("/annotations/count", response_model=list[CountAnnotationsView])
 def count_video_frame_annotations_by_video_collection(
     session: SessionDep,
     collection_id: Annotated[UUID, Path(title="collection Id")],
     body: ReadVideoCountAnnotationsRequest,
-) -> List[CountAnnotationsView]:
+) -> list[CountAnnotationsView]:
     """Retrieve a list of annotations along with total count and filtered count.
 
     Args:

@@ -16,13 +16,11 @@
     let {
         video,
         size,
-        index,
         showAnnotations = true,
         showCaption = false
     }: {
         video: VideoView;
         size: number;
-        index?: number | undefined;
         showAnnotations?: boolean;
         showCaption?: boolean;
     } = $props();
@@ -76,15 +74,7 @@
         const collectionId = (video.sample as SampleView).collection_id;
 
         if (datasetId && collectionId) {
-            goto(
-                routeHelpers.toVideosDetails(
-                    datasetId,
-                    'video',
-                    collectionId,
-                    video.sample_id,
-                    index
-                )
-            );
+            goto(routeHelpers.toVideosDetails(datasetId, 'video', collectionId, video.sample_id));
         }
     }
 
