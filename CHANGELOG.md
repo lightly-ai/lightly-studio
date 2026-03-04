@@ -22,6 +22,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Settings dialog is now scrollable on small screens.
 - Added `✕` button to clear an active text search, matching the existing image search behaviour.
 - Fixed spurious "Annotation updated successfully" toast appearing when clicking a bounding box without moving or resizing it.
+- Improved deletion UX in sample details and captions list views: replaced confirmation popups with immediate deletion and Ctrl+Z undo support.
 
 ### Security
 

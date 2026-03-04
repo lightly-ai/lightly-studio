@@ -428,7 +428,8 @@
                                     datasetId,
                                     'video_frame',
                                     frameCollectionId,
-                                    currentFrame.sample_id
+                                    currentFrame.sample_id,
+                                    true
                                 );
                             })()}
                             data-testid="view-frame-button"
