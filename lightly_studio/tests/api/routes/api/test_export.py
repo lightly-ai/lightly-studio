@@ -111,37 +111,6 @@ def test_export_collection_captions(
     )
 
 
-def test_export_collection_samples(db_session: Session, test_client: TestClient) -> None:
-    client = test_client
-    collection_id = create_collection(
-        session=db_session, collection_name="example_collection"
-    ).collection_id
-    images = create_images(
-        db_session=db_session,
-        collection_id=collection_id,
-        images=[
-            ImageStub(path="path/to/image0.jpg"),
-            ImageStub(path="path/to/image1.jpg"),
-            ImageStub(path="path/to/image2.jpg"),
-        ],
-    )
-
-    # Tag two samples.
-    tag = create_tag(session=db_session, collection_id=collection_id)
-    tag_resolver.add_tag_to_sample(session=db_session, tag_id=tag.tag_id, sample=images[0].sample)
-    tag_resolver.add_tag_to_sample(session=db_session, tag_id=tag.tag_id, sample=images[2].sample)
-
-    # Export the collection
-    response = client.post(
-        f"/api/collections/{collection_id}/export",
-        json={"include": {"tag_ids": [str(tag.tag_id)]}},
-    )
-    assert response.status_code == HTTP_STATUS_OK
-
-    lines = response.text.split("\n")
-    assert lines == ["path/to/image0.jpg", "path/to/image2.jpg"]
-
-
 def test_export_collection_instance_segmentations(
     db_session: Session,
     test_client: TestClient,
@@ -199,3 +168,34 @@ def test_export_collection_instance_segmentations(
         response.headers["Content-Disposition"]
         == "attachment; filename=coco_instance_segmentation_export.json"
     )
+
+
+def test_export_collection_samples(db_session: Session, test_client: TestClient) -> None:
+    client = test_client
+    collection_id = create_collection(
+        session=db_session, collection_name="example_collection"
+    ).collection_id
+    images = create_images(
+        db_session=db_session,
+        collection_id=collection_id,
+        images=[
+            ImageStub(path="path/to/image0.jpg"),
+            ImageStub(path="path/to/image1.jpg"),
+            ImageStub(path="path/to/image2.jpg"),
+        ],
+    )
+
+    # Tag two samples.
+    tag = create_tag(session=db_session, collection_id=collection_id)
+    tag_resolver.add_tag_to_sample(session=db_session, tag_id=tag.tag_id, sample=images[0].sample)
+    tag_resolver.add_tag_to_sample(session=db_session, tag_id=tag.tag_id, sample=images[2].sample)
+
+    # Export the collection
+    response = client.post(
+        f"/api/collections/{collection_id}/export",
+        json={"include": {"tag_ids": [str(tag.tag_id)]}},
+    )
+    assert response.status_code == HTTP_STATUS_OK
+
+    lines = response.text.split("\n")
+    assert lines == ["path/to/image0.jpg", "path/to/image2.jpg"]
