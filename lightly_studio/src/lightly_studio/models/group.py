@@ -1,6 +1,6 @@
 """Group table definition."""
 
-from typing import TYPE_CHECKING, Optional, Union
+from typing import Optional, Union
 from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict
@@ -8,13 +8,10 @@ from pydantic import Field as PydanticField
 from sqlalchemy.orm import Mapped
 from sqlmodel import Field, Relationship, SQLModel
 
-from lightly_studio.models.image import ImageView
+from lightly_studio.models.collection import ComponentCollectionView
+from lightly_studio.models.image import ImageTable, ImageView
 from lightly_studio.models.sample import SampleTable, SampleView
-from lightly_studio.models.video import VideoView
-
-if TYPE_CHECKING:
-    from lightly_studio.models.image import ImageTable
-    from lightly_studio.models.video import VideoTable
+from lightly_studio.models.video import VideoTable, VideoView
 
 
 class GroupTable(SQLModel, table=True):
@@ -72,20 +69,21 @@ class GroupComponentView(BaseModel):
       by sample_id and the parent group by parent_sample_id.
     - Content relationship: Each sample's actual content (media file information) is stored in
       either ImageTable or VideoTable, linked via sample_id as a foreign key. A sample_id exists
-      in SampleTable and exactly one of ImageTable/VideoTable - never both. 
+      in SampleTable and exactly one of ImageTable/VideoTable - never both.
     """
 
-    component_name: str
-    image: Optional[ImageView] = None
-    video: Optional[VideoView] = None
+    collection: ComponentCollectionView
+    details: Union[ImageView, VideoView, None] = None
 
     @classmethod
-    def from_image_table(cls, image: "ImageTable", component_name: str) -> "GroupComponentView":
+    def from_image_table(
+        cls, image: "ImageTable", collection: ComponentCollectionView
+    ) -> "GroupComponentView":
         """Create a GroupComponentView from an ImageTable.
 
         Args:
             image: ImageTable instance with loaded sample relationship.
-            component_name: Name of the component from the collection.
+            collection: ComponentCollectionView instance with collection data.
 
         Returns:
             GroupComponentView with image data populated.
@@ -93,18 +91,19 @@ class GroupComponentView(BaseModel):
         # TODO(Kondrat 03/25): Replace manual ImageView construction with
         # ImageView.from_image_table() once that factory method is implemented
         return cls(
-            component_name=component_name,
-            image=ImageView.from_image_table(image=image),
-            video=None,
+            collection=collection,
+            details=ImageView.from_image_table(image=image),
         )
 
     @classmethod
-    def from_video_table(cls, video: "VideoTable", component_name: str) -> "GroupComponentView":
+    def from_video_table(
+        cls, video: "VideoTable", collection: ComponentCollectionView
+    ) -> "GroupComponentView":
         """Create a GroupComponentView from a VideoTable.
 
         Args:
             video: VideoTable instance with loaded sample relationship.
-            component_name: Name of the component from the collection.
+            collection: ComponentCollectionView instance with collection data.
 
         Returns:
             GroupComponentView with video data populated.
@@ -112,9 +111,8 @@ class GroupComponentView(BaseModel):
         # TODO(Kondrat 03/25): Replace manual VideoView construction with
         # VideoView.from_video_table() once that factory method is implemented
         return cls(
-            component_name=component_name,
-            image=None,
-            video=VideoView(
+            collection=collection,
+            details=VideoView(
                 sample_id=video.sample_id,
                 file_name=video.file_name,
                 file_path_abs=video.file_path_abs,
