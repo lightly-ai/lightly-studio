@@ -11,7 +11,7 @@ from sqlmodel import Field, Relationship, SQLModel
 from lightly_studio.models.collection import ComponentCollectionView
 from lightly_studio.models.image import ImageTable, ImageView
 from lightly_studio.models.sample import SampleTable, SampleView
-from lightly_studio.models.video import VideoTable, VideoView
+from lightly_studio.models.video import FrameView, VideoTable, VideoView
 
 
 class GroupTable(SQLModel, table=True):
@@ -104,6 +104,7 @@ class GroupComponentView(BaseModel):
         video: "VideoTable",
         collection: ComponentCollectionView,
         similarity_score: Optional[float] = None,
+        frame: Optional["FrameView"] = None,
     ) -> "GroupComponentView":
         """Create a GroupComponentView from a VideoTable.
 
@@ -128,5 +129,6 @@ class GroupComponentView(BaseModel):
                 duration_s=video.duration_s,
                 sample=SampleView.model_validate(video.sample),
                 similarity_score=similarity_score,
+                frame=frame,
             ),
         )
