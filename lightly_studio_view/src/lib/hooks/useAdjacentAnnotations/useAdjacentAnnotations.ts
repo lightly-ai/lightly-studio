@@ -25,8 +25,7 @@ export const useAdjacentAnnotations = ({
                         get(selectedAnnotationFilterIds).size > 0
                             ? Array.from(get(selectedAnnotationFilterIds))
                             : undefined,
-                    annotation_tag_ids:
-                        get(tagsSelected).size > 0 ? Array.from(get(tagsSelected)) : undefined
+                    tag_ids: get(tagsSelected).size > 0 ? Array.from(get(tagsSelected)) : undefined
                 }
             }
         }
