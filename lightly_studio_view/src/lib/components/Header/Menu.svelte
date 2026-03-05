@@ -17,17 +17,21 @@
     } from '@lucide/svelte';
 
     import type { CollectionView } from '$lib/api/lightly_studio_local';
+    import { hasMinimumRole } from '$lib/hooks/useAuth/hasMinimumRole';
+    import type { LightlyEnterpriseSession } from '$lib/hooks/useAuth/getLightlyEnterpriseSession/getLightlyEnterpriseSession';
 
     let {
         isSamples = false,
         isVideos = false,
         hasEmbeddings = false,
-        collection
+        collection,
+        user
     } = $props<{
         isSamples?: boolean;
         isVideos?: boolean;
         hasEmbeddings?: boolean;
         collection: CollectionView;
+        user?: LightlyEnterpriseSession['user'];
     }>();
 
     const { openClassifiersMenu } = useClassifiersMenu();
@@ -50,10 +54,12 @@
     const hasSelection = $derived(isSamples || isVideos);
     const hasExport = $derived(collection.sample_type == 'image');
 
+    const isEditor = $derived(hasMinimumRole(user?.role, 'editor'));
+
     const menuItems = $derived.by<MenuItem[]>(() => {
         const items: MenuItem[] = [];
 
-        if (hasClassifier) {
+        if (hasClassifier && isEditor) {
             items.push({
                 icon: BrainCircuitIcon,
                 label: 'Few Shot Classifier',
@@ -62,7 +68,7 @@
             });
         }
 
-        if (hasSelection) {
+        if (hasSelection && isEditor) {
             items.push({
                 icon: WandSparklesIcon,
                 label: 'Selection',
@@ -71,12 +77,14 @@
             });
         }
 
-        items.push({
-            icon: PuzzleIcon,
-            label: 'Plugins',
-            onSelect: openOperatorsDialog,
-            testId: 'menu-operators'
-        });
+        if (isEditor) {
+            items.push({
+                icon: PuzzleIcon,
+                label: 'Plugins',
+                onSelect: openOperatorsDialog,
+                testId: 'menu-operators'
+            });
+        }
 
         if (hasExport) {
             items.push({
@@ -87,12 +95,14 @@
             });
         }
 
-        items.push({
-            icon: SettingsIcon,
-            label: 'Settings',
-            onSelect: openSettingsDialog,
-            testId: 'menu-settings'
-        });
+        if (isEditor) {
+            items.push({
+                icon: SettingsIcon,
+                label: 'Settings',
+                onSelect: openSettingsDialog,
+                testId: 'menu-settings'
+            });
+        }
 
         return items;
     });
