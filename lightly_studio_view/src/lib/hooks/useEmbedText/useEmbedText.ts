@@ -10,17 +10,17 @@ type UseEmbedTextParams = {
 };
 
 export function useEmbedText(params: StoreOrVal<UseEmbedTextParams>) {
-    const optionsStore = derived(toReadable(params), ($p) => {
+    const optionsStore = derived(toReadable(params), (currentParams) => {
         const options = embedTextOptions({
-            path: { collection_id: $p.collectionId },
+            path: { collection_id: currentParams.collectionId },
             query: {
-                query_text: $p.queryText,
-                embedding_model_id: $p.embeddingModelId
+                query_text: currentParams.queryText,
+                embedding_model_id: currentParams.embeddingModelId
             }
         });
         return {
             ...options,
-            enabled: Boolean($p.queryText)
+            enabled: Boolean(currentParams.queryText)
         };
     });
     return createQuery(optionsStore);

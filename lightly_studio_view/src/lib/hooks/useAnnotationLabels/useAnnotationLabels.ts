@@ -8,9 +8,9 @@ type UseAnnotationLabelsParams = {
 };
 
 export const useAnnotationLabels = (params: StoreOrVal<UseAnnotationLabelsParams>) => {
-    const optionsStore = derived(toReadable(params), ($p) =>
+    const optionsStore = derived(toReadable(params), (currentParams) =>
         readAnnotationLabelsOptions({
-            path: { collection_id: $p.collectionId }
+            path: { collection_id: currentParams.collectionId }
         })
     );
     return createQuery(optionsStore);

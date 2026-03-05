@@ -16,8 +16,8 @@ export const useAnnotationLabels = ({ collectionId }) =>
 
 // After: store → reactive observer
 export const useAnnotationLabels = (params: StoreOrVal<Params>) => {
-    const optionsStore = derived(toReadable(params), ($p) =>
-        readAnnotationLabelsOptions({ path: { collection_id: $p.collectionId } })
+    const optionsStore = derived(toReadable(params), (currentParams) =>
+        readAnnotationLabelsOptions({ path: { collection_id: currentParams.collectionId } })
     );
     return createQuery(optionsStore);
 };

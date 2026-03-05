@@ -10,9 +10,9 @@ type UseHasEmbeddingsParams = {
 export const useHasEmbeddings = (
     params: StoreOrVal<UseHasEmbeddingsParams>
 ): CreateQueryResult<boolean, Error> => {
-    const optionsStore = derived(toReadable(params), ($p) =>
+    const optionsStore = derived(toReadable(params), (currentParams) =>
         hasEmbeddingsOptions({
-            path: { collection_id: $p.collectionId }
+            path: { collection_id: currentParams.collectionId }
         })
     );
     return createQuery(optionsStore);
