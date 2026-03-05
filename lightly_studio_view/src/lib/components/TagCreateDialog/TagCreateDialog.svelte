@@ -339,7 +339,7 @@
         }}
         data-testid="tag-create-dialog-button"
     >
-        Tag selected
+        Tag selected items
     </Button>
     <Button
         variant="outline"
