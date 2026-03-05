@@ -154,13 +154,19 @@
     let query_text = $state($textEmbedding ? $textEmbedding.queryText : '');
     let submittedQueryText = $state('');
 
-    const embedTextQuery = $derived(
-        useEmbedText({
+    const embedTextParams = writable<{
+        collectionId: string;
+        queryText: string;
+        embeddingModelId: string | null;
+    }>({ collectionId: '', queryText: '', embeddingModelId: null });
+    $effect(() => {
+        embedTextParams.set({
             collectionId,
             queryText: submittedQueryText,
             embeddingModelId: null
-        })
-    );
+        });
+    });
+    const embedTextQuery = useEmbedText(embedTextParams);
 
     async function onKeyDown(event: KeyboardEvent) {
         if (event.key === 'Enter') {
@@ -169,15 +175,27 @@
         }
     }
 
-    const hasEmbeddingsQuery = $derived(useHasEmbeddings({ collectionId }));
+    const hasEmbeddingsParams = writable<{ collectionId: string }>({ collectionId: '' });
+    $effect(() => {
+        hasEmbeddingsParams.set({ collectionId });
+    });
+    const hasEmbeddingsQuery = useHasEmbeddings(hasEmbeddingsParams);
     const hasEmbeddings = $derived(!!$hasEmbeddingsQuery.data);
 
-    const { metadataValues } = $derived.by(() => useMetadataFilters(collectionId));
-    const { dimensionsValues } = $derived.by(() =>
-        useDimensions(collection?.parent_collection_id ?? collectionId)
-    );
+    const { metadataValues } = useMetadataFilters();
+    $effect(() => {
+        if (collectionId) useMetadataFilters(collectionId);
+    });
+    const { dimensionsValues } = useDimensions();
+    $effect(() => {
+        useDimensions(collectionId);
+    });
 
-    const annotationLabels = $derived(useAnnotationLabels({ collectionId: collectionId ?? '' }));
+    const annotationLabelsParams = writable<{ collectionId: string }>({ collectionId: '' });
+    $effect(() => {
+        annotationLabelsParams.set({ collectionId: collectionId ?? '' });
+    });
+    const annotationLabels = useAnnotationLabels(annotationLabelsParams);
     const { showPlot, setShowPlot, filteredSampleCount, filteredAnnotationCount } =
         useGlobalStorage();
 

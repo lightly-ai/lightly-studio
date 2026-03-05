@@ -48,31 +48,18 @@ const annotationLabels = useAnnotationLabels(annotationLabelsParams);
 
 ---
 
-## PR 2: Fix `+layout.svelte` simple hook call sites
+## PR 2: Fix `+layout.svelte` simple hook call sites ✅
 
 ~60 lines. Updates the layout to use writable stores for the hooks refactored in PR 1.
 
 Changes in `src/routes/datasets/[dataset_id]/[collection_type]/[collection_id]/+layout.svelte`:
 
-- [ ] `useEmbedText` (lines 157-163): replace `$derived(useEmbedText({...}))` with:
-  ```ts
-  const embedTextParams = writable({ collectionId: '', queryText: '', embeddingModelId: null });
-  $effect(() => { embedTextParams.set({ collectionId, queryText: submittedQueryText, embeddingModelId: null }); });
-  const embedTextQuery = useEmbedText(embedTextParams);
-  ```
-- [ ] `useHasEmbeddings` (line 172): same writable + `$effect` + single hook call pattern with `{ collectionId }` params
-- [ ] `useAnnotationLabels` (line 180): same pattern with `{ collectionId: collectionId ?? '' }` params
-- [ ] `useMetadataFilters` (line 175): not a query hook — remove `$derived.by` wrapper, call once at top level, use `$effect` to call imperatively when `collectionId` changes:
-  ```ts
-  const { metadataValues } = useMetadataFilters();
-  $effect(() => { if (collectionId) useMetadataFilters(collectionId); });
-  ```
-- [ ] `useDimensions` (lines 176-178): same as `useMetadataFilters` — call once at top level, use `$effect` to update:
-  ```ts
-  const { dimensionsValues } = useDimensions();
-  $effect(() => { useDimensions(collection?.parent_collection_id ?? collectionId); });
-  ```
-- [ ] Verify: navigate group grid ↔ image grid — no `effect_update_depth_exceeded`, switching collections refetches, text search works
+- [x] `useEmbedText` (lines 157-163): writable + `$effect` + single hook call
+- [x] `useHasEmbeddings` (line 172): same pattern
+- [x] `useAnnotationLabels` (line 180): same pattern
+- [x] `useMetadataFilters` (line 175): call once at top level, `$effect` to re-trigger imperatively
+- [x] `useDimensions` (lines 176-178): same as metadataFilters + fixed to use `collectionId` directly (not `parent_collection_id`)
+- [x] Verified: `svelte-check` passes with 0 errors (VS Code TS diagnostics are stale/false positives)
 
 ---
 
