@@ -1,7 +1,7 @@
 import { browser } from '$app/environment';
 import { AUTHENTICATION_SESSION_STORAGE_KEY } from '$lib/constants';
 
-export const AVAILABLE_ROLES = ['admin', 'viewer'] as const;
+export const AVAILABLE_ROLES = ['viewer', 'labeler', 'editor', 'admin'] as const;
 
 export type Role = (typeof AVAILABLE_ROLES)[number];
 
