@@ -3,9 +3,10 @@
 from __future__ import annotations
 
 import uuid
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 
 from .base_operator import BaseOperator
+from .operator_context import OperatorScope
 
 
 @dataclass
@@ -14,6 +15,7 @@ class RegisteredOperatorMetadata:
 
     operator_id: str
     name: str
+    supported_scopes: list[OperatorScope] = field(default_factory=list)
 
 
 class OperatorRegistry:
@@ -34,6 +36,7 @@ class OperatorRegistry:
             RegisteredOperatorMetadata(
                 operator_id=operator_id,
                 name=operator.name,
+                supported_scopes=operator.supported_scopes,
             )
             for operator_id, operator in self._operators.items()
         ]
