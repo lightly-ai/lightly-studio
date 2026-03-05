@@ -47,14 +47,44 @@ describe('UserAvatar', () => {
         expect(usersButton.getAttribute('href')).toBe('/workspace/users');
     });
 
-    it('should not render users menu item for non-admin user', async () => {
-        const nonAdminUser = {
-            username: 'user',
-            email: 'user@example.com',
-            role: 'user'
+    it('should not render users menu item for editor user', async () => {
+        const editorUser = {
+            username: 'editor',
+            email: 'editor@example.com',
+            role: 'editor' as const
         };
-        const { getByTitle, queryByRole } = render(UserAvatar, { props: { user: nonAdminUser } });
-        const avatarButton = getByTitle('user');
+        const { getByTitle, queryByRole } = render(UserAvatar, { props: { user: editorUser } });
+        const avatarButton = getByTitle('editor');
+
+        await fireEvent.click(avatarButton);
+
+        const usersButton = queryByRole('link', { name: /users/i });
+        expect(usersButton).toBeNull();
+    });
+
+    it('should not render users menu item for labeler user', async () => {
+        const labelerUser = {
+            username: 'labeler',
+            email: 'labeler@example.com',
+            role: 'labeler' as const
+        };
+        const { getByTitle, queryByRole } = render(UserAvatar, { props: { user: labelerUser } });
+        const avatarButton = getByTitle('labeler');
+
+        await fireEvent.click(avatarButton);
+
+        const usersButton = queryByRole('link', { name: /users/i });
+        expect(usersButton).toBeNull();
+    });
+
+    it('should not render users menu item for viewer user', async () => {
+        const viewerUser = {
+            username: 'viewer',
+            email: 'viewer@example.com',
+            role: 'viewer' as const
+        };
+        const { getByTitle, queryByRole } = render(UserAvatar, { props: { user: viewerUser } });
+        const avatarButton = getByTitle('viewer');
 
         await fireEvent.click(avatarButton);
 
