@@ -243,8 +243,8 @@
     }}
 >
     {#snippet gridItem({ index, style, sampleSize })}
-        {#key samples[index].sample_id}
-            {#if samples[index]}
+        {#if samples[index]}
+            {#key samples[index].sample_id}
                 {@const displayTextOnImage = $showSampleFilenamesStore
                     ? samples[index].file_name
                     : samples[index].captions?.[0]?.text}
@@ -267,7 +267,7 @@
                         />
                     {/snippet}
                 </SampleGridItem>
-            {/if}
-        {/key}
+            {/key}
+        {/if}
     {/snippet}
 </SampleGrid>
