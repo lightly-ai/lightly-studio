@@ -110,26 +110,23 @@ export function useOperatorContext(
             videoFilter,
             frameFilter,
             selectedAnnotationFilterIds,
-            tagsSelected
+            tagsSelected,
+            isOnDetailPage
         ],
-        ([$p, $imageFilter, $videoFilter, $frameFilter, $annotationFilterIds, $tagsSelected]: [
-            PageContext,
-            ImageFilter | null,
-            VideoFilter | null,
-            VideoFrameFilter | null,
-            Set<string>,
-            Set<string>
+        ([
+            $p,
+            $imageFilter,
+            $videoFilter,
+            $frameFilter,
+            $annotationFilterIds,
+            $tagsSelected,
+            $isOnDetailPage
         ]): OperatorContextFilter => {
             const { routeId: $r, collectionId: $cid, sampleId: $sid, annotationId: $aid } = $p;
 
-            const $isAnnotationDetail = isAnnotationDetailsRoute($r);
-            const $isOnDetailPage =
-                isSampleDetailsRoute($r) ||
-                isFrameDetailsRoute($r) ||
-                isVideoDetailsRoute($r) ||
-                $isAnnotationDetail;
+            const isAnnotationDetail = isAnnotationDetailsRoute($r);
 
-            if ($isAnnotationDetail && $aid) {
+            if (isAnnotationDetail && $aid) {
                 return { collection_id: $cid, sample_ids: [$aid] } satisfies SampleFilter;
             }
             if ($isOnDetailPage && $sid) {
