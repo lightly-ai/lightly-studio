@@ -1,6 +1,7 @@
 import { embedTextOptions } from '$lib/api/lightly_studio_local/@tanstack/svelte-query.gen';
-
+import { toReadable, type StoreOrVal } from '$lib/utils/reactiveParams';
 import { createQuery } from '@tanstack/svelte-query';
+import { derived } from 'svelte/store';
 
 type UseEmbedTextParams = {
     collectionId: string;
@@ -8,16 +9,19 @@ type UseEmbedTextParams = {
     embeddingModelId?: string | null;
 };
 
-export function useEmbedText({ collectionId, queryText, embeddingModelId }: UseEmbedTextParams) {
-    const options = embedTextOptions({
-        path: { collection_id: collectionId },
-        query: {
-            query_text: queryText,
-            embedding_model_id: embeddingModelId
-        }
+export function useEmbedText(params: StoreOrVal<UseEmbedTextParams>) {
+    const optionsStore = derived(toReadable(params), ($p) => {
+        const options = embedTextOptions({
+            path: { collection_id: $p.collectionId },
+            query: {
+                query_text: $p.queryText,
+                embedding_model_id: $p.embeddingModelId
+            }
+        });
+        return {
+            ...options,
+            enabled: Boolean($p.queryText)
+        };
     });
-    return createQuery({
-        ...options,
-        enabled: Boolean(queryText)
-    });
+    return createQuery(optionsStore);
 }
