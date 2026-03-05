@@ -16,6 +16,35 @@ from lightly_studio.api.routes.api.status import (
 from lightly_studio.api.server import Server, _is_ipv6_available
 
 
+def test_lifespan_calls_startup_all() -> None:
+    """Operator startup_all is called when the app starts."""
+    with patch("lightly_studio.api.app.operator_registry") as mock_registry, TestClient(app):
+        mock_registry.startup_all.assert_called_once()
+
+
+def test_lifespan_calls_shutdown_all() -> None:
+    """Operator shutdown_all is called when the app shuts down."""
+    with patch("lightly_studio.api.app.operator_registry") as mock_registry, TestClient(app):
+        pass
+    mock_registry.shutdown_all.assert_called_once()
+
+
+def test_lifespan_shutdown_all_called_even_if_startup_raises() -> None:
+    """Operator shutdown_all and db_manager.close still run if startup_all raises."""
+    with (
+        patch("lightly_studio.api.app.operator_registry") as mock_registry,
+        patch("lightly_studio.api.app.db_manager") as mock_db,
+    ):
+        mock_registry.startup_all.side_effect = RuntimeError("startup failed")
+        try:
+            with TestClient(app):
+                pass
+        except RuntimeError:
+            pass
+        mock_registry.shutdown_all.assert_called_once()
+        mock_db.close.assert_called_once()
+
+
 def test_server_initialization() -> None:
     """Test that the Server class initializes correctly."""
     host = "127.0.0.1"
