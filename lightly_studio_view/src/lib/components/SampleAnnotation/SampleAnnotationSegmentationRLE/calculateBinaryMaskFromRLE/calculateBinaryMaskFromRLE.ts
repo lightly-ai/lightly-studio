@@ -1,5 +1,9 @@
 import parseColor from './parseColor';
 
+const TRANSPARENT_DATA_URL =
+    'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=';
+const maskDataUrlCache = new WeakMap<number[], Map<string, { dataUrl: string; height: number }>>();
+
 export default function calculateBinaryMaskFromRLE(
     segmentation: number[],
     width: number,
@@ -13,10 +17,15 @@ export default function calculateBinaryMaskFromRLE(
     if (width <= 0 || height <= 0 || !Number.isFinite(width) || !Number.isFinite(height)) {
         // Return a minimal transparent data URL or throw an error, depending on requirements
         return {
-            dataUrl:
-                'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=',
+            dataUrl: TRANSPARENT_DATA_URL,
             height: 0
         };
+    }
+
+    const cacheKey = `${width}:${colorFill}`;
+    const cachedMaskDataUrl = maskDataUrlCache.get(segmentation)?.get(cacheKey);
+    if (cachedMaskDataUrl) {
+        return cachedMaskDataUrl;
     }
 
     // --- Environment Check (Optional but helpful for debugging tests) ---
@@ -67,7 +76,6 @@ export default function calculateBinaryMaskFromRLE(
     const { r, g, b, a } = parseColor(colorFill);
 
     let currentPixelIndex = 0; // Tracks the logical pixel number (0 to width*height - 1)
-    let imageDataIndex = 0; // Tracks the index in the flat ImageData buffer (0 to bufferLength - 4)
 
     segmentation.forEach((count, index) => {
         if (count === 0) return; // Skip zero counts
@@ -77,26 +85,21 @@ export default function calculateBinaryMaskFromRLE(
         if (isFillSegment) {
             // Fill 'count' pixels
             const endPixelIndex = currentPixelIndex + count;
+            let dataIndex = currentPixelIndex * 4;
             while (currentPixelIndex < endPixelIndex) {
-                // Calculate buffer index *only once* per pixel
-                const y = Math.floor(currentPixelIndex / width);
-                const x = currentPixelIndex % width;
-                imageDataIndex = (y * width + x) * 4; // Calculate the byte index for this pixel
-
                 // Boundary check before writing
-                if (imageDataIndex >= 0 && imageDataIndex < bufferLength - 3) {
-                    data[imageDataIndex] = r;
-                    data[imageDataIndex + 1] = g;
-                    data[imageDataIndex + 2] = b;
-                    data[imageDataIndex + 3] = a;
+                if (dataIndex >= 0 && dataIndex < bufferLength - 3) {
+                    data[dataIndex] = r;
+                    data[dataIndex + 1] = g;
+                    data[dataIndex + 2] = b;
+                    data[dataIndex + 3] = a;
                 }
-                currentPixelIndex++; // Move to the next logical pixel
+                currentPixelIndex++;
+                dataIndex += 4;
             }
         } else {
             // Skip 'count' pixels (ImageData is already transparent black)
             currentPixelIndex += count;
-            // No need to update imageDataIndex here, it will be recalculated
-            // when the next fill segment starts.
         }
     });
 
@@ -110,10 +113,14 @@ export default function calculateBinaryMaskFromRLE(
     } catch (e) {
         console.error('Error calling canvas.toDataURL(). Check mock implementation.', e);
         // Return minimal data URL or re-throw depending on desired test behavior on mock failure
-        dataUrl =
-            'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=';
+        dataUrl = TRANSPARENT_DATA_URL;
         // throw e; // Alternatively, make the test fail hard
     }
 
-    return { dataUrl, height };
+    const result = { dataUrl, height };
+    const cache = maskDataUrlCache.get(segmentation) ?? new Map<string, { dataUrl: string; height: number }>();
+    cache.set(cacheKey, result);
+    maskDataUrlCache.set(segmentation, cache);
+
+    return result;
 }
