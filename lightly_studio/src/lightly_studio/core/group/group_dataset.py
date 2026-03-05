@@ -98,7 +98,7 @@ class GroupDataset(Dataset[GroupSample]):
         if name is None:
             name = DEFAULT_DATASET_NAME
 
-        collection = collection_resolver.create(
+        collection = collection_resolver.create_dataset(
             session=db_manager.persistent_session(),
             collection=CollectionCreate(name=name, sample_type=cls.sample_type()),
         )

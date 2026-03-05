@@ -67,6 +67,16 @@ def create_collection(
     """Helper function to create a collection."""
     if collection_name is None:
         collection_name = f"test_collection_{uuid.uuid4().hex[:8]}"
+
+    if parent_collection_id is None:
+        return collection_resolver.create_dataset(
+            session=session,
+            collection=CollectionCreate(
+                name=collection_name,
+                sample_type=sample_type,
+            ),
+        )
+
     return collection_resolver.create(
         session=session,
         collection=CollectionCreate(

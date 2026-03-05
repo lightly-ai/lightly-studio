@@ -213,10 +213,12 @@ class BaseSampleDataset(Dataset[T], ABC):
         if name is None:
             name = DEFAULT_DATASET_NAME
 
-        collection = collection_resolver.create(
-            session=db_manager.persistent_session(),
+        session = db_manager.persistent_session()
+        collection = collection_resolver.create_dataset(
+            session=session,
             collection=CollectionCreate(name=name, sample_type=cls.sample_type()),
         )
+
         return cls(collection=collection)
 
     @classmethod

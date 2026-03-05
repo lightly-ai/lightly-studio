@@ -4,6 +4,7 @@ from lightly_studio.resolvers.collection_resolver.check_collection_type import (
     check_collection_type,
 )
 from lightly_studio.resolvers.collection_resolver.create import create
+from lightly_studio.resolvers.collection_resolver.create_dataset import create_dataset
 from lightly_studio.resolvers.collection_resolver.create_group_components import (
     create_group_components,
 )
@@ -49,6 +50,7 @@ from lightly_studio.resolvers.collection_resolver.update import update
 __all__ = [
     "check_collection_type",
     "create",
+    "create_dataset",
     "create_group_components",
     "deep_copy",
     "delete",
