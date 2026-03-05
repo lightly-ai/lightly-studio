@@ -11,7 +11,6 @@
     import { useGlobalStorage } from '$lib/hooks/useGlobalStorage';
     import { addAnnotationLabelChangeToUndoStack } from '$lib/services/addAnnotationLabelChangeToUndoStack';
     import { useUpdateAnnotationsMutation } from '$lib/hooks/useUpdateAnnotationsMutation/useUpdateAnnotationsMutation';
-    import DeleteAnnotationPopUp from '$lib/components/DeleteAnnotationPopUp/DeleteAnnotationPopUp.svelte';
     import AnnotationColorLegend from '$lib/components/AnnotationColorLegend/AnnotationColorLegend.svelte';
 
     const {
@@ -25,7 +24,6 @@
         onChangeAnnotationLabel,
         canHighlight = false,
         onClickSelectList,
-        onDelete,
         isLocked = false,
         onToggleLock
     }: {
@@ -39,16 +37,9 @@
         isHidden?: boolean;
         canHighlight?: boolean;
         onClickSelectList?: () => void;
-        onDelete?: () => void;
         isLocked?: boolean;
         onToggleLock?: (e: MouseEvent) => void;
     } = $props();
-
-    $effect(() => {
-        if (showDeleteConfirmation) {
-            return onDelete?.();
-        }
-    });
 
     const formatAnnotationType = (annotationType: string) => {
         switch (annotationType) {
@@ -109,8 +100,6 @@
         const item = items.find((i) => i.value === annotationLabelName);
         return item ? item : { value: annotationLabelName, label: annotationLabelName };
     });
-
-    let showDeleteConfirmation = $state(false);
 </script>
 
 <div
@@ -133,7 +122,14 @@
                         class="flex w-full items-center gap-2 text-sm font-medium leading-5"
                         data-testid="sample-details-pannel-annotation-name"
                     >
-                        <div class="flex flex-col gap-1">
+                        <div class="h-4">
+                            <AnnotationColorLegend
+                                labelName={annotationLabelName}
+                                className="h-4 w-4"
+                                selected={isSelected}
+                            />
+                        </div>
+                        <div class="flex flex-col justify-center gap-1">
                             {#if $isEditingMode}
                                 <div
                                     role="button"
@@ -192,12 +188,12 @@
                         </div>
                     </div>
                 </div>
-                <div class="flex flex-col items-end justify-between gap-2 self-stretch pl-1">
+                <div class="flex flex-col items-end justify-center gap-2 self-stretch pl-1">
                     <div class="flex gap-3">
                         {#if $isEditingMode && annotation.annotation_type != 'object_detection'}
                             {#if isLocked}
                                 <Lock
-                                    class="size-6 text-muted-foreground"
+                                    class="size-4 text-muted-foreground"
                                     onclick={(e) => {
                                         e.stopPropagation();
                                         onToggleLock?.(e);
@@ -205,7 +201,7 @@
                                 />
                             {:else}
                                 <Unlock
-                                    class="size-6"
+                                    class="size-4"
                                     onclick={(e) => {
                                         e.stopPropagation();
                                         onToggleLock?.(e);
@@ -215,17 +211,21 @@
                         {/if}
                         {#if isHidden}
                             <EyeOff
-                                class="size-6 text-muted-foreground"
+                                class="size-4 text-muted-foreground"
                                 onclick={onToggleShowAnnotation}
                             />
                         {:else}
-                            <Eye class="size-6" onclick={onToggleShowAnnotation} />
+                            <Eye class="size-4" onclick={onToggleShowAnnotation} />
                         {/if}
 
                         {#if $isEditingMode}
-                            <DeleteAnnotationPopUp onDelete={onDeleteAnnotation}>
-                                <Trash2 class="size-6" />
-                            </DeleteAnnotationPopUp>
+                            <Trash2
+                                class="size-4"
+                                onclick={(e) => {
+                                    e.stopPropagation();
+                                    onDeleteAnnotation(e);
+                                }}
+                            />
                         {/if}
                     </div>
                 </div>
@@ -249,13 +249,6 @@
                         ({getAnnotationDimensions(annotation)})
                     {/if}
                 </span>
-                <div class={$isEditingMode ? '' : 'pr-1'}>
-                    <AnnotationColorLegend
-                        labelName={annotationLabelName}
-                        className="h-4 w-4"
-                        selected={isSelected}
-                    />
-                </div>
             </div>
         </div>
     </button>

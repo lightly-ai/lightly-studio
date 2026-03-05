@@ -51,6 +51,13 @@ class CollectionView(CollectionBase):
     children: list["CollectionView"] = []
 
 
+class ComponentCollectionView(CollectionBase):
+    """Collection view for group components."""
+
+    group_component_name: str
+    group_component_index: int
+
+
 class CollectionViewWithCount(CollectionView):
     """Collection view with total sample count."""
 

@@ -240,6 +240,7 @@ class AnnotationDetails:
         width: Width of the annotation.
         height: Height of the annotation.
         segmentation_mask: Segmentation mask for instance and semantic segmentation annotations.
+        object_track_id: Optional object track id.
     """
 
     sample_id: UUID
@@ -251,6 +252,7 @@ class AnnotationDetails:
     width: int = 20
     height: int = 20
     segmentation_mask: list[int] | None = None
+    object_track_id: UUID | None = None
 
 
 def create_annotations(
@@ -271,6 +273,7 @@ def create_annotations(
             parent_sample_id=annotation.sample_id,
             annotation_label_id=annotation.annotation_label_id,
             annotation_type=annotation.annotation_type,
+            object_track_id=annotation.object_track_id,
             segmentation_mask=annotation.segmentation_mask,
             confidence=annotation.confidence,
             x=annotation.x,
