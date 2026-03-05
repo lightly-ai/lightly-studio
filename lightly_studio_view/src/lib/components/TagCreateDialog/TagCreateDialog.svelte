@@ -37,6 +37,8 @@
     import { useImageFilters } from '$lib/hooks/useImageFilters/useImageFilters';
     import { useVideoFilters } from '$lib/hooks/useVideoFilters/useVideoFilters';
     import { isNormalModeParams } from '$lib/hooks/useImagesInfinite/useImagesInfinite';
+    import useAuth from '$lib/hooks/useAuth/useAuth';
+    import { hasMinimumRole } from '$lib/hooks/useAuth/hasMinimumRole';
 
     export type UseTagsCreateDialog = {
         collectionId: string;
@@ -269,6 +271,8 @@
 
     const changesToCommit = $derived(tagsToAddItemsTo.size > 0 || tagsEnlistedToCreate.length > 0);
 
+    const { user } = useAuth();
+
     let isCreateByFilter = $state(false);
     let hasFetched = false;
 
@@ -329,29 +333,31 @@
     };
 </script>
 
-<div class="flex space-x-1">
-    <Button
-        variant="outline"
-        class={'flex-1'}
-        onclick={() => {
-            isDialogOpened = true;
-            isCreateByFilter = !isDialogOpenable;
-        }}
-        data-testid="tag-create-dialog-button"
-    >
-        <AddIcon />
-        Create new Tags
-    </Button>
-    <Button
-        variant="outline"
-        disabled={!isDialogOpenable}
-        size="icon"
-        title="Clear selection"
-        onclick={clearItemsSelected}
-    >
-        <EraserIcon />
-    </Button>
-</div>
+{#if hasMinimumRole(user?.role, 'labeler')}
+    <div class="flex space-x-1">
+        <Button
+            variant="outline"
+            class={'flex-1'}
+            onclick={() => {
+                isDialogOpened = true;
+                isCreateByFilter = !isDialogOpenable;
+            }}
+            data-testid="tag-create-dialog-button"
+        >
+            <AddIcon />
+            Create new Tags
+        </Button>
+        <Button
+            variant="outline"
+            disabled={!isDialogOpenable}
+            size="icon"
+            title="Clear selection"
+            onclick={clearItemsSelected}
+        >
+            <EraserIcon />
+        </Button>
+    </div>
+{/if}
 <Dialog.Root onOpenChange={changeDialogOpenState} open={isDialogOpened}>
     <Dialog.Content class="sm:max-w-[425px]">
         {#await fetchSamples()}
