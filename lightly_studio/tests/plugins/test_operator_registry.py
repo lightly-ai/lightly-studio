@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from dataclasses import dataclass
 from typing import Any
 
 from sqlmodel import Session
@@ -91,6 +92,7 @@ def test_operator_registry__startup_all_continues_after_failure() -> None:
     assert healthy.status == OperatorStatus.READY
 
 
+@dataclass
 class TestOperator(BaseOperator):
     name: str = "test operator"
     description: str = "used to test the operator and registry system"
@@ -135,6 +137,7 @@ class TestOperator(BaseOperator):
         )
 
 
+@dataclass
 class FailingStartupOperator(BaseOperator):
     name: str = "failing operator"
     description: str = "always raises during startup"
