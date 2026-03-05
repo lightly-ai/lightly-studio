@@ -28,14 +28,13 @@ from lightly_studio.models.annotation_label import (
     AnnotationLabelCreate,
     AnnotationLabelTable,
 )
-from lightly_studio.models.collection import CollectionCreate, CollectionTable, SampleType
+from lightly_studio.models.collection import CollectionTable
 from lightly_studio.models.embedding_model import EmbeddingModelCreate
 from lightly_studio.models.image import ImageTable
 from lightly_studio.models.tag import TagCreate, TagTable
 from lightly_studio.resolvers import (
     annotation_label_resolver,
     annotation_resolver,
-    collection_resolver,
     tag_resolver,
 )
 from tests.helpers_resolvers import (
@@ -77,8 +76,7 @@ def test_client(db_session: Session) -> Generator[TestClient, None, None]:
 @pytest.fixture
 def collection(db_session: Session) -> CollectionTable:
     """Create a test collection."""
-    collection_input = CollectionCreate(name="test_collection", sample_type=SampleType.IMAGE)
-    return collection_resolver.create(db_session, collection_input)
+    return create_collection(session=db_session)
 
 
 @pytest.fixture
@@ -90,14 +88,7 @@ def collection_id(collections: list[CollectionTable]) -> UUID:
 @pytest.fixture
 def collections(db_session: Session) -> list[CollectionTable]:
     """Create multiple test collections."""
-    collections = []
-    for i in range(10):
-        collection_input = CollectionCreate(
-            name=f"test_collection_{i}", sample_type=SampleType.IMAGE
-        )
-        collection = collection_resolver.create(db_session, collection_input)
-        collections.append(collection)
-    return collections
+    return [create_collection(session=db_session) for _ in range(10)]
 
 
 @pytest.fixture

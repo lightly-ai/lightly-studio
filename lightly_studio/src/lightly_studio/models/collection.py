@@ -8,6 +8,8 @@ from uuid import UUID, uuid4
 from sqlalchemy import UniqueConstraint
 from sqlmodel import Field, Relationship, SQLModel
 
+from lightly_studio.models.dataset import DatasetTable
+
 
 class SampleType(str, Enum):
     """The type of samples in the collection."""
@@ -28,6 +30,7 @@ class CollectionBase(SQLModel):
         UniqueConstraint("name", "parent_collection_id", name="unique_collection"),
     )
     name: str = Field(index=True)
+    dataset_id: Optional[UUID] = Field(default=None)
     parent_collection_id: Optional[UUID] = Field(
         default=None, foreign_key="collection.collection_id"
     )
@@ -79,6 +82,7 @@ class CollectionTable(CollectionBase, table=True):
 
     __tablename__ = "collection"
     collection_id: UUID = Field(default_factory=uuid4, primary_key=True)
+    dataset_id: Optional[UUID] = Field(default=None, foreign_key="dataset.dataset_id", index=True)
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc), index=True)
     updated_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 
@@ -89,4 +93,7 @@ class CollectionTable(CollectionBase, table=True):
     children: list["CollectionTable"] = Relationship(
         back_populates="parent",
         sa_relationship_kwargs={"lazy": "select"},
+    )
+    dataset: Optional["DatasetTable"] = Relationship(
+        sa_relationship_kwargs={"foreign_keys": "CollectionTable.dataset_id"},
     )

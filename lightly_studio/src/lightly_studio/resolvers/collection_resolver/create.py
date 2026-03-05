@@ -22,7 +22,17 @@ def create(session: Session, collection: CollectionCreate) -> CollectionTable:
         existing = collection_resolver.get_by_name(session=session, name=collection.name)
     if existing:
         raise ValueError(f"Collection with name '{collection.name}' already exists.")
+
     db_collection = CollectionTable.model_validate(collection)
+
+    # If dataset_id is not set, inherit it from parent collection.
+    if db_collection.dataset_id is None and db_collection.parent_collection_id is not None:
+        parent = collection_resolver.get_by_id(
+            session=session, collection_id=db_collection.parent_collection_id
+        )
+        if parent is not None:
+            db_collection.dataset_id = parent.dataset_id
+
     session.add(db_collection)
     session.commit()
     session.refresh(db_collection)
