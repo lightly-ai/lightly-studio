@@ -291,7 +291,7 @@ describe('TagCreateDialog role-based gating', () => {
 
         renderComponent(defaultProps['samples']);
 
-        expect(screen.queryByText('Create new Tags')).not.toBeInTheDocument();
+        expect(screen.queryByText('Tag selected items')).not.toBeInTheDocument();
     });
 
     it('should show buttons for labeler role', () => {
@@ -307,7 +307,7 @@ describe('TagCreateDialog role-based gating', () => {
 
         renderComponent(defaultProps['samples']);
 
-        expect(screen.getByText('Create new Tags')).toBeInTheDocument();
+        expect(screen.getByText('Tag selected items')).toBeInTheDocument();
     });
 
     it('should show buttons when no user is logged in (OSS standalone)', () => {
@@ -323,6 +323,6 @@ describe('TagCreateDialog role-based gating', () => {
 
         renderComponent(defaultProps['samples']);
 
-        expect(screen.getByText('Create new Tags')).toBeInTheDocument();
+        expect(screen.getByText('Tag selected items')).toBeInTheDocument();
     });
 });
