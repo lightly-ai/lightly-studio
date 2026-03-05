@@ -115,6 +115,10 @@ export class SampleDetailsPage {
         await this.captionUtils.deleteNthCaption(index);
     }
 
+    async undoLastCaptionDelete() {
+        await this.captionUtils.undoLastCaptionDelete();
+    }
+
     async updateNthCaption(index: number, text: string) {
         await this.captionUtils.updateNthCaption(index, text);
     }

@@ -121,9 +121,16 @@ export const routes = {
             datasetId: string,
             collectionType: string,
             collectionId: string,
-            sampleId: string
+            sampleId: string,
+            fromVideos?: boolean
         ) => {
-            return `/datasets/${datasetId}/${collectionType}/${collectionId}/frames/${sampleId}`;
+            const path = `/datasets/${datasetId}/${collectionType}/${collectionId}/frames/${sampleId}`;
+
+            if (fromVideos) {
+                return `${path}?from_video=true`;
+            }
+
+            return path;
         },
         groups: (datasetId: string, collectionType: string, collectionId: string) =>
             `/datasets/${datasetId}/${collectionType}/${collectionId}/groups`,
@@ -178,9 +185,16 @@ export const routeHelpers = {
         datasetId: string,
         collectionType: string,
         collectionId: string,
-        sampleId: string
+        sampleId: string,
+        isFromVideos?: boolean
     ) => {
-        return routes.collection.framesDetails(datasetId, collectionType, collectionId, sampleId);
+        return routes.collection.framesDetails(
+            datasetId,
+            collectionType,
+            collectionId,
+            sampleId,
+            isFromVideos
+        );
     },
     toGroups: (datasetId: string, collectionType: string, collectionId: string) => {
         return routes.collection.groups(datasetId, collectionType, collectionId);

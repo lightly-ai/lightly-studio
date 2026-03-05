@@ -259,6 +259,7 @@
                     y2={sample.height}
                     stroke={drawerStrokeColor}
                     stroke-width="1"
+                    vector-effect="non-scaling-stroke"
                     stroke-dasharray="5,5"
                     opacity="0.6"
                 />
