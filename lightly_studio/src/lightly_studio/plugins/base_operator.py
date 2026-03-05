@@ -73,11 +73,7 @@ class BaseOperator(ABC):
         subprocess, etc.).
 
         Simple operators that run purely in-process do not need to override
-        <<<<<<< HEAD
-        this — the default is a no-op that sets status to READY.
-        =======
         this — the default sets status to READY without any additional setup.
-        >>>>>>> 2128c21a5f62760c1c77c6b1dcd6e55a0adaff8c
         """
         self.status = OperatorStatus.READY
 
