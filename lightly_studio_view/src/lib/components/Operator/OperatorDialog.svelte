@@ -1,5 +1,6 @@
 <script lang="ts">
-    import { page } from '$app/state';
+    import { page } from '$app/stores';
+    import { derived } from 'svelte/store';
     import { Button } from '$lib/components/ui/button';
     import * as Dialog from '$lib/components/ui/dialog';
     import { LoaderCircle as Loader2 } from '@lucide/svelte';
@@ -19,18 +20,10 @@
         getParameterConfig
     } from './parameterTypeConfig';
     import {
-        isSampleDetailsRoute,
-        isFrameDetailsRoute,
-        isVideoDetailsRoute,
-        isAnnotationDetailsRoute,
-        isSamplesRoute,
-        isVideoFramesRoute,
-        isVideosRoute,
-        isAnnotationsRoute
-    } from '$lib/routes';
-    import { useImageFilters } from '$lib/hooks/useImageFilters/useImageFilters';
-    import { useVideoFilters } from '$lib/hooks/useVideoFilters/useVideoFilters';
-    import { useFramesFilter } from '$lib/hooks/useFramesFilter/useFramesFilter';
+        useOperatorContext,
+        type PageContext
+    } from '$lib/hooks/useOperatorContext/useOperatorContext';
+    import { useTags } from '$lib/hooks/useTags/useTags';
 
     interface Props {
         operatorMetadata: RegisteredOperatorMetadata | null;
@@ -47,57 +40,23 @@
     let executionError = $state<string | undefined>(undefined);
     let executionSuccess = $state<string | undefined>(undefined);
 
-    const collectionId = $derived(page.params.collection_id);
+    const pageContext = derived(page, ($p) => ({
+        routeId: $p.route.id,
+        collectionId: $p.params.collection_id,
+        sampleId: $p.params.sampleId || $p.params.sample_id || null,
+        annotationId: $p.params.annotationId || null
+    }) satisfies PageContext);
 
-    const routeId = $derived(page.route.id);
-    const currentSampleId = $derived(page.params.sampleId || page.params.sample_id || null);
-    const currentAnnotationId = $derived(page.params.annotationId || null);
+    const collectionId = $derived($pageContext.collectionId);
 
-    const isSampleDetail = $derived(isSampleDetailsRoute(routeId));
-    const isFrameDetail = $derived(isFrameDetailsRoute(routeId));
-    const isVideoDetail = $derived(isVideoDetailsRoute(routeId));
-    const isAnnotationDetail = $derived(isAnnotationDetailsRoute(routeId));
-    const isOnDetailPage = $derived(isSampleDetail || isFrameDetail || isVideoDetail || isAnnotationDetail);
+    const { tagsSelected } = useTags({ collection_id: collectionId, kind: ['annotation'] });
 
-    const { imageFilter } = useImageFilters();
-    const { videoFilter } = useVideoFilters();
-    const { frameFilter } = useFramesFilter();
-
-    const isFilterActive = $derived.by(() => {
-        if (isOnDetailPage) return false;
-        if (isSamplesRoute(routeId)) return $imageFilter !== null;
-        if (isVideosRoute(routeId)) return $videoFilter !== null;
-        if (isVideoFramesRoute(routeId)) return $frameFilter !== null;
-        if (isAnnotationsRoute(routeId)) return false;
-        return false;
-    });
-
-    const scopeLabel = $derived(
-        isSampleDetail
-            ? 'Current image'
-            : isFrameDetail
-              ? 'Current frame'
-              : isVideoDetail
-                ? 'Current video'
-                : isAnnotationDetail
-                  ? 'Current annotation'
-                  : isFilterActive
-                    ? 'Filtered collection'
-                    : 'Full collection'
-    );
-
-    const contextFilter = $derived.by(() => {
-        if (isAnnotationDetail && currentAnnotationId) {
-            return { annotation_ids: [currentAnnotationId] };
-        }
-        if (isOnDetailPage && currentSampleId) {
-            return { sample_ids: [currentSampleId] };
-        }
-        if (isSamplesRoute(routeId)) return $imageFilter ?? undefined;
-        if (isVideosRoute(routeId)) return $videoFilter ?? undefined;
-        if (isVideoFramesRoute(routeId)) return $frameFilter ?? undefined;
-        return undefined;
-    });
+    const {
+        isOnDetailPage,
+        scopeLabel,
+        isCollectionView,
+        contextFilter
+    } = useOperatorContext(pageContext, tagsSelected);
 
     function resetExecutionState() {
         executionError = undefined;
@@ -166,7 +125,7 @@
                     parameters,
                     context: {
                         collection_id: collectionId,
-                        ...(contextFilter !== undefined && { context_filter: contextFilter })
+                        ...($contextFilter !== undefined && { context_filter: $contextFilter })
                     }
                 }
             });
@@ -219,13 +178,13 @@
                 <span class="text-muted-foreground">Scope:</span>
                 <span
                     class="inline-flex items-center rounded-full px-2 py-1 text-xs font-medium
-                    {isOnDetailPage
+                    {$isOnDetailPage
                         ? 'bg-primary text-primary-foreground'
-                        : isFilterActive
+                        : $isCollectionView
                           ? 'bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-400'
                           : 'bg-secondary text-secondary-foreground'}"
                 >
-                    {scopeLabel}
+                    {$scopeLabel}
                 </span>
             </div>
         </Dialog.Header>
