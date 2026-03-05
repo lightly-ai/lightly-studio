@@ -5,7 +5,6 @@ import type {
     ImageFilter,
     VideoFrameFilter,
     VideoFilter,
-    GroupFilter,
     OperatorScope
 } from '$lib/api/lightly_studio_local';
 import { OperatorScope as OperatorScopeValues } from '$lib/api/lightly_studio_local';
@@ -38,7 +37,6 @@ export type OperatorContextFilter =
     | VideoFrameFilter
     | VideoFilter
     | AnnotationsFilter
-    | GroupFilter
     | SampleFilter
     | undefined;
 
