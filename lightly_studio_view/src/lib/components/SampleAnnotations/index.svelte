@@ -80,7 +80,7 @@
     });
 </script>
 
-{#if showAnnotations || !$isHidden}
+{#if showAnnotations && !$isHidden}
     <AnnotationCanvas
         width={sample.width}
         height={sample.height}
