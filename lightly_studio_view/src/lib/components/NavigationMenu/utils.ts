@@ -13,11 +13,12 @@ export function getMenuItem(
 ): NavigationMenuItem {
     const collectionType = sampleType.toLowerCase();
     const isSelected = collectionId === currentCollectionId;
+    const elementId = `${collectionType}-${collectionId}`;
     switch (sampleType) {
         case SampleType.IMAGE:
             return {
                 title: groupComponentName || 'Images',
-                id: `samples-${collectionId}`,
+                id: elementId,
                 href: routeHelpers.toSamples(datasetId, collectionType, collectionId),
                 isSelected,
                 icon: Image
@@ -26,7 +27,7 @@ export function getMenuItem(
         case SampleType.VIDEO:
             return {
                 title: groupComponentName || 'Videos',
-                id: `videos-${collectionId}`,
+                id: elementId,
                 href: routeHelpers.toVideos(datasetId, collectionType, collectionId),
                 isSelected,
                 icon: Video
@@ -34,7 +35,7 @@ export function getMenuItem(
         case SampleType.VIDEO_FRAME:
             return {
                 title: groupComponentName || 'Frames',
-                id: `frames-${collectionId}`,
+                id: elementId,
                 icon: Frame,
                 href: routeHelpers.toFrames(datasetId, collectionType, collectionId),
                 isSelected
@@ -42,7 +43,7 @@ export function getMenuItem(
         case SampleType.ANNOTATION:
             return {
                 title: groupComponentName || 'Annotations',
-                id: `annotations-${collectionId}`,
+                id: elementId,
                 icon: ComponentIcon,
                 href: routeHelpers.toAnnotations(datasetId, collectionType, collectionId),
                 isSelected
@@ -50,7 +51,7 @@ export function getMenuItem(
         case SampleType.CAPTION:
             return {
                 title: groupComponentName || 'Captions',
-                id: `captions-${collectionId}`,
+                id: elementId,
                 href: routeHelpers.toCaptions(datasetId, collectionType, collectionId),
                 isSelected,
                 icon: WholeWord
@@ -58,7 +59,7 @@ export function getMenuItem(
         case SampleType.GROUP:
             return {
                 title: groupComponentName || 'Groups',
-                id: 'groups',
+                id: elementId,
                 href: routeHelpers.toGroups(datasetId, collectionType, collectionId),
                 isSelected,
                 icon: LayoutDashboard
