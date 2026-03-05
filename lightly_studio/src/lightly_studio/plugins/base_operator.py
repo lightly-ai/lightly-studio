@@ -23,6 +23,7 @@ class OperatorStatus(str, Enum):
     STOPPED = "stopped"
     ERROR = "error"
 
+
 @dataclass
 class OperatorResult:
     """Result returned by operator execution."""
