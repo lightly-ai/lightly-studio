@@ -2,7 +2,7 @@ import { readable, type Readable } from 'svelte/store';
 
 export type StoreOrVal<T> = T | Readable<T>;
 
-export function isSvelteStore<T>(val: StoreOrVal<T>): val is Readable<T> {
+function isSvelteStore<T>(val: StoreOrVal<T>): val is Readable<T> {
     return val != null && typeof val === 'object' && 'subscribe' in val;
 }
 
