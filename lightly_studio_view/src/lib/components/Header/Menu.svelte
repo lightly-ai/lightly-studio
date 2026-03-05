@@ -113,33 +113,35 @@
     }
 </script>
 
-<Popover bind:open={isMenuOpen}>
-    <PopoverTrigger>
-        <Button
-            variant="ghost"
-            class="nav-button flex items-center space-x-2"
-            data-testid="menu-trigger"
-        >
-            <span>Menu</span>
-            <ChevronDown class="size-4" />
-        </Button>
-    </PopoverTrigger>
-    <PopoverContent class="w-64 p-2">
-        <div class="flex flex-col">
-            {#each menuItems as item (item.testId)}
-                <button
-                    type="button"
-                    class="flex w-full items-center justify-between rounded px-3 py-2 text-left text-sm transition hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                    onclick={() => handle(item.onSelect)}
-                    data-testid={item.testId}
-                >
-                    <div class="flex items-center gap-2">
-                        <item.icon class="size-4 text-muted-foreground" />
-                        <span>{item.label}</span>
-                    </div>
-                    <ChevronRight class="size-4 text-muted-foreground" />
-                </button>
-            {/each}
-        </div>
-    </PopoverContent>
-</Popover>
+{#if menuItems.length > 0}
+    <Popover bind:open={isMenuOpen}>
+        <PopoverTrigger>
+            <Button
+                variant="ghost"
+                class="nav-button flex items-center space-x-2"
+                data-testid="menu-trigger"
+            >
+                <span>Menu</span>
+                <ChevronDown class="size-4" />
+            </Button>
+        </PopoverTrigger>
+        <PopoverContent class="w-64 p-2">
+            <div class="flex flex-col">
+                {#each menuItems as item (item.testId)}
+                    <button
+                        type="button"
+                        class="flex w-full items-center justify-between rounded px-3 py-2 text-left text-sm transition hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                        onclick={() => handle(item.onSelect)}
+                        data-testid={item.testId}
+                    >
+                        <div class="flex items-center gap-2">
+                            <item.icon class="size-4 text-muted-foreground" />
+                            <span>{item.label}</span>
+                        </div>
+                        <ChevronRight class="size-4 text-muted-foreground" />
+                    </button>
+                {/each}
+            </div>
+        </PopoverContent>
+    </Popover>
+{/if}
