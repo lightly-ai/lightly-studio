@@ -1352,8 +1352,7 @@ export interface paths {
          *
          *     Args:
          *         operator_id: The ID of the operator to execute.
-         *         collection_id: The ID of the collection to operate on.
-         *         request: The execution request containing parameters and optional context.
+         *         request: The execution request containing parameters and context.
          *         session: Database session.
          *
          *     Returns:
@@ -1993,15 +1992,10 @@ export interface components {
              */
             annotation_label_ids?: string[] | null;
             /**
-             * Annotation Tag Ids
+             * Tag Ids
              * @description List of tag UUIDs
              */
-            annotation_tag_ids?: string[] | null;
-            /**
-             * Sample Tag Ids
-             * @description List of sample tag UUIDs to filter annotations by
-             */
-            sample_tag_ids?: string[] | null;
+            tag_ids?: string[] | null;
             /**
              * Sample Ids
              * @description List of sample UUIDs to filter annotations by
