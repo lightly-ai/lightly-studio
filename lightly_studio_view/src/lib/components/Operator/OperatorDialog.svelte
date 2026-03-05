@@ -6,7 +6,9 @@
     import {
         executeOperator,
         getOperatorParameters,
-        type RegisteredOperatorMetadata
+        type RegisteredOperatorMetadata,
+        type AnnotationsFilter,
+        type SampleFilter
     } from '$lib/api/lightly_studio_local';
     import { toast } from 'svelte-sonner';
     import type { Operator } from '$lib/hooks/useOperators/useOperators';
@@ -26,11 +28,15 @@
         isSamplesRoute,
         isVideoFramesRoute,
         isVideosRoute,
-        isAnnotationsRoute
+        isAnnotationsRoute,
+        isCaptionsRoute,
+        isGroupsRoute
     } from '$lib/routes';
     import { useImageFilters } from '$lib/hooks/useImageFilters/useImageFilters';
     import { useVideoFilters } from '$lib/hooks/useVideoFilters/useVideoFilters';
     import { useFramesFilter } from '$lib/hooks/useFramesFilter/useFramesFilter';
+    import { useGlobalStorage } from '$lib/hooks/useGlobalStorage';
+    import { useTags } from '$lib/hooks/useTags/useTags';
 
     interface Props {
         operatorMetadata: RegisteredOperatorMetadata | null;
@@ -57,41 +63,66 @@
     const isFrameDetail = $derived(isFrameDetailsRoute(routeId));
     const isVideoDetail = $derived(isVideoDetailsRoute(routeId));
     const isAnnotationDetail = $derived(isAnnotationDetailsRoute(routeId));
-    const isOnDetailPage = $derived(isSampleDetail || isFrameDetail || isVideoDetail || isAnnotationDetail);
+    const isOnDetailPage = $derived(
+        isSampleDetail || isFrameDetail || isVideoDetail || isAnnotationDetail
+    );
 
     const { imageFilter } = useImageFilters();
     const { videoFilter } = useVideoFilters();
     const { frameFilter } = useFramesFilter();
+    const { selectedAnnotationFilterIds } = useGlobalStorage();
+    const { tagsSelected } = $derived(
+        useTags({ collection_id: collectionId, kind: ['annotation'] })
+    );
 
-    const isFilterActive = $derived.by(() => {
-        if (isOnDetailPage) return false;
-        if (isSamplesRoute(routeId)) return $imageFilter !== null;
-        if (isVideosRoute(routeId)) return $videoFilter !== null;
-        if (isVideoFramesRoute(routeId)) return $frameFilter !== null;
-        if (isAnnotationsRoute(routeId)) return false;
-        return false;
+    const scopeLabel = $derived.by(() => {
+        if (isSampleDetail) return 'Current image';
+        if (isFrameDetail) return 'Current frame';
+        if (isVideoDetail) return 'Current video';
+        if (isAnnotationDetail) return 'Current annotation';
+        if (isSamplesRoute(routeId)) return 'Current image collection';
+        if (isVideosRoute(routeId)) return 'Current video collection';
+        if (isVideoFramesRoute(routeId)) return 'Current frame collection';
+        if (isAnnotationsRoute(routeId)) return 'Current annotation collection';
+        if (isGroupsRoute(routeId)) return 'Current group collection';
+        if (isCaptionsRoute(routeId)) return 'Current caption collection';
+        return 'Full collection';
     });
 
-    const scopeLabel = $derived(
-        isSampleDetail
-            ? 'Current image'
-            : isFrameDetail
-              ? 'Current frame'
-              : isVideoDetail
-                ? 'Current video'
-                : isAnnotationDetail
-                  ? 'Current annotation'
-                  : isFilterActive
-                    ? 'Filtered collection'
-                    : 'Full collection'
+    const isCollectionView = $derived(
+        !isOnDetailPage &&
+            (isSamplesRoute(routeId) ||
+                isVideosRoute(routeId) ||
+                isVideoFramesRoute(routeId) ||
+                isAnnotationsRoute(routeId) ||
+                isGroupsRoute(routeId) ||
+                isCaptionsRoute(routeId))
     );
 
     const contextFilter = $derived.by(() => {
         if (isAnnotationDetail && currentAnnotationId) {
-            return { annotation_ids: [currentAnnotationId] };
+            return {
+                collection_id: collectionId,
+                sample_ids: [currentAnnotationId]
+            } satisfies SampleFilter;
         }
         if (isOnDetailPage && currentSampleId) {
-            return { sample_ids: [currentSampleId] };
+            return {
+                collection_id: collectionId,
+                sample_ids: [currentSampleId]
+            } satisfies SampleFilter;
+        }
+        if (isAnnotationsRoute(routeId)) {
+            const labelIds = Array.from($selectedAnnotationFilterIds);
+            const tagIds = Array.from($tagsSelected);
+            const filter: AnnotationsFilter = {
+                ...(labelIds.length > 0 && { annotation_label_ids: labelIds }),
+                ...(tagIds.length > 0 && { annotation_tag_ids: tagIds })
+            };
+            return Object.keys(filter).length > 0 ? filter : undefined;
+        }
+        if (isCaptionsRoute(routeId)) {
+            return { has_captions: true } satisfies SampleFilter;
         }
         if (isSamplesRoute(routeId)) return $imageFilter ?? undefined;
         if (isVideosRoute(routeId)) return $videoFilter ?? undefined;
@@ -221,7 +252,7 @@
                     class="inline-flex items-center rounded-full px-2 py-1 text-xs font-medium
                     {isOnDetailPage
                         ? 'bg-primary text-primary-foreground'
-                        : isFilterActive
+                        : isCollectionView
                           ? 'bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-400'
                           : 'bg-secondary text-secondary-foreground'}"
                 >
