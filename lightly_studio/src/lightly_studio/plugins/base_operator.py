@@ -31,17 +31,11 @@ class OperatorResult:
     message: str
 
 
-@dataclass
 class BaseOperator(ABC):
     """Base class for all operators."""
 
     status: OperatorStatus = OperatorStatus.PENDING
     error_message: str = ""
-
-    def __init_subclass__(cls, **kwargs: Any) -> None:
-        """Automatically apply @dataclass to all subclasses."""
-        super().__init_subclass__(**kwargs)
-        dataclass(cls)
 
     @property
     @abstractmethod
