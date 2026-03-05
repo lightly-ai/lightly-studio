@@ -1,14 +1,13 @@
 <script lang="ts">
-    import { page } from '$app/state';
+    import { page } from '$app/stores';
+    import { derived } from 'svelte/store';
     import { Button } from '$lib/components/ui/button';
     import * as Dialog from '$lib/components/ui/dialog';
     import { LoaderCircle as Loader2 } from '@lucide/svelte';
     import {
         executeOperator,
         getOperatorParameters,
-        type RegisteredOperatorMetadata,
-        type AnnotationsFilter,
-        type SampleFilter
+        type RegisteredOperatorMetadata
     } from '$lib/api/lightly_studio_local';
     import { toast } from 'svelte-sonner';
     import type { Operator } from '$lib/hooks/useOperators/useOperators';
@@ -21,21 +20,9 @@
         getParameterConfig
     } from './parameterTypeConfig';
     import {
-        isSampleDetailsRoute,
-        isFrameDetailsRoute,
-        isVideoDetailsRoute,
-        isAnnotationDetailsRoute,
-        isSamplesRoute,
-        isVideoFramesRoute,
-        isVideosRoute,
-        isAnnotationsRoute,
-        isCaptionsRoute,
-        isGroupsRoute
-    } from '$lib/routes';
-    import { useImageFilters } from '$lib/hooks/useImageFilters/useImageFilters';
-    import { useVideoFilters } from '$lib/hooks/useVideoFilters/useVideoFilters';
-    import { useFramesFilter } from '$lib/hooks/useFramesFilter/useFramesFilter';
-    import { useGlobalStorage } from '$lib/hooks/useGlobalStorage';
+        useOperatorContext,
+        type PageContext
+    } from '$lib/hooks/useOperatorContext/useOperatorContext';
     import { useTags } from '$lib/hooks/useTags/useTags';
 
     interface Props {
@@ -53,82 +40,23 @@
     let executionError = $state<string | undefined>(undefined);
     let executionSuccess = $state<string | undefined>(undefined);
 
-    const collectionId = $derived(page.params.collection_id);
+    const pageContext = derived(page, ($p) => ({
+        routeId: $p.route.id,
+        collectionId: $p.params.collection_id,
+        sampleId: $p.params.sampleId || $p.params.sample_id || null,
+        annotationId: $p.params.annotationId || null
+    }) satisfies PageContext);
 
-    const routeId = $derived(page.route.id);
-    const currentSampleId = $derived(page.params.sampleId || page.params.sample_id || null);
-    const currentAnnotationId = $derived(page.params.annotationId || null);
+    const collectionId = $derived($pageContext.collectionId);
 
-    const isSampleDetail = $derived(isSampleDetailsRoute(routeId));
-    const isFrameDetail = $derived(isFrameDetailsRoute(routeId));
-    const isVideoDetail = $derived(isVideoDetailsRoute(routeId));
-    const isAnnotationDetail = $derived(isAnnotationDetailsRoute(routeId));
-    const isOnDetailPage = $derived(
-        isSampleDetail || isFrameDetail || isVideoDetail || isAnnotationDetail
-    );
+    const { tagsSelected } = useTags({ collection_id: collectionId, kind: ['annotation'] });
 
-    const { imageFilter } = useImageFilters();
-    const { videoFilter } = useVideoFilters();
-    const { frameFilter } = useFramesFilter();
-    const { selectedAnnotationFilterIds } = useGlobalStorage();
-    const { tagsSelected } = $derived(
-        useTags({ collection_id: collectionId, kind: ['annotation'] })
-    );
-
-    const scopeLabel = $derived.by(() => {
-        if (isSampleDetail) return 'Current image';
-        if (isFrameDetail) return 'Current frame';
-        if (isVideoDetail) return 'Current video';
-        if (isAnnotationDetail) return 'Current annotation';
-        if (isSamplesRoute(routeId)) return 'Current image collection';
-        if (isVideosRoute(routeId)) return 'Current video collection';
-        if (isVideoFramesRoute(routeId)) return 'Current frame collection';
-        if (isAnnotationsRoute(routeId)) return 'Current annotation collection';
-        if (isGroupsRoute(routeId)) return 'Current group collection';
-        if (isCaptionsRoute(routeId)) return 'Current caption collection';
-        return 'Full collection';
-    });
-
-    const isCollectionView = $derived(
-        !isOnDetailPage &&
-            (isSamplesRoute(routeId) ||
-                isVideosRoute(routeId) ||
-                isVideoFramesRoute(routeId) ||
-                isAnnotationsRoute(routeId) ||
-                isGroupsRoute(routeId) ||
-                isCaptionsRoute(routeId))
-    );
-
-    const contextFilter = $derived.by(() => {
-        if (isAnnotationDetail && currentAnnotationId) {
-            return {
-                collection_id: collectionId,
-                sample_ids: [currentAnnotationId]
-            } satisfies SampleFilter;
-        }
-        if (isOnDetailPage && currentSampleId) {
-            return {
-                collection_id: collectionId,
-                sample_ids: [currentSampleId]
-            } satisfies SampleFilter;
-        }
-        if (isAnnotationsRoute(routeId)) {
-            const labelIds = Array.from($selectedAnnotationFilterIds);
-            const tagIds = Array.from($tagsSelected);
-            const filter: AnnotationsFilter = {
-                ...(labelIds.length > 0 && { annotation_label_ids: labelIds }),
-                ...(tagIds.length > 0 && { annotation_tag_ids: tagIds })
-            };
-            return Object.keys(filter).length > 0 ? filter : undefined;
-        }
-        if (isCaptionsRoute(routeId)) {
-            return { has_captions: true } satisfies SampleFilter;
-        }
-        if (isSamplesRoute(routeId)) return $imageFilter ?? undefined;
-        if (isVideosRoute(routeId)) return $videoFilter ?? undefined;
-        if (isVideoFramesRoute(routeId)) return $frameFilter ?? undefined;
-        return undefined;
-    });
+    const {
+        isOnDetailPage,
+        scopeLabel,
+        isCollectionView,
+        contextFilter
+    } = useOperatorContext(pageContext, tagsSelected);
 
     function resetExecutionState() {
         executionError = undefined;
@@ -197,7 +125,7 @@
                     parameters,
                     context: {
                         collection_id: collectionId,
-                        ...(contextFilter !== undefined && { context_filter: contextFilter })
+                        ...($contextFilter !== undefined && { context_filter: $contextFilter })
                     }
                 }
             });
@@ -250,13 +178,13 @@
                 <span class="text-muted-foreground">Scope:</span>
                 <span
                     class="inline-flex items-center rounded-full px-2 py-1 text-xs font-medium
-                    {isOnDetailPage
+                    {$isOnDetailPage
                         ? 'bg-primary text-primary-foreground'
-                        : isCollectionView
+                        : $isCollectionView
                           ? 'bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-400'
                           : 'bg-secondary text-secondary-foreground'}"
                 >
-                    {scopeLabel}
+                    {$scopeLabel}
                 </span>
             </div>
         </Dialog.Header>

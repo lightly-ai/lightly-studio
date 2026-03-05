@@ -1,5 +1,6 @@
 <script lang="ts">
-    import { page } from '$app/state';
+    import { page } from '$app/stores';
+    import { derived } from 'svelte/store';
     import { onMount } from 'svelte';
     import {
         getOperators,
@@ -12,16 +13,9 @@
     import { useOperatorsDialog } from '$lib/hooks/useOperatorsDialog/useOperatorsDialog';
     import OperatorDialog from '$lib/components/Operator/OperatorDialog.svelte';
     import {
-        isSamplesRoute,
-        isSampleDetailsRoute,
-        isVideosRoute,
-        isVideoDetailsRoute,
-        isVideoFramesRoute,
-        isFrameDetailsRoute,
-        isGroupsRoute,
-        isAnnotationsRoute,
-        isAnnotationDetailsRoute
-    } from '$lib/routes';
+        useOperatorContext,
+        type PageContext
+    } from '$lib/hooks/useOperatorContext/useOperatorContext';
 
     let operators: RegisteredOperatorMetadata[] = $state([]);
     let selectedOperatorId: string | undefined = $state(undefined);
@@ -62,30 +56,25 @@
         isOperatorDialogOpen = true;
     };
 
-    // Derive the current media-type scope from the route so we can split
-    // applicable vs. not-applicable operators.
-    const routeId = $derived(page.route.id);
-    const collectionId = $derived(page.params.collection_id as string | undefined);
+    const pageContext = derived(page, ($p) => ({
+        routeId: $p.route.id,
+        collectionId: $p.params.collection_id ?? '',
+        sampleId: $p.params.sampleId || $p.params.sample_id || null,
+        annotationId: $p.params.annotationId || null
+    }) satisfies PageContext);
 
-    const currentScope = $derived.by((): OperatorScope | null => {
-        if (isSamplesRoute(routeId) || isSampleDetailsRoute(routeId)) return OperatorScope.IMAGE;
-        if (isVideosRoute(routeId) || isVideoDetailsRoute(routeId)) return OperatorScope.VIDEO;
-        if (isVideoFramesRoute(routeId) || isFrameDetailsRoute(routeId)) return OperatorScope.VIDEO_FRAME;
-        if (isAnnotationsRoute(routeId) || isAnnotationDetailsRoute(routeId)) return OperatorScope.ANNOTATION;
-        if (isGroupsRoute(routeId)) return OperatorScope.GROUP;
-        return null;
-    });
+    const { collectionId, currentScope } = useOperatorContext(pageContext);
 
     const { collection: collectionQuery } = $derived.by(() =>
-        useCollection({ collectionId: collectionId ?? '' })
+        useCollection({ collectionId: $collectionId ?? '' })
     );
 
     const isRootCollection = $derived($collectionQuery.data?.parent_collection_id === null);
 
     const isApplicable = (operator: RegisteredOperatorMetadata): boolean => {
-        if (currentScope === null) return true;
+        if ($currentScope === null) return false;
         if (isRootCollection && operator.supported_scopes.includes(OperatorScope.ROOT)) return true;
-        return operator.supported_scopes.includes(currentScope);
+        return operator.supported_scopes.includes($currentScope);
     };
 
     const applicableOperators = $derived(operators.filter((op) => isApplicable(op)));
@@ -109,7 +98,7 @@
                 <span
                     class="inline-flex items-center rounded-full bg-secondary px-2 py-1 text-xs font-medium text-secondary-foreground"
                 >
-                    {operators.length}
+                    {applicableOperators.length}
                 </span>
             </div>
             <div
