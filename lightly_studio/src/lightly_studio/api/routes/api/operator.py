@@ -8,9 +8,7 @@ from uuid import UUID
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 
-from lightly_studio.api.routes.api.status import (
-    HTTP_STATUS_NOT_FOUND,
-)
+from lightly_studio.api.routes.api.status import HTTP_STATUS_NOT_FOUND
 from lightly_studio.db_manager import SessionDep
 from lightly_studio.plugins import operator_context
 from lightly_studio.plugins.base_operator import OperatorResult

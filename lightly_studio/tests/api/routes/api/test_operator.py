@@ -203,9 +203,10 @@ def test_execute_operator__scope_mismatch(
         json={"parameters": {}, "context": {"collection_id": str(video_collection.collection_id)}},
     )
 
+    response_payload = response.json()
     assert response.status_code == HTTP_STATUS_OK
-    assert response.json()["success"] is False
-    assert "image-only" in response.json()["message"]
+    assert response_payload["success"] is False
+    assert "image-only" in response_payload["message"]
 
 
 def test_execute_operator__filter_is_passed_through(
