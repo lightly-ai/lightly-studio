@@ -362,6 +362,47 @@ describe('Header', () => {
         });
     });
 
+    describe('Role-based gating of keyboard shortcuts', () => {
+        it('should not toggle edit mode via keyboard for viewer role', async () => {
+            const { setIsEditingModeSpy, collection } = setup({
+                isEditingMode: false,
+                user: { username: 'viewer', email: 'viewer@test.com', role: 'viewer' }
+            });
+
+            render(Header, { props: { collection } });
+
+            await fireEvent.keyDown(window, { key: 'e' });
+
+            expect(setIsEditingModeSpy).not.toHaveBeenCalled();
+        });
+
+        it('should toggle edit mode via keyboard for labeler role', async () => {
+            const { setIsEditingModeSpy, collection } = setup({
+                isEditingMode: false,
+                user: { username: 'labeler', email: 'labeler@test.com', role: 'labeler' }
+            });
+
+            render(Header, { props: { collection } });
+
+            await fireEvent.keyDown(window, { key: 'e' });
+
+            expect(setIsEditingModeSpy).toHaveBeenCalledWith(true);
+        });
+
+        it('should toggle edit mode via keyboard when no user (OSS standalone)', async () => {
+            const { setIsEditingModeSpy, collection } = setup({
+                isEditingMode: false,
+                user: null
+            });
+
+            render(Header, { props: { collection } });
+
+            await fireEvent.keyDown(window, { key: 'e' });
+
+            expect(setIsEditingModeSpy).toHaveBeenCalledWith(true);
+        });
+    });
+
     describe('User Avatar', () => {
         it('should render user avatar for enterprise version (user logged in)', () => {
             const mockUser = {

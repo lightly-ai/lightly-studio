@@ -37,6 +37,10 @@
         if (isInputElement(event.target)) {
             return;
         }
+
+        if (!hasMinimumRole(user?.role, 'labeler')) {
+            return;
+        }
         if (event.key === get(settingsStore).key_toggle_edit_mode) {
             setIsEditingMode(!$isEditingMode);
         } else if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'z') {
