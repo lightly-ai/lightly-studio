@@ -50,10 +50,12 @@ def test_operator_registry__dummy_operators(db_session: Session) -> None:
     assert len(operator_info_list) == 2
 
 
+def test_operator__initial_status_is_pending() -> None:
+    assert TestOperator().status == OperatorStatus.PENDING
+
+
 def test_operator_registry__startup_all_sets_ready() -> None:
     operator = TestOperator()
-    assert operator.status == OperatorStatus.PENDING
-
     registry = OperatorRegistry()
     registry.register(operator)
     registry.startup_all()
