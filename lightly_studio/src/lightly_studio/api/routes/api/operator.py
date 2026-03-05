@@ -10,7 +10,6 @@ from pydantic import BaseModel
 
 from lightly_studio.api.routes.api.status import (
     HTTP_STATUS_NOT_FOUND,
-    HTTP_STATUS_UNPROCESSABLE_ENTITY,
 )
 from lightly_studio.db_manager import SessionDep
 from lightly_studio.plugins import operator_context
@@ -98,12 +97,12 @@ def execute_operator(
         is_root_collection=collection.parent_collection_id is None,
     )
     if not any(scope in operator.supported_scopes for scope in collection_scopes):
-        raise HTTPException(
-            status_code=HTTP_STATUS_UNPROCESSABLE_ENTITY,
-            detail=(
-                f"Operator '{operator_id}' does not support scope(s) "
-                f"{[scope.value for scope in collection_scopes]}. "
-                f"Supported scopes: {[s.value for s in operator.supported_scopes]}"
+        supported = ", ".join(s.value for s in operator.supported_scopes)
+        return OperatorResult(
+            success=False,
+            message=(
+                f"Operator '{operator.name}' cannot be executed in this context. "
+                f"Supported scopes: {supported}."
             ),
         )
 
