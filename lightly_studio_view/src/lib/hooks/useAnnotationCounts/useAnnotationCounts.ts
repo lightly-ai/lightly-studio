@@ -1,10 +1,9 @@
 import { createQuery } from '@tanstack/svelte-query';
 import { countAnnotationsByCollectionOptions } from '$lib/api/lightly_studio_local/@tanstack/svelte-query.gen';
+import { toReadable, type StoreOrVal } from '$lib/utils/reactiveParams';
+import { derived } from 'svelte/store';
 
-export const useAnnotationCounts = ({
-    collectionId,
-    options
-}: {
+type UseAnnotationCountsParams = {
     collectionId: string;
     options?: {
         filtered_labels?: string[];
@@ -15,20 +14,30 @@ export const useAnnotationCounts = ({
             max_height?: number;
         };
     };
-}) =>
-    createQuery(
+};
+
+export const useAnnotationCounts = (params: StoreOrVal<UseAnnotationCountsParams>) => {
+    const optionsStore = derived(toReadable(params), (currentParams) =>
         countAnnotationsByCollectionOptions({
-            path: { collection_id: collectionId },
+            path: { collection_id: currentParams.collectionId },
             query: {
-                ...(options?.filtered_labels && { filtered_labels: options.filtered_labels }),
-                ...(options?.dimensions?.min_width && { min_width: options.dimensions.min_width }),
-                ...(options?.dimensions?.max_width && { max_width: options.dimensions.max_width }),
-                ...(options?.dimensions?.min_height && {
-                    min_height: options.dimensions.min_height
+                ...(currentParams.options?.filtered_labels && {
+                    filtered_labels: currentParams.options.filtered_labels
                 }),
-                ...(options?.dimensions?.max_height && {
-                    max_height: options.dimensions.max_height
+                ...(currentParams.options?.dimensions?.min_width && {
+                    min_width: currentParams.options.dimensions.min_width
+                }),
+                ...(currentParams.options?.dimensions?.max_width && {
+                    max_width: currentParams.options.dimensions.max_width
+                }),
+                ...(currentParams.options?.dimensions?.min_height && {
+                    min_height: currentParams.options.dimensions.min_height
+                }),
+                ...(currentParams.options?.dimensions?.max_height && {
+                    max_height: currentParams.options.dimensions.max_height
                 })
             }
         })
     );
+    return createQuery(optionsStore);
+};

@@ -5,6 +5,8 @@ import { readImages, type ReadImagesRequest } from '$lib/api/lightly_studio_loca
 import type { DimensionBounds } from '$lib/services/loadDimensionBounds';
 import { createMetadataFilters } from '$lib/hooks/useMetadataFilters/useMetadataFilters';
 import type { MetadataValues } from '$lib/services/types';
+import { toReadable, type StoreOrVal } from '$lib/utils/reactiveParams';
+import { derived, get } from 'svelte/store';
 
 // Define mode-aware parameter types.
 interface ClassifierSamples {
@@ -167,13 +169,17 @@ const isQueryEnabled = (params: ImagesInfiniteParams): boolean => {
     return true;
 };
 
-export const useImagesInfinite = (params: ImagesInfiniteParams) => {
-    const samplesOptions = createImagesInfiniteOptions(params);
-    const samples = createInfiniteQuery(samplesOptions);
+export const useImagesInfinite = (params: StoreOrVal<ImagesInfiniteParams>) => {
+    const paramsStore = toReadable(params);
+    const optionsStore = derived(paramsStore, (currentParams) =>
+        createImagesInfiniteOptions(currentParams)
+    );
+
+    const samples = createInfiniteQuery(optionsStore);
     const client = useQueryClient();
 
     const refresh = () => {
-        client.invalidateQueries({ queryKey: samplesOptions.queryKey });
+        client.invalidateQueries({ queryKey: get(optionsStore).queryKey });
     };
 
     return {

@@ -1,21 +1,29 @@
 import { readCollectionOptions } from '$lib/api/lightly_studio_local/@tanstack/svelte-query.gen';
 import { readCollectionHierarchyOptions } from '$lib/api/lightly_studio_local/@tanstack/svelte-query.gen';
 import { createQuery, useQueryClient } from '@tanstack/svelte-query';
-import { derived } from 'svelte/store';
+import { derived, get } from 'svelte/store';
 import type { CollectionView } from '$lib/api/lightly_studio_local';
+import { toReadable, type StoreOrVal } from '$lib/utils/reactiveParams';
+
+type UseCollectionParams = {
+    collectionId: string;
+};
 
 /**
  * Hook to fetch a single collection without children.
  * Use this for most cases where you only need the collection data.
  */
-export const useCollection = ({ collectionId }: { collectionId: string }) => {
-    const options = readCollectionOptions({ path: { collection_id: collectionId } });
+export const useCollection = (params: StoreOrVal<UseCollectionParams>) => {
+    const paramsStore = toReadable(params);
+    const optionsStore = derived(paramsStore, (currentParams) =>
+        readCollectionOptions({ path: { collection_id: currentParams.collectionId } })
+    );
     const client = useQueryClient();
 
-    const collectionQuery = createQuery(options);
+    const collectionQuery = createQuery(optionsStore);
 
     const refetch = () => {
-        client.invalidateQueries({ queryKey: options.queryKey });
+        client.invalidateQueries({ queryKey: get(optionsStore).queryKey });
     };
 
     return {
@@ -29,11 +37,14 @@ export const useCollection = ({ collectionId }: { collectionId: string }) => {
  * Use this when you need the root collection with all child collections populated
  * (e.g., for navigation menus that need to show all available collections).
  */
-export const useCollectionWithChildren = ({ collectionId }: { collectionId: string }) => {
-    const options = readCollectionHierarchyOptions({ path: { collection_id: collectionId } });
+export const useCollectionWithChildren = (params: StoreOrVal<UseCollectionParams>) => {
+    const paramsStore = toReadable(params);
+    const optionsStore = derived(paramsStore, (currentParams) =>
+        readCollectionHierarchyOptions({ path: { collection_id: currentParams.collectionId } })
+    );
     const client = useQueryClient();
 
-    const hierarchyQuery = createQuery(options);
+    const hierarchyQuery = createQuery(optionsStore);
 
     // readCollectionHierarchy returns an array starting from the root
     // We need to get the first item (root collection) which has all children
@@ -54,7 +65,7 @@ export const useCollectionWithChildren = ({ collectionId }: { collectionId: stri
     });
 
     const refetch = () => {
-        client.invalidateQueries({ queryKey: options.queryKey });
+        client.invalidateQueries({ queryKey: get(optionsStore).queryKey });
     };
 
     return {
