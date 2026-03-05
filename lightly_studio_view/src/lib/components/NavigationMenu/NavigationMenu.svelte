@@ -13,8 +13,6 @@
         collection: CollectionView;
     } = $props();
 
-    const pageId = $derived(page.route.id);
-
     const { setCollection } = useGlobalStorage();
 
     $effect(() => {
@@ -40,7 +38,7 @@
     );
 
     const breadcrumbLevels: BreadcrumbLevel[] = $derived(
-        buildBreadcrumbLevels(navigationPath, collection, pageId, datasetId)
+        buildBreadcrumbLevels(navigationPath, collection, currentCollectionId, datasetId)
     );
 
     const { user } = useAuth();
