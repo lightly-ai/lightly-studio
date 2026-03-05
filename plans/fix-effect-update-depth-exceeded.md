@@ -28,10 +28,8 @@ export const useAnnotationLabels = (params: StoreOrVal<Params>) => {
 <!-- Before: infinite loop -->
 const annotationLabels = $derived(useAnnotationLabels({ collectionId }));
 
-<!-- After: reactive, no loop -->
-const annotationLabelsParams = writable({ collectionId: '' });
-$effect(() => { annotationLabelsParams.set({ collectionId: collectionId ?? '' }); });
-const annotationLabels = useAnnotationLabels(annotationLabelsParams);
+<!-- After: reactive, no loop — uses toStore from svelte/store -->
+const annotationLabels = useAnnotationLabels(toStore(() => ({ collectionId: collectionId ?? '' })));
 ```
 
 ---
@@ -50,16 +48,19 @@ const annotationLabels = useAnnotationLabels(annotationLabelsParams);
 
 ## PR 2: Fix `+layout.svelte` simple hook call sites ✅
 
-~60 lines. Updates the layout to use writable stores for the hooks refactored in PR 1.
-
 Changes in `src/routes/datasets/[dataset_id]/[collection_type]/[collection_id]/+layout.svelte`:
 
-- [x] `useEmbedText` (lines 157-163): writable + `$effect` + single hook call
-- [x] `useHasEmbeddings` (line 172): same pattern
-- [x] `useAnnotationLabels` (line 180): same pattern
-- [x] `useMetadataFilters` (line 175): call once at top level, `$effect` to re-trigger imperatively
-- [x] `useDimensions` (lines 176-178): same as metadataFilters + fixed to use `collectionId` directly (not `parent_collection_id`)
-- [x] Verified: `svelte-check` passes with 0 errors (VS Code TS diagnostics are stale/false positives)
+- [x] `useEmbedText`: `useEmbedText(toStore(() => ({ collectionId, queryText, embeddingModelId })))`
+- [x] `useHasEmbeddings`: `useHasEmbeddings(toStore(() => ({ collectionId })))`
+- [x] `useAnnotationLabels`: `useAnnotationLabels(toStore(() => ({ collectionId: collectionId ?? '' })))`
+- [x] `useMetadataFilters`: call once at top level, `$effect` to re-trigger imperatively
+- [x] `useDimensions`: same as metadataFilters + fixed to use `collectionId` directly (not `parent_collection_id`)
+- [x] Verified: `svelte-check` passes with 0 errors
+
+**Learnings for next PRs:**
+- Use `toStore` from `svelte/store` (NOT `svelte/reactivity`) to convert reactive getters to stores — eliminates `writable` + `$effect` boilerplate
+- Call site pattern for query hooks: `useHook(toStore(() => ({ ...reactiveParams })))`
+- `useMetadataFilters` / `useDimensions` are imperative (not query hooks) — use init-once + `$effect` pattern instead
 
 ---
 
@@ -72,22 +73,13 @@ Changes in `src/routes/datasets/[dataset_id]/[collection_type]/[collection_id]/+
   - Use `toReadable` → `derived` → `createQuery(optionsStore)` pattern
 - [ ] Refactor `lightly_studio_view/src/lib/hooks/useVideoAnnotationsCount/useVideoAnnotationsCount.ts` → same pattern with `enabled`
 - [ ] Refactor `lightly_studio_view/src/lib/hooks/useVideoFrameAnnotationsCount/useVideoFrameAnnotationsCount.ts` → same pattern with `enabled`
-- [ ] Update `+layout.svelte` (lines 222-260) — replace the conditional `$derived.by` that calls different hooks with three always-instantiated queries:
+- [ ] Update `+layout.svelte` (lines 222-260) — replace the conditional `$derived.by` that calls different hooks with three always-instantiated queries using `toStore` from `svelte/store`:
   ```ts
-  const videoFrameCountParams = writable({ collectionId: datasetId, filter: { ... }, enabled: false });
-  const videoCountParams = writable({ collectionId, filter: { ... }, enabled: false });
-  const defaultCountParams = writable({ collectionId: datasetId, options: { ... }, enabled: false });
+  const isVF = $derived(isVideoFrames || (isAnnotations && parentCollection?.sampleType == SampleType.VIDEO_FRAME));
 
-  $effect(() => {
-      const isVF = isVideoFrames || (isAnnotations && parentCollection?.sampleType == SampleType.VIDEO_FRAME);
-      videoFrameCountParams.set({ ..., enabled: isVF });
-      videoCountParams.set({ ..., enabled: isVideos && !isVF });
-      defaultCountParams.set({ ..., enabled: !isVF && !isVideos });
-  });
-
-  const vfQuery = useVideoFrameAnnotationCounts(videoFrameCountParams);
-  const videoQuery = useVideoAnnotationCounts(videoCountParams);
-  const defaultQuery = useAnnotationCounts(defaultCountParams);
+  const vfQuery = useVideoFrameAnnotationCounts(toStore(() => ({ collectionId: datasetId, filter: { ... }, enabled: isVF })));
+  const videoQuery = useVideoAnnotationCounts(toStore(() => ({ collectionId, filter: { ... }, enabled: isVideos && !isVF })));
+  const defaultQuery = useAnnotationCounts(toStore(() => ({ collectionId: datasetId, options: { ... }, enabled: !isVF && !isVideos })));
 
   // Safe $derived.by — only selects which existing result to read, no hook calls
   const annotationCounts = $derived.by(() => {
@@ -110,9 +102,9 @@ Changes in `src/routes/datasets/[dataset_id]/[collection_type]/[collection_id]/+
   - For the `refresh` function: subscribe to the params store to track the latest query key so `queryClient.invalidateQueries` invalidates the right key
 - [ ] Update `lightly_studio_view/src/lib/components/Captions/Captions.svelte` (lines 35-39):
   ```ts
-  const samplesParams = writable({ body: { filters: { collection_id: collectionId, has_captions: true } } });
-  $effect(() => { samplesParams.set({ body: { filters: { collection_id: parentCollectionId, has_captions: true } } }); });
-  const { data, query, loadMore, refresh } = useSamplesInfinite(samplesParams);
+  const { data, query, loadMore, refresh } = useSamplesInfinite(
+      toStore(() => ({ body: { filters: { collection_id: parentCollectionId, has_captions: true } } }))
+  );
   ```
 - [ ] Verify captions load and update when navigating between collections
 

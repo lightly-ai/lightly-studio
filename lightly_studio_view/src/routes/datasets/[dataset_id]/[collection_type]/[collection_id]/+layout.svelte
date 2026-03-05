@@ -22,7 +22,7 @@
         GripVertical
     } from '@lucide/svelte';
     import { onDestroy, onMount } from 'svelte';
-    import { get, writable } from 'svelte/store';
+    import { get, toStore, writable } from 'svelte/store';
     import { toast } from 'svelte-sonner';
     import { Header } from '$lib/components';
     import MenuDialogHost from '$lib/components/Header/MenuDialogHost.svelte';
@@ -154,19 +154,13 @@
     let query_text = $state($textEmbedding ? $textEmbedding.queryText : '');
     let submittedQueryText = $state('');
 
-    const embedTextParams = writable<{
-        collectionId: string;
-        queryText: string;
-        embeddingModelId: string | null;
-    }>({ collectionId: '', queryText: '', embeddingModelId: null });
-    $effect(() => {
-        embedTextParams.set({
+    const embedTextQuery = useEmbedText(
+        toStore(() => ({
             collectionId,
             queryText: submittedQueryText,
-            embeddingModelId: null
-        });
-    });
-    const embedTextQuery = useEmbedText(embedTextParams);
+            embeddingModelId: null as string | null
+        }))
+    );
 
     async function onKeyDown(event: KeyboardEvent) {
         if (event.key === 'Enter') {
@@ -175,11 +169,7 @@
         }
     }
 
-    const hasEmbeddingsParams = writable<{ collectionId: string }>({ collectionId: '' });
-    $effect(() => {
-        hasEmbeddingsParams.set({ collectionId });
-    });
-    const hasEmbeddingsQuery = useHasEmbeddings(hasEmbeddingsParams);
+    const hasEmbeddingsQuery = useHasEmbeddings(toStore(() => ({ collectionId })));
     const hasEmbeddings = $derived(!!$hasEmbeddingsQuery.data);
 
     const { metadataValues } = useMetadataFilters();
@@ -191,11 +181,9 @@
         useDimensions(collectionId);
     });
 
-    const annotationLabelsParams = writable<{ collectionId: string }>({ collectionId: '' });
-    $effect(() => {
-        annotationLabelsParams.set({ collectionId: collectionId ?? '' });
-    });
-    const annotationLabels = useAnnotationLabels(annotationLabelsParams);
+    const annotationLabels = useAnnotationLabels(
+        toStore(() => ({ collectionId: collectionId ?? '' }))
+    );
     const { showPlot, setShowPlot, filteredSampleCount, filteredAnnotationCount } =
         useGlobalStorage();
 
