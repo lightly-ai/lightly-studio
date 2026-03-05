@@ -45,17 +45,16 @@ describe('findNavigationPath', () => {
 });
 
 describe('buildBreadcrumbLevels', () => {
-    const pageId = null;
     const datasetId = 'ds-1';
 
     it('returns empty array when ancestorPath is null', () => {
         const root = makeCollection('root');
-        expect(buildBreadcrumbLevels(null, root, pageId, datasetId)).toEqual([]);
+        expect(buildBreadcrumbLevels(null, root, undefined, datasetId)).toEqual([]);
     });
 
     it('returns single level for root-only path', () => {
         const root = makeCollection('root');
-        const levels = buildBreadcrumbLevels([root], root, pageId, datasetId);
+        const levels = buildBreadcrumbLevels([root], root, 'root', datasetId);
 
         expect(levels).toHaveLength(1);
         expect(levels[0].selected.id).toBe('samples-root');
@@ -68,7 +67,7 @@ describe('buildBreadcrumbLevels', () => {
         const child2 = makeCollection('child-2', SampleType.ANNOTATION);
         const root = makeCollection('root', SampleType.IMAGE, [child1, child2]);
 
-        const levels = buildBreadcrumbLevels([root, child1], root, pageId, datasetId);
+        const levels = buildBreadcrumbLevels([root, child1], root, 'child-1', datasetId);
 
         expect(levels).toHaveLength(2);
         expect(levels[0].selected.id).toBe('samples-root');
@@ -84,10 +83,25 @@ describe('buildBreadcrumbLevels', () => {
         const child = makeCollection('child', SampleType.VIDEO, [grandchild]);
         const root = makeCollection('root', SampleType.IMAGE, [child]);
 
-        const levels = buildBreadcrumbLevels([root, child, grandchild], root, pageId, datasetId);
+        const levels = buildBreadcrumbLevels([root, child, grandchild], root, 'gc', datasetId);
 
         expect(levels).toHaveLength(3);
         expect(levels[2].selected.id).toBe('frames-gc');
         expect(levels[2].siblings.map((s) => s.id)).toEqual(['frames-gc']);
+    });
+
+    it('only highlights the matching collection when siblings share the same type', () => {
+        const img1 = makeCollection('img-1', SampleType.IMAGE);
+        const img2 = makeCollection('img-2', SampleType.IMAGE);
+        const root = makeCollection('root', SampleType.GROUP, [img1, img2]);
+
+        const levels = buildBreadcrumbLevels([root, img1], root, 'img-1', datasetId);
+
+        expect(levels[1].siblings).toHaveLength(2);
+        const [sib1, sib2] = levels[1].siblings;
+        expect(sib1.id).toBe('samples-img-1');
+        expect(sib1.isSelected).toBe(true);
+        expect(sib2.id).toBe('samples-img-2');
+        expect(sib2.isSelected).toBe(false);
     });
 });

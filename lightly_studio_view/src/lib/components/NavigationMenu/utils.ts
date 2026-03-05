@@ -1,24 +1,25 @@
 import type { CollectionView } from '$lib/api/lightly_studio_local';
 import { SampleType } from '$lib/api/lightly_studio_local';
-import { APP_ROUTES, routeHelpers } from '$lib/routes';
+import { routeHelpers } from '$lib/routes';
 import { Image, WholeWord, Video, Frame, ComponentIcon, LayoutDashboard } from '@lucide/svelte';
 import type { BreadcrumbLevel, NavigationMenuItem } from './types';
 
 export function getMenuItem(
-    pageId: string | null,
     datasetId: string,
+    currentCollectionId: string | undefined,
     collectionId: string,
     sampleType: SampleType,
     groupComponentName?: string | null
 ): NavigationMenuItem {
     const collectionType = sampleType.toLowerCase();
+    const isSelected = collectionId === currentCollectionId;
     switch (sampleType) {
         case SampleType.IMAGE:
             return {
                 title: groupComponentName || 'Images',
                 id: `samples-${collectionId}`,
                 href: routeHelpers.toSamples(datasetId, collectionType, collectionId),
-                isSelected: pageId === APP_ROUTES.samples || pageId === APP_ROUTES.sampleDetails,
+                isSelected,
                 icon: Image
             };
 
@@ -27,7 +28,7 @@ export function getMenuItem(
                 title: groupComponentName || 'Videos',
                 id: `videos-${collectionId}`,
                 href: routeHelpers.toVideos(datasetId, collectionType, collectionId),
-                isSelected: pageId === APP_ROUTES.videos || pageId === APP_ROUTES.videoDetails,
+                isSelected,
                 icon: Video
             };
         case SampleType.VIDEO_FRAME:
@@ -36,7 +37,7 @@ export function getMenuItem(
                 id: `frames-${collectionId}`,
                 icon: Frame,
                 href: routeHelpers.toFrames(datasetId, collectionType, collectionId),
-                isSelected: pageId == APP_ROUTES.frames || pageId == APP_ROUTES.framesDetails
+                isSelected
             };
         case SampleType.ANNOTATION:
             return {
@@ -44,15 +45,14 @@ export function getMenuItem(
                 id: `annotations-${collectionId}`,
                 icon: ComponentIcon,
                 href: routeHelpers.toAnnotations(datasetId, collectionType, collectionId),
-                isSelected:
-                    pageId == APP_ROUTES.annotations || pageId == APP_ROUTES.annotationDetails
+                isSelected
             };
         case SampleType.CAPTION:
             return {
                 title: groupComponentName || 'Captions',
                 id: `captions-${collectionId}`,
                 href: routeHelpers.toCaptions(datasetId, collectionType, collectionId),
-                isSelected: pageId === APP_ROUTES.captions,
+                isSelected,
                 icon: WholeWord
             };
         case SampleType.GROUP:
@@ -60,7 +60,7 @@ export function getMenuItem(
                 title: groupComponentName || 'Groups',
                 id: 'groups',
                 href: routeHelpers.toGroups(datasetId, collectionType, collectionId),
-                isSelected: pageId === APP_ROUTES.groups,
+                isSelected,
                 icon: LayoutDashboard
             };
     }
@@ -114,13 +114,19 @@ function findPathToTarget(root: CollectionView, targetId: string): CollectionVie
 export function buildBreadcrumbLevels(
     ancestorPath: CollectionView[] | null,
     rootCollection: CollectionView,
-    pageId: string | null,
+    currentCollectionId: string | undefined,
     datasetId: string
 ): BreadcrumbLevel[] {
     if (!ancestorPath) return [];
 
     const toMenuItem = (c: CollectionView): NavigationMenuItem =>
-        getMenuItem(pageId, datasetId, c.collection_id, c.sample_type, c.group_component_name);
+        getMenuItem(
+            datasetId,
+            currentCollectionId,
+            c.collection_id,
+            c.sample_type,
+            c.group_component_name
+        );
 
     return ancestorPath.map((node, index) => {
         const siblings = index === 0 ? [rootCollection] : (ancestorPath[index - 1].children ?? []);
