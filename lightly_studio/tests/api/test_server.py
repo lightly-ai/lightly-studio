@@ -45,6 +45,21 @@ def test_lifespan_shutdown_all_called_even_if_startup_raises() -> None:
         mock_db.close.assert_called_once()
 
 
+def test_lifespan_db_close_called_even_if_shutdown_all_raises() -> None:
+    """db_manager.close still runs if shutdown_all raises."""
+    with (
+        patch("lightly_studio.api.app.operator_registry") as mock_registry,
+        patch("lightly_studio.api.app.db_manager") as mock_db,
+    ):
+        mock_registry.shutdown_all.side_effect = RuntimeError("shutdown failed")
+        try:
+            with TestClient(app):
+                pass
+        except RuntimeError:
+            pass
+        mock_db.close.assert_called_once()
+
+
 def test_server_initialization() -> None:
     """Test that the Server class initializes correctly."""
     host = "127.0.0.1"

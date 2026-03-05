@@ -64,8 +64,10 @@ async def lifespan(_: FastAPI) -> AsyncGenerator[None, None]:
         operator_registry.startup_all()
         yield
     finally:  # we need an explicit close for the db manager to make a final write to disk
-        operator_registry.shutdown_all()
-        db_manager.close()
+        try:
+            operator_registry.shutdown_all()
+        finally:
+            db_manager.close()
 
 
 if LIGHTLY_STUDIO_DEBUG:
