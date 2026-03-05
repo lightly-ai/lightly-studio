@@ -1,19 +1,87 @@
 <script lang="ts">
     import { useAnnotationLabelContext } from '$lib/contexts/SampleDetailsAnnotation.svelte';
     import { useSampleDetailsToolbarContext } from '$lib/contexts/SampleDetailsToolbar.svelte';
+    import { useSettings } from '$lib/hooks/useSettings';
+    import { isInputElement } from '$lib/utils/isInputElement';
     import { Brush, Eraser } from '@lucide/svelte';
+    import { onDestroy, onMount } from 'svelte';
 
-    const { context: sampleDetailsToolbarContext, setBrushMode } = useSampleDetailsToolbarContext();
+    const {
+        context: sampleDetailsToolbarContext,
+        setBrushMode,
+        setBrushSize
+    } = useSampleDetailsToolbarContext();
+    const { settingsStore } = useSettings();
 
     const {
         context: annotationLabelContext,
         setAnnotationId,
-        setLastCreatedAnnotationId
+        setLastCreatedAnnotationId,
+        setIsChangingBrushSize
     } = useAnnotationLabelContext();
+
+    const normalizeShortcut = (key: string): string => (key.length === 1 ? key.toLowerCase() : key);
+
+    const MIN_BRUSH_SIZE = 1;
+    const MAX_BRUSH_SIZE = 100;
+    const WHEEL_STEP = 1;
+
+    const clampBrushSize = (size: number): number =>
+        Math.min(MAX_BRUSH_SIZE, Math.max(MIN_BRUSH_SIZE, size));
+
+    const onKeyDown = (event: KeyboardEvent) => {
+        const target = event.target as HTMLElement;
+        if (target?.isContentEditable || isInputElement(target)) return;
+        console.log($settingsStore.key_toolbar_eraser);
+        const key = normalizeShortcut(event.key);
+        const brushShortcut = normalizeShortcut($settingsStore.key_toolbar_brush || 'r');
+        const eraserShortcut = normalizeShortcut($settingsStore.key_toolbar_eraser || 'x');
+
+        if (key === brushShortcut) {
+            event.preventDefault();
+            setBrushMode('brush');
+        } else if (key === eraserShortcut) {
+            event.preventDefault();
+            setBrushMode('eraser');
+        }
+    };
+
+    const onWheel = (event: WheelEvent) => {
+        const target = event.target as HTMLElement;
+
+        if (target?.isContentEditable || isInputElement(target)) return;
+        if (!event.altKey) return;
+        setIsChangingBrushSize(true);
+
+        const direction = event.deltaY < 0 ? 1 : -1;
+        const nextSize = clampBrushSize(
+            sampleDetailsToolbarContext.brush.size + direction * WHEEL_STEP
+        );
+
+        if (nextSize !== sampleDetailsToolbarContext.brush.size) {
+            event.preventDefault();
+            setBrushSize(nextSize);
+        }
+
+        // Prevent enabling zoom immediately
+        setTimeout(() => setIsChangingBrushSize(false), 100);
+    };
+
+    onMount(() => {
+        window.addEventListener('keydown', onKeyDown);
+        // Use capture so wheel updates still work if inner components stop propagation.
+        window.addEventListener('wheel', onWheel, { passive: false, capture: true });
+    });
+
+    onDestroy(() => {
+        window.removeEventListener('keydown', onKeyDown);
+        window.removeEventListener('wheel', onWheel, { capture: true });
+    });
 </script>
 
 <div class="absolute bottom-11 w-full">
     <div
+        data-testid="brush-tool-popup"
         class="
       pointer-events-auto
       flex
@@ -38,6 +106,7 @@
                 <div class="flex overflow-hidden rounded-lg border border-border">
                     <button
                         aria-label="Brush mode"
+                        title={`Shortcut: ${($settingsStore.key_toolbar_brush || 'r').toUpperCase()}`}
                         class="
               flex h-9 w-12 items-center justify-center transition
               {sampleDetailsToolbarContext.brush.mode === 'brush'
@@ -51,6 +120,7 @@
 
                     <button
                         aria-label="Eraser mode"
+                        title={`Shortcut: ${($settingsStore.key_toolbar_eraser || 'x').toUpperCase()}`}
                         class="
               flex h-9 w-12 items-center justify-center transition
               {sampleDetailsToolbarContext.brush.mode === 'eraser'

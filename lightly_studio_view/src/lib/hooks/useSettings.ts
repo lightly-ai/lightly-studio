@@ -20,7 +20,9 @@ const DEFAULT_SETTINGS: SettingView = {
     key_toolbar_selection: 's',
     key_toolbar_drag: 'd',
     key_toolbar_bounding_box: 'b',
-    key_toolbar_segmentation_mask: 'm'
+    key_toolbar_segmentation_mask: 'm',
+    key_toolbar_brush: 'r',
+    key_toolbar_eraser: 'x'
 };
 
 // Create stores for settings state
@@ -109,7 +111,11 @@ const saveSettings = async (
                 currentSettings.key_toolbar_bounding_box,
             key_toolbar_segmentation_mask:
                 updatedSettings.key_toolbar_segmentation_mask ||
-                currentSettings.key_toolbar_segmentation_mask
+                currentSettings.key_toolbar_segmentation_mask,
+            key_toolbar_brush:
+                updatedSettings.key_toolbar_brush || currentSettings.key_toolbar_brush || 'r',
+            key_toolbar_eraser:
+                updatedSettings.key_toolbar_eraser || currentSettings.key_toolbar_eraser || 'x'
         };
 
         // The API call

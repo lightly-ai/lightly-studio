@@ -194,6 +194,7 @@
     boundingBox={annotationDetailsBoundingBox}
     autoFocusEnabled={annotationLabelContext.isOnAnnotationDetailsView}
     autoFocusKey={annotationDetailsFocusKey}
+    zoomEnabled={!annotationLabelContext.isChangingBrushSize}
     registerResetFn={(fn) => (resetZoomTransform = fn)}
 >
     {#snippet toolbarContent()}

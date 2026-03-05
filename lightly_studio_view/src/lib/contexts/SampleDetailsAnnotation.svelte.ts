@@ -21,6 +21,7 @@ export type AnnotationLabelContext = {
     isDrawing?: boolean;
     isErasing?: boolean;
     isDragging?: boolean;
+    isChangingBrushSize?: boolean;
 
     // Check whether the page is an annotation details page.
     // This is usually determined in the parent component.
@@ -51,6 +52,7 @@ export function useAnnotationLabelContext(): {
     setIsDrawing: (value: boolean) => void;
     setIsErasing: (value: boolean) => void;
     setIsDragging: (value: boolean) => void;
+    setIsChangingBrushSize: (value: boolean) => void;
     setLockedAnnotationIds: (ids: Set<string>) => void;
     isAnnotationLocked: (annotationId?: string | null) => boolean;
 } {
@@ -101,6 +103,10 @@ export function useAnnotationLabelContext(): {
         context.isDragging = value;
     }
 
+    function setIsChangingBrushSize(value: boolean) {
+        context.isChangingBrushSize = value;
+    }
+
     return {
         context,
         setAnnotationId,
@@ -112,6 +118,7 @@ export function useAnnotationLabelContext(): {
         setIsErasing,
         setIsDragging,
         setLockedAnnotationIds,
-        isAnnotationLocked
+        isAnnotationLocked,
+        setIsChangingBrushSize
     };
 }

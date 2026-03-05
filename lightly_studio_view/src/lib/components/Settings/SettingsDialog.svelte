@@ -21,7 +21,9 @@
         keyToolbarSelection: 's',
         keyToolbarDrag: $settingsStore.key_toolbar_drag,
         keyToolbarBoundingBox: $settingsStore.key_toolbar_bounding_box,
-        keyToolbarSegmentationMask: $settingsStore.key_toolbar_segmentation_mask
+        keyToolbarSegmentationMask: $settingsStore.key_toolbar_segmentation_mask,
+        keyToolbarBrush: $settingsStore.key_toolbar_brush || 'r',
+        keyToolbarEraser: $settingsStore.key_toolbar_eraser || 'x'
     });
     type RenderingMode = 'contain' | 'cover';
     let gridViewRendering: RenderingMode = $state('contain');
@@ -40,7 +42,9 @@
                 keyToolbarSelection: $settingsStore.key_toolbar_selection,
                 keyToolbarDrag: $settingsStore.key_toolbar_drag,
                 keyToolbarBoundingBox: $settingsStore.key_toolbar_bounding_box,
-                keyToolbarSegmentationMask: $settingsStore.key_toolbar_segmentation_mask
+                keyToolbarSegmentationMask: $settingsStore.key_toolbar_segmentation_mask,
+                keyToolbarBrush: $settingsStore.key_toolbar_brush || 'r',
+                keyToolbarEraser: $settingsStore.key_toolbar_eraser || 'x'
             };
             gridViewRendering = $settingsStore.grid_view_sample_rendering || 'contain';
             showAnnotationTextLabels = Boolean($settingsStore.show_annotation_text_labels ?? true);
@@ -85,7 +89,9 @@
                 key_toolbar_selection: shortcutSettings.keyToolbarSelection,
                 key_toolbar_drag: shortcutSettings.keyToolbarDrag,
                 key_toolbar_bounding_box: shortcutSettings.keyToolbarBoundingBox,
-                key_toolbar_segmentation_mask: shortcutSettings.keyToolbarSegmentationMask
+                key_toolbar_segmentation_mask: shortcutSettings.keyToolbarSegmentationMask,
+                key_toolbar_brush: shortcutSettings.keyToolbarBrush,
+                key_toolbar_eraser: shortcutSettings.keyToolbarEraser
             });
 
             setOpen(false);
@@ -288,6 +294,59 @@
                                 {:else}
                                     <span>{shortcutSettings.keyToolbarSegmentationMask}</span>
                                 {/if}
+                            </button>
+                        </div>
+                        <div class="grid grid-cols-2 items-center gap-4">
+                            <Label for="toolbar-brush-mode" class="text-right text-foreground">
+                                Toolbar brush mode
+                            </Label>
+                            <button
+                                id="toolbar-brush-mode"
+                                type="button"
+                                class="rounded-md border border-input bg-background p-2 text-left text-foreground"
+                                onclick={(e) => {
+                                    e.preventDefault();
+                                    startRecording('keyToolbarBrush');
+                                }}
+                            >
+                                {#if recordingShortcut === 'keyToolbarBrush'}
+                                    <span class="italic opacity-70">Press a key...</span>
+                                {:else}
+                                    <span>{shortcutSettings.keyToolbarBrush}</span>
+                                {/if}
+                            </button>
+                        </div>
+                        <div class="grid grid-cols-2 items-center gap-4">
+                            <Label for="toolbar-eraser-mode" class="text-right text-foreground">
+                                Toolbar eraser mode
+                            </Label>
+                            <button
+                                id="toolbar-eraser-mode"
+                                type="button"
+                                class="rounded-md border border-input bg-background p-2 text-left text-foreground"
+                                onclick={(e) => {
+                                    e.preventDefault();
+                                    startRecording('keyToolbarEraser');
+                                }}
+                            >
+                                {#if recordingShortcut === 'keyToolbarEraser'}
+                                    <span class="italic opacity-70">Press a key...</span>
+                                {:else}
+                                    <span>{shortcutSettings.keyToolbarEraser}</span>
+                                {/if}
+                            </button>
+                        </div>
+                        <div class="grid grid-cols-2 items-center gap-4">
+                            <Label for="toolbar-eraser-mode" class="text-right text-foreground">
+                                Change brush size
+                            </Label>
+                            <button
+                                id="toolbar-eraser-mode"
+                                type="button"
+                                disabled={true}
+                                class="rounded-md border border-input bg-background p-2 text-left text-foreground"
+                            >
+                                 <span>Alt + scroll</span>
                             </button>
                         </div>
                     </div>
