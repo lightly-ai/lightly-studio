@@ -15,8 +15,21 @@ from lightly_studio.plugins.base_operator import BaseOperator, OperatorResult
 from lightly_studio.plugins.operator_context import ExecutionContext, OperatorScope
 from lightly_studio.plugins.operator_registry import operator_registry
 from lightly_studio.plugins.parameter import BaseParameter
-from lightly_studio.resolvers import collection_resolver, sample_resolver
+from lightly_studio.resolvers import (
+    annotation_resolver,
+    collection_resolver,
+    group_resolver,
+    image_resolver,
+    sample_resolver,
+    video_frame_resolver,
+    video_resolver,
+)
+from lightly_studio.resolvers.annotations.annotations_filter import AnnotationsFilter
+from lightly_studio.resolvers.group_resolver.group_filter import GroupFilter
+from lightly_studio.resolvers.image_filter import ImageFilter
 from lightly_studio.resolvers.sample_resolver.sample_filter import SampleFilter
+from lightly_studio.resolvers.video_frame_resolver.video_frame_filter import VideoFrameFilter
+from lightly_studio.resolvers.video_resolver.video_filter import VideoFilter
 
 
 @dataclass
@@ -40,11 +53,22 @@ class DemoRootOperator(BaseOperator):
         self,
         session: Session,
         context: ExecutionContext,
-        parameters: dict[str, Any],
+        parameters: dict[str, Any],  # noqa: ARG002
     ) -> OperatorResult:
         """Execute the operator."""
-        _ = parameters
-        sample_type, count = _collection_info(session=session, context=context)
+        collection = collection_resolver.get_by_id(
+            session=session, collection_id=context.collection_id
+        )
+        sample_type = collection.sample_type.value if collection else "unknown"
+        context_filter = context.context_filter
+        if isinstance(context_filter, SampleFilter):
+            count = sample_resolver.get_filtered_samples(
+                session=session, filters=context_filter
+            ).total_count
+        else:
+            count = sample_resolver.count_by_collection_id(
+                session=session, collection_id=context.collection_id
+            )
         return OperatorResult(
             success=True,
             message=f"ROOT executed on {context.collection_id} (type={sample_type}, n={count}).",
@@ -72,14 +96,24 @@ class DemoImageOperator(BaseOperator):
         self,
         session: Session,
         context: ExecutionContext,
-        parameters: dict[str, Any],
+        parameters: dict[str, Any],  # noqa: ARG002
     ) -> OperatorResult:
         """Execute the operator."""
-        _ = parameters
-        sample_type, count = _collection_info(session=session, context=context)
+        context_filter = context.context_filter
+        if isinstance(context_filter, SampleFilter):
+            image_filter: ImageFilter | None = ImageFilter(sample_filter=context_filter)
+        elif isinstance(context_filter, ImageFilter):
+            image_filter = context_filter
+        else:
+            image_filter = None
+        result = image_resolver.get_all_by_collection_id(
+            session=session, collection_id=context.collection_id, filters=image_filter
+        )
         return OperatorResult(
             success=True,
-            message=f"IMAGE executed on {context.collection_id} (type={sample_type}, n={count}).",
+            message=(
+                f"IMAGE executed on {context.collection_id} (type=image, n={result.total_count})."
+            ),
         )
 
 
@@ -104,14 +138,25 @@ class DemoVideoFrameOperator(BaseOperator):
         self,
         session: Session,
         context: ExecutionContext,
-        parameters: dict[str, Any],
+        parameters: dict[str, Any],  # noqa: ARG002
     ) -> OperatorResult:
         """Execute the operator."""
-        _ = parameters
-        sample_type, count = _collection_info(session=session, context=context)
+        context_filter = context.context_filter
+        if isinstance(context_filter, SampleFilter):
+            vf_filter: VideoFrameFilter | None = VideoFrameFilter(sample_filter=context_filter)
+        elif isinstance(context_filter, VideoFrameFilter):
+            vf_filter = context_filter
+        else:
+            vf_filter = None
+        result = video_frame_resolver.get_all_by_collection_id(
+            session=session, collection_id=context.collection_id, video_frame_filter=vf_filter
+        )
         return OperatorResult(
             success=True,
-            message=f"FRAME executed on {context.collection_id} (type={sample_type}, n={count}).",
+            message=(
+                f"FRAME executed on {context.collection_id} "
+                f"(type=video_frame, n={result.total_count})."
+            ),
         )
 
 
@@ -136,14 +181,24 @@ class DemoVideoOperator(BaseOperator):
         self,
         session: Session,
         context: ExecutionContext,
-        parameters: dict[str, Any],
+        parameters: dict[str, Any],  # noqa: ARG002
     ) -> OperatorResult:
         """Execute the operator."""
-        _ = parameters
-        sample_type, count = _collection_info(session=session, context=context)
+        context_filter = context.context_filter
+        if isinstance(context_filter, SampleFilter):
+            video_filter: VideoFilter | None = VideoFilter(sample_filter=context_filter)
+        elif isinstance(context_filter, VideoFilter):
+            video_filter = context_filter
+        else:
+            video_filter = None
+        result = video_resolver.get_all_by_collection_id(
+            session=session, collection_id=context.collection_id, filters=video_filter
+        )
         return OperatorResult(
             success=True,
-            message=f"VIDEO executed on {context.collection_id} (type={sample_type}, n={count}).",
+            message=(
+                f"VIDEO executed on {context.collection_id} (type=video, n={result.total_count})."
+            ),
         )
 
 
@@ -168,15 +223,24 @@ class DemoAnnotationOperator(BaseOperator):
         self,
         session: Session,
         context: ExecutionContext,
-        parameters: dict[str, Any],
+        parameters: dict[str, Any],  # noqa: ARG002
     ) -> OperatorResult:
         """Execute the operator."""
-        _ = parameters
-        sample_type, count = _collection_info(session=session, context=context)
+        context_filter = context.context_filter
+        if isinstance(context_filter, SampleFilter):
+            result = sample_resolver.get_filtered_samples(session=session, filters=context_filter)
+            count = result.total_count
+        else:
+            if isinstance(context_filter, AnnotationsFilter):
+                ann_filter = context_filter
+            else:
+                ann_filter = AnnotationsFilter(collection_ids=[context.collection_id])
+            result_anno = annotation_resolver.get_all(session=session, filters=ann_filter)
+            count = result_anno.total_count
         return OperatorResult(
             success=True,
             message=(
-                f"ANNOTATION executed on {context.collection_id} (type={sample_type}, n={count})."
+                f"ANNOTATION executed on {context.collection_id} (type=annotation, n={count})."
             ),
         )
 
@@ -202,72 +266,26 @@ class DemoGroupOperator(BaseOperator):
         self,
         session: Session,
         context: ExecutionContext,
-        parameters: dict[str, Any],
+        parameters: dict[str, Any],  # noqa: ARG002
     ) -> OperatorResult:
         """Execute the operator."""
-        _ = parameters
-        sample_type, count = _collection_info(session=session, context=context)
-        return OperatorResult(
-            success=True,
-            message=f"GROUP executed on {context.collection_id} (type={sample_type}, n={count}).",
-        )
-
-
-@dataclass
-class DemoImageAndFrameOperator(BaseOperator):
-    """Demo operator for IMAGE + VIDEO_FRAME scopes."""
-
-    name: str = "Demo IMAGE + FRAME"
-    description: str = "Applicable on both image and video-frame collections."
-
-    @property
-    def parameters(self) -> list[BaseParameter]:
-        """Return operator parameters."""
-        return []
-
-    @property
-    def supported_scopes(self) -> list[OperatorScope]:
-        """Support image and video-frame scopes."""
-        return [OperatorScope.IMAGE, OperatorScope.VIDEO_FRAME]
-
-    def execute(
-        self,
-        session: Session,
-        context: ExecutionContext,
-        parameters: dict[str, Any],
-    ) -> OperatorResult:
-        """Execute the operator."""
-        _ = parameters
-        sample_type, count = _collection_info(session=session, context=context)
+        context_filter = context.context_filter
+        if isinstance(context_filter, GroupFilter):
+            group_filter = context_filter
+        elif isinstance(context_filter, SampleFilter):
+            group_filter = GroupFilter(sample_filter=context_filter)
+        else:
+            group_filter = GroupFilter(
+                sample_filter=SampleFilter(collection_id=context.collection_id)
+            )
+        result = group_resolver.get_all(session=session, pagination=None, filters=group_filter)
         return OperatorResult(
             success=True,
             message=(
-                f"IMAGE+FRAME executed on {context.collection_id} (type={sample_type}, n={count})."
+                f"GROUP executed on {context.collection_id} (type=group, n={result.total_count})."
             ),
         )
 
-
-def _collection_info(session: Session, context: ExecutionContext) -> tuple[str, int]:
-    """Return (sample_type value, sample count after filter).
-
-    ``context_filter`` may be deserialized as any filter subtype by Pydantic's
-    union matching (e.g. AnnotationsFilter instead of SampleFilter when both
-    carry ``sample_ids``).  Use ``getattr`` so the count works regardless of
-    which concrete type was selected.
-    """
-    collection = collection_resolver.get_by_id(
-        session=session, collection_id=context.collection_id
-    )
-    sample_type = collection.sample_type.value if collection else "unknown"
-    sample_ids = getattr(context.context_filter, "sample_ids", None)
-    if sample_ids is not None:
-        sf = SampleFilter(collection_id=context.collection_id, sample_ids=sample_ids)
-        count = sample_resolver.get_filtered_samples(session=session, filters=sf).total_count
-    else:
-        count = sample_resolver.count_by_collection_id(
-            session=session, collection_id=context.collection_id
-        )
-    return sample_type, count
 
 # ---------------------------------------------------------------------------
 # Setup
@@ -284,7 +302,6 @@ operator_registry.register(operator=DemoVideoFrameOperator())
 operator_registry.register(operator=DemoVideoOperator())
 operator_registry.register(operator=DemoAnnotationOperator())
 operator_registry.register(operator=DemoGroupOperator())
-operator_registry.register(operator=DemoImageAndFrameOperator())
 
 dataset_path = env.path("EXAMPLES_MIDV_PATH", "/path/to/midv/dataset")
 
