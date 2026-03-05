@@ -1,11 +1,10 @@
 from __future__ import annotations
 
-from dataclasses import dataclass
 from typing import Any
 
 from sqlmodel import Session
 
-from lightly_studio.plugins.base_operator import BaseOperator, OperatorResult
+from lightly_studio.plugins.base_operator import BaseOperator, OperatorResult, OperatorStatus
 from lightly_studio.plugins.operator_context import ExecutionContext, OperatorScope
 from lightly_studio.plugins.operator_registry import OperatorRegistry
 from lightly_studio.plugins.parameter import BaseParameter, BoolParameter, StringParameter
@@ -50,7 +49,48 @@ def test_operator_registry__dummy_operators(db_session: Session) -> None:
     assert len(operator_info_list) == 2
 
 
-@dataclass
+def test_operator_registry__startup_all_sets_ready() -> None:
+    operator = TestOperator()
+    assert operator.status == OperatorStatus.PENDING
+
+    registry = OperatorRegistry()
+    registry.register(operator)
+    registry.startup_all()
+
+    assert operator.status == OperatorStatus.READY
+
+
+def test_operator_registry__shutdown_all_sets_stopped() -> None:
+    operator = TestOperator()
+    registry = OperatorRegistry()
+    registry.register(operator)
+    registry.startup_all()
+    registry.shutdown_all()
+
+    assert operator.status == OperatorStatus.STOPPED
+
+
+def test_operator_registry__startup_all_sets_error_on_failure() -> None:
+    operator = FailingStartupOperator()
+    registry = OperatorRegistry()
+    registry.register(operator)
+    registry.startup_all()
+
+    assert operator.status == OperatorStatus.ERROR
+
+
+def test_operator_registry__startup_all_continues_after_failure() -> None:
+    failing = FailingStartupOperator()
+    healthy = TestOperator()
+    registry = OperatorRegistry()
+    registry.register(failing)
+    registry.register(healthy)
+    registry.startup_all()
+
+    assert failing.status == OperatorStatus.ERROR
+    assert healthy.status == OperatorStatus.READY
+
+
 class TestOperator(BaseOperator):
     name: str = "test operator"
     description: str = "used to test the operator and registry system"
@@ -93,3 +133,32 @@ class TestOperator(BaseOperator):
             + " "
             + str(context.collection_id),
         )
+
+
+class FailingStartupOperator(BaseOperator):
+    name: str = "failing operator"
+    description: str = "always raises during startup"
+
+    @property
+    def parameters(self) -> list[BaseParameter]:
+        """Return the list of parameters this operator expects."""
+        return []
+
+    @property
+    def supported_scopes(self) -> list[OperatorScope]:
+        """Return the list of scopes this operator can be triggered from."""
+        return [OperatorScope.ROOT]
+
+    def startup(self) -> None:
+        """Raise to simulate a broken operator."""
+        raise RuntimeError("startup failed")
+
+    def execute(
+        self,
+        *,
+        session: Session,
+        context: ExecutionContext,
+        parameters: dict[str, Any],
+    ) -> OperatorResult:
+        """Not expected to be called in tests."""
+        raise NotImplementedError  # pragma: no cover
