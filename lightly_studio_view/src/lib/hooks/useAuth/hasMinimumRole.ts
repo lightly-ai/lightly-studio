@@ -13,5 +13,5 @@ const ROLE_HIERARCHY: Record<Role, ReadonlySet<Role>> = {
  */
 export function hasMinimumRole(userRole: Role | undefined, minimum: Role): boolean {
     if (!userRole) return true;
-    return ROLE_HIERARCHY[userRole].has(minimum);
+    return ROLE_HIERARCHY[userRole]?.has(minimum) ?? false;
 }

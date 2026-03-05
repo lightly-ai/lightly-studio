@@ -89,4 +89,10 @@ describe('hasMinimumRole', () => {
             expect(hasMinimumRole(role, 'admin')).toBe(true);
         });
     });
+
+    it('returns false for an unknown role', () => {
+        const unknownRole = 'moderator' as Role;
+        expect(hasMinimumRole(unknownRole, 'viewer')).toBe(false);
+        expect(hasMinimumRole(unknownRole, 'admin')).toBe(false);
+    });
 });
