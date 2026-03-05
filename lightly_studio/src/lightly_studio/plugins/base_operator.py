@@ -35,7 +35,10 @@ class BaseOperator(ABC):
     """Base class for all operators."""
 
     status: OperatorStatus = OperatorStatus.PENDING
+    """Current lifecycle status of the operator."""
+
     error_message: str = ""
+    """Human-readable error description set when status is ERROR."""
 
     @property
     @abstractmethod
@@ -69,7 +72,7 @@ class BaseOperator(ABC):
         subprocess, etc.).
 
         Simple operators that run purely in-process do not need to override
-        this — the default is a no-op that sets status to READY.
+        this — the default sets status to READY without any additional setup.
         """
         self.status = OperatorStatus.READY
 
