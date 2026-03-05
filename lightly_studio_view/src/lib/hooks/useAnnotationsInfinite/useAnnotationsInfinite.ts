@@ -37,7 +37,10 @@ export const useAnnotationsInfinite = (params: StoreOrVal<UseAnnotationsInfinite
         });
     };
 
-    const collectionIdStore = derived(paramsStore, (currentParams) => currentParams.path.collection_id);
+    const collectionIdStore = derived(
+        paramsStore,
+        (currentParams) => currentParams.path.collection_id
+    );
 
     const { updateAnnotations } = useUpdateAnnotationsMutation({
         collectionId: get(collectionIdStore)
