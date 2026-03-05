@@ -81,11 +81,13 @@
 </script>
 
 {#if showAnnotations && !$isHidden}
-    <AnnotationCanvas
-        width={sample.width}
-        height={sample.height}
-        annotations={annotationsWithVisuals}
-        alpha={0.8}
-        className="pointer-events-none absolute w-full object-contain h-full inset-0 z-10"
-    />
+    <div data-testid="sample-annotation-item">
+        <AnnotationCanvas
+            width={sample.width}
+            height={sample.height}
+            annotations={annotationsWithVisuals}
+            alpha={0.8}
+            className="pointer-events-none absolute w-full object-contain h-full inset-0 z-10"
+        />
+    </div>
 {/if}

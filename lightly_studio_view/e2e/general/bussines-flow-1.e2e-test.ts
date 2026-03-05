@@ -12,7 +12,7 @@ test.describe('bussines-flow1', () => {
         expect(await samplesPage.getSamples().count()).toBe(cocoDataset.defaultPageSize);
 
         // Check if we have some annotations on screen.
-        const annotationCount = await page.getByTestId('annotation_box').count();
+        const annotationCount = await page.getByTestId('sample-annotation-item').count();
         expect(annotationCount).toBeGreaterThan(0);
 
         // No images in the grid view should be selected
@@ -27,7 +27,7 @@ test.describe('bussines-flow1', () => {
         await page.waitForTimeout(100);
 
         // Check that annotation boxes are not visible anymore.
-        const annotations = page.getByTestId('annotation_box');
+        const annotations = page.getByTestId('sample-annotation-item');
         const annotationsCount = await annotations.count();
         for (let i = 0; i < annotationsCount; i++) {
             expect(annotations.nth(i)).toBeHidden();
