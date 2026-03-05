@@ -24,7 +24,7 @@
     import { useGlobalStorage, type TextEmbedding } from '$lib/hooks/useGlobalStorage';
     import { useTags } from '$lib/hooks/useTags/useTags.js';
 
-    import { Eraser as EraserIcon, Plus as AddIcon } from '@lucide/svelte';
+    import { Eraser as EraserIcon } from '@lucide/svelte';
     import {
         createMetadataFilters,
         useMetadataFilters
@@ -339,8 +339,7 @@
         }}
         data-testid="tag-create-dialog-button"
     >
-        <AddIcon />
-        Create new Tags
+        Tag selected items
     </Button>
     <Button
         variant="outline"
