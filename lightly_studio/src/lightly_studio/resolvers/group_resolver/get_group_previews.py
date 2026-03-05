@@ -98,19 +98,7 @@ def get_group_previews_image(
         sample_ids=list(sample_id_to_group_id.keys()),
     )
     return {
-        sample_id_to_group_id[image.sample_id]: ImageView(
-            sample_id=image.sample_id,
-            file_name=image.file_name,
-            file_path_abs=image.file_path_abs,
-            width=image.width,
-            height=image.height,
-            sample=SampleView.model_validate(image.sample),
-            # TODO(Kondrat, 02/2026): These are not fetched here, decide how to handle.
-            annotations=[],
-            tags=[],
-            metadata_dict=None,
-            captions=[],
-        )
+        sample_id_to_group_id[image.sample_id]: ImageView.from_image_table(image=image)
         for image in images
     }
 

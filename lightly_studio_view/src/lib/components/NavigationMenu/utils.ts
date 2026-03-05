@@ -1,10 +1,94 @@
 import type { CollectionView } from '$lib/api/lightly_studio_local';
+import { SampleType } from '$lib/api/lightly_studio_local';
+import { APP_ROUTES, routeHelpers } from '$lib/routes';
+import { Image, WholeWord, Video, Frame, ComponentIcon, LayoutDashboard } from '@lucide/svelte';
+import type { BreadcrumbLevel, NavigationMenuItem } from './types';
+
+export function getMenuItem(
+    pageId: string | null,
+    datasetId: string,
+    collectionId: string,
+    sampleType: SampleType,
+    groupComponentName?: string | null
+): NavigationMenuItem {
+    const collectionType = sampleType.toLowerCase();
+    switch (sampleType) {
+        case SampleType.IMAGE:
+            return {
+                title: groupComponentName || 'Images',
+                id: `samples-${collectionId}`,
+                href: routeHelpers.toSamples(datasetId, collectionType, collectionId),
+                isSelected: pageId === APP_ROUTES.samples || pageId === APP_ROUTES.sampleDetails,
+                icon: Image
+            };
+
+        case SampleType.VIDEO:
+            return {
+                title: groupComponentName || 'Videos',
+                id: `videos-${collectionId}`,
+                href: routeHelpers.toVideos(datasetId, collectionType, collectionId),
+                isSelected: pageId === APP_ROUTES.videos || pageId === APP_ROUTES.videoDetails,
+                icon: Video
+            };
+        case SampleType.VIDEO_FRAME:
+            return {
+                title: groupComponentName || 'Frames',
+                id: `frames-${collectionId}`,
+                icon: Frame,
+                href: routeHelpers.toFrames(datasetId, collectionType, collectionId),
+                isSelected: pageId == APP_ROUTES.frames || pageId == APP_ROUTES.framesDetails
+            };
+        case SampleType.ANNOTATION:
+            return {
+                title: groupComponentName || 'Annotations',
+                id: `annotations-${collectionId}`,
+                icon: ComponentIcon,
+                href: routeHelpers.toAnnotations(datasetId, collectionType, collectionId),
+                isSelected:
+                    pageId == APP_ROUTES.annotations || pageId == APP_ROUTES.annotationDetails
+            };
+        case SampleType.CAPTION:
+            return {
+                title: groupComponentName || 'Captions',
+                id: `captions-${collectionId}`,
+                href: routeHelpers.toCaptions(datasetId, collectionType, collectionId),
+                isSelected: pageId === APP_ROUTES.captions,
+                icon: WholeWord
+            };
+        case SampleType.GROUP:
+            return {
+                title: groupComponentName || 'Groups',
+                id: 'groups',
+                href: routeHelpers.toGroups(datasetId, collectionType, collectionId),
+                isSelected: pageId === APP_ROUTES.groups,
+                icon: LayoutDashboard
+            };
+    }
+}
 
 /**
- * Finds the path from root to the collection with the given targetId using DFS.
- * Returns an array of ancestors [root, child, ..., target] or null if not found.
+ * Finds the path from root to the collection with the given targetId using DFS,
+ * then continues to a leaf by always selecting the first child.
+ * Returns an array [root, child, ..., target, ..., leaf] or null if not found.
  */
-export function findAncestorPath(root: CollectionView, targetId: string): CollectionView[] | null {
+export function findNavigationPath(
+    root: CollectionView,
+    targetId: string
+): CollectionView[] | null {
+    const navigationPath = findPathToTarget(root, targetId);
+    if (!navigationPath) return null;
+
+    // Continue from the target to a leaf via first children
+    let current = navigationPath[navigationPath.length - 1];
+    while (current.children && current.children.length > 0) {
+        current = current.children[0];
+        navigationPath.push(current);
+    }
+
+    return navigationPath;
+}
+
+function findPathToTarget(root: CollectionView, targetId: string): CollectionView[] | null {
     if (root.collection_id === targetId) {
         return [root];
     }
@@ -14,11 +98,36 @@ export function findAncestorPath(root: CollectionView, targetId: string): Collec
     }
 
     for (const child of root.children) {
-        const path = findAncestorPath(child, targetId);
+        const path = findPathToTarget(child, targetId);
         if (path) {
             return [root, ...path];
         }
     }
 
     return null;
+}
+
+/**
+ * Builds breadcrumb levels from an ancestor path.
+ * Each level contains the selected node's menu item and all sibling menu items at that depth.
+ */
+export function buildBreadcrumbLevels(
+    ancestorPath: CollectionView[] | null,
+    rootCollection: CollectionView,
+    pageId: string | null,
+    datasetId: string
+): BreadcrumbLevel[] {
+    if (!ancestorPath) return [];
+
+    const toMenuItem = (c: CollectionView): NavigationMenuItem =>
+        getMenuItem(pageId, datasetId, c.collection_id, c.sample_type, c.group_component_name);
+
+    return ancestorPath.map((node, index) => {
+        const siblings = index === 0 ? [rootCollection] : (ancestorPath[index - 1].children ?? []);
+
+        return {
+            selected: toMenuItem(node),
+            siblings: siblings.map((sibling) => toMenuItem(sibling))
+        };
+    });
 }

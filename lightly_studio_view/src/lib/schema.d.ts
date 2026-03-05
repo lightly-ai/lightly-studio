@@ -1337,7 +1337,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/operators/collections/{collection_id}/{operator_id}/execute": {
+    "/api/operators/{operator_id}/execute": {
         parameters: {
             query?: never;
             header?: never;
@@ -1352,8 +1352,7 @@ export interface paths {
          *
          *     Args:
          *         operator_id: The ID of the operator to execute.
-         *         collection_id: The ID of the collection to operate on.
-         *         request: The execution request containing parameters.
+         *         request: The execution request containing parameters and context.
          *         session: Database session.
          *
          *     Returns:
@@ -1718,7 +1717,7 @@ export interface components {
         AdjacentRequest: {
             sample_type: components["schemas"]["SampleType"];
             /** Filters */
-            filters: components["schemas"]["ImageFilter"] | components["schemas"]["VideoFilter"] | components["schemas"]["VideoFrameFilter"] | components["schemas"]["AnnotationsFilter"];
+            filters: components["schemas"]["ImageFilter"] | components["schemas"]["VideoFilter"] | components["schemas"]["VideoFrameAdjacentFilter"] | components["schemas"]["AnnotationsFilter"];
             /** Text Embedding */
             text_embedding?: number[] | null;
         };
@@ -1993,15 +1992,10 @@ export interface components {
              */
             annotation_label_ids?: string[] | null;
             /**
-             * Annotation Tag Ids
+             * Tag Ids
              * @description List of tag UUIDs
              */
-            annotation_tag_ids?: string[] | null;
-            /**
-             * Sample Tag Ids
-             * @description List of sample tag UUIDs to filter annotations by
-             */
-            sample_tag_ids?: string[] | null;
+            tag_ids?: string[] | null;
             /**
              * Sample Ids
              * @description List of sample UUIDs to filter annotations by
@@ -2345,6 +2339,7 @@ export interface components {
         ExecuteOperatorRequest: {
             /** Parameters */
             parameters: Record<string, never>;
+            context: components["schemas"]["OperatorContextRequest"];
         };
         /**
          * ExportBody
@@ -2724,6 +2719,19 @@ export interface components {
             /** Height */
             height: number;
         };
+        /**
+         * OperatorContextRequest
+         * @description Client-supplied execution context for scoped operator calls.
+         */
+        OperatorContextRequest: {
+            /**
+             * Collection Id
+             * Format: uuid
+             */
+            collection_id: string;
+            /** Context Filter */
+            context_filter?: components["schemas"]["ImageFilter"] | components["schemas"]["VideoFrameFilter"] | components["schemas"]["VideoFilter"] | components["schemas"]["AnnotationsFilter"] | components["schemas"]["GroupFilter"] | components["schemas"]["SampleFilter"] | null;
+        };
         /** OperatorResult */
         OperatorResult: {
             /** Success */
@@ -2731,6 +2739,15 @@ export interface components {
             /** Message */
             message: string;
         };
+        /**
+         * OperatorScope
+         * @description Scope in which an operator can be triggered.
+         *
+         *     Operators declare which scopes they support via ``BaseOperator.supported_scopes``.
+         *     The UI uses this to surface operators contextually by media type.
+         * @enum {string}
+         */
+        OperatorScope: "root" | "image" | "video_frame" | "video" | "annotation" | "group" | "caption";
         /**
          * Paginated
          * @description Paginated query parameters.
@@ -2828,6 +2845,8 @@ export interface components {
             operator_id: string;
             /** Name */
             name: string;
+            /** Supported Scopes */
+            supported_scopes?: components["schemas"]["OperatorScope"][];
         };
         /**
          * SampleAnnotationDetailsView
@@ -3266,6 +3285,21 @@ export interface components {
             /** Annotation Frames Label Ids */
             annotation_frames_label_ids?: string[] | null;
             sample_filter?: components["schemas"]["SampleFilter"] | null;
+        };
+        /**
+         * VideoFrameAdjacentFilter
+         * @description Aggregate filters for adjacent video frame lookups.
+         *
+         *     Attributes:
+         *         video_frame_filter: Frame-level filters (required collection_id).
+         *         video_filter: Parent-video filters (required collection_id).
+         *         video_text_embedding: Text embedding to order parent videos; needs video collection_id.
+         */
+        VideoFrameAdjacentFilter: {
+            video_frame_filter: components["schemas"]["VideoFrameFilter"];
+            video_filter?: components["schemas"]["VideoFilter"] | null;
+            /** Video Text Embedding */
+            video_text_embedding?: number[] | null;
         };
         /**
          * VideoFrameAnnotationDetailsView
@@ -3963,7 +3997,9 @@ export interface operations {
     };
     export_collection_annotations: {
         parameters: {
-            query?: never;
+            query?: {
+                annotation_type?: components["schemas"]["AnnotationType"];
+            };
             header?: never;
             path: {
                 collection_id: string;
@@ -5710,7 +5746,6 @@ export interface operations {
             header?: never;
             path: {
                 operator_id: string;
-                collection_id: string;
             };
             cookie?: never;
         };
