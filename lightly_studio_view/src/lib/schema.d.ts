@@ -3986,7 +3986,9 @@ export interface operations {
     };
     export_collection_annotations: {
         parameters: {
-            query?: never;
+            query?: {
+                annotation_type?: components["schemas"]["AnnotationType"];
+            };
             header?: never;
             path: {
                 collection_id: string;

@@ -5,16 +5,17 @@ import { Image, WholeWord, Video, Frame, ComponentIcon, LayoutDashboard } from '
 import type { BreadcrumbLevel, NavigationMenuItem } from './types';
 
 export function getMenuItem(
-    sampleType: SampleType,
     pageId: string | null,
     datasetId: string,
-    collectionType: string,
-    collectionId: string
+    collectionId: string,
+    sampleType: SampleType,
+    groupComponentName?: string | null
 ): NavigationMenuItem {
+    const collectionType = sampleType.toLowerCase();
     switch (sampleType) {
         case SampleType.IMAGE:
             return {
-                title: 'Images',
+                title: groupComponentName || 'Images',
                 id: `samples-${collectionId}`,
                 href: routeHelpers.toSamples(datasetId, collectionType, collectionId),
                 isSelected: pageId === APP_ROUTES.samples || pageId === APP_ROUTES.sampleDetails,
@@ -23,7 +24,7 @@ export function getMenuItem(
 
         case SampleType.VIDEO:
             return {
-                title: 'Videos',
+                title: groupComponentName || 'Videos',
                 id: `videos-${collectionId}`,
                 href: routeHelpers.toVideos(datasetId, collectionType, collectionId),
                 isSelected: pageId === APP_ROUTES.videos || pageId === APP_ROUTES.videoDetails,
@@ -31,7 +32,7 @@ export function getMenuItem(
             };
         case SampleType.VIDEO_FRAME:
             return {
-                title: 'Frames',
+                title: groupComponentName || 'Frames',
                 id: `frames-${collectionId}`,
                 icon: Frame,
                 href: routeHelpers.toFrames(datasetId, collectionType, collectionId),
@@ -39,7 +40,7 @@ export function getMenuItem(
             };
         case SampleType.ANNOTATION:
             return {
-                title: 'Annotations',
+                title: groupComponentName || 'Annotations',
                 id: `annotations-${collectionId}`,
                 icon: ComponentIcon,
                 href: routeHelpers.toAnnotations(datasetId, collectionType, collectionId),
@@ -48,7 +49,7 @@ export function getMenuItem(
             };
         case SampleType.CAPTION:
             return {
-                title: 'Captions',
+                title: groupComponentName || 'Captions',
                 id: `captions-${collectionId}`,
                 href: routeHelpers.toCaptions(datasetId, collectionType, collectionId),
                 isSelected: pageId === APP_ROUTES.captions,
@@ -56,7 +57,7 @@ export function getMenuItem(
             };
         case SampleType.GROUP:
             return {
-                title: 'Groups',
+                title: groupComponentName || 'Groups',
                 id: 'groups',
                 href: routeHelpers.toGroups(datasetId, collectionType, collectionId),
                 isSelected: pageId === APP_ROUTES.groups,
@@ -119,7 +120,7 @@ export function buildBreadcrumbLevels(
     if (!ancestorPath) return [];
 
     const toMenuItem = (c: CollectionView): NavigationMenuItem =>
-        getMenuItem(c.sample_type, pageId, datasetId, c.sample_type.toLowerCase(), c.collection_id);
+        getMenuItem(pageId, datasetId, c.collection_id, c.sample_type, c.group_component_name);
 
     return ancestorPath.map((node, index) => {
         const siblings = index === 0 ? [rootCollection] : (ancestorPath[index - 1].children ?? []);
