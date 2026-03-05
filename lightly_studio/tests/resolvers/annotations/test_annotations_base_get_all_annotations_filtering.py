@@ -7,7 +7,6 @@ from sqlmodel import Session
 from lightly_studio.api.routes.api.validators import Paginated
 from lightly_studio.models.annotation_label import AnnotationLabelTable
 from lightly_studio.models.collection import CollectionTable
-from lightly_studio.models.image import ImageTable
 from lightly_studio.models.tag import TagTable
 from lightly_studio.resolvers import annotation_resolver as annotations_resolver
 from lightly_studio.resolvers.annotations.annotations_filter import (
@@ -89,7 +88,7 @@ def test_filter_by_annotation_tag_ids(
         len(
             annotations_resolver.get_all(
                 db_session,
-                filters=AnnotationsFilter(annotation_tag_ids=[annotation_tags_assigned[0].tag_id]),
+                filters=AnnotationsFilter(tag_ids=[annotation_tags_assigned[0].tag_id]),
             ).annotations
         )
         == 2
@@ -100,7 +99,7 @@ def test_filter_by_annotation_tag_ids(
         len(
             annotations_resolver.get_all(
                 db_session,
-                filters=AnnotationsFilter(annotation_tag_ids=[annotation_tags_assigned[1].tag_id]),
+                filters=AnnotationsFilter(tag_ids=[annotation_tags_assigned[1].tag_id]),
             ).annotations
         )
         == 3
@@ -112,7 +111,7 @@ def test_filter_by_annotation_tag_ids(
             annotations_resolver.get_all(
                 db_session,
                 filters=AnnotationsFilter(
-                    annotation_tag_ids=[
+                    tag_ids=[
                         annotation_tags_assigned[0].tag_id,
                         annotation_tags_assigned[1].tag_id,
                     ]
@@ -121,41 +120,6 @@ def test_filter_by_annotation_tag_ids(
         )
         == 5
     )
-
-
-def test_filter_by_sample_tag_ids(
-    db_session: Session,
-    samples_assigned_with_tags: tuple[list[ImageTable], list[TagTable]],
-    annotations_test_data: None,  # noqa: ARG001
-) -> None:
-    # We have 12 annotations all together
-    annotations_all = annotations_resolver.get_all(
-        db_session,
-        filters=AnnotationsFilter(
-            sample_tag_ids=[
-                sample.sample.tags[0].tag_id for sample in samples_assigned_with_tags[0]
-            ]
-        ),
-    ).annotations
-    assert len(annotations_all) == 12
-
-    # We have 8 annotations for the first tag
-    annotations_tag_0 = annotations_resolver.get_all(
-        db_session,
-        filters=AnnotationsFilter(
-            sample_tag_ids=[samples_assigned_with_tags[0][0].sample.tags[0].tag_id]
-        ),
-    ).annotations
-    assert len(annotations_tag_0) == 8
-
-    # We have 4 annotations for the second tag
-    annotations_tag_1 = annotations_resolver.get_all(
-        db_session,
-        filters=AnnotationsFilter(
-            sample_tag_ids=[samples_assigned_with_tags[0][1].sample.tags[0].tag_id]
-        ),
-    ).annotations
-    assert len(annotations_tag_1) == 4
 
 
 def test_annotations_pagination_without_filters(

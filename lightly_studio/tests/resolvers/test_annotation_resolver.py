@@ -620,7 +620,7 @@ def test_get_all__with_tag_filtering(test_db: Session) -> None:
         session=test_db,
         filters=AnnotationsFilter(
             collection_ids=[collection.children[0].collection_id],
-            annotation_tag_ids=[tag_1.tag_id],
+            tag_ids=[tag_1.tag_id],
         ),
     ).annotations
     assert len(annotations_part1) == int(total_annos / 2)
@@ -633,7 +633,7 @@ def test_get_all__with_tag_filtering(test_db: Session) -> None:
         session=test_db,
         filters=AnnotationsFilter(
             collection_ids=[collection.children[0].collection_id],
-            annotation_tag_ids=[tag_2.tag_id],
+            tag_ids=[tag_2.tag_id],
         ),
     ).annotations
     assert len(annotations_part2) == int(total_annos / 2)
@@ -647,7 +647,7 @@ def test_get_all__with_tag_filtering(test_db: Session) -> None:
         session=test_db,
         filters=AnnotationsFilter(
             collection_ids=[collection.children[0].collection_id],
-            annotation_tag_ids=[tag_1.tag_id, tag_2.tag_id],
+            tag_ids=[tag_1.tag_id, tag_2.tag_id],
         ),
     ).annotations
     assert len(annotations_all) == total_annos
