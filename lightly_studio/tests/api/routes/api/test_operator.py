@@ -17,7 +17,7 @@ from lightly_studio.api.routes.api.status import (
     HTTP_STATUS_UNPROCESSABLE_ENTITY,
 )
 from lightly_studio.models.collection import SampleType
-from lightly_studio.plugins.base_operator import BaseOperator, OperatorResult
+from lightly_studio.plugins.base_operator import BaseOperator, OperatorResult, OperatorStatus
 from lightly_studio.plugins.operator_context import ExecutionContext, OperatorScope
 from lightly_studio.plugins.operator_registry import OperatorRegistry
 from lightly_studio.plugins.parameter import BaseParameter, BoolParameter, StringParameter
@@ -169,6 +169,28 @@ def _get_operator_id_by_name(registry: OperatorRegistry, target_name: str) -> st
         if metadata.name == target_name:
             return metadata.operator_id
     raise AssertionError(f"Operator named '{target_name}' not found in registry metadata.")
+
+
+def test_execute_operator__operator_not_ready(
+    test_client: TestClient,
+    collection_id: UUID,
+    isolated_operator_registry: OperatorRegistry,
+) -> None:
+    operator = TestOperator(name="not-ready")
+    operator.status = OperatorStatus.PENDING
+    isolated_operator_registry.register(operator)
+    operator_id = _get_operator_id_by_name(isolated_operator_registry, "not-ready")
+
+    response = test_client.post(
+        f"/api/operators/{operator_id}/execute",
+        json={"parameters": {}, "context": {"collection_id": str(collection_id)}},
+    )
+
+    assert response.status_code == HTTP_STATUS_OK
+    expected_message = (
+        f"Operator '{operator_id}' is not ready (status: {OperatorStatus.PENDING.value})"
+    )
+    assert response.json() == {"success": False, "message": expected_message}
 
 
 def test_execute_operator__context_collection_not_found(

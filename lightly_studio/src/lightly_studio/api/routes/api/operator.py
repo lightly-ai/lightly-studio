@@ -14,7 +14,7 @@ from lightly_studio.api.routes.api.status import (
 )
 from lightly_studio.db_manager import SessionDep
 from lightly_studio.plugins import operator_context
-from lightly_studio.plugins.base_operator import OperatorResult
+from lightly_studio.plugins.base_operator import OperatorResult, OperatorStatus
 from lightly_studio.plugins.operator_context import AnyFilter, ExecutionContext
 from lightly_studio.plugins.operator_registry import RegisteredOperatorMetadata, operator_registry
 from lightly_studio.plugins.parameter import BaseParameter
@@ -80,6 +80,12 @@ def execute_operator(
         raise HTTPException(
             status_code=HTTP_STATUS_NOT_FOUND,
             detail=f"Operator '{operator_id}' not found",
+        )
+
+    if operator.status != OperatorStatus.READY:
+        return OperatorResult(
+            success=False,
+            message=f"Operator '{operator_id}' is not ready (status: {operator.status.value})",
         )
 
     context = request.context
