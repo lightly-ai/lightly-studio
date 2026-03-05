@@ -4,43 +4,43 @@ import { multipleAnnotationsSample, bearSamples, cocoDataset } from '../fixtures
 
 type BoundingBox = { x: number; y: number; width: number; height: number };
 
-const hasBoxStrokeAtCoordinates = async (
-    canvas: Locator,
-    { x, y, width, height }: BoundingBox
-) => {
-    return await canvas.evaluate((element, box) => {
-        const canvasElement = element as HTMLCanvasElement;
-        const context = canvasElement.getContext('2d');
+const hasBoxStrokeAtCoordinates = async (canvas: Locator, { x, y, width, height }: BoundingBox) => {
+    return await canvas.evaluate(
+        (element, box) => {
+            const canvasElement = element as HTMLCanvasElement;
+            const context = canvasElement.getContext('2d');
 
-        if (!context) {
-            return false;
-        }
-
-        const maxX = canvasElement.width - 1;
-        const maxY = canvasElement.height - 1;
-
-        const hasInkNearPoint = (pointX: number, pointY: number) => {
-            for (let deltaX = -1; deltaX <= 1; deltaX++) {
-                for (let deltaY = -1; deltaY <= 1; deltaY++) {
-                    const sampleX = Math.min(maxX, Math.max(0, Math.round(pointX + deltaX)));
-                    const sampleY = Math.min(maxY, Math.max(0, Math.round(pointY + deltaY)));
-                    const alpha = context.getImageData(sampleX, sampleY, 1, 1).data[3];
-                    if (alpha > 0) {
-                        return true;
-                    }
-                }
+            if (!context) {
+                return false;
             }
 
-            return false;
-        };
+            const maxX = canvasElement.width - 1;
+            const maxY = canvasElement.height - 1;
 
-        return [
-            [box.x, box.y],
-            [box.x + box.width, box.y],
-            [box.x, box.y + box.height],
-            [box.x + box.width, box.y + box.height]
-        ].every(([pointX, pointY]) => hasInkNearPoint(pointX, pointY));
-    }, { x, y, width, height });
+            const hasInkNearPoint = (pointX: number, pointY: number) => {
+                for (let deltaX = -1; deltaX <= 1; deltaX++) {
+                    for (let deltaY = -1; deltaY <= 1; deltaY++) {
+                        const sampleX = Math.min(maxX, Math.max(0, Math.round(pointX + deltaX)));
+                        const sampleY = Math.min(maxY, Math.max(0, Math.round(pointY + deltaY)));
+                        const alpha = context.getImageData(sampleX, sampleY, 1, 1).data[3];
+                        if (alpha > 0) {
+                            return true;
+                        }
+                    }
+                }
+
+                return false;
+            };
+
+            return [
+                [box.x, box.y],
+                [box.x + box.width, box.y],
+                [box.x, box.y + box.height],
+                [box.x + box.width, box.y + box.height]
+            ].every(([pointX, pointY]) => hasInkNearPoint(pointX, pointY));
+        },
+        { x, y, width, height }
+    );
 };
 
 const expectBoxCoordinates = async (
