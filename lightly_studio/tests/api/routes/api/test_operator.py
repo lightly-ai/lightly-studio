@@ -14,7 +14,6 @@ import lightly_studio.plugins.operator_registry as operator_registry_module
 from lightly_studio.api.routes.api.status import (
     HTTP_STATUS_NOT_FOUND,
     HTTP_STATUS_OK,
-    HTTP_STATUS_UNPROCESSABLE_ENTITY,
 )
 from lightly_studio.models.collection import SampleType
 from lightly_studio.plugins.base_operator import BaseOperator, OperatorResult
@@ -192,7 +191,7 @@ def test_execute_operator__scope_mismatch(
     db_session: Session,
     isolated_operator_registry: OperatorRegistry,
 ) -> None:
-    """An operator that doesn't support the collection's scope returns 422."""
+    """An operator that doesn't support the collection's scope returns success=False."""
     isolated_operator_registry.register(ImageScopeOperator())
     operator_id = _get_operator_id_by_name(isolated_operator_registry, "image-only")
     video_collection = helpers_resolvers.create_collection(
@@ -204,7 +203,10 @@ def test_execute_operator__scope_mismatch(
         json={"parameters": {}, "context": {"collection_id": str(video_collection.collection_id)}},
     )
 
-    assert response.status_code == HTTP_STATUS_UNPROCESSABLE_ENTITY
+    response_payload = response.json()
+    assert response.status_code == HTTP_STATUS_OK
+    assert response_payload["success"] is False
+    assert "image-only" in response_payload["message"]
 
 
 def test_execute_operator__filter_is_passed_through(
