@@ -142,14 +142,14 @@ describe.each<{
 
     it('should render when items are selected', () => {
         renderComponent(defaultProps[gridType]);
-        expect(screen.getByText(`Create new Tags`)).toBeInTheDocument();
+        expect(screen.getByText(`Tag selected items`)).toBeInTheDocument();
     });
 
     it('should filter tags based on search input', async () => {
         renderComponent(defaultProps[gridType]);
 
         // Open dialog
-        await fireEvent.click(screen.getByText(`Create new Tags`));
+        await fireEvent.click(screen.getByText(`Tag selected items`));
 
         // Type in search
         const searchInput = screen.getByPlaceholderText('Create or search tags');
@@ -164,7 +164,7 @@ describe.each<{
         renderComponent(defaultProps[gridType]);
 
         // Open dialog
-        await fireEvent.click(screen.getByText(`Create new Tags`));
+        await fireEvent.click(screen.getByText(`Tag selected items`));
 
         // Select a tag
         const checkbox = screen.getByText('Test Tag 1');
@@ -178,7 +178,7 @@ describe.each<{
         renderComponent(defaultProps[gridType]);
 
         // Open dialog
-        await fireEvent.click(screen.getByText(`Create new Tags`));
+        await fireEvent.click(screen.getByText(`Tag selected items`));
 
         // Type new tag name
         const searchInput = screen.getByPlaceholderText('Create or search tags');
@@ -205,7 +205,7 @@ describe.each<{
         renderComponent(defaultProps[gridType]);
 
         // Open dialog
-        await fireEvent.click(screen.getByText(`Create new Tags`));
+        await fireEvent.click(screen.getByText(`Tag selected items`));
 
         // Create new tag
         const searchInput = screen.getByPlaceholderText('Create or search tags');
@@ -251,7 +251,7 @@ describe.each<{
         renderComponent(defaultProps[gridType]);
 
         // Open dialog and create tag
-        await fireEvent.click(screen.getByText(`Create new Tags`));
+        await fireEvent.click(screen.getByText(`Tag selected items`));
         await fireEvent.input(screen.getByPlaceholderText('Create or search tags'), {
             target: { value: 'New Tag' }
         });
