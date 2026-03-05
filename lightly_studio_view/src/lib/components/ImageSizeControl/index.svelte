@@ -27,7 +27,7 @@
     }
 </script>
 
-<div class="mx-auto flex max-w-56 items-center space-x-2 text-diffuse-foreground">
+<div class="flex w-48 shrink-0 items-center space-x-2 text-diffuse-foreground">
     <button
         onclick={zoomOut}
         disabled={width >= max}
