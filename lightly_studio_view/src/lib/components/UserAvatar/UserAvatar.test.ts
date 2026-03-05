@@ -6,7 +6,7 @@ describe('UserAvatar', () => {
     const mockUser = {
         username: 'admin',
         email: 'admin@example.com',
-        role: 'admin'
+        role: 'admin' as const
     };
 
     it('should render avatar button with user initial', () => {
