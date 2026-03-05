@@ -1,9 +1,12 @@
 from __future__ import annotations
 
+import uuid
+
 import pytest
 from sqlmodel import Session
 
 from lightly_studio.models.collection import CollectionCreate, SampleType
+from lightly_studio.models.dataset import DatasetTable
 from lightly_studio.resolvers import collection_resolver
 
 
@@ -13,6 +16,12 @@ def test_create(db_session: Session) -> None:
         collection=CollectionCreate(name="my_collection", sample_type=SampleType.IMAGE),
     )
     assert ds.name == "my_collection"
+    assert ds.dataset_id is not None
+
+    # Check that the dataset record was created and links to the root collection
+    db_dataset = db_session.get(DatasetTable, ds.dataset_id)
+    assert db_dataset is not None
+    assert db_dataset.root_collection_id == ds.collection_id
 
     # Creating a collection with the same name should raise an error.
     with pytest.raises(ValueError, match="Collection with name 'my_collection' already exists."):
@@ -100,3 +109,23 @@ def test_create__root_collections_with_same_name_fails(db_session: Session) -> N
             session=db_session,
             collection=CollectionCreate(name="root", sample_type=SampleType.IMAGE),
         )
+
+
+def test_create__with_existing_dataset_id(db_session: Session) -> None:
+    # Pre-create a dataset
+    dataset_id = uuid.uuid4()
+    db_dataset = DatasetTable(dataset_id=dataset_id)
+    db_session.add(db_dataset)
+    db_session.commit()
+
+    # create should not take dataset_id, it should create one or inherit it.
+    collection = collection_resolver.create(
+        session=db_session,
+        collection=CollectionCreate(
+            name="new_root",
+            sample_type=SampleType.IMAGE,
+        ),
+    )
+
+    assert collection.dataset_id != dataset_id
+    assert collection.dataset_id is not None

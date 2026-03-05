@@ -28,6 +28,7 @@ class CollectionBase(SQLModel):
         UniqueConstraint("name", "parent_collection_id", name="unique_collection"),
     )
     name: str = Field(index=True)
+    dataset_id: UUID = Field(index=True, foreign_key="dataset.dataset_id")
     parent_collection_id: Optional[UUID] = Field(
         default=None, foreign_key="collection.collection_id"
     )
@@ -38,8 +39,16 @@ class CollectionBase(SQLModel):
     group_component_index: Optional[int] = None
 
 
-class CollectionCreate(CollectionBase):
+class CollectionCreate(SQLModel):
     """Collection class when inserting."""
+
+    name: str
+    parent_collection_id: Optional[UUID] = None
+    sample_type: SampleType
+
+    # Group-specific fields
+    group_component_name: Optional[str] = None
+    group_component_index: Optional[int] = None
 
 
 class CollectionView(CollectionBase):
@@ -61,7 +70,9 @@ class ComponentCollectionView(CollectionBase):
     def from_collection_table(cls, collection: "CollectionTable") -> "ComponentCollectionView":
         """Create a ComponentCollectionView from a CollectionTable."""
         return cls(
+            collection_id=collection.collection_id,
             name=collection.name,
+            dataset_id=collection.dataset_id,
             parent_collection_id=collection.parent_collection_id,
             sample_type=collection.sample_type,
             group_component_name=collection.group_component_name or "",
@@ -101,3 +112,4 @@ class CollectionTable(CollectionBase, table=True):
         back_populates="parent",
         sa_relationship_kwargs={"lazy": "select"},
     )
+    # TODO(lukas 3/2026): add a relathinship to DatasetTable

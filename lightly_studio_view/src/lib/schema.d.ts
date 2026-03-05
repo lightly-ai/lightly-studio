@@ -2161,6 +2161,11 @@ export interface components {
         CollectionTable: {
             /** Name */
             name: string;
+            /**
+             * Dataset Id
+             * Format: uuid
+             */
+            dataset_id: string;
             /** Parent Collection Id */
             parent_collection_id?: string | null;
             sample_type: components["schemas"]["SampleType"];
@@ -2191,6 +2196,11 @@ export interface components {
         CollectionView: {
             /** Name */
             name: string;
+            /**
+             * Dataset Id
+             * Format: uuid
+             */
+            dataset_id: string;
             /** Parent Collection Id */
             parent_collection_id?: string | null;
             sample_type: components["schemas"]["SampleType"];
@@ -2226,6 +2236,11 @@ export interface components {
         CollectionViewWithCount: {
             /** Name */
             name: string;
+            /**
+             * Dataset Id
+             * Format: uuid
+             */
+            dataset_id: string;
             /** Parent Collection Id */
             parent_collection_id?: string | null;
             sample_type: components["schemas"]["SampleType"];
@@ -2263,6 +2278,11 @@ export interface components {
         ComponentCollectionView: {
             /** Name */
             name: string;
+            /**
+             * Dataset Id
+             * Format: uuid
+             */
+            dataset_id: string;
             /** Parent Collection Id */
             parent_collection_id?: string | null;
             sample_type: components["schemas"]["SampleType"];
@@ -3384,6 +3404,7 @@ export interface components {
             /** Annotation Frames Label Ids */
             annotation_frames_label_ids?: string[] | null;
             sample_filter?: components["schemas"]["SampleFilter"] | null;
+            annotation_filter?: components["schemas"]["AnnotationsFilter"] | null;
         };
         /**
          * VideoFrameAdjacentFilter
