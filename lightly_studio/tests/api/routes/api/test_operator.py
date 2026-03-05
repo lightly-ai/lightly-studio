@@ -139,6 +139,28 @@ def test_execute_operator__operator_not_found(
     assert response.json() == {"detail": "Operator 'missing' not found"}
 
 
+def test_execute_operator__operator_not_ready(
+    test_client: TestClient,
+    collection_id: UUID,
+    isolated_operator_registry: OperatorRegistry,
+) -> None:
+    operator = TestOperator(name="not-ready")
+    operator.status = OperatorStatus.PENDING
+    isolated_operator_registry.register(operator)
+    operator_id = _get_operator_id_by_name(isolated_operator_registry, "not-ready")
+
+    response = test_client.post(
+        f"/api/operators/{operator_id}/execute",
+        json={"parameters": {}, "context": {"collection_id": str(collection_id)}},
+    )
+
+    assert response.status_code == HTTP_STATUS_OK
+    expected_message = (
+        f"Operator '{operator_id}' is not ready (status: {OperatorStatus.PENDING.value})"
+    )
+    assert response.json() == {"success": False, "message": expected_message}
+
+
 def test_execute_operator__successful(
     test_client: TestClient,
     db_session: Session,
@@ -169,28 +191,6 @@ def _get_operator_id_by_name(registry: OperatorRegistry, target_name: str) -> st
         if metadata.name == target_name:
             return metadata.operator_id
     raise AssertionError(f"Operator named '{target_name}' not found in registry metadata.")
-
-
-def test_execute_operator__operator_not_ready(
-    test_client: TestClient,
-    collection_id: UUID,
-    isolated_operator_registry: OperatorRegistry,
-) -> None:
-    operator = TestOperator(name="not-ready")
-    operator.status = OperatorStatus.PENDING
-    isolated_operator_registry.register(operator)
-    operator_id = _get_operator_id_by_name(isolated_operator_registry, "not-ready")
-
-    response = test_client.post(
-        f"/api/operators/{operator_id}/execute",
-        json={"parameters": {}, "context": {"collection_id": str(collection_id)}},
-    )
-
-    assert response.status_code == HTTP_STATUS_OK
-    expected_message = (
-        f"Operator '{operator_id}' is not ready (status: {OperatorStatus.PENDING.value})"
-    )
-    assert response.json() == {"success": False, "message": expected_message}
 
 
 def test_execute_operator__context_collection_not_found(
@@ -261,6 +261,7 @@ def test_execute_operator__filter_is_passed_through(
 class TestOperator(BaseOperator):
     name: str = "test operator"
     description: str = "used to test the operator and registry system"
+    status: OperatorStatus = OperatorStatus.READY
 
     @property
     def parameters(self) -> list[BaseParameter]:
@@ -302,6 +303,7 @@ class TestOperator(BaseOperator):
 
 
 class EmptyParamsOperator(TestOperator):
+    status: OperatorStatus = OperatorStatus.READY
     @property
     def parameters(self) -> list[BaseParameter]:
         return []
@@ -314,6 +316,7 @@ class ImageScopeOperator(BaseOperator):
     name: str = "image-only"
     description: str = "supports only image scope"
     captured_context: ExecutionContext | None = None
+    status: OperatorStatus = OperatorStatus.READY
 
     @property
     def parameters(self) -> list[BaseParameter]:
