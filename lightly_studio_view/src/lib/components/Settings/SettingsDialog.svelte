@@ -346,7 +346,7 @@
                                 disabled={true}
                                 class="rounded-md border border-input bg-background p-2 text-left text-foreground"
                             >
-                                 <span>Alt + scroll</span>
+                                <span>Alt + scroll</span>
                             </button>
                         </div>
                     </div>

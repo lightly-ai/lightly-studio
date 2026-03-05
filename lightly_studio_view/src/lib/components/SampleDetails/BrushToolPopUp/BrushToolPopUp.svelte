@@ -32,7 +32,7 @@
     const onKeyDown = (event: KeyboardEvent) => {
         const target = event.target as HTMLElement;
         if (target?.isContentEditable || isInputElement(target)) return;
-        console.log($settingsStore.key_toolbar_eraser);
+
         const key = normalizeShortcut(event.key);
         const brushShortcut = normalizeShortcut($settingsStore.key_toolbar_brush || 'r');
         const eraserShortcut = normalizeShortcut($settingsStore.key_toolbar_eraser || 'x');
