@@ -74,43 +74,6 @@ def test_export_collection_annotations(
     assert response.headers["Content-Disposition"] == "attachment; filename=coco_export.json"
 
 
-def test_export_collection_captions(
-    db_session: Session,
-    test_client: TestClient,
-) -> None:
-    # Create a single sample with a single annotation.
-    collection = create_collection(session=db_session)
-    image = create_image(
-        session=db_session,
-        collection_id=collection.collection_id,
-        file_path_abs="img1.jpg",
-        width=100,
-        height=100,
-    )
-    create_caption(
-        session=db_session,
-        collection_id=collection.collection_id,
-        parent_sample_id=image.sample_id,
-        text="test caption",
-    )
-
-    # Call the API.
-    response = test_client.get(f"/api/collections/{collection.collection_id}/export/captions")
-
-    # Check the response.
-    assert response.status_code == HTTP_STATUS_OK
-    content = json.loads(response.content)
-    assert content == {
-        "images": [{"id": 0, "file_name": "img1.jpg", "width": 100, "height": 100}],
-        "annotations": [{"id": 0, "image_id": 0, "caption": "test caption"}],
-    }
-
-    # Check the export file name. Quotes are intentionally omitted.
-    assert (
-        response.headers["Content-Disposition"] == "attachment; filename=coco_captions_export.json"
-    )
-
-
 def test_export_collection_instance_segmentations(
     db_session: Session,
     test_client: TestClient,
@@ -145,7 +108,8 @@ def test_export_collection_instance_segmentations(
     )
 
     response = test_client.get(
-        f"/api/collections/{collection.collection_id}/export/instance-segmentations"
+        f"/api/collections/{collection.collection_id}/export/annotations",
+        params={"annotation_type": "instance_segmentation"},
     )
 
     assert response.status_code == HTTP_STATUS_OK
@@ -167,6 +131,43 @@ def test_export_collection_instance_segmentations(
     assert (
         response.headers["Content-Disposition"]
         == "attachment; filename=coco_instance_segmentation_export.json"
+    )
+
+
+def test_export_collection_captions(
+    db_session: Session,
+    test_client: TestClient,
+) -> None:
+    # Create a single sample with a single annotation.
+    collection = create_collection(session=db_session)
+    image = create_image(
+        session=db_session,
+        collection_id=collection.collection_id,
+        file_path_abs="img1.jpg",
+        width=100,
+        height=100,
+    )
+    create_caption(
+        session=db_session,
+        collection_id=collection.collection_id,
+        parent_sample_id=image.sample_id,
+        text="test caption",
+    )
+
+    # Call the API.
+    response = test_client.get(f"/api/collections/{collection.collection_id}/export/captions")
+
+    # Check the response.
+    assert response.status_code == HTTP_STATUS_OK
+    content = json.loads(response.content)
+    assert content == {
+        "images": [{"id": 0, "file_name": "img1.jpg", "width": 100, "height": 100}],
+        "annotations": [{"id": 0, "image_id": 0, "caption": "test caption"}],
+    }
+
+    # Check the export file name. Quotes are intentionally omitted.
+    assert (
+        response.headers["Content-Disposition"] == "attachment; filename=coco_captions_export.json"
     )
 
 
