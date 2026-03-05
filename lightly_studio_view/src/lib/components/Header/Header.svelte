@@ -14,6 +14,7 @@
     import { useCollectionWithChildren } from '$lib/hooks/useCollection/useCollection';
     import UserAvatar from '$lib/components/UserAvatar/UserAvatar.svelte';
     import useAuth from '$lib/hooks/useAuth/useAuth';
+    import { hasMinimumRole } from '$lib/hooks/useAuth/hasMinimumRole';
 
     let { collection }: { collection: CollectionView } = $props();
 
@@ -75,41 +76,43 @@
                 {/if}
             </div>
             <div class="flex flex-auto justify-end gap-2">
-                <Menu {isSamples} {isVideos} {hasEmbeddings} {collection} />
-                {#if $isEditingMode}
-                    <Button
-                        data-testid="header-reverse-action-button"
-                        variant="outline"
-                        class="nav-button flex items-center space-x-2"
-                        title={$reversibleActions[0]
-                            ? $reversibleActions[0].description
-                            : 'No action to undo'}
-                        disabled={$reversibleActions.length === 0}
-                        onclick={executeUndoAction}
-                    >
-                        <Undo2 class="size-4" />
-                        <span>Undo</span>
-                    </Button>
-                    <Button
-                        data-testid="header-editing-mode-button"
-                        class="nav-button flex items-center space-x-2"
-                        onclick={() => setIsEditingMode(false)}
-                        title="Finish Editing"
-                    >
-                        <Check class="size-4" />
-                        <span>Finish Editing</span>
-                    </Button>
-                {:else}
-                    <Button
-                        data-testid="header-editing-mode-button"
-                        variant="outline"
-                        class="nav-button flex items-center space-x-2"
-                        onclick={() => setIsEditingMode(true)}
-                        title="Edit Annotations"
-                    >
-                        <Pencil class="size-4" />
-                        <span>Edit Annotations</span>
-                    </Button>
+                <Menu {isSamples} {isVideos} {hasEmbeddings} {collection} {user} />
+                {#if hasMinimumRole(user?.role, 'labeler')}
+                    {#if $isEditingMode}
+                        <Button
+                            data-testid="header-reverse-action-button"
+                            variant="outline"
+                            class="nav-button flex items-center space-x-2"
+                            title={$reversibleActions[0]
+                                ? $reversibleActions[0].description
+                                : 'No action to undo'}
+                            disabled={$reversibleActions.length === 0}
+                            onclick={executeUndoAction}
+                        >
+                            <Undo2 class="size-4" />
+                            <span>Undo</span>
+                        </Button>
+                        <Button
+                            data-testid="header-editing-mode-button"
+                            class="nav-button flex items-center space-x-2"
+                            onclick={() => setIsEditingMode(false)}
+                            title="Finish Editing"
+                        >
+                            <Check class="size-4" />
+                            <span>Finish Editing</span>
+                        </Button>
+                    {:else}
+                        <Button
+                            data-testid="header-editing-mode-button"
+                            variant="outline"
+                            class="nav-button flex items-center space-x-2"
+                            onclick={() => setIsEditingMode(true)}
+                            title="Edit Annotations"
+                        >
+                            <Pencil class="size-4" />
+                            <span>Edit Annotations</span>
+                        </Button>
+                    {/if}
                 {/if}
                 {#if user}
                     <div data-testid="header-user-avatar">
