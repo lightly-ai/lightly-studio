@@ -2,6 +2,8 @@
     import { useGlobalStorage } from '$lib/hooks/useGlobalStorage';
     import type { Snippet } from 'svelte';
     import SelectableBox from '../SelectableBox/SelectableBox.svelte';
+    import useAuth from '$lib/hooks/useAuth/useAuth';
+    import { hasMinimumRole } from '$lib/hooks/useAuth/hasMinimumRole';
 
     type SampleGridItemProps = {
         style?: string;
@@ -27,6 +29,7 @@
         item
     }: SampleGridItemProps = $props();
 
+    const { user } = useAuth();
     const { getSelectedSampleIds, toggleSampleSelection } = useGlobalStorage();
 
     const selectedSampleIds = getSelectedSampleIds(collectionId);
@@ -67,9 +70,14 @@
     role="button"
     tabindex="0"
 >
-    <div class="absolute right-7 top-1 z-10">
-        <SelectableBox onSelect={() => undefined} isSelected={$selectedSampleIds.has(sampleId)} />
-    </div>
+    {#if hasMinimumRole(user?.role, 'labeler')}
+        <div class="absolute right-7 top-1 z-10">
+            <SelectableBox
+                onSelect={() => undefined}
+                isSelected={$selectedSampleIds.has(sampleId)}
+            />
+        </div>
+    {/if}
 
     <div
         class="relative overflow-hidden rounded-lg"
