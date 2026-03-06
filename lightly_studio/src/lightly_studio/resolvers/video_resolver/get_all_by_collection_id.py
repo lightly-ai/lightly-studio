@@ -13,6 +13,7 @@ from sqlmodel import Session, col, func, select
 
 from lightly_studio.api.routes.api.frame import build_frame_view
 from lightly_studio.api.routes.api.validators import Paginated
+from lightly_studio.models.annotation.annotation_base import AnnotationBaseTable
 from lightly_studio.models.sample import SampleTable, SampleView
 from lightly_studio.models.video import (
     VideoFrameTable,
@@ -36,6 +37,12 @@ def _get_load_options() -> list[LoaderOption]:
             # Ignore type checker error - false positive from TYPE_CHECKING.
             joinedload(SampleTable.metadata_dict),  # type: ignore[arg-type]
             selectinload(SampleTable.captions),
+            selectinload(SampleTable.annotations).options(
+                joinedload(AnnotationBaseTable.annotation_label),
+                joinedload(AnnotationBaseTable.object_detection_details),
+                joinedload(AnnotationBaseTable.segmentation_details),
+                selectinload(AnnotationBaseTable.sample).options(selectinload(SampleTable.tags)),
+            ),
         ),
         selectinload(VideoTable.sample).options(
             joinedload(SampleTable.tags),
