@@ -2,7 +2,7 @@
     import { PUBLIC_VIDEOS_FRAMES_MEDIA_URL, PUBLIC_VIDEOS_MEDIA_URL } from '$env/static/public';
     import type { FrameView, VideoFrameView, VideoView } from '$lib/api/lightly_studio_local';
     import { findFrame } from '$lib/utils/frame';
-    import { onMount } from 'svelte';
+    import { onDestroy, onMount } from 'svelte';
 
     interface VideoProps {
         video: VideoView;
@@ -13,6 +13,7 @@
         muted?: boolean;
         playsinline?: boolean;
         preload?: 'auto' | 'metadata' | 'none';
+        active?: boolean;
         className?: string;
         handleMouseEnter?: (event: MouseEvent) => void;
         handleMouseLeave?: (event: MouseEvent) => void;
@@ -29,6 +30,7 @@
         playsinline = true,
         controls = false,
         preload = 'metadata',
+        active = true,
         className = '',
         handleMouseEnter = () => {},
         handleMouseLeave = () => {},
@@ -37,9 +39,24 @@
     }: VideoProps = $props();
 
     let previousIndex: number | null = null;
+    let frameLoopId: number | null = null;
 
     onMount(() => {
         startFrameLoop();
+    });
+
+    onDestroy(() => {
+        if (frameLoopId !== null) {
+            cancelAnimationFrame(frameLoopId);
+        }
+    });
+
+    $effect(() => {
+        if (active || !videoEl) return;
+
+        videoEl.pause();
+        videoEl.removeAttribute('src');
+        videoEl.load();
     });
 
     function startFrameLoop() {
@@ -52,15 +69,23 @@
                 previousIndex = index;
             }
 
-            requestAnimationFrame(tick);
+            frameLoopId = requestAnimationFrame(tick);
         }
-        requestAnimationFrame(tick);
+        frameLoopId = requestAnimationFrame(tick);
+    }
+
+    function handlePlay() {
+        onplay();
+    }
+
+    function handleSeeked(event: Event) {
+        onseeked(event);
     }
 </script>
 
 <video
     bind:this={videoEl}
-    src={`${PUBLIC_VIDEOS_MEDIA_URL}/${video.sample_id}`}
+    src={active ? `${PUBLIC_VIDEOS_MEDIA_URL}/${video.sample_id}` : undefined}
     {muted}
     {playsinline}
     {preload}
@@ -68,8 +93,8 @@
     class={className}
     onmouseenter={handleMouseEnter}
     onmouseleave={handleMouseLeave}
-    {onplay}
-    {onseeked}
+    onplay={handlePlay}
+    onseeked={handleSeeked}
     poster={frames.length > 0
         ? `${PUBLIC_VIDEOS_FRAMES_MEDIA_URL}/${frames[0].sample_id}?compressed=true`
         : null}
