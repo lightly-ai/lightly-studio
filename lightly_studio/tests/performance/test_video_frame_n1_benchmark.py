@@ -42,13 +42,21 @@ from sqlmodel import Session, SQLModel, create_engine
 
 from lightly_studio.api.routes.api.validators import Paginated
 from lightly_studio.models.collection import SampleType
-from lightly_studio.resolvers import video_frame_resolver
+from lightly_studio.models.video import VideoCreate, VideoFrameCreate
+from lightly_studio.resolvers import collection_resolver, video_frame_resolver, video_resolver
 from tests.helpers_resolvers import create_collection
 from tests.resolvers.video.helpers import VideoStub, create_video_with_frames
 
 NUM_VIDEOS = 20
 FRAMES_PER_VIDEO = 5
 TOTAL_FRAMES = NUM_VIDEOS * FRAMES_PER_VIDEO
+
+# 100k-frame benchmark constants
+NUM_VIDEOS_LARGE = 1_000
+FRAMES_PER_VIDEO_LARGE = 100
+TOTAL_FRAMES_LARGE = NUM_VIDEOS_LARGE * FRAMES_PER_VIDEO_LARGE  # 100_000
+PAGE_SIZE_LARGE = 100  # maximum enforced by the Paginated validator
+MAX_QUERY_DURATION_S = 5.0  # ~50 ms observed on in-memory DuckDB; 100x safety margin for CI
 
 
 @pytest.fixture
@@ -134,4 +142,90 @@ def test_video_frame_n1_benchmark(
         f"(threshold < {NUM_VIDEOS}). "
         f"Wall-clock time: {elapsed_s:.3f}s. "
         "Ensure selectinload(VideoFrameTable.video) is in _get_load_options()."
+    )
+
+
+@pytest.mark.slow
+def test_video_frame_duration_100k(
+    benchmark_session: tuple[Session, Any],
+) -> None:
+    """Measure wall-clock query duration with 100k video frames.
+
+    The test:
+    1. Bulk-inserts 1 000 distinct videos and 100 frames per video (100 000 frames
+       total) using a single ``create_many`` call each - no per-row round-trips.
+    2. Runs ``get_all_by_collection_id`` for the first page of 100 frames (the
+       maximum enforced by the ``Paginated`` validator), which also executes the
+       ``SELECT COUNT(*)`` subquery over all 100 000 rows.
+    3. Asserts that the full call completes within ``MAX_QUERY_DURATION_S`` seconds.
+
+    This benchmark exists to catch performance regressions at realistic dataset
+    sizes and to demonstrate that the eager-load fix scales to 100k+ frames.
+    """
+    session, _engine = benchmark_session
+
+    # ------------------------------------------------------------------ setup
+    collection = create_collection(session=session, sample_type=SampleType.VIDEO)
+    collection_id = collection.collection_id
+
+    # Bulk-create all videos in a single round-trip.
+    _fps = 1.0
+    video_ids = video_resolver.create_many(
+        session=session,
+        collection_id=collection_id,
+        samples=[
+            VideoCreate(
+                file_path_abs=f"/videos/clip_{i:04d}.mp4",
+                file_name=f"clip_{i:04d}.mp4",
+                width=640,
+                height=480,
+                duration_s=float(FRAMES_PER_VIDEO_LARGE) / _fps,
+                fps=_fps,
+            )
+            for i in range(NUM_VIDEOS_LARGE)
+        ],
+    )
+
+    video_frames_collection_id = collection_resolver.get_or_create_child_collection(
+        session=session,
+        collection_id=collection_id,
+        sample_type=SampleType.VIDEO_FRAME,
+    )
+
+    # Bulk-create all 100k frames in a single round-trip.
+    video_frame_resolver.create_many(
+        session=session,
+        collection_id=video_frames_collection_id,
+        samples=[
+            VideoFrameCreate(
+                frame_number=j,
+                frame_timestamp_s=float(j),
+                frame_timestamp_pts=j,
+                parent_sample_id=video_ids[i],
+            )
+            for i in range(NUM_VIDEOS_LARGE)
+            for j in range(FRAMES_PER_VIDEO_LARGE)
+        ],
+    )
+
+    # ------------------------------------------------------------------ measure
+    start = time.perf_counter()
+    result = video_frame_resolver.get_all_by_collection_id(
+        session=session,
+        collection_id=video_frames_collection_id,
+        pagination=Paginated(offset=0, limit=PAGE_SIZE_LARGE),
+    )
+    elapsed_s = time.perf_counter() - start
+
+    # ------------------------------------------------------------------ assert
+    assert result.total_count == TOTAL_FRAMES_LARGE, (
+        f"Expected {TOTAL_FRAMES_LARGE} total frames, got {result.total_count}"
+    )
+    assert len(result.samples) == PAGE_SIZE_LARGE, (
+        f"Expected {PAGE_SIZE_LARGE} frames in page, got {len(result.samples)}"
+    )
+    assert elapsed_s < MAX_QUERY_DURATION_S, (
+        f"Query took {elapsed_s:.3f}s, threshold is {MAX_QUERY_DURATION_S}s "
+        f"({PAGE_SIZE_LARGE}-frame page from {TOTAL_FRAMES_LARGE} total frames, "
+        f"threshold = {MAX_QUERY_DURATION_S}s)."
     )

@@ -76,6 +76,8 @@ For a page of **100 frames** from **100 distinct videos** (e.g. 100 k
 
 File: `lightly_studio/tests/performance/test_video_frame_n1_benchmark.py`
 
+### N+1 correctness test (`test_video_frame_n1_benchmark`)
+
 1. Create an **in-memory DuckDB** session via `create_engine("duckdb:///:memory:")`.
 2. Insert **20 distinct videos × 5 frames each = 100 frames** using helpers
    from `tests/resolvers/video/helpers.py`.
@@ -86,15 +88,39 @@ File: `lightly_studio/tests/performance/test_video_frame_n1_benchmark.py`
 5. Assert that the total `SELECT` count is **less than `NUM_VIDEOS` (20)**,
    proving the fix is in effect.
 
+### Duration benchmark at 100k frames (`test_video_frame_duration_100k`, `@pytest.mark.slow`)
+
+1. Bulk-insert **1 000 distinct videos** in a single `video_resolver.create_many`
+   call and **100 frames per video (100 000 frames total)** in a single
+   `video_frame_resolver.create_many` call – no per-row round-trips.
+2. Call `video_frame_resolver.get_all_by_collection_id()` for the first page of
+   100 frames (the maximum enforced by the `Paginated` validator), which also
+   executes the `SELECT COUNT(*)` subquery over all 100 000 rows.
+3. Assert that the call completes within **5 seconds** (~50 ms observed on
+   in-memory DuckDB; the 100× margin accommodates slow CI machines).
+
+Run with `uv run pytest -m slow tests/performance/` (excluded from the default
+suite via `pytest -m "not slow"`).
+
 ---
 
 ## Before / after numbers
+
+### N+1 query count (small dataset – 20 videos, 100 frames)
 
 | Metric | Before fix | After fix |
 |---|---|---|
 | SQL `SELECT` statements (20 videos, 100 frames) | ~24 | ~4–5 |
 | Worst case (100 distinct videos, 100 frames) | ~103 | ~4–5 |
 | N+1 scaling | O(N videos) | O(1) |
+
+### Wall-clock duration (100k frames – 1 000 videos × 100 frames, in-memory DuckDB)
+
+| Phase | Duration |
+|---|---|
+| Bulk-insert 1 000 videos | ~0.35 s |
+| Bulk-insert 100 000 frames | ~30 s |
+| Query: first page of 100 + `COUNT(*)` over 100k | **~50 ms** (threshold: 5 s) |
 
 ---
 
