@@ -16,7 +16,10 @@
     // Get collection ID from URL params
     const collectionId = $derived(page.params.collection_id!);
 
-    const { loadTags } = $derived(useTags({ collection_id: collectionId, kind: ['sample'] }));
+    const { loadTags } = useTags({ collection_id: collectionId, kind: ['sample'] });
+    $effect(() => {
+        loadTags();
+    });
 
     const { isSelectionDialogOpen, openSelectionDialog, closeSelectionDialog } =
         useSelectionDialog();

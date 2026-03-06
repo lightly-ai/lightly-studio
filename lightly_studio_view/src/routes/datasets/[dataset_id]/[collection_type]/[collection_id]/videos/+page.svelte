@@ -17,16 +17,14 @@
     const { data: propsData } = $props();
 
     const collectionId = $derived($page.params.collection_id!);
-    const { tagsSelected } = $derived.by(() =>
-        useTags({
-            collection_id: collectionId,
-            kind: ['sample']
-        })
-    );
+    const { tagsSelected } = useTags({
+        collection_id: collectionId,
+        kind: ['sample']
+    });
 
     const { metadataValues } = useMetadataFilters();
     const selectedAnnotationsFilterIds = $derived(propsData.selectedAnnotationFilterIds);
-    const { videoBoundsValues } = $derived.by(() => useVideoBounds(collectionId));
+    const { videoBoundsValues } = useVideoBounds(collectionId);
 
     const { textEmbedding, getSelectedSampleIds, toggleSampleSelection } = useGlobalStorage();
 

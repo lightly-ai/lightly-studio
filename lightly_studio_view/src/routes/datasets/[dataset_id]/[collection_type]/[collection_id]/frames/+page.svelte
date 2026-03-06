@@ -18,16 +18,14 @@
     const { data: dataProps } = $props();
     const collectionId = $derived(page.params.collection_id);
 
-    const { metadataValues } = $derived(useMetadataFilters(collectionId));
-    const { videoFramesBoundsValues } = $derived(useVideoFramesBounds(collectionId));
+    const { metadataValues } = useMetadataFilters(collectionId);
+    const { videoFramesBoundsValues } = useVideoFramesBounds(collectionId);
 
     const selectedAnnotationFilterIds = $derived(dataProps.selectedAnnotationFilterIds);
-    const { tagsSelected } = $derived(
-        useTags({
-            collection_id: collectionId,
-            kind: ['sample']
-        })
-    );
+    const { tagsSelected } = useTags({
+        collection_id: collectionId,
+        kind: ['sample']
+    });
 
     const framesParams = $derived<VideoFrameFilterParams>({
         collection_id: collectionId,
