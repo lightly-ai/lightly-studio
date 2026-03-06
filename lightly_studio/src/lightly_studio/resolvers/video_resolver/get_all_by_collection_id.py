@@ -11,9 +11,8 @@ from sqlalchemy.orm import joinedload, selectinload
 from sqlalchemy.orm.interfaces import LoaderOption
 from sqlmodel import Session, col, func, select
 
-from lightly_studio.api.routes.api.frame import build_frame_view
 from lightly_studio.api.routes.api.validators import Paginated
-from lightly_studio.models.sample import SampleTable, SampleView
+from lightly_studio.models.sample import SampleTable
 from lightly_studio.models.video import (
     VideoFrameTable,
     VideoTable,
@@ -167,9 +166,9 @@ def _get_all_with_similarity(  # noqa: PLR0913
     results = session.exec(samples_query).all()
 
     video_views = [
-        convert_video_table_to_view(
+        VideoView.from_video_table(
             video=r[0],
-            first_frame=r[1],
+            frame=r[1],
             similarity_score=distance_to_similarity(r[2]),
         )
         for r in results
@@ -235,8 +234,7 @@ def _get_all_without_similarity(
     results = session.exec(samples_query).all()
 
     video_views = [
-        convert_video_table_to_view(video=video, first_frame=first_frame)
-        for video, first_frame in results
+        VideoView.from_video_table(video=video, frame=first_frame) for video, first_frame in results
     ]
 
     return VideoViewsWithCount(
@@ -258,27 +256,3 @@ def get_all_by_collection_id_with_frames(
     )
     samples_query = samples_query.order_by(col(VideoTable.file_path_abs).asc())
     return session.exec(samples_query).all()
-
-
-def convert_video_table_to_view(
-    video: VideoTable,
-    first_frame: VideoFrameTable | None,
-    similarity_score: float | None = None,
-) -> VideoView:
-    """Convert VideoTable to VideoView with only the first frame."""
-    first_frame_view = None
-    if first_frame:
-        first_frame_view = build_frame_view(first_frame)
-
-    return VideoView(
-        width=video.width,
-        height=video.height,
-        duration_s=video.duration_s,
-        fps=video.fps,
-        file_name=video.file_name,
-        file_path_abs=video.file_path_abs,
-        sample_id=video.sample_id,
-        sample=SampleView.model_validate(video.sample),
-        frame=first_frame_view,
-        similarity_score=similarity_score,
-    )

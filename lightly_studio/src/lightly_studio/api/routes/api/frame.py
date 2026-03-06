@@ -165,16 +165,7 @@ def _build_sample_view(sample: SampleTable) -> SampleView:
 
 
 def _build_video_view(video: VideoTable) -> VideoView:
-    return VideoView(
-        width=video.width,
-        height=video.height,
-        duration_s=video.duration_s,
-        fps=video.fps,
-        file_name=video.file_name,
-        file_path_abs=video.file_path_abs,
-        sample_id=video.sample_id,
-        sample=_build_sample_view(video.sample),
-    )
+    return VideoView.from_video_table(video=video)
 
 
 def _build_video_frame_view(vf: VideoFrameTable) -> VideoFrameView:
