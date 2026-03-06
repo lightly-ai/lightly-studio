@@ -18,18 +18,6 @@ from lightly_studio.models.video import VideoFrameTable, VideoTable
 from lightly_studio.resolvers.video_frame_resolver.video_frame_filter import VideoFrameFilter
 
 
-def _get_load_options() -> LoaderOption:
-    """Eager-load annotations to avoid multiple queries."""
-    return selectinload(VideoFrameTable.sample).options(
-        selectinload(SampleTable.annotations).options(
-            joinedload(AnnotationBaseTable.annotation_label),
-            joinedload(AnnotationBaseTable.object_detection_details),
-            joinedload(AnnotationBaseTable.segmentation_details),
-            selectinload(AnnotationBaseTable.sample).options(selectinload(SampleTable.tags)),
-        ),
-    )
-
-
 class VideoFramesWithCount(BaseModel):
     """Result of getting all samples."""
 
@@ -75,4 +63,16 @@ def get_all_by_collection_id(
         samples=session.exec(samples_query).all(),
         total_count=total_count,
         next_cursor=next_cursor,
+    )
+
+
+def _get_load_options() -> LoaderOption:
+    """Eager-load annotations to avoid multiple queries."""
+    return selectinload(VideoFrameTable.sample).options(
+        selectinload(SampleTable.annotations).options(
+            joinedload(AnnotationBaseTable.annotation_label),
+            joinedload(AnnotationBaseTable.object_detection_details),
+            joinedload(AnnotationBaseTable.segmentation_details),
+            selectinload(AnnotationBaseTable.sample).options(selectinload(SampleTable.tags)),
+        ),
     )
