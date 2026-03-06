@@ -253,7 +253,7 @@
             collectionId: datasetId,
             options: {
                 filtered_labels: annotationsLabels,
-                dimensions: $dimensionsValues
+                dimensions: $dimensionsValues ?? undefined
             }
         });
     });
