@@ -1,0 +1,231 @@
+"""Benchmark for the VideoFrame N+1 query problem on the ``video`` relationship.
+
+Background
+----------
+The ``POST /collections/{id}/frame/`` endpoint calls
+``video_frame_resolver.get_all_by_collection_id()``, which previously returned
+``VideoFrameTable`` rows without eagerly loading the ``VideoFrameTable.video``
+relationship.  Every subsequent call to ``vf.video`` inside
+``_build_video_frame_view()`` therefore triggered a separate lazy SELECT, one
+per unique video in the page.
+
+For a dataset with one video per frame (e.g. 100 k 1-second clips) this
+becomes a true N+1 problem.
+
+Worst-case query count (BEFORE fix) for 20 distinct videos, 100 frames:
+------------------------------------------------------------------------
+- 1 x SELECT COUNT(*)   (total-count subquery)
+- 1 x SELECT video_frame (main paginated query)
+- 1 x SELECT sample      (selectinload for VideoFrameTable.sample)
+- 1 x SELECT annotation  (selectinload for SampleTable.annotations)
+- 20 x SELECT video      (one lazy SELECT per unique video)
+
+Total ~24 round-trips for 20 videos.
+
+AFTER fix
+---------
+``_get_load_options()`` now includes ``selectinload(VideoFrameTable.video)``,
+which batches all video look-ups into a single IN-query.
+
+Total ~4-5 round-trips regardless of the number of unique videos.
+"""
+
+from __future__ import annotations
+
+import time
+from collections.abc import Generator
+from typing import Any
+
+import pytest
+from sqlalchemy import event
+from sqlmodel import Session, SQLModel, create_engine
+
+from lightly_studio.api.routes.api.validators import Paginated
+from lightly_studio.models.collection import SampleType
+from lightly_studio.models.video import VideoCreate, VideoFrameCreate
+from lightly_studio.resolvers import collection_resolver, video_frame_resolver, video_resolver
+from tests.helpers_resolvers import create_collection
+from tests.resolvers.video.helpers import VideoStub, create_video_with_frames
+
+NUM_VIDEOS = 20
+FRAMES_PER_VIDEO = 5
+TOTAL_FRAMES = NUM_VIDEOS * FRAMES_PER_VIDEO
+
+# 100k-frame benchmark constants
+NUM_VIDEOS_LARGE = 1_000
+FRAMES_PER_VIDEO_LARGE = 100
+TOTAL_FRAMES_LARGE = NUM_VIDEOS_LARGE * FRAMES_PER_VIDEO_LARGE  # 100_000
+PAGE_SIZE_LARGE = 100  # maximum enforced by the Paginated validator
+MAX_QUERY_DURATION_S = 5.0  # ~50 ms observed on in-memory DuckDB; 100x safety margin for CI
+
+
+@pytest.fixture
+def benchmark_session() -> Generator[tuple[Session, Any], None, None]:
+    """Yield a (session, engine) pair backed by an in-memory DuckDB database."""
+    engine = create_engine("duckdb:///:memory:")
+    SQLModel.metadata.create_all(engine)
+    with Session(engine) as session:
+        yield session, engine
+
+
+def _count_select_statements(engine: Any) -> list[str]:
+    """Return a mutable list that accumulates every SQL statement executed.
+
+    Attaches a ``before_cursor_execute`` listener to *engine* and returns the
+    list so callers can inspect it after the queries run.
+    """
+    statements: list[str] = []
+
+    @event.listens_for(engine, "before_cursor_execute")
+    def _on_execute(*args: Any, **kwargs: Any) -> None:  # noqa: ARG001
+        statements.append(args[2])  # args[2] is the SQL statement string
+
+    return statements
+
+
+def test_video_frame_n1_benchmark(
+    benchmark_session: tuple[Session, Any],
+) -> None:
+    """Verify that ``get_all_by_collection_id`` does not cause N+1 queries.
+
+    The test:
+    1. Inserts 20 distinct videos with 5 frames each (100 frames total).
+    2. Records every SQL statement issued during a single call to
+       ``get_all_by_collection_id``.
+    3. Asserts that the total number of SELECT statements is well below the
+       N+1 worst-case (NUM_VIDEOS + fixed overhead ≈ 24), proving that the
+       eager-load fix is in effect.
+    """
+    session, engine = benchmark_session
+
+    # ------------------------------------------------------------------ setup
+    collection = create_collection(session=session, sample_type=SampleType.VIDEO)
+    video_frames_collection_id = None
+
+    for i in range(NUM_VIDEOS):
+        result = create_video_with_frames(
+            session=session,
+            collection_id=collection.collection_id,
+            video=VideoStub(
+                path=f"/videos/clip_{i:03d}.mp4",
+                duration_s=float(FRAMES_PER_VIDEO),
+                fps=1.0,
+            ),
+        )
+        video_frames_collection_id = result.video_frames_collection_id
+
+    assert video_frames_collection_id is not None
+
+    # ------------------------------------------------------------------ measure
+    statements = _count_select_statements(engine)
+
+    start = time.perf_counter()
+    result = video_frame_resolver.get_all_by_collection_id(
+        session=session,
+        collection_id=video_frames_collection_id,
+        pagination=Paginated(offset=0, limit=TOTAL_FRAMES),
+    )
+    elapsed_s = time.perf_counter() - start
+
+    # ------------------------------------------------------------------ assert
+    assert len(result.samples) == TOTAL_FRAMES, (
+        f"Expected {TOTAL_FRAMES} frames, got {len(result.samples)}"
+    )
+
+    select_count = sum(1 for s in statements if s.lstrip().upper().startswith("SELECT"))
+
+    # Before the fix the count would be NUM_VIDEOS + fixed ≈ 24.
+    # After the fix a single selectinload replaces the N lazy selects,
+    # so the count must be well below NUM_VIDEOS.
+    assert select_count < NUM_VIDEOS, (
+        f"N+1 regression detected: {select_count} SELECT statements issued "
+        f"(threshold < {NUM_VIDEOS}). "
+        f"Wall-clock time: {elapsed_s:.3f}s. "
+        "Ensure selectinload(VideoFrameTable.video) is in _get_load_options()."
+    )
+
+
+@pytest.mark.slow
+def test_video_frame_duration_100k(
+    benchmark_session: tuple[Session, Any],
+) -> None:
+    """Measure wall-clock query duration with 100k video frames.
+
+    The test:
+    1. Bulk-inserts 1 000 distinct videos and 100 frames per video (100 000 frames
+       total) using a single ``create_many`` call each - no per-row round-trips.
+    2. Runs ``get_all_by_collection_id`` for the first page of 100 frames (the
+       maximum enforced by the ``Paginated`` validator), which also executes the
+       ``SELECT COUNT(*)`` subquery over all 100 000 rows.
+    3. Asserts that the full call completes within ``MAX_QUERY_DURATION_S`` seconds.
+
+    This benchmark exists to catch performance regressions at realistic dataset
+    sizes and to demonstrate that the eager-load fix scales to 100k+ frames.
+    """
+    session, _engine = benchmark_session
+
+    # ------------------------------------------------------------------ setup
+    collection = create_collection(session=session, sample_type=SampleType.VIDEO)
+    collection_id = collection.collection_id
+
+    # Bulk-create all videos in a single round-trip.
+    _fps = 1.0
+    video_ids = video_resolver.create_many(
+        session=session,
+        collection_id=collection_id,
+        samples=[
+            VideoCreate(
+                file_path_abs=f"/videos/clip_{i:04d}.mp4",
+                file_name=f"clip_{i:04d}.mp4",
+                width=640,
+                height=480,
+                duration_s=float(FRAMES_PER_VIDEO_LARGE) / _fps,
+                fps=_fps,
+            )
+            for i in range(NUM_VIDEOS_LARGE)
+        ],
+    )
+
+    video_frames_collection_id = collection_resolver.get_or_create_child_collection(
+        session=session,
+        collection_id=collection_id,
+        sample_type=SampleType.VIDEO_FRAME,
+    )
+
+    # Bulk-create all 100k frames in a single round-trip.
+    video_frame_resolver.create_many(
+        session=session,
+        collection_id=video_frames_collection_id,
+        samples=[
+            VideoFrameCreate(
+                frame_number=j,
+                frame_timestamp_s=float(j),
+                frame_timestamp_pts=j,
+                parent_sample_id=video_ids[i],
+            )
+            for i in range(NUM_VIDEOS_LARGE)
+            for j in range(FRAMES_PER_VIDEO_LARGE)
+        ],
+    )
+
+    # ------------------------------------------------------------------ measure
+    start = time.perf_counter()
+    result = video_frame_resolver.get_all_by_collection_id(
+        session=session,
+        collection_id=video_frames_collection_id,
+        pagination=Paginated(offset=0, limit=PAGE_SIZE_LARGE),
+    )
+    elapsed_s = time.perf_counter() - start
+
+    # ------------------------------------------------------------------ assert
+    assert result.total_count == TOTAL_FRAMES_LARGE, (
+        f"Expected {TOTAL_FRAMES_LARGE} total frames, got {result.total_count}"
+    )
+    assert len(result.samples) == PAGE_SIZE_LARGE, (
+        f"Expected {PAGE_SIZE_LARGE} frames in page, got {len(result.samples)}"
+    )
+    assert elapsed_s < MAX_QUERY_DURATION_S, (
+        f"Query took {elapsed_s:.3f}s, threshold is {MAX_QUERY_DURATION_S}s "
+        f"({PAGE_SIZE_LARGE}-frame page from {TOTAL_FRAMES_LARGE} total frames, "
+        f"threshold = {MAX_QUERY_DURATION_S}s)."
+    )
