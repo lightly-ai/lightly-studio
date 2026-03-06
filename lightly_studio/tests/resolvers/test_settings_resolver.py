@@ -20,6 +20,8 @@ def test_get_settings_creates_default_settings(
     assert settings is not None
     assert settings.grid_view_sample_rendering == GridViewSampleRenderingType.CONTAIN
     assert settings.show_sample_filenames is False
+    assert settings.key_toolbar_brush == "r"
+    assert settings.key_toolbar_eraser == "x"
 
 
 def test_set_settings_updates_grid_view_rendering(
@@ -43,6 +45,8 @@ def test_set_settings_updates_grid_view_rendering(
         key_toolbar_drag="s",
         key_toolbar_bounding_box="m",
         key_toolbar_segmentation_mask="b",
+        key_toolbar_brush="r",
+        key_toolbar_eraser="x",
     )
 
     updated_settings = settings_resolver.set_settings(session=test_db, settings=input_settings)
@@ -59,6 +63,8 @@ def test_set_settings_updates_grid_view_rendering(
     assert updated_settings.key_toolbar_drag == "s"
     assert updated_settings.key_toolbar_bounding_box == "m"
     assert updated_settings.key_toolbar_segmentation_mask == "b"
+    assert updated_settings.key_toolbar_brush == "r"
+    assert updated_settings.key_toolbar_eraser == "x"
 
     settings = settings_resolver.get_settings(session=test_db)
     assert settings.grid_view_sample_rendering == GridViewSampleRenderingType.CONTAIN
@@ -66,3 +72,5 @@ def test_set_settings_updates_grid_view_rendering(
     assert settings.key_hide_annotations == current_settings.key_hide_annotations
     assert settings.key_go_back == current_settings.key_go_back
     assert settings.show_annotation_text_labels == current_settings.show_annotation_text_labels
+    assert settings.key_toolbar_brush == "r"
+    assert settings.key_toolbar_eraser == "x"
