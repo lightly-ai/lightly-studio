@@ -48,7 +48,7 @@ test.describe.serial('video-frames-page-flow-captions', () => {
         expect(await videoFrameDetailsPage.getNthCaptionInput(0)).toEqual('caption 1');
     });
 
-    test.skip('add and edit captions in caption page', async ({ captionsVideoFramePage }) => {
+    test('add and edit captions in caption page', async ({ captionsVideoFramePage }) => {
         expect(await captionsVideoFramePage.getCaptionCount()).toEqual(1);
         expect(await captionsVideoFramePage.getNthCaptionText(0)).toEqual('caption 1');
 
@@ -71,7 +71,7 @@ test.describe.serial('video-frames-page-flow-captions', () => {
         );
     });
 
-    test.skip('delete a caption in caption page', async ({ captionsVideoFramePage }) => {
+    test('delete a caption in caption page', async ({ captionsVideoFramePage }) => {
         // Start edit mode
         await captionsVideoFramePage.clickEditButton();
 
