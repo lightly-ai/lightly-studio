@@ -2,7 +2,7 @@ import { test, expect } from '../utils';
 
 // This tests are dependent of each other.
 test.describe.serial('video-frames-page-flow-captions', () => {
-    test.skip('add captions in video frame details', async ({
+    test('add captions in video frame details', async ({
         videoFramesPage,
         videoFrameDetailsPage
     }) => {
