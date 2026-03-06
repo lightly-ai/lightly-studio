@@ -1,4 +1,5 @@
 <script lang="ts">
+    import { PUBLIC_VIDEOS_MEDIA_URL } from '$env/static/public';
     import {
         getAllFrames,
         type FrameView,
@@ -45,6 +46,10 @@
             if (showAnnotations) await loadFrames();
 
             if (videoEl) {
+                if (!videoEl.getAttribute('src')) {
+                    videoEl.src = `${PUBLIC_VIDEOS_MEDIA_URL}/${video.sample_id}`;
+                }
+
                 if (videoEl.readyState < 2) {
                     videoEl.load();
                     await new Promise((res) =>
@@ -67,6 +72,8 @@
 
         videoEl?.pause();
         videoEl.currentTime = 0;
+        videoEl.removeAttribute('src');
+        videoEl.load();
     }
 
     const datasetId = $derived(page.params.dataset_id!);
