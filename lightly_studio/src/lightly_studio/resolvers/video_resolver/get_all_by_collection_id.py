@@ -31,6 +31,7 @@ from lightly_studio.resolvers.video_resolver.video_filter import VideoFilter
 
 def _get_load_options() -> list[LoaderOption]:
     """Get common load options for video and frame relationships."""
+    # Eagerly load annotations to avoid multiple queries.
     return [
         selectinload(VideoFrameTable.sample).options(
             joinedload(SampleTable.tags),
