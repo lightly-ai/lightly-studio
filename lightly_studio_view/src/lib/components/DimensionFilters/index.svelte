@@ -12,6 +12,7 @@
     } = useDimensions();
 
     const handleChangeWidth: SliderMultipleRootProps['onValueChange'] = (newValues) => {
+        if (!$values) return;
         onChange({
             min_width: newValues[0],
             max_width: newValues[1],
@@ -21,6 +22,7 @@
     };
 
     const handleChangeHeight: SliderMultipleRootProps['onValueChange'] = (newValues) => {
+        if (!$values) return;
         onChange({
             min_width: $values.min_width,
             max_width: $values.max_width,
@@ -32,6 +34,7 @@
 
 <Segment title="Metadata">
     <div class="space-y-4">
+        {#if $bounds && $values}
         <div class="space-y-1">
             <h2 class="text-md">Width Filter</h2>
             <div class="flex justify-between text-sm text-diffuse-foreground">
@@ -66,5 +69,6 @@
                 />
             </div>
         </div>
+        {/if}
     </div>
 </Segment>
