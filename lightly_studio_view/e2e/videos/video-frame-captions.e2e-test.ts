@@ -30,7 +30,7 @@ test.describe.serial('video-frames-page-flow-captions', () => {
         expect(await videoFrameDetailsPage.getNthCaptionInput(1)).toEqual('caption 1');
     });
 
-    test.skip('delete a caption in video frame details', async ({
+    test('delete a caption in video frame details', async ({
         videoFramesPage,
         videoFrameDetailsPage
     }) => {

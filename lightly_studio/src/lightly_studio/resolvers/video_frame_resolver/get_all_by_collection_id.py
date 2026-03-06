@@ -19,7 +19,7 @@ from lightly_studio.resolvers.video_frame_resolver.video_frame_filter import Vid
 
 
 def _get_load_options() -> LoaderOption:
-    """Eager-load annotations to avoid N+1 queries."""
+    """Eager-load annotations to avoid multiple queries."""
     return selectinload(VideoFrameTable.sample).options(
         selectinload(SampleTable.annotations).options(
             joinedload(AnnotationBaseTable.annotation_label),
