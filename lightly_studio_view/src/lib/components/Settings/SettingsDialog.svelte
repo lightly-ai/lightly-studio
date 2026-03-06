@@ -337,13 +337,13 @@
                             </button>
                         </div>
                         <div class="grid grid-cols-2 items-center gap-4">
-                            <Label for="toolbar-eraser-mode" class="text-right text-foreground">
+                            <Label for="change-brush-size" class="text-right text-foreground">
                                 Change brush size
                             </Label>
                             <button
-                                id="toolbar-eraser-mode"
+                                id="change-brush-size"
                                 type="button"
-                                disabled={true}
+                                disabled
                                 class="rounded-md border border-input bg-background p-2 text-left text-foreground"
                             >
                                 <span>Alt + scroll</span>

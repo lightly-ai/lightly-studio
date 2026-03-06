@@ -10,7 +10,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 
 - `Dataset.export()` now supports instance segmentation export to COCO using `to_coco_instance_segmentations()`.
-- Add keyboard shortcuts for switching between brush and eraser and adjusting brush size
+- Added keyboard shortcuts to switch between the brush and eraser, as well as to adjust the brush size.
 
 ### Changed
 

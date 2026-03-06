@@ -121,6 +121,15 @@ describe('BrushTool component', () => {
         expect(mockContext.brush.size).toBe(9);
     });
 
+    it('does not update brush size when pressing Alt and scrolling horizontally', async () => {
+        render(BrushTool);
+
+        await fireEvent.wheel(window, { deltaX: 100, deltaY: 0, altKey: true });
+
+        expect(mockContext.brush.size).toBe(10);
+        expect(mockAnnotationLabelContext.isChangingBrushSize).toBe(false);
+    });
+
     it('updates brush size when pressing Alt and scrolling outside the popup', async () => {
         render(BrushTool);
 

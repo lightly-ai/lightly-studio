@@ -113,9 +113,9 @@ const saveSettings = async (
                 updatedSettings.key_toolbar_segmentation_mask ||
                 currentSettings.key_toolbar_segmentation_mask,
             key_toolbar_brush:
-                updatedSettings.key_toolbar_brush || currentSettings.key_toolbar_brush || 'r',
+                updatedSettings.key_toolbar_brush || currentSettings.key_toolbar_brush,
             key_toolbar_eraser:
-                updatedSettings.key_toolbar_eraser || currentSettings.key_toolbar_eraser || 'x'
+                updatedSettings.key_toolbar_eraser || currentSettings.key_toolbar_eraser
         };
 
         // The API call

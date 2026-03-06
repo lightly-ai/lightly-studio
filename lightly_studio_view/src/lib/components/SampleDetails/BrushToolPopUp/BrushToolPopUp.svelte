@@ -46,11 +46,16 @@
         }
     };
 
+    let onWheelTimeout: ReturnType<typeof setTimeout> | undefined;
+
     const onWheel = (event: WheelEvent) => {
         const target = event.target as HTMLElement;
 
         if (target?.isContentEditable || isInputElement(target)) return;
         if (!event.altKey) return;
+        if (event.deltaY === 0) return;
+
+        clearTimeout(onWheelTimeout);
         setIsChangingBrushSize(true);
 
         const direction = event.deltaY < 0 ? 1 : -1;
@@ -64,7 +69,7 @@
         }
 
         // Prevent enabling zoom immediately
-        setTimeout(() => setIsChangingBrushSize(false), 100);
+        onWheelTimeout = setTimeout(() => setIsChangingBrushSize(false), 100);
     };
 
     onMount(() => {
