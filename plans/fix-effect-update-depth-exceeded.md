@@ -83,54 +83,13 @@ Converted all 11 remaining query hooks to accept `StoreOrVal` parameters. This w
 
 ---
 
-## PR 4: All call sites ✅
+## PR 4: All call sites + remaining imperative hooks ✅
 
-Updated 18 components to use `toStore(() => ...)` pattern and removed `$derived` wrappers. This was done in a single PR instead of incremental per-file PRs.
+Updated 18 components to use `toStore(() => ...)` pattern and removed `$derived` wrappers. This was done in a single PR instead of incremental per-file PRs. Also fixed remaining imperative (non-query) hooks that were wrapped in `$derived`.
 
 - [x] Refactored conditional `annotationCounts` in `+layout.svelte` to three always-instantiated queries gated by `enabled`
 - [x] Updated all query hook call sites across 18 components
-- [x] Verified: `svelte-check` — 0 errors, 0 warnings
-
----
-
-## Remaining Work
-
-3 files still have `$derived` wrapping **imperative** (non-query) hooks:
-
-| File | Hook | Line |
-|------|------|------|
-| `CreateSelectionDialog.svelte` | `useTags` | `$derived(useTags({...}))` |
-| `frames/+page.svelte` | `useMetadataFilters` | `$derived(useMetadataFilters(...))` |
-| `frames/+page.svelte` | `useVideoFramesBounds` | `$derived(useVideoFramesBounds(...))` |
-| `videos/+page.svelte` | `useVideoBounds` | `$derived.by(() => useVideoBounds(...))` |
-
-These 4 hooks are **imperative** (not TanStack Query). They init data on first call and return stores/functions. The fix follows the same pattern used in PR2's layout for `useMetadataFilters`/`useDimensions`: call once at init, use `$effect` to re-trigger when params change.
-
-### PR5: Fix remaining imperative hook call sites (~40 LOC)
-
-**`src/lib/components/Selection/CreateSelectionDialog.svelte`:**
-```ts
-// Before:
-const { loadTags } = $derived(useTags({ collection_id: collectionId, kind: ['sample'] }));
-// After:
-const { loadTags } = useTags({ collection_id: collectionId, kind: ['sample'] });
-$effect(() => { loadTags(); });
-```
-
-**`src/routes/.../frames/+page.svelte`:**
-```ts
-// Before:
-const { metadataValues } = $derived(useMetadataFilters(collectionId));
-const { videoFramesBoundsValues } = $derived(useVideoFramesBounds(collectionId));
-// After:
-const { metadataValues } = useMetadataFilters(collectionId);
-const { videoFramesBoundsValues } = useVideoFramesBounds(collectionId);
-```
-
-**`src/routes/.../videos/+page.svelte`:**
-```ts
-// Before:
-const { videoBoundsValues } = $derived.by(() => useVideoBounds(collectionId));
-// After:
-const { videoBoundsValues } = useVideoBounds(collectionId);
-```
+- [x] Removed `$derived` from `useTags` in `CreateSelectionDialog.svelte`, `frames/+page.svelte`, `videos/+page.svelte`
+- [x] Removed `$derived` from `useMetadataFilters` and `useVideoFramesBounds` in `frames/+page.svelte`
+- [x] Removed `$derived.by` from `useVideoBounds` in `videos/+page.svelte`
+- [x] Verified: `svelte-check` — 0 errors; no `$derived` wrapping any `use*` hooks remain
