@@ -3,6 +3,7 @@
     import { useGlobalStorage } from '$lib/hooks/useGlobalStorage.js';
     import { useTags } from '$lib/hooks/useTags/useTags';
     import { page } from '$app/state';
+    import { toStore } from 'svelte/store';
 
     const { data } = $props();
 
@@ -13,14 +14,13 @@
     } = data;
 
     const collection_id = $derived(page.params.collection_id!);
+    const collectionIdStore = toStore(() => collection_id);
 
     const { lastGridType } = useGlobalStorage();
 
-    const { clearTagsSelected } = $derived(
-        useTags({
-            collection_id
-        })
-    );
+    const { clearTagsSelected } = useTags({
+        collection_id: collectionIdStore
+    });
 
     $effect(() => {
         if ($lastGridType !== 'samples') {

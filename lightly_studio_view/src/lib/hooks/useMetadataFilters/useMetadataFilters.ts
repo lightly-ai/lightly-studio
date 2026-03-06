@@ -1,6 +1,7 @@
 import { getMetadataInfoOptions } from '$lib/api/lightly_studio_local/@tanstack/svelte-query.gen';
+import { isReadableStore } from '$lib/hooks/utils/isReadableStore';
 import { createQuery } from '@tanstack/svelte-query';
-import { get, writable } from 'svelte/store';
+import { derived, get, writable, type Readable } from 'svelte/store';
 import type { components } from '$lib/schema';
 import { useGlobalStorage } from '$lib/hooks/useGlobalStorage';
 
@@ -9,49 +10,94 @@ type MetadataBounds = Record<string, { min: number; max: number }>;
 type MetadataValues = Record<string, { min: number; max: number }>;
 
 const lastCollectionId = writable<string | null>();
+let activeCollectionId: string | null = null;
+let metadataQueryUnsubscribe: (() => void) | null = null;
 
-const loadInitialMetadataInfo = async (collection_id: string) => {
-    if (get(lastCollectionId) == collection_id) {
+const cleanupMetadataQuerySubscription = () => {
+    if (metadataQueryUnsubscribe) {
+        metadataQueryUnsubscribe();
+        metadataQueryUnsubscribe = null;
+    }
+    activeCollectionId = null;
+};
+
+const syncMetadataInfoToGlobalStorage = (
+    collection_id: string,
+    metadataInfoData: MetadataInfo[]
+) => {
+    const { updateMetadataBounds, updateMetadataValues, updateMetadataInfo } = useGlobalStorage();
+
+    // Extract numerical metadata for bounds and values
+    const bounds: MetadataBounds = {};
+    const values: MetadataValues = {};
+
+    metadataInfoData.forEach((info: MetadataInfo) => {
+        if (info.type === 'integer' || info.type === 'float') {
+            if (info.min != null && info.max != null) {
+                bounds[info.name] = { min: info.min, max: info.max };
+                values[info.name] = { min: info.min, max: info.max };
+            }
+        }
+    });
+
+    updateMetadataBounds(bounds);
+    updateMetadataValues(values);
+    updateMetadataInfo(metadataInfoData);
+    lastCollectionId.set(collection_id);
+};
+
+const loadInitialMetadataInfo = (collection_id: string) => {
+    if (get(lastCollectionId) === collection_id || activeCollectionId === collection_id) {
         return;
     }
+
+    cleanupMetadataQuerySubscription();
+    activeCollectionId = collection_id;
 
     const metadataOptions = getMetadataInfoOptions({
         path: {
             collection_id: collection_id
         }
     });
-
     const metadataQuery = createQuery(metadataOptions);
 
-    // Subscribe to the query to get the data
-    metadataQuery.subscribe((queryResult) => {
-        if (queryResult.data) {
-            const metadataInfoData = queryResult.data;
-            const { updateMetadataBounds, updateMetadataValues, updateMetadataInfo } =
-                useGlobalStorage();
-
-            // Extract numerical metadata for bounds and values
-            const bounds: MetadataBounds = {};
-            const values: MetadataValues = {};
-
-            metadataInfoData.forEach((info: MetadataInfo) => {
-                if (info.type === 'integer' || info.type === 'float') {
-                    if (info.min != null && info.max != null) {
-                        bounds[info.name] = { min: info.min, max: info.max };
-                        values[info.name] = { min: info.min, max: info.max };
-                    }
-                }
-            });
-
-            updateMetadataBounds(bounds);
-            updateMetadataValues(values);
-            updateMetadataInfo(metadataInfoData);
-            lastCollectionId.set(collection_id);
+    // Keep a single active metadata subscription and release it after terminal states.
+    metadataQueryUnsubscribe = metadataQuery.subscribe((queryResult) => {
+        if (queryResult.isError) {
+            cleanupMetadataQuerySubscription();
+            return;
         }
+
+        if (!queryResult.data) {
+            return;
+        }
+
+        syncMetadataInfoToGlobalStorage(collection_id, queryResult.data);
+        cleanupMetadataQuerySubscription();
     });
 };
 
 type MetadataFilter = components['schemas']['MetadataFilter'];
+type CollectionIdInput = string | Readable<string> | undefined;
+
+const bindCollectionLoader = <T>(source: Readable<T>, collectionId: CollectionIdInput) => {
+    if (!collectionId) {
+        return source;
+    }
+
+    if (!isReadableStore<string>(collectionId)) {
+        loadInitialMetadataInfo(collectionId);
+        return source;
+    }
+
+    return derived([source, collectionId], ([$source, $collectionId]) => {
+        if ($collectionId) {
+            loadInitialMetadataInfo($collectionId);
+        }
+
+        return $source;
+    });
+};
 
 export const createMetadataFilters = (metadataValues: MetadataValues): MetadataFilter[] => {
     const filters: MetadataFilter[] = [];
@@ -86,11 +132,7 @@ export const createMetadataFilters = (metadataValues: MetadataValues): MetadataF
     return filters;
 };
 
-export const useMetadataFilters = (collection_id?: string) => {
-    if (collection_id) {
-        loadInitialMetadataInfo(collection_id);
-    }
-
+export const useMetadataFilters = (collection_id?: CollectionIdInput) => {
     const {
         metadataBounds,
         metadataValues,
@@ -101,9 +143,9 @@ export const useMetadataFilters = (collection_id?: string) => {
     } = useGlobalStorage();
 
     return {
-        metadataBounds,
-        metadataValues,
-        metadataInfo,
+        metadataBounds: bindCollectionLoader(metadataBounds, collection_id),
+        metadataValues: bindCollectionLoader(metadataValues, collection_id),
+        metadataInfo: bindCollectionLoader(metadataInfo, collection_id),
         updateMetadataValues,
         updateMetadataBounds,
         updateMetadataInfo,

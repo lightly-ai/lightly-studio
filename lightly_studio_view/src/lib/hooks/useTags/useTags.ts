@@ -1,10 +1,11 @@
 import type { TagView as Tag, TagKind } from '$lib/services/types';
-import { derived, get, readonly, writable, type Readable } from 'svelte/store';
+import { isReadableStore } from '$lib/hooks/utils/isReadableStore';
+import { derived, get, readonly, readable, writable, type Readable } from 'svelte/store';
 import { readTags } from '$lib/api/lightly_studio_local';
 import { useGlobalStorage } from '../useGlobalStorage';
 
 interface UseTagsOptions {
-    collection_id: string;
+    collection_id: string | Readable<string>;
     kind?: TagKind[];
 }
 
@@ -23,18 +24,27 @@ const tagsSelectedByCollection = writable<Record<string, Set<string>>>({});
 export function useTags(options: UseTagsOptions): UseTagsReturn {
     const { collection_id, kind } = options;
     const { tags: tagsData } = useGlobalStorage();
-    const isLoaded = writable(false);
     const error = writable<Error | null>(null);
     const isLoading = writable(false);
+    const loadedCollectionIds = new Set<string>();
+    const pendingCollectionIds = new Set<string>();
 
-    const loadTags = () => {
-        if (get(isLoading)) return;
-        if (!collection_id) return;
+    const collectionIdStore = isReadableStore<string>(collection_id)
+        ? collection_id
+        : readable(collection_id);
 
+    const loadTagsForCollection = (currentCollectionId: string, force = false) => {
+        if (!currentCollectionId) return;
+        if (!force && loadedCollectionIds.has(currentCollectionId)) return;
+        if (pendingCollectionIds.has(currentCollectionId)) return;
+
+        pendingCollectionIds.add(currentCollectionId);
         isLoading.set(true);
+        error.set(null);
+
         readTags({
             path: {
-                collection_id
+                collection_id: currentCollectionId
             }
         })
             .then((response) => {
@@ -45,27 +55,31 @@ export function useTags(options: UseTagsOptions): UseTagsReturn {
                     // Store tags by collection_id to prevent preloading from overwriting other collections' tags
                     tagsData.update((tagsByCollection) => ({
                         ...tagsByCollection,
-                        [collection_id]: response.data ?? []
+                        [currentCollectionId]: response.data ?? []
                     }));
                 }
+                loadedCollectionIds.add(currentCollectionId);
             })
-            .catch((err) => {
-                error.set(err as Error);
+            .catch((err: unknown) => {
+                error.set(err instanceof Error ? err : new Error(String(err)));
             })
             .finally(() => {
-                isLoading.set(false);
+                pendingCollectionIds.delete(currentCollectionId);
+                isLoading.set(pendingCollectionIds.size > 0);
             });
     };
 
-    // Auto-load tags when hook is initialized
-    if (!get(isLoaded) && collection_id) {
-        loadTags();
-        isLoaded.set(true);
-    }
+    const loadTags = () => {
+        loadTagsForCollection(get(collectionIdStore), true);
+    };
 
-    const tags = derived(tagsData, ($tagsData) => {
+    loadTagsForCollection(get(collectionIdStore));
+
+    const tags = derived([tagsData, collectionIdStore], ([$tagsData, $collectionId]) => {
+        loadTagsForCollection($collectionId);
+
         // Get tags for the current collection_id
-        const allTags = $tagsData[collection_id] ?? [];
+        const allTags = $collectionId ? ($tagsData[$collectionId] ?? []) : [];
         if (!kind) return allTags;
 
         const _tags = allTags.filter((tag: Tag) => kind.includes(tag.kind));
@@ -73,15 +87,26 @@ export function useTags(options: UseTagsOptions): UseTagsReturn {
     });
 
     const tagsSelectedForCollection = derived(
-        tagsSelectedByCollection,
-        ($tagsSelectedByCollection) => {
-            return $tagsSelectedByCollection[collection_id] ?? new Set<string>();
+        [tagsSelectedByCollection, collectionIdStore],
+        ([$tagsSelectedByCollection, $collectionId]) => {
+            loadTagsForCollection($collectionId);
+
+            if (!$collectionId) {
+                return new Set<string>();
+            }
+
+            return $tagsSelectedByCollection[$collectionId] ?? new Set<string>();
         }
     );
 
     const tagSelectionToggle = (tag_id: string) => {
+        const currentCollectionId = get(collectionIdStore);
+        if (!currentCollectionId) {
+            return;
+        }
+
         tagsSelectedByCollection.update((selectedByCollection) => {
-            const selected = selectedByCollection[collection_id] ?? new Set<string>();
+            const selected = selectedByCollection[currentCollectionId] ?? new Set<string>();
             if (selected.has(tag_id)) {
                 selected.delete(tag_id);
             } else {
@@ -89,16 +114,21 @@ export function useTags(options: UseTagsOptions): UseTagsReturn {
             }
             return {
                 ...selectedByCollection,
-                [collection_id]: new Set([...selected])
+                [currentCollectionId]: new Set([...selected])
             };
         });
     };
 
     const clearTagsSelected = () => {
+        const currentCollectionId = get(collectionIdStore);
+        if (!currentCollectionId) {
+            return;
+        }
+
         tagsSelectedByCollection.update((selectedByCollection) => {
             return {
                 ...selectedByCollection,
-                [collection_id]: new Set()
+                [currentCollectionId]: new Set()
             };
         });
     };

@@ -5,7 +5,7 @@
     import { useSettings } from '$lib/hooks/useSettings';
     import { useTags } from '$lib/hooks/useTags/useTags';
     import { routeHelpers } from '$lib/routes';
-    import { onMount } from 'svelte';
+    import { onMount, untrack } from 'svelte';
     import type { Readable } from 'svelte/store';
     import {
         isNormalModeParams,
@@ -14,7 +14,7 @@
     } from '$lib/hooks/useImagesInfinite/useImagesInfinite';
     import { useScrollRestoration } from '$lib/hooks/useScrollRestoration/useScrollRestoration';
     import { useImageFilters } from '$lib/hooks/useImageFilters/useImageFilters';
-    import type { ImageView } from '$lib/api/lightly_studio_local';
+    import type { ImageView, ReadImagesResponse } from '$lib/api/lightly_studio_local';
     import { goto } from '$app/navigation';
     import { omit, isEqual } from 'lodash-es';
     import SampleGrid from '../SampleGrid/SampleGrid.svelte';
@@ -23,7 +23,6 @@
     import { page } from '$app/state';
     import SampleImageGridItem from '../SampleImageGridItem/SampleImageGridItem.svelte';
 
-    // Import the settings hook
     const { gridViewSampleRenderingStore, showSampleFilenamesStore } = useSettings();
 
     type SamplesProps = {
@@ -57,7 +56,7 @@
                 ? $selectedAnnotationFilterIds
                 : undefined,
             tag_ids: $tagsSelected.size > 0 ? Array.from($tagsSelected) : undefined,
-            dimensions: $dimensions
+            dimensions: $dimensions ?? undefined
         },
         metadata_values: $metadataValues,
         text_embedding: $textEmbedding?.embedding
@@ -75,7 +74,8 @@
     $effect(() => {
         // Synchronize the global filter parameters with the local samples parameters
         const baseParams = samplesParams as ImagesInfiniteParams;
-        const currentParams = $filterParams;
+        // Read filterParams without tracking to avoid a read→write→re-trigger loop
+        const currentParams = untrack(() => $filterParams);
 
         // Compare parameters excluding sample_ids to detect if other filters have changed
         if (
@@ -104,18 +104,15 @@
             };
         }
 
-        // Update the global filter parameters
         updateFilterParams(nextParams);
     });
 
-    const { samples: infiniteSamples } = $derived(
-        useImagesInfinite({ ...$filterParams, collection_id: collection_id })
-    );
-    // Derived list of samples from TanStack infinite query
+    // Single query instance — filterParams store is passed as a Readable so TanStack
+    // reactively updates the existing query observer instead of creating a new one.
+    const { samples: infiniteSamples } = useImagesInfinite(filterParams);
+
     const samples: ImageView[] = $derived(
-        $infiniteSamples && $infiniteSamples.data
-            ? $infiniteSamples.data.pages.flatMap((page: { data?: ImageView[] }) => page.data ?? [])
-            : []
+        $infiniteSamples.data?.pages.flatMap((page: ReadImagesResponse) => page.data) ?? []
     );
     const selectedSampleIds = getSelectedSampleIds(collection_id);
     let selectionAnchorSampleId = $state<string | null>(null);
@@ -142,8 +139,8 @@
         const parts = [
             $selectedAnnotationFilterIds.join(','),
             Array.from($tagsSelected).join(','),
-            `${$dimensions.min_width}-${$dimensions.max_width}`,
-            `${$dimensions.min_height}-${$dimensions.max_height}`,
+            `${$dimensions?.min_width}-${$dimensions?.max_width}`,
+            `${$dimensions?.min_height}-${$dimensions?.max_height}`,
             JSON.stringify($metadataValues),
             $textEmbedding?.queryText || ''
         ];
@@ -158,16 +155,14 @@
         savePosition(scrollTop, filterHash);
     }
 
-    // Add reactive effect to update objectFit when settings change
     $effect(() => {
-        // Update objectFit whenever the grid view rendering setting changes
         objectFit = $gridViewSampleRenderingStore;
     });
 
-    // Set total count when data is available
     $effect(() => {
         if ($infiniteSamples.isSuccess && $infiniteSamples.data?.pages.length > 0) {
-            setfilteredSampleCount($infiniteSamples.data.pages[0].total_count);
+            const count = $infiniteSamples.data.pages[0].total_count;
+            setfilteredSampleCount(count);
         }
     });
 
