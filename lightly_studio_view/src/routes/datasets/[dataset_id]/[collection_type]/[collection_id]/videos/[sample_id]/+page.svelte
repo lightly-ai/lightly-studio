@@ -205,15 +205,16 @@
 
         const newFrames = res?.data?.data ?? [];
 
-        frames = mergeFrames(frames, newFrames);
-
-        cursor = res?.data?.nextCursor ?? cursor + BATCH_SIZE;
-
-        if (res?.data?.nextCursor == null || newFrames.length === 0) {
+        if (newFrames.length === 0) {
             reachedEnd = true;
             loading = false;
             return;
         }
+
+        frames = mergeFrames(frames, newFrames);
+
+        cursor = res?.data?.nextCursor ?? cursor + BATCH_SIZE;
+
         loading = false;
     }
 
