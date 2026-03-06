@@ -9,18 +9,20 @@ from __future__ import annotations
 
 import statistics
 import time
+from collections.abc import Generator
 from uuid import UUID
 
 import pytest
-from sqlmodel import Session
+from sqlmodel import Session, SQLModel, create_engine
 
 from lightly_studio.models.annotation.annotation_base import AnnotationCreate, AnnotationType
-from lightly_studio.resolvers import annotation_resolver
+from lightly_studio.models.image import ImageCreate
+from lightly_studio.resolvers import annotation_resolver, image_resolver
 from lightly_studio.resolvers.annotations.annotations_filter import AnnotationsFilter
-from tests.helpers_resolvers import create_annotation_label, create_collection, create_image
+from tests.helpers_resolvers import create_annotation_label, create_collection
 
-N_IMAGES = 1_000
-N_ANNOTATIONS_PER_IMAGE = 10
+N_IMAGES = 100_000
+N_ANNOTATIONS_PER_IMAGE = 1
 N_REPETITIONS = 5
 
 # Maximum acceptable median query time in seconds.  This is intentionally generous
@@ -29,11 +31,27 @@ N_REPETITIONS = 5
 MAX_MEDIAN_SECONDS = 5.0
 
 
-@pytest.fixture
+@pytest.fixture(scope="module")
+def bench_db() -> Generator[Session, None, None]:
+    """Module-scoped in-memory DuckDB session shared by all benchmark tests.
+
+    Using module scope avoids repeating the expensive data-insertion setup for
+    every test function in this file.
+    """
+    engine = create_engine("duckdb:///:memory:")
+    SQLModel.metadata.create_all(engine)
+    with Session(engine) as session:
+        yield session
+
+
+@pytest.fixture(scope="module")
 def benchmark_data(
-    test_db: Session,
+    bench_db: Session,
 ) -> tuple[Session, UUID, UUID]:
     """Populate the database with N_IMAGES images and N_ANNOTATIONS_PER_IMAGE annotations each.
+
+    Images are created in a single bulk call to keep fixture setup time acceptable at
+    100 k scale.
 
     Returns:
         A tuple of (session, annotation_collection_id, annotation_label_id).
@@ -41,49 +59,58 @@ def benchmark_data(
         (a child collection of the parent image collection), which is what
         AnnotationsFilter.collection_ids filters on.
     """
-    collection = create_collection(session=test_db)
+    collection = create_collection(session=bench_db)
     parent_collection_id: UUID = collection.collection_id
 
     label = create_annotation_label(
-        session=test_db,
+        session=bench_db,
         dataset_id=parent_collection_id,
         label_name="benchmark_label",
     )
     annotation_label_id: UUID = label.annotation_label_id
 
-    annotations_batch: list[AnnotationCreate] = []
-    for i in range(N_IMAGES):
-        image = create_image(
-            session=test_db,
-            collection_id=parent_collection_id,
-            file_path_abs=f"/bench/image_{i:05d}.jpg",
-        )
-        for _ in range(N_ANNOTATIONS_PER_IMAGE):
-            annotations_batch.append(
-                AnnotationCreate(
-                    parent_sample_id=image.sample_id,
-                    annotation_label_id=annotation_label_id,
-                    annotation_type=AnnotationType.OBJECT_DETECTION,
-                    x=10,
-                    y=10,
-                    width=20,
-                    height=20,
-                )
+    # Bulk-create all images in a single database round-trip.
+    image_sample_ids = image_resolver.create_many(
+        session=bench_db,
+        collection_id=parent_collection_id,
+        samples=[
+            ImageCreate(
+                file_path_abs=f"/bench/image_{i:06d}.jpg",
+                file_name=f"image_{i:06d}.jpg",
+                width=1920,
+                height=1080,
             )
+            for i in range(N_IMAGES)
+        ],
+    )
+
+    annotations_batch: list[AnnotationCreate] = [
+        AnnotationCreate(
+            parent_sample_id=sample_id,
+            annotation_label_id=annotation_label_id,
+            annotation_type=AnnotationType.OBJECT_DETECTION,
+            x=10,
+            y=10,
+            width=20,
+            height=20,
+        )
+        for sample_id in image_sample_ids
+        for _ in range(N_ANNOTATIONS_PER_IMAGE)
+    ]
 
     ann_ids = annotation_resolver.create_many(
-        session=test_db,
+        session=bench_db,
         parent_collection_id=parent_collection_id,
         annotations=annotations_batch,
     )
 
     # The annotation *samples* live in an auto-created child collection.
     # Retrieve that collection ID via the first annotation's sample.
-    first_annotation = annotation_resolver.get_by_id(session=test_db, annotation_id=ann_ids[0])
+    first_annotation = annotation_resolver.get_by_id(session=bench_db, annotation_id=ann_ids[0])
     assert first_annotation is not None
     annotation_collection_id: UUID = first_annotation.sample.collection_id
 
-    return test_db, annotation_collection_id, annotation_label_id
+    return bench_db, annotation_collection_id, annotation_label_id
 
 
 def _measure_query(

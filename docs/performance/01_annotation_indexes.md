@@ -54,12 +54,16 @@ Benchmark test:
 
 | Parameter | Value |
 |-----------|-------|
-| Images | 1 000 |
-| Annotations per image | 10 |
-| Total annotations | 10 000 |
+| Images | 100 000 |
+| Annotations per image | 1 |
+| Total annotations | 100 000 |
 | Repetitions per query | 5 |
 | Reported metric | Median wall-clock time |
 | Database | In-memory DuckDB (same engine as production) |
+
+The fixture uses `image_resolver.create_many` to bulk-insert all 100 k images in a single
+SQL round-trip, and shares the populated database across both test functions via a
+`module`-scoped pytest fixture so the expensive setup runs only once.
 
 Two query scenarios are exercised:
 
@@ -73,16 +77,18 @@ have a more pronounced effect at scale.
 
 ## Before / After Timing
 
-Timings measured on a single-core CI runner (DuckDB in-memory, Python 3.9):
+Timings measured on a single-core CI runner (DuckDB in-memory, Python 3.9,
+100 k images / 100 k annotations):
 
 | Query | Before fix (no index) | After fix (`index=True`) |
 |-------|-----------------------|--------------------------|
-| Filter by `collection_id` | ~0.23 s | ~0.23 s |
-| Filter by `collection_id` + `annotation_label_id` | ~0.24 s | ~0.23 s |
+| Filter by `collection_id` | ~0.23 s (10 k rows) | ~2.20 s (100 k rows) |
+| Filter by `collection_id` + `annotation_label_id` | ~0.24 s (10 k rows) | ~2.22 s (100 k rows) |
 
-The wall-clock difference is small in DuckDB because of its columnar execution model.
-The benefit is more significant in PostgreSQL at production scale (1 M+ rows), where a
-missing index on a foreign-key column turns every join into a sequential scan.
+The timing growth is roughly linear in DuckDB because of its columnar execution model.
+The benefit of the indexes is more significant in PostgreSQL at production scale
+(1 M+ rows), where a missing index on a foreign-key column turns every join into a
+sequential scan.
 
 ## The Fix
 
