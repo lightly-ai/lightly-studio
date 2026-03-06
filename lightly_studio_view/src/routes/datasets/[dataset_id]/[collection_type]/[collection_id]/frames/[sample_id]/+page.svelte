@@ -6,6 +6,7 @@
     import { routeHelpers } from '$lib/routes';
     import FrameDetailsBreadcrumb from '$lib/components/FrameDetailsBreadcrumb/FrameDetailsBreadcrumb.svelte';
     import { useFrame } from '$lib/hooks/useFrame/useFrame';
+    import { toStore } from 'svelte/store';
     import FrameDetailsSegment from '$lib/components/frames/FrameDetailsSegment/FrameDetailsSegment.svelte';
     import SampleDetailsPanel from '$lib/components/SampleDetails/SampleDetailsPanel.svelte';
     import MetadataSegment from '$lib/components/MetadataSegment/MetadataSegment.svelte';
@@ -15,7 +16,7 @@
 
     const { data }: { data: PageData } = $props();
     const { collection_id, sampleId } = $derived(data);
-    const { refetch, videoFrame } = $derived(useFrame(sampleId));
+    const { refetch, videoFrame } = useFrame(toStore(() => sampleId));
 
     const sample = $derived($videoFrame.data);
 

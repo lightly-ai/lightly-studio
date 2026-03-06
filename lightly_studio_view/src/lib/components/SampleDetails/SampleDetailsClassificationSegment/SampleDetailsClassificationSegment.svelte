@@ -9,6 +9,7 @@
     import { addAnnotationDeleteToUndoStack } from '$lib/services/addAnnotationDeleteToUndoStack';
     import { addAnnotationLabelChangeToUndoStack } from '$lib/services/addAnnotationLabelChangeToUndoStack';
     import { useAnnotationLabels } from '$lib/hooks/useAnnotationLabels/useAnnotationLabels';
+    import { toStore } from 'svelte/store';
     import { useCreateAnnotation } from '$lib/hooks/useCreateAnnotation/useCreateAnnotation';
     import { useCreateLabel } from '$lib/hooks/useCreateLabel/useCreateLabel';
     import { useDeleteAnnotation } from '$lib/hooks/useDeleteAnnotation/useDeleteAnnotation';
@@ -30,14 +31,14 @@
 
     const { isEditingMode, addReversibleAction } = useGlobalStorage();
 
-    const annotationLabels = useAnnotationLabels({ collectionId });
+    const annotationLabels = useAnnotationLabels(toStore(() => ({ collectionId })));
     const { createAnnotation } = useCreateAnnotation({ collectionId });
     const { deleteAnnotation } = useDeleteAnnotation({ collectionId });
     const { createLabel } = useCreateLabel({ collectionId });
     const { updateAnnotations } = useUpdateAnnotationsMutation({ collectionId });
     const datasetId = $derived(page.params.dataset_id!);
-    const { refetch: refetchRootCollection } = $derived.by(() =>
-        useCollectionWithChildren({ collectionId: datasetId })
+    const { refetch: refetchRootCollection } = useCollectionWithChildren(
+        toStore(() => ({ collectionId: datasetId }))
     );
 
     const items = $derived(getSelectionItems($annotationLabels.data || []));

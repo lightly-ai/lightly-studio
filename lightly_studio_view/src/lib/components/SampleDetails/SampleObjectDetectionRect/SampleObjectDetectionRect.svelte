@@ -1,5 +1,6 @@
 <script lang="ts">
     import { useAnnotationLabels } from '$lib/hooks/useAnnotationLabels/useAnnotationLabels';
+    import { toStore } from 'svelte/store';
     import { useCreateAnnotation } from '$lib/hooks/useCreateAnnotation/useCreateAnnotation';
     import { useCreateLabel } from '$lib/hooks/useCreateLabel/useCreateLabel';
     import type { BoundingBox } from '$lib/types';
@@ -46,7 +47,7 @@
 
     let temporaryBbox = $state<BoundingBox | null>(null);
     let shouldDisableInteraction = $state(false);
-    const labels = useAnnotationLabels({ collectionId });
+    const labels = useAnnotationLabels(toStore(() => ({ collectionId })));
     const { createLabel } = useCreateLabel({ collectionId });
     const { createAnnotation } = useCreateAnnotation({
         collectionId
@@ -62,8 +63,8 @@
     };
 
     const datasetId = $derived(page.params.dataset_id!);
-    const { refetch: refetchRootCollection } = $derived.by(() =>
-        useCollectionWithChildren({ collectionId: datasetId })
+    const { refetch: refetchRootCollection } = useCollectionWithChildren(
+        toStore(() => ({ collectionId: datasetId }))
     );
 
     const BOX_MIN_SIZE_PX = 4;

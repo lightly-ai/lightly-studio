@@ -12,6 +12,7 @@
     import { useAnnotationLabelContext } from '$lib/contexts/SampleDetailsAnnotation.svelte';
     import { useAnnotation } from '$lib/hooks/useAnnotation/useAnnotation';
     import { useAnnotationLabels } from '$lib/hooks/useAnnotationLabels/useAnnotationLabels';
+    import { toStore } from 'svelte/store';
     import { useInstanceSegmentationBrush } from '$lib/hooks/useInstanceSegmentationBrush';
     import { useCollectionWithChildren } from '$lib/hooks/useCollection/useCollection';
     import { page } from '$app/state';
@@ -47,7 +48,7 @@
     }: SampleInstanceSegmentationRectProps = $props();
     const resolvedAnnotationType = $derived(annotationTypeProp);
 
-    const labels = useAnnotationLabels({ collectionId });
+    const labels = useAnnotationLabels(toStore(() => ({ collectionId })));
     const activeAnnotationId = $derived.by(() => {
         if (annotationLabelContext.annotationId) return annotationLabelContext.annotationId;
 
@@ -66,8 +67,8 @@
         });
     });
     const datasetId = $derived(page.params.dataset_id!);
-    const { refetch: refetchRootCollection } = $derived.by(() =>
-        useCollectionWithChildren({ collectionId: datasetId })
+    const { refetch: refetchRootCollection } = useCollectionWithChildren(
+        toStore(() => ({ collectionId: datasetId }))
     );
     const brushApi = $derived.by(() =>
         useInstanceSegmentationBrush({

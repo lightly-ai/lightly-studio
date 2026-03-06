@@ -8,7 +8,7 @@
     import { page } from '$app/state';
     import NavigationMenu from '../NavigationMenu/NavigationMenu.svelte';
     import { isSamplesRoute, isVideosRoute } from '$lib/routes';
-    import { get } from 'svelte/store';
+    import { get, toStore } from 'svelte/store';
     import Menu from '$lib/components/Header/Menu.svelte';
     import type { CollectionView } from '$lib/api/lightly_studio_local';
     import { useCollectionWithChildren } from '$lib/hooks/useCollection/useCollection';
@@ -21,12 +21,12 @@
     const isVideos = $derived(isVideosRoute(page.route.id));
     const { settingsStore } = useSettings();
 
-    const hasEmbeddingsQuery = useHasEmbeddings({ collectionId: collection.collection_id });
+    const hasEmbeddingsQuery = useHasEmbeddings(toStore(() => ({ collectionId: collection.collection_id })));
     const hasEmbeddings = $derived(!!$hasEmbeddingsQuery.data);
 
     const datasetId = $derived(page.params.dataset_id!);
-    const { collection: datasetCollection } = $derived.by(() =>
-        useCollectionWithChildren({ collectionId: datasetId })
+    const { collection: datasetCollection } = useCollectionWithChildren(
+        toStore(() => ({ collectionId: datasetId }))
     );
 
     const { setIsEditingMode, isEditingMode, reversibleActions, executeReversibleAction } =

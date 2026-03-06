@@ -2,7 +2,7 @@
     import { useAnnotationLabels } from '$lib/hooks/useAnnotationLabels/useAnnotationLabels';
     import SelectList from '$lib/components/SelectList/SelectList.svelte';
     import { useAnnotation } from '$lib/hooks/useAnnotation/useAnnotation';
-    import type { Readable } from 'svelte/store';
+    import { toStore, type Readable } from 'svelte/store';
     import LabelNotFound from '$lib/components/LabelNotFound/LabelNotFound.svelte';
     import { getSelectionItems } from '$lib/components/SelectList/getSelectionItems';
     import { useGlobalStorage } from '$lib/hooks/useGlobalStorage';
@@ -27,7 +27,7 @@
         trackId?: number | null;
     } = $props();
 
-    const result = useAnnotationLabels({ collectionId });
+    const result = useAnnotationLabels(toStore(() => ({ collectionId })));
     const { addReversibleAction } = useGlobalStorage();
 
     const { updateAnnotation, refetch } = useAnnotation({

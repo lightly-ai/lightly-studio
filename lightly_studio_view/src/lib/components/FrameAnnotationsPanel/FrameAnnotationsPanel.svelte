@@ -1,5 +1,6 @@
 <script lang="ts">
     import { useAnnotationLabels } from '$lib/hooks/useAnnotationLabels/useAnnotationLabels';
+    import { toStore } from 'svelte/store';
     import { Segment } from '..';
     import LabelNotFound from '../LabelNotFound/LabelNotFound.svelte';
     import SampleDetailsSidePanelAnnotation from '../SampleDetails/SampleDetailsSidePanel/SampleDetailsSidePanelAnnotation/SampleDetailsSidePanelAnnotation.svelte';
@@ -37,7 +38,7 @@
     }: Props = $props();
 
     const { isEditingMode } = page.data.globalStorage;
-    const annotationLabels = useAnnotationLabels({ collectionId });
+    const annotationLabels = useAnnotationLabels(toStore(() => ({ collectionId })));
     const items = $derived(getSelectionItems($annotationLabels.data || []));
     const annotations = $derived(
         sample.sample.annotations

@@ -7,18 +7,20 @@ import { derived } from 'svelte/store';
 type UseVideoFrameAnnotationCountsParams = {
     collectionId: string;
     filter: VideoFrameAnnotationsCounterFilter;
+    enabled?: boolean;
 };
 
 export const useVideoFrameAnnotationCounts = (
     params: StoreOrVal<UseVideoFrameAnnotationCountsParams>
 ) => {
-    const optionsStore = derived(toReadable(params), (currentParams) =>
-        countVideoFrameAnnotationsOptions({
+    const optionsStore = derived(toReadable(params), (currentParams) => ({
+        ...countVideoFrameAnnotationsOptions({
             path: { video_frame_collection_id: currentParams.collectionId },
             body: {
                 filter: currentParams.filter
             }
-        })
-    );
+        }),
+        enabled: currentParams.enabled ?? true
+    }));
     return createQuery(optionsStore);
 };

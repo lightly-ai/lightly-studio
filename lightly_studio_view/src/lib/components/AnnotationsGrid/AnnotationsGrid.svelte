@@ -6,7 +6,7 @@
     import { routeHelpers } from '$lib/routes';
     import { onMount } from 'svelte';
     import { Grid } from 'svelte-virtual';
-    import { type Readable } from 'svelte/store';
+    import { type Readable, toStore } from 'svelte/store';
     import { page } from '$app/state';
     import { useAnnotationsInfinite } from '$lib/hooks/useAnnotationsInfinite/useAnnotationsInfinite';
     import Spinner from '../Spinner/Spinner.svelte';
@@ -81,7 +81,7 @@
         updateAnnotations,
         refresh,
         isPending
-    } = $derived(useAnnotationsInfinite(queryParams));
+    } = useAnnotationsInfinite(toStore(() => queryParams));
 
     const { updateAnnotations: updateAnnotationsRaw } = useUpdateAnnotationsMutation({
         collectionId: collection_id

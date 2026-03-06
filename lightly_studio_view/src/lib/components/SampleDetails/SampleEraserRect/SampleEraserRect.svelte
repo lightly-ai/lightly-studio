@@ -13,6 +13,7 @@
     import { useAnnotation } from '$lib/hooks/useAnnotation/useAnnotation';
     import { useAnnotationDeleteNavigation } from '$lib/hooks/useAnnotationDeleteNavigation/useAnnotationDeleteNavigation';
     import { useAnnotationLabels } from '$lib/hooks/useAnnotationLabels/useAnnotationLabels';
+    import { toStore } from 'svelte/store';
     import { useCreateAnnotation } from '$lib/hooks/useCreateAnnotation/useCreateAnnotation';
     import { useDeleteAnnotation } from '$lib/hooks/useDeleteAnnotation/useDeleteAnnotation';
     import { useGlobalStorage } from '$lib/hooks/useGlobalStorage';
@@ -54,7 +55,7 @@
     const { deleteAnnotation } = useDeleteAnnotation({
         collectionId
     });
-    const annotationLabels = useAnnotationLabels({ collectionId });
+    const annotationLabels = useAnnotationLabels(toStore(() => ({ collectionId })));
     const { addReversibleAction } = useGlobalStorage();
     const { createAnnotation } = useCreateAnnotation({
         collectionId

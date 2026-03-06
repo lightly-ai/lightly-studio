@@ -7,6 +7,7 @@
     import { useDeleteCaption } from '$lib/hooks/useDeleteCaption/useDeleteCaption';
     import { useGlobalStorage } from '$lib/hooks/useGlobalStorage';
     import { useCollectionWithChildren } from '$lib/hooks/useCollection/useCollection';
+    import { toStore } from 'svelte/store';
     import { addCaptionDeleteToUndoStack } from '$lib/services/addCaptionDeleteToUndoStack';
     import { page } from '$app/state';
     import { toast } from 'svelte-sonner';
@@ -24,8 +25,8 @@
     const { deleteCaption } = useDeleteCaption();
     const { createCaption } = useCreateCaption();
     const datasetId = $derived(page.params.dataset_id!);
-    const { refetch: refetchRootCollection } = $derived.by(() =>
-        useCollectionWithChildren({ collectionId: datasetId })
+    const { refetch: refetchRootCollection } = useCollectionWithChildren(
+        toStore(() => ({ collectionId: datasetId }))
     );
 
     const handleDeleteCaption = async (captionId: string) => {

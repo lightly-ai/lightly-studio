@@ -4,6 +4,7 @@
     import SelectList from '$lib/components/SelectList/SelectList.svelte';
     import type { AnnotationView } from '$lib/api/lightly_studio_local';
     import { useAnnotationLabels } from '$lib/hooks/useAnnotationLabels/useAnnotationLabels';
+    import { toStore } from 'svelte/store';
     import LabelNotFound from '$lib/components/LabelNotFound/LabelNotFound.svelte';
     import { getSelectionItems } from '$lib/components/SelectList/getSelectionItems';
 
@@ -17,7 +18,7 @@
 
     const { selectedAnnotations, onSelect, disabled, isLoading, collectionId }: Props = $props();
 
-    const result = useAnnotationLabels({ collectionId });
+    const result = useAnnotationLabels(toStore(() => ({ collectionId })));
 
     const items = $derived(getSelectionItems($result.data || []));
 </script>

@@ -6,7 +6,7 @@
     import { useTags } from '$lib/hooks/useTags/useTags';
     import { routeHelpers } from '$lib/routes';
     import { onMount } from 'svelte';
-    import type { Readable } from 'svelte/store';
+    import { toStore, type Readable } from 'svelte/store';
     import {
         isNormalModeParams,
         useImagesInfinite,
@@ -108,8 +108,8 @@
         updateFilterParams(nextParams);
     });
 
-    const { samples: infiniteSamples } = $derived(
-        useImagesInfinite({ ...$filterParams, collection_id: collection_id })
+    const { samples: infiniteSamples } = useImagesInfinite(
+        toStore(() => ({ ...$filterParams, collection_id: collection_id }))
     );
     // Derived list of samples from TanStack infinite query
     const samples: ImageView[] = $derived(

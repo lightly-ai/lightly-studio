@@ -5,6 +5,7 @@
     import { useSettings } from '$lib/hooks/useSettings';
     import { Grid } from 'svelte-virtual';
     import type { ImageView } from '$lib/api/lightly_studio_local';
+    import { toStore } from 'svelte/store';
 
     const { collection_id }: { collection_id: string } = $props();
 
@@ -18,7 +19,7 @@
         classifierSamples: $classifierSamples || undefined
     });
 
-    const { samples: infiniteSamples } = $derived(useImagesInfinite(samplesParams));
+    const { samples: infiniteSamples } = useImagesInfinite(toStore(() => samplesParams));
 
     const displayedSamples: ImageView[] = $derived(
         $infiniteSamples &&

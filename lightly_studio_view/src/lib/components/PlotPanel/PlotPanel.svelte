@@ -8,6 +8,7 @@
         type ViewportState
     } from 'embedding-atlas/svelte';
     import { useEmbeddings } from '$lib/hooks/useEmbeddings/useEmbeddings';
+    import { toStore } from 'svelte/store';
     import { useImageFilters } from '$lib/hooks/useImageFilters/useImageFilters';
     import { useVideoFilters } from '$lib/hooks/useVideoFilters/useVideoFilters';
     import { useArrowData } from './useArrowData/useArrowData';
@@ -63,7 +64,7 @@
         };
     });
 
-    const embeddingsData = $derived(useEmbeddings(filter));
+    const embeddingsData = useEmbeddings(toStore(() => filter));
 
     const categoryColors = ['#9CA3AF', '#2563EB', '#F59E0B'];
     const { data: arrowData, error: arrowError } = $derived(

@@ -14,11 +14,12 @@ type UseAnnotationCountsParams = {
             max_height?: number;
         };
     };
+    enabled?: boolean;
 };
 
 export const useAnnotationCounts = (params: StoreOrVal<UseAnnotationCountsParams>) => {
-    const optionsStore = derived(toReadable(params), (currentParams) =>
-        countAnnotationsByCollectionOptions({
+    const optionsStore = derived(toReadable(params), (currentParams) => ({
+        ...countAnnotationsByCollectionOptions({
             path: { collection_id: currentParams.collectionId },
             query: {
                 ...(currentParams.options?.filtered_labels && {
@@ -37,7 +38,8 @@ export const useAnnotationCounts = (params: StoreOrVal<UseAnnotationCountsParams
                     max_height: currentParams.options.dimensions.max_height
                 })
             }
-        })
-    );
+        }),
+        enabled: currentParams.enabled ?? true
+    }));
     return createQuery(optionsStore);
 };

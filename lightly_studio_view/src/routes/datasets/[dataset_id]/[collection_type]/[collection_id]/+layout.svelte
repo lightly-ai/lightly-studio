@@ -225,44 +225,56 @@
     const { videoFramesBoundsValues } = useVideoFramesBounds();
     const { videoBoundsValues } = useVideoBounds();
 
-    const annotationCounts = $derived.by(() => {
-        if (
-            isVideoFrames ||
+    const isVideoFramesCounts = $derived(
+        isVideoFrames ||
             (isAnnotations && parentCollection?.sampleType == SampleType.VIDEO_FRAME)
-        ) {
-            return useVideoFrameAnnotationCounts({
-                collectionId: datasetId,
-                filter: {
-                    annotations_labels: annotationsLabels,
-                    video_filter: {
-                        sample_filter: {
-                            metadata_filters: metadataFilters
-                        },
-                        ...$videoFramesBoundsValues
-                    }
+    );
+    const isVideosCounts = $derived(isVideos && !isVideoFramesCounts);
+
+    const vfCounts = useVideoFrameAnnotationCounts(
+        toStore(() => ({
+            collectionId: datasetId,
+            filter: {
+                annotations_labels: annotationsLabels,
+                video_filter: {
+                    sample_filter: {
+                        metadata_filters: metadataFilters
+                    },
+                    ...$videoFramesBoundsValues
                 }
-            });
-        } else if (isVideos) {
-            return useVideoAnnotationCounts({
-                collectionId,
-                filter: {
-                    video_frames_annotations_labels: annotationsLabels,
-                    video_filter: {
-                        sample_filter: {
-                            metadata_filters: metadataFilters
-                        },
-                        ...$videoBoundsValues
-                    }
+            },
+            enabled: isVideoFramesCounts
+        }))
+    );
+    const videoCounts = useVideoAnnotationCounts(
+        toStore(() => ({
+            collectionId,
+            filter: {
+                video_frames_annotations_labels: annotationsLabels,
+                video_filter: {
+                    sample_filter: {
+                        metadata_filters: metadataFilters
+                    },
+                    ...$videoBoundsValues
                 }
-            });
-        }
-        return useAnnotationCounts({
+            },
+            enabled: isVideosCounts
+        }))
+    );
+    const defaultCounts = useAnnotationCounts(
+        toStore(() => ({
             collectionId: datasetId,
             options: {
                 filtered_labels: annotationsLabels,
                 dimensions: $dimensionsValues
-            }
-        });
+            },
+            enabled: !isVideoFramesCounts && !isVideosCounts
+        }))
+    );
+    const annotationCounts = $derived.by(() => {
+        if (isVideoFramesCounts) return vfCounts;
+        if (isVideosCounts) return videoCounts;
+        return defaultCounts;
     });
 
     type AnnotationCount = {

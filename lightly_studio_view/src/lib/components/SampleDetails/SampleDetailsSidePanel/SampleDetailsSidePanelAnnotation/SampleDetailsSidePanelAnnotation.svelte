@@ -6,6 +6,7 @@
     import { useAnnotation } from '$lib/hooks/useAnnotation/useAnnotation';
     import LabelNotFound from '$lib/components/LabelNotFound/LabelNotFound.svelte';
     import { useAnnotationLabels } from '$lib/hooks/useAnnotationLabels/useAnnotationLabels';
+    import { toStore } from 'svelte/store';
     import { Trash2, Eye, EyeOff, Lock, Unlock } from '@lucide/svelte';
     import { type AnnotationView } from '$lib/api/lightly_studio_local';
     import { useGlobalStorage } from '$lib/hooks/useGlobalStorage';
@@ -68,7 +69,7 @@
 
     const { isEditingMode } = page.data.globalStorage;
     const collectionId = $derived(page.params.collection_id!);
-    const result = $derived(useAnnotationLabels({ collectionId }));
+    const result = useAnnotationLabels(toStore(() => ({ collectionId })));
     const items = $derived(getSelectionItems($result.data || []));
     const { addReversibleAction } = useGlobalStorage();
 

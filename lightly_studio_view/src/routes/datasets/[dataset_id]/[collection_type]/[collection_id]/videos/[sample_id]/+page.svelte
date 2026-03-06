@@ -17,6 +17,7 @@
     import MetadataSegment from '$lib/components/MetadataSegment/MetadataSegment.svelte';
     import { useRemoveTagFromSample } from '$lib/hooks/useRemoveTagFromSample/useRemoveTagFromSample';
     import { useCollectionWithChildren } from '$lib/hooks/useCollection/useCollection';
+    import { toStore } from 'svelte/store';
     import { page } from '$app/state';
     import CaptionField from '$lib/components/CaptionField/CaptionField.svelte';
     import { useDeleteCaption } from '$lib/hooks/useDeleteCaption/useDeleteCaption';
@@ -41,11 +42,8 @@
     const collectionId = page.params.collection_id;
 
     const { removeTagFromSample } = useRemoveTagFromSample({ collectionId });
-    const { collection: datasetCollection, refetch: refetchRootCollection } = $derived.by(() =>
-        useCollectionWithChildren({
-            collectionId: datasetId
-        })
-    );
+    const { collection: datasetCollection, refetch: refetchRootCollection } =
+        useCollectionWithChildren(toStore(() => ({ collectionId: datasetId })));
     const { deleteCaption } = useDeleteCaption();
     const { createCaption } = useCreateCaption();
     const { isEditingMode } = page.data.globalStorage;

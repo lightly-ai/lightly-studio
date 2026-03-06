@@ -7,6 +7,7 @@
     import CaptionsItem from './CaptionsItem/CaptionsItem.svelte';
     import { readCollectionOptions } from '$lib/api/lightly_studio_local/@tanstack/svelte-query.gen';
     import { createQuery } from '@tanstack/svelte-query';
+    import { toStore } from 'svelte/store';
 
     const {
         collectionId
@@ -32,10 +33,8 @@
         return collection.parent_collection_id;
     });
 
-    const { data, query, loadMore, refresh } = $derived(
-        useSamplesInfinite({
-            body: { filters: { collection_id: parentCollectionId, has_captions: true } }
-        })
+    const { data, query, loadMore, refresh } = useSamplesInfinite(
+        toStore(() => ({ body: { filters: { collection_id: parentCollectionId, has_captions: true } } }))
     );
 
     let viewport: HTMLElement | null = $state(null);

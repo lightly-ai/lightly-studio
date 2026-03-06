@@ -2,6 +2,7 @@
     import { GroupsGrid } from '$lib/components/GroupsGrid';
     import { useGroupsInfinite } from '$lib/hooks/useGroupsInfinite';
     import { useGlobalStorage } from '$lib/hooks/useGlobalStorage';
+    import { toStore } from 'svelte/store';
     import { page } from '$app/stores';
     import { routeHelpers } from '$lib/routes';
     import { goto } from '$app/navigation';
@@ -10,7 +11,7 @@
     const collectionType = $derived($page.params.collection_type!);
     const datasetId = $derived($page.params.dataset_id!);
 
-    const { data, query, loadMore, totalCount } = $derived(useGroupsInfinite(collectionId));
+    const { data, query, loadMore, totalCount } = useGroupsInfinite(toStore(() => collectionId));
     const { setfilteredSampleCount } = useGlobalStorage();
 
     $effect(() => {

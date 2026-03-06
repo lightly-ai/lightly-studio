@@ -4,6 +4,7 @@
     import { type Snippet } from 'svelte';
     import { getImageURL } from '$lib/utils/getImageURL';
     import { useImage } from '$lib/hooks/useImage/useImage';
+    import { toStore } from 'svelte/store';
     import type { Collection } from '$lib/services/types';
     import SampleDetailsPanel from './SampleDetailsPanel.svelte';
     import SampleMetadata from '../SampleMetadata/SampleMetadata.svelte';
@@ -36,7 +37,7 @@
         }
     };
 
-    const { image, refetch } = $derived(useImage({ sampleId }));
+    const { image, refetch } = useImage(toStore(() => ({ sampleId })));
 
     let sampleURL = $derived(getImageURL(sampleId));
     const sampleImage = $derived($image.data as ImageView | undefined);
