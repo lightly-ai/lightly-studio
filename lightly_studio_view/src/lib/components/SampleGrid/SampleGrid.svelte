@@ -63,7 +63,7 @@
 </script>
 
 {#if status.loading}
-    <div class="flex h-full w-full items-center justify-center">
+    <div class="flex h-full w-full items-center justify-center gap-2">
         <Spinner />
         <div>{message.loading}</div>
     </div>
