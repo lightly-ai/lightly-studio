@@ -12,6 +12,7 @@
     import { goto } from '$app/navigation';
     import Video from '../Video/Video.svelte';
     import { page } from '$app/state';
+    import { tick } from 'svelte';
 
     let {
         video,
@@ -36,21 +37,24 @@
     let hoverTimer: ReturnType<typeof setTimeout> | null = null;
     const HOVER_DELAY = 200;
     let isHovering = false;
+    let isPreviewActive = $state(false);
     // Start it with the initial frame
     let frames = $state<FrameView[]>(video.frame == null ? [] : [video.frame]);
 
     async function handleMouseEnter() {
         isHovering = true;
         hoverTimer = setTimeout(async () => {
+            if (!isHovering) return;
+
+            isPreviewActive = true;
+            await tick();
+
             if (showAnnotations) await loadFrames();
 
             if (videoEl) {
-                if (videoEl.readyState < 2) {
-                    await new Promise((res) =>
-                        videoEl?.addEventListener('loadeddata', res, { once: true })
-                    );
+                if (isHovering) {
+                    await videoEl.play().catch(() => undefined);
                 }
-                if (isHovering) videoEl.play();
             }
         }, HOVER_DELAY);
     }
@@ -62,10 +66,14 @@
             hoverTimer = null;
         }
 
-        if (!videoEl) return;
+        if (!videoEl) {
+            isPreviewActive = false;
+            return;
+        }
 
         videoEl?.pause();
         videoEl.currentTime = 0;
+        isPreviewActive = false;
     }
 
     const datasetId = $derived(page.params.dataset_id!);
@@ -143,6 +151,7 @@
         muted={true}
         playsinline={true}
         preload="metadata"
+        active={isPreviewActive}
         {handleMouseEnter}
         {handleMouseLeave}
         className="h-full w-full cursor-pointer rounded-lg shadow-md"
