@@ -171,7 +171,12 @@
 
         currentFrame = frame;
 
-        if (index != null && (cursor - index  < BATCH_SIZE / 2) && index != 0 && currentIndex < index) {
+        if (
+            index != null &&
+            cursor - index < BATCH_SIZE / 2 &&
+            index != 0 &&
+            currentIndex < index
+        ) {
             loadFrames();
         }
     }
@@ -200,7 +205,7 @@
 
         const newFrames = res?.data?.data ?? [];
 
-        if (res?.data?.nextCursor == null || newFrames.length === 0 ) {
+        if (res?.data?.nextCursor == null || newFrames.length === 0) {
             reachedEnd = true;
             loading = false;
             return;
