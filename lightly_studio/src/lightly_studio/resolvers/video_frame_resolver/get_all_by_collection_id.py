@@ -45,7 +45,7 @@ def get_all_by_collection_id(
     if video_frame_filter:
         base_query = video_frame_filter.apply(base_query)
 
-    samples_query = base_query.options(_get_load_options()).order_by(
+    samples_query = base_query.options(*_get_load_options()).order_by(
         col(VideoTable.file_path_abs).asc(), col(VideoFrameTable.frame_number).asc()
     )
 
@@ -66,13 +66,16 @@ def get_all_by_collection_id(
     )
 
 
-def _get_load_options() -> LoaderOption:
-    """Eager-load annotations to avoid multiple queries."""
-    return selectinload(VideoFrameTable.sample).options(
-        selectinload(SampleTable.annotations).options(
-            joinedload(AnnotationBaseTable.annotation_label),
-            joinedload(AnnotationBaseTable.object_detection_details),
-            joinedload(AnnotationBaseTable.segmentation_details),
-            selectinload(AnnotationBaseTable.sample).options(selectinload(SampleTable.tags)),
+def _get_load_options() -> list[LoaderOption]:
+    """Eager-load video and annotations to avoid multiple queries."""
+    return [
+        selectinload(VideoFrameTable.video),
+        selectinload(VideoFrameTable.sample).options(
+            selectinload(SampleTable.annotations).options(
+                joinedload(AnnotationBaseTable.annotation_label),
+                joinedload(AnnotationBaseTable.object_detection_details),
+                joinedload(AnnotationBaseTable.segmentation_details),
+                selectinload(AnnotationBaseTable.sample).options(selectinload(SampleTable.tags)),
+            ),
         ),
-    )
+    ]
