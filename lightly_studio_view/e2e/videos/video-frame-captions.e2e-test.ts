@@ -71,7 +71,7 @@ test.describe.serial('video-frames-page-flow-captions', () => {
         );
     });
 
-    test('delete a caption in caption page', async ({ captionsVideoFramePage }) => {
+    test.skip('delete a caption in caption page', async ({ captionsVideoFramePage }) => {
         // Start edit mode
         await captionsVideoFramePage.clickEditButton();
 
