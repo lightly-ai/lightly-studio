@@ -22,17 +22,17 @@ lazy relationships synchronously inside the list comprehension:
 | `annotation.segmentation_details` | `AnnotationBaseTable.segmentation_details` | lazy select – 1 query per annotation |
 | `annotation.sample.tags` | `AnnotationBaseTable.sample` → `SampleTable.tags` | lazy select – 1 query per annotation + 1 per annotation for tags |
 
-### Worst-case query count (100 annotations, 10 distinct labels)
+### Worst-case query count (1 000 annotations, 10 distinct labels)
 
 | Query | Count |
 |---|---|
 | Main annotation SELECT | 1 |
 | Total-count subquery SELECT | 1 |
 | `annotation_label` (10 unique labels) | 10 |
-| `object_detection_details` (one per annotation) | 100 |
-| `sample` row (one per annotation) | 100 |
-| `sample.tags` (one per annotation) | 100 |
-| **Total** | **312** |
+| `object_detection_details` (one per annotation) | 1 000 |
+| `sample` row (one per annotation) | 1 000 |
+| `sample.tags` (one per annotation) | 1 000 |
+| **Total** | **3 012** |
 
 ## Fix
 
@@ -88,16 +88,19 @@ A pytest benchmark in
 `tests/performance/test_annotation_payload_n1_benchmark.py`:
 
 1. Creates an in-memory DuckDB session.
-2. Inserts 100 images each with one `OBJECT_DETECTION` annotation using 10
-   distinct labels (via `annotation_resolver.create_many`).
+2. Inserts 10 000 images each with 10 `OBJECT_DETECTION` annotations using 10
+   distinct labels. Images are inserted in batches of 5 000 via
+   `image_resolver.create_many`; annotations (100 000 total) are inserted in
+   batches of 5 000 via `annotation_resolver.create_many`.
 3. Counts SQLAlchemy `SELECT` events using
    `event.listen(engine, "before_cursor_execute", ...)`.
-4. Calls `annotation_resolver.get_all_with_payload()` for all 100 annotations.
+4. Calls `annotation_resolver.get_all_with_payload()` for a page of 100
+   annotations and records the wall-clock time and SELECT count.
 5. Asserts the total SELECT count is ≤ 20.
 
 ### Results
 
-| State | SELECT count (100 annotations, 10 labels) |
+| State | SELECT count (page of 100 annotations, 10 labels) |
 |---|---|
 | **Before fix** (all relationships lazy) | ~312 |
 | **After fix** (eager loading) | **5** |
