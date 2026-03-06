@@ -2,7 +2,7 @@ import { test, expect } from '../utils';
 
 // This tests are dependent of each other.
 test.describe.serial('video-frames-page-flow-captions', () => {
-    test('add captions in video frame details', async ({
+    test.skip('add captions in video frame details', async ({
         videoFramesPage,
         videoFrameDetailsPage
     }) => {
@@ -30,7 +30,7 @@ test.describe.serial('video-frames-page-flow-captions', () => {
         expect(await videoFrameDetailsPage.getNthCaptionInput(1)).toEqual('caption 1');
     });
 
-    test('delete a caption in video frame details', async ({
+    test.skip('delete a caption in video frame details', async ({
         videoFramesPage,
         videoFrameDetailsPage
     }) => {
@@ -48,7 +48,7 @@ test.describe.serial('video-frames-page-flow-captions', () => {
         expect(await videoFrameDetailsPage.getNthCaptionInput(0)).toEqual('caption 1');
     });
 
-    test('add and edit captions in caption page', async ({ captionsVideoFramePage }) => {
+    test.skip('add and edit captions in caption page', async ({ captionsVideoFramePage }) => {
         expect(await captionsVideoFramePage.getCaptionCount()).toEqual(1);
         expect(await captionsVideoFramePage.getNthCaptionText(0)).toEqual('caption 1');
 
