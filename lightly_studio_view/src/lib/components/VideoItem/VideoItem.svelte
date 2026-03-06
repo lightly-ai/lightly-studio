@@ -46,6 +46,7 @@
 
             if (videoEl) {
                 if (videoEl.readyState < 2) {
+                    videoEl.load();
                     await new Promise((res) =>
                         videoEl?.addEventListener('loadeddata', res, { once: true })
                     );
@@ -142,7 +143,7 @@
         update={onUpdate}
         muted={true}
         playsinline={true}
-        preload="metadata"
+        preload="none"
         {handleMouseEnter}
         {handleMouseLeave}
         className="h-full w-full cursor-pointer rounded-lg shadow-md"
