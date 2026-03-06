@@ -34,7 +34,7 @@ const annotationLabels = useAnnotationLabels(toStore(() => ({ collectionId: coll
 
 ---
 
-## PR 1: Utility + `useHasEmbeddings` + `useEmbedText` + `useAnnotationLabels`
+## PR 1: Utility + `useHasEmbeddings` + `useEmbedText` + `useAnnotationLabels` ✅
 
 ~80 lines. Creates the shared utility and refactors the three simplest hooks.
 
@@ -64,64 +64,73 @@ Changes in `src/routes/datasets/[dataset_id]/[collection_type]/[collection_id]/+
 
 ---
 
-## PR 3: Fix conditional `annotationCounts` in `+layout.svelte`
+## PR 3: All remaining hooks → StoreOrVal ✅
 
-~80 lines. Replaces the conditional hook call with three always-instantiated queries gated by `enabled`.
+Converted all 11 remaining query hooks to accept `StoreOrVal` parameters. This was done in a single PR instead of incremental per-file PRs (deviation from original plan).
 
-- [ ] Refactor `lightly_studio_view/src/lib/hooks/useAnnotationCounts/useAnnotationCounts.ts`:
-  - Accept `StoreOrVal<{ collectionId, options, enabled }>` — add `enabled` field that maps to TanStack Query's `enabled` option
-  - Use `toReadable` → `derived` → `createQuery(optionsStore)` pattern
-- [ ] Refactor `lightly_studio_view/src/lib/hooks/useVideoAnnotationsCount/useVideoAnnotationsCount.ts` → same pattern with `enabled`
-- [ ] Refactor `lightly_studio_view/src/lib/hooks/useVideoFrameAnnotationsCount/useVideoFrameAnnotationsCount.ts` → same pattern with `enabled`
-- [ ] Update `+layout.svelte` (lines 222-260) — replace the conditional `$derived.by` that calls different hooks with three always-instantiated queries using `toStore` from `svelte/store`:
-  ```ts
-  const isVF = $derived(isVideoFrames || (isAnnotations && parentCollection?.sampleType == SampleType.VIDEO_FRAME));
-
-  const vfQuery = useVideoFrameAnnotationCounts(toStore(() => ({ collectionId: datasetId, filter: { ... }, enabled: isVF })));
-  const videoQuery = useVideoAnnotationCounts(toStore(() => ({ collectionId, filter: { ... }, enabled: isVideos && !isVF })));
-  const defaultQuery = useAnnotationCounts(toStore(() => ({ collectionId: datasetId, options: { ... }, enabled: !isVF && !isVideos })));
-
-  // Safe $derived.by — only selects which existing result to read, no hook calls
-  const annotationCounts = $derived.by(() => {
-      if (isVF) return vfQuery;
-      if (isVideos) return videoQuery;
-      return defaultQuery;
-  });
-  ```
-- [ ] Verify: annotation counts load correctly on samples, videos, and video frames views; only the active variant fetches
+- [x] `useAnnotationCounts` — added `enabled` flag
+- [x] `useAnnotationsInfinite`
+- [x] `useCollection`
+- [x] `useCollectionWithChildren`
+- [x] `useEmbeddings`
+- [x] `useFrame`
+- [x] `useGroupsInfinite`
+- [x] `useImage`
+- [x] `useImagesInfinite`
+- [x] `useSamplesInfinite`
+- [x] `useVideoAnnotationsCount` — added `enabled` flag
+- [x] `useVideoFrameAnnotationsCount` — added `enabled` flag
 
 ---
 
-## PR 4: Fix `Captions.svelte`
+## PR 4: All call sites ✅
 
-~40 lines.
+Updated 18 components to use `toStore(() => ...)` pattern and removed `$derived` wrappers. This was done in a single PR instead of incremental per-file PRs.
 
-- [ ] Refactor `lightly_studio_view/src/lib/hooks/useSamplesInfinite/useSamplesInfinite.ts`:
-  - Accept `StoreOrVal<{ body: { filters: { collection_id, has_captions } } }>`
-  - Use `toReadable` → `derived` → `createInfiniteQuery(optionsStore)`
-  - For the `refresh` function: subscribe to the params store to track the latest query key so `queryClient.invalidateQueries` invalidates the right key
-- [ ] Update `lightly_studio_view/src/lib/components/Captions/Captions.svelte` (lines 35-39):
-  ```ts
-  const { data, query, loadMore, refresh } = useSamplesInfinite(
-      toStore(() => ({ body: { filters: { collection_id: parentCollectionId, has_captions: true } } }))
-  );
-  ```
-- [ ] Verify captions load and update when navigating between collections
+- [x] Refactored conditional `annotationCounts` in `+layout.svelte` to three always-instantiated queries gated by `enabled`
+- [x] Updated all query hook call sites across 18 components
+- [x] Verified: `svelte-check` — 0 errors, 0 warnings
 
 ---
 
-## Future PRs (same pattern, one per file)
+## Remaining Work
 
-Each ≤50 lines: refactor the hook (if not yet done) + fix the call site.
+3 files still have `$derived` wrapping **imperative** (non-query) hooks:
 
-- [ ] `groups/+page.svelte` → `useGroupsInfinite`
-- [ ] `frames/+page.svelte` → `useMetadataFilters`, `useVideoFramesBounds`, `useTags`
-- [ ] `frames/[sample_id]/+page.svelte` → `useFrame`
-- [ ] `videos/+page.svelte` → `useVideoBounds`
-- [ ] `PlotPanel.svelte` → `useEmbeddings`
-- [ ] `ClassifierSamplesGrid.svelte` → `useImagesInfinite`
-- [ ] `AnnotationsGrid.svelte` → `useAnnotationsInfinite`
-- [ ] `SampleDetailsSidePanelAnnotation.svelte` → `useAnnotationLabels` (hook already done)
-- [ ] `CreateSelectionDialog.svelte` → `useTags`
-- [ ] `ImageDetails.svelte` → `useImage`
-- [ ] `Header.svelte` → `useCollectionWithChildren`
+| File | Hook | Line |
+|------|------|------|
+| `CreateSelectionDialog.svelte` | `useTags` | `$derived(useTags({...}))` |
+| `frames/+page.svelte` | `useMetadataFilters` | `$derived(useMetadataFilters(...))` |
+| `frames/+page.svelte` | `useVideoFramesBounds` | `$derived(useVideoFramesBounds(...))` |
+| `videos/+page.svelte` | `useVideoBounds` | `$derived.by(() => useVideoBounds(...))` |
+
+These 4 hooks are **imperative** (not TanStack Query). They init data on first call and return stores/functions. The fix follows the same pattern used in PR2's layout for `useMetadataFilters`/`useDimensions`: call once at init, use `$effect` to re-trigger when params change.
+
+### PR5: Fix remaining imperative hook call sites (~40 LOC)
+
+**`src/lib/components/Selection/CreateSelectionDialog.svelte`:**
+```ts
+// Before:
+const { loadTags } = $derived(useTags({ collection_id: collectionId, kind: ['sample'] }));
+// After:
+const { loadTags } = useTags({ collection_id: collectionId, kind: ['sample'] });
+$effect(() => { loadTags(); });
+```
+
+**`src/routes/.../frames/+page.svelte`:**
+```ts
+// Before:
+const { metadataValues } = $derived(useMetadataFilters(collectionId));
+const { videoFramesBoundsValues } = $derived(useVideoFramesBounds(collectionId));
+// After:
+const { metadataValues } = useMetadataFilters(collectionId);
+const { videoFramesBoundsValues } = useVideoFramesBounds(collectionId);
+```
+
+**`src/routes/.../videos/+page.svelte`:**
+```ts
+// Before:
+const { videoBoundsValues } = $derived.by(() => useVideoBounds(collectionId));
+// After:
+const { videoBoundsValues } = useVideoBounds(collectionId);
+```
