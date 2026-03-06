@@ -214,7 +214,7 @@ describe('resolveContextFilter', () => {
     });
 
     describe('collection routes with route-specific filters', () => {
-        const imageFilter = { collection_id: 'coll-1' };
+        const imageFilter = { sample_filter: { collection_id: 'coll-1' } };
         const videoFilter = { sample_filter: { collection_id: 'coll-1' } };
         const frameFilter = { sample_filter: { collection_id: 'coll-1' } };
 
