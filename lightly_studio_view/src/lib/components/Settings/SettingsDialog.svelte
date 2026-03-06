@@ -47,8 +47,8 @@
                 keyToolbarEraser: $settingsStore.key_toolbar_eraser || 'x'
             };
             gridViewRendering = $settingsStore.grid_view_sample_rendering || 'contain';
-            showAnnotationTextLabels = Boolean($settingsStore.show_annotation_text_labels ?? false);
-            showSampleFilenames = Boolean($settingsStore.show_sample_filenames ?? false);
+            showAnnotationTextLabels = $settingsStore.show_annotation_text_labels ?? false;
+            showSampleFilenames = $settingsStore.show_sample_filenames ?? false;
             initialized = true;
         }
     });
