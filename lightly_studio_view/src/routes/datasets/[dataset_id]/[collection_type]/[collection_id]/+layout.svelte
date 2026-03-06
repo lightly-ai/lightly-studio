@@ -110,7 +110,7 @@
     const isVideoFrames = $derived(isVideoFramesRoute(page.route.id));
 
     let gridType = $state<GridType>('samples');
-    let lastVisitedGridContext: { gridType: GridType; collectionId: string } | null = null;
+    let lastCollectionId: string | null = null;
     $effect(() => {
         let nextGridType: GridType | null = null;
         if (isAnnotations) {
@@ -131,20 +131,13 @@
             return;
         }
 
-        if (
-            lastVisitedGridContext &&
-            lastVisitedGridContext.gridType !== nextGridType &&
-            lastVisitedGridContext.collectionId
-        ) {
-            clearSelectedSamples(lastVisitedGridContext.collectionId);
-            clearSelectedSampleAnnotationCrops(lastVisitedGridContext.collectionId);
+        if (lastCollectionId && lastCollectionId !== collectionId) {
+            clearSelectedSamples(lastCollectionId);
+            clearSelectedSampleAnnotationCrops(lastCollectionId);
         }
 
         gridType = nextGridType;
-        lastVisitedGridContext = {
-            gridType: nextGridType,
-            collectionId
-        };
+        lastCollectionId = collectionId;
 
         // Temporary hack to remember where the user was when navigating
         // TODO: also remember state of tags, labels, metadata filters etc. Possible store it in pagestate
