@@ -1,5 +1,5 @@
 import { fireEvent, render, screen, waitFor } from '@testing-library/svelte';
-import { get } from 'svelte/store';
+import { get, writable } from 'svelte/store';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import SettingsDialog from './SettingsDialog.svelte';
 import { useSettingsDialog } from '$lib/hooks/useSettingsDialog/useSettingsDialog';
@@ -8,39 +8,26 @@ import { useSettingsDialog } from '$lib/hooks/useSettingsDialog/useSettingsDialo
 vi.mock('$lib/hooks/useSettings', () => {
     const mockSaveSettings = vi.fn().mockResolvedValue({ success: true });
 
-    const writable = (initialValue) => {
-        let value = initialValue;
-        const subscribers = new Set();
-
-        return {
-            subscribe: (subscriber) => {
-                subscribers.add(subscriber);
-                subscriber(value);
-                return () => {
-                    subscribers.delete(subscriber);
-                };
-            },
-            set: (newValue) => {
-                value = newValue;
-                subscribers.forEach((subscriber) => subscriber(value));
-            },
-            get: () => value
-        };
-    };
-
     const settingsStore = writable({
-        keyboard_shortcut_mapping: {
-            hide_annotations: 'v',
-            go_back: 'Escape'
-        },
+        key_hide_annotations: 'v',
+        key_go_back: 'Escape',
+        key_toggle_edit_mode: 'e',
         grid_view_sample_rendering: 'contain',
         show_annotation_text_labels: true,
-        show_sample_filenames: true
+        show_sample_filenames: true,
+        key_toolbar_selection: 's',
+        key_toolbar_drag: 'd',
+        key_toolbar_bounding_box: 'b',
+        key_toolbar_segmentation_mask: 'm',
+        key_toolbar_brush: 'r',
+        key_toolbar_eraser: 'x'
     });
+    const isLoadedStore = writable(true);
 
     return {
         useSettings: () => ({
             settingsStore,
+            isLoadedStore,
             saveSettings: mockSaveSettings
         })
     };
@@ -101,10 +88,8 @@ describe('SettingsDialog', () => {
         await openDialog();
 
         // Check if the initial values match our mock
-        expect(
-            screen.getByText(settings.keyboard_shortcut_mapping.hide_annotations)
-        ).toBeInTheDocument();
-        expect(screen.getByText(settings.keyboard_shortcut_mapping.go_back)).toBeInTheDocument();
+        expect(screen.getByText(settings.key_hide_annotations)).toBeInTheDocument();
+        expect(screen.getByText(settings.key_go_back)).toBeInTheDocument();
 
         // Check grid view rendering - use getByRole for the trigger
         expect(screen.getByLabelText('Grid View Rendering')).toBeInTheDocument();
@@ -121,7 +106,11 @@ describe('SettingsDialog', () => {
         await openDialog();
 
         // Click the hide annotations shortcut button
-        const hideAnnotationsButton = screen.getByText('v');
+        const hideAnnotationsButton = document.getElementById('hide-annotations');
+        expect(hideAnnotationsButton).not.toBeNull();
+        if (!hideAnnotationsButton) {
+            throw new Error('Hide annotations shortcut button not found');
+        }
         await fireEvent.click(hideAnnotationsButton);
 
         // It should show "Press a key..." text
@@ -131,7 +120,7 @@ describe('SettingsDialog', () => {
         await fireEvent.keyDown(window, { key: 'b' });
 
         // Button should now show the new key
-        expect(screen.getByText('b')).toBeInTheDocument();
+        expect(hideAnnotationsButton).toHaveTextContent('b');
     });
 
     it('should change grid view rendering option', async () => {
