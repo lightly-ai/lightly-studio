@@ -38,6 +38,10 @@ const loadInitialDimensionBounds = async (collection_id: string) => {
         collection_id: collection_id
     });
 
+    if (get(lastCollectionId) !== collection_id) {
+        return;
+    }
+
     if (dimensionBoundsData) {
         dimensionsBounds.set(dimensionBoundsData);
         dimensionsValues.set(dimensionBoundsData);
