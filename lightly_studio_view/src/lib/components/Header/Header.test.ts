@@ -91,9 +91,13 @@ describe('Header', () => {
             })
         );
 
-        vi.mock('$lib/hooks/useAuth/useAuth', () => ({
-            default: vi.fn()
-        }));
+        vi.mock('$lib/hooks/useAuth/useAuth', async (importOriginal) => {
+            const actual = await importOriginal();
+            return {
+                ...actual,
+                default: vi.fn()
+            };
+        });
 
         (useAuth as unknown as vi.Mock).mockReturnValue({
             user: props.user ?? null,
@@ -298,6 +302,104 @@ describe('Header', () => {
             await fireEvent.click(undoButton);
 
             expect(executeReversibleActionMock).not.toHaveBeenCalled();
+        });
+    });
+
+    describe('Role-based gating of Edit Annotations button', () => {
+        it('should show edit button for labeler role', () => {
+            const { collection } = setup({
+                isEditingMode: false,
+                user: { username: 'labeler', email: 'labeler@test.com', role: 'labeler' }
+            });
+
+            render(Header, { props: { collection } });
+
+            expect(screen.getByTestId('header-editing-mode-button')).toBeInTheDocument();
+        });
+
+        it('should show edit button for editor role', () => {
+            const { collection } = setup({
+                isEditingMode: false,
+                user: { username: 'editor', email: 'editor@test.com', role: 'editor' }
+            });
+
+            render(Header, { props: { collection } });
+
+            expect(screen.getByTestId('header-editing-mode-button')).toBeInTheDocument();
+        });
+
+        it('should show edit button for admin role', () => {
+            const { collection } = setup({
+                isEditingMode: false,
+                user: { username: 'admin', email: 'admin@test.com', role: 'admin' }
+            });
+
+            render(Header, { props: { collection } });
+
+            expect(screen.getByTestId('header-editing-mode-button')).toBeInTheDocument();
+        });
+
+        it('should hide edit button for viewer role', () => {
+            const { collection } = setup({
+                isEditingMode: false,
+                user: { username: 'viewer', email: 'viewer@test.com', role: 'viewer' }
+            });
+
+            render(Header, { props: { collection } });
+
+            expect(screen.queryByTestId('header-editing-mode-button')).not.toBeInTheDocument();
+        });
+
+        it('should show edit button when no user (OSS standalone)', () => {
+            const { collection } = setup({
+                isEditingMode: false,
+                user: null
+            });
+
+            render(Header, { props: { collection } });
+
+            expect(screen.getByTestId('header-editing-mode-button')).toBeInTheDocument();
+        });
+    });
+
+    describe('Role-based gating of keyboard shortcuts', () => {
+        it('should not toggle edit mode via keyboard for viewer role', async () => {
+            const { setIsEditingModeSpy, collection } = setup({
+                isEditingMode: false,
+                user: { username: 'viewer', email: 'viewer@test.com', role: 'viewer' }
+            });
+
+            render(Header, { props: { collection } });
+
+            await fireEvent.keyDown(window, { key: 'e' });
+
+            expect(setIsEditingModeSpy).not.toHaveBeenCalled();
+        });
+
+        it('should toggle edit mode via keyboard for labeler role', async () => {
+            const { setIsEditingModeSpy, collection } = setup({
+                isEditingMode: false,
+                user: { username: 'labeler', email: 'labeler@test.com', role: 'labeler' }
+            });
+
+            render(Header, { props: { collection } });
+
+            await fireEvent.keyDown(window, { key: 'e' });
+
+            expect(setIsEditingModeSpy).toHaveBeenCalledWith(true);
+        });
+
+        it('should toggle edit mode via keyboard when no user (OSS standalone)', async () => {
+            const { setIsEditingModeSpy, collection } = setup({
+                isEditingMode: false,
+                user: null
+            });
+
+            render(Header, { props: { collection } });
+
+            await fireEvent.keyDown(window, { key: 'e' });
+
+            expect(setIsEditingModeSpy).toHaveBeenCalledWith(true);
         });
     });
 
