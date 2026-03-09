@@ -22,7 +22,7 @@
         GripVertical
     } from '@lucide/svelte';
     import { onDestroy, onMount } from 'svelte';
-    import { get, writable } from 'svelte/store';
+    import { get, toStore, writable } from 'svelte/store';
     import { toast } from 'svelte-sonner';
     import { Header } from '$lib/components';
     import MenuDialogHost from '$lib/components/Header/MenuDialogHost.svelte';
@@ -75,6 +75,7 @@
 
     const datasetId = $derived(page.params.dataset_id!);
     const collectionId = $derived(page.params.collection_id!);
+    const collectionIdStore = toStore(() => collectionId);
 
     // Use hideAnnotations hook
     const { handleKeyEvent } = useHideAnnotations();
@@ -110,7 +111,7 @@
     const isVideoFrames = $derived(isVideoFramesRoute(page.route.id));
 
     let gridType = $state<GridType>('samples');
-    let lastVisitedGridContext: { gridType: GridType; collectionId: string } | null = null;
+    let lastCollectionId: string | null = null;
     $effect(() => {
         let nextGridType: GridType | null = null;
         if (isAnnotations) {
@@ -131,20 +132,13 @@
             return;
         }
 
-        if (
-            lastVisitedGridContext &&
-            lastVisitedGridContext.gridType !== nextGridType &&
-            lastVisitedGridContext.collectionId
-        ) {
-            clearSelectedSamples(lastVisitedGridContext.collectionId);
-            clearSelectedSampleAnnotationCrops(lastVisitedGridContext.collectionId);
+        if (lastCollectionId && lastCollectionId !== collectionId) {
+            clearSelectedSamples(lastCollectionId);
+            clearSelectedSampleAnnotationCrops(lastCollectionId);
         }
 
         gridType = nextGridType;
-        lastVisitedGridContext = {
-            gridType: nextGridType,
-            collectionId
-        };
+        lastCollectionId = collectionId;
 
         // Temporary hack to remember where the user was when navigating
         // TODO: also remember state of tags, labels, metadata filters etc. Possible store it in pagestate
@@ -173,9 +167,7 @@
     const hasEmbeddings = $derived(!!$hasEmbeddingsQuery.data);
 
     const { metadataValues } = $derived.by(() => useMetadataFilters(collectionId));
-    const { dimensionsValues } = $derived.by(() =>
-        useDimensions(collection?.parent_collection_id ?? collectionId)
-    );
+    const { dimensionsValues } = useDimensions(collectionIdStore);
 
     const annotationLabels = $derived(useAnnotationLabels({ collectionId: collectionId ?? '' }));
     const { showPlot, setShowPlot, filteredSampleCount, filteredAnnotationCount } =
@@ -254,7 +246,7 @@
             collectionId: datasetId,
             options: {
                 filtered_labels: annotationsLabels,
-                dimensions: $dimensionsValues
+                dimensions: $dimensionsValues ?? undefined
             }
         });
     });
@@ -469,7 +461,7 @@
             return;
         }
         setTextEmbedding({
-            queryText: query_text,
+            queryText: submittedQueryText,
             embedding: $embedTextQuery.data || []
         });
     });
