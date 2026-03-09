@@ -461,7 +461,7 @@
             return;
         }
         setTextEmbedding({
-            queryText: query_text,
+            queryText: submittedQueryText,
             embedding: $embedTextQuery.data || []
         });
     });
