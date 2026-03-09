@@ -18,9 +18,9 @@
 
     const { isExportDialogOpen, openExportDialog, closeExportDialog } = useExportDialog();
 
-    let exportType = $state<'samples' | 'object_detections' | 'instance_segmentations' | 'captions'>(
-        'samples'
-    );
+    let exportType = $state<
+        'samples' | 'object_detections' | 'instance_segmentations' | 'captions'
+    >('samples');
     const exportTypeLabels: Record<typeof exportType, string> = {
         samples: 'Image Filenames',
         object_detections: 'Image Object Detections',
@@ -138,7 +138,9 @@
                                 <Select.Item value="samples" label="Image Filenames"
                                     >Image Filenames</Select.Item
                                 >
-                                <Select.Item value="object_detections" label="Image Object Detections"
+                                <Select.Item
+                                    value="object_detections"
+                                    label="Image Object Detections"
                                     >Image Object Detections</Select.Item
                                 >
                                 <Select.Item
