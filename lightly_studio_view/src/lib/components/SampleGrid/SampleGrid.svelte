@@ -9,6 +9,7 @@
         itemCount: number;
         overScan: number;
         scrollPosition?: number;
+        scrollResetKey?: string;
         gridItem: Snippet<[{ index: number; style: string; sampleSize: number }]>;
         testId?: string;
         message: {
@@ -39,6 +40,7 @@
         itemCount,
         overScan,
         scrollPosition,
+        scrollResetKey,
         loader,
         onScroll,
         gridItem,
@@ -49,6 +51,7 @@
     let viewport: HTMLElement | null = $state(null);
     let clientWidth = $state(0);
     let clientHeight = $state(0);
+    let grid: ReturnType<typeof Grid> | undefined = $state();
 
     const { sampleSize } = useGlobalStorage();
     const columnCount = $derived($sampleSize.width);
@@ -60,6 +63,11 @@
         return clientWidth / columnCount;
     });
     const sampleItemSize = $derived(itemSize - GRID_GAP);
+
+    $effect(() => {
+        void scrollResetKey;
+        grid?.scrollToPosition(0);
+    });
 </script>
 
 {#if status.loading}
@@ -78,6 +86,7 @@
 {:else if status.success}
     <div class="viewport flex-1" bind:this={viewport} bind:clientWidth bind:clientHeight>
         <Grid
+            bind:this={grid}
             {itemCount}
             itemHeight={itemSize}
             itemWidth={itemSize}

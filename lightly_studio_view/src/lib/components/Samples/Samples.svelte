@@ -221,6 +221,7 @@
     itemCount={samples.length}
     overScan={100}
     scrollPosition={initialScrollPosition}
+    scrollResetKey={$textEmbedding?.queryText ?? ''}
     onScroll={handleScroll}
     message={{
         loading: 'Loading samples...',
