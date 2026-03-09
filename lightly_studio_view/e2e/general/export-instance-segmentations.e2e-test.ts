@@ -11,8 +11,9 @@ test.describe('Export Instance Segmentations', () => {
         await page.getByTestId('menu-export').click();
         await expect(page.getByRole('heading', { name: 'Export' })).toBeVisible();
 
-        // Switch to the correct tab and wait until the anchor has the href
-        await page.getByRole('tab', { name: 'Instance Segmentations' }).click();
+        // Switch to the correct export type
+        await page.getByTestId('export-type-select').click();
+        await page.getByRole('option', { name: 'Instance Segmentations' }).click();
         await expect(page.getByTestId('submit-button-instance-segmentations')).toHaveAttribute(
             'href',
             /\/api\/collections\/.*\/export\/annotations\?ts=\d+&annotation_type=instance_segmentation/

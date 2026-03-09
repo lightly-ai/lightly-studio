@@ -21,6 +21,13 @@
     let exportType = $state<'samples' | 'annotations' | 'instance-segmentations' | 'captions'>(
         'samples'
     );
+    const exportTypeLabels: Record<typeof exportType, string> = {
+        samples: 'Image Filenames',
+        annotations: 'Image Annotations',
+        'instance-segmentations': 'Instance Segmentations',
+        captions: 'Image Captions'
+    };
+    const exportTypeTriggerContent = $derived(exportTypeLabels[exportType]);
     let collectionId = page.params.collection_id;
 
     //
@@ -122,14 +129,29 @@
 
             <div class="grid flex-1 gap-4 overflow-y-auto px-1">
                 <Tabs.Root bind:value={exportType} class="w-full">
-                    <Tabs.List class="grid h-auto w-full grid-cols-2">
-                        <Tabs.Trigger value="samples">Image Filenames</Tabs.Trigger>
-                        <Tabs.Trigger value="annotations">Image Annotations</Tabs.Trigger>
-                        <Tabs.Trigger value="instance-segmentations"
-                            >Instance Segmentations</Tabs.Trigger
-                        >
-                        <Tabs.Trigger value="captions">Image Captions</Tabs.Trigger>
-                    </Tabs.List>
+                    <FormField label="Export Type">
+                        <Select.Root type="single" bind:value={exportType}>
+                            <Select.Trigger class="w-full" data-testid="export-type-select">
+                                {exportTypeTriggerContent}
+                            </Select.Trigger>
+                            <Select.Content>
+                                <Select.Item value="samples" label="Image Filenames"
+                                    >Image Filenames</Select.Item
+                                >
+                                <Select.Item value="annotations" label="Image Annotations"
+                                    >Image Annotations</Select.Item
+                                >
+                                <Select.Item
+                                    value="instance-segmentations"
+                                    label="Instance Segmentations"
+                                    >Instance Segmentations</Select.Item
+                                >
+                                <Select.Item value="captions" label="Image Captions"
+                                    >Image Captions</Select.Item
+                                >
+                            </Select.Content>
+                        </Select.Root>
+                    </FormField>
 
                     <!-- Samples tab -->
 
