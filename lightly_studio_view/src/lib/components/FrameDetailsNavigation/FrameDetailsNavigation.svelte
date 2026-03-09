@@ -10,11 +10,13 @@
     const collectionType = $derived(page.params.collection_type!);
     const collectionId = $derived(page.params.collection_id);
     const sampleId = $derived(page.params.sample_id);
+    const isFromVideos = $derived(Boolean(page.url.searchParams.get('from_video')));
 
     const { query: sampleAdjacentQuery } = $derived(
         useAdjacentFrames({
             sampleId,
-            collectionId
+            collectionId,
+            fromVideos: isFromVideos
         })
     );
 
@@ -24,14 +26,30 @@
         const sampleNext = sampleAdjacentData?.next_sample_id;
         if (!sampleNext) return;
 
-        goto(routeHelpers.toFramesDetails(datasetId, collectionType, collectionId, sampleNext));
+        goto(
+            routeHelpers.toFramesDetails(
+                datasetId,
+                collectionType,
+                collectionId,
+                sampleNext,
+                isFromVideos
+            )
+        );
     }
 
     function goToPreviousFrame() {
         const samplePrevious = sampleAdjacentData?.previous_sample_id;
         if (!samplePrevious) return;
 
-        goto(routeHelpers.toFramesDetails(datasetId, collectionType, collectionId, samplePrevious));
+        goto(
+            routeHelpers.toFramesDetails(
+                datasetId,
+                collectionType,
+                collectionId,
+                samplePrevious,
+                isFromVideos
+            )
+        );
     }
 
     const { context } = useAnnotationLabelContext();

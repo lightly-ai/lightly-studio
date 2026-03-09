@@ -121,7 +121,7 @@
     let reachedEnd = false;
     // This flag is used to prevent the onUpdate callback from changing the current frame while we are seeking to a specific frame number on load
     let seekFrameNumber = false;
-    const BATCH_SIZE = 25;
+    const BATCH_SIZE = 50;
 
     let resizeObserver: ResizeObserver;
 
@@ -171,7 +171,12 @@
 
         currentFrame = frame;
 
-        if (index != null && index % BATCH_SIZE == 0 && index != 0 && currentIndex < index) {
+        if (
+            index != null &&
+            cursor - index < BATCH_SIZE / 2 &&
+            index != 0 &&
+            currentIndex < index
+        ) {
             loadFrames();
         }
     }
@@ -213,10 +218,6 @@
         loading = false;
     }
 
-    function onPlay() {
-        loadFrames();
-    }
-
     let lastVideoId: string | null = null;
 
     $effect(() => {
@@ -233,6 +234,7 @@
             reachedEnd = false;
 
             lastVideoId = videoId;
+            loadFrames();
         }
     });
 
@@ -318,7 +320,6 @@
                                 controls={true}
                                 update={onUpdate}
                                 className="block h-full w-full"
-                                onplay={onPlay}
                                 onseeked={onSeeked}
                             />
 
@@ -428,7 +429,8 @@
                                     datasetId,
                                     'video_frame',
                                     frameCollectionId,
-                                    currentFrame.sample_id
+                                    currentFrame.sample_id,
+                                    true
                                 );
                             })()}
                             data-testid="view-frame-button"

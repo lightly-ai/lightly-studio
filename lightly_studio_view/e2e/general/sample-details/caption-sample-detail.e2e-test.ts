@@ -39,6 +39,14 @@ test.describe('sample-details-caption-flow', () => {
         // Check the remaining caption
         expect(await sampleDetailsPage.getCaptionCount()).toEqual(1);
         expect(await sampleDetailsPage.getNthCaptionInput(0)).toEqual('another caption');
+
+        // Undo the deletion — the caption should be restored
+        await sampleDetailsPage.undoLastCaptionDelete();
+        expect(await sampleDetailsPage.getCaptionCount()).toEqual(2);
+
+        // Re-delete to restore state for the next test
+        await sampleDetailsPage.deleteNthCaption(0);
+        expect(await sampleDetailsPage.getCaptionCount()).toEqual(1);
     });
 
     test('Clean up', async ({ samplesPage, sampleDetailsPage }) => {

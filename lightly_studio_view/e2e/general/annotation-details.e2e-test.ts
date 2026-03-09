@@ -135,6 +135,7 @@ test('user can change label of an annotation', async ({
     annotationDetailsPage
 }) => {
     await annotationsPage.clickAnnotation(0);
+    await annotationDetailsPage.setShowAnnotationTextLabels(true);
 
     const originalLabel = cocoDataset.labels.cellPhone.name;
     const newLabel = cocoDataset.labels.apple.name;
@@ -223,10 +224,10 @@ test('user can delete annotation and navigate to next annotation', async ({
     await annotationsPage.clickAnnotation(5);
     const annotationUrlBeforeDelete = page.url();
 
-    // Click "Delete annotation" button
+    // Click "Delete annotation" button to open confirmation
     await annotationDetailsPage.getAnnotationDeleteButton().click();
 
-    // Confirm deletion
+    // Confirm deletion in popup
     await annotationDetailsPage.getAnnotationConfirmDeleteButton().click();
     await annotationDetailsPage.waitForNavigation();
     await expect(page).not.toHaveURL(annotationUrlBeforeDelete);

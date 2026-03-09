@@ -79,7 +79,7 @@
     });
 </script>
 
-<Segment title="Metadata Filters">
+<Segment title="Metadata">
     <div class="space-y-4">
         {#if !isVideos && !isVideoFrames}
             <!-- Dimension Filters -->

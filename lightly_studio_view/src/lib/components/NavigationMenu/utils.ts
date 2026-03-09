@@ -1,65 +1,67 @@
 import type { CollectionView } from '$lib/api/lightly_studio_local';
 import { SampleType } from '$lib/api/lightly_studio_local';
-import { APP_ROUTES, routeHelpers } from '$lib/routes';
+import { routeHelpers } from '$lib/routes';
 import { Image, WholeWord, Video, Frame, ComponentIcon, LayoutDashboard } from '@lucide/svelte';
 import type { BreadcrumbLevel, NavigationMenuItem } from './types';
 
 export function getMenuItem(
-    sampleType: SampleType,
-    pageId: string | null,
     datasetId: string,
-    collectionType: string,
-    collectionId: string
+    currentCollectionId: string | undefined,
+    collectionId: string,
+    sampleType: SampleType,
+    groupComponentName?: string | null
 ): NavigationMenuItem {
+    const collectionType = sampleType.toLowerCase();
+    const isSelected = collectionId === currentCollectionId;
+    const elementId = `${collectionType}-${collectionId}`;
     switch (sampleType) {
         case SampleType.IMAGE:
             return {
-                title: 'Images',
-                id: `samples-${collectionId}`,
+                title: groupComponentName || 'Images',
+                id: elementId,
                 href: routeHelpers.toSamples(datasetId, collectionType, collectionId),
-                isSelected: pageId === APP_ROUTES.samples || pageId === APP_ROUTES.sampleDetails,
+                isSelected,
                 icon: Image
             };
 
         case SampleType.VIDEO:
             return {
-                title: 'Videos',
-                id: `videos-${collectionId}`,
+                title: groupComponentName || 'Videos',
+                id: elementId,
                 href: routeHelpers.toVideos(datasetId, collectionType, collectionId),
-                isSelected: pageId === APP_ROUTES.videos || pageId === APP_ROUTES.videoDetails,
+                isSelected,
                 icon: Video
             };
         case SampleType.VIDEO_FRAME:
             return {
-                title: 'Frames',
-                id: `frames-${collectionId}`,
+                title: groupComponentName || 'Frames',
+                id: elementId,
                 icon: Frame,
                 href: routeHelpers.toFrames(datasetId, collectionType, collectionId),
-                isSelected: pageId == APP_ROUTES.frames || pageId == APP_ROUTES.framesDetails
+                isSelected
             };
         case SampleType.ANNOTATION:
             return {
-                title: 'Annotations',
-                id: `annotations-${collectionId}`,
+                title: groupComponentName || 'Annotations',
+                id: elementId,
                 icon: ComponentIcon,
                 href: routeHelpers.toAnnotations(datasetId, collectionType, collectionId),
-                isSelected:
-                    pageId == APP_ROUTES.annotations || pageId == APP_ROUTES.annotationDetails
+                isSelected
             };
         case SampleType.CAPTION:
             return {
-                title: 'Captions',
-                id: `captions-${collectionId}`,
+                title: groupComponentName || 'Captions',
+                id: elementId,
                 href: routeHelpers.toCaptions(datasetId, collectionType, collectionId),
-                isSelected: pageId === APP_ROUTES.captions,
+                isSelected,
                 icon: WholeWord
             };
         case SampleType.GROUP:
             return {
-                title: 'Groups',
-                id: 'groups',
+                title: groupComponentName || 'Groups',
+                id: elementId,
                 href: routeHelpers.toGroups(datasetId, collectionType, collectionId),
-                isSelected: pageId === APP_ROUTES.groups,
+                isSelected,
                 icon: LayoutDashboard
             };
     }
@@ -113,13 +115,19 @@ function findPathToTarget(root: CollectionView, targetId: string): CollectionVie
 export function buildBreadcrumbLevels(
     ancestorPath: CollectionView[] | null,
     rootCollection: CollectionView,
-    pageId: string | null,
+    currentCollectionId: string | undefined,
     datasetId: string
 ): BreadcrumbLevel[] {
     if (!ancestorPath) return [];
 
     const toMenuItem = (c: CollectionView): NavigationMenuItem =>
-        getMenuItem(c.sample_type, pageId, datasetId, c.sample_type.toLowerCase(), c.collection_id);
+        getMenuItem(
+            datasetId,
+            currentCollectionId,
+            c.collection_id,
+            c.sample_type,
+            c.group_component_name
+        );
 
     return ancestorPath.map((node, index) => {
         const siblings = index === 0 ? [rootCollection] : (ancestorPath[index - 1].children ?? []);

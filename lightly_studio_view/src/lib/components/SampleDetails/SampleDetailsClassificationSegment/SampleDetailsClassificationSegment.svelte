@@ -18,9 +18,6 @@
     import { page } from '$app/state';
     import { Trash2 } from '@lucide/svelte';
     import { toast } from 'svelte-sonner';
-    import * as Popover from '$lib/components/ui/popover/index.js';
-    import Button from '$lib/components/ui/button/button.svelte';
-
     type SampleDetailsClassificationSegmentProps = {
         collectionId: string;
         annotations: AnnotationView[];
@@ -164,7 +161,6 @@
 
     let draftCounter = 0;
     let draftClassifications = $state<string[]>([]);
-    let deleteConfirmationId = $state<string | null>(null);
 
     const addDraftClassification = () => {
         draftCounter += 1;
@@ -220,43 +216,15 @@
                     </span>
                     <div class="flex items-center gap-3">
                         {#if $isEditingMode}
-                            <Popover.Root
-                                open={deleteConfirmationId === annotation.sample_id}
-                                onOpenChange={(open) => {
-                                    deleteConfirmationId = open ? annotation.sample_id : null;
+                            <button
+                                type="button"
+                                onclick={(e) => {
+                                    e.stopPropagation();
+                                    handleDeleteAnnotation(annotation.sample_id);
                                 }}
                             >
-                                <Popover.Trigger>
-                                    <Trash2 class="size-6" />
-                                </Popover.Trigger>
-                                <Popover.Content>
-                                    You are going to delete this classification. This action cannot
-                                    be undone.
-                                    <div class="mt-2 flex justify-end gap-2">
-                                        <Button
-                                            variant="destructive"
-                                            size="sm"
-                                            onclick={(e: MouseEvent) => {
-                                                e.stopPropagation();
-                                                handleDeleteAnnotation(annotation.sample_id);
-                                                deleteConfirmationId = null;
-                                            }}
-                                        >
-                                            Delete
-                                        </Button>
-                                        <Button
-                                            variant="outline"
-                                            size="sm"
-                                            onclick={(e: MouseEvent) => {
-                                                e.stopPropagation();
-                                                deleteConfirmationId = null;
-                                            }}
-                                        >
-                                            Cancel
-                                        </Button>
-                                    </div>
-                                </Popover.Content>
-                            </Popover.Root>
+                                <Trash2 class="size-6" />
+                            </button>
                         {/if}
                     </div>
                 </div>
