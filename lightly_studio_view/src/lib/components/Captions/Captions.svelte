@@ -100,7 +100,7 @@
 
     <div class="h-full w-full flex-1 overflow-hidden" bind:this={viewport} bind:clientWidth>
         {#if $query.isPending && items.length === 0}
-            <div class="flex h-full w-full items-center justify-center">
+            <div class="flex h-full w-full items-center justify-center gap-2">
                 <Spinner />
                 <div>Loading samples...</div>
             </div>

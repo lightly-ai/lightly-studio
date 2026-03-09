@@ -57,7 +57,7 @@
                 ? $selectedAnnotationFilterIds
                 : undefined,
             tag_ids: $tagsSelected.size > 0 ? Array.from($tagsSelected) : undefined,
-            dimensions: $dimensions
+            dimensions: $dimensions ?? undefined
         },
         metadata_values: $metadataValues,
         text_embedding: $textEmbedding?.embedding
@@ -142,8 +142,8 @@
         const parts = [
             $selectedAnnotationFilterIds.join(','),
             Array.from($tagsSelected).join(','),
-            `${$dimensions.min_width}-${$dimensions.max_width}`,
-            `${$dimensions.min_height}-${$dimensions.max_height}`,
+            `${$dimensions?.min_width}-${$dimensions?.max_width}`,
+            `${$dimensions?.min_height}-${$dimensions?.max_height}`,
             JSON.stringify($metadataValues),
             $textEmbedding?.queryText || ''
         ];
@@ -221,6 +221,7 @@
     itemCount={samples.length}
     overScan={100}
     scrollPosition={initialScrollPosition}
+    scrollResetKey={$textEmbedding?.queryText ?? ''}
     onScroll={handleScroll}
     message={{
         loading: 'Loading samples...',

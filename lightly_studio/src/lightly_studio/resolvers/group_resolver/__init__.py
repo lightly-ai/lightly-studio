@@ -6,6 +6,9 @@ from lightly_studio.resolvers.group_resolver.get_by_id import get_by_id
 from lightly_studio.resolvers.group_resolver.get_collection_id_by_group_id import (
     get_collection_id_by_group_id,
 )
+from lightly_studio.resolvers.group_resolver.get_group_component_details_by_group_id import (
+    get_group_component_details_by_group_id,
+)
 from lightly_studio.resolvers.group_resolver.get_group_component_with_type import (
     get_group_component_with_type,
 )
@@ -25,6 +28,7 @@ __all__ = [
     "get_all",
     "get_by_id",
     "get_collection_id_by_group_id",
+    "get_group_component_details_by_group_id",
     "get_group_component_with_type",
     "get_group_components_as_dict",
     "get_group_components_by_group_id",
