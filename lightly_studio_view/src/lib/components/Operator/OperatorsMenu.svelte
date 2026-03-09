@@ -7,8 +7,7 @@
         type RegisteredOperatorMetadata,
         OperatorScope
     } from '$lib/api/lightly_studio_local';
-    import { useCollection } from '$lib/hooks/useCollection/useCollection';
-    import { LoaderCircle as Loader2, AlertCircle, ChevronRight } from '@lucide/svelte';
+import { LoaderCircle as Loader2, AlertCircle, ChevronRight } from '@lucide/svelte';
     import * as Dialog from '$lib/components/ui/dialog';
     import { useOperatorsDialog } from '$lib/hooks/useOperatorsDialog/useOperatorsDialog';
     import OperatorDialog from '$lib/components/Operator/OperatorDialog.svelte';
@@ -60,20 +59,17 @@
         routeId: $p.route.id,
         collectionId: $p.params.collection_id ?? '',
         sampleId: $p.params.sampleId || $p.params.sample_id || null,
-        annotationId: $p.params.annotationId || null
+        annotationId: $p.params.annotationId || null,
+        sampleType: $p.data.collection?.sample_type ?? null
     }) satisfies PageContext);
 
-    const { collectionId, currentScope } = useOperatorContext(pageContext);
+    const { currentScope } = useOperatorContext(pageContext);
 
-    const { collection: collectionQuery } = $derived.by(() =>
-        useCollection({ collectionId: $collectionId ?? '' })
-    );
-
-    const isRootCollection = $derived($collectionQuery.data?.parent_collection_id === null);
+    const isDataset = $derived($page.data.collection?.parent_collection_id === null);
 
     const isApplicable = (operator: RegisteredOperatorMetadata): boolean => {
         if ($currentScope === null) return false;
-        if (isRootCollection && operator.supported_scopes.includes(OperatorScope.ROOT)) return true;
+        if (isDataset && operator.supported_scopes.includes(OperatorScope.ROOT)) return true;
         return operator.supported_scopes.includes($currentScope);
     };
 

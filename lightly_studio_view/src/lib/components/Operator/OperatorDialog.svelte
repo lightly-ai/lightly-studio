@@ -40,23 +40,26 @@
     let executionError = $state<string | undefined>(undefined);
     let executionSuccess = $state<string | undefined>(undefined);
 
-    const pageContext = derived(page, ($p) => ({
-        routeId: $p.route.id,
-        collectionId: $p.params.collection_id,
-        sampleId: $p.params.sampleId || $p.params.sample_id || null,
-        annotationId: $p.params.annotationId || null
-    }) satisfies PageContext);
+    const pageContext = derived(
+        page,
+        ($p) =>
+            ({
+                routeId: $p.route.id,
+                collectionId: $p.params.collection_id,
+                sampleId: $p.params.sampleId || $p.params.sample_id || null,
+                annotationId: $p.params.annotationId || null,
+                sampleType: $p.data.collection?.sample_type ?? null
+            }) satisfies PageContext
+    );
 
     const collectionId = $derived($pageContext.collectionId);
 
     const { tagsSelected } = useTags({ collection_id: collectionId, kind: ['annotation'] });
 
-    const {
-        isOnDetailPage,
-        scopeLabel,
-        isCollectionView,
-        contextFilter
-    } = useOperatorContext(pageContext, tagsSelected);
+    const { isOnDetailPage, scopeLabel, contextFilter } = useOperatorContext(
+        pageContext,
+        tagsSelected
+    );
 
     function resetExecutionState() {
         executionError = undefined;
@@ -180,9 +183,7 @@
                     class="inline-flex items-center rounded-full px-2 py-1 text-xs font-medium
                     {$isOnDetailPage
                         ? 'bg-primary text-primary-foreground'
-                        : $isCollectionView
-                          ? 'bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-400'
-                          : 'bg-secondary text-secondary-foreground'}"
+                        : 'bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-400'}"
                 >
                     {$scopeLabel}
                 </span>
