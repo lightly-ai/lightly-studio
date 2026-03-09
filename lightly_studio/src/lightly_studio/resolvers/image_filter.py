@@ -29,6 +29,7 @@ class ImageFilter(BaseModel):
 
     def apply(self, query: QueryType) -> QueryType:
         """Apply the filters to the given query."""
+        # Apply sample filters to the query.
         if self.sample_filter is not None:
             query = self.sample_filter.apply(query)
 
@@ -37,8 +38,10 @@ class ImageFilter(BaseModel):
                 query, col(ImageTable.sample_id)
             )
 
+        # Apply dimension-based filters to the query.
         query = self._apply_dimension_filters(query)
 
+        # Return the modified query.
         return query  # noqa: RET504
 
     def _apply_dimension_filters(self, query: QueryType) -> QueryType:
