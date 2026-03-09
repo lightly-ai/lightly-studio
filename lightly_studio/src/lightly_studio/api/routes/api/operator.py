@@ -80,10 +80,13 @@ def execute_operator(
         )
 
     if operator.status != OperatorStatus.READY:
-        return OperatorResult(
-            success=False,
-            message=f"Operator '{operator_id}' is not ready (status: {operator.status.value})",
-        )
+        if operator.status in (OperatorStatus.PENDING, OperatorStatus.STARTING):
+            message = f"Operator '{operator_id}' is still starting, please try again in a moment."
+        elif operator.status in (OperatorStatus.STOPPING, OperatorStatus.STOPPED):
+            message = f"Operator '{operator_id}' has been stopped and cannot be executed."
+        else:
+            message = f"Operator '{operator_id}' is in an error state and cannot be executed."
+        return OperatorResult(success=False, message=message)
 
     context = request.context
 

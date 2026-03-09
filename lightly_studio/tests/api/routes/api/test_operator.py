@@ -138,13 +138,15 @@ def test_execute_operator__operator_not_found(
     assert response.json() == {"detail": "Operator 'missing' not found"}
 
 
-def test_execute_operator__operator_not_ready(
+@pytest.mark.parametrize("status", [OperatorStatus.PENDING, OperatorStatus.STARTING])
+def test_execute_operator__operator_starting_up(
     test_client: TestClient,
     collection_id: UUID,
     isolated_operator_registry: OperatorRegistry,
+    status: OperatorStatus,
 ) -> None:
     operator = TestOperator(name="not-ready")
-    operator.status = OperatorStatus.PENDING
+    operator.status = status
     isolated_operator_registry.register(operator)
     operator_id = _get_operator_id_by_name(isolated_operator_registry, "not-ready")
 
@@ -154,10 +156,54 @@ def test_execute_operator__operator_not_ready(
     )
 
     assert response.status_code == HTTP_STATUS_OK
-    expected_message = (
-        f"Operator '{operator_id}' is not ready (status: {OperatorStatus.PENDING.value})"
+    payload = response.json()
+    assert payload["success"] is False
+    assert "starting" in payload["message"]
+    assert "please try again" in payload["message"]
+
+
+@pytest.mark.parametrize("status", [OperatorStatus.STOPPING, OperatorStatus.STOPPED])
+def test_execute_operator__operator_stopped(
+    test_client: TestClient,
+    collection_id: UUID,
+    isolated_operator_registry: OperatorRegistry,
+    status: OperatorStatus,
+) -> None:
+    operator = TestOperator(name="not-ready")
+    operator.status = status
+    isolated_operator_registry.register(operator)
+    operator_id = _get_operator_id_by_name(isolated_operator_registry, "not-ready")
+
+    response = test_client.post(
+        f"/api/operators/{operator_id}/execute",
+        json={"parameters": {}, "context": {"collection_id": str(collection_id)}},
     )
-    assert response.json() == {"success": False, "message": expected_message}
+
+    assert response.status_code == HTTP_STATUS_OK
+    payload = response.json()
+    assert payload["success"] is False
+    assert "stopped" in payload["message"]
+
+
+def test_execute_operator__operator_error_state(
+    test_client: TestClient,
+    collection_id: UUID,
+    isolated_operator_registry: OperatorRegistry,
+) -> None:
+    operator = TestOperator(name="not-ready")
+    operator.status = OperatorStatus.ERROR
+    isolated_operator_registry.register(operator)
+    operator_id = _get_operator_id_by_name(isolated_operator_registry, "not-ready")
+
+    response = test_client.post(
+        f"/api/operators/{operator_id}/execute",
+        json={"parameters": {}, "context": {"collection_id": str(collection_id)}},
+    )
+
+    assert response.status_code == HTTP_STATUS_OK
+    payload = response.json()
+    assert payload["success"] is False
+    assert "error state" in payload["message"]
 
 
 def test_execute_operator__successful(
