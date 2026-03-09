@@ -30,10 +30,10 @@ let ctx: OffscreenCanvasRenderingContext2D | null = null;
 const handleRender = ({ width, height, masks, boxes, scaleX = 1, scaleY = 1 }: RenderMessage) => {
     // Render masks into a pixel buffer and overlay boxes; stroke is scaled to CSS size.
     const pixelData = renderMasks(width, height, masks);
-    const imageData = new ImageData(pixelData, width, height);
     const stroke = computeStroke(scaleX, scaleY);
 
     if (ctx) {
+        const imageData = new ImageData(pixelData, width, height);
         ctx.canvas.width = width;
         ctx.canvas.height = height;
         ctx.clearRect(0, 0, width, height);

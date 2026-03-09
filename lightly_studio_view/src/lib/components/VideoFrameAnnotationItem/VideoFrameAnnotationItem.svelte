@@ -43,6 +43,7 @@
             height: sampleHeight,
             annotations: annotations
         }}
+        objectFit={sampleImageObjectFit}
     />
 {:else}
     <svg

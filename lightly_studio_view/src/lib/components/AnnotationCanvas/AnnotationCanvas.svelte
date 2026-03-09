@@ -1,5 +1,6 @@
 <script lang="ts">
     import { onDestroy, onMount } from 'svelte';
+    import { useCustomLabelColors, type CustomColor } from '$lib/hooks/useCustomLabelColors';
     import { getColorByLabel } from '$lib/utils';
     import type { BoundingBox } from '$lib/types';
 
@@ -43,6 +44,8 @@
         className?: string;
     } = $props();
 
+    const { customLabelColorsStore } = useCustomLabelColors();
+
     let canvasEl: HTMLCanvasElement | null = null;
     let worker: Worker | null = null;
     let workerReady = false;
@@ -85,6 +88,25 @@
         color: [number, number, number, number];
     };
 
+    type CustomLabelColorMap = Record<string, CustomColor>;
+
+    const clampAlpha = (value: number): number => Math.max(0, Math.min(value, 1));
+
+    const resolveLabelColor = (
+        labelName: string,
+        colorAlpha: number,
+        customLabelColors: CustomLabelColorMap
+    ): [number, number, number, number] => {
+        const customColor = customLabelColors[labelName];
+        if (!customColor) {
+            return rgbaParser(getColorByLabel(labelName, colorAlpha).color);
+        }
+
+        const [r, g, b] = rgbaParser(customColor.color);
+        const alphaValue = Math.round(clampAlpha(customColor.alpha * colorAlpha) * 255);
+        return [r, g, b, alphaValue];
+    };
+
     const normalizeRLE = (mask?: ArrayLike<number> | null): number[] => {
         if (!mask?.length) {
             return [];
@@ -95,7 +117,9 @@
     };
 
     // Collect mask RLEs and any available bounding boxes in image space.
-    const buildRenderPayload = (): { masks: MaskPayload[]; boxes: BoxPayload[] } => {
+    const buildRenderPayload = (
+        customLabelColors: CustomLabelColorMap
+    ): { masks: MaskPayload[]; boxes: BoxPayload[] } => {
         const masks: MaskPayload[] = [];
         const boxes: BoxPayload[] = [];
 
@@ -106,7 +130,7 @@
             if (rle.length) {
                 masks.push({
                     rle,
-                    color: rgbaParser(getColorByLabel(labelName, alpha).color)
+                    color: resolveLabelColor(labelName, alpha, customLabelColors)
                 });
             }
 
@@ -117,7 +141,7 @@
                     y: Math.round(bbox.y),
                     width: Math.round(bbox.width),
                     height: Math.round(bbox.height),
-                    color: rgbaParser(getColorByLabel(labelName, 1).color)
+                    color: resolveLabelColor(labelName, 1, customLabelColors)
                 });
             }
         }
@@ -125,7 +149,7 @@
         return { masks, boxes };
     };
 
-    const render = () => {
+    const render = (customLabelColors: CustomLabelColorMap = $customLabelColorsStore) => {
         if (!worker || !workerReady) {
             return;
         }
@@ -146,7 +170,7 @@
             height,
             scaleX,
             scaleY,
-            ...buildRenderPayload()
+            ...buildRenderPayload(customLabelColors)
         });
     };
 
@@ -221,7 +245,7 @@
         }
 
         workerReady = true;
-        render();
+        render($customLabelColorsStore);
     };
 
     onMount(() => {
@@ -240,8 +264,9 @@
     });
 
     $effect(() => {
+        const customLabelColors = $customLabelColorsStore;
         if (workerReady) {
-            render();
+            render(customLabelColors);
         }
     });
 </script>

@@ -3,6 +3,7 @@
     import { onMount, type ComponentProps } from 'svelte';
     import type { AnnotationView } from '$lib/api/lightly_studio_local';
     import { AnnotationCanvas } from '$lib/components';
+    import type { SampleImageObjectFit } from '../SampleImage/types';
 
     type AnnotationCanvasAnnotation = NonNullable<
         ComponentProps<typeof AnnotationCanvas>['annotations']
@@ -15,9 +16,11 @@
     };
 
     const {
-        sample
+        sample,
+        objectFit = 'contain'
     }: {
         sample: SampleView;
+        objectFit?: SampleImageObjectFit;
     } = $props();
 
     const { isHidden } = useHideAnnotations();
@@ -68,6 +71,7 @@
             .map(mapToCanvasAnnotation)
             .filter((annotation): annotation is AnnotationCanvasAnnotation => annotation != null)
     );
+    const objectFitClass = $derived(objectFit === 'cover' ? 'object-cover' : 'object-contain');
 
     let showAnnotations = $state(false);
 
@@ -87,7 +91,7 @@
             height={sample.height}
             annotations={annotationsWithVisuals}
             alpha={0.8}
-            className="pointer-events-none absolute w-full object-contain h-full inset-0 z-10"
+            className={`pointer-events-none absolute inset-0 z-10 h-full w-full ${objectFitClass}`}
         />
     </div>
 {/if}
