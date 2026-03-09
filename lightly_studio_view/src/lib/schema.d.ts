@@ -1352,8 +1352,7 @@ export interface paths {
          *
          *     Args:
          *         operator_id: The ID of the operator to execute.
-         *         collection_id: The ID of the collection to operate on.
-         *         request: The execution request containing parameters and optional context.
+         *         request: The execution request containing parameters and context.
          *         session: Database session.
          *
          *     Returns:
@@ -1993,15 +1992,10 @@ export interface components {
              */
             annotation_label_ids?: string[] | null;
             /**
-             * Annotation Tag Ids
+             * Tag Ids
              * @description List of tag UUIDs
              */
-            annotation_tag_ids?: string[] | null;
-            /**
-             * Sample Tag Ids
-             * @description List of sample tag UUIDs to filter annotations by
-             */
-            sample_tag_ids?: string[] | null;
+            tag_ids?: string[] | null;
             /**
              * Sample Ids
              * @description List of sample UUIDs to filter annotations by
@@ -2746,6 +2740,15 @@ export interface components {
             message: string;
         };
         /**
+         * OperatorScope
+         * @description Scope in which an operator can be triggered.
+         *
+         *     Operators declare which scopes they support via ``BaseOperator.supported_scopes``.
+         *     The UI uses this to surface operators contextually by media type.
+         * @enum {string}
+         */
+        OperatorScope: "root" | "image" | "video_frame" | "video" | "annotation" | "group" | "caption";
+        /**
          * Paginated
          * @description Paginated query parameters.
          */
@@ -2842,6 +2845,8 @@ export interface components {
             operator_id: string;
             /** Name */
             name: string;
+            /** Supported Scopes */
+            supported_scopes?: components["schemas"]["OperatorScope"][];
         };
         /**
          * SampleAnnotationDetailsView
@@ -3050,7 +3055,7 @@ export interface components {
             /**
              * Show Annotation Text Labels
              * @description Controls whether to show text labels on annotations
-             * @default true
+             * @default false
              */
             show_annotation_text_labels: boolean;
             /**
@@ -3083,6 +3088,18 @@ export interface components {
              * @default m
              */
             key_toolbar_segmentation_mask: string;
+            /**
+             * Key Toolbar Brush
+             * @description Key to activate brush mode in the segmentation tool
+             * @default r
+             */
+            key_toolbar_brush: string;
+            /**
+             * Key Toolbar Eraser
+             * @description Key to activate eraser mode in the segmentation tool
+             * @default x
+             */
+            key_toolbar_eraser: string;
             /**
              * Setting Id
              * Format: uuid
@@ -3992,7 +4009,9 @@ export interface operations {
     };
     export_collection_annotations: {
         parameters: {
-            query?: never;
+            query?: {
+                annotation_type?: components["schemas"]["AnnotationType"];
+            };
             header?: never;
             path: {
                 collection_id: string;

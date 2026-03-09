@@ -7,6 +7,7 @@ import { type UseTagsCreateDialog } from './TagCreateDialog.svelte';
 
 import TestTagCreateDialog from '$lib/components/TagCreateDialog/TagCreateDialog.test.svelte';
 import * as useTags from '$lib/hooks/useTags/useTags';
+import useAuth from '$lib/hooks/useAuth/useAuth';
 import type { GridType, TagKind, TagView } from '$lib/services/types';
 
 vi.useFakeTimers();
@@ -28,6 +29,10 @@ vi.mock('$lib/api/lightly_studio_local', async () => {
         })
     };
 });
+
+vi.mock('$lib/hooks/useAuth/useAuth', () => ({
+    default: vi.fn()
+}));
 
 // Mock global storage with per-collection selection helpers
 vi.mock('$lib/hooks/useGlobalStorage', () => ({
@@ -104,6 +109,11 @@ const renderComponent = (props: Partial<UseTagsCreateDialog> = {}) => {
 };
 
 const setup = () => {
+    vi.mocked(useAuth).mockReturnValue({
+        user: { username: 'testuser', email: 'test@test.com', role: 'labeler' },
+        token: 'mock-token',
+        isAuthenticated: true
+    });
     vi.spyOn(useTags, 'useTags').mockReturnValueOnce({
         tags: readable(mockSampleTags)
     } as ReturnType<typeof useTags.useTags>);
@@ -142,14 +152,14 @@ describe.each<{
 
     it('should render when items are selected', () => {
         renderComponent(defaultProps[gridType]);
-        expect(screen.getByText(`Create new Tags`)).toBeInTheDocument();
+        expect(screen.getByText(`Tag selected items`)).toBeInTheDocument();
     });
 
     it('should filter tags based on search input', async () => {
         renderComponent(defaultProps[gridType]);
 
         // Open dialog
-        await fireEvent.click(screen.getByText(`Create new Tags`));
+        await fireEvent.click(screen.getByText(`Tag selected items`));
 
         // Type in search
         const searchInput = screen.getByPlaceholderText('Create or search tags');
@@ -164,7 +174,7 @@ describe.each<{
         renderComponent(defaultProps[gridType]);
 
         // Open dialog
-        await fireEvent.click(screen.getByText(`Create new Tags`));
+        await fireEvent.click(screen.getByText(`Tag selected items`));
 
         // Select a tag
         const checkbox = screen.getByText('Test Tag 1');
@@ -178,7 +188,7 @@ describe.each<{
         renderComponent(defaultProps[gridType]);
 
         // Open dialog
-        await fireEvent.click(screen.getByText(`Create new Tags`));
+        await fireEvent.click(screen.getByText(`Tag selected items`));
 
         // Type new tag name
         const searchInput = screen.getByPlaceholderText('Create or search tags');
@@ -205,7 +215,7 @@ describe.each<{
         renderComponent(defaultProps[gridType]);
 
         // Open dialog
-        await fireEvent.click(screen.getByText(`Create new Tags`));
+        await fireEvent.click(screen.getByText(`Tag selected items`));
 
         // Create new tag
         const searchInput = screen.getByPlaceholderText('Create or search tags');
@@ -251,7 +261,7 @@ describe.each<{
         renderComponent(defaultProps[gridType]);
 
         // Open dialog and create tag
-        await fireEvent.click(screen.getByText(`Create new Tags`));
+        await fireEvent.click(screen.getByText(`Tag selected items`));
         await fireEvent.input(screen.getByPlaceholderText('Create or search tags'), {
             target: { value: 'New Tag' }
         });
@@ -260,5 +270,59 @@ describe.each<{
 
         // Verify error is displayed
         expect(await screen.findByText('Error occured')).toBeInTheDocument();
+    });
+});
+
+describe('TagCreateDialog role-based gating', () => {
+    beforeEach(() => {
+        vi.resetAllMocks();
+    });
+
+    it('should hide buttons for viewer role', () => {
+        vi.mocked(useAuth).mockReturnValue({
+            user: { username: 'viewer', email: 'viewer@test.com', role: 'viewer' },
+            token: 'mock-token',
+            isAuthenticated: true
+        });
+
+        vi.spyOn(useTags, 'useTags').mockReturnValueOnce({
+            tags: readable(mockSampleTags)
+        } as ReturnType<typeof useTags.useTags>);
+
+        renderComponent(defaultProps['samples']);
+
+        expect(screen.queryByText('Tag selected items')).not.toBeInTheDocument();
+    });
+
+    it('should show buttons for labeler role', () => {
+        vi.mocked(useAuth).mockReturnValue({
+            user: { username: 'labeler', email: 'labeler@test.com', role: 'labeler' },
+            token: 'mock-token',
+            isAuthenticated: true
+        });
+
+        vi.spyOn(useTags, 'useTags').mockReturnValueOnce({
+            tags: readable(mockSampleTags)
+        } as ReturnType<typeof useTags.useTags>);
+
+        renderComponent(defaultProps['samples']);
+
+        expect(screen.getByText('Tag selected items')).toBeInTheDocument();
+    });
+
+    it('should show buttons when no user is logged in (OSS standalone)', () => {
+        vi.mocked(useAuth).mockReturnValue({
+            user: undefined,
+            token: undefined,
+            isAuthenticated: false
+        });
+
+        vi.spyOn(useTags, 'useTags').mockReturnValueOnce({
+            tags: readable(mockSampleTags)
+        } as ReturnType<typeof useTags.useTags>);
+
+        renderComponent(defaultProps['samples']);
+
+        expect(screen.getByText('Tag selected items')).toBeInTheDocument();
     });
 });

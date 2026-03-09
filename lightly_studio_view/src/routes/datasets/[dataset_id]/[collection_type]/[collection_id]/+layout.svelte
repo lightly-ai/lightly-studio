@@ -621,9 +621,7 @@
                                     {/if}
                                 </div>
 
-                                <div class="w-4/12">
-                                    <ImageSizeControl />
-                                </div>
+                                <ImageSizeControl />
                             </div>
                             <Separator class="mb-4 bg-border-hard" />
                             <div class="flex min-h-0 flex-1 overflow-hidden">
@@ -739,9 +737,7 @@
                                 {/if}
                             </div>
 
-                            <div class="w-4/12">
-                                <ImageSizeControl />
-                            </div>
+                            <ImageSizeControl />
                             {#if (isSamples || isVideos) && hasEmbeddings}
                                 <Button
                                     class="flex items-center space-x-1"
