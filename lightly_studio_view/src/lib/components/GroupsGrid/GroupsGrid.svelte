@@ -33,9 +33,9 @@
 
 <div class="h-full w-full" bind:clientWidth>
     {#if isLoading}
-        <div class="flex h-full w-full items-center justify-center">
+        <div class="flex h-full w-full items-center justify-center gap-2">
             <Spinner />
-            <div class="ml-2">Loading groups...</div>
+            <div>Loading groups...</div>
         </div>
     {:else if isEmpty}
         <div class="flex h-full w-full items-center justify-center">
