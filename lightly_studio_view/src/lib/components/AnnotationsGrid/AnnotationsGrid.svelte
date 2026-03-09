@@ -17,6 +17,8 @@
     import { useUpdateAnnotationsMutation } from '$lib/hooks/useUpdateAnnotationsMutation/useUpdateAnnotationsMutation';
     import { AnnotationType, type AnnotationWithPayloadView } from '$lib/api/lightly_studio_local';
     import { selectRangeByAnchor } from '$lib/utils/selectRangeByAnchor';
+    import useAuth from '$lib/hooks/useAuth/useAuth';
+    import { hasMinimumRole } from '$lib/hooks/useAuth/hasMinimumRole';
 
     type AnnotationsProps = {
         collection_id: string;
@@ -108,6 +110,7 @@
         });
     });
 
+    const { user } = useAuth();
     const {
         selectedSampleAnnotationCropIds: pickedAnnotationIds,
         toggleSampleAnnotationCropSelection,
@@ -271,15 +274,17 @@
                                     role="button"
                                     tabindex="0"
                                 >
-                                    <!-- Hide the SelectableBox when in editing mode -->
-                                    <div class="absolute right-7 top-1 z-10">
-                                        <SelectableBox
-                                            onSelect={() => undefined}
-                                            isSelected={$pickedAnnotationIds[collection_id]?.has(
-                                                annotations[index].annotation.sample_id
-                                            )}
-                                        />
-                                    </div>
+                                    <!-- Hide the SelectableBox for viewers or when in editing mode -->
+                                    {#if hasMinimumRole(user?.role, 'labeler')}
+                                        <div class="absolute right-7 top-1 z-10">
+                                            <SelectableBox
+                                                onSelect={() => undefined}
+                                                isSelected={$pickedAnnotationIds[
+                                                    collection_id
+                                                ]?.has(annotations[index].annotation.sample_id)}
+                                            />
+                                        </div>
+                                    {/if}
 
                                     <AnnotationsGridItem
                                         annotation={annotations[index]}

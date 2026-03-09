@@ -3055,7 +3055,7 @@ export interface components {
             /**
              * Show Annotation Text Labels
              * @description Controls whether to show text labels on annotations
-             * @default true
+             * @default false
              */
             show_annotation_text_labels: boolean;
             /**
@@ -3088,6 +3088,18 @@ export interface components {
              * @default m
              */
             key_toolbar_segmentation_mask: string;
+            /**
+             * Key Toolbar Brush
+             * @description Key to activate brush mode in the segmentation tool
+             * @default r
+             */
+            key_toolbar_brush: string;
+            /**
+             * Key Toolbar Eraser
+             * @description Key to activate eraser mode in the segmentation tool
+             * @default x
+             */
+            key_toolbar_eraser: string;
             /**
              * Setting Id
              * Format: uuid
