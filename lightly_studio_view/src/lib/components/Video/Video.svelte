@@ -39,6 +39,15 @@
     let previousIndex: number | null = null;
     let rafId: number | null = null;
 
+    function syncFrame() {
+        if (!videoEl) return;
+        const { frame, index } = findFrame({ frames, currentTime: videoEl.currentTime });
+        if (index !== null && previousIndex !== index) {
+            update(frame, index);
+            previousIndex = index;
+        }
+    }
+
     function startFrameLoop() {
         if (rafId !== null) return;
 
@@ -47,14 +56,7 @@
                 rafId = null;
                 return;
             }
-
-            const { frame, index } = findFrame({ frames, currentTime: videoEl.currentTime });
-
-            if (index !== null && previousIndex !== index) {
-                update(frame, index);
-                previousIndex = index;
-            }
-
+            syncFrame();
             rafId = requestAnimationFrame(tick);
         }
 
@@ -80,22 +82,14 @@
 
     function handleSeeked(event: Event) {
         if (videoEl?.paused) {
-            const { frame, index } = findFrame({ frames, currentTime: videoEl.currentTime });
-            if (index !== null && previousIndex !== index) {
-                update(frame, index);
-                previousIndex = index;
-            }
+            syncFrame();
         }
         onseeked(event);
     }
 
     $effect(() => {
         if (!videoEl || !videoEl.paused) return;
-        const { frame, index } = findFrame({ frames, currentTime: videoEl.currentTime });
-        if (index !== null && previousIndex !== index) {
-            update(frame, index);
-            previousIndex = index;
-        }
+        syncFrame();
     });
 
     onDestroy(() => {
