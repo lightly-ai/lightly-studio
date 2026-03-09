@@ -31,6 +31,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Fixed spurious "Annotation updated successfully" toast appearing when clicking a bounding box without moving or resizing it.
 - Improved deletion UX in sample details and captions list views: replaced confirmation popups with immediate deletion and Ctrl+Z undo support.
 - Fixed grid not scrolling to the top when text search results are returned from cache.
+- Navigation menu immediately updates to display the Captions page when the first caption is added.
 
 ### Security
 

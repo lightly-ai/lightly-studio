@@ -19,6 +19,7 @@
     import { useCollectionWithChildren } from '$lib/hooks/useCollection/useCollection';
     import { page } from '$app/state';
     import CaptionField from '$lib/components/CaptionField/CaptionField.svelte';
+    import CreateCaptionField from '$lib/components/CaptionField/CreateCaptionField.svelte';
     import { useDeleteCaption } from '$lib/hooks/useDeleteCaption/useDeleteCaption';
     import { useCreateCaption } from '$lib/hooks/useCreateCaption/useCreateCaption';
     import { toast } from 'svelte-sonner';
@@ -86,19 +87,21 @@
         }
     };
 
-    const handleCreateCaption = async (sampleId: string) => {
-        if (!videoData?.sample_id) return;
+    const handleCreateCaption = async (sampleId: string, text: string): Promise<boolean> => {
+        if (!videoData?.sample_id) return false;
         try {
-            await createCaption({ parent_sample_id: sampleId });
+            await createCaption({ parent_sample_id: sampleId, text });
             toast.success('Caption created successfully');
             refetchVideo();
             // If this is the first caption, refresh root collection to update navigation
             if (!captions.length) {
                 refetchRootCollection();
             }
+            return true;
         } catch (error) {
             toast.error('Failed to create caption. Please try again.');
             console.error('Error creating caption:', error);
+            return false;
         }
     };
 
@@ -389,14 +392,10 @@
                             {/each}
                             <!-- Add new caption button -->
                             {#if $isEditingMode}
-                                <button
-                                    type="button"
-                                    class="mb-2 flex h-8 items-center justify-center rounded-sm bg-card px-2 py-0 text-diffuse-foreground transition-colors hover:bg-primary hover:text-primary-foreground"
-                                    onclick={() => handleCreateCaption(videoData?.sample_id ?? '')}
-                                    data-testid="add-caption-button"
-                                >
-                                    +
-                                </button>
+                                <CreateCaptionField
+                                    onCreate={(text) =>
+                                        handleCreateCaption(videoData?.sample_id ?? '', text)}
+                                />
                             {/if}
                         </div>
                     </div>
