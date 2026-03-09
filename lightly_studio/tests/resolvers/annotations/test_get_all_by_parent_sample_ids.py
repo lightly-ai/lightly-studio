@@ -1,4 +1,4 @@
-"""Tests for get_all_by_sample_ids resolver."""
+"""Tests for get_all_by_parent_sample_ids resolver."""
 
 from __future__ import annotations
 
