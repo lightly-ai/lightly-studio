@@ -45,7 +45,7 @@
             if (showAnnotations) await loadFrames();
 
             if (videoEl) {
-                if (videoEl.readyState < 2) {
+                if (videoEl.readyState < HTMLMediaElement.HAVE_CURRENT_DATA) {
                     await new Promise((res) =>
                         videoEl?.addEventListener('loadeddata', res, { once: true })
                     );

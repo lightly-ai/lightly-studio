@@ -37,7 +37,16 @@
     }: VideoProps = $props();
 
     let previousIndex: number | null = null;
-    let rafId: number | null = null;
+    let frameRequestId: number | null = null;
+    let sourceLoadError = $state<string | null>(null);
+
+    // HTMLMediaElement.error.code values.
+    const MEDIA_ERROR_MESSAGES: Record<number, string> = {
+        1: 'Video loading was canceled.',
+        2: 'Network error while loading the video.',
+        3: 'Video decoding failed.',
+        4: 'Video source is unavailable or unsupported.'
+    };
 
     function syncFrame() {
         if (!videoEl) return;
@@ -49,24 +58,23 @@
     }
 
     function startFrameLoop() {
-        if (rafId !== null) return;
+        if (frameRequestId !== null) return;
 
         function tick() {
             if (!videoEl) {
-                rafId = null;
+                frameRequestId = null;
                 return;
             }
             syncFrame();
-            rafId = requestAnimationFrame(tick);
+            frameRequestId = requestAnimationFrame(tick);
         }
-
-        rafId = requestAnimationFrame(tick);
+        frameRequestId = requestAnimationFrame(tick);
     }
 
-    function stopFrameLoop() {
-        if (rafId !== null) {
-            cancelAnimationFrame(rafId);
-            rafId = null;
+    function clearFrameLoop() {
+        if (frameRequestId !== null) {
+            cancelAnimationFrame(frameRequestId);
+            frameRequestId = null;
         }
         previousIndex = null;
     }
@@ -77,7 +85,7 @@
     }
 
     function handlePause() {
-        stopFrameLoop();
+        clearFrameLoop();
     }
 
     function handleSeeked(event: Event) {
@@ -87,30 +95,55 @@
         onseeked(event);
     }
 
+    function handleVideoError() {
+        clearFrameLoop();
+        const errorCode = videoEl?.error?.code;
+        sourceLoadError =
+            (errorCode != null ? MEDIA_ERROR_MESSAGES[errorCode] : null) ??
+            'Failed to load video source.';
+    }
+
+    function handleVideoLoadedData() {
+        sourceLoadError = null;
+    }
+
     $effect(() => {
         if (!videoEl || !videoEl.paused) return;
         syncFrame();
-    });
+    })
 
     onDestroy(() => {
-        stopFrameLoop();
+        clearFrameLoop();
     });
 </script>
 
-<video
-    bind:this={videoEl}
-    src={`${PUBLIC_VIDEOS_MEDIA_URL}/${video.sample_id}`}
-    {muted}
-    {playsinline}
-    {preload}
-    {controls}
-    class={className}
-    onmouseenter={handleMouseEnter}
-    onmouseleave={handleMouseLeave}
-    onplay={handlePlay}
-    onpause={handlePause}
-    onseeked={handleSeeked}
-    poster={frames.length > 0
-        ? `${PUBLIC_VIDEOS_FRAMES_MEDIA_URL}/${frames[0].sample_id}?compressed=true`
-        : null}
-></video>
+<div class="relative h-full w-full">
+    <video
+        bind:this={videoEl}
+        src={`${PUBLIC_VIDEOS_MEDIA_URL}/${video.sample_id}`}
+        {muted}
+        {playsinline}
+        {preload}
+        {controls}
+        class={className}
+        onmouseenter={handleMouseEnter}
+        onmouseleave={handleMouseLeave}
+        onplay={handlePlay}
+        onpause={handlePause}
+        onseeked={handleSeeked}
+        onerror={handleVideoError}
+        onloadeddata={handleVideoLoadedData}
+        poster={frames.length > 0
+            ? `${PUBLIC_VIDEOS_FRAMES_MEDIA_URL}/${frames[0].sample_id}?compressed=true`
+            : null}
+    ></video>
+    {#if sourceLoadError}
+        <div
+            role="status"
+            aria-live="polite"
+            class="absolute inset-0 z-[10] flex items-center justify-center bg-black/70 p-2 text-center text-xs font-medium text-white"
+        >
+            {sourceLoadError}
+        </div>
+    {/if}
+</div>

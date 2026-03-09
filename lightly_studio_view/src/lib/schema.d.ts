@@ -3055,7 +3055,7 @@ export interface components {
             /**
              * Show Annotation Text Labels
              * @description Controls whether to show text labels on annotations
-             * @default false
+             * @default true
              */
             show_annotation_text_labels: boolean;
             /**
