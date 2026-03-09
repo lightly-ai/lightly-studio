@@ -78,6 +78,17 @@
         stopFrameLoop();
     }
 
+    function handleSeeked(event: Event) {
+        if (videoEl?.paused) {
+            const { frame, index } = findFrame({ frames, currentTime: videoEl.currentTime });
+            if (index !== null && previousIndex !== index) {
+                update(frame, index);
+                previousIndex = index;
+            }
+        }
+        onseeked(event);
+    }
+
     onDestroy(() => {
         stopFrameLoop();
     });
@@ -95,7 +106,7 @@
     onmouseleave={handleMouseLeave}
     onplay={handlePlay}
     onpause={handlePause}
-    {onseeked}
+    onseeked={handleSeeked}
     poster={frames.length > 0
         ? `${PUBLIC_VIDEOS_FRAMES_MEDIA_URL}/${frames[0].sample_id}?compressed=true`
         : null}
