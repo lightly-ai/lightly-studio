@@ -30,7 +30,6 @@ export type PageContext = {
     sampleId: string | null;
     annotationId: string | null;
     sampleType: SampleType | null;
-    isDataset: boolean;
 };
 
 export type OperatorContextFilter =
@@ -90,9 +89,7 @@ export function useOperatorContext(
     tagsSelected: Readable<Set<string>> = readable(new Set<string>())
 ) {
     const routeId = derived(pageContext, ($p) => $p.routeId);
-    const collectionId = derived(pageContext, ($p) => $p.collectionId);
 
-    const isDataset = derived(pageContext, ($p) => $p.isDataset);
     const isOnDetailPage = derived(routeId, resolveIsDetailPage);
     const currentScope = derived(pageContext, ($p) => $p.sampleType as OperatorScope | null);
     const scopeLabel = derived(pageContext, ($p) =>
@@ -132,8 +129,6 @@ export function useOperatorContext(
     );
 
     return {
-        collectionId,
-        isDataset,
         currentScope,
         scopeLabel,
         isOnDetailPage,

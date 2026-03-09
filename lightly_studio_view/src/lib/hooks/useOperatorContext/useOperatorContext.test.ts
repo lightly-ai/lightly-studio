@@ -9,8 +9,7 @@ const BASE_CONTEXT: PageContext = {
     collectionId: 'coll-1',
     sampleId: null,
     annotationId: null,
-    sampleType: null,
-    isDataset: false
+    sampleType: null
 };
 
 describe('resolveIsDetailPage', () => {
