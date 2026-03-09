@@ -33,7 +33,7 @@
     let cursor = 0;
     let loading = false;
     let reachedEnd = false;
-    const BATCH_SIZE = 25;
+    const BATCH_SIZE = 50;
     let hoverTimer: ReturnType<typeof setTimeout> | null = null;
     const HOVER_DELAY = 200;
     let isHovering = false;
@@ -89,7 +89,7 @@
     function onUpdate(frame: FrameView | VideoFrameView | null, index: number | null) {
         if (!showAnnotations) return;
         currentFrame = frame;
-        if (index != null && index % BATCH_SIZE == 0 && index != 0) {
+        if (index != null && cursor - index < BATCH_SIZE / 2 && index != 0) {
             loadFrames();
         }
     }
