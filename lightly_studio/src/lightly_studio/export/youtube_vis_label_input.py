@@ -151,15 +151,13 @@ def _extract_segmentation_from_annotation(
             ],
         )
 
-        seg = None
         if seg_details.segmentation_mask is not None:
-            seg = BinaryMaskSegmentation.from_rle(
+            return BinaryMaskSegmentation.from_rle(
                 rle_row_wise=list(seg_details.segmentation_mask),
                 width=video.width,
                 height=video.height,
                 bounding_box=bbox,
             )
-        return seg
     return None
 
 
