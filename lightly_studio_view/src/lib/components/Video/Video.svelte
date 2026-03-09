@@ -40,11 +40,12 @@
     let previousVideoSampleId: string | null = null;
     let sourceLoadError = $state<string | null>(null);
 
+    // HTMLMediaElement.error.code values.
     const MEDIA_ERROR_MESSAGES: Record<number, string> = {
-        [MediaError.MEDIA_ERR_ABORTED]: 'Video loading was canceled.',
-        [MediaError.MEDIA_ERR_NETWORK]: 'Network error while loading the video.',
-        [MediaError.MEDIA_ERR_DECODE]: 'Video decoding failed.',
-        [MediaError.MEDIA_ERR_SRC_NOT_SUPPORTED]: 'Video source is unavailable or unsupported.'
+        1: 'Video loading was canceled.',
+        2: 'Network error while loading the video.',
+        3: 'Video decoding failed.',
+        4: 'Video source is unavailable or unsupported.'
     };
 
     function startFrameLoop() {
