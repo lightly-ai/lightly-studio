@@ -135,6 +135,7 @@ test('user can change label of an annotation', async ({
     annotationDetailsPage
 }) => {
     await annotationsPage.clickAnnotation(0);
+    await annotationDetailsPage.setShowAnnotationTextLabels(true);
 
     const originalLabel = cocoDataset.labels.cellPhone.name;
     const newLabel = cocoDataset.labels.apple.name;

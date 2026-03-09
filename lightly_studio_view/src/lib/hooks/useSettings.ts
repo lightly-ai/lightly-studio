@@ -13,7 +13,7 @@ const DEFAULT_SETTINGS: SettingView = {
     key_hide_annotations: 'v',
     key_go_back: 'Escape',
     key_toggle_edit_mode: 'e',
-    show_annotation_text_labels: true,
+    show_annotation_text_labels: false,
     show_sample_filenames: true,
     created_at: new Date().toISOString(),
     updated_at: new Date().toISOString(),
@@ -39,7 +39,7 @@ const gridViewSampleRenderingStore = derived(
 
 const showAnnotationTextLabelsStore = derived(
     settingsStore,
-    ($settings) => $settings.show_annotation_text_labels ?? true
+    ($settings) => $settings.show_annotation_text_labels ?? false
 );
 
 const showSampleFilenamesStore = derived(
@@ -96,7 +96,7 @@ const saveSettings = async (
             show_annotation_text_labels:
                 updatedSettings.show_annotation_text_labels !== undefined
                     ? updatedSettings.show_annotation_text_labels
-                    : (currentSettings.show_annotation_text_labels ?? true),
+                    : (currentSettings.show_annotation_text_labels ?? false),
             show_sample_filenames:
                 updatedSettings.show_sample_filenames !== undefined
                     ? updatedSettings.show_sample_filenames
