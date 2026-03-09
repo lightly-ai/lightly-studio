@@ -306,6 +306,7 @@ class TestOperator(BaseOperator):
 
 class EmptyParamsOperator(TestOperator):
     status: OperatorStatus = OperatorStatus.READY
+
     @property
     def parameters(self) -> list[BaseParameter]:
         return []
