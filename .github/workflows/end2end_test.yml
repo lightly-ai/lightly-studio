@@ -84,7 +84,9 @@ jobs:
           # No need to download a cached version in cache preparation step
           lookup-only: true
           path: &cache-example-dataset-path lightly_studio/datasets
-          key: &cache-example-dataset-key example-dataset
+          # Manually update the cache key to invalidate caches when files relevant to the CI change
+          # in the dataset_examples repo.
+          key: &cache-example-dataset-key example-dataset-2026-03-09
 
       - name: Check general e2e success cache
         id: cache-general-success

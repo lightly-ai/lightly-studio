@@ -113,6 +113,7 @@ def _validate_has_samples() -> None:
     if not datasets:
         raise ValueError(
             "No datasets found. Please load a dataset using Dataset class methods "
+            "(e.g., add_images_from_path(), add_samples_from_yolo(), etc.) "
             "before starting the GUI."
         )
 
@@ -124,6 +125,6 @@ def _validate_has_samples() -> None:
 
     if sample_count == 0:
         raise ValueError(
-            "No samples have been indexed for the first dataset. "
-            "Please ensure your dataset contains valid samples and try loading again."
+            "No images have been indexed for the first dataset. "
+            "Please ensure your dataset contains valid images and try loading again."
         )
