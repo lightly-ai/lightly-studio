@@ -26,6 +26,7 @@ jobs:
     outputs:
       cache-general-success: ${{ steps.cache-general-success.outputs.cache-hit }}
       cache-videos-success: ${{ steps.cache-videos-success.outputs.cache-hit }}
+      cache-groups-success: ${{ steps.cache-groups-success.outputs.cache-hit }}
       file-hash: ${{ steps.file-hash.outputs.hash }}
     steps:
       - name: Checkout Code
@@ -100,6 +101,14 @@ jobs:
           lookup-only: true
           path: .e2e-success-videos
           key: e2e-success-videos-${{ steps.file-hash.outputs.hash }}
+
+      - name: Check groups e2e success cache
+        id: cache-groups-success
+        uses: actions/cache@v4
+        with:
+          lookup-only: true
+          path: .e2e-success-groups
+          key: e2e-success-groups-${{ steps.file-hash.outputs.hash }}
 
 
       ### Setup steps for the workflow ###
@@ -382,6 +391,57 @@ jobs:
       - *cleanup-upload-playwright-report
       - *cleanup-stop-server
 
+  end-to-end-groups:
+    name: Groups End2End Test
+    runs-on: ubuntu-latest
+    needs: prepare-caches
+    # Skip the job if the success marker for this exact file hash already exists.
+    if: needs.prepare-caches.outputs.cache-groups-success != 'true'
+    steps:
+      - *setup-checkout-code
+      - *setup-authenticate-gcp
+      - *setup-cache-build
+      - *setup-cache-playwright-browsers
+      - *setup-cache-example-dataset
+      - *setup-python
+      - *setup-uv
+      - *setup-nodejs
+      - *setup-install-lightly-studio-view-deps
+      - *setup-install-lightly-studio-deps
+
+      ### Run e2e tests ###
+
+      - name: Index dataset with using lightly_studio pypi package
+        working-directory: lightly_studio
+        # TODO(Michal, 10/2025): Starting up the server redownloads the embedding model. Consider caching it.
+        run: |
+          uv run e2e-tests/index_groups.py > server.log 2>&1 &
+          echo "SERVER_PID=$!" >> $GITHUB_ENV
+        id: server
+
+      - *wait-for-server
+
+      ### Running end-to-end tests ###
+      - name: Run end-to-end tests for indexed dataset
+        working-directory: lightly_studio_view
+        run: npx playwright test --reporter=html --trace=on --project=groups
+        timeout-minutes: 10
+
+      - name: Create e2e success marker
+        run: touch .e2e-success-groups
+
+      - name: Save e2e success marker
+        uses: actions/cache/save@v4
+        with:
+          path: .e2e-success-groups
+          key: e2e-success-groups-${{ needs.prepare-caches.outputs.file-hash }}
+
+      ### Cleanup steps ###
+
+      - *cleanup-show-server-logs
+      - *cleanup-upload-playwright-report
+      - *cleanup-stop-server
+
   success-check:
     name: End2End Success Check
     runs-on: ubuntu-latest
@@ -389,6 +449,7 @@ jobs:
       - prepare-caches
       - end-to-end-general
       - end-to-end-videos
+      - end-to-end-groups
     if: always()
     steps:
       - name: Check failure
@@ -399,6 +460,9 @@ jobs:
           ) || (
             needs.prepare-caches.outputs.cache-videos-success != 'true' &&
             needs.end-to-end-videos.result != 'success'
+          ) || (
+            needs.prepare-caches.outputs.cache-groups-success != 'true' &&
+            needs.end-to-end-groups.result != 'success'
           )
         run: |
           echo "❌ End-to-End tests did not complete successfully."
