@@ -5,6 +5,8 @@
     import { cn } from '$lib/utils/shadcn';
     import { useLogout } from '$lib/hooks/useLogout/useLogout';
     import { Separator } from '../ui/separator';
+    import { hasMinimumRole } from '$lib/hooks/useAuth/hasMinimumRole';
+    import type { Role } from '$lib/hooks/useAuth/getLightlyEnterpriseSession/getLightlyEnterpriseSession';
 
     const { logout } = useLogout();
 
@@ -12,7 +14,7 @@
         user: {
             username: string;
             email: string;
-            role: string;
+            role: Role;
         };
     }
 
@@ -53,7 +55,7 @@
                     <p class="text-sm text-muted-foreground">{user.username}</p>
                 </div>
             </div>
-            {#if user?.role === 'admin'}
+            {#if hasMinimumRole(user?.role, 'admin')}
                 <Button variant="ghost" class="w-full justify-start gap-2" href="/workspace/users">
                     <Users class="size-4" />
                     Users

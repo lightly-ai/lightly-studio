@@ -13,14 +13,16 @@ const DEFAULT_SETTINGS: SettingView = {
     key_hide_annotations: 'v',
     key_go_back: 'Escape',
     key_toggle_edit_mode: 'e',
-    show_annotation_text_labels: true,
+    show_annotation_text_labels: false,
     show_sample_filenames: true,
     created_at: new Date().toISOString(),
     updated_at: new Date().toISOString(),
     key_toolbar_selection: 's',
     key_toolbar_drag: 'd',
     key_toolbar_bounding_box: 'b',
-    key_toolbar_segmentation_mask: 'm'
+    key_toolbar_segmentation_mask: 'm',
+    key_toolbar_brush: 'r',
+    key_toolbar_eraser: 'x'
 };
 
 // Create stores for settings state
@@ -37,7 +39,7 @@ const gridViewSampleRenderingStore = derived(
 
 const showAnnotationTextLabelsStore = derived(
     settingsStore,
-    ($settings) => $settings.show_annotation_text_labels ?? true
+    ($settings) => $settings.show_annotation_text_labels ?? false
 );
 
 const showSampleFilenamesStore = derived(
@@ -94,7 +96,7 @@ const saveSettings = async (
             show_annotation_text_labels:
                 updatedSettings.show_annotation_text_labels !== undefined
                     ? updatedSettings.show_annotation_text_labels
-                    : (currentSettings.show_annotation_text_labels ?? true),
+                    : (currentSettings.show_annotation_text_labels ?? false),
             show_sample_filenames:
                 updatedSettings.show_sample_filenames !== undefined
                     ? updatedSettings.show_sample_filenames
@@ -109,7 +111,11 @@ const saveSettings = async (
                 currentSettings.key_toolbar_bounding_box,
             key_toolbar_segmentation_mask:
                 updatedSettings.key_toolbar_segmentation_mask ||
-                currentSettings.key_toolbar_segmentation_mask
+                currentSettings.key_toolbar_segmentation_mask,
+            key_toolbar_brush:
+                updatedSettings.key_toolbar_brush || currentSettings.key_toolbar_brush,
+            key_toolbar_eraser:
+                updatedSettings.key_toolbar_eraser || currentSettings.key_toolbar_eraser
         };
 
         // The API call
