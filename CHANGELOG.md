@@ -17,6 +17,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- Navigation menu immediately updates to display the Captions page when the first caption is added.
+
 ### Security
 
 ## \[0.4.10\] - 2026-03-09
