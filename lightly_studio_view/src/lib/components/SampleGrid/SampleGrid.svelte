@@ -52,6 +52,7 @@
     let clientWidth = $state(0);
     let clientHeight = $state(0);
     let grid: ReturnType<typeof Grid> | undefined = $state();
+    let prevScrollResetKey = scrollResetKey;
 
     const { sampleSize } = useGlobalStorage();
     const columnCount = $derived($sampleSize.width);
@@ -65,8 +66,10 @@
     const sampleItemSize = $derived(itemSize - GRID_GAP);
 
     $effect(() => {
-        void scrollResetKey;
-        grid?.scrollToPosition(0);
+        if (scrollResetKey !== prevScrollResetKey) {
+            grid?.scrollToPosition(0);
+        }
+        prevScrollResetKey = scrollResetKey;
     });
 </script>
 
