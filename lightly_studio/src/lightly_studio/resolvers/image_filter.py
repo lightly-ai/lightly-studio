@@ -4,8 +4,10 @@
 from typing import Optional
 
 from pydantic import BaseModel
+from sqlmodel import col
 
 from lightly_studio.models.image import ImageTable
+from lightly_studio.resolvers.annotations.annotations_filter import AnnotationsFilter
 from lightly_studio.resolvers.sample_resolver.sample_filter import SampleFilter
 from lightly_studio.type_definitions import QueryType
 
@@ -21,19 +23,22 @@ class ImageFilter(BaseModel):
     """Encapsulates filter parameters for querying samples."""
 
     sample_filter: Optional[SampleFilter] = None
+    annotation_filter: Optional[AnnotationsFilter] = None
     width: Optional[FilterDimensions] = None
     height: Optional[FilterDimensions] = None
 
     def apply(self, query: QueryType) -> QueryType:
         """Apply the filters to the given query."""
-        # Apply sample filters to the query.
         if self.sample_filter is not None:
             query = self.sample_filter.apply(query)
 
-        # Apply dimension-based filters to the query.
+        if self.annotation_filter is not None:
+            query = self.annotation_filter.apply_to_sample_query(
+                query, col(ImageTable.sample_id)
+            )
+
         query = self._apply_dimension_filters(query)
 
-        # Return the modified query.
         return query  # noqa: RET504
 
     def _apply_dimension_filters(self, query: QueryType) -> QueryType:
