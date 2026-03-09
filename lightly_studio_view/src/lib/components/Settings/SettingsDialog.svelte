@@ -27,7 +27,7 @@
     });
     type RenderingMode = 'contain' | 'cover';
     let gridViewRendering: RenderingMode = $state('contain');
-    let showAnnotationTextLabels = $state<boolean>(true);
+    let showAnnotationTextLabels = $state<boolean>(false);
     let showSampleFilenames = $state<boolean>(false);
 
     let initialized = false;
@@ -47,8 +47,8 @@
                 keyToolbarEraser: $settingsStore.key_toolbar_eraser || 'x'
             };
             gridViewRendering = $settingsStore.grid_view_sample_rendering || 'contain';
-            showAnnotationTextLabels = Boolean($settingsStore.show_annotation_text_labels ?? true);
-            showSampleFilenames = Boolean($settingsStore.show_sample_filenames ?? false);
+            showAnnotationTextLabels = $settingsStore.show_annotation_text_labels ?? false;
+            showSampleFilenames = $settingsStore.show_sample_filenames ?? false;
             initialized = true;
         }
     });

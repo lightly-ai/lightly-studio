@@ -80,7 +80,7 @@
                     : undefined,
                 ...sampleFilter
             },
-            ...$dimensions
+            ...($dimensions ?? {})
         },
         text_embedding: textEmbedding?.embedding
     });

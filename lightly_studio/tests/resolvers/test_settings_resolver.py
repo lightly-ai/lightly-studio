@@ -19,6 +19,7 @@ def test_get_settings_creates_default_settings(
 
     assert settings is not None
     assert settings.grid_view_sample_rendering == GridViewSampleRenderingType.CONTAIN
+    assert settings.show_annotation_text_labels is False
     assert settings.show_sample_filenames is False
     assert settings.key_toolbar_brush == "r"
     assert settings.key_toolbar_eraser == "x"

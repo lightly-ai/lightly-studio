@@ -40,7 +40,7 @@ class SettingBase(SQLModel):
 
     # New setting for annotation text visibility.
     show_annotation_text_labels: bool = Field(
-        default=True,
+        default=False,
         description="Controls whether to show text labels on annotations",
     )
 
