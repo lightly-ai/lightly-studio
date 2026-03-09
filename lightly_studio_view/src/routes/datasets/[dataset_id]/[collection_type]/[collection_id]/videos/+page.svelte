@@ -129,6 +129,7 @@
     <SampleGrid
         itemCount={items.length}
         overScan={20}
+        scrollResetKey={$textEmbedding?.queryText ?? ''}
         testId="video-grid"
         message={{
             loading: 'Loading videos...',
