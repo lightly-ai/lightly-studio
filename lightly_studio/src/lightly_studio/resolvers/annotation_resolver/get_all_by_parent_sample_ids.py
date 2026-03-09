@@ -14,8 +14,8 @@ from lightly_studio.models.video import VideoFrameTable, VideoTable
 
 def get_all_by_parent_sample_ids(
     session: Session,
-    sample_ids: Sequence[UUID],
-) -> list[AnnotationBaseTable]:
+    parent_sample_ids: Sequence[UUID],
+) -> Sequence[AnnotationBaseTable]:
     """Get all annotations belonging to the provided parent sample IDs."""
     annotations_statement = (
         select(AnnotationBaseTable)
@@ -28,11 +28,11 @@ def get_all_by_parent_sample_ids(
             col(VideoFrameTable.sample_id) == col(AnnotationBaseTable.parent_sample_id),
         )
         .outerjoin(VideoTable, col(VideoTable.sample_id) == col(VideoFrameTable.parent_sample_id))
-        .where(col(AnnotationBaseTable.parent_sample_id).in_(sample_ids))
+        .where(col(AnnotationBaseTable.parent_sample_id).in_(parent_sample_ids))
         .order_by(
             func.coalesce(ImageTable.file_path_abs, VideoTable.file_path_abs, "").asc(),
             col(AnnotationBaseTable.created_at).asc(),
             col(AnnotationBaseTable.sample_id).asc(),
         )
     )
-    return list(session.exec(annotations_statement).all())
+    return session.exec(annotations_statement).all()

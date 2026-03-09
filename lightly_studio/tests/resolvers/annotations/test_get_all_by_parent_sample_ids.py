@@ -56,7 +56,7 @@ def test_get_all_by_parent_sample_ids_returns_only_matching_annotations(test_db:
 
     result = annotation_resolver.get_all_by_parent_sample_ids(
         session=test_db,
-        sample_ids=[
+        parent_sample_ids=[
             image_b.sample_id,
         ],
     )
@@ -70,6 +70,6 @@ def test_get_all_by_parent_sample_ids_returns_only_matching_annotations(test_db:
 def test_get_all_by_parent_sample_ids_with_no_parent_sample_ids_returns_empty_result(
     test_db: Session,
 ) -> None:
-    result = annotation_resolver.get_all_by_parent_sample_ids(session=test_db, sample_ids=[])
+    result = annotation_resolver.get_all_by_parent_sample_ids(session=test_db, parent_sample_ids=[])
 
     assert result == []

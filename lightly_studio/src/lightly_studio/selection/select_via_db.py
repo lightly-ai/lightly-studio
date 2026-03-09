@@ -243,7 +243,7 @@ def select_via_database(
         elif isinstance(strat, AnnotationClassBalancingStrategy):
             annotations = annotation_resolver.get_all_by_parent_sample_ids(
                 session=session,
-                sample_ids=input_sample_ids,
+                parent_sample_ids=input_sample_ids,
             )
             annotation_label_ids = [a.annotation_label_id for a in annotations]
             sample_id_to_annotation_label_ids = defaultdict(list)
