@@ -1,19 +1,16 @@
 import { describe, it, expect } from 'vitest';
-import { OperatorScope as OperatorScopeValues } from '$lib/api/lightly_studio_local';
 import { APP_ROUTES } from '$lib/routes';
-import {
-    resolveIsDetailPage,
-    resolveCurrentScope,
-    resolveScopeLabel,
-    resolveContextFilter
-} from './useOperatorContext';
+import { SampleType as SampleTypeValues } from '$lib/api/lightly_studio_local';
+import { resolveIsDetailPage, resolveScopeLabel, resolveContextFilter } from './useOperatorContext';
 import type { PageContext } from './useOperatorContext';
 
 const BASE_CONTEXT: PageContext = {
     routeId: null,
     collectionId: 'coll-1',
     sampleId: null,
-    annotationId: null
+    annotationId: null,
+    sampleType: null,
+    isDataset: false
 };
 
 describe('resolveIsDetailPage', () => {
@@ -51,66 +48,32 @@ describe('resolveIsDetailPage', () => {
     });
 });
 
-describe('resolveCurrentScope', () => {
-    it('returns null for null route', () => {
-        expect(resolveCurrentScope(null)).toBeNull();
-    });
-
-    it('returns null for unknown route', () => {
-        expect(resolveCurrentScope('/unknown')).toBeNull();
-    });
-
-    it('returns IMAGE for samples and sampleDetails', () => {
-        expect(resolveCurrentScope(APP_ROUTES.samples)).toBe(OperatorScopeValues.IMAGE);
-        expect(resolveCurrentScope(APP_ROUTES.sampleDetails)).toBe(OperatorScopeValues.IMAGE);
-    });
-
-    it('returns VIDEO for videos and videoDetails', () => {
-        expect(resolveCurrentScope(APP_ROUTES.videos)).toBe(OperatorScopeValues.VIDEO);
-        expect(resolveCurrentScope(APP_ROUTES.videoDetails)).toBe(OperatorScopeValues.VIDEO);
-    });
-
-    it('returns VIDEO_FRAME for frames and framesDetails', () => {
-        expect(resolveCurrentScope(APP_ROUTES.frames)).toBe(OperatorScopeValues.VIDEO_FRAME);
-        expect(resolveCurrentScope(APP_ROUTES.framesDetails)).toBe(OperatorScopeValues.VIDEO_FRAME);
-    });
-
-    it('returns ANNOTATION for annotations and annotationDetails', () => {
-        expect(resolveCurrentScope(APP_ROUTES.annotations)).toBe(OperatorScopeValues.ANNOTATION);
-        expect(resolveCurrentScope(APP_ROUTES.annotationDetails)).toBe(
-            OperatorScopeValues.ANNOTATION
-        );
-    });
-
-    it('returns GROUP for groups', () => {
-        expect(resolveCurrentScope(APP_ROUTES.groups)).toBe(OperatorScopeValues.GROUP);
-    });
-
-    it('returns CAPTION for captions', () => {
-        expect(resolveCurrentScope(APP_ROUTES.captions)).toBe(OperatorScopeValues.CAPTION);
-    });
-});
-
 describe('resolveScopeLabel', () => {
-    it('returns "Full collection" for null or unknown route', () => {
-        expect(resolveScopeLabel(null)).toBe('Full collection');
-        expect(resolveScopeLabel('/unknown')).toBe('Full collection');
+    it('returns "Full collection" for null sampleType', () => {
+        expect(resolveScopeLabel(null, false)).toBe('Full collection');
+        expect(resolveScopeLabel(null, true)).toBe('Full collection');
     });
 
-    it('returns detail labels for detail routes', () => {
-        expect(resolveScopeLabel(APP_ROUTES.sampleDetails)).toBe('Current image');
-        expect(resolveScopeLabel(APP_ROUTES.framesDetails)).toBe('Current frame');
-        expect(resolveScopeLabel(APP_ROUTES.videoDetails)).toBe('Current video');
-        expect(resolveScopeLabel(APP_ROUTES.annotationDetails)).toBe('Current annotation');
+    it('returns detail label when isOnDetailPage is true', () => {
+        expect(resolveScopeLabel(SampleTypeValues.IMAGE, true)).toBe('Current image');
+        expect(resolveScopeLabel(SampleTypeValues.VIDEO, true)).toBe('Current video');
+        expect(resolveScopeLabel(SampleTypeValues.VIDEO_FRAME, true)).toBe('Current video_frame');
+        expect(resolveScopeLabel(SampleTypeValues.ANNOTATION, true)).toBe('Current annotation');
     });
 
-    it('returns collection labels for collection routes', () => {
-        expect(resolveScopeLabel(APP_ROUTES.samples)).toBe('Current image collection');
-        expect(resolveScopeLabel(APP_ROUTES.videos)).toBe('Current video collection');
-        expect(resolveScopeLabel(APP_ROUTES.frames)).toBe('Current frame collection');
-        expect(resolveScopeLabel(APP_ROUTES.annotations)).toBe('Current annotation collection');
-        expect(resolveScopeLabel(APP_ROUTES.groups)).toBe('Current group collection');
-        expect(resolveScopeLabel(APP_ROUTES.captions)).toBe('Current caption collection');
+    it('returns collection label when isOnDetailPage is false', () => {
+        expect(resolveScopeLabel(SampleTypeValues.IMAGE, false)).toBe('Current image collection');
+        expect(resolveScopeLabel(SampleTypeValues.VIDEO, false)).toBe('Current video collection');
+        expect(resolveScopeLabel(SampleTypeValues.VIDEO_FRAME, false)).toBe(
+            'Current video_frame collection'
+        );
+        expect(resolveScopeLabel(SampleTypeValues.ANNOTATION, false)).toBe(
+            'Current annotation collection'
+        );
+        expect(resolveScopeLabel(SampleTypeValues.GROUP, false)).toBe('Current group collection');
+        expect(resolveScopeLabel(SampleTypeValues.CAPTION, false)).toBe(
+            'Current caption collection'
+        );
     });
 });
 

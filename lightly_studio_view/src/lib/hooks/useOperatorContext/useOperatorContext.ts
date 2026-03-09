@@ -5,9 +5,9 @@ import type {
     ImageFilter,
     VideoFrameFilter,
     VideoFilter,
-    OperatorScope
+    OperatorScope,
+    SampleType
 } from '$lib/api/lightly_studio_local';
-import { OperatorScope as OperatorScopeValues } from '$lib/api/lightly_studio_local';
 import {
     isSampleDetailsRoute,
     isFrameDetailsRoute,
@@ -17,8 +17,7 @@ import {
     isVideosRoute,
     isVideoFramesRoute,
     isAnnotationsRoute,
-    isCaptionsRoute,
-    isGroupsRoute
+    isCaptionsRoute
 } from '$lib/routes';
 import { useImageFilters } from '$lib/hooks/useImageFilters/useImageFilters';
 import { useVideoFilters } from '$lib/hooks/useVideoFilters/useVideoFilters';
@@ -30,6 +29,8 @@ export type PageContext = {
     collectionId: string;
     sampleId: string | null;
     annotationId: string | null;
+    sampleType: SampleType | null;
+    isDataset: boolean;
 };
 
 export type OperatorContextFilter =
@@ -49,30 +50,9 @@ export function resolveIsDetailPage(routeId: string | null): boolean {
     );
 }
 
-export function resolveCurrentScope(routeId: string | null): OperatorScope | null {
-    if (isSamplesRoute(routeId) || isSampleDetailsRoute(routeId)) return OperatorScopeValues.IMAGE;
-    if (isVideosRoute(routeId) || isVideoDetailsRoute(routeId)) return OperatorScopeValues.VIDEO;
-    if (isVideoFramesRoute(routeId) || isFrameDetailsRoute(routeId))
-        return OperatorScopeValues.VIDEO_FRAME;
-    if (isAnnotationsRoute(routeId) || isAnnotationDetailsRoute(routeId))
-        return OperatorScopeValues.ANNOTATION;
-    if (isGroupsRoute(routeId)) return OperatorScopeValues.GROUP;
-    if (isCaptionsRoute(routeId)) return OperatorScopeValues.CAPTION;
-    return null;
-}
-
-export function resolveScopeLabel(routeId: string | null): string {
-    if (isSampleDetailsRoute(routeId)) return 'Current image';
-    if (isFrameDetailsRoute(routeId)) return 'Current frame';
-    if (isVideoDetailsRoute(routeId)) return 'Current video';
-    if (isAnnotationDetailsRoute(routeId)) return 'Current annotation';
-    if (isSamplesRoute(routeId)) return 'Current image collection';
-    if (isVideosRoute(routeId)) return 'Current video collection';
-    if (isVideoFramesRoute(routeId)) return 'Current frame collection';
-    if (isAnnotationsRoute(routeId)) return 'Current annotation collection';
-    if (isGroupsRoute(routeId)) return 'Current group collection';
-    if (isCaptionsRoute(routeId)) return 'Current caption collection';
-    return 'Full collection';
+export function resolveScopeLabel(sampleType: SampleType | null, isOnDetailPage: boolean): string {
+    if (sampleType === null) return 'Full collection';
+    return isOnDetailPage ? `Current ${sampleType}` : `Current ${sampleType} collection`;
 }
 
 export function resolveContextFilter(
@@ -112,13 +92,11 @@ export function useOperatorContext(
     const routeId = derived(pageContext, ($p) => $p.routeId);
     const collectionId = derived(pageContext, ($p) => $p.collectionId);
 
+    const isDataset = derived(pageContext, ($p) => $p.isDataset);
     const isOnDetailPage = derived(routeId, resolveIsDetailPage);
-    const currentScope = derived(routeId, resolveCurrentScope);
-    const scopeLabel = derived(routeId, resolveScopeLabel);
-
-    const isCollectionView = derived(
-        routeId,
-        ($r) => resolveCurrentScope($r) !== null && !resolveIsDetailPage($r)
+    const currentScope = derived(pageContext, ($p) => $p.sampleType as OperatorScope | null);
+    const scopeLabel = derived(pageContext, ($p) =>
+        resolveScopeLabel($p.sampleType, resolveIsDetailPage($p.routeId))
     );
 
     const { imageFilter } = useImageFilters();
@@ -155,9 +133,9 @@ export function useOperatorContext(
 
     return {
         collectionId,
+        isDataset,
         currentScope,
         scopeLabel,
-        isCollectionView,
         isOnDetailPage,
         contextFilter
     };
