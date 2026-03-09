@@ -1,5 +1,4 @@
 <script lang="ts">
-    import { SampleAnnotations, SampleImage } from '$lib/components';
     import { useDimensions } from '$lib/hooks/useDimensions/useDimensions';
     import { type TextEmbedding, useGlobalStorage } from '$lib/hooks/useGlobalStorage';
     import { useMetadataFilters } from '$lib/hooks/useMetadataFilters/useMetadataFilters';
@@ -20,9 +19,9 @@
     import { omit, isEqual } from 'lodash-es';
     import SampleGrid from '../SampleGrid/SampleGrid.svelte';
     import SampleGridItem from '../SampleGridItem/SampleGridItem.svelte';
-    import { getSimilarityColor } from '$lib/utils';
     import { selectRangeByAnchor } from '$lib/utils/selectRangeByAnchor';
     import { page } from '$app/state';
+    import SampleImageGridItem from '../SampleImageGridItem/SampleImageGridItem.svelte';
 
     // Import the settings hook
     const { gridViewSampleRenderingStore, showSampleFilenamesStore } = useSettings();
@@ -58,7 +57,7 @@
                 ? $selectedAnnotationFilterIds
                 : undefined,
             tag_ids: $tagsSelected.size > 0 ? Array.from($tagsSelected) : undefined,
-            dimensions: $dimensions
+            dimensions: $dimensions ?? undefined
         },
         metadata_values: $metadataValues,
         text_embedding: $textEmbedding?.embedding
@@ -143,8 +142,8 @@
         const parts = [
             $selectedAnnotationFilterIds.join(','),
             Array.from($tagsSelected).join(','),
-            `${$dimensions.min_width}-${$dimensions.max_width}`,
-            `${$dimensions.min_height}-${$dimensions.max_height}`,
+            `${$dimensions?.min_width}-${$dimensions?.max_width}`,
+            `${$dimensions?.min_height}-${$dimensions?.max_height}`,
             JSON.stringify($metadataValues),
             $textEmbedding?.queryText || ''
         ];
@@ -222,6 +221,7 @@
     itemCount={samples.length}
     overScan={100}
     scrollPosition={initialScrollPosition}
+    scrollResetKey={$textEmbedding?.queryText ?? ''}
     onScroll={handleScroll}
     message={{
         loading: 'Loading samples...',
@@ -244,8 +244,8 @@
     }}
 >
     {#snippet gridItem({ index, style, sampleSize })}
-        {#key $infiniteSamples.dataUpdatedAt}
-            {#if samples[index]}
+        {#if samples[index]}
+            {#key samples[index].sample_id}
                 {@const displayTextOnImage = $showSampleFilenamesStore
                     ? samples[index].file_name
                     : samples[index].captions?.[0]?.text}
@@ -260,40 +260,15 @@
                     onSelect={handleSampleSelect}
                 >
                     {#snippet item()}
-                        <SampleImage sample={samples[index]} {objectFit} />
-                        <SampleAnnotations
+                        <SampleImageGridItem
                             sample={samples[index]}
-                            containerWidth={sampleSize}
-                            sampleImageObjectFit={objectFit}
-                            containerHeight={sampleSize}
+                            {objectFit}
+                            {sampleSize}
+                            {displayTextOnImage}
                         />
-                        {#if samples[index].similarity_score !== undefined && samples[index].similarity_score !== null}
-                            <div
-                                class="absolute right-1 z-10 flex items-center rounded bg-black/60 px-1.5 py-0.5 text-xs font-medium text-white backdrop-blur-sm {displayTextOnImage
-                                    ? 'bottom-8'
-                                    : 'bottom-1'}"
-                            >
-                                <span
-                                    class="mr-1.5 block h-2 w-2 rounded-full"
-                                    style="background-color: {getSimilarityColor(
-                                        samples[index].similarity_score
-                                    )}"
-                                ></span>
-                                {samples[index].similarity_score.toFixed(2)}
-                            </div>
-                        {/if}
-                        {#if displayTextOnImage}
-                            <div
-                                class="pointer-events-none absolute inset-x-0 bottom-0 z-10 rounded-b-lg bg-black/60 px-2 py-1 text-xs font-medium text-white"
-                            >
-                                <span class="block truncate" title={displayTextOnImage}>
-                                    {displayTextOnImage}
-                                </span>
-                            </div>
-                        {/if}
                     {/snippet}
                 </SampleGridItem>
-            {/if}
-        {/key}
+            {/key}
+        {/if}
     {/snippet}
 </SampleGrid>

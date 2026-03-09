@@ -53,6 +53,8 @@ def set_settings(session: Session, settings: SettingView) -> SettingView:
     current_settings.key_toolbar_drag = settings.key_toolbar_drag
     current_settings.key_toolbar_bounding_box = settings.key_toolbar_bounding_box
     current_settings.key_toolbar_segmentation_mask = settings.key_toolbar_segmentation_mask
+    current_settings.key_toolbar_brush = settings.key_toolbar_brush
+    current_settings.key_toolbar_eraser = settings.key_toolbar_eraser
 
     # Update show annotation text labels
     current_settings.show_annotation_text_labels = settings.show_annotation_text_labels

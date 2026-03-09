@@ -1616,6 +1616,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/groups/{group_id}/components": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Group Components By Group Id
+         * @description Get all component views that belong to a group sample.
+         */
+        get: operations["get_group_components_by_group_id"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/images/sample/{sample_id}": {
         parameters: {
             query?: never;
@@ -1992,15 +2012,10 @@ export interface components {
              */
             annotation_label_ids?: string[] | null;
             /**
-             * Annotation Tag Ids
+             * Tag Ids
              * @description List of tag UUIDs
              */
-            annotation_tag_ids?: string[] | null;
-            /**
-             * Sample Tag Ids
-             * @description List of sample tag UUIDs to filter annotations by
-             */
-            sample_tag_ids?: string[] | null;
+            tag_ids?: string[] | null;
             /**
              * Sample Ids
              * @description List of sample UUIDs to filter annotations by
@@ -2225,6 +2240,21 @@ export interface components {
             children: components["schemas"]["CollectionView"][];
             /** Total Sample Count */
             total_sample_count: number;
+        };
+        /**
+         * ComponentCollectionView
+         * @description Collection view for group components.
+         */
+        ComponentCollectionView: {
+            /** Name */
+            name: string;
+            /** Parent Collection Id */
+            parent_collection_id?: string | null;
+            sample_type: components["schemas"]["SampleType"];
+            /** Group Component Name */
+            group_component_name: string;
+            /** Group Component Index */
+            group_component_index: number;
         };
         /**
          * ComputeSimilarityRequest
@@ -2459,6 +2489,28 @@ export interface components {
          * @enum {string}
          */
         GridViewSampleRenderingType: "cover" | "contain";
+        /**
+         * GroupComponentView
+         * @description GroupComponentView representation.
+         *
+         *     Represents a group component with its name and associated media (image or video).
+         *     A component is always either an image or a video, never both.
+         *
+         *     A "GroupComponent" is a sample that has the following relationships:
+         *     - Collection relationship (samples.collection_id → collections.collection_id): The component
+         *       sample belongs to a component collection.
+         *     - Group relationship (via SampleGroupLinkTable): The component is linked to a parent group
+         *       sample through the SampleGroupLinkTable join table, where the component is referenced
+         *       by sample_id and the parent group by parent_sample_id.
+         *     - Content relationship: Each sample's actual content (media file information) is stored in
+         *       either ImageTable or VideoTable, linked via sample_id as a foreign key. A sample_id exists
+         *       in SampleTable and exactly one of ImageTable/VideoTable - never both.
+         */
+        GroupComponentView: {
+            collection: components["schemas"]["ComponentCollectionView"];
+            /** Details */
+            details?: components["schemas"]["ImageView"] | components["schemas"]["VideoView"] | null;
+        };
         /**
          * GroupFilter
          * @description Encapsulates filter parameters for querying groups.
@@ -3060,7 +3112,7 @@ export interface components {
             /**
              * Show Annotation Text Labels
              * @description Controls whether to show text labels on annotations
-             * @default true
+             * @default false
              */
             show_annotation_text_labels: boolean;
             /**
@@ -3093,6 +3145,18 @@ export interface components {
              * @default m
              */
             key_toolbar_segmentation_mask: string;
+            /**
+             * Key Toolbar Brush
+             * @description Key to activate brush mode in the segmentation tool
+             * @default r
+             */
+            key_toolbar_brush: string;
+            /**
+             * Key Toolbar Eraser
+             * @description Key to activate eraser mode in the segmentation tool
+             * @default x
+             */
+            key_toolbar_eraser: string;
             /**
              * Setting Id
              * Format: uuid
@@ -6077,6 +6141,37 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["GroupViewsWithCount"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_group_components_by_group_id: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                group_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["GroupComponentView"][];
                 };
             };
             /** @description Validation Error */

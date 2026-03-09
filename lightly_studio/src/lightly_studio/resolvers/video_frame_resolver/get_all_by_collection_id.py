@@ -7,9 +7,12 @@ from typing import Any
 from uuid import UUID
 
 from pydantic import BaseModel
+from sqlalchemy.orm import joinedload, selectinload
+from sqlalchemy.orm.interfaces import LoaderOption
 from sqlmodel import Session, col, func, select
 
 from lightly_studio.api.routes.api.validators import Paginated
+from lightly_studio.models.annotation.annotation_base import AnnotationBaseTable
 from lightly_studio.models.sample import SampleTable
 from lightly_studio.models.video import VideoFrameTable, VideoTable
 from lightly_studio.resolvers.video_frame_resolver.video_frame_filter import VideoFrameFilter
@@ -42,7 +45,7 @@ def get_all_by_collection_id(
     if video_frame_filter:
         base_query = video_frame_filter.apply(base_query)
 
-    samples_query = base_query.order_by(
+    samples_query = base_query.options(_get_load_options()).order_by(
         col(VideoTable.file_path_abs).asc(), col(VideoFrameTable.frame_number).asc()
     )
 
@@ -60,4 +63,16 @@ def get_all_by_collection_id(
         samples=session.exec(samples_query).all(),
         total_count=total_count,
         next_cursor=next_cursor,
+    )
+
+
+def _get_load_options() -> LoaderOption:
+    """Eager-load annotations to avoid multiple queries."""
+    return selectinload(VideoFrameTable.sample).options(
+        selectinload(SampleTable.annotations).options(
+            joinedload(AnnotationBaseTable.annotation_label),
+            joinedload(AnnotationBaseTable.object_detection_details),
+            joinedload(AnnotationBaseTable.segmentation_details),
+            selectinload(AnnotationBaseTable.sample).options(selectinload(SampleTable.tags)),
+        ),
     )
