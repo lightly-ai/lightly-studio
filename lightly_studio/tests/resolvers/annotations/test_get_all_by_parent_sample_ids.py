@@ -14,7 +14,7 @@ from tests.helpers_resolvers import (
 )
 
 
-def test_get_all_by_parent_sample_ids_returns_only_matching_annotations(test_db: Session) -> None:
+def test_get_all_by_parent_sample_ids(test_db: Session) -> None:
     collection = create_collection(session=test_db)
     label = create_annotation_label(
         session=test_db,
@@ -24,12 +24,12 @@ def test_get_all_by_parent_sample_ids_returns_only_matching_annotations(test_db:
     image_b = create_image(
         session=test_db,
         collection_id=collection.collection_id,
-        file_path_abs="/z_dir/sample_b.png",
+        file_path_abs="sample_b.png",
     )
     image_a = create_image(
         session=test_db,
         collection_id=collection.collection_id,
-        file_path_abs="/a_dir/sample_a.png",
+        file_path_abs="sample_a.png",
     )
 
     annotations = create_annotations(
@@ -60,7 +60,7 @@ def test_get_all_by_parent_sample_ids_returns_only_matching_annotations(test_db:
             image_b.sample_id,
         ],
     )
-
+    assert len(result) == 2
     assert [annotation.sample_id for annotation in result] == [
         image_b_annotations[0].sample_id,
         image_b_annotations[1].sample_id,
