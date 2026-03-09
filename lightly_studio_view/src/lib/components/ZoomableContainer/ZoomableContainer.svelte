@@ -18,6 +18,7 @@
         height: containerHeight,
         cursor = 'auto',
         panEnabled = true,
+        zoomEnabled = true,
         toolbarContent,
         registerResetFn,
         zoomPanelContent
@@ -32,6 +33,7 @@
         autoFocusKey?: string | undefined;
         registerResetFn?: (resetFn: () => void) => void;
         panEnabled?: boolean;
+        zoomEnabled?: boolean;
         toolbarContent?: Snippet;
         zoomPanelContent?: Snippet;
     } = $props();
@@ -156,10 +158,11 @@
         // we use d3-zoom to handle zooming and panning https://d3js.org/d3-zoom
         zoom = D3zoom<SVGSVGElement, unknown>()
             .on('zoom', (event: EventZoom) => {
+                if (!zoomEnabled) return;
                 transform = event.transform;
             })
             .filter((event: MouseEvent | WheelEvent) => {
-                if (!panEnabled) return false;
+                if (!panEnabled || !zoomEnabled) return false;
                 // Allow wheel events, touch events, and mouse events (except right click)
                 return (
                     (!event.ctrlKey || event.type === 'wheel') &&

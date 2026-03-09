@@ -122,7 +122,7 @@ def read_annotations(
         filters=AnnotationsFilter(
             collection_ids=[collection_id],
             annotation_label_ids=annotation_label_ids,
-            annotation_tag_ids=tag_ids,
+            tag_ids=tag_ids,
         ),
     )
 
@@ -147,7 +147,7 @@ def read_annotations_with_payload(
         filters=AnnotationsFilter(
             collection_ids=[collection_id],
             annotation_label_ids=params.annotation_label_ids,
-            annotation_tag_ids=params.tag_ids,
+            tag_ids=params.tag_ids,
         ),
         collection_id=collection_id,
     )

@@ -25,11 +25,8 @@ class AnnotationsFilter(BaseModel):
     annotation_label_ids: list[UUID] | None = Field(
         default=None, description="List of annotation label UUIDs"
     )
-    annotation_tag_ids: list[UUID] | None = Field(default=None, description="List of tag UUIDs")
-    sample_tag_ids: list[UUID] | None = Field(
-        default=None,
-        description="List of sample tag UUIDs to filter annotations by",
-    )
+    tag_ids: list[UUID] | None = Field(default=None, description="List of tag UUIDs")
+
     sample_ids: list[UUID] | None = Field(
         default=None, description="List of sample UUIDs to filter annotations by"
     )
@@ -60,23 +57,11 @@ class AnnotationsFilter(BaseModel):
                 col(AnnotationBaseTable.annotation_label_id).in_(self.annotation_label_ids)
             )
 
-        # Filter by annotation tags
-        if self.annotation_tag_ids:
+        # Filter by tags
+        if self.tag_ids:
             query = (
                 query.join(annotation_sample.tags)
-                .where(
-                    annotation_sample.tags.any(col(TagTable.tag_id).in_(self.annotation_tag_ids))
-                )
-                .distinct()
-            )
-
-        # Filter by sample tags
-        if self.sample_tag_ids:
-            parent_sample = aliased(SampleTable)
-            query = (
-                query.join(parent_sample, AnnotationBaseTable.parent_sample)
-                .join(parent_sample.tags)
-                .where(parent_sample.tags.any(col(TagTable.tag_id).in_(self.sample_tag_ids)))
+                .where(annotation_sample.tags.any(col(TagTable.tag_id).in_(self.tag_ids)))
                 .distinct()
             )
 
