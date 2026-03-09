@@ -6,6 +6,7 @@ import socket as socket_module
 from socket import AF_INET, SOCK_STREAM, socket
 from unittest.mock import MagicMock, patch
 
+import pytest
 from fastapi.testclient import TestClient
 
 from lightly_studio.api.app import app
@@ -36,10 +37,7 @@ def test_lifespan_shutdown_all_called_even_if_startup_raises() -> None:
         patch("lightly_studio.api.app.db_manager") as mock_db,
     ):
         mock_registry.startup_all.side_effect = RuntimeError("startup failed")
-        try:
-            with TestClient(app):
-                pass
-        except RuntimeError:
+        with pytest.raises(RuntimeError), TestClient(app):
             pass
         mock_registry.shutdown_all.assert_called_once()
         mock_db.close.assert_called_once()
@@ -52,10 +50,7 @@ def test_lifespan_db_close_called_even_if_shutdown_all_raises() -> None:
         patch("lightly_studio.api.app.db_manager") as mock_db,
     ):
         mock_registry.shutdown_all.side_effect = RuntimeError("shutdown failed")
-        try:
-            with TestClient(app):
-                pass
-        except RuntimeError:
+        with pytest.raises(RuntimeError), TestClient(app):
             pass
         mock_db.close.assert_called_once()
 
