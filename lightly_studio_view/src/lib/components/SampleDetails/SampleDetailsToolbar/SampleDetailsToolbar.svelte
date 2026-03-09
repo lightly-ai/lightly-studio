@@ -4,6 +4,7 @@
     import { useAnnotationLabelContext } from '$lib/contexts/SampleDetailsAnnotation.svelte';
     import { useSampleDetailsToolbarContext } from '$lib/contexts/SampleDetailsToolbar.svelte';
     import { onDestroy, onMount } from 'svelte';
+    import { isTextInputTarget } from '$lib/utils';
     import BoundingBoxToolbarButton from '../BoundingBoxToolbarButton/BoundingBoxToolbarButton.svelte';
     import BrushToolbarButton from '../BrushToolbarButton/BrushToolbarButton.svelte';
     import CursorToolbarButton from '../CursorToolbarButton/CursorToolbarButton.svelte';
@@ -15,13 +16,6 @@
 
     const { settingsStore } = useSettings();
     let isSpacePressed = false;
-
-    const isTextInputTarget = (target: EventTarget | null) => {
-        if (!(target instanceof HTMLElement)) return false;
-        return (
-            target.tagName === 'TEXTAREA' || target.isContentEditable || target.tagName === 'INPUT'
-        );
-    };
 
     const onKeyDown = (e: KeyboardEvent) => {
         if (e.code === 'Space') {

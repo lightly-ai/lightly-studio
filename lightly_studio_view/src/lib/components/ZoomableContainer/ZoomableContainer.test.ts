@@ -170,12 +170,15 @@ describe('ZoomableContainer', () => {
         vi.advanceTimersByTime(100);
         await tick();
 
-        const match = zoomGroup!
+        const transformMatch = zoomGroup!
             .getAttribute('transform')
-            ?.match(/translate\(([-\d.]+),\s*([-\d.]+)\) scale\(([-\d.]+)\)/);
+            ?.match(
+                /translate\((?<translateX>[-\d.]+),\s*(?<translateY>[-\d.]+)\) scale\((?<scale>[-\d.]+)\)/
+            );
+        const translateY = Number(transformMatch?.groups?.translateY);
 
-        expect(match).toBeTruthy();
-        expect(Number(match![2])).toBeGreaterThan(0);
+        expect(Number.isFinite(translateY)).toBe(true);
+        expect(translateY).toBeGreaterThan(0);
 
         await fireEvent.keyUp(window, { key: 'w', code: 'KeyW' });
         await fireEvent.keyUp(window, { key: ' ', code: 'Space' });

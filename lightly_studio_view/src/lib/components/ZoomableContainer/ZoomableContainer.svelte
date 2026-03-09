@@ -2,6 +2,7 @@
     import { select, selectAll } from 'd3-selection';
     import 'd3-transition';
     import { zoom as D3zoom, zoomIdentity, type D3ZoomEvent, type ZoomBehavior } from 'd3-zoom';
+    import { isTextInputTarget } from '$lib/utils';
     import { onMount, type Snippet } from 'svelte';
     import { unscale } from './unscale';
     import ZoomPanel from '../ZoomPanel/ZoomPanel.svelte';
@@ -210,17 +211,10 @@
     const MOVEMENT_KEY_CODES = new Set(['KeyW', 'KeyA', 'KeyS', 'KeyD']);
     const KEYBOARD_PAN_SPEED_PX_PER_SECOND = 600;
 
-    let pressedMovementKeys = new Set<string>();
+    const pressedMovementKeys = new Set<string>();
     let isSpacePanActive = false;
     let isKeyboardPanContextActive = false;
     let keyboardPanAnimationFrameId: number | null = null;
-
-    const isTextInputTarget = (target: EventTarget | null) => {
-        if (!(target instanceof HTMLElement)) return false;
-        return (
-            target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable
-        );
-    };
 
     const stopKeyboardPanLoop = () => {
         if (keyboardPanAnimationFrameId === null) return;
