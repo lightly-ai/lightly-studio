@@ -2,7 +2,7 @@
     import { PUBLIC_VIDEOS_FRAMES_MEDIA_URL, PUBLIC_VIDEOS_MEDIA_URL } from '$env/static/public';
     import type { FrameView, VideoFrameView, VideoView } from '$lib/api/lightly_studio_local';
     import { findFrame } from '$lib/utils/frame';
-    import { onMount } from 'svelte';
+    import { onDestroy } from 'svelte';
 
     interface VideoProps {
         video: VideoView;
@@ -37,14 +37,17 @@
     }: VideoProps = $props();
 
     let previousIndex: number | null = null;
-
-    onMount(() => {
-        startFrameLoop();
-    });
+    let rafId: number | null = null;
 
     function startFrameLoop() {
+        if (rafId !== null) return;
+
         function tick() {
-            if (!videoEl) return;
+            if (!videoEl) {
+                rafId = null;
+                return;
+            }
+
             const { frame, index } = findFrame({ frames, currentTime: videoEl.currentTime });
 
             if (index !== null && previousIndex !== index) {
@@ -52,10 +55,32 @@
                 previousIndex = index;
             }
 
-            requestAnimationFrame(tick);
+            rafId = requestAnimationFrame(tick);
         }
-        requestAnimationFrame(tick);
+
+        rafId = requestAnimationFrame(tick);
     }
+
+    function stopFrameLoop() {
+        if (rafId !== null) {
+            cancelAnimationFrame(rafId);
+            rafId = null;
+        }
+        previousIndex = null;
+    }
+
+    function handlePlay() {
+        startFrameLoop();
+        onplay();
+    }
+
+    function handlePause() {
+        stopFrameLoop();
+    }
+
+    onDestroy(() => {
+        stopFrameLoop();
+    });
 </script>
 
 <video
@@ -68,7 +93,8 @@
     class={className}
     onmouseenter={handleMouseEnter}
     onmouseleave={handleMouseLeave}
-    {onplay}
+    onplay={handlePlay}
+    onpause={handlePause}
     {onseeked}
     poster={frames.length > 0
         ? `${PUBLIC_VIDEOS_FRAMES_MEDIA_URL}/${frames[0].sample_id}?compressed=true`
