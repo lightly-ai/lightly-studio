@@ -52,7 +52,7 @@ class AnnotationsFilter(BaseModel):
             annotation_sample=annotation_sample,
         )
 
-    def apply_to_sample_query(
+    def apply_to_parent_sample_query(
         self,
         query: QueryType,
         sample_id_column: Any,
@@ -61,28 +61,18 @@ class AnnotationsFilter(BaseModel):
 
         This is used when the base query returns samples, but the filter itself
         is defined on annotations. The sample query is constrained to the parent
-        sample ids produced by `get_parent_sample_ids_subquery()`.
-        """
-        sample_ids_subquery = self.get_parent_sample_ids_subquery()
-        return query.where(sample_id_column.in_(sample_ids_subquery))
-
-    def get_parent_sample_ids_subquery(self) -> Any:
-        """Build a subquery selecting parent sample ids for matching annotations.
-
-        The subquery reuses the same annotation predicates as `apply()`, but
-        returns `AnnotationBaseTable.parent_sample_id` instead of annotation
-        rows.
+        sample ids of annotations matching this filter.
         """
         annotation_sample = aliased(SampleTable)
-        query = select(AnnotationBaseTable.parent_sample_id).join(
+        sample_ids_subquery = select(AnnotationBaseTable.parent_sample_id).join(
             annotation_sample,
             AnnotationBaseTable.sample,
         )
-        query = self._apply_annotation_filters(
-            query=query,
+        sample_ids_subquery = self._apply_annotation_filters(
+            query=sample_ids_subquery,
             annotation_sample=annotation_sample,
         )
-        return query.distinct()
+        return query.where(sample_id_column.in_(sample_ids_subquery.distinct()))
 
     def _apply_annotation_filters(
         self,
@@ -91,8 +81,8 @@ class AnnotationsFilter(BaseModel):
     ) -> QueryType:
         """Apply the shared annotation predicates to a joined query.
 
-        Both `apply()` and `get_parent_sample_ids_subquery()` call this helper
-        so the annotation filtering rules live in one place.
+        Both `apply()` and `apply_to_parent_sample_query()` call this helper so
+        the annotation filtering rules live in one place.
         """
         # Filter by collection
         if self.collection_ids:

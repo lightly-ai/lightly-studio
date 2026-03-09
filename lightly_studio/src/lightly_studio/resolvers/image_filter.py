@@ -33,7 +33,7 @@ class ImageFilter(BaseModel):
             query = self.sample_filter.apply(query)
 
         if self.annotation_filter is not None:
-            query = self.annotation_filter.apply_to_sample_query(
+            query = self.annotation_filter.apply_to_parent_sample_query(
                 query, col(ImageTable.sample_id)
             )
 
