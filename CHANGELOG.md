@@ -9,15 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
-- `Dataset.export()` now supports instance segmentation export to COCO using `to_coco_instance_segmentations()`.
-- Added keyboard shortcuts to switch between the brush and eraser, as well as to adjust the brush size.
-
 ### Changed
-
-- Replaced grid size slider icons with clickable `+` / `−` buttons for zooming in and out.
-- Restructured the navigation menu to follow the dataset structure. This makes the menu work with group datasets.
-- Simplified `VideoDataset` import in README and docs quickstart examples to use `ls.VideoDataset` instead of a separate import line.
-- Disable annotation class text rendering in the detail view by default (can be changed in settings)
 
 ### Deprecated
 
@@ -25,14 +17,31 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+### Security
+
+## \[0.4.10\] - 2026-03-09
+
+### Added
+
+- `Dataset.export()` now supports instance segmentation export to COCO using `to_coco_instance_segmentations()`.
+- Added keyboard shortcuts: to switch between the brush and eraser; to adjust the brush size.
+
+### Changed
+
+- Replaced grid size slider icons with clickable `+` / `−` buttons for zooming in and out.
+- Restructured the navigation menu to follow the dataset structure. This makes the menu work with group datasets.
+- Disable annotation class text rendering in the detail view by default (can be changed in settings).
+
+### Fixed
+
 - Fixed crosshair helper lines in annotation draw mode so vertical and horizontal lines remain the same thickness when zooming.
 - Settings dialog is now scrollable on small screens.
-- Added `✕` button to clear an active text search, matching the existing image search behaviour.
-- Fixed spurious "Annotation updated successfully" toast appearing when clicking a bounding box without moving or resizing it.
+- Added `✕` button to clear an active text search, matching the existing image search behavior.
+- Fixed "Annotation updated successfully" toast appearing when clicking a bounding box without moving or resizing it.
 - Improved deletion UX in sample details and captions list views: replaced confirmation popups with immediate deletion and Ctrl+Z undo support.
 - Fixed grid not scrolling to the top when text search results are returned from cache.
-
-### Security
+- Fixed performance issues where annotations lagged behind the video.
+- Fixed concurrency issue on video datasets.
 
 ## \[0.4.9\] - 2026-02-27
 
