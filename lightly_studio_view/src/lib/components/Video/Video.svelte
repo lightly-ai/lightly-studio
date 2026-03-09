@@ -89,6 +89,15 @@
         onseeked(event);
     }
 
+    $effect(() => {
+        if (!videoEl || !videoEl.paused) return;
+        const { frame, index } = findFrame({ frames, currentTime: videoEl.currentTime });
+        if (index !== null && previousIndex !== index) {
+            update(frame, index);
+            previousIndex = index;
+        }
+    });
+
     onDestroy(() => {
         stopFrameLoop();
     });
