@@ -50,7 +50,7 @@
                     videoEl.src = `${PUBLIC_VIDEOS_MEDIA_URL}/${video.sample_id}`;
                 }
 
-                if (videoEl.readyState < 2) {
+                if (videoEl.readyState < HTMLMediaElement.HAVE_CURRENT_DATA) {
                     videoEl.load();
                     await new Promise((res) =>
                         videoEl?.addEventListener('loadeddata', res, { once: true })
