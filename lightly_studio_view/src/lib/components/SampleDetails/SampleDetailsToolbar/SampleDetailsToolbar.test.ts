@@ -257,4 +257,16 @@ describe('SampleDetailsToolbar', () => {
             AnnotationType.INSTANCE_SEGMENTATION
         );
     });
+
+    it('does not trigger toolbar shortcuts while space is held', async () => {
+        render(SampleDetailsToolbar);
+
+        await fireEvent.keyDown(window, { key: ' ', code: 'Space' });
+        await fireEvent.keyDown(window, { key: 'd', code: 'KeyD' });
+        expect(mockSampleDetailsToolbarContext.status).toBe('cursor');
+
+        await fireEvent.keyUp(window, { key: ' ', code: 'Space' });
+        await fireEvent.keyDown(window, { key: 'd', code: 'KeyD' });
+        expect(mockSampleDetailsToolbarContext.status).toBe('drag');
+    });
 });
