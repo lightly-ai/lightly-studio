@@ -9,6 +9,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Add keyboard navigation (Space + W/A/S/D) for moving within the zoomable image container.
+
 ### Changed
 
 ### Deprecated
