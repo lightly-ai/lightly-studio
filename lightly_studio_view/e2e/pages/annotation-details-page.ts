@@ -79,6 +79,29 @@ export class AnnotationDetailsPage {
         return this.page.getByTestId('svg-annotation-text');
     }
 
+    async setShowAnnotationTextLabels(show: boolean) {
+        const responsePromise = this.page.waitForResponse(
+            (response) =>
+                response.request().method() === 'POST' &&
+                response.url().includes('/api/settings') &&
+                response.status() === 200
+        );
+
+        await this.page.getByTestId('menu-trigger').click();
+        await this.page.getByTestId('menu-settings').click();
+
+        const toggle = this.page.locator('#show-annotation-text-labels');
+
+        const isChecked = (await toggle.getAttribute('aria-checked')) === 'true';
+        if (isChecked !== show) {
+            await toggle.click();
+        }
+
+        await this.page.getByRole('button', { name: 'Save Changes' }).click();
+        await responsePromise;
+        await expect(this.page.getByRole('button', { name: 'Save Changes' })).not.toBeAttached();
+    }
+
     async clickEditLabelButton() {
         await this.page.getByTestId('header-editing-mode-button').click();
     }
