@@ -13,7 +13,7 @@ vi.mock('$lib/hooks/useSettings', () => {
         key_go_back: 'Escape',
         key_toggle_edit_mode: 'e',
         grid_view_sample_rendering: 'contain',
-        show_annotation_text_labels: true,
+        show_annotation_text_labels: false,
         show_sample_filenames: true,
         key_toolbar_selection: 's',
         key_toolbar_drag: 'd',
@@ -96,6 +96,8 @@ describe('SettingsDialog', () => {
         // For the switch, check for the element's presence instead of its checked state
         const switchLabel = screen.getByText('Show Annotation Text Labels');
         expect(switchLabel).toBeInTheDocument();
+        const switchElement = switchLabel.closest('.grid')?.querySelector('[role="switch"]');
+        expect(switchElement).toHaveAttribute('aria-checked', 'false');
         expect(screen.getByText('Show filenames in grid view')).toBeInTheDocument();
     });
 
@@ -170,7 +172,7 @@ describe('SettingsDialog', () => {
         const { saveSettings } = useSettings();
         expect(saveSettings).toHaveBeenCalledWith(
             expect.objectContaining({
-                show_annotation_text_labels: false
+                show_annotation_text_labels: true
             })
         );
     });
@@ -231,7 +233,7 @@ describe('SettingsDialog', () => {
             expect.objectContaining({
                 key_hide_annotations: 'x',
                 key_go_back: 'Escape',
-                show_annotation_text_labels: false
+                show_annotation_text_labels: true
             })
         );
 
