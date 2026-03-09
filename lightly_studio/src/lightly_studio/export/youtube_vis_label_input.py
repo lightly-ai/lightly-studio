@@ -22,6 +22,7 @@ from sqlmodel import Session
 
 from lightly_studio.core.video.video_sample import VideoSample
 from lightly_studio.models.annotation.annotation_base import AnnotationBaseTable, AnnotationType
+from lightly_studio.models.video import VideoFrameTable
 from lightly_studio.resolvers import (
     annotation_label_resolver,
     annotation_resolver,
@@ -40,11 +41,9 @@ class _LightlyStudioYouTubeVISTrackInputBase:
         annotation_types: list[AnnotationType],
     ) -> None:
         self._session = session
-        self._samples = list(samples)
-        self._annotation_types = annotation_types
         self._videos, self._categories, self._tracks = _load_youtube_vis_track_data(
             session=session,
-            samples=self._samples,
+            samples=list(samples),
             annotation_types=annotation_types,
         )
 
@@ -70,6 +69,7 @@ class LightlyStudioYouTubeVISInstanceSegmentationTrackInput(
         """Yield video instance segmentation tracks for export."""
         yield from self._tracks
 
+
 def _build_videos_and_frame_map(
     session: Session,
     samples: list[VideoSample],
@@ -85,11 +85,17 @@ def _build_videos_and_frame_map(
     """
     videos: list[Video] = []
     frame_to_video_id_and_index: dict[UUID, tuple[int, int]] = {}
+    frames_by_video_id: dict[UUID, list[VideoFrameTable]] = defaultdict(list)
+    frames = video_frame_resolver.get_all_by_video_ids(
+        session=session,
+        video_ids=[sample.sample_id for sample in samples],
+    )
+    for frame in frames:
+        frames_by_video_id[frame.parent_sample_id].append(frame)
+
     for yvis_id, sample in enumerate(samples, start=1):
-        frames = video_frame_resolver.get_all_by_video_ids(
-            session=session, video_ids=[sample.sample_id]
-        )
-        length = len(frames)
+        sample_frames = frames_by_video_id[sample.sample_id]
+        length = len(sample_frames)
         videos.append(
             Video(
                 id=yvis_id,
@@ -99,7 +105,7 @@ def _build_videos_and_frame_map(
                 number_of_frames=length,
             )
         )
-        for frame_index, frame in enumerate(frames):
+        for frame_index, frame in enumerate(sample_frames):
             frame_to_video_id_and_index[frame.sample_id] = (yvis_id, frame_index)
     video_by_yvis_id = {v.id: v for v in videos}
     return videos, video_by_yvis_id, frame_to_video_id_and_index
@@ -235,7 +241,7 @@ def _load_youtube_vis_track_data(
         session=session, samples=samples
     )
     # Build label_uuid -> YouTube-VIS category map
-    label_uuid_to_category = _build_label_id_to_category(session, dataset_id)
+    label_uuid_to_category = _build_label_id_to_category(session=session, dataset_id=dataset_id)
 
     tracks = object_track_resolver.get_all_by_dataset_id(session=session, dataset_id=dataset_id)
     video_id_to_tracks: dict[int, list[SingleInstanceSegmentationTrack]] = defaultdict(list)
@@ -266,4 +272,3 @@ def _load_youtube_vis_track_data(
     tracks_out = _track_tuples_to_video_instance_segmentation(video_id_to_tracks, video_by_yvis_id)
     categories = list(label_uuid_to_category.values())
     return videos, categories, tracks_out
-

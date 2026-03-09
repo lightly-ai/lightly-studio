@@ -64,22 +64,43 @@ class TestLightlyStudioYouTubeVISInstanceSegmentationTrackInput:
     def test_get_videos(
         self,
         db_session: Session,
-        video_collection_with_annotations: CollectionTable,
     ) -> None:
-        collection = video_collection_with_annotations
+        collection = create_collection(
+            session=db_session,
+            collection_name="video_multiple",
+            sample_type=SampleType.VIDEO,
+        )
+        create_video_with_frames(
+            session=db_session,
+            collection_id=collection.collection_id,
+            video=VideoStub(path="video_001.mp4", width=10, height=20, duration_s=1.0, fps=2.0),
+        )
+        create_video_with_frames(
+            session=db_session,
+            collection_id=collection.collection_id,
+            video=VideoStub(path="video_002.mp4", width=30, height=40, duration_s=1.0, fps=3.0),
+        )
         samples = DatasetQuery(dataset=collection, session=db_session, sample_class=VideoSample)
         label_input = LightlyStudioYouTubeVISInstanceSegmentationTrackInput(
             session=db_session,
             samples=samples,
             annotation_types=[AnnotationType.INSTANCE_SEGMENTATION],
         )
+
         assert list(label_input.get_videos()) == [
             Video(
                 id=1,
                 filename=Path("video_001.mp4").name,
-                width=3,
-                height=2,
+                width=10,
+                height=20,
                 number_of_frames=2,
+            ),
+            Video(
+                id=2,
+                filename=Path("video_002.mp4").name,
+                width=30,
+                height=40,
+                number_of_frames=3,
             ),
         ]
 
