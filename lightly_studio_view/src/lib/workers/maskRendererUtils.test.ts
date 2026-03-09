@@ -1,18 +1,12 @@
 import { describe, expect, it, vi } from 'vitest';
 import {
     computeStroke,
-    decodeRLEToBinaryMask,
     drawBoxesOnContext,
     renderMasks,
     type BoundingBoxInput
 } from './maskRendererUtils';
 
 describe('maskRendererUtils', () => {
-    it('decodes RLE into binary mask', () => {
-        const mask = decodeRLEToBinaryMask([2, 2], 2, 2);
-        expect([...mask]).toEqual([0, 0, 1, 1]);
-    });
-
     it('renders masks into RGBA pixels', () => {
         const color: BoundingBoxInput['color'] = [10, 20, 30, 40];
         const pixels = renderMasks(2, 2, [{ rle: [1, 3], color }]);

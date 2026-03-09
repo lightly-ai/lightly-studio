@@ -1,3 +1,5 @@
+import { decodeRLEToBinaryMask } from '$lib/components/SampleAnnotation/utils';
+
 export type MaskInput = {
     rle: number[];
     color: [number, number, number, number]; // RGBA 0-255
@@ -9,24 +11,6 @@ export type BoundingBoxInput = {
     width: number;
     height: number;
     color: [number, number, number, number]; // RGBA 0-255
-};
-
-export const decodeRLEToBinaryMask = (rle: number[], width: number, height: number): Uint8Array => {
-    const mask = new Uint8Array(width * height);
-    let idx = 0;
-    let value = 0;
-
-    for (const count of rle) {
-        const end = idx + count;
-        if (end > mask.length) {
-            break;
-        }
-        mask.fill(value, idx, end);
-        idx = end;
-        value = value === 0 ? 1 : 0;
-    }
-
-    return mask;
 };
 
 export const renderMasks = (width: number, height: number, masks: MaskInput[]) => {
