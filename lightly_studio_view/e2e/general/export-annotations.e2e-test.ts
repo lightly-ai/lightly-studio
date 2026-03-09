@@ -13,7 +13,7 @@ test.describe('Export Annotations', () => {
 
         // Switch to the correct export type
         await page.getByTestId('export-type-select').click();
-        await page.getByRole('option', { name: 'Image Annotations' }).click();
+        await page.getByRole('option', { name: 'Image Object Detections' }).click();
         await expect(page.getByTestId('submit-button-annotations')).toHaveAttribute(
             'href',
             /\/api\/collections\/.*\/export\/annotations\?ts=\d+/

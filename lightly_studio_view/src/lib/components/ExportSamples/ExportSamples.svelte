@@ -18,13 +18,13 @@
 
     const { isExportDialogOpen, openExportDialog, closeExportDialog } = useExportDialog();
 
-    let exportType = $state<'samples' | 'annotations' | 'instance-segmentations' | 'captions'>(
+    let exportType = $state<'samples' | 'object_detections' | 'instance_segmentations' | 'captions'>(
         'samples'
     );
     const exportTypeLabels: Record<typeof exportType, string> = {
         samples: 'Image Filenames',
-        annotations: 'Image Annotations',
-        'instance-segmentations': 'Instance Segmentations',
+        object_detections: 'Image Object Detections',
+        instance_segmentations: 'Image Instance Segmentations',
         captions: 'Image Captions'
     };
     const exportTypeTriggerContent = $derived(exportTypeLabels[exportType]);
@@ -138,13 +138,13 @@
                                 <Select.Item value="samples" label="Image Filenames"
                                     >Image Filenames</Select.Item
                                 >
-                                <Select.Item value="annotations" label="Image Annotations"
-                                    >Image Annotations</Select.Item
+                                <Select.Item value="object_detections" label="Image Object Detections"
+                                    >Image Object Detections</Select.Item
                                 >
                                 <Select.Item
-                                    value="instance-segmentations"
-                                    label="Instance Segmentations"
-                                    >Instance Segmentations</Select.Item
+                                    value="instance_segmentations"
+                                    label="Image Instance Segmentations"
+                                    >Image Instance Segmentations</Select.Item
                                 >
                                 <Select.Item value="captions" label="Image Captions"
                                     >Image Captions</Select.Item
@@ -257,9 +257,8 @@
                         </Button>
                     </Tabs.Content>
 
-                    <!-- Annotations tab -->
-
-                    <Tabs.Content value="annotations" class="pt-2">
+                    <!-- Object Detections tab -->
+                    <Tabs.Content value="object_detections" class="pt-2">
                         <p class="text-sm text-muted-foreground">
                             The object detection annotations will be exported in COCO format.
                         </p>
@@ -274,7 +273,7 @@
                         </Button>
                     </Tabs.Content>
 
-                    <Tabs.Content value="instance-segmentations" class="pt-2">
+                    <Tabs.Content value="instance_segmentations" class="pt-2">
                         <p class="text-sm text-muted-foreground">
                             The instance segmentations will be exported in COCO format.
                         </p>
