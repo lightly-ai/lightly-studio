@@ -17,17 +17,21 @@
     } from '@lucide/svelte';
 
     import type { CollectionView } from '$lib/api/lightly_studio_local';
+    import { hasMinimumRole } from '$lib/hooks/useAuth/hasMinimumRole';
+    import type { LightlyEnterpriseSession } from '$lib/hooks/useAuth/getLightlyEnterpriseSession/getLightlyEnterpriseSession';
 
     let {
         isSamples = false,
         isVideos = false,
         hasEmbeddings = false,
-        collection
+        collection,
+        user
     } = $props<{
         isSamples?: boolean;
         isVideos?: boolean;
         hasEmbeddings?: boolean;
         collection: CollectionView;
+        user?: LightlyEnterpriseSession['user'];
     }>();
 
     const { openClassifiersMenu } = useClassifiersMenu();
@@ -50,10 +54,12 @@
     const hasSelection = $derived(isSamples || isVideos);
     const hasExport = $derived(collection.sample_type == 'image');
 
+    const isEditor = $derived(hasMinimumRole(user?.role, 'editor'));
+
     const menuItems = $derived.by<MenuItem[]>(() => {
         const items: MenuItem[] = [];
 
-        if (hasClassifier) {
+        if (hasClassifier && isEditor) {
             items.push({
                 icon: BrainCircuitIcon,
                 label: 'Few Shot Classifier',
@@ -62,7 +68,7 @@
             });
         }
 
-        if (hasSelection) {
+        if (hasSelection && isEditor) {
             items.push({
                 icon: WandSparklesIcon,
                 label: 'Selection',
@@ -71,12 +77,14 @@
             });
         }
 
-        items.push({
-            icon: PuzzleIcon,
-            label: 'Plugins',
-            onSelect: openOperatorsDialog,
-            testId: 'menu-operators'
-        });
+        if (isEditor) {
+            items.push({
+                icon: PuzzleIcon,
+                label: 'Plugins',
+                onSelect: openOperatorsDialog,
+                testId: 'menu-operators'
+            });
+        }
 
         if (hasExport) {
             items.push({
@@ -87,12 +95,14 @@
             });
         }
 
-        items.push({
-            icon: SettingsIcon,
-            label: 'Settings',
-            onSelect: openSettingsDialog,
-            testId: 'menu-settings'
-        });
+        if (isEditor) {
+            items.push({
+                icon: SettingsIcon,
+                label: 'Settings',
+                onSelect: openSettingsDialog,
+                testId: 'menu-settings'
+            });
+        }
 
         return items;
     });
@@ -103,33 +113,35 @@
     }
 </script>
 
-<Popover bind:open={isMenuOpen}>
-    <PopoverTrigger>
-        <Button
-            variant="ghost"
-            class="nav-button flex items-center space-x-2"
-            data-testid="menu-trigger"
-        >
-            <span>Menu</span>
-            <ChevronDown class="size-4" />
-        </Button>
-    </PopoverTrigger>
-    <PopoverContent class="w-64 p-2">
-        <div class="flex flex-col">
-            {#each menuItems as item (item.testId)}
-                <button
-                    type="button"
-                    class="flex w-full items-center justify-between rounded px-3 py-2 text-left text-sm transition hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                    onclick={() => handle(item.onSelect)}
-                    data-testid={item.testId}
-                >
-                    <div class="flex items-center gap-2">
-                        <item.icon class="size-4 text-muted-foreground" />
-                        <span>{item.label}</span>
-                    </div>
-                    <ChevronRight class="size-4 text-muted-foreground" />
-                </button>
-            {/each}
-        </div>
-    </PopoverContent>
-</Popover>
+{#if menuItems.length > 0}
+    <Popover bind:open={isMenuOpen}>
+        <PopoverTrigger>
+            <Button
+                variant="ghost"
+                class="nav-button flex items-center space-x-2"
+                data-testid="menu-trigger"
+            >
+                <span>Menu</span>
+                <ChevronDown class="size-4" />
+            </Button>
+        </PopoverTrigger>
+        <PopoverContent class="w-64 p-2">
+            <div class="flex flex-col">
+                {#each menuItems as item (item.testId)}
+                    <button
+                        type="button"
+                        class="flex w-full items-center justify-between rounded px-3 py-2 text-left text-sm transition hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                        onclick={() => handle(item.onSelect)}
+                        data-testid={item.testId}
+                    >
+                        <div class="flex items-center gap-2">
+                            <item.icon class="size-4 text-muted-foreground" />
+                            <span>{item.label}</span>
+                        </div>
+                        <ChevronRight class="size-4 text-muted-foreground" />
+                    </button>
+                {/each}
+            </div>
+        </PopoverContent>
+    </Popover>
+{/if}
