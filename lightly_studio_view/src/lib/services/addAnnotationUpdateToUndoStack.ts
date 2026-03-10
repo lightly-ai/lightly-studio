@@ -8,12 +8,14 @@ export const addAnnotationUpdateToUndoStack = ({
     annotation,
     collection_id,
     addReversibleAction,
-    updateAnnotation
+    updateAnnotation,
+    onUndo
 }: {
     annotation: AnnotationView;
     collection_id: string;
     addReversibleAction: (action: ReversibleAction) => void;
     updateAnnotation: (input: AnnotationUpdateInput) => Promise<void>;
+    onUndo?: () => Promise<void> | void;
 }) => {
     const prevBoundingBox = getBoundingBox(annotation);
 
@@ -26,6 +28,7 @@ export const addAnnotationUpdateToUndoStack = ({
         };
 
         await updateAnnotation(revertAnnotation);
+        await onUndo?.();
     };
 
     addReversibleAction({
