@@ -24,6 +24,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 
 - Added option to customize the semantic segmentation keyboard shortcut in the settings dialog.
+- Operators lifecycle management: operators now have `startup` and `shutdown` methods, which be default pass. The new methods can be used for example to start and stop inference server.
 
 ### Changed
 
