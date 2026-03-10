@@ -32,6 +32,7 @@ def test_create_tag__unique_tag_name(db_session: Session) -> None:
                 kind="sample",
             ),
         )
+    db_session.rollback()
 
 
 def test_read_tags(db_session: Session) -> None:
@@ -123,6 +124,7 @@ def test_update_tag__unique_tag_name(db_session: Session) -> None:
             tag_id=tag_1.tag_id,
             tag_data=TagUpdate(name=tag_2.name),
         )
+    db_session.rollback()
 
 
 def test_update_tag__unique_tag_name__different_kind(
