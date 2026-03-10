@@ -251,25 +251,25 @@ class TestImageFilter:
             sample.sample_id for sample in expected_samples
         ]
 
-    def test_query__annotation_filter(self, test_db: Session) -> None:
-        collection = create_collection(session=test_db)
+    def test_query__annotation_filter(self, db_session: Session) -> None:
+        collection = create_collection(session=db_session)
         image_with_annotation = create_image(
-            session=test_db,
+            session=db_session,
             collection_id=collection.collection_id,
             file_path_abs="with_annotation.png",
         )
         image_without_annotation = create_image(
-            session=test_db,
+            session=db_session,
             collection_id=collection.collection_id,
             file_path_abs="without_annotation.png",
         )
         label = create_annotation_label(
-            session=test_db,
+            session=db_session,
             dataset_id=collection.collection_id,
             label_name="car",
         )
         create_annotation(
-            session=test_db,
+            session=db_session,
             sample_id=image_with_annotation.sample_id,
             annotation_label_id=label.annotation_label_id,
             collection_id=collection.collection_id,
@@ -283,7 +283,7 @@ class TestImageFilter:
         )
 
         filtered_query = image_filter.apply(query=query)
-        result = test_db.exec(filtered_query).all()
+        result = db_session.exec(filtered_query).all()
 
         assert [sample.sample_id for sample in result] == [image_with_annotation.sample_id]
         assert image_without_annotation.sample_id not in [sample.sample_id for sample in result]
