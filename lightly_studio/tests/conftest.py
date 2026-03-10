@@ -116,7 +116,7 @@ def _postgres_url(_postgres_container: PostgresContainer) -> str | None:
 
 
 @pytest.fixture(scope="session")
-def _postgres_engine(_postgres_url: str) -> Generator[DatabaseEngine | None, Any, None]:
+def _postgres_engine(_postgres_url: str | None) -> Generator[DatabaseEngine | None, Any, None]:
     """Create a session-scoped DatabaseEngine pointing to the Postgres container."""
     if _postgres_url is None:
         yield None
@@ -130,7 +130,7 @@ def _postgres_engine(_postgres_url: str) -> Generator[DatabaseEngine | None, Any
 @pytest.fixture
 def db_session(
     request: pytest.FixtureRequest,
-    _postgres_engine: DatabaseEngine,
+    _postgres_engine: DatabaseEngine | None,
 ) -> Generator[Session, None, None]:
     """Create a test database manager session.
 
@@ -507,7 +507,7 @@ def assert_contains_properties(
 def patch_collection(
     request: pytest.FixtureRequest,
     mocker: MockerFixture,
-    _postgres_engine: DatabaseEngine,
+    _postgres_engine: DatabaseEngine | None,
 ) -> Generator[None, None, None]:
     """Fixture to patch the collection resources.
 
