@@ -10,12 +10,12 @@ from lightly_studio.resolvers.sample_resolver.sample_filter import SampleFilter
 from tests.helpers_resolvers import ImageStub, create_collection, create_images
 
 
-def test_get_sample_ids(test_db: Session) -> None:
-    collection = create_collection(session=test_db, sample_type=SampleType.IMAGE)
-    other_collection = create_collection(session=test_db, sample_type=SampleType.IMAGE)
+def test_get_sample_ids(db_session: Session) -> None:
+    collection = create_collection(session=db_session, sample_type=SampleType.IMAGE)
+    other_collection = create_collection(session=db_session, sample_type=SampleType.IMAGE)
 
     created_images = create_images(
-        db_session=test_db,
+        db_session=db_session,
         collection_id=collection.collection_id,
         images=[
             ImageStub(path="/path/to/small.jpg", width=100, height=100),
@@ -23,19 +23,19 @@ def test_get_sample_ids(test_db: Session) -> None:
         ],
     )
     create_images(
-        db_session=test_db,
+        db_session=db_session,
         collection_id=other_collection.collection_id,
         images=[ImageStub(path="/path/to/other.jpg", width=800, height=800)],
     )
 
     all_sample_ids = image_resolver.get_sample_ids(
-        session=test_db,
+        session=db_session,
         filters=ImageFilter(sample_filter=SampleFilter(collection_id=collection.collection_id)),
     )
     assert all_sample_ids == {img.sample_id for img in created_images}
 
     filtered_sample_ids = image_resolver.get_sample_ids(
-        session=test_db,
+        session=db_session,
         filters=ImageFilter(
             sample_filter=SampleFilter(collection_id=collection.collection_id),
             width=FilterDimensions(min=500),
@@ -44,9 +44,9 @@ def test_get_sample_ids(test_db: Session) -> None:
     assert filtered_sample_ids == {created_images[1].sample_id}
 
 
-def test_get_sample_ids__no_collection_id(test_db: Session) -> None:
+def test_get_sample_ids__no_collection_id(db_session: Session) -> None:
     with pytest.raises(ValueError, match="Collection ID must be provided in the sample filter."):
         image_resolver.get_sample_ids(
-            session=test_db,
+            session=db_session,
             filters=ImageFilter(width=FilterDimensions(min=500)),
         )

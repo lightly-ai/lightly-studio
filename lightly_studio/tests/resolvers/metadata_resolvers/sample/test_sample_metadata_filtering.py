@@ -13,18 +13,18 @@ from tests.helpers_resolvers import (
 )
 
 
-def test_metadata_filter(test_db: Session) -> None:
-    collection = create_collection(session=test_db)
+def test_metadata_filter(db_session: Session) -> None:
+    collection = create_collection(session=db_session)
     collection_id = collection.collection_id
 
     # Create samples
     sample1 = create_image(
-        session=test_db,
+        session=db_session,
         collection_id=collection_id,
         file_path_abs="/path/to/sample1.png",
     ).sample
     sample2 = create_image(
-        session=test_db,
+        session=db_session,
         collection_id=collection_id,
         file_path_abs="/path/to/sample2.png",
     ).sample
@@ -37,7 +37,7 @@ def test_metadata_filter(test_db: Session) -> None:
 
     normal_filter = [Metadata("temperature") > 15]
     sample_filter = SampleFilter(metadata_filters=normal_filter)
-    samples = sample_resolver.get_filtered_samples(session=test_db, filters=sample_filter).samples
+    samples = sample_resolver.get_filtered_samples(session=db_session, filters=sample_filter).samples
     assert len(samples) == 1
     assert samples[0].sample_id == sample1.sample_id
 
@@ -49,28 +49,28 @@ def test_metadata_filter(test_db: Session) -> None:
     sample1["test_dict"] = test_dict
 
     sample_filter = SampleFilter(metadata_filters=[Metadata("test_dict.int_key") == 42])
-    samples = sample_resolver.get_filtered_samples(session=test_db, filters=sample_filter).samples
+    samples = sample_resolver.get_filtered_samples(session=db_session, filters=sample_filter).samples
     assert len(samples) == 1
     assert samples[0]["test_dict"]["int_key"] == 42
 
     sample_filter = SampleFilter(metadata_filters=[Metadata("test_dict.nested_list[0]") == 1])
-    samples = sample_resolver.get_filtered_samples(session=test_db, filters=sample_filter).samples
+    samples = sample_resolver.get_filtered_samples(session=db_session, filters=sample_filter).samples
     assert len(samples) == 1
     assert samples[0]["test_dict"]["nested_list"][0] == 1
 
 
-def test_metadata_multiple_filters(test_db: Session) -> None:
-    collection = create_collection(session=test_db)
+def test_metadata_multiple_filters(db_session: Session) -> None:
+    collection = create_collection(session=db_session)
     collection_id = collection.collection_id
 
     # Create samples
     sample1 = create_image(
-        session=test_db,
+        session=db_session,
         collection_id=collection_id,
         file_path_abs="/path/to/sample1.png",
     ).sample
     sample2 = create_image(
-        session=test_db,
+        session=db_session,
         collection_id=collection_id,
         file_path_abs="/path/to/sample2.png",
     ).sample
@@ -95,6 +95,6 @@ def test_metadata_multiple_filters(test_db: Session) -> None:
             Metadata("test_dict.int_key") == 42,
         ]
     )
-    samples = sample_resolver.get_filtered_samples(session=test_db, filters=sample_filter).samples
+    samples = sample_resolver.get_filtered_samples(session=db_session, filters=sample_filter).samples
     assert len(samples) == 1
     assert samples[0].sample_id == sample2.sample_id

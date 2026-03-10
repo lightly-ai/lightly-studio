@@ -38,11 +38,11 @@ from tests.helpers_resolvers import (
 
 
 def test_select_via_database__embedding_diversity(
-    test_db: Session,
+    db_session: Session,
 ) -> None:
     """Runs selection with a simple embedding diversity strategy."""
     collection_id = fill_db_with_samples_and_embeddings(
-        test_db, n_samples=20, embedding_model_names=["embedding_model_1"]
+        db_session, n_samples=20, embedding_model_names=["embedding_model_1"]
     )
 
     selection_config = SelectionConfig(
@@ -53,15 +53,15 @@ def test_select_via_database__embedding_diversity(
     )
 
     select_via_database(
-        test_db, selection_config, input_sample_ids=_all_sample_ids(test_db, collection_id)
+        db_session, selection_config, input_sample_ids=_all_sample_ids(db_session, collection_id)
     )
 
     # Assert that the tag for the selected set was created with 2 samples
-    tags = tag_resolver.get_all_by_collection_id(test_db, collection_id=collection_id)
+    tags = tag_resolver.get_all_by_collection_id(db_session, collection_id=collection_id)
     assert len(tags) == 1
     assert tags[0].name == "selection_1"
     samples_in_tag = image_resolver.get_all_by_collection_id(
-        session=test_db,
+        session=db_session,
         collection_id=collection_id,
         filters=ImageFilter(sample_filter=SampleFilter(tag_ids=[tags[0].tag_id])),
     ).samples
@@ -75,11 +75,11 @@ def test_select_via_database__embedding_diversity(
 
 
 def test_select_via_database__multi_embedding_diversity(
-    test_db: Session,
+    db_session: Session,
 ) -> None:
     """Runs selection with multiple embedding diversity strategies."""
     collection_id = fill_db_with_samples_and_embeddings(
-        test_db,
+        db_session,
         n_samples=20,
         embedding_model_names=["embedding_model_1", "embedding_model_2"],
     )
@@ -94,15 +94,15 @@ def test_select_via_database__multi_embedding_diversity(
         ],
     )
     select_via_database(
-        test_db, selection_config, input_sample_ids=_all_sample_ids(test_db, collection_id)
+        db_session, selection_config, input_sample_ids=_all_sample_ids(db_session, collection_id)
     )
 
     # Assert that the tag for the selected set was created with 2 samples
-    tags = tag_resolver.get_all_by_collection_id(test_db, collection_id=collection_id)
+    tags = tag_resolver.get_all_by_collection_id(db_session, collection_id=collection_id)
     assert len(tags) == 1
     assert tags[0].name == "selection_1"
     samples_in_tag = image_resolver.get_all_by_collection_id(
-        session=test_db,
+        session=db_session,
         collection_id=collection_id,
         filters=ImageFilter(sample_filter=SampleFilter(tag_ids=[tags[0].tag_id])),
     ).samples
@@ -115,16 +115,16 @@ def test_select_via_database__multi_embedding_diversity(
 
 
 def test_select_via_database__embedding_diversity__sample_filter_tags(
-    test_db: Session,
+    db_session: Session,
 ) -> None:
     """Runs selection with a filter for the input tag."""
     collection_id = fill_db_with_samples_and_embeddings(
-        test_db, n_samples=101, embedding_model_names=["embedding_model_1"]
+        db_session, n_samples=101, embedding_model_names=["embedding_model_1"]
     )
 
     # Create a tag and add some samples to it
     tag = tag_resolver.create(
-        session=test_db,
+        session=db_session,
         tag=TagCreate(
             collection_id=collection_id,
             name="samples_5_through_14",
@@ -133,12 +133,12 @@ def test_select_via_database__embedding_diversity__sample_filter_tags(
         ),
     )
     all_samples = image_resolver.get_all_by_collection_id(
-        session=test_db, pagination=None, collection_id=collection_id
+        session=db_session, pagination=None, collection_id=collection_id
     ).samples
     assert len(all_samples) == 101
     samples_5_through_14 = sorted(all_samples, key=lambda s: s.created_at)[5:15]
     tag_resolver.add_sample_ids_to_tag_id(
-        session=test_db,
+        session=db_session,
         tag_id=tag.tag_id,
         sample_ids=[s.sample_id for s in samples_5_through_14],
     )
@@ -151,19 +151,19 @@ def test_select_via_database__embedding_diversity__sample_filter_tags(
         strategies=[EmbeddingDiversityStrategy(embedding_model_name="embedding_model_1")],
     )
     select_via_database(
-        test_db,
+        db_session,
         selection_config,
         input_sample_ids=[s.sample_id for s in samples_5_through_14],
     )
 
     # Assert that the tag for the selected set was created with 2 samples
-    tags = tag_resolver.get_all_by_collection_id(test_db, collection_id=collection_id)
+    tags = tag_resolver.get_all_by_collection_id(db_session, collection_id=collection_id)
     assert len(tags) == 2
     tag_selected = next(
         t for t in tags if t.name == "selection_1"
     )  # Get the tag created by the selection
     samples_in_tag = image_resolver.get_all_by_collection_id(
-        session=test_db,
+        session=db_session,
         collection_id=collection_id,
         filters=ImageFilter(sample_filter=SampleFilter(tag_ids=[tag_selected.tag_id])),
     ).samples
@@ -177,14 +177,14 @@ def test_select_via_database__embedding_diversity__sample_filter_tags(
 
 
 def test_select_via_database__unknown_strategy(
-    test_db: Session,
+    db_session: Session,
 ) -> None:
     """Runs selection with a non-existing strategy.
 
     Check for the correct error message.
     """
     collection_id = fill_db_with_samples_and_embeddings(
-        test_db, n_samples=20, embedding_model_names=["embedding_model_1"]
+        db_session, n_samples=20, embedding_model_names=["embedding_model_1"]
     )
 
     selection_config = SelectionConfig(
@@ -201,19 +201,19 @@ def test_select_via_database__unknown_strategy(
         match=expected_error,
     ):
         select_via_database(
-            test_db,
+            db_session,
             selection_config,
-            input_sample_ids=_all_sample_ids(test_db, collection_id),
+            input_sample_ids=_all_sample_ids(db_session, collection_id),
         )
 
 
 def test_select_via_database__more_samples_to_select_than_available(
-    test_db: Session,
+    db_session: Session,
     mocker: MockerFixture,
 ) -> None:
     """Runs selection when requesting more samples than available."""
     collection_id = fill_db_with_samples_and_embeddings(
-        test_db, n_samples=5, embedding_model_names=["embedding_model_1"]
+        db_session, n_samples=5, embedding_model_names=["embedding_model_1"]
     )
 
     selection_config = SelectionConfig(
@@ -227,9 +227,9 @@ def test_select_via_database__more_samples_to_select_than_available(
     spy_mundig_run = mocker.spy(Mundig, "run")
 
     select_via_database(
-        test_db,
+        db_session,
         selection_config,
-        input_sample_ids=_all_sample_ids(test_db, collection_id),
+        input_sample_ids=_all_sample_ids(db_session, collection_id),
     )
 
     # Verify that mundig.run was called with the correct n_samples (5, not 10)
@@ -237,16 +237,16 @@ def test_select_via_database__more_samples_to_select_than_available(
 
 
 def test_select_via_database__zero_input_samples_available(
-    test_db: Session,
+    db_session: Session,
 ) -> None:
     """Runs selection when no input samples are available."""
     collection_id = fill_db_with_samples_and_embeddings(
-        test_db, n_samples=20, embedding_model_names=["embedding_model_1"]
+        db_session, n_samples=20, embedding_model_names=["embedding_model_1"]
     )
 
     # Create a tag with no samples
     _ = tag_resolver.create(
-        session=test_db,
+        session=db_session,
         tag=TagCreate(
             collection_id=collection_id,
             name="empty_tag",
@@ -262,21 +262,21 @@ def test_select_via_database__zero_input_samples_available(
         strategies=[EmbeddingDiversityStrategy(embedding_model_name="embedding_model_1")],
     )
 
-    select_via_database(test_db, selection_config, input_sample_ids=[])
+    select_via_database(db_session, selection_config, input_sample_ids=[])
 
     # Assert that no selection tag was created since there were no samples to select
-    tags = tag_resolver.get_all_by_collection_id(test_db, collection_id=collection_id)
+    tags = tag_resolver.get_all_by_collection_id(db_session, collection_id=collection_id)
     tag_names = [tag.name for tag in tags]
     assert "selection_1" not in tag_names  # Selection tag should not be created
     assert "empty_tag" in tag_names  # Only the empty tag should exist
 
 
 def test_select_via_database__tag_name_already_exists(
-    test_db: Session,
+    db_session: Session,
 ) -> None:
     """Runs selection when the selection result tag name already exists."""
     collection_id = fill_db_with_samples_and_embeddings(
-        test_db, n_samples=20, embedding_model_names=["embedding_model_1"]
+        db_session, n_samples=20, embedding_model_names=["embedding_model_1"]
     )
 
     selection_config = SelectionConfig(
@@ -286,10 +286,10 @@ def test_select_via_database__tag_name_already_exists(
         strategies=[EmbeddingDiversityStrategy(embedding_model_name="embedding_model_1")],
     )
 
-    candidate_sample_ids = _all_sample_ids(test_db, collection_id)
+    candidate_sample_ids = _all_sample_ids(db_session, collection_id)
 
     # First creation of tag
-    select_via_database(test_db, selection_config, input_sample_ids=candidate_sample_ids)
+    select_via_database(db_session, selection_config, input_sample_ids=candidate_sample_ids)
 
     expected_error = (
         f"Tag with name {selection_config.selection_result_tag_name} already exists in the "
@@ -300,25 +300,25 @@ def test_select_via_database__tag_name_already_exists(
         match=expected_error,
     ):
         select_via_database(
-            test_db,
+            db_session,
             selection_config,
             input_sample_ids=candidate_sample_ids,
         )
 
 
 def test_select_via_database_with_annotation_class_balancing_target(
-    test_db: Session,
+    db_session: Session,
 ) -> None:
     """Runs selection with a simple annotation class balancing strategy."""
     collection_id = fill_db_with_samples_and_embeddings(
-        test_db, n_samples=3, embedding_model_names=[]
+        db_session, n_samples=3, embedding_model_names=[]
     )
-    sample_ids = _all_sample_ids(test_db, collection_id)
+    sample_ids = _all_sample_ids(db_session, collection_id)
 
-    label_cat = create_annotation_label(session=test_db, dataset_id=collection_id, label_name="cat")
-    label_dog = create_annotation_label(session=test_db, dataset_id=collection_id, label_name="dog")
+    label_cat = create_annotation_label(session=db_session, dataset_id=collection_id, label_name="cat")
+    label_dog = create_annotation_label(session=db_session, dataset_id=collection_id, label_name="dog")
     label_bird = create_annotation_label(
-        session=test_db, dataset_id=collection_id, label_name="bird"
+        session=db_session, dataset_id=collection_id, label_name="bird"
     )
 
     # Create annotations
@@ -326,7 +326,7 @@ def test_select_via_database_with_annotation_class_balancing_target(
     # * sample 1: dog
     # * sample 2: dog + bird
     create_annotations(
-        session=test_db,
+        session=db_session,
         collection_id=collection_id,
         annotations=[
             AnnotationDetails(
@@ -368,16 +368,16 @@ def test_select_via_database_with_annotation_class_balancing_target(
     )
 
     select_via_database(
-        session=test_db,
+        session=db_session,
         config=config,
         input_sample_ids=sample_ids,
     )
 
-    tags = tag_resolver.get_all_by_collection_id(test_db, collection_id=collection_id)
+    tags = tag_resolver.get_all_by_collection_id(db_session, collection_id=collection_id)
     assert len(tags) == 1
     assert tags[0].name == "selection-tag"
     samples_in_tag = image_resolver.get_all_by_collection_id(
-        session=test_db,
+        session=db_session,
         collection_id=collection_id,
         filters=ImageFilter(sample_filter=SampleFilter(tag_ids=[tags[0].tag_id])),
     ).samples
@@ -388,13 +388,13 @@ def test_select_via_database_with_annotation_class_balancing_target(
 
 
 def test_select_via_database_with_annotation_class_balancing_missing_class(
-    test_db: Session,
+    db_session: Session,
 ) -> None:
     """Runs selection with a simple annotation class balancing strategy."""
     collection_id = fill_db_with_samples_and_embeddings(
-        test_db, n_samples=1, embedding_model_names=[]
+        db_session, n_samples=1, embedding_model_names=[]
     )
-    sample_ids = _all_sample_ids(test_db, collection_id)
+    sample_ids = _all_sample_ids(db_session, collection_id)
 
     config = SelectionConfig(
         n_samples_to_select=2,
@@ -409,24 +409,24 @@ def test_select_via_database_with_annotation_class_balancing_missing_class(
 
     with pytest.raises(ValueError, match="Annotation label with this name does not exist: cat"):
         select_via_database(
-            session=test_db,
+            session=db_session,
             config=config,
             input_sample_ids=sample_ids,
         )
 
 
 def test_select_via_database_with_annotation_class_balancing_target_incomplete(
-    test_db: Session, mocker: MockerFixture
+    db_session: Session, mocker: MockerFixture
 ) -> None:
     """Runs selection with a simple annotation class balancing strategy."""
     collection_id = fill_db_with_samples_and_embeddings(
-        test_db, n_samples=3, embedding_model_names=[]
+        db_session, n_samples=3, embedding_model_names=[]
     )
-    sample_ids = _all_sample_ids(test_db, collection_id)
-    label_cat = create_annotation_label(session=test_db, dataset_id=collection_id, label_name="cat")
-    label_dog = create_annotation_label(session=test_db, dataset_id=collection_id, label_name="dog")
+    sample_ids = _all_sample_ids(db_session, collection_id)
+    label_cat = create_annotation_label(session=db_session, dataset_id=collection_id, label_name="cat")
+    label_dog = create_annotation_label(session=db_session, dataset_id=collection_id, label_name="dog")
     label_bird = create_annotation_label(
-        session=test_db, dataset_id=collection_id, label_name="bird"
+        session=db_session, dataset_id=collection_id, label_name="bird"
     )
 
     # Create annotations
@@ -434,7 +434,7 @@ def test_select_via_database_with_annotation_class_balancing_target_incomplete(
     # * sample 1: cat + bird
     # * sample 2: dog + bird
     create_annotations(
-        session=test_db,
+        session=db_session,
         collection_id=collection_id,
         annotations=[
             AnnotationDetails(
@@ -480,15 +480,15 @@ def test_select_via_database_with_annotation_class_balancing_target_incomplete(
 
     spy_mundig_run = mocker.spy(Mundig, "add_class_balancing")
     select_via_database(
-        session=test_db,
+        session=db_session,
         config=config,
         input_sample_ids=sample_ids,
     )
-    tags = tag_resolver.get_all_by_collection_id(session=test_db, collection_id=collection_id)
+    tags = tag_resolver.get_all_by_collection_id(session=db_session, collection_id=collection_id)
     assert len(tags) == 1
     assert tags[0].name == "selection-tag"
     samples_in_tag = image_resolver.get_all_by_collection_id(
-        session=test_db,
+        session=db_session,
         collection_id=collection_id,
         filters=ImageFilter(sample_filter=SampleFilter(tag_ids=[tags[0].tag_id])),
     ).samples
@@ -508,21 +508,21 @@ def test_select_via_database_with_annotation_class_balancing_target_incomplete(
 
 
 def test_select_via_database_with_annotation_class_balancing_target_over_1(
-    test_db: Session, mocker: MockerFixture
+    db_session: Session, mocker: MockerFixture
 ) -> None:
     """Runs selection with a simple annotation class balancing strategy."""
     collection_id = fill_db_with_samples_and_embeddings(
-        test_db, n_samples=3, embedding_model_names=[]
+        db_session, n_samples=3, embedding_model_names=[]
     )
-    sample_ids = _all_sample_ids(test_db, collection_id)
-    label_cat = create_annotation_label(session=test_db, dataset_id=collection_id, label_name="cat")
-    label_dog = create_annotation_label(session=test_db, dataset_id=collection_id, label_name="dog")
+    sample_ids = _all_sample_ids(db_session, collection_id)
+    label_cat = create_annotation_label(session=db_session, dataset_id=collection_id, label_name="cat")
+    label_dog = create_annotation_label(session=db_session, dataset_id=collection_id, label_name="dog")
 
     # Create annotations
     # * sample 0: cat
     # * sample 1: dog
     create_annotations(
-        session=test_db,
+        session=db_session,
         collection_id=collection_id,
         annotations=[
             AnnotationDetails(
@@ -552,7 +552,7 @@ def test_select_via_database_with_annotation_class_balancing_target_over_1(
 
     spy_mundig_run = mocker.spy(Mundig, "add_class_balancing")
     select_via_database(
-        session=test_db,
+        session=db_session,
         config=config,
         input_sample_ids=sample_ids,
     )
@@ -565,18 +565,18 @@ def test_select_via_database_with_annotation_class_balancing_target_over_1(
 
 
 def test_select_via_database_with_annotation_class_balancing_uniform(
-    test_db: Session,
+    db_session: Session,
 ) -> None:
     """Runs selection with a simple annotation class balancing strategy."""
     collection_id = fill_db_with_samples_and_embeddings(
-        test_db, n_samples=3, embedding_model_names=[]
+        db_session, n_samples=3, embedding_model_names=[]
     )
-    sample_ids = _all_sample_ids(test_db, collection_id)
+    sample_ids = _all_sample_ids(db_session, collection_id)
 
-    label_cat = create_annotation_label(session=test_db, dataset_id=collection_id, label_name="cat")
-    label_dog = create_annotation_label(session=test_db, dataset_id=collection_id, label_name="dog")
+    label_cat = create_annotation_label(session=db_session, dataset_id=collection_id, label_name="cat")
+    label_dog = create_annotation_label(session=db_session, dataset_id=collection_id, label_name="dog")
     label_bird = create_annotation_label(
-        session=test_db, dataset_id=collection_id, label_name="bird"
+        session=db_session, dataset_id=collection_id, label_name="bird"
     )
 
     # Create annotations
@@ -584,7 +584,7 @@ def test_select_via_database_with_annotation_class_balancing_uniform(
     # * sample 1: dog
     # * sample 2: dog + bird
     create_annotations(
-        session=test_db,
+        session=db_session,
         collection_id=collection_id,
         annotations=[
             AnnotationDetails(
@@ -618,16 +618,16 @@ def test_select_via_database_with_annotation_class_balancing_uniform(
     )
 
     select_via_database(
-        session=test_db,
+        session=db_session,
         config=config,
         input_sample_ids=sample_ids,
     )
 
-    tags = tag_resolver.get_all_by_collection_id(test_db, collection_id=collection_id)
+    tags = tag_resolver.get_all_by_collection_id(db_session, collection_id=collection_id)
     assert len(tags) == 1
     assert tags[0].name == "selection-tag"
     samples_in_tag = image_resolver.get_all_by_collection_id(
-        session=test_db,
+        session=db_session,
         collection_id=collection_id,
         filters=ImageFilter(sample_filter=SampleFilter(tag_ids=[tags[0].tag_id])),
     ).samples
@@ -638,18 +638,18 @@ def test_select_via_database_with_annotation_class_balancing_uniform(
 
 
 def test_select_via_database_with_annotation_class_balancing_input(
-    test_db: Session,
+    db_session: Session,
 ) -> None:
     """Runs selection with a simple annotation class balancing strategy."""
     collection_id = fill_db_with_samples_and_embeddings(
-        test_db, n_samples=3, embedding_model_names=[]
+        db_session, n_samples=3, embedding_model_names=[]
     )
-    sample_ids = _all_sample_ids(test_db, collection_id)
+    sample_ids = _all_sample_ids(db_session, collection_id)
 
-    label_cat = create_annotation_label(session=test_db, dataset_id=collection_id, label_name="cat")
-    label_dog = create_annotation_label(session=test_db, dataset_id=collection_id, label_name="dog")
+    label_cat = create_annotation_label(session=db_session, dataset_id=collection_id, label_name="cat")
+    label_dog = create_annotation_label(session=db_session, dataset_id=collection_id, label_name="dog")
     label_bird = create_annotation_label(
-        session=test_db, dataset_id=collection_id, label_name="bird"
+        session=db_session, dataset_id=collection_id, label_name="bird"
     )
 
     # Create annotations
@@ -657,7 +657,7 @@ def test_select_via_database_with_annotation_class_balancing_input(
     # * sample 1: dog
     # * sample 2: bird
     create_annotations(
-        session=test_db,
+        session=db_session,
         collection_id=collection_id,
         annotations=[
             AnnotationDetails(
@@ -687,16 +687,16 @@ def test_select_via_database_with_annotation_class_balancing_input(
     )
 
     select_via_database(
-        session=test_db,
+        session=db_session,
         config=config,
         input_sample_ids=sample_ids,
     )
 
-    tags = tag_resolver.get_all_by_collection_id(test_db, collection_id=collection_id)
+    tags = tag_resolver.get_all_by_collection_id(db_session, collection_id=collection_id)
     assert len(tags) == 1
     assert tags[0].name == "selection-tag"
     samples_in_tag = image_resolver.get_all_by_collection_id(
-        session=test_db,
+        session=db_session,
         collection_id=collection_id,
         filters=ImageFilter(sample_filter=SampleFilter(tag_ids=[tags[0].tag_id])),
     ).samples
@@ -746,7 +746,7 @@ def test_aggregate_class_distributions() -> None:
     np.testing.assert_array_equal(class_distributions, expected_distributions)
 
 
-def test_get_class_balancing_data_input(test_db: Session) -> None:
+def test_get_class_balancing_data_input(db_session: Session) -> None:
     """Test the 'input' distribution logic."""
     dataset_id = UUID("00000000-0000-0000-0000-000000000000")
     label_id_cat = UUID("00000000-0000-0000-0000-000000000001")
@@ -768,7 +768,7 @@ def test_get_class_balancing_data_input(test_db: Session) -> None:
     strat = AnnotationClassBalancingStrategy(target_distribution="input")
 
     class_dist, target_vals = _get_class_balancing_data(
-        session=test_db,
+        session=db_session,
         strat=strat,
         dataset_id=dataset_id,
         annotation_label_ids=all_annotation_labels,
@@ -786,7 +786,7 @@ def test_get_class_balancing_data_input(test_db: Session) -> None:
     np.testing.assert_array_equal(class_dist, expected_dist)
 
 
-def test_get_class_balancing_data_uniform(test_db: Session) -> None:
+def test_get_class_balancing_data_uniform(db_session: Session) -> None:
     """Test the 'uniform' distribution logic."""
     dataset_id = UUID("00000000-0000-0000-0000-000000000000")
     label_id_cat = UUID("00000000-0000-0000-0000-000000000001")
@@ -805,7 +805,7 @@ def test_get_class_balancing_data_uniform(test_db: Session) -> None:
     strat = AnnotationClassBalancingStrategy(target_distribution="uniform")
 
     class_dist, target_vals = _get_class_balancing_data(
-        session=test_db,
+        session=db_session,
         strat=strat,
         dataset_id=dataset_id,
         annotation_label_ids=all_annotation_labels,
@@ -823,14 +823,14 @@ def test_get_class_balancing_data_uniform(test_db: Session) -> None:
     np.testing.assert_array_equal(class_dist[:, 1], expected_col_dog)
 
 
-def test_get_class_balancing_data_target(test_db: Session) -> None:
+def test_get_class_balancing_data_target(db_session: Session) -> None:
     """Test the 'target' (dict) distribution logic."""
-    collection_id = create_collection(session=test_db).collection_id
+    collection_id = create_collection(session=db_session).collection_id
     label_cat_obj = create_annotation_label(
-        session=test_db, dataset_id=collection_id, label_name="cat"
+        session=db_session, dataset_id=collection_id, label_name="cat"
     )
     label_dog_obj = create_annotation_label(
-        session=test_db, dataset_id=collection_id, label_name="dog"
+        session=db_session, dataset_id=collection_id, label_name="dog"
     )
 
     label_id_cat = label_cat_obj.annotation_label_id
@@ -855,7 +855,7 @@ def test_get_class_balancing_data_target(test_db: Session) -> None:
     strat = AnnotationClassBalancingStrategy(target_distribution=distribution_dict)
 
     class_dist, target_vals = _get_class_balancing_data(
-        session=test_db,
+        session=db_session,
         strat=strat,
         dataset_id=collection_id,
         annotation_label_ids=all_annotation_labels,

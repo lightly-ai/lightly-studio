@@ -26,14 +26,14 @@ from tests.helpers_resolvers import (
 
 class TestImageFilter:
     @pytest.fixture
-    def setup_samples_filter_test(self, test_db: Session) -> tuple[list[ImageTable], UUID, Session]:
+    def setup_samples_filter_test(self, db_session: Session) -> tuple[list[ImageTable], UUID, Session]:
         """Create sample data for testing."""
-        collection = create_collection(session=test_db)
+        collection = create_collection(session=db_session)
         collection_id = collection.collection_id
 
         samples = [
             create_image(
-                session=test_db,
+                session=db_session,
                 collection_id=collection_id,
                 file_path_abs=f"/path/to/sample_{i}.jpg",
                 width=width,
@@ -51,7 +51,7 @@ class TestImageFilter:
         ]
 
         # just pass the session to the resolver
-        return samples, collection_id, test_db
+        return samples, collection_id, db_session
 
     @pytest.mark.parametrize(
         (
@@ -152,12 +152,12 @@ class TestImageFilter:
 
     def test_query__sample_filter(
         self,
-        test_db: Session,
+        db_session: Session,
     ) -> None:
-        collection = create_collection(session=test_db)
+        collection = create_collection(session=db_session)
         collection_id = collection.collection_id
         samples = create_images(
-            db_session=test_db,
+            db_session=db_session,
             collection_id=collection_id,
             images=[
                 ImageStub(path="sample1.png"),
@@ -168,13 +168,13 @@ class TestImageFilter:
 
         # Tag the first and third samples
         tag = create_tag(
-            session=test_db,
+            session=db_session,
             collection_id=collection_id,
             tag_name="test_tag",
             kind="sample",
         )
         tag_resolver.add_sample_ids_to_tag_id(
-            session=test_db,
+            session=db_session,
             tag_id=tag.tag_id,
             sample_ids=[samples[0].sample_id, samples[2].sample_id],
         )
@@ -192,7 +192,7 @@ class TestImageFilter:
 
         # Apply the filter
         filtered_query = sample_filter.apply(query=query)
-        result = test_db.exec(filtered_query).all()
+        result = db_session.exec(filtered_query).all()
 
         # Should only return the first sample
         assert len(result) == 1
@@ -200,14 +200,14 @@ class TestImageFilter:
 
     def test_samples_filter__sample_ids_with_dimension_filter(
         self,
-        test_db: Session,
+        db_session: Session,
     ) -> None:
         """Sample IDs should be applied alongside other filters."""
-        collection = create_collection(session=test_db)
+        collection = create_collection(session=db_session)
         collection_id = collection.collection_id
 
         images = create_images(
-            db_session=test_db,
+            db_session=db_session,
             collection_id=collection_id,
             images=[
                 ImageStub(path="sample_0.png", width=300),
@@ -238,7 +238,7 @@ class TestImageFilter:
         )
 
         filtered_query = sample_filter.apply(query=query)
-        result = test_db.exec(filtered_query).all()
+        result = db_session.exec(filtered_query).all()
 
         # Sample with index 2 does not fulfil the width filter.
         expected_samples = [images[1], images[3]]

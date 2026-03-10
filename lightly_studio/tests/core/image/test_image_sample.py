@@ -25,10 +25,10 @@ from tests.helpers_resolvers import (
 
 
 class TestImageSample:
-    def test_basic_fields_get(self, test_db: Session) -> None:
-        collection = create_collection(session=test_db)
+    def test_basic_fields_get(self, db_session: Session) -> None:
+        collection = create_collection(session=db_session)
         image_table = create_image(
-            session=test_db,
+            session=db_session,
             collection_id=collection.collection_id,
             file_path_abs="/path/to/sample1.png",
             width=640,
@@ -46,16 +46,16 @@ class TestImageSample:
         assert sample.created_at == image_table.created_at
         assert sample.updated_at == image_table.updated_at
 
-    def test_basic_fields_set(self, mocker: MockerFixture, test_db: Session) -> None:
-        collection = create_collection(session=test_db)
+    def test_basic_fields_set(self, mocker: MockerFixture, db_session: Session) -> None:
+        collection = create_collection(session=db_session)
         image_table = create_image(
-            session=test_db,
+            session=db_session,
             collection_id=collection.collection_id,
         )
         sample = ImageSample(inner=image_table)
 
         # Spy on commit.
-        spy_commit = mocker.spy(test_db, "commit")
+        spy_commit = mocker.spy(db_session, "commit")
 
         # Test "set".
         sample.file_name = "sample1.png"
@@ -63,15 +63,15 @@ class TestImageSample:
         sample.width = 1000
         assert spy_commit.call_count == 2
 
-        new_image_table = image_resolver.get_by_id(session=test_db, sample_id=sample.sample_id)
+        new_image_table = image_resolver.get_by_id(session=db_session, sample_id=sample.sample_id)
         assert new_image_table is not None
         assert new_image_table.file_name == "sample1.png"
         assert new_image_table.width == 1000
 
-    def test_add_tag(self, test_db: Session) -> None:
-        collection = create_collection(session=test_db)
+    def test_add_tag(self, db_session: Session) -> None:
+        collection = create_collection(session=db_session)
         image_table = create_image(
-            session=test_db,
+            session=db_session,
             collection_id=collection.collection_id,
         )
         sample = ImageSample(inner=image_table)
@@ -85,10 +85,10 @@ class TestImageSample:
         sample.add_tag("tag1")
         assert sorted([tag.name for tag in sample.sample_table.tags]) == ["tag1", "tag2"]
 
-    def test_remove_tag(self, test_db: Session) -> None:
-        collection = create_collection(session=test_db)
+    def test_remove_tag(self, db_session: Session) -> None:
+        collection = create_collection(session=db_session)
         image_table = create_image(
-            session=test_db,
+            session=db_session,
             collection_id=collection.collection_id,
         )
         sample = ImageSample(inner=image_table)
@@ -107,7 +107,7 @@ class TestImageSample:
         assert [tag.name for tag in sample.sample_table.tags] == ["tag2"]
 
         # Test removing a tag that exists in database but isn't associated with sample
-        create_tag(session=test_db, collection_id=collection.collection_id, tag_name="unassociated")
+        create_tag(session=db_session, collection_id=collection.collection_id, tag_name="unassociated")
         sample.remove_tag("unassociated")
         assert [tag.name for tag in sample.sample_table.tags] == ["tag2"]
 
@@ -115,10 +115,10 @@ class TestImageSample:
         sample.remove_tag("tag2")
         assert [tag.name for tag in sample.sample_table.tags] == []
 
-    def test_tags_property_get(self, test_db: Session) -> None:
-        collection = create_collection(session=test_db)
+    def test_tags_property_get(self, db_session: Session) -> None:
+        collection = create_collection(session=db_session)
         image_table = create_image(
-            session=test_db,
+            session=db_session,
             collection_id=collection.collection_id,
         )
         sample = ImageSample(inner=image_table)
@@ -131,10 +131,10 @@ class TestImageSample:
         sample.add_tag("tag2")
         assert sample.tags == {"tag1", "tag2"}
 
-    def test_tags_property_set(self, test_db: Session) -> None:
-        collection = create_collection(session=test_db)
+    def test_tags_property_set(self, db_session: Session) -> None:
+        collection = create_collection(session=db_session)
         image_table = create_image(
-            session=test_db,
+            session=db_session,
             collection_id=collection.collection_id,
         )
         sample = ImageSample(inner=image_table)
@@ -154,10 +154,10 @@ class TestImageSample:
         assert sample.tags == set()
         assert [tag.name for tag in sample.sample_table.tags] == []
 
-    def test_metadata(self, test_db: Session) -> None:
-        collection = create_collection(session=test_db)
+    def test_metadata(self, db_session: Session) -> None:
+        collection = create_collection(session=db_session)
         image_table = create_image(
-            session=test_db,
+            session=db_session,
             collection_id=collection.collection_id,
         )
         sample = ImageSample(inner=image_table)
@@ -185,15 +185,15 @@ class TestImageSample:
         sample.metadata["string_key"] = "updated_value"
         assert sample.metadata["string_key"] == "updated_value"
 
-    def test_metadata__schema_must_match(self, test_db: Session) -> None:
-        collection = create_collection(session=test_db)
+    def test_metadata__schema_must_match(self, db_session: Session) -> None:
+        collection = create_collection(session=db_session)
         image_table1 = create_image(
-            session=test_db,
+            session=db_session,
             collection_id=collection.collection_id,
             file_path_abs="/path/to/sample1.png",
         )
         image_table2 = create_image(
-            session=test_db,
+            session=db_session,
             collection_id=collection.collection_id,
             file_path_abs="/path/to/sample2.png",
         )
@@ -211,10 +211,10 @@ class TestImageSample:
         # TODO(Michal, 9/2025): But shouldn't it?
         sample2.metadata["key"] = 123
 
-    def test_add_caption(self, test_db: Session) -> None:
-        collection = create_collection(session=test_db)
+    def test_add_caption(self, db_session: Session) -> None:
+        collection = create_collection(session=db_session)
         image_table = create_image(
-            session=test_db,
+            session=db_session,
             collection_id=collection.collection_id,
         )
         sample = ImageSample(inner=image_table)
@@ -227,10 +227,10 @@ class TestImageSample:
         sample.add_caption("caption1")
         assert sample.captions == ["caption3", "caption2", "caption1"]
 
-    def test_captions_setter(self, test_db: Session) -> None:
-        collection = create_collection(session=test_db)
+    def test_captions_setter(self, db_session: Session) -> None:
+        collection = create_collection(session=db_session)
         image_table = create_image(
-            session=test_db,
+            session=db_session,
             collection_id=collection.collection_id,
         )
         sample = ImageSample(inner=image_table)
@@ -243,21 +243,21 @@ class TestImageSample:
 
     def test_annotations_object_detection(
         self,
-        test_db: Session,
+        db_session: Session,
     ) -> None:
-        collection = create_collection(session=test_db)
+        collection = create_collection(session=db_session)
         image_table = create_image(
-            session=test_db,
+            session=db_session,
             collection_id=collection.collection_id,
         )
         zebra_label = create_annotation_label(
-            session=test_db,
+            session=db_session,
             dataset_id=collection.collection_id,
             label_name="zebra",
         )
         image = ImageSample(inner=image_table)
         create_annotation(
-            session=test_db,
+            session=db_session,
             collection_id=collection.collection_id,
             sample_id=image.sample_id,
             annotation_label_id=zebra_label.annotation_label_id,
@@ -276,21 +276,21 @@ class TestImageSample:
 
     def test_annotations_instance_segmentation(
         self,
-        test_db: Session,
+        db_session: Session,
     ) -> None:
-        collection = create_collection(session=test_db)
+        collection = create_collection(session=db_session)
         image_table = create_image(
-            session=test_db,
+            session=db_session,
             collection_id=collection.collection_id,
         )
         cat_label = create_annotation_label(
-            session=test_db,
+            session=db_session,
             dataset_id=collection.collection_id,
             label_name="cat",
         )
         image = ImageSample(inner=image_table)
         create_annotation(
-            session=test_db,
+            session=db_session,
             collection_id=collection.collection_id,
             sample_id=image.sample_id,
             annotation_label_id=cat_label.annotation_label_id,
@@ -318,21 +318,21 @@ class TestImageSample:
 
     def test_annotations_classification(
         self,
-        test_db: Session,
+        db_session: Session,
     ) -> None:
-        collection = create_collection(session=test_db)
+        collection = create_collection(session=db_session)
         image_table = create_image(
-            session=test_db,
+            session=db_session,
             collection_id=collection.collection_id,
         )
         cat_label = create_annotation_label(
-            session=test_db,
+            session=db_session,
             dataset_id=collection.collection_id,
             label_name="cat",
         )
         image = ImageSample(inner=image_table)
         create_annotation(
-            session=test_db,
+            session=db_session,
             collection_id=collection.collection_id,
             sample_id=image.sample_id,
             annotation_label_id=cat_label.annotation_label_id,
@@ -348,28 +348,28 @@ class TestImageSample:
 
     def test_annotations_multiple_types(
         self,
-        test_db: Session,
+        db_session: Session,
     ) -> None:
-        collection = create_collection(session=test_db)
+        collection = create_collection(session=db_session)
         image_table = create_image(
-            session=test_db,
+            session=db_session,
             collection_id=collection.collection_id,
         )
         cat_label = create_annotation_label(
-            session=test_db,
+            session=db_session,
             dataset_id=collection.collection_id,
             label_name="cat",
         )
         image = ImageSample(inner=image_table)
         create_annotation(
-            session=test_db,
+            session=db_session,
             collection_id=collection.collection_id,
             sample_id=image.sample_id,
             annotation_label_id=cat_label.annotation_label_id,
             annotation_data={"x": 47, "y": 64, "width": 100, "height": 200},
         )
         create_annotation(
-            session=test_db,
+            session=db_session,
             collection_id=collection.collection_id,
             sample_id=image.sample_id,
             annotation_label_id=cat_label.annotation_label_id,
@@ -383,7 +383,7 @@ class TestImageSample:
             },
         )
         create_annotation(
-            session=test_db,
+            session=db_session,
             collection_id=collection.collection_id,
             sample_id=image.sample_id,
             annotation_label_id=cat_label.annotation_label_id,
@@ -398,21 +398,21 @@ class TestImageSample:
 
     def test_annotations_semantic_segmentation(
         self,
-        test_db: Session,
+        db_session: Session,
     ) -> None:
-        collection = create_collection(session=test_db)
+        collection = create_collection(session=db_session)
         image_table = create_image(
-            session=test_db,
+            session=db_session,
             collection_id=collection.collection_id,
         )
         road_label = create_annotation_label(
-            session=test_db,
+            session=db_session,
             dataset_id=collection.collection_id,
             label_name="road",
         )
         image = ImageSample(inner=image_table)
         create_annotation(
-            session=test_db,
+            session=db_session,
             collection_id=collection.collection_id,
             sample_id=image.sample_id,
             annotation_label_id=road_label.annotation_label_id,
@@ -432,11 +432,11 @@ class TestImageSample:
 
     def test_add_annotation_classification(
         self,
-        test_db: Session,
+        db_session: Session,
     ) -> None:
-        collection = create_collection(session=test_db)
+        collection = create_collection(session=db_session)
         image_table = create_image(
-            session=test_db,
+            session=db_session,
             collection_id=collection.collection_id,
         )
         image = ImageSample(inner=image_table)
@@ -457,11 +457,11 @@ class TestImageSample:
 
     def test_add_annotation_object_detection(
         self,
-        test_db: Session,
+        db_session: Session,
     ) -> None:
-        collection = create_collection(session=test_db)
+        collection = create_collection(session=db_session)
         image_table = create_image(
-            session=test_db,
+            session=db_session,
             collection_id=collection.collection_id,
         )
         image = ImageSample(inner=image_table)
@@ -490,11 +490,11 @@ class TestImageSample:
 
     def test_add_annotation_instance_segmentation(
         self,
-        test_db: Session,
+        db_session: Session,
     ) -> None:
-        collection = create_collection(session=test_db)
+        collection = create_collection(session=db_session)
         image_table = create_image(
-            session=test_db,
+            session=db_session,
             collection_id=collection.collection_id,
         )
         image = ImageSample(inner=image_table)
@@ -525,11 +525,11 @@ class TestImageSample:
 
     def test_add_annotation_semantic_segmentation(
         self,
-        test_db: Session,
+        db_session: Session,
     ) -> None:
-        collection = create_collection(session=test_db)
+        collection = create_collection(session=db_session)
         image_table = create_image(
-            session=test_db,
+            session=db_session,
             collection_id=collection.collection_id,
         )
         image = ImageSample(inner=image_table)
@@ -560,11 +560,11 @@ class TestImageSample:
 
     def test_delete_annotation(
         self,
-        test_db: Session,
+        db_session: Session,
     ) -> None:
-        collection = create_collection(session=test_db)
+        collection = create_collection(session=db_session)
         image_table = create_image(
-            session=test_db,
+            session=db_session,
             collection_id=collection.collection_id,
         )
         image = ImageSample(inner=image_table)
