@@ -40,15 +40,8 @@ from lightly_studio.resolvers import (
 )
 from tests.helpers_resolvers import (
     ImageStub,
-    create_annotation_label,
-    create_collection,
-    create_image,
     create_images,
 )
-
-pytest_plugins = [
-    "tests.helpers_resolvers",
-]
 
 
 @pytest.fixture
@@ -205,28 +198,6 @@ def create_test_base_annotations(
     )
     assert len(annotation_ids) == len(annotation_base_inputs)
     return list(annotation_resolver.get_by_ids(session=db_session, annotation_ids=annotation_ids))
-
-
-@pytest.fixture
-def create_test_data(
-    test_db: Session,
-) -> tuple[str, str, str]:
-    """Create test data for annotation creation tests."""
-    # Create collection
-    collection = create_collection(session=test_db)
-    collection_id = collection.collection_id
-
-    # Create sample
-    image = create_image(session=test_db, collection_id=collection_id)
-    sample_id = image.sample_id
-
-    # Create label
-    label = create_annotation_label(
-        session=test_db, dataset_id=collection_id, label_name="test_label"
-    )
-    label_id = label.annotation_label_id
-
-    return collection_id, sample_id, label_id  # type: ignore[return-value]
 
 
 @pytest.fixture
