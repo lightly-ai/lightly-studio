@@ -12,12 +12,12 @@ from tests.helpers_resolvers import (
 from tests.resolvers.video.helpers import VideoStub, create_video_with_frames, create_videos
 
 
-def test_get_table_fields_bounds__without_annotations_frames(test_db: Session) -> None:
-    collection = create_collection(session=test_db, sample_type=SampleType.VIDEO)
+def test_get_table_fields_bounds__without_annotations_frames(db_session: Session) -> None:
+    collection = create_collection(session=db_session, sample_type=SampleType.VIDEO)
     collection_id = collection.collection_id
 
     create_videos(
-        session=test_db,
+        session=db_session,
         collection_id=collection_id,
         videos=[
             VideoStub(path="/path/to/sample1.mp4", fps=2, duration_s=5, width=200, height=250),
@@ -27,7 +27,7 @@ def test_get_table_fields_bounds__without_annotations_frames(test_db: Session) -
         ],
     )
 
-    bounds = video_resolver.get_table_fields_bounds(session=test_db, collection_id=collection_id)
+    bounds = video_resolver.get_table_fields_bounds(session=db_session, collection_id=collection_id)
 
     assert bounds is not None
     assert bounds.fps.min == 2
@@ -40,62 +40,62 @@ def test_get_table_fields_bounds__without_annotations_frames(test_db: Session) -
     assert bounds.height.max == 550
 
 
-def test_get_table_fields_bounds__with_annotations_frames(test_db: Session) -> None:
-    collection = create_collection(session=test_db, sample_type=SampleType.VIDEO)
+def test_get_table_fields_bounds__with_annotations_frames(db_session: Session) -> None:
+    collection = create_collection(session=db_session, sample_type=SampleType.VIDEO)
     collection_id = collection.collection_id
 
     video_frame_id_1 = create_video_with_frames(
-        session=test_db,
+        session=db_session,
         collection_id=collection_id,
         video=VideoStub(path="/path/to/sample1.mp4", fps=5, duration_s=5, width=200, height=250),
     ).frame_sample_ids[0]
     video_frame_id_2 = create_video_with_frames(
-        session=test_db,
+        session=db_session,
         collection_id=collection_id,
         video=VideoStub(path="/path/to/sample2.mp4", fps=2, duration_s=8, width=300, height=450),
     ).frame_sample_ids[0]
     video_frame_id_3 = create_video_with_frames(
-        session=test_db,
+        session=db_session,
         collection_id=collection_id,
         video=VideoStub(path="/path/to/sample3.mp4", fps=30, duration_s=10, width=500, height=550),
     ).frame_sample_ids[0]
 
     car_label = create_annotation_label(
-        session=test_db,
+        session=db_session,
         dataset_id=collection_id,
         label_name="car",
     )
 
     airplane_label = create_annotation_label(
-        session=test_db,
+        session=db_session,
         dataset_id=collection_id,
         label_name="airplane",
     )
 
     # Create annotations
     create_annotation(
-        session=test_db,
+        session=db_session,
         sample_id=video_frame_id_1,
         annotation_label_id=car_label.annotation_label_id,
         collection_id=collection_id,
     )
 
     create_annotation(
-        session=test_db,
+        session=db_session,
         sample_id=video_frame_id_2,
         annotation_label_id=car_label.annotation_label_id,
         collection_id=collection_id,
     )
 
     create_annotation(
-        session=test_db,
+        session=db_session,
         sample_id=video_frame_id_3,
         annotation_label_id=airplane_label.annotation_label_id,
         collection_id=collection_id,
     )
 
     bounds = video_resolver.get_table_fields_bounds(
-        session=test_db,
+        session=db_session,
         collection_id=collection_id,
         annotations_frames_labels_id=[car_label.annotation_label_id],
     )

@@ -16,14 +16,14 @@ from tests.helpers_resolvers import (
 
 
 def test_get_dimension_bounds(
-    test_db: Session,
+    db_session: Session,
 ) -> None:
-    collection = create_collection(session=test_db)
+    collection = create_collection(session=db_session)
     collection_id = collection.collection_id
 
     # Create samples with different dimensions
     create_images(
-        db_session=test_db,
+        db_session=db_session,
         collection_id=collection_id,
         images=[
             ImageStub(path="small.jpg", width=100, height=200),
@@ -31,7 +31,7 @@ def test_get_dimension_bounds(
         ],
     )
 
-    bounds = image_resolver.get_dimension_bounds(session=test_db, collection_id=collection_id)
+    bounds = image_resolver.get_dimension_bounds(session=db_session, collection_id=collection_id)
     assert bounds["min_width"] == 100
     assert bounds["max_width"] == 1920
     assert bounds["min_height"] == 200
@@ -39,14 +39,14 @@ def test_get_dimension_bounds(
 
 
 def test_get_dimension_bounds__with_tag_filtering(
-    test_db: Session,
+    db_session: Session,
 ) -> None:
-    collection = create_collection(session=test_db)
+    collection = create_collection(session=db_session)
     collection_id = collection.collection_id
 
     # Create samples with different dimensions
     images = create_images(
-        db_session=test_db,
+        db_session=db_session,
         collection_id=collection_id,
         images=[
             ImageStub(path="small.jpg", width=100, height=200),
@@ -57,33 +57,33 @@ def test_get_dimension_bounds__with_tag_filtering(
 
     # create tag of medium->large images
     tag_bigger = create_tag(
-        session=test_db,
+        session=db_session,
         collection_id=collection_id,
         tag_name="bigger",
         kind="sample",
     )
     tag_resolver.add_sample_ids_to_tag_id(
-        session=test_db,
+        session=db_session,
         tag_id=tag_bigger.tag_id,
         sample_ids=[images[1].sample_id, images[2].sample_id],
     )
 
     # create tag of medium->small images
     tag_smaller = create_tag(
-        session=test_db,
+        session=db_session,
         collection_id=collection_id,
         tag_name="smaller",
         kind="sample",
     )
     tag_resolver.add_sample_ids_to_tag_id(
-        session=test_db,
+        session=db_session,
         tag_id=tag_smaller.tag_id,
         sample_ids=[images[0].sample_id, images[1].sample_id],
     )
 
     # Test width filtering of bigger samples
     bounds = image_resolver.get_dimension_bounds(
-        session=test_db, collection_id=collection_id, tag_ids=[tag_bigger.tag_id]
+        session=db_session, collection_id=collection_id, tag_ids=[tag_bigger.tag_id]
     )
     assert bounds["min_width"] == 800
     assert bounds["max_width"] == 1920
@@ -92,7 +92,7 @@ def test_get_dimension_bounds__with_tag_filtering(
 
     # Test height filtering of smaller samples
     bounds = image_resolver.get_dimension_bounds(
-        session=test_db, collection_id=collection_id, tag_ids=[tag_smaller.tag_id]
+        session=db_session, collection_id=collection_id, tag_ids=[tag_smaller.tag_id]
     )
     assert bounds["min_width"] == 100
     assert bounds["max_width"] == 800
@@ -101,14 +101,14 @@ def test_get_dimension_bounds__with_tag_filtering(
 
 
 def test_get_dimension_bounds_with_annotation_filtering(
-    test_db: Session,
+    db_session: Session,
 ) -> None:
-    collection = create_collection(session=test_db)
+    collection = create_collection(session=db_session)
     collection_id = collection.collection_id
 
     # Create samples with different dimensions
     images = create_images(
-        db_session=test_db,
+        db_session=db_session,
         collection_id=collection_id,
         images=[
             ImageStub(path="small.jpg", width=100, height=200),
@@ -119,12 +119,12 @@ def test_get_dimension_bounds_with_annotation_filtering(
 
     # Create labels
     dog_label = create_annotation_label(
-        session=test_db,
+        session=db_session,
         dataset_id=collection_id,
         label_name="dog",
     )
     cat_label = create_annotation_label(
-        session=test_db,
+        session=db_session,
         dataset_id=collection_id,
         label_name="cat",
     )
@@ -134,7 +134,7 @@ def test_get_dimension_bounds_with_annotation_filtering(
     # - medium image has both dog and cat
     # - large image has cat
     create_annotations(
-        session=test_db,
+        session=db_session,
         collection_id=collection_id,
         annotations=[
             AnnotationDetails(
@@ -173,7 +173,7 @@ def test_get_dimension_bounds_with_annotation_filtering(
     )
 
     # Test without filtering (should get all samples)
-    bounds = image_resolver.get_dimension_bounds(session=test_db, collection_id=collection_id)
+    bounds = image_resolver.get_dimension_bounds(session=db_session, collection_id=collection_id)
     assert bounds["min_width"] == 100
     assert bounds["max_width"] == 1920
     assert bounds["min_height"] == 200
@@ -181,7 +181,7 @@ def test_get_dimension_bounds_with_annotation_filtering(
 
     # Test filtering by dog (should only get small and medium images)
     dog_bounds = image_resolver.get_dimension_bounds(
-        session=test_db,
+        session=db_session,
         collection_id=collection_id,
         annotation_label_ids=[dog_label.annotation_label_id],
     )
@@ -192,7 +192,7 @@ def test_get_dimension_bounds_with_annotation_filtering(
 
     # Test filtering by cat (should only get medium and large images)
     cat_bounds = image_resolver.get_dimension_bounds(
-        session=test_db,
+        session=db_session,
         collection_id=collection_id,
         annotation_label_ids=[cat_label.annotation_label_id],
     )
@@ -203,7 +203,7 @@ def test_get_dimension_bounds_with_annotation_filtering(
 
     # Test filtering by both dog and cat (should only get medium image)
     both_bounds = image_resolver.get_dimension_bounds(
-        session=test_db,
+        session=db_session,
         collection_id=collection_id,
         annotation_label_ids=[
             dog_label.annotation_label_id,
@@ -217,9 +217,9 @@ def test_get_dimension_bounds_with_annotation_filtering(
 
 
 def test_get_dimension_bounds__no_samples(
-    test_db: Session,
+    db_session: Session,
 ) -> None:
-    collection = create_collection(session=test_db)
+    collection = create_collection(session=db_session)
     collection_id = collection.collection_id
-    bounds = image_resolver.get_dimension_bounds(session=test_db, collection_id=collection_id)
+    bounds = image_resolver.get_dimension_bounds(session=db_session, collection_id=collection_id)
     assert bounds == {}

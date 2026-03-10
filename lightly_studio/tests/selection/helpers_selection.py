@@ -17,15 +17,15 @@ from tests.helpers_resolvers import (
 
 
 def fill_db_with_samples_and_metadata(
-    test_db: Session,
+    session: Session,
     metadata: list[Any],
     metadata_key: str,
 ) -> UUID:
     """Creates a collection and fills it with sample and metadata."""
-    collection = create_collection(test_db)
+    collection = create_collection(session)
     for i, data in enumerate(metadata):
         image_table = create_image(
-            session=test_db,
+            session=session,
             collection_id=collection.collection_id,
             file_path_abs=f"sample_{i}.jpg",
         )
@@ -35,11 +35,11 @@ def fill_db_with_samples_and_metadata(
 
 
 def fill_db_metadata(
-    test_db: Session, collection_id: UUID, metadata: list[Any], metadata_key: str
+    session: Session, collection_id: UUID, metadata: list[Any], metadata_key: str
 ) -> None:
     """Fetches a collection from the database and adds metadata to it."""
-    collection = collection_resolver.get_by_id(test_db, collection_id)
+    collection = collection_resolver.get_by_id(session, collection_id)
     assert collection is not None
-    query = DatasetQuery(collection, test_db)
+    query = DatasetQuery(collection, session)
     for data, sample in zip(metadata, query):
         sample.metadata[metadata_key] = data

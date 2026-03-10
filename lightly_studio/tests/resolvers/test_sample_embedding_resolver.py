@@ -18,19 +18,19 @@ from tests.helpers_resolvers import (
 )
 
 
-def test_create_sample_embedding(test_db: Session) -> None:
-    collection = create_collection(session=test_db)
+def test_create_sample_embedding(db_session: Session) -> None:
+    collection = create_collection(session=db_session)
     collection_id = collection.collection_id
-    image = create_image(session=test_db, collection_id=collection_id)
+    image = create_image(session=db_session, collection_id=collection_id)
     sample_id = image.sample_id
     embedding_model = create_embedding_model(
-        session=test_db,
+        session=db_session,
         collection_id=collection_id,
         embedding_model_name="example_embedding_model",
     )
     embedding_model_id = embedding_model.embedding_model_id
     sample_embedding = create_sample_embedding(
-        session=test_db,
+        session=db_session,
         sample_id=sample_id,
         embedding=[1.0, 2.0, 3.0],
         embedding_model_id=embedding_model_id,
@@ -39,21 +39,23 @@ def test_create_sample_embedding(test_db: Session) -> None:
     assert sample_embedding.embedding == [1.0, 2.0, 3.0]
 
 
-def test_create_many_sample_embeddings(test_db: Session) -> None:
+def test_create_many_sample_embeddings(db_session: Session) -> None:
     # Create a collection
-    collection = create_collection(session=test_db)
+    collection = create_collection(session=db_session)
     collection_id = collection.collection_id
 
     # Create 3 samples.
     samples = [
         create_image(
-            session=test_db, collection_id=collection_id, file_path_abs=f"/path/to/sample_{i}.png"
+            session=db_session,
+            collection_id=collection_id,
+            file_path_abs=f"/path/to/sample_{i}.png",
         )
         for i in range(3)
     ]
     # Create an embedding model
     embedding_model = create_embedding_model(
-        session=test_db,
+        session=db_session,
         collection_id=collection_id,
         embedding_model_name="batch_embedding_model",
     )
@@ -70,11 +72,11 @@ def test_create_many_sample_embeddings(test_db: Session) -> None:
     ]
 
     # Create many embeddings in a batch.
-    sample_embedding_resolver.create_many(session=test_db, sample_embeddings=embedding_inputs)
+    sample_embedding_resolver.create_many(session=db_session, sample_embeddings=embedding_inputs)
 
     # Verify all embeddings were created correctly.
     for i, sample in enumerate(samples):
-        sample_from_db = image_resolver.get_by_id(session=test_db, sample_id=sample.sample_id)
+        sample_from_db = image_resolver.get_by_id(session=db_session, sample_id=sample.sample_id)
         assert sample_from_db is not None
         assert len(sample_from_db.sample.embeddings) == 1
         assert sample_from_db.sample.embeddings[0].embedding == [
@@ -84,22 +86,22 @@ def test_create_many_sample_embeddings(test_db: Session) -> None:
         ]
 
 
-def test_add_sample_embedding_to_sample(test_db: Session) -> None:
+def test_add_sample_embedding_to_sample(db_session: Session) -> None:
     # This test checks if the relationship between a sample and its embeddings
     # is correctly set up and we can read embedding out of the sample after it
     # is created.
-    collection = create_collection(session=test_db)
+    collection = create_collection(session=db_session)
     collection_id = collection.collection_id
-    image = create_image(session=test_db, collection_id=collection_id)
+    image = create_image(session=db_session, collection_id=collection_id)
     sample_id = image.sample_id
     embedding_model = create_embedding_model(
-        session=test_db,
+        session=db_session,
         collection_id=collection_id,
         embedding_model_name="example_embedding_model",
     )
     embedding_model_id = embedding_model.embedding_model_id
     sample_embedding = create_sample_embedding(
-        session=test_db,
+        session=db_session,
         sample_id=sample_id,
         embedding=[1.0, 2.0, 3.0],
         embedding_model_id=embedding_model_id,
@@ -111,27 +113,29 @@ def test_add_sample_embedding_to_sample(test_db: Session) -> None:
     assert sample_embedding.embedding == image.sample.embeddings[0].embedding
 
     # Read sample from the db and check the embedding.
-    sample_from_db = image_resolver.get_by_id(session=test_db, sample_id=sample_id)
+    sample_from_db = image_resolver.get_by_id(session=db_session, sample_id=sample_id)
     assert sample_from_db is not None
     assert len(sample_from_db.sample.embeddings) == 1
     assert sample_embedding.embedding == sample_from_db.sample.embeddings[0].embedding
 
 
-def test_get_sample_embeddings_by_sample_ids(test_db: Session) -> None:
+def test_get_sample_embeddings_by_sample_ids(db_session: Session) -> None:
     # Create a collection
-    collection = create_collection(session=test_db)
+    collection = create_collection(session=db_session)
     collection_id = collection.collection_id
 
     # Create 3 samples.
     samples = [
         create_image(
-            session=test_db, collection_id=collection_id, file_path_abs=f"/path/to/sample_{i}.png"
+            session=db_session,
+            collection_id=collection_id,
+            file_path_abs=f"/path/to/sample_{i}.png",
         )
         for i in range(3)
     ]
     # Create an embedding model
     embedding_model = create_embedding_model(
-        session=test_db,
+        session=db_session,
         collection_id=collection_id,
         embedding_model_name="batch_embedding_model",
     )
@@ -148,15 +152,15 @@ def test_get_sample_embeddings_by_sample_ids(test_db: Session) -> None:
     ]
 
     # Create many embeddings in a batch.
-    sample_embedding_resolver.create_many(session=test_db, sample_embeddings=embedding_inputs)
+    sample_embedding_resolver.create_many(session=db_session, sample_embeddings=embedding_inputs)
     all_in_collection = sample_embedding_resolver.get_all_by_collection_id(
-        session=test_db,
+        session=db_session,
         collection_id=collection_id,
         embedding_model_id=embedding_model_id,
     )
     assert len(all_in_collection) == 3
     embeddings = sample_embedding_resolver.get_by_sample_ids(
-        session=test_db,
+        session=db_session,
         sample_ids=[samples[0].sample_id],
         embedding_model_id=embedding_model_id,
     )
@@ -165,37 +169,37 @@ def test_get_sample_embeddings_by_sample_ids(test_db: Session) -> None:
     assert embeddings[0].embedding == samples[0].sample.embeddings[0].embedding
 
     embeddings = sample_embedding_resolver.get_by_sample_ids(
-        session=test_db,
+        session=db_session,
         sample_ids=[samples[0].sample_id],
         embedding_model_id=uuid4(),
     )
     assert len(embeddings) == 0
 
     embeddings = sample_embedding_resolver.get_by_sample_ids(
-        session=test_db,
+        session=db_session,
         sample_ids=[uuid4()],
         embedding_model_id=embedding_model_id,
     )
     assert len(embeddings) == 0
 
 
-def test_get_embedding_count(test_db: Session) -> None:
+def test_get_embedding_count(db_session: Session) -> None:
     # Create collections
-    col1_id = create_collection(session=test_db).collection_id
-    col2_id = create_collection(session=test_db, collection_name="col2").collection_id
+    col1_id = create_collection(session=db_session).collection_id
+    col2_id = create_collection(session=db_session, collection_name="col2").collection_id
 
     # Create samples.
     images_col1 = create_images(
-        db_session=test_db,
+        db_session=db_session,
         collection_id=col1_id,
         images=[ImageStub("sample1.png"), ImageStub("sample2.png"), ImageStub("sample3.png")],
     )
-    create_images(db_session=test_db, collection_id=col2_id, images=[ImageStub("sample.png")])
+    create_images(db_session=db_session, collection_id=col2_id, images=[ImageStub("sample.png")])
 
     # Create an embedding models
-    embedding_model_1 = create_embedding_model(session=test_db, collection_id=col1_id)
+    embedding_model_1 = create_embedding_model(session=db_session, collection_id=col1_id)
     embedding_model_1_id = embedding_model_1.embedding_model_id
-    embedding_model_2 = create_embedding_model(session=test_db, collection_id=col1_id)
+    embedding_model_2 = create_embedding_model(session=db_session, collection_id=col1_id)
     embedding_model_2_id = embedding_model_2.embedding_model_id
 
     # Create embeddings for col1
@@ -211,11 +215,11 @@ def test_get_embedding_count(test_db: Session) -> None:
             embedding=[0.0, 0.0, 0.0],
         ),
     ]
-    sample_embedding_resolver.create_many(session=test_db, sample_embeddings=embedding_inputs)
+    sample_embedding_resolver.create_many(session=db_session, sample_embeddings=embedding_inputs)
 
     # Collection 1 has two embeddings
     count = sample_embedding_resolver.get_embedding_count(
-        session=test_db,
+        session=db_session,
         collection_id=col1_id,
         embedding_model_id=embedding_model_1_id,
     )
@@ -223,7 +227,7 @@ def test_get_embedding_count(test_db: Session) -> None:
 
     # Collection 2 has no embeddings
     count = sample_embedding_resolver.get_embedding_count(
-        session=test_db,
+        session=db_session,
         collection_id=col2_id,
         embedding_model_id=embedding_model_2_id,
     )
