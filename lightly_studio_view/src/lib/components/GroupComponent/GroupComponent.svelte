@@ -19,5 +19,5 @@
     {:else if type === 'video'}
         <VideoPreview className="object-contain" {src} />
     {/if}
-    <Badge variant="secondary" class="absolute m-2">{title}</Badge>
+    <Badge variant="secondary" class="badge absolute m-2">{title}</Badge>
 </div>

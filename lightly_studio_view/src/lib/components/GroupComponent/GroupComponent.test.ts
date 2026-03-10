@@ -4,13 +4,11 @@ import GroupComponentTestWrapper from './GroupComponentTestWrapper.test.svelte';
 
 describe('GroupComponent', () => {
     it('should render badge with title', () => {
-        const title = 'Test Title';
         const { container } = render(GroupComponentTestWrapper, {
-            props: { src: 'test.jpg', type: 'image', title }
+            props: { src: 'test.jpg', type: 'image', title: 'Test Title' }
         });
         const badge = container.querySelector('.badge');
-        expect(badge).toBeTruthy();
-        expect(badge?.textContent).toBe(title);
+        expect(badge?.textContent).toBe('Test Title');
     });
 
     it('should render Image component when type is image', () => {
