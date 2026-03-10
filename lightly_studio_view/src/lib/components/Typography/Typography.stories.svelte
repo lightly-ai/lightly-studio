@@ -1,6 +1,7 @@
 <script module>
     import { defineMeta } from '@storybook/addon-svelte-csf';
     import Typography from './Typography.svelte';
+    import { TYPOGRAPHY_VARIANTS, COMPONENT_TYPES } from './constants';
 
     const { Story } = defineMeta({
         title: 'Components/Typography',
@@ -9,24 +10,11 @@
         argTypes: {
             variant: {
                 control: 'select',
-                options: [
-                    'h1',
-                    'h2',
-                    'h3',
-                    'h4',
-                    'h5',
-                    'h6',
-                    'body1',
-                    'body2',
-                    'caption',
-                    'overline',
-                    'subtitle1',
-                    'subtitle2'
-                ]
+                options: [...TYPOGRAPHY_VARIANTS]
             },
             component: {
                 control: 'select',
-                options: ['h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'p', 'span', 'div']
+                options: [...COMPONENT_TYPES]
             }
         },
         parameters: {

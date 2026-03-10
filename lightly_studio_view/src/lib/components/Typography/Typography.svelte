@@ -2,22 +2,7 @@
     import { cn } from '$lib/utils/shadcn.js';
     import type { Snippet } from 'svelte';
     import type { HTMLAttributes } from 'svelte/elements';
-
-    type TypographyVariant =
-        | 'h1'
-        | 'h2'
-        | 'h3'
-        | 'h4'
-        | 'h5'
-        | 'h6'
-        | 'body1'
-        | 'body2'
-        | 'caption'
-        | 'overline'
-        | 'subtitle1'
-        | 'subtitle2';
-
-    type ComponentType = 'h1' | 'h2' | 'h3' | 'h4' | 'h5' | 'h6' | 'p' | 'span' | 'div';
+    import type { TypographyVariant, ComponentType } from './constants.js';
 
     interface Props {
         variant?: TypographyVariant;
