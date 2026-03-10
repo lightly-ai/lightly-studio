@@ -4,6 +4,7 @@ export { default as AnnotationsGridItem } from '$lib/components/AnnotationsGrid/
 export { default as Card } from '$lib/components/Card/Card.svelte';
 export { default as CardContent } from '$lib/components/CardContent/CardContent.svelte';
 export { default as CombinedMetadataDimensionsFilters } from '$lib/components/CombinedMetadataDimensionsFilters/CombinedMetadataDimensionsFilters.svelte';
+export { default as DefinitionList } from '$lib/components/DefinitionList/DefinitionList.svelte';
 export { default as DimensionFilters } from '$lib/components/DimensionFilters/index.svelte';
 export { default as ExportSamples } from '$lib/components/ExportSamples/ExportSamples.svelte';
 export { default as Checkbox } from '$lib/components/Form/Checkbox/Checkbox.svelte';
