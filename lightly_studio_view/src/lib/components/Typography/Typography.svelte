@@ -24,7 +24,7 @@
         component?: ComponentType;
         class?: string;
         children?: Snippet;
-        props: HTMLAttributes<HTMLElement>;
+        props?: HTMLAttributes<HTMLElement>;
     }
 
     let { variant = 'body1', component, class: className, children, props }: Props = $props();
