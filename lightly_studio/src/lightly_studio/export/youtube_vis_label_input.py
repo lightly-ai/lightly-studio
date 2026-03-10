@@ -175,6 +175,8 @@ def _build_videos_and_frame_map(
     videos: dict[UUID, Video] = {}
     frame_to_video_id_and_index: dict[UUID, tuple[UUID, int]] = {}
     frames_by_video_id: dict[UUID, list[VideoFrameTable]] = defaultdict(list)
+    # Get all frames for the videos. The frames are sorted by video and frame number, so the index
+    # in the list corresponds to the frame number.
     frames = video_frame_resolver.get_all_by_video_ids(
         session=session,
         video_ids=[sample.sample_id for sample in samples],
