@@ -35,7 +35,7 @@ class ImageFilter(BaseModel):
 
         if self.annotation_filter is not None:
             query = self.annotation_filter.apply_to_parent_sample_query(
-                query, col(ImageTable.sample_id)
+                query=query, sample_id_column=col(ImageTable.sample_id)
             )
 
         # Apply dimension-based filters to the query.
