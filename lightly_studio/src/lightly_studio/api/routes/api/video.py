@@ -110,7 +110,7 @@ def get_video_sample_ids(
     sample_filter = filters.sample_filter or SampleFilter(collection_id=collection_id)
     sample_filter.collection_id = collection_id
     filters.sample_filter = sample_filter
-    return video_resolver.get_sample_ids(session=session, filters=filters)
+    return list(video_resolver.get_sample_ids(session=session, filters=filters))
 
 
 @video_router.get("/{sample_id}", response_model=VideoView)
