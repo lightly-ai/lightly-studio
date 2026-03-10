@@ -19,7 +19,7 @@
 
     type ComponentType = 'h1' | 'h2' | 'h3' | 'h4' | 'h5' | 'h6' | 'p' | 'span' | 'div';
 
-    interface Props extends HTMLAttributes<HTMLElement> {
+    interface Props {
         variant?: TypographyVariant;
         component?: ComponentType;
         class?: string;
