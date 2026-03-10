@@ -10,7 +10,7 @@ from typing import Any
 from uuid import UUID
 
 import pytest
-from sqlmodel import Session, SQLModel, create_engine
+from sqlmodel import Session
 
 from lightly_studio.models.annotation.annotation_base import (
     AnnotationBaseTable,
@@ -46,16 +46,6 @@ from lightly_studio.resolvers import (
 from lightly_studio.type_definitions import PathLike
 from tests.resolvers.video import helpers as video_helpers
 
-
-@pytest.fixture
-def test_db() -> Generator[Session, None, None]:
-    """Fixture which yields an in-memory database unique to a test."""
-    # Setup a test database
-    engine = create_engine("duckdb:///:memory:")
-    SQLModel.metadata.create_all(engine)
-
-    with Session(engine) as session:
-        yield session
 
 
 def create_collection(
@@ -390,30 +380,30 @@ def create_caption(
 
 
 def fill_db_with_samples_and_embeddings(
-    test_db: Session,
+    session: Session,
     n_samples: int,
     embedding_model_names: list[str],
     embedding_dimension: int = 2,
 ) -> UUID:
     """Creates a collection and fills it with sample and embeddings."""
-    collection = create_collection(test_db)
+    collection = create_collection(session)
     embedding_models = []
     for embedding_model_name in embedding_model_names:
         embedding_model = create_embedding_model(
-            session=test_db,
+            session=session,
             collection_id=collection.collection_id,
             embedding_model_name=embedding_model_name,
         )
         embedding_models.append(embedding_model)
     for i in range(n_samples):
         image = create_image(
-            session=test_db,
+            session=session,
             collection_id=collection.collection_id,
             file_path_abs=f"sample_{i}.jpg",
         )
         for embedding_model in embedding_models:
             create_sample_embedding(
-                session=test_db,
+                session=session,
                 sample_id=image.sample_id,
                 embedding_model_id=embedding_model.embedding_model_id,
                 embedding=[i] * embedding_dimension,
@@ -422,7 +412,7 @@ def fill_db_with_samples_and_embeddings(
 
 
 def fill_db_with_video_samples_and_embeddings(
-    test_db: Session,
+    session: Session,
     n_samples: int,
     embedding_model_names: list[str],
     embedding_dimension: int = 2,
@@ -430,7 +420,7 @@ def fill_db_with_video_samples_and_embeddings(
     """Create a video collection and fill it with video samples and embeddings.
 
     Args:
-        test_db: Database session for the test.
+        session: Database session for the test.
         n_samples: Number of video samples to create.
         embedding_model_names: Names of embedding models to create and attach to each sample.
         embedding_dimension: Dimension of each embedding vector. Defaults to 2.
@@ -438,24 +428,24 @@ def fill_db_with_video_samples_and_embeddings(
     Returns:
         The collection_id of the created video collection.
     """
-    collection = create_collection(session=test_db, sample_type=SampleType.VIDEO)
+    collection = create_collection(session=session, sample_type=SampleType.VIDEO)
     embedding_models = []
     for embedding_model_name in embedding_model_names:
         embedding_model = create_embedding_model(
-            session=test_db,
+            session=session,
             collection_id=collection.collection_id,
             embedding_model_name=embedding_model_name,
         )
         embedding_models.append(embedding_model)
     for i in range(n_samples):
         video = video_helpers.create_video(
-            session=test_db,
+            session=session,
             collection_id=collection.collection_id,
             video=video_helpers.VideoStub(path=f"/path/to/sample_{i}.mp4"),
         )
         for embedding_model in embedding_models:
             create_sample_embedding(
-                session=test_db,
+                session=session,
                 sample_id=video.sample_id,
                 embedding_model_id=embedding_model.embedding_model_id,
                 embedding=[i] * embedding_dimension,
