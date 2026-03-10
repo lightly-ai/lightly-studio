@@ -14,26 +14,26 @@ from tests.helpers_resolvers import (
 )
 
 
-def test_get_all_by_parent_sample_ids(test_db: Session) -> None:
-    collection = create_collection(session=test_db)
+def test_get_all_by_parent_sample_ids(db_session: Session) -> None:
+    collection = create_collection(session=db_session)
     label = create_annotation_label(
-        session=test_db,
+        session=db_session,
         dataset_id=collection.collection_id,
         label_name="label",
     )
     image_b = create_image(
-        session=test_db,
+        session=db_session,
         collection_id=collection.collection_id,
         file_path_abs="sample_b.png",
     )
     image_a = create_image(
-        session=test_db,
+        session=db_session,
         collection_id=collection.collection_id,
         file_path_abs="sample_a.png",
     )
 
     annotations = create_annotations(
-        session=test_db,
+        session=db_session,
         collection_id=collection.collection_id,
         annotations=[
             AnnotationDetails(
@@ -55,7 +55,7 @@ def test_get_all_by_parent_sample_ids(test_db: Session) -> None:
     ]
 
     result = annotation_resolver.get_all_by_parent_sample_ids(
-        session=test_db,
+        session=db_session,
         parent_sample_ids=[
             image_b.sample_id,
         ],
@@ -68,8 +68,10 @@ def test_get_all_by_parent_sample_ids(test_db: Session) -> None:
 
 
 def test_get_all_by_parent_sample_ids_with_no_parent_sample_ids_returns_empty_result(
-    test_db: Session,
+    db_session: Session,
 ) -> None:
-    result = annotation_resolver.get_all_by_parent_sample_ids(session=test_db, parent_sample_ids=[])
+    result = annotation_resolver.get_all_by_parent_sample_ids(
+        session=db_session, parent_sample_ids=[]
+    )
 
     assert result == []

@@ -65,13 +65,17 @@ class TestNumericalFieldExpression:
         ],
     )
     def test_operators__real_db(
-        self, test_db: Session, operator: OrdinalOperator, test_value: float, expected_match: bool
+        self,
+        db_session: Session,
+        operator: OrdinalOperator,
+        test_value: float,
+        expected_match: bool,
     ) -> None:
         """Test numerical operators against a real database with a sample of height=100."""
         # Arrange
-        dataset = create_collection(session=test_db)
+        dataset = create_collection(session=db_session)
         image = create_image(
-            session=test_db,
+            session=db_session,
             collection_id=dataset.collection_id,
             file_path_abs="/path/to/test.jpg",
             width=200,
@@ -88,7 +92,7 @@ class TestNumericalFieldExpression:
             .where(SampleTable.collection_id == dataset.collection_id)
         )
         result_query = query.where(expr.get())
-        results = test_db.exec(result_query).all()
+        results = db_session.exec(result_query).all()
 
         # Assert
         if expected_match:
@@ -153,13 +157,13 @@ class TestStringFieldExpression:
         ],
     )
     def test_operators__real_db(
-        self, test_db: Session, operator: str, test_value: str, expected_match: bool
+        self, db_session: Session, operator: str, test_value: str, expected_match: bool
     ) -> None:
         """Test string operators against a real database with a sample named 'test.jpg'."""
         # Arrange
-        dataset = create_collection(session=test_db)
+        dataset = create_collection(session=db_session)
         image = create_image(
-            session=test_db,
+            session=db_session,
             collection_id=dataset.collection_id,
             file_path_abs="/path/to/test.jpg",
             width=200,
@@ -179,7 +183,7 @@ class TestStringFieldExpression:
             .where(SampleTable.collection_id == dataset.collection_id)
         )
         result_query = query.where(expr.get())
-        results = test_db.exec(result_query).all()
+        results = db_session.exec(result_query).all()
 
         # Assert
         if expected_match:

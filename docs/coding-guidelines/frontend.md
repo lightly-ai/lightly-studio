@@ -210,6 +210,25 @@ src/
 - Leverage Svelte's reactive declarations for local state management.
 - Leverage [$app/state](https://svelte.dev/tutorial/kit/page-state) for global state management and access to already loaded data.
 
+### Page State Access
+Use `$app/state` instead of `$app/stores` for accessing page state.
+
+**Bad Example:**
+```typescript
+import { page } from '$app/stores';
+
+// Accessing params with stores requires $ prefix
+$page.params.sampleId
+```
+
+**Good Example:**
+```typescript
+import { page } from '$app/state';
+
+// Accessing params directly without $ prefix
+page.params.sampleId
+```
+
 
 ## State Management
 - use reusable tiny hooks to avoid one big store for all the state management. E.g. [useTags](../../lightly_studio_view/src/lib/hooks/useTags/useTags.ts).
