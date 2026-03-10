@@ -28,6 +28,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- Improved semantic segmentation loading performance in the GUI.
+
 ### Deprecated
 
 ### Removed
