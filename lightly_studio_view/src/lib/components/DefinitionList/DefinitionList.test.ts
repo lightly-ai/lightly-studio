@@ -10,7 +10,7 @@ describe('DefinitionList', () => {
             }
         });
 
-        expect(container.querySelector('div')).toBeInTheDocument();
+        expect(container.querySelector('dl')).toBeInTheDocument();
     });
 
     it('renders items with labels and values', () => {
