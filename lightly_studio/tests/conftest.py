@@ -144,6 +144,7 @@ def db_session(
         assert _postgres_engine is not None
         with _postgres_engine.session() as session:
             yield session
+            session.rollback()
             _truncate_tables(session)
     else:
         test_manager = DatabaseEngine("duckdb:///:memory:", single_threaded=True)
@@ -550,4 +551,5 @@ def patch_collection(
 
     if use_postgres:
         with _postgres_engine.session() as session:
+            session.rollback()
             _truncate_tables(session)
