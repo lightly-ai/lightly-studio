@@ -59,11 +59,6 @@
         if (showTooltip) updateRect();
     };
 
-    if (typeof window !== 'undefined') {
-        window.addEventListener('resize', handleWindowChange);
-        window.addEventListener('scroll', handleWindowChange, true);
-    }
-
     onDestroy(() => {
         if (typeof window === 'undefined') return;
         window.removeEventListener('resize', handleWindowChange);
@@ -71,11 +66,22 @@
     });
 
     $effect(() => {
+        if (typeof window === 'undefined') return;
+
         if (!showTooltip) {
+            window.removeEventListener('resize', handleWindowChange);
+            window.removeEventListener('scroll', handleWindowChange, true);
             return;
         }
 
+        window.addEventListener('resize', handleWindowChange);
+        window.addEventListener('scroll', handleWindowChange, true);
         updateRect();
+
+        return () => {
+            window.removeEventListener('resize', handleWindowChange);
+            window.removeEventListener('scroll', handleWindowChange, true);
+        };
     });
 </script>
 
