@@ -12,4 +12,3 @@ This file contains:
 - Testing requirements
 - Development workflow
 - Contributing guidelines
-CLAUDE.md  
