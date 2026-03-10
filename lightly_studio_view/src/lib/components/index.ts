@@ -37,3 +37,5 @@ export { default as Segment } from '$lib/components/Segment/Segment.svelte';
 export { default as SelectableSvgGroup } from '$lib/components/SelectableSvgGroup/SelectableSvgGroup.svelte';
 export { Footer } from '$lib/components/Footer';
 export { default as GroupComponent } from '$lib/components/GroupComponent/GroupComponent.svelte';
+export { default as Image } from '$lib/components/Image/Image.svelte';
+export { default as VideoPreview } from '$lib/components/VideoPreview/VideoPreview.svelte';

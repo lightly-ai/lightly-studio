@@ -14,7 +14,7 @@
     } = $props();
 </script>
 
-<div class={cn('relative aspect-square', className)}>
+<div class={cn('aspect-square', className)}>
     <video
         {src}
         class="h-full w-full rounded-lg bg-black object-cover"

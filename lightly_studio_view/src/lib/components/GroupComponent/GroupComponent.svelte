@@ -13,9 +13,11 @@
     } = $props();
 </script>
 
-<Badge variant="secondary" class="absolute m-2">{title}</Badge>
-{#if type === 'image'}
-    <Image className="w-60 h-60 object-contain" {src} />
-{:else if type === 'video'}
-    <VideoPreview className="w-60 h-60 object-contain" {src} />
-{/if}
+<div class="relative flex h-60 w-60 items-start justify-start">
+    {#if type === 'image'}
+        <Image className="object-contain" {src} />
+    {:else if type === 'video'}
+        <VideoPreview className="object-contain" {src} />
+    {/if}
+    <Badge variant="secondary" class="absolute m-2">{title}</Badge>
+</div>
