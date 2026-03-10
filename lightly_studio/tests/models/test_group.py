@@ -10,6 +10,24 @@ from tests.helpers_resolvers import ImageStub, create_collection, create_images
 from tests.resolvers.video.helpers import VideoStub, create_video
 
 
+def test_component_collection_view_from_collection_table(db_session: Session) -> None:
+    """Test ComponentCollectionView.from_collection_table() factory method."""
+    collection = create_collection(session=db_session, sample_type=SampleType.VIDEO)
+    collection.group_component_name = "front_camera"
+    collection.group_component_index = 0
+    db_session.add(collection)
+    db_session.commit()
+
+    result = ComponentCollectionView.from_collection_table(collection=collection)
+
+    assert isinstance(result, ComponentCollectionView)
+    assert result.name == collection.name
+    assert result.parent_collection_id == collection.parent_collection_id
+    assert result.sample_type == SampleType.VIDEO
+    assert result.group_component_name == "front_camera"
+    assert result.group_component_index == 0
+
+
 def test_group_component_view_from_image_table(db_session: Session) -> None:
     """Test GroupComponentView.from_image_table() factory method."""
     collection = create_collection(session=db_session, sample_type=SampleType.IMAGE)

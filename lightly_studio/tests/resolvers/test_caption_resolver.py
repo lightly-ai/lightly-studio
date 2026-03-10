@@ -11,25 +11,25 @@ from lightly_studio.resolvers import caption_resolver, collection_resolver
 from tests.helpers_resolvers import create_collection, create_image
 
 
-def test_create_many__returns_empty_when_no_captions(test_db: Session) -> None:
-    collection_id = create_collection(session=test_db).collection_id
+def test_create_many__returns_empty_when_no_captions(db_session: Session) -> None:
+    collection_id = create_collection(session=db_session).collection_id
     assert (
         caption_resolver.create_many(
-            session=test_db, parent_collection_id=collection_id, captions=[]
+            session=db_session, parent_collection_id=collection_id, captions=[]
         )
         == []
     )
 
 
-def test_create_many(test_db: Session) -> None:
-    collection = create_collection(session=test_db)
+def test_create_many(db_session: Session) -> None:
+    collection = create_collection(session=db_session)
     image_one = create_image(
-        session=test_db,
+        session=db_session,
         collection_id=collection.collection_id,
         file_path_abs="/samples/sample_one.jpg",
     )
     image_two = create_image(
-        session=test_db,
+        session=db_session,
         collection_id=collection.collection_id,
         file_path_abs="/samples/sample_two.jpg",
     )
@@ -50,9 +50,9 @@ def test_create_many(test_db: Session) -> None:
     ]
 
     created_ids = caption_resolver.create_many(
-        session=test_db, parent_collection_id=collection.collection_id, captions=inputs
+        session=db_session, parent_collection_id=collection.collection_id, captions=inputs
     )
-    created = caption_resolver.get_by_ids(session=test_db, sample_ids=created_ids)
+    created = caption_resolver.get_by_ids(session=db_session, sample_ids=created_ids)
 
     assert len(created) == 3
     # Check first caption
@@ -70,17 +70,17 @@ def test_create_many(test_db: Session) -> None:
     assert created[2].parent_sample_id == image_two.sample_id
     assert created[2].text == "lorem ipsum dolor"
 
-    stored_captions = test_db.exec(select(CaptionTable)).all()
+    stored_captions = db_session.exec(select(CaptionTable)).all()
     assert len(stored_captions) == 3
 
 
-def test_create_many__check_collection_ids(test_db: Session) -> None:
-    collection = create_collection(session=test_db)
+def test_create_many__check_collection_ids(db_session: Session) -> None:
+    collection = create_collection(session=db_session)
     collection_id = collection.collection_id
-    image = create_image(session=test_db, collection_id=collection_id)
+    image = create_image(session=db_session, collection_id=collection_id)
 
     created_ids = caption_resolver.create_many(
-        session=test_db,
+        session=db_session,
         parent_collection_id=collection_id,
         captions=[
             CaptionCreate(
@@ -89,22 +89,22 @@ def test_create_many__check_collection_ids(test_db: Session) -> None:
             ),
         ],
     )
-    created = caption_resolver.get_by_ids(session=test_db, sample_ids=created_ids)[0]
+    created = caption_resolver.get_by_ids(session=db_session, sample_ids=created_ids)[0]
 
     expected_caption_collection_id = collection_resolver.get_or_create_child_collection(
-        session=test_db, collection_id=collection_id, sample_type=SampleType.CAPTION
+        session=db_session, collection_id=collection_id, sample_type=SampleType.CAPTION
     )
     assert created.sample.collection_id == expected_caption_collection_id
     assert created.parent_sample.collection_id == collection_id
 
 
-def test_create_many__relationships(test_db: Session) -> None:
-    collection = create_collection(session=test_db)
+def test_create_many__relationships(db_session: Session) -> None:
+    collection = create_collection(session=db_session)
     collection_id = collection.collection_id
-    image = create_image(session=test_db, collection_id=collection_id)
+    image = create_image(session=db_session, collection_id=collection_id)
 
     created_ids = caption_resolver.create_many(
-        session=test_db,
+        session=db_session,
         parent_collection_id=collection_id,
         captions=[
             CaptionCreate(
@@ -113,7 +113,7 @@ def test_create_many__relationships(test_db: Session) -> None:
             ),
         ],
     )
-    created = caption_resolver.get_by_ids(session=test_db, sample_ids=created_ids)[0]
+    created = caption_resolver.get_by_ids(session=db_session, sample_ids=created_ids)[0]
     caption_sample = created.sample
     parent_sample = created.parent_sample
 
@@ -129,17 +129,17 @@ def test_create_many__relationships(test_db: Session) -> None:
     assert caption_sample.captions == []
 
 
-def test_get_by_id(test_db: Session) -> None:
-    collection = create_collection(session=test_db)
+def test_get_by_id(db_session: Session) -> None:
+    collection = create_collection(session=db_session)
 
     image_a = create_image(
-        session=test_db,
+        session=db_session,
         collection_id=collection.collection_id,
         file_path_abs="/samples/a.jpg",
     )
 
     created_caption_ids = caption_resolver.create_many(
-        session=test_db,
+        session=db_session,
         parent_collection_id=collection.collection_id,
         captions=[
             CaptionCreate(
@@ -154,36 +154,36 @@ def test_get_by_id(test_db: Session) -> None:
     )
 
     # Retrieve 0
-    caption_retrieved = caption_resolver.get_by_ids(session=test_db, sample_ids=[])
+    caption_retrieved = caption_resolver.get_by_ids(session=db_session, sample_ids=[])
     assert len(caption_retrieved) == 0
 
     # Retrieve 1
     caption_retrieved = caption_resolver.get_by_ids(
-        session=test_db, sample_ids=[created_caption_ids[0]]
+        session=db_session, sample_ids=[created_caption_ids[0]]
     )
     assert len(caption_retrieved) == 1
     assert caption_retrieved[0].sample_id == created_caption_ids[0]
 
     # Retrieve many
     caption_retrieved = caption_resolver.get_by_ids(
-        session=test_db, sample_ids=[created_caption_ids[0], created_caption_ids[1]]
+        session=db_session, sample_ids=[created_caption_ids[0], created_caption_ids[1]]
     )
     assert len(caption_retrieved) == 2
     assert caption_retrieved[0].sample_id == created_caption_ids[0]
     assert caption_retrieved[1].sample_id == created_caption_ids[1]
 
 
-def test_update_text(test_db: Session) -> None:
-    collection = create_collection(session=test_db)
+def test_update_text(db_session: Session) -> None:
+    collection = create_collection(session=db_session)
 
     image_a = create_image(
-        session=test_db,
+        session=db_session,
         collection_id=collection.collection_id,
         file_path_abs="/samples/a.jpg",
     )
 
     created_caption_ids = caption_resolver.create_many(
-        session=test_db,
+        session=db_session,
         parent_collection_id=collection.collection_id,
         captions=[
             CaptionCreate(
@@ -195,11 +195,11 @@ def test_update_text(test_db: Session) -> None:
 
     # Update the text and double check it got updated
     caption_updated = caption_resolver.update_text(
-        session=test_db, sample_id=created_caption_ids[0], text="Updated text"
+        session=db_session, sample_id=created_caption_ids[0], text="Updated text"
     )
     assert caption_updated.text == "Updated text"
     caption_retrieved = caption_resolver.get_by_ids(
-        session=test_db, sample_ids=[created_caption_ids[0]]
+        session=db_session, sample_ids=[created_caption_ids[0]]
     )
     assert caption_retrieved[0].text == "Updated text"
 
@@ -207,21 +207,21 @@ def test_update_text(test_db: Session) -> None:
     wrong_id = uuid4()
     with pytest.raises(ValueError, match=f"Caption with ID {wrong_id} not found."):
         caption_updated = caption_resolver.update_text(
-            session=test_db, sample_id=wrong_id, text="Updated text"
+            session=db_session, sample_id=wrong_id, text="Updated text"
         )
 
 
-def test_delete_caption(test_db: Session) -> None:
-    collection = create_collection(session=test_db)
+def test_delete_caption(db_session: Session) -> None:
+    collection = create_collection(session=db_session)
 
     image = create_image(
-        session=test_db,
+        session=db_session,
         collection_id=collection.collection_id,
         file_path_abs="/samples/a.jpg",
     )
 
     caption_ids = caption_resolver.create_many(
-        session=test_db,
+        session=db_session,
         parent_collection_id=collection.collection_id,
         captions=[
             CaptionCreate(
@@ -239,7 +239,7 @@ def test_delete_caption(test_db: Session) -> None:
     assert len(image.sample.captions) == 2
 
     # Delete the first caption
-    caption_resolver.delete_caption(session=test_db, sample_id=caption_ids[0])
+    caption_resolver.delete_caption(session=db_session, sample_id=caption_ids[0])
 
     # Assert that only second caption is left
     assert len(image.sample.captions) == 1
@@ -248,4 +248,4 @@ def test_delete_caption(test_db: Session) -> None:
     # Try to delete a non-existing caption
     wrong_id = uuid4()
     with pytest.raises(ValueError, match=f"Caption with ID {wrong_id} not found."):
-        caption_resolver.delete_caption(session=test_db, sample_id=wrong_id)
+        caption_resolver.delete_caption(session=db_session, sample_id=wrong_id)
