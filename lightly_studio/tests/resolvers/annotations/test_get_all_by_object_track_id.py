@@ -17,16 +17,16 @@ from tests.helpers_resolvers import (
 
 
 def test_get_all_by_object_track_id_returns_only_track_annotations(
-    test_db: Session,
+    db_session: Session,
 ) -> None:
-    collection = create_collection(session=test_db)
+    collection = create_collection(session=db_session)
     dataset_id = collection.collection_id
-    label = create_annotation_label(session=test_db, dataset_id=dataset_id, label_name="label")
+    label = create_annotation_label(session=db_session, dataset_id=dataset_id, label_name="label")
 
-    img_1 = create_image(session=test_db, collection_id=dataset_id, file_path_abs="/tmp/1.png")
+    img_1 = create_image(session=db_session, collection_id=dataset_id, file_path_abs="/tmp/1.png")
 
     track_ids = object_track_resolver.create_many(
-        session=test_db,
+        session=db_session,
         tracks=[
             ObjectTrackCreate(object_track_number=1, dataset_id=dataset_id),
             ObjectTrackCreate(object_track_number=2, dataset_id=dataset_id),
@@ -35,7 +35,7 @@ def test_get_all_by_object_track_id_returns_only_track_annotations(
     track_a, track_b = track_ids
 
     annotations = create_annotations(
-        session=test_db,
+        session=db_session,
         collection_id=dataset_id,
         annotations=[
             AnnotationDetails(
@@ -60,7 +60,7 @@ def test_get_all_by_object_track_id_returns_only_track_annotations(
     ]
     assert len(track_a_annotations) == 2
     result = annotation_resolver.get_all_by_object_track_id(
-        session=test_db, object_track_id=track_a
+        session=db_session, object_track_id=track_a
     )
     assert len(result) == 2
     assert {annotation.sample_id for annotation in result} == {
@@ -70,25 +70,25 @@ def test_get_all_by_object_track_id_returns_only_track_annotations(
 
 
 def test_get_all_by_object_track_id__filter_by_annotation_type(
-    test_db: Session,
+    db_session: Session,
 ) -> None:
-    collection = create_collection(session=test_db)
+    collection = create_collection(session=db_session)
     dataset_id = collection.collection_id
-    label = create_annotation_label(session=test_db, dataset_id=dataset_id, label_name="label")
+    label = create_annotation_label(session=db_session, dataset_id=dataset_id, label_name="label")
 
     image_sample = create_image(
-        session=test_db, collection_id=dataset_id, file_path_abs="/tmp/1.png"
+        session=db_session, collection_id=dataset_id, file_path_abs="/tmp/1.png"
     )
 
     track_id = object_track_resolver.create_many(
-        session=test_db,
+        session=db_session,
         tracks=[
             ObjectTrackCreate(object_track_number=1, dataset_id=dataset_id),
         ],
     )[0]
 
     annotations = create_annotations(
-        session=test_db,
+        session=db_session,
         collection_id=dataset_id,
         annotations=[
             AnnotationDetails(
@@ -110,7 +110,7 @@ def test_get_all_by_object_track_id__filter_by_annotation_type(
         ],
     )
     result = annotation_resolver.get_all_by_object_track_id(
-        session=test_db,
+        session=db_session,
         object_track_id=track_id,
         annotation_types=[AnnotationType.SEMANTIC_SEGMENTATION],
     )

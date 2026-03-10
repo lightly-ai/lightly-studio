@@ -25,14 +25,14 @@ from tests.selection import helpers_selection
 
 class TestSelect:
     def test_diverse__embedding_model_name_unspecified(
-        self, test_db: Session, mocker: MockerFixture
+        self, db_session: Session, mocker: MockerFixture
     ) -> None:
         collection_id = helpers_resolvers.fill_db_with_samples_and_embeddings(
-            test_db=test_db, n_samples=20, embedding_model_names=["embedding_model_1"]
+            session=db_session, n_samples=20, embedding_model_names=["embedding_model_1"]
         )
-        collection_table = collection_resolver.get_by_id(test_db, collection_id)
+        collection_table = collection_resolver.get_by_id(db_session, collection_id)
         assert collection_table is not None
-        query = DatasetQuery(collection_table, test_db)
+        query = DatasetQuery(collection_table, db_session)
         spy_select_via_db = mocker.spy(select_file, "select_via_database")
 
         query.selection().diverse(
@@ -40,10 +40,10 @@ class TestSelect:
         )
 
         expected_sample_ids = [
-            sample.sample_id for sample in DatasetQuery(collection_table, test_db)
+            sample.sample_id for sample in DatasetQuery(collection_table, db_session)
         ]
         spy_select_via_db.assert_called_once_with(
-            session=test_db,
+            session=db_session,
             config=SelectionConfig(
                 collection_id=collection_id,
                 n_samples_to_select=3,
@@ -54,14 +54,14 @@ class TestSelect:
         )
 
     def test_diverse__embedding_model_name_specified(
-        self, test_db: Session, mocker: MockerFixture
+        self, db_session: Session, mocker: MockerFixture
     ) -> None:
         collection_id = helpers_resolvers.fill_db_with_samples_and_embeddings(
-            test_db=test_db, n_samples=20, embedding_model_names=["embedding_model_1"]
+            session=db_session, n_samples=20, embedding_model_names=["embedding_model_1"]
         )
-        collection_table = collection_resolver.get_by_id(test_db, collection_id)
+        collection_table = collection_resolver.get_by_id(db_session, collection_id)
         assert collection_table is not None
-        query = DatasetQuery(collection_table, test_db)
+        query = DatasetQuery(collection_table, db_session)
         spy_select_via_db = mocker.spy(select_file, "select_via_database")
 
         query.selection().diverse(
@@ -71,10 +71,10 @@ class TestSelect:
         )
 
         expected_sample_ids = [
-            sample.sample_id for sample in DatasetQuery(collection_table, test_db)
+            sample.sample_id for sample in DatasetQuery(collection_table, db_session)
         ]
         spy_select_via_db.assert_called_once_with(
-            session=test_db,
+            session=db_session,
             config=SelectionConfig(
                 collection_id=collection_id,
                 n_samples_to_select=3,
@@ -84,27 +84,27 @@ class TestSelect:
             input_sample_ids=expected_sample_ids,
         )
 
-    def test_annotation_balancing(self, test_db: Session, mocker: MockerFixture) -> None:
+    def test_annotation_balancing(self, db_session: Session, mocker: MockerFixture) -> None:
         collection_id = helpers_resolvers.fill_db_with_samples_and_embeddings(
-            test_db=test_db, n_samples=5, embedding_model_names=["embedding_model_1"]
+            session=db_session, n_samples=5, embedding_model_names=["embedding_model_1"]
         )
-        collection_table = collection_resolver.get_by_id(test_db, collection_id)
+        collection_table = collection_resolver.get_by_id(db_session, collection_id)
         assert collection_table is not None
 
         dummy_label = helpers_resolvers.create_annotation_label(
-            session=test_db, dataset_id=collection_id, label_name="test-label"
+            session=db_session, dataset_id=collection_id, label_name="test-label"
         )
 
         all_samples = image_resolver.get_all_by_collection_id(
-            session=test_db, pagination=None, collection_id=collection_id
+            session=db_session, pagination=None, collection_id=collection_id
         ).samples
 
         sample_id = all_samples[0].sample_id
 
-        query = DatasetQuery(collection_table, test_db)
+        query = DatasetQuery(collection_table, db_session)
 
         helpers_resolvers.create_annotations(
-            session=test_db,
+            session=db_session,
             collection_id=collection_id,
             annotations=[
                 AnnotationDetails(
@@ -126,7 +126,7 @@ class TestSelect:
         expected_sample_ids = [sample.sample_id for sample in all_samples]
 
         spy_select_via_db.assert_called_once_with(
-            session=test_db,
+            session=db_session,
             config=SelectionConfig(
                 collection_id=collection_id,
                 n_samples_to_select=5,
@@ -136,13 +136,13 @@ class TestSelect:
             input_sample_ids=expected_sample_ids,
         )
 
-    def test_metadata_weighting(self, test_db: Session, mocker: MockerFixture) -> None:
+    def test_metadata_weighting(self, db_session: Session, mocker: MockerFixture) -> None:
         collection_id = helpers_selection.fill_db_with_samples_and_metadata(
-            test_db=test_db, metadata=[16.0, 50.0, 35.0], metadata_key="speed"
+            session=db_session, metadata=[16.0, 50.0, 35.0], metadata_key="speed"
         )
-        collection_table = collection_resolver.get_by_id(test_db, collection_id)
+        collection_table = collection_resolver.get_by_id(db_session, collection_id)
         assert collection_table is not None
-        query = DatasetQuery(collection_table, test_db)
+        query = DatasetQuery(collection_table, db_session)
         spy_select_via_db = mocker.spy(select_file, "select_via_database")
         spy_mundig_add_weighting = mocker.spy(Mundig, "add_weighting")
 
@@ -153,10 +153,10 @@ class TestSelect:
         )
 
         expected_sample_ids = [
-            sample.sample_id for sample in DatasetQuery(collection_table, test_db)
+            sample.sample_id for sample in DatasetQuery(collection_table, db_session)
         ]
         spy_select_via_db.assert_called_once_with(
-            session=test_db,
+            session=db_session,
             config=SelectionConfig(
                 collection_id=collection_id,
                 n_samples_to_select=2,
@@ -169,19 +169,19 @@ class TestSelect:
             self=mocker.ANY, weights=[16.0, 50.0, 35.0], strength=1.0
         )
 
-    def test_multi_strategies(self, test_db: Session, mocker: MockerFixture) -> None:
+    def test_multi_strategies(self, db_session: Session, mocker: MockerFixture) -> None:
         collection_id = helpers_resolvers.fill_db_with_samples_and_embeddings(
-            test_db=test_db, n_samples=5, embedding_model_names=["model_1", "model_2"]
+            session=db_session, n_samples=5, embedding_model_names=["model_1", "model_2"]
         )
         helpers_selection.fill_db_metadata(
-            test_db=test_db,
+            session=db_session,
             collection_id=collection_id,
             metadata=[15.0, 47.0, 35.0, 18.0, 29.5],
             metadata_key="speed",
         )
-        collection_table = collection_resolver.get_by_id(test_db, collection_id)
+        collection_table = collection_resolver.get_by_id(db_session, collection_id)
         assert collection_table is not None
-        query = DatasetQuery(collection_table, test_db)
+        query = DatasetQuery(collection_table, db_session)
         spy_select_via_db = mocker.spy(select_file, "select_via_database")
 
         query.selection().multi_strategies(
@@ -195,10 +195,10 @@ class TestSelect:
         )
 
         expected_sample_ids = [
-            sample.sample_id for sample in DatasetQuery(collection_table, test_db)
+            sample.sample_id for sample in DatasetQuery(collection_table, db_session)
         ]
         spy_select_via_db.assert_called_once_with(
-            session=test_db,
+            session=db_session,
             config=SelectionConfig(
                 collection_id=collection_id,
                 n_samples_to_select=3,
