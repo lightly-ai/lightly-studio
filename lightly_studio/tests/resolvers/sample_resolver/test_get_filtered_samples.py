@@ -154,7 +154,9 @@ def test_get_filtered_samples__filters(
     )
 
     # Add a tag to sample2
-    tag = create_tag(session=db_session, collection_id=collection_id, tag_name="tag1", kind="sample")
+    tag = create_tag(
+        session=db_session, collection_id=collection_id, tag_name="tag1", kind="sample"
+    )
     tag_resolver.add_sample_ids_to_tag_id(
         session=db_session,
         tag_id=tag.tag_id,

@@ -65,7 +65,11 @@ class TestNumericalFieldExpression:
         ],
     )
     def test_operators__real_db(
-        self, db_session: Session, operator: OrdinalOperator, test_value: float, expected_match: bool
+        self,
+        db_session: Session,
+        operator: OrdinalOperator,
+        test_value: float,
+        expected_match: bool,
     ) -> None:
         """Test numerical operators against a real database with a sample of height=100."""
         # Arrange

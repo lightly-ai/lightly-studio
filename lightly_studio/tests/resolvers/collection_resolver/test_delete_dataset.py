@@ -72,7 +72,9 @@ def test_delete_dataset__with_images_and_annotations(db_session: Session) -> Non
 
     # Assert - collection, annotations, and labels deleted
     assert collection_resolver.get_by_id(session=db_session, collection_id=collection_id) is None
-    assert collection_resolver.get_by_id(session=db_session, collection_id=child_collection_id) is None
+    assert (
+        collection_resolver.get_by_id(session=db_session, collection_id=child_collection_id) is None
+    )
     assert annotation_label_resolver.get_by_id(session=db_session, label_id=label_id) is None
 
 
@@ -98,8 +100,12 @@ def test_delete_dataset__with_video_and_frames(db_session: Session) -> None:
     )
 
     # Assert - entire hierarchy deleted
-    assert collection_resolver.get_by_id(session=db_session, collection_id=root_collection_id) is None
-    assert collection_resolver.get_by_id(session=db_session, collection_id=child_collection_id) is None
+    assert (
+        collection_resolver.get_by_id(session=db_session, collection_id=root_collection_id) is None
+    )
+    assert (
+        collection_resolver.get_by_id(session=db_session, collection_id=child_collection_id) is None
+    )
 
 
 def test_delete_dataset__with_metadata(db_session: Session) -> None:
@@ -194,7 +200,9 @@ def test_delete_dataset__does_not_affect_other_datasets(db_session: Session) -> 
         session=db_session, collection_id=other_collection_id, file_path_abs="/other.png"
     )
     other_sample_id = other_image.sample_id  # Capture before delete
-    other_tag = create_tag(session=db_session, collection_id=other_collection_id, tag_name="tag_other")
+    other_tag = create_tag(
+        session=db_session, collection_id=other_collection_id, tag_name="tag_other"
+    )
     other_tag_id = other_tag.tag_id  # Capture before delete
 
     # Act
@@ -205,7 +213,8 @@ def test_delete_dataset__does_not_affect_other_datasets(db_session: Session) -> 
 
     # Assert - deleted dataset is gone
     assert (
-        collection_resolver.get_by_id(session=db_session, collection_id=delete_collection_id) is None
+        collection_resolver.get_by_id(session=db_session, collection_id=delete_collection_id)
+        is None
     )
     assert tag_resolver.get_by_id(session=db_session, tag_id=delete_tag_id) is None
 

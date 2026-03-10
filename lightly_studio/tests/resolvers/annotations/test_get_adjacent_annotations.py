@@ -8,7 +8,9 @@ from tests import helpers_resolvers
 
 
 def test_get_adjacent_annotations__orders_by_path(db_session: Session) -> None:
-    collection = helpers_resolvers.create_collection(session=db_session, sample_type=SampleType.IMAGE)
+    collection = helpers_resolvers.create_collection(
+        session=db_session, sample_type=SampleType.IMAGE
+    )
     collection_id = collection.collection_id
 
     label = helpers_resolvers.create_annotation_label(
@@ -70,7 +72,9 @@ def test_get_adjacent_annotations__orders_by_path(db_session: Session) -> None:
 def test_get_adjacent_annotations__raises_with_filter_missing_collection_id(
     db_session: Session,
 ) -> None:
-    collection = helpers_resolvers.create_collection(session=db_session, sample_type=SampleType.IMAGE)
+    collection = helpers_resolvers.create_collection(
+        session=db_session, sample_type=SampleType.IMAGE
+    )
     collection_id = collection.collection_id
 
     label = helpers_resolvers.create_annotation_label(
@@ -101,7 +105,9 @@ def test_get_adjacent_annotations__raises_with_filter_missing_collection_id(
 
 
 def test_get_adjacent_annotations__respects_annotation_filter(db_session: Session) -> None:
-    collection = helpers_resolvers.create_collection(session=db_session, sample_type=SampleType.IMAGE)
+    collection = helpers_resolvers.create_collection(
+        session=db_session, sample_type=SampleType.IMAGE
+    )
     collection_id = collection.collection_id
 
     dog_label = helpers_resolvers.create_annotation_label(
@@ -169,7 +175,9 @@ def test_get_adjacent_annotations__respects_annotation_filter(db_session: Sessio
 
 
 def test_get_adjacent_annotations__respects_annotation_tags(db_session: Session) -> None:
-    collection = helpers_resolvers.create_collection(session=db_session, sample_type=SampleType.IMAGE)
+    collection = helpers_resolvers.create_collection(
+        session=db_session, sample_type=SampleType.IMAGE
+    )
     collection_id = collection.collection_id
 
     dog_label = helpers_resolvers.create_annotation_label(
@@ -258,7 +266,9 @@ def test_get_adjacent_annotations__respects_annotation_tags(db_session: Session)
 
 
 def test_get_adjacent_annotations__respects_sample_tags(db_session: Session) -> None:
-    collection = helpers_resolvers.create_collection(session=db_session, sample_type=SampleType.IMAGE)
+    collection = helpers_resolvers.create_collection(
+        session=db_session, sample_type=SampleType.IMAGE
+    )
     collection_id = collection.collection_id
 
     dog_label = helpers_resolvers.create_annotation_label(
@@ -346,7 +356,9 @@ def test_get_adjacent_annotations__respects_sample_tags(db_session: Session) -> 
     assert result.total_count == 3
 
 
-def test_get_adjacent_annotations__returns_none_when_sample_not_in_filter(db_session: Session) -> None:
+def test_get_adjacent_annotations__returns_none_when_sample_not_in_filter(
+    db_session: Session,
+) -> None:
     collection = helpers_resolvers.create_collection(session=db_session)
     collection_1 = helpers_resolvers.create_collection(
         session=db_session, collection_name="collection_1"

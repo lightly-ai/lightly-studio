@@ -237,9 +237,15 @@ class TestDatasetQueryMatch:
         cat_tag = create_tag(session=db_session, collection_id=dataset_id, tag_name="cat")
 
         # Assign tags
-        tag_resolver.add_tag_to_sample(session=db_session, tag_id=dog_tag.tag_id, sample=image2.sample)
-        tag_resolver.add_tag_to_sample(session=db_session, tag_id=dog_tag.tag_id, sample=image3.sample)
-        tag_resolver.add_tag_to_sample(session=db_session, tag_id=cat_tag.tag_id, sample=image3.sample)
+        tag_resolver.add_tag_to_sample(
+            session=db_session, tag_id=dog_tag.tag_id, sample=image2.sample
+        )
+        tag_resolver.add_tag_to_sample(
+            session=db_session, tag_id=dog_tag.tag_id, sample=image3.sample
+        )
+        tag_resolver.add_tag_to_sample(
+            session=db_session, tag_id=cat_tag.tag_id, sample=image3.sample
+        )
 
         # Test dog tag
         query = DatasetQuery(dataset=dataset, session=db_session)

@@ -47,7 +47,9 @@ def test_create_many_sample_embeddings(db_session: Session) -> None:
     # Create 3 samples.
     samples = [
         create_image(
-            session=db_session, collection_id=collection_id, file_path_abs=f"/path/to/sample_{i}.png"
+            session=db_session,
+            collection_id=collection_id,
+            file_path_abs=f"/path/to/sample_{i}.png",
         )
         for i in range(3)
     ]
@@ -125,7 +127,9 @@ def test_get_sample_embeddings_by_sample_ids(db_session: Session) -> None:
     # Create 3 samples.
     samples = [
         create_image(
-            session=db_session, collection_id=collection_id, file_path_abs=f"/path/to/sample_{i}.png"
+            session=db_session,
+            collection_id=collection_id,
+            file_path_abs=f"/path/to/sample_{i}.png",
         )
         for i in range(3)
     ]

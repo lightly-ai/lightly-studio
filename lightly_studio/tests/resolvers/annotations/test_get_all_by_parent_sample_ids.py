@@ -70,6 +70,8 @@ def test_get_all_by_parent_sample_ids(db_session: Session) -> None:
 def test_get_all_by_parent_sample_ids_with_no_parent_sample_ids_returns_empty_result(
     db_session: Session,
 ) -> None:
-    result = annotation_resolver.get_all_by_parent_sample_ids(session=db_session, parent_sample_ids=[])
+    result = annotation_resolver.get_all_by_parent_sample_ids(
+        session=db_session, parent_sample_ids=[]
+    )
 
     assert result == []

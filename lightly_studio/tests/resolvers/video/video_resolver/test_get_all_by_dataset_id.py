@@ -37,7 +37,9 @@ def test_get_all_by_collection_id(db_session: Session) -> None:
     )
 
     # Act
-    result = video_resolver.get_all_by_collection_id(session=db_session, collection_id=collection_id)
+    result = video_resolver.get_all_by_collection_id(
+        session=db_session, collection_id=collection_id
+    )
 
     # Assert
     assert len(result.samples) == 2
@@ -57,7 +59,9 @@ def test_get_all_by_collection_id__first_frame(db_session: Session) -> None:
     )
 
     # Act
-    result = video_resolver.get_all_by_collection_id(session=db_session, collection_id=collection_id)
+    result = video_resolver.get_all_by_collection_id(
+        session=db_session, collection_id=collection_id
+    )
 
     # Assert
     assert len(result.samples) == 1
@@ -131,7 +135,9 @@ def test_get_all_by_collection_id__empty_output(
     collection_id = collection.collection_id
 
     # Act
-    result = video_resolver.get_all_by_collection_id(session=db_session, collection_id=collection_id)
+    result = video_resolver.get_all_by_collection_id(
+        session=db_session, collection_id=collection_id
+    )
 
     # Assert
     assert len(result.samples) == 0  # Should return an empty list

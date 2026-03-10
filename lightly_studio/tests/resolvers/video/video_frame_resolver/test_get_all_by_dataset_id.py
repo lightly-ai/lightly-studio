@@ -112,7 +112,9 @@ def test_get_all_by_collection_id(db_session: Session) -> None:
 
 
 def test_get_all_by_collection_id__with_frame_number_filter(db_session: Session) -> None:
-    collection_id = create_collection(session=db_session, sample_type=SampleType.VIDEO).collection_id
+    collection_id = create_collection(
+        session=db_session, sample_type=SampleType.VIDEO
+    ).collection_id
 
     video_frame_data = create_video_with_frames(
         session=db_session,

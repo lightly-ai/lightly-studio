@@ -13,7 +13,9 @@ from tests.resolvers.video import helpers as video_helpers
 
 
 def test_get_adjacent_video_frames__orders_by_path_and_frame_number(db_session: Session) -> None:
-    collection = helpers_resolvers.create_collection(session=db_session, sample_type=SampleType.VIDEO)
+    collection = helpers_resolvers.create_collection(
+        session=db_session, sample_type=SampleType.VIDEO
+    )
 
     video_frames_a = video_helpers.create_video_with_frames(
         session=db_session,
@@ -51,7 +53,9 @@ def test_get_adjacent_video_frames__orders_by_path_and_frame_number(db_session: 
 
 
 def test_get_adjacent_video_frames__respects_sample_ids(db_session: Session) -> None:
-    collection = helpers_resolvers.create_collection(session=db_session, sample_type=SampleType.VIDEO)
+    collection = helpers_resolvers.create_collection(
+        session=db_session, sample_type=SampleType.VIDEO
+    )
     video_frames = video_helpers.create_video_with_frames(
         session=db_session,
         collection_id=collection.collection_id,
@@ -87,7 +91,9 @@ def test_get_adjacent_video_frames__respects_sample_ids(db_session: Session) -> 
 
 
 def test_get_adjacent_video_frames__raises_without_collection_id(db_session: Session) -> None:
-    collection = helpers_resolvers.create_collection(session=db_session, sample_type=SampleType.VIDEO)
+    collection = helpers_resolvers.create_collection(
+        session=db_session, sample_type=SampleType.VIDEO
+    )
     video_frames = video_helpers.create_video_with_frames(
         session=db_session,
         collection_id=collection.collection_id,
@@ -109,7 +115,9 @@ def test_get_adjacent_video_frames__raises_without_collection_id(db_session: Ses
 def test_get_adjacent_video_frames__raises_without_parent_video_collection_id(
     db_session: Session,
 ) -> None:
-    collection = helpers_resolvers.create_collection(session=db_session, sample_type=SampleType.VIDEO)
+    collection = helpers_resolvers.create_collection(
+        session=db_session, sample_type=SampleType.VIDEO
+    )
     video_frames = video_helpers.create_video_with_frames(
         session=db_session,
         collection_id=collection.collection_id,
@@ -134,7 +142,9 @@ def test_get_adjacent_video_frames__raises_without_parent_video_collection_id(
 
 
 def test_get_adjacent_video_frames__respects_annotation_filter(db_session: Session) -> None:
-    collection = helpers_resolvers.create_collection(session=db_session, sample_type=SampleType.VIDEO)
+    collection = helpers_resolvers.create_collection(
+        session=db_session, sample_type=SampleType.VIDEO
+    )
 
     video_frames = video_helpers.create_video_with_frames(
         session=db_session,
@@ -196,7 +206,9 @@ def test_get_adjacent_video_frames__respects_annotation_filter(db_session: Sessi
 
 
 def test_get_adjacent_video_frames__filters_by_parent_video_filter(db_session: Session) -> None:
-    collection = helpers_resolvers.create_collection(session=db_session, sample_type=SampleType.VIDEO)
+    collection = helpers_resolvers.create_collection(
+        session=db_session, sample_type=SampleType.VIDEO
+    )
 
     video_a = video_helpers.create_video_with_frames(
         session=db_session,
@@ -236,7 +248,9 @@ def test_get_adjacent_video_frames__filters_by_parent_video_filter(db_session: S
 
 
 def test_get_adjacent_video_frames__filters_by_parent_video_tags(db_session: Session) -> None:
-    collection = helpers_resolvers.create_collection(session=db_session, sample_type=SampleType.VIDEO)
+    collection = helpers_resolvers.create_collection(
+        session=db_session, sample_type=SampleType.VIDEO
+    )
 
     video_a = video_helpers.create_video_with_frames(
         session=db_session,
@@ -285,8 +299,12 @@ def test_get_adjacent_video_frames__filters_by_parent_video_tags(db_session: Ses
     assert result.total_count == len(video_b.frame_sample_ids)
 
 
-def test_get_adjacent_video_frames__filters_by_parent_video_annotations(db_session: Session) -> None:
-    collection = helpers_resolvers.create_collection(session=db_session, sample_type=SampleType.VIDEO)
+def test_get_adjacent_video_frames__filters_by_parent_video_annotations(
+    db_session: Session,
+) -> None:
+    collection = helpers_resolvers.create_collection(
+        session=db_session, sample_type=SampleType.VIDEO
+    )
 
     video_a = video_helpers.create_video_with_frames(
         session=db_session,
@@ -346,7 +364,9 @@ def test_get_adjacent_video_frames__filters_by_parent_video_annotations(db_sessi
 
 
 def test_get_adjacent_video_frames__uses_video_text_embedding(db_session: Session) -> None:
-    collection = helpers_resolvers.create_collection(session=db_session, sample_type=SampleType.VIDEO)
+    collection = helpers_resolvers.create_collection(
+        session=db_session, sample_type=SampleType.VIDEO
+    )
 
     embedding_model = helpers_resolvers.create_embedding_model(
         session=db_session,
@@ -459,7 +479,9 @@ def test_get_adjacent_video_frames__requires_resolvable_collection_for_text_embe
 def test_get_adjacent_video_frames__returns_none_when_sample_not_in_filter(
     db_session: Session,
 ) -> None:
-    collection = helpers_resolvers.create_collection(session=db_session, sample_type=SampleType.VIDEO)
+    collection = helpers_resolvers.create_collection(
+        session=db_session, sample_type=SampleType.VIDEO
+    )
     collection_1 = helpers_resolvers.create_collection(
         session=db_session, collection_name="collection_1", sample_type=SampleType.VIDEO
     )

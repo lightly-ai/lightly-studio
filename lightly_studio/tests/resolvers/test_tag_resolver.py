@@ -189,7 +189,9 @@ def test_get_or_create_sample_tag_by_name(db_session: Session) -> None:
     collection_id = collection.collection_id
 
     # Create an existing tag
-    existing_tag = create_tag(session=db_session, collection_id=collection_id, tag_name="existing_tag")
+    existing_tag = create_tag(
+        session=db_session, collection_id=collection_id, tag_name="existing_tag"
+    )
 
     # Case 1: Get existing tag
     result_tag = tag_resolver.get_or_create_sample_tag_by_name(

@@ -3,13 +3,12 @@
 from __future__ import annotations
 
 import uuid
-from collections.abc import Generator, Sequence
+from collections.abc import Sequence
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 from uuid import UUID
 
-import pytest
 from sqlmodel import Session
 
 from lightly_studio.models.annotation.annotation_base import (
@@ -45,7 +44,6 @@ from lightly_studio.resolvers import (
 )
 from lightly_studio.type_definitions import PathLike
 from tests.resolvers.video import helpers as video_helpers
-
 
 
 def create_collection(

@@ -26,7 +26,9 @@ def test__calculate_2d_embeddings__2_samples() -> None:
 def test_get_twodim_embeddings__no_samples(
     db_session: Session,
 ) -> None:
-    collection = helpers_resolvers.create_collection(session=db_session, collection_name="no_samples")
+    collection = helpers_resolvers.create_collection(
+        session=db_session, collection_name="no_samples"
+    )
     embedding_model = helpers_resolvers.create_embedding_model(
         session=db_session,
         collection_id=collection.collection_id,

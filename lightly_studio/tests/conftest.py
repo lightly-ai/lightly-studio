@@ -200,7 +200,6 @@ def create_test_base_annotations(
     return list(annotation_resolver.get_by_ids(session=db_session, annotation_ids=annotation_ids))
 
 
-
 @pytest.fixture
 def annotation_tags(
     db_session: Session,

@@ -107,7 +107,9 @@ class TestImageSample:
         assert [tag.name for tag in sample.sample_table.tags] == ["tag2"]
 
         # Test removing a tag that exists in database but isn't associated with sample
-        create_tag(session=db_session, collection_id=collection.collection_id, tag_name="unassociated")
+        create_tag(
+            session=db_session, collection_id=collection.collection_id, tag_name="unassociated"
+        )
         sample.remove_tag("unassociated")
         assert [tag.name for tag in sample.sample_table.tags] == ["tag2"]
 

@@ -420,7 +420,8 @@ def test_deep_copy__can_delete_original_after_copy(db_session: Session) -> None:
     )
     assert copied_check is not None
     assert (
-        collection_resolver.get_by_id(session=db_session, collection_id=original_collection_id) is None
+        collection_resolver.get_by_id(session=db_session, collection_id=original_collection_id)
+        is None
     )
 
     # Assert - copied collection still has embeddings

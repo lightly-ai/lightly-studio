@@ -10,7 +10,9 @@ from tests.resolvers.video import helpers as video_helpers
 
 
 def test_get_adjacent_videos__orders_by_path(db_session: Session) -> None:
-    collection = helpers_resolvers.create_collection(session=db_session, sample_type=SampleType.VIDEO)
+    collection = helpers_resolvers.create_collection(
+        session=db_session, sample_type=SampleType.VIDEO
+    )
     collection_id = collection.collection_id
 
     video_a = video_helpers.create_video(
@@ -44,7 +46,9 @@ def test_get_adjacent_videos__orders_by_path(db_session: Session) -> None:
 
 
 def test_get_adjacent_videos__respects_sample_ids(db_session: Session) -> None:
-    collection = helpers_resolvers.create_collection(session=db_session, sample_type=SampleType.VIDEO)
+    collection = helpers_resolvers.create_collection(
+        session=db_session, sample_type=SampleType.VIDEO
+    )
     collection_id = collection.collection_id
 
     video_helpers.create_video(
@@ -82,7 +86,9 @@ def test_get_adjacent_videos__respects_sample_ids(db_session: Session) -> None:
 
 
 def test_get_adjacent_videos__raises_with_filter_missing_collection_id(db_session: Session) -> None:
-    collection = helpers_resolvers.create_collection(session=db_session, sample_type=SampleType.VIDEO)
+    collection = helpers_resolvers.create_collection(
+        session=db_session, sample_type=SampleType.VIDEO
+    )
     collection_id = collection.collection_id
 
     video = video_helpers.create_video(
@@ -100,7 +106,9 @@ def test_get_adjacent_videos__raises_with_filter_missing_collection_id(db_sessio
 
 
 def test_get_adjacent_videos__respects_annotation_filter(db_session: Session) -> None:
-    collection = helpers_resolvers.create_collection(session=db_session, sample_type=SampleType.VIDEO)
+    collection = helpers_resolvers.create_collection(
+        session=db_session, sample_type=SampleType.VIDEO
+    )
     collection_id = collection.collection_id
 
     dog_label = helpers_resolvers.create_annotation_label(
@@ -169,7 +177,9 @@ def test_get_adjacent_videos__respects_annotation_filter(db_session: Session) ->
 
 
 def test_get_adjacent_videos__with_similarity(db_session: Session) -> None:
-    collection = helpers_resolvers.create_collection(session=db_session, sample_type=SampleType.VIDEO)
+    collection = helpers_resolvers.create_collection(
+        session=db_session, sample_type=SampleType.VIDEO
+    )
     collection_id = collection.collection_id
 
     embedding_model = helpers_resolvers.create_embedding_model(
@@ -234,7 +244,9 @@ def test_get_adjacent_videos__with_similarity(db_session: Session) -> None:
 
 
 def test_get_adjacent_videos__returns_none_when_sample_not_in_filter(db_session: Session) -> None:
-    collection = helpers_resolvers.create_collection(session=db_session, sample_type=SampleType.VIDEO)
+    collection = helpers_resolvers.create_collection(
+        session=db_session, sample_type=SampleType.VIDEO
+    )
     collection_1 = helpers_resolvers.create_collection(
         session=db_session, collection_name="collection_1", sample_type=SampleType.VIDEO
     )

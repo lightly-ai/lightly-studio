@@ -43,7 +43,9 @@ def test_get_all_by_collection_id(db_session: Session) -> None:
     )
 
     # Act
-    result = image_resolver.get_all_by_collection_id(session=db_session, collection_id=collection_id)
+    result = image_resolver.get_all_by_collection_id(
+        session=db_session, collection_id=collection_id
+    )
 
     # Assert
     assert len(result.samples) == 2
@@ -120,7 +122,9 @@ def test_get_all_by_collection_id__empty_output(
     collection_id = collection.collection_id
 
     # Act
-    result = image_resolver.get_all_by_collection_id(session=db_session, collection_id=collection_id)
+    result = image_resolver.get_all_by_collection_id(
+        session=db_session, collection_id=collection_id
+    )
 
     # Assert
     assert len(result.samples) == 0  # Should return an empty list
@@ -180,7 +184,9 @@ def test_get_all_by_collection_id__with_annotation_filtering(
     )
 
     # Test without filtering
-    result = image_resolver.get_all_by_collection_id(session=db_session, collection_id=collection_id)
+    result = image_resolver.get_all_by_collection_id(
+        session=db_session, collection_id=collection_id
+    )
     assert len(result.samples) == 2
     assert result.total_count == 2
 

@@ -95,6 +95,8 @@ def test_complex_metadata_filter(db_session: Session) -> None:
 
     gps_filter = [Metadata("gps_location.lat") > 35]
     sample_filter = SampleFilter(metadata_filters=gps_filter)
-    samples = sample_resolver.get_filtered_samples(session=db_session, filters=sample_filter).samples
+    samples = sample_resolver.get_filtered_samples(
+        session=db_session, filters=sample_filter
+    ).samples
     assert len(samples) == 1
     assert samples[0].sample_id == sample1.sample_id

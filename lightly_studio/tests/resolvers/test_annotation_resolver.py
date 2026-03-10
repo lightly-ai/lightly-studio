@@ -149,7 +149,9 @@ def test_create_and_get_annotation(db_session: Session, test_data: _TestData) ->
 
 
 def test_create_and_get_annotation__for_video_frame_with_ordering(db_session: Session) -> None:
-    collection_id = create_collection(session=db_session, sample_type=SampleType.VIDEO).collection_id
+    collection_id = create_collection(
+        session=db_session, sample_type=SampleType.VIDEO
+    ).collection_id
 
     # Create video.
     video_ids = create_videos(

@@ -17,11 +17,15 @@ def test_get_by_id(db_session: Session) -> None:
     collection_id = ds1.collection_id
 
     # Fetch an existing collection
-    collection_fetched = collection_resolver.get_by_id(session=db_session, collection_id=collection_id)
+    collection_fetched = collection_resolver.get_by_id(
+        session=db_session, collection_id=collection_id
+    )
     assert collection_fetched is not None
     assert collection_fetched.collection_id == collection_id
     assert collection_fetched.name == "ds1"
 
     # Fetch a non-existing collection
-    collection_fetched = collection_resolver.get_by_id(session=db_session, collection_id=UUID(int=123))
+    collection_fetched = collection_resolver.get_by_id(
+        session=db_session, collection_id=UUID(int=123)
+    )
     assert collection_fetched is None

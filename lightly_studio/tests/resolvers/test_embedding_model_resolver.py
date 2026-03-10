@@ -271,7 +271,9 @@ def test_get_or_create__creates_new_model(db_session: Session) -> None:
         parameter_count_in_mb=200,
         embedding_dimension=768,
     )
-    created = embedding_model_resolver.get_or_create(session=db_session, embedding_model=model_create)
+    created = embedding_model_resolver.get_or_create(
+        session=db_session, embedding_model=model_create
+    )
 
     assert created.embedding_model_hash == "model_hash"
     assert created.name == "Model Name"
@@ -300,7 +302,9 @@ def test_get_or_create__reuses_existing_model(db_session: Session) -> None:
         embedding_dimension=32,
     )
 
-    reused = embedding_model_resolver.get_or_create(session=db_session, embedding_model=model_create)
+    reused = embedding_model_resolver.get_or_create(
+        session=db_session, embedding_model=model_create
+    )
 
     assert reused.embedding_model_id == existing.embedding_model_id
     models = embedding_model_resolver.get_all_by_collection_id(

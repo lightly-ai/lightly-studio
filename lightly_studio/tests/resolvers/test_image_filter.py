@@ -26,7 +26,9 @@ from tests.helpers_resolvers import (
 
 class TestImageFilter:
     @pytest.fixture
-    def setup_samples_filter_test(self, db_session: Session) -> tuple[list[ImageTable], UUID, Session]:
+    def setup_samples_filter_test(
+        self, db_session: Session
+    ) -> tuple[list[ImageTable], UUID, Session]:
         """Create sample data for testing."""
         collection = create_collection(session=db_session)
         collection_id = collection.collection_id
