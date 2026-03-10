@@ -36,7 +36,7 @@ def test_create_sample_embedding(db_session: Session) -> None:
         embedding_model_id=embedding_model_id,
     )
     assert sample_embedding.sample_id == sample_id
-    assert sample_embedding.embedding == [1.0, 2.0, 3.0]
+    assert list(sample_embedding.embedding) == [1.0, 2.0, 3.0]
 
 
 def test_create_many_sample_embeddings(db_session: Session) -> None:
@@ -79,7 +79,7 @@ def test_create_many_sample_embeddings(db_session: Session) -> None:
         sample_from_db = image_resolver.get_by_id(session=db_session, sample_id=sample.sample_id)
         assert sample_from_db is not None
         assert len(sample_from_db.sample.embeddings) == 1
-        assert sample_from_db.sample.embeddings[0].embedding == [
+        assert list(sample_from_db.sample.embeddings[0].embedding) == [
             float(i),
             float(i + 1),
             float(i + 2),
@@ -107,16 +107,16 @@ def test_add_sample_embedding_to_sample(db_session: Session) -> None:
         embedding_model_id=embedding_model_id,
     )
     assert sample_embedding.sample_id == sample_id
-    assert sample_embedding.embedding == [1.0, 2.0, 3.0]
+    assert list(sample_embedding.embedding) == [1.0, 2.0, 3.0]
 
     assert len(image.sample.embeddings) == 1
-    assert sample_embedding.embedding == image.sample.embeddings[0].embedding
+    assert list(sample_embedding.embedding) == list(image.sample.embeddings[0].embedding)
 
     # Read sample from the db and check the embedding.
     sample_from_db = image_resolver.get_by_id(session=db_session, sample_id=sample_id)
     assert sample_from_db is not None
     assert len(sample_from_db.sample.embeddings) == 1
-    assert sample_embedding.embedding == sample_from_db.sample.embeddings[0].embedding
+    assert list(sample_embedding.embedding) == list(sample_from_db.sample.embeddings[0].embedding)
 
 
 def test_get_sample_embeddings_by_sample_ids(db_session: Session) -> None:
@@ -166,7 +166,7 @@ def test_get_sample_embeddings_by_sample_ids(db_session: Session) -> None:
     )
     assert len(embeddings) == 1
     assert embeddings[0].sample_id == samples[0].sample_id
-    assert embeddings[0].embedding == samples[0].sample.embeddings[0].embedding
+    assert list(embeddings[0].embedding) == list(samples[0].sample.embeddings[0].embedding)
 
     embeddings = sample_embedding_resolver.get_by_sample_ids(
         session=db_session,
