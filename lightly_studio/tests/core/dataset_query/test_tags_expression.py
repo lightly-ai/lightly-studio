@@ -24,17 +24,17 @@ class TestTagsContainsExpression:
         assert "FROM tag, sampletaglinktable" in sql
         assert "tag.name = 'car'" in sql
 
-    def test_apply__can_be_chained(self, test_db: Session) -> None:
+    def test_apply__can_be_chained(self, db_session: Session) -> None:
         """Test that multiple TagsContainsExpression can be applied to a query."""
-        dataset = create_collection(session=test_db)
-        image = create_image(session=test_db, collection_id=dataset.collection_id)
-        tag = create_tag(session=test_db, collection_id=dataset.collection_id, tag_name="car")
-        tag_resolver.add_tag_to_sample(session=test_db, tag_id=tag.tag_id, sample=image.sample)
+        dataset = create_collection(session=db_session)
+        image = create_image(session=db_session, collection_id=dataset.collection_id)
+        tag = create_tag(session=db_session, collection_id=dataset.collection_id, tag_name="car")
+        tag_resolver.add_tag_to_sample(session=db_session, tag_id=tag.tag_id, sample=image.sample)
 
         query = select(ImageTable)
         query = query.where(ImageSampleField.tags.contains("vehicle").get())
         query = query.where(ImageSampleField.tags.contains("car").get())
 
         # The sample has only one out of the two tags, no results are expected
-        results = test_db.exec(query).all()
+        results = db_session.exec(query).all()
         assert len(results) == 0

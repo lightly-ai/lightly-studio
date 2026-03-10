@@ -18,17 +18,17 @@ from tests.helpers_resolvers import (
 )
 
 
-def test_compute_similarity_metadata(test_db: Session) -> None:
-    collection = create_collection(session=test_db, collection_name="similarity_test")
+def test_compute_similarity_metadata(db_session: Session) -> None:
+    collection = create_collection(session=db_session, collection_name="similarity_test")
     collection_id = collection.collection_id
     embedding_model = create_embedding_model(
-        session=test_db,
+        session=db_session,
         collection_id=collection_id,
         embedding_model_name="example_embedding_model",
     )
     embedding_model_id = embedding_model.embedding_model_id
     samples = create_samples_with_embeddings(
-        session=test_db,
+        session=db_session,
         collection_id=collection_id,
         embedding_model_id=embedding_model_id,
         images_and_embeddings=[
@@ -39,23 +39,23 @@ def test_compute_similarity_metadata(test_db: Session) -> None:
         ],
     )
 
-    query_tag = create_tag(session=test_db, collection_id=collection_id, tag_name="query_tag")
+    query_tag = create_tag(session=db_session, collection_id=collection_id, tag_name="query_tag")
     query_tag_id = query_tag.tag_id
     tag_resolver.add_sample_ids_to_tag_id(
-        session=test_db,
+        session=db_session,
         tag_id=query_tag_id,
         sample_ids=[samples[0].sample_id, samples[2].sample_id],
     )
 
     compute_similarity.compute_similarity_metadata(
-        session=test_db,
+        session=db_session,
         key_collection_id=collection_id,
         embedding_model_id=embedding_model_id,
         query_tag_id=query_tag_id,
         metadata_name="similarity",
     )
 
-    enriched_samples = list(DatasetQuery(dataset=collection, session=test_db))
+    enriched_samples = list(DatasetQuery(dataset=collection, session=db_session))
     # The nearest neighbor of embedding1 is embedding0 with distance 0.1.
     # The nearest neighbor of embedding3 is embedding2 with distance sqrt(2).
     # So similarity of sample1 should be higher than similarity of sample3.
@@ -67,17 +67,17 @@ def test_compute_similarity_metadata(test_db: Session) -> None:
     assert enriched_samples[2].metadata["similarity"] == 1.0
 
 
-def test_compute_similarity_metadata_missing_query(test_db: Session) -> None:
-    collection = create_collection(session=test_db, collection_name="similarity_test")
+def test_compute_similarity_metadata_missing_query(db_session: Session) -> None:
+    collection = create_collection(session=db_session, collection_name="similarity_test")
     collection_id = collection.collection_id
     embedding_model = create_embedding_model(
-        session=test_db,
+        session=db_session,
         collection_id=collection_id,
         embedding_model_name="example_embedding_model",
     )
     embedding_model_id = embedding_model.embedding_model_id
     create_samples_with_embeddings(
-        session=test_db,
+        session=db_session,
         collection_id=collection_id,
         embedding_model_id=embedding_model_id,
         images_and_embeddings=[
@@ -87,7 +87,7 @@ def test_compute_similarity_metadata_missing_query(test_db: Session) -> None:
 
     with pytest.raises(TagNotFoundError, match="Query tag .* not found"):
         compute_similarity.compute_similarity_metadata(
-            session=test_db,
+            session=db_session,
             key_collection_id=collection_id,
             embedding_model_id=embedding_model_id,
             query_tag_id=uuid4(),  # This UUID won't exist in the database

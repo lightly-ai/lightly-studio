@@ -18,13 +18,13 @@ from tests.helpers_resolvers import (
 )
 
 
-def test_complex_metadata(test_db: Session) -> None:
-    collection = create_collection(session=test_db)
+def test_complex_metadata(db_session: Session) -> None:
+    collection = create_collection(session=db_session)
     collection_id = collection.collection_id
 
     # Create samples
     sample = create_image(
-        session=test_db,
+        session=db_session,
         collection_id=collection_id,
         file_path_abs="/path/to/sample1.png",
     ).sample
@@ -38,7 +38,7 @@ def test_complex_metadata(test_db: Session) -> None:
     assert sample["gps_location"].lon == -74.0060
 
     metadata_resolver.set_value_for_sample(
-        session=test_db,
+        session=db_session,
         sample_id=sample.sample_id,
         key="gps_location",
         value=GPSCoordinate(lat=50.7128, lon=-54.0060),
@@ -47,13 +47,13 @@ def test_complex_metadata(test_db: Session) -> None:
     assert sample["gps_location"].lon == -54.0060
 
 
-def test_complex_metadata_update_type(test_db: Session) -> None:
-    collection = create_collection(session=test_db)
+def test_complex_metadata_update_type(db_session: Session) -> None:
+    collection = create_collection(session=db_session)
     collection_id = collection.collection_id
 
     # Create samples
     sample = create_image(
-        session=test_db,
+        session=db_session,
         collection_id=collection_id,
         file_path_abs="/path/to/sample1.png",
     ).sample
@@ -69,18 +69,18 @@ def test_complex_metadata_update_type(test_db: Session) -> None:
         sample["gps_location"] = 12
 
 
-def test_complex_metadata_filter(test_db: Session) -> None:
-    collection = create_collection(session=test_db)
+def test_complex_metadata_filter(db_session: Session) -> None:
+    collection = create_collection(session=db_session)
     collection_id = collection.collection_id
 
     # Create samples
     sample1 = create_image(
-        session=test_db,
+        session=db_session,
         collection_id=collection_id,
         file_path_abs="/path/to/sample1.png",
     ).sample
     sample2 = create_image(
-        session=test_db,
+        session=db_session,
         collection_id=collection_id,
         file_path_abs="/path/to/sample2.png",
     ).sample
@@ -95,6 +95,8 @@ def test_complex_metadata_filter(test_db: Session) -> None:
 
     gps_filter = [Metadata("gps_location.lat") > 35]
     sample_filter = SampleFilter(metadata_filters=gps_filter)
-    samples = sample_resolver.get_filtered_samples(session=test_db, filters=sample_filter).samples
+    samples = sample_resolver.get_filtered_samples(
+        session=db_session, filters=sample_filter
+    ).samples
     assert len(samples) == 1
     assert samples[0].sample_id == sample1.sample_id

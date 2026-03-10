@@ -52,54 +52,54 @@ class _TestData:
 
 
 @pytest.fixture
-def test_data(test_db: Session) -> _TestData:
+def test_data(db_session: Session) -> _TestData:
     """Fixture that provides test database with sample data."""
-    collection1 = create_collection(session=test_db)
+    collection1 = create_collection(session=db_session)
     collection1_id = collection1.collection_id
 
-    collection2 = create_collection(session=test_db, collection_name="collection2")
+    collection2 = create_collection(session=db_session, collection_name="collection2")
     collection2_id = collection2.collection_id
 
     # Create samples
     image1 = create_image(
-        session=test_db, collection_id=collection1_id, file_path_abs="/path/to/sample1.png"
+        session=db_session, collection_id=collection1_id, file_path_abs="/path/to/sample1.png"
     )
     image2 = create_image(
-        session=test_db, collection_id=collection1_id, file_path_abs="/path/to/sample2.png"
+        session=db_session, collection_id=collection1_id, file_path_abs="/path/to/sample2.png"
     )
 
     image_with_mouse = create_image(
-        session=test_db,
+        session=db_session,
         collection_id=collection2_id,
         file_path_abs="/path/to/sample_with_mouse.png",
     )
 
     # Create labels
     dog_label = create_annotation_label(
-        session=test_db,
+        session=db_session,
         dataset_id=collection1_id,
         label_name="dog",
     )
     cat_label = create_annotation_label(
-        session=test_db,
+        session=db_session,
         dataset_id=collection1_id,
         label_name="cat",
     )
     mouse_label = create_annotation_label(
-        session=test_db,
+        session=db_session,
         dataset_id=collection2_id,
         label_name="mouse",
     )
 
     # Create annotations
     dog_annotation1 = create_annotation(
-        session=test_db,
+        session=db_session,
         sample_id=image1.sample_id,
         annotation_label_id=dog_label.annotation_label_id,
         collection_id=collection1_id,
     )
     dog_annotation2 = create_annotation(
-        session=test_db,
+        session=db_session,
         sample_id=image2.sample_id,
         annotation_label_id=dog_label.annotation_label_id,
         collection_id=collection1_id,
@@ -108,13 +108,13 @@ def test_data(test_db: Session) -> _TestData:
         },
     )
     cat_annotation = create_annotation(
-        session=test_db,
+        session=db_session,
         sample_id=image1.sample_id,
         annotation_label_id=cat_label.annotation_label_id,
         collection_id=collection1_id,
     )
     mouse_annotation = create_annotation(
-        session=test_db,
+        session=db_session,
         sample_id=image_with_mouse.sample_id,
         annotation_label_id=mouse_label.annotation_label_id,
         collection_id=collection2_id,
@@ -138,22 +138,24 @@ def test_data(test_db: Session) -> _TestData:
     )
 
 
-def test_create_and_get_annotation(test_db: Session, test_data: _TestData) -> None:
+def test_create_and_get_annotation(db_session: Session, test_data: _TestData) -> None:
     dog_annotation = test_data.dog_annotation1
 
     retrieved_annotation = annotation_resolver.get_by_id(
-        session=test_db, annotation_id=dog_annotation.sample_id
+        session=db_session, annotation_id=dog_annotation.sample_id
     )
 
     assert retrieved_annotation == dog_annotation
 
 
-def test_create_and_get_annotation__for_video_frame_with_ordering(test_db: Session) -> None:
-    collection_id = create_collection(session=test_db, sample_type=SampleType.VIDEO).collection_id
+def test_create_and_get_annotation__for_video_frame_with_ordering(db_session: Session) -> None:
+    collection_id = create_collection(
+        session=db_session, sample_type=SampleType.VIDEO
+    ).collection_id
 
     # Create video.
     video_ids = create_videos(
-        session=test_db,
+        session=db_session,
         collection_id=collection_id,
         videos=[
             VideoStub(path="/path/to/b_video.mp4"),
@@ -179,13 +181,13 @@ def test_create_and_get_annotation__for_video_frame_with_ordering(test_db: Sessi
     ]
 
     video_frames_collection_id = collection_resolver.get_or_create_child_collection(
-        session=test_db, collection_id=collection_id, sample_type=SampleType.VIDEO_FRAME
+        session=db_session, collection_id=collection_id, sample_type=SampleType.VIDEO_FRAME
     )
     video_frame_ids = video_frame_resolver.create_many(
-        session=test_db, collection_id=video_frames_collection_id, samples=frames_to_create
+        session=db_session, collection_id=video_frames_collection_id, samples=frames_to_create
     )
     annotation_label = create_annotation_label(
-        session=test_db,
+        session=db_session,
         dataset_id=collection_id,
         label_name="label_for_video_frame",
     )
@@ -195,28 +197,28 @@ def test_create_and_get_annotation__for_video_frame_with_ordering(test_db: Sessi
     # Second annotation linked to video frame of a_video (file path /path/to/a_video.mp4)
     # This is to test that retrieval is ordered by sample file path.
     create_annotation(
-        session=test_db,
+        session=db_session,
         sample_id=video_frame_ids[0],
         annotation_label_id=annotation_label.annotation_label_id,
         collection_id=collection_id,
     )
     create_annotation(
-        session=test_db,
+        session=db_session,
         sample_id=video_frame_ids[1],
         annotation_label_id=annotation_label.annotation_label_id,
         collection_id=collection_id,
     )
-    retrieved_annotations = annotation_resolver.get_all(session=test_db)
+    retrieved_annotations = annotation_resolver.get_all(session=db_session)
     # Check the order of retrieved annotations is by sample file path
     assert retrieved_annotations.annotations[0].parent_sample_id == video_frame_ids[1]
     assert retrieved_annotations.annotations[1].parent_sample_id == video_frame_ids[0]
 
 
-def test_count_annotations_labels_by_collection(test_db: Session, test_data: _TestData) -> None:
+def test_count_annotations_labels_by_collection(db_session: Session, test_data: _TestData) -> None:
     collection = test_data.collection
 
     annotation_counts = annotation_resolver.count_annotations_by_collection(
-        session=test_db, collection_id=collection.collection_id
+        session=db_session, collection_id=collection.collection_id
     )
 
     assert len(annotation_counts) == 2
@@ -226,7 +228,7 @@ def test_count_annotations_labels_by_collection(test_db: Session, test_data: _Te
 
 
 def test_count_annotations_by_collection_with_filtering(
-    test_db: Session,
+    db_session: Session,
     test_data: _TestData,
 ) -> None:
     collection = test_data.collection
@@ -234,7 +236,7 @@ def test_count_annotations_by_collection_with_filtering(
 
     # Test without filtering
     counts = annotation_resolver.count_annotations_by_collection(
-        session=test_db, collection_id=collection_id
+        session=db_session, collection_id=collection_id
     )
     counts_dict = {label: (current, total) for label, current, total in counts}
     assert counts_dict["dog"] == (
@@ -245,7 +247,7 @@ def test_count_annotations_by_collection_with_filtering(
 
     # Test with filtering by "dog"
     filtered_counts = annotation_resolver.count_annotations_by_collection(
-        session=test_db, collection_id=collection_id, filtered_labels=["dog"]
+        session=db_session, collection_id=collection_id, filtered_labels=["dog"]
     )
     filtered_dict = {label: (current, total) for label, current, total in filtered_counts}
     assert filtered_dict["dog"] == (2, 2)  # All dogs are visible
@@ -256,7 +258,7 @@ def test_count_annotations_by_collection_with_filtering(
 
     # Test with filtering by "cat"
     filtered_counts = annotation_resolver.count_annotations_by_collection(
-        session=test_db, collection_id=collection_id, filtered_labels=["cat"]
+        session=db_session, collection_id=collection_id, filtered_labels=["cat"]
     )
     filtered_dict = {label: (current, total) for label, current, total in filtered_counts}
     assert filtered_dict["dog"] == (
@@ -266,12 +268,12 @@ def test_count_annotations_by_collection_with_filtering(
     assert filtered_dict["cat"] == (1, 1)  # All cats are visible
 
 
-def test_get_by_ids(test_db: Session, test_data: _TestData) -> None:
+def test_get_by_ids(db_session: Session, test_data: _TestData) -> None:
     dog_annotation1 = test_data.dog_annotation1
     cat_annotation = test_data.cat_annotation
 
     retrieved_annotations = annotation_resolver.get_by_ids(
-        session=test_db,
+        session=db_session,
         annotation_ids=[dog_annotation1.sample_id, cat_annotation.sample_id],
     )
 
@@ -280,12 +282,12 @@ def test_get_by_ids(test_db: Session, test_data: _TestData) -> None:
     assert cat_annotation in retrieved_annotations
 
 
-def test_get_all_with_mulpiple_labels(test_db: Session, test_data: _TestData) -> None:
+def test_get_all_with_mulpiple_labels(db_session: Session, test_data: _TestData) -> None:
     dog_label = test_data.dog_label
     cat_label = test_data.cat_label
 
     annotations = annotation_resolver.get_all(
-        session=test_db,
+        session=db_session,
         filters=AnnotationsFilter(
             annotation_label_ids=[
                 dog_label.annotation_label_id,
@@ -301,46 +303,46 @@ def test_get_all_with_mulpiple_labels(test_db: Session, test_data: _TestData) ->
 
 
 def test_get_all_returns_paginated_results(
-    test_db: Session,
+    db_session: Session,
     # We need the fixture to create test data.
     test_data: _TestData,  # noqa ARG001
 ) -> None:
     # Test pagination
     annotations = annotation_resolver.get_all(
-        session=test_db, pagination=Paginated(offset=0, limit=3)
+        session=db_session, pagination=Paginated(offset=0, limit=3)
     ).annotations
     assert len(annotations) == 3
 
     # Test pagination with offset
     annotations = annotation_resolver.get_all(
-        session=test_db, pagination=Paginated(offset=3, limit=3)
+        session=db_session, pagination=Paginated(offset=3, limit=3)
     ).annotations
     assert len(annotations) == 1
 
 
 def test_get_all_returns_total_count(
-    test_db: Session,
+    db_session: Session,
     # We need the fixture to create test data.
     test_data: _TestData,  # noqa ARG001
 ) -> None:
     # Test total count without pagination
     annotations_result = annotation_resolver.get_all(
-        session=test_db, pagination=Paginated(offset=0, limit=90)
+        session=db_session, pagination=Paginated(offset=0, limit=90)
     )
     assert len(annotations_result.annotations) == 4
 
     # Test pagination with offset
     annotations_result = annotation_resolver.get_all(
-        session=test_db, pagination=Paginated(offset=0, limit=2)
+        session=db_session, pagination=Paginated(offset=0, limit=2)
     )
     assert annotations_result.total_count == 4
 
 
-def test_get_all_returns_filtered_results(test_db: Session, test_data: _TestData) -> None:
+def test_get_all_returns_filtered_results(db_session: Session, test_data: _TestData) -> None:
     dog_label = test_data.dog_label
 
     annotations = annotation_resolver.get_all(
-        session=test_db,
+        session=db_session,
         filters=AnnotationsFilter(
             annotation_label_ids=[
                 dog_label.annotation_label_id,
@@ -352,12 +354,12 @@ def test_get_all_returns_filtered_results(test_db: Session, test_data: _TestData
 
 
 def test_get_all_with_filtered_results_returns_total_count(
-    test_db: Session, test_data: _TestData
+    db_session: Session, test_data: _TestData
 ) -> None:
     dog_label = test_data.dog_label
 
     annotations = annotation_resolver.get_all(
-        session=test_db,
+        session=db_session,
         filters=AnnotationsFilter(
             annotation_label_ids=[
                 dog_label.annotation_label_id,
@@ -371,7 +373,7 @@ def test_get_all_with_filtered_results_returns_total_count(
 
 
 def test_get_all_returns_filtered_and_paginated_results(
-    test_db: Session,
+    db_session: Session,
     test_data: _TestData,
 ) -> None:
     dog_label = test_data.dog_label
@@ -384,7 +386,7 @@ def test_get_all_returns_filtered_and_paginated_results(
         ]
     )
     annotations = annotation_resolver.get_all(
-        session=test_db,
+        session=db_session,
         filters=filters,
         pagination=Paginated(
             offset=0,
@@ -394,7 +396,7 @@ def test_get_all_returns_filtered_and_paginated_results(
     assert len(annotations) == 2
 
     annotations = annotation_resolver.get_all(
-        session=test_db,
+        session=db_session,
         filters=filters,
         pagination=Paginated(
             offset=2,
@@ -405,14 +407,14 @@ def test_get_all_returns_filtered_and_paginated_results(
 
 
 def test_get_all_returns_filtered_by_collection_results(
-    test_db: Session,
+    db_session: Session,
     test_data: _TestData,
 ) -> None:
     collection = test_data.collection
     collection2 = test_data.collection2
 
     annotations_for_collection1 = annotation_resolver.get_all(
-        session=test_db,
+        session=db_session,
         filters=AnnotationsFilter(
             collection_ids=[
                 collection.children[0].collection_id,
@@ -422,7 +424,7 @@ def test_get_all_returns_filtered_by_collection_results(
     assert len(annotations_for_collection1) == 3
 
     annotations_for_collection2 = annotation_resolver.get_all(
-        session=test_db,
+        session=db_session,
         filters=AnnotationsFilter(
             collection_ids=[
                 collection2.children[0].collection_id,
@@ -432,7 +434,7 @@ def test_get_all_returns_filtered_by_collection_results(
     assert len(annotations_for_collection2) == 1
 
     annotations_for_both_collections = annotation_resolver.get_all(
-        session=test_db,
+        session=db_session,
         filters=AnnotationsFilter(
             collection_ids=[
                 collection.children[0].collection_id,
@@ -444,16 +446,16 @@ def test_get_all_returns_filtered_by_collection_results(
 
 
 def test_get_all_by_collection_name(
-    test_db: Session,
+    db_session: Session,
 ) -> None:
-    collection = create_collection(session=test_db)
-    image = create_image(session=test_db, collection_id=collection.collection_id)
+    collection = create_collection(session=db_session)
+    image = create_image(session=db_session, collection_id=collection.collection_id)
     cat_label = create_annotation_label(
-        session=test_db, dataset_id=collection.collection_id, label_name="cat"
+        session=db_session, dataset_id=collection.collection_id, label_name="cat"
     )
 
     annotation_resolver.create_many(
-        session=test_db,
+        session=db_session,
         parent_collection_id=collection.collection_id,
         annotations=[
             AnnotationCreate(
@@ -470,7 +472,7 @@ def test_get_all_by_collection_name(
     )
 
     annotation_resolver.create_many(
-        session=test_db,
+        session=db_session,
         parent_collection_id=collection.collection_id,
         annotations=[
             AnnotationCreate(
@@ -488,7 +490,7 @@ def test_get_all_by_collection_name(
     )
 
     ground_truth = annotation_resolver.get_all_by_collection_name(
-        session=test_db,
+        session=db_session,
         collection_name="ground_truth",
     ).annotations
     assert len(ground_truth) == 1
@@ -499,7 +501,7 @@ def test_get_all_by_collection_name(
     assert ground_truth[0].object_detection_details.height == 50
 
     prediction = annotation_resolver.get_all_by_collection_name(
-        session=test_db,
+        session=db_session,
         collection_name="predictions",
     ).annotations
     assert len(prediction) == 1
@@ -513,43 +515,43 @@ def test_get_all_by_collection_name(
     # Test with non-existent collection name
     with pytest.raises(ValueError, match="Collection with name 'non-existent' does not exist."):
         annotation_resolver.get_all_by_collection_name(
-            session=test_db, collection_name="non-existent"
+            session=db_session, collection_name="non-existent"
         )
 
 
-def test_get_all_ordered_by_sample_file_path(test_db: Session) -> None:
-    collection = create_collection(session=test_db)
+def test_get_all_ordered_by_sample_file_path(db_session: Session) -> None:
+    collection = create_collection(session=db_session)
     collection_id = collection.collection_id
 
     image_2 = create_image(
-        session=test_db, collection_id=collection_id, file_path_abs="/z_dir/sample_2.png"
+        session=db_session, collection_id=collection_id, file_path_abs="/z_dir/sample_2.png"
     )
     image_1 = create_image(
-        session=test_db, collection_id=collection_id, file_path_abs="/a_dir/sample_1.png"
+        session=db_session, collection_id=collection_id, file_path_abs="/a_dir/sample_1.png"
     )
 
-    label = create_annotation_label(session=test_db, dataset_id=collection_id, label_name="test")
+    label = create_annotation_label(session=db_session, dataset_id=collection_id, label_name="test")
 
     sample_2_ann_1 = create_annotation(
-        session=test_db,
+        session=db_session,
         sample_id=image_2.sample_id,
         annotation_label_id=label.annotation_label_id,
         collection_id=collection_id,
     )
     sample_1_ann_1 = create_annotation(
-        session=test_db,
+        session=db_session,
         sample_id=image_1.sample_id,
         annotation_label_id=label.annotation_label_id,
         collection_id=collection_id,
     )
     sample_1_ann_2 = create_annotation(
-        session=test_db,
+        session=db_session,
         sample_id=image_1.sample_id,
         annotation_label_id=label.annotation_label_id,
         collection_id=collection_id,
     )
 
-    ordered_annotations = annotation_resolver.get_all(session=test_db).annotations
+    ordered_annotations = annotation_resolver.get_all(session=db_session).annotations
     assert len(ordered_annotations) == 3
     assert ordered_annotations == [
         sample_1_ann_1,
@@ -558,33 +560,33 @@ def test_get_all_ordered_by_sample_file_path(test_db: Session) -> None:
     ]
 
 
-def test_get_all__with_tag_filtering(test_db: Session) -> None:
-    collection = create_collection(session=test_db)
+def test_get_all__with_tag_filtering(db_session: Session) -> None:
+    collection = create_collection(session=db_session)
     tag_1 = create_tag(
-        session=test_db,
+        session=db_session,
         collection_id=collection.collection_id,
         tag_name="tag_all",
         kind="annotation",
     )
     tag_2 = create_tag(
-        session=test_db,
+        session=db_session,
         collection_id=collection.collection_id,
         tag_name="tag_odd",
         kind="annotation",
     )
-    image = create_image(session=test_db, collection_id=collection.collection_id)
+    image = create_image(session=db_session, collection_id=collection.collection_id)
     anno_label_cat = create_annotation_label(
-        session=test_db, dataset_id=collection.collection_id, label_name="cat"
+        session=db_session, dataset_id=collection.collection_id, label_name="cat"
     )
     anno_label_dog = create_annotation_label(
-        session=test_db, dataset_id=collection.collection_id, label_name="dog"
+        session=db_session, dataset_id=collection.collection_id, label_name="dog"
     )
 
     total_annos = 10
     annotations = []
     for i in range(total_annos):
         annotation = create_annotation(
-            session=test_db,
+            session=db_session,
             collection_id=collection.collection_id,
             sample_id=image.sample_id,
             annotation_label_id=anno_label_cat.annotation_label_id
@@ -595,7 +597,7 @@ def test_get_all__with_tag_filtering(test_db: Session) -> None:
 
     # add first half to tag_1
     tag_resolver.add_sample_ids_to_tag_id(
-        session=test_db,
+        session=db_session,
         tag_id=tag_1.tag_id,
         sample_ids=[
             annotation.sample_id
@@ -606,7 +608,7 @@ def test_get_all__with_tag_filtering(test_db: Session) -> None:
 
     # add second half to tag_1
     tag_resolver.add_sample_ids_to_tag_id(
-        session=test_db,
+        session=db_session,
         tag_id=tag_2.tag_id,
         sample_ids=[
             annotation.sample_id
@@ -617,7 +619,7 @@ def test_get_all__with_tag_filtering(test_db: Session) -> None:
 
     # Test filtering by tags
     annotations_part1 = annotation_resolver.get_all(
-        session=test_db,
+        session=db_session,
         filters=AnnotationsFilter(
             collection_ids=[collection.children[0].collection_id],
             tag_ids=[tag_1.tag_id],
@@ -630,7 +632,7 @@ def test_get_all__with_tag_filtering(test_db: Session) -> None:
     )
 
     annotations_part2 = annotation_resolver.get_all(
-        session=test_db,
+        session=db_session,
         filters=AnnotationsFilter(
             collection_ids=[collection.children[0].collection_id],
             tag_ids=[tag_2.tag_id],
@@ -644,7 +646,7 @@ def test_get_all__with_tag_filtering(test_db: Session) -> None:
 
     # test filtering by both tags
     annotations_all = annotation_resolver.get_all(
-        session=test_db,
+        session=db_session,
         filters=AnnotationsFilter(
             collection_ids=[collection.children[0].collection_id],
             tag_ids=[tag_1.tag_id, tag_2.tag_id],
@@ -653,12 +655,12 @@ def test_get_all__with_tag_filtering(test_db: Session) -> None:
     assert len(annotations_all) == total_annos
 
 
-def test_create_many_annotations(test_db: Session) -> None:
+def test_create_many_annotations(db_session: Session) -> None:
     """Test bulk creation of annotations."""
-    collection = create_collection(session=test_db)
-    image = create_image(session=test_db, collection_id=collection.collection_id)
+    collection = create_collection(session=db_session)
+    image = create_image(session=db_session, collection_id=collection.collection_id)
     cat_label = create_annotation_label(
-        session=test_db, dataset_id=collection.collection_id, label_name="cat"
+        session=db_session, dataset_id=collection.collection_id, label_name="cat"
     )
 
     annotations_to_create = [
@@ -675,13 +677,13 @@ def test_create_many_annotations(test_db: Session) -> None:
     ]
 
     annotation_resolver.create_many(
-        session=test_db,
+        session=db_session,
         parent_collection_id=collection.collection_id,
         annotations=annotations_to_create,
     )
 
     created_annotations = annotation_resolver.get_all(
-        session=test_db,
+        session=db_session,
         filters=AnnotationsFilter(collection_ids=[collection.children[0].collection_id]),
     ).annotations
 
