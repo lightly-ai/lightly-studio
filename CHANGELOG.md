@@ -21,6 +21,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Security
 
+## \[0.4.11\] - 2026-03-10
+
+### Added
+
+- Added option to customize the semantic segmentation keyboard shortcut in the settings dialog.
+- Operators lifecycle management: operators now have `startup` and `shutdown` methods, which be default pass. The new methods can be used for example to start and stop inference server.
+
+### Changed
+
+- Improved semantic segmentation loading performance in the GUI.
+
+### Fixed
+
+- Navigation menu immediately updates to display the Captions page when the first caption is added.
+
 ## \[0.4.10\] - 2026-03-09
 
 ### Added
