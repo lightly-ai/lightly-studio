@@ -55,10 +55,8 @@ class AnnotationsFilter(BaseModel):
 
         # Filter by tags
         if self.tag_ids:
-            query = (
-                query.join(annotation_sample.tags)
-                .where(annotation_sample.tags.any(col(TagTable.tag_id).in_(self.tag_ids)))
-                .distinct()
+            query = query.where(
+                annotation_sample.tags.any(col(TagTable.tag_id).in_(self.tag_ids))
             )
 
         # Filter by annotation type
