@@ -10,6 +10,7 @@ from lightly_studio.api.routes.api.validators import Paginated, PaginatedWithCur
 from lightly_studio.db_manager import SessionDep
 from lightly_studio.models.video import VideoFieldsBoundsView, VideoView, VideoViewsWithCount
 from lightly_studio.resolvers import video_resolver
+from lightly_studio.resolvers.sample_resolver.sample_filter import SampleFilter
 from lightly_studio.resolvers.video_resolver.count_video_frame_annotations_by_collection import (
     CountAnnotationsView,
 )
@@ -32,6 +33,12 @@ class ReadVideosRequest(BaseModel):
 
     filter: Optional[VideoFilter] = Field(None, description="Filter parameters for videos")
     text_embedding: Optional[list[float]] = Field(None, description="Text embedding to search for")
+
+
+class ReadVideoSampleIdsRequest(BaseModel):
+    """Request body for reading matching video sample ids."""
+
+    filter: Optional[VideoFilter] = Field(None, description="Filter parameters for videos")
 
 
 class ReadVideoCountAnnotationsRequest(BaseModel):
@@ -90,6 +97,20 @@ def get_all_videos(
         filters=body.filter,
         text_embedding=body.text_embedding,
     )
+
+
+@video_router.post("/sample_ids", response_model=list[UUID])
+def get_video_sample_ids(
+    session: SessionDep,
+    collection_id: Annotated[UUID, Path(title="collection Id")],
+    body: ReadVideoSampleIdsRequest,
+) -> list[UUID]:
+    """Retrieve all sample ids of videos matching the given filters."""
+    filters = body.filter or VideoFilter()
+    sample_filter = filters.sample_filter or SampleFilter(collection_id=collection_id)
+    sample_filter.collection_id = collection_id
+    filters.sample_filter = sample_filter
+    return video_resolver.get_sample_ids(session=session, filters=filters)
 
 
 @video_router.get("/{sample_id}", response_model=VideoView)
