@@ -28,94 +28,59 @@
                 control: 'select',
                 options: ['h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'p', 'span', 'div']
             }
+        },
+        parameters: {
+            backgrounds: {
+                default: 'dark'
+            }
         }
     });
 </script>
 
-<Story name="H1" args={{ variant: 'h1' }}>
-    {#snippet children()}
-        Heading 1 - Large Page Title
-    {/snippet}
-</Story>
+<Story name="H1" args={{ variant: 'h1' }}>Heading 1 - Large Page Title</Story>
 
-<Story name="H2" args={{ variant: 'h2' }}>
-    {#snippet children()}
-        Heading 2 - Section Title
-    {/snippet}
-</Story>
+<Story name="H2" args={{ variant: 'h2' }}>Heading 2 - Section Title</Story>
 
-<Story name="H3" args={{ variant: 'h3' }}>
-    {#snippet children()}
-        Heading 3 - Subsection Title
-    {/snippet}
-</Story>
+<Story name="H3" args={{ variant: 'h3' }}>Heading 3 - Subsection Title</Story>
 
-<Story name="H4" args={{ variant: 'h4' }}>
-    {#snippet children()}
-        Heading 4 - Component Title
-    {/snippet}
-</Story>
+<Story name="H4" args={{ variant: 'h4' }}>Heading 4 - Component Title</Story>
 
-<Story name="H5" args={{ variant: 'h5' }}>
-    {#snippet children()}
-        Heading 5 - Small Section
-    {/snippet}
-</Story>
+<Story name="H5" args={{ variant: 'h5' }}>Heading 5 - Small Section</Story>
 
-<Story name="H6" args={{ variant: 'h6' }}>
-    {#snippet children()}
-        Heading 6 - Smallest Heading
-    {/snippet}
-</Story>
+<Story name="H6" args={{ variant: 'h6' }}>Heading 6 - Smallest Heading</Story>
 
 <Story name="Body1" args={{ variant: 'body1' }}>
-    {#snippet children()}
-        Body 1 - This is the default body text variant. It's perfect for regular paragraphs and most
-        text content in your application.
-    {/snippet}
+    Body 1 - This is the default body text variant. It's perfect for regular paragraphs and most
+    text content in your application.
 </Story>
 
 <Story name="Body2" args={{ variant: 'body2' }}>
-    {#snippet children()}
-        Body 2 - A smaller body text variant. Great for secondary information or text that should be
-        less prominent than Body1.
-    {/snippet}
+    Body 2 - A smaller body text variant. Great for secondary information or text that should be
+    less prominent than Body1.
 </Story>
 
 <Story name="Subtitle1" args={{ variant: 'subtitle1' }}>
-    {#snippet children()}
-        Subtitle 1 - Medium-weight subtitle text for important secondary information.
-    {/snippet}
+    Subtitle 1 - Medium-weight subtitle text for important secondary information.
 </Story>
 
 <Story name="Subtitle2" args={{ variant: 'subtitle2' }}>
-    {#snippet children()}
-        Subtitle 2 - Smaller medium-weight subtitle text.
-    {/snippet}
+    Subtitle 2 - Smaller medium-weight subtitle text.
 </Story>
 
 <Story name="Caption" args={{ variant: 'caption' }}>
-    {#snippet children()}
-        Caption - Small text for image captions, footnotes, or annotations.
-    {/snippet}
+    Caption - Small text for image captions, footnotes, or annotations.
 </Story>
 
 <Story name="Overline" args={{ variant: 'overline' }}>
-    {#snippet children()}
-        Overline - Small uppercase text for category labels or section markers
-    {/snippet}
+    Overline - Small uppercase text for category labels or section markers
 </Story>
 
 <Story name="Custom Component" args={{ variant: 'h1', component: 'div' }}>
-    {#snippet children()}
-        H1 Styling on a Div Element
-    {/snippet}
+    H1 Styling on a Div Element
 </Story>
 
 <Story name="Custom Class" args={{ variant: 'body1', class: 'text-blue-500 underline' }}>
-    {#snippet children()}
-        Body text with custom styling applied via className
-    {/snippet}
+    Body text with custom styling applied via className
 </Story>
 
 <Story name="All Variants Showcase">

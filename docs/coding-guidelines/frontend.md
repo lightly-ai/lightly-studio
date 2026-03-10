@@ -373,12 +373,35 @@ export function useUsers() {
 ```
 
 
+## Storybook
+
+### Story Syntax
+When creating Storybook stories, use the simplified syntax without explicit `{#snippet children()}` blocks for better readability:
+
+**Good Example:**
+```typescript
+<Story name="H1" args={{ variant: 'h1' }}>
+    Heading 1 - Large Page Title
+</Story>
+```
+
+**Bad Example:**
+```typescript
+<Story name="H1" args={{ variant: 'h1' }}>
+    {#snippet children()}
+        Heading 1 - Large Page Title
+    {/snippet}
+</Story>
+```
+
+The explicit snippet syntax is not required for simple text content and makes stories less readable.
+
 ## Testing
 
 ### Motivation
-- Writing the tests is a crucial part of the development process. 
-- It helps to ensure that your code works as expected and prevents regressions in the future. 
-- It shows maturity of the code and helps to write the more scalable and maintainable code. 
+- Writing the tests is a crucial part of the development process.
+- It helps to ensure that your code works as expected and prevents regressions in the future.
+- It shows maturity of the code and helps to write the more scalable and maintainable code.
 - It helps you to understand the requirements better.
 
 ### Testing levels
