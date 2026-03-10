@@ -31,4 +31,4 @@
     } = $props();
 </script>
 
-<Typography {variant} {component} class={className} {props}>Test Content</Typography>
+<Typography {variant} {component} {className} {props}>Test Content</Typography>

@@ -22,12 +22,12 @@
     interface Props {
         variant?: TypographyVariant;
         component?: ComponentType;
-        class?: string;
+        className?: string;
         children?: Snippet;
         props?: HTMLAttributes<HTMLElement>;
     }
 
-    let { variant = 'body1', component, class: className, children, props }: Props = $props();
+    let { variant = 'body1', component, className, children, props }: Props = $props();
 
     // Auto-determine component if not provided
     const defaultComponent = $derived<ComponentType>(
