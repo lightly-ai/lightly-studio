@@ -3,6 +3,7 @@
     import { GroupComponents } from './';
     import Image from '../Image/Image.svelte';
     import { VideoPreview } from '../VideoPreview';
+    import GroupComponent from '../GroupComponent/GroupComponent.svelte';
 
     const { Story } = defineMeta({
         title: 'Components/GroupComponents',
@@ -38,7 +39,7 @@
         onclick={(index) => (selectedImageIndex = index)}
     >
         {#snippet renderItem({ index })}
-            <Image src={imageItems[index]} />
+            <GroupComponent src={imageItems[index]} type="image" title={`Image ${index}`} />
         {/snippet}
     </GroupComponents>
 </Story>
@@ -50,7 +51,7 @@
         onclick={(index) => (selectedVideoIndex = index)}
     >
         {#snippet renderItem({ index })}
-            <VideoPreview src={videoItems[index]} />
+            <GroupComponent src={videoItems[index]} type="video" title={`Video ${index}`} />
         {/snippet}
     </GroupComponents>
 </Story>
