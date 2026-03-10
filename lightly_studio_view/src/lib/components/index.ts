@@ -36,3 +36,4 @@ export { default as Spinner } from '$lib/components/Spinner/Spinner.svelte';
 export { default as Segment } from '$lib/components/Segment/Segment.svelte';
 export { default as SelectableSvgGroup } from '$lib/components/SelectableSvgGroup/SelectableSvgGroup.svelte';
 export { Footer } from '$lib/components/Footer';
+export { default as VideoDetails } from '$lib/components/VideoDetails/VideoDetails.svelte';
