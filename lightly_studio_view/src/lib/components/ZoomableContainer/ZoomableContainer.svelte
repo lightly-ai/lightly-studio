@@ -2,9 +2,9 @@
     import { select, selectAll } from 'd3-selection';
     import 'd3-transition';
     import { zoom as D3zoom, zoomIdentity, type D3ZoomEvent, type ZoomBehavior } from 'd3-zoom';
-    import { isTextInputTarget } from '$lib/utils';
     import { onMount, type Snippet } from 'svelte';
     import { unscale } from './unscale';
+    import { useKeyboardPan } from './useKeyboardPan';
     import ZoomPanel from '../ZoomPanel/ZoomPanel.svelte';
 
     let svgContainer: SVGSVGElement | null = $state(null);
@@ -208,182 +208,30 @@
         }
     };
 
-    const MOVEMENT_KEY_CODES = new Set(['KeyW', 'KeyA', 'KeyS', 'KeyD']);
-    const KEYBOARD_PAN_SPEED_PX_PER_SECOND = 600;
+    const {
+        handleContainerMouseEnter,
+        handleContainerMouseLeave,
+        handleWindowKeyDown,
+        handleWindowKeyUp,
+        handleWindowMouseDown,
+        handleWindowBlur,
+        cleanup: cleanupKeyboardPan
+    } = useKeyboardPan({
+        getContainerElement: () => svgContainer,
+        isPanEnabled: () => panEnabled,
+        isZoomEnabled: () => zoomEnabled,
+        panByPixels: (panX: number, panY: number) => {
+            if (!svgContainer || !zoom) return false;
 
-    const pressedMovementKeys = new Set<string>();
-    let isSpacePanActive = false;
-    let isKeyboardPanContextActive = false;
-    let keyboardPanAnimationFrameId: number | null = null;
-
-    const stopKeyboardPanLoop = () => {
-        if (keyboardPanAnimationFrameId === null) return;
-        cancelAnimationFrame(keyboardPanAnimationFrameId);
-        keyboardPanAnimationFrameId = null;
-    };
-
-    const resetKeyboardPanState = () => {
-        pressedMovementKeys.clear();
-        isSpacePanActive = false;
-        stopKeyboardPanLoop();
-    };
-
-    const getKeyboardPanDirection = () => {
-        let x = 0;
-        let y = 0;
-
-        // W/A/S/D move the viewport like game controls.
-        if (pressedMovementKeys.has('KeyW')) y += 1;
-        if (pressedMovementKeys.has('KeyS')) y -= 1;
-        if (pressedMovementKeys.has('KeyA')) x += 1;
-        if (pressedMovementKeys.has('KeyD')) x -= 1;
-
-        if (x !== 0 && y !== 0) {
-            x *= Math.SQRT1_2;
-            y *= Math.SQRT1_2;
+            select(svgContainer).call(zoom.translateBy, panX / transform.k, panY / transform.k);
+            return true;
         }
-
-        return { x, y };
-    };
-
-    const panWithKeyboard = (elapsedSeconds: number) => {
-        if (!svgContainer || !zoom) return false;
-
-        const direction = getKeyboardPanDirection();
-        if (direction.x === 0 && direction.y === 0) {
-            return false;
-        }
-
-        const panDistance = KEYBOARD_PAN_SPEED_PX_PER_SECOND * elapsedSeconds;
-        select(svgContainer).call(
-            zoom.translateBy,
-            (direction.x * panDistance) / transform.k,
-            (direction.y * panDistance) / transform.k
-        );
-
-        return true;
-    };
-
-    const ensureKeyboardPanLoop = () => {
-        if (keyboardPanAnimationFrameId !== null) return;
-        let previousFrameTimestamp: number | null = null;
-
-        const onKeyboardPanFrame = (timestamp: number) => {
-            if (
-                !svgContainer ||
-                !zoom ||
-                !panEnabled ||
-                !zoomEnabled ||
-                !isSpacePanActive ||
-                pressedMovementKeys.size === 0
-            ) {
-                stopKeyboardPanLoop();
-                return;
-            }
-
-            const elapsedSeconds =
-                previousFrameTimestamp === null
-                    ? 1 / 60
-                    : (timestamp - previousFrameTimestamp) / 1000;
-            previousFrameTimestamp = timestamp;
-
-            const didPan = panWithKeyboard(elapsedSeconds);
-            if (!didPan) {
-                stopKeyboardPanLoop();
-                return;
-            }
-
-            keyboardPanAnimationFrameId = requestAnimationFrame(onKeyboardPanFrame);
-        };
-
-        keyboardPanAnimationFrameId = requestAnimationFrame(onKeyboardPanFrame);
-    };
-
-    const handleContainerKeyDown = (event: KeyboardEvent) => {
-        if (!isKeyboardPanContextActive) return;
-        if (!panEnabled || !zoomEnabled) return;
-        if (isTextInputTarget(event.target)) return;
-
-        if (event.code === 'Space') {
-            isSpacePanActive = true;
-            event.preventDefault();
-            if (pressedMovementKeys.size > 0) {
-                panWithKeyboard(1 / 60);
-                ensureKeyboardPanLoop();
-            }
-            return;
-        }
-
-        if (!MOVEMENT_KEY_CODES.has(event.code)) return;
-
-        pressedMovementKeys.add(event.code);
-        if (!isSpacePanActive) return;
-
-        event.preventDefault();
-        panWithKeyboard(1 / 60);
-        ensureKeyboardPanLoop();
-    };
-
-    const handleContainerKeyUp = (event: KeyboardEvent) => {
-        if (event.code === 'Space') {
-            isSpacePanActive = false;
-            stopKeyboardPanLoop();
-            return;
-        }
-
-        if (!MOVEMENT_KEY_CODES.has(event.code)) return;
-        pressedMovementKeys.delete(event.code);
-
-        if (pressedMovementKeys.size === 0) {
-            stopKeyboardPanLoop();
-        }
-    };
-
-    const handleContainerMouseEnter = () => {
-        isKeyboardPanContextActive = true;
-    };
-
-    const handleContainerMouseLeave = () => {
-        isKeyboardPanContextActive = false;
-        resetKeyboardPanState();
-    };
-
-    const handleWindowMouseDown = (event: MouseEvent) => {
-        if (!(event.target instanceof Node)) return;
-        if (svgContainer?.contains(event.target)) return;
-
-        isKeyboardPanContextActive = false;
-        resetKeyboardPanState();
-    };
-
-    const handleWindowBlur = () => {
-        resetKeyboardPanState();
-        isKeyboardPanContextActive = false;
-    };
+    });
 
     onMount(() => {
         setupZoom();
         registerResetFn?.(resetTransform);
-
-        if (!svgContainer) return;
-        const zoomableElement = svgContainer;
-
-        zoomableElement.addEventListener('mouseenter', handleContainerMouseEnter);
-        zoomableElement.addEventListener('mouseleave', handleContainerMouseLeave);
-        window.addEventListener('keydown', handleContainerKeyDown);
-        window.addEventListener('keyup', handleContainerKeyUp);
-        window.addEventListener('mousedown', handleWindowMouseDown);
-        window.addEventListener('blur', handleWindowBlur);
-
-        return () => {
-            stopKeyboardPanLoop();
-            zoomableElement.removeEventListener('mouseenter', handleContainerMouseEnter);
-            zoomableElement.removeEventListener('mouseleave', handleContainerMouseLeave);
-            window.removeEventListener('keydown', handleContainerKeyDown);
-            window.removeEventListener('keyup', handleContainerKeyUp);
-            window.removeEventListener('mousedown', handleWindowMouseDown);
-            window.removeEventListener('blur', handleWindowBlur);
-        };
+        return cleanupKeyboardPan;
     });
 
     $effect(() => {
@@ -414,9 +262,12 @@
             {/if}
         {/snippet}
     </ZoomPanel>
+    <!-- svelte-ignore a11y_no_static_element_interactions -->
     <svg
         bind:this={svgContainer}
         class="z-10 h-full w-full"
+        onmouseenter={handleContainerMouseEnter}
+        onmouseleave={handleContainerMouseLeave}
         preserveAspectRatio="xMidYMid meet"
         style={`cursor: ${cursor};`}
         viewBox={`${SVGViewBox.x} ${SVGViewBox.y} ${SVGViewBox.width} ${SVGViewBox.height}`}
@@ -434,3 +285,10 @@
     >
     </svg>
 </div>
+
+<svelte:window
+    onkeydowncapture={handleWindowKeyDown}
+    onkeyupcapture={handleWindowKeyUp}
+    onmousedown={handleWindowMouseDown}
+    onblur={handleWindowBlur}
+/>
