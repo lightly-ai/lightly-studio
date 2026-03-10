@@ -38,7 +38,8 @@
                 collectionId,
                 groupId,
                 componentId
-            )
+            ),
+            { replaceState: true }
         );
     };
 
