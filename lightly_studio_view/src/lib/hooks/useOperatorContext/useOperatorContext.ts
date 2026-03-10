@@ -51,7 +51,9 @@ export function resolveIsDetailPage(routeId: string | null): boolean {
 
 export function resolveScopeLabel(sampleType: SampleType | null, isOnDetailPage: boolean): string {
     if (sampleType === null) return 'Full collection';
-    return isOnDetailPage ? `Current ${sampleType}` : `Current ${sampleType} collection`;
+    return isOnDetailPage
+        ? `Current ${sampleType.replaceAll('_', ' ')}`
+        : `All ${sampleType.replaceAll('_', ' ')}s in the view`;
 }
 
 export function resolveContextFilter(
