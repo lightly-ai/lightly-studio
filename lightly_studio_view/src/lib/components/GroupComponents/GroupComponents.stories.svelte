@@ -1,8 +1,6 @@
 <script module>
     import { defineMeta } from '@storybook/addon-svelte-csf';
     import { GroupComponents } from './';
-    import Image from '../Image/Image.svelte';
-    import { VideoPreview } from '../VideoPreview';
     import GroupComponent from '../GroupComponent/GroupComponent.svelte';
 
     const { Story } = defineMeta({
