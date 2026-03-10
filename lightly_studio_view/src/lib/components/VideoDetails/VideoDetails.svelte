@@ -1,7 +1,6 @@
 <script lang="ts">
     import { Card, CardContent, Segment } from '$lib/components';
     import SegmentTags from '$lib/components/SegmentTags/SegmentTags.svelte';
-    import type { PageData } from './$types';
     import {
         getAllFrames,
         type FrameView,
