@@ -6,3 +6,4 @@ export * from './formatter';
 export * from './shadcn';
 export * from './isInputElement';
 export * from './isTextInputTarget';
+export { getVideoURLById } from './getVideoURLById/getVideoURLById';

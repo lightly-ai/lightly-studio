@@ -36,7 +36,7 @@ def test_get_embeddings2d__2d(
     n_samples = 50
 
     collection_id = fill_db_with_samples_and_embeddings(
-        test_db=db_session,
+        session=db_session,
         n_samples=n_samples,
         embedding_model_names=["model_a"],
         embedding_dimension=EMBEDDING_DIMENSION,
@@ -98,7 +98,7 @@ def test_get_embeddings2d__2d__with_tag_filter(
     n_samples = 5
 
     collection_id = fill_db_with_samples_and_embeddings(
-        test_db=db_session,
+        session=db_session,
         n_samples=n_samples,
         embedding_model_names=["model_a"],
         embedding_dimension=EMBEDDING_DIMENSION,
@@ -268,7 +268,7 @@ def test_get_embeddings2d_2d_benchmark(
 ) -> None:
     start_time = time.perf_counter()
     fill_db_with_samples_and_embeddings(
-        test_db=db_session,
+        session=db_session,
         n_samples=n_samples,
         embedding_model_names=["model_a"],
         embedding_dimension=EMBEDDING_DIMENSION,
