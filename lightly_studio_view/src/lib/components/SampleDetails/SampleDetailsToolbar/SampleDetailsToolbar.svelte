@@ -40,7 +40,7 @@
         } else if (key === $settingsStore.key_toolbar_drag) {
             e.preventDefault();
             onClickDrag();
-        } else if (key === 'g') {
+        } else if (key === $settingsStore.key_toolbar_semantic) {
             if (!showSegmentationTool) return;
             e.preventDefault();
             onClickSemanticBrush();
@@ -196,7 +196,7 @@
             {#if !annotationLabelContext.isOnAnnotationDetailsView}
                 <SampleDetailsToolbarTooltip
                     label="Semantic Segmentation Brush"
-                    shortcut="G"
+                    shortcut={$settingsStore.key_toolbar_semantic.toUpperCase()}
                     action="paint"
                 >
                     <SemanticBrushToolbarButton

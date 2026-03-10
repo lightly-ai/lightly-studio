@@ -65,6 +65,9 @@ class SettingBase(SQLModel):
     key_toolbar_segmentation_mask: str = Field(
         default="m", description="Key to activate the segmentation mask tool in the toolbar"
     )
+    key_toolbar_semantic: str = Field(
+        default="g", description="Key to activate semantic segmentation in the toolbar"
+    )
     key_toolbar_brush: str = Field(
         default="r", description="Key to activate brush mode in the segmentation tool"
     )
