@@ -6,6 +6,7 @@ from sqlmodel import Session
 from lightly_studio.metadata.gps_coordinate import GPSCoordinate
 from lightly_studio.models.annotation.annotation_base import AnnotationType
 from lightly_studio.models.annotation.object_detection import ObjectDetectionAnnotationTable
+from lightly_studio.models.annotation.object_track import ObjectTrackCreate
 from lightly_studio.models.annotation.segmentation import SegmentationAnnotationTable
 from lightly_studio.models.collection import SampleType
 from lightly_studio.resolvers import (
@@ -14,6 +15,7 @@ from lightly_studio.resolvers import (
     embedding_model_resolver,
     image_resolver,
     metadata_resolver,
+    object_track_resolver,
     sample_embedding_resolver,
     sample_resolver,
 )
@@ -29,13 +31,13 @@ from tests.helpers_resolvers import (
 )
 
 
-def test_deep_copy__empty_collection(test_db: Session) -> None:
+def test_deep_copy__empty_collection(db_session: Session) -> None:
     # Arrange
-    original = create_collection(session=test_db, collection_name="original")
+    original = create_collection(session=db_session, collection_name="original")
 
     # Act
     copied = collection_resolver.deep_copy(
-        session=test_db,
+        session=db_session,
         root_collection_id=original.collection_id,
         copy_name="copied",
     )
@@ -47,28 +49,28 @@ def test_deep_copy__empty_collection(test_db: Session) -> None:
     assert copied.parent_collection_id is None
 
 
-def test_deep_copy__with_images(test_db: Session) -> None:
+def test_deep_copy__with_images(db_session: Session) -> None:
     # Arrange
-    original = create_collection(session=test_db, collection_name="original")
+    original = create_collection(session=db_session, collection_name="original")
     img1 = create_image(
-        session=test_db, collection_id=original.collection_id, file_path_abs="/a.png"
+        session=db_session, collection_id=original.collection_id, file_path_abs="/a.png"
     )
     img2 = create_image(
-        session=test_db, collection_id=original.collection_id, file_path_abs="/b.png"
+        session=db_session, collection_id=original.collection_id, file_path_abs="/b.png"
     )
 
     # Act
     copied = collection_resolver.deep_copy(
-        session=test_db,
+        session=db_session,
         root_collection_id=original.collection_id,
         copy_name="copied",
     )
     # Add another image to the original collection after copying
-    create_image(session=test_db, collection_id=original.collection_id, file_path_abs="/c.png")
+    create_image(session=db_session, collection_id=original.collection_id, file_path_abs="/c.png")
 
     # Assert - new collection has new samples
     copied_samples_result = sample_resolver.get_filtered_samples(
-        session=test_db,
+        session=db_session,
         filters=SampleFilter(collection_id=copied.collection_id),
     )
     assert copied_samples_result.total_count == 2
@@ -80,7 +82,7 @@ def test_deep_copy__with_images(test_db: Session) -> None:
 
     # Assert - image data preserved
     copied_images = image_resolver.get_all_by_collection_id(
-        session=test_db,
+        session=db_session,
         collection_id=copied.collection_id,
     )
     copied_paths = {s.file_path_abs for s in copied_images.samples}
@@ -88,26 +90,26 @@ def test_deep_copy__with_images(test_db: Session) -> None:
 
     # Assert - original collection has 3 samples
     original_samples_result = sample_resolver.get_filtered_samples(
-        session=test_db,
+        session=db_session,
         filters=SampleFilter(collection_id=original.collection_id),
     )
     assert original_samples_result.total_count == 3
 
     # Assert - copied collection remains with 2 samples
     copied_samples_result_after = sample_resolver.get_filtered_samples(
-        session=test_db,
+        session=db_session,
         filters=SampleFilter(collection_id=copied.collection_id),
     )
     assert copied_samples_result_after.total_count == 2
 
 
-def test_deep_copy__with_hierarchy(test_db: Session) -> None:
+def test_deep_copy__with_hierarchy(db_session: Session) -> None:
     # Arrange
     root = create_collection(
-        session=test_db, collection_name="original_dataset", sample_type=SampleType.VIDEO
+        session=db_session, collection_name="original_dataset", sample_type=SampleType.VIDEO
     )
     child = create_collection(
-        session=test_db,
+        session=db_session,
         collection_name="original_dataset__video_frame",
         parent_collection_id=root.collection_id,
         sample_type=SampleType.VIDEO_FRAME,
@@ -115,14 +117,14 @@ def test_deep_copy__with_hierarchy(test_db: Session) -> None:
 
     # Act
     copied_root = collection_resolver.deep_copy(
-        session=test_db,
+        session=db_session,
         root_collection_id=root.collection_id,
         copy_name="copied_dataset",
     )
 
     # Assert - hierarchy copied
     hierarchy = collection_resolver.get_hierarchy(
-        session=test_db, dataset_id=copied_root.collection_id
+        session=db_session, dataset_id=copied_root.collection_id
     )
     assert len(hierarchy) == 2
 
@@ -137,17 +139,17 @@ def test_deep_copy__with_hierarchy(test_db: Session) -> None:
 
     # Assert - original hierarchy unchanged
     original_hierarchy = collection_resolver.get_hierarchy(
-        session=test_db, dataset_id=root.collection_id
+        session=db_session, dataset_id=root.collection_id
     )
     assert len(original_hierarchy) == 2
     assert original_hierarchy[1].parent_collection_id == root.collection_id
 
 
-def test_deep_copy__with_metadata(test_db: Session) -> None:
+def test_deep_copy__with_metadata(db_session: Session) -> None:
     # Arrange
-    original = create_collection(session=test_db, collection_name="original")
+    original = create_collection(session=db_session, collection_name="original")
     img = create_image(
-        session=test_db, collection_id=original.collection_id, file_path_abs="/test.png"
+        session=db_session, collection_id=original.collection_id, file_path_abs="/test.png"
     )
 
     img.sample["temperature"] = 25
@@ -156,21 +158,21 @@ def test_deep_copy__with_metadata(test_db: Session) -> None:
 
     # Act
     copied = collection_resolver.deep_copy(
-        session=test_db,
+        session=db_session,
         root_collection_id=original.collection_id,
         copy_name="copied",
     )
 
     # Assert - metadata gets copied
     copied_samples = sample_resolver.get_filtered_samples(
-        session=test_db,
+        session=db_session,
         filters=SampleFilter(collection_id=copied.collection_id),
     )
     assert copied_samples.total_count == 1
     copied_sample = copied_samples.samples[0]
 
     copied_metadata = metadata_resolver.get_by_sample_id(
-        session=test_db,
+        session=db_session,
         sample_id=copied_sample.sample_id,
     )
     assert copied_metadata is not None
@@ -188,14 +190,14 @@ def test_deep_copy__with_metadata(test_db: Session) -> None:
     # Assert - modifications to copied metadata do not affect original
     copied_sample["temperature"] = 30
     original_metadata = metadata_resolver.get_by_sample_id(
-        session=test_db, sample_id=img.sample.sample_id
+        session=db_session, sample_id=img.sample.sample_id
     )
     assert original_metadata is not None
     assert original_metadata.data["temperature"] == 25
     assert copied_metadata.data["temperature"] == 30
 
 
-def test_deep_copy__with_nested_metadata(test_db: Session) -> None:
+def test_deep_copy__with_nested_metadata(db_session: Session) -> None:
     """Verify nested metadata structures are properly deep copied.
 
     This test ensures that modifying nested dicts/lists in copied metadata
@@ -203,9 +205,9 @@ def test_deep_copy__with_nested_metadata(test_db: Session) -> None:
     deep copies JSON fields).
     """
     # Arrange
-    original = create_collection(session=test_db, collection_name="original")
+    original = create_collection(session=db_session, collection_name="original")
     img = create_image(
-        session=test_db, collection_id=original.collection_id, file_path_abs="/test.png"
+        session=db_session, collection_id=original.collection_id, file_path_abs="/test.png"
     )
 
     # Set metadata with nested structures
@@ -214,19 +216,19 @@ def test_deep_copy__with_nested_metadata(test_db: Session) -> None:
 
     # Act
     copied = collection_resolver.deep_copy(
-        session=test_db,
+        session=db_session,
         root_collection_id=original.collection_id,
         copy_name="copied",
     )
 
     # Get copied metadata
     copied_samples = sample_resolver.get_filtered_samples(
-        session=test_db,
+        session=db_session,
         filters=SampleFilter(collection_id=copied.collection_id),
     )
     copied_sample = copied_samples.samples[0]
     copied_metadata = metadata_resolver.get_by_sample_id(
-        session=test_db, sample_id=copied_sample.sample_id
+        session=db_session, sample_id=copied_sample.sample_id
     )
     assert copied_metadata is not None
 
@@ -244,7 +246,7 @@ def test_deep_copy__with_nested_metadata(test_db: Session) -> None:
 
     # Assert - original metadata is unchanged
     original_metadata = metadata_resolver.get_by_sample_id(
-        session=test_db, sample_id=img.sample.sample_id
+        session=db_session, sample_id=img.sample.sample_id
     )
     assert original_metadata is not None
     assert original_metadata.data["config"]["threshold"] == 0.5
@@ -253,19 +255,19 @@ def test_deep_copy__with_nested_metadata(test_db: Session) -> None:
     assert original_metadata.data["some_list"] == ["el1", "el2"]
 
 
-def test_deep_copy__with_embeddings(test_db: Session) -> None:
+def test_deep_copy__with_embeddings(db_session: Session) -> None:
     # Arrange
-    original = create_collection(session=test_db, collection_name="original")
+    original = create_collection(session=db_session, collection_name="original")
     img1 = create_image(
-        session=test_db, collection_id=original.collection_id, file_path_abs="/a.png"
+        session=db_session, collection_id=original.collection_id, file_path_abs="/a.png"
     )
     img2 = create_image(
-        session=test_db, collection_id=original.collection_id, file_path_abs="/b.png"
+        session=db_session, collection_id=original.collection_id, file_path_abs="/b.png"
     )
 
     # Create embedding model
     embedding_model = create_embedding_model(
-        session=test_db,
+        session=db_session,
         collection_id=original.collection_id,
         embedding_model_name="test_model",
         embedding_dimension=512,
@@ -273,13 +275,13 @@ def test_deep_copy__with_embeddings(test_db: Session) -> None:
 
     # Create embeddings
     create_sample_embedding(
-        session=test_db,
+        session=db_session,
         sample_id=img1.sample_id,
         embedding_model_id=embedding_model.embedding_model_id,
         embedding=[1.0, 2.0, 3.0],
     )
     create_sample_embedding(
-        session=test_db,
+        session=db_session,
         sample_id=img2.sample_id,
         embedding_model_id=embedding_model.embedding_model_id,
         embedding=[4.0, 5.0, 6.0],
@@ -287,14 +289,14 @@ def test_deep_copy__with_embeddings(test_db: Session) -> None:
 
     # Act
     copied = collection_resolver.deep_copy(
-        session=test_db,
+        session=db_session,
         root_collection_id=original.collection_id,
         copy_name="copied",
     )
 
     # Assert - embedding model is copied with new ID
     copied_embedding_models = embedding_model_resolver.get_all_by_collection_id(
-        session=test_db,
+        session=db_session,
         collection_id=copied.collection_id,
     )
     assert len(copied_embedding_models) == 1
@@ -306,14 +308,14 @@ def test_deep_copy__with_embeddings(test_db: Session) -> None:
 
     # Assert - embeddings copied
     copied_samples = sample_resolver.get_filtered_samples(
-        session=test_db,
+        session=db_session,
         filters=SampleFilter(collection_id=copied.collection_id),
     )
     assert copied_samples.total_count == 2
 
     # Assert - copied embeddings reference the new embedding model
     copied_embeddings = sample_embedding_resolver.get_all_by_collection_id(
-        session=test_db,
+        session=db_session,
         collection_id=copied.collection_id,
         embedding_model_id=copied_model.embedding_model_id,
     )
@@ -332,27 +334,27 @@ def test_deep_copy__with_embeddings(test_db: Session) -> None:
     assert original_sample_ids.isdisjoint(copied_sample_ids)
 
 
-def test_deep_copy__can_delete_original_after_copy(test_db: Session) -> None:
+def test_deep_copy__can_delete_original_after_copy(db_session: Session) -> None:
     """Verify deleting original collection after deep copy doesn't cause FK errors."""
     # Arrange
-    original = create_collection(session=test_db, collection_name="original")
+    original = create_collection(session=db_session, collection_name="original")
     original_collection_id = original.collection_id
     img = create_image(
-        session=test_db, collection_id=original.collection_id, file_path_abs="/a.png"
+        session=db_session, collection_id=original.collection_id, file_path_abs="/a.png"
     )
     label = create_annotation_label(
-        session=test_db, dataset_id=original.collection_id, label_name="test"
+        session=db_session, dataset_id=original.collection_id, label_name="test"
     )
 
     create_annotation(
-        session=test_db,
+        session=db_session,
         collection_id=original.collection_id,
         sample_id=img.sample_id,
         annotation_label_id=label.annotation_label_id,
         annotation_type=AnnotationType.CLASSIFICATION,
     )
     create_annotation(
-        session=test_db,
+        session=db_session,
         collection_id=original.collection_id,
         sample_id=img.sample_id,
         annotation_label_id=label.annotation_label_id,
@@ -360,7 +362,7 @@ def test_deep_copy__can_delete_original_after_copy(test_db: Session) -> None:
         annotation_data={"x": 10, "y": 20, "width": 30, "height": 40},
     )
     create_annotation(
-        session=test_db,
+        session=db_session,
         collection_id=original.collection_id,
         sample_id=img.sample_id,
         annotation_label_id=label.annotation_label_id,
@@ -374,7 +376,7 @@ def test_deep_copy__can_delete_original_after_copy(test_db: Session) -> None:
         },
     )
     create_annotation(
-        session=test_db,
+        session=db_session,
         collection_id=original.collection_id,
         sample_id=img.sample_id,
         annotation_label_id=label.annotation_label_id,
@@ -389,13 +391,13 @@ def test_deep_copy__can_delete_original_after_copy(test_db: Session) -> None:
     )
 
     embedding_model = create_embedding_model(
-        session=test_db,
+        session=db_session,
         collection_id=original.collection_id,
         embedding_model_name="test",
         embedding_dimension=3,
     )
     create_sample_embedding(
-        session=test_db,
+        session=db_session,
         sample_id=img.sample_id,
         embedding_model_id=embedding_model.embedding_model_id,
         embedding=[1.0, 2.0, 3.0],
@@ -403,32 +405,33 @@ def test_deep_copy__can_delete_original_after_copy(test_db: Session) -> None:
 
     # Act - deep copy, then delete original
     copied = collection_resolver.deep_copy(
-        session=test_db,
+        session=db_session,
         root_collection_id=original.collection_id,
         copy_name="copied",
     )
     collection_resolver.delete_dataset(
-        session=test_db,
+        session=db_session,
         root_collection_id=original.collection_id,
     )
 
     # Assert - copied collection still exists with its data
     copied_check = collection_resolver.get_by_id(
-        session=test_db, collection_id=copied.collection_id
+        session=db_session, collection_id=copied.collection_id
     )
     assert copied_check is not None
     assert (
-        collection_resolver.get_by_id(session=test_db, collection_id=original_collection_id) is None
+        collection_resolver.get_by_id(session=db_session, collection_id=original_collection_id)
+        is None
     )
 
     # Assert - copied collection still has embeddings
     copied_embedding_models = embedding_model_resolver.get_all_by_collection_id(
-        session=test_db,
+        session=db_session,
         collection_id=copied.collection_id,
     )
     assert len(copied_embedding_models) == 1
     copied_embeddings = sample_embedding_resolver.get_all_by_collection_id(
-        session=test_db,
+        session=db_session,
         collection_id=copied.collection_id,
         embedding_model_id=copied_embedding_models[0].embedding_model_id,
     )
@@ -436,17 +439,17 @@ def test_deep_copy__can_delete_original_after_copy(test_db: Session) -> None:
 
     # Assert - copied collection still has annotations
     copied_annotations = annotation_resolver.get_all(
-        session=test_db,
+        session=db_session,
         filters=AnnotationsFilter(collection_ids=[copied.children[0].collection_id]),
     )
     assert copied_annotations.total_count == 4
 
 
-def test_deep_copy__raises_for_non_root_collection(test_db: Session) -> None:
+def test_deep_copy__raises_for_non_root_collection(db_session: Session) -> None:
     # Arrange
-    root = create_collection(session=test_db, collection_name="root")
+    root = create_collection(session=db_session, collection_name="root")
     child = create_collection(
-        session=test_db,
+        session=db_session,
         collection_name="child",
         parent_collection_id=root.collection_id,
     )
@@ -454,13 +457,13 @@ def test_deep_copy__raises_for_non_root_collection(test_db: Session) -> None:
     # Act & Assert
     with pytest.raises(ValueError, match="Only root collections can be deep copied"):
         collection_resolver.deep_copy(
-            session=test_db,
+            session=db_session,
             root_collection_id=child.collection_id,
             copy_name="test",
         )
 
 
-def test_deep_copy__raises_for_nonexistent_collection(test_db: Session) -> None:
+def test_deep_copy__raises_for_nonexistent_collection(db_session: Session) -> None:
     # Arrange
     from uuid import uuid4
 
@@ -469,39 +472,49 @@ def test_deep_copy__raises_for_nonexistent_collection(test_db: Session) -> None:
     # Act & Assert
     with pytest.raises(ValueError, match="not found"):
         collection_resolver.deep_copy(
-            session=test_db,
+            session=db_session,
             root_collection_id=nonexistent_id,
             copy_name="test",
         )
 
 
-def test_deep_copy__with_annotations(test_db: Session) -> None:
+def test_deep_copy__with_annotations(db_session: Session) -> None:
     # Arrange
-    original = create_collection(session=test_db, collection_name="original")
+    original = create_collection(session=db_session, collection_name="original")
     img = create_image(
-        session=test_db, collection_id=original.collection_id, file_path_abs="/a.png"
+        session=db_session, collection_id=original.collection_id, file_path_abs="/a.png"
     )
     label = create_annotation_label(
-        session=test_db, dataset_id=original.collection_id, label_name="test"
+        session=db_session, dataset_id=original.collection_id, label_name="test"
+    )
+    (original_track_id,) = object_track_resolver.create_many(
+        session=db_session,
+        tracks=[ObjectTrackCreate(object_track_number=7, dataset_id=original.collection_id)],
     )
 
     classification = create_annotation(
-        session=test_db,
+        session=db_session,
         collection_id=original.collection_id,
         sample_id=img.sample_id,
         annotation_label_id=label.annotation_label_id,
         annotation_type=AnnotationType.CLASSIFICATION,
     )
     obj_detection = create_annotation(
-        session=test_db,
+        session=db_session,
         collection_id=original.collection_id,
         sample_id=img.sample_id,
         annotation_label_id=label.annotation_label_id,
         annotation_type=AnnotationType.OBJECT_DETECTION,
-        annotation_data={"x": 10, "y": 20, "width": 30, "height": 40},
+        annotation_data={
+            "x": 10,
+            "y": 20,
+            "width": 30,
+            "height": 40,
+            "object_track_id": original_track_id,
+        },
     )
     semantic_seg = create_annotation(
-        session=test_db,
+        session=db_session,
         collection_id=original.collection_id,
         sample_id=img.sample_id,
         annotation_label_id=label.annotation_label_id,
@@ -515,7 +528,7 @@ def test_deep_copy__with_annotations(test_db: Session) -> None:
         },
     )
     instance_seg = create_annotation(
-        session=test_db,
+        session=db_session,
         collection_id=original.collection_id,
         sample_id=img.sample_id,
         annotation_label_id=label.annotation_label_id,
@@ -538,14 +551,14 @@ def test_deep_copy__with_annotations(test_db: Session) -> None:
 
     # Act
     copied = collection_resolver.deep_copy(
-        session=test_db,
+        session=db_session,
         root_collection_id=original.collection_id,
         copy_name="copied",
     )
 
     # Assert - 4 annotations exist in the copied collection
     result = annotation_resolver.get_all(
-        session=test_db,
+        session=db_session,
         filters=AnnotationsFilter(collection_ids=[copied.children[0].collection_id]),
     )
     assert result.total_count == 4
@@ -565,16 +578,24 @@ def test_deep_copy__with_annotations(test_db: Session) -> None:
 
     # Assert - object detection detail table copied
     copied_od = copied_by_type[AnnotationType.OBJECT_DETECTION]
-    od_detail = test_db.get(ObjectDetectionAnnotationTable, copied_od.sample_id)
+    od_detail = db_session.get(ObjectDetectionAnnotationTable, copied_od.sample_id)
     assert od_detail is not None
     assert od_detail.x == 10
     assert od_detail.y == 20
     assert od_detail.width == 30
     assert od_detail.height == 40
+    assert copied_od.object_track_id is not None
+    assert copied_od.object_track_id != original_track_id
+    copied_track = object_track_resolver.get_by_id(
+        session=db_session, object_track_id=copied_od.object_track_id
+    )
+    assert copied_track is not None
+    assert copied_track.object_track_number == 7
+    assert copied_track.dataset_id == copied.collection_id
 
     # Assert - semantic segmentation detail table copied
     copied_ss = copied_by_type[AnnotationType.SEMANTIC_SEGMENTATION]
-    ss_detail = test_db.get(SegmentationAnnotationTable, copied_ss.sample_id)
+    ss_detail = db_session.get(SegmentationAnnotationTable, copied_ss.sample_id)
     assert ss_detail is not None
     assert ss_detail.x == 5
     assert ss_detail.y == 15
@@ -584,7 +605,7 @@ def test_deep_copy__with_annotations(test_db: Session) -> None:
 
     # Assert - instance segmentation detail table copied
     copied_is = copied_by_type[AnnotationType.INSTANCE_SEGMENTATION]
-    is_detail = test_db.get(SegmentationAnnotationTable, copied_is.sample_id)
+    is_detail = db_session.get(SegmentationAnnotationTable, copied_is.sample_id)
     assert is_detail is not None
     assert is_detail.x == 2
     assert is_detail.y == 4

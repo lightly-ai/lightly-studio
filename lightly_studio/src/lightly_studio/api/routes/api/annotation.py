@@ -122,7 +122,7 @@ def read_annotations(
         filters=AnnotationsFilter(
             collection_ids=[collection_id],
             annotation_label_ids=annotation_label_ids,
-            annotation_tag_ids=tag_ids,
+            tag_ids=tag_ids,
         ),
     )
 
@@ -147,7 +147,7 @@ def read_annotations_with_payload(
         filters=AnnotationsFilter(
             collection_ids=[collection_id],
             annotation_label_ids=params.annotation_label_ids,
-            annotation_tag_ids=params.tag_ids,
+            tag_ids=params.tag_ids,
         ),
         collection_id=collection_id,
     )
@@ -198,9 +198,12 @@ def get_annotation(
         Path(title="collection Id", description="The ID of the collection"),
     ],  # We need collection_id because otherwise the path would not match
     annotation_id: Annotated[UUID, Path(title="Annotation ID")],
-) -> AnnotationBaseTable:
+) -> AnnotationView:
     """Retrieve an existing annotation from the database."""
-    return annotations_service.get_annotation_by_id(session=session, annotation_id=annotation_id)
+    annotation = annotations_service.get_annotation_by_id(
+        session=session, annotation_id=annotation_id
+    )
+    return AnnotationView.from_annotation_table(annotation=annotation)
 
 
 @annotations_router.delete("/annotations/{annotation_id}")

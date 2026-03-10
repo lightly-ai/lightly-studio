@@ -5,8 +5,8 @@ from __future__ import annotations
 from uuid import UUID
 
 from pydantic import BaseModel, Field
-from sqlalchemy.orm import aliased
-from sqlmodel import col
+from sqlalchemy.orm import Mapped, aliased
+from sqlmodel import col, select
 
 from lightly_studio.models.annotation.annotation_base import AnnotationBaseTable, AnnotationType
 from lightly_studio.models.sample import SampleTable
@@ -25,14 +25,7 @@ class AnnotationsFilter(BaseModel):
     annotation_label_ids: list[UUID] | None = Field(
         default=None, description="List of annotation label UUIDs"
     )
-    annotation_tag_ids: list[UUID] | None = Field(default=None, description="List of tag UUIDs")
-    sample_tag_ids: list[UUID] | None = Field(
-        default=None,
-        description="List of sample tag UUIDs to filter annotations by",
-    )
-    sample_ids: list[UUID] | None = Field(
-        default=None, description="List of sample UUIDs to filter annotations by"
-    )
+    tag_ids: list[UUID] | None = Field(default=None, description="List of tag UUIDs")
 
     def apply(
         self,
@@ -49,7 +42,43 @@ class AnnotationsFilter(BaseModel):
         """
         annotation_sample = aliased(SampleTable)
         query = query.join(annotation_sample, AnnotationBaseTable.sample)
+        return self._apply_annotation_filters(
+            query=query,
+            annotation_sample=annotation_sample,
+        )
 
+    def apply_to_parent_sample_query(
+        self,
+        query: QueryType,
+        sample_id_column: Mapped[UUID],
+    ) -> QueryType:
+        """Filter a parent-sample query by annotation criteria.
+
+        This is used when the base query returns samples, but the filter itself
+        is defined on annotations. The sample query is constrained to the parent
+        sample ids of annotations matching this filter.
+        """
+        annotation_sample = aliased(SampleTable)
+        sample_ids_subquery = select(AnnotationBaseTable.parent_sample_id).join(
+            annotation_sample,
+            AnnotationBaseTable.sample,
+        )
+        sample_ids_subquery = self._apply_annotation_filters(
+            query=sample_ids_subquery,
+            annotation_sample=annotation_sample,
+        )
+        return query.where(sample_id_column.in_(sample_ids_subquery.distinct()))
+
+    def _apply_annotation_filters(
+        self,
+        query: QueryType,
+        annotation_sample: type[SampleTable],
+    ) -> QueryType:
+        """Apply the shared annotation predicates to a joined query.
+
+        Both `apply()` and `apply_to_parent_sample_query()` call this helper so
+        the annotation filtering rules live in one place.
+        """
         # Filter by collection
         if self.collection_ids:
             query = query.where(col(annotation_sample.collection_id).in_(self.collection_ids))
@@ -60,29 +89,13 @@ class AnnotationsFilter(BaseModel):
                 col(AnnotationBaseTable.annotation_label_id).in_(self.annotation_label_ids)
             )
 
-        # Filter by annotation tags
-        if self.annotation_tag_ids:
+        # Filter by tags
+        if self.tag_ids:
             query = (
                 query.join(annotation_sample.tags)
-                .where(
-                    annotation_sample.tags.any(col(TagTable.tag_id).in_(self.annotation_tag_ids))
-                )
+                .where(annotation_sample.tags.any(col(TagTable.tag_id).in_(self.tag_ids)))
                 .distinct()
             )
-
-        # Filter by sample tags
-        if self.sample_tag_ids:
-            parent_sample = aliased(SampleTable)
-            query = (
-                query.join(parent_sample, AnnotationBaseTable.parent_sample)
-                .join(parent_sample.tags)
-                .where(parent_sample.tags.any(col(TagTable.tag_id).in_(self.sample_tag_ids)))
-                .distinct()
-            )
-
-        # Filter by sample ids
-        if self.sample_ids:
-            query = query.where(col(AnnotationBaseTable.parent_sample_id).in_(self.sample_ids))
 
         # Filter by annotation type
         if self.annotation_types:

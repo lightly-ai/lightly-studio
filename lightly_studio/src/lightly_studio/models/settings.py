@@ -40,7 +40,7 @@ class SettingBase(SQLModel):
 
     # New setting for annotation text visibility.
     show_annotation_text_labels: bool = Field(
-        default=True,
+        default=False,
         description="Controls whether to show text labels on annotations",
     )
 
@@ -64,6 +64,15 @@ class SettingBase(SQLModel):
 
     key_toolbar_segmentation_mask: str = Field(
         default="m", description="Key to activate the segmentation mask tool in the toolbar"
+    )
+    key_toolbar_semantic: str = Field(
+        default="g", description="Key to activate semantic segmentation in the toolbar"
+    )
+    key_toolbar_brush: str = Field(
+        default="r", description="Key to activate brush mode in the segmentation tool"
+    )
+    key_toolbar_eraser: str = Field(
+        default="x", description="Key to activate eraser mode in the segmentation tool"
     )
 
 

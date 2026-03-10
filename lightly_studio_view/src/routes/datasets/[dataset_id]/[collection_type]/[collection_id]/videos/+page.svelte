@@ -129,6 +129,7 @@
     <SampleGrid
         itemCount={items.length}
         overScan={20}
+        scrollResetKey={$textEmbedding?.queryText ?? ''}
         testId="video-grid"
         message={{
             loading: 'Loading videos...',
@@ -163,12 +164,7 @@
                         onSelect={handleSampleSelect}
                     >
                         {#snippet item()}
-                            <VideoItem
-                                video={items[index]}
-                                size={sampleSize}
-                                {index}
-                                showCaption={true}
-                            />
+                            <VideoItem video={items[index]} size={sampleSize} showCaption={true} />
                         {/snippet}
                     </SampleGridItem>
                 {/key}

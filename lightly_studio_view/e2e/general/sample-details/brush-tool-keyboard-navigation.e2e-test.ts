@@ -3,7 +3,7 @@ import type { Page } from '@playwright/test';
 import { cocoDataset } from '../fixtures';
 
 const getCurrentSampleIdFromUrl = (page: Page): string => {
-    const match = page.url().match(/\/samples\/([^/]+)\/\d+$/);
+    const match = page.url().match(/\/samples\/([^/]+)$/);
     if (!match?.[1]) {
         throw new Error(`Could not parse sample id from URL: ${page.url()}`);
     }

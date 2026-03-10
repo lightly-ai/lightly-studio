@@ -1,48 +1,91 @@
 <script lang="ts">
     import { ImageSizeControl } from '$lib/components';
     import Separator from '$lib/components/ui/separator/separator.svelte';
-    import { page } from '$app/stores';
     import { useGlobalStorage } from '$lib/hooks/useGlobalStorage';
     import { useFrames } from '$lib/hooks/useFrames/useFrames';
     import VideoFrameItem from '$lib/components/VideoFrameItem/VideoFrameItem.svelte';
-    import { type VideoFrameFilter } from '$lib/api/lightly_studio_local';
     import { useTags } from '$lib/hooks/useTags/useTags';
     import { useVideoFramesBounds } from '$lib/hooks/useVideoFramesBounds/useVideoFramesBounds.js';
-    import {
-        createMetadataFilters,
-        useMetadataFilters
-    } from '$lib/hooks/useMetadataFilters/useMetadataFilters.js';
+    import { useMetadataFilters } from '$lib/hooks/useMetadataFilters/useMetadataFilters.js';
     import SampleGrid from '$lib/components/SampleGrid/SampleGrid.svelte';
     import SampleGridItem from '$lib/components/SampleGridItem/SampleGridItem.svelte';
     import { selectRangeByAnchor } from '$lib/utils/selectRangeByAnchor';
+    import { useFramesFilter } from '$lib/hooks/useFramesFilter/useFramesFilter';
+    import { isEqual, omit } from 'lodash-es';
+    import { page } from '$app/state';
+    import type { VideoFrameFilterParams } from '$lib/hooks/useFramesFilter/frameFilter';
 
     const { data: dataProps } = $props();
-    const { metadataValues } = useMetadataFilters($page.params.collection_id);
-    const { videoFramesBoundsValues } = useVideoFramesBounds();
+    const collectionId = $derived(page.params.collection_id);
+
+    const { metadataValues } = $derived(useMetadataFilters(collectionId));
+    const { videoFramesBoundsValues } = $derived(useVideoFramesBounds(collectionId));
 
     const selectedAnnotationFilterIds = $derived(dataProps.selectedAnnotationFilterIds);
-    const { tagsSelected } = useTags({
-        collection_id: $page.params.collection_id,
-        kind: ['sample']
-    });
-    const filter: VideoFrameFilter = $derived({
-        sample_filter: {
+    const { tagsSelected } = $derived(
+        useTags({
+            collection_id: collectionId,
+            kind: ['sample']
+        })
+    );
+
+    const framesParams = $derived<VideoFrameFilterParams>({
+        collection_id: collectionId,
+        filters: {
             annotation_label_ids: $selectedAnnotationFilterIds?.length
                 ? $selectedAnnotationFilterIds
                 : undefined,
             tag_ids: $tagsSelected.size > 0 ? Array.from($tagsSelected) : undefined,
-            metadata_filters: metadataValues ? createMetadataFilters($metadataValues) : undefined
+            metadata_values: $metadataValues
         },
-        ...$videoFramesBoundsValues
+        frame_bounds: $videoFramesBoundsValues
     });
+
+    const paramsWithoutSampleIds = (params: VideoFrameFilterParams) => {
+        return {
+            ...params,
+            filters: params.filters ? omit(params.filters, ['sample_ids']) : undefined
+        };
+    };
+
+    const { filterParams, frameFilter, updateFilterParams } = useFramesFilter();
+
+    $effect(() => {
+        const baseParams = framesParams;
+        const currentParams = $filterParams;
+
+        if (
+            currentParams &&
+            isEqual(paramsWithoutSampleIds(baseParams), paramsWithoutSampleIds(currentParams))
+        ) {
+            return;
+        }
+
+        let nextParams = baseParams;
+        const currentSampleIds = currentParams?.filters?.sample_ids ?? [];
+
+        if (currentSampleIds.length > 0) {
+            nextParams = {
+                ...nextParams,
+                filters: {
+                    ...(nextParams.filters ?? {}),
+                    sample_ids: currentSampleIds
+                }
+            };
+        }
+
+        updateFilterParams(nextParams);
+    });
+
+    const currentFrameFilter = $derived($frameFilter ?? {});
     const { data, query, loadMore, totalCount } = $derived(
-        useFrames($page.params.collection_id, filter)
+        useFrames(collectionId, currentFrameFilter)
     );
     const { setfilteredSampleCount, getSelectedSampleIds, toggleSampleSelection } =
         useGlobalStorage();
 
     let items = $derived($data);
-    const selectedSampleIds = getSelectedSampleIds($page.params.collection_id);
+    const selectedSampleIds = $derived(getSelectedSampleIds(collectionId));
     let selectionAnchorSampleId = $state<string | null>(null);
 
     $effect(() => {
@@ -66,7 +109,7 @@
             shiftKey,
             anchorSampleId: selectionAnchorSampleId,
             onSelectSample: (selectedSampleId) =>
-                toggleSampleSelection(selectedSampleId, $page.params.collection_id)
+                toggleSampleSelection(selectedSampleId, collectionId)
         });
     }
 </script>
@@ -114,12 +157,12 @@
                     {index}
                     dataTestId="frame-grid-item"
                     sampleId={items[index].sample_id}
-                    collectionId={$page.params.collection_id}
+                    {collectionId}
                     dataSampleName={items[index].sample_id}
                     onSelect={handleSampleSelect}
                 >
                     {#snippet item()}
-                        <VideoFrameItem videoFrame={items[index]} {index} size={sampleSize} />
+                        <VideoFrameItem videoFrame={items[index]} size={sampleSize} />
                     {/snippet}
                 </SampleGridItem>
             {/if}

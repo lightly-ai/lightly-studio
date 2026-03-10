@@ -136,14 +136,13 @@ Create a file named `example_video.py` with the following contents:
 
 ```python title="example_video.py"
 import lightly_studio as ls
-from lightly_studio.core.video.video_dataset import VideoDataset
 from lightly_studio.utils import download_example_dataset
 
 # Download the example dataset (will be skipped if it already exists)
 dataset_path = download_example_dataset(download_dir="dataset_examples")
 
 # Create a dataset and populate it with videos.
-dataset = VideoDataset.create()
+dataset = ls.VideoDataset.create()
 dataset.add_videos_from_path(path=f"{dataset_path}/youtube_vis_50_videos/train/videos")
 
 # Start the UI server.
@@ -237,7 +236,7 @@ Our tool uses the fsspec library, which also supports other file systems. If you
 
 * **Images:** Your images can be located in a cloud bucket (e.g., `s3://my-bucket/images/`)
 * **Videos:** Your video files must currently be local. Cloud support is coming soon.
-* **Annotations (Labels):** Your annotation files (like `labels.json` or a `labels/` directory) must be local on your machine. Loading annotations from cloud storage is not yet supported.
+* **Annotations (Labels):** Loading annotations from cloud storage is only supported for COCO object detection and instance segmentation formats. Other annotation formats and caption datasets are not yet supported.
 
 ### Dataset
 

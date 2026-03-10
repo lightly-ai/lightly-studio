@@ -71,6 +71,7 @@ def create_many(
             annotation_type=annotation_create.annotation_type,
             confidence=annotation_create.confidence,
             parent_sample_id=annotation_create.parent_sample_id,
+            object_track_id=annotation_create.object_track_id,
         )
 
         # Set other relationship details to None

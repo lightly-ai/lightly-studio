@@ -1,39 +1,38 @@
 import { goto } from '$app/navigation';
-import { get, type Readable } from 'svelte/store';
-import type { UseAnnotationAdjacentsData } from '../useAnnotationAdjacents/useAnnotationAdjacents';
+import { get } from 'svelte/store';
 import { routeHelpers } from '$lib/routes';
 import { useAnnotationLabelContext } from '$lib/contexts/SampleDetailsAnnotation.svelte';
 import { useSampleDetailsToolbarContext } from '$lib/contexts/SampleDetailsToolbar.svelte';
+import { useAdjacentAnnotations } from '../useAdjacentAnnotations/useAdjacentAnnotations';
 
 export function useAnnotationDeleteNavigation({
+    annotationId,
     collectionId,
     datasetId,
-    collectionType,
-    annotationIndex,
-    annotationAdjacents
+    collectionType
 }: {
+    annotationId: string;
     collectionId: string;
-    annotationIndex: number;
     datasetId: string;
     collectionType: string;
-    annotationAdjacents: Readable<UseAnnotationAdjacentsData>;
 }) {
     const { setAnnotationId } = useAnnotationLabelContext();
     const { setStatus } = useSampleDetailsToolbarContext();
+    const { query: adjacentAnnotationsQuery } = useAdjacentAnnotations({
+        sampleId: annotationId,
+        collectionId
+    });
 
     const gotoNextAnnotation = () => {
-        const index = annotationIndex;
-        const adjacents = get(annotationAdjacents);
+        const nextAnnotationId = get(adjacentAnnotationsQuery).data?.next_sample_id;
 
-        if (adjacents.annotationNext) {
+        if (nextAnnotationId) {
             goto(
                 routeHelpers.toSampleWithAnnotation({
                     datasetId,
                     collectionId,
                     collectionType,
-                    sampleId: adjacents.annotationNext.parent_sample_id,
-                    annotationId: adjacents.annotationNext.sample_id,
-                    annotationIndex: index + 1
+                    annotationId: nextAnnotationId
                 }),
                 { invalidateAll: true }
             );

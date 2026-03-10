@@ -98,8 +98,8 @@
 
         try {
             const response = await executeOperator({
-                path: { collection_id: collectionId, operator_id: operator.id },
-                body: { parameters }
+                path: { operator_id: operator.id },
+                body: { parameters, context: { collection_id: collectionId } }
             });
 
             if (response.error) {

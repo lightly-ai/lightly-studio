@@ -3,9 +3,8 @@ export { default as AnnotationsGrid } from '$lib/components/AnnotationsGrid/Anno
 export { default as AnnotationsGridItem } from '$lib/components/AnnotationsGrid/AnnotationsGridItem/AnnotationsGridItem.svelte';
 export { default as Card } from '$lib/components/Card/Card.svelte';
 export { default as CardContent } from '$lib/components/CardContent/CardContent.svelte';
-export { default as CombinedMetadataDimensionsFilters } from '$lib/components/CombinedMetadataDimensionsFilters/index.svelte';
+export { default as CombinedMetadataDimensionsFilters } from '$lib/components/CombinedMetadataDimensionsFilters/CombinedMetadataDimensionsFilters.svelte';
 export { default as DimensionFilters } from '$lib/components/DimensionFilters/index.svelte';
-export { default as MetadataFilters } from '$lib/components/MetadataFilters/index.svelte';
 export { default as ExportSamples } from '$lib/components/ExportSamples/ExportSamples.svelte';
 export { default as Checkbox } from '$lib/components/Form/Checkbox/Checkbox.svelte';
 export { default as Header } from '$lib/components/Header/Header.svelte';
@@ -17,6 +16,7 @@ export { default as SampleAnnotation } from '$lib/components/SampleAnnotation/Sa
 export { default as SampleAnnotationBox } from '$lib/components/SampleAnnotation/SampleAnnotationBox/SampleAnnotationBox.svelte';
 export { default as SampleAnnotationLabel } from '$lib/components/SampleAnnotation/SampleAnnotationLabel/SampleAnnotationLabel.svelte';
 export { default as SampleAnnotationSegmentationRLE } from '$lib/components/SampleAnnotation/SampleAnnotationSegmentationRLE/SampleAnnotationSegmentationRLE.svelte';
+export { default as AnnotationCanvas } from '$lib/components/AnnotationCanvas/AnnotationCanvas.svelte';
 export { default as SampleAnnotations } from '$lib/components/SampleAnnotations/index.svelte';
 export { default as ImageDetails } from '$lib/components/SampleDetails/ImageDetails.svelte';
 export { default as SampleDetailsSidePanel } from '$lib/components/SampleDetails/SampleDetailsSidePanel/SampleDetailsSidePanel.svelte';

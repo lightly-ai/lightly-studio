@@ -28,7 +28,7 @@
                 />
             </div>
         {:else}
-            <p>No tag, create a tag</p>
+            <p>No tags yet</p>
         {/each}
     </div>
 </Segment>

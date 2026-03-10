@@ -12,7 +12,7 @@ test.describe('bussines-flow1', () => {
         expect(await samplesPage.getSamples().count()).toBe(cocoDataset.defaultPageSize);
 
         // Check if we have some annotations on screen.
-        const annotationCount = await page.getByTestId('annotation_box').count();
+        const annotationCount = await page.getByTestId('sample-annotation-item').count();
         expect(annotationCount).toBeGreaterThan(0);
 
         // No images in the grid view should be selected
@@ -27,7 +27,7 @@ test.describe('bussines-flow1', () => {
         await page.waitForTimeout(100);
 
         // Check that annotation boxes are not visible anymore.
-        const annotations = page.getByTestId('annotation_box');
+        const annotations = page.getByTestId('sample-annotation-item');
         const annotationsCount = await annotations.count();
         for (let i = 0; i < annotationsCount; i++) {
             expect(annotations.nth(i)).toBeHidden();
@@ -58,7 +58,9 @@ test.describe('bussines-flow1', () => {
         // Collect all annotation names
         const annotationNames = [];
         for (let i = 0; i < 3; i++) {
-            const name = await sampleAnnotationNames.nth(i).textContent();
+            const text = await sampleAnnotationNames.nth(i).textContent();
+            // Extract just the label name (first line, before any track id info)
+            const name = text?.trim().split('\n')[0] || '';
             annotationNames.push(name);
         }
 
@@ -101,9 +103,13 @@ test.describe('bussines-flow1', () => {
         await samplesPage.pressTag(catsTagName);
         expect(await samplesPage.getSamples().count()).toBe(cocoDataset.defaultPageSize);
 
-        // Clear the search input by typing empty string and pressing Enter.
-        // The first sample should be the default one.
-        await samplesPage.textSearch('');
+        // We need to wait after clicking the clear button for the grid view to be updated
+        const clearResponsePromise = page.waitForResponse(
+            (response) => response.url().includes('/images/list') && response.status() === 200
+        );
+        await page.getByTestId('search-clear-button').click();
+        await clearResponsePromise;
+
         await samplesPage.doubleClickFirstSample();
         await expect(sampleDetailsPage.getSampleName()).toHaveText(cocoDataset.firstSampleName);
     });

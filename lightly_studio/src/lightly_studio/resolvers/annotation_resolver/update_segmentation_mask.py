@@ -26,7 +26,7 @@ def update_segmentation_mask(
     Raises:
         ValueError: If the annotation does not exist or does not support a segmentation mask.
     """
-    annotation = annotation_resolver.get_by_id(session, annotation_id)
+    annotation = annotation_resolver.get_by_id(session=session, annotation_id=annotation_id)
     if not annotation:
         raise ValueError(f"Annotation with ID {annotation_id} not found.")
 

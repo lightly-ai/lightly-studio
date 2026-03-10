@@ -21,7 +21,7 @@ def test_create_combination_selection__diversity_success(
 ) -> None:
     """Test successful diversity selection."""
     collection_id = helpers_resolvers.fill_db_with_samples_and_embeddings(
-        test_db=db_session, n_samples=10, embedding_model_names=["test_embedding_model"]
+        session=db_session, n_samples=10, embedding_model_names=["test_embedding_model"]
     )
 
     request_data = {
@@ -60,7 +60,7 @@ def test_create_combination_selection__diversity_success_videos(
 ) -> None:
     """Test successful diversity selection on a video collection."""
     collection_id = helpers_resolvers.fill_db_with_video_samples_and_embeddings(
-        test_db=db_session, n_samples=10, embedding_model_names=["test_embedding_model"]
+        session=db_session, n_samples=10, embedding_model_names=["test_embedding_model"]
     )
 
     request_data = {
@@ -96,7 +96,7 @@ def test_create_combination_selection__insufficient_samples(
 ) -> None:
     """Test diversity selection when requesting more samples than available."""
     collection_id = helpers_resolvers.fill_db_with_samples_and_embeddings(
-        test_db=db_session, n_samples=2, embedding_model_names=["test_embedding_model"]
+        session=db_session, n_samples=2, embedding_model_names=["test_embedding_model"]
     )
 
     request_data = {
@@ -122,7 +122,7 @@ def test_create_combination_selection__duplicate_tag_name(
 ) -> None:
     """Test diversity selection when tag name already exists."""
     collection_id = helpers_resolvers.fill_db_with_samples_and_embeddings(
-        test_db=db_session, n_samples=5, embedding_model_names=["test_embedding_model"]
+        session=db_session, n_samples=5, embedding_model_names=["test_embedding_model"]
     )
 
     request_data = {

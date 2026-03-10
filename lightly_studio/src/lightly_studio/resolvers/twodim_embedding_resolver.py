@@ -7,10 +7,9 @@ from uuid import UUID
 import numpy as np
 from lightly_mundig import TwoDimEmbedding  # type: ignore[import-untyped]
 from numpy.typing import NDArray
-from sqlmodel import Session, col, select
+from sqlmodel import Session
 
 from lightly_studio.models.embedding_model import EmbeddingModelTable
-from lightly_studio.models.sample import SampleTable
 from lightly_studio.models.two_dim_embedding import TwoDimEmbeddingTable
 from lightly_studio.resolvers import sample_embedding_resolver
 
@@ -38,21 +37,11 @@ def get_twodim_embeddings(
     if embedding_model is None:
         raise ValueError(f"Embedding model {embedding_model_id} not found.")
 
-    # Define a fixed order of sample IDs for the cache key.
-    sample_ids_ordered = list(
-        session.exec(
-            select(SampleTable.sample_id)
-            .where(SampleTable.collection_id == collection_id)
-            .order_by(col(SampleTable.sample_id).asc())
-        ).all()
-    )
-
-    # Check if we have a cached 2D embedding for the given samples and embedding model.
-    # The order is defined by sample_ids_ordered.
+    # Check if we have a cached 2D embedding for the given collection and embedding model.
     cache_key, sample_ids_of_samples_with_embeddings = (
-        sample_embedding_resolver.get_hash_by_sample_ids(
+        sample_embedding_resolver.get_hash_by_collection_id(
             session=session,
-            sample_ids_ordered=sample_ids_ordered,
+            collection_id=collection_id,
             embedding_model_id=embedding_model_id,
         )
     )

@@ -8,9 +8,9 @@
     import { page } from '$app/state';
     import { Button } from '$lib/components/ui';
     import { useDeleteAnnotation } from '$lib/hooks/useDeleteAnnotation/useDeleteAnnotation';
+    import * as Popover from '$lib/components/ui/popover/index.js';
     import { toast } from 'svelte-sonner';
     import { useAnnotationDeleteNavigation } from '$lib/hooks/useAnnotationDeleteNavigation/useAnnotationDeleteNavigation';
-    import DeleteAnnotationPopUp from '$lib/components/DeleteAnnotationPopUp/DeleteAnnotationPopUp.svelte';
 
     const {
         annotation,
@@ -55,13 +55,14 @@
 
     const { gotoNextAnnotation } = $derived.by(() =>
         useAnnotationDeleteNavigation({
+            annotationId: annotation.sample_id,
             collectionId,
             datasetId,
-            collectionType,
-            annotationIndex: page.data.annotationIndex,
-            annotationAdjacents: page.data.annotationAdjacents
+            collectionType
         })
     );
+
+    let showDeleteConfirmation = $state(false);
 </script>
 
 <Card className="h-full">
@@ -75,13 +76,40 @@
             {@render children()}
 
             {#if $isEditingMode}
-                <DeleteAnnotationPopUp onDelete={handleDeleteAnnotation}>
-                    <Button
-                        variant="destructive"
-                        class="w-full"
-                        data-testid="delete-annotation-trigger">Delete annotation</Button
-                    >
-                </DeleteAnnotationPopUp>
+                <Popover.Root bind:open={showDeleteConfirmation}>
+                    <Popover.Trigger>
+                        <Button
+                            variant="destructive"
+                            class="w-full"
+                            data-testid="delete-annotation-trigger"
+                        >
+                            Delete annotation
+                        </Button>
+                    </Popover.Trigger>
+                    <Popover.Content>
+                        You are going to delete this annotation. This action cannot be undone.
+                        <div class="mt-2 flex justify-end gap-2">
+                            <Button
+                                variant="destructive"
+                                size="sm"
+                                data-testid="confirm-delete-annotation"
+                                onclick={(e: MouseEvent) => {
+                                    e.stopPropagation();
+                                    handleDeleteAnnotation();
+                                    showDeleteConfirmation = false;
+                                }}>Delete</Button
+                            >
+                            <Button
+                                variant="outline"
+                                size="sm"
+                                onclick={(e: MouseEvent) => {
+                                    e.stopPropagation();
+                                    showDeleteConfirmation = false;
+                                }}>Cancel</Button
+                            >
+                        </div>
+                    </Popover.Content>
+                </Popover.Root>
             {/if}
         </div>
     </CardContent>

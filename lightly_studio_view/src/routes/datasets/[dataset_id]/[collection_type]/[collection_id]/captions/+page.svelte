@@ -2,7 +2,9 @@
     import { page } from '$app/state';
     import Captions from '$lib/components/Captions/Captions.svelte';
 
-    const collectionId = page.params.collection_id;
+    const collectionId = $derived(page.params.collection_id);
 </script>
 
-<Captions {collectionId} />
+{#key collectionId}
+    <Captions {collectionId} />
+{/key}

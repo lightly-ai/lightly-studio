@@ -21,11 +21,14 @@
         keyToolbarSelection: 's',
         keyToolbarDrag: $settingsStore.key_toolbar_drag,
         keyToolbarBoundingBox: $settingsStore.key_toolbar_bounding_box,
-        keyToolbarSegmentationMask: $settingsStore.key_toolbar_segmentation_mask
+        keyToolbarSegmentationMask: $settingsStore.key_toolbar_segmentation_mask,
+        keyToolbarSemantic: $settingsStore.key_toolbar_semantic,
+        keyToolbarBrush: $settingsStore.key_toolbar_brush || 'r',
+        keyToolbarEraser: $settingsStore.key_toolbar_eraser || 'x'
     });
     type RenderingMode = 'contain' | 'cover';
     let gridViewRendering: RenderingMode = $state('contain');
-    let showAnnotationTextLabels = $state<boolean>(true);
+    let showAnnotationTextLabels = $state<boolean>(false);
     let showSampleFilenames = $state<boolean>(false);
 
     let initialized = false;
@@ -40,11 +43,14 @@
                 keyToolbarSelection: $settingsStore.key_toolbar_selection,
                 keyToolbarDrag: $settingsStore.key_toolbar_drag,
                 keyToolbarBoundingBox: $settingsStore.key_toolbar_bounding_box,
-                keyToolbarSegmentationMask: $settingsStore.key_toolbar_segmentation_mask
+                keyToolbarSegmentationMask: $settingsStore.key_toolbar_segmentation_mask,
+                keyToolbarSemantic: $settingsStore.key_toolbar_semantic,
+                keyToolbarBrush: $settingsStore.key_toolbar_brush || 'r',
+                keyToolbarEraser: $settingsStore.key_toolbar_eraser || 'x'
             };
             gridViewRendering = $settingsStore.grid_view_sample_rendering || 'contain';
-            showAnnotationTextLabels = Boolean($settingsStore.show_annotation_text_labels ?? true);
-            showSampleFilenames = Boolean($settingsStore.show_sample_filenames ?? false);
+            showAnnotationTextLabels = $settingsStore.show_annotation_text_labels ?? false;
+            showSampleFilenames = $settingsStore.show_sample_filenames ?? false;
             initialized = true;
         }
     });
@@ -85,7 +91,10 @@
                 key_toolbar_selection: shortcutSettings.keyToolbarSelection,
                 key_toolbar_drag: shortcutSettings.keyToolbarDrag,
                 key_toolbar_bounding_box: shortcutSettings.keyToolbarBoundingBox,
-                key_toolbar_segmentation_mask: shortcutSettings.keyToolbarSegmentationMask
+                key_toolbar_segmentation_mask: shortcutSettings.keyToolbarSegmentationMask,
+                key_toolbar_semantic: shortcutSettings.keyToolbarSemantic,
+                key_toolbar_brush: shortcutSettings.keyToolbarBrush,
+                key_toolbar_eraser: shortcutSettings.keyToolbarEraser
             });
 
             setOpen(false);
@@ -137,7 +146,9 @@
 <Dialog.Root open={$isSettingsDialogOpen} onOpenChange={(isOpen) => setOpen(isOpen)}>
     <Dialog.Portal>
         <Dialog.Overlay />
-        <Dialog.Content class="border-border bg-background sm:max-w-[500px]">
+        <Dialog.Content
+            class="max-h-[85vh] overflow-y-auto border-border bg-background dark:[color-scheme:dark] sm:max-w-[500px]"
+        >
             <form onsubmit={handleFormSubmit}>
                 <Dialog.Header>
                     <Dialog.Title class="text-foreground">Settings</Dialog.Title>
@@ -286,6 +297,82 @@
                                 {:else}
                                     <span>{shortcutSettings.keyToolbarSegmentationMask}</span>
                                 {/if}
+                            </button>
+                        </div>
+                        <div class="grid grid-cols-2 items-center gap-4">
+                            <Label
+                                for="toolbar-semantic-segmentation"
+                                class="text-right text-foreground"
+                            >
+                                Toolbar semantic segmentation
+                            </Label>
+                            <button
+                                id="toolbar-semantic-segmentation"
+                                type="button"
+                                class="rounded-md border border-input bg-background p-2 text-left text-foreground"
+                                onclick={(e) => {
+                                    e.preventDefault();
+                                    startRecording('keyToolbarSemantic');
+                                }}
+                            >
+                                {#if recordingShortcut === 'keyToolbarSemantic'}
+                                    <span class="italic opacity-70">Press a key...</span>
+                                {:else}
+                                    <span>{shortcutSettings.keyToolbarSemantic}</span>
+                                {/if}
+                            </button>
+                        </div>
+                        <div class="grid grid-cols-2 items-center gap-4">
+                            <Label for="toolbar-brush-mode" class="text-right text-foreground">
+                                Toolbar brush mode
+                            </Label>
+                            <button
+                                id="toolbar-brush-mode"
+                                type="button"
+                                class="rounded-md border border-input bg-background p-2 text-left text-foreground"
+                                onclick={(e) => {
+                                    e.preventDefault();
+                                    startRecording('keyToolbarBrush');
+                                }}
+                            >
+                                {#if recordingShortcut === 'keyToolbarBrush'}
+                                    <span class="italic opacity-70">Press a key...</span>
+                                {:else}
+                                    <span>{shortcutSettings.keyToolbarBrush}</span>
+                                {/if}
+                            </button>
+                        </div>
+                        <div class="grid grid-cols-2 items-center gap-4">
+                            <Label for="toolbar-eraser-mode" class="text-right text-foreground">
+                                Toolbar eraser mode
+                            </Label>
+                            <button
+                                id="toolbar-eraser-mode"
+                                type="button"
+                                class="rounded-md border border-input bg-background p-2 text-left text-foreground"
+                                onclick={(e) => {
+                                    e.preventDefault();
+                                    startRecording('keyToolbarEraser');
+                                }}
+                            >
+                                {#if recordingShortcut === 'keyToolbarEraser'}
+                                    <span class="italic opacity-70">Press a key...</span>
+                                {:else}
+                                    <span>{shortcutSettings.keyToolbarEraser}</span>
+                                {/if}
+                            </button>
+                        </div>
+                        <div class="grid grid-cols-2 items-center gap-4">
+                            <Label for="change-brush-size" class="text-right text-foreground">
+                                Change brush size
+                            </Label>
+                            <button
+                                id="change-brush-size"
+                                type="button"
+                                disabled
+                                class="rounded-md border border-input bg-background p-2 text-left text-foreground"
+                            >
+                                <span>Alt + scroll</span>
                             </button>
                         </div>
                     </div>

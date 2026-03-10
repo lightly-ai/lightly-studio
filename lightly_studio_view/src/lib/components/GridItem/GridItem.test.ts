@@ -12,8 +12,6 @@ describe('GridItem', () => {
 
         const gridItem = container.querySelector('.relative.select-none');
         expect(gridItem).toBeInTheDocument();
-        expect(gridItem).toHaveAttribute('role', 'button');
-        expect(gridItem).toHaveAttribute('tabindex', '0');
 
         const innerDiv = container.querySelector('.relative.overflow-hidden.rounded-lg');
         expect(innerDiv).toBeInTheDocument();

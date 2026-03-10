@@ -1,5 +1,5 @@
 <script lang="ts">
-    import { PenTool } from '@lucide/svelte';
+    import { PaintRoller } from '@lucide/svelte';
 
     type Props = { onclick: () => void; isActive?: boolean };
 
@@ -15,7 +15,7 @@
         focus:outline-none
                 ${isActive ? 'bg-black/40' : 'hover:bg-black/20'}`}
 >
-    <PenTool
+    <PaintRoller
         class={`size-4 transition-colors ${isActive ? 'text-primary' : ''} hover:text-primary`}
     />
 </button>

@@ -33,7 +33,7 @@ describe('NavigationMenu', () => {
             params: {
                 dataset_id: 'test-dataset-id',
                 collection_type: 'image',
-                collection_id: 'test-collection-id'
+                collection_id: 'test-collection'
             }
         } as unknown as Page<Record<string, string>, string | null>);
 

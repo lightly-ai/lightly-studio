@@ -1,4 +1,5 @@
 <script lang="ts">
+    import { PUBLIC_VIDEOS_MEDIA_URL } from '$env/static/public';
     import {
         getAllFrames,
         type FrameView,
@@ -16,13 +17,11 @@
     let {
         video,
         size,
-        index,
         showAnnotations = true,
         showCaption = false
     }: {
         video: VideoView;
         size: number;
-        index?: number | undefined;
         showAnnotations?: boolean;
         showCaption?: boolean;
     } = $props();
@@ -34,7 +33,7 @@
     let cursor = 0;
     let loading = false;
     let reachedEnd = false;
-    const BATCH_SIZE = 25;
+    const BATCH_SIZE = 50;
     let hoverTimer: ReturnType<typeof setTimeout> | null = null;
     const HOVER_DELAY = 200;
     let isHovering = false;
@@ -47,7 +46,12 @@
             if (showAnnotations) await loadFrames();
 
             if (videoEl) {
-                if (videoEl.readyState < 2) {
+                if (!videoEl.getAttribute('src')) {
+                    videoEl.src = `${PUBLIC_VIDEOS_MEDIA_URL}/${video.sample_id}`;
+                }
+
+                if (videoEl.readyState < HTMLMediaElement.HAVE_CURRENT_DATA) {
+                    videoEl.load();
                     await new Promise((res) =>
                         videoEl?.addEventListener('loadeddata', res, { once: true })
                     );
@@ -68,6 +72,8 @@
 
         videoEl?.pause();
         videoEl.currentTime = 0;
+        videoEl.removeAttribute('src');
+        videoEl.load();
     }
 
     const datasetId = $derived(page.params.dataset_id!);
@@ -76,22 +82,14 @@
         const collectionId = (video.sample as SampleView).collection_id;
 
         if (datasetId && collectionId) {
-            goto(
-                routeHelpers.toVideosDetails(
-                    datasetId,
-                    'video',
-                    collectionId,
-                    video.sample_id,
-                    index
-                )
-            );
+            goto(routeHelpers.toVideosDetails(datasetId, 'video', collectionId, video.sample_id));
         }
     }
 
     function onUpdate(frame: FrameView | VideoFrameView | null, index: number | null) {
         if (!showAnnotations) return;
         currentFrame = frame;
-        if (index != null && index % BATCH_SIZE == 0 && index != 0) {
+        if (index != null && cursor - index < BATCH_SIZE / 2 && index != 0) {
             loadFrames();
         }
     }
@@ -152,7 +150,7 @@
         update={onUpdate}
         muted={true}
         playsinline={true}
-        preload="metadata"
+        preload="none"
         {handleMouseEnter}
         {handleMouseLeave}
         className="h-full w-full cursor-pointer rounded-lg shadow-md"
@@ -164,6 +162,7 @@
             sampleWidth={video.width}
             sampleHeight={video.height}
             sample={currentFrame}
+            showLabel={false}
         />
     {/if}
     {#if video.similarity_score !== undefined && video.similarity_score !== null}

@@ -1337,7 +1337,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/operators/collections/{collection_id}/{operator_id}/execute": {
+    "/api/operators/{operator_id}/execute": {
         parameters: {
             query?: never;
             header?: never;
@@ -1352,8 +1352,7 @@ export interface paths {
          *
          *     Args:
          *         operator_id: The ID of the operator to execute.
-         *         collection_id: The ID of the collection to operate on.
-         *         request: The execution request containing parameters.
+         *         request: The execution request containing parameters and context.
          *         session: Database session.
          *
          *     Returns:
@@ -1617,6 +1616,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/groups/{group_id}/components": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Group Components By Group Id
+         * @description Get all component views that belong to a group sample.
+         */
+        get: operations["get_group_components_by_group_id"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/images/sample/{sample_id}": {
         parameters: {
             query?: never;
@@ -1718,7 +1737,7 @@ export interface components {
         AdjacentRequest: {
             sample_type: components["schemas"]["SampleType"];
             /** Filters */
-            filters: components["schemas"]["ImageFilter"] | components["schemas"]["VideoFilter"] | components["schemas"]["VideoFrameFilter"] | components["schemas"]["AnnotationsFilter"];
+            filters: components["schemas"]["ImageFilter"] | components["schemas"]["VideoFilter"] | components["schemas"]["VideoFrameAdjacentFilter"] | components["schemas"]["AnnotationsFilter"];
             /** Text Embedding */
             text_embedding?: number[] | null;
         };
@@ -1769,6 +1788,8 @@ export interface components {
              * Format: uuid
              */
             parent_sample_id: string;
+            /** Object Track Id */
+            object_track_id?: string | null;
         };
         /**
          * AnnotationCreateInput
@@ -1913,6 +1934,10 @@ export interface components {
             created_at: string;
             object_detection_details?: components["schemas"]["ObjectDetectionAnnotationView"] | null;
             segmentation_details?: components["schemas"]["SegmentationAnnotationView"] | null;
+            /** Object Track Id */
+            object_track_id?: string | null;
+            /** Object Track Number */
+            object_track_number?: number | null;
             /**
              * Tags
              * @default []
@@ -1987,20 +2012,10 @@ export interface components {
              */
             annotation_label_ids?: string[] | null;
             /**
-             * Annotation Tag Ids
+             * Tag Ids
              * @description List of tag UUIDs
              */
-            annotation_tag_ids?: string[] | null;
-            /**
-             * Sample Tag Ids
-             * @description List of sample tag UUIDs to filter annotations by
-             */
-            sample_tag_ids?: string[] | null;
-            /**
-             * Sample Ids
-             * @description List of sample UUIDs to filter annotations by
-             */
-            sample_ids?: string[] | null;
+            tag_ids?: string[] | null;
         };
         /** BaseParameter */
         BaseParameter: {
@@ -2222,6 +2237,21 @@ export interface components {
             total_sample_count: number;
         };
         /**
+         * ComponentCollectionView
+         * @description Collection view for group components.
+         */
+        ComponentCollectionView: {
+            /** Name */
+            name: string;
+            /** Parent Collection Id */
+            parent_collection_id?: string | null;
+            sample_type: components["schemas"]["SampleType"];
+            /** Group Component Name */
+            group_component_name: string;
+            /** Group Component Index */
+            group_component_index: number;
+        };
+        /**
          * ComputeSimilarityRequest
          * @description Request model for computing typicality metadata.
          */
@@ -2338,9 +2368,8 @@ export interface components {
          */
         ExecuteOperatorRequest: {
             /** Parameters */
-            parameters: {
-                [key: string]: unknown;
-            };
+            parameters: Record<string, never>;
+            context: components["schemas"]["OperatorContextRequest"];
         };
         /**
          * ExportBody
@@ -2455,6 +2484,28 @@ export interface components {
          * @enum {string}
          */
         GridViewSampleRenderingType: "cover" | "contain";
+        /**
+         * GroupComponentView
+         * @description GroupComponentView representation.
+         *
+         *     Represents a group component with its name and associated media (image or video).
+         *     A component is always either an image or a video, never both.
+         *
+         *     A "GroupComponent" is a sample that has the following relationships:
+         *     - Collection relationship (samples.collection_id → collections.collection_id): The component
+         *       sample belongs to a component collection.
+         *     - Group relationship (via SampleGroupLinkTable): The component is linked to a parent group
+         *       sample through the SampleGroupLinkTable join table, where the component is referenced
+         *       by sample_id and the parent group by parent_sample_id.
+         *     - Content relationship: Each sample's actual content (media file information) is stored in
+         *       either ImageTable or VideoTable, linked via sample_id as a foreign key. A sample_id exists
+         *       in SampleTable and exactly one of ImageTable/VideoTable - never both.
+         */
+        GroupComponentView: {
+            collection: components["schemas"]["ComponentCollectionView"];
+            /** Details */
+            details?: components["schemas"]["ImageView"] | components["schemas"]["VideoView"] | null;
+        };
         /**
          * GroupFilter
          * @description Encapsulates filter parameters for querying groups.
@@ -2720,6 +2771,19 @@ export interface components {
             /** Height */
             height: number;
         };
+        /**
+         * OperatorContextRequest
+         * @description Client-supplied execution context for scoped operator calls.
+         */
+        OperatorContextRequest: {
+            /**
+             * Collection Id
+             * Format: uuid
+             */
+            collection_id: string;
+            /** Context Filter */
+            context_filter?: components["schemas"]["ImageFilter"] | components["schemas"]["VideoFrameFilter"] | components["schemas"]["VideoFilter"] | components["schemas"]["AnnotationsFilter"] | components["schemas"]["GroupFilter"] | components["schemas"]["SampleFilter"] | null;
+        };
         /** OperatorResult */
         OperatorResult: {
             /** Success */
@@ -2727,6 +2791,15 @@ export interface components {
             /** Message */
             message: string;
         };
+        /**
+         * OperatorScope
+         * @description Scope in which an operator can be triggered.
+         *
+         *     Operators declare which scopes they support via ``BaseOperator.supported_scopes``.
+         *     The UI uses this to surface operators contextually by media type.
+         * @enum {string}
+         */
+        OperatorScope: "root" | "image" | "video_frame" | "video" | "annotation" | "group" | "caption";
         /**
          * Paginated
          * @description Paginated query parameters.
@@ -2824,6 +2897,8 @@ export interface components {
             operator_id: string;
             /** Name */
             name: string;
+            /** Supported Scopes */
+            supported_scopes?: components["schemas"]["OperatorScope"][];
         };
         /**
          * SampleAnnotationDetailsView
@@ -2892,9 +2967,7 @@ export interface components {
          */
         SampleMetadataView: {
             /** Data */
-            data: {
-                [key: string]: unknown;
-            };
+            data: Record<string, never>;
         };
         /**
          * SampleType
@@ -3034,7 +3107,7 @@ export interface components {
             /**
              * Show Annotation Text Labels
              * @description Controls whether to show text labels on annotations
-             * @default true
+             * @default false
              */
             show_annotation_text_labels: boolean;
             /**
@@ -3067,6 +3140,24 @@ export interface components {
              * @default m
              */
             key_toolbar_segmentation_mask: string;
+            /**
+             * Key Toolbar Semantic
+             * @description Key to activate semantic segmentation in the toolbar
+             * @default g
+             */
+            key_toolbar_semantic: string;
+            /**
+             * Key Toolbar Brush
+             * @description Key to activate brush mode in the segmentation tool
+             * @default r
+             */
+            key_toolbar_brush: string;
+            /**
+             * Key Toolbar Eraser
+             * @description Key to activate eraser mode in the segmentation tool
+             * @default x
+             */
+            key_toolbar_eraser: string;
             /**
              * Setting Id
              * Format: uuid
@@ -3264,6 +3355,21 @@ export interface components {
             /** Annotation Frames Label Ids */
             annotation_frames_label_ids?: string[] | null;
             sample_filter?: components["schemas"]["SampleFilter"] | null;
+        };
+        /**
+         * VideoFrameAdjacentFilter
+         * @description Aggregate filters for adjacent video frame lookups.
+         *
+         *     Attributes:
+         *         video_frame_filter: Frame-level filters (required collection_id).
+         *         video_filter: Parent-video filters (required collection_id).
+         *         video_text_embedding: Text embedding to order parent videos; needs video collection_id.
+         */
+        VideoFrameAdjacentFilter: {
+            video_frame_filter: components["schemas"]["VideoFrameFilter"];
+            video_filter?: components["schemas"]["VideoFilter"] | null;
+            /** Video Text Embedding */
+            video_text_embedding?: number[] | null;
         };
         /**
          * VideoFrameAnnotationDetailsView
@@ -3961,7 +4067,9 @@ export interface operations {
     };
     export_collection_annotations: {
         parameters: {
-            query?: never;
+            query?: {
+                annotation_type?: components["schemas"]["AnnotationType"];
+            };
             header?: never;
             path: {
                 collection_id: string;
@@ -5708,7 +5816,6 @@ export interface operations {
             header?: never;
             path: {
                 operator_id: string;
-                collection_id: string;
             };
             cookie?: never;
         };
@@ -6035,6 +6142,37 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["GroupViewsWithCount"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_group_components_by_group_id: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                group_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["GroupComponentView"][];
                 };
             };
             /** @description Validation Error */

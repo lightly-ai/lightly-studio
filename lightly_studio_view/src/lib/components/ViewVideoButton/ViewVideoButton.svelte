@@ -16,7 +16,6 @@
             'video',
             frame.video.sample.collection_id!,
             frame.video.sample_id,
-            0,
             frame.frame_number
         );
     })()}

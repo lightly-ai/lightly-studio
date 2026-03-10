@@ -367,7 +367,34 @@ Instead of abstracting type in different files rather define it locally
 class ImageView(BaseModel):
     class SampleMetadataView(SQLModel):
         data: dict[str, Any]
-   metadata_dict: Optional[SampleMetadataView] = None 
+   metadata_dict: Optional[SampleMetadataView] = None
+```
+
+### View model conversion functions
+
+For View models, define conversion functions (e.g., `from_*_table`) as classmethods directly in the view model class. This keeps conversion logic close to the model definition and makes it easy to find and maintain.
+
+**Example:**
+```python
+class ImageView(BaseModel):
+    """Sample view model."""
+    sample_id: UUID
+    file_name: str
+    width: int
+    height: int
+    # ... other fields
+
+    @classmethod
+    def from_image_table(
+        cls, image: "ImageTable", similarity_score: Optional[float] = None
+    ) -> "ImageView":
+        """Convert an ImageTable to an ImageView."""
+        return cls(
+            file_name=image.file_name,
+            file_path_abs=image.file_path_abs,
+            sample_id=image.sample_id,
+            # ... other field mappings
+        )
 ```
 
 ## Error handling

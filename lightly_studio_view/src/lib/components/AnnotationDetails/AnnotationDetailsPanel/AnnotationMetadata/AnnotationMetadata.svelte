@@ -55,6 +55,16 @@
             ];
         }
 
+        if (annotation.object_track_number != null) {
+            annotationsMetadata = [
+                ...annotationsMetadata,
+                {
+                    id: 'object_track_number',
+                    label: 'Track ID:',
+                    value: `${annotation.object_track_number}`
+                }
+            ];
+        }
         return annotationsMetadata;
     });
     const { isEditingMode } = page.data.globalStorage;

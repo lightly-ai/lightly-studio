@@ -13,33 +13,27 @@
     import { routeHelpers } from '$lib/routes';
     import VideoFrameAnnotationItem from '$lib/components/VideoFrameAnnotationItem/VideoFrameAnnotationItem.svelte';
     import Video from '$lib/components/Video/Video.svelte';
-    import type { Writable } from 'svelte/store';
-    import type { VideoAdjacents } from '$lib/hooks/useVideoAdjacents/useVideoAdjancents';
-    import { goto } from '$app/navigation';
-    import SteppingNavigation from '$lib/components/SteppingNavigation/SteppingNavigation.svelte';
-    import DetailsBreadcrumb from '$lib/components/DetailsBreadcrumb/DetailsBreadcrumb.svelte';
     import Separator from '$lib/components/ui/separator/separator.svelte';
     import MetadataSegment from '$lib/components/MetadataSegment/MetadataSegment.svelte';
     import { useRemoveTagFromSample } from '$lib/hooks/useRemoveTagFromSample/useRemoveTagFromSample';
     import { useCollectionWithChildren } from '$lib/hooks/useCollection/useCollection';
     import { page } from '$app/state';
     import CaptionField from '$lib/components/CaptionField/CaptionField.svelte';
+    import CreateCaptionField from '$lib/components/CaptionField/CreateCaptionField.svelte';
     import { useDeleteCaption } from '$lib/hooks/useDeleteCaption/useDeleteCaption';
     import { useCreateCaption } from '$lib/hooks/useCreateCaption/useCreateCaption';
     import { toast } from 'svelte-sonner';
     import { useVideo } from '$lib/hooks/useVideo/useVideo';
     import { onMount } from 'svelte';
     import { getFrameBatchCursor } from '$lib/utils/frame';
+    import VideoDetailsNavigation from '$lib/components/VideoDetailsNavigation/VideoDetailsNavigation.svelte';
+    import VideoDetailsBreadcrumb from '$lib/components/VideoDetailsBreadcrumb/VideoDetailsBreadcrumb.svelte';
 
     const { data }: { data: PageData } = $props();
     const {
-        sample,
-        videoIndex,
-        videoAdjacents
+        sample
     }: {
         sample: VideoView | undefined;
-        videoIndex: number | null;
-        videoAdjacents: Writable<VideoAdjacents> | null;
     } = $derived(data);
 
     // Route validations in +layout.ts ensure these params are always present and valid
@@ -93,19 +87,21 @@
         }
     };
 
-    const handleCreateCaption = async (sampleId: string) => {
-        if (!videoData?.sample_id) return;
+    const handleCreateCaption = async (sampleId: string, text: string): Promise<boolean> => {
+        if (!videoData?.sample_id) return false;
         try {
-            await createCaption({ parent_sample_id: sampleId });
+            await createCaption({ parent_sample_id: sampleId, text });
             toast.success('Caption created successfully');
             refetchVideo();
             // If this is the first caption, refresh root collection to update navigation
             if (!captions.length) {
                 refetchRootCollection();
             }
+            return true;
         } catch (error) {
             toast.error('Failed to create caption. Please try again.');
             console.error('Error creating caption:', error);
+            return false;
         }
     };
 
@@ -128,7 +124,7 @@
     let reachedEnd = false;
     // This flag is used to prevent the onUpdate callback from changing the current frame while we are seeking to a specific frame number on load
     let seekFrameNumber = false;
-    const BATCH_SIZE = 25;
+    const BATCH_SIZE = 50;
 
     let resizeObserver: ResizeObserver;
 
@@ -178,7 +174,12 @@
 
         currentFrame = frame;
 
-        if (index != null && index % BATCH_SIZE == 0 && index != 0 && currentIndex < index) {
+        if (
+            index != null &&
+            cursor - index < BATCH_SIZE / 2 &&
+            index != 0 &&
+            currentIndex < index
+        ) {
             loadFrames();
         }
     }
@@ -220,46 +221,6 @@
         loading = false;
     }
 
-    function onPlay() {
-        loadFrames();
-    }
-
-    function goToNextVideo() {
-        if (videoIndex === null || !videoData) return null;
-        if (!videoAdjacents) return null;
-
-        const sampleNext = $videoAdjacents?.sampleNext;
-        if (!sampleNext) return null;
-
-        goto(
-            routeHelpers.toVideosDetails(
-                datasetId,
-                collectionType,
-                collectionId,
-                sampleNext.sample_id,
-                videoIndex + 1
-            )
-        );
-    }
-
-    function goToPreviousVideo() {
-        if (videoIndex === null || !videoData) return null;
-        if (!videoAdjacents) return null;
-
-        const samplePrevious = $videoAdjacents?.samplePrevious;
-        if (!samplePrevious) return null;
-
-        goto(
-            routeHelpers.toVideosDetails(
-                datasetId,
-                collectionType,
-                collectionId,
-                samplePrevious.sample_id,
-                videoIndex - 1
-            )
-        );
-    }
-
     let lastVideoId: string | null = null;
 
     $effect(() => {
@@ -276,6 +237,7 @@
             reachedEnd = false;
 
             lastVideoId = videoId;
+            loadFrames();
         }
     });
 
@@ -334,15 +296,11 @@
 <div class="flex h-full w-full flex-col space-y-4">
     <div class="flex w-full items-center">
         {#if $datasetCollection.data && !Array.isArray($datasetCollection.data)}
-            <DetailsBreadcrumb
+            <VideoDetailsBreadcrumb
                 rootCollection={$datasetCollection.data}
-                section="Videos"
-                subsection="Video"
-                navigateTo={(collectionId) =>
-                    datasetId && collectionType
-                        ? routeHelpers.toVideos(datasetId, collectionType, collectionId)
-                        : '#'}
-                index={videoIndex}
+                {datasetId}
+                {collectionType}
+                sampleId={page.params.sample_id}
             />
         {/if}
     </div>
@@ -354,14 +312,7 @@
                     bind:this={containerEl}
                     class="video-frame-container relative overflow-hidden rounded-lg bg-black"
                 >
-                    {#if $videoAdjacents}
-                        <SteppingNavigation
-                            hasPrevious={!!$videoAdjacents?.samplePrevious}
-                            hasNext={!!$videoAdjacents?.sampleNext}
-                            onPrevious={goToPreviousVideo}
-                            onNext={goToNextVideo}
-                        />
-                    {/if}
+                    <VideoDetailsNavigation />
                     {#key videoData?.sample_id}
                         {#if videoData}
                             <Video
@@ -372,7 +323,6 @@
                                 controls={true}
                                 update={onUpdate}
                                 className="block h-full w-full"
-                                onplay={onPlay}
                                 onseeked={onSeeked}
                             />
 
@@ -442,14 +392,10 @@
                             {/each}
                             <!-- Add new caption button -->
                             {#if $isEditingMode}
-                                <button
-                                    type="button"
-                                    class="mb-2 flex h-8 items-center justify-center rounded-sm bg-card px-2 py-0 text-diffuse-foreground transition-colors hover:bg-primary hover:text-primary-foreground"
-                                    onclick={() => handleCreateCaption(videoData?.sample_id ?? '')}
-                                    data-testid="add-caption-button"
-                                >
-                                    +
-                                </button>
+                                <CreateCaptionField
+                                    onCreate={(text) =>
+                                        handleCreateCaption(videoData?.sample_id ?? '', text)}
+                                />
                             {/if}
                         </div>
                     </div>
@@ -482,7 +428,8 @@
                                     datasetId,
                                     'video_frame',
                                     frameCollectionId,
-                                    currentFrame.sample_id
+                                    currentFrame.sample_id,
+                                    true
                                 );
                             })()}
                             data-testid="view-frame-button"

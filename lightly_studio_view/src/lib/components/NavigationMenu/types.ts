@@ -8,3 +8,8 @@ export type NavigationMenuItem = {
     id: string;
     children?: NavigationMenuItem[];
 };
+
+export type BreadcrumbLevel = {
+    selected: NavigationMenuItem;
+    siblings: NavigationMenuItem[];
+};
