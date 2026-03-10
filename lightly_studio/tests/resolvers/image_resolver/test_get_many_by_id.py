@@ -10,25 +10,25 @@ from tests.helpers_resolvers import (
 
 
 def test_get_many_by_id(
-    test_db: Session,
+    db_session: Session,
 ) -> None:
-    collection = create_collection(session=test_db)
+    collection = create_collection(session=db_session)
     collection_id = collection.collection_id
     # Create samples.
     image1 = create_image(
-        session=test_db,
+        session=db_session,
         collection_id=collection_id,
         file_path_abs="/path/to/sample1.png",
     )
     image2 = create_image(
-        session=test_db,
+        session=db_session,
         collection_id=collection_id,
         file_path_abs="/path/to/sample2.png",
     )
 
     # Act.
     samples = image_resolver.get_many_by_id(
-        session=test_db, sample_ids=[image1.sample_id, image2.sample_id]
+        session=db_session, sample_ids=[image1.sample_id, image2.sample_id]
     )
 
     # Assert.
