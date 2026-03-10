@@ -7,6 +7,7 @@ from pydantic import BaseModel
 from sqlmodel import col
 
 from lightly_studio.models.video import VideoFrameTable, VideoTable
+from lightly_studio.resolvers.annotations.annotations_filter import AnnotationsFilter
 from lightly_studio.resolvers.image_filter import FilterDimensions
 from lightly_studio.resolvers.sample_resolver.sample_filter import SampleFilter
 from lightly_studio.type_definitions import QueryType
@@ -18,6 +19,7 @@ class VideoFrameFilter(BaseModel):
     frame_number: Optional[FilterDimensions] = None
     video_id: Optional[UUID] = None
     sample_filter: Optional[SampleFilter] = None
+    annotation_filter: Optional[AnnotationsFilter] = None
 
     def apply(self, query: QueryType) -> QueryType:
         """Apply the filters to the given query."""
@@ -26,6 +28,11 @@ class VideoFrameFilter(BaseModel):
 
         if self.sample_filter:
             query = self.sample_filter.apply(query)
+
+        if self.annotation_filter is not None:
+            query = self.annotation_filter.apply_to_parent_sample_query(
+                query=query, sample_id_column=col(VideoFrameTable.sample_id)
+            )
 
         return query
 
