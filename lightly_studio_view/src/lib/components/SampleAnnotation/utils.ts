@@ -170,11 +170,11 @@ export const decodeRLEToBinaryMask = (rle: number[], width: number, height: numb
     let value = 0;
 
     for (const count of rle) {
-        for (let i = 0; i < count; i++) {
-            if (idx < mask.length) {
-                mask[idx++] = value;
-            }
-        }
+        if (idx >= mask.length) break;
+
+        const end = Math.min(idx + count, mask.length);
+        mask.fill(value, idx, end);
+        idx = end;
         value = value === 0 ? 1 : 0;
     }
 

@@ -55,7 +55,7 @@
             toast.success('Caption created successfully');
             refetch();
 
-            if (!captions) refetchRootCollection();
+            if (!captions?.length) refetchRootCollection();
             return true;
         } catch (error) {
             toast.error('Failed to create caption. Please try again.');
