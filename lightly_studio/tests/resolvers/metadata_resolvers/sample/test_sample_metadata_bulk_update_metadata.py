@@ -13,18 +13,18 @@ from tests.helpers_resolvers import (
 
 
 def test_bulk_update_metadata(
-    test_db: Session,
+    db_session: Session,
 ) -> None:
-    collection = create_collection(session=test_db)
+    collection = create_collection(session=db_session)
     collection_id = collection.collection_id
     # Create samples.
     sample1 = create_image(
-        session=test_db,
+        session=db_session,
         collection_id=collection_id,
         file_path_abs="/path/to/sample1.png",
     ).sample
     sample2 = create_image(
-        session=test_db,
+        session=db_session,
         collection_id=collection_id,
         file_path_abs="/path/to/sample2.png",
     ).sample
@@ -50,20 +50,20 @@ def test_bulk_update_metadata(
     )
 
     # Bulk insert metadata
-    metadata_resolver.bulk_update_metadata(test_db, sample_metadata)
+    metadata_resolver.bulk_update_metadata(db_session, sample_metadata)
 
     assert sample1["location"] == "city"
     assert sample2["location"] == "rural"
 
 
 def test_bulk_update_metadata__existing_metadata(
-    test_db: Session,
+    db_session: Session,
 ) -> None:
-    collection = create_collection(session=test_db)
+    collection = create_collection(session=db_session)
     collection_id = collection.collection_id
     # Create samples.
     sample = create_image(
-        session=test_db,
+        session=db_session,
         collection_id=collection_id,
         file_path_abs="/path/to/sample.png",
     ).sample
@@ -78,7 +78,7 @@ def test_bulk_update_metadata__existing_metadata(
     ]
 
     # Bulk insert metadata
-    metadata_resolver.bulk_update_metadata(test_db, sample_metadata)
+    metadata_resolver.bulk_update_metadata(db_session, sample_metadata)
 
     assert sample["location"] == "city"
 
@@ -93,7 +93,7 @@ def test_bulk_update_metadata__existing_metadata(
     ]
 
     # Bulk update metadata.
-    metadata_resolver.bulk_update_metadata(test_db, sample_metadata_update)
+    metadata_resolver.bulk_update_metadata(db_session, sample_metadata_update)
 
     # Verify old keys still exist.
     assert sample["location"] == "city"
@@ -103,7 +103,7 @@ def test_bulk_update_metadata__existing_metadata(
 
     # Verify no duplicate rows were created (should only be 1 metadata row per sample).
     metadata_count_sample = len(
-        test_db.exec(
+        db_session.exec(
             select(SampleMetadataTable).where(SampleMetadataTable.sample_id == sample.sample_id)
         ).all()
     )
@@ -111,13 +111,13 @@ def test_bulk_update_metadata__existing_metadata(
 
 
 def test_bulk_update_metadata__overwrite_existing_metadata(
-    test_db: Session,
+    db_session: Session,
 ) -> None:
-    collection = create_collection(session=test_db)
+    collection = create_collection(session=db_session)
     collection_id = collection.collection_id
     # Create samples.
     sample = create_image(
-        session=test_db,
+        session=db_session,
         collection_id=collection_id,
         file_path_abs="/path/to/sample.png",
     ).sample
@@ -132,7 +132,7 @@ def test_bulk_update_metadata__overwrite_existing_metadata(
     ]
 
     # Bulk insert metadata
-    metadata_resolver.bulk_update_metadata(test_db, sample_metadata)
+    metadata_resolver.bulk_update_metadata(db_session, sample_metadata)
 
     assert sample["temperature"] == 25
 
@@ -147,14 +147,14 @@ def test_bulk_update_metadata__overwrite_existing_metadata(
     ]
 
     # Bulk update metadata.
-    metadata_resolver.bulk_update_metadata(test_db, sample_metadata_update)
+    metadata_resolver.bulk_update_metadata(db_session, sample_metadata_update)
 
     # Verify metadata was overwritten.
     assert sample["temperature"] == 15
 
     # Verify no duplicate rows were created (should only be 1 metadata row per sample).
     metadata_count_sample1 = len(
-        test_db.exec(
+        db_session.exec(
             select(SampleMetadataTable).where(SampleMetadataTable.sample_id == sample.sample_id)
         ).all()
     )

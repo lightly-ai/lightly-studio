@@ -9,41 +9,42 @@ from lightly_studio.resolvers import tag_resolver
 from tests.helpers_resolvers import create_collection, create_image, create_tag
 
 
-def test_create_tag(test_db: Session) -> None:
-    collection = create_collection(session=test_db)
+def test_create_tag(db_session: Session) -> None:
+    collection = create_collection(session=db_session)
     collection_id = collection.collection_id
-    tag = create_tag(session=test_db, collection_id=collection_id, tag_name="example_tag")
+    tag = create_tag(session=db_session, collection_id=collection_id, tag_name="example_tag")
     assert tag.name == "example_tag"
 
 
-def test_create_tag__unique_tag_name(test_db: Session) -> None:
-    collection = create_collection(session=test_db)
+def test_create_tag__unique_tag_name(db_session: Session) -> None:
+    collection = create_collection(session=db_session)
     collection_id = collection.collection_id
 
-    create_tag(session=test_db, collection_id=collection_id, tag_name="example_tag")
+    create_tag(session=db_session, collection_id=collection_id, tag_name="example_tag")
 
     # trying to create a tag with the same name results in an IntegrityError
     with pytest.raises(IntegrityError):
         tag_resolver.create(
-            session=test_db,
+            session=db_session,
             tag=TagCreate(
                 collection_id=collection_id,
                 name="example_tag",
                 kind="sample",
             ),
         )
+    db_session.rollback()
 
 
-def test_read_tags(test_db: Session) -> None:
-    collection = create_collection(session=test_db)
+def test_read_tags(db_session: Session) -> None:
+    collection = create_collection(session=db_session)
     collection_id = collection.collection_id
 
-    tag_1 = create_tag(session=test_db, collection_id=collection_id, tag_name="tag_1")
-    create_tag(session=test_db, collection_id=collection_id, tag_name="tag_2")
-    create_tag(session=test_db, collection_id=collection_id, tag_name="tag_3")
+    tag_1 = create_tag(session=db_session, collection_id=collection_id, tag_name="tag_1")
+    create_tag(session=db_session, collection_id=collection_id, tag_name="tag_2")
+    create_tag(session=db_session, collection_id=collection_id, tag_name="tag_3")
 
     # get all tags of a collection
-    tags = tag_resolver.get_all_by_collection_id(session=test_db, collection_id=collection_id)
+    tags = tag_resolver.get_all_by_collection_id(session=db_session, collection_id=collection_id)
     assert len(tags) == 3
     # check order
     tag = tags[0]
@@ -51,18 +52,18 @@ def test_read_tags(test_db: Session) -> None:
     assert tag.name == tag_1.name
 
 
-def test_read_tags__paginated(test_db: Session) -> None:
-    collection = create_collection(session=test_db)
+def test_read_tags__paginated(db_session: Session) -> None:
+    collection = create_collection(session=db_session)
     collection_id = collection.collection_id
 
     total = 10
     chunk_size = total // 2
     for i in range(total):
-        create_tag(session=test_db, collection_id=collection_id, tag_name=f"example_tag_{i}")
+        create_tag(session=db_session, collection_id=collection_id, tag_name=f"example_tag_{i}")
 
     # get first chunk/page
     page_1 = tag_resolver.get_all_by_collection_id(
-        session=test_db,
+        session=db_session,
         collection_id=collection.collection_id,
         offset=0,
         limit=chunk_size,
@@ -71,7 +72,7 @@ def test_read_tags__paginated(test_db: Session) -> None:
 
     # get second chunk/page
     page_2 = tag_resolver.get_all_by_collection_id(
-        session=test_db,
+        session=db_session,
         collection_id=collection.collection_id,
         offset=5,
         limit=chunk_size,
@@ -83,62 +84,63 @@ def test_read_tags__paginated(test_db: Session) -> None:
     assert page_1[0].name != page_2[0].name
 
 
-def test_read_tag(test_db: Session) -> None:
-    collection = create_collection(session=test_db)
+def test_read_tag(db_session: Session) -> None:
+    collection = create_collection(session=db_session)
     collection_id = collection.collection_id
 
-    tag = create_tag(session=test_db, collection_id=collection_id)
+    tag = create_tag(session=db_session, collection_id=collection_id)
 
-    tag_read = tag_resolver.get_by_id(session=test_db, tag_id=tag.tag_id)
+    tag_read = tag_resolver.get_by_id(session=db_session, tag_id=tag.tag_id)
     assert tag_read is not None
     assert tag_read.tag_id == tag.tag_id
     assert tag_read.name == "example_tag"
 
 
-def test_update_tag(test_db: Session) -> None:
-    collection = create_collection(session=test_db)
+def test_update_tag(db_session: Session) -> None:
+    collection = create_collection(session=db_session)
     collection_id = collection.collection_id
 
-    tag = create_tag(session=test_db, collection_id=collection_id)
+    tag = create_tag(session=db_session, collection_id=collection_id)
 
     data_update = TagUpdate(name="updated_tag")
-    tag_updated = tag_resolver.update(session=test_db, tag_id=tag.tag_id, tag_data=data_update)
+    tag_updated = tag_resolver.update(session=db_session, tag_id=tag.tag_id, tag_data=data_update)
     # assert tag name changed.
     assert tag_updated is not None
     assert tag_updated.name == data_update.name
 
 
-def test_update_tag__unique_tag_name(test_db: Session) -> None:
-    collection = create_collection(session=test_db)
+def test_update_tag__unique_tag_name(db_session: Session) -> None:
+    collection = create_collection(session=db_session)
     collection_id = collection.collection_id
 
-    tag_1 = create_tag(session=test_db, collection_id=collection_id, tag_name="example_tag_1")
-    tag_2 = create_tag(session=test_db, collection_id=collection_id, tag_name="some_other_tag")
+    tag_1 = create_tag(session=db_session, collection_id=collection_id, tag_name="example_tag_1")
+    tag_2 = create_tag(session=db_session, collection_id=collection_id, tag_name="some_other_tag")
 
     # updating a tag with a name that already exists results in 409
     # trying to create a tag with the same name results in an IntegrityError
     with pytest.raises(IntegrityError):
         tag_resolver.update(
-            session=test_db,
+            session=db_session,
             tag_id=tag_1.tag_id,
             tag_data=TagUpdate(name=tag_2.name),
         )
+    db_session.rollback()
 
 
 def test_update_tag__unique_tag_name__different_kind(
-    test_db: Session,
+    db_session: Session,
 ) -> None:
-    collection = create_collection(session=test_db)
+    collection = create_collection(session=db_session)
     collection_id = collection.collection_id
 
     sample_tag = create_tag(
-        session=test_db,
+        session=db_session,
         collection_id=collection_id,
         kind="sample",
         tag_name="sample_tag_1",
     )
     annotation_tag = create_tag(
-        session=test_db,
+        session=db_session,
         collection_id=collection_id,
         kind="annotation",
         tag_name="annotation_tag_1",
@@ -146,7 +148,7 @@ def test_update_tag__unique_tag_name__different_kind(
 
     # updating a tag with an existing name but for a different kind is allowed
     tag_updated = tag_resolver.update(
-        session=test_db,
+        session=db_session,
         tag_id=sample_tag.tag_id,
         tag_data=TagUpdate(name=annotation_tag.name),
     )
@@ -155,52 +157,54 @@ def test_update_tag__unique_tag_name__different_kind(
     assert tag_updated.name == annotation_tag.name
 
 
-def test_update_tag__unknown_tag_404(test_db: Session) -> None:
-    collection = create_collection(session=test_db)
+def test_update_tag__unknown_tag_404(db_session: Session) -> None:
+    collection = create_collection(session=db_session)
     collection_id = collection.collection_id
 
-    create_tag(session=test_db, collection_id=collection_id)
+    create_tag(session=db_session, collection_id=collection_id)
 
     # updating a unknown tag results in 404
     tag_updated = tag_resolver.update(
-        session=test_db,
+        session=db_session,
         tag_id=uuid4(),
         tag_data=TagUpdate(name="unknown_tag"),
     )
     assert tag_updated is None
 
 
-def test_delete_tag(test_db: Session) -> None:
-    collection = create_collection(session=test_db)
+def test_delete_tag(db_session: Session) -> None:
+    collection = create_collection(session=db_session)
     collection_id = collection.collection_id
 
-    tag = create_tag(session=test_db, collection_id=collection_id)
+    tag = create_tag(session=db_session, collection_id=collection_id)
 
     # Delete the tag
-    tag_resolver.delete(session=test_db, tag_id=tag.tag_id)
+    tag_resolver.delete(session=db_session, tag_id=tag.tag_id)
 
     # assert tag was deleted
-    tag_deleted = tag_resolver.get_by_id(session=test_db, tag_id=tag.tag_id)
+    tag_deleted = tag_resolver.get_by_id(session=db_session, tag_id=tag.tag_id)
     assert tag_deleted is None
 
 
-def test_get_or_create_sample_tag_by_name(test_db: Session) -> None:
-    collection = create_collection(session=test_db)
+def test_get_or_create_sample_tag_by_name(db_session: Session) -> None:
+    collection = create_collection(session=db_session)
     collection_id = collection.collection_id
 
     # Create an existing tag
-    existing_tag = create_tag(session=test_db, collection_id=collection_id, tag_name="existing_tag")
+    existing_tag = create_tag(
+        session=db_session, collection_id=collection_id, tag_name="existing_tag"
+    )
 
     # Case 1: Get existing tag
     result_tag = tag_resolver.get_or_create_sample_tag_by_name(
-        session=test_db, collection_id=collection_id, tag_name="existing_tag"
+        session=db_session, collection_id=collection_id, tag_name="existing_tag"
     )
     assert result_tag.tag_id == existing_tag.tag_id
     assert result_tag.name == "existing_tag"
 
     # Case 2: Create new tag
     new_tag = tag_resolver.get_or_create_sample_tag_by_name(
-        session=test_db, collection_id=collection_id, tag_name="new_tag"
+        session=db_session, collection_id=collection_id, tag_name="new_tag"
     )
     assert new_tag.tag_id != existing_tag.tag_id
     assert new_tag.name == "new_tag"
@@ -208,49 +212,49 @@ def test_get_or_create_sample_tag_by_name(test_db: Session) -> None:
     assert new_tag.kind == "sample"
 
 
-def test_add_tag_to_sample(test_db: Session) -> None:
-    collection = create_collection(session=test_db)
+def test_add_tag_to_sample(db_session: Session) -> None:
+    collection = create_collection(session=db_session)
     collection_id = collection.collection_id
-    tag = create_tag(session=test_db, collection_id=collection_id, kind="sample")
-    image = create_image(session=test_db, collection_id=collection_id)
+    tag = create_tag(session=db_session, collection_id=collection_id, kind="sample")
+    image = create_image(session=db_session, collection_id=collection_id)
 
     # add sample to tag
-    tag_resolver.add_tag_to_sample(session=test_db, tag_id=tag.tag_id, sample=image.sample)
+    tag_resolver.add_tag_to_sample(session=db_session, tag_id=tag.tag_id, sample=image.sample)
 
     assert image.sample.tags.index(tag) == 0
 
 
-def test_remove_sample_from_tag(test_db: Session) -> None:
-    collection = create_collection(session=test_db)
+def test_remove_sample_from_tag(db_session: Session) -> None:
+    collection = create_collection(session=db_session)
     collection_id = collection.collection_id
-    tag = create_tag(session=test_db, collection_id=collection_id, kind="sample")
-    image = create_image(session=test_db, collection_id=collection_id)
+    tag = create_tag(session=db_session, collection_id=collection_id, kind="sample")
+    image = create_image(session=db_session, collection_id=collection_id)
 
     # add sample to tag
-    tag_resolver.add_tag_to_sample(session=test_db, tag_id=tag.tag_id, sample=image.sample)
+    tag_resolver.add_tag_to_sample(session=db_session, tag_id=tag.tag_id, sample=image.sample)
     assert len(image.sample.tags) == 1
     assert image.sample.tags.index(tag) == 0
 
     # remove sample to tag
-    tag_resolver.remove_tag_from_sample(session=test_db, tag_id=tag.tag_id, sample=image.sample)
+    tag_resolver.remove_tag_from_sample(session=db_session, tag_id=tag.tag_id, sample=image.sample)
     assert len(image.sample.tags) == 0
     with pytest.raises(ValueError, match="is not in list"):
         image.sample.tags.index(tag)
 
 
 def test_add_and_remove_sample_ids_to_tag_id(
-    test_db: Session,
+    db_session: Session,
 ) -> None:
-    collection = create_collection(session=test_db)
+    collection = create_collection(session=db_session)
     collection_id = collection.collection_id
     tag_1 = create_tag(
-        session=test_db,
+        session=db_session,
         collection_id=collection_id,
         tag_name="tag_all",
         kind="sample",
     )
     tag_2 = create_tag(
-        session=test_db,
+        session=db_session,
         collection_id=collection_id,
         tag_name="tag_odd",
         kind="sample",
@@ -260,7 +264,7 @@ def test_add_and_remove_sample_ids_to_tag_id(
     images = []
     for i in range(total_samples):
         image = create_image(
-            session=test_db,
+            session=db_session,
             collection_id=collection_id,
             file_path_abs=f"sample{i}.png",
         )
@@ -268,14 +272,14 @@ def test_add_and_remove_sample_ids_to_tag_id(
 
     # add samples to tag_1
     tag_resolver.add_sample_ids_to_tag_id(
-        session=test_db,
+        session=db_session,
         tag_id=tag_1.tag_id,
         sample_ids=[sample.sample_id for sample in images],
     )
 
     # add every odd samples to tag_2
     tag_resolver.add_sample_ids_to_tag_id(
-        session=test_db,
+        session=db_session,
         tag_id=tag_2.tag_id,
         sample_ids=[sample.sample_id for i, sample in enumerate(images) if i % 2 == 1],
     )
@@ -293,7 +297,7 @@ def test_add_and_remove_sample_ids_to_tag_id(
     # Remove the *same* even indexed samples we added earlier,
     # but computed from the original `samples` list so ordering is stable.
     tag_resolver.remove_sample_ids_from_tag_id(
-        session=test_db,
+        session=db_session,
         tag_id=tag_1.tag_id,
         sample_ids=[s.sample_id for i, s in enumerate(images) if i % 2 == 0],
     )
@@ -307,12 +311,12 @@ def test_add_and_remove_sample_ids_to_tag_id(
 
 
 def test_add_and_remove_sample_ids_to_tag_id__twice_same_sample_ids(
-    test_db: Session,
+    db_session: Session,
 ) -> None:
-    collection = create_collection(session=test_db)
+    collection = create_collection(session=db_session)
     collection_id = collection.collection_id
     tag_1 = create_tag(
-        session=test_db,
+        session=db_session,
         collection_id=collection_id,
         tag_name="tag_all",
         kind="sample",
@@ -322,7 +326,7 @@ def test_add_and_remove_sample_ids_to_tag_id__twice_same_sample_ids(
     images = []
     for i in range(total_samples):
         image = create_image(
-            session=test_db,
+            session=db_session,
             collection_id=collection_id,
             file_path_abs=f"sample{i}.png",
         )
@@ -330,14 +334,14 @@ def test_add_and_remove_sample_ids_to_tag_id__twice_same_sample_ids(
 
     # add samples to tag_1
     tag_resolver.add_sample_ids_to_tag_id(
-        session=test_db,
+        session=db_session,
         tag_id=tag_1.tag_id,
         sample_ids=[sample.sample_id for sample in images],
     )
 
     # adding the same samples to tag_1 does not create an error
     tag_resolver.add_sample_ids_to_tag_id(
-        session=test_db,
+        session=db_session,
         tag_id=tag_1.tag_id,
         sample_ids=[sample.sample_id for sample in images],
     )
@@ -347,13 +351,13 @@ def test_add_and_remove_sample_ids_to_tag_id__twice_same_sample_ids(
 
     # remove samples from
     tag_resolver.remove_sample_ids_from_tag_id(
-        session=test_db,
+        session=db_session,
         tag_id=tag_1.tag_id,
         sample_ids=[sample.sample_id for sample in images],
     )
     # removing the same samples to tag_1 does not create an error
     tag_resolver.remove_sample_ids_from_tag_id(
-        session=test_db,
+        session=db_session,
         tag_id=tag_1.tag_id,
         sample_ids=[sample.sample_id for sample in images],
     )

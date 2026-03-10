@@ -7,9 +7,9 @@ from lightly_studio.resolvers import image_resolver
 from tests.helpers_resolvers import create_collection
 
 
-def test_create_many_samples(test_db: Session) -> None:
+def test_create_many_samples(db_session: Session) -> None:
     """Test bulk creation of samples."""
-    collection = create_collection(session=test_db)
+    collection = create_collection(session=db_session)
     collection_id = collection.collection_id
 
     # Use out of order file names to verify that order is preserved
@@ -29,10 +29,10 @@ def test_create_many_samples(test_db: Session) -> None:
     ]
 
     created_sample_ids = image_resolver.create_many(
-        session=test_db, collection_id=collection_id, samples=samples_to_create
+        session=db_session, collection_id=collection_id, samples=samples_to_create
     )
     retrieved_samples = image_resolver.get_all_by_collection_id(
-        session=test_db, collection_id=collection_id, sample_ids=created_sample_ids
+        session=db_session, collection_id=collection_id, sample_ids=created_sample_ids
     ).samples
 
     # Retrieved samples are ordered by path
@@ -53,12 +53,12 @@ def test_create_many_samples(test_db: Session) -> None:
     assert retrieved_samples[0].sample.collection_id == collection_id
 
 
-def test_create_many__sample_type_mismatch(test_db: Session) -> None:
+def test_create_many__sample_type_mismatch(db_session: Session) -> None:
     """Test bulk creation of samples."""
-    collection = create_collection(session=test_db, sample_type=SampleType.VIDEO)
+    collection = create_collection(session=db_session, sample_type=SampleType.VIDEO)
     with pytest.raises(ValueError, match="is having sample type 'video', expected 'image'"):
         image_resolver.create_many(
-            session=test_db,
+            session=db_session,
             collection_id=collection.collection_id,
             samples=[
                 ImageCreate(
