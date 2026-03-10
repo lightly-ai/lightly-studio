@@ -17,7 +17,7 @@
     } = $props();
 
     let showTooltip = $state(false);
-    let triggerRect: DOMRect | null = null;
+    let triggerRect: DOMRect | null = $state(null);
     let triggerElement: HTMLElement;
 
     const updateRect = () => {
