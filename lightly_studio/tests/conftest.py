@@ -10,7 +10,9 @@ import pytest
 from fastapi.testclient import TestClient
 from pydantic import BaseModel
 from pytest_mock import MockerFixture
-from sqlmodel import Session
+from sqlalchemy import text
+from sqlmodel import Session, SQLModel
+from testcontainers.postgres import PostgresContainer
 
 from lightly_studio import db_manager
 from lightly_studio.api import features
@@ -44,12 +46,111 @@ from tests.helpers_resolvers import (
 )
 
 
+def pytest_addoption(parser: pytest.Parser) -> None:
+    """Add --postgres CLI option to run tests against a real Postgres container."""
+    parser.addoption(
+        "--postgres",
+        action="store_true",
+        default=False,
+        help="Run tests against a Postgres container instead of in-memory DuckDB.",
+    )
+
+
+def pytest_configure(config: pytest.Config) -> None:
+    """Register custom markers for DB backend selection."""
+    config.addinivalue_line("markers", "duckdb_only: mark test to run only with DuckDB backend")
+    config.addinivalue_line("markers", "postgres_only: mark test to run only with Postgres backend")
+
+
+def pytest_collection_modifyitems(config: pytest.Config, items: list[pytest.Item]) -> None:
+    """Skip tests based on database backend markers."""
+    use_postgres = config.getoption("--postgres")
+
+    skip_on_postgres = pytest.mark.skip(
+        reason="Test is marked duckdb_only; skipping under --postgres"
+    )
+    skip_on_duckdb = pytest.mark.skip(reason="Test is marked postgres_only; skipping under DuckDB")
+
+    for item in items:
+        if use_postgres and "duckdb_only" in item.keywords:
+            item.add_marker(skip_on_postgres)
+        elif not use_postgres and "postgres_only" in item.keywords:
+            item.add_marker(skip_on_duckdb)
+
+
+def _truncate_tables(session: Session) -> None:
+    """Truncate all tables in the database to reset state between tests.
+
+    Uses TRUNCATE ... CASCADE on Postgres to handle foreign key constraints.
+    Table names are quoted to handle reserved words (e.g. "group").
+    """
+    table_names = [table.name for table in reversed(SQLModel.metadata.sorted_tables)]
+    for table_name in table_names:
+        session.execute(text(f'TRUNCATE TABLE "{table_name}" CASCADE'))
+    session.commit()
+
+
+@pytest.fixture(scope="session")
+def _postgres_container(
+    request: pytest.FixtureRequest,
+) -> Generator[PostgresContainer | None, None, None]:
+    """Start a Postgres container for the test session if --postgres is set."""
+    if not request.config.getoption("--postgres"):
+        yield None
+        return
+
+    from testcontainers.postgres import PostgresContainer
+
+    pg_container = PostgresContainer(image="pgvector/pgvector:0.8.1-pg18-bookworm", driver="psycopg")
+    pg_container.start()
+    yield pg_container
+    pg_container.stop()
+
+
+@pytest.fixture(scope="session")
+def _postgres_url(_postgres_container: PostgresContainer) -> str | None:
+    """Return the Postgres connection URL for the test container, or None for DuckDB."""
+    if _postgres_container is None:
+        return None
+    return _postgres_container.get_connection_url()
+
+
+@pytest.fixture(scope="session")
+def _postgres_engine(_postgres_url: str) -> Generator[DatabaseEngine | None, Any, None]:
+    """Create a session-scoped DatabaseEngine pointing to the Postgres container."""
+    if _postgres_url is None:
+        yield None
+        return
+
+    engine = DatabaseEngine(engine_url=_postgres_url, single_threaded=True)
+    yield engine
+    engine.close()
+
+
 @pytest.fixture
-def db_session() -> Generator[Session, None, None]:
-    """Create a test database manager session."""
-    test_manager = DatabaseEngine("duckdb:///:memory:", single_threaded=True)
-    with test_manager.session() as session:
-        yield session
+def db_session(
+    request: pytest.FixtureRequest,
+    _postgres_engine: DatabaseEngine,
+) -> Generator[Session, None, None]:
+    """Create a test database manager session.
+
+    DuckDB mode (default): creates a fresh in-memory engine per test.
+    Postgres mode (--postgres): reuses the session-scoped engine,
+    then truncates all tables after the test..
+    """
+    use_postgres = request.config.getoption("--postgres")
+
+    if use_postgres:
+        assert _postgres_engine is not None
+        with _postgres_engine.session() as session:
+            yield session
+            _truncate_tables(session)
+    else:
+        test_manager = DatabaseEngine("duckdb:///:memory:", single_threaded=True)
+        with test_manager.session() as session:
+            yield session
+
+
 
 
 @pytest.fixture
@@ -405,17 +506,29 @@ def assert_contains_properties(
 
 @pytest.fixture
 def patch_collection(
+    request: pytest.FixtureRequest,
     mocker: MockerFixture,
+    _postgres_engine: DatabaseEngine,
 ) -> Generator[None, None, None]:
-    """Fixture to patch the collection resources."""
+    """Fixture to patch the collection resources.
+
+    For DuckDB: patches get_engine() to return an in-memory DuckDB engine.
+    For Postgres: patches get_engine() to return the session-scoped Postgres engine,
+    but truncates tables after the test.
+    """
+    use_postgres = request.config.getoption("--postgres")
+
+    if use_postgres:
+        assert _postgres_engine is not None
+        engine = _postgres_engine
+    else:
+        engine = DatabaseEngine(engine_url="duckdb:///:memory:", single_threaded=True)
+
     # Create a mock database manager.
     mocker.patch.object(
         db_manager,
         "get_engine",
-        return_value=db_manager.DatabaseEngine(
-            engine_url="duckdb:///:memory:",
-            single_threaded=True,
-        ),
+        return_value=engine,
     )
 
     # Create a test-specific EmbeddingManager singleton.
@@ -436,3 +549,7 @@ def patch_collection(
     mocker.patch.object(features, "lightly_studio_active_features", [])
 
     yield  # noqa
+
+    if use_postgres:
+        with _postgres_engine.session() as session:
+            _truncate_tables(session)
