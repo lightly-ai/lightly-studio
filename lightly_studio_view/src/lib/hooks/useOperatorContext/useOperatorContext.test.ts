@@ -56,23 +56,21 @@ describe('resolveScopeLabel', () => {
     it('returns detail label when isOnDetailPage is true', () => {
         expect(resolveScopeLabel(SampleTypeValues.IMAGE, true)).toBe('Current image');
         expect(resolveScopeLabel(SampleTypeValues.VIDEO, true)).toBe('Current video');
-        expect(resolveScopeLabel(SampleTypeValues.VIDEO_FRAME, true)).toBe('Current video_frame');
+        expect(resolveScopeLabel(SampleTypeValues.VIDEO_FRAME, true)).toBe('Current video frame');
         expect(resolveScopeLabel(SampleTypeValues.ANNOTATION, true)).toBe('Current annotation');
     });
 
     it('returns collection label when isOnDetailPage is false', () => {
-        expect(resolveScopeLabel(SampleTypeValues.IMAGE, false)).toBe('Current image collection');
-        expect(resolveScopeLabel(SampleTypeValues.VIDEO, false)).toBe('Current video collection');
+        expect(resolveScopeLabel(SampleTypeValues.IMAGE, false)).toBe('All images in the view');
+        expect(resolveScopeLabel(SampleTypeValues.VIDEO, false)).toBe('All videos in the view');
         expect(resolveScopeLabel(SampleTypeValues.VIDEO_FRAME, false)).toBe(
-            'Current video_frame collection'
+            'All video frames in the view'
         );
         expect(resolveScopeLabel(SampleTypeValues.ANNOTATION, false)).toBe(
-            'Current annotation collection'
+            'All annotations in the view'
         );
-        expect(resolveScopeLabel(SampleTypeValues.GROUP, false)).toBe('Current group collection');
-        expect(resolveScopeLabel(SampleTypeValues.CAPTION, false)).toBe(
-            'Current caption collection'
-        );
+        expect(resolveScopeLabel(SampleTypeValues.GROUP, false)).toBe('All groups in the view');
+        expect(resolveScopeLabel(SampleTypeValues.CAPTION, false)).toBe('All captions in the view');
     });
 });
 
