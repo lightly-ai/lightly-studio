@@ -73,7 +73,7 @@ export function resolveContextFilter(
         const tagIds = Array.from(tagsSelected);
         const filter: AnnotationsFilter = {
             ...(labelIds.length > 0 && { annotation_label_ids: labelIds }),
-            ...(tagIds.length > 0 && { annotation_tag_ids: tagIds })
+            ...(tagIds.length > 0 && { tag_ids: tagIds })
         };
         return Object.keys(filter).length > 0 ? filter : undefined;
     }

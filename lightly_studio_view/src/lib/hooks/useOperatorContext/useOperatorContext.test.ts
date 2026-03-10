@@ -148,14 +148,14 @@ describe('resolveContextFilter', () => {
             const ctx = { ...BASE_CONTEXT, routeId: APP_ROUTES.annotations };
             expect(
                 resolveContextFilter(ctx, null, null, null, new Set(), new Set(['tag-1']))
-            ).toEqual({ annotation_tag_ids: ['tag-1'] });
+            ).toEqual({ tag_ids: ['tag-1'] });
         });
 
         it('returns AnnotationsFilter with both when both are set', () => {
             const ctx = { ...BASE_CONTEXT, routeId: APP_ROUTES.annotations };
             expect(
                 resolveContextFilter(ctx, null, null, null, new Set(['lbl-1']), new Set(['tag-1']))
-            ).toEqual({ annotation_label_ids: ['lbl-1'], annotation_tag_ids: ['tag-1'] });
+            ).toEqual({ annotation_label_ids: ['lbl-1'], tag_ids: ['tag-1'] });
         });
 
         it('returns undefined when no filters are set', () => {
