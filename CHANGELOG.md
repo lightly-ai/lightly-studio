@@ -9,6 +9,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+### Changed
+
+### Deprecated
+
+### Removed
+
+### Fixed
+
+### Security
+
+## \[0.4.11\] - 2026-03-10
+
+### Added
+
 - Added option to customize the semantic segmentation keyboard shortcut in the settings dialog.
 
 ### Changed
