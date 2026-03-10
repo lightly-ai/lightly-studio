@@ -19,6 +19,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- Speedup frontend by reducing initial video list requests in by two.
+
 ### Security
 
 ## \[0.4.11\] - 2026-03-10
