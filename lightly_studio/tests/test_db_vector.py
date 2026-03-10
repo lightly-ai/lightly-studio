@@ -25,15 +25,13 @@ class TestVectorType:
         assert isinstance(result.item_type, Float)
         db.close()
 
-    def test_load_dialect_impl__postgresql(self) -> None:
-        """VectorType returns pgvector VECTOR for PostgreSQL dialect."""
-        # TODO(Mihnea, 02/2026): Refactor to use a test Postgres connection instead of
-        #  a mock engine once we have the testing infrastructure in place.
-        # For now, use a mock engine since we don't have a test Postgres connection yet.
-        engine = sqlalchemy.create_mock_engine(
-            "postgresql://", executor=lambda *_args, **_kwargs: None
-        )
-        dialect = engine.dialect
+    @pytest.mark.postgres_only
+    def test_load_dialect_impl__postgresql(
+            self,
+            _postgres_engine: DatabaseEngine,
+    ) -> None:
+        """VectorType returns pgvector VECTOR for a real PostgreSQL dialect."""
+        dialect = _postgres_engine._engine.dialect
         vector_type = db_vector.VectorType()
         result = vector_type.load_dialect_impl(dialect=dialect)
         assert isinstance(result, Vector)
