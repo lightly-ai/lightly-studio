@@ -253,7 +253,7 @@ def _detect_backend_from_url(engine_url: str) -> DatabaseBackend:
     """
     if engine_url.startswith("duckdb://"):
         return DatabaseBackend.DUCKDB
-    if engine_url.startswith(("postgresql://", "postgres://")):
+    if engine_url.startswith("postgres"):
         return DatabaseBackend.POSTGRESQL
     raise ValueError(
         f"Unsupported database URL scheme: {engine_url}. "
