@@ -1,5 +1,5 @@
 import type { AnnotationView } from '$lib/api/lightly_studio_local';
-import type { ReversibleAction } from '$lib/hooks/useReversibleActions';
+import type { ReversibleAction, ReversibleActionCallback } from '$lib/hooks/useReversibleActions';
 
 export const ANNOTATION_CREATE_GROUP_ID = 'annotation-create';
 
@@ -14,7 +14,7 @@ export const addAnnotationCreateToUndoStack = ({
     addReversibleAction: (action: ReversibleAction) => void;
     deleteAnnotation: (annotationId: string) => Promise<void>;
     refetch: () => void;
-    onUndo?: () => Promise<void> | void;
+    onUndo?: ReversibleActionCallback;
 }) => {
     const execute = async () => {
         await deleteAnnotation(annotation.sample_id);

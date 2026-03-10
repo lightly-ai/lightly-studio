@@ -1,6 +1,6 @@
 import { type AnnotationUpdateInput, type AnnotationView } from '$lib/api/lightly_studio_local';
 import { getBoundingBox } from '$lib/components/SampleAnnotation/utils';
-import type { ReversibleAction } from '$lib/hooks/useReversibleActions';
+import type { ReversibleAction, ReversibleActionCallback } from '$lib/hooks/useReversibleActions';
 
 export const BBOX_CHANGE_ANNOTATION_DETAILS = `bbox-change-annotation-details`;
 
@@ -15,7 +15,7 @@ export const addAnnotationUpdateToUndoStack = ({
     collection_id: string;
     addReversibleAction: (action: ReversibleAction) => void;
     updateAnnotation: (input: AnnotationUpdateInput) => Promise<void>;
-    onUndo?: () => Promise<void> | void;
+    onUndo?: ReversibleActionCallback;
 }) => {
     const prevBoundingBox = getBoundingBox(annotation);
 
