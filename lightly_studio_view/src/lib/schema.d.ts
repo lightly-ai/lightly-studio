@@ -2587,6 +2587,7 @@ export interface components {
          */
         ImageFilter: {
             sample_filter?: components["schemas"]["SampleFilter"] | null;
+            annotation_filter?: components["schemas"]["AnnotationsFilter"] | null;
             width?: components["schemas"]["FilterDimensions"] | null;
             height?: components["schemas"]["FilterDimensions"] | null;
         };
@@ -3140,6 +3141,12 @@ export interface components {
              * @default m
              */
             key_toolbar_segmentation_mask: string;
+            /**
+             * Key Toolbar Semantic
+             * @description Key to activate semantic segmentation in the toolbar
+             * @default g
+             */
+            key_toolbar_semantic: string;
             /**
              * Key Toolbar Brush
              * @description Key to activate brush mode in the segmentation tool

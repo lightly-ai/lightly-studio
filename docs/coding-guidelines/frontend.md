@@ -150,7 +150,7 @@ import { AnnotationToolbar } from '$lib/components';
   import { Card } from '$lib/components/ui/card';
   import { Button } from '$lib/components/ui/button';
   import { useDataset } from '$lib/hooks/useDataset';
-  
+
   const { dataset, isLoading } = useDataset();
 </script>
 
@@ -163,6 +163,56 @@ import { AnnotationToolbar } from '$lib/components';
   {/if}
 </Card>
 ```
+
+#### Explicit Props vs. Prop Spreading
+- Prefer explicit props over blindly spreading objects into components
+- Components should only receive the specific props they need, making the interface clear and maintainable
+- Avoid spreading entire objects unless the component is intentionally designed as a proxy/wrapper
+
+**Benefits of explicit props:**
+- **Type safety**: Clear understanding of what props the component uses
+- **Maintainability**: Easy to track which props are relevant
+- **Intent clarity**: The relationship between data and UI is explicit
+- **Refactoring safety**: Changes to object shapes won't silently break components
+
+```typescript
+// Bad: Blind object spreading - unclear what props are actually used
+<script lang="ts">
+  interface User {
+    id: string;
+    name: string;
+    email: string;
+    age: number;
+    address: string;
+    // ... many other fields
+  }
+
+  const user: User = getUserData();
+</script>
+
+<UserCard {...user} />
+
+// Good: Explicit props - clear interface and intent
+<script lang="ts">
+  interface User {
+    id: string;
+    name: string;
+    email: string;
+    age: number;
+    address: string;
+    // ... many other fields
+  }
+
+  const user: User = getUserData();
+</script>
+
+<UserCard name={user.name} email={user.email} />
+```
+
+**Exception**: Spreading is acceptable when:
+- Forwarding HTML attributes using `...rest` pattern
+- The component is intentionally designed as a wrapper/proxy
+- You immediately destructure with explicit TypeScript types in the component definition
 
 - Organize Tailwind classes using the `cn()` utility from `$lib/utils`. This utility helps combine Tailwind classes conditionally and prevents class conflicts.
 
@@ -209,6 +259,25 @@ src/
 - Use Svelte's props for data passing.
 - Leverage Svelte's reactive declarations for local state management.
 - Leverage [$app/state](https://svelte.dev/tutorial/kit/page-state) for global state management and access to already loaded data.
+
+### Page State Access
+Use `$app/state` instead of `$app/stores` for accessing page state.
+
+**Bad Example:**
+```typescript
+import { page } from '$app/stores';
+
+// Accessing params with stores requires $ prefix
+$page.params.sampleId
+```
+
+**Good Example:**
+```typescript
+import { page } from '$app/state';
+
+// Accessing params directly without $ prefix
+page.params.sampleId
+```
 
 
 ## State Management
@@ -373,12 +442,35 @@ export function useUsers() {
 ```
 
 
+## Storybook
+
+### Story Syntax
+When creating Storybook stories, use the simplified syntax without explicit `{#snippet children()}` blocks for better readability:
+
+**Good Example:**
+```typescript
+<Story name="H1" args={{ variant: 'h1' }}>
+    Heading 1 - Large Page Title
+</Story>
+```
+
+**Bad Example:**
+```typescript
+<Story name="H1" args={{ variant: 'h1' }}>
+    {#snippet children()}
+        Heading 1 - Large Page Title
+    {/snippet}
+</Story>
+```
+
+The explicit snippet syntax is not required for simple text content and makes stories less readable.
+
 ## Testing
 
 ### Motivation
-- Writing the tests is a crucial part of the development process. 
-- It helps to ensure that your code works as expected and prevents regressions in the future. 
-- It shows maturity of the code and helps to write the more scalable and maintainable code. 
+- Writing the tests is a crucial part of the development process.
+- It helps to ensure that your code works as expected and prevents regressions in the future.
+- It shows maturity of the code and helps to write the more scalable and maintainable code.
 - It helps you to understand the requirements better.
 
 ### Testing levels
