@@ -11,7 +11,7 @@ from pydantic import BaseModel
 from lightly_studio.api.routes.api.status import HTTP_STATUS_NOT_FOUND
 from lightly_studio.db_manager import SessionDep
 from lightly_studio.plugins import operator_context
-from lightly_studio.plugins.base_operator import OperatorResult
+from lightly_studio.plugins.base_operator import OperatorResult, OperatorStatus
 from lightly_studio.plugins.operator_context import AnyFilter, ExecutionContext
 from lightly_studio.plugins.operator_registry import RegisteredOperatorMetadata, operator_registry
 from lightly_studio.plugins.parameter import BaseParameter
@@ -78,6 +78,15 @@ def execute_operator(
             status_code=HTTP_STATUS_NOT_FOUND,
             detail=f"Operator '{operator_id}' not found",
         )
+
+    if operator.status != OperatorStatus.READY:
+        if operator.status in (OperatorStatus.PENDING, OperatorStatus.STARTING):
+            message = f"Operator '{operator_id}' is still starting, please try again in a moment."
+        elif operator.status in (OperatorStatus.STOPPING, OperatorStatus.STOPPED):
+            message = f"Operator '{operator_id}' has been stopped and cannot be executed."
+        else:
+            message = f"Operator '{operator_id}' is in an error state and cannot be executed."
+        return OperatorResult(success=False, message=message)
 
     context = request.context
 
