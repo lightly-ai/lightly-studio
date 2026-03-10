@@ -6,12 +6,12 @@ from tests.helpers_resolvers import create_collection
 from tests.resolvers.video.helpers import VideoStub, create_video_with_frames
 
 
-def test_get_by_id(test_db: Session) -> None:
-    collection = create_collection(session=test_db, sample_type=SampleType.VIDEO)
+def test_get_by_id(db_session: Session) -> None:
+    collection = create_collection(session=db_session, sample_type=SampleType.VIDEO)
     collection_id = collection.collection_id
 
     video_frames = create_video_with_frames(
-        session=test_db,
+        session=db_session,
         collection_id=collection_id,
         video=VideoStub(path="/path/to/video1.mp4", duration_s=2.0, fps=1),
     )
@@ -19,7 +19,7 @@ def test_get_by_id(test_db: Session) -> None:
     frame_sample_id = video_frames.frame_sample_ids[0]
 
     retrieved_frame = video_frame_resolver.get_by_id(
-        session=test_db,
+        session=db_session,
         sample_id=frame_sample_id,
     )
 

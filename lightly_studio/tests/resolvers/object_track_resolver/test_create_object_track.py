@@ -9,12 +9,12 @@ from lightly_studio.resolvers import object_track_resolver
 from tests.helpers_resolvers import create_collection
 
 
-def test_create_many(test_db: Session) -> None:
+def test_create_many(db_session: Session) -> None:
     """Test creating tracks and verifying returned fields."""
-    collection = create_collection(session=test_db)
+    collection = create_collection(session=db_session)
 
     track_ids = object_track_resolver.create_many(
-        session=test_db,
+        session=db_session,
         tracks=[
             ObjectTrackCreate(object_track_number=10, dataset_id=collection.collection_id),
             ObjectTrackCreate(object_track_number=20, dataset_id=collection.collection_id),
@@ -24,7 +24,7 @@ def test_create_many(test_db: Session) -> None:
     assert len(track_ids) == 2
 
     track1 = object_track_resolver.get_by_id(
-        session=test_db,
+        session=db_session,
         object_track_id=track_ids[0],
     )
     assert track1 is not None
@@ -32,7 +32,7 @@ def test_create_many(test_db: Session) -> None:
     assert track1.dataset_id == collection.collection_id
 
     track2 = object_track_resolver.get_by_id(
-        session=test_db,
+        session=db_session,
         object_track_id=track_ids[1],
     )
     assert track2 is not None

@@ -8,12 +8,12 @@ from tests.helpers_resolvers import create_collection
 from tests.resolvers.video.helpers import VideoStub, create_videos
 
 
-def test_get_by_id(test_db: Session) -> None:
-    collection = create_collection(session=test_db, sample_type=SampleType.VIDEO)
+def test_get_by_id(db_session: Session) -> None:
+    collection = create_collection(session=db_session, sample_type=SampleType.VIDEO)
     collection_id = collection.collection_id
 
     create_videos(
-        session=test_db,
+        session=db_session,
         collection_id=collection_id,
         videos=[
             VideoStub(path="/path/to/sample1.mp4"),
@@ -22,11 +22,11 @@ def test_get_by_id(test_db: Session) -> None:
     )
 
     videos = video_resolver.get_all_by_collection_id(
-        session=test_db,
+        session=db_session,
         collection_id=collection_id,
     ).samples
 
-    result = video_resolver.get_by_id(session=test_db, sample_id=videos[0].sample_id)
+    result = video_resolver.get_by_id(session=db_session, sample_id=videos[0].sample_id)
 
     assert result is not None
     assert result.file_name == "sample1.mp4"
