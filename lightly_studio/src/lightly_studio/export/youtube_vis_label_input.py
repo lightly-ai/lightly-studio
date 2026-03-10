@@ -45,8 +45,6 @@ class _LightlyStudioYouTubeVISTrackInputBase:
             session=session,
             samples=list(samples),
         )
-        self._videos = self._export_context.videos
-        self._categories = self._export_context.categories
 
     @staticmethod
     def add_cli_arguments(parser: ArgumentParser) -> None:
@@ -55,10 +53,10 @@ class _LightlyStudioYouTubeVISTrackInputBase:
         raise NotImplementedError()
 
     def get_categories(self) -> Iterable[Category]:
-        return self._categories
+        return self._export_context.categories
 
     def get_videos(self) -> Iterable[Video]:
-        return self._videos
+        return self._export_context.videos
 
     @staticmethod
     def _load_youtube_vis_videos_and_categories(
