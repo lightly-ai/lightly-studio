@@ -2,11 +2,10 @@
 
 from __future__ import annotations
 
-from typing import Any
 from uuid import UUID
 
 from pydantic import BaseModel, Field
-from sqlalchemy.orm import aliased
+from sqlalchemy.orm import Mapped, aliased
 from sqlmodel import col, select
 
 from lightly_studio.models.annotation.annotation_base import AnnotationBaseTable, AnnotationType
@@ -51,7 +50,7 @@ class AnnotationsFilter(BaseModel):
     def apply_to_parent_sample_query(
         self,
         query: QueryType,
-        sample_id_column: Any,
+        sample_id_column: Mapped[UUID],
     ) -> QueryType:
         """Filter a parent-sample query by annotation criteria.
 
@@ -73,7 +72,7 @@ class AnnotationsFilter(BaseModel):
     def _apply_annotation_filters(
         self,
         query: QueryType,
-        annotation_sample: Any,
+        annotation_sample: type[SampleTable],
     ) -> QueryType:
         """Apply the shared annotation predicates to a joined query.
 
