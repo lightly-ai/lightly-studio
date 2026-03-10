@@ -14,73 +14,69 @@ from lightly_studio.db_manager import DatabaseEngine
 from lightly_studio.db_vector import VectorType
 
 
-class TestVectorType:
-    def test_load_dialect_impl__duckdb(self) -> None:
-        """VectorType returns ARRAY(Float) for DuckDB dialect."""
-        db = DatabaseEngine(engine_url="duckdb:///:memory:", single_threaded=True)
-        dialect = db._engine.dialect
-        vector_type = VectorType()
-        result = vector_type.load_dialect_impl(dialect=dialect)
-        assert isinstance(result, ARRAY)
-        assert isinstance(result.item_type, Float)
-        db.close()
+def test_load_dialect_impl__duckdb() -> None:
+    """VectorType returns ARRAY(Float) for DuckDB dialect."""
+    db = DatabaseEngine(engine_url="duckdb:///:memory:", single_threaded=True)
+    dialect = db._engine.dialect
+    vector_type = VectorType()
+    result = vector_type.load_dialect_impl(dialect=dialect)
+    assert isinstance(result, ARRAY)
+    assert isinstance(result.item_type, Float)
+    db.close()
 
-    @pytest.mark.postgres_only
-    def test_load_dialect_impl__postgresql(
-            self,
-            _postgres_engine: DatabaseEngine,
-    ) -> None:
-        """VectorType returns pgvector VECTOR for a real PostgreSQL dialect."""
-        dialect = _postgres_engine._engine.dialect
-        vector_type = db_vector.VectorType()
-        result = vector_type.load_dialect_impl(dialect=dialect)
-        assert isinstance(result, Vector)
+@pytest.mark.postgres_only
+def test_load_dialect_impl__postgresql(
+        _postgres_engine: DatabaseEngine,
+) -> None:
+    """VectorType returns pgvector VECTOR for a real PostgreSQL dialect."""
+    dialect = _postgres_engine._engine.dialect
+    vector_type = db_vector.VectorType()
+    result = vector_type.load_dialect_impl(dialect=dialect)
+    assert isinstance(result, Vector)
 
-    def test_load_dialect_impl__unsupported(self) -> None:
+def test_load_dialect_impl__unsupported() -> None:
+    # SQLAlchemy dialect factory functions lack type stubs.
+    dialect = sqlite.dialect()  # type: ignore[no-untyped-call]
+    vector_type = db_vector.VectorType()
+    with pytest.raises(NotImplementedError, match="Unsupported dialect: sqlite"):
+        vector_type.load_dialect_impl(dialect=dialect)
+
+
+def test_cosine_distance__duckdb() -> None:
+    """cosine_distance compiles to <=> without casts for DuckDB."""
+    expr = db_vector.cosine_distance(sqlalchemy.column("col1"), sqlalchemy.column("col2"))
+    result = expr.compile(dialect=Dialect())
+    assert str(result) == "(col1 <=> col2)"
+
+def test_cosine_distance__postgresql() -> None:
+    """cosine_distance compiles to <=> with ::vector casts for PostgreSQL."""
+    expr = db_vector.cosine_distance(sqlalchemy.column("col1"), sqlalchemy.column("col2"))
+    # SQLAlchemy dialect factory functions lack type stubs.
+    result = expr.compile(dialect=postgresql.dialect())  # type: ignore[no-untyped-call]
+    assert str(result) == "(col1::vector <=> col2::vector)"
+
+def test_cosine_distance__unsupported() -> None:
+    expr = db_vector.cosine_distance(sqlalchemy.column("col1"), sqlalchemy.column("col2"))
+    with pytest.raises(NotImplementedError, match="Unsupported dialect: sqlite"):
         # SQLAlchemy dialect factory functions lack type stubs.
-        dialect = sqlite.dialect()  # type: ignore[no-untyped-call]
-        vector_type = db_vector.VectorType()
-        with pytest.raises(NotImplementedError, match="Unsupported dialect: sqlite"):
-            vector_type.load_dialect_impl(dialect=dialect)
+        expr.compile(dialect=sqlite.dialect())  # type: ignore[no-untyped-call]
 
 
-class TestCosineDistanceCompilation:
-    def test_cosine_distance__duckdb(self) -> None:
-        """cosine_distance compiles to <=> without casts for DuckDB."""
-        expr = db_vector.cosine_distance(sqlalchemy.column("col1"), sqlalchemy.column("col2"))
-        result = expr.compile(dialect=Dialect())
-        assert str(result) == "(col1 <=> col2)"
+def test_vector_element__duckdb() -> None:
+    """vector_element compiles to col[index] for DuckDB."""
+    expr = db_vector.vector_element(sqlalchemy.column("col1"), sqlalchemy.literal_column("1"))
+    result = expr.compile(dialect=Dialect())
+    assert str(result) == "col1[1]"
 
-    def test_cosine_distance__postgresql(self) -> None:
-        """cosine_distance compiles to <=> with ::vector casts for PostgreSQL."""
-        expr = db_vector.cosine_distance(sqlalchemy.column("col1"), sqlalchemy.column("col2"))
+def test_vector_element__postgresql() -> None:
+    """vector_element compiles to (col::real[])[index] for PostgreSQL."""
+    expr = db_vector.vector_element(sqlalchemy.column("col1"), sqlalchemy.literal_column("1"))
+    # SQLAlchemy dialect factory functions lack type stubs.
+    result = expr.compile(dialect=postgresql.dialect())  # type: ignore[no-untyped-call]
+    assert str(result) == "(col1::real[])[1]"
+
+def test_vector_element__unsupported() -> None:
+    expr = db_vector.vector_element(sqlalchemy.column("col1"), sqlalchemy.literal_column("1"))
+    with pytest.raises(NotImplementedError, match="Unsupported dialect: sqlite"):
         # SQLAlchemy dialect factory functions lack type stubs.
-        result = expr.compile(dialect=postgresql.dialect())  # type: ignore[no-untyped-call]
-        assert str(result) == "(col1::vector <=> col2::vector)"
-
-    def test_cosine_distance__unsupported(self) -> None:
-        expr = db_vector.cosine_distance(sqlalchemy.column("col1"), sqlalchemy.column("col2"))
-        with pytest.raises(NotImplementedError, match="Unsupported dialect: sqlite"):
-            # SQLAlchemy dialect factory functions lack type stubs.
-            expr.compile(dialect=sqlite.dialect())  # type: ignore[no-untyped-call]
-
-
-class TestVectorElementCompilation:
-    def test_vector_element__duckdb(self) -> None:
-        """vector_element compiles to col[index] for DuckDB."""
-        expr = db_vector.vector_element(sqlalchemy.column("col1"), sqlalchemy.literal_column("1"))
-        result = expr.compile(dialect=Dialect())
-        assert str(result) == "col1[1]"
-
-    def test_vector_element__postgresql(self) -> None:
-        """vector_element compiles to (col::real[])[index] for PostgreSQL."""
-        expr = db_vector.vector_element(sqlalchemy.column("col1"), sqlalchemy.literal_column("1"))
-        # SQLAlchemy dialect factory functions lack type stubs.
-        result = expr.compile(dialect=postgresql.dialect())  # type: ignore[no-untyped-call]
-        assert str(result) == "(col1::real[])[1]"
-
-    def test_vector_element__unsupported(self) -> None:
-        expr = db_vector.vector_element(sqlalchemy.column("col1"), sqlalchemy.literal_column("1"))
-        with pytest.raises(NotImplementedError, match="Unsupported dialect: sqlite"):
-            # SQLAlchemy dialect factory functions lack type stubs.
-            expr.compile(dialect=sqlite.dialect())  # type: ignore[no-untyped-call]
+        expr.compile(dialect=sqlite.dialect())  # type: ignore[no-untyped-call]
