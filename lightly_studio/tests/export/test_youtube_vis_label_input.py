@@ -17,7 +17,6 @@ from lightly_studio.core.video.video_sample import VideoSample
 from lightly_studio.export.youtube_vis_label_input import (
     LightlyStudioYouTubeVISInstanceSegmentationTrackInput,
 )
-from lightly_studio.models.annotation.annotation_base import AnnotationType
 from lightly_studio.models.collection import CollectionTable, SampleType
 from tests.helpers_resolvers import create_collection
 from tests.resolvers.video.helpers import VideoStub, create_video_with_frames
@@ -34,7 +33,6 @@ class TestLightlyStudioYouTubeVISInstanceSegmentationTrackInput:
         label_input = LightlyStudioYouTubeVISInstanceSegmentationTrackInput(
             session=db_session,
             samples=samples,
-            annotation_types=[AnnotationType.INSTANCE_SEGMENTATION],
         )
         categories = list(label_input.get_categories())
         assert categories == [
@@ -57,7 +55,6 @@ class TestLightlyStudioYouTubeVISInstanceSegmentationTrackInput:
         label_input = LightlyStudioYouTubeVISInstanceSegmentationTrackInput(
             session=db_session,
             samples=samples,
-            annotation_types=[AnnotationType.INSTANCE_SEGMENTATION],
         )
         assert list(label_input.get_categories()) == []
 
@@ -84,7 +81,6 @@ class TestLightlyStudioYouTubeVISInstanceSegmentationTrackInput:
         label_input = LightlyStudioYouTubeVISInstanceSegmentationTrackInput(
             session=db_session,
             samples=samples,
-            annotation_types=[AnnotationType.INSTANCE_SEGMENTATION],
         )
 
         assert list(label_input.get_videos()) == [
@@ -114,7 +110,6 @@ class TestLightlyStudioYouTubeVISInstanceSegmentationTrackInput:
         label_input = LightlyStudioYouTubeVISInstanceSegmentationTrackInput(
             session=db_session,
             samples=samples,
-            annotation_types=[AnnotationType.INSTANCE_SEGMENTATION],
         )
         assert list(label_input.get_videos()) == []
 
@@ -128,7 +123,6 @@ class TestLightlyStudioYouTubeVISInstanceSegmentationTrackInput:
         label_input = LightlyStudioYouTubeVISInstanceSegmentationTrackInput(
             session=db_session,
             samples=samples,
-            annotation_types=[AnnotationType.INSTANCE_SEGMENTATION],
         )
         labels = list(label_input.get_labels())
 
@@ -166,7 +160,6 @@ class TestLightlyStudioYouTubeVISInstanceSegmentationTrackInput:
         label_input = LightlyStudioYouTubeVISInstanceSegmentationTrackInput(
             session=db_session,
             samples=samples,
-            annotation_types=[AnnotationType.INSTANCE_SEGMENTATION],
         )
         labels = list(label_input.get_labels())
 

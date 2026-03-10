@@ -5,6 +5,7 @@ from __future__ import annotations
 from argparse import ArgumentParser
 from collections import defaultdict
 from collections.abc import Iterable
+from dataclasses import dataclass
 from pathlib import Path
 from uuid import UUID
 
@@ -38,14 +39,14 @@ class _LightlyStudioYouTubeVISTrackInputBase:
         self,
         session: Session,
         samples: Iterable[VideoSample],
-        annotation_types: list[AnnotationType],
     ) -> None:
         self._session = session
-        self._videos, self._categories, self._tracks = _load_youtube_vis_track_data(
+        self._export_context = self._load_youtube_vis_videos_and_categories(
             session=session,
             samples=list(samples),
-            annotation_types=annotation_types,
         )
+        self._videos = self._export_context.videos
+        self._categories = self._export_context.categories
 
     @staticmethod
     def add_cli_arguments(parser: ArgumentParser) -> None:
@@ -59,32 +60,122 @@ class _LightlyStudioYouTubeVISTrackInputBase:
     def get_videos(self) -> Iterable[Video]:
         return self._videos
 
+    @staticmethod
+    def _load_youtube_vis_videos_and_categories(
+        session: Session,
+        samples: list[VideoSample],
+    ) -> _YouTubeVISExportContext:
+        """Load shared video metadata and categories for YouTube-VIS export."""
+        if not samples:
+            return _YouTubeVISExportContext(
+                dataset_id=None,
+                videos=[],
+                uuid_to_videos={},
+                frame_to_video_id_and_index={},
+                label_uuid_to_category={},
+                categories=[],
+            )
+
+        dataset_id = samples[0].dataset_id
+        uuid_to_videos, frame_to_video_id_and_index = _build_videos_and_frame_map(
+            session=session, samples=samples
+        )
+        label_uuid_to_category = _build_label_id_to_category(session=session, dataset_id=dataset_id)
+        return _YouTubeVISExportContext(
+            dataset_id=dataset_id,
+            videos=list(uuid_to_videos.values()),
+            uuid_to_videos=uuid_to_videos,
+            frame_to_video_id_and_index=frame_to_video_id_and_index,
+            label_uuid_to_category=label_uuid_to_category,
+            categories=list(label_uuid_to_category.values()),
+        )
+
 
 class LightlyStudioYouTubeVISInstanceSegmentationTrackInput(
     _LightlyStudioYouTubeVISTrackInputBase, InstanceSegmentationTrackInput
 ):
     """Labelformat InstanceSegmentationTrackInput backed by Lightly Studio DB."""
 
+    def __init__(
+        self,
+        session: Session,
+        samples: Iterable[VideoSample],
+    ) -> None:
+        """Initialize the adapter and load segmentation tracks."""
+        super().__init__(session=session, samples=samples)
+        self._tracks = self._load_youtube_vis_segmentation_tracks_out(
+            session=session,
+        )
+
     def get_labels(self) -> Iterable[VideoInstanceSegmentationTrack]:
         """Yield video instance segmentation tracks for export."""
         yield from self._tracks
+
+    def _load_youtube_vis_segmentation_tracks_out(
+        self,
+        session: Session,
+    ) -> list[VideoInstanceSegmentationTrack]:
+        """Load per-video instance segmentation tracks for YouTube-VIS export."""
+        dataset_id = self._export_context.dataset_id
+        if dataset_id is None:
+            return []
+
+        tracks = object_track_resolver.get_all_by_dataset_id(session=session, dataset_id=dataset_id)
+        video_id_to_tracks: dict[UUID, list[SingleInstanceSegmentationTrack]] = defaultdict(list)
+        for track in tracks:
+            annotations = annotation_resolver.get_all_by_object_track_id(
+                session=session,
+                object_track_id=track.object_track_id,
+                annotation_types=[AnnotationType.INSTANCE_SEGMENTATION],
+            )
+            if not annotations:
+                continue
+
+            annotations_by_video = _split_annotations_by_video(
+                annotations,
+                self._export_context.frame_to_video_id_and_index,
+            )
+            for video_id, video_annotations in annotations_by_video.items():
+                track_obj = _build_segmentation_track_entry_from_annotations(
+                    annotations=video_annotations,
+                    video=self._export_context.uuid_to_videos[video_id],
+                    frame_to_video_id_and_index=self._export_context.frame_to_video_id_and_index,
+                    label_uuid_to_category=self._export_context.label_uuid_to_category,
+                    object_track_id=track.object_track_number,
+                )
+                if track_obj is None:
+                    continue
+                video_id_to_tracks[video_id].append(track_obj)
+
+        return _track_tuples_to_video_instance_segmentation(
+            video_id_to_tracks, self._export_context.uuid_to_videos
+        )
+
+
+@dataclass(frozen=True)
+class _YouTubeVISExportContext:
+    dataset_id: UUID | None
+    videos: list[Video]
+    uuid_to_videos: dict[UUID, Video]
+    frame_to_video_id_and_index: dict[UUID, tuple[UUID, int]]
+    label_uuid_to_category: dict[UUID, Category]
+    categories: list[Category]
 
 
 def _build_videos_and_frame_map(
     session: Session,
     samples: list[VideoSample],
 ) -> tuple[
-    list[Video],
-    dict[int, Video],
-    dict[UUID, tuple[int, int]],
+    dict[UUID, Video],
+    dict[UUID, tuple[UUID, int]],
 ]:
-    """Build Video list, video_by_yvis_id, and frame_uuid -> (output_video_id, frame_index).
+    """Build UUID -> Video mapping and frame_uuid -> (video uuid, frame_index) mapping.
 
     Frame id to video_id mapping is needed to associate annotations to the correct video and
     frame in the output.
     """
-    videos: list[Video] = []
-    frame_to_video_id_and_index: dict[UUID, tuple[int, int]] = {}
+    videos: dict[UUID, Video] = {}
+    frame_to_video_id_and_index: dict[UUID, tuple[UUID, int]] = {}
     frames_by_video_id: dict[UUID, list[VideoFrameTable]] = defaultdict(list)
     frames = video_frame_resolver.get_all_by_video_ids(
         session=session,
@@ -96,35 +187,25 @@ def _build_videos_and_frame_map(
     for yvis_id, sample in enumerate(samples, start=1):
         sample_frames = frames_by_video_id[sample.sample_id]
         length = len(sample_frames)
-        videos.append(
-            Video(
-                id=yvis_id,
-                filename=Path(sample.file_name).name,
-                width=int(sample.width),
-                height=int(sample.height),
-                number_of_frames=length,
-            )
+        videos[sample.sample_id] = Video(
+            id=yvis_id,
+            filename=Path(sample.file_name).name,
+            width=int(sample.width),
+            height=int(sample.height),
+            number_of_frames=length,
         )
+
         for frame_index, frame in enumerate(sample_frames):
-            frame_to_video_id_and_index[frame.sample_id] = (yvis_id, frame_index)
-    video_by_yvis_id = {v.id: v for v in videos}
-    return videos, video_by_yvis_id, frame_to_video_id_and_index
-
-
-def _get_video_id_and_frame_index(
-    annotation: AnnotationBaseTable,
-    frame_to_video_id_and_index: dict[UUID, tuple[int, int]],
-) -> tuple[int, int] | None:
-    """Return (output_video_id, frame_index) for the annotation's frame, or None."""
-    return frame_to_video_id_and_index.get(annotation.parent_sample_id)
+            frame_to_video_id_and_index[frame.sample_id] = (frame.parent_sample_id, frame_index)
+    return videos, frame_to_video_id_and_index
 
 
 def _split_annotations_by_video(
     annotations: list[AnnotationBaseTable],
-    frame_to_video_id_and_index: dict[UUID, tuple[int, int]],
-) -> dict[int, list[AnnotationBaseTable]]:
+    frame_to_video_id_and_index: dict[UUID, tuple[UUID, int]],
+) -> dict[UUID, list[AnnotationBaseTable]]:
     """Group annotations by output video_id."""
-    annotations_by_video: dict[int, list[AnnotationBaseTable]] = defaultdict(list)
+    annotations_by_video: dict[UUID, list[AnnotationBaseTable]] = defaultdict(list)
     for ann in annotations:
         video_and_index = frame_to_video_id_and_index.get(ann.parent_sample_id)
         if video_and_index is None:
@@ -161,10 +242,10 @@ def _extract_segmentation_from_annotation(
     return None
 
 
-def _build_track_entry_from_annotations(
+def _build_segmentation_track_entry_from_annotations(
     annotations: list[AnnotationBaseTable],
     video: Video,
-    frame_to_video_id_and_index: dict[UUID, tuple[int, int]],
+    frame_to_video_id_and_index: dict[UUID, tuple[UUID, int]],
     label_uuid_to_category: dict[UUID, Category],
     object_track_id: int | None = None,
 ) -> SingleInstanceSegmentationTrack | None:
@@ -177,7 +258,7 @@ def _build_track_entry_from_annotations(
     label_uuid: UUID | None = None
 
     for ann in annotations:
-        video_and_index = _get_video_id_and_frame_index(ann, frame_to_video_id_and_index)
+        video_and_index = frame_to_video_id_and_index.get(ann.parent_sample_id)
         if video_and_index is None:
             continue
         _, frame_index = video_and_index
@@ -212,61 +293,13 @@ def _build_label_id_to_category(session: Session, dataset_id: UUID) -> dict[UUID
 
 
 def _track_tuples_to_video_instance_segmentation(
-    video_id_to_tracks: dict[int, list[SingleInstanceSegmentationTrack]],
-    video_by_yvis_id: dict[int, Video],
+    video_id_to_tracks: dict[UUID, list[SingleInstanceSegmentationTrack]],
+    video_by_uuid: dict[UUID, Video],
 ) -> list[VideoInstanceSegmentationTrack]:
     """Convert per-video SingleInstanceSegmentationTracks to VideoInstanceSegmentationTrack list."""
     tracks: list[VideoInstanceSegmentationTrack] = []
     for vid_id in sorted(video_id_to_tracks.keys()):
-        video = video_by_yvis_id[vid_id]
+        video = video_by_uuid[vid_id]
         objects = video_id_to_tracks[vid_id]
         tracks.append(VideoInstanceSegmentationTrack(video=video, objects=objects))
     return tracks
-
-
-def _load_youtube_vis_track_data(
-    session: Session,
-    samples: list[VideoSample],
-    annotation_types: list[AnnotationType],
-) -> tuple[list[Video], list[Category], list[VideoInstanceSegmentationTrack]]:
-    """Load videos, categories, and per-video instance segmentation tracks from DB."""
-    if not samples:
-        return [], [], []
-
-    dataset_id = samples[0].dataset_id
-    # Create videos map for export and maps for associating annotations to videos and frames
-    videos, video_by_yvis_id, frame_to_video_id_and_index = _build_videos_and_frame_map(
-        session=session, samples=samples
-    )
-    # Build label_uuid -> YouTube-VIS category map
-    label_uuid_to_category = _build_label_id_to_category(session=session, dataset_id=dataset_id)
-
-    tracks = object_track_resolver.get_all_by_dataset_id(session=session, dataset_id=dataset_id)
-    video_id_to_tracks: dict[int, list[SingleInstanceSegmentationTrack]] = defaultdict(list)
-    for track in tracks:
-        annotations = annotation_resolver.get_all_by_object_track_id(
-            session=session,
-            object_track_id=track.object_track_id,
-            annotation_types=annotation_types,
-        )
-        if not annotations:
-            continue
-
-        # There can be annotations from different videos in the same track, so we need to split
-        # them by video
-        annotations_by_video = _split_annotations_by_video(annotations, frame_to_video_id_and_index)
-        for video_id, video_annotations in annotations_by_video.items():
-            track_obj = _build_track_entry_from_annotations(
-                annotations=video_annotations,
-                video=video_by_yvis_id[video_id],
-                frame_to_video_id_and_index=frame_to_video_id_and_index,
-                label_uuid_to_category=label_uuid_to_category,
-                object_track_id=track.object_track_number,
-            )
-            if track_obj is None:
-                continue
-            video_id_to_tracks[video_id].append(track_obj)
-
-    tracks_out = _track_tuples_to_video_instance_segmentation(video_id_to_tracks, video_by_yvis_id)
-    categories = list(label_uuid_to_category.values())
-    return videos, categories, tracks_out
