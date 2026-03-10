@@ -2016,11 +2016,6 @@ export interface components {
              * @description List of tag UUIDs
              */
             tag_ids?: string[] | null;
-            /**
-             * Sample Ids
-             * @description List of sample UUIDs to filter annotations by
-             */
-            sample_ids?: string[] | null;
         };
         /** BaseParameter */
         BaseParameter: {
