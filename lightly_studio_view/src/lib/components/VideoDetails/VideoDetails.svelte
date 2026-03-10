@@ -180,7 +180,10 @@
         loading = true;
 
         const frameCollectionId = (videoData?.frame?.sample as SampleView)?.collection_id;
-        if (!frameCollectionId) return;
+        if (!frameCollectionId) {
+            loading = false;
+            return;
+        }
 
         const res = await getAllFrames({
             path: {
