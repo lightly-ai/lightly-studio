@@ -2607,6 +2607,7 @@ export interface components {
          */
         ImageFilter: {
             sample_filter?: components["schemas"]["SampleFilter"] | null;
+            annotation_filter?: components["schemas"]["AnnotationsFilter"] | null;
             width?: components["schemas"]["FilterDimensions"] | null;
             height?: components["schemas"]["FilterDimensions"] | null;
         };
