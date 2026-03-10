@@ -129,7 +129,7 @@
     });
 
     async function loadFramesFromFrameNumber() {
-        if (frameNumber && videoEl) {
+        if (frameNumber !== null && videoEl) {
             seekFrameNumber = true;
             cursor = getFrameBatchCursor(frameNumber, BATCH_SIZE);
 
