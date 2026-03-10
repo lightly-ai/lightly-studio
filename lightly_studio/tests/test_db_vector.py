@@ -12,24 +12,24 @@ from sqlalchemy.dialects import postgresql, sqlite
 from lightly_studio import db_vector
 from lightly_studio.db_manager import DatabaseEngine
 from lightly_studio.db_vector import VectorType
+from sqlmodel import Session
 
 
-def test_load_dialect_impl__duckdb() -> None:
+@pytest.mark.duckdb_only
+def test_load_dialect_impl__duckdb(db_session: Session) -> None:
     """VectorType returns ARRAY(Float) for DuckDB dialect."""
-    db = DatabaseEngine(engine_url="duckdb:///:memory:", single_threaded=True)
-    dialect = db._engine.dialect
+    dialect = db_session.bind.dialect
     vector_type = VectorType()
     result = vector_type.load_dialect_impl(dialect=dialect)
     assert isinstance(result, ARRAY)
     assert isinstance(result.item_type, Float)
-    db.close()
 
 @pytest.mark.postgres_only
 def test_load_dialect_impl__postgresql(
-        _postgres_engine: DatabaseEngine,
+        db_session: Session,
 ) -> None:
     """VectorType returns pgvector VECTOR for a real PostgreSQL dialect."""
-    dialect = _postgres_engine._engine.dialect
+    dialect = db_session.bind.dialect
     vector_type = db_vector.VectorType()
     result = vector_type.load_dialect_impl(dialect=dialect)
     assert isinstance(result, Vector)
