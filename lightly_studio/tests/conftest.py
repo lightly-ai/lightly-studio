@@ -7,10 +7,10 @@ from typing import Any
 from uuid import UUID
 
 import pytest
+import sqlalchemy
 from fastapi.testclient import TestClient
 from pydantic import BaseModel
 from pytest_mock import MockerFixture
-from sqlalchemy import text
 from sqlmodel import Session, SQLModel
 from testcontainers.postgres import PostgresContainer  # type: ignore[import-untyped]
 
@@ -86,7 +86,7 @@ def _truncate_tables(session: Session) -> None:
     """
     table_names = [table.name for table in reversed(SQLModel.metadata.sorted_tables)]
     for table_name in table_names:
-        session.execute(text(f'TRUNCATE TABLE "{table_name}" CASCADE'))
+        session.execute(sqlalchemy.text(f'TRUNCATE TABLE "{table_name}" CASCADE'))
     session.commit()
 
 
@@ -98,8 +98,6 @@ def _postgres_container(
     if not request.config.getoption("--postgres"):
         yield None
         return
-
-    from testcontainers.postgres import PostgresContainer
 
     pg_container = PostgresContainer(
         image="pgvector/pgvector:0.8.1-pg18-bookworm", driver="psycopg"
