@@ -101,7 +101,9 @@ def _postgres_container(
 
     from testcontainers.postgres import PostgresContainer
 
-    pg_container = PostgresContainer(image="pgvector/pgvector:0.8.1-pg18-bookworm", driver="psycopg")
+    pg_container = PostgresContainer(
+        image="pgvector/pgvector:0.8.1-pg18-bookworm", driver="psycopg"
+    )
     pg_container.start()
     yield pg_container
     pg_container.stop()
@@ -149,8 +151,6 @@ def db_session(
         test_manager = DatabaseEngine("duckdb:///:memory:", single_threaded=True)
         with test_manager.session() as session:
             yield session
-
-
 
 
 @pytest.fixture
@@ -548,7 +548,7 @@ def patch_collection(
     # Create test-specific lightly_studio_active_features.
     mocker.patch.object(features, "lightly_studio_active_features", [])
 
-    yield  # noqa
+    yield
 
     if use_postgres:
         with _postgres_engine.session() as session:
