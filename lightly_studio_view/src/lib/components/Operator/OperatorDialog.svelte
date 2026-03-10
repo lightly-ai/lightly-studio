@@ -1,6 +1,6 @@
 <script lang="ts">
     import { page } from '$app/stores';
-    import { derived } from 'svelte/store';
+    import { derived as storeDerived } from 'svelte/store';
     import { Button } from '$lib/components/ui/button';
     import * as Dialog from '$lib/components/ui/dialog';
     import { LoaderCircle as Loader2 } from '@lucide/svelte';
@@ -40,23 +40,26 @@
     let executionError = $state<string | undefined>(undefined);
     let executionSuccess = $state<string | undefined>(undefined);
 
-    const pageContext = derived(page, ($p) => ({
-        routeId: $p.route.id,
-        collectionId: $p.params.collection_id,
-        sampleId: $p.params.sampleId || $p.params.sample_id || null,
-        annotationId: $p.params.annotationId || null
-    }) satisfies PageContext);
+    const pageContext = storeDerived(
+        page,
+        ($p) =>
+            ({
+                routeId: $p.route.id,
+                collectionId: $p.params.collection_id,
+                sampleId: $p.params.sampleId || $p.params.sample_id || null,
+                annotationId: $p.params.annotationId || null,
+                sampleType: $p.data.collection?.sample_type ?? null
+            }) satisfies PageContext
+    );
 
-    const collectionId = $derived($pageContext.collectionId);
+    const collectionId = $page.params.collection_id;
 
     const { tagsSelected } = useTags({ collection_id: collectionId, kind: ['annotation'] });
 
-    const {
-        isOnDetailPage,
-        scopeLabel,
-        isCollectionView,
-        contextFilter
-    } = useOperatorContext(pageContext, tagsSelected);
+    const { isOnDetailPage, scopeLabel, contextFilter } = useOperatorContext(
+        pageContext,
+        tagsSelected
+    );
 
     function resetExecutionState() {
         executionError = undefined;
@@ -107,8 +110,9 @@
     });
 
     async function handleExecute() {
-        if (!operator || !collectionId || !isFormValid) {
-            executionError = !collectionId
+        const currentCollectionId = $pageContext.collectionId;
+        if (!operator || !currentCollectionId || !isFormValid) {
+            executionError = !currentCollectionId
                 ? 'Collection not available. Please open a collection first.'
                 : 'Please fill in all required parameters.';
             return;
@@ -124,7 +128,7 @@
                 body: {
                     parameters,
                     context: {
-                        collection_id: collectionId,
+                        collection_id: currentCollectionId,
                         ...($contextFilter !== undefined && { context_filter: $contextFilter })
                     }
                 }
@@ -180,9 +184,7 @@
                     class="inline-flex items-center rounded-full px-2 py-1 text-xs font-medium
                     {$isOnDetailPage
                         ? 'bg-primary text-primary-foreground'
-                        : $isCollectionView
-                          ? 'bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-400'
-                          : 'bg-secondary text-secondary-foreground'}"
+                        : 'bg-secondary text-secondary-foreground'}"
                 >
                     {$scopeLabel}
                 </span>
