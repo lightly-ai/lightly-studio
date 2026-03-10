@@ -12,7 +12,7 @@ from pydantic import BaseModel
 from pytest_mock import MockerFixture
 from sqlalchemy import text
 from sqlmodel import Session, SQLModel
-from testcontainers.postgres import PostgresContainer
+from testcontainers.postgres import PostgresContainer  # type: ignore[import-untyped]
 
 from lightly_studio import db_manager
 from lightly_studio.api import features
@@ -114,7 +114,7 @@ def _postgres_url(_postgres_container: PostgresContainer) -> str | None:
     """Return the Postgres connection URL for the test container, or None for DuckDB."""
     if _postgres_container is None:
         return None
-    return _postgres_container.get_connection_url()
+    return _postgres_container.get_connection_url()  # type: ignore[no-any-return]
 
 
 @pytest.fixture(scope="session")

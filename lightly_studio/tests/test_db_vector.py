@@ -17,6 +17,7 @@ from lightly_studio.db_vector import VectorType
 @pytest.mark.duckdb_only
 def test_load_dialect_impl__duckdb(db_session: Session) -> None:
     """VectorType returns ARRAY(Float) for DuckDB dialect."""
+    assert db_session.bind is not None
     dialect = db_session.bind.dialect
     vector_type = VectorType()
     result = vector_type.load_dialect_impl(dialect=dialect)
@@ -29,6 +30,7 @@ def test_load_dialect_impl__postgresql(
     db_session: Session,
 ) -> None:
     """VectorType returns pgvector VECTOR for a real PostgreSQL dialect."""
+    assert db_session.bind is not None
     dialect = db_session.bind.dialect
     vector_type = db_vector.VectorType()
     result = vector_type.load_dialect_impl(dialect=dialect)
