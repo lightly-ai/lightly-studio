@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test';
+import { test, expect } from '../utils';
 
 test.describe('groups-menu-navigation', () => {
     test('navigate between collections', async ({ page }) => {
