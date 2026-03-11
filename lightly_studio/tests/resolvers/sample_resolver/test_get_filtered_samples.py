@@ -14,17 +14,17 @@ from tests.helpers_resolvers import (
 )
 
 
-def test_get_filtered_samples__all(test_db: Session) -> None:
+def test_get_filtered_samples__all(db_session: Session) -> None:
     # Create samples
-    collection = create_collection(session=test_db)
+    collection = create_collection(session=db_session)
     samples = create_images(
-        db_session=test_db,
+        db_session=db_session,
         collection_id=collection.collection_id,
         images=[ImageStub(path="s1.png"), ImageStub(path="s2.png")],
     )
 
     # Act
-    result = sample_resolver.get_filtered_samples(session=test_db)
+    result = sample_resolver.get_filtered_samples(session=db_session)
 
     # Assert
     assert len(result.samples) == 2
@@ -36,10 +36,10 @@ def test_get_filtered_samples__all(test_db: Session) -> None:
 
 
 def test_get_filtered_samples__empty_db(
-    test_db: Session,
+    db_session: Session,
 ) -> None:
     # Act
-    result = sample_resolver.get_filtered_samples(session=test_db)
+    result = sample_resolver.get_filtered_samples(session=db_session)
 
     # Assert
     assert len(result.samples) == 0
@@ -47,12 +47,12 @@ def test_get_filtered_samples__empty_db(
 
 
 def test_get_filtered_samples__default_order(
-    test_db: Session,
+    db_session: Session,
 ) -> None:
     # Create samples
-    collection = create_collection(session=test_db)
+    collection = create_collection(session=db_session)
     samples = create_images(
-        db_session=test_db,
+        db_session=db_session,
         collection_id=collection.collection_id,
         images=[
             ImageStub(path="s1.png"),
@@ -67,7 +67,7 @@ def test_get_filtered_samples__default_order(
     samples.sort(key=lambda x: (x.created_at, x.sample_id))
 
     # Act
-    result = sample_resolver.get_filtered_samples(session=test_db)
+    result = sample_resolver.get_filtered_samples(session=db_session)
 
     # Assert - Check first page
     assert len(result.samples) == 5
@@ -80,12 +80,12 @@ def test_get_filtered_samples__default_order(
 
 
 def test_get_filtered_samples__pagination(
-    test_db: Session,
+    db_session: Session,
 ) -> None:
     # Create samples
-    collection = create_collection(session=test_db)
+    collection = create_collection(session=db_session)
     samples = create_images(
-        db_session=test_db,
+        db_session=db_session,
         collection_id=collection.collection_id,
         images=[
             ImageStub(path="s1.png"),
@@ -101,15 +101,15 @@ def test_get_filtered_samples__pagination(
 
     # Act - Get first 2 samples
     result_page_1 = sample_resolver.get_filtered_samples(
-        session=test_db, pagination=Paginated(offset=0, limit=2)
+        session=db_session, pagination=Paginated(offset=0, limit=2)
     )
     # Act - Get next 2 samples
     result_page_2 = sample_resolver.get_filtered_samples(
-        session=test_db, pagination=Paginated(offset=2, limit=2)
+        session=db_session, pagination=Paginated(offset=2, limit=2)
     )
     # Act - Get remaining samples
     result_page_3 = sample_resolver.get_filtered_samples(
-        session=test_db, pagination=Paginated(offset=4, limit=2)
+        session=db_session, pagination=Paginated(offset=4, limit=2)
     )
 
     # Assert - Check first page
@@ -131,20 +131,20 @@ def test_get_filtered_samples__pagination(
 
     # Assert - Check out of bounds (should return empty list)
     result_empty = sample_resolver.get_filtered_samples(
-        session=test_db, pagination=Paginated(offset=5, limit=2)
+        session=db_session, pagination=Paginated(offset=5, limit=2)
     )
     assert len(result_empty.samples) == 0
     assert result_empty.total_count == 5
 
 
 def test_get_filtered_samples__filters(
-    test_db: Session,
+    db_session: Session,
 ) -> None:
     # Create samples
-    collection = create_collection(session=test_db)
+    collection = create_collection(session=db_session)
     collection_id = collection.collection_id
     samples = create_images(
-        db_session=test_db,
+        db_session=db_session,
         collection_id=collection_id,
         images=[
             ImageStub(path="sample1.png"),
@@ -154,9 +154,11 @@ def test_get_filtered_samples__filters(
     )
 
     # Add a tag to sample2
-    tag = create_tag(session=test_db, collection_id=collection_id, tag_name="tag1", kind="sample")
+    tag = create_tag(
+        session=db_session, collection_id=collection_id, tag_name="tag1", kind="sample"
+    )
     tag_resolver.add_sample_ids_to_tag_id(
-        session=test_db,
+        session=db_session,
         tag_id=tag.tag_id,
         sample_ids=[samples[1].sample_id],
     )
@@ -165,7 +167,7 @@ def test_get_filtered_samples__filters(
 
     # By sample IDs
     result = sample_resolver.get_filtered_samples(
-        session=test_db,
+        session=db_session,
         filters=SampleFilter(sample_ids=[samples[0].sample_id, samples[2].sample_id]),
     )
     assert len(result.samples) == 2
@@ -177,7 +179,7 @@ def test_get_filtered_samples__filters(
 
     # By tag and collection ID
     result = sample_resolver.get_filtered_samples(
-        session=test_db,
+        session=db_session,
         filters=SampleFilter(collection_id=collection_id, tag_ids=[tag.tag_id]),
     )
     assert len(result.samples) == 1

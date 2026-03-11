@@ -31,22 +31,22 @@ class TestcollectionExport:
 
 
 @pytest.fixture
-def test_collection_export(test_db: Session) -> TestcollectionExport:
+def test_collection_export(db_session: Session) -> TestcollectionExport:
     samples_total = 20
     annotations_per_sample = 2
     annotations_total = samples_total * annotations_per_sample
 
-    collection = create_collection(session=test_db)
+    collection = create_collection(session=db_session)
     collection_id = collection.collection_id
 
     # create annotation_tag
     cat_label = create_annotation_label(
-        session=test_db,
+        session=db_session,
         dataset_id=collection_id,
         label_name="cat",
     )
     dog_label = create_annotation_label(
-        session=test_db,
+        session=db_session,
         dataset_id=collection_id,
         label_name="dog",
     )
@@ -56,7 +56,7 @@ def test_collection_export(test_db: Session) -> TestcollectionExport:
     annotations = []
     for i in range(samples_total):
         image = create_image(
-            session=test_db,
+            session=db_session,
             collection_id=collection_id,
             file_path_abs=f"/path/to/sample{i}.png",
         )
@@ -66,7 +66,7 @@ def test_collection_export(test_db: Session) -> TestcollectionExport:
         for a in range(annotations_per_sample):
             annotations.append(
                 create_annotation(
-                    session=test_db,
+                    session=db_session,
                     collection_id=collection_id,
                     sample_id=image.sample_id,
                     annotation_label_id=cat_label.annotation_label_id
@@ -77,19 +77,19 @@ def test_collection_export(test_db: Session) -> TestcollectionExport:
 
     # create sample tags
     tag_1_of_4 = create_tag(
-        session=test_db,
+        session=db_session,
         collection_id=collection_id,
         tag_name="tag 1/4",
         kind="sample",
     )
     tag_4_of_4 = create_tag(
-        session=test_db,
+        session=db_session,
         collection_id=collection_id,
         tag_name="tag 4/4",
         kind="sample",
     )
     tag_mod_2 = create_tag(
-        session=test_db,
+        session=db_session,
         collection_id=collection_id,
         tag_name="tag mmod2",
         kind="sample",
@@ -97,19 +97,19 @@ def test_collection_export(test_db: Session) -> TestcollectionExport:
 
     # create tags for annotations
     anno_tag_1_of_4 = create_tag(
-        session=test_db,
+        session=db_session,
         collection_id=collection_id,
         tag_name="anno tag 1/4",
         kind="annotation",
     )
     anno_tag_4_of_4 = create_tag(
-        session=test_db,
+        session=db_session,
         collection_id=collection_id,
         tag_name="anno tag 4/4",
         kind="annotation",
     )
     anno_tag_mod_2 = create_tag(
-        session=test_db,
+        session=db_session,
         collection_id=collection_id,
         tag_name="anno tag mmod2",
         kind="annotation",
@@ -117,26 +117,26 @@ def test_collection_export(test_db: Session) -> TestcollectionExport:
 
     # add samples to tags
     tag_resolver.add_sample_ids_to_tag_id(
-        session=test_db,
+        session=db_session,
         tag_id=tag_1_of_4.tag_id,
         sample_ids=[sample.sample_id for i, sample in enumerate(images) if i < samples_total / 4],
     )
     tag_resolver.add_sample_ids_to_tag_id(
-        session=test_db,
+        session=db_session,
         tag_id=tag_4_of_4.tag_id,
         sample_ids=[
             sample.sample_id for i, sample in enumerate(images) if i >= samples_total / 4 * 3
         ],
     )
     tag_resolver.add_sample_ids_to_tag_id(
-        session=test_db,
+        session=db_session,
         tag_id=tag_mod_2.tag_id,
         sample_ids=[sample.sample_id for i, sample in enumerate(images) if i % 2 == 0],
     )
 
     # add annotations to tags
     tag_resolver.add_sample_ids_to_tag_id(
-        session=test_db,
+        session=db_session,
         tag_id=anno_tag_1_of_4.tag_id,
         sample_ids=[
             annotation.sample_id
@@ -145,7 +145,7 @@ def test_collection_export(test_db: Session) -> TestcollectionExport:
         ],
     )
     tag_resolver.add_sample_ids_to_tag_id(
-        session=test_db,
+        session=db_session,
         tag_id=anno_tag_4_of_4.tag_id,
         sample_ids=[
             annotation.sample_id
@@ -154,25 +154,25 @@ def test_collection_export(test_db: Session) -> TestcollectionExport:
         ],
     )
     tag_resolver.add_sample_ids_to_tag_id(
-        session=test_db,
+        session=db_session,
         tag_id=anno_tag_mod_2.tag_id,
         sample_ids=[annotation.sample_id for i, annotation in enumerate(annotations) if i % 2 == 0],
     )
 
     # add second collection to ensure we properly scope it to one collection
-    collection2 = create_collection(session=test_db, collection_name="collection2")
+    collection2 = create_collection(session=db_session, collection_name="collection2")
     image2 = create_image(
-        session=test_db,
+        session=db_session,
         collection_id=collection2.collection_id,
         file_path_abs="/second/collection/sample.png",
     )
     parrot_label = create_annotation_label(
-        session=test_db,
+        session=db_session,
         dataset_id=collection2.collection_id,
         label_name="parrot",
     )
     create_annotation(
-        session=test_db,
+        session=db_session,
         collection_id=collection2.collection_id,
         sample_id=image2.sample_id,
         annotation_label_id=parrot_label.annotation_label_id,
@@ -198,14 +198,14 @@ def test_collection_export(test_db: Session) -> TestcollectionExport:
 
 
 def test_export__include_or_exclude__both_provided(
-    test_db: Session,
+    db_session: Session,
     test_collection_export: TestcollectionExport,
 ) -> None:
     tag_1_of_4 = test_collection_export.tags["tag_1_of_4"]
 
     with pytest.raises(ValueError, match="Cannot include and exclude at the same time."):
         collection_resolver.export(
-            session=test_db,
+            session=db_session,
             collection_id=test_collection_export.collection.collection_id,
             include=ExportFilter(tag_ids=[tag_1_of_4.tag_id]),
             exclude=ExportFilter(tag_ids=[tag_1_of_4.tag_id]),
@@ -213,41 +213,41 @@ def test_export__include_or_exclude__both_provided(
 
 
 def test_export__include_or_exclude__none_provided(
-    test_db: Session,
+    db_session: Session,
     test_collection_export: TestcollectionExport,
 ) -> None:
     with pytest.raises(ValueError, match="Include or exclude filter is required."):
         collection_resolver.export(
-            session=test_db, collection_id=test_collection_export.collection.collection_id
+            session=db_session, collection_id=test_collection_export.collection.collection_id
         )
 
 
 def test_export__include_no_empty_list_provided(
-    test_db: Session,
+    db_session: Session,
     test_collection_export: TestcollectionExport,
 ) -> None:
     with pytest.raises(ValueError, match="List should have at least 1 item"):
         collection_resolver.export(
-            session=test_db,
+            session=db_session,
             collection_id=test_collection_export.collection.collection_id,
             include=ExportFilter(tag_ids=[]),
         )
     with pytest.raises(ValueError, match="List should have at least 1 item"):
         collection_resolver.export(
-            session=test_db,
+            session=db_session,
             collection_id=test_collection_export.collection.collection_id,
             include=ExportFilter(sample_ids=[]),
         )
     with pytest.raises(ValueError, match="List should have at least 1 item"):
         collection_resolver.export(
-            session=test_db,
+            session=db_session,
             collection_id=test_collection_export.collection.collection_id,
             include=ExportFilter(annotation_ids=[]),
         )
 
 
 def test_export__include_with_either_tag_ids_or_sample_ids_or_annotation_ids(
-    test_db: Session,
+    db_session: Session,
     test_collection_export: TestcollectionExport,
 ) -> None:
     tag_1_of_4 = test_collection_export.tags["tag_1_of_4"]
@@ -259,7 +259,7 @@ def test_export__include_with_either_tag_ids_or_sample_ids_or_annotation_ids(
         match="Either tag_ids, sample_ids, or annotation_ids must be set.",
     ):
         collection_resolver.export(
-            session=test_db,
+            session=db_session,
             collection_id=test_collection_export.collection.collection_id,
             include=ExportFilter(tag_ids=[tag_1_of_4.tag_id], sample_ids=[sample.sample_id]),
         )
@@ -269,7 +269,7 @@ def test_export__include_with_either_tag_ids_or_sample_ids_or_annotation_ids(
         match="Either tag_ids, sample_ids, or annotation_ids must be set.",
     ):
         collection_resolver.export(
-            session=test_db,
+            session=db_session,
             collection_id=test_collection_export.collection.collection_id,
             include=ExportFilter(
                 sample_ids=[sample.sample_id],
@@ -282,7 +282,7 @@ def test_export__include_with_either_tag_ids_or_sample_ids_or_annotation_ids(
         match="Either tag_ids, sample_ids, or annotation_ids must be set.",
     ):
         collection_resolver.export(
-            session=test_db,
+            session=db_session,
             collection_id=test_collection_export.collection.collection_id,
             include=ExportFilter(
                 annotation_ids=[annotation.sample_id],
@@ -295,7 +295,7 @@ def test_export__include_with_either_tag_ids_or_sample_ids_or_annotation_ids(
         match="Either tag_ids, sample_ids, or annotation_ids must be set.",
     ):
         collection_resolver.export(
-            session=test_db,
+            session=db_session,
             collection_id=test_collection_export.collection.collection_id,
             include=ExportFilter(
                 tag_ids=[tag_1_of_4.tag_id],
@@ -307,7 +307,7 @@ def test_export__include_with_either_tag_ids_or_sample_ids_or_annotation_ids(
 
 # test export include tags
 def test_export__include_single_sample_tag(
-    test_db: Session,
+    db_session: Session,
     test_collection_export: TestcollectionExport,
 ) -> None:
     samples_total = test_collection_export.samples_total
@@ -315,7 +315,7 @@ def test_export__include_single_sample_tag(
 
     # export single tag
     samples_exported = collection_resolver.export(
-        session=test_db,
+        session=db_session,
         collection_id=test_collection_export.collection.collection_id,
         include=ExportFilter(tag_ids=[tag_1_of_4.tag_id]),
     )
@@ -323,7 +323,7 @@ def test_export__include_single_sample_tag(
 
 
 def test_export__include_multiple_sample_tags(
-    test_db: Session,
+    db_session: Session,
     test_collection_export: TestcollectionExport,
 ) -> None:
     samples_total = test_collection_export.samples_total
@@ -332,7 +332,7 @@ def test_export__include_multiple_sample_tags(
 
     # export multiple tags
     samples_exported = collection_resolver.export(
-        session=test_db,
+        session=db_session,
         collection_id=test_collection_export.collection.collection_id,
         include=ExportFilter(tag_ids=[tag_1_of_4.tag_id, tag_4_of_4.tag_id]),
     )
@@ -340,7 +340,7 @@ def test_export__include_multiple_sample_tags(
 
 
 def test_export__include_multiple_sample_tags__overlapping(
-    test_db: Session,
+    db_session: Session,
     test_collection_export: TestcollectionExport,
 ) -> None:
     tag_1_of_4 = test_collection_export.tags["tag_1_of_4"]
@@ -349,7 +349,7 @@ def test_export__include_multiple_sample_tags__overlapping(
 
     # export multiple tags overlapping
     samples_exported = collection_resolver.export(
-        session=test_db,
+        session=db_session,
         collection_id=test_collection_export.collection.collection_id,
         include=ExportFilter(
             tag_ids=[
@@ -366,7 +366,7 @@ def test_export__include_multiple_sample_tags__overlapping(
 
 # test export include tags
 def test_export__include_single_annotation_tag(
-    test_db: Session,
+    db_session: Session,
     test_collection_export: TestcollectionExport,
 ) -> None:
     samples_total = test_collection_export.samples_total
@@ -374,7 +374,7 @@ def test_export__include_single_annotation_tag(
 
     # export single tag
     samples_exported = collection_resolver.export(
-        session=test_db,
+        session=db_session,
         collection_id=test_collection_export.collection.collection_id,
         include=ExportFilter(tag_ids=[anno_tag_1_of_4.tag_id]),
     )
@@ -382,7 +382,7 @@ def test_export__include_single_annotation_tag(
 
 
 def test_export__include_multiple_annotation_tags(
-    test_db: Session,
+    db_session: Session,
     test_collection_export: TestcollectionExport,
 ) -> None:
     samples_total = test_collection_export.samples_total
@@ -391,7 +391,7 @@ def test_export__include_multiple_annotation_tags(
 
     # export multiple tags
     samples_exported = collection_resolver.export(
-        session=test_db,
+        session=db_session,
         collection_id=test_collection_export.collection.collection_id,
         include=ExportFilter(tag_ids=[anno_tag_1_of_4.tag_id, anno_tag_4_of_4.tag_id]),
     )
@@ -399,7 +399,7 @@ def test_export__include_multiple_annotation_tags(
 
 
 def test_export__include_multiple_annotation_tags__overlapping(
-    test_db: Session,
+    db_session: Session,
     test_collection_export: TestcollectionExport,
 ) -> None:
     samples_total = test_collection_export.samples_total
@@ -409,7 +409,7 @@ def test_export__include_multiple_annotation_tags__overlapping(
 
     # export multiple tags overlapping
     samples_exported = collection_resolver.export(
-        session=test_db,
+        session=db_session,
         collection_id=test_collection_export.collection.collection_id,
         include=ExportFilter(
             tag_ids=[
@@ -424,14 +424,14 @@ def test_export__include_multiple_annotation_tags__overlapping(
 
 # test export include sample_ids
 def test_export__include_sample_id(
-    test_db: Session,
+    db_session: Session,
     test_collection_export: TestcollectionExport,
 ) -> None:
     sample = test_collection_export.samples[-1]
 
     # export single sample_id
     samples_exported = collection_resolver.export(
-        session=test_db,
+        session=db_session,
         collection_id=test_collection_export.collection.collection_id,
         include=ExportFilter(sample_ids=[sample.sample_id]),
     )
@@ -439,14 +439,14 @@ def test_export__include_sample_id(
 
 
 def test_export__include_multiple_sample_ids(
-    test_db: Session,
+    db_session: Session,
     test_collection_export: TestcollectionExport,
 ) -> None:
     samples = test_collection_export.samples
 
     # export single tag
     samples_exported = collection_resolver.export(
-        session=test_db,
+        session=db_session,
         collection_id=test_collection_export.collection.collection_id,
         include=ExportFilter(sample_ids=[sample.sample_id for sample in samples]),
     )
@@ -455,7 +455,7 @@ def test_export__include_multiple_sample_ids(
 
 # test export include annotation_ids
 def test_export__include_annotation_id(
-    test_db: Session,
+    db_session: Session,
     test_collection_export: TestcollectionExport,
 ) -> None:
     annotation = test_collection_export.annotations[-1]
@@ -463,7 +463,7 @@ def test_export__include_annotation_id(
 
     # export sample via single annotation_id
     samples_exported = collection_resolver.export(
-        session=test_db,
+        session=db_session,
         collection_id=test_collection_export.collection.collection_id,
         include=ExportFilter(annotation_ids=[annotation.sample_id]),
     )
@@ -473,7 +473,7 @@ def test_export__include_annotation_id(
 
 
 def test_export__include_multiple_annotation_ids(
-    test_db: Session,
+    db_session: Session,
     test_collection_export: TestcollectionExport,
 ) -> None:
     annotations = test_collection_export.annotations
@@ -481,7 +481,7 @@ def test_export__include_multiple_annotation_ids(
 
     # export sample via multiple annotations preventing duplicates
     samples_exported = collection_resolver.export(
-        session=test_db,
+        session=db_session,
         collection_id=test_collection_export.collection.collection_id,
         include=ExportFilter(
             annotation_ids=[
@@ -517,7 +517,7 @@ def test_export__exclude_with_either_tag_ids_or_sample_ids(
 
 
 def test_export__exclude_single_sample_tag(
-    test_db: Session,
+    db_session: Session,
     test_collection_export: TestcollectionExport,
 ) -> None:
     samples_total = test_collection_export.samples_total
@@ -525,7 +525,7 @@ def test_export__exclude_single_sample_tag(
 
     # export single tag
     samples_exported = collection_resolver.export(
-        session=test_db,
+        session=db_session,
         collection_id=test_collection_export.collection.collection_id,
         exclude=ExportFilter(tag_ids=[tag_1_of_4.tag_id]),
     )
@@ -533,7 +533,7 @@ def test_export__exclude_single_sample_tag(
 
 
 def test_export__exclude_by_multiple_sample_tags(
-    test_db: Session,
+    db_session: Session,
     test_collection_export: TestcollectionExport,
 ) -> None:
     samples_total = test_collection_export.samples_total
@@ -542,7 +542,7 @@ def test_export__exclude_by_multiple_sample_tags(
 
     # export multiple tags
     samples_exported = collection_resolver.export(
-        session=test_db,
+        session=db_session,
         collection_id=test_collection_export.collection.collection_id,
         exclude=ExportFilter(tag_ids=[tag_1_of_4.tag_id, tag_4_of_4.tag_id]),
     )
@@ -550,7 +550,7 @@ def test_export__exclude_by_multiple_sample_tags(
 
 
 def test_export__exclude_by_multiple_sample_tags__overlapping(
-    test_db: Session,
+    db_session: Session,
     test_collection_export: TestcollectionExport,
 ) -> None:
     samples_total = test_collection_export.samples_total
@@ -560,7 +560,7 @@ def test_export__exclude_by_multiple_sample_tags__overlapping(
 
     # export multiple tags overlapping
     samples_exported = collection_resolver.export(
-        session=test_db,
+        session=db_session,
         collection_id=test_collection_export.collection.collection_id,
         exclude=ExportFilter(
             tag_ids=[
@@ -576,7 +576,7 @@ def test_export__exclude_by_multiple_sample_tags__overlapping(
 
 
 def test_export__exclude_single_annotation_tag(
-    test_db: Session,
+    db_session: Session,
     test_collection_export: TestcollectionExport,
 ) -> None:
     samples_total = test_collection_export.samples_total
@@ -584,7 +584,7 @@ def test_export__exclude_single_annotation_tag(
 
     # export single tag
     samples_exported = collection_resolver.export(
-        session=test_db,
+        session=db_session,
         collection_id=test_collection_export.collection.collection_id,
         exclude=ExportFilter(tag_ids=[anno_tag_1_of_4.tag_id]),
     )
@@ -592,7 +592,7 @@ def test_export__exclude_single_annotation_tag(
 
 
 def test_export__exclude_by_multiple_annotation_tags(
-    test_db: Session,
+    db_session: Session,
     test_collection_export: TestcollectionExport,
 ) -> None:
     samples = test_collection_export.samples
@@ -603,7 +603,7 @@ def test_export__exclude_by_multiple_annotation_tags(
 
     # export multiple tags
     samples_exported = collection_resolver.export(
-        session=test_db,
+        session=db_session,
         collection_id=test_collection_export.collection.collection_id,
         exclude=ExportFilter(tag_ids=[anno_tag_1_of_4.tag_id, anno_tag_4_of_4.tag_id]),
     )
@@ -614,7 +614,7 @@ def test_export__exclude_by_multiple_annotation_tags(
 
 
 def test_export__exclude_by_multiple_annotation_tags__overlapping(
-    test_db: Session,
+    db_session: Session,
     test_collection_export: TestcollectionExport,
 ) -> None:
     annotations_total = test_collection_export.annotations_total
@@ -625,7 +625,7 @@ def test_export__exclude_by_multiple_annotation_tags__overlapping(
 
     # export multiple tags overlapping
     samples_exported = collection_resolver.export(
-        session=test_db,
+        session=db_session,
         collection_id=test_collection_export.collection.collection_id,
         exclude=ExportFilter(
             tag_ids=[
@@ -642,7 +642,7 @@ def test_export__exclude_by_multiple_annotation_tags__overlapping(
 
 
 def test_export__exclude_by_sample_ids(
-    test_db: Session,
+    db_session: Session,
     test_collection_export: TestcollectionExport,
 ) -> None:
     samples_total = test_collection_export.samples_total
@@ -650,7 +650,7 @@ def test_export__exclude_by_sample_ids(
 
     # export ALL but this single sample_id
     samples_exported = collection_resolver.export(
-        session=test_db,
+        session=db_session,
         collection_id=test_collection_export.collection.collection_id,
         exclude=ExportFilter(sample_ids=[sample.sample_id]),
     )
@@ -658,7 +658,7 @@ def test_export__exclude_by_sample_ids(
 
 
 def test_export__exclude_by_multiple_samples(
-    test_db: Session,
+    db_session: Session,
     test_collection_export: TestcollectionExport,
 ) -> None:
     samples_total = test_collection_export.samples_total
@@ -666,7 +666,7 @@ def test_export__exclude_by_multiple_samples(
 
     # export ALL but these multiple sample_ids
     samples_exported = collection_resolver.export(
-        session=test_db,
+        session=db_session,
         collection_id=test_collection_export.collection.collection_id,
         exclude=ExportFilter(sample_ids=[sample.sample_id for sample in samples]),
     )
@@ -675,7 +675,7 @@ def test_export__exclude_by_multiple_samples(
 
 # test export exclude annotation_ids
 def test_export__exclude_by_annotation_id(
-    test_db: Session,
+    db_session: Session,
     test_collection_export: TestcollectionExport,
 ) -> None:
     annotation = test_collection_export.annotations[0]
@@ -683,7 +683,7 @@ def test_export__exclude_by_annotation_id(
 
     # export ALL sample except the first sample because it has the annotation
     samples_exported = collection_resolver.export(
-        session=test_db,
+        session=db_session,
         collection_id=test_collection_export.collection.collection_id,
         exclude=ExportFilter(annotation_ids=[annotation.sample_id]),
     )
@@ -696,39 +696,39 @@ def test_export__exclude_by_annotation_id(
 
 
 def test_export__exclude_by_annotation_id__ensure_samples_without_annotations_are_included(
-    test_db: Session,
+    db_session: Session,
 ) -> None:
     # collection with three samples, only middle sample has an annotation
-    collection = create_collection(session=test_db, collection_name="collection2")
+    collection = create_collection(session=db_session, collection_name="collection2")
     image1 = create_image(
-        session=test_db,
+        session=db_session,
         collection_id=collection.collection_id,
         file_path_abs="/path/to/sample1.png",
     )
     image2 = create_image(
-        session=test_db,
+        session=db_session,
         collection_id=collection.collection_id,
         file_path_abs="/path/to/sample2.png",
     )
     image3 = create_image(
-        session=test_db,
+        session=db_session,
         collection_id=collection.collection_id,
         file_path_abs="/path/to/sample3.png",
     )
     parrot_label = create_annotation_label(
-        session=test_db,
+        session=db_session,
         dataset_id=collection.collection_id,
         label_name="parrot",
     )
     # create annotaitons only for sample 2
     sample2_anno1 = create_annotation(
-        session=test_db,
+        session=db_session,
         collection_id=collection.collection_id,
         sample_id=image2.sample_id,
         annotation_label_id=parrot_label.annotation_label_id,
     )
     create_annotation(
-        session=test_db,
+        session=db_session,
         collection_id=collection.collection_id,
         sample_id=image3.sample_id,
         annotation_label_id=parrot_label.annotation_label_id,
@@ -737,7 +737,7 @@ def test_export__exclude_by_annotation_id__ensure_samples_without_annotations_ar
     # export ALL samples except the one with the annotation.
     # ensure we also export samples without an annotation
     samples_exported = collection_resolver.export(
-        session=test_db,
+        session=db_session,
         collection_id=collection.collection_id,
         exclude=ExportFilter(
             annotation_ids=[
@@ -752,7 +752,7 @@ def test_export__exclude_by_annotation_id__ensure_samples_without_annotations_ar
 
 
 def test_export__exclude_by_multiple_annotation_ids(
-    test_db: Session,
+    db_session: Session,
     test_collection_export: TestcollectionExport,
 ) -> None:
     annotations = test_collection_export.annotations
@@ -760,7 +760,7 @@ def test_export__exclude_by_multiple_annotation_ids(
 
     # export ALL samples except the first two samples
     samples_exported = collection_resolver.export(
-        session=test_db,
+        session=db_session,
         collection_id=test_collection_export.collection.collection_id,
         exclude=ExportFilter(
             annotation_ids=[
@@ -778,13 +778,13 @@ def test_export__exclude_by_multiple_annotation_ids(
 
 
 def test_get_filtered_samples_count__include_single_sample_tag(
-    test_db: Session,
+    db_session: Session,
     test_collection_export: TestcollectionExport,
 ) -> None:
     samples_total = test_collection_export.samples_total
     tag_1_of_4 = test_collection_export.tags["tag_1_of_4"]
     count = collection_resolver.get_filtered_samples_count(
-        session=test_db,
+        session=db_session,
         collection_id=test_collection_export.collection.collection_id,
         include=ExportFilter(tag_ids=[tag_1_of_4.tag_id]),
     )
@@ -792,14 +792,14 @@ def test_get_filtered_samples_count__include_single_sample_tag(
 
 
 def test_get_filtered_samples_count__include_multiple_sample_tags(
-    test_db: Session,
+    db_session: Session,
     test_collection_export: TestcollectionExport,
 ) -> None:
     samples_total = test_collection_export.samples_total
     tag_1_of_4 = test_collection_export.tags["tag_1_of_4"]
     tag_4_of_4 = test_collection_export.tags["tag_4_of_4"]
     count = collection_resolver.get_filtered_samples_count(
-        session=test_db,
+        session=db_session,
         collection_id=test_collection_export.collection.collection_id,
         include=ExportFilter(tag_ids=[tag_1_of_4.tag_id, tag_4_of_4.tag_id]),
     )
@@ -807,12 +807,12 @@ def test_get_filtered_samples_count__include_multiple_sample_tags(
 
 
 def test_get_filtered_samples_count__include_sample_ids(
-    test_db: Session,
+    db_session: Session,
     test_collection_export: TestcollectionExport,
 ) -> None:
     sample = test_collection_export.samples[0]
     count = collection_resolver.get_filtered_samples_count(
-        session=test_db,
+        session=db_session,
         collection_id=test_collection_export.collection.collection_id,
         include=ExportFilter(sample_ids=[sample.sample_id]),
     )
@@ -820,12 +820,12 @@ def test_get_filtered_samples_count__include_sample_ids(
 
 
 def test_get_filtered_samples_count__include_annotation_ids(
-    test_db: Session,
+    db_session: Session,
     test_collection_export: TestcollectionExport,
 ) -> None:
     annotation = test_collection_export.annotations[0]
     count = collection_resolver.get_filtered_samples_count(
-        session=test_db,
+        session=db_session,
         collection_id=test_collection_export.collection.collection_id,
         include=ExportFilter(annotation_ids=[annotation.sample_id]),
     )
@@ -833,13 +833,13 @@ def test_get_filtered_samples_count__include_annotation_ids(
 
 
 def test_get_filtered_samples_count__exclude_single_sample_tag(
-    test_db: Session,
+    db_session: Session,
     test_collection_export: TestcollectionExport,
 ) -> None:
     samples_total = test_collection_export.samples_total
     tag_1_of_4 = test_collection_export.tags["tag_1_of_4"]
     count = collection_resolver.get_filtered_samples_count(
-        session=test_db,
+        session=db_session,
         collection_id=test_collection_export.collection.collection_id,
         exclude=ExportFilter(tag_ids=[tag_1_of_4.tag_id]),
     )
@@ -847,13 +847,13 @@ def test_get_filtered_samples_count__exclude_single_sample_tag(
 
 
 def test_get_filtered_samples_count__exclude_sample_ids(
-    test_db: Session,
+    db_session: Session,
     test_collection_export: TestcollectionExport,
 ) -> None:
     samples_total = test_collection_export.samples_total
     sample = test_collection_export.samples[0]
     count = collection_resolver.get_filtered_samples_count(
-        session=test_db,
+        session=db_session,
         collection_id=test_collection_export.collection.collection_id,
         exclude=ExportFilter(sample_ids=[sample.sample_id]),
     )
@@ -861,13 +861,13 @@ def test_get_filtered_samples_count__exclude_sample_ids(
 
 
 def test_get_filtered_samples_count__exclude_annotation_ids(
-    test_db: Session,
+    db_session: Session,
     test_collection_export: TestcollectionExport,
 ) -> None:
     samples_total = test_collection_export.samples_total
     annotation = test_collection_export.annotations[0]
     count = collection_resolver.get_filtered_samples_count(
-        session=test_db,
+        session=db_session,
         collection_id=test_collection_export.collection.collection_id,
         exclude=ExportFilter(annotation_ids=[annotation.sample_id]),
     )
@@ -875,13 +875,13 @@ def test_get_filtered_samples_count__exclude_annotation_ids(
 
 
 def test_get_filtered_samples_count__exclude_multiple_annotation_ids(
-    test_db: Session,
+    db_session: Session,
     test_collection_export: TestcollectionExport,
 ) -> None:
     samples = test_collection_export.samples
     annotations = test_collection_export.annotations
     count = collection_resolver.get_filtered_samples_count(
-        session=test_db,
+        session=db_session,
         collection_id=test_collection_export.collection.collection_id,
         exclude=ExportFilter(
             annotation_ids=[
