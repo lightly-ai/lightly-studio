@@ -149,9 +149,6 @@ class TestLightlyStudioYouTubeVISInstanceSegmentationTrackInput:
         cat_label = create_annotation_label(
             session=db_session, dataset_id=collection.collection_id, label_name="cat"
         )
-        create_annotation_label(
-            session=db_session, dataset_id=collection.collection_id, label_name="dog"
-        )
         object_track_ids = object_track_resolver.create_many(
             session=db_session,
             tracks=[ObjectTrackCreate(object_track_number=99, dataset_id=collection.collection_id)],
