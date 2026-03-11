@@ -40,7 +40,9 @@
         isSamplesRoute,
         isVideoFramesRoute,
         isVideosRoute,
-        isGroupsRoute
+        isGroupsRoute,
+        isGroupDetailsRoute,
+        isGroupComponentDetailsRoute
     } from '$lib/routes';
     import { useEmbedText } from '$lib/hooks/useEmbedText/useEmbedText';
     import type { GridType } from '$lib/types';
@@ -107,6 +109,8 @@
 
     const isSamples = $derived(isSamplesRoute(page.route.id));
     const isGroups = $derived(isGroupsRoute(page.route.id));
+    const isGroupDetails = $derived(isGroupDetailsRoute(page.route.id));
+    const isGroupComponentDetails = $derived(isGroupComponentDetailsRoute(page.route.id));
     const isAnnotations = $derived(isAnnotationsRoute(page.route.id));
     const isSampleDetails = $derived(isSampleDetailsRoute(page.route.id));
     const isAnnotationDetails = $derived(isAnnotationDetailsRoute(page.route.id));
@@ -513,7 +517,7 @@
 </div>
 
 <div class="relative flex min-h-0 flex-1 flex-col">
-    {#if isSampleDetails || isAnnotationDetails}
+    {#if isSampleDetails || isAnnotationDetails || isGroupDetails || isGroupComponentDetails}
         {@render children()}
     {:else}
         <div class="flex min-h-0 flex-1 space-x-4 px-4">

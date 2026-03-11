@@ -9,7 +9,8 @@
         getAllFrames,
         type AnnotationsFilter,
         type VideoFrameFilter,
-        getAllVideos,
+        type VideoFilter,
+        getVideoSampleIds,
         readAnnotationsWithPayload,
         type SampleFilter
     } from '$lib/api/lightly_studio_local';
@@ -105,11 +106,13 @@
 
     const { videoBoundsValues } = useVideoBounds();
 
-    const videosFilter = $derived<VideoFrameFilter>({
+    const videosFilter = $derived<VideoFilter>({
+        annotation_frames_label_ids: $selectedAnnotationFilterIds?.size
+            ? Array.from($selectedAnnotationFilterIds)
+            : undefined,
         sample_filter: {
             sample_ids: $videoFilterParams?.filters?.sample_ids,
             ...sampleFilter,
-            annotation_label_ids: annotationLabelIds
         },
         ...$videoBoundsValues
     });
@@ -319,7 +322,7 @@
 
             itemsSelectedByFilter = new Set(sampleIds);
         } else if (gridType == 'videos') {
-            const videos = await getAllVideos({
+            const videoSampleIds = await getVideoSampleIds({
                 path: {
                     collection_id: collectionId
                 },
@@ -328,7 +331,7 @@
                 }
             });
 
-            const sampleIds = videos.data?.data?.map((e) => e.sample_id);
+            const sampleIds = videoSampleIds.data;
 
             itemsSelectedByFilter = new Set(sampleIds);
         } else if (gridType == 'annotations') {

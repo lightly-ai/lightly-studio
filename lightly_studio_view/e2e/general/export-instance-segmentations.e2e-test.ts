@@ -2,8 +2,8 @@ import { expect, test, gotoFirstPage } from '../utils';
 import { cocoDataset } from './fixtures';
 import fs from 'node:fs/promises';
 
-test.describe('Export Annotations', () => {
-    test('Download annotations export JSON', async ({ page }) => {
+test.describe('Export Instance Segmentations', () => {
+    test('Download instance segmentations export JSON', async ({ page }) => {
         await gotoFirstPage(page);
 
         // Open the Export side panel from the header
@@ -13,25 +13,25 @@ test.describe('Export Annotations', () => {
 
         // Switch to the correct export type
         await page.getByTestId('export-type-select').click();
-        await page.getByRole('option', { name: 'Image Object Detections' }).click();
-        await expect(page.getByTestId('submit-button-annotations')).toHaveAttribute(
+        await page.getByRole('option', { name: 'Image Instance Segmentations' }).click();
+        await expect(page.getByTestId('submit-button-instance-segmentations')).toHaveAttribute(
             'href',
-            /\/api\/collections\/.*\/export\/annotations\?ts=\d+/
+            /\/api\/collections\/.*\/export\/annotations\?ts=\d+&annotation_type=instance_segmentation/
         );
 
         // Remove target to avoid popup and keep navigation in the same page context
         await page
-            .getByTestId('submit-button-annotations')
+            .getByTestId('submit-button-instance-segmentations')
             .evaluate((el: HTMLAnchorElement) => el.removeAttribute('target'));
 
         // Click and wait for the download event deterministically
         const [download] = await Promise.all([
             page.waitForEvent('download'),
-            page.getByTestId('submit-button-annotations').click()
+            page.getByTestId('submit-button-instance-segmentations').click()
         ]);
 
         // Verify the suggested filename from headers
-        expect(download.suggestedFilename()).toBe(cocoDataset.annotationExportFilename);
+        expect(download.suggestedFilename()).toBe(cocoDataset.instanceSegmentationExportFilename);
 
         // Read downloaded file contents (acceptDownloads is enabled)
         const filePath = await download.path();
@@ -58,10 +58,19 @@ test.describe('Export Annotations', () => {
         const cat = data.categories[0];
         expect(cat).toHaveProperty('id');
         expect(cat).toHaveProperty('name');
-        expect(cat.name).toBe(cocoDataset.labels.airplane.name);
 
-        // TODO(Michal, 10/2025): Currently we export only object detections, but the test collection
-        // has instance segmentations. Update the test to expect more than 0 annotations later.
-        expect(data.annotations.length).toEqual(0);
+        // Inspect annotations
+        expect(data.annotations.length).toBeGreaterThan(0);
+        const ann = data.annotations[0];
+        expect(ann).toHaveProperty('image_id');
+        expect(ann).toHaveProperty('category_id');
+        expect(ann).toHaveProperty('bbox');
+        expect(Array.isArray(ann.bbox)).toBeTruthy();
+        expect(ann).toHaveProperty('segmentation');
+        // Ensure it's instance segmentation (it can be an array of polygons or RLE)
+        expect(
+            Array.isArray(ann.segmentation) ||
+                (typeof ann.segmentation === 'object' && ann.segmentation !== null)
+        ).toBeTruthy();
     });
 });
