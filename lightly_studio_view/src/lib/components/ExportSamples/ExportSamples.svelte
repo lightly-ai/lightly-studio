@@ -129,6 +129,7 @@
 
             <div class="grid flex-1 gap-4 overflow-y-auto px-1">
                 <Tabs.Root bind:value={exportType} class="w-full">
+                    <!-- TODO(lukas 3/2026): Consider constructing this by iterating over exportTypeLabels-->
                     <FormField label="Export Type">
                         <Select.Root type="single" bind:value={exportType}>
                             <Select.Trigger class="w-full" data-testid="export-type-select">
