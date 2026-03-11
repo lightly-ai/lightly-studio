@@ -109,28 +109,43 @@ def _postgres_engine(_postgres_url: str | None) -> Generator[DatabaseEngine | No
 
 
 @pytest.fixture
-def db_session(
+def _db_engine(
     request: pytest.FixtureRequest,
     _postgres_engine: DatabaseEngine | None,
-) -> Generator[Session, None, None]:
-    """Create a test database manager session.
+) -> Generator[DatabaseEngine, None, None]:
+    """Provide a single DatabaseEngine for each test.
 
     DuckDB mode (default): creates a fresh in-memory engine per test.
-    Postgres mode (--postgres): reuses the session-scoped engine,
-    then truncates all tables after the test..
+    Postgres mode (--postgres): reuses the session-scoped Postgres engine.
     """
     use_postgres = request.config.getoption("--postgres")
 
     if use_postgres:
         assert _postgres_engine is not None
-        with _postgres_engine.session() as session:
-            yield session
+        yield _postgres_engine
+    else:
+        engine = DatabaseEngine("duckdb:///:memory:", single_threaded=True)
+        yield engine
+        engine.close()
+
+
+@pytest.fixture
+def db_session(
+    request: pytest.FixtureRequest,
+    _db_engine: DatabaseEngine,
+) -> Generator[Session, None, None]:
+    """Create a test database manager session.
+
+    DuckDB mode (default): creates a session from the per-test in-memory engine.
+    Postgres mode (--postgres): creates a session from the shared engine,
+    then truncates all tables after the test.
+    """
+    use_postgres = request.config.getoption("--postgres")
+    with _db_engine.session() as session:
+        yield session
+        if use_postgres:
             session.rollback()
             _truncate_tables(session)
-    else:
-        test_manager = DatabaseEngine("duckdb:///:memory:", single_threaded=True)
-        with test_manager.session() as session:
-            yield session
 
 
 @pytest.fixture
@@ -488,27 +503,19 @@ def assert_contains_properties(
 def patch_collection(
     request: pytest.FixtureRequest,
     mocker: MockerFixture,
-    _postgres_engine: DatabaseEngine | None,
+    _db_engine: DatabaseEngine,
 ) -> Generator[None, None, None]:
     """Fixture to patch the collection resources.
 
-    For DuckDB: patches get_engine() to return an in-memory DuckDB engine.
-    For Postgres: patches get_engine() to return the session-scoped Postgres engine,
-    but truncates tables after the test.
+    Patches get_engine() to return the per-test engine (in-memory DuckDB or
+    session-scoped Postgres). Truncates tables after the test on Postgres.
     """
     use_postgres = request.config.getoption("--postgres")
-
-    if use_postgres:
-        assert _postgres_engine is not None
-        engine = _postgres_engine
-    else:
-        engine = DatabaseEngine(engine_url="duckdb:///:memory:", single_threaded=True)
-
     # Create a mock database manager.
     mocker.patch.object(
         db_manager,
         "get_engine",
-        return_value=engine,
+        return_value=_db_engine,
     )
 
     # Create a test-specific EmbeddingManager singleton.
@@ -530,7 +537,7 @@ def patch_collection(
 
     yield
 
-    if use_postgres and _postgres_engine is not None:
-        with _postgres_engine.session() as session:
+    if use_postgres:
+        with _db_engine.session() as session:
             session.rollback()
             _truncate_tables(session)
