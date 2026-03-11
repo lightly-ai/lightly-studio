@@ -14,7 +14,8 @@ export const useUpdateAnnotationsMutation = ({ collectionId }: { collectionId: s
     const refetch = () => {
         client.invalidateQueries({
             queryKey: countAnnotationsByCollectionOptions({
-                path: { collection_id: collectionId }
+                path: { collection_id: collectionId },
+                body: {}
             }).queryKey
         });
     };

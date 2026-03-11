@@ -103,9 +103,11 @@
     }
 
     $effect(() => {
-        if ($infiniteAnnotations.isSuccess && $infiniteAnnotations.data?.pages.length > 0) {
-            setfilteredAnnotationCount($infiniteAnnotations.data.pages[0].total_count);
-        }
+        infiniteAnnotations.subscribe((result) => {
+            if (result.isSuccess && result.data.pages.length > 0) {
+                setfilteredAnnotationCount(result.data.pages[0].total_count);
+            }
+        });
     });
 
     const { user } = useAuth();

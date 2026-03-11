@@ -16,7 +16,8 @@ export const useDeleteAnnotation = ({ collectionId }: { collectionId: string }) 
     const refetch = () => {
         client.invalidateQueries({
             queryKey: countAnnotationsByCollectionOptions({
-                path: { collection_id: collectionId }
+                path: { collection_id: collectionId },
+                body: {}
             }).queryKey
         });
     };

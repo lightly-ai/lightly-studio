@@ -107,7 +107,8 @@
         });
         client.invalidateQueries({
             queryKey: countAnnotationsByCollectionOptions({
-                path: { collection_id: collectionId }
+                path: { collection_id: collectionId },
+                body: {}
             }).queryKey
         });
     }
