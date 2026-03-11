@@ -134,6 +134,72 @@ def test_read_annotations_with_annotation_labels_ids(
     assert result["total_count"] == expected_count
 
 
+def test_count_annotations_by_collection_with_image_filter(
+    test_client: TestClient,
+    db_session: Session,
+) -> None:
+    collection = create_collection(session=db_session)
+    collection_id = collection.collection_id
+
+    image_1 = create_image(
+        session=db_session,
+        collection_id=collection_id,
+        file_path_abs="/path/to/sample1.png",
+    )
+    image_2 = create_image(
+        session=db_session,
+        collection_id=collection_id,
+        file_path_abs="/path/to/sample2.png",
+    )
+
+    dog_label = create_annotation_label(
+        session=db_session,
+        dataset_id=collection_id,
+        label_name="dog",
+    )
+    cat_label = create_annotation_label(
+        session=db_session,
+        dataset_id=collection_id,
+        label_name="cat",
+    )
+
+    create_annotation(
+        session=db_session,
+        sample_id=image_1.sample_id,
+        annotation_label_id=dog_label.annotation_label_id,
+        collection_id=collection_id,
+    )
+    create_annotation(
+        session=db_session,
+        sample_id=image_1.sample_id,
+        annotation_label_id=cat_label.annotation_label_id,
+        collection_id=collection_id,
+    )
+    create_annotation(
+        session=db_session,
+        sample_id=image_2.sample_id,
+        annotation_label_id=dog_label.annotation_label_id,
+        collection_id=collection_id,
+    )
+
+    response = test_client.post(
+        f"/api/collections/{collection_id}/annotations/count",
+        json={
+            "filter": {
+                "annotation_filter": {"annotation_label_ids": [str(dog_label.annotation_label_id)]}
+            }
+        },
+    )
+
+    assert response.status_code == HTTP_STATUS_OK
+    result = response.json()
+
+    assert result == [
+        {"label_name": "cat", "current_count": 1, "total_count": 1},
+        {"label_name": "dog", "current_count": 2, "total_count": 2},
+    ]
+
+
 def test_delete_annotation(
     test_client: TestClient,
     collection_id: UUID,

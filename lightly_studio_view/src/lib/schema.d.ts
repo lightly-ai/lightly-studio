@@ -579,15 +579,15 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
+        get?: never;
+        put?: never;
         /**
          * Count Annotations By Collection
-         * @description Get annotation counts for a specific collection.
+         * @description Get annotation counts for a specific collection using an image filter body.
          *
          *     Returns a list of dictionaries with label name and count.
          */
-        get: operations["count_annotations_by_collection"];
-        put?: never;
-        post?: never;
+        post: operations["count_annotations_by_collection"];
         delete?: never;
         options?: never;
         head?: never;
@@ -2820,6 +2820,13 @@ export interface components {
             limit: number;
         };
         /**
+         * ReadCountAnnotationsRequest
+         * @description Request body for reading annotation counts.
+         */
+        ReadCountAnnotationsRequest: {
+            filter?: components["schemas"]["ImageFilter"] | null;
+        };
+        /**
          * ReadCountVideoFramesAnnotationsRequest
          * @description Request body for reading video frames annotations counter.
          */
@@ -4718,20 +4725,18 @@ export interface operations {
     };
     count_annotations_by_collection: {
         parameters: {
-            query?: {
-                filtered_labels?: string[] | null;
-                min_width?: number | null;
-                max_width?: number | null;
-                min_height?: number | null;
-                max_height?: number | null;
-            };
+            query?: never;
             header?: never;
             path: {
                 collection_id: string;
             };
             cookie?: never;
         };
-        requestBody?: never;
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ReadCountAnnotationsRequest"];
+            };
+        };
         responses: {
             /** @description Successful Response */
             200: {

@@ -24,6 +24,7 @@ from lightly_studio.resolvers import (
 from lightly_studio.resolvers.annotations.annotations_filter import (
     AnnotationsFilter,
 )
+from lightly_studio.resolvers.image_filter import ImageFilter
 from tests.helpers_resolvers import (
     create_annotation,
     create_annotation_label,
@@ -247,7 +248,13 @@ def test_count_annotations_by_collection_with_filtering(
 
     # Test with filtering by "dog"
     filtered_counts = annotation_resolver.count_annotations_by_collection(
-        session=db_session, collection_id=collection_id, filtered_labels=["dog"]
+        session=db_session,
+        collection_id=collection_id,
+        image_filter=ImageFilter(
+            annotation_filter=AnnotationsFilter(
+                annotation_label_ids=[test_data.dog_label.annotation_label_id]
+            )
+        ),
     )
     filtered_dict = {label: (current, total) for label, current, total in filtered_counts}
     assert filtered_dict["dog"] == (2, 2)  # All dogs are visible
@@ -258,7 +265,13 @@ def test_count_annotations_by_collection_with_filtering(
 
     # Test with filtering by "cat"
     filtered_counts = annotation_resolver.count_annotations_by_collection(
-        session=db_session, collection_id=collection_id, filtered_labels=["cat"]
+        session=db_session,
+        collection_id=collection_id,
+        image_filter=ImageFilter(
+            annotation_filter=AnnotationsFilter(
+                annotation_label_ids=[test_data.cat_label.annotation_label_id]
+            )
+        ),
     )
     filtered_dict = {label: (current, total) for label, current, total in filtered_counts}
     assert filtered_dict["dog"] == (

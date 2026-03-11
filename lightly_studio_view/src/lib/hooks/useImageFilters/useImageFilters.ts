@@ -5,6 +5,7 @@ import type { ImagesInfiniteParams } from '../useImagesInfinite/useImagesInfinit
 import type { DimensionBounds } from '$lib/services/loadDimensionBounds';
 
 type ImageFilter = components['schemas']['ImageFilter'];
+type AnnotationsFilter = components['schemas']['AnnotationsFilter'];
 type SampleFilter = components['schemas']['SampleFilter'];
 
 const filterParams = writable<ImagesInfiniteParams>({} as ImagesInfiniteParams);
@@ -53,6 +54,7 @@ const imageFilter = derived(filterParams, ($filterParams): ImageFilter | null =>
     }
 
     const sampleFilter: SampleFilter = {};
+    const annotationFilter: AnnotationsFilter = {};
     sampleFilter.collection_id = $filterParams?.collection_id;
 
     const sampleIds = $filterParams.filters?.sample_ids;
@@ -62,7 +64,7 @@ const imageFilter = derived(filterParams, ($filterParams): ImageFilter | null =>
 
     const annotationLabelIds = $filterParams.filters?.annotation_label_ids;
     if (annotationLabelIds && annotationLabelIds.length > 0) {
-        sampleFilter.annotation_label_ids = annotationLabelIds;
+        annotationFilter.annotation_label_ids = annotationLabelIds;
     }
 
     const tagIds = $filterParams.filters?.tag_ids;
@@ -79,6 +81,9 @@ const imageFilter = derived(filterParams, ($filterParams): ImageFilter | null =>
 
     if (Object.keys(sampleFilter).length > 0) {
         filters.sample_filter = sampleFilter;
+    }
+    if (Object.keys(annotationFilter).length > 0) {
+        filters.annotation_filter = annotationFilter;
     }
 
     return Object.keys(filters).length > 0 ? filters : null;

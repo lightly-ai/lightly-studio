@@ -57,7 +57,11 @@
     import { useVideoFrameAnnotationCounts } from '$lib/hooks/useVideoFrameAnnotationsCount/useVideoFrameAnnotationsCount.js';
     import { useVideoFramesBounds } from '$lib/hooks/useVideoFramesBounds/useVideoFramesBounds.js';
     import { useVideoBounds } from '$lib/hooks/useVideosBounds/useVideosBounds.js';
-    import { SampleType } from '$lib/api/lightly_studio_local/types.gen.js';
+    import {
+        SampleType,
+        type AnnotationsFilter,
+        type ImageFilter
+    } from '$lib/api/lightly_studio_local/types.gen.js';
     import type { AnnotationLabel } from '$lib/services/types.js';
 
     const { data, children } = $props();
@@ -205,9 +209,51 @@
     const annotationsLabels = $derived(
         selectedAnnotationFilter.length > 0 ? selectedAnnotationFilter : undefined
     );
+    const annotationFilter = $derived.by<AnnotationsFilter | undefined>(() =>
+        $selectedAnnotationFilterIds.size > 0
+            ? { annotation_label_ids: Array.from($selectedAnnotationFilterIds) }
+            : undefined
+    );
     const metadataFilters = $derived(
         metadataValues ? createMetadataFilters($metadataValues) : undefined
     );
+    const imageFilter = $derived.by<ImageFilter | undefined>(() => {
+        const filter: ImageFilter = {};
+
+        if ($dimensionsValues) {
+            if (
+                $dimensionsValues.min_width !== undefined ||
+                $dimensionsValues.max_width !== undefined
+            ) {
+                filter.width = {
+                    min: $dimensionsValues.min_width,
+                    max: $dimensionsValues.max_width
+                };
+            }
+            if (
+                $dimensionsValues.min_height !== undefined ||
+                $dimensionsValues.max_height !== undefined
+            ) {
+                filter.height = {
+                    min: $dimensionsValues.min_height,
+                    max: $dimensionsValues.max_height
+                };
+            }
+        }
+
+        if (annotationFilter) {
+            filter.annotation_filter = annotationFilter;
+        }
+
+        if (metadataFilters?.length) {
+            filter.sample_filter = {
+                collection_id: datasetId,
+                metadata_filters: metadataFilters
+            };
+        }
+
+        return Object.keys(filter).length > 0 ? filter : undefined;
+    });
     const { videoFramesBoundsValues } = useVideoFramesBounds();
     const { videoBoundsValues } = useVideoBounds();
 
@@ -244,10 +290,7 @@
         }
         return useAnnotationCounts({
             collectionId: datasetId,
-            options: {
-                filtered_labels: annotationsLabels,
-                dimensions: $dimensionsValues ?? undefined
-            }
+            filter: imageFilter
         });
     });
 

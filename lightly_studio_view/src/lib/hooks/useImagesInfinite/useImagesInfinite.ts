@@ -128,14 +128,16 @@ const buildRequestBody = (params: ImagesInfiniteParams, pageParam: number): Read
                 ...baseBody.filters,
                 sample_filter: {
                     ...(baseBody.filters?.sample_filter ?? {}),
-                    annotation_label_ids: params.filters.annotation_label_ids?.length
-                        ? params.filters.annotation_label_ids
-                        : undefined,
                     tag_ids: params.filters.tag_ids?.length ? params.filters.tag_ids : undefined,
                     sample_ids: params.filters.sample_ids?.length
                         ? params.filters.sample_ids
                         : undefined
                 },
+                annotation_filter: params.filters.annotation_label_ids?.length
+                    ? {
+                          annotation_label_ids: params.filters.annotation_label_ids
+                      }
+                    : undefined,
                 // TODO(Malte, 10/2025): Share the width/height mapping with useImageFilters to avoid drift.
                 width: params.filters.dimensions
                     ? {
