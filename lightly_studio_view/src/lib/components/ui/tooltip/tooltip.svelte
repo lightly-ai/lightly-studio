@@ -2,6 +2,7 @@
     import { cn } from '$lib/utils/shadcn.js';
     import type { Snippet } from 'svelte';
     import { fly } from 'svelte/transition';
+    import { onDestroy } from 'svelte';
 
     let {
         content,
@@ -16,52 +17,72 @@
     } = $props();
 
     let showTooltip = $state(false);
+    let triggerRect: DOMRect | null = $state(null);
     let triggerElement: HTMLElement;
 
-    function getPositionStyles() {
-        if (!triggerElement) return '';
+    const updateRect = () => {
+        if (!triggerElement) return;
+        triggerRect = triggerElement.getBoundingClientRect();
+    };
 
-        let positionStyle = '';
-        let transform = '';
-        let margin = '';
+    function getPositionStyles() {
+        if (!triggerRect) return '';
+
+        const offset = 6;
+        const { top, left, right, bottom, width, height } = triggerRect;
 
         switch (position) {
             case 'top':
-                positionStyle = 'bottom: 100%; left: 50%;';
-                transform = 'translateX(-50%)';
-                margin = 'margin-bottom: 5px;';
-                break;
+                return `position: fixed; left: ${left + width / 2}px; top: ${top - offset}px; transform: translate(-50%, -100%);`;
             case 'bottom':
-                positionStyle = 'top: 100%; left: 50%;';
-                transform = 'translateX(-50%)';
-                margin = 'margin-top: 5px;';
-                break;
+                return `position: fixed; left: ${left + width / 2}px; top: ${bottom + offset}px; transform: translate(-50%, 0);`;
             case 'left':
-                positionStyle = 'right: 100%; top: 50%;';
-                transform = 'translateY(-50%)';
-                margin = 'margin-right: 5px;';
-                break;
+                return `position: fixed; left: ${left - offset}px; top: ${top + height / 2}px; transform: translate(-100%, -50%);`;
             case 'right':
-                positionStyle = 'left: 100%; top: 50%;';
-                transform = 'translateY(-50%)';
-                margin = 'margin-left: 5px;';
-                break;
+                return `position: fixed; left: ${right + offset}px; top: ${top + height / 2}px; transform: translate(0, -50%);`;
             default:
-                positionStyle = 'bottom: 100%; left: 50%;';
-                transform = 'translateX(-50%)';
-                margin = 'margin-bottom: 5px;';
+                return `position: fixed; left: ${left + width / 2}px; top: ${top - offset}px; transform: translate(-50%, -100%);`;
         }
-
-        return `${positionStyle} transform: ${transform}; ${margin}`;
     }
 
     function showTooltipHandler() {
+        updateRect();
         showTooltip = true;
     }
 
     function hideTooltipHandler() {
         showTooltip = false;
     }
+
+    // Keep tooltip aligned on resize/scroll; avoids clipping in scrollable side panels.
+    const handleWindowChange = () => {
+        if (showTooltip) updateRect();
+    };
+
+    onDestroy(() => {
+        if (typeof window === 'undefined') return;
+        window.removeEventListener('resize', handleWindowChange);
+        window.removeEventListener('scroll', handleWindowChange, true);
+    });
+
+    $effect(() => {
+        if (typeof window === 'undefined') return;
+
+        if (!showTooltip) {
+            window.removeEventListener('resize', handleWindowChange);
+            window.removeEventListener('scroll', handleWindowChange, true);
+            return;
+        }
+
+        window.addEventListener('resize', handleWindowChange);
+        window.addEventListener('scroll', handleWindowChange, true);
+        updateRect();
+
+        return () => {
+            window.removeEventListener('resize', handleWindowChange);
+            window.removeEventListener('scroll', handleWindowChange, true);
+        };
+    });
 </script>
 
 <div

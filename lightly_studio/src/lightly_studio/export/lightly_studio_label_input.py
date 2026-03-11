@@ -84,16 +84,21 @@ class LightlyStudioInstanceSegmentationInput(LightlyStudioInputBase, InstanceSeg
         label_id_to_category: dict[UUID, Category],
     ) -> ImageInstanceSegmentation:
         # TODO(lukas, 02/2026): We can optimise in the future to filter annotations in a DB query.
-        objects = [
-            _annotation_to_single_inst_seg(
-                annotation=annotation,
-                label_id_to_category=label_id_to_category,
-                image_width=sample.width,
-                image_height=sample.height,
-            )
-            for annotation in sample.sample_table.annotations
-            if annotation.annotation_type == AnnotationType.INSTANCE_SEGMENTATION
-        ]
+        objects = []
+        for annotation in sample.sample_table.annotations:
+            if annotation.annotation_type == AnnotationType.INSTANCE_SEGMENTATION:
+                obj = _annotation_to_single_inst_seg(
+                    annotation=annotation,
+                    label_id_to_category=label_id_to_category,
+                    image_width=sample.width,
+                    image_height=sample.height,
+                )
+                # TODO(lukas 3/2026): workaround needed because
+                # annotation.segmentation_details.segmentation_mask can be None.
+                # See lightly_studio/src/lightly_studio/models/annotation/segmentation.py.
+                if obj is not None:
+                    objects.append(obj)
+
         return ImageInstanceSegmentation(
             image=_sample_to_image(sample=sample, image_id=image_id),
             objects=objects,
@@ -174,11 +179,12 @@ def _annotation_to_single_inst_seg(
     label_id_to_category: dict[UUID, Category],
     image_width: int,
     image_height: int,
-) -> SingleInstanceSegmentation:
-    assert annotation.segmentation_details is not None
-    assert annotation.segmentation_details.segmentation_mask is not None, (
-        "Instance segmentation must have a mask."
-    )
+) -> SingleInstanceSegmentation | None:
+    if annotation.segmentation_details is None:
+        return None
+    if annotation.segmentation_details.segmentation_mask is None:
+        return None
+
     box = BoundingBox(
         xmin=annotation.segmentation_details.x,
         ymin=annotation.segmentation_details.y,
