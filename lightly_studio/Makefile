@@ -97,6 +97,11 @@ test-ci:
 	@echo "Running tests..."
 	uv run pytest
 
+.PHONY: test-postgres
+test-postgres:
+	@echo "Running tests against Postgres..."
+	uv run pytest --postgres
+
 .PHONY: check-uv-lock
 check-uv-lock:
 	@echo "Ensuring uv.lock is up to date..."
