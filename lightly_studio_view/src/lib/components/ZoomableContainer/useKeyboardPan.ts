@@ -127,8 +127,10 @@ export const useKeyboardPan = ({
         if (isTextInputTarget(event.target)) return;
 
         if (isSpaceKey(event)) {
-            isSpacePanActive = true;
             event.preventDefault();
+            if (event.repeat) return;
+
+            isSpacePanActive = true;
             if (pressedMovementKeys.size > 0) {
                 panWithKeyboard(1 / 60);
                 ensureKeyboardPanLoop();
@@ -139,10 +141,13 @@ export const useKeyboardPan = ({
         const movementCode = getMovementCode(event);
         if (!movementCode) return;
 
+        const isFirstMovementKeydownForCode = !pressedMovementKeys.has(movementCode);
         pressedMovementKeys.add(movementCode);
         if (!isSpacePanActive) return;
 
         event.preventDefault();
+        if (event.repeat && !isFirstMovementKeydownForCode) return;
+
         panWithKeyboard(1 / 60);
         ensureKeyboardPanLoop();
     };
