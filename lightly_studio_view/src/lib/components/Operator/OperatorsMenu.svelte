@@ -1,13 +1,14 @@
 <script lang="ts">
     import { page } from '$app/stores';
-    import { derived } from 'svelte/store';
+    import { derived as storeDerived } from 'svelte/store';
     import { onMount } from 'svelte';
     import {
         getOperators,
         type RegisteredOperatorMetadata,
+        type SampleType,
         OperatorScope
     } from '$lib/api/lightly_studio_local';
-import { LoaderCircle as Loader2, AlertCircle, ChevronRight } from '@lucide/svelte';
+    import { LoaderCircle as Loader2, AlertCircle, ChevronRight } from '@lucide/svelte';
     import * as Dialog from '$lib/components/ui/dialog';
     import { useOperatorsDialog } from '$lib/hooks/useOperatorsDialog/useOperatorsDialog';
     import OperatorDialog from '$lib/components/Operator/OperatorDialog.svelte';
@@ -55,13 +56,17 @@ import { LoaderCircle as Loader2, AlertCircle, ChevronRight } from '@lucide/svel
         isOperatorDialogOpen = true;
     };
 
-    const pageContext = derived(page, ($p) => ({
-        routeId: $p.route.id,
-        collectionId: $p.params.collection_id ?? '',
-        sampleId: $p.params.sampleId || $p.params.sample_id || null,
-        annotationId: $p.params.annotationId || null,
-        sampleType: $p.data.collection?.sample_type ?? null
-    }) satisfies PageContext);
+    const pageContext = storeDerived(
+        page,
+        ($p) =>
+            ({
+                routeId: $p.route.id,
+                collectionId: $p.params.collection_id ?? '',
+                sampleId: $p.params.sampleId || $p.params.sample_id || null,
+                annotationId: $p.params.annotationId || null,
+                sampleType: ($p.params.collection_type as SampleType) ?? null
+            }) satisfies PageContext
+    );
 
     const { currentScope } = useOperatorContext(pageContext);
 
@@ -69,8 +74,8 @@ import { LoaderCircle as Loader2, AlertCircle, ChevronRight } from '@lucide/svel
 
     const isApplicable = (operator: RegisteredOperatorMetadata): boolean => {
         if ($currentScope === null) return false;
-        if (isDataset && operator.supported_scopes.includes(OperatorScope.ROOT)) return true;
-        return operator.supported_scopes.includes($currentScope);
+        if (isDataset && operator.supported_scopes?.includes(OperatorScope.ROOT)) return true;
+        return operator.supported_scopes?.includes($currentScope) ?? false;
     };
 
     const applicableOperators = $derived(operators.filter((op) => isApplicable(op)));
