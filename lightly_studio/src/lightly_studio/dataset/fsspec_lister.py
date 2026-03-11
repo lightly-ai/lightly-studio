@@ -199,7 +199,7 @@ def _get_filesystem(path: str) -> fsspec.AbstractFileSystem:
     Raises:
         ValueError: If the protocol cannot be determined or is invalid.
     """
-    protocol = path.split(PROTOCOL_SEPARATOR)[0] if PROTOCOL_SEPARATOR in path else DEFAULT_PROTOCOL
+    protocol = path.split(PROTOCOL_SEPARATOR, maxsplit=1)[0] if PROTOCOL_SEPARATOR in path else DEFAULT_PROTOCOL
 
     # Ensure protocol is a string, not a tuple
     if isinstance(protocol, (list, tuple)):
