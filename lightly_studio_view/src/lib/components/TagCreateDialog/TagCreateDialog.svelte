@@ -71,16 +71,14 @@
     );
 
     const sampleFilter = $derived<SampleFilter>({
-        tag_ids: $tagsSelected.size > 0 ? Array.from($tagsSelected) : undefined,
-        metadata_filters: $metadataValues ? createMetadataFilters($metadataValues) : undefined
-    });
-    const annotationFilter = $derived<AnnotationsFilter | undefined>(
-        annotationLabelIds
+        annotations_filter: annotationLabelIds
             ? {
                   annotation_label_ids: annotationLabelIds
               }
-            : undefined
-    );
+            : undefined,
+        tag_ids: $tagsSelected.size > 0 ? Array.from($tagsSelected) : undefined,
+        metadata_filters: $metadataValues ? createMetadataFilters($metadataValues) : undefined
+    });
     const imageParams = $derived<ReadImagesRequest>({
         filters: {
             sample_filter: {
@@ -89,7 +87,6 @@
                     : undefined,
                 ...sampleFilter
             },
-            annotation_filter: annotationFilter,
             ...($dimensions ?? {})
         },
         text_embedding: textEmbedding?.embedding

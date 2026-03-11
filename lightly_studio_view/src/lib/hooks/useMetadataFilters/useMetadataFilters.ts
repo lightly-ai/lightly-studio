@@ -2,6 +2,7 @@ import { getMetadataInfo } from '$lib/api/lightly_studio_local';
 import { get, writable } from 'svelte/store';
 import type { components } from '$lib/schema';
 import { useGlobalStorage } from '$lib/hooks/useGlobalStorage';
+import { validate as validateUUID } from 'uuid';
 
 type MetadataInfo = components['schemas']['MetadataInfoView'];
 type MetadataBounds = Record<string, { min: number; max: number }>;
@@ -15,6 +16,10 @@ const loadInitialMetadataInfo = async (collection_id: string) => {
     }
 
     lastCollectionId.set(collection_id);
+
+    if (!validateUUID(collection_id)) {
+        return;
+    }
 
     const { data: metadataInfoData } = await getMetadataInfo({
         path: {

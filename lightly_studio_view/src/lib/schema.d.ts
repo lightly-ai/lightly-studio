@@ -2607,7 +2607,6 @@ export interface components {
          */
         ImageFilter: {
             sample_filter?: components["schemas"]["SampleFilter"] | null;
-            annotation_filter?: components["schemas"]["AnnotationsFilter"] | null;
             width?: components["schemas"]["FilterDimensions"] | null;
             height?: components["schemas"]["FilterDimensions"] | null;
         };
@@ -2985,6 +2984,7 @@ export interface components {
             sample_ids?: string[] | null;
             /** Has Captions */
             has_captions?: boolean | null;
+            annotations_filter?: components["schemas"]["AnnotationsFilter"] | null;
         };
         /**
          * SampleIdsBody
@@ -3391,7 +3391,7 @@ export interface components {
             /** Annotation Frames Label Ids */
             annotation_frames_label_ids?: string[] | null;
             sample_filter?: components["schemas"]["SampleFilter"] | null;
-            annotation_filter?: components["schemas"]["AnnotationsFilter"] | null;
+            frame_annotation_filter?: components["schemas"]["AnnotationsFilter"] | null;
         };
         /**
          * VideoFrameAdjacentFilter

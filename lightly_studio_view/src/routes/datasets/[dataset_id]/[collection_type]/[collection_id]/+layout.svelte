@@ -246,7 +246,11 @@
         }
 
         if (annotationFilter) {
-            filter.annotation_filter = annotationFilter;
+            filter.sample_filter = {
+                ...(filter.sample_filter ?? {}),
+                collection_id: datasetId,
+                annotations_filter: annotationFilter
+            };
         }
 
         return Object.keys(filter).length > 0 ? filter : undefined;
