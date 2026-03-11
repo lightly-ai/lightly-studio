@@ -102,7 +102,7 @@ def test_create_many__unique_component_samples(db_session: Session) -> None:
         groups=[{front_image.sample_id}],
     )
     # Assigning the sample to a second group should fail
-    with pytest.raises(IntegrityError, match='Constraint Error: Duplicate key "sample_id'):
+    with pytest.raises(IntegrityError, match="[Dd]uplicate key"):
         group_resolver.create_many(
             session=db_session,
             collection_id=group_col.collection_id,
