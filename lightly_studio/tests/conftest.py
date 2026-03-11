@@ -80,11 +80,15 @@ def _truncate_tables(session: Session) -> None:
 
 
 @pytest.fixture(scope="session")
-def _postgres_url(
-    request: pytest.FixtureRequest,
-) -> Generator[str | None, None, None]:
+def use_postgres(request: pytest.FixtureRequest) -> bool:
+    """Return True when the test suite is running against Postgres."""
+    return bool(request.config.getoption("--postgres"))
+
+
+@pytest.fixture(scope="session")
+def _postgres_url(use_postgres: bool) -> Generator[str | None, None, None]:
     """Start a Postgres container and yield its URL, or None for DuckDB."""
-    if not request.config.getoption("--postgres"):
+    if not use_postgres:
         yield None
         return
 
@@ -110,7 +114,7 @@ def _postgres_engine(_postgres_url: str | None) -> Generator[DatabaseEngine | No
 
 @pytest.fixture
 def _db_engine(
-    request: pytest.FixtureRequest,
+    use_postgres: bool,
     _postgres_engine: DatabaseEngine | None,
 ) -> Generator[DatabaseEngine, None, None]:
     """Provide a single DatabaseEngine for each test.
@@ -118,8 +122,6 @@ def _db_engine(
     DuckDB mode (default): creates a fresh in-memory engine per test.
     Postgres mode (--postgres): reuses the session-scoped Postgres engine.
     """
-    use_postgres = request.config.getoption("--postgres")
-
     if use_postgres:
         assert _postgres_engine is not None
         yield _postgres_engine
@@ -131,7 +133,7 @@ def _db_engine(
 
 @pytest.fixture
 def db_session(
-    request: pytest.FixtureRequest,
+    use_postgres: bool,
     _db_engine: DatabaseEngine,
 ) -> Generator[Session, None, None]:
     """Create a test database manager session.
@@ -140,7 +142,6 @@ def db_session(
     Postgres mode (--postgres): creates a session from the shared engine,
     then truncates all tables after the test.
     """
-    use_postgres = request.config.getoption("--postgres")
     with _db_engine.session() as session:
         yield session
         if use_postgres:
@@ -501,7 +502,7 @@ def assert_contains_properties(
 
 @pytest.fixture
 def patch_collection(
-    request: pytest.FixtureRequest,
+    use_postgres: bool,
     mocker: MockerFixture,
     _db_engine: DatabaseEngine,
 ) -> Generator[None, None, None]:
@@ -510,7 +511,6 @@ def patch_collection(
     Patches get_engine() to return the per-test engine (in-memory DuckDB or
     session-scoped Postgres). Truncates tables after the test on Postgres.
     """
-    use_postgres = request.config.getoption("--postgres")
     # Create a mock database manager.
     mocker.patch.object(
         db_manager,
