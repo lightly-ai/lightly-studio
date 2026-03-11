@@ -58,24 +58,19 @@ def pytest_addoption(parser: pytest.Parser) -> None:
 
 def pytest_configure(config: pytest.Config) -> None:
     """Register custom markers for DB backend selection."""
-    config.addinivalue_line("markers", "duckdb_only: mark test to run only with DuckDB backend")
-    config.addinivalue_line("markers", "postgres_only: mark test to run only with Postgres backend")
+    config.addinivalue_line("markers", "skip_on_postgres: skip test when running with --postgres")
+    config.addinivalue_line("markers", "skip_on_duckdb: skip test when running with DuckDB (default)")
 
 
 def pytest_collection_modifyitems(config: pytest.Config, items: list[pytest.Item]) -> None:
     """Skip tests based on database backend markers."""
     use_postgres = config.getoption("--postgres")
 
-    skip_on_postgres = pytest.mark.skip(
-        reason="Test is marked duckdb_only; skipping under --postgres"
-    )
-    skip_on_duckdb = pytest.mark.skip(reason="Test is marked postgres_only; skipping under DuckDB")
-
     for item in items:
-        if use_postgres and "duckdb_only" in item.keywords:
-            item.add_marker(skip_on_postgres)
-        elif not use_postgres and "postgres_only" in item.keywords:
-            item.add_marker(skip_on_duckdb)
+        if use_postgres and "skip_on_postgres" in item.keywords:
+            item.add_marker(pytest.mark.skip(reason="Skipped on Postgres"))
+        elif not use_postgres and "skip_on_duckdb" in item.keywords:
+            item.add_marker(pytest.mark.skip(reason="Skipped on DuckDB"))
 
 
 def _truncate_tables(session: Session) -> None:
