@@ -26,6 +26,7 @@
 </script>
 
 <div
+    data-testid="group-grid-item"
     class="relative h-full w-full"
     style="width: {width}px; height: {height}px"
     {...containerProps}

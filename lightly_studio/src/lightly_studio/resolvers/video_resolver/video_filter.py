@@ -24,7 +24,7 @@ class VideoFilter(BaseModel):
     duration_s: Optional[FloatRange] = None
     annotation_frames_label_ids: Optional[list[UUID]] = None
     sample_filter: Optional[SampleFilter] = None
-    annotation_filter: Optional[AnnotationsFilter] = None
+    frame_annotation_filter: Optional[AnnotationsFilter] = None
 
     def apply(self, query: QueryType) -> QueryType:
         """Apply the filters to the given query."""
@@ -36,7 +36,7 @@ class VideoFilter(BaseModel):
             query = self._apply_annotations_ids(query)
         if self.sample_filter:
             query = self.sample_filter.apply(query)
-        if self.annotation_filter is not None:
+        if self.frame_annotation_filter is not None:
             query = self._apply_annotation_filter(query)
 
         return query
@@ -103,12 +103,14 @@ class VideoFilter(BaseModel):
 
     def _apply_annotation_filter(self, query: QueryType) -> QueryType:
         """For videos, annotation filters are applied to the frames."""
-        assert self.annotation_filter is not None
+        assert self.frame_annotation_filter is not None
 
         frame_filtered_video_ids_subquery = select(VideoFrameTable.parent_sample_id)
-        frame_filtered_video_ids_subquery = self.annotation_filter.apply_to_parent_sample_query(
-            query=frame_filtered_video_ids_subquery,
-            sample_id_column=col(VideoFrameTable.sample_id),
+        frame_filtered_video_ids_subquery = (
+            self.frame_annotation_filter.apply_to_parent_sample_query(
+                query=frame_filtered_video_ids_subquery,
+                sample_id_column=col(VideoFrameTable.sample_id),
+            )
         )
 
         return query.where(col(VideoTable.sample_id).in_(frame_filtered_video_ids_subquery))
