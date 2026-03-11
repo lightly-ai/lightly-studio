@@ -3,13 +3,14 @@
 from __future__ import annotations
 
 from typing import Annotated
+from uuid import UUID
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Path
 from pydantic import BaseModel, Field
 
 from lightly_studio.api.routes.api.validators import Paginated, PaginatedWithCursor
 from lightly_studio.db_manager import SessionDep
-from lightly_studio.models.group import GroupViewsWithCount
+from lightly_studio.models.group import GroupComponentView, GroupViewsWithCount
 from lightly_studio.resolvers import group_resolver
 from lightly_studio.resolvers.group_resolver.group_filter import GroupFilter
 
@@ -42,4 +43,16 @@ def get_all_groups(
         session=session,
         pagination=Paginated(offset=pagination.offset, limit=pagination.limit),
         filters=body.filter,
+    )
+
+
+@group_router.get("/groups/{group_id}/components", response_model=list[GroupComponentView])
+def get_group_components_by_group_id(
+    session: SessionDep,
+    group_id: Annotated[UUID, Path(title="Group Id")],
+) -> list[GroupComponentView]:
+    """Get all component views that belong to a group sample."""
+    # Extract groupcomponent details for each sample
+    return group_resolver.get_group_component_details_by_group_id(
+        session=session, group_id=group_id
     )

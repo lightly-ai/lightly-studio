@@ -29,6 +29,7 @@
     } = useDimensions();
 
     const handleChangeWidth: SliderMultipleRootProps['onValueChange'] = (newValues) => {
+        if (!$values) return;
         onChange({
             min_width: newValues[0],
             max_width: newValues[1],
@@ -38,6 +39,7 @@
     };
 
     const handleChangeHeight: SliderMultipleRootProps['onValueChange'] = (newValues) => {
+        if (!$values) return;
         onChange({
             min_width: $values.min_width,
             max_width: $values.max_width,
@@ -79,9 +81,9 @@
     });
 </script>
 
-<Segment title="Metadata Filters">
+<Segment title="Metadata">
     <div class="space-y-4">
-        {#if !isVideos && !isVideoFrames}
+        {#if !isVideos && !isVideoFrames && $bounds && $values}
             <!-- Dimension Filters -->
             <div class="space-y-1">
                 <h2 class="text-md">Width</h2>

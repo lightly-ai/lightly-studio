@@ -17,6 +17,7 @@ from lightly_studio.api.routes.api import collection as collection_api
 from lightly_studio.core.dataset_query.dataset_query import DatasetQuery
 from lightly_studio.db_manager import SessionDep
 from lightly_studio.export import export_dataset
+from lightly_studio.models.annotation.annotation_base import AnnotationType
 from lightly_studio.models.collection import CollectionTable
 from lightly_studio.resolvers import collection_resolver
 from lightly_studio.resolvers.collection_resolver.export import ExportFilter
@@ -32,6 +33,7 @@ def export_collection_annotations(
         Depends(collection_api.get_and_validate_collection_id),
     ],
     session: SessionDep,
+    annotation_type: AnnotationType = AnnotationType.OBJECT_DETECTION,
 ) -> StreamingResponse:
     """Export collection annotations for an object detection task in COCO format."""
     # Query to export - all samples in the collection.
@@ -40,19 +42,36 @@ def export_collection_annotations(
     # Create the export in a temporary directory. We cannot use a context manager
     # because the directory should be deleted only after the file has finished streaming.
     temp_dir = TemporaryDirectory()
-    output_path = PathlibPath(temp_dir.name) / "coco_export.json"
 
-    try:
-        export_dataset.to_coco_object_detections(
-            session=session,
-            root_dataset_id=collection.collection_id,
-            samples=dataset_query,
-            output_json=output_path,
-        )
-    except Exception:
-        temp_dir.cleanup()
-        # Reraise.
-        raise
+    if annotation_type == AnnotationType.OBJECT_DETECTION:
+        output_path = PathlibPath(temp_dir.name) / "coco_export.json"
+        try:
+            export_dataset.to_coco_object_detections(
+                session=session,
+                root_dataset_id=collection.collection_id,
+                samples=dataset_query,
+                output_json=output_path,
+            )
+        except Exception:
+            temp_dir.cleanup()
+            # Reraise.
+            raise
+    elif annotation_type == AnnotationType.INSTANCE_SEGMENTATION:
+        output_path = PathlibPath(temp_dir.name) / "coco_instance_segmentation_export.json"
+
+        try:
+            export_dataset.to_coco_instance_segmentations(
+                session=session,
+                root_dataset_id=collection.collection_id,
+                samples=dataset_query,
+                output_json=output_path,
+            )
+        except Exception:
+            temp_dir.cleanup()
+            # Reraise.
+            raise
+    elif annotation_type in {AnnotationType.CLASSIFICATION, AnnotationType.SEMANTIC_SEGMENTATION}:
+        raise NotImplementedError
 
     return StreamingResponse(
         content=_stream_export_file(

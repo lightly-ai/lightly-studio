@@ -12,24 +12,24 @@ from lightly_studio.services import annotations_service
 from tests.helpers_resolvers import create_annotation_label, create_collection, create_image
 
 
-def test_update_segmentation_mask(test_db: Session) -> None:
-    collection = create_collection(session=test_db, sample_type=SampleType.IMAGE)
+def test_update_segmentation_mask(db_session: Session) -> None:
+    collection = create_collection(session=db_session, sample_type=SampleType.IMAGE)
     collection_id = collection.collection_id
 
     car_label = create_annotation_label(
-        session=test_db,
+        session=db_session,
         dataset_id=collection_id,
         label_name="car",
     )
 
     image = create_image(
-        session=test_db,
+        session=db_session,
         collection_id=collection_id,
         file_path_abs="/path/to/sample2.png",
     )
 
     annotation_id = annotation_resolver.create_many(
-        session=test_db,
+        session=db_session,
         parent_collection_id=collection_id,
         annotations=[
             AnnotationCreate(
@@ -46,7 +46,7 @@ def test_update_segmentation_mask(test_db: Session) -> None:
     )[0]
 
     annotation = annotations_service.update_segmentation_mask(
-        session=test_db, annotation_id=annotation_id, segmentation_mask=[1, 2, 3, 4]
+        session=db_session, annotation_id=annotation_id, segmentation_mask=[1, 2, 3, 4]
     )
 
     assert annotation.sample_id == annotation_id

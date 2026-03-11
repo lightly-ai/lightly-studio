@@ -47,7 +47,7 @@ describe('useAdjacentAnnotations', () => {
                     filters: {
                         collection_ids: ['col-9'],
                         annotation_label_ids: ['label-1', 'label-2'],
-                        annotation_tag_ids: ['tag-1']
+                        tag_ids: ['tag-1']
                     }
                 }
             }
@@ -66,7 +66,7 @@ describe('useAdjacentAnnotations', () => {
                     filters: {
                         collection_ids: ['col-3'],
                         annotation_label_ids: undefined,
-                        annotation_tag_ids: undefined
+                        tag_ids: undefined
                     }
                 }
             }

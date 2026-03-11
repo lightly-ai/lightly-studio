@@ -11,8 +11,8 @@
     import { useGlobalStorage } from '$lib/hooks/useGlobalStorage';
     import { addAnnotationLabelChangeToUndoStack } from '$lib/services/addAnnotationLabelChangeToUndoStack';
     import { useUpdateAnnotationsMutation } from '$lib/hooks/useUpdateAnnotationsMutation/useUpdateAnnotationsMutation';
-    import DeleteAnnotationPopUp from '$lib/components/DeleteAnnotationPopUp/DeleteAnnotationPopUp.svelte';
     import AnnotationColorLegend from '$lib/components/AnnotationColorLegend/AnnotationColorLegend.svelte';
+    import { Tooltip } from '$lib/components/ui/tooltip';
 
     const {
         annotation: annotationProp,
@@ -25,7 +25,6 @@
         onChangeAnnotationLabel,
         canHighlight = false,
         onClickSelectList,
-        onDelete,
         isLocked = false,
         onToggleLock
     }: {
@@ -39,16 +38,9 @@
         isHidden?: boolean;
         canHighlight?: boolean;
         onClickSelectList?: () => void;
-        onDelete?: () => void;
         isLocked?: boolean;
         onToggleLock?: (e: MouseEvent) => void;
     } = $props();
-
-    $effect(() => {
-        if (showDeleteConfirmation) {
-            return onDelete?.();
-        }
-    });
 
     const formatAnnotationType = (annotationType: string) => {
         switch (annotationType) {
@@ -109,8 +101,6 @@
         const item = items.find((i) => i.value === annotationLabelName);
         return item ? item : { value: annotationLabelName, label: annotationLabelName };
     });
-
-    let showDeleteConfirmation = $state(false);
 </script>
 
 <div
@@ -203,36 +193,50 @@
                     <div class="flex gap-3">
                         {#if $isEditingMode && annotation.annotation_type != 'object_detection'}
                             {#if isLocked}
-                                <Lock
-                                    class="size-4 text-muted-foreground"
-                                    onclick={(e) => {
-                                        e.stopPropagation();
-                                        onToggleLock?.(e);
-                                    }}
-                                />
+                                <Tooltip content="Unlock annotation">
+                                    <Lock
+                                        class="size-4 text-muted-foreground"
+                                        onclick={(e) => {
+                                            e.stopPropagation();
+                                            onToggleLock?.(e);
+                                        }}
+                                    />
+                                </Tooltip>
                             {:else}
-                                <Unlock
-                                    class="size-4"
-                                    onclick={(e) => {
-                                        e.stopPropagation();
-                                        onToggleLock?.(e);
-                                    }}
-                                />
+                                <Tooltip content="Lock annotation">
+                                    <Unlock
+                                        class="size-4"
+                                        onclick={(e) => {
+                                            e.stopPropagation();
+                                            onToggleLock?.(e);
+                                        }}
+                                    />
+                                </Tooltip>
                             {/if}
                         {/if}
                         {#if isHidden}
-                            <EyeOff
-                                class="size-4 text-muted-foreground"
-                                onclick={onToggleShowAnnotation}
-                            />
+                            <Tooltip content="Show annotation">
+                                <EyeOff
+                                    class="size-4 text-muted-foreground"
+                                    onclick={onToggleShowAnnotation}
+                                />
+                            </Tooltip>
                         {:else}
-                            <Eye class="size-4" onclick={onToggleShowAnnotation} />
+                            <Tooltip content="Hide annotation">
+                                <Eye class="size-4" onclick={onToggleShowAnnotation} />
+                            </Tooltip>
                         {/if}
 
                         {#if $isEditingMode}
-                            <DeleteAnnotationPopUp onDelete={onDeleteAnnotation}>
-                                <Trash2 class="size-4" />
-                            </DeleteAnnotationPopUp>
+                            <Tooltip content="Delete annotation">
+                                <Trash2
+                                    class="size-4"
+                                    onclick={(e) => {
+                                        e.stopPropagation();
+                                        onDeleteAnnotation(e);
+                                    }}
+                                />
+                            </Tooltip>
                         {/if}
                     </div>
                 </div>

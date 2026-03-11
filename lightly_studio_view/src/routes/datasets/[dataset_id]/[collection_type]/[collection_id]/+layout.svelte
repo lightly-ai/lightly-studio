@@ -22,7 +22,7 @@
         GripVertical
     } from '@lucide/svelte';
     import { onDestroy, onMount } from 'svelte';
-    import { get, writable } from 'svelte/store';
+    import { get, toStore, writable } from 'svelte/store';
     import { toast } from 'svelte-sonner';
     import { Header } from '$lib/components';
     import MenuDialogHost from '$lib/components/Header/MenuDialogHost.svelte';
@@ -40,7 +40,9 @@
         isSamplesRoute,
         isVideoFramesRoute,
         isVideosRoute,
-        isGroupsRoute
+        isGroupsRoute,
+        isGroupDetailsRoute,
+        isGroupComponentDetailsRoute
     } from '$lib/routes';
     import { useEmbedText } from '$lib/hooks/useEmbedText/useEmbedText';
     import type { GridType } from '$lib/types';
@@ -75,6 +77,7 @@
 
     const datasetId = $derived(page.params.dataset_id!);
     const collectionId = $derived(page.params.collection_id!);
+    const collectionIdStore = toStore(() => collectionId);
 
     // Use hideAnnotations hook
     const { handleKeyEvent } = useHideAnnotations();
@@ -102,6 +105,8 @@
 
     const isSamples = $derived(isSamplesRoute(page.route.id));
     const isGroups = $derived(isGroupsRoute(page.route.id));
+    const isGroupDetails = $derived(isGroupDetailsRoute(page.route.id));
+    const isGroupComponentDetails = $derived(isGroupComponentDetailsRoute(page.route.id));
     const isAnnotations = $derived(isAnnotationsRoute(page.route.id));
     const isSampleDetails = $derived(isSampleDetailsRoute(page.route.id));
     const isAnnotationDetails = $derived(isAnnotationDetailsRoute(page.route.id));
@@ -110,7 +115,7 @@
     const isVideoFrames = $derived(isVideoFramesRoute(page.route.id));
 
     let gridType = $state<GridType>('samples');
-    let lastVisitedGridContext: { gridType: GridType; collectionId: string } | null = null;
+    let lastCollectionId: string | null = null;
     $effect(() => {
         let nextGridType: GridType | null = null;
         if (isAnnotations) {
@@ -131,20 +136,13 @@
             return;
         }
 
-        if (
-            lastVisitedGridContext &&
-            lastVisitedGridContext.gridType !== nextGridType &&
-            lastVisitedGridContext.collectionId
-        ) {
-            clearSelectedSamples(lastVisitedGridContext.collectionId);
-            clearSelectedSampleAnnotationCrops(lastVisitedGridContext.collectionId);
+        if (lastCollectionId && lastCollectionId !== collectionId) {
+            clearSelectedSamples(lastCollectionId);
+            clearSelectedSampleAnnotationCrops(lastCollectionId);
         }
 
         gridType = nextGridType;
-        lastVisitedGridContext = {
-            gridType: nextGridType,
-            collectionId
-        };
+        lastCollectionId = collectionId;
 
         // Temporary hack to remember where the user was when navigating
         // TODO: also remember state of tags, labels, metadata filters etc. Possible store it in pagestate
@@ -173,9 +171,7 @@
     const hasEmbeddings = $derived(!!$hasEmbeddingsQuery.data);
 
     const { metadataValues } = $derived.by(() => useMetadataFilters(collectionId));
-    const { dimensionsValues } = $derived.by(() =>
-        useDimensions(collection?.parent_collection_id ?? collectionId)
-    );
+    const { dimensionsValues } = useDimensions(collectionIdStore);
 
     const annotationLabels = $derived(useAnnotationLabels({ collectionId: collectionId ?? '' }));
     const { showPlot, setShowPlot, filteredSampleCount, filteredAnnotationCount } =
@@ -254,7 +250,7 @@
             collectionId: datasetId,
             options: {
                 filtered_labels: annotationsLabels,
-                dimensions: $dimensionsValues
+                dimensions: $dimensionsValues ?? undefined
             }
         });
     });
@@ -469,7 +465,7 @@
             return;
         }
         setTextEmbedding({
-            queryText: query_text,
+            queryText: submittedQueryText,
             embedding: $embedTextQuery.data || []
         });
     });
@@ -485,7 +481,7 @@
 </div>
 
 <div class="relative flex min-h-0 flex-1 flex-col">
-    {#if isSampleDetails || isAnnotationDetails}
+    {#if isSampleDetails || isAnnotationDetails || isGroupDetails || isGroupComponentDetails}
         {@render children()}
     {:else}
         <div class="flex min-h-0 flex-1 space-x-4 px-4">
@@ -621,9 +617,7 @@
                                     {/if}
                                 </div>
 
-                                <div class="w-4/12">
-                                    <ImageSizeControl />
-                                </div>
+                                <ImageSizeControl />
                             </div>
                             <Separator class="mb-4 bg-border-hard" />
                             <div class="flex min-h-0 flex-1 overflow-hidden">
@@ -739,9 +733,7 @@
                                 {/if}
                             </div>
 
-                            <div class="w-4/12">
-                                <ImageSizeControl />
-                            </div>
+                            <ImageSizeControl />
                             {#if (isSamples || isVideos) && hasEmbeddings}
                                 <Button
                                     class="flex items-center space-x-1"

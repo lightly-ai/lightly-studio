@@ -21,9 +21,9 @@ class ImageSample(Sample):
 
     file_name = DBField(col(ImageTable.file_name))
     """Image file name"""
-    width = DBField(col(ImageTable.width))
+    _width = DBField(col(ImageTable.width))
     """Image width (px)"""
-    height = DBField(col(ImageTable.height))
+    _height = DBField(col(ImageTable.height))
     """Image height (px)"""
     file_path_abs = DBField(col(ImageTable.file_path_abs))
     """Absolute path to image"""
@@ -41,3 +41,21 @@ class ImageSample(Sample):
         """
         self.inner = inner
         super().__init__(sample_table=inner.sample)
+
+    @property
+    def width(self) -> int:
+        """Image width in pixels."""
+        return self._width
+
+    @width.setter
+    def width(self, value: int) -> None:
+        self._width = value
+
+    @property
+    def height(self) -> int:
+        """Image height in pixels."""
+        return self._height
+
+    @height.setter
+    def height(self, value: int) -> None:
+        self._height = value

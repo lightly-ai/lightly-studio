@@ -1,6 +1,6 @@
 <script lang="ts">
     import { page } from '$app/stores';
-    import { derived } from 'svelte/store';
+    import { derived as storeDerived } from 'svelte/store';
     import { Button } from '$lib/components/ui/button';
     import * as Dialog from '$lib/components/ui/dialog';
     import { LoaderCircle as Loader2 } from '@lucide/svelte';
@@ -23,6 +23,7 @@
         useOperatorContext,
         type PageContext
     } from '$lib/hooks/useOperatorContext/useOperatorContext';
+    import type { SampleType } from '$lib/api/lightly_studio_local';
     import { useTags } from '$lib/hooks/useTags/useTags';
 
     interface Props {
@@ -40,7 +41,7 @@
     let executionError = $state<string | undefined>(undefined);
     let executionSuccess = $state<string | undefined>(undefined);
 
-    const pageContext = derived(
+    const pageContext = storeDerived(
         page,
         ($p) =>
             ({
@@ -48,11 +49,11 @@
                 collectionId: $p.params.collection_id,
                 sampleId: $p.params.sampleId || $p.params.sample_id || null,
                 annotationId: $p.params.annotationId || null,
-                sampleType: $p.data.collection?.sample_type ?? null
+                sampleType: ($p.params.collection_type as SampleType) ?? null
             }) satisfies PageContext
     );
 
-    const collectionId = $derived($pageContext.collectionId);
+    const collectionId = $page.params.collection_id;
 
     const { tagsSelected } = useTags({ collection_id: collectionId, kind: ['annotation'] });
 
@@ -110,8 +111,9 @@
     });
 
     async function handleExecute() {
-        if (!operator || !collectionId || !isFormValid) {
-            executionError = !collectionId
+        const currentCollectionId = $pageContext.collectionId;
+        if (!operator || !currentCollectionId || !isFormValid) {
+            executionError = !currentCollectionId
                 ? 'Collection not available. Please open a collection first.'
                 : 'Please fill in all required parameters.';
             return;
@@ -127,7 +129,7 @@
                 body: {
                     parameters,
                     context: {
-                        collection_id: collectionId,
+                        collection_id: currentCollectionId,
                         ...($contextFilter !== undefined && { context_filter: $contextFilter })
                     }
                 }
@@ -183,7 +185,7 @@
                     class="inline-flex items-center rounded-full px-2 py-1 text-xs font-medium
                     {$isOnDetailPage
                         ? 'bg-primary text-primary-foreground'
-                        : 'bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-400'}"
+                        : 'bg-secondary text-secondary-foreground'}"
                 >
                     {$scopeLabel}
                 </span>

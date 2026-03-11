@@ -23,7 +23,6 @@ from lightly_studio.resolvers import (
     sample_embedding_resolver,
     tag_resolver,
 )
-from lightly_studio.resolvers.annotations.annotations_filter import AnnotationsFilter
 from lightly_studio.selection.mundig import Mundig
 from lightly_studio.selection.selection_config import (
     AnnotationClassBalancingStrategy,
@@ -242,10 +241,10 @@ def select_via_database(
                 weights.append(float(weight))
             mundig.add_weighting(weights=weights, strength=strat.strength)
         elif isinstance(strat, AnnotationClassBalancingStrategy):
-            annotations = annotation_resolver.get_all(
+            annotations = annotation_resolver.get_all_by_parent_sample_ids(
                 session=session,
-                filters=AnnotationsFilter(sample_ids=input_sample_ids),
-            ).annotations
+                parent_sample_ids=input_sample_ids,
+            )
             annotation_label_ids = [a.annotation_label_id for a in annotations]
             sample_id_to_annotation_label_ids = defaultdict(list)
             for annotation in annotations:

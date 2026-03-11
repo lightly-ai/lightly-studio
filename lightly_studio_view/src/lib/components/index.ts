@@ -16,6 +16,7 @@ export { default as SampleAnnotation } from '$lib/components/SampleAnnotation/Sa
 export { default as SampleAnnotationBox } from '$lib/components/SampleAnnotation/SampleAnnotationBox/SampleAnnotationBox.svelte';
 export { default as SampleAnnotationLabel } from '$lib/components/SampleAnnotation/SampleAnnotationLabel/SampleAnnotationLabel.svelte';
 export { default as SampleAnnotationSegmentationRLE } from '$lib/components/SampleAnnotation/SampleAnnotationSegmentationRLE/SampleAnnotationSegmentationRLE.svelte';
+export { default as AnnotationCanvas } from '$lib/components/AnnotationCanvas/AnnotationCanvas.svelte';
 export { default as SampleAnnotations } from '$lib/components/SampleAnnotations/index.svelte';
 export { default as ImageDetails } from '$lib/components/SampleDetails/ImageDetails.svelte';
 export { default as SampleDetailsSidePanel } from '$lib/components/SampleDetails/SampleDetailsSidePanel/SampleDetailsSidePanel.svelte';
@@ -35,3 +36,6 @@ export { default as Spinner } from '$lib/components/Spinner/Spinner.svelte';
 export { default as Segment } from '$lib/components/Segment/Segment.svelte';
 export { default as SelectableSvgGroup } from '$lib/components/SelectableSvgGroup/SelectableSvgGroup.svelte';
 export { Footer } from '$lib/components/Footer';
+export { default as GroupComponent } from '$lib/components/GroupComponent/GroupComponent.svelte';
+export { default as Image } from '$lib/components/Image/Image.svelte';
+export { default as VideoPreview } from '$lib/components/VideoPreview/VideoPreview.svelte';

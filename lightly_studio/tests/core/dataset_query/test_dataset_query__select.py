@@ -9,16 +9,16 @@ from tests import helpers_resolvers
 
 
 class TestDatasetQuerySelect:
-    def test_selection_creates_tag_for_selected_samples(self, test_db: Session) -> None:
+    def test_selection_creates_tag_for_selected_samples(self, db_session: Session) -> None:
         """Integration: running selection tags selected samples."""
         dataset_id = helpers_resolvers.fill_db_with_samples_and_embeddings(
-            test_db=test_db,
+            session=db_session,
             n_samples=5,
             embedding_model_names=["embedding_model_1"],
         )
-        dataset_table = collection_resolver.get_by_id(test_db, dataset_id)
+        dataset_table = collection_resolver.get_by_id(db_session, dataset_id)
         assert dataset_table is not None
-        query = DatasetQuery(dataset=dataset_table, session=test_db)
+        query = DatasetQuery(dataset=dataset_table, session=db_session)
 
         query.selection().diverse(
             n_samples_to_select=2,
@@ -26,7 +26,7 @@ class TestDatasetQuerySelect:
         )
 
         tag = tag_resolver.get_by_name(
-            session=test_db, tag_name="selection_tag", collection_id=dataset_id
+            session=db_session, tag_name="selection_tag", collection_id=dataset_id
         )
         assert tag is not None, "Selection tag should be created"
 
