@@ -112,7 +112,7 @@
             : undefined,
         sample_filter: {
             sample_ids: $videoFilterParams?.filters?.sample_ids,
-            ...sampleFilter,
+            ...sampleFilter
         },
         ...$videoBoundsValues
     });

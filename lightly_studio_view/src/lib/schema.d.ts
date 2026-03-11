@@ -3391,6 +3391,7 @@ export interface components {
             /** Annotation Frames Label Ids */
             annotation_frames_label_ids?: string[] | null;
             sample_filter?: components["schemas"]["SampleFilter"] | null;
+            annotation_filter?: components["schemas"]["AnnotationsFilter"] | null;
         };
         /**
          * VideoFrameAdjacentFilter
