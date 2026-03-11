@@ -35,6 +35,8 @@ class MetadataFilter(BaseModel):
 class Metadata:
     """Helper class for creating metadata filters with operator syntax."""
 
+    __hash__ = object.__hash__
+
     def __init__(self, key: str) -> None:
         """Initialize metadata filter with key."""
         self.key = key

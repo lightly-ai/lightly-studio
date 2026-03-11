@@ -24,7 +24,7 @@ logger = logging.getLogger(__name__)
 image_embedding_router = APIRouter()
 EmbeddingManagerDep = Annotated[
     EmbeddingManager,
-    Depends(lambda: EmbeddingManagerProvider.get_embedding_manager()),
+    Depends(EmbeddingManagerProvider.get_embedding_manager),
 ]
 
 

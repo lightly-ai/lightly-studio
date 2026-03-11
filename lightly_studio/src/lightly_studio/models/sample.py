@@ -96,12 +96,10 @@ class SampleTable(SampleBase, table=True):
             raise RuntimeError("No database session found for this instance")
 
         # Delayed import to avoid circular dependencies.
-        from lightly_studio.resolvers import metadata_resolver
+        from lightly_studio.resolvers import metadata_resolver  # noqa: PLC0415
 
         # Use metadata_resolver to handle the database operations.
-        # Added type: ignore to avoid type checking issues. SQLAlchemy and
-        # SQLModel sessions are compatible at runtime but have different type
-        # annotations.
+        # SQLAlchemy and SQLModel sessions are compatible at runtime but differ in typing.
         metadata_resolver.set_value_for_sample(
             session=session,  # type: ignore[arg-type]
             sample_id=self.sample_id,

@@ -342,7 +342,7 @@ def _load_embedding_generator_from_env(sample_type: SampleType) -> EmbeddingGene
 def _load_image_embedding_generator_from_env() -> ImageEmbeddingGenerator | None:
     if env.LIGHTLY_STUDIO_EMBEDDINGS_MODEL_TYPE == "EDGE":
         try:
-            from lightly_studio.dataset.edge_embedding_generator import (
+            from lightly_studio.dataset.edge_embedding_generator import (  # noqa: PLC0415
                 EdgeSDKEmbeddingGenerator,
             )
 
@@ -352,7 +352,7 @@ def _load_image_embedding_generator_from_env() -> ImageEmbeddingGenerator | None
             logger.warning("Embedding functionality is disabled.")
     elif env.LIGHTLY_STUDIO_EMBEDDINGS_MODEL_TYPE == "MOBILE_CLIP":
         try:
-            from lightly_studio.dataset.mobileclip_embedding_generator import (
+            from lightly_studio.dataset.mobileclip_embedding_generator import (  # noqa: PLC0415
                 MobileCLIPEmbeddingGenerator,
             )
 
@@ -362,7 +362,7 @@ def _load_image_embedding_generator_from_env() -> ImageEmbeddingGenerator | None
             logger.warning("Embedding functionality is disabled.")
     elif env.LIGHTLY_STUDIO_EMBEDDINGS_MODEL_TYPE == "PE":
         try:
-            from lightly_studio.dataset.perception_encoder_embedding_generator import (
+            from lightly_studio.dataset.perception_encoder_embedding_generator import (  # noqa: PLC0415
                 PerceptionEncoderEmbeddingGenerator,
             )
 
@@ -378,7 +378,7 @@ def _load_image_embedding_generator_from_env() -> ImageEmbeddingGenerator | None
 
 def _load_video_embedding_generator() -> VideoEmbeddingGenerator | None:
     try:
-        from lightly_studio.dataset.perception_encoder_embedding_generator import (
+        from lightly_studio.dataset.perception_encoder_embedding_generator import (  # noqa: PLC0415
             PerceptionEncoderEmbeddingGenerator,
         )
 
