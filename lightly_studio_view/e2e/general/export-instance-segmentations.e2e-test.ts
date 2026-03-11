@@ -65,7 +65,7 @@ test.describe('Export Instance Segmentations', () => {
         expect(ann).toHaveProperty('image_id');
         expect(ann).toHaveProperty('category_id');
         expect(ann).toHaveProperty('bbox');
-        expect(Array.isArray(ann.bbox));
+        expect(Array.isArray(ann.bbox)).toBeTruthy();
         expect(ann).toHaveProperty('segmentation');
         // Ensure it's instance segmentation (it can be an array of polygons or RLE)
         expect(
