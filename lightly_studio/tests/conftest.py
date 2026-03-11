@@ -56,17 +56,6 @@ def pytest_addoption(parser: pytest.Parser) -> None:
     )
 
 
-def pytest_collection_modifyitems(config: pytest.Config, items: list[pytest.Item]) -> None:
-    """Skip tests based on database backend markers."""
-    use_postgres = config.getoption("--postgres")
-
-    for item in items:
-        if use_postgres and "skip_on_postgres" in item.keywords:
-            item.add_marker(pytest.mark.skip(reason="Skipped on Postgres"))
-        elif not use_postgres and "skip_on_duckdb" in item.keywords:
-            item.add_marker(pytest.mark.skip(reason="Skipped on DuckDB"))
-
-
 def _truncate_tables(session: Session) -> None:
     """Truncate all tables in the database to reset state between tests.
 

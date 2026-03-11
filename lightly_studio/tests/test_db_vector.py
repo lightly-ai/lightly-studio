@@ -14,27 +14,17 @@ from lightly_studio import db_vector
 from lightly_studio.db_vector import VectorType
 
 
-@pytest.mark.skip_on_postgres
-def test_load_dialect_impl__duckdb(db_session: Session) -> None:
-    """VectorType returns ARRAY(Float) for DuckDB dialect."""
+def test_load_dialect_impl__from_session(db_session: Session) -> None:
+    """VectorType returns the correct column type for the active database dialect."""
     assert db_session.bind is not None
     dialect = db_session.bind.dialect
     vector_type = VectorType()
     result = vector_type.load_dialect_impl(dialect=dialect)
-    assert isinstance(result, ARRAY)
-    assert isinstance(result.item_type, Float)
-
-
-@pytest.mark.skip_on_duckdb
-def test_load_dialect_impl__postgresql(
-    db_session: Session,
-) -> None:
-    """VectorType returns pgvector VECTOR for a real PostgreSQL dialect."""
-    assert db_session.bind is not None
-    dialect = db_session.bind.dialect
-    vector_type = db_vector.VectorType()
-    result = vector_type.load_dialect_impl(dialect=dialect)
-    assert isinstance(result, Vector)
+    if dialect.name == "postgresql":
+        assert isinstance(result, Vector)
+    else:
+        assert isinstance(result, ARRAY)
+        assert isinstance(result.item_type, Float)
 
 
 def test_load_dialect_impl__unsupported() -> None:
