@@ -47,7 +47,7 @@ class SampleFilter(BaseModel):
 
     def _apply_annotation_filters(self, query: QueryType) -> QueryType:
         annotations_filter = self.annotations_filter
-        # TODO(Horatiu, 03/2026): This is temporary untill we refactor the resolvers to use the
+        # TODO(Horatiu, 03/2026): This is temporary until we refactor the resolvers to use the
         # AnnotationsFilter directly instead of passing the annotation_label_ids to SampleFilter.
         if annotations_filter is None and self.annotation_label_ids:
             annotations_filter = AnnotationsFilter(annotation_label_ids=self.annotation_label_ids)

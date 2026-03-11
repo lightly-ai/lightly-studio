@@ -1,4 +1,4 @@
-"""Tests for ImageFilter class."""
+"""Tests for SampleFilter class."""
 
 from __future__ import annotations
 
