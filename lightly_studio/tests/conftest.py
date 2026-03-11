@@ -116,7 +116,7 @@ def _postgres_url(_postgres_container: PostgresContainer) -> str | None:
 
 
 @pytest.fixture(scope="session")
-def _postgres_engine(_postgres_url: str | None) -> Generator[DatabaseEngine | None, Any, None]:
+def _postgres_engine(_postgres_url: str | None) -> Generator[DatabaseEngine | None, None, None]:
     """Create a session-scoped DatabaseEngine pointing to the Postgres container."""
     if _postgres_url is None:
         yield None
