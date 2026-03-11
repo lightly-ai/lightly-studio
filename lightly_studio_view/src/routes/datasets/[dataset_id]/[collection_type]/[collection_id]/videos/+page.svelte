@@ -68,7 +68,10 @@
         let nextParams = baseParams;
 
         let currentSampleIds: string[] = [];
-        if (currentParams?.filters?.sample_ids) {
+        if (
+            currentParams?.collection_id === baseParams.collection_id &&
+            currentParams.filters?.sample_ids
+        ) {
             currentSampleIds = currentParams.filters.sample_ids;
         }
 
@@ -88,7 +91,10 @@
     });
 
     const currentVideoFilter = $derived.by(() => {
-        const currentSampleIds = $filterParams?.filters?.sample_ids;
+        const currentSampleIds =
+            $filterParams?.collection_id === videosParams.collection_id
+                ? $filterParams.filters?.sample_ids
+                : undefined;
         const paramsWithSelection: VideoFilterParams =
             currentSampleIds && currentSampleIds.length > 0
                 ? {
