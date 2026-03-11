@@ -549,7 +549,7 @@ def patch_collection(
 
     yield
 
-    if use_postgres:
+    if use_postgres and _postgres_engine is not None:
         with _postgres_engine.session() as session:
             session.rollback()
             _truncate_tables(session)
