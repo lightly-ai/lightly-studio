@@ -23,6 +23,7 @@
         useOperatorContext,
         type PageContext
     } from '$lib/hooks/useOperatorContext/useOperatorContext';
+    import type { SampleType } from '$lib/api/lightly_studio_local';
     import { useTags } from '$lib/hooks/useTags/useTags';
 
     interface Props {
@@ -48,7 +49,7 @@
                 collectionId: $p.params.collection_id,
                 sampleId: $p.params.sampleId || $p.params.sample_id || null,
                 annotationId: $p.params.annotationId || null,
-                sampleType: $p.data.collection?.sample_type ?? null
+                sampleType: ($p.params.collection_type as SampleType) ?? null
             }) satisfies PageContext
     );
 
