@@ -487,7 +487,7 @@ def assert_contains_properties(
 def patch_collection(
     mocker: MockerFixture,
     _db_engine: DatabaseEngine,
-) -> Generator[None, None, None]:
+) -> None:
     """Fixture to patch the collection resources.
 
     Patches get_engine() to return the per-test engine (in-memory DuckDB or
@@ -516,5 +516,3 @@ def patch_collection(
 
     # Create test-specific lightly_studio_active_features.
     mocker.patch.object(features, "lightly_studio_active_features", [])
-
-    yield
