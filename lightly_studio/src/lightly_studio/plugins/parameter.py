@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
-from typing import Any, Generic, TypeVar, cast
+from typing import Any, Generic, TypeVar
 
 T = TypeVar("T")
 
@@ -42,7 +42,7 @@ class BuiltinParameter(BaseParameter, Generic[T]):
 
     def _validate(self, value: T) -> T:
         if isinstance(value, self._type):
-            return cast(T, value)
+            return value
         raise TypeError(f"Expected value of type '{self._type.__name__}' but got {type(value)}'")
 
 
