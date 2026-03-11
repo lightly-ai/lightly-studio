@@ -478,10 +478,7 @@
             URL.revokeObjectURL(previewUrl);
             previewUrl = null;
         }
-        setTextEmbedding({
-            queryText: '',
-            embedding: []
-        });
+        setTextEmbedding(undefined);
     }
 
     function triggerFileInput() {
@@ -500,10 +497,18 @@
             setError(String(message));
             return;
         }
-        setTextEmbedding({
-            queryText: submittedQueryText,
-            embedding: $embedTextQuery.data || []
-        });
+
+        if (!submittedQueryText) {
+            setTextEmbedding(undefined);
+            return;
+        }
+
+        if ($embedTextQuery.isSuccess) {
+            setTextEmbedding({
+                queryText: submittedQueryText,
+                embedding: $embedTextQuery.data
+            });
+        }
     });
 
     const showLeftSidebar = $derived(

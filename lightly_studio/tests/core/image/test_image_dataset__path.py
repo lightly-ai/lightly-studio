@@ -5,11 +5,9 @@ from pathlib import Path
 import pytest
 from PIL import Image
 from pytest_mock import MockerFixture as Mocker
-from sqlmodel import Session
 
 from lightly_studio import ImageDataset
 from lightly_studio.core.image import add_images
-from tests import helpers_resolvers
 
 
 class TestDataset:
@@ -196,7 +194,6 @@ class TestDataset:
     def test_add_images_from_path_calls_tag_samples_by_directory(
         self,
         patch_collection: None,  # noqa: ARG002
-        db_session: Session,
         tmp_path: Path,
         mocker: Mocker,
     ) -> None:
@@ -204,14 +201,12 @@ class TestDataset:
         spy_tagger = mocker.spy(add_images, "tag_samples_by_directory")
 
         _create_sample_images([tmp_path / "image1.jpg"])
-        dataset_table = helpers_resolvers.create_collection(db_session, "test_dataset")
-        dataset = ImageDataset(collection=dataset_table)
-        dataset.session = db_session
+        dataset = ImageDataset.create(name="test_dataset")
 
         dataset.add_images_from_path(path=str(tmp_path), tag_depth=0, embed=False)
 
         spy_tagger.assert_called_once_with(
-            session=db_session,
+            session=dataset.session,
             collection_id=dataset.dataset_id,
             input_path=str(tmp_path),
             sample_ids=mocker.ANY,
