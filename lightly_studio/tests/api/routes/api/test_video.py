@@ -73,6 +73,31 @@ def test_get_all_videos__with_width_filter(test_client: TestClient, db_session: 
     assert data[0]["file_path_abs"].endswith("sample1.mp4")
 
 
+def test_get_video_sample_ids(test_client: TestClient, db_session: Session) -> None:
+    collection = create_collection(session=db_session, sample_type=SampleType.VIDEO)
+    collection_id = collection.collection_id
+
+    video_ids = create_videos(
+        session=db_session,
+        collection_id=collection_id,
+        videos=[
+            VideoStub(path="/path/to/sample1.mp4", width=800, height=1000),
+            VideoStub(path="/path/to/sample2.mp4", width=400, height=600),
+        ],
+    )
+
+    response = test_client.post(
+        f"/api/collections/{collection_id}/video/sample_ids",
+        json={"filter": {"width": {"min": 700}}},
+    )
+
+    assert response.status_code == HTTP_STATUS_OK
+    result = response.json()
+
+    assert len(result) == 1
+    assert UUID(result[0]) == video_ids[0]
+
+
 def test_get_video_by_id(test_client: TestClient, db_session: Session) -> None:
     collection = create_collection(session=db_session, sample_type=SampleType.VIDEO)
     collection_id = collection.collection_id
