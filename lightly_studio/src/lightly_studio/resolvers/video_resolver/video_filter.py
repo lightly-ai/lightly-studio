@@ -9,6 +9,7 @@ from sqlmodel import col, select
 from lightly_studio.models.annotation.annotation_base import AnnotationBaseTable
 from lightly_studio.models.range import FloatRange
 from lightly_studio.models.video import VideoFrameTable, VideoTable
+from lightly_studio.resolvers.annotations.annotations_filter import AnnotationsFilter
 from lightly_studio.resolvers.image_filter import FilterDimensions
 from lightly_studio.resolvers.sample_resolver.sample_filter import SampleFilter
 from lightly_studio.type_definitions import QueryType
@@ -23,6 +24,7 @@ class VideoFilter(BaseModel):
     duration_s: Optional[FloatRange] = None
     annotation_frames_label_ids: Optional[list[UUID]] = None
     sample_filter: Optional[SampleFilter] = None
+    annotation_filter: Optional[AnnotationsFilter] = None
 
     def apply(self, query: QueryType) -> QueryType:
         """Apply the filters to the given query."""
@@ -34,6 +36,8 @@ class VideoFilter(BaseModel):
             query = self._apply_annotations_ids(query)
         if self.sample_filter:
             query = self.sample_filter.apply(query)
+        if self.annotation_filter is not None:
+            query = self._apply_annotation_filter(query)
 
         return query
 
@@ -93,6 +97,18 @@ class VideoFilter(BaseModel):
                 )
             )
             .distinct()
+        )
+
+        return query.where(col(VideoTable.sample_id).in_(frame_filtered_video_ids_subquery))
+
+    def _apply_annotation_filter(self, query: QueryType) -> QueryType:
+        """For videos, annotation filters are applied to the frames."""
+        assert self.annotation_filter is not None
+
+        frame_filtered_video_ids_subquery = select(VideoFrameTable.parent_sample_id)
+        frame_filtered_video_ids_subquery = self.annotation_filter.apply_to_parent_sample_query(
+            query=frame_filtered_video_ids_subquery,
+            sample_id_column=col(VideoFrameTable.sample_id),
         )
 
         return query.where(col(VideoTable.sample_id).in_(frame_filtered_video_ids_subquery))
