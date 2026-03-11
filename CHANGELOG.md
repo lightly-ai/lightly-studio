@@ -20,6 +20,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- Speedup frontend by eliminating two redundant initial video list requests.
+
 ### Security
 
 ## \[0.4.11\] - 2026-03-10
