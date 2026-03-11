@@ -6,11 +6,10 @@ from uuid import UUID
 from pydantic import BaseModel
 from sqlmodel import col, select
 
-from lightly_studio.models.annotation.annotation_base import AnnotationBaseTable
-from lightly_studio.models.annotation_label import AnnotationLabelTable
 from lightly_studio.models.metadata import SampleMetadataTable
 from lightly_studio.models.sample import SampleTable
 from lightly_studio.models.tag import TagTable
+from lightly_studio.resolvers.annotations.annotations_filter import AnnotationsFilter
 from lightly_studio.resolvers.metadata_resolver import metadata_filter
 from lightly_studio.resolvers.metadata_resolver.metadata_filter import MetadataFilter
 from lightly_studio.type_definitions import QueryType
@@ -25,6 +24,7 @@ class SampleFilter(BaseModel):
     metadata_filters: Optional[list[MetadataFilter]] = None
     sample_ids: Optional[list[UUID]] = None
     has_captions: Optional[bool] = None
+    annotations_filter: Optional[AnnotationsFilter] = None
 
     def apply(self, query: QueryType) -> QueryType:
         """Apply the filters to the given query."""
@@ -46,17 +46,17 @@ class SampleFilter(BaseModel):
         return query
 
     def _apply_annotation_filters(self, query: QueryType) -> QueryType:
-        if not self.annotation_label_ids:
+        annotations_filter = self.annotations_filter
+        # TODO(Horatiu, 03/2026): This is temporary untill we refactor the resolvers to use the
+        # AnnotationsFilter directly instead of passing the annotation_label_ids to SampleFilter.
+        if annotations_filter is None and self.annotation_label_ids:
+            annotations_filter = AnnotationsFilter(annotation_label_ids=self.annotation_label_ids)
+        if annotations_filter is None:
             return query
-
-        sample_ids_subquery = (
-            select(AnnotationBaseTable.parent_sample_id)
-            .select_from(AnnotationBaseTable)
-            .join(AnnotationBaseTable.annotation_label)
-            .where(col(AnnotationLabelTable.annotation_label_id).in_(self.annotation_label_ids))
-            .distinct()
+        return annotations_filter.apply_to_parent_sample_query(
+            query=query,
+            sample_id_column=col(SampleTable.sample_id),
         )
-        return query.where(col(SampleTable.sample_id).in_(sample_ids_subquery))
 
     def _apply_tag_filters(self, query: QueryType) -> QueryType:
         if not self.tag_ids:
