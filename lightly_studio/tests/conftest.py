@@ -91,10 +91,10 @@ def _truncate_tables(session: Session) -> None:
 
 
 @pytest.fixture(scope="session")
-def _postgres_container(
+def _postgres_url(
     request: pytest.FixtureRequest,
-) -> Generator[PostgresContainer | None, None, None]:
-    """Start a Postgres container for the test session if --postgres is set."""
+) -> Generator[str | None, None, None]:
+    """Start a Postgres container and yield its URL, or None for DuckDB."""
     if not request.config.getoption("--postgres"):
         yield None
         return
@@ -103,16 +103,8 @@ def _postgres_container(
         image="pgvector/pgvector:0.8.1-pg18-bookworm", driver="psycopg"
     )
     pg_container.start()
-    yield pg_container
+    yield pg_container.get_connection_url()
     pg_container.stop()
-
-
-@pytest.fixture(scope="session")
-def _postgres_url(_postgres_container: PostgresContainer) -> str | None:
-    """Return the Postgres connection URL for the test container, or None for DuckDB."""
-    if _postgres_container is None:
-        return None
-    return _postgres_container.get_connection_url()  # type: ignore[no-any-return]
 
 
 @pytest.fixture(scope="session")
