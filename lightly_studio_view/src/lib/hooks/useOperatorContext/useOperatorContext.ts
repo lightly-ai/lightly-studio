@@ -51,7 +51,9 @@ export function resolveIsDetailPage(routeId: string | null): boolean {
 
 export function resolveScopeLabel(sampleType: SampleType | null, isOnDetailPage: boolean): string {
     if (sampleType === null) return 'Full collection';
-    return isOnDetailPage ? `Current ${sampleType}` : `Current ${sampleType} collection`;
+    return isOnDetailPage
+        ? `Current ${sampleType.replaceAll('_', ' ')}`
+        : `All ${sampleType.replaceAll('_', ' ')}s in the view`;
 }
 
 export function resolveContextFilter(
@@ -73,7 +75,7 @@ export function resolveContextFilter(
         const tagIds = Array.from(tagsSelected);
         const filter: AnnotationsFilter = {
             ...(labelIds.length > 0 && { annotation_label_ids: labelIds }),
-            ...(tagIds.length > 0 && { annotation_tag_ids: tagIds })
+            ...(tagIds.length > 0 && { tag_ids: tagIds })
         };
         return Object.keys(filter).length > 0 ? filter : undefined;
     }

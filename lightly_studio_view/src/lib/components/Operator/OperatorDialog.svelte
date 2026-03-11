@@ -1,5 +1,6 @@
 <script lang="ts">
-    import { page } from '$app/state';
+    import { page } from '$app/stores';
+    import { derived as storeDerived } from 'svelte/store';
     import { Button } from '$lib/components/ui/button';
     import * as Dialog from '$lib/components/ui/dialog';
     import { LoaderCircle as Loader2 } from '@lucide/svelte';
@@ -18,6 +19,12 @@
         buildInitialParameters,
         getParameterConfig
     } from './parameterTypeConfig';
+    import {
+        useOperatorContext,
+        type PageContext
+    } from '$lib/hooks/useOperatorContext/useOperatorContext';
+    import type { SampleType } from '$lib/api/lightly_studio_local';
+    import { useTags } from '$lib/hooks/useTags/useTags';
 
     interface Props {
         operatorMetadata: RegisteredOperatorMetadata | null;
@@ -34,7 +41,26 @@
     let executionError = $state<string | undefined>(undefined);
     let executionSuccess = $state<string | undefined>(undefined);
 
-    const collectionId = $derived(page.params.collection_id);
+    const pageContext = storeDerived(
+        page,
+        ($p) =>
+            ({
+                routeId: $p.route.id,
+                collectionId: $p.params.collection_id,
+                sampleId: $p.params.sampleId || $p.params.sample_id || null,
+                annotationId: $p.params.annotationId || null,
+                sampleType: ($p.params.collection_type as SampleType) ?? null
+            }) satisfies PageContext
+    );
+
+    const collectionId = $page.params.collection_id;
+
+    const { tagsSelected } = useTags({ collection_id: collectionId, kind: ['annotation'] });
+
+    const { isOnDetailPage, scopeLabel, contextFilter } = useOperatorContext(
+        pageContext,
+        tagsSelected
+    );
 
     function resetExecutionState() {
         executionError = undefined;
@@ -85,8 +111,9 @@
     });
 
     async function handleExecute() {
-        if (!operator || !collectionId || !isFormValid) {
-            executionError = !collectionId
+        const currentCollectionId = $pageContext.collectionId;
+        if (!operator || !currentCollectionId || !isFormValid) {
+            executionError = !currentCollectionId
                 ? 'Collection not available. Please open a collection first.'
                 : 'Please fill in all required parameters.';
             return;
@@ -99,7 +126,13 @@
         try {
             const response = await executeOperator({
                 path: { operator_id: operator.id },
-                body: { parameters, context: { collection_id: collectionId } }
+                body: {
+                    parameters,
+                    context: {
+                        collection_id: currentCollectionId,
+                        ...($contextFilter !== undefined && { context_filter: $contextFilter })
+                    }
+                }
             });
 
             if (response.error) {
@@ -146,6 +179,17 @@
             <Dialog.Description>
                 Configure the parameters for this operator and click Execute to run it.
             </Dialog.Description>
+            <div class="mt-1 flex items-center gap-2 text-sm">
+                <span class="text-muted-foreground">Scope:</span>
+                <span
+                    class="inline-flex items-center rounded-full px-2 py-1 text-xs font-medium
+                    {$isOnDetailPage
+                        ? 'bg-primary text-primary-foreground'
+                        : 'bg-secondary text-secondary-foreground'}"
+                >
+                    {$scopeLabel}
+                </span>
+            </div>
         </Dialog.Header>
 
         {#if isLoadingParameters}
