@@ -101,7 +101,7 @@ def test_get_adjacent_video_frames__raises_without_collection_id(db_session: Ses
     )
 
     with pytest.raises(
-        ValueError, match="Collection ID must be provided in video_frame_filter.sample_filter."
+        ValueError, match=r"Collection ID must be provided in video_frame_filter.sample_filter."
     ):
         video_frame_resolver.get_adjacent_video_frames(
             session=db_session,
@@ -125,7 +125,7 @@ def test_get_adjacent_video_frames__raises_without_parent_video_collection_id(
     )
 
     with pytest.raises(
-        ValueError, match="Collection ID must be provided in video_filter.sample_filter"
+        ValueError, match=r"Collection ID must be provided in video_filter.sample_filter"
     ):
         video_frame_resolver.get_adjacent_video_frames(
             session=db_session,
@@ -462,7 +462,7 @@ def test_get_adjacent_video_frames__requires_resolvable_collection_for_text_embe
     )[0]
 
     with pytest.raises(
-        ValueError, match="Collection ID must be resolvable when video_text_embedding is provided."
+        ValueError, match=r"Collection ID must be resolvable when video_text_embedding is provided."
     ):
         video_frame_resolver.get_adjacent_video_frames(
             session=db_session,

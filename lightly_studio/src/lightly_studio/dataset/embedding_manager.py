@@ -2,8 +2,10 @@
 
 from __future__ import annotations
 
+import importlib
 import logging
 from dataclasses import dataclass
+from typing import cast
 from uuid import UUID
 
 from sqlmodel import Session
@@ -342,32 +344,43 @@ def _load_embedding_generator_from_env(sample_type: SampleType) -> EmbeddingGene
 def _load_image_embedding_generator_from_env() -> ImageEmbeddingGenerator | None:
     if env.LIGHTLY_STUDIO_EMBEDDINGS_MODEL_TYPE == "EDGE":
         try:
-            from lightly_studio.dataset.edge_embedding_generator import (
-                EdgeSDKEmbeddingGenerator,
+            edge_embedding_generator = importlib.import_module(
+                "lightly_studio.dataset.edge_embedding_generator"
             )
 
             logger.info("Using LightlyEdge embedding generator for images.")
-            return EdgeSDKEmbeddingGenerator(model_path=env.LIGHTLY_STUDIO_EDGE_MODEL_FILE_PATH)
+            return cast(
+                ImageEmbeddingGenerator,
+                edge_embedding_generator.EdgeSDKEmbeddingGenerator(
+                    model_path=env.LIGHTLY_STUDIO_EDGE_MODEL_FILE_PATH
+                ),
+            )
         except ImportError:
             logger.warning("Embedding functionality is disabled.")
     elif env.LIGHTLY_STUDIO_EMBEDDINGS_MODEL_TYPE == "MOBILE_CLIP":
         try:
-            from lightly_studio.dataset.mobileclip_embedding_generator import (
-                MobileCLIPEmbeddingGenerator,
+            mobileclip_embedding_generator = importlib.import_module(
+                "lightly_studio.dataset.mobileclip_embedding_generator"
             )
 
             logger.info("Using MobileCLIP embedding generator for images.")
-            return MobileCLIPEmbeddingGenerator()
+            return cast(
+                ImageEmbeddingGenerator,
+                mobileclip_embedding_generator.MobileCLIPEmbeddingGenerator(),
+            )
         except ImportError:
             logger.warning("Embedding functionality is disabled.")
     elif env.LIGHTLY_STUDIO_EMBEDDINGS_MODEL_TYPE == "PE":
         try:
-            from lightly_studio.dataset.perception_encoder_embedding_generator import (
-                PerceptionEncoderEmbeddingGenerator,
+            perception_encoder_embedding_generator = importlib.import_module(
+                "lightly_studio.dataset.perception_encoder_embedding_generator"
             )
 
             logger.info("Using PerceptionEncoder embedding generator for images.")
-            return PerceptionEncoderEmbeddingGenerator()
+            return cast(
+                ImageEmbeddingGenerator,
+                perception_encoder_embedding_generator.PerceptionEncoderEmbeddingGenerator(),
+            )
         except ImportError:
             logger.warning("Embedding functionality is disabled.")
     else:
@@ -378,12 +391,15 @@ def _load_image_embedding_generator_from_env() -> ImageEmbeddingGenerator | None
 
 def _load_video_embedding_generator() -> VideoEmbeddingGenerator | None:
     try:
-        from lightly_studio.dataset.perception_encoder_embedding_generator import (
-            PerceptionEncoderEmbeddingGenerator,
+        perception_encoder_embedding_generator = importlib.import_module(
+            "lightly_studio.dataset.perception_encoder_embedding_generator"
         )
 
         logger.info("Using PerceptionEncoder embedding generator for videos.")
-        return PerceptionEncoderEmbeddingGenerator()
+        return cast(
+            VideoEmbeddingGenerator,
+            perception_encoder_embedding_generator.PerceptionEncoderEmbeddingGenerator(),
+        )
     except ImportError:
         logger.warning("Embedding functionality is disabled.")
         return None

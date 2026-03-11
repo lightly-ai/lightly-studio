@@ -1,5 +1,6 @@
 """This module defines the Sample model for the application."""
 
+import importlib
 from datetime import datetime, timezone
 from typing import Any, Optional
 from uuid import UUID, uuid4
@@ -96,14 +97,11 @@ class SampleTable(SampleBase, table=True):
             raise RuntimeError("No database session found for this instance")
 
         # Delayed import to avoid circular dependencies.
-        from lightly_studio.resolvers import metadata_resolver
+        metadata_resolver = importlib.import_module("lightly_studio.resolvers.metadata_resolver")
 
         # Use metadata_resolver to handle the database operations.
-        # Added type: ignore to avoid type checking issues. SQLAlchemy and
-        # SQLModel sessions are compatible at runtime but have different type
-        # annotations.
         metadata_resolver.set_value_for_sample(
-            session=session,  # type: ignore[arg-type]
+            session=session,
             sample_id=self.sample_id,
             key=key,
             value=value,

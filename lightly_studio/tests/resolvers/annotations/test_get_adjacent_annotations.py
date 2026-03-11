@@ -96,7 +96,7 @@ def test_get_adjacent_annotations__raises_with_filter_missing_collection_id(
         annotation_label_id=label.annotation_label_id,
     )
 
-    with pytest.raises(ValueError, match="Collection IDs must be provided in filters."):
+    with pytest.raises(ValueError, match=r"Collection IDs must be provided in filters."):
         annotation_resolver.get_adjacent_annotations(
             session=db_session,
             sample_id=annotation.sample_id,

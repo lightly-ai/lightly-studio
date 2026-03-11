@@ -6,6 +6,7 @@ Provides VectorType and cosine_distance that work across both DuckDB and Postgre
 
 from __future__ import annotations
 
+import importlib
 from typing import Any
 
 from sqlalchemy import ARRAY, Float
@@ -32,9 +33,9 @@ class VectorType(TypeDecorator[list[float]]):
         Raises NotImplementedError for unsupported dialects.
         """
         if dialect.name == "postgresql":
-            from pgvector.sqlalchemy import Vector
+            pgvector_sqlalchemy = importlib.import_module("pgvector.sqlalchemy")
 
-            return dialect.type_descriptor(Vector())
+            return dialect.type_descriptor(pgvector_sqlalchemy.Vector())
         if dialect.name == "duckdb":
             return dialect.type_descriptor(ARRAY(Float))
         raise NotImplementedError(

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import io
+import logging
 import os
 import shutil
 from pathlib import Path
@@ -107,8 +108,6 @@ def test_download_file_if_does_not_exist__creates_parent_directory(
 def test_download_file_if_does_not_exist__cleanup_failure_logs_warning(
     tmp_path: Path, mocker: MockerFixture, caplog: pytest.LogCaptureFixture
 ) -> None:
-    import logging
-
     target = tmp_path / "model.pt"
     _mock_response(mocker)
     mocker.patch.object(shutil, "copyfileobj", side_effect=ConnectionError("Network failed"))
