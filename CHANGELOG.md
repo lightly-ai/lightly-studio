@@ -10,6 +10,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 
 - Add tooltips to features in annotation items in the right panel to improve usability.
+- Added instance segmentation export to COCO in the GUI.
 
 ### Changed
 
