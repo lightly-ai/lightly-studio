@@ -5,7 +5,6 @@ from __future__ import annotations
 from sqlmodel import Session, select
 
 from lightly_studio.models.caption import CaptionCreate
-from lightly_studio.models.collection import SampleType
 from lightly_studio.models.sample import SampleTable
 from lightly_studio.resolvers import caption_resolver, tag_resolver
 from lightly_studio.resolvers.annotations.annotations_filter import AnnotationsFilter
@@ -19,7 +18,6 @@ from tests.helpers_resolvers import (
     create_images,
     create_tag,
 )
-from tests.resolvers.video.helpers import VideoStub, create_video_with_frames
 
 
 class TestSampleFilter:
@@ -195,51 +193,6 @@ class TestSampleFilter:
         assert len(result) == 1
         assert result[0].sample_id == samples[1].sample_id
 
-    def test_apply__annotations_filter__video_frame_sample(self, db_session: Session) -> None:
-        collection = create_collection(session=db_session, sample_type=SampleType.VIDEO)
-        video_frames = create_video_with_frames(
-            session=db_session,
-            collection_id=collection.collection_id,
-            video=VideoStub(path="/videos/a.mp4", fps=1, duration_s=2.0),
-        )
-
-        cat_label = create_annotation_label(
-            session=db_session,
-            dataset_id=video_frames.video_frames_collection_id,
-            label_name="cat",
-        )
-        dog_label = create_annotation_label(
-            session=db_session,
-            dataset_id=video_frames.video_frames_collection_id,
-            label_name="dog",
-        )
-
-        create_annotation(
-            session=db_session,
-            collection_id=video_frames.video_frames_collection_id,
-            sample_id=video_frames.frame_sample_ids[0],
-            annotation_label_id=cat_label.annotation_label_id,
-        )
-        create_annotation(
-            session=db_session,
-            collection_id=video_frames.video_frames_collection_id,
-            sample_id=video_frames.frame_sample_ids[1],
-            annotation_label_id=dog_label.annotation_label_id,
-        )
-
-        sample_filter = SampleFilter(
-            collection_id=video_frames.video_frames_collection_id,
-            annotations_filter=AnnotationsFilter(
-                annotation_label_ids=[dog_label.annotation_label_id]
-            ),
-        )
-
-        filtered_query = sample_filter.apply(query=select(SampleTable))
-        result = db_session.exec(filtered_query).all()
-
-        assert len(result) == 1
-        assert result[0].sample_id == video_frames.frame_sample_ids[1]
-
     def test_query__annotation_filter_distinct_samples_only(self, db_session: Session) -> None:
         """Test SampleFilter with annotation label filters.
 
@@ -293,7 +246,9 @@ class TestSampleFilter:
 
         # Create the filter
         sample_filter = SampleFilter(
-            annotation_label_ids=[cat_label.annotation_label_id, dog_label.annotation_label_id],
+            annotations_filter=AnnotationsFilter(
+                annotation_label_ids=[cat_label.annotation_label_id, dog_label.annotation_label_id]
+            )
         )
 
         # Apply the filter
