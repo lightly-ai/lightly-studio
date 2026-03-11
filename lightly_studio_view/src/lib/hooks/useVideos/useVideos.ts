@@ -9,13 +9,12 @@ export const useVideos = (
     filter: VideoFilter,
     text_embedding?: Array<number>
 ) => {
-    const normalizedTextEmbedding = text_embedding?.length ? text_embedding : undefined;
     const readVideosOptions = getAllVideosInfiniteOptions({
         path: { collection_id },
         query: { limit: 30 },
         body: {
             filter,
-            text_embedding: normalizedTextEmbedding
+            text_embedding
         }
     });
     const query = createInfiniteQuery({
