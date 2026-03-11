@@ -27,8 +27,9 @@ test.describe('Export Captions', () => {
         await page.getByTestId('menu-export').click();
         await expect(page.getByRole('heading', { name: 'Export' })).toBeVisible();
 
-        // Switch to the correct tab and wait until the anchor has the href
-        await page.getByRole('tab', { name: 'Image Captions' }).click();
+        // Switch to the correct export type
+        await page.getByTestId('export-type-select').click();
+        await page.getByRole('option', { name: 'Image Captions' }).click();
         await expect(page.getByTestId('submit-button-captions')).toHaveAttribute(
             'href',
             /\/api\/collections\/.*\/export\/captions\?ts=\d+/
