@@ -270,6 +270,10 @@ def select_via_database(
 
     selected_indices = mundig.run(n_samples=n_samples_to_select)
     selected_sample_ids = [input_sample_ids[i] for i in selected_indices]
+    order_key = f"{config.selection_result_tag_name}_order"
+    sample_id_to_order = {
+        sample_id: order for order, sample_id in enumerate(selected_sample_ids, start=1)
+    }
 
     datetime_str = datetime.datetime.now(tz=datetime.timezone.utc).isoformat()
     tag_description = f"Selected at {datetime_str} UTC"
@@ -284,4 +288,11 @@ def select_via_database(
     )
     tag_resolver.add_sample_ids_to_tag_id(
         session=session, tag_id=tag.tag_id, sample_ids=selected_sample_ids
+    )
+    metadata_resolver.bulk_update_metadata(
+        session=session,
+        sample_metadata=[
+            (sample_id, {order_key: order})
+            for sample_id, order in sample_id_to_order.items()
+        ],
     )

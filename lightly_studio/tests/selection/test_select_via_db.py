@@ -12,6 +12,7 @@ from sqlmodel import Session
 from lightly_studio.models.tag import TagCreate
 from lightly_studio.resolvers import (
     image_resolver,
+    metadata_resolver,
     tag_resolver,
 )
 from lightly_studio.resolvers.image_filter import ImageFilter
@@ -112,6 +113,66 @@ def test_select_via_database__multi_embedding_diversity(
     expected_sample_paths = {"sample_0.jpg", "sample_19.jpg"}
     actual_sample_paths = {sample.file_path_abs for sample in samples_in_tag}
     assert actual_sample_paths == expected_sample_paths
+
+
+def test_select_via_database__stores_selection_order_metadata(
+    db_session: Session,
+    mocker: MockerFixture,
+) -> None:
+    """Stores the selected sample order as integer metadata."""
+    collection_id = fill_db_with_samples_and_embeddings(
+        db_session, n_samples=4, embedding_model_names=["embedding_model_1"]
+    )
+    input_sample_ids = _all_sample_ids(db_session, collection_id)
+    metadata_resolver.set_value_for_sample(
+        session=db_session,
+        sample_id=input_sample_ids[2],
+        key="existing_key",
+        value="kept",
+    )
+    mocker.patch.object(Mundig, "run", return_value=[2, 0, 1])
+
+    selection_config = SelectionConfig(
+        collection_id=collection_id,
+        n_samples_to_select=3,
+        selection_result_tag_name="selection_1",
+        strategies=[EmbeddingDiversityStrategy(embedding_model_name="embedding_model_1")],
+    )
+
+    select_via_database(db_session, selection_config, input_sample_ids=input_sample_ids)
+
+    order_key = "selection_1_order"
+    assert metadata_resolver.get_value_for_sample(
+        session=db_session,
+        sample_id=input_sample_ids[2],
+        key=order_key,
+    ) == 1
+    assert metadata_resolver.get_value_for_sample(
+        session=db_session,
+        sample_id=input_sample_ids[0],
+        key=order_key,
+    ) == 2
+    assert metadata_resolver.get_value_for_sample(
+        session=db_session,
+        sample_id=input_sample_ids[1],
+        key=order_key,
+    ) == 3
+    assert metadata_resolver.get_value_for_sample(
+        session=db_session,
+        sample_id=input_sample_ids[3],
+        key=order_key,
+    ) is None
+
+    metadata = metadata_resolver.get_by_sample_id(
+        session=db_session, sample_id=input_sample_ids[2]
+    )
+    assert metadata is not None
+    assert metadata.metadata_schema[order_key] == "integer"
+    assert metadata_resolver.get_value_for_sample(
+        session=db_session,
+        sample_id=input_sample_ids[2],
+        key="existing_key",
+    ) == "kept"
 
 
 def test_select_via_database__embedding_diversity__sample_filter_tags(
