@@ -1046,7 +1046,9 @@ from lightly_studio.models.annotation_label import AnnotationLabelCreate
 from lightly_studio.plugins.base_operator import BaseOperator, OperatorResult
 from lightly_studio.plugins.operator_context import OperatorScope
 from lightly_studio.plugins.parameter import FloatParameter, StringParameter
+from lightly_studio.resolvers.image_filter import ImageFilter
 from lightly_studio.resolvers import annotation_label_resolver, annotation_resolver, image_resolver
+from lightly_studio.resolvers.sample_resolver.sample_filter import SampleFilter
 
 
 def _preload_label_map(session, dataset_id, class_names):
