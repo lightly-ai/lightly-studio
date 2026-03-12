@@ -124,7 +124,7 @@ def test_deep_copy__with_hierarchy(db_session: Session) -> None:
 
     # Assert - hierarchy copied
     hierarchy = collection_resolver.get_hierarchy(
-        session=db_session, dataset_id=copied_root.collection_id
+        session=db_session, root_collection_id=copied_root.collection_id
     )
     assert len(hierarchy) == 2
 
@@ -139,7 +139,7 @@ def test_deep_copy__with_hierarchy(db_session: Session) -> None:
 
     # Assert - original hierarchy unchanged
     original_hierarchy = collection_resolver.get_hierarchy(
-        session=db_session, dataset_id=root.collection_id
+        session=db_session, root_collection_id=root.collection_id
     )
     assert len(original_hierarchy) == 2
     assert original_hierarchy[1].parent_collection_id == root.collection_id
