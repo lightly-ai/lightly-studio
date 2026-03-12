@@ -47,7 +47,7 @@ def test_query__annotation_filter(db_session: Session) -> None:
 
     query = select(VideoTable).join(VideoTable.sample)
     video_filter = VideoFilter(
-        annotation_filter=AnnotationsFilter(
+        frame_annotation_filter=AnnotationsFilter(
             annotation_label_ids=[label.annotation_label_id],
         )
     )
