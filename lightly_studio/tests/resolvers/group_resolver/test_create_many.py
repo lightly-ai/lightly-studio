@@ -102,7 +102,7 @@ def test_create_many__unique_component_samples(db_session: Session) -> None:
         groups=[{front_image.sample_id}],
     )
     # Assigning the sample to a second group should fail
-    with pytest.raises(IntegrityError, match="[Dd]uplicate key"):
+    with pytest.raises(IntegrityError, match=r"[Dd]uplicate key"):
         group_resolver.create_many(
             session=db_session,
             collection_id=group_col.collection_id,
@@ -133,7 +133,7 @@ def test_create_many__invalid_components(db_session: Session) -> None:
     )
 
     # Duplicate component
-    with pytest.raises(ValueError, match="Duplicate group components found"):
+    with pytest.raises(ValueError, match=r"Duplicate group components found"):
         group_resolver.create_many(
             session=db_session,
             collection_id=group_col.collection_id,
@@ -154,7 +154,7 @@ def test_create_many__invalid_components(db_session: Session) -> None:
 
     # Invalid component
     with pytest.raises(
-        ValueError, match="Sample IDs .* to create a group do not belong to allowed components."
+        ValueError, match=r"Sample IDs .* to create a group do not belong to allowed components."
     ):
         group_resolver.create_many(
             session=db_session,
@@ -167,7 +167,7 @@ def test_create_many__non_group(db_session: Session) -> None:
     non_group_col = create_collection(session=db_session, sample_type=SampleType.IMAGE)
 
     with pytest.raises(
-        ValueError, match="Can only get group components for collections of type GROUP."
+        ValueError, match=r"Can only get group components for collections of type GROUP."
     ):
         group_resolver.create_many(
             session=db_session,

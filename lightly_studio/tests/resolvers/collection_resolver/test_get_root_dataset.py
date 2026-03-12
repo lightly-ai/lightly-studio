@@ -72,7 +72,9 @@ def test_get_root_collection__multiple_root_collections(
 def test_get_root_collection__no_collection(
     db_session: Session,
 ) -> None:
-    with pytest.raises(ValueError, match="No root collection found. A root collection must exist."):
+    with pytest.raises(
+        ValueError, match=r"No root collection found. A root collection must exist."
+    ):
         collection_resolver.get_dataset(session=db_session)
 
     not_found_collection_id = uuid.uuid4()

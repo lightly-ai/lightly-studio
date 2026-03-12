@@ -97,7 +97,7 @@ def test_get_adjacent_videos__raises_with_filter_missing_collection_id(db_sessio
         video=video_helpers.VideoStub(path="/videos/a.mp4"),
     )
 
-    with pytest.raises(ValueError, match="Collection ID must be provided in filters."):
+    with pytest.raises(ValueError, match=r"Collection ID must be provided in filters."):
         video_resolver.get_adjacent_videos(
             session=db_session,
             sample_id=video.sample_id,

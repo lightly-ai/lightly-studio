@@ -25,6 +25,7 @@
     } from '$lib/hooks/useOperatorContext/useOperatorContext';
     import type { SampleType } from '$lib/api/lightly_studio_local';
     import { useTags } from '$lib/hooks/useTags/useTags';
+    import { useQueryClient } from '@tanstack/svelte-query';
 
     interface Props {
         operatorMetadata: RegisteredOperatorMetadata | null;
@@ -52,6 +53,8 @@
                 sampleType: ($p.params.collection_type as SampleType) ?? null
             }) satisfies PageContext
     );
+
+    const queryClient = useQueryClient();
 
     const collectionId = $page.params.collection_id;
 
@@ -143,6 +146,7 @@
             if (response.data.success) {
                 executionSuccess = response.data.message || 'Execution succeeded.';
                 toast.success('Operator executed', { description: executionSuccess });
+                queryClient.invalidateQueries();
             } else {
                 executionError = response.data.message || 'Execution failed.';
                 toast.error('Operator execution failed', { description: executionError });
