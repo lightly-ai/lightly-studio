@@ -1,6 +1,6 @@
 """Tests for deep_copy resolver."""
 
-from uuid import uuid4
+import uuid
 
 import pytest
 from sqlmodel import Session
@@ -467,7 +467,7 @@ def test_deep_copy__raises_for_non_root_collection(db_session: Session) -> None:
 
 def test_deep_copy__raises_for_nonexistent_collection(db_session: Session) -> None:
     # Arrange
-    nonexistent_id = uuid4()
+    nonexistent_id = uuid.uuid4()
 
     # Act & Assert
     with pytest.raises(ValueError, match="not found"):

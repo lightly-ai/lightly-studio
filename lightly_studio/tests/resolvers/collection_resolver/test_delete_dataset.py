@@ -1,6 +1,6 @@
 """Tests for delete_dataset resolver."""
 
-from uuid import uuid4
+import uuid
 
 import pytest
 from sqlmodel import Session
@@ -254,7 +254,7 @@ def test_delete_dataset__raises_for_non_root_collection(db_session: Session) -> 
 
 def test_delete_dataset__raises_for_nonexistent_collection(db_session: Session) -> None:
     # Arrange
-    nonexistent_id = uuid4()
+    nonexistent_id = uuid.uuid4()
 
     # Act & Assert
     with pytest.raises(ValueError, match="not found"):
