@@ -965,6 +965,7 @@ An operator plugin is defined by the following attributes of the [`BaseOperator`
 - name: The name of the operator that will also be used in the GUI.
 - description: A detailed description of what the operator does.
 - parameters: A list of inputs exposed in the GUI. Supported parameter types are documented under [`Parameter`](api/plugin/#parameter)
+- supported_scopes: A list of [`OperatorScopes`](api/plugin/#lightly_studio.plugins.operator_context.OperatorScope) the operator can be executed in.
 - execute: The method that is used to execute the actual action. It will receive the parameters from the GUI.
 
 
@@ -976,6 +977,7 @@ An example `Hello World" operator plugin looks this:
 from dataclasses import dataclass
 
 from lightly_studio.plugins.base_operator import BaseOperator, OperatorResult
+from lightly_studio.plugins.operator_context import OperatorScope
 from lightly_studio.plugins.parameter import StringParameter
 
 
@@ -994,8 +996,13 @@ class GreetingOperator(BaseOperator):
                 description="your name"
             ),
         ]
-
-    def execute(self, *, session, collection_id, parameters):
+    
+    @property
+    def supported_scopes(self) -> list[OperatorScope]:
+        """Return the list of scopes this operator can be triggered from."""
+        return [OperatorScope.ROOT]
+    
+    def execute(self, *, session, context, parameters):
         your_name = parameters.get("name", "")
         return OperatorResult(success=True, message=f"Hello {your_name}!")
 ```
@@ -1037,8 +1044,11 @@ from lightly_train._commands.predict_task_helpers import prepare_coco_entries as
 from lightly_studio.models.annotation.annotation_base import AnnotationCreate, AnnotationType
 from lightly_studio.models.annotation_label import AnnotationLabelCreate
 from lightly_studio.plugins.base_operator import BaseOperator, OperatorResult
+from lightly_studio.plugins.operator_context import OperatorScope
 from lightly_studio.plugins.parameter import FloatParameter, StringParameter
+from lightly_studio.resolvers.image_filter import ImageFilter
 from lightly_studio.resolvers import annotation_label_resolver, annotation_resolver, image_resolver
+from lightly_studio.resolvers.sample_resolver.sample_filter import SampleFilter
 
 
 def _preload_label_map(session, dataset_id, class_names):
@@ -1086,8 +1096,13 @@ class LightlyTrainAutoLabelingODOperator(BaseOperator):
                 description="The confidence threshold to be applied to the predictions."
             ),
         ]
+    
+    @property
+    def supported_scopes(self) -> list[OperatorScope]:
+        """Return the list of scopes this operator can be triggered from."""
+        return [OperatorScope.IMAGE]
 
-    def execute(self, *, session, collection_id, parameters):
+    def execute(self, *, session, context, parameters):
         try:
             model = lightly_train.load_model(parameters["Model"])
         except ValueError as e:
@@ -1097,11 +1112,24 @@ class LightlyTrainAutoLabelingODOperator(BaseOperator):
             return OperatorResult(success=False, message="Threshold must be in range 0.0 to 1.0")
 
         raw_classes = getattr(model, "classes", {})
-        label_map = _preload_label_map(session, collection_id, list(raw_classes.values()))
+        label_map = _preload_label_map(session, context.collection_id, list(raw_classes.values()))
+
+        # Getting all samples for the provided context
+        context_filter = None
+        if context.context_filter:
+            if isinstance(context.context_filter, SampleFilter):
+                context_filter = ImageFilter(sample_filter=context.context_filter)
+            elif isinstance(context.context_filter, ImageFilter):
+                context_filter = context.context_filter
+
+        samples = image_resolver.get_all_by_collection_id(
+            session=session,
+            collection_id=context.collection_id,
+            filters=context_filter
+        )
 
         # Running inference
         annotations_buffer = []
-        samples = image_resolver.get_all_by_collection_id(session=session, collection_id=collection_id)
         for sample in samples.samples:
             image = Image.open(sample.file_path_abs).convert("RGB")
 
@@ -1124,7 +1152,7 @@ class LightlyTrainAutoLabelingODOperator(BaseOperator):
 
         annotation_resolver.create_many(
             session=session,
-            parent_collection_id=collection_id,
+            parent_collection_id=context.collection_id,
             annotations=annotations_buffer,
         )
         total_created = len(annotations_buffer)

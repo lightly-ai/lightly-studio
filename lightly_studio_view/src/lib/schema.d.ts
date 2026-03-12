@@ -1533,6 +1533,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/collections/{collection_id}/video/sample_ids": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Get Video Sample Ids
+         * @description Retrieve all sample ids of videos matching the given filters.
+         */
+        post: operations["get_video_sample_ids"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/collections/{collection_id}/video/{sample_id}": {
         parameters: {
             query?: never;
@@ -2587,7 +2607,6 @@ export interface components {
          */
         ImageFilter: {
             sample_filter?: components["schemas"]["SampleFilter"] | null;
-            annotation_filter?: components["schemas"]["AnnotationsFilter"] | null;
             width?: components["schemas"]["FilterDimensions"] | null;
             height?: components["schemas"]["FilterDimensions"] | null;
         };
@@ -2880,6 +2899,14 @@ export interface components {
             filter?: components["schemas"]["VideoFrameFilter"] | null;
         };
         /**
+         * ReadVideoSampleIdsRequest
+         * @description Request body for reading matching video sample ids.
+         */
+        ReadVideoSampleIdsRequest: {
+            /** @description Filter parameters for videos */
+            filter?: components["schemas"]["VideoFilter"] | null;
+        };
+        /**
          * ReadVideosRequest
          * @description Request body for reading videos.
          */
@@ -2950,6 +2977,7 @@ export interface components {
             sample_ids?: string[] | null;
             /** Has Captions */
             has_captions?: boolean | null;
+            annotations_filter?: components["schemas"]["AnnotationsFilter"] | null;
         };
         /**
          * SampleIdsBody
@@ -3356,6 +3384,7 @@ export interface components {
             /** Annotation Frames Label Ids */
             annotation_frames_label_ids?: string[] | null;
             sample_filter?: components["schemas"]["SampleFilter"] | null;
+            frame_annotation_filter?: components["schemas"]["AnnotationsFilter"] | null;
         };
         /**
          * VideoFrameAdjacentFilter
@@ -6041,6 +6070,41 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["VideoViewsWithCount"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_video_sample_ids: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                collection_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ReadVideoSampleIdsRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": string[];
                 };
             };
             /** @description Validation Error */

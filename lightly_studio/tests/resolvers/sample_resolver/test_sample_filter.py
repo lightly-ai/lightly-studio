@@ -1,4 +1,4 @@
-"""Tests for ImageFilter class."""
+"""Tests for SampleFilter class."""
 
 from __future__ import annotations
 
@@ -7,6 +7,7 @@ from sqlmodel import Session, select
 from lightly_studio.models.caption import CaptionCreate
 from lightly_studio.models.sample import SampleTable
 from lightly_studio.resolvers import caption_resolver, tag_resolver
+from lightly_studio.resolvers.annotations.annotations_filter import AnnotationsFilter
 from lightly_studio.resolvers.metadata_resolver.metadata_filter import Metadata
 from lightly_studio.resolvers.sample_resolver.sample_filter import SampleFilter
 from tests.helpers_resolvers import (
@@ -142,6 +143,56 @@ class TestSampleFilter:
         assert len(result) == 1
         assert result[0].sample_id == samples[0].sample_id
 
+    def test_apply__annotations_filter__image_sample(self, db_session: Session) -> None:
+        # Create samples
+        collection = create_collection(session=db_session)
+        collection_id = collection.collection_id
+        samples = create_images(
+            db_session=db_session,
+            collection_id=collection.collection_id,
+            images=[
+                ImageStub(path="sample_0.png"),
+                ImageStub(path="sample_1.png"),
+            ],
+        )
+
+        # Create annotations
+        cat_label = create_annotation_label(
+            session=db_session, dataset_id=collection_id, label_name="cat"
+        )
+        dog_label = create_annotation_label(
+            session=db_session, dataset_id=collection_id, label_name="dog"
+        )
+
+        # Add annotations to samples
+        create_annotation(
+            session=db_session,
+            collection_id=collection_id,
+            sample_id=samples[0].sample_id,
+            annotation_label_id=cat_label.annotation_label_id,
+        )
+        create_annotation(
+            session=db_session,
+            collection_id=collection_id,
+            sample_id=samples[1].sample_id,
+            annotation_label_id=dog_label.annotation_label_id,
+        )
+
+        # Create the filter
+        sample_filter = SampleFilter(
+            annotations_filter=AnnotationsFilter(
+                annotation_label_ids=[dog_label.annotation_label_id]
+            )
+        )
+
+        # Apply the filter
+        filtered_query = sample_filter.apply(query=select(SampleTable))
+        result = db_session.exec(filtered_query).all()
+
+        # Should only return samples with dog annotations
+        assert len(result) == 1
+        assert result[0].sample_id == samples[1].sample_id
+
     def test_query__annotation_filter_distinct_samples_only(self, db_session: Session) -> None:
         """Test SampleFilter with annotation label filters.
 
@@ -195,7 +246,9 @@ class TestSampleFilter:
 
         # Create the filter
         sample_filter = SampleFilter(
-            annotation_label_ids=[cat_label.annotation_label_id, dog_label.annotation_label_id],
+            annotations_filter=AnnotationsFilter(
+                annotation_label_ids=[cat_label.annotation_label_id, dog_label.annotation_label_id]
+            )
         )
 
         # Apply the filter

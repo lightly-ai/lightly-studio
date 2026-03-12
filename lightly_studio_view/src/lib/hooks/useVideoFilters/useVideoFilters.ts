@@ -16,12 +16,11 @@ export type VideoFilterParams = {
         metadata_values?: MetadataValues;
     };
     video_bounds?: VideoFieldsBoundsView | null;
-    text_embedding?: Array<number>;
 };
 
 const filterParams = writable<VideoFilterParams | null>(null);
 
-const videoFilter = derived(filterParams, ($filterParams): VideoFilter | null => {
+export const buildVideoFilter = ($filterParams: VideoFilterParams | null): VideoFilter | null => {
     if (!$filterParams?.collection_id) {
         return null;
     }
@@ -85,7 +84,11 @@ const videoFilter = derived(filterParams, ($filterParams): VideoFilter | null =>
     }
 
     return Object.keys(filters).length > 0 ? filters : null;
-});
+};
+
+const videoFilter = derived(filterParams, ($filterParams): VideoFilter | null =>
+    buildVideoFilter($filterParams)
+);
 
 export const useVideoFilters = () => {
     const updateFilterParams = (params: VideoFilterParams) => {
