@@ -31,11 +31,10 @@ class MetadataFilter(BaseModel):
     op: MetadataOperator
     value: Any
 
-
-class Metadata:
+# Ignore PLW1641 because `==` and `!=` create filters here, so this class does
+# not need normal hash behavior.
+class Metadata:  # noqa: PLW1641
     """Helper class for creating metadata filters with operator syntax."""
-
-    __hash__ = object.__hash__
 
     def __init__(self, key: str) -> None:
         """Initialize metadata filter with key."""
