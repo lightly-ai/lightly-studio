@@ -115,4 +115,10 @@ def _fetch_engine_url(api_url: str, token: str) -> str:
             f"Unexpected error from LightlyStudio ({response.status_code}): {response.text}"
         )
 
-    return response.json()["engine_url"]
+    try:
+        return response.json()["engine_url"]
+    except (ValueError, KeyError):
+        raise RuntimeError(
+            "Unexpected response from LightlyStudio: "
+            "response body does not contain `engine_url`."
+        ) from None
