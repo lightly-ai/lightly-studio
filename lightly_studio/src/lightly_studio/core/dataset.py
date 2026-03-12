@@ -253,7 +253,10 @@ def load_collection(sample_type: SampleType, name: str | None = None) -> Collect
     if name is None:
         name = DEFAULT_DATASET_NAME
 
-    collection = collection_resolver.get_by_name(session=db_manager.persistent_session(), name=name)
+    # Search for root collections only using parent_collection_id=None
+    collection = collection_resolver.get_by_name(
+        session=db_manager.persistent_session(), name=name, parent_collection_id=None
+    )
     if collection is None:
         return None
 
