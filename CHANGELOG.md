@@ -15,6 +15,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- Added DatasetTable to the database model, databases from previous versions won't work with this one.
+
 ### Deprecated
 
 ### Removed
