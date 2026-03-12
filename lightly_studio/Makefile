@@ -1,6 +1,6 @@
 # Postgres E2E test configuration
 POSTGRES_CONTAINER_NAME := lightly-studio-postgres
-POSTGRES_PORT := 5432
+POSTGRES_PORT := 5433
 POSTGRES_USER := lightly
 POSTGRES_PASSWORD := lightly
 POSTGRES_DB := lightly_studio
