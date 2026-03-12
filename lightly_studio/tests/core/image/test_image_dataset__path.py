@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import logging
 from pathlib import Path
 
 import pytest
@@ -152,8 +153,6 @@ class TestDataset:
                 images_path / "subfolder" / "im4.jpg",
             ]
         )
-
-        import logging
 
         caplog.set_level(logging.INFO)
 
