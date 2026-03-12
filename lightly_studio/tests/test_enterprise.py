@@ -53,7 +53,9 @@ def test_connect__success_env_vars(
     mock_response = mocker.MagicMock()
     mock_response.status_code = 200
     mock_response.ok = True
-    mock_response.json.return_value = {"engine_url": "postgresql://lightly:secret@10.0.0.5:5433/lightly_studio"}
+    mock_response.json.return_value = {
+        "engine_url": "postgresql://lightly:secret@10.0.0.5:5433/lightly_studio"
+    }
     mock_get = mocker.patch.object(requests, "get", return_value=mock_response)
 
     enterprise.connect()
@@ -72,7 +74,9 @@ def test_connect__strips_trailing_slash(
     mock_response = mocker.MagicMock()
     mock_response.status_code = 200
     mock_response.ok = True
-    mock_response.json.return_value = {"engine_url": "postgresql://lightly:secret@10.0.0.5:5433/lightly_studio"}
+    mock_response.json.return_value = {
+        "engine_url": "postgresql://lightly:secret@10.0.0.5:5433/lightly_studio"
+    }
     mock_get = mocker.patch.object(requests, "get", return_value=mock_response)
 
     enterprise.connect(api_url="http://10.0.0.5:8100/", token="tok")
@@ -95,7 +99,9 @@ def test_connect__explicit_params_over_env(
     mock_response = mocker.MagicMock()
     mock_response.status_code = 200
     mock_response.ok = True
-    mock_response.json.return_value = {"engine_url": "postgresql://lightly:secret@10.0.0.5:5433/lightly_studio"}
+    mock_response.json.return_value = {
+        "engine_url": "postgresql://lightly:secret@10.0.0.5:5433/lightly_studio"
+    }
     mock_get = mocker.patch.object(requests, "get", return_value=mock_response)
 
     enterprise.connect(api_url="http://10.0.0.6:8100", token="explicit-token")
