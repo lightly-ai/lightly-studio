@@ -56,7 +56,9 @@ def delete_dataset(
         raise ValueError("Only root collections can be deleted.")
 
     # Get the hierarchy and collect all IDs.
-    hierarchy = collection_resolver.get_hierarchy(session=session, dataset_id=root_collection_id)
+    hierarchy = collection_resolver.get_hierarchy(
+        session=session, root_collection_id=root_collection_id
+    )
     collection_ids = [coll.collection_id for coll in hierarchy]
 
     # Collect all sample IDs from all collections.
