@@ -17,7 +17,9 @@ def test_get_by_name__root_success(db_session: Session) -> None:
     create_collection(session=db_session, collection_name="ds2")
 
     # Exactly one root collection with the name exists
-    collection_fetched = collection_resolver.get_by_name(session=db_session, name="ds1")
+    collection_fetched = collection_resolver.get_by_name(
+        session=db_session, name="ds1", parent_collection_id=None
+    )
     assert collection_fetched is not None
     assert collection_fetched.collection_id == ds1.collection_id
     assert collection_fetched.name == "ds1"
@@ -26,7 +28,9 @@ def test_get_by_name__root_success(db_session: Session) -> None:
 
 def test_get_by_name_root_not_found(db_session: Session) -> None:
     # No root collection with the name exists
-    collection_fetched = collection_resolver.get_by_name(session=db_session, name="non_existing")
+    collection_fetched = collection_resolver.get_by_name(
+        session=db_session, name="non_existing", parent_collection_id=None
+    )
     assert collection_fetched is None
 
 

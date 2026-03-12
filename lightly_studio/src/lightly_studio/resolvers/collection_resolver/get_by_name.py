@@ -13,7 +13,7 @@ from lightly_studio.resolvers import collection_resolver
 def get_by_name(
     session: Session,
     name: str,
-    parent_collection_id: UUID | None = None,
+    parent_collection_id: UUID | None,
 ) -> CollectionTable | None:
     """Retrieves a single collection by its name and parent collection.
 
@@ -33,15 +33,14 @@ def get_by_name(
         ValueError:
             If the specified parent_collection_id does not exist.
     """
-    statement = select(CollectionTable).where(CollectionTable.name == name)
     if parent_collection_id is not None:
         parent = collection_resolver.get_by_id(session=session, collection_id=parent_collection_id)
         if parent is None:
             raise ValueError(f"Parent collection with id {parent_collection_id} not found.")
-        statement = statement.where(
-            col(CollectionTable.parent_collection_id) == parent_collection_id
-        )
-    else:
-        statement = statement.where(col(CollectionTable.parent_collection_id).is_(None))
+    statement = (
+        select(CollectionTable)
+        .where(CollectionTable.name == name)
+        .where(col(CollectionTable.parent_collection_id) == parent_collection_id)
+    )
 
     return session.exec(statement).one_or_none()
