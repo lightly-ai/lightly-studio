@@ -14,7 +14,7 @@ def get_by_name(
     session: Session,
     name: str,
     parent_collection_id: UUID | None,
-) -> CollectionTable | None:
+) -> UUID | None:
     """Retrieves a single collection by its name and parent collection.
 
     Args:
@@ -27,7 +27,7 @@ def get_by_name(
             is performed for root collections (collections with no parent).
 
     Returns:
-        The collection if found, otherwise None.
+        The collection ID if found, otherwise None.
 
     Raises:
         ValueError:
@@ -43,4 +43,7 @@ def get_by_name(
         .where(col(CollectionTable.parent_collection_id) == parent_collection_id)
     )
 
-    return session.exec(statement).one_or_none()
+    collection = session.exec(statement).one_or_none()
+    if collection is not None:
+        return collection.collection_id
+    return None

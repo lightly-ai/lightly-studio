@@ -256,13 +256,17 @@ def load_root_collection(
         name = DEFAULT_DATASET_NAME
 
     # Search for root collections only using parent_collection_id=None
-    collection = collection_resolver.get_by_name(
+    collection_id = collection_resolver.get_by_name(
         session=db_manager.persistent_session(), name=name, parent_collection_id=None
     )
-    if collection is None:
+    if collection_id is None:
         return None
 
-    # Dataset exists, verify the sample type matches.
+    # Root collection exists, verify the sample type matches.
+    collection = collection_resolver.get_by_id(
+        session=db_manager.persistent_session(), collection_id=collection_id
+    )
+    assert collection is not None
     if collection.sample_type != sample_type:
         raise ValueError(
             f"Dataset with name '{name}' already exists with sample type "

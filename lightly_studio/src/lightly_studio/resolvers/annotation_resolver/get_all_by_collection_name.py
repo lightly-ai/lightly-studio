@@ -33,11 +33,11 @@ def get_all_by_collection_name(
     Raises:
         ValueError: If the collection with the given name does not exist.
     """
-    collection = get_by_name(
+    collection_id = get_by_name(
         session=session, name=collection_name, parent_collection_id=parent_collection_id
     )
-    if collection is None:
+    if collection_id is None:
         raise ValueError(f"Collection with name '{collection_name}' does not exist.")
 
-    filters = AnnotationsFilter(collection_ids=[collection.collection_id])
+    filters = AnnotationsFilter(collection_ids=[collection_id])
     return get_all(session=session, pagination=pagination, filters=filters)
