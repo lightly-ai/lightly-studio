@@ -35,6 +35,8 @@ class OrdinalField(Field, Generic[T]):
     >, <, >=, <=, ==, !=
     """
 
+    __hash__ = object.__hash__
+
     def __init__(self, column: Mapped[T]) -> None:
         """Initialize the ordinal field with a database column.
 
@@ -87,6 +89,8 @@ class ComparableField(Field, Generic[T]):
     - ComparableField(ABC) with the comparison operators.
     - ComparableColumnField(StringField) for the __init__ and get_sqlmodel_field implementation.
     """
+
+    __hash__ = object.__hash__
 
     def __init__(self, column: Mapped[T]) -> None:
         """Initialize the string field with a database column.

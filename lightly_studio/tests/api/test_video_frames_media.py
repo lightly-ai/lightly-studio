@@ -259,9 +259,7 @@ def test_get_cached_capture_handles_stale_entry(
 def test_get_thread_pool_executor_creates_singleton() -> None:
     """Test get_thread_pool_executor returns the same executor instance."""
     # Reset the global executor
-    import lightly_studio.api.routes.video_frames_media as module
-
-    module._thread_pool_executor = None
+    video_frames_media_module._thread_pool_executor = None
 
     executor1 = get_thread_pool_executor()
     executor2 = get_thread_pool_executor()
@@ -271,9 +269,7 @@ def test_get_thread_pool_executor_creates_singleton() -> None:
 
 def test_get_thread_pool_executor_has_workers() -> None:
     """Test get_thread_pool_executor creates executor with workers."""
-    import lightly_studio.api.routes.video_frames_media as module
-
-    module._thread_pool_executor = None
+    video_frames_media_module._thread_pool_executor = None
 
     executor = get_thread_pool_executor()
 
