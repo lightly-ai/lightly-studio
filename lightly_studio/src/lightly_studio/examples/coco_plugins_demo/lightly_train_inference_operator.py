@@ -94,9 +94,7 @@ class LightlyTrainObjectDetectionInferenceOperator(BaseOperator):
                 context_filter = context.context_filter
 
         samples_result = image_resolver.get_all_by_collection_id(
-            session=session,
-            collection_id=collection_id,
-            filters=context_filter
+            session=session, collection_id=collection_id, filters=context_filter
         )
         samples = list(samples_result.samples)
         if not samples:
