@@ -1,10 +1,10 @@
 # Postgres E2E test configuration
 POSTGRES_CONTAINER_NAME := lightly-studio-postgres
 POSTGRES_PORT := 5432
-POSTGRES_USER := postgres
-POSTGRES_PASSWORD := postgres
+POSTGRES_USER := lightly
+POSTGRES_PASSWORD := lightly
 POSTGRES_DB := lightly_studio
-POSTGRES_IMAGE := pgvector/pgvector:pg17
+POSTGRES_IMAGE := pgvector/pgvector:0.8.1-pg18-bookworm
 POSTGRES_URL := postgresql://$(POSTGRES_USER):$(POSTGRES_PASSWORD)@localhost:$(POSTGRES_PORT)/$(POSTGRES_DB)
 
 .PHONY: install-uv
