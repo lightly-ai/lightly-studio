@@ -13,7 +13,7 @@ def test_get_group_previews__no_collections(db_session: Session) -> None:
     """Test that empty list of group IDs returns empty dict."""
     group_col = create_collection(session=db_session, sample_type=SampleType.GROUP)
     with pytest.raises(
-        ValueError, match="No component collections found for the given group collection."
+        ValueError, match=r"No component collections found for the given group collection."
     ):
         group_resolver.get_group_previews(
             session=db_session, group_collection_id=group_col.collection_id, group_sample_ids=[]

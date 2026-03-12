@@ -42,7 +42,7 @@ def test_get_group_components(db_session: Session) -> None:
 
 
 def test_get_group_components__non_existent_parent(db_session: Session) -> None:
-    with pytest.raises(ValueError, match="Parent collection with id .* does not exist."):
+    with pytest.raises(ValueError, match=r"Parent collection with id .* does not exist."):
         collection_resolver.get_group_components(
             session=db_session,
             parent_collection_id=UUID("00000000-0000-0000-0000-000000000000"),
@@ -56,7 +56,7 @@ def test_get_group_components__non_group_parent(db_session: Session) -> None:
         sample_type=SampleType.IMAGE,
     )
     with pytest.raises(
-        ValueError, match="Can only get group components for collections of type GROUP."
+        ValueError, match=r"Can only get group components for collections of type GROUP."
     ):
         collection_resolver.get_group_components(
             session=db_session,

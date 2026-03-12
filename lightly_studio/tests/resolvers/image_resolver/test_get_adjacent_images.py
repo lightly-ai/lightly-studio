@@ -90,7 +90,7 @@ def test_get_adjacent_images__raises_with_filter_missing_collection_id(db_sessio
         file_path_abs="/images/a.png",
     )
 
-    with pytest.raises(ValueError, match="Collection ID must be provided in filters."):
+    with pytest.raises(ValueError, match=r"Collection ID must be provided in filters."):
         image_resolver.get_adjacent_images(
             session=db_session,
             sample_id=image.sample_id,
