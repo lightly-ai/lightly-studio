@@ -69,7 +69,7 @@ start-e2e-video-groups: build
 	uv run e2e-tests/index_videos_groups.py
 
 .PHONY: start-postgres
-start-postgres:
+start-postgres: stop-postgres
 	@echo "Starting PostgreSQL container ($(POSTGRES_IMAGE))..."
 	docker run -d \
 		--name $(POSTGRES_CONTAINER_NAME) \
