@@ -23,7 +23,7 @@ def test_get_by_name__root_success(db_session: Session) -> None:
     assert collection_id == ds1.collection_id
 
 
-def test_get_by_name_root_not_found(db_session: Session) -> None:
+def test_get_by_name__root_not_found(db_session: Session) -> None:
     # No root collection with the name exists
     collection_id = collection_resolver.get_by_name(
         session=db_session, name="non_existing", parent_collection_id=None
@@ -31,7 +31,7 @@ def test_get_by_name_root_not_found(db_session: Session) -> None:
     assert collection_id is None
 
 
-def test_get_by_name_child_success(db_session: Session) -> None:
+def test_get_by_name__child_success(db_session: Session) -> None:
     # Create two root collections
     ds1 = create_collection(session=db_session, collection_name="ds1")
     ds2 = create_collection(session=db_session, collection_name="ds2")
@@ -68,7 +68,7 @@ def test_get_by_name_child_success(db_session: Session) -> None:
     assert collection.parent_collection_id == ds2.collection_id
 
 
-def test_get_by_name_child_not_found(db_session: Session) -> None:
+def test_get_by_name__child_not_found(db_session: Session) -> None:
     # Create a root collection
     ds1 = create_collection(session=db_session, collection_name="ds1")
 
@@ -79,7 +79,7 @@ def test_get_by_name_child_not_found(db_session: Session) -> None:
     assert collection_id is None
 
 
-def test_get_by_name_parent_not_found(db_session: Session) -> None:
+def test_get_by_name__parent_not_found(db_session: Session) -> None:
     # Parent ID does not exist
     with pytest.raises(ValueError, match="Parent collection with id"):
         collection_resolver.get_by_name(
