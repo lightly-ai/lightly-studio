@@ -93,6 +93,11 @@ def _fetch_engine_url(api_url: str, token: str) -> str:
             f"Could not reach LightlyStudio at {api_url}. "
             "Verify the URL and that the server is running."
         ) from None
+    except requests.Timeout:
+        raise ConnectionError(
+            f"Request to LightlyStudio at {api_url} timed out. "
+            "Verify that the server is reachable and responsive."
+        ) from None
 
     if response.status_code == http.HTTPStatus.UNAUTHORIZED:
         raise PermissionError(
