@@ -15,8 +15,6 @@ const loadInitialMetadataInfo = async (collection_id: string) => {
         return;
     }
 
-    lastCollectionId.set(collection_id);
-
     if (!validateUUID(collection_id)) {
         return;
     }
@@ -31,6 +29,7 @@ const loadInitialMetadataInfo = async (collection_id: string) => {
         return;
     }
 
+    lastCollectionId.set(collection_id);
     const { updateMetadataBounds, updateMetadataValues, updateMetadataInfo } = useGlobalStorage();
 
     // Extract numerical metadata for bounds and values

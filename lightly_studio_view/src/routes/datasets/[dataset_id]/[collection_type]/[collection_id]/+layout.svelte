@@ -253,6 +253,14 @@
             };
         }
 
+        if (metadataFilters) {
+            filter.sample_filter = {
+                ...(filter.sample_filter ?? {}),
+                collection_id: datasetId,
+                metadata_filters: metadataFilters
+            };
+        }
+
         return Object.keys(filter).length > 0 ? filter : undefined;
     });
     const { videoFramesBoundsValues } = useVideoFramesBounds();

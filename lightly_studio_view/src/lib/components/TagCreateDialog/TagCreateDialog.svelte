@@ -7,7 +7,6 @@
         readImages,
         type ReadImagesRequest,
         getAllFrames,
-        type AnnotationsFilter,
         type VideoFrameFilter,
         type VideoFilter,
         getVideoSampleIds,
