@@ -2974,8 +2974,6 @@ export interface components {
         SampleFilter: {
             /** Collection Id */
             collection_id?: string | null;
-            /** Annotation Label Ids */
-            annotation_label_ids?: string[] | null;
             /** Tag Ids */
             tag_ids?: string[] | null;
             /** Metadata Filters */
@@ -3388,8 +3386,6 @@ export interface components {
             height?: components["schemas"]["FilterDimensions"] | null;
             fps?: components["schemas"]["FloatRange"] | null;
             duration_s?: components["schemas"]["FloatRange"] | null;
-            /** Annotation Frames Label Ids */
-            annotation_frames_label_ids?: string[] | null;
             sample_filter?: components["schemas"]["SampleFilter"] | null;
             frame_annotation_filter?: components["schemas"]["AnnotationsFilter"] | null;
         };

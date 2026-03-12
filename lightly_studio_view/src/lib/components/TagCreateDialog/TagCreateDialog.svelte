@@ -70,12 +70,14 @@
         $selectedAnnotationFilterIds?.size ? Array.from($selectedAnnotationFilterIds) : undefined
     );
 
-    const sampleFilter = $derived<SampleFilter>({
-        annotations_filter: annotationLabelIds
+    const annotationFilter = $derived<AnnotationsFilter | undefined>(
+        annotationLabelIds
             ? {
                   annotation_label_ids: annotationLabelIds
               }
-            : undefined,
+            : undefined
+    );
+    const sampleFilter = $derived<SampleFilter>({
         tag_ids: $tagsSelected.size > 0 ? Array.from($tagsSelected) : undefined,
         metadata_filters: $metadataValues ? createMetadataFilters($metadataValues) : undefined
     });
@@ -85,6 +87,7 @@
                 sample_ids: isNormalModeParams($filterParams)
                     ? $filterParams.filters?.sample_ids
                     : undefined,
+                annotations_filter: annotationFilter,
                 ...sampleFilter
             },
             ...($dimensions ?? {})
@@ -96,7 +99,7 @@
     const videoFramesFilter = $derived<VideoFrameFilter>({
         sample_filter: {
             ...sampleFilter,
-            annotation_label_ids: annotationLabelIds
+            annotations_filter: annotationFilter
         },
         ...$videoFramesBoundsValues
     });
@@ -104,9 +107,7 @@
     const { videoBoundsValues } = useVideoBounds();
 
     const videosFilter = $derived<VideoFilter>({
-        annotation_frames_label_ids: $selectedAnnotationFilterIds?.size
-            ? Array.from($selectedAnnotationFilterIds)
-            : undefined,
+        frame_annotation_filter: annotationFilter,
         sample_filter: {
             sample_ids: $videoFilterParams?.filters?.sample_ids,
             ...sampleFilter

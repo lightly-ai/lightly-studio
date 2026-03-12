@@ -160,7 +160,9 @@ describe('PlotPanel.svelte', () => {
         imageFilterStore.set({
             sample_filter: {
                 sample_ids: [],
-                annotation_label_ids: ['dog']
+                annotations_filter: {
+                    annotation_label_ids: ['dog']
+                }
             }
         });
 

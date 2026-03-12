@@ -5,6 +5,7 @@ import type {
     VideoFrameFieldsBoundsView
 } from '$lib/api/lightly_studio_local/types.gen';
 
+type AnnotationsFilter = components['schemas']['AnnotationsFilter'];
 type SampleFilter = components['schemas']['SampleFilter'];
 type MetadataValues = Record<string, { min: number; max: number }>;
 
@@ -51,7 +52,9 @@ export const getFrameFilter = (params: VideoFrameFilterParams | null): VideoFram
 
     const annotationLabelIds = params.filters?.annotation_label_ids;
     if (annotationLabelIds && annotationLabelIds.length > 0) {
-        sampleFilter.annotation_label_ids = annotationLabelIds;
+        sampleFilter.annotations_filter = {
+            annotation_label_ids: annotationLabelIds
+        } satisfies AnnotationsFilter;
     }
 
     const tagIds = params.filters?.tag_ids;
