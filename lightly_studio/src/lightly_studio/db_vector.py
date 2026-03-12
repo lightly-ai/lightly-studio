@@ -32,6 +32,7 @@ class VectorType(TypeDecorator[list[float]]):
         Raises NotImplementedError for unsupported dialects.
         """
         if dialect.name == "postgresql":
+            # Keep this import local because pgvector is only needed for PostgreSQL.
             from pgvector.sqlalchemy import Vector  # noqa: PLC0415
 
             return dialect.type_descriptor(Vector())
