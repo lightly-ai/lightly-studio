@@ -78,10 +78,14 @@ start-postgres:
 		-e POSTGRES_DB=$(POSTGRES_DB) \
 		-p $(POSTGRES_PORT):5432 \
 		$(POSTGRES_IMAGE)
+ifeq ($(OS),Windows_NT)
+	@powershell -Command "Start-Sleep -Seconds 3"
+else
 	@echo "Waiting for PostgreSQL to be ready..."
 	@until docker exec $(POSTGRES_CONTAINER_NAME) pg_isready -U $(POSTGRES_USER) -d $(POSTGRES_DB) > /dev/null 2>&1; do \
 		sleep 1; \
 	done
+endif
 	@echo "PostgreSQL is ready on port $(POSTGRES_PORT)"
 
 .PHONY: stop-postgres
