@@ -156,7 +156,12 @@ def deep_copy(
     request: DeepCopyRequest,
 ) -> dict[str, str]:
     """Create a deep copy of a collection with all related data."""
-    existing = collection_resolver.get_by_name(session=session, name=request.copy_name)
+    existing = collection_resolver.get_by_name(
+        # parent_collection_id=None searches for root collections
+        session=session,
+        name=request.copy_name,
+        parent_collection_id=None,
+    )
     if existing:
         raise HTTPException(
             status_code=HTTP_STATUS_CONFLICT,
