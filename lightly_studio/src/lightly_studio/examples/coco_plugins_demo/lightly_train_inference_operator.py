@@ -20,16 +20,13 @@ from lightly_studio.resolvers import (
     annotation_label_resolver,
     annotation_resolver,
     image_resolver,
-    tag_resolver,
 )
 from lightly_studio.resolvers.image_filter import ImageFilter
 from lightly_studio.resolvers.sample_resolver.sample_filter import SampleFilter
 
-DEFAULT_INPUT_TAG = "unlabeled"
 DEFAULT_MODEL_NAME = "dinov3/convnext-tiny-ltdetr-coco"
 DEFAULT_SCORE_THRESHOLD = 0.5
 
-PARAM_INPUT_TAG = "input_tag"
 PARAM_MODEL_NAME = "model_name"
 PARAM_SCORE_THRESHOLD = "score_threshold"
 
@@ -57,12 +54,6 @@ class LightlyTrainObjectDetectionInferenceOperator(BaseOperator):
                 default=DEFAULT_SCORE_THRESHOLD,
                 description="Minimum score for keeping a prediction.",
             ),
-            StringParameter(
-                name=PARAM_INPUT_TAG,
-                required=True,
-                default=DEFAULT_INPUT_TAG,
-                description="Tag of samples to auto-label.",
-            ),
         ]
 
     @property
@@ -81,23 +72,11 @@ class LightlyTrainObjectDetectionInferenceOperator(BaseOperator):
         collection_id = context.collection_id
         model_name = str(parameters.get(PARAM_MODEL_NAME, DEFAULT_MODEL_NAME))
         score_threshold = float(parameters.get(PARAM_SCORE_THRESHOLD, DEFAULT_SCORE_THRESHOLD))
-        input_tag = str(parameters.get(PARAM_INPUT_TAG, DEFAULT_INPUT_TAG))
 
         if score_threshold < 0.0 or score_threshold > 1.0:
             return OperatorResult(
                 success=False,
                 message="score_threshold must be between 0 and 1",
-            )
-
-        input_tag_entry = tag_resolver.get_by_name(
-            session=session,
-            tag_name=input_tag,
-            collection_id=collection_id,
-        )
-        if input_tag_entry is None:
-            return OperatorResult(
-                success=False,
-                message=f"Tag '{input_tag}' not found.",
             )
 
         model = lightly_train.load_model(model=model_name)
@@ -107,18 +86,21 @@ class LightlyTrainObjectDetectionInferenceOperator(BaseOperator):
             class_map=model.classes,
         )
 
+        context_filter = None
+        if context.context_filter:
+            if isinstance(context.context_filter, SampleFilter):
+                context_filter = ImageFilter(sample_filter=context.context_filter)
+            elif isinstance(context.context_filter, ImageFilter):
+                context_filter = context.context_filter
+
         samples_result = image_resolver.get_all_by_collection_id(
-            session=session,
-            collection_id=collection_id,
-            filters=ImageFilter(
-                sample_filter=SampleFilter(tag_ids=[input_tag_entry.tag_id]),
-            ),
+            session=session, collection_id=collection_id, filters=context_filter
         )
         samples = list(samples_result.samples)
         if not samples:
             return OperatorResult(
                 success=True,
-                message=f"No samples found for tag '{input_tag}'.",
+                message="No samples found for current view.",
             )
 
         annotations_to_create: list[AnnotationCreate] = []
