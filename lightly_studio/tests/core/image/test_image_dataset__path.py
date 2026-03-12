@@ -51,7 +51,7 @@ class TestDataset:
         images_path.touch()
 
         dataset = ImageDataset.create(name="test_dataset")
-        with pytest.raises(ValueError, match="File is not an image:.*file.txt"):
+        with pytest.raises(ValueError, match=r"File is not an image:.*file.txt"):
             dataset.add_images_from_path(path=images_path)
 
     def test_dataset_add_images_from_path__non_existent_dir(
@@ -62,7 +62,7 @@ class TestDataset:
         images_path = tmp_path / "non_existent"
 
         dataset = ImageDataset.create(name="test_dataset")
-        with pytest.raises(ValueError, match="Path does not exist:.*non_existent"):
+        with pytest.raises(ValueError, match=r"Path does not exist:.*non_existent"):
             dataset.add_images_from_path(path=images_path)
 
     def test_dataset_add_images_from_path__empty_dir(

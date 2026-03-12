@@ -165,7 +165,7 @@ def test_get_all__empty(db_session: Session) -> None:
 def test_get_all__without_collection_id(db_session: Session) -> None:
     """Test that request without collection_id raises an error."""
     with pytest.raises(
-        ValueError, match="Collection ID must be provided in filters to fetch groups."
+        ValueError, match=r"Collection ID must be provided in filters to fetch groups."
     ):
         group_resolver.get_all(
             session=db_session,

@@ -98,7 +98,7 @@ def test_get_collection_hierarchy__non_existent_collection(
     db_session: Session,
 ) -> None:
     with pytest.raises(
-        ValueError, match="Collection with id 00000000-0000-0000-0000-000000000000 not found."
+        ValueError, match=r"Collection with id 00000000-0000-0000-0000-000000000000 not found."
     ):
         collection_resolver.get_hierarchy(
             session=db_session, root_collection_id=UUID("00000000-0000-0000-0000-000000000000")

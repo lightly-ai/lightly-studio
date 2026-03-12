@@ -82,7 +82,9 @@ def test_set_engine__raises_if_already_set(
     """Test set_engine raises if the engine is already set."""
     engine_url = "duckdb:///:memory:"
     db_manager.set_engine(engine=DatabaseEngine(engine_url=engine_url, single_threaded=True))
-    with pytest.raises(RuntimeError, match="Database engine is already set and cannot be changed."):
+    with pytest.raises(
+        RuntimeError, match=r"Database engine is already set and cannot be changed."
+    ):
         db_manager.set_engine(
             engine=DatabaseEngine(engine_url="duckdb:///:memory:", single_threaded=True)
         )
@@ -100,7 +102,9 @@ def test_connect(
     assert engine._engine_url == f"duckdb:///{db_file}"
 
     # Cannot connect again, should raise.
-    with pytest.raises(RuntimeError, match="Database engine is already set and cannot be changed."):
+    with pytest.raises(
+        RuntimeError, match=r"Database engine is already set and cannot be changed."
+    ):
         db_manager.connect(db_file=str(db_file), cleanup_existing=True)
 
 
@@ -208,7 +212,7 @@ def test_detect_backend_from_url() -> None:
     assert (
         _detect_backend_from_url("postgres://user:pass@localhost/db") == DatabaseBackend.POSTGRESQL
     )
-    with pytest.raises(ValueError, match="Unsupported database URL scheme"):
+    with pytest.raises(ValueError, match=r"Unsupported database URL scheme"):
         _detect_backend_from_url("mysql://localhost/db")
 
 
@@ -252,7 +256,7 @@ def test_connect__with_engine_url(
 def test_connect__db_file_and_engine_url_raises(
     patch_engine_singleton: None,  # noqa: ARG001
 ) -> None:
-    with pytest.raises(ValueError, match="Cannot specify both db_file and engine_url"):
+    with pytest.raises(ValueError, match=r"Cannot specify both db_file and engine_url"):
         db_manager.connect(db_file="test.db", engine_url="duckdb:///other.db")
 
 

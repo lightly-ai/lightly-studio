@@ -45,9 +45,9 @@ class TestMundig:
         with pytest.raises(
             ValueError,
             match=(
-                "setting an array element with a sequence. "
-                "The requested array has an inhomogeneous shape after "
-                "1 dimensions. "
+                r"setting an array element with a sequence. "
+                r"The requested array has an inhomogeneous shape after "
+                r"1 dimensions. "
             ),
         ):
             mundig.add_diversity([[1], [3, 4], [5]])

@@ -104,7 +104,7 @@ def test_update_bounding_box__classification(
         height=200,
     )
 
-    with pytest.raises(ValueError, match="Annotation type does not support bounding boxes."):
+    with pytest.raises(ValueError, match=r"Annotation type does not support bounding boxes."):
         annotation_resolver.update_bounding_box(db_session, annotation_id, new_coordinates)
 
 

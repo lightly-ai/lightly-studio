@@ -101,7 +101,7 @@ class TestImageFilter:
         expected_condition: Callable[[ImageTable], bool],
     ) -> None:
         """Test ImageFilter with dimension filters."""
-        samples, collection_id, session = setup_samples_filter_test
+        _samples, _collection_id, session = setup_samples_filter_test
 
         # Create the base query.
         query = select(ImageTable).join(ImageTable.sample)
@@ -123,7 +123,7 @@ class TestImageFilter:
         self, setup_samples_filter_test: tuple[list[ImageTable], UUID, Session]
     ) -> None:
         """Test that apply_filters calls apply_dimensions_filters."""
-        samples, collection_id, session = setup_samples_filter_test
+        _samples, _collection_id, session = setup_samples_filter_test
 
         # Create a filter with specific dimensions
         width_filter = FilterDimensions(min=500, max=2000)
