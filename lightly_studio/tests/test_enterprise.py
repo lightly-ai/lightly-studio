@@ -29,7 +29,6 @@ def test_connect__success(mocker: MockerFixture, patch_db_connect: MockType) -> 
         "engine_url": "postgresql://lightly:secret@10.0.0.5:5433/lightly_studio"
     }
     mock_get = mocker.patch.object(requests, "get", return_value=mock_response)
-    # mock_connect = mocker.patch.object(db_manager, "connect")
 
     enterprise.connect(api_url="http://10.0.0.5:8100", token="token")
 
