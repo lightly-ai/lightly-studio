@@ -1,4 +1,4 @@
-# Postgres E2E test configuration
+# Postgres E2E test configuration (for local development only, not used in CI)
 POSTGRES_CONTAINER_NAME := lightly-studio-postgres
 POSTGRES_PORT := 5433
 POSTGRES_USER := lightly
