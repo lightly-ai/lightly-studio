@@ -344,6 +344,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/collections/{collection_id}/export/youtube-vis": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Export Collection Youtube Vis
+         * @description Export collection video annotations in YouTube-VIS instance segmentation format.
+         */
+        get: operations["export_collection_youtube_vis"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/collections/{collection_id}/images/list": {
         parameters: {
             query?: never;
@@ -4216,6 +4236,37 @@ export interface operations {
                 };
                 content: {
                     "application/json": number;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    export_collection_youtube_vis: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                collection_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
                 };
             };
             /** @description Validation Error */
