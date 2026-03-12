@@ -31,6 +31,7 @@ class MetadataFilter(BaseModel):
     op: MetadataOperator
     value: Any
 
+
 # Ignore PLW1641 because `==` and `!=` create filters here, so this class does
 # not need normal hash behavior.
 class Metadata:  # noqa: PLW1641

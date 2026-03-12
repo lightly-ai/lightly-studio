@@ -27,6 +27,7 @@ class Field(ABC):
             The database column or property for queries.
         """
 
+
 # Ignore PLW1641 because `==` and `!=` create query conditions here, so these
 # classes do not need normal hash behavior.
 class OrdinalField(Field, Generic[T]):  # noqa: PLW1641
@@ -79,6 +80,7 @@ class OrdinalField(Field, Generic[T]):  # noqa: PLW1641
 
 NumericalField = OrdinalField[Union[float, int]]
 DatetimeField = OrdinalField[datetime]
+
 
 # Ignore PLW1641 because `==` and `!=` create query conditions here, so these
 # classes do not need normal hash behavior.
