@@ -20,6 +20,7 @@ def get_collection_details(
     )
     return CollectionViewWithCount(
         collection_id=collection.collection_id,
+        dataset_id=collection.dataset_id,
         parent_collection_id=collection.parent_collection_id,
         sample_type=collection.sample_type,
         name=collection.name,

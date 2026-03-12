@@ -17,6 +17,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 
 - Smarter font loading reduces initial download from 500kB to 150kB
+- Added DatasetTable to the database model, databases from previous versions are incompatible with this one.
 
 ### Deprecated
 

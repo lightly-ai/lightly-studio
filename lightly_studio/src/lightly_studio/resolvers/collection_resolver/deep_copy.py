@@ -23,6 +23,7 @@ from lightly_studio.models.annotation.segmentation import (
 from lightly_studio.models.annotation_label import AnnotationLabelTable
 from lightly_studio.models.caption import CaptionTable
 from lightly_studio.models.collection import CollectionTable
+from lightly_studio.models.dataset import DatasetTable
 from lightly_studio.models.embedding_model import EmbeddingModelTable
 from lightly_studio.models.group import GroupTable, SampleGroupLinkTable
 from lightly_studio.models.image import ImageTable
@@ -82,13 +83,33 @@ def deep_copy(
 
     ctx = DeepCopyContext()
 
-    # 1. Copy collection hierarchy.
+    # 1. Create new dataset entry.
+    new_dataset_id = uuid4()
+    db_dataset = DatasetTable(
+        dataset_id=new_dataset_id,
+        root_collection_id=None,
+    )
+    session.add(db_dataset)
+    session.flush([db_dataset])
+
+    # 2. Copy collection hierarchy.
     hierarchy = collection_resolver.get_hierarchy(
         session=session, root_collection_id=root_collection_id
     )
-    root = _copy_collections(session=session, hierarchy=hierarchy, copy_name=copy_name, ctx=ctx)
+    root = _copy_collections(
+        session=session,
+        hierarchy=hierarchy,
+        copy_name=copy_name,
+        ctx=ctx,
+        new_dataset_id=new_dataset_id,
+    )
 
-    # 2. Copy collection-scoped entities.
+    # Update dataset with root collection ID.
+    db_dataset.root_collection_id = root.collection_id
+    session.add(db_dataset)
+    session.flush([db_dataset])
+
+    # 3. Copy collection-scoped entities.
     old_collection_ids = list(ctx.collection_map.keys())
     _copy_tags(session=session, old_collection_ids=old_collection_ids, ctx=ctx)
     _copy_object_tracks(session=session, old_collection_ids=old_collection_ids, ctx=ctx)
@@ -97,7 +118,7 @@ def deep_copy(
     _copy_samples(session=session, old_collection_ids=old_collection_ids, ctx=ctx)
     session.flush()
 
-    # 3. Copy type-specific sample tables.
+    # 4. Copy type-specific sample tables.
     old_sample_ids = list(ctx.sample_map.keys())
     _copy_images(session=session, old_sample_ids=old_sample_ids, ctx=ctx)
     _copy_videos(session=session, old_sample_ids=old_sample_ids, ctx=ctx)
@@ -107,12 +128,12 @@ def deep_copy(
     _copy_annotations(session=session, old_sample_ids=old_sample_ids, ctx=ctx)
     session.flush()
 
-    # 4. Copy sample attachments.
+    # 5. Copy sample attachments.
     _copy_metadata(session=session, old_sample_ids=old_sample_ids, ctx=ctx)
     _copy_embeddings(session=session, old_sample_ids=old_sample_ids, ctx=ctx)
     session.flush()
 
-    # 5. Copy link tables.
+    # 6. Copy link tables.
     _copy_sample_tag_links(session=session, old_sample_ids=old_sample_ids, ctx=ctx)
     _copy_sample_group_links(session=session, old_sample_ids=old_sample_ids, ctx=ctx)
 
@@ -126,6 +147,7 @@ def _copy_collections(
     hierarchy: list[CollectionTable],
     copy_name: str,
     ctx: DeepCopyContext,
+    new_dataset_id: UUID,
 ) -> CollectionTable:
     """Copy collection hierarchy, maintaining parent-child relationships."""
     root: CollectionTable | None = None
@@ -153,6 +175,7 @@ def _copy_collections(
             old_coll,
             {
                 "collection_id": new_id,
+                "dataset_id": new_dataset_id,
                 "name": derived_name,
                 "parent_collection_id": new_parent_id,
             },
