@@ -11,7 +11,7 @@ from tests.helpers_resolvers import (
 )
 
 
-def test_get_by_name_root_success(db_session: Session) -> None:
+def test_get_by_name__root_success(db_session: Session) -> None:
     # Create two root collections
     ds1 = create_collection(session=db_session, collection_name="ds1")
     create_collection(session=db_session, collection_name="ds2")
