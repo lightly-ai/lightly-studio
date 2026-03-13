@@ -279,7 +279,7 @@ class TestDatasetExport:
             "annotations": [],
         }
 
-    def test_to_pascalvoc_instance_segmentation(
+    def test_o_pascalvoc_semantic_segmentation(
         self,
         tmp_path: Path,
         patch_collection: None,  # noqa: ARG002
@@ -301,7 +301,7 @@ class TestDatasetExport:
         )
 
         output_folder = tmp_path / "pascalvoc"
-        export_dataset.to_pascalvoc_instance_segmentation(
+        export_dataset.o_pascalvoc_semantic_segmentation(
             session=dataset.session,
             root_dataset_id=dataset.dataset_id,
             samples=dataset.query(),
@@ -318,7 +318,7 @@ class TestDatasetExport:
             mask_values = list(mask.getdata())
         assert mask_values == [0, 0, 0, 0, 0, 0]
 
-    def test_to_pascalvoc_instance_segmentation__void_uses_non_semantic_id(
+    def test_o_pascalvoc_semantic_segmentation__void_uses_non_semantic_id(
         self,
         tmp_path: Path,
         patch_collection: None,  # noqa: ARG002
@@ -340,7 +340,7 @@ class TestDatasetExport:
         )
 
         output_folder = tmp_path / "pascalvoc"
-        export_dataset.to_pascalvoc_instance_segmentation(
+        export_dataset.o_pascalvoc_semantic_segmentation(
             session=dataset.session,
             root_dataset_id=dataset.dataset_id,
             samples=dataset.query(),

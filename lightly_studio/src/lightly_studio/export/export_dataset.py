@@ -142,7 +142,7 @@ def to_coco_instance_segmentations(
     COCOInstanceSegmentationOutput(output_file=output_json).save(label_input=export_input)
 
 
-def to_pascalvoc_instance_segmentation(
+def o_pascalvoc_semantic_segmentation(
     session: Session,
     root_dataset_id: UUID,
     samples: Iterable[ImageSample],
