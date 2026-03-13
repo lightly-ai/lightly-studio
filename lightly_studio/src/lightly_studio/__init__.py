@@ -16,6 +16,7 @@ from lightly_studio.core.start_gui import (
     stop_gui_background,
 )
 from lightly_studio.models.collection import SampleType
+from lightly_studio.enterprise import connect
 
 
 # TODO (Jonas 08/25): This will be removed as soon as the new interface is used in the examples
@@ -29,6 +30,7 @@ __all__ = [
     "ImageDataset",
     "SampleType",
     "VideoDataset",
+    "connect",
     "start_gui",
     "start_gui_background",
     "stop_gui_background",
