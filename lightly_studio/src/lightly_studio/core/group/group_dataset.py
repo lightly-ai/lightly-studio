@@ -112,7 +112,7 @@ class GroupDataset(Dataset[GroupSample]):
     @classmethod
     def load(cls, name: str | None = None) -> Self:
         """Load an existing dataset."""
-        collection = dataset.load_collection(name=name, sample_type=cls.sample_type())
+        collection = dataset.load_root_collection(name=name, sample_type=cls.sample_type())
         if collection is None:
             raise ValueError(f"Dataset with name '{name}' not found.")
         return cls(collection=collection)
@@ -131,7 +131,7 @@ class GroupDataset(Dataset[GroupSample]):
                 `(component_name: str, sample_type: SampleType)`.
             name: The name of the dataset. If None, a default name is used.
         """
-        collection = dataset.load_collection(name=name, sample_type=cls.sample_type())
+        collection = dataset.load_root_collection(name=name, sample_type=cls.sample_type())
         if collection is None:
             return cls.create(components=components, name=name)
 

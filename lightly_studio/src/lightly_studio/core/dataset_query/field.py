@@ -28,7 +28,9 @@ class Field(ABC):
         """
 
 
-class OrdinalField(Field, Generic[T]):
+# Ignore PLW1641 because `==` and `!=` create query conditions here, so these
+# classes do not need normal hash behavior.
+class OrdinalField(Field, Generic[T]):  # noqa: PLW1641
     """Generic field for ordinal values that support comparison operations.
 
     Ordinal values have a natural ordering and support all comparison operators:
@@ -80,7 +82,9 @@ NumericalField = OrdinalField[Union[float, int]]
 DatetimeField = OrdinalField[datetime]
 
 
-class ComparableField(Field, Generic[T]):
+# Ignore PLW1641 because `==` and `!=` create query conditions here, so these
+# classes do not need normal hash behavior.
+class ComparableField(Field, Generic[T]):  # noqa: PLW1641
     """Field for values that supports equality operations.
 
     Optional refactor when needed: Split into

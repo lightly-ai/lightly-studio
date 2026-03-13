@@ -1,3 +1,12 @@
+# Postgres E2E test configuration (for local development only, not used in CI)
+POSTGRES_CONTAINER_NAME := lightly-studio-postgres
+POSTGRES_PORT := 5433
+POSTGRES_USER := lightly
+POSTGRES_PASSWORD := lightly
+POSTGRES_DB := lightly_studio
+POSTGRES_IMAGE := pgvector/pgvector:0.8.1-pg18-bookworm
+POSTGRES_URL ?= postgresql://$(POSTGRES_USER):$(POSTGRES_PASSWORD)@localhost:$(POSTGRES_PORT)/$(POSTGRES_DB)
+
 .PHONY: install-uv
 install-uv:
 ifeq ($(OS),Windows_NT)
@@ -59,6 +68,51 @@ start-e2e-groups: build
 start-e2e-video-groups: build
 	uv run e2e-tests/index_videos_groups.py
 
+.PHONY: start-postgres
+start-postgres: stop-postgres
+	@echo "Starting PostgreSQL container ($(POSTGRES_IMAGE))..."
+	docker run -d \
+		--name $(POSTGRES_CONTAINER_NAME) \
+		-e POSTGRES_USER=$(POSTGRES_USER) \
+		-e POSTGRES_PASSWORD=$(POSTGRES_PASSWORD) \
+		-e POSTGRES_DB=$(POSTGRES_DB) \
+		-p $(POSTGRES_PORT):5432 \
+		$(POSTGRES_IMAGE)
+ifeq ($(OS),Windows_NT)
+	@powershell -Command "Start-Sleep -Seconds 3"
+else
+	@echo "Waiting for PostgreSQL to be ready..."
+	@until docker exec $(POSTGRES_CONTAINER_NAME) pg_isready -U $(POSTGRES_USER) -d $(POSTGRES_DB) > /dev/null 2>&1; do \
+		sleep 1; \
+	done
+endif
+	@echo "PostgreSQL is ready on port $(POSTGRES_PORT)"
+
+.PHONY: stop-postgres
+stop-postgres:
+	@echo "Stopping and removing PostgreSQL container..."
+	-docker stop $(POSTGRES_CONTAINER_NAME)
+	-docker rm $(POSTGRES_CONTAINER_NAME)
+	@echo "PostgreSQL container removed"
+
+.PHONY: start-e2e-postgres
+start-e2e-postgres: build
+	@echo "Starting server for e2e tests with PostgreSQL..."
+	LIGHTLY_STUDIO_DATABASE_URL=$(POSTGRES_URL) uv run e2e-tests/index_general.py
+
+.PHONY: start-e2e-postgres-with-videos
+start-e2e-postgres-with-videos: build
+	@echo "Starting server for e2e tests with videos on PostgreSQL..."
+	LIGHTLY_STUDIO_DATABASE_URL=$(POSTGRES_URL) uv run e2e-tests/index_video.py
+
+.PHONY: start-e2e-postgres-groups
+start-e2e-postgres-groups: build
+	LIGHTLY_STUDIO_DATABASE_URL=$(POSTGRES_URL) uv run e2e-tests/index_groups.py
+
+.PHONY: start-e2e-postgres-video-groups
+start-e2e-postgres-video-groups: build
+	LIGHTLY_STUDIO_DATABASE_URL=$(POSTGRES_URL) uv run e2e-tests/index_videos_groups.py
+
 # Note: we just mock dist_lightly_studio_view_app folder to avoid failing exporting the schema
 # because we need to have schema before building the frontend app
 .PHONY: export-schema
@@ -96,6 +150,11 @@ test: build
 test-ci:
 	@echo "Running tests..."
 	uv run pytest
+
+.PHONY: test-postgres
+test-postgres:
+	@echo "Running tests against Postgres..."
+	uv run pytest --postgres
 
 .PHONY: check-uv-lock
 check-uv-lock:

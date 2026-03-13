@@ -11,8 +11,9 @@ test.describe('Export Annotations', () => {
         await page.getByTestId('menu-export').click();
         await expect(page.getByRole('heading', { name: 'Export' })).toBeVisible();
 
-        // Switch to the correct tab and wait until the anchor has the href
-        await page.getByRole('tab', { name: 'Image Annotations' }).click();
+        // Switch to the correct export type
+        await page.getByTestId('export-type-select').click();
+        await page.getByRole('option', { name: 'Image Object Detections' }).click();
         await expect(page.getByTestId('submit-button-annotations')).toHaveAttribute(
             'href',
             /\/api\/collections\/.*\/export\/annotations\?ts=\d+/
