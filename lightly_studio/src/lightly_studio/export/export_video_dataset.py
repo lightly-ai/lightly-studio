@@ -28,7 +28,7 @@ class VideoDatasetExport:
 
         Args:
             output_json: Optional path to the output JSON file. If not provided,
-                defaults to "youtube_vis_export.json" in the current working directory.
+                defaults to "youtube_vis_export.json".
         """
         if output_json is None:
             output_json = DEFAULT_EXPORT_FILENAME
