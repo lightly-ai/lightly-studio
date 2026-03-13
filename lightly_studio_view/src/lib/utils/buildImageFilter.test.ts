@@ -5,7 +5,7 @@ describe('buildImageFilter', () => {
         dimensionsValues: null,
         annotationFilter: undefined,
         metadataFilters: undefined,
-        datasetId: 'dataset-1'
+        collectionId: 'dataset-1'
     } as const;
 
     test('returns undefined when no filters are provided', () => {
@@ -94,4 +94,3 @@ describe('buildImageFilter', () => {
         });
     });
 });
-
