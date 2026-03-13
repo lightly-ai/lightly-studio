@@ -83,7 +83,9 @@ def deep_copy(
     ctx = DeepCopyContext()
 
     # 1. Copy collection hierarchy.
-    hierarchy = collection_resolver.get_hierarchy(session=session, dataset_id=root_collection_id)
+    hierarchy = collection_resolver.get_hierarchy(
+        session=session, root_collection_id=root_collection_id
+    )
     root = _copy_collections(session=session, hierarchy=hierarchy, copy_name=copy_name, ctx=ctx)
 
     # 2. Copy collection-scoped entities.

@@ -162,6 +162,7 @@
             sampleWidth={video.width}
             sampleHeight={video.height}
             sample={currentFrame}
+            showLabel={false}
         />
     {/if}
     {#if video.similarity_score !== undefined && video.similarity_score !== null}

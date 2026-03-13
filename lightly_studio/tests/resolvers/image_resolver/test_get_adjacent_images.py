@@ -8,28 +8,28 @@ from tests import helpers_resolvers
 from tests.helpers_resolvers import AnnotationDetails
 
 
-def test_get_adjacent_images__orders_by_path(test_db: Session) -> None:
-    collection = helpers_resolvers.create_collection(session=test_db)
+def test_get_adjacent_images__orders_by_path(db_session: Session) -> None:
+    collection = helpers_resolvers.create_collection(session=db_session)
     collection_id = collection.collection_id
 
     image_a = helpers_resolvers.create_image(
-        session=test_db,
+        session=db_session,
         collection_id=collection_id,
         file_path_abs="/images/a.png",
     )
     image_b = helpers_resolvers.create_image(
-        session=test_db,
+        session=db_session,
         collection_id=collection_id,
         file_path_abs="/images/b.png",
     )
     image_c = helpers_resolvers.create_image(
-        session=test_db,
+        session=db_session,
         collection_id=collection_id,
         file_path_abs="/images/c.png",
     )
 
     result = image_resolver.get_adjacent_images(
-        session=test_db,
+        session=db_session,
         sample_id=image_b.sample_id,
         filters=ImageFilter(sample_filter=SampleFilter(collection_id=collection_id)),
     )
@@ -42,28 +42,28 @@ def test_get_adjacent_images__orders_by_path(test_db: Session) -> None:
     assert result.total_count == 3
 
 
-def test_get_adjacent_images__respects_sample_ids(test_db: Session) -> None:
-    collection = helpers_resolvers.create_collection(session=test_db)
+def test_get_adjacent_images__respects_sample_ids(db_session: Session) -> None:
+    collection = helpers_resolvers.create_collection(session=db_session)
     collection_id = collection.collection_id
 
     helpers_resolvers.create_image(
-        session=test_db,
+        session=db_session,
         collection_id=collection_id,
         file_path_abs="/images/a.png",
     )
     image_b = helpers_resolvers.create_image(
-        session=test_db,
+        session=db_session,
         collection_id=collection_id,
         file_path_abs="/images/b.png",
     )
     image_c = helpers_resolvers.create_image(
-        session=test_db,
+        session=db_session,
         collection_id=collection_id,
         file_path_abs="/images/c.png",
     )
 
     result = image_resolver.get_adjacent_images(
-        session=test_db,
+        session=db_session,
         sample_id=image_c.sample_id,
         filters=ImageFilter(
             sample_filter=SampleFilter(
@@ -80,57 +80,57 @@ def test_get_adjacent_images__respects_sample_ids(test_db: Session) -> None:
     assert result.total_count == 2
 
 
-def test_get_adjacent_images__raises_with_filter_missing_collection_id(test_db: Session) -> None:
-    collection = helpers_resolvers.create_collection(session=test_db)
+def test_get_adjacent_images__raises_with_filter_missing_collection_id(db_session: Session) -> None:
+    collection = helpers_resolvers.create_collection(session=db_session)
     collection_id = collection.collection_id
 
     image = helpers_resolvers.create_image(
-        session=test_db,
+        session=db_session,
         collection_id=collection_id,
         file_path_abs="/images/a.png",
     )
 
-    with pytest.raises(ValueError, match="Collection ID must be provided in filters."):
+    with pytest.raises(ValueError, match=r"Collection ID must be provided in filters."):
         image_resolver.get_adjacent_images(
-            session=test_db,
+            session=db_session,
             sample_id=image.sample_id,
             filters=ImageFilter(sample_filter=SampleFilter()),
         )
 
 
-def test_get_adjacent_images__respects_annotation_filter(test_db: Session) -> None:
-    collection = helpers_resolvers.create_collection(session=test_db)
+def test_get_adjacent_images__respects_annotation_filter(db_session: Session) -> None:
+    collection = helpers_resolvers.create_collection(session=db_session)
     collection_id = collection.collection_id
 
     dog_label = helpers_resolvers.create_annotation_label(
-        session=test_db,
+        session=db_session,
         dataset_id=collection_id,
         label_name="dog",
     )
     cat_label = helpers_resolvers.create_annotation_label(
-        session=test_db,
+        session=db_session,
         dataset_id=collection_id,
         label_name="cat",
     )
 
     image_a = helpers_resolvers.create_image(
-        session=test_db,
+        session=db_session,
         collection_id=collection_id,
         file_path_abs="/images/a.png",
     )
     image_b = helpers_resolvers.create_image(
-        session=test_db,
+        session=db_session,
         collection_id=collection_id,
         file_path_abs="/images/b.png",
     )
     image_c = helpers_resolvers.create_image(
-        session=test_db,
+        session=db_session,
         collection_id=collection_id,
         file_path_abs="/images/c.png",
     )
 
     helpers_resolvers.create_annotations(
-        session=test_db,
+        session=db_session,
         collection_id=collection_id,
         annotations=[
             AnnotationDetails(
@@ -149,7 +149,7 @@ def test_get_adjacent_images__respects_annotation_filter(test_db: Session) -> No
     )
 
     result = image_resolver.get_adjacent_images(
-        session=test_db,
+        session=db_session,
         sample_id=image_b.sample_id,
         filters=ImageFilter(
             sample_filter=SampleFilter(
@@ -167,54 +167,54 @@ def test_get_adjacent_images__respects_annotation_filter(test_db: Session) -> No
     assert result.total_count == 2
 
 
-def test_get_adjacent_images__with_similarity(test_db: Session) -> None:
-    collection = helpers_resolvers.create_collection(session=test_db)
+def test_get_adjacent_images__with_similarity(db_session: Session) -> None:
+    collection = helpers_resolvers.create_collection(session=db_session)
     collection_id = collection.collection_id
 
     embedding_model = helpers_resolvers.create_embedding_model(
-        session=test_db,
+        session=db_session,
         collection_id=collection_id,
         embedding_model_name="embedding-for-adjacency",
         embedding_dimension=2,
     )
 
     image_a = helpers_resolvers.create_image(
-        session=test_db,
+        session=db_session,
         collection_id=collection_id,
         file_path_abs="/images/a.png",
     )
     image_b = helpers_resolvers.create_image(
-        session=test_db,
+        session=db_session,
         collection_id=collection_id,
         file_path_abs="/images/b.png",
     )
     image_c = helpers_resolvers.create_image(
-        session=test_db,
+        session=db_session,
         collection_id=collection_id,
         file_path_abs="/images/c.png",
     )
 
     helpers_resolvers.create_sample_embedding(
-        session=test_db,
+        session=db_session,
         sample_id=image_a.sample_id,
         embedding_model_id=embedding_model.embedding_model_id,
         embedding=[0.0, 1.0],
     )
     helpers_resolvers.create_sample_embedding(
-        session=test_db,
+        session=db_session,
         sample_id=image_b.sample_id,
         embedding_model_id=embedding_model.embedding_model_id,
         embedding=[0.5, 1.0],
     )
     helpers_resolvers.create_sample_embedding(
-        session=test_db,
+        session=db_session,
         sample_id=image_c.sample_id,
         embedding_model_id=embedding_model.embedding_model_id,
         embedding=[1.0, 1.0],
     )
 
     result = image_resolver.get_adjacent_images(
-        session=test_db,
+        session=db_session,
         sample_id=image_c.sample_id,
         filters=ImageFilter(
             sample_filter=SampleFilter(
@@ -232,19 +232,19 @@ def test_get_adjacent_images__with_similarity(test_db: Session) -> None:
     assert result.total_count == 3
 
 
-def test_get_adjacent_images__returns_none_when_sample_not_in_filter(test_db: Session) -> None:
-    collection = helpers_resolvers.create_collection(session=test_db)
+def test_get_adjacent_images__returns_none_when_sample_not_in_filter(db_session: Session) -> None:
+    collection = helpers_resolvers.create_collection(session=db_session)
     collection_1 = helpers_resolvers.create_collection(
-        session=test_db, collection_name="collection_1"
+        session=db_session, collection_name="collection_1"
     )
 
     image_a = helpers_resolvers.create_image(
-        session=test_db,
+        session=db_session,
         collection_id=collection.collection_id,
         file_path_abs="/images/a.png",
     )
     helpers_resolvers.create_image(
-        session=test_db,
+        session=db_session,
         collection_id=collection.collection_id,
         file_path_abs="/images/b.png",
     )
@@ -252,7 +252,7 @@ def test_get_adjacent_images__returns_none_when_sample_not_in_filter(test_db: Se
     # Use a filter that includes only samples from collection_1,
     # which does not include image_a.sample_id
     result = image_resolver.get_adjacent_images(
-        session=test_db,
+        session=db_session,
         sample_id=image_a.sample_id,
         filters=ImageFilter(
             sample_filter=SampleFilter(

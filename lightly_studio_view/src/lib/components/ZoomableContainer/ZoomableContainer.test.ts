@@ -152,4 +152,35 @@ describe('ZoomableContainer', () => {
         // viewBox should remain focused on the original bbox
         expect(svg!.getAttribute('viewBox')).toBe('90 110 100 80');
     });
+
+    it('pans up when pressing Space + W', async () => {
+        const { container } = render(ZoomableContainerTestWrapper);
+        await tick();
+
+        const svg = container.querySelector('svg.z-10');
+        const zoomGroup = container.querySelector('svg.z-10 g');
+
+        expect(svg).toBeTruthy();
+        expect(zoomGroup).toBeTruthy();
+        expect(zoomGroup!.getAttribute('transform')).toBe('translate(0, 0) scale(1)');
+
+        await fireEvent.mouseEnter(svg!);
+        await fireEvent.keyDown(window, { key: ' ', code: 'Space' });
+        await fireEvent.keyDown(window, { key: 'w', code: 'KeyW' });
+        vi.advanceTimersByTime(100);
+        await tick();
+
+        const transformMatch = zoomGroup!
+            .getAttribute('transform')
+            ?.match(
+                /translate\((?<translateX>[-\d.]+),\s*(?<translateY>[-\d.]+)\) scale\((?<scale>[-\d.]+)\)/
+            );
+        const translateY = Number(transformMatch?.groups?.translateY);
+
+        expect(Number.isFinite(translateY)).toBe(true);
+        expect(translateY).toBeGreaterThan(0);
+
+        await fireEvent.keyUp(window, { key: 'w', code: 'KeyW' });
+        await fireEvent.keyUp(window, { key: ' ', code: 'Space' });
+    });
 });

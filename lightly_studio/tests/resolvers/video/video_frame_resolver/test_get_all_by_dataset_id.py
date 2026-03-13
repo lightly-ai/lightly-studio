@@ -8,6 +8,7 @@ from lightly_studio.resolvers import (
     video_frame_resolver,
     video_resolver,
 )
+from lightly_studio.resolvers.annotations.annotations_filter import AnnotationsFilter
 from lightly_studio.resolvers.image_filter import FilterDimensions
 from lightly_studio.resolvers.sample_resolver.sample_filter import SampleFilter
 from lightly_studio.resolvers.video_frame_resolver.video_frame_filter import VideoFrameFilter
@@ -19,13 +20,13 @@ from tests.helpers_resolvers import (
 from tests.resolvers.video.helpers import VideoStub, create_video_with_frames
 
 
-def test_get_all_by_collection_id(test_db: Session) -> None:
-    collection = create_collection(session=test_db, sample_type=SampleType.VIDEO)
+def test_get_all_by_collection_id(db_session: Session) -> None:
+    collection = create_collection(session=db_session, sample_type=SampleType.VIDEO)
     collection_id = collection.collection_id
 
     # create samples out of order to verify ordering by parent video file_path_abs and frame number
     sample_video_2_id = video_resolver.create_many(
-        session=test_db,
+        session=db_session,
         collection_id=collection_id,
         samples=[
             VideoCreate(
@@ -39,10 +40,10 @@ def test_get_all_by_collection_id(test_db: Session) -> None:
         ],
     )[0]
     video_frames_collection_id = collection_resolver.get_or_create_child_collection(
-        session=test_db, collection_id=collection_id, sample_type=SampleType.VIDEO_FRAME
+        session=db_session, collection_id=collection_id, sample_type=SampleType.VIDEO_FRAME
     )
     video_frame_resolver.create_many(
-        session=test_db,
+        session=db_session,
         collection_id=video_frames_collection_id,
         samples=[
             VideoFrameCreate(
@@ -60,7 +61,7 @@ def test_get_all_by_collection_id(test_db: Session) -> None:
         ],
     )
     sample_video_1_id = video_resolver.create_many(
-        session=test_db,
+        session=db_session,
         collection_id=collection_id,
         samples=[
             VideoCreate(
@@ -74,7 +75,7 @@ def test_get_all_by_collection_id(test_db: Session) -> None:
         ],
     )[0]
     video_frame_resolver.create_many(
-        session=test_db,
+        session=db_session,
         collection_id=video_frames_collection_id,
         samples=[
             VideoFrameCreate(
@@ -95,7 +96,7 @@ def test_get_all_by_collection_id(test_db: Session) -> None:
 
     # Act
     result = video_frame_resolver.get_all_by_collection_id(
-        session=test_db, collection_id=video_frames_collection_id
+        session=db_session, collection_id=video_frames_collection_id
     )
 
     # Assert
@@ -111,17 +112,19 @@ def test_get_all_by_collection_id(test_db: Session) -> None:
     assert result.samples[3].parent_sample_id == sample_video_2_id
 
 
-def test_get_all_by_collection_id__with_frame_number_filter(test_db: Session) -> None:
-    collection_id = create_collection(session=test_db, sample_type=SampleType.VIDEO).collection_id
+def test_get_all_by_collection_id__with_frame_number_filter(db_session: Session) -> None:
+    collection_id = create_collection(
+        session=db_session, sample_type=SampleType.VIDEO
+    ).collection_id
 
     video_frame_data = create_video_with_frames(
-        session=test_db,
+        session=db_session,
         collection_id=collection_id,
         video=VideoStub(path="/path/to/sample1.mp4", duration_s=5, fps=1),
     )
 
     samples = video_frame_resolver.get_all_by_collection_id(
-        session=test_db,
+        session=db_session,
         collection_id=video_frame_data.video_frames_collection_id,
         video_frame_filter=VideoFrameFilter(
             frame_number=FilterDimensions(min=2, max=3),
@@ -133,47 +136,51 @@ def test_get_all_by_collection_id__with_frame_number_filter(test_db: Session) ->
     assert samples[1].sample_id == video_frame_data.frame_sample_ids[3]
 
 
-def test_get_all_by_collection_id__with_annotations_filter(test_db: Session) -> None:
-    collection = create_collection(session=test_db, sample_type=SampleType.VIDEO)
+def test_get_all_by_collection_id__with_annotations_filter(db_session: Session) -> None:
+    collection = create_collection(session=db_session, sample_type=SampleType.VIDEO)
 
     # Create videos
     video_frame_data = create_video_with_frames(
-        session=test_db,
+        session=db_session,
         collection_id=collection.collection_id,
         video=VideoStub(path="/path/to/sample1.mp4"),
     )
 
     car_label = create_annotation_label(
-        session=test_db,
+        session=db_session,
         dataset_id=collection.collection_id,
         label_name="car",
     )
 
     airplane_label = create_annotation_label(
-        session=test_db,
+        session=db_session,
         dataset_id=collection.collection_id,
         label_name="airplane",
     )
 
     # Create annotations
     create_annotation(
-        session=test_db,
+        session=db_session,
         sample_id=video_frame_data.frame_sample_ids[0],
         annotation_label_id=car_label.annotation_label_id,
         collection_id=collection.collection_id,
     )
     create_annotation(
-        session=test_db,
+        session=db_session,
         sample_id=video_frame_data.frame_sample_ids[1],
         annotation_label_id=airplane_label.annotation_label_id,
         collection_id=collection.collection_id,
     )
 
     samples = video_frame_resolver.get_all_by_collection_id(
-        session=test_db,
+        session=db_session,
         collection_id=video_frame_data.video_frames_collection_id,
         video_frame_filter=VideoFrameFilter(
-            sample_filter=SampleFilter(annotation_label_ids=[car_label.annotation_label_id])
+            sample_filter=SampleFilter(
+                annotations_filter=AnnotationsFilter(
+                    annotation_label_ids=[car_label.annotation_label_id]
+                )
+            )
         ),
     ).samples
 
@@ -182,43 +189,43 @@ def test_get_all_by_collection_id__with_annotations_filter(test_db: Session) -> 
 
 
 def test_get_all_by_collection_id__with_pagination(
-    test_db: Session,
+    db_session: Session,
 ) -> None:
     # Arrange
-    collection = create_collection(session=test_db, sample_type=SampleType.VIDEO)
+    collection = create_collection(session=db_session, sample_type=SampleType.VIDEO)
     collection_id = collection.collection_id
 
     # Create sample data with known sample_ids to ensure consistent ordering
     sample_video_1_id = create_video_with_frames(
-        session=test_db,
+        session=db_session,
         collection_id=collection_id,
         video=VideoStub(path="video1.mp4", duration_s=2.0, fps=1),  # 2 frames
     ).video_sample_id
 
     sample_video_2_id = create_video_with_frames(
-        session=test_db,
+        session=db_session,
         collection_id=collection_id,
         video=VideoStub(path="video2.mp4", duration_s=3.0, fps=1),  # 3 frames
     ).video_sample_id
 
     video_frames_collection_id = collection_resolver.get_or_create_child_collection(
-        session=test_db, collection_id=collection_id, sample_type=SampleType.VIDEO_FRAME
+        session=db_session, collection_id=collection_id, sample_type=SampleType.VIDEO_FRAME
     )
     # Act - Get first 2 samples
     result_page_1 = video_frame_resolver.get_all_by_collection_id(
-        session=test_db,
+        session=db_session,
         collection_id=video_frames_collection_id,
         pagination=Paginated(offset=0, limit=2),
     )
     # Act - Get next 2 samples
     result_page_2 = video_frame_resolver.get_all_by_collection_id(
-        session=test_db,
+        session=db_session,
         collection_id=video_frames_collection_id,
         pagination=Paginated(offset=2, limit=2),
     )
     # Act - Get remaining samples
     result_page_3 = video_frame_resolver.get_all_by_collection_id(
-        session=test_db,
+        session=db_session,
         collection_id=video_frames_collection_id,
         pagination=Paginated(offset=4, limit=2),
     )
@@ -247,7 +254,7 @@ def test_get_all_by_collection_id__with_pagination(
 
     # Assert - Check out of bounds (should return empty list)
     result_empty = video_frame_resolver.get_all_by_collection_id(
-        session=test_db,
+        session=db_session,
         collection_id=video_frames_collection_id,
         pagination=Paginated(offset=5, limit=2),
     )
@@ -256,15 +263,15 @@ def test_get_all_by_collection_id__with_pagination(
 
 
 def test_get_all_by_collection_id__empty_output(
-    test_db: Session,
+    db_session: Session,
 ) -> None:
     # Arrange
-    collection = create_collection(session=test_db, sample_type=SampleType.VIDEO)
+    collection = create_collection(session=db_session, sample_type=SampleType.VIDEO)
     collection_id = collection.collection_id
 
     # Act
     result = video_frame_resolver.get_all_by_collection_id(
-        session=test_db, collection_id=collection_id
+        session=db_session, collection_id=collection_id
     )
 
     # Assert
@@ -273,22 +280,22 @@ def test_get_all_by_collection_id__empty_output(
 
 
 def test_get_all_by_collection_id__with_sample_ids(
-    test_db: Session,
+    db_session: Session,
 ) -> None:
-    collection = create_collection(session=test_db, sample_type=SampleType.VIDEO)
+    collection = create_collection(session=db_session, sample_type=SampleType.VIDEO)
     collection_id = collection.collection_id
 
     # Create sample data with known sample_ids
     sample_ids = create_video_with_frames(
-        session=test_db,
+        session=db_session,
         collection_id=collection_id,
         video=VideoStub(),
     ).frame_sample_ids
     video_frames_collection_id = collection_resolver.get_or_create_child_collection(
-        session=test_db, collection_id=collection_id, sample_type=SampleType.VIDEO_FRAME
+        session=db_session, collection_id=collection_id, sample_type=SampleType.VIDEO_FRAME
     )
     result = video_frame_resolver.get_all_by_collection_id(
-        session=test_db,
+        session=db_session,
         collection_id=video_frames_collection_id,
         video_frame_filter=VideoFrameFilter(sample_filter=SampleFilter(sample_ids=sample_ids)),
     )
@@ -299,23 +306,23 @@ def test_get_all_by_collection_id__with_sample_ids(
     assert all(sample_id in returned_sample_ids for sample_id in sample_ids)
 
 
-def test_get_all_by_collection_id__with_video_id(test_db: Session) -> None:
-    collection = create_collection(session=test_db, sample_type=SampleType.VIDEO)
+def test_get_all_by_collection_id__with_video_id(db_session: Session) -> None:
+    collection = create_collection(session=db_session, sample_type=SampleType.VIDEO)
 
     video_frames = create_video_with_frames(
-        session=test_db,
+        session=db_session,
         collection_id=collection.collection_id,
         video=VideoStub(path="video1.mp4", duration_s=1, fps=2),
     )
 
     create_video_with_frames(
-        session=test_db,
+        session=db_session,
         collection_id=collection.collection_id,
         video=VideoStub(path="video2.mp4", duration_s=1, fps=2),
     )
 
     result = video_frame_resolver.get_all_by_collection_id(
-        session=test_db,
+        session=db_session,
         collection_id=video_frames.video_frames_collection_id,
         video_frame_filter=VideoFrameFilter(video_id=video_frames.video_sample_id),
     )

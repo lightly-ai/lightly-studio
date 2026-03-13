@@ -12,24 +12,24 @@ from lightly_studio.resolvers import annotation_resolver
 from tests.helpers_resolvers import create_annotation_label, create_collection, create_image
 
 
-def test_update_segmentation_mask(test_db: Session) -> None:
-    collection = create_collection(session=test_db, sample_type=SampleType.IMAGE)
+def test_update_segmentation_mask(db_session: Session) -> None:
+    collection = create_collection(session=db_session, sample_type=SampleType.IMAGE)
     collection_id = collection.collection_id
 
     car_label = create_annotation_label(
-        session=test_db,
+        session=db_session,
         dataset_id=collection_id,
         label_name="car",
     )
 
     image = create_image(
-        session=test_db,
+        session=db_session,
         collection_id=collection_id,
         file_path_abs="/path/to/sample2.png",
     )
 
     annotation_id = annotation_resolver.create_many(
-        session=test_db,
+        session=db_session,
         parent_collection_id=collection_id,
         annotations=[
             AnnotationCreate(
@@ -46,7 +46,7 @@ def test_update_segmentation_mask(test_db: Session) -> None:
     )[0]
 
     annotation = annotation_resolver.update_segmentation_mask(
-        session=test_db, annotation_id=annotation_id, segmentation_mask=[1, 2, 3, 4]
+        session=db_session, annotation_id=annotation_id, segmentation_mask=[1, 2, 3, 4]
     )
 
     assert annotation.sample_id == annotation_id
@@ -54,24 +54,24 @@ def test_update_segmentation_mask(test_db: Session) -> None:
     assert annotation.segmentation_details.segmentation_mask == [1, 2, 3, 4]
 
 
-def test_update_segmentation_mask__unsupported_annotation_type(test_db: Session) -> None:
-    collection = create_collection(session=test_db, sample_type=SampleType.IMAGE)
+def test_update_segmentation_mask__unsupported_annotation_type(db_session: Session) -> None:
+    collection = create_collection(session=db_session, sample_type=SampleType.IMAGE)
     collection_id = collection.collection_id
 
     car_label = create_annotation_label(
-        session=test_db,
+        session=db_session,
         dataset_id=collection_id,
         label_name="car",
     )
 
     image = create_image(
-        session=test_db,
+        session=db_session,
         collection_id=collection_id,
         file_path_abs="/path/to/sample2.png",
     )
 
     annotation_id = annotation_resolver.create_many(
-        session=test_db,
+        session=db_session,
         parent_collection_id=collection_id,
         annotations=[
             AnnotationCreate(
@@ -86,7 +86,7 @@ def test_update_segmentation_mask__unsupported_annotation_type(test_db: Session)
         ],
     )[0]
 
-    with pytest.raises(ValueError, match="Annotation type does not support segmentation mask."):
+    with pytest.raises(ValueError, match=r"Annotation type does not support segmentation mask."):
         annotation_resolver.update_segmentation_mask(
-            session=test_db, annotation_id=annotation_id, segmentation_mask=[1, 2, 3, 4]
+            session=db_session, annotation_id=annotation_id, segmentation_mask=[1, 2, 3, 4]
         )

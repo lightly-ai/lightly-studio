@@ -120,7 +120,7 @@ class TestClassifierManager:
 
     def test_commit_temp_classifier__classifier_not_found(self) -> None:
         classifier_manager = ClassifierManager()
-        with pytest.raises(ValueError, match="Classifier with ID .* not found"):
+        with pytest.raises(ValueError, match=r"Classifier with ID .* not found"):
             classifier_manager.commit_temp_classifier(classifier_id=uuid4())
 
     def test_train(
@@ -278,7 +278,7 @@ class TestClassifierManager:
         )
         with pytest.raises(
             ValueError,
-            match="No matching embedding model found for the classifier's hash:"
+            match=r"No matching embedding model found for the classifier's hash:"
             f"'{classifier.few_shot_classifier.embedding_model_hash}'",
         ):
             classifier_manager.load_classifier_from_file(
@@ -411,7 +411,7 @@ class TestClassifierManager:
     def test_update_annotations__classifier_not_found(self) -> None:
         """Test updating samples for non-existent classifier."""
         classifier_manager = ClassifierManager()
-        with pytest.raises(ValueError, match="Classifier with ID .* not found"):
+        with pytest.raises(ValueError, match=r"Classifier with ID .* not found"):
             classifier_manager.update_classifiers_annotations(
                 classifier_id=uuid4(),
                 new_annotations={"class1": [uuid4()]},
@@ -443,8 +443,10 @@ class TestClassifierManager:
         sample1, sample2 = uuid4(), uuid4()
         with pytest.raises(
             ValueError,
-            match="Cannot add new classes {'dog'} to existing"
-            " classifier. Allowed classes are: {'class1'}",
+            match=(
+                r"Cannot add new classes {'dog'} to existing"
+                r" classifier. Allowed classes are: {'class1'}"
+            ),
         ):
             classifier_manager.update_classifiers_annotations(
                 classifier_id=classifier.classifier_id,
@@ -808,7 +810,7 @@ class TestClassifierManager:
         )
         with pytest.raises(
             ValueError,
-            match="Predict returned empty list for classifier:",
+            match=r"Predict returned empty list for classifier:",
         ):
             classifier_manager.run_classifier(
                 session=db_session,

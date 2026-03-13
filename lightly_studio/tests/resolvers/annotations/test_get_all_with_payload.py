@@ -22,50 +22,50 @@ from tests.resolvers.video.helpers import VideoStub, create_video_with_frames
 
 
 def test_get_all_with_payload__with_pagination(
-    test_db: Session,
+    db_session: Session,
 ) -> None:
-    collection = create_collection(session=test_db)
+    collection = create_collection(session=db_session)
     collection_id = collection.collection_id
 
     image_1 = create_image(
-        session=test_db,
+        session=db_session,
         collection_id=collection_id,
         file_path_abs="/path/to/sample2.png",
     )
     image_2 = create_image(
-        session=test_db,
+        session=db_session,
         collection_id=collection_id,
         file_path_abs="/path/to/sample1.png",
     )
 
     car_label = create_annotation_label(
-        session=test_db,
+        session=db_session,
         dataset_id=collection_id,
         label_name="car",
     )
 
     airplane_label = create_annotation_label(
-        session=test_db,
+        session=db_session,
         dataset_id=collection_id,
         label_name="airplane",
     )
 
     # Create annotations
     annotation = create_annotation(
-        session=test_db,
+        session=db_session,
         sample_id=image_1.sample_id,
         annotation_label_id=car_label.annotation_label_id,
         collection_id=collection_id,
     )
     create_annotation(
-        session=test_db,
+        session=db_session,
         sample_id=image_2.sample_id,
         annotation_label_id=airplane_label.annotation_label_id,
         collection_id=collection_id,
     )
 
     annotations_page = annotation_resolver.get_all_with_payload(
-        session=test_db,
+        session=db_session,
         pagination=Paginated(limit=1, offset=0),
         collection_id=annotation.sample.collection_id,
     )
@@ -80,50 +80,50 @@ def test_get_all_with_payload__with_pagination(
 
 
 def test_get_all_with_payload__with_image(
-    test_db: Session,
+    db_session: Session,
 ) -> None:
-    collection = create_collection(session=test_db)
+    collection = create_collection(session=db_session)
     collection_id = collection.collection_id
 
     image_1 = create_image(
-        session=test_db,
+        session=db_session,
         collection_id=collection_id,
         file_path_abs="/path/to/sample2.png",
     )
     image_2 = create_image(
-        session=test_db,
+        session=db_session,
         collection_id=collection_id,
         file_path_abs="/path/to/sample1.png",
     )
 
     car_label = create_annotation_label(
-        session=test_db,
+        session=db_session,
         dataset_id=collection_id,
         label_name="car",
     )
 
     airplane_label = create_annotation_label(
-        session=test_db,
+        session=db_session,
         dataset_id=collection_id,
         label_name="airplane",
     )
 
     # Create annotations
     annotation = create_annotation(
-        session=test_db,
+        session=db_session,
         sample_id=image_1.sample_id,
         annotation_label_id=car_label.annotation_label_id,
         collection_id=collection_id,
     )
     create_annotation(
-        session=test_db,
+        session=db_session,
         sample_id=image_2.sample_id,
         annotation_label_id=airplane_label.annotation_label_id,
         collection_id=collection_id,
     )
 
     annotations_page = annotation_resolver.get_all_with_payload(
-        session=test_db,
+        session=db_session,
         collection_id=annotation.sample.collection_id,
     )
 
@@ -149,44 +149,44 @@ def test_get_all_with_payload__with_image(
     assert annotations_page.annotations[1].parent_sample_data.sample.collection_id == collection_id
 
 
-def test_get_all_with_payload__with_video_frame(test_db: Session) -> None:
-    collection = create_collection(session=test_db, sample_type=SampleType.VIDEO)
+def test_get_all_with_payload__with_video_frame(db_session: Session) -> None:
+    collection = create_collection(session=db_session, sample_type=SampleType.VIDEO)
 
     # Create videos
     video_frame_data = create_video_with_frames(
-        session=test_db,
+        session=db_session,
         collection_id=collection.collection_id,
         video=VideoStub(path="/path/to/sample1.mp4"),
     )
 
     car_label = create_annotation_label(
-        session=test_db,
+        session=db_session,
         dataset_id=collection.collection_id,
         label_name="car",
     )
 
     airplane_label = create_annotation_label(
-        session=test_db,
+        session=db_session,
         dataset_id=collection.collection_id,
         label_name="airplane",
     )
 
     # Create annotations
     annotation = create_annotation(
-        session=test_db,
+        session=db_session,
         sample_id=video_frame_data.frame_sample_ids[0],
         annotation_label_id=car_label.annotation_label_id,
         collection_id=collection.collection_id,
     )
     create_annotation(
-        session=test_db,
+        session=db_session,
         sample_id=video_frame_data.frame_sample_ids[1],
         annotation_label_id=airplane_label.annotation_label_id,
         collection_id=collection.collection_id,
     )
 
     annotations_page = annotation_resolver.get_all_with_payload(
-        session=test_db,
+        session=db_session,
         collection_id=annotation.sample.collection_id,
     )
 
@@ -217,16 +217,16 @@ def test_get_all_with_payload__with_video_frame(test_db: Session) -> None:
 
 
 def test_get_all_with_payload__with_unsupported_collection(
-    test_db: Session,
+    db_session: Session,
 ) -> None:
-    collection = create_collection(session=test_db, sample_type=SampleType.VIDEO)
+    collection = create_collection(session=db_session, sample_type=SampleType.VIDEO)
 
     with pytest.raises(
         ValueError,
         match=f"Collection with id {collection.collection_id} does not have a parent collection.",
     ):
         annotation_resolver.get_all_with_payload(
-            session=test_db,
+            session=db_session,
             pagination=Paginated(limit=1, offset=0),
             collection_id=collection.collection_id,
         )

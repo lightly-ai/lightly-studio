@@ -31,12 +31,12 @@ class TestDistanceToSimilarity:
 class TestGetDistanceExpression:
     """Tests for get_distance_expression function."""
 
-    def test_no_embedding__returns_none(self, test_db: Session) -> None:
+    def test_no_embedding__returns_none(self, db_session: Session) -> None:
         """When no text_embedding is provided, returns (None, None)."""
-        collection = create_collection(session=test_db)
+        collection = create_collection(session=db_session)
 
         embedding_model_id, distance_expr = get_distance_expression(
-            session=test_db,
+            session=db_session,
             collection_id=collection.collection_id,
             text_embedding=None,
         )
@@ -44,12 +44,12 @@ class TestGetDistanceExpression:
         assert embedding_model_id is None
         assert distance_expr is None
 
-    def test_no_embedding_model__returns_none(self, test_db: Session) -> None:
+    def test_no_embedding_model__returns_none(self, db_session: Session) -> None:
         """When no embedding model exists for collection, returns (None, None)."""
-        collection = create_collection(session=test_db)
+        collection = create_collection(session=db_session)
 
         embedding_model_id, distance_expr = get_distance_expression(
-            session=test_db,
+            session=db_session,
             collection_id=collection.collection_id,
             text_embedding=[1.0, 0.0, 0.0],
         )
@@ -57,18 +57,18 @@ class TestGetDistanceExpression:
         assert embedding_model_id is None
         assert distance_expr is None
 
-    def test_with_embedding_model__returns_expression(self, test_db: Session) -> None:
+    def test_with_embedding_model__returns_expression(self, db_session: Session) -> None:
         """When embedding model exists, returns the model ID and distance expression."""
-        collection = create_collection(session=test_db)
+        collection = create_collection(session=db_session)
         embedding_model = create_embedding_model(
-            session=test_db,
+            session=db_session,
             collection_id=collection.collection_id,
             embedding_model_name="test_model",
             embedding_dimension=3,
         )
 
         embedding_model_id, distance_expr = get_distance_expression(
-            session=test_db,
+            session=db_session,
             collection_id=collection.collection_id,
             text_embedding=[1.0, 0.0, 0.0],
         )

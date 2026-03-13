@@ -1,4 +1,5 @@
 import { render, fireEvent } from '@testing-library/svelte';
+import { writable } from 'svelte/store';
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import SampleDetailsToolbar from './SampleDetailsToolbar.svelte';
 import { AnnotationType } from '$lib/api/lightly_studio_local';
@@ -20,6 +21,20 @@ const mockAnnotationLabelContext = {
     isErasing: false,
     isOnAnnotationDetailsView: false
 };
+
+const settingsStore = writable({
+    key_toolbar_selection: 's',
+    key_toolbar_drag: 'd',
+    key_toolbar_bounding_box: 'b',
+    key_toolbar_segmentation_mask: 'm',
+    key_toolbar_semantic: 'g'
+});
+
+vi.mock('$lib/hooks/useSettings', () => ({
+    useSettings: () => ({
+        settingsStore
+    })
+}));
 
 vi.mock('$lib/contexts/SampleDetailsToolbar.svelte', () => ({
     useSampleDetailsToolbarContext: () => ({
@@ -123,6 +138,17 @@ describe('SampleDetailsToolbar', () => {
         );
         expect(mockAnnotationLabelContext.annotationLabel).toBe('road');
         expect(mockAnnotationLabelContext.annotationId).toBeNull();
+    });
+
+    it('activates semantic brush through the configured shortcut', async () => {
+        render(SampleDetailsToolbar);
+
+        await fireEvent.keyDown(window, { key: 'g' });
+
+        expect(mockSampleDetailsToolbarContext.status).toBe('brush');
+        expect(mockAnnotationLabelContext.annotationType).toBe(
+            AnnotationType.SEMANTIC_SEGMENTATION
+        );
     });
 
     it('activates drag tool', async () => {
@@ -256,5 +282,17 @@ describe('SampleDetailsToolbar', () => {
         expect(mockAnnotationLabelContext.annotationType).toBe(
             AnnotationType.INSTANCE_SEGMENTATION
         );
+    });
+
+    it('does not trigger toolbar shortcuts while space is held', async () => {
+        render(SampleDetailsToolbar);
+
+        await fireEvent.keyDown(window, { key: ' ', code: 'Space' });
+        await fireEvent.keyDown(window, { key: 'd', code: 'KeyD' });
+        expect(mockSampleDetailsToolbarContext.status).toBe('cursor');
+
+        await fireEvent.keyUp(window, { key: ' ', code: 'Space' });
+        await fireEvent.keyDown(window, { key: 'd', code: 'KeyD' });
+        expect(mockSampleDetailsToolbarContext.status).toBe('drag');
     });
 });

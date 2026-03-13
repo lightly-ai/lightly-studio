@@ -180,7 +180,7 @@ def test_get_adjacent_samples__raises_for_image_with_wrong_filter_type(
         filters=VideoFilter(sample_filter=SampleFilter(collection_id=uuid4())),
     )
 
-    with pytest.raises(ValueError, match="Invalid filter provided. Expected ImageFilter"):
+    with pytest.raises(ValueError, match=r"Invalid filter provided. Expected ImageFilter"):
         get_adjacent_samples(
             session=db_session,
             sample_id=uuid4(),
@@ -196,7 +196,7 @@ def test_get_adjacent_samples__raises_for_video_with_wrong_filter_type(
         filters=ImageFilter(sample_filter=SampleFilter(collection_id=uuid4())),
     )
 
-    with pytest.raises(ValueError, match="Invalid filter provided. Expected VideoFilter"):
+    with pytest.raises(ValueError, match=r"Invalid filter provided. Expected VideoFilter"):
         get_adjacent_samples(
             session=db_session,
             sample_id=uuid4(),
@@ -213,7 +213,7 @@ def test_get_adjacent_samples__raises_for_video_frame_with_wrong_filter_type(
     )
 
     with pytest.raises(
-        ValueError, match="Invalid filter provided. Expected VideoFrameAdjacentFilter"
+        ValueError, match=r"Invalid filter provided. Expected VideoFrameAdjacentFilter"
     ):
         get_adjacent_samples(
             session=db_session,
@@ -230,7 +230,7 @@ def test_get_adjacent_samples__raises_for_annotation_with_wrong_filter_type(
         filters=ImageFilter(sample_filter=SampleFilter(collection_id=uuid4())),
     )
 
-    with pytest.raises(ValueError, match="Invalid filter provided. Expected AnnotationsFilter"):
+    with pytest.raises(ValueError, match=r"Invalid filter provided. Expected AnnotationsFilter"):
         get_adjacent_samples(
             session=db_session,
             sample_id=uuid4(),
@@ -246,7 +246,7 @@ def test_get_adjacent_samples__raises_not_implemented_for_unsupported_type(
         filters=ImageFilter(sample_filter=SampleFilter(collection_id=uuid4())),
     )
 
-    with pytest.raises(NotImplementedError, match="not implemented for sample type"):
+    with pytest.raises(NotImplementedError, match=r"not implemented for sample type"):
         get_adjacent_samples(
             session=db_session,
             sample_id=uuid4(),

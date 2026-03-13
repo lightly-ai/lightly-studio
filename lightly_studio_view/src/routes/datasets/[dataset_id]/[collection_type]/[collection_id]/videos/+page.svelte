@@ -6,7 +6,7 @@
     import { useMetadataFilters } from '$lib/hooks/useMetadataFilters/useMetadataFilters';
     import { useTags } from '$lib/hooks/useTags/useTags';
     import { useVideoBounds } from '$lib/hooks/useVideosBounds/useVideosBounds';
-    import { useVideoFilters } from '$lib/hooks/useVideoFilters/useVideoFilters';
+    import { buildVideoFilter, useVideoFilters } from '$lib/hooks/useVideoFilters/useVideoFilters';
     import SampleGridItem from '$lib/components/SampleGridItem/SampleGridItem.svelte';
     import SampleGrid from '$lib/components/SampleGrid/SampleGrid.svelte';
     import type { VideoFilterParams } from '$lib/hooks/useVideoFilters/useVideoFilters';
@@ -39,8 +39,7 @@
             tag_ids: $tagsSelected.size > 0 ? Array.from($tagsSelected) : undefined,
             metadata_values: $metadataValues
         },
-        video_bounds: $videoBoundsValues,
-        text_embedding: $textEmbedding?.embedding
+        video_bounds: $videoBoundsValues
     });
 
     const paramsWithoutSampleIds = (params: VideoFilterParams) => {
@@ -50,7 +49,7 @@
         };
     };
 
-    const { filterParams, videoFilter, updateFilterParams } = useVideoFilters();
+    const { filterParams, updateFilterParams } = useVideoFilters();
 
     $effect(() => {
         // Synchronize the global filter parameters with the local videos parameters
@@ -69,7 +68,10 @@
         let nextParams = baseParams;
 
         let currentSampleIds: string[] = [];
-        if (currentParams?.filters?.sample_ids) {
+        if (
+            currentParams?.collection_id === baseParams.collection_id &&
+            currentParams.filters?.sample_ids
+        ) {
             currentSampleIds = currentParams.filters.sample_ids;
         }
 
@@ -88,8 +90,25 @@
         updateFilterParams(nextParams);
     });
 
-    // Make sure the query reacts to filter changes
-    const currentVideoFilter = $derived($videoFilter ?? {});
+    const currentVideoFilter = $derived.by(() => {
+        const currentSampleIds =
+            $filterParams?.collection_id === videosParams.collection_id
+                ? $filterParams.filters?.sample_ids
+                : undefined;
+        const paramsWithSelection: VideoFilterParams =
+            currentSampleIds && currentSampleIds.length > 0
+                ? {
+                      ...videosParams,
+                      filters: {
+                          ...(videosParams.filters ?? {}),
+                          sample_ids: currentSampleIds
+                      }
+                  }
+                : videosParams;
+
+        return buildVideoFilter(paramsWithSelection) ?? {};
+    });
+
     const { data, query, loadMore, totalCount } = $derived(
         useVideos(collectionId, currentVideoFilter, $textEmbedding?.embedding)
     );

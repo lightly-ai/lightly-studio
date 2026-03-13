@@ -10,19 +10,19 @@ from tests.helpers_resolvers import create_collection, create_image
 
 
 class TestDatasetQueryOrderBy:
-    def test_order_by__ascending_by_file_name(self, test_db: Session) -> None:
+    def test_order_by__ascending_by_file_name(self, db_session: Session) -> None:
         """Test ordering samples by file name in ascending order."""
         # Arrange
-        dataset = create_collection(session=test_db)
+        dataset = create_collection(session=db_session)
         image1 = create_image(
-            session=test_db,
+            session=db_session,
             collection_id=dataset.collection_id,
             file_path_abs="/path/to/zebra.jpg",
             width=100,
             height=100,
         )
         image2 = create_image(
-            session=test_db,
+            session=db_session,
             collection_id=dataset.collection_id,
             file_path_abs="/path/to/alpha.jpg",
             width=200,
@@ -30,7 +30,7 @@ class TestDatasetQueryOrderBy:
         )
 
         # Act
-        query = DatasetQuery(dataset=dataset, session=test_db)
+        query = DatasetQuery(dataset=dataset, session=db_session)
         result_samples = query.order_by(OrderByField(ImageSampleField.file_name)).to_list()
 
         # Assert
@@ -39,40 +39,40 @@ class TestDatasetQueryOrderBy:
         assert result_samples[0].sample_id == image2.sample_id  # alpha.jpg
         assert result_samples[1].sample_id == image1.sample_id  # zebra.jpg
 
-    def test_order_by__triple_criteria_width_height_file_name(self, test_db: Session) -> None:
+    def test_order_by__triple_criteria_width_height_file_name(self, db_session: Session) -> None:
         """Test ordering by triple criteria: width asc, height desc, file_name asc."""
         # Arrange
-        dataset = create_collection(session=test_db)
+        dataset = create_collection(session=db_session)
         image1 = create_image(
-            session=test_db,
+            session=db_session,
             collection_id=dataset.collection_id,
             file_path_abs="/path/to/E.jpg",
             width=100,  # Same width as sample2 and sample4
             height=150,
         )
         image2 = create_image(
-            session=test_db,
+            session=db_session,
             collection_id=dataset.collection_id,
             file_path_abs="/path/to/A.jpg",
             width=100,  # Same width as sample1 and sample4
             height=200,
         )
         image3 = create_image(
-            session=test_db,
+            session=db_session,
             collection_id=dataset.collection_id,
             file_path_abs="/path/to/B.jpg",
             width=200,  # Same width as sample5
             height=300,  # Same height as sample5 to test file_name ordering
         )
         image4 = create_image(
-            session=test_db,
+            session=db_session,
             collection_id=dataset.collection_id,
             file_path_abs="/path/to/C.jpg",
             width=100,  # Same width as sample1 and sample2
             height=100,  # Smallest height
         )
         image5 = create_image(
-            session=test_db,
+            session=db_session,
             collection_id=dataset.collection_id,
             file_path_abs="/path/to/D.jpg",
             width=200,  # Same width as sample3
@@ -80,7 +80,7 @@ class TestDatasetQueryOrderBy:
         )
 
         # Act: Triple criteria ordering (width asc, height desc, file_name asc)
-        query = DatasetQuery(dataset=dataset, session=test_db)
+        query = DatasetQuery(dataset=dataset, session=db_session)
         result_samples = query.order_by(
             OrderByField(ImageSampleField.width),
             OrderByField(ImageSampleField.height).desc(),
@@ -97,11 +97,11 @@ class TestDatasetQueryOrderBy:
         assert result_samples[3].sample_id == image3.sample_id  # B.jpg, width=200, height=300
         assert result_samples[4].sample_id == image5.sample_id  # D.jpg, width=200, height=300
 
-    def test_order_by__multiple_calls_raises_error(self, test_db: Session) -> None:
+    def test_order_by__multiple_calls_raises_error(self, db_session: Session) -> None:
         """Test that calling order_by() twice raises ValueError."""
         # Arrange
-        dataset = create_collection(session=test_db)
-        query = DatasetQuery(dataset=dataset, session=test_db)
+        dataset = create_collection(session=db_session)
+        query = DatasetQuery(dataset=dataset, session=db_session)
         query.order_by(OrderByField(ImageSampleField.file_name))
 
         # Act & Assert

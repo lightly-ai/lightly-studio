@@ -13,24 +13,24 @@ from tests.helpers_resolvers import (
 
 
 def test_metadata(
-    test_db: Session,
+    db_session: Session,
 ) -> None:
-    collection = create_collection(session=test_db)
+    collection = create_collection(session=db_session)
     collection_id = collection.collection_id
     # Create samples.
     sample = create_image(
-        session=test_db,
+        session=db_session,
         collection_id=collection_id,
         file_path_abs="/path/to/sample1.png",
     ).sample
     metadata_resolver.set_value_for_sample(
-        session=test_db,
+        session=db_session,
         sample_id=sample.sample_id,
         key="str_value",
         value="value1",
     )
     metadata_resolver.set_value_for_sample(
-        session=test_db,
+        session=db_session,
         sample_id=sample.sample_id,
         key="int_value",
         value=1,
@@ -40,13 +40,13 @@ def test_metadata(
     assert sample["int_value"] == 1
     assert (
         metadata_resolver.get_value_for_sample(
-            session=test_db, sample_id=sample.sample_id, key="str_value"
+            session=db_session, sample_id=sample.sample_id, key="str_value"
         )
         == "value1"
     )
     assert (
         metadata_resolver.get_value_for_sample(
-            session=test_db, sample_id=sample.sample_id, key="int_value"
+            session=db_session, sample_id=sample.sample_id, key="int_value"
         )
         == 1
     )
@@ -86,19 +86,19 @@ def test_metadata(
 
 
 def test_metadata__update_type(
-    test_db: Session,
+    db_session: Session,
 ) -> None:
-    collection = create_collection(session=test_db)
+    collection = create_collection(session=db_session)
     collection_id = collection.collection_id
     # Create samples.
     sample = create_image(
-        session=test_db,
+        session=db_session,
         collection_id=collection_id,
         file_path_abs="/path/to/sample1.png",
     ).sample
     sample["count"] = 42  # Creates INTEGER type
     metadata_resolver.set_value_for_sample(
-        session=test_db,
+        session=db_session,
         sample_id=sample.sample_id,
         key="name",
         value="test",
@@ -109,25 +109,25 @@ def test_metadata__update_type(
     # Try to set a value of a different type.
     with pytest.raises(
         ValueError,
-        match="Value type mismatch for key 'name'. Expected string, got integer",
+        match=r"Value type mismatch for key 'name'. Expected string, got integer",
     ):
         sample["name"] = 12
 
     with pytest.raises(
         ValueError,
-        match="Value type mismatch for key 'count'. Expected integer, got string",
+        match=r"Value type mismatch for key 'count'. Expected integer, got string",
     ):
         sample["count"] = "42"
 
 
 def test_metadata_get_value_for_missing_key(
-    test_db: Session,
+    db_session: Session,
 ) -> None:
-    collection = create_collection(session=test_db)
+    collection = create_collection(session=db_session)
     collection_id = collection.collection_id
     # Create samples.
     sample = create_image(
-        session=test_db,
+        session=db_session,
         collection_id=collection_id,
         file_path_abs="/path/to/sample1.png",
     ).sample

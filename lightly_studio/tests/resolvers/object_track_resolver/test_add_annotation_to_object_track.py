@@ -15,14 +15,14 @@ from tests.helpers_resolvers import (
 )
 
 
-def test_add_annotation_to_object_track(test_db: Session) -> None:
+def test_add_annotation_to_object_track(db_session: Session) -> None:
     """Test linking an object detection annotation to a track."""
-    collection = create_collection(session=test_db)
-    image = create_image(session=test_db, collection_id=collection.collection_id)
-    label = create_annotation_label(session=test_db, dataset_id=collection.collection_id)
+    collection = create_collection(session=db_session)
+    image = create_image(session=db_session, collection_id=collection.collection_id)
+    label = create_annotation_label(session=db_session, dataset_id=collection.collection_id)
 
     annotation = create_annotation(
-        session=test_db,
+        session=db_session,
         collection_id=collection.collection_id,
         sample_id=image.sample_id,
         annotation_label_id=label.annotation_label_id,
@@ -30,13 +30,13 @@ def test_add_annotation_to_object_track(test_db: Session) -> None:
     )
 
     track_id = object_track_resolver.create_many(
-        session=test_db,
+        session=db_session,
         tracks=[ObjectTrackCreate(object_track_number=99, dataset_id=collection.collection_id)],
     )[0]
     assert track_id is not None
 
     result = object_track_resolver.add_annotation_to_object_track(
-        session=test_db,
+        session=db_session,
         annotation_id=annotation.sample_id,
         object_track_id=track_id,
     )
@@ -44,7 +44,7 @@ def test_add_annotation_to_object_track(test_db: Session) -> None:
     assert result.object_track_id == track_id
 
     # Verify persisted in database.
-    fetched = annotation_resolver.get_by_id(session=test_db, annotation_id=annotation.sample_id)
+    fetched = annotation_resolver.get_by_id(session=db_session, annotation_id=annotation.sample_id)
     assert fetched is not None
     assert fetched.object_track_id == track_id
     assert fetched.object_track is not None

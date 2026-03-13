@@ -27,7 +27,9 @@ export const APP_ROUTES: Record<string, LayoutRouteId> = {
     frames: `${COLLECTION_BASE_ROUTE}/frames`,
     framesDetails: `${COLLECTION_BASE_ROUTE}/frames/[sample_id]`,
     videoDetails: `${COLLECTION_BASE_ROUTE}/videos/[sample_id]`,
-    groups: `${COLLECTION_BASE_ROUTE}/groups`
+    groups: `${COLLECTION_BASE_ROUTE}/groups`,
+    groupDetails: `${COLLECTION_BASE_ROUTE}/groups/[sampleId]`,
+    groupComponentDetails: `${COLLECTION_BASE_ROUTE}/groups/[sampleId]/[componentId]`
 };
 
 export const isSampleDetailsRoute = (routeId: string | null): boolean => {
@@ -68,6 +70,14 @@ export const isFrameDetailsRoute = (routeId: string | null): boolean => {
 
 export const isVideoDetailsRoute = (routeId: string | null): boolean => {
     return routeId ? routeId == APP_ROUTES.videoDetails : false;
+};
+
+export const isGroupDetailsRoute = (routeId: string | null): boolean => {
+    return routeId ? routeId == APP_ROUTES.groupDetails : false;
+};
+
+export const isGroupComponentDetailsRoute = (routeId: string | null): boolean => {
+    return routeId ? routeId == APP_ROUTES.groupComponentDetails : false;
 };
 
 // Route structure: /datasets/{dataset_id}/{collection_type}/{collection_id}
@@ -141,6 +151,15 @@ export const routes = {
             groupId: string
         ) => {
             return `/datasets/${datasetId}/${collectionType}/${collectionId}/groups/${groupId}`;
+        },
+        groupComponentDetails: (
+            datasetId: string,
+            collectionType: string,
+            collectionId: string,
+            groupId: string,
+            componentId: string
+        ) => {
+            return `/datasets/${datasetId}/${collectionType}/${collectionId}/groups/${groupId}/${componentId}`;
         }
     }
 };
@@ -206,5 +225,20 @@ export const routeHelpers = {
         groupId: string
     ) => {
         return routes.collection.groupDetails(datasetId, collectionType, collectionId, groupId);
+    },
+    toGroupComponentDetails: (
+        datasetId: string,
+        collectionType: string,
+        collectionId: string,
+        groupId: string,
+        componentId: string
+    ) => {
+        return routes.collection.groupComponentDetails(
+            datasetId,
+            collectionType,
+            collectionId,
+            groupId,
+            componentId
+        );
     }
 };

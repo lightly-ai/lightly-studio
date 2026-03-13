@@ -23,6 +23,7 @@ QueryType = TypeVar(
     SelectOfScalar[SampleTable],
     SelectOfScalar[SampleEmbeddingTable],
     SelectOfScalar[GroupTable],
+    SelectOfScalar[VideoTable],
     Select[tuple[VideoTable, VideoFrameTable]],
     SelectOfScalar[VideoFrameTable],
     Select[tuple[Any, int]],

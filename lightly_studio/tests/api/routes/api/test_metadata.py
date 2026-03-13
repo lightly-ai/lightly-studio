@@ -69,7 +69,7 @@ def test_get_metadata_info__empty_response(test_client: TestClient, mocker: Mock
 def test_compute_typicality_metadata(test_client: TestClient, db_session: Session) -> None:
     # Create collection with samples and embeddings
     collection_id = fill_db_with_samples_and_embeddings(
-        test_db=db_session, n_samples=10, embedding_model_names=["test_embedding_model"]
+        session=db_session, n_samples=10, embedding_model_names=["test_embedding_model"]
     )
 
     # Make API request with empty body (uses defaults)
@@ -94,7 +94,7 @@ def test_compute_typicality_metadata(test_client: TestClient, db_session: Sessio
 
 def test_compute_similarity_metadata(test_client: TestClient, db_session: Session) -> None:
     collection_id = fill_db_with_samples_and_embeddings(
-        test_db=db_session, n_samples=10, embedding_model_names=["test_embedding_model"]
+        session=db_session, n_samples=10, embedding_model_names=["test_embedding_model"]
     )
     query_tag = create_tag(session=db_session, collection_id=collection_id, tag_name="query_tag")
     samples = image_resolver.get_all_by_collection_id(
@@ -132,7 +132,7 @@ def test_compute_similarity_metadata_missing_query(
     test_client: TestClient, db_session: Session
 ) -> None:
     collection_id = fill_db_with_samples_and_embeddings(
-        test_db=db_session, n_samples=10, embedding_model_names=["test_embedding_model"]
+        session=db_session, n_samples=10, embedding_model_names=["test_embedding_model"]
     )
 
     response = test_client.post(
