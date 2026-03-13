@@ -7,7 +7,11 @@ from collections.abc import Iterable
 from pathlib import Path
 from uuid import UUID
 
-from labelformat.formats import COCOInstanceSegmentationOutput, COCOObjectDetectionOutput
+from labelformat.formats import (
+    COCOInstanceSegmentationOutput,
+    COCOObjectDetectionOutput,
+    PascalVOCSemanticSegmentationOutput,
+)
 from sqlmodel import Session
 
 from lightly_studio.core.image.image_sample import ImageSample
@@ -15,6 +19,7 @@ from lightly_studio.export import coco_captions
 from lightly_studio.export.lightly_studio_label_input import (
     LightlyStudioInstanceSegmentationInput,
     LightlyStudioObjectDetectionInput,
+    LightlyStudioSemanticSegmentationInput,
 )
 from lightly_studio.type_definitions import PathLike
 
@@ -135,6 +140,32 @@ def to_coco_instance_segmentations(
         samples=samples,
     )
     COCOInstanceSegmentationOutput(output_file=output_json).save(label_input=export_input)
+
+
+def to_pascalvoc_instance_segmentation(
+    session: Session,
+    root_dataset_id: UUID,
+    samples: Iterable[ImageSample],
+    output_folder: Path,
+) -> None:
+    """Exports semantic segmentation annotations to a Pascal VOC segmentation folder.
+
+    This function is for internal use.
+
+    Args:
+        session: The database session.
+        root_dataset_id: The root dataset ID for label retrieval.
+        samples: The samples to export.
+        output_folder: The folder where Pascal VOC segmentation files are written.
+    """
+    export_input = LightlyStudioSemanticSegmentationInput(
+        session=session,
+        dataset_id=root_dataset_id,
+        samples=samples,
+    )
+    PascalVOCSemanticSegmentationOutput(
+        output_folder=output_folder,
+    ).save(label_input=export_input)
 
 
 def to_coco_captions(

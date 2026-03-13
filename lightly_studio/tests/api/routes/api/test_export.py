@@ -2,9 +2,12 @@
 
 from __future__ import annotations
 
+import io
 import json
+import zipfile
 
 from fastapi.testclient import TestClient
+from PIL import Image as PILImage
 from sqlmodel import Session
 
 from lightly_studio.api.routes.api.status import (
@@ -132,6 +135,61 @@ def test_export_collection_instance_segmentations(
         response.headers["Content-Disposition"]
         == "attachment; filename=coco_instance_segmentation_export.json"
     )
+
+
+def test_export_collection_semantic_segmentations(
+    db_session: Session,
+    test_client: TestClient,
+) -> None:
+    collection = create_collection(session=db_session)
+    image = create_image(
+        session=db_session,
+        collection_id=collection.collection_id,
+        file_path_abs="img1.jpg",
+        width=3,
+        height=2,
+    )
+    label = create_annotation_label(
+        session=db_session, dataset_id=collection.collection_id, label_name="dog"
+    )
+    annotation_resolver.create_many(
+        session=db_session,
+        parent_collection_id=collection.collection_id,
+        annotations=[
+            AnnotationCreate(
+                annotation_label_id=label.annotation_label_id,
+                annotation_type=AnnotationType.SEMANTIC_SEGMENTATION,
+                parent_sample_id=image.sample_id,
+                x=1,
+                y=0,
+                width=1,
+                height=1,
+                segmentation_mask=[1, 1, 4],
+            )
+        ],
+    )
+
+    response = test_client.get(
+        f"/api/collections/{collection.collection_id}/export/annotations",
+        params={"annotation_type": "semantic_segmentation"},
+    )
+
+    assert response.status_code == HTTP_STATUS_OK
+    assert response.headers["Content-Disposition"] == "attachment; filename=pascalvoc.zip"
+
+    with zipfile.ZipFile(io.BytesIO(response.content)) as zip_ref:
+        files = set(zip_ref.namelist())
+        assert "pascalvoc/class_id_to_name.json" in files
+        assert "pascalvoc/SegmentationClass/img1.png" in files
+
+        class_map = json.loads(zip_ref.read("pascalvoc/class_id_to_name.json"))
+        assert class_map == {"0": "dog"}
+
+        with PILImage.open(
+            io.BytesIO(zip_ref.read("pascalvoc/SegmentationClass/img1.png"))
+        ) as mask:
+            mask_values = list(mask.getdata())
+        assert mask_values == [0, 0, 0, 0, 0, 0]
 
 
 def test_export_collection_captions(

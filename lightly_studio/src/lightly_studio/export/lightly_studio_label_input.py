@@ -114,6 +114,61 @@ class LightlyStudioInstanceSegmentationInput(LightlyStudioInputBase, InstanceSeg
             )
 
 
+class LightlyStudioSemanticSegmentationInput(LightlyStudioInputBase, InstanceSegmentationInput):
+    """Labelformat adapter for semantic segmentation backed by dataset samples and annotations."""
+
+    def __init__(self, session: Session, dataset_id: UUID, samples: Iterable[ImageSample]) -> None:
+        """Initializes the semantic segmentation adapter."""
+        super().__init__(session=session, dataset_id=dataset_id, samples=samples)
+
+    @staticmethod
+    def _sample_to_image_sem_seg(
+        sample: ImageSample,
+        image_id: int,
+        label_id_to_category: dict[UUID, Category],
+    ) -> ImageInstanceSegmentation:
+        objects = []
+        for annotation in sample.sample_table.annotations:
+            if annotation.annotation_type == AnnotationType.SEMANTIC_SEGMENTATION:
+                obj = _annotation_to_single_inst_seg(
+                    annotation=annotation,
+                    label_id_to_category=label_id_to_category,
+                    image_width=sample.width,
+                    image_height=sample.height,
+                )
+                if obj is not None:
+                    objects.append(obj)
+
+        return ImageInstanceSegmentation(
+            image=_sample_to_image(
+                sample=sample,
+                image_id=image_id,
+                filename=sample.file_name,
+            ),
+            objects=objects,
+        )
+
+    def get_images(self) -> Iterable[Image]:
+        """Returns the images for export."""
+        for idx, sample in enumerate(self._samples):
+            # Pascal VOC derives mask filenames from image names,
+            # so an absolute path cannot be used.
+            yield _sample_to_image(
+                sample=sample,
+                image_id=idx,
+                filename=sample.file_name,
+            )
+
+    def get_labels(self) -> Iterable[ImageInstanceSegmentation]:
+        """Returns the labels for export."""
+        for idx, sample in enumerate(self._samples):
+            yield LightlyStudioSemanticSegmentationInput._sample_to_image_sem_seg(
+                sample=sample,
+                image_id=idx,
+                label_id_to_category=self._label_id_to_category,
+            )
+
+
 def _build_label_id_to_category(session: Session, dataset_id: UUID) -> dict[UUID, Category]:
     labels = annotation_label_resolver.get_all_sorted_alphabetically(
         session=session,
@@ -127,10 +182,12 @@ def _build_label_id_to_category(session: Session, dataset_id: UUID) -> dict[UUID
     }
 
 
-def _sample_to_image(sample: ImageSample, image_id: int) -> Image:
+def _sample_to_image(sample: ImageSample, image_id: int, filename: str | None = None) -> Image:
+    if filename is None:
+        filename = sample.file_path_abs
     return Image(
         id=image_id,
-        filename=sample.file_path_abs,
+        filename=filename,
         width=sample.width,
         height=sample.height,
     )
