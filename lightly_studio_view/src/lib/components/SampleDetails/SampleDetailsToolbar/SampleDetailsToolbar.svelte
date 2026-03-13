@@ -4,6 +4,7 @@
     import { useAnnotationLabelContext } from '$lib/contexts/SampleDetailsAnnotation.svelte';
     import { useSampleDetailsToolbarContext } from '$lib/contexts/SampleDetailsToolbar.svelte';
     import { onDestroy, onMount } from 'svelte';
+    import { isTextInputTarget } from '$lib/utils';
     import BoundingBoxToolbarButton from '../BoundingBoxToolbarButton/BoundingBoxToolbarButton.svelte';
     import BrushToolbarButton from '../BrushToolbarButton/BrushToolbarButton.svelte';
     import CursorToolbarButton from '../CursorToolbarButton/CursorToolbarButton.svelte';
@@ -14,15 +15,15 @@
     const { showSegmentationTool = true }: { showSegmentationTool?: boolean } = $props();
 
     const { settingsStore } = useSettings();
+    let isSpacePressed = false;
 
     const onKeyDown = (e: KeyboardEvent) => {
-        const target = e.target as HTMLElement;
+        if (e.code === 'Space') {
+            isSpacePressed = true;
+            return;
+        }
 
-        if (
-            target.tagName === 'TEXTAREA' ||
-            target.isContentEditable ||
-            target.tagName === 'INPUT'
-        ) {
+        if (isSpacePressed || isTextInputTarget(e.target)) {
             return;
         }
 
@@ -47,12 +48,26 @@
         }
     };
 
+    const onKeyUp = (e: KeyboardEvent) => {
+        if (e.code === 'Space') {
+            isSpacePressed = false;
+        }
+    };
+
+    const onWindowBlur = () => {
+        isSpacePressed = false;
+    };
+
     onMount(() => {
         window.addEventListener('keydown', onKeyDown);
+        window.addEventListener('keyup', onKeyUp);
+        window.addEventListener('blur', onWindowBlur);
     });
 
     onDestroy(() => {
         window.removeEventListener('keydown', onKeyDown);
+        window.removeEventListener('keyup', onKeyUp);
+        window.removeEventListener('blur', onWindowBlur);
     });
 
     const {
