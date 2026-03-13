@@ -222,7 +222,7 @@ class BaseSampleDataset(Dataset[T], ABC):
     @classmethod
     def load(cls, name: str | None = None) -> Self:
         """Load an existing dataset."""
-        collection = load_collection(name=name, sample_type=cls.sample_type())
+        collection = load_root_collection(name=name, sample_type=cls.sample_type())
         if collection is None:
             raise ValueError(f"Dataset with name '{name}' not found.")
         return cls(collection=collection)
@@ -234,17 +234,19 @@ class BaseSampleDataset(Dataset[T], ABC):
         Args:
             name: The name of the dataset. If None, a default name is used.
         """
-        collection = load_collection(name=name, sample_type=cls.sample_type())
+        collection = load_root_collection(name=name, sample_type=cls.sample_type())
         if collection is None:
             return cls.create(name=name)
         return cls(collection=collection)
 
 
-def load_collection(sample_type: SampleType, name: str | None = None) -> CollectionTable | None:
-    """Load an existing collection.
+def load_root_collection(
+    sample_type: SampleType, name: str | None = None
+) -> CollectionTable | None:
+    """Load an existing root collection.
 
     Args:
-        name: The name of the dataset. If None, a default name is used.
+        name: The name of the collection. If None, a default name is used.
         sample_type: The type of samples in the dataset. Defaults to SampleType.IMAGE.
 
     Return:
@@ -253,11 +255,18 @@ def load_collection(sample_type: SampleType, name: str | None = None) -> Collect
     if name is None:
         name = DEFAULT_DATASET_NAME
 
-    collection = collection_resolver.get_by_name(session=db_manager.persistent_session(), name=name)
-    if collection is None:
+    # Search for root collections only using parent_collection_id=None
+    collection_id = collection_resolver.get_by_name(
+        session=db_manager.persistent_session(), name=name, parent_collection_id=None
+    )
+    if collection_id is None:
         return None
 
-    # Dataset exists, verify the sample type matches.
+    # Root collection exists, verify the sample type matches.
+    collection = collection_resolver.get_by_id(
+        session=db_manager.persistent_session(), collection_id=collection_id
+    )
+    assert collection is not None
     if collection.sample_type != sample_type:
         raise ValueError(
             f"Dataset with name '{name}' already exists with sample type "

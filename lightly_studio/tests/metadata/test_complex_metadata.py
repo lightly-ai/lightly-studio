@@ -64,7 +64,7 @@ def test_complex_metadata_update_type(db_session: Session) -> None:
     # Try to set a value of a different type.
     with pytest.raises(
         ValueError,
-        match="Value type mismatch for key 'gps_location'. Expected gps_coordinate, got integer",
+        match=r"Value type mismatch for key 'gps_location'. Expected gps_coordinate, got integer",
     ):
         sample["gps_location"] = 12
 

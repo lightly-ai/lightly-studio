@@ -39,7 +39,7 @@ def test_create_group_components(db_session: Session) -> None:
 
 
 def test_create_group_components__non_existent_parent(db_session: Session) -> None:
-    with pytest.raises(ValueError, match="Parent collection with id .* does not exist."):
+    with pytest.raises(ValueError, match=r"Parent collection with id .* does not exist."):
         collection_resolver.create_group_components(
             session=db_session,
             parent_collection_id=UUID("00000000-0000-0000-0000-000000000000"),
@@ -54,7 +54,7 @@ def test_create_group_components__non_group_parent(db_session: Session) -> None:
         sample_type=SampleType.IMAGE,
     )
     with pytest.raises(
-        ValueError, match="Can only create group components for collections of type GROUP."
+        ValueError, match=r"Can only create group components for collections of type GROUP."
     ):
         collection_resolver.create_group_components(
             session=db_session,
@@ -75,7 +75,7 @@ def test_create_group_components__existing_components(db_session: Session) -> No
         components=[("comp1", SampleType.IMAGE)],
     )
     with pytest.raises(
-        ValueError, match="Group components already exist for this parent collection."
+        ValueError, match=r"Group components already exist for this parent collection."
     ):
         collection_resolver.create_group_components(
             session=db_session,
@@ -90,7 +90,7 @@ def test_create_group_components__duplicate_component_names(db_session: Session)
         collection_name="group",
         sample_type=SampleType.GROUP,
     )
-    with pytest.raises(ValueError, match="Duplicate component name 'comp' in group components."):
+    with pytest.raises(ValueError, match=r"Duplicate component name 'comp' in group components."):
         collection_resolver.create_group_components(
             session=db_session,
             parent_collection_id=group.collection_id,
