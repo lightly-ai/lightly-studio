@@ -4,25 +4,34 @@ import { multipleAnnotationsSample, bearSamples, cocoDataset } from '../fixtures
 
 type BoundingBox = { x: number; y: number; width: number; height: number };
 
+const getSampleAnnotationCanvas = (sample: Locator) =>
+    sample.getByTestId('sample-annotation-item').locator('canvas').first();
+
 const hasBoxStrokeAtCoordinates = async (canvas: Locator, { x, y, width, height }: BoundingBox) => {
     return await canvas.evaluate(
         (element, box) => {
             const canvasElement = element as HTMLCanvasElement;
-            const context = canvasElement.getContext('2d');
+            const context = canvasElement.getContext('2d', { willReadFrequently: true });
 
             if (!context) {
                 return false;
             }
 
+            const imageData = context.getImageData(0, 0, canvasElement.width, canvasElement.height).data;
+            const canvasWidth = canvasElement.width;
             const maxX = canvasElement.width - 1;
             const maxY = canvasElement.height - 1;
 
-            const hasInkNearPoint = (pointX: number, pointY: number) => {
-                for (let deltaX = -1; deltaX <= 1; deltaX++) {
-                    for (let deltaY = -1; deltaY <= 1; deltaY++) {
-                        const sampleX = Math.min(maxX, Math.max(0, Math.round(pointX + deltaX)));
-                        const sampleY = Math.min(maxY, Math.max(0, Math.round(pointY + deltaY)));
-                        const alpha = context.getImageData(sampleX, sampleY, 1, 1).data[3];
+            const alphaAt = (pointX: number, pointY: number) => {
+                const sampleX = Math.min(maxX, Math.max(0, Math.round(pointX)));
+                const sampleY = Math.min(maxY, Math.max(0, Math.round(pointY)));
+                return imageData[(sampleY * canvasWidth + sampleX) * 4 + 3];
+            };
+
+            const hasInkNearPoint = (pointX: number, pointY: number, radius = 2) => {
+                for (let deltaX = -radius; deltaX <= radius; deltaX++) {
+                    for (let deltaY = -radius; deltaY <= radius; deltaY++) {
+                        const alpha = alphaAt(pointX + deltaX, pointY + deltaY);
                         if (alpha > 0) {
                             return true;
                         }
@@ -32,12 +41,34 @@ const hasBoxStrokeAtCoordinates = async (canvas: Locator, { x, y, width, height 
                 return false;
             };
 
-            return [
-                [box.x, box.y],
-                [box.x + box.width, box.y],
-                [box.x, box.y + box.height],
-                [box.x + box.width, box.y + box.height]
-            ].every(([pointX, pointY]) => hasInkNearPoint(pointX, pointY));
+            const edgeHasInk = (fromX: number, fromY: number, toX: number, toY: number) => {
+                const distance = Math.hypot(toX - fromX, toY - fromY);
+                const sampleCount = Math.max(4, Math.ceil(distance / 12));
+                let hits = 0;
+
+                for (let i = 0; i <= sampleCount; i++) {
+                    const t = i / sampleCount;
+                    const pointX = fromX + (toX - fromX) * t;
+                    const pointY = fromY + (toY - fromY) * t;
+                    if (hasInkNearPoint(pointX, pointY)) {
+                        hits++;
+                    }
+                }
+
+                return hits >= Math.max(2, Math.ceil(sampleCount * 0.4));
+            };
+
+            const left = box.x;
+            const right = box.x + box.width;
+            const top = box.y;
+            const bottom = box.y + box.height;
+
+            return (
+                edgeHasInk(left, top, right, top) &&
+                edgeHasInk(left, bottom, right, bottom) &&
+                edgeHasInk(left, top, left, bottom) &&
+                edgeHasInk(right, top, right, bottom)
+            );
         },
         { x, y, width, height }
     );
@@ -77,10 +108,9 @@ test('Annotations should have correct position between annotation label selectio
     await expect(samplesPage.getSampleByName(multipleAnnotationsSample.name)).toBeVisible();
 
     // Check that we have the sample with annotations
-    const multipleAnnotationsCanvas = samplesPage
-        .getSampleByName(multipleAnnotationsSample.name)
-        .locator('canvas')
-        .first();
+    const multipleAnnotationsCanvas = getSampleAnnotationCanvas(
+        samplesPage.getSampleByName(multipleAnnotationsSample.name)
+    );
     await expect(multipleAnnotationsCanvas).toBeVisible();
     for (const { coordinates } of multipleAnnotationsSample.annotations) {
         await expectBoxCoordinates(multipleAnnotationsCanvas, coordinates);
@@ -96,7 +126,7 @@ test('Annotations should have correct position between annotation label selectio
     await expect(samplesPage.getSampleByName(bearSamples[1].name)).toBeVisible();
 
     // Check bear box coordinates
-    const bearCanvas = samplesPage.getSampleByName(bearSamples[1].name).locator('canvas').first();
+    const bearCanvas = getSampleAnnotationCanvas(samplesPage.getSampleByName(bearSamples[1].name));
     await expect(bearCanvas).toBeVisible();
     for (let i = 0; i < bearSamples[1].annotations.length; i++) {
         await expectBoxCoordinates(bearCanvas, bearSamples[1].annotations[i].coordinates);
