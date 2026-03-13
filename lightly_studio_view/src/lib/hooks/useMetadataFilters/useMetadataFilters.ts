@@ -14,7 +14,9 @@ const loadInitialMetadataInfo = async (collection_id: string) => {
     if (get(lastCollectionId) === collection_id) {
         return;
     }
-
+    if (!validateUUID(collection_id)) {
+        return;
+    }
     lastCollectionId.set(collection_id);
 
     const { data: metadataInfoData } = await getMetadataInfo({
