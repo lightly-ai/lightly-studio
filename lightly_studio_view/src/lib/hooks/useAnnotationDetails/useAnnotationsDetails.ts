@@ -39,8 +39,7 @@ export const useAnnotationDetails = ({
         });
         client.invalidateQueries({
             queryKey: countAnnotationsByCollectionOptions({
-                path: { collection_id: collectionId },
-                body: {}
+                path: { collection_id: collectionId }
             }).queryKey
         });
     };

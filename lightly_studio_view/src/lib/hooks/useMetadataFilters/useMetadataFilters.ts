@@ -8,28 +8,24 @@ type MetadataInfo = components['schemas']['MetadataInfoView'];
 type MetadataBounds = Record<string, { min: number; max: number }>;
 type MetadataValues = Record<string, { min: number; max: number }>;
 
-const lastCollectionId = writable<string | null>();
+const lastCollectionId = writable<string | null>(null);
 
 const loadInitialMetadataInfo = async (collection_id: string) => {
-    if (get(lastCollectionId) == collection_id) {
-        return;
-    }
-
-    if (!validateUUID(collection_id)) {
-        return;
-    }
-
-    const { data: metadataInfoData } = await getMetadataInfo({
-        path: {
-            collection_id: collection_id
-        }
-    });
-
-    if (!metadataInfoData || get(lastCollectionId) !== collection_id) {
+    if (get(lastCollectionId) === collection_id) {
         return;
     }
 
     lastCollectionId.set(collection_id);
+
+    const { data: metadataInfoData } = await getMetadataInfo({
+        path: {
+            collection_id
+        }
+    });
+
+    if (!metadataInfoData) {
+        return;
+    }
     const { updateMetadataBounds, updateMetadataValues, updateMetadataInfo } = useGlobalStorage();
 
     // Extract numerical metadata for bounds and values

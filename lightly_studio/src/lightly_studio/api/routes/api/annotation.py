@@ -11,9 +11,7 @@ from pydantic import BaseModel
 
 from lightly_studio.api.routes.api import annotations as annotations_module
 from lightly_studio.api.routes.api.collection import get_and_validate_collection_id
-from lightly_studio.api.routes.api.status import (
-    HTTP_STATUS_NOT_FOUND,
-)
+from lightly_studio.api.routes.api.status import HTTP_STATUS_NOT_FOUND
 from lightly_studio.api.routes.api.validators import Paginated, PaginatedWithCursor
 from lightly_studio.db_manager import SessionDep
 from lightly_studio.models.annotation.annotation_base import (
@@ -77,13 +75,13 @@ def count_annotations_by_collection(
         Depends(get_and_validate_collection_id),
     ],
     session: SessionDep,
-    body: ReadCountAnnotationsRequest,
+    body: ReadCountAnnotationsRequest | None = None,
 ) -> list[dict[str, str | int]]:
     """Get annotation counts for a specific collection using an image filter body.
 
     Returns a list of dictionaries with label name and count.
     """
-    image_filter = body.filter or ImageFilter()
+    image_filter = body.filter if body and body.filter else ImageFilter()
     sample_filter = image_filter.sample_filter or SampleFilter()
     sample_filter.collection_id = collection.collection_id
     image_filter.sample_filter = sample_filter

@@ -200,6 +200,17 @@ def test_count_annotations_by_collection_with_image_filter(
     ]
 
 
+def test_count_annotations_by_collection_without_body(
+    test_client: TestClient,
+    annotation_collection_id: UUID,
+) -> None:
+    response = test_client.post(
+        f"/api/collections/{annotation_collection_id}/annotations/count",
+    )
+
+    assert response.status_code == HTTP_STATUS_OK
+
+
 def test_delete_annotation(
     test_client: TestClient,
     collection_id: UUID,
