@@ -510,6 +510,7 @@ def test_get_all_by_collection_name(
     ground_truth = annotation_resolver.get_all_by_collection_name(
         session=db_session,
         collection_name="ground_truth",
+        parent_collection_id=collection.collection_id,
     ).annotations
     assert len(ground_truth) == 1
     assert ground_truth[0].object_detection_details is not None
@@ -521,6 +522,7 @@ def test_get_all_by_collection_name(
     prediction = annotation_resolver.get_all_by_collection_name(
         session=db_session,
         collection_name="predictions",
+        parent_collection_id=collection.collection_id,
     ).annotations
     assert len(prediction) == 1
     assert prediction[0].object_detection_details is not None
@@ -531,9 +533,11 @@ def test_get_all_by_collection_name(
     assert prediction[0].confidence == pytest.approx(0.7)
 
     # Test with non-existent collection name
-    with pytest.raises(ValueError, match="Collection with name 'non-existent' does not exist."):
+    with pytest.raises(ValueError, match=r"Collection with name 'non-existent' does not exist."):
         annotation_resolver.get_all_by_collection_name(
-            session=db_session, collection_name="non-existent"
+            session=db_session,
+            collection_name="non-existent",
+            parent_collection_id=collection.collection_id,
         )
 
 

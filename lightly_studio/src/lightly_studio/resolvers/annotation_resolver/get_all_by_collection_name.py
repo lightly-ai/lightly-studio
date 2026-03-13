@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from uuid import UUID
+
 from sqlmodel import Session
 
 from lightly_studio.api.routes.api.validators import Paginated
@@ -14,6 +16,7 @@ from .get_all import GetAllAnnotationsResult, get_all
 def get_all_by_collection_name(
     session: Session,
     collection_name: str,
+    parent_collection_id: UUID,
     pagination: Paginated | None = None,
 ) -> GetAllAnnotationsResult:
     """Get all annotations for a collection by its name.
@@ -21,6 +24,7 @@ def get_all_by_collection_name(
     Args:
         session: Database session.
         collection_name: Name of the collection to get annotations for.
+        parent_collection_id: UUID of the parent collection.
         pagination: Optional pagination parameters.
 
     Returns:
@@ -29,9 +33,11 @@ def get_all_by_collection_name(
     Raises:
         ValueError: If the collection with the given name does not exist.
     """
-    collection = get_by_name(session=session, name=collection_name)
-    if collection is None:
+    collection_id = get_by_name(
+        session=session, name=collection_name, parent_collection_id=parent_collection_id
+    )
+    if collection_id is None:
         raise ValueError(f"Collection with name '{collection_name}' does not exist.")
 
-    filters = AnnotationsFilter(collection_ids=[collection.collection_id])
+    filters = AnnotationsFilter(collection_ids=[collection_id])
     return get_all(session=session, pagination=pagination, filters=filters)
