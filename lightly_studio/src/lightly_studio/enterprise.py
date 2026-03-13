@@ -119,6 +119,5 @@ def _fetch_engine_url(api_url: str, token: str) -> str:
         return response.json()["engine_url"]
     except (ValueError, KeyError):
         raise RuntimeError(
-            "Unexpected response from LightlyStudio: "
-            "response body does not contain `engine_url`."
+            "Unexpected response from LightlyStudio: response body does not contain `engine_url`."
         ) from None
