@@ -19,3 +19,5 @@ export type StripLockedParams = CommonParams & { mask: Uint8Array };
 export type ApplyMaskConstraintsParams = Omit<RemoveOverlapParams, 'newMask'> & {
     workingMask: Uint8Array;
 };
+
+export type OverriddenSegmentationAnnotations = AnnotationView[];
