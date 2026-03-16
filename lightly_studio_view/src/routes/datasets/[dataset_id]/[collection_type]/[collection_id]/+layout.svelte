@@ -65,6 +65,7 @@
         type ImageFilter
     } from '$lib/api/lightly_studio_local/types.gen.js';
     import type { AnnotationLabel } from '$lib/services/types.js';
+    import { buildImageFilter } from '$lib/utils/buildImageFilter';
 
     const { data, children } = $props();
     const {
@@ -221,40 +222,14 @@
     const metadataFilters = $derived(
         metadataValues ? createMetadataFilters($metadataValues) : undefined
     );
-    const imageFilter = $derived.by<ImageFilter | undefined>(() => {
-        const filter: ImageFilter = {};
-
-        if ($dimensionsValues) {
-            if (
-                $dimensionsValues.min_width !== undefined ||
-                $dimensionsValues.max_width !== undefined
-            ) {
-                filter.width = {
-                    min: $dimensionsValues.min_width,
-                    max: $dimensionsValues.max_width
-                };
-            }
-            if (
-                $dimensionsValues.min_height !== undefined ||
-                $dimensionsValues.max_height !== undefined
-            ) {
-                filter.height = {
-                    min: $dimensionsValues.min_height,
-                    max: $dimensionsValues.max_height
-                };
-            }
-        }
-
-        if (annotationFilter) {
-            filter.sample_filter = {
-                ...(filter.sample_filter ?? {}),
-                collection_id: datasetId,
-                annotations_filter: annotationFilter
-            };
-        }
-
-        return Object.keys(filter).length > 0 ? filter : undefined;
-    });
+    const imageFilter = $derived.by<ImageFilter | undefined>(() =>
+        buildImageFilter({
+            dimensionsValues: $dimensionsValues ?? undefined,
+            annotationFilter,
+            metadataFilters,
+            collectionId: collectionId
+        })
+    );
     const { videoFramesBoundsValues } = useVideoFramesBounds();
     const { videoBoundsValues } = useVideoBounds();
 

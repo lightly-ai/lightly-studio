@@ -11,8 +11,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Add tooltips to features in annotation items in the right panel to improve usability.
 - Added instance segmentation export to COCO in the GUI.
+- Added scopes to operators: now operators are tied to certain scopes and also retrieve filters. This enables to execute operators on specific collections, with specific filters, or even on individual samples.
+- Added keyboard navigation (Space + W/A/S/D) for moving within the zoomable image container.
 
 ### Changed
+
+- Smarter font loading reduces initial download from 500kB to 150kB
 
 ### Deprecated
 

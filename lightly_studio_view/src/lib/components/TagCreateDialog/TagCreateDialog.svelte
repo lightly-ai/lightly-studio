@@ -78,6 +78,11 @@
             : undefined
     );
     const sampleFilter = $derived<SampleFilter>({
+        annotations_filter: annotationLabelIds
+            ? {
+                  annotation_label_ids: annotationLabelIds
+              }
+            : undefined,
         tag_ids: $tagsSelected.size > 0 ? Array.from($tagsSelected) : undefined,
         metadata_filters: $metadataValues ? createMetadataFilters($metadataValues) : undefined
     });

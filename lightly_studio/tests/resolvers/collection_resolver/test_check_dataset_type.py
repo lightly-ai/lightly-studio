@@ -21,7 +21,7 @@ def test_check_collection_type(db_session: Session) -> None:
     )
 
     # Non-matching type raises ValueError
-    with pytest.raises(ValueError, match="is having sample type 'image', expected 'video'"):
+    with pytest.raises(ValueError, match=r"is having sample type 'image', expected 'video'"):
         collection_resolver.check_collection_type(
             session=db_session,
             collection_id=collection.collection_id,
@@ -30,7 +30,7 @@ def test_check_collection_type(db_session: Session) -> None:
 
     # Non-existing collection raises ValueError
     with pytest.raises(
-        ValueError, match="Collection with id 00000000-0000-0000-0000-000000000000 not found."
+        ValueError, match=r"Collection with id 00000000-0000-0000-0000-000000000000 not found."
     ):
         collection_resolver.check_collection_type(
             session=db_session,

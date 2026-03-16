@@ -12,8 +12,6 @@ export const useAnnotationCounts = ({
     createQuery(
         countAnnotationsByCollectionOptions({
             path: { collection_id: collectionId },
-            body: {
-                ...(filter && { filter })
-            }
+            ...(filter ? { body: { filter } } : {})
         })
     );

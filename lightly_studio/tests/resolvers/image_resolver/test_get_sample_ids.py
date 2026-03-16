@@ -45,7 +45,7 @@ def test_get_sample_ids(db_session: Session) -> None:
 
 
 def test_get_sample_ids__no_collection_id(db_session: Session) -> None:
-    with pytest.raises(ValueError, match="Collection ID must be provided in the sample filter."):
+    with pytest.raises(ValueError, match=r"Collection ID must be provided in the sample filter."):
         image_resolver.get_sample_ids(
             session=db_session,
             filters=ImageFilter(width=FilterDimensions(min=500)),

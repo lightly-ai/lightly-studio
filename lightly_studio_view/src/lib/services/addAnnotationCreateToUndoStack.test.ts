@@ -52,4 +52,28 @@ describe('addAnnotationCreateToUndoStack', () => {
         expect(deleteAnnotation).toHaveBeenCalledWith('annotation-123');
         expect(refetch).toHaveBeenCalled();
     });
+
+    it('should execute optional onUndo callback before refetch', async () => {
+        const addReversibleAction = vi.fn();
+        const deleteAnnotation = vi.fn().mockResolvedValue(undefined);
+        const refetch = vi.fn();
+        const onUndo = vi.fn().mockResolvedValue(undefined);
+
+        addAnnotationCreateToUndoStack({
+            annotation: mockAnnotation,
+            addReversibleAction,
+            deleteAnnotation,
+            refetch,
+            onUndo
+        });
+
+        const action = addReversibleAction.mock.calls[0][0] as ReversibleAction;
+        await action.execute();
+
+        expect(onUndo).toHaveBeenCalledTimes(1);
+        expect(refetch).toHaveBeenCalledTimes(1);
+        expect(onUndo.mock.invocationCallOrder[0]).toBeLessThan(
+            refetch.mock.invocationCallOrder[0]
+        );
+    });
 });

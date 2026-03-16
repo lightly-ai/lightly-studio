@@ -109,13 +109,13 @@ def test_metadata__update_type(
     # Try to set a value of a different type.
     with pytest.raises(
         ValueError,
-        match="Value type mismatch for key 'name'. Expected string, got integer",
+        match=r"Value type mismatch for key 'name'. Expected string, got integer",
     ):
         sample["name"] = 12
 
     with pytest.raises(
         ValueError,
-        match="Value type mismatch for key 'count'. Expected integer, got string",
+        match=r"Value type mismatch for key 'count'. Expected integer, got string",
     ):
         sample["count"] = "42"
 

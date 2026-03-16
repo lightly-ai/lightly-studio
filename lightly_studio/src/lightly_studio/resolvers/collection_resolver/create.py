@@ -1,4 +1,4 @@
-"""Implementation of create collection resolver function."""
+"""Implementation of the create collection resolver function."""
 
 from __future__ import annotations
 
@@ -9,17 +9,24 @@ from lightly_studio.resolvers import collection_resolver
 
 
 def create(session: Session, collection: CollectionCreate) -> CollectionTable:
-    """Create a new collection in the database."""
-    if collection.parent_collection_id is not None:
-        collection_id = collection_resolver.get_child_collection_by_name(
-            session=session, name=collection.name, collection_id=collection.parent_collection_id
-        )
-        if collection_id is not None:
-            existing = collection_resolver.get_by_id(session=session, collection_id=collection_id)
-        else:
-            existing = None
-    else:
-        existing = collection_resolver.get_by_name(session=session, name=collection.name)
+    """Creates a new collection in the database.
+
+    Args:
+        session: The database session to use.
+        collection: The data for the new collection.
+
+    Returns:
+        The created collection.
+
+    Raises:
+        ValueError:
+            If a collection with the same name already exists under the same parent.
+    """
+    existing = collection_resolver.get_by_name(
+        session=session,
+        name=collection.name,
+        parent_collection_id=collection.parent_collection_id,
+    )
     if existing:
         raise ValueError(f"Collection with name '{collection.name}' already exists.")
     db_collection = CollectionTable.model_validate(collection)
