@@ -18,12 +18,17 @@ from lightly_studio.dataset.embedding_manager import (
 
 text_embedding_router = APIRouter()
 
+EmbeddingManagerDep = Annotated[
+    EmbeddingManager,
+    Depends(lambda: EmbeddingManagerProvider.get_embedding_manager()),  # noqa: PLW0108
+]
+
 
 @text_embedding_router.get(
     "/text_embedding/for_collection/{collection_id}", response_model=list[float]
 )
 def embed_text(
-    embedding_manager: Annotated[EmbeddingManager, Depends(_get_embedding_manager)],
+    embedding_manager: EmbeddingManagerDep,
     collection_id: Annotated[UUID, Path(title="The ID of the collection for which to embed.")],
     query_text: str = Query(..., description="The text to embed."),
     embedding_model_id: Annotated[
@@ -44,7 +49,3 @@ def embed_text(
         ) from None
 
     return text_embeddings
-
-
-def _get_embedding_manager() -> EmbeddingManager:
-    return EmbeddingManagerProvider.get_embedding_manager()
