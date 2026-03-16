@@ -34,7 +34,7 @@ describe('applySegmentationMaskConstraints', () => {
         const locked = new Set(['lock']);
         const annotations = [baseAnn('lock', [1, 1, 0, 0]), baseAnn('other', [1, 0, 0, 0])];
 
-        await applySegmentationMaskConstraints({
+        const overriddenAnnotations = await applySegmentationMaskConstraints({
             workingMask,
             lockedAnnotationIds: locked,
             annotations,
@@ -49,5 +49,6 @@ describe('applySegmentationMaskConstraints', () => {
         expect(Array.from(workingMask)).toEqual([0, 0, 0, 0]);
         // Overlap with "other" should trigger an update call.
         expect(updateAnnotations).toHaveBeenCalledTimes(1);
+        expect(overriddenAnnotations.map((annotation) => annotation.sample_id)).toEqual(['other']);
     });
 });
