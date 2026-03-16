@@ -21,14 +21,14 @@ c = MyClass()
 ```
 
 Exceptions from the guidelines:
-- We allow direct function import from `typing` in Python
+- We allow direct function import from `typing`
 
 ## File layout
 
 - Put important functions at the top
     - Especially, put public functions before private ones
-    - Classes should come before global functions, if they are present
-- Rationale: The file should be easy to understand when read top-to-bottom. Important information therefore should be towards the top of the file.
+    - Classes should come before global functions
+- Rationale: The file should be easy to understand when read top-to-bottom. Important information should be towards the top of the file.
 
 ```python
 from x import y
@@ -150,6 +150,27 @@ Exceptions may apply occasionally. Such logic should be accompanied by a comment
 
 ## Docstrings
 
+### Function and method-level Docstrings
+
+We use Google style docstrings.
+
+```python
+def foo(bar: int) -> str:
+    """Summary of function here.
+
+    Longer function information...
+
+    Args:
+        bar: Description of the argument `bar`.
+
+    Returns:
+        Description of the return value.
+
+    Raises:
+        ValueError: Description of the error that may be raised.
+    """
+```
+
 ### Class-level Docstrings
 
 Document the functionality of the class and its **public attributes** if they are not already
@@ -170,23 +191,6 @@ class SampleClass:
     """An example docstring."""
 
 ```
-
-### Constructor-level Docstrings
-
-Should have its own arguments section and a brief sentence describing the functionality. Don’t write `Constructor of the SampleClass` as the description, this is not helpful.
-
-```python
-    def __init__(self, likes_spam: bool = False) -> None:
-        """Initializes the instance based on spam preference.
-
-        Args:
-            likes_spam: Defines if instance exhibits this preference.
-        """
-        self.likes_spam = likes_spam
-        self.eggs = 0
-```
-
-If **public attributes** and **constructor arguments** match exactly, prefer using Dataclasses over writing your own constructor and constructor docstring.
 
 ### Tensor Shapes in Docstrings
 
@@ -265,7 +269,6 @@ All our code must be typed.
 - Mocking has its place though, especially for outside dependencies (e.g. db or network) or long-running subroutines
 - Mocking is also suitable for “thin” methods that make many subcalls
 - Spying can be an alternative to mocking
-- Use pytest mocking
 
 ### Tests must be easy to check by hand
 
@@ -275,12 +278,12 @@ All our code must be typed.
 
 ### Tests must use pytest (NOT unittest)
 
-- Pytest it the better library
-- If you import from unittest, it is wrong. Replace by the corresponding pytest feature instead.
+- Don't import unittest. Pytest it more modern.
+- Use pytest.MockerFixture
 
 ## Naming
 
-We use the following naming conventions for tests. Tests are in a folder structure parallel
+We use the following naming conventions for tests. Tests must be a folder structure parallel
 to `src/{package_name}`.
 
 ```python
