@@ -24,21 +24,11 @@ logger = logging.getLogger(__name__)
 image_embedding_router = APIRouter()
 
 
-def _get_embedding_manager() -> EmbeddingManager:
-    return EmbeddingManagerProvider.get_embedding_manager()
-
-
-EmbeddingManagerDep = Annotated[
-    EmbeddingManager,
-    Depends(_get_embedding_manager),
-]
-
-
 @image_embedding_router.post(
     "/image_embedding/from_file/for_collection/{collection_id}", response_model=list[float]
 )
 def embed_image_from_file(
-    embedding_manager: EmbeddingManagerDep,
+    embedding_manager: Annotated[EmbeddingManager, Depends(_get_embedding_manager)],
     collection_id: Annotated[UUID, FastAPIPath(title="The ID of the collection.")],
     file: Annotated[UploadFile, File(description="The image file to embed.")],
     embedding_model_id: Annotated[
@@ -74,3 +64,7 @@ def embed_image_from_file(
             status_code=HTTP_STATUS_INTERNAL_SERVER_ERROR,
             detail=f"Error processing image: {exc}",
         ) from None
+
+
+def _get_embedding_manager() -> EmbeddingManager:
+    return EmbeddingManagerProvider.get_embedding_manager()
