@@ -9,5 +9,4 @@ class DatasetTable(SQLModel, table=True):
     """This class defines the Dataset model."""
 
     __tablename__ = "dataset"
-    # TODO(lukas, 3/2026): Consider adding a uniqueness constraint.
     dataset_id: UUID = Field(default_factory=uuid4, primary_key=True)
