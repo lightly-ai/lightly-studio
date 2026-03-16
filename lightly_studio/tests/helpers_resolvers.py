@@ -159,7 +159,7 @@ def create_annotation_label(
     return annotation_label_resolver.create(
         session=session,
         label=AnnotationLabelCreate(
-            dataset_id=dataset_id,
+            root_collection_id=dataset_id,
             annotation_label_name=label_name,
         ),
     )

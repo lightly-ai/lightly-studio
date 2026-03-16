@@ -32,7 +32,7 @@ def test_get_by_label_name__returns_label(
 
     annotation_label = annotation_label_resolver.get_by_label_name(
         session=db_session,
-        dataset_id=collection_id_1,
+        root_collection_id=collection_id_1,
         label_name="cat",
     )
     assert annotation_label == label_1
@@ -58,7 +58,7 @@ def test_get_by_label_name__returns_none(
     assert (
         annotation_label_resolver.get_by_label_name(
             session=db_session,
-            dataset_id=collection_id_1,
+            root_collection_id=collection_id_1,
             label_name="nonexistent_label_name",
         )
         is None
@@ -66,7 +66,7 @@ def test_get_by_label_name__returns_none(
     assert (
         annotation_label_resolver.get_by_label_name(
             session=db_session,
-            dataset_id=collection_id_2,
+            root_collection_id=collection_id_2,
             label_name="cat",
         )
         is None

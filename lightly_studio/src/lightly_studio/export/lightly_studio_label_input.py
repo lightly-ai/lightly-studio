@@ -180,7 +180,7 @@ def _build_label_id_to_category(
 ) -> dict[UUID, Category]:
     labels = annotation_label_resolver.get_all_sorted_alphabetically(
         session=session,
-        dataset_id=dataset_id,
+        root_collection_id=dataset_id,
     )
     # TODO(Horatiu, 09/2025): We should get only labels that are attached to Object Detection
     # annotations.

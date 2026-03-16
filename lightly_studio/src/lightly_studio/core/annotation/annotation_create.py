@@ -54,13 +54,13 @@ class CreateAnnotationBase(BaseModel):
 
     def _get_label_id(self, session: Session, dataset_id: UUID) -> UUID:
         label = annotation_label_resolver.get_by_label_name(
-            session=session, dataset_id=dataset_id, label_name=self.label
+            session=session, root_collection_id=dataset_id, label_name=self.label
         )
         if label is None:
             label = annotation_label_resolver.create(
                 session=session,
                 label=AnnotationLabelCreate(
-                    dataset_id=dataset_id, annotation_label_name=self.label
+                    root_collection_id=dataset_id, annotation_label_name=self.label
                 ),
             )
         return label.annotation_label_id
