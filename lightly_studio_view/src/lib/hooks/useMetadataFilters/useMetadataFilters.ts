@@ -1,54 +1,51 @@
-import { getMetadataInfoOptions } from '$lib/api/lightly_studio_local/@tanstack/svelte-query.gen';
-import { createQuery } from '@tanstack/svelte-query';
+import { getMetadataInfo } from '$lib/api/lightly_studio_local';
 import { get, writable } from 'svelte/store';
 import type { components } from '$lib/schema';
 import { useGlobalStorage } from '$lib/hooks/useGlobalStorage';
+import { validate as validateUUID } from 'uuid';
 
 type MetadataInfo = components['schemas']['MetadataInfoView'];
 type MetadataBounds = Record<string, { min: number; max: number }>;
 type MetadataValues = Record<string, { min: number; max: number }>;
 
-const lastCollectionId = writable<string | null>();
+const lastCollectionId = writable<string | null>(null);
 
 const loadInitialMetadataInfo = async (collection_id: string) => {
-    if (get(lastCollectionId) == collection_id) {
+    if (get(lastCollectionId) === collection_id) {
         return;
     }
+    if (!validateUUID(collection_id)) {
+        return;
+    }
+    lastCollectionId.set(collection_id);
 
-    const metadataOptions = getMetadataInfoOptions({
+    const { data: metadataInfoData } = await getMetadataInfo({
         path: {
-            collection_id: collection_id
+            collection_id
         }
     });
 
-    const metadataQuery = createQuery(metadataOptions);
+    if (!metadataInfoData) {
+        return;
+    }
+    const { updateMetadataBounds, updateMetadataValues, updateMetadataInfo } = useGlobalStorage();
 
-    // Subscribe to the query to get the data
-    metadataQuery.subscribe((queryResult) => {
-        if (queryResult.data) {
-            const metadataInfoData = queryResult.data;
-            const { updateMetadataBounds, updateMetadataValues, updateMetadataInfo } =
-                useGlobalStorage();
+    // Extract numerical metadata for bounds and values
+    const bounds: MetadataBounds = {};
+    const values: MetadataValues = {};
 
-            // Extract numerical metadata for bounds and values
-            const bounds: MetadataBounds = {};
-            const values: MetadataValues = {};
-
-            metadataInfoData.forEach((info: MetadataInfo) => {
-                if (info.type === 'integer' || info.type === 'float') {
-                    if (info.min != null && info.max != null) {
-                        bounds[info.name] = { min: info.min, max: info.max };
-                        values[info.name] = { min: info.min, max: info.max };
-                    }
-                }
-            });
-
-            updateMetadataBounds(bounds);
-            updateMetadataValues(values);
-            updateMetadataInfo(metadataInfoData);
-            lastCollectionId.set(collection_id);
+    metadataInfoData.forEach((info: MetadataInfo) => {
+        if (info.type === 'integer' || info.type === 'float') {
+            if (info.min != null && info.max != null) {
+                bounds[info.name] = { min: info.min, max: info.max };
+                values[info.name] = { min: info.min, max: info.max };
+            }
         }
     });
+
+    updateMetadataBounds(bounds);
+    updateMetadataValues(values);
+    updateMetadataInfo(metadataInfoData);
 };
 
 type MetadataFilter = components['schemas']['MetadataFilter'];
