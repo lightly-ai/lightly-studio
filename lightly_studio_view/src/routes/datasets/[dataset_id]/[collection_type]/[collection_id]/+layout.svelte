@@ -236,9 +236,10 @@
             (isAnnotations && parentCollection?.sampleType == SampleType.VIDEO_FRAME)
         ) {
             let usedCollection = collectionId;
+            // If we are on the annotation page we must pass the video frames connectionId as annotations
+            // collection is a child of it.
             if (isAnnotations && parentCollection?.sampleType == SampleType.VIDEO_FRAME)
                 usedCollection = parentCollection.collectionId;
-            console.log('using useVideoFrameAnnotationCounts');
             return useVideoFrameAnnotationCounts({
                 collectionId: usedCollection,
                 filter: {
@@ -250,7 +251,6 @@
                 }
             });
         } else if (isVideos) {
-            console.log('using useVideoAnnotationCounts');
             return useVideoAnnotationCounts({
                 collectionId,
                 filter: {
@@ -266,7 +266,6 @@
                 }
             });
         }
-        console.log('using useAnnotationCounts');
         return useAnnotationCounts({
             collectionId: datasetId,
             filter: imageFilter
