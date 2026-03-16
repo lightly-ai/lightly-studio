@@ -23,19 +23,41 @@ class SampleType(str, Enum):
 class CollectionBase(SQLModel):
     """Base class for the Collection model."""
 
-    __table_args__ = (
-        # Collections should have unique names per parent collection
-        UniqueConstraint("name", "parent_collection_id", name="unique_collection"),
-    )
     name: str = Field(index=True)
     parent_collection_id: Optional[UUID] = Field(
-        default=None, foreign_key="collection.collection_id"
+        default=None,
+        foreign_key="collection.collection_id",
+        index=True,
     )
     sample_type: SampleType
 
     # Group-specific fields
     group_component_name: Optional[str] = None
     group_component_index: Optional[int] = None
+
+
+class CollectionTable(CollectionBase, table=True):
+    """This class defines the Collection model."""
+
+    __tablename__ = "collection"
+    __table_args__ = (
+        # Collections should have unique names per parent collection
+        UniqueConstraint("name", "parent_collection_id", name="unique_collection"),
+    )
+    collection_id: UUID = Field(default_factory=uuid4, primary_key=True)
+    dataset_id: UUID = Field(index=True, foreign_key="dataset.dataset_id")
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc), index=True)
+    updated_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+
+    parent: Optional["CollectionTable"] = Relationship(
+        back_populates="children",
+        sa_relationship_kwargs={"remote_side": "CollectionTable.collection_id"},
+    )
+    children: list["CollectionTable"] = Relationship(
+        back_populates="parent",
+        sa_relationship_kwargs={"lazy": "select"},
+    )
+    # TODO(lukas, 3/2026): add a relationship to DatasetTable
 
 
 class CollectionCreate(CollectionBase):
@@ -46,6 +68,7 @@ class CollectionView(CollectionBase):
     """Collection class when retrieving."""
 
     collection_id: UUID
+    dataset_id: UUID
     created_at: datetime
     updated_at: datetime
     children: list["CollectionView"] = []
@@ -83,21 +106,3 @@ class CollectionOverviewView(SQLModel):
     sample_type: SampleType
     created_at: datetime
     total_sample_count: int
-
-
-class CollectionTable(CollectionBase, table=True):
-    """This class defines the Collection model."""
-
-    __tablename__ = "collection"
-    collection_id: UUID = Field(default_factory=uuid4, primary_key=True)
-    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc), index=True)
-    updated_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
-
-    parent: Optional["CollectionTable"] = Relationship(
-        back_populates="children",
-        sa_relationship_kwargs={"remote_side": "CollectionTable.collection_id"},
-    )
-    children: list["CollectionTable"] = Relationship(
-        back_populates="parent",
-        sa_relationship_kwargs={"lazy": "select"},
-    )
