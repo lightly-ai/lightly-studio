@@ -4,7 +4,7 @@ import {
     decodeRLEToBinaryMask,
     encodeBinaryMaskToRLE
 } from '$lib/components/SampleAnnotation/utils';
-import type { RemoveOverlapParams } from './types';
+import type { OverriddenSegmentationAnnotations, RemoveOverlapParams } from './types';
 
 /**
  * Clears pixels from other semantic masks that overlap the new mask,
@@ -19,11 +19,12 @@ export const removeOverlapFromOtherSemanticAnnotations = async ({
     sample,
     collectionId,
     updateAnnotations
-}: RemoveOverlapParams) => {
-    if (segmentationMode !== 'semantic') return;
-    if (!annotations?.length) return;
+}: RemoveOverlapParams): Promise<OverriddenSegmentationAnnotations> => {
+    if (segmentationMode !== 'semantic') return [];
+    if (!annotations?.length) return [];
 
     const updates: AnnotationUpdateInput[] = [];
+    const overriddenAnnotations: OverriddenSegmentationAnnotations = [];
 
     annotations
         .filter((ann) => {
@@ -49,6 +50,7 @@ export const removeOverlapFromOtherSemanticAnnotations = async ({
 
             if (!changed) return;
 
+            overriddenAnnotations.push(ann);
             const bbox = computeBoundingBoxFromMask(otherMask, sample.width, sample.height);
             updates.push({
                 annotation_id: ann.sample_id,
@@ -61,4 +63,6 @@ export const removeOverlapFromOtherSemanticAnnotations = async ({
     if (updates.length) {
         await updateAnnotations(updates);
     }
+
+    return overriddenAnnotations;
 };

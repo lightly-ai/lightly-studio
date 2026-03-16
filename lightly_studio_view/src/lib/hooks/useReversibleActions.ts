@@ -1,9 +1,11 @@
 import { get, writable } from 'svelte/store';
 
+export type ReversibleActionCallback = () => void | Promise<void>;
+
 export interface ReversibleAction {
     id: string;
     description: string;
-    execute: () => void | Promise<void>;
+    execute: ReversibleActionCallback;
     timestamp: Date;
     groupId: string;
 }
