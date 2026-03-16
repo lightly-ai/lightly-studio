@@ -75,7 +75,7 @@ def _use_postgres(request: pytest.FixtureRequest) -> bool:
 
 
 @pytest.fixture(scope="session")
-def _postgres_url(_use_postgres: bool) -> Generator[str | None, None, None]:
+def postgres_url(_use_postgres: bool) -> Generator[str | None, None, None]:
     """Start a Postgres container and yield its URL, or None for DuckDB."""
     if not _use_postgres:
         yield None
@@ -90,13 +90,13 @@ def _postgres_url(_use_postgres: bool) -> Generator[str | None, None, None]:
 
 
 @pytest.fixture(scope="session")
-def _postgres_engine(_postgres_url: str | None) -> Generator[DatabaseEngine | None, None, None]:
+def _postgres_engine(postgres_url: str | None) -> Generator[DatabaseEngine | None, None, None]:
     """Create a session-scoped DatabaseEngine for Postgres, or None for DuckDB."""
-    if _postgres_url is None:
+    if postgres_url is None:
         yield None
         return
 
-    engine = DatabaseEngine(engine_url=_postgres_url, single_threaded=True)
+    engine = DatabaseEngine(engine_url=postgres_url, single_threaded=True)
     yield engine
     engine.close()
 
