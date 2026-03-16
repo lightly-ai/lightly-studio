@@ -154,7 +154,7 @@ def remove_sample_ids_from_tag_id(
     if not tag or not tag.tag_id:
         return None
 
-    session.exec(  # type:ignore[call-overload]
+    session.exec(
         sqlmodel.delete(SampleTagLinkTable).where(
             col(SampleTagLinkTable.tag_id) == tag_id,
             col(SampleTagLinkTable.sample_id).in_(sample_ids),
