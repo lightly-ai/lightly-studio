@@ -31,16 +31,19 @@ repo_name: LightlyStudio
 docs_dir: docs
 
 nav:
-  - Home: index.md
+  - Getting Started: index.md
   - Python API:
+    - api/index.md
     - Dataset: api/dataset.md
     - Sample: api/sample.md
     - DatasetQuery: api/dataset_query.md
     - Selection: api/selection.md
     - Plugin: api/plugin.md
     - Annotation: api/annotation.md
-  - Tutorials:
-    - Parallel Python and GUI: tutorials/parallel_python_gui.md
+  - Concepts & Tools:
+    - Plugins: concepts_and_tools/plugins.md
+  - Advanced:
+    - Parallel Python and GUI: advanced/parallel_python_gui.md
   - About Us: about-us.md
 
 extra_css:
