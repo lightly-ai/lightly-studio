@@ -18,7 +18,7 @@ def test_create(db_session: Session) -> None:
     assert ds.name == "my_collection"
     assert ds.dataset_id is not None
 
-    # Check that the dataset record was created and links to the root collection
+    # Check that the dataset record was created
     db_dataset = db_session.get(DatasetTable, ds.dataset_id)
     assert db_dataset is not None
 
