@@ -6,6 +6,7 @@
 from __future__ import annotations
 
 from pathlib import Path
+from uuid import uuid4
 
 import pytest
 import sqlalchemy
@@ -295,7 +296,7 @@ def test_cleanup_postgres__drops_tables_when_cleanup_existing(
         cleanup_existing=True,
     )
 
-    mock_drop_all.assert_called_once_with(mock_engine)
+    mock_drop_all.assert_called_once_with(bind=mock_engine)
 
 
 def test_cleanup_postgres__no_drop_when_cleanup_existing_false(
@@ -321,7 +322,7 @@ def test_cleanup_postgres__integration(
 
     # Create an isolated database within the same Postgres container.
     base_url = sqlalchemy.make_url(postgres_url)
-    cleanup_db_name = "test_cleanup"
+    cleanup_db_name = f"test_cleanup_{uuid4().hex}"
     cleanup_db_url = base_url.set(database=cleanup_db_name).render_as_string(hide_password=False)
 
     # AUTOCOMMIT required because Postgres forbids CREATE/DROP DATABASE inside a transaction.
@@ -331,12 +332,14 @@ def test_cleanup_postgres__integration(
     with base_engine.connect() as conn:
         conn.execute(sqlalchemy.text(f"CREATE DATABASE {cleanup_db_name}"))
 
+    engine: DatabaseEngine | None = None
     try:
         # 1. Create engine and insert a row.
         engine = DatabaseEngine(engine_url=cleanup_db_url, single_threaded=True)
         with engine.session() as session:
             create_collection(session=session, collection_name="should_be_deleted")
         engine.close()
+        engine = None
 
         # 2. Re-create engine with cleanup_existing=True -> data should be wiped.
         engine = DatabaseEngine(
@@ -346,7 +349,10 @@ def test_cleanup_postgres__integration(
             collections = session.exec(sqlmodel.select(CollectionTable)).all()
             assert len(collections) == 0
         engine.close()
+        engine = None
     finally:
+        if engine is not None:
+            engine.close()
         with base_engine.connect() as conn:
             conn.execute(sqlalchemy.text(f"DROP DATABASE IF EXISTS {cleanup_db_name}"))
         base_engine.dispose()
