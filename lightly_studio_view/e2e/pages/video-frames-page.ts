@@ -12,7 +12,7 @@ export class VideoFramesPage {
         // Wait for frame grid items to be visible
         // TODO(Horatiu 01/2026): 20s timeout might be too long, investigate if we can reduce it.
         await expect(this.getVideoFrames().first()).toBeVisible({
-            timeout: 20000
+            timeout: 10000
         });
     }
 
