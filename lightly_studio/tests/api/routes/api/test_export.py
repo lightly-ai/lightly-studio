@@ -14,7 +14,9 @@ from lightly_studio.models.annotation.annotation_base import (
     AnnotationCreate,
     AnnotationType,
 )
-from lightly_studio.resolvers import annotation_resolver, tag_resolver
+from lightly_studio.models.annotation.object_track import ObjectTrackCreate
+from lightly_studio.models.collection import SampleType
+from lightly_studio.resolvers import annotation_resolver, object_track_resolver, tag_resolver
 from tests.helpers_resolvers import (
     ImageStub,
     create_annotation_label,
@@ -24,6 +26,7 @@ from tests.helpers_resolvers import (
     create_images,
     create_tag,
 )
+from tests.resolvers.video.helpers import VideoStub, create_video_with_frames
 
 
 def test_export_collection_annotations(
@@ -200,3 +203,91 @@ def test_export_collection_samples(db_session: Session, test_client: TestClient)
 
     lines = response.text.split("\n")
     assert lines == ["path/to/image0.jpg", "path/to/image2.jpg"]
+
+
+def test_export_collection_youtube_vis(
+    db_session: Session,
+    test_client: TestClient,
+) -> None:
+    collection = create_collection(session=db_session, sample_type=SampleType.VIDEO)
+    video_with_frames = create_video_with_frames(
+        session=db_session,
+        collection_id=collection.collection_id,
+        video=VideoStub(path="video_001.mp4", width=3, height=2, duration_s=2.0, fps=1.0),
+    )
+
+    label = create_annotation_label(
+        session=db_session,
+        dataset_id=collection.collection_id,
+        label_name="cat",
+    )
+    object_track_id = object_track_resolver.create_many(
+        session=db_session,
+        tracks=[
+            ObjectTrackCreate(
+                object_track_number=99,
+                dataset_id=collection.collection_id,
+            )
+        ],
+    )[0]
+
+    frame_0, _frame_1 = video_with_frames.frame_sample_ids
+    annotation_resolver.create_many(
+        session=db_session,
+        parent_collection_id=video_with_frames.video_frames_collection_id,
+        annotations=[
+            AnnotationCreate(
+                parent_sample_id=frame_0,
+                annotation_label_id=label.annotation_label_id,
+                annotation_type=AnnotationType.INSTANCE_SEGMENTATION,
+                x=0,
+                y=1,
+                width=1,
+                height=1,
+                segmentation_mask=[1, 1, 4],
+                object_track_id=object_track_id,
+            )
+        ],
+    )
+
+    response = test_client.get(
+        f"/api/collections/{collection.collection_id}/export/youtube-vis",
+        params={"annotation_type": "instance_segmentation"},
+    )
+
+    assert response.status_code == HTTP_STATUS_OK
+    content = json.loads(response.content)
+    assert content == {
+        "info": {"description": "YouTube-VIS export"},
+        "categories": [{"id": 1, "name": "cat"}],
+        "videos": [
+            {
+                "id": 1,
+                "file_names": ["video_001.mp4/00000.jpg", "video_001.mp4/00001.jpg"],
+                "width": 3,
+                "height": 2,
+                "length": 2,
+            }
+        ],
+        "annotations": [
+            {
+                "id": 99,
+                "video_id": 1,
+                "category_id": 1,
+                "bboxes": [[0.0, 1.0, 1.0, 1.0], None],
+                "segmentations": [
+                    {"counts": [2, 1, 3], "size": [2, 3]},
+                    None,
+                ],
+                "areas": [1.0, None],
+                "iscrowd": 1,
+                "height": 2,
+                "width": 3,
+                "length": 2,
+            }
+        ],
+    }
+    assert (
+        response.headers["Content-Disposition"]
+        == "attachment; filename=youtube_vis_instance_segmentation_export.json"
+    )
