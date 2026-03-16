@@ -17,7 +17,7 @@ An operator plugin is defined by the following attributes of the [`BaseOperator`
 
 #### Hello World 
 
-An example `Hello World" operator plugin looks this:
+An example `Hello World" operator plugin looks like this:
 
 ```python title="greeting_operator.py"
 from dataclasses import dataclass
@@ -226,5 +226,4 @@ operator_registry.register(LightlyTrainAutoLabelingODOperator())
 ls.start_gui()
 ```
 
-![LightlyTrain plugin](https://storage.googleapis.com/lightly-public/studio/plugin_LightlyTrain_autoOD.gif
-){ width="100%" }
+![LightlyTrain plugin](https://storage.googleapis.com/lightly-public/studio/plugin_LightlyTrain_autoOD.gif){ width="100%" }
