@@ -6,11 +6,16 @@ from pathlib import Path
 
 import pytest
 from pytest_mock import MockerFixture
+from sqlmodel import SQLModel
 
 from lightly_studio import ImageDataset, db_manager
 from lightly_studio.core.dataset_query.image_sample_field import ImageSampleField
 from lightly_studio.core.dataset_query.order_by import OrderByField
-from lightly_studio.db_manager import DatabaseBackend, DatabaseEngine, _detect_backend_from_url
+from lightly_studio.db_manager import (
+    DatabaseBackend,
+    DatabaseEngine,
+    _detect_backend_from_url,
+)
 from lightly_studio.resolvers import image_resolver
 from tests.helpers_resolvers import (
     create_collection,
@@ -269,3 +274,34 @@ def test_get_backend(
 
     assert db_manager.get_backend() == DatabaseBackend.DUCKDB
     db_manager.close()
+
+
+def test_cleanup_postgres__drops_tables_when_cleanup_existing(
+    mocker: MockerFixture,
+) -> None:
+    mock_create_engine = mocker.patch.object(db_manager, "create_engine")
+    mock_engine = mock_create_engine.return_value
+    mock_drop_all = mocker.patch.object(SQLModel.metadata, "drop_all")
+    mocker.patch.object(SQLModel.metadata, "create_all")
+
+    DatabaseEngine(
+        engine_url="postgresql://user:pass@localhost:5432/testdb",
+        cleanup_existing=True,
+    )
+
+    mock_drop_all.assert_called_once_with(mock_engine)
+
+
+def test_cleanup_postgres__no_drop_when_cleanup_existing_false(
+    mocker: MockerFixture,
+) -> None:
+    mocker.patch.object(db_manager, "create_engine")
+    mock_drop_all = mocker.patch.object(SQLModel.metadata, "drop_all")
+    mocker.patch.object(SQLModel.metadata, "create_all")
+
+    DatabaseEngine(
+        engine_url="postgresql://user:pass@localhost:5432/testdb",
+        cleanup_existing=False,
+    )
+
+    mock_drop_all.assert_not_called()
