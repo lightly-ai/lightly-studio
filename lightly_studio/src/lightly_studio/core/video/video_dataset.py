@@ -14,11 +14,13 @@ from labelformat.formats import (
 from sqlmodel import Session
 
 from lightly_studio.core.dataset import BaseSampleDataset
+from lightly_studio.core.dataset_query.dataset_query import DatasetQuery
 from lightly_studio.core.video import add_videos
 from lightly_studio.core.video.add_videos import VIDEO_EXTENSIONS
 from lightly_studio.core.video.video_sample import VideoSample
 from lightly_studio.dataset import fsspec_lister
 from lightly_studio.dataset.embedding_manager import EmbeddingManagerProvider
+from lightly_studio.export.export_video_dataset import VideoDatasetExport
 from lightly_studio.models.annotation.annotation_base import AnnotationType
 from lightly_studio.models.collection import SampleType
 from lightly_studio.resolvers import video_resolver
@@ -71,6 +73,12 @@ class VideoDataset(BaseSampleDataset[VideoSample]):
     def sample_class() -> type[VideoSample]:
         """Returns the sample class."""
         return VideoSample
+
+    def export(self, query: DatasetQuery[VideoSample] | None = None) -> VideoDatasetExport:
+        """Return an export interface for the (optionally filtered) video dataset."""
+        if query is None:
+            query = self.query()
+        return VideoDatasetExport(session=self.session, samples=query)
 
     def get_sample(self, sample_id: UUID) -> VideoSample:
         """Get a single sample from the dataset by its ID.
