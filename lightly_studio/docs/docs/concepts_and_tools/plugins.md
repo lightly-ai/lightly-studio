@@ -6,12 +6,12 @@ The LightlyStudio operator plugin makes it possible to call a python function in
 
 ### Operator Plugin
 
-An operator plugin is defined by the following attributes of the [`BaseOperator`](api/plugin/#lightly_studio.plugins.base_operator.BaseOperator) schema:
+An operator plugin is defined by the following attributes of the [`BaseOperator`](../../api/plugin/#lightly_studio.plugins.base_operator.BaseOperator) schema:
 
 - name: The name of the operator that will also be used in the GUI.
 - description: A detailed description of what the operator does.
-- parameters: A list of inputs exposed in the GUI. Supported parameter types are documented under [`Parameter`](api/plugin/#parameter)
-- supported_scopes: A list of [`OperatorScopes`](api/plugin/#lightly_studio.plugins.operator_context.OperatorScope) the operator can be executed in.
+- parameters: A list of inputs exposed in the GUI. Supported parameter types are documented under [`Parameter`](../../api/plugin/#parameter)
+- supported_scopes: A list of [`OperatorScopes`](../../api/plugin/#lightly_studio.plugins.operator_context.OperatorScope) the operator can be executed in.
 - execute: The method that is used to execute the actual action. It will receive the parameters from the GUI.
 
 

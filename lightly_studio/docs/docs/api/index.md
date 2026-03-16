@@ -131,7 +131,7 @@ for sample in dataset:
 
 ### Accessing annotations
 
-You can access annotations of each sample. They can be created in the GUI or imported, e.g. from the COCO format, see the [COCO Instance Segmentation](#quickstart) example above. In the next section [Indexing with Predictions](#indexing-with-predictions) an example of creating annotations from Python is provided.
+You can access annotations of each sample. They can be created in the GUI or imported, e.g. from the COCO format, see the [COCO Instance Segmentation](../#quickstart) example. In the next section [Indexing with Predictions](#indexing-with-predictions) an example of creating annotations from Python is provided.
 
 ```py
 from lightly_studio.core.annotation import ObjectDetectionAnnotation
@@ -199,7 +199,7 @@ from lightly_studio.core.annotation import CreateSemanticSegmentation
 sample.add_annotation(
     CreateSemanticSegmentation.from_rle_mask(
         label="car",
-        segmentation_mask=[1, 2, 1, 4]
+        segmentation_mask=[1, 2, 1, 4],
         # `sample` could be ImageSample or another 2D sample, such as a video frame
         sample_2d=sample,
         confidence=0.85, # optional
