@@ -117,10 +117,6 @@ class LightlyStudioInstanceSegmentationInput(LightlyStudioInputBase, InstanceSeg
 class LightlyStudioSemanticSegmentationInput(LightlyStudioInputBase, InstanceSegmentationInput):
     """Labelformat adapter for semantic segmentation backed by dataset samples and annotations."""
 
-    def __init__(self, session: Session, dataset_id: UUID, samples: Iterable[ImageSample]) -> None:
-        """Initializes the semantic segmentation adapter."""
-        super().__init__(session=session, dataset_id=dataset_id, samples=samples)
-
     @staticmethod
     def _sample_to_image_sem_seg(
         sample: ImageSample,

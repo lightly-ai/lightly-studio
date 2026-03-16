@@ -75,7 +75,7 @@ def export_collection_annotations(
         output_path = PathlibPath(temp_dir.name) / "pascalvoc"
 
         try:
-            export_dataset.o_pascalvoc_semantic_segmentation(
+            export_dataset.to_pascalvoc_semantic_segmentation(
                 session=session,
                 root_dataset_id=collection.collection_id,
                 samples=dataset_query,
@@ -99,9 +99,7 @@ def export_collection_annotations(
                 "Content-Disposition": f"attachment; filename={output_path.name}.zip",
             },
         )
-    elif annotation_type in {
-        AnnotationType.CLASSIFICATION,
-    }:
+    elif annotation_type == AnnotationType.CLASSIFICATION:
         raise NotImplementedError
 
     return StreamingResponse(
