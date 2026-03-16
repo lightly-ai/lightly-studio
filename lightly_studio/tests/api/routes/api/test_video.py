@@ -268,7 +268,9 @@ def test_count_video_frame_annotations_by_video_collection(
         },
         json={
             "filter": {
-                "video_frames_annotations_labels": [str(airplane_label.annotation_label_name)]
+                "frame_annotation_filter": {
+                    "annotation_label_ids": [str(airplane_label.annotation_label_id)]
+                }
             }
         },
     )

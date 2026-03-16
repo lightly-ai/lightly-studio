@@ -14,9 +14,6 @@ from lightly_studio.resolvers.sample_resolver.sample_filter import SampleFilter
 from lightly_studio.resolvers.video_resolver.count_video_frame_annotations_by_collection import (
     CountAnnotationsView,
 )
-from lightly_studio.resolvers.video_resolver.video_count_annotations_filter import (
-    VideoCountAnnotationsFilter,
-)
 from lightly_studio.resolvers.video_resolver.video_filter import VideoFilter
 
 video_router = APIRouter(prefix="/collections/{collection_id}/video", tags=["video"])
@@ -44,7 +41,7 @@ class ReadVideoSampleIdsRequest(BaseModel):
 class ReadVideoCountAnnotationsRequest(BaseModel):
     """Request body for reading video annotations counter."""
 
-    filter: Optional[VideoCountAnnotationsFilter] = Field(
+    filter: Optional[VideoFilter] = Field(
         None, description="Filter parameters for video annotations counter"
     )
 

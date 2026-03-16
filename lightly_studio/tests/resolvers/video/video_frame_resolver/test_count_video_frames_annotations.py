@@ -2,9 +2,9 @@ from sqlmodel import Session
 
 from lightly_studio.models.collection import SampleType
 from lightly_studio.resolvers import video_frame_resolver
-from lightly_studio.resolvers.video_frame_resolver.video_frame_annotations_counter_filter import (
-    VideoFrameAnnotationsCounterFilter,
-)
+from lightly_studio.resolvers.annotations.annotations_filter import AnnotationsFilter
+from lightly_studio.resolvers.sample_resolver.sample_filter import SampleFilter
+from lightly_studio.resolvers.video_frame_resolver.video_frame_filter import VideoFrameFilter
 from tests.helpers_resolvers import create_annotation, create_annotation_label, create_collection
 from tests.resolvers.video.helpers import VideoStub, create_video_with_frames
 
@@ -108,8 +108,12 @@ def test_count_video_frames_annotations_without_annotations_filter(db_session: S
     annotations = video_frame_resolver.count_video_frames_annotations(
         session=db_session,
         collection_id=collection.collection_id,
-        filters=VideoFrameAnnotationsCounterFilter(
-            annotations_labels=[airplane_label.annotation_label_name]
+        filters=VideoFrameFilter(
+            sample_filter=SampleFilter(
+                annotations_filter=AnnotationsFilter(
+                    annotation_label_ids=[airplane_label.annotation_label_id]
+                )
+            )
         ),
     )
 

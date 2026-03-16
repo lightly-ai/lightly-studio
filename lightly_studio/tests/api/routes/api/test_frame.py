@@ -193,7 +193,15 @@ def test_count_video_frames_annotations_without_annotations_filter(
 
     response = test_client.post(
         f"/api/collections/{collection_id}/frame/annotations/count",
-        json={"filter": {"annotations_labels": [airplane_label.annotation_label_name]}},
+        json={
+            "filter": {
+                "sample_filter": {
+                    "annotations_filter": {
+                        "annotation_label_ids": [str(airplane_label.annotation_label_id)]
+                    }
+                }
+            }
+        },
     )
 
     assert response.status_code == HTTP_STATUS_OK

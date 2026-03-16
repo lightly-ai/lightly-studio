@@ -2851,7 +2851,7 @@ export interface components {
          */
         ReadCountVideoFramesAnnotationsRequest: {
             /** @description Filter parameters for video frames annotations counter */
-            filter?: components["schemas"]["VideoFrameAnnotationsCounterFilter"] | null;
+            filter?: components["schemas"]["VideoFrameFilter"] | null;
         };
         /**
          * ReadGroupsRequest
@@ -2895,7 +2895,7 @@ export interface components {
          */
         ReadVideoCountAnnotationsRequest: {
             /** @description Filter parameters for video annotations counter */
-            filter?: components["schemas"]["VideoCountAnnotationsFilter"] | null;
+            filter?: components["schemas"]["VideoFilter"] | null;
         };
         /**
          * ReadVideoFramesRequest
@@ -3351,15 +3351,6 @@ export interface components {
             file_path_abs: string;
         };
         /**
-         * VideoCountAnnotationsFilter
-         * @description Encapsulates filter parameters for querying video frame annotations counter.
-         */
-        VideoCountAnnotationsFilter: {
-            video_filter?: components["schemas"]["VideoFilter"] | null;
-            /** Video Frames Annotations Labels */
-            video_frames_annotations_labels?: string[] | null;
-        };
-        /**
          * VideoFieldsBoundsBody
          * @description The body to retrieve the fields bounds.
          */
@@ -3432,15 +3423,6 @@ export interface components {
              */
             sample_id: string;
             video: components["schemas"]["VideoAnnotationView"];
-        };
-        /**
-         * VideoFrameAnnotationsCounterFilter
-         * @description Encapsulates filter parameters for querying video frame annotations counter.
-         */
-        VideoFrameAnnotationsCounterFilter: {
-            video_filter?: components["schemas"]["VideoFrameFilter"] | null;
-            /** Annotations Labels */
-            annotations_labels?: string[] | null;
         };
         /**
          * VideoFrameFieldsBoundsView

@@ -241,26 +241,26 @@
             return useVideoFrameAnnotationCounts({
                 collectionId: datasetId,
                 filter: {
-                    annotations_labels: annotationsLabels,
-                    video_filter: {
-                        sample_filter: {
-                            metadata_filters: metadataFilters
-                        },
-                        ...$videoFramesBoundsValues
-                    }
+                    sample_filter: {
+                        metadata_filters: metadataFilters,
+                        ...(annotationFilter ? { annotations_filter: annotationFilter } : {})
+                    },
+                    ...$videoFramesBoundsValues
                 }
             });
         } else if (isVideos) {
             return useVideoAnnotationCounts({
                 collectionId,
                 filter: {
-                    video_frames_annotations_labels: annotationsLabels,
-                    video_filter: {
-                        sample_filter: {
-                            metadata_filters: metadataFilters
-                        },
-                        ...$videoBoundsValues
-                    }
+                    sample_filter: {
+                        metadata_filters: metadataFilters
+                    },
+                    ...(annotationFilter
+                        ? {
+                              frame_annotation_filter: annotationFilter
+                          }
+                        : {}),
+                    ...$videoBoundsValues
                 }
             });
         }
