@@ -319,9 +319,7 @@ def test_cleanup_postgres__integration(
     # Create an isolated database within the same Postgres container.
     base_url = sqlalchemy.make_url(postgres_url)
     cleanup_db_name = "test_cleanup"
-    cleanup_db_url = base_url.set(database=cleanup_db_name).render_as_string(
-        hide_password=False
-    )
+    cleanup_db_url = base_url.set(database=cleanup_db_name).render_as_string(hide_password=False)
 
     # AUTOCOMMIT required because Postgres forbids CREATE/DROP DATABASE inside a transaction.
     base_engine = sqlalchemy.create_engine(
