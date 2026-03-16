@@ -278,13 +278,23 @@ All our code must be typed.
 
 ### Tests must use pytest (NOT unittest)
 
-- Don't import unittest. Pytest it more modern.
-- Use pytest.MockerFixture
+- Don't import unittest. Pytest is more modern.
+- Use MockerFixture for mocking.
+
+```python
+from pytest_mock import MockerFixture
+
+def test_foo(mocker: MockerFixture):
+    mock_bar = mocker.patch.object(mymodule, "bar", return_value=42)
+    mock_bar.assert_called_once_with(...)
+
+    mock_obj = mocker.MagicMock()
+```
 
 ## Naming
 
-We use the following naming conventions for tests. Tests must be a folder structure parallel
-to `src/{package_name}`.
+Tests must be located in a folder structure parallel
+to `src/{package_name}` and use the following naming conventions:
 
 ```python
 # src/my_package/dir/source.py
