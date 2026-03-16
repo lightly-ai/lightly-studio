@@ -11,9 +11,7 @@ from pydantic import BaseModel
 
 from lightly_studio.api.routes.api import annotations as annotations_module
 from lightly_studio.api.routes.api.collection import get_and_validate_collection_id
-from lightly_studio.api.routes.api.status import (
-    HTTP_STATUS_NOT_FOUND,
-)
+from lightly_studio.api.routes.api.status import HTTP_STATUS_NOT_FOUND
 from lightly_studio.api.routes.api.validators import Paginated, PaginatedWithCursor
 from lightly_studio.db_manager import SessionDep
 from lightly_studio.models.annotation.annotation_base import (
@@ -32,6 +30,8 @@ from lightly_studio.resolvers.annotation_resolver.update_bounding_box import Bou
 from lightly_studio.resolvers.annotations.annotations_filter import (
     AnnotationsFilter,
 )
+from lightly_studio.resolvers.image_filter import ImageFilter
+from lightly_studio.resolvers.sample_resolver.sample_filter import SampleFilter
 from lightly_studio.services import annotations_service
 from lightly_studio.services.annotations_service.update_annotation import (
     AnnotationUpdate,
@@ -61,32 +61,34 @@ def _get_annotation_query_params(
     )
 
 
-@annotations_router.get("/annotations/count")
-def count_annotations_by_collection(  # noqa: PLR0913 // FIXME: refactor to use proper pydantic
+class ReadCountAnnotationsRequest(BaseModel):
+    """Request body for reading annotation counts."""
+
+    filter: ImageFilter | None = None
+
+
+@annotations_router.post("/annotations/count")
+def count_annotations_by_collection(
     collection: Annotated[
         CollectionTable,
         Path(title="collection Id"),
         Depends(get_and_validate_collection_id),
     ],
     session: SessionDep,
-    filtered_labels: Annotated[list[str] | None, Query()] = None,
-    min_width: Annotated[int | None, Query(ge=0)] = None,
-    max_width: Annotated[int | None, Query(ge=0)] = None,
-    min_height: Annotated[int | None, Query(ge=0)] = None,
-    max_height: Annotated[int | None, Query(ge=0)] = None,
+    body: ReadCountAnnotationsRequest | None = None,
 ) -> list[dict[str, str | int]]:
-    """Get annotation counts for a specific collection.
+    """Get annotation counts for a specific collection using an image filter body.
 
     Returns a list of dictionaries with label name and count.
     """
+    image_filter = body.filter if body and body.filter else ImageFilter()
+    sample_filter = image_filter.sample_filter or SampleFilter()
+    sample_filter.collection_id = collection.collection_id
+    image_filter.sample_filter = sample_filter
     counts = annotation_resolver.count_annotations_by_collection(
         session=session,
         collection_id=collection.collection_id,
-        filtered_labels=filtered_labels,
-        min_width=min_width,
-        max_width=max_width,
-        min_height=min_height,
-        max_height=max_height,
+        image_filter=image_filter,
     )
 
     return [

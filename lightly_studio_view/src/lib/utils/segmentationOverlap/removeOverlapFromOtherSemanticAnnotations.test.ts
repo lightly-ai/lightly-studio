@@ -30,7 +30,7 @@ describe('removeOverlapFromOtherSemanticAnnotations', () => {
     });
 
     it('skips overlap removal when mode is instance segmentation', async () => {
-        await removeOverlapFromOtherSemanticAnnotations({
+        const overriddenAnnotations = await removeOverlapFromOtherSemanticAnnotations({
             newMask: new Uint8Array(16),
             annotations: [baseAnn('1', [1, 1, 0, 0])],
             segmentationMode: 'instance',
@@ -41,10 +41,11 @@ describe('removeOverlapFromOtherSemanticAnnotations', () => {
 
         // In instance mode, we should not alter other semantic masks.
         expect(updateAnnotations).not.toHaveBeenCalled();
+        expect(overriddenAnnotations).toEqual([]);
     });
 
     it('respects locked annotations and leaves them untouched', async () => {
-        await removeOverlapFromOtherSemanticAnnotations({
+        const overriddenAnnotations = await removeOverlapFromOtherSemanticAnnotations({
             newMask: Uint8Array.from([1, 0, 0, 0]),
             annotations: [baseAnn('1', [1, 0, 0, 0])],
             segmentationMode: 'semantic',
@@ -56,10 +57,11 @@ describe('removeOverlapFromOtherSemanticAnnotations', () => {
 
         // Locked annotations should never be updated even if they overlap.
         expect(updateAnnotations).not.toHaveBeenCalled();
+        expect(overriddenAnnotations).toEqual([]);
     });
 
     it('clears overlapping pixels on other semantic masks and sends an update', async () => {
-        await removeOverlapFromOtherSemanticAnnotations({
+        const overriddenAnnotations = await removeOverlapFromOtherSemanticAnnotations({
             newMask: Uint8Array.from([1, 0, 0, 0]),
             annotations: [baseAnn('1', [1, 1, 0, 0])],
             segmentationMode: 'semantic',
@@ -72,5 +74,6 @@ describe('removeOverlapFromOtherSemanticAnnotations', () => {
         expect(updateAnnotations).toHaveBeenCalledTimes(1);
         const [updates] = updateAnnotations.mock.calls[0];
         expect(updates[0].annotation_id).toBe('1');
+        expect(overriddenAnnotations.map((annotation) => annotation.sample_id)).toEqual(['1']);
     });
 });

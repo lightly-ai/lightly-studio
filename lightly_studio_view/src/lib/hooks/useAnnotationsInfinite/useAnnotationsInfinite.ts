@@ -24,7 +24,8 @@ export const useAnnotationsInfinite = (
         client.invalidateQueries({ queryKey: annotationsOptions.queryKey });
         client.invalidateQueries({
             queryKey: countAnnotationsByCollectionOptions({
-                path: { collection_id: collection_id }
+                path: { collection_id: collection_id },
+                body: {}
             }).queryKey
         });
     };

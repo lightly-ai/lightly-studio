@@ -65,11 +65,16 @@
     const { dimensionsValues: dimensions } = useDimensions();
     const { filterParams } = useImageFilters();
     const { filterParams: videoFilterParams } = useVideoFilters();
+    const annotationLabelIds = $derived<string[] | undefined>(
+        $selectedAnnotationFilterIds?.size ? Array.from($selectedAnnotationFilterIds) : undefined
+    );
 
     const sampleFilter = $derived<SampleFilter>({
-        annotation_label_ids: $selectedAnnotationFilterIds?.size
-            ? Array.from($selectedAnnotationFilterIds)
-            : [],
+        annotations_filter: annotationLabelIds
+            ? {
+                  annotation_label_ids: annotationLabelIds
+              }
+            : undefined,
         tag_ids: $tagsSelected.size > 0 ? Array.from($tagsSelected) : undefined,
         metadata_filters: $metadataValues ? createMetadataFilters($metadataValues) : undefined
     });
@@ -88,7 +93,10 @@
 
     const { videoFramesBoundsValues } = useVideoFramesBounds();
     const videoFramesFilter = $derived<VideoFrameFilter>({
-        sample_filter: sampleFilter,
+        sample_filter: {
+            ...sampleFilter,
+            annotation_label_ids: annotationLabelIds
+        },
         ...$videoFramesBoundsValues
     });
 
@@ -100,8 +108,7 @@
             : undefined,
         sample_filter: {
             sample_ids: $videoFilterParams?.filters?.sample_ids,
-            tag_ids: $tagsSelected.size > 0 ? Array.from($tagsSelected) : undefined,
-            metadata_filters: $metadataValues ? createMetadataFilters($metadataValues) : undefined
+            ...sampleFilter
         },
         ...$videoBoundsValues
     });
