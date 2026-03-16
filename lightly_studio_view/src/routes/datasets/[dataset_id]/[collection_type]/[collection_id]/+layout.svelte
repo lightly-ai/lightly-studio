@@ -211,9 +211,6 @@
             selected: selected.includes(annotation.label_name)
         }));
 
-    const annotationsLabels = $derived(
-        selectedAnnotationFilter.length > 0 ? selectedAnnotationFilter : undefined
-    );
     const annotationFilter = $derived.by<AnnotationsFilter | undefined>(() =>
         $selectedAnnotationFilterIds.size > 0
             ? { annotation_label_ids: Array.from($selectedAnnotationFilterIds) }
@@ -238,8 +235,12 @@
             isVideoFrames ||
             (isAnnotations && parentCollection?.sampleType == SampleType.VIDEO_FRAME)
         ) {
+            let usedCollection = collectionId;
+            if (isAnnotations && parentCollection?.sampleType == SampleType.VIDEO_FRAME)
+                usedCollection = parentCollection.collectionId;
+            console.log('using useVideoFrameAnnotationCounts')
             return useVideoFrameAnnotationCounts({
-                collectionId: datasetId,
+                collectionId: usedCollection,
                 filter: {
                     sample_filter: {
                         metadata_filters: metadataFilters,
@@ -249,6 +250,7 @@
                 }
             });
         } else if (isVideos) {
+            console.log('using useVideoAnnotationCounts')
             return useVideoAnnotationCounts({
                 collectionId,
                 filter: {
@@ -264,6 +266,7 @@
                 }
             });
         }
+        console.log('using useAnnotationCounts')
         return useAnnotationCounts({
             collectionId: datasetId,
             filter: imageFilter

@@ -80,6 +80,6 @@ def _build_base_query(collection_id: UUID, count_column_name: str) -> Select[tup
             VideoFrameTable,
             col(VideoFrameTable.sample_id) == col(AnnotationBaseTable.parent_sample_id),
         )
-        .join(SampleTable, col(VideoFrameTable.parent_sample_id) == col(SampleTable.sample_id))
+        .join(SampleTable, col(VideoFrameTable.sample_id) == col(SampleTable.sample_id))
         .where(col(SampleTable.collection_id) == collection_id)
     )

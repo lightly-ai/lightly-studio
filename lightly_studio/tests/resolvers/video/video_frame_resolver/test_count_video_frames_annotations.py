@@ -107,7 +107,7 @@ def test_count_video_frames_annotations_without_annotations_filter(db_session: S
 
     annotations = video_frame_resolver.count_video_frames_annotations(
         session=db_session,
-        collection_id=collection.collection_id,
+        collection_id=video_frames_data.video_frames_collection_id,
         filters=VideoFrameFilter(
             sample_filter=SampleFilter(
                 annotations_filter=AnnotationsFilter(

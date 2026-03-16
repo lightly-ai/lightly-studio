@@ -192,7 +192,7 @@ def test_count_video_frames_annotations_without_annotations_filter(
     )
 
     response = test_client.post(
-        f"/api/collections/{collection_id}/frame/annotations/count",
+        f"/api/collections/{video_frame_collection_id}/frame/annotations/count",
         json={
             "filter": {
                 "sample_filter": {
