@@ -1,6 +1,5 @@
 """This module contains the Dataset model."""
 
-from typing import Optional
 from uuid import UUID, uuid4
 
 from sqlmodel import Field, SQLModel
@@ -12,4 +11,3 @@ class DatasetTable(SQLModel, table=True):
     __tablename__ = "dataset"
     # TODO(lukas, 3/2026): Consider adding a uniqueness constraint.
     dataset_id: UUID = Field(default_factory=uuid4, primary_key=True)
-    root_collection_id: Optional[UUID] = Field(default=None)

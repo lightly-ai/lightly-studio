@@ -21,7 +21,6 @@ def test_create(db_session: Session) -> None:
     # Check that the dataset record was created and links to the root collection
     db_dataset = db_session.get(DatasetTable, ds.dataset_id)
     assert db_dataset is not None
-    assert db_dataset.root_collection_id == ds.collection_id
 
     # Creating a collection with the same name should raise an error.
     with pytest.raises(ValueError, match=r"Collection with name 'my_collection' already exists."):

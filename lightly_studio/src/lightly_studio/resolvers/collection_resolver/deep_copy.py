@@ -178,8 +178,6 @@ def _copy_collections(
         # The root is the first collection in the hierarchy argument.
         if root is None:
             root = new_coll
-            # Update dataset with root collection ID.
-            dataset.root_collection_id = root.collection_id
             session.add(dataset)
             session.flush([dataset])
 

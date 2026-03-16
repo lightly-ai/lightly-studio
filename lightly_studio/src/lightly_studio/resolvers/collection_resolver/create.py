@@ -57,9 +57,6 @@ def create(session: Session, collection: CollectionCreate) -> CollectionTable:
     )
 
     if db_dataset is not None:
-        # Link the dataset back to its root collection. Note that this isn't a foreign key
-        # relationship. Only the collection has a foreign key to the dataset.
-        db_dataset.root_collection_id = db_collection.collection_id
         session.add(db_dataset)
 
     session.add(db_collection)
