@@ -24,6 +24,7 @@ from lightly_studio.resolvers import collection_resolver
 from lightly_studio.resolvers.collection_resolver.export import ExportFilter
 
 export_router = APIRouter(prefix="/collections/{collection_id}", tags=["export"])
+_STREAM_CHUNK_SIZE_BYTES = 64 * 1024
 
 
 @export_router.get("/export/annotations")
@@ -231,7 +232,8 @@ def _stream_export_file(
     """Stream the export file and clean up the temporary directory afterwards."""
     try:
         with file_path.open("rb") as file:
-            yield from file
+            while chunk := file.read(_STREAM_CHUNK_SIZE_BYTES):
+                yield chunk
     finally:
         temp_dir.cleanup()
 
