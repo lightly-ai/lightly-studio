@@ -51,7 +51,7 @@ def test_count_video_frames_annotations_without_filter(db_session: Session) -> N
 
     annotations = video_frame_resolver.count_video_frames_annotations(
         session=db_session,
-        collection_id=collection.collection_id,
+        collection_id=video_frames_data.video_frames_collection_id,
     )
 
     assert len(annotations) == 2

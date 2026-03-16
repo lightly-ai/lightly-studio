@@ -238,7 +238,7 @@
             let usedCollection = collectionId;
             if (isAnnotations && parentCollection?.sampleType == SampleType.VIDEO_FRAME)
                 usedCollection = parentCollection.collectionId;
-            console.log('using useVideoFrameAnnotationCounts')
+            console.log('using useVideoFrameAnnotationCounts');
             return useVideoFrameAnnotationCounts({
                 collectionId: usedCollection,
                 filter: {
@@ -250,7 +250,7 @@
                 }
             });
         } else if (isVideos) {
-            console.log('using useVideoAnnotationCounts')
+            console.log('using useVideoAnnotationCounts');
             return useVideoAnnotationCounts({
                 collectionId,
                 filter: {
@@ -266,7 +266,7 @@
                 }
             });
         }
-        console.log('using useAnnotationCounts')
+        console.log('using useAnnotationCounts');
         return useAnnotationCounts({
             collectionId: datasetId,
             filter: imageFilter
