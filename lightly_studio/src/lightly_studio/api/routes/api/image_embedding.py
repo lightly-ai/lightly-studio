@@ -22,9 +22,15 @@ from lightly_studio.dataset.embedding_manager import (
 logger = logging.getLogger(__name__)
 
 image_embedding_router = APIRouter()
+
+
+def _get_embedding_manager() -> EmbeddingManager:
+    return EmbeddingManagerProvider.get_embedding_manager()
+
+
 EmbeddingManagerDep = Annotated[
     EmbeddingManager,
-    Depends(lambda: EmbeddingManagerProvider.get_embedding_manager()),
+    Depends(_get_embedding_manager),
 ]
 
 

@@ -17,10 +17,15 @@ from lightly_studio.dataset.embedding_manager import (
 )
 
 text_embedding_router = APIRouter()
-# Define a type alias for the EmbeddingManager dependency
+
+
+def _get_embedding_manager() -> EmbeddingManager:
+    return EmbeddingManagerProvider.get_embedding_manager()
+
+
 EmbeddingManagerDep = Annotated[
     EmbeddingManager,
-    Depends(lambda: EmbeddingManagerProvider.get_embedding_manager()),
+    Depends(_get_embedding_manager),
 ]
 
 
