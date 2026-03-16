@@ -32,7 +32,7 @@ class TestVideoDatasetExport:
             tracks=[ObjectTrackCreate(object_track_number=99, dataset_id=dataset.dataset_id)],
         )[0]
 
-        frame_0, _frame_1 = video_with_frames.frame_sample_ids
+        frame_0, frame_1 = video_with_frames.frame_sample_ids
         annotation_resolver.create_many(
             session=dataset.session,
             parent_collection_id=video_with_frames.video_frames_collection_id,
@@ -49,6 +49,19 @@ class TestVideoDatasetExport:
                     # row-major pixels: [0,1,0,0,0,0] -> counts [1,1,4]
                     segmentation_mask=[1, 1, 4],
                     object_track_id=object_track_id,
+                ),
+                AnnotationCreate(
+                    parent_sample_id=frame_1,
+                    annotation_label_id=label.annotation_label_id,
+                    annotation_type=AnnotationType.INSTANCE_SEGMENTATION,
+                    x=0,
+                    y=1,
+                    width=1,
+                    height=1,
+                    # Row-wise RLE for a 2x3 mask with a single 1 at (row=0, col=1):
+                    # row-major pixels: [0,1,0,0,0,0] -> counts [1,1,4]
+                    segmentation_mask=[1, 1, 4],
+                    object_track_id=None,
                 ),
             ],
         )
@@ -69,6 +82,7 @@ class TestVideoDatasetExport:
         ]
         assert yvis["annotations"] == [
             {
+                # id should map to object_track_id from the export input.
                 "id": 99,
                 "video_id": 1,
                 "category_id": 1,

@@ -23,15 +23,15 @@ class VideoDatasetExport:
         self.session = session
         self.samples = samples
 
-    def to_youtube_vis_instance_segmentation(self, output_json: PathLike | None = None) -> None:
+    def to_youtube_vis_instance_segmentation(
+        self, output_json: PathLike = DEFAULT_EXPORT_FILENAME
+    ) -> None:
         """Export video instance segmentation tracks to YouTube-VIS format JSON file.
 
         Args:
             output_json: Optional path to the output JSON file. If not provided,
                 defaults to "youtube_vis_export.json".
         """
-        if output_json is None:
-            output_json = DEFAULT_EXPORT_FILENAME
         to_youtube_vis_instance_segmentation(
             session=self.session,
             samples=self.samples,
@@ -45,9 +45,9 @@ def to_youtube_vis_instance_segmentation(
     output_json: Path,
 ) -> None:
     """Export video instance segmentation tracks to a YouTube-VIS JSON file."""
-    adapter = youtube_vis_label_input.LightlyStudioYouTubeVISInstanceSegmentationTrackInput(
+    export_input = youtube_vis_label_input.LightlyStudioYouTubeVISInstanceSegmentationTrackInput(
         session=session,
         samples=samples,
     )
     output = YouTubeVISInstanceSegmentationTrackOutput(output_file=output_json)
-    output.save(label_input=adapter)
+    output.save(label_input=export_input)
