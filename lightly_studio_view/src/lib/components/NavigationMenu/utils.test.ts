@@ -8,6 +8,7 @@ const makeCollection = (
     children?: CollectionView[]
 ): CollectionView => ({
     collection_id: id,
+    dataset_id: 'test-dataset-id',
     name: id,
     sample_type: sampleType,
     created_at: new Date(),
