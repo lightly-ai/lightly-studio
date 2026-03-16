@@ -23,12 +23,7 @@ class SampleType(str, Enum):
 class CollectionBase(SQLModel):
     """Base class for the Collection model."""
 
-    __table_args__ = (
-        # Collections should have unique names per parent collection
-        UniqueConstraint("name", "parent_collection_id", name="unique_collection"),
-    )
     name: str = Field(index=True)
-    dataset_id: UUID = Field(index=True, foreign_key="dataset.dataset_id")
     parent_collection_id: Optional[UUID] = Field(
         default=None,
         foreign_key="collection.collection_id",
@@ -41,22 +36,39 @@ class CollectionBase(SQLModel):
     group_component_index: Optional[int] = None
 
 
-class CollectionCreate(SQLModel):
+class CollectionTable(CollectionBase, table=True):
+    """This class defines the Collection model."""
+
+    __tablename__ = "collection"
+    __table_args__ = (
+        # Collections should have unique names per parent collection
+        UniqueConstraint("name", "parent_collection_id", name="unique_collection"),
+    )
+    collection_id: UUID = Field(default_factory=uuid4, primary_key=True)
+    dataset_id: UUID = Field(index=True, foreign_key="dataset.dataset_id")
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc), index=True)
+    updated_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+
+    parent: Optional["CollectionTable"] = Relationship(
+        back_populates="children",
+        sa_relationship_kwargs={"remote_side": "CollectionTable.collection_id"},
+    )
+    children: list["CollectionTable"] = Relationship(
+        back_populates="parent",
+        sa_relationship_kwargs={"lazy": "select"},
+    )
+    # TODO(lukas, 3/2026): add a relationship to DatasetTable
+
+
+class CollectionCreate(CollectionBase):
     """Collection class when inserting."""
-
-    name: str
-    parent_collection_id: Optional[UUID] = None
-    sample_type: SampleType
-
-    # Group-specific fields
-    group_component_name: Optional[str] = None
-    group_component_index: Optional[int] = None
 
 
 class CollectionView(CollectionBase):
     """Collection class when retrieving."""
 
     collection_id: UUID
+    dataset_id: UUID
     created_at: datetime
     updated_at: datetime
     children: list["CollectionView"] = []
@@ -73,7 +85,6 @@ class ComponentCollectionView(CollectionBase):
         """Create a ComponentCollectionView from a CollectionTable."""
         return cls(
             name=collection.name,
-            dataset_id=collection.dataset_id,
             parent_collection_id=collection.parent_collection_id,
             sample_type=collection.sample_type,
             group_component_name=collection.group_component_name or "",
@@ -95,22 +106,3 @@ class CollectionOverviewView(SQLModel):
     sample_type: SampleType
     created_at: datetime
     total_sample_count: int
-
-
-class CollectionTable(CollectionBase, table=True):
-    """This class defines the Collection model."""
-
-    __tablename__ = "collection"
-    collection_id: UUID = Field(default_factory=uuid4, primary_key=True)
-    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc), index=True)
-    updated_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
-
-    parent: Optional["CollectionTable"] = Relationship(
-        back_populates="children",
-        sa_relationship_kwargs={"remote_side": "CollectionTable.collection_id"},
-    )
-    children: list["CollectionTable"] = Relationship(
-        back_populates="parent",
-        sa_relationship_kwargs={"lazy": "select"},
-    )
-    # TODO(lukas, 3/2026): add a relationship to DatasetTable

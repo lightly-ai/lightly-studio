@@ -2161,11 +2161,6 @@ export interface components {
         CollectionTable: {
             /** Name */
             name: string;
-            /**
-             * Dataset Id
-             * Format: uuid
-             */
-            dataset_id: string;
             /** Parent Collection Id */
             parent_collection_id?: string | null;
             sample_type: components["schemas"]["SampleType"];
@@ -2178,6 +2173,11 @@ export interface components {
              * Format: uuid
              */
             collection_id?: string;
+            /**
+             * Dataset Id
+             * Format: uuid
+             */
+            dataset_id: string;
             /**
              * Created At
              * Format: date-time
@@ -2196,11 +2196,6 @@ export interface components {
         CollectionView: {
             /** Name */
             name: string;
-            /**
-             * Dataset Id
-             * Format: uuid
-             */
-            dataset_id: string;
             /** Parent Collection Id */
             parent_collection_id?: string | null;
             sample_type: components["schemas"]["SampleType"];
@@ -2213,6 +2208,11 @@ export interface components {
              * Format: uuid
              */
             collection_id: string;
+            /**
+             * Dataset Id
+             * Format: uuid
+             */
+            dataset_id: string;
             /**
              * Created At
              * Format: date-time
@@ -2236,11 +2236,6 @@ export interface components {
         CollectionViewWithCount: {
             /** Name */
             name: string;
-            /**
-             * Dataset Id
-             * Format: uuid
-             */
-            dataset_id: string;
             /** Parent Collection Id */
             parent_collection_id?: string | null;
             sample_type: components["schemas"]["SampleType"];
@@ -2253,6 +2248,11 @@ export interface components {
              * Format: uuid
              */
             collection_id: string;
+            /**
+             * Dataset Id
+             * Format: uuid
+             */
+            dataset_id: string;
             /**
              * Created At
              * Format: date-time
@@ -2278,11 +2278,6 @@ export interface components {
         ComponentCollectionView: {
             /** Name */
             name: string;
-            /**
-             * Dataset Id
-             * Format: uuid
-             */
-            dataset_id: string;
             /** Parent Collection Id */
             parent_collection_id?: string | null;
             sample_type: components["schemas"]["SampleType"];
