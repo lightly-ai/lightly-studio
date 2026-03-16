@@ -5,6 +5,8 @@
 from pathlib import Path
 
 import pytest
+import sqlalchemy
+import sqlmodel
 from pytest_mock import MockerFixture
 from sqlmodel import SQLModel
 
@@ -16,6 +18,7 @@ from lightly_studio.db_manager import (
     DatabaseEngine,
     _detect_backend_from_url,
 )
+from lightly_studio.models.collection import CollectionTable
 from lightly_studio.resolvers import image_resolver
 from tests.helpers_resolvers import (
     create_collection,
@@ -305,3 +308,44 @@ def test_cleanup_postgres__no_drop_when_cleanup_existing_false(
     )
 
     mock_drop_all.assert_not_called()
+
+
+def test_cleanup_postgres__integration(
+    postgres_url: str | None,
+) -> None:
+    if postgres_url is None:
+        pytest.skip("Requires --postgres flag")
+
+    # Create an isolated database within the same Postgres container.
+    base_url = sqlalchemy.make_url(postgres_url)
+    cleanup_db_name = "test_cleanup"
+    cleanup_db_url = base_url.set(database=cleanup_db_name).render_as_string(
+        hide_password=False
+    )
+
+    # AUTOCOMMIT required because Postgres forbids CREATE/DROP DATABASE inside a transaction.
+    base_engine = sqlalchemy.create_engine(
+        base_url.render_as_string(hide_password=False), isolation_level="AUTOCOMMIT"
+    )
+    with base_engine.connect() as conn:
+        conn.execute(sqlalchemy.text(f"CREATE DATABASE {cleanup_db_name}"))
+
+    try:
+        # 1. Create engine and insert a row.
+        engine = DatabaseEngine(engine_url=cleanup_db_url, single_threaded=True)
+        with engine.session() as session:
+            create_collection(session=session, collection_name="should_be_deleted")
+        engine.close()
+
+        # 2. Re-create engine with cleanup_existing=True -> data should be wiped.
+        engine = DatabaseEngine(
+            engine_url=cleanup_db_url, cleanup_existing=True, single_threaded=True
+        )
+        with engine.session() as session:
+            collections = session.exec(sqlmodel.select(CollectionTable)).all()
+            assert len(collections) == 0
+        engine.close()
+    finally:
+        with base_engine.connect() as conn:
+            conn.execute(sqlalchemy.text(f"DROP DATABASE IF EXISTS {cleanup_db_name}"))
+        base_engine.dispose()
