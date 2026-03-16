@@ -8,9 +8,6 @@ export class VideoFramesPage {
     async goto() {
         await this.page.goto('/');
         await this.page.getByTestId('navigation-menu-frames').click();
-
-        // Wait for frame grid items to be visible
-        // TODO(Horatiu 01/2026): 20s timeout might be too long, investigate if we can reduce it.
         await expect(this.getVideoFrames().first()).toBeVisible({
             timeout: 10000
         });

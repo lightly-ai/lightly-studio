@@ -48,7 +48,6 @@ test.describe.serial('video-frames-page-flow-captions', () => {
         expect(await videoFrameDetailsPage.getNthCaptionInput(0)).toEqual('caption 1');
     });
 
-    // TODO(Horatiu, 03/2026): Investigate why the test started failing after frame retreival update and re-enable it.
     test('add and edit captions in caption page', async ({ captionsVideoFramePage }) => {
         expect(await captionsVideoFramePage.getCaptionCount()).toEqual(1);
         expect(await captionsVideoFramePage.getNthCaptionText(0)).toEqual('caption 1');
@@ -72,7 +71,6 @@ test.describe.serial('video-frames-page-flow-captions', () => {
         );
     });
 
-    // TODO(Horatiu, 03/2026): Investigate why the test started failing after frame retreival update and re-enable it.
     test('delete a caption in caption page', async ({ captionsVideoFramePage }) => {
         // Start edit mode
         await captionsVideoFramePage.clickEditButton();
