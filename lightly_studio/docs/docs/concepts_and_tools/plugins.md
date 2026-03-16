@@ -111,7 +111,7 @@ def _preload_label_map(session, dataset_id, class_names):
 
     for name in class_names:
         # Check if label exists in db
-        label = annotation_label_resolver.get_by_label_name(session=session, label_name=name)
+        label = annotation_label_resolver.get_by_label_name(session=session, dataset_id=dataset_id, label_name=name)
 
         # Create if missing
         if label is None:
