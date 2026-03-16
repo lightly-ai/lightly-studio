@@ -115,7 +115,6 @@ def test_json_extract__pg_array_index() -> None:
 def test_json_extract__sqlite_raises() -> None:
     expr = db_json.json_extract(column=sqlalchemy.column("data"), field="key")
     with pytest.raises(NotImplementedError, match="Unsupported dialect: sqlite"):
-        # SQLAlchemy dialect factory functions lack type stubs.
         expr.compile(dialect=sqlite.dialect())
 
 
