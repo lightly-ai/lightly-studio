@@ -183,13 +183,13 @@ def test_export_collection_semantic_segmentations(
         assert "pascalvoc/SegmentationClass/img1.png" in files
 
         class_map = json.loads(zip_ref.read("pascalvoc/class_id_to_name.json"))
-        assert class_map == {"0": "dog"}
+        assert class_map == {"0": "background", "1": "dog"}
 
         with PILImage.open(
             io.BytesIO(zip_ref.read("pascalvoc/SegmentationClass/img1.png"))
         ) as mask:
             mask_values = list(mask.getdata())
-        assert mask_values == [0, 0, 0, 0, 0, 0]
+        assert mask_values == [0, 1, 0, 0, 0, 0]
 
 
 def test_export_collection_captions(

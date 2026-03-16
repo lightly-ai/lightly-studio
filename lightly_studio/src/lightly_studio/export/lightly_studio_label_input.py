@@ -30,6 +30,8 @@ from lightly_studio.resolvers import annotation_label_resolver
 class LightlyStudioInputBase:
     """Base class for Lightly Studio labelformat adapters."""
 
+    CATEGORY_ID_START = 0
+
     def __init__(self, session: Session, dataset_id: UUID, samples: Iterable[ImageSample]) -> None:
         """Initializes the adapter.
 
@@ -41,7 +43,9 @@ class LightlyStudioInputBase:
         """
         self._samples = list(samples)
         self._label_id_to_category = _build_label_id_to_category(
-            session=session, dataset_id=dataset_id
+            session=session,
+            dataset_id=dataset_id,
+            category_id_start=self.CATEGORY_ID_START,
         )
 
     @staticmethod
@@ -117,6 +121,8 @@ class LightlyStudioInstanceSegmentationInput(LightlyStudioInputBase, InstanceSeg
 class LightlyStudioSemanticSegmentationInput(LightlyStudioInputBase, InstanceSegmentationInput):
     """Labelformat adapter for semantic segmentation backed by dataset samples and annotations."""
 
+    CATEGORY_ID_START = 1
+
     @staticmethod
     def _sample_to_image_sem_seg(
         sample: ImageSample,
@@ -165,7 +171,11 @@ class LightlyStudioSemanticSegmentationInput(LightlyStudioInputBase, InstanceSeg
             )
 
 
-def _build_label_id_to_category(session: Session, dataset_id: UUID) -> dict[UUID, Category]:
+def _build_label_id_to_category(
+    session: Session,
+    dataset_id: UUID,
+    category_id_start: int = 0,
+) -> dict[UUID, Category]:
     labels = annotation_label_resolver.get_all_sorted_alphabetically(
         session=session,
         dataset_id=dataset_id,
@@ -173,7 +183,10 @@ def _build_label_id_to_category(session: Session, dataset_id: UUID) -> dict[UUID
     # TODO(Horatiu, 09/2025): We should get only labels that are attached to Object Detection
     # annotations.
     return {
-        label.annotation_label_id: Category(id=idx, name=label.annotation_label_name)
+        label.annotation_label_id: Category(
+            id=category_id_start + idx,
+            name=label.annotation_label_name,
+        )
         for idx, label in enumerate(labels)
     }
 
