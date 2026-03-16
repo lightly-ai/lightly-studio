@@ -326,7 +326,7 @@ def test_cleanup_postgres__integration(
 
     # AUTOCOMMIT required because Postgres forbids CREATE/DROP DATABASE inside a transaction.
     base_engine = sqlalchemy.create_engine(
-        base_url.render_as_string(hide_password=False), isolation_level="AUTOCOMMIT"
+        url=base_url.render_as_string(hide_password=False), isolation_level="AUTOCOMMIT"
     )
     with base_engine.connect() as conn:
         conn.execute(sqlalchemy.text(f"CREATE DATABASE {cleanup_db_name}"))

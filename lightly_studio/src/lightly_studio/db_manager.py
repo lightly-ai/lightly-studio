@@ -96,7 +96,7 @@ class DatabaseEngine:
                 conn.commit()
 
         if cleanup_existing and self._backend == DatabaseBackend.POSTGRESQL:
-            SQLModel.metadata.drop_all(self._engine)
+            SQLModel.metadata.drop_all(bind=self._engine)
             logging.info("Dropped all tables in PostgreSQL database.")
 
         SQLModel.metadata.create_all(self._engine)
