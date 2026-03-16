@@ -20,9 +20,7 @@
 
     $effect(() => {
         if ($isExportDialogOpen) {
-            exportType = isVideoCollection
-                ? 'youtube_vis_instance_segmentations'
-                : 'samples';
+            exportType = isVideoCollection ? 'youtube_vis_instance_segmentations' : 'samples';
         }
     });
 
@@ -325,7 +323,8 @@
                     {#if isVideoCollection}
                         <Tabs.Content value="youtube_vis_instance_segmentations" class="pt-2">
                             <p class="text-sm text-muted-foreground">
-                                The video instance segmentations will be exported in YouTube-VIS format.
+                                The video instance segmentations will be exported in YouTube-VIS
+                                format.
                             </p>
 
                             <Button
