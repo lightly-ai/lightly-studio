@@ -56,8 +56,9 @@ class DatabaseEngine:
         Args:
             engine_url: The database engine URL. If None, reads from LIGHTLY_STUDIO_DATABASE_URL
                 env var, or defaults to a local DuckDB file.
-            cleanup_existing: If True, deletes the existing database file if it exists.
-                Only applicable for DuckDB.
+            cleanup_existing: If True, removes the existing database before use. For DuckDB,
+                this deletes the database files. For PostgreSQL, this drops and recreates
+                all tables.
             single_threaded: If True, creates a single-threaded engine suitable for testing.
         """
         if engine_url is not None:
@@ -73,7 +74,6 @@ class DatabaseEngine:
         if self._backend == DatabaseBackend.POSTGRESQL:
             self._engine_url = _ensure_psycopg3_driver(self._engine_url)
 
-        # TODO (Mihnea, 02/2026): Support cleanup for Postgres too.
         if cleanup_existing and self._backend == DatabaseBackend.DUCKDB:
             _cleanup_database_file(engine_url=self._engine_url)
 
@@ -94,6 +94,10 @@ class DatabaseEngine:
             with self._engine.connect() as conn:
                 conn.execute(text("CREATE EXTENSION IF NOT EXISTS vector"))
                 conn.commit()
+
+        if cleanup_existing and self._backend == DatabaseBackend.POSTGRESQL:
+            SQLModel.metadata.drop_all(self._engine)
+            logging.info("Dropped all tables in PostgreSQL database.")
 
         SQLModel.metadata.create_all(self._engine)
 
@@ -194,7 +198,9 @@ def connect(
 
     Args:
         db_file: Path to DuckDB file.
-        cleanup_existing: If True, deletes existing database file (DuckDB only).
+        cleanup_existing: If True, removes the existing database before use.
+            For DuckDB, deletes the database files. For PostgreSQL, drops and
+            recreates all tables.
         engine_url: Full database URL.
 
     Raises:
