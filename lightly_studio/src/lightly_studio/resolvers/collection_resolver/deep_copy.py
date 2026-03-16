@@ -97,17 +97,8 @@ def deep_copy(
         session=session, root_collection_id=root_collection_id
     )
     root = _copy_collections(
-        session=session,
-        hierarchy=hierarchy,
-        copy_name=copy_name,
-        ctx=ctx,
-        new_dataset_id=new_dataset_id,
+        session=session, hierarchy=hierarchy, copy_name=copy_name, ctx=ctx, dataset=db_dataset
     )
-
-    # Update dataset with root collection ID.
-    db_dataset.root_collection_id = root.collection_id
-    session.add(db_dataset)
-    session.flush([db_dataset])
 
     # 3. Copy collection-scoped entities.
     old_collection_ids = list(ctx.collection_map.keys())
@@ -147,7 +138,7 @@ def _copy_collections(
     hierarchy: list[CollectionTable],
     copy_name: str,
     ctx: DeepCopyContext,
-    new_dataset_id: UUID,
+    dataset: DatasetTable,
 ) -> CollectionTable:
     """Copy collection hierarchy, maintaining parent-child relationships."""
     root: CollectionTable | None = None
@@ -175,7 +166,7 @@ def _copy_collections(
             old_coll,
             {
                 "collection_id": new_id,
-                "dataset_id": new_dataset_id,
+                "dataset_id": dataset.dataset_id,
                 "name": derived_name,
                 "parent_collection_id": new_parent_id,
             },
@@ -187,6 +178,10 @@ def _copy_collections(
         # The root is the first collection in the hierarchy argument.
         if root is None:
             root = new_coll
+            # Update dataset with root collection ID.
+            dataset.root_collection_id = root.collection_id
+            session.add(dataset)
+            session.flush([dataset])
 
     assert root is not None
     return root

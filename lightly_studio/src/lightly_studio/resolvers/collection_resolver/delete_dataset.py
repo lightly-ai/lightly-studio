@@ -110,7 +110,7 @@ def delete_dataset(
     _delete_collections(session=session, collection_ids=collection_ids)
 
     # 7. Delete the dataset entry itself.
-    _delete_dataset_entry(session=session, dataset_id=dataset_id)
+    _delete_dataset(session=session, dataset_id=dataset_id)
     session.commit()
 
 
@@ -263,7 +263,7 @@ def _delete_annotation_labels(session: Session, root_collection_id: UUID) -> Non
     )
 
 
-def _delete_dataset_entry(session: Session, dataset_id: UUID) -> None:
+def _delete_dataset(session: Session, dataset_id: UUID) -> None:
     """Delete the dataset record from DatasetTable."""
     session.exec(  # type: ignore[call-overload]
         delete(DatasetTable).where(col(DatasetTable.dataset_id) == dataset_id)
