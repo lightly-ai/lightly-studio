@@ -1,6 +1,6 @@
 import { removeOverlapFromOtherSemanticAnnotations } from './removeOverlapFromOtherSemanticAnnotations';
 import { stripLockedPixels } from './stripLockedPixels';
-import type { ApplyMaskConstraintsParams } from './types';
+import type { ApplyMaskConstraintsParams, OverriddenSegmentationAnnotations } from './types';
 
 /**
  * Applies lock constraints and overlap cleanup to a working segmentation mask.
@@ -8,7 +8,7 @@ import type { ApplyMaskConstraintsParams } from './types';
 export const applySegmentationMaskConstraints = async ({
     workingMask,
     ...rest
-}: ApplyMaskConstraintsParams) => {
+}: ApplyMaskConstraintsParams): Promise<OverriddenSegmentationAnnotations> => {
     // Preserve the drawn mask for overlap removal; locked stripping mutates workingMask.
     const maskForOverlap = workingMask.slice();
 
@@ -19,7 +19,7 @@ export const applySegmentationMaskConstraints = async ({
         sample: rest.sample
     });
 
-    await removeOverlapFromOtherSemanticAnnotations({
+    return removeOverlapFromOtherSemanticAnnotations({
         newMask: maskForOverlap,
         ...rest
     });

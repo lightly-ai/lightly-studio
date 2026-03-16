@@ -1,26 +1,7 @@
-/* Define Open Sans font faces */
-
-/* use variable fonts */
+/* Define Open Sans font faces used by the app. */
 @font-face {
     font-family: 'Open Sans';
-    src: url('../assets/fonts/OpenSans-VariableFont_wdth,wght.ttf') format('truetype-variations');
-    font-weight: 100 1000;
-    font-style: normal;
-    font-display: swap;
-}
-@font-face {
-    font-family: 'Open Sans';
-    src: url('../assets/fonts/OpenSans-Italic-VariableFont_wdth,wght.ttf')
-        format('truetype-variations');
-    font-style: italic;
-    font-weight: 100 1000;
-    font-display: swap;
-}
-
-/* fallback for old browsers */
-@font-face {
-    font-family: 'Open Sans';
-    src: url('../assets/fonts/OpenSans-Regular.ttf') format('truetype');
+    src: url('../assets/fonts/OpenSans-Regular.woff2') format('woff2');
     font-weight: 400;
     font-style: normal;
     font-display: swap;
@@ -28,7 +9,7 @@
 
 @font-face {
     font-family: 'Open Sans';
-    src: url('../assets/fonts/OpenSans-Medium.ttf') format('truetype');
+    src: url('../assets/fonts/OpenSans-Medium.woff2') format('woff2');
     font-weight: 500;
     font-style: normal;
     font-display: swap;
@@ -36,7 +17,7 @@
 
 @font-face {
     font-family: 'Open Sans';
-    src: url('../assets/fonts/OpenSans-SemiBold.ttf') format('truetype');
+    src: url('../assets/fonts/OpenSans-SemiBold.woff2') format('woff2');
     font-weight: 600;
     font-style: normal;
     font-display: swap;
@@ -44,7 +25,7 @@
 
 @font-face {
     font-family: 'Open Sans';
-    src: url('../assets/fonts/OpenSans-Bold.ttf') format('truetype');
+    src: url('../assets/fonts/OpenSans-Bold.woff2') format('woff2');
     font-weight: 700;
     font-style: normal;
     font-display: swap;

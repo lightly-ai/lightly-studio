@@ -14,6 +14,7 @@ import { addAnnotationCreateToUndoStack } from '$lib/services/addAnnotationCreat
 import { useDeleteAnnotation } from './useDeleteAnnotation/useDeleteAnnotation';
 import { useUpdateAnnotationsMutation } from './useUpdateAnnotationsMutation/useUpdateAnnotationsMutation';
 import { applySegmentationMaskConstraints } from '$lib/utils/segmentationOverlap';
+import { restoreOverriddenSegmentationAnnotationsForUndo } from '$lib/services/restoreOverriddenSegmentationAnnotationsForUndo';
 
 export function useInstanceSegmentationBrush({
     collectionId,
@@ -64,7 +65,7 @@ export function useInstanceSegmentationBrush({
 
         setIsDrawing(false);
 
-        await applySegmentationMaskConstraints({
+        const overriddenAnnotations = await applySegmentationMaskConstraints({
             workingMask,
             skipId: selectedAnnotation?.sample_id,
             lockedAnnotationIds,
@@ -74,6 +75,16 @@ export function useInstanceSegmentationBrush({
             collectionId,
             updateAnnotations
         });
+
+        const restoreOverriddenAnnotations = async () => {
+            await restoreOverriddenSegmentationAnnotationsForUndo({
+                collectionId,
+                overriddenAnnotations,
+                labels,
+                updateAnnotations,
+                createAnnotation
+            });
+        };
 
         const bbox: BoundingBox | null = computeBoundingBoxFromMask(
             workingMask,
@@ -112,7 +123,11 @@ export function useInstanceSegmentationBrush({
                     annotation: selectedAnnotation,
                     collection_id: collectionId,
                     addReversibleAction,
-                    updateAnnotation
+                    updateAnnotation,
+                    onUndo: async () => {
+                        await restoreOverriddenAnnotations();
+                        refetch();
+                    }
                 });
 
                 return;
@@ -150,7 +165,8 @@ export function useInstanceSegmentationBrush({
             annotation: newAnnotation,
             addReversibleAction,
             deleteAnnotation,
-            refetch
+            refetch,
+            onUndo: restoreOverriddenAnnotations
         });
 
         setAnnotationType(

@@ -59,8 +59,13 @@
     import { useVideoFrameAnnotationCounts } from '$lib/hooks/useVideoFrameAnnotationsCount/useVideoFrameAnnotationsCount.js';
     import { useVideoFramesBounds } from '$lib/hooks/useVideoFramesBounds/useVideoFramesBounds.js';
     import { useVideoBounds } from '$lib/hooks/useVideosBounds/useVideosBounds.js';
-    import { SampleType } from '$lib/api/lightly_studio_local/types.gen.js';
+    import {
+        SampleType,
+        type AnnotationsFilter,
+        type ImageFilter
+    } from '$lib/api/lightly_studio_local/types.gen.js';
     import type { AnnotationLabel } from '$lib/services/types.js';
+    import { buildImageFilter } from '$lib/utils/buildImageFilter';
 
     const { data, children } = $props();
     const {
@@ -209,8 +214,21 @@
     const annotationsLabels = $derived(
         selectedAnnotationFilter.length > 0 ? selectedAnnotationFilter : undefined
     );
+    const annotationFilter = $derived.by<AnnotationsFilter | undefined>(() =>
+        $selectedAnnotationFilterIds.size > 0
+            ? { annotation_label_ids: Array.from($selectedAnnotationFilterIds) }
+            : undefined
+    );
     const metadataFilters = $derived(
         metadataValues ? createMetadataFilters($metadataValues) : undefined
+    );
+    const imageFilter = $derived.by<ImageFilter | undefined>(() =>
+        buildImageFilter({
+            dimensionsValues: $dimensionsValues ?? undefined,
+            annotationFilter,
+            metadataFilters,
+            collectionId: collectionId
+        })
     );
     const { videoFramesBoundsValues } = useVideoFramesBounds();
     const { videoBoundsValues } = useVideoBounds();
@@ -248,10 +266,7 @@
         }
         return useAnnotationCounts({
             collectionId: datasetId,
-            options: {
-                filtered_labels: annotationsLabels,
-                dimensions: $dimensionsValues ?? undefined
-            }
+            filter: imageFilter
         });
     });
 
