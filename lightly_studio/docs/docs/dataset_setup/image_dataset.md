@@ -35,16 +35,7 @@ folder name as a tag to each sample. See the [API reference](../api/dataset.md#l
 ### From an Annotation Format
 
 ImageDataset class exposes methods to load images with annotations from a number of
-standard formats:
-
-- YOLO Object Detections
-- COCO Object Detections
-- COCO Instance Segmentations
-- COCO Captions
-- Pascal VOC Semantic Segmentations
-- Lightly Object Detections
-
-See [API reference](../api/dataset.md#lightly_studio.ImageDataset) for full details.
+standard formats. See [API reference](../api/dataset.md#lightly_studio.ImageDataset) for full details.
 
 === "YOLO Object Detections"
 
@@ -204,11 +195,122 @@ See [API reference](../api/dataset.md#lightly_studio.ImageDataset) for full deta
 
 === "PascalVOC Semantic Segmentations"
 
-    TODO
+    ```python
+    import json
+    from pathlib import Path
+
+    import lightly_studio as ls
+
+    # Download the example dataset (will be skipped if it already exists)
+    dataset_path = ls.utils.download_example_dataset(download_dir="dataset_examples")
+
+    # Load a mapping from class IDs to class names. The mapping is not a part of the PascalVOC format.
+    class_id_to_name_path = f"{dataset_path}/voc2012_10_images/class_id_to_name.json"
+    json_dict = json.loads(Path(class_id_to_name_path).read_text())
+    class_id_to_name = {int(k): v for k, v in json_dict.items()}
+
+    # Create an image dataset and add samples from PascalVOC format.
+    dataset = ls.ImageDataset.create()
+    dataset.add_samples_from_pascal_voc_segmentations(
+        images_path=f"{dataset_path}/voc2012_10_images/JPEGImages",
+        masks_path=f"{dataset_path}/voc2012_10_images/SegmentationClass",
+        class_id_to_name=class_id_to_name,
+    )
+    ```
+
+    To load PascalVOC format, the mapping from class IDs to class names is not a part of the
+    format and must be provided separately. In the example above, we load it from a JSON file,
+    but you can also create it manually in Python.
+
+    <details>
+    <summary>The Pascal VOC format details:</summary>
+
+    ```
+    dataset/
+    ├── images/
+    │   ├── image1.jpg
+    │   ├── image2.jpg
+    │   └── ...
+    └── masks/
+        ├── image1.png
+        ├── image2.png
+        └── ...
+    ```
+
+    Each mask is a PNG image where each pixel value corresponds to a class ID.
+
+    In the example above, we load a mapping from class IDs to class names from a JSON file
+    in this format:
+
+    ```json
+    {
+        "0": "background",
+        "1": "aeroplane",
+        "2": "bicycle",
+        ...
+    }
+    ```
+
+    </details>
 
 === "Lightly Object Detections"
 
-    TODO
+    ```python
+    import lightly_studio as ls
+
+    # Download the example dataset (will be skipped if it already exists)
+    dataset_path = ls.utils.download_example_dataset(download_dir="dataset_examples")
+
+    dataset = ls.ImageDataset.create()
+    dataset.add_samples_from_lightly(
+        input_folder=f"{dataset_path}/coco_subset_128_images/predictions",
+    )
+    ```
+
+    <details>
+    <summary>The Lightly format details:</summary>
+
+    ```
+    predictions/
+    ├── schema.json
+    ├── image1.json
+    ├── image2.json
+    └── ...
+    ```
+
+    The prediction folder contains a `schema.json` file defining the task type and
+    categories, and one JSON file per image with the predictions.
+
+    The `schema.json` file defines the task type and the list of categories:
+
+    ```json
+    {
+        "task_type": "object-detection",
+        "categories": [
+            {"id": 0, "name": "person"},
+            {"id": 1, "name": "bicycle"},
+            {"id": 2, "name": "car"},
+            ...
+        ]
+    }
+    ```
+
+    Each per-image JSON file contains the file name and a list of predictions with
+    bounding boxes in `[x, y, w, h]` format (top-left corner, width, height) and
+    an optional confidence score:
+
+    ```json
+    {
+        "file_name": "000000001732.jpg",
+        "predictions": [
+            {"category_id": 0, "bbox": [223, 105, 115, 372], "score": 0.95},
+            {"category_id": 26, "bbox": [204, 240, 38, 70], "score": 0.8},
+            {"category_id": 28, "bbox": [35, 385, 209, 88], "score": 0.6}
+        ]
+    }
+    ```
+
+    </details>
 
 ---
 
