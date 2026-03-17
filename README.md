@@ -151,6 +151,8 @@ ls.start_gui()
 
 Run the script with `python example_video.py`. Now you can inspect videos in the app.
 
+The same `dataset.add_videos_from_path()` call also accepts cloud storage URLs such as `s3://my-bucket/videos/` after installing `pip installlightly-studio[cloud-storage]`.
+
 ### YOLO Object Detection
 
 To run an object detection example using a [YOLO](https://labelformat.com/formats/object-detection/yolov8/) dataset, create a file named `example_yolo.py`:
@@ -223,7 +225,7 @@ Run the script with `python example_coco_captions.py`. Now you can inspect sampl
 LightlyStudio has a powerful Python interface. You can not only index datasets but also query and manipulate them using code.
 
 ### ☁️ Using Cloud Storage
-To load images directly from a cloud storage provider (like AWS S3, GCS, etc.), you must first install the required dependencies:
+To load images or videos directly from a cloud storage provider (like AWS S3, GCS, etc.), you must first install the required dependencies:
 
 ```py
 pip install "lightly-studio[cloud-storage]"
@@ -232,11 +234,7 @@ pip install "lightly-studio[cloud-storage]"
 This installs the necessary libraries: s3fs (for S3), gcsfs (for GCS), and adlfs (for Azure).
 Our tool uses the fsspec library, which also supports other file systems. If you need a different provider (like FTP, SSH, etc.), you can find the required library in the [fsspec documentation](https://filesystem-spec.readthedocs.io/en/latest/api.html#other-known-implementations) and install it manually (e.g., pip install sftpfs).
 
-**Current Support Limitations:**
-
-* **Images:** Your images can be located in a cloud bucket (e.g., `s3://my-bucket/images/`)
-* **Videos:** Your video files must currently be local. Cloud support is coming soon.
-* **Annotations (Labels):** Loading annotations from cloud storage is only supported for COCO object detection and instance segmentation formats. Other annotation formats and caption datasets are not yet supported.
+**Current Support Limitations for Annotations (Labels):** Cloud-hosted annotations are currently supported for COCO object detection and instance segmentation; other dataset importers still expect local files.
 
 ### Dataset
 
