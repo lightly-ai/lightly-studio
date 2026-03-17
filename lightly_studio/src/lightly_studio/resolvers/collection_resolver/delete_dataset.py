@@ -128,7 +128,7 @@ def _delete_sample_tag_links(session: Session, sample_ids: list[UUID]) -> None:
     """Delete sample-tag links for the given samples."""
     if not sample_ids:
         return
-    session.exec(  # type: ignore[call-overload]
+    session.exec(
         delete(SampleTagLinkTable).where(col(SampleTagLinkTable.sample_id).in_(sample_ids))
     )
 
@@ -137,7 +137,7 @@ def _delete_sample_group_links(session: Session, sample_ids: list[UUID]) -> None
     """Delete sample-group links for the given samples."""
     if not sample_ids:
         return
-    session.exec(  # type: ignore[call-overload]
+    session.exec(
         delete(SampleGroupLinkTable).where(col(SampleGroupLinkTable.sample_id).in_(sample_ids))
     )
 
@@ -146,7 +146,7 @@ def _delete_sample_embeddings(session: Session, sample_ids: list[UUID]) -> None:
     """Delete sample embeddings for the given samples."""
     if not sample_ids:
         return
-    session.exec(  # type: ignore[call-overload]
+    session.exec(
         delete(SampleEmbeddingTable).where(col(SampleEmbeddingTable.sample_id).in_(sample_ids))
     )
 
@@ -155,7 +155,7 @@ def _delete_sample_metadata(session: Session, sample_ids: list[UUID]) -> None:
     """Delete sample metadata for the given samples."""
     if not sample_ids:
         return
-    session.exec(  # type: ignore[call-overload]
+    session.exec(
         delete(SampleMetadataTable).where(col(SampleMetadataTable.sample_id).in_(sample_ids))
     )
 
@@ -164,7 +164,7 @@ def _delete_object_detection_annotations(session: Session, sample_ids: list[UUID
     """Delete object detection annotation details."""
     if not sample_ids:
         return
-    session.exec(  # type: ignore[call-overload]
+    session.exec(
         delete(ObjectDetectionAnnotationTable).where(
             col(ObjectDetectionAnnotationTable.sample_id).in_(sample_ids)
         )
@@ -175,7 +175,7 @@ def _delete_segmentation_annotations(session: Session, sample_ids: list[UUID]) -
     """Delete segmentation annotation details."""
     if not sample_ids:
         return
-    session.exec(  # type: ignore[call-overload]
+    session.exec(
         delete(SegmentationAnnotationTable).where(
             col(SegmentationAnnotationTable.sample_id).in_(sample_ids)
         )
@@ -186,7 +186,7 @@ def _delete_annotation_base(session: Session, sample_ids: list[UUID]) -> None:
     """Delete annotation base records."""
     if not sample_ids:
         return
-    session.exec(  # type: ignore[call-overload]
+    session.exec(
         delete(AnnotationBaseTable).where(col(AnnotationBaseTable.sample_id).in_(sample_ids))
     )
 
@@ -195,7 +195,7 @@ def _delete_object_tracks(session: Session, collection_ids: list[UUID]) -> None:
     """Delete object tracks for the given collections."""
     if not collection_ids:
         return
-    session.exec(  # type: ignore[call-overload]
+    session.exec(
         delete(ObjectTrackTable).where(col(ObjectTrackTable.dataset_id).in_(collection_ids))
     )
 
@@ -204,59 +204,47 @@ def _delete_captions(session: Session, sample_ids: list[UUID]) -> None:
     """Delete captions."""
     if not sample_ids:
         return
-    session.exec(  # type: ignore[call-overload]
-        delete(CaptionTable).where(col(CaptionTable.sample_id).in_(sample_ids))
-    )
+    session.exec(delete(CaptionTable).where(col(CaptionTable.sample_id).in_(sample_ids)))
 
 
 def _delete_video_frames(session: Session, sample_ids: list[UUID]) -> None:
     """Delete video frames."""
     if not sample_ids:
         return
-    session.exec(  # type: ignore[call-overload]
-        delete(VideoFrameTable).where(col(VideoFrameTable.sample_id).in_(sample_ids))
-    )
+    session.exec(delete(VideoFrameTable).where(col(VideoFrameTable.sample_id).in_(sample_ids)))
 
 
 def _delete_groups(session: Session, sample_ids: list[UUID]) -> None:
     """Delete group records."""
     if not sample_ids:
         return
-    session.exec(  # type: ignore[call-overload]
-        delete(GroupTable).where(col(GroupTable.sample_id).in_(sample_ids))
-    )
+    session.exec(delete(GroupTable).where(col(GroupTable.sample_id).in_(sample_ids)))
 
 
 def _delete_videos(session: Session, sample_ids: list[UUID]) -> None:
     """Delete videos."""
     if not sample_ids:
         return
-    session.exec(  # type: ignore[call-overload]
-        delete(VideoTable).where(col(VideoTable.sample_id).in_(sample_ids))
-    )
+    session.exec(delete(VideoTable).where(col(VideoTable.sample_id).in_(sample_ids)))
 
 
 def _delete_images(session: Session, sample_ids: list[UUID]) -> None:
     """Delete images."""
     if not sample_ids:
         return
-    session.exec(  # type: ignore[call-overload]
-        delete(ImageTable).where(col(ImageTable.sample_id).in_(sample_ids))
-    )
+    session.exec(delete(ImageTable).where(col(ImageTable.sample_id).in_(sample_ids)))
 
 
 def _delete_samples(session: Session, sample_ids: list[UUID]) -> None:
     """Delete samples."""
     if not sample_ids:
         return
-    session.exec(  # type: ignore[call-overload]
-        delete(SampleTable).where(col(SampleTable.sample_id).in_(sample_ids))
-    )
+    session.exec(delete(SampleTable).where(col(SampleTable.sample_id).in_(sample_ids)))
 
 
 def _delete_annotation_labels(session: Session, root_collection_id: UUID) -> None:
     """Delete annotation labels for the root collection."""
-    session.exec(  # type: ignore[call-overload]
+    session.exec(
         delete(AnnotationLabelTable).where(
             col(AnnotationLabelTable.dataset_id) == root_collection_id
         )
@@ -265,25 +253,21 @@ def _delete_annotation_labels(session: Session, root_collection_id: UUID) -> Non
 
 def _delete_dataset(session: Session, dataset_id: UUID) -> None:
     """Delete the dataset record from DatasetTable."""
-    session.exec(  # type: ignore[call-overload]
-        delete(DatasetTable).where(col(DatasetTable.dataset_id) == dataset_id)
-    )
+    session.exec(delete(DatasetTable).where(col(DatasetTable.dataset_id) == dataset_id))
 
 
 def _delete_tags(session: Session, collection_ids: list[UUID]) -> None:
     """Delete tags for the given collections."""
     if not collection_ids:
         return
-    session.exec(  # type: ignore[call-overload]
-        delete(TagTable).where(col(TagTable.collection_id).in_(collection_ids))
-    )
+    session.exec(delete(TagTable).where(col(TagTable.collection_id).in_(collection_ids)))
 
 
 def _delete_embedding_models(session: Session, collection_ids: list[UUID]) -> None:
     """Delete embedding models for the given collections."""
     if not collection_ids:
         return
-    session.exec(  # type: ignore[call-overload]
+    session.exec(
         delete(EmbeddingModelTable).where(
             col(EmbeddingModelTable.collection_id).in_(collection_ids)
         )
@@ -296,7 +280,7 @@ def _delete_collections(session: Session, collection_ids: list[UUID]) -> None:
         return
     # Reverse the list to delete children before parents
     for collection_id in reversed(collection_ids):
-        session.exec(  # type: ignore[call-overload]
+        session.exec(
             delete(CollectionTable).where(col(CollectionTable.collection_id) == collection_id)
         )
         session.commit()
