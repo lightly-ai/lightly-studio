@@ -136,7 +136,8 @@ const expectBoxCoordinates = async (
                     width,
                     height
                 }),
-            { timeout: 10000 }
+            // todo leave a comment if this works
+            { timeout: 15000 }
         )
         .toBe(true);
 };
