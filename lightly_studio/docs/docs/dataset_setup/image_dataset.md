@@ -381,4 +381,135 @@ add captions or view metadata.
 
 ## Image Dataset in the Python API
 
-<!-- TODO(Michal, 03/2026): Add content. -->
+### ImageDataset class
+
+The main entrypoint is the [ImageDataset class](../api/dataset.md#imagedataset).
+An instance of it can be created as described above by using one of the factory methods:
+
+```python title="Create or load an ImageDataset"
+dataset = ls.ImageDataset.create()
+dataset = ls.ImageDataset.load()
+dataset = ls.ImageDataset.load_or_create()
+```
+
+Once samples are added to the dataset, they can be iterated over, yielding `ImageSample` objects:
+
+```python title="Iterate over dataset samples"
+for sample in dataset:
+    print(sample.file_name)
+    assert isinstance(sample, ls.ImageSample)
+```
+
+### ImageSample class
+
+[ImageSample class](../api/sample.md#imagesample) provides read and write access to the image data.
+
+```python title="Access image data"
+# Grab one sample
+image = next(iter(dataset))
+
+# Image properties
+print(image.file_name)
+print(image.file_path_abs)
+print(image.width)
+print(image.height)
+
+# Tags
+image.tags = ["tag1", "tag2"]
+image.add_tag("needs_review")
+image.remove_tag("needs_review")
+print(image.tags)
+
+# Captions
+image.captions = ["Caption 1", "Caption 2"]
+image.add_caption("Caption 3")
+print(image.captions)
+
+# Metadata
+image.metadata["my_key"] = "my_value"
+print(image.metadata["my_key"])
+
+# Annotations
+from lightly_studio.core.annotation import CreateObjectDetection
+image.add_annotation(
+    CreateObjectDetection(
+        label="dog",
+        x=10,
+        y=20,
+        width=30,
+        height=40,
+        confidence=0.9,
+    )
+)
+for annotation in image.annotations:
+    print(annotation.label)
+```
+
+<!-- TODO(Michal, 03/2026)
+Find more details on [Tags](todo), [Captions](todo), [Metadata](todo) and [Annotations](todo)
+on dedicated pages.
+-->
+
+### Querying the Dataset
+
+You can programmatically filter samples by attributes (e.g., image size, tags), sort them,
+and select subsets. This is useful for creating training/validation splits, finding specific
+samples, or exporting filtered data.
+
+!!! tip "GUI Support"
+    These filtering and querying operations can also be performed directly for image datasets
+    in the GUI using the search and filter panels.
+
+Create a query object by combining `match`, `order_by` and `slice` (or `[start:end]`) calls.
+The query is composed lazily, it is executed against the database once it is consumed, e.g. by
+iterating over it or calling `to_list()`.
+
+<!-- TODO(Michal, 03/2026): Link below a dedicated page on querying when ready. -->
+
+The listing below shows examples of working with queries. For details see the API reference
+for [DatasetQuery](../api/dataset_query.md#datasetquery) and [ImageSampleField](../api/dataset_query.md#imagesamplefield).
+
+```py
+from lightly_studio.core.dataset_query import AND, OR, NOT, OrderByField, ImageSampleField
+
+###
+# Compose a query
+
+# match: Find all samples that need labeling plus small samples (< 500px) that haven't been reviewed.
+query = dataset.match(
+    OR(
+        AND(
+            ImageSampleField.width < 500,
+            NOT(ImageSampleField.tags.contains("reviewed"))
+        ),
+        ImageSampleField.tags.contains("needs-labeling")
+    )
+)
+
+# order_by: Sort the samples by their width descending.
+query.order_by(
+    OrderByField(ImageSampleField.width).desc()
+)
+
+# slice: Extract a slice of samples.
+query[10:20]
+
+# chaining: The query can also be constructed in chained way
+query = dataset.match(...).order_by(...)[...]
+
+###
+# Consume a query
+
+# Tag this subset for easy filtering in the UI
+query.add_tag("needs-review")
+
+# Iterate over resulting samples
+for sample in query:
+    # Access the sample: see previous section
+
+# Collect all resulting samples as list
+samples = query.to_list()
+
+# Export all resulting samples in coco format
+dataset.export(query).to_coco_object_detections()
+```
