@@ -40,6 +40,8 @@
     --md-primary-fg-color: #091c1e;
     --md-primary-fg-color--light: #0f2c30;
     --md-primary-fg-color--dark: #051315;
+    --md-accent-fg-color: #13a6e6;
+    --md-accent-fg-color--transparent: #13a6e61a;
 }
 
 /* Override Material theme primary colors */
@@ -47,12 +49,16 @@
     --md-primary-fg-color: #091c1e;
     --md-primary-fg-color--light: #0f2c30;
     --md-primary-fg-color--dark: #051315;
+    --md-accent-fg-color: #13a6e6;
+    --md-accent-fg-color--transparent: #13a6e61a;
 }
 
 [data-md-color-scheme="slate"] {
     --md-primary-fg-color: #091c1e;
     --md-primary-fg-color--light: #0f2c30;
     --md-primary-fg-color--dark: #051315;
+    --md-accent-fg-color: #13a6e6;
+    --md-accent-fg-color--transparent: #13a6e61a;
 }
 
 /* Custom logo styling - increased size */
@@ -76,6 +82,55 @@
     display: none !important;
 }
 
+
+/* Show all tab headers without overflow arrows */
+.md-typeset .tabbed-labels {
+  flex-wrap: wrap;
+  overflow: visible;
+  /* Full-width separator line at the bottom of each tab row.
+     Row height = label <a> padding (10px + 8px) + line-height (1.6 * 0.8rem) ≈ 40.5px */
+  background-image: linear-gradient(
+    to bottom,
+    transparent calc(100% - 1px),
+    var(--md-default-fg-color--lightest) calc(100% - 1px)
+  );
+  background-size: 100% 40.5px;
+}
+
+/* Hide the sliding indicator which breaks with wrapped tabs */
+.md-typeset .tabbed-labels::before {
+  display: none !important;
+}
+
+/* Per-tab underline with grow-from-center animation */
+.md-typeset .tabbed-set > .tabbed-labels > label {
+  position: relative;
+}
+
+.md-typeset .tabbed-set > .tabbed-labels > label::after {
+  content: "";
+  position: absolute;
+  bottom: -1px;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: var(--md-accent-fg-color);
+  transform: scaleX(0);
+  transition: transform 0.25s ease;
+}
+
+.md-typeset .tabbed-set:has(> input:nth-child(1):checked) > .tabbed-labels > label:nth-child(1)::after,
+.md-typeset .tabbed-set:has(> input:nth-child(2):checked) > .tabbed-labels > label:nth-child(2)::after,
+.md-typeset .tabbed-set:has(> input:nth-child(3):checked) > .tabbed-labels > label:nth-child(3)::after,
+.md-typeset .tabbed-set:has(> input:nth-child(4):checked) > .tabbed-labels > label:nth-child(4)::after,
+.md-typeset .tabbed-set:has(> input:nth-child(5):checked) > .tabbed-labels > label:nth-child(5)::after,
+.md-typeset .tabbed-set:has(> input:nth-child(6):checked) > .tabbed-labels > label:nth-child(6)::after,
+.md-typeset .tabbed-set:has(> input:nth-child(7):checked) > .tabbed-labels > label:nth-child(7)::after,
+.md-typeset .tabbed-set:has(> input:nth-child(8):checked) > .tabbed-labels > label:nth-child(8)::after,
+.md-typeset .tabbed-set:has(> input:nth-child(9):checked) > .tabbed-labels > label:nth-child(9)::after,
+.md-typeset .tabbed-set:has(> input:nth-child(10):checked) > .tabbed-labels > label:nth-child(10)::after {
+  transform: scaleX(1);
+}
 
 /* Indentation. doc strings */
 div.doc-contents:not(.first) {
@@ -109,7 +164,7 @@ code.doc-symbol-module {
 .md-content .md-typeset > blockquote a,
 .md-content .md-typeset details a,
 .md-content .md-typeset .admonition a {
-  color: #0969da;
+  color: #13a6e6;
 }
 
 .md-content .md-typeset > p a:hover,
@@ -118,6 +173,6 @@ code.doc-symbol-module {
 .md-content .md-typeset > blockquote a:hover,
 .md-content .md-typeset details a:hover,
 .md-content .md-typeset .admonition a:hover {
-  color: #0550ae;
+  color: #0d8abf;
 }
 
