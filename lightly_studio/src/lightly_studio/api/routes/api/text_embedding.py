@@ -20,7 +20,7 @@ text_embedding_router = APIRouter()
 # Define a type alias for the EmbeddingManager dependency
 EmbeddingManagerDep = Annotated[
     EmbeddingManager,
-    Depends(lambda: EmbeddingManagerProvider.get_embedding_manager()),
+    Depends(lambda: EmbeddingManagerProvider.get_embedding_manager()),  # noqa: PLW0108
 ]
 
 
