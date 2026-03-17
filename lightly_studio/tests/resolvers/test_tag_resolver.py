@@ -238,7 +238,7 @@ def test_remove_sample_from_tag(db_session: Session) -> None:
     # remove sample to tag
     tag_resolver.remove_tag_from_sample(session=db_session, tag_id=tag.tag_id, sample=image.sample)
     assert len(image.sample.tags) == 0
-    with pytest.raises(ValueError, match="is not in list"):
+    with pytest.raises(ValueError, match="not in list"):
         image.sample.tags.index(tag)
 
 

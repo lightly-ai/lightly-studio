@@ -41,12 +41,12 @@ def delete_annotation(
     # Store the annotation's sample_id before deletion
     annotation_sample_id = annotation.sample_id
 
-    session.exec(  # type: ignore
+    session.exec(
         delete(ObjectDetectionAnnotationTable).where(
             col(ObjectDetectionAnnotationTable.sample_id) == annotation.sample_id
         )
     )
-    session.exec(  # type: ignore
+    session.exec(
         delete(SegmentationAnnotationTable).where(
             col(SegmentationAnnotationTable.sample_id) == annotation.sample_id
         )
@@ -54,7 +54,7 @@ def delete_annotation(
     session.commit()
 
     # Delete the annotation using explicit DELETE to avoid relationship cascade issues
-    session.exec(  # type: ignore
+    session.exec(
         delete(AnnotationBaseTable).where(
             col(AnnotationBaseTable.sample_id) == annotation.sample_id
         )
