@@ -13,7 +13,7 @@ test('user can navigate to first annotation details', async ({
 
     await expect(annotationDetailsPage.getSampleName()).toHaveText(multipleAnnotationsSample.name);
 
-    await expect(annotationDetailsPage.getAnnotationBoxes()).toHaveCount(1);
+    await expect(annotationDetailsPage.getAnnotationBoxes()).toHaveCount(2);
 
     // First annotation is "cell phone"
     const cellPhoneAnnotation = multipleAnnotationsSample.annotations.find(

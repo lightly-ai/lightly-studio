@@ -10,7 +10,7 @@ test.describe.serial('video-frames-page-flow-captions', () => {
 
         await videoFrameDetailsPage.pageIsReady();
 
-        expect(await videoFrameDetailsPage.getCaptionCount()).toEqual(0);
+        expect(await videoFrameDetailsPage.getCaptionCount()).toEqual(1);
 
         // Start edit mode
         await videoFrameDetailsPage.clickEditButton();
