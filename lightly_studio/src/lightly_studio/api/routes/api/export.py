@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import shutil
 from collections.abc import Generator
 from datetime import datetime, timezone
 from pathlib import Path as PathlibPath
@@ -24,6 +25,7 @@ from lightly_studio.resolvers import collection_resolver
 from lightly_studio.resolvers.collection_resolver.export import ExportFilter
 
 export_router = APIRouter(prefix="/collections/{collection_id}", tags=["export"])
+_STREAM_CHUNK_SIZE_BYTES = 64 * 1024
 
 
 @export_router.get("/export/annotations")
@@ -71,7 +73,35 @@ def export_collection_annotations(
             temp_dir.cleanup()
             # Reraise.
             raise
-    elif annotation_type in {AnnotationType.CLASSIFICATION, AnnotationType.SEMANTIC_SEGMENTATION}:
+    elif annotation_type == AnnotationType.SEMANTIC_SEGMENTATION:
+        output_path = PathlibPath(temp_dir.name) / "pascalvoc"
+
+        try:
+            export_dataset.to_pascalvoc_semantic_segmentation(
+                session=session,
+                root_dataset_id=collection.collection_id,
+                samples=dataset_query,
+                output_folder=output_path,
+            )
+        except Exception:
+            temp_dir.cleanup()
+            # Reraise.
+            raise
+
+        # For semantic segmentation, the exporter produces a Pascal VOC directory,
+        # so this route should stream the folder as a .zip instead of streaming a single file.
+        return StreamingResponse(
+            content=_stream_export_dir(
+                temp_dir=temp_dir,
+                dir_path=output_path,
+            ),
+            media_type="application/zip",
+            headers={
+                "Access-Control-Expose-Headers": "Content-Disposition",
+                "Content-Disposition": f"attachment; filename={output_path.name}.zip",
+            },
+        )
+    elif annotation_type == AnnotationType.CLASSIFICATION:
         raise NotImplementedError
 
     return StreamingResponse(
@@ -203,10 +233,7 @@ def _stream_export_file(
     """Stream the export file and clean up the temporary directory afterwards."""
     try:
         with file_path.open("rb") as file:
-            while True:
-                chunk = file.read(1024 * 1024)  # 1 MB
-                if not chunk:
-                    break
+            while chunk := file.read(_STREAM_CHUNK_SIZE_BYTES):
                 yield chunk
     finally:
         temp_dir.cleanup()
@@ -256,3 +283,23 @@ def export_collection_youtube_vis(
             "Content-Disposition": f"attachment; filename={output_path.name}",
         },
     )
+def _stream_export_dir(
+    temp_dir: TemporaryDirectory[str],
+    dir_path: PathlibPath,
+) -> Generator[bytes, None, None]:
+    """Zip and stream an export directory, then clean up the temporary directory."""
+    try:
+        archive_path = PathlibPath(
+            shutil.make_archive(
+                base_name=str(dir_path),
+                format="zip",
+                root_dir=dir_path.parent,
+                base_dir=dir_path.name,
+            )
+        )
+    except Exception:
+        temp_dir.cleanup()
+        # Reraise.
+        raise
+
+    yield from _stream_export_file(temp_dir=temp_dir, file_path=archive_path)

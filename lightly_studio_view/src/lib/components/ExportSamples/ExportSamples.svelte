@@ -35,11 +35,13 @@
         | 'instance_segmentations'
         | 'captions'
         | 'youtube_vis_instance_segmentations'
+        | 'semantic_segmentations'
     >('samples');
     const exportTypeLabels: Record<typeof exportType, string> = {
         samples: 'Image Filenames',
         object_detections: 'Image Object Detections',
         instance_segmentations: 'Image Instance Segmentations',
+        semantic_segmentations: 'Image Semantic Segmentations',
         captions: 'Image Captions',
         youtube_vis_instance_segmentations: 'YouTube-VIS Video Instance Segmentations'
     };
@@ -125,6 +127,9 @@
     // YouTube-VIS video instance segmentation export
     //
     const exportYoutubeVisInstanceSegmentationsURL = `${PUBLIC_LIGHTLY_STUDIO_API_URL}api/collections/${collectionId}/export/youtube-vis?ts=${Date.now()}&annotation_type=instance_segmentation`;
+    // Semantic segmentation export
+    //
+    const exportSemanticSegmentationsURL = `${PUBLIC_LIGHTLY_STUDIO_API_URL}api/collections/${collectionId}/export/annotations?ts=${Date.now()}&annotation_type=semantic_segmentation`;
 
     //
     // Caption export
@@ -176,6 +181,11 @@
                                         value="instance_segmentations"
                                         label="Image Instance Segmentations"
                                         >Image Instance Segmentations</Select.Item
+                                    >
+                                    <Select.Item
+                                        value="semantic_segmentations"
+                                        label="Image Semantic Segmentations"
+                                        >Image Semantic Segmentations</Select.Item
                                     >
                                     <Select.Item value="captions" label="Image Captions"
                                         >Image Captions</Select.Item
@@ -337,6 +347,20 @@
                             </Button>
                         </Tabs.Content>
                     {/if}
+                    <Tabs.Content value="semantic_segmentations" class="pt-2">
+                        <p class="text-sm text-muted-foreground">
+                            The semantic segmentations will be exported in PASCAL VOC format.
+                        </p>
+
+                        <Button
+                            class="relative my-4 w-full"
+                            href={exportSemanticSegmentationsURL}
+                            target="_blank"
+                            data-testid="submit-button-semantic-segmentations"
+                        >
+                            Download
+                        </Button>
+                    </Tabs.Content>
 
                     <!-- Captions tab -->
 
