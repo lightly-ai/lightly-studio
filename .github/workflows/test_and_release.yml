@@ -187,4 +187,4 @@ jobs:
         env:
           LIGHTLY_STUDIO_LICENSE_KEY: ${{ secrets.MUNDIG_LICENSE_KEY }}
           UV_PYTHON: "3.13"
-        run: make test-postgres
+        run: make test-ci-postgres
