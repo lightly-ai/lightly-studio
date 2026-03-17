@@ -15,6 +15,7 @@ from lightly_studio.models.annotation.segmentation import SegmentationAnnotation
 from lightly_studio.models.annotation_label import AnnotationLabelTable
 from lightly_studio.models.caption import CaptionTable
 from lightly_studio.models.collection import CollectionTable
+from lightly_studio.models.dataset import DatasetTable
 from lightly_studio.models.embedding_model import EmbeddingModelTable
 from lightly_studio.models.group import GroupTable, SampleGroupLinkTable
 from lightly_studio.models.image import ImageTable
@@ -54,6 +55,8 @@ def delete_dataset(
         raise ValueError(f"Collection with ID {root_collection_id} not found.")
     if root.parent_collection_id is not None:
         raise ValueError("Only root collections can be deleted.")
+
+    dataset_id = root.dataset_id
 
     # Get the hierarchy and collect all IDs.
     hierarchy = collection_resolver.get_hierarchy(
@@ -105,6 +108,10 @@ def delete_dataset(
 
     # 6. Delete collections (with individual commits due to self-referential FKs).
     _delete_collections(session=session, collection_ids=collection_ids)
+
+    # 7. Delete the dataset entry itself.
+    _delete_dataset(session=session, dataset_id=dataset_id)
+    session.commit()
 
 
 def _get_sample_ids(session: Session, collection_ids: list[UUID]) -> list[UUID]:
@@ -241,6 +248,13 @@ def _delete_annotation_labels(session: Session, root_collection_id: UUID) -> Non
         delete(AnnotationLabelTable).where(
             col(AnnotationLabelTable.dataset_id) == root_collection_id
         )
+    )
+
+
+def _delete_dataset(session: Session, dataset_id: UUID) -> None:
+    """Delete the dataset record from DatasetTable."""
+    session.exec(  # type: ignore[call-overload]
+        delete(DatasetTable).where(col(DatasetTable.dataset_id) == dataset_id)
     )
 
 
