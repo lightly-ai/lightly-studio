@@ -184,6 +184,8 @@ jobs:
     needs: prepare-caches
     # Skip the job if the success marker for this exact file hash already exists.
     if: needs.prepare-caches.outputs.cache-general-success != 'true'
+    env:
+      PLAYWRIGHT_ARTIFACT_NAME: Playwright Report (General)
     steps:
       - &setup-checkout-code
         name: Checkout Code
@@ -332,7 +334,7 @@ jobs:
         uses: actions/upload-artifact@v4
         if: failure()
         with:
-          name: Upload Playwright Report
+          name: ${{ env.PLAYWRIGHT_ARTIFACT_NAME }}
           path: lightly_studio_view/playwright-report
           retention-days: 5
 
@@ -348,6 +350,8 @@ jobs:
     needs: prepare-caches
     # Skip the job if the success marker for this exact file hash already exists.
     if: needs.prepare-caches.outputs.cache-videos-success != 'true'
+    env:
+      PLAYWRIGHT_ARTIFACT_NAME: Playwright Report (Videos)
     steps:
       - *setup-checkout-code
       - *setup-authenticate-gcp
@@ -399,6 +403,8 @@ jobs:
     needs: prepare-caches
     # Skip the job if the success marker for this exact file hash already exists.
     if: needs.prepare-caches.outputs.cache-groups-success != 'true'
+    env:
+      PLAYWRIGHT_ARTIFACT_NAME: Playwright Report (Groups)
     steps:
       - *setup-checkout-code
       - *setup-authenticate-gcp
