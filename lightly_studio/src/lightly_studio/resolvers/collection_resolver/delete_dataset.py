@@ -253,9 +253,7 @@ def _delete_annotation_labels(session: Session, root_collection_id: UUID) -> Non
 
 def _delete_dataset(session: Session, dataset_id: UUID) -> None:
     """Delete the dataset record from DatasetTable."""
-    session.exec(  # type: ignore[call-overload]
-        delete(DatasetTable).where(col(DatasetTable.dataset_id) == dataset_id)
-    )
+    session.exec(delete(DatasetTable).where(col(DatasetTable.dataset_id) == dataset_id))
 
 
 def _delete_tags(session: Session, collection_ids: list[UUID]) -> None:
