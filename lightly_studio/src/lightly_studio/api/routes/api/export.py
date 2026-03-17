@@ -220,7 +220,7 @@ def export_collection_youtube_vis(
         Depends(collection_api.get_and_validate_collection_id),
     ],
     session: SessionDep,
-    annotation_type: AnnotationType = AnnotationType.OBJECT_DETECTION,
+    annotation_type: AnnotationType = AnnotationType.INSTANCE_SEGMENTATION,
 ) -> StreamingResponse:
     """Export collection video annotations in YouTube-VIS instance segmentation format."""
     if collection.sample_type != SampleType.VIDEO:
