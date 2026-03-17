@@ -148,3 +148,40 @@ jobs:
         env:
           UV_PYTHON: ${{ matrix.python }}
         run: make test
+
+  test-unit-postgres:
+    name: Unit (Postgres)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      # Authenticate to download lightly-edge-sdk.
+      - name: Authenticate with GCP
+        uses: 'google-github-actions/auth@v2'
+        with:
+          project_id: boris-250909
+          credentials_json: ${{ secrets.GCP_LIGHTLY_STUDIO_CI_READONLY }}
+
+      - name: Set Up uv
+        uses: astral-sh/setup-uv@v6
+        with:
+          version: "0.8.17"
+          enable-cache: true
+
+      - name: Set Up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      - name: Install LightlyStudio dependencies
+        working-directory: lightly_studio
+        run: make install-optional-deps
+
+      - name: Run Tests for LightlyStudio (Postgres)
+        working-directory: lightly_studio
+        env:
+          LIGHTLY_STUDIO_LICENSE_KEY: ${{ secrets.MUNDIG_LICENSE_KEY }}
+        run: make test-ci-postgres
