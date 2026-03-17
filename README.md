@@ -34,8 +34,6 @@ We at **[Lightly](https://lightly.ai)** created **[LightlyStudio](https://www.li
   <em>Curate, Annotate, and Manage Your Data in LightlyStudio.</em>
 </p>
 
-> **Note:** LightlyStudio is pre-1.0. Expect occasional breaking changes as we iterate quickly. We’re targeting a v1.0 release in March 2026 and will keep changes documented in the changelog.
-
 ## 💻 Installation
 
 Runs on **Python 3.9 or higher** on Windows, Linux and MacOS.
