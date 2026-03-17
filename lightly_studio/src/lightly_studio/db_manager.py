@@ -56,9 +56,7 @@ class DatabaseEngine:
         Args:
             engine_url: The database engine URL. If None, reads from LIGHTLY_STUDIO_DATABASE_URL
                 env var, or defaults to a local DuckDB file.
-            cleanup_existing: If True, removes the existing database before use. For DuckDB,
-                this deletes the database files. For PostgreSQL, this drops and recreates
-                all tables.
+            cleanup_existing: If True, removes the existing database before use.
             single_threaded: If True, creates a single-threaded engine suitable for testing.
         """
         if engine_url is not None:
@@ -199,8 +197,6 @@ def connect(
     Args:
         db_file: Path to DuckDB file.
         cleanup_existing: If True, removes the existing database before use.
-            For DuckDB, deletes the database files. For PostgreSQL, drops and
-            recreates all tables.
         engine_url: Full database URL.
 
     Raises:
