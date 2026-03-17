@@ -349,11 +349,11 @@ GUI displays only a single dataset.
 
 ## Image Dataset in the GUI
 
-Launch the GUI by calling `ls.start_gui()`. It starts a local webserver, click
+Launch the GUI by calling `ls.start_gui()`, it starts a local web server. Click
 on the link printed in the console - by default `http://localhost:8001` - to open the GUI
 in your browser.
 
-```python  title="Start the GUI"
+```python title="Start the GUI"
 import lightly_studio as ls
 ls.start_gui()
 ```
@@ -364,8 +364,8 @@ The main view shows a grid of images in your dataset. From here, you can perform
 
 - Use the left panel to filter the images by tags, annotation labels or metadata.
 - Use the search bar to do similarity search by text or an image.
-- Use the "Show Embeddings" button to explore the data in embedding space.
-- Use the "Menu" dropdown for further actions like plugins, sampling, classification, export and more.
+- Use the `Show Embeddings` button to explore the data in embedding space.
+- Use the `Menu` dropdown for further actions like plugins, sampling, classification, export and more.
 
 Refer to dedicated pages in this documentation on every feature for more details.
 
