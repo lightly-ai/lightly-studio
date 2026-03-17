@@ -349,7 +349,35 @@ GUI displays only a single dataset.
 
 ## Image Dataset in the GUI
 
-<!-- TODO(Michal, 03/2026): Add content. -->
+Launch the GUI by calling `ls.start_gui()`. It starts a local webserver, click
+on the link printed in the console - by default `http://localhost:8001` - to open the GUI
+in your browser.
+
+```python  title="Start the GUI"
+import lightly_studio as ls
+ls.start_gui()
+```
+
+### Grid View
+
+The main view shows a grid of images in your dataset. From here, you can perform multiple actions:
+
+- Use the left panel to filter the images by tags, annotation labels or metadata.
+- Use the search bar to do similarity search by text or an image.
+- Use the "Show Embeddings" button to explore the data in embedding space.
+- Use the "Menu" dropdown for further actions like plugins, sampling, classification, export and more.
+
+Refer to dedicated pages in this documentation on every feature for more details.
+
+![Image Dataset Grid](https://storage.googleapis.com/lightly-public/studio/image_dataset_grid.png){ width="100%" }
+
+### Detail View
+
+Double-clicking on an image opens the image detail view. Here you can annotate the image,
+add captions or view metadata.
+
+![Image Detail View](https://storage.googleapis.com/lightly-public/studio/image_dataset_detail.png){ width="100%" }
+
 
 ## Image Dataset in the Python API
 
