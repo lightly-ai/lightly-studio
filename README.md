@@ -38,7 +38,7 @@ We at **[Lightly](https://lightly.ai)** created **[LightlyStudio](https://www.li
 
 ## 💻 Installation
 
-Runs on **Python 3.9 or higher** on Windows, Linux and MacOS.
+Runs on **Python 3.9 to 3.14** on Windows, Linux and MacOS.
 
 ```shell
 pip install lightly-studio
