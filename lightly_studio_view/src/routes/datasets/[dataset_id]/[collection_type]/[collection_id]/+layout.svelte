@@ -235,13 +235,13 @@
             isVideoFrames ||
             (isAnnotations && parentCollection?.sampleType == SampleType.VIDEO_FRAME)
         ) {
-            let usedCollection = collectionId;
-            // If we are on the annotation page we must pass the video frames connectionId as annotations
-            // collection is a child of it.
+            let videoFrameCollectionId = collectionId;
+            // If we are on the fideo frame annotations page we must pass the parent collectionId as annotations
+            // collection is a child of video frame collection.
             if (isAnnotations && parentCollection?.sampleType == SampleType.VIDEO_FRAME)
-                usedCollection = parentCollection.collectionId;
+                videoFrameCollectionId = parentCollection.collectionId;
             return useVideoFrameAnnotationCounts({
-                collectionId: usedCollection,
+                collectionId: videoFrameCollectionId,
                 filter: {
                     sample_filter: {
                         metadata_filters: metadataFilters,

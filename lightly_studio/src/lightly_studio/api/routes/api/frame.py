@@ -129,7 +129,7 @@ def count_video_frame_annotations(
 
     Args:
         session: The database session.
-        video_frame_collection_id: The ID of the collection to retrieve videos for.
+        video_frame_collection_id: The ID of the collection to count annotations for.
         body: The body containing filters.
 
     Returns:
