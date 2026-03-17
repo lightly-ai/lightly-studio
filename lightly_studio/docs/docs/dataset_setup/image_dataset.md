@@ -87,7 +87,6 @@ standard formats. See [API reference](../api/dataset.md#lightly_studio.ImageData
 
 === "COCO Object Detections"
 
-
     ```python
     import lightly_studio as ls
 
@@ -123,7 +122,6 @@ standard formats. See [API reference](../api/dataset.md#lightly_studio.ImageData
     </details>
 
 === "COCO Instance Segmentations"
-
 
     ```python
     import lightly_studio as ls
@@ -186,14 +184,14 @@ standard formats. See [API reference](../api/dataset.md#lightly_studio.ImageData
     └── captions_train2017.json        # Single JSON file containing all captions
     ```
 
-    COCO uses a single JSON file containing all captions. The format consists of three main components:
+    COCO uses a single JSON file containing all captions. The format consists of two main components:
 
     - Images: Defines metadata for each image in the dataset.
     - Annotations: Defines the captions.
 
     </details>
 
-=== "PascalVOC Semantic Segmentations"
+=== "Pascal VOC Semantic Segmentations"
 
     ```python
     import json
@@ -204,12 +202,12 @@ standard formats. See [API reference](../api/dataset.md#lightly_studio.ImageData
     # Download the example dataset (will be skipped if it already exists)
     dataset_path = ls.utils.download_example_dataset(download_dir="dataset_examples")
 
-    # Load a mapping from class IDs to class names. The mapping is not a part of the PascalVOC format.
+    # Load a mapping from class IDs to class names. The mapping is not a part of the Pascal VOC format.
     class_id_to_name_path = f"{dataset_path}/voc2012_10_images/class_id_to_name.json"
     json_dict = json.loads(Path(class_id_to_name_path).read_text())
     class_id_to_name = {int(k): v for k, v in json_dict.items()}
 
-    # Create an image dataset and add samples from PascalVOC format.
+    # Create an image dataset and add samples from Pascal VOC format.
     dataset = ls.ImageDataset.create()
     dataset.add_samples_from_pascal_voc_segmentations(
         images_path=f"{dataset_path}/voc2012_10_images/JPEGImages",
@@ -218,7 +216,7 @@ standard formats. See [API reference](../api/dataset.md#lightly_studio.ImageData
     )
     ```
 
-    To load PascalVOC format, the mapping from class IDs to class names is not a part of the
+    To load Pascal VOC format, the mapping from class IDs to class names is not a part of the
     format and must be provided separately. In the example above, we load it from a JSON file,
     but you can also create it manually in Python.
 
