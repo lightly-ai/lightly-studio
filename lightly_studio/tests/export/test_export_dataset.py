@@ -367,6 +367,8 @@ class TestDatasetExport:
         class_map_path = output_folder / "class_id_to_name.json"
         with class_map_path.open() as f:
             class_map = json.load(f)
+        # Two "background" classes are expected: class 0 is reserved by labelformat,
+        # and class 1 is the user-defined "background" class.
         assert class_map == {"0": "background", "1": "background", "2": "dog"}
 
         mask_path = output_folder / "SegmentationClass" / "image0.png"
