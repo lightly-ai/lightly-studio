@@ -61,11 +61,11 @@ ls.start_gui()
 
 - When you rerun the script later, only new files are indexed. Existing embeddings and annotations remain untouched; embeddings are generated only for the new samples (set `embed=False` to skip).
 - Manual labels created in the GUI, metadata changed via Python, and tags assigned anywhere are all stored in `lightly_studio.db`, so you can stop/start the process at will.
-- External files such as images/videos (.jpg, .png files etc.) remain in the original folders; keep them accessible so the GUI can display them when you reopen the dataset.
+- External files such as images/videos (.jpg, .png, .mp4 files etc.) remain in their original location; keep them accessible so the GUI can display them when you reopen the dataset.
 
 ### Using Cloud Storage
 
-To load images directly from a cloud storage provider (like AWS S3, GCS, etc.), first install the required dependencies:
+To load images or videos directly from a cloud storage provider (like AWS S3, GCS, etc.), first install the required dependencies:
 
 ```shell
 pip install "lightly-studio[cloud-storage]"
@@ -84,12 +84,23 @@ dataset.add_images_from_path(path="s3://my-bucket/images/")
 ls.start_gui()
 ```
 
-The images remain in S3 and are streamed to the UI when displayed. Make sure your AWS credentials are configured (via environment variables or `~/.aws/credentials`).
+**Example: Loading videos from S3**
+
+```py
+import lightly_studio as ls
+
+dataset = ls.VideoDataset.create(name="s3_video_dataset")
+dataset.add_videos_from_path(path="s3://my-bucket/videos/")
+
+ls.start_gui()
+```
+
+Files remain in the remote storage and are streamed to the UI on demand. Make sure your cloud credentials are configured for the selected provider.
 
 **Current Limitations:**
 
 !!! warning "Cloud Storage Limitation"
-    Cloud storage is only supported for image-only datasets using `add_images_from_path()` or when manually indexing the data with annotations. When loading annotated datasets with `add_samples_from_coco()` or `add_samples_from_yolo()`, both images and annotation files must be stored locally for now. The same is true for video files, they can be only loaded locally.
+    Cloud storage is supported for raw media folders via `add_images_from_path()` and `add_videos_from_path()`, and for COCO object detection and instance segmentation imports via `add_samples_from_coco()`. Other dataset importers still expect local files.
 
 
 ## Sample
