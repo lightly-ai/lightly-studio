@@ -151,7 +151,7 @@ ls.start_gui()
 
 Run the script with `python example_video.py`. Now you can inspect videos in the app.
 
-The same `dataset.add_videos_from_path()` call also accepts cloud storage URLs such as `s3://my-bucket/videos/` after installing `pip installlightly-studio[cloud-storage]`.
+The same `dataset.add_videos_from_path()` call also accepts cloud storage URLs such as `s3://my-bucket/videos/` after installing `pip install "lightly-studio[cloud-storage]"`.
 
 ### YOLO Object Detection
 
