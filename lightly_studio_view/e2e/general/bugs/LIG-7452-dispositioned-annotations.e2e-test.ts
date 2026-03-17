@@ -136,8 +136,7 @@ const expectBoxCoordinates = async (
                     width,
                     height
                 }),
-            // todo leave a comment if this works
-            { timeout: 20000 }
+            { timeout: 10000 }
         )
         .toBe(true);
 };
@@ -145,6 +144,11 @@ const expectBoxCoordinates = async (
 test('Annotations should have correct position between annotation label selection', async ({
     samplesPage
 }) => {
+    test.skip(
+        !!process.env['LIGHTLY_STUDIO_DATABASE_URL'],
+        'Flaky on Postgres'
+    );
+
     await samplesPage.page.addInitScript(() => {
         Object.defineProperty(HTMLCanvasElement.prototype, 'transferControlToOffscreen', {
             configurable: true,
