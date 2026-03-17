@@ -13,9 +13,14 @@
         playbackTime?: number;
     }
 
-    let { videoData, datasetId, frameNumber, playbackTime = 0 }: VideoFrameDetailsProps = $props();
+    let {
+        videoData,
+        datasetId,
+        frameNumber = $bindable(),
+        playbackTime = $bindable(0)
+    }: VideoFrameDetailsProps = $props();
 
-    let { currentFrame, loadFrameByPlaybackTime, loadFramesFromFrameNumber } = useVideoFrames({
+    let { currentFrame, playbackTime: hookPlaybackTime, loadFrameByPlaybackTime, loadFramesFromFrameNumber } = useVideoFrames({
         videoData
     });
 
@@ -26,6 +31,18 @@
             });
         } else if (frameNumber !== undefined && frameNumber !== null) {
             await loadFramesFromFrameNumber(frameNumber);
+        }
+    });
+
+    // Sync bindable playbackTime with hook's playbackTime store
+    $effect(() => {
+        playbackTime = $hookPlaybackTime;
+    });
+
+    // Sync bindable frameNumber with currentFrame's frame_number
+    $effect(() => {
+        if ($currentFrame) {
+            frameNumber = $currentFrame.frame_number;
         }
     });
 

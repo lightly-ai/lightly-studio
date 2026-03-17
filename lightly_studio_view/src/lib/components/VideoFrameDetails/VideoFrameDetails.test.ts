@@ -3,7 +3,7 @@ import { render } from '@testing-library/svelte';
 import VideoFrameDetails from './VideoFrameDetails.svelte';
 import type { VideoView, SampleView } from '$lib/api/lightly_studio_local';
 import * as useVideoFramesModule from '$lib/hooks/useVideoFrames/useVideoFrames';
-import { writable } from 'svelte/store';
+import { writable, get } from 'svelte/store';
 
 vi.mock('$lib/hooks/useVideoFrames/useVideoFrames', () => ({
     useVideoFrames: vi.fn()
@@ -153,7 +153,6 @@ describe('VideoFrameDetails', () => {
             props: { videoData: mockVideoData, datasetId: 'dataset-1', playbackTime: 0.5 }
         });
 
-        // Wait for onMount
         await new Promise((resolve) => setTimeout(resolve, 0));
 
         expect(loadFrameByPlaybackTime).toHaveBeenCalledWith(0.5, 30);
@@ -176,7 +175,6 @@ describe('VideoFrameDetails', () => {
             props: { videoData: mockVideoData, datasetId: 'dataset-1', playbackTime: 0.5 }
         });
 
-        // Wait for onMount and error handling
         await new Promise((resolve) => setTimeout(resolve, 10));
 
         expect(consoleErrorSpy).toHaveBeenCalledWith(
@@ -185,5 +183,49 @@ describe('VideoFrameDetails', () => {
         );
 
         consoleErrorSpy.mockRestore();
+    });
+
+    it('should sync playbackTime when loading by frameNumber', async () => {
+        const hookPlaybackTime = writable(0);
+
+        vi.mocked(useVideoFramesModule.useVideoFrames).mockReturnValue({
+            currentFrame: writable(mockCurrentFrame),
+            loading: false,
+            reachedEnd: false,
+            playbackTime: hookPlaybackTime,
+            loadFramesFromFrameNumber: vi.fn().mockResolvedValue(undefined),
+            loadFrameByPlaybackTime: vi.fn().mockResolvedValue(undefined)
+        });
+
+        render(VideoFrameDetails, {
+            props: { videoData: mockVideoData, datasetId: 'dataset-1', frameNumber: 5 }
+        });
+
+        hookPlaybackTime.set(0.169);
+        await new Promise((resolve) => setTimeout(resolve, 10));
+
+        expect(get(hookPlaybackTime)).toBe(0.169);
+    });
+
+    it('should sync frameNumber when loading by playbackTime', async () => {
+        const hookCurrentFrame = writable<typeof mockCurrentFrame | undefined>(undefined);
+
+        vi.mocked(useVideoFramesModule.useVideoFrames).mockReturnValue({
+            currentFrame: hookCurrentFrame,
+            loading: false,
+            reachedEnd: false,
+            playbackTime: writable(0.5),
+            loadFramesFromFrameNumber: vi.fn().mockResolvedValue(undefined),
+            loadFrameByPlaybackTime: vi.fn().mockResolvedValue(undefined)
+        });
+
+        render(VideoFrameDetails, {
+            props: { videoData: mockVideoData, datasetId: 'dataset-1', playbackTime: 0.5 }
+        });
+
+        hookCurrentFrame.set(mockCurrentFrame);
+        await new Promise((resolve) => setTimeout(resolve, 10));
+
+        expect(get(hookCurrentFrame)?.frame_number).toBe(5);
     });
 });
