@@ -163,6 +163,9 @@ def to_pascalvoc_semantic_segmentation(
         dataset_id=root_dataset_id,
         samples=samples,
     )
+
+    # Keep `background_class_id` unchanged: `LightlyStudioSemanticSegmentationInput`
+    # defines category IDs and reserves class 0 for background.
     PascalVOCSemanticSegmentationOutput(
         output_folder=output_folder,
     ).save(label_input=export_input)

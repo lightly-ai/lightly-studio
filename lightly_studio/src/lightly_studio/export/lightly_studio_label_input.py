@@ -121,6 +121,8 @@ class LightlyStudioInstanceSegmentationInput(LightlyStudioInputBase, InstanceSeg
 class LightlyStudioSemanticSegmentationInput(LightlyStudioInputBase, InstanceSegmentationInput):
     """Labelformat adapter for semantic segmentation backed by dataset samples and annotations."""
 
+    # TODO(Leonardo, 03/26): Ensure Pascal VOC export maps user-defined background to class ID 0
+    # and void/ignore to 255 for spec compliance.
     CATEGORY_ID_START = 1
 
     @staticmethod
