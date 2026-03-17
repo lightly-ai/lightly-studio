@@ -2194,6 +2194,11 @@ export interface components {
              */
             collection_id?: string;
             /**
+             * Dataset Id
+             * Format: uuid
+             */
+            dataset_id: string;
+            /**
              * Created At
              * Format: date-time
              */
@@ -2223,6 +2228,11 @@ export interface components {
              * Format: uuid
              */
             collection_id: string;
+            /**
+             * Dataset Id
+             * Format: uuid
+             */
+            dataset_id: string;
             /**
              * Created At
              * Format: date-time
@@ -2258,6 +2268,11 @@ export interface components {
              * Format: uuid
              */
             collection_id: string;
+            /**
+             * Dataset Id
+             * Format: uuid
+             */
+            dataset_id: string;
             /**
              * Created At
              * Format: date-time
