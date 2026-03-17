@@ -5,7 +5,7 @@ test.describe('groups-menu-navigation', () => {
         await page.goto('/');
 
         // Verify groups page loads with group items
-        await expect(page.getByTestId('group-grid-item').first()).not.toBeVisible();
+        await expect(page.getByTestId('group-grid-item').first()).toBeVisible();
         await expect(page.getByTestId('navigation-menu-photo')).toBeVisible();
 
         // Navigate to "photo" image collection via breadcrumb
