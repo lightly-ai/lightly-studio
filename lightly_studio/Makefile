@@ -156,12 +156,6 @@ test-postgres: build
 	@echo "Running tests against Postgres..."
 	uv run pytest --postgres
 
-.PHONY: test-ci-postgres
-test-ci-postgres:
-	@echo "Running tests against Postgres..."
-	mkdir -p src/lightly_studio/dist_lightly_studio_view_app
-	touch src/lightly_studio/dist_lightly_studio_view_app/index.html
-	uv run pytest --postgres
 
 .PHONY: check-uv-lock
 check-uv-lock:
