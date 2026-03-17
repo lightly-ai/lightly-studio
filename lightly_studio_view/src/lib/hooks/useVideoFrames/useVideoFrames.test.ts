@@ -1,6 +1,11 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { useVideoFrames } from './useVideoFrames';
-import type { VideoView, VideoFrameView, SampleView, FrameView } from '$lib/api/lightly_studio_local';
+import type {
+    VideoView,
+    VideoFrameView,
+    SampleView,
+    FrameView
+} from '$lib/api/lightly_studio_local';
 import * as api from '$lib/api/lightly_studio_local';
 import { get } from 'svelte/store';
 
@@ -84,7 +89,7 @@ describe('useVideoFrames', () => {
         expect(get(hook.currentFrame)).toBeUndefined();
         expect(hook.loading).toBe(false);
         expect(hook.reachedEnd).toBe(false);
-        expect(hook.playbackTime).toBe(0);
+        expect(get(hook.playbackTime)).toBe(0);
     });
 
     it('should load frames and update currentFrame store', async () => {
@@ -204,15 +209,12 @@ describe('useVideoFrames', () => {
         });
 
         it('should throw error when video data is not available', async () => {
-            // Create hook with mock data first
-            const hook = useVideoFrames({ videoData: mockVideoData });
+            // Create hook with null videoData
+            const hook = useVideoFrames({ videoData: null as unknown as VideoView });
 
-            // This test verifies the error message exists, even though videoData is always provided in current implementation
-            await expect(async () => {
-                // Force the condition by mocking videoData as null in the closure
-                const videoData = null;
-                if (!videoData) throw new Error('No video data available');
-            }).rejects.toThrow('No video data available');
+            await expect(hook.loadFrameByPlaybackTime(0, 30)).rejects.toThrow(
+                'No video data available'
+            );
         });
     });
 

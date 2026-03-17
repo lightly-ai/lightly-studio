@@ -138,6 +138,7 @@ export function useVideoFrames({ videoData }: { videoData: VideoView }) {
         if (frameNumber !== null && frameNumber !== undefined) {
             state.seekFrameNumber = true;
             state.cursor = getFrameBatchCursor(frameNumber, BATCH_SIZE);
+            state.reachedEnd = false; // Reset since we're seeking to a new position
 
             await loadFrames();
 
@@ -182,6 +183,7 @@ export function useVideoFrames({ videoData }: { videoData: VideoView }) {
 
         // Estimate the cursor position for fetching frames around the current frame index
         state.cursor = getFrameBatchCursor(frameIndex, BATCH_SIZE);
+        state.reachedEnd = false; // Reset since we're seeking to a new position
 
         await loadFrames();
 
@@ -206,8 +208,8 @@ export function useVideoFrames({ videoData }: { videoData: VideoView }) {
      */
     function mergeFrames(existingFrames: FrameView[], newFrames: FrameView[]): FrameView[] {
         if (existingFrames.at(-1)?.frame_number === newFrames[0]?.frame_number) {
-            // If the last existing frame is the same as the first new frame, we can just concatenate
-            return [...existingFrames, ...newFrames];
+            // Skip the duplicate first frame when concatenating
+            return [...existingFrames, ...newFrames.slice(1)];
         }
 
         const frameMap = new Map<string, FrameView>();
@@ -220,14 +222,12 @@ export function useVideoFrames({ videoData }: { videoData: VideoView }) {
 
     return {
         currentFrame,
+        playbackTime,
         get loading() {
             return state.loading;
         },
         get reachedEnd() {
             return state.reachedEnd;
-        },
-        get playbackTime() {
-            return state.playbackTime;
         },
         loadFramesFromFrameNumber,
         loadFrameByPlaybackTime
