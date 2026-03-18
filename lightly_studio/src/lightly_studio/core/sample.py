@@ -342,11 +342,17 @@ class SampleMetadata:
         other: Mapping[str, Any] | None = None,
         **kwargs: Any,
     ) -> None:
-        """Update the metadata with the key-value pairs from other, overwriting existing keys.
+        """Update the metadata with key-value pairs, overwriting existing keys.
+
+        It behaves similarly to `dict.update()`.
+        ```python
+        sample.metadata.update({"key1": "val1", "key2": 2})
+        sample.metadata.update(key3="val3", key4=4)
+        ```
 
         Args:
             other: An optional mapping of key-value pairs.
-            **kwargs: Key-value pairs.
+            **kwargs: Key-value pairs to update.
         """
         # Dictionary from positional or named arguments.
         new_metadata = dict(other or {}, **kwargs)
