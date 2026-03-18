@@ -261,18 +261,27 @@ class Sample(ABC):
         Args:
             annotation: The annotation to add.
         """
+        self.add_annotations([annotation])
+
+    def add_annotations(self, annotations: Iterable[CreateAnnotation]) -> None:
+        """Add annotations to this sample.
+
+        Args:
+            annotations: The annotations to add.
+        """
         session = self.get_object_session()
-        annotations = [
+        annotation_creates = [
             annotation.to_annotation_create(
                 session=session,
                 dataset_id=self.dataset_id,
                 parent_sample_id=self.sample_id,
             )
+            for annotation in annotations
         ]
         annotation_resolver.create_many(
             session=session,
             parent_collection_id=self.dataset_id,
-            annotations=annotations,
+            annotations=annotation_creates,
         )
 
     def delete_annotation(self, annotation: Annotation) -> None:
