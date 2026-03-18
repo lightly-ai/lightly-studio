@@ -43,6 +43,8 @@ class _ImageFileDatasetEdge(Dataset[tuple[bytes, int, int]]):
             # Decode image from bytes using OpenCV
             nparr = np.frombuffer(image_bytes, np.uint8)
             bgr_image = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
+            if bgr_image is None:
+                raise ValueError(f"Failed to decode image: {self.filepaths[idx]}")
             rgb_image = cv2.cvtColor(bgr_image, cv2.COLOR_BGR2RGB)
             rgb_bytes = rgb_image.tobytes()
             height, width, _ = rgb_image.shape

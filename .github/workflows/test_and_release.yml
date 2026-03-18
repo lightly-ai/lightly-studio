@@ -105,7 +105,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        python: ["3.9", "3.13"]
+        python: ["3.9", "3.14"]
     steps:
       - name: Checkout Code
         uses: actions/checkout@v4
