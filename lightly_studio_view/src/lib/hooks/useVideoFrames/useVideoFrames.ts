@@ -63,6 +63,7 @@ interface UseVideoFramesState {
 export function useVideoFrames({ videoData }: { videoData: VideoView }) {
     const currentFrame = writable<FrameView | undefined>(undefined);
     const playbackTime = writable<number>(0);
+    const playbackStep = 0.002;
 
     const state: UseVideoFramesState = {
         frames: [],
@@ -152,7 +153,7 @@ export function useVideoFrames({ videoData }: { videoData: VideoView }) {
             currentFrame.set(frame);
 
             if (frame) {
-                playbackTime.set(frame.frame_timestamp_s + 0.002);
+                playbackTime.set(frame.frame_timestamp_s + playbackStep);
             }
         }
 
