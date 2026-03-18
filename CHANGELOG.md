@@ -15,6 +15,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Added semantic segmentation export to PASCAL VOC in the GUI.
 - Added keyboard navigation (Space + W/A/S/D) for moving within the zoomable image container.
 - Added instance segmentation export to YouTube-VIS in the GUI.
+- Added support for Python 3.14.
 
 ### Changed
 
