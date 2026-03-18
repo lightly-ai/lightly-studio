@@ -43,7 +43,7 @@ def delete_annotations(
     # Now delete the annotations themselves
     annotation_ids = [annotation.sample_id for annotation in annotations]
     if annotation_ids:
-        session.exec(  # type: ignore
+        session.exec(
             delete(AnnotationBaseTable).where(
                 col(AnnotationBaseTable.sample_id).in_(annotation_ids)
             )
