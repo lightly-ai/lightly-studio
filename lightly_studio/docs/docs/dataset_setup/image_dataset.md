@@ -395,9 +395,9 @@ dataset = ls.ImageDataset.load_or_create()
 Once samples are added to the dataset, they can be iterated over, yielding `ImageSample` objects:
 
 ```python title="Iterate over dataset samples"
-for sample in dataset:
-    print(sample.file_name)
-    assert isinstance(sample, ls.ImageSample)
+for image in dataset:
+    print(image.file_name)
+    assert isinstance(image, ls.ImageSample)
 ```
 
 ### ImageSample class
@@ -469,7 +469,7 @@ iterating over it or calling `to_list()`.
 The listing below shows examples of working with queries. For details see the API reference
 for [DatasetQuery](../api/dataset_query.md#datasetquery) and [ImageSampleField](../api/dataset_query.md#imagesamplefield).
 
-```py
+```python title="Query an ImageDataset"
 from lightly_studio.core.dataset_query import AND, OR, NOT, OrderByField, ImageSampleField
 
 ###
@@ -506,6 +506,7 @@ query.add_tag("needs-review")
 # Iterate over resulting samples
 for sample in query:
     # Access the sample: see previous section
+    ...
 
 # Collect all resulting samples as list
 samples = query.to_list()
