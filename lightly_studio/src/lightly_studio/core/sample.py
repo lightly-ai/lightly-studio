@@ -261,19 +261,7 @@ class Sample(ABC):
         Args:
             annotation: The annotation to add.
         """
-        session = self.get_object_session()
-        annotations = [
-            annotation.to_annotation_create(
-                session=session,
-                dataset_id=self.dataset_id,
-                parent_sample_id=self.sample_id,
-            )
-        ]
-        annotation_resolver.create_many(
-            session=session,
-            parent_collection_id=self.dataset_id,
-            annotations=annotations,
-        )
+        self.add_annotations([annotation])
 
     def add_annotations(self, annotations: Iterable[CreateAnnotation]) -> None:
         """Add annotations to this sample.
