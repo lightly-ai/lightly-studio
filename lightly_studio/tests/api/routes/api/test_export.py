@@ -349,3 +349,27 @@ def test_export_collection_youtube_vis(
         response.headers["Content-Disposition"]
         == "attachment; filename=youtube_vis_instance_segmentation_export.json"
     )
+
+def test_export_collection_youtube_vis__wrong_collection_type(
+    db_session: Session,
+    test_client: TestClient,
+) -> None:
+    collection = create_collection(session=db_session)
+    response = test_client.get(
+        f"/api/collections/{collection.collection_id}/export/youtube-vis",
+        params={"annotation_type": "instance_segmentation"},
+    )
+
+    assert response.status_code == HTTP_STATUS_BAD_REQUEST
+
+def test_export_collection_youtube_vis__wrong_annotation_type(
+    db_session: Session,
+    test_client: TestClient,
+) -> None:
+    collection = create_collection(session=db_session, sample_type=SampleType.VIDEO)
+    response = test_client.get(
+        f"/api/collections/{collection.collection_id}/export/youtube-vis",
+        params={"annotation_type": "object_detection"},
+    )
+
+    assert response.status_code == HTTP_STATUS_BAD_REQUEST
