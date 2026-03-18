@@ -172,7 +172,7 @@ describe('useVideoFrames', () => {
         expect(currentFrame?.sample_id).toBe('frame-2');
     });
 
-    it('should set seekFrameNumber flag when loading from frame number', async () => {
+    it('should set currentFrame from frame number', async () => {
         vi.mocked(api.getAllFrames).mockResolvedValue({
             data: {
                 data: mockFrames,
