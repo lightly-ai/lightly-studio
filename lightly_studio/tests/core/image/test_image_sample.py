@@ -188,6 +188,28 @@ class TestImageSample:
         sample.metadata["string_key"] = "updated_value"
         assert sample.metadata["string_key"] == "updated_value"
 
+    def test_metadata__update(self, db_session: Session) -> None:
+        collection = create_collection(session=db_session)
+        image_table = create_image(
+            session=db_session,
+            collection_id=collection.collection_id,
+        )
+        sample = ImageSample(inner=image_table)
+
+        # Initial metadata
+        sample.metadata["key1"] = "val1"
+
+        # Update metadata using dict
+        sample.metadata.update({"key2": "val2", "key3": 3})
+        assert sample.metadata["key1"] == "val1"
+        assert sample.metadata["key2"] == "val2"
+        assert sample.metadata["key3"] == 3
+
+        # Update metadata using kwargs
+        sample.metadata.update(key1="new_val1", key4=4.0)
+        assert sample.metadata["key1"] == "new_val1"
+        assert sample.metadata["key4"] == 4.0
+
     def test_metadata__schema_must_match(self, db_session: Session) -> None:
         collection = create_collection(session=db_session)
         image_table1 = create_image(

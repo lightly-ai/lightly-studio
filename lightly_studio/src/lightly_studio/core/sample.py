@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from abc import ABC
-from collections.abc import Iterable
+from collections.abc import Iterable, Mapping
 from typing import Any, cast
 from uuid import UUID
 
@@ -335,4 +335,26 @@ class SampleMetadata:
             sample_id=self._sample.sample_id,
             key=key,
             value=value,
+        )
+
+    def update(
+        self,
+        other: Mapping[str, Any] | None = None,
+        **kwargs: Any,
+    ) -> None:
+        """Update the metadata with the key-value pairs from other, overwriting existing keys.
+
+        Args:
+            other: An optional mapping of key-value pairs.
+            **kwargs: Key-value pairs.
+        """
+        # Dictionary from positional or named arguments.
+        new_metadata = dict(other or {}, **kwargs)
+        if not new_metadata:
+            return
+
+        session = self._sample.get_object_session()
+        metadata_resolver.bulk_update_metadata(
+            session=session,
+            sample_metadata=[(self._sample.sample_id, new_metadata)],
         )
