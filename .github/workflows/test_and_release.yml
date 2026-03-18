@@ -152,6 +152,9 @@ jobs:
   test-unit-postgres:
     name: Unit (Postgres)
     runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python: ["3.14"]
     steps:
       - name: Checkout Code
         uses: actions/checkout@v4
@@ -174,17 +177,17 @@ jobs:
       - name: Set Up Python
         uses: actions/setup-python@v5
         with:
-          python-version: "3.13"
+          python-version: ${{ matrix.python }}
 
       - name: Install LightlyStudio dependencies
         working-directory: lightly_studio
         env:
-          UV_PYTHON: "3.13"
+          UV_PYTHON: ${{ matrix.python }}
         run: make install-optional-deps
 
       - name: Run Tests for LightlyStudio (Postgres)
         working-directory: lightly_studio
         env:
           LIGHTLY_STUDIO_LICENSE_KEY: ${{ secrets.MUNDIG_LICENSE_KEY }}
-          UV_PYTHON: "3.13"
+          UV_PYTHON: ${{ matrix.python }}
         run: make test-postgres
