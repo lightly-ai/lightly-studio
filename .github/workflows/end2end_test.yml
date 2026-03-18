@@ -347,6 +347,7 @@ jobs:
     runs-on: ubuntu-latest
     needs: prepare-caches
     # Skip the job if the success marker for this exact file hash already exists.
+    if: needs.prepare-caches.outputs.cache-videos-success != 'true'
     steps:
       - *setup-checkout-code
       - *setup-authenticate-gcp
