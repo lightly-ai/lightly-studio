@@ -118,6 +118,8 @@ export function useVideoFrames({ videoData }: { videoData: VideoView }) {
             }
 
             state.frames = mergeFrames(state.frames, newFrames);
+            // Update cursor for next batch: use server-provided nextCursor if available,
+            // otherwise increment by BATCH_SIZE for client-side pagination
             state.cursor = res?.data?.nextCursor ?? state.cursor + BATCH_SIZE;
             state.loading = false;
         } catch (error) {
