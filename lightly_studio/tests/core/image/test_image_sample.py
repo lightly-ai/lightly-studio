@@ -222,13 +222,22 @@ class TestImageSample:
         )
         sample = ImageSample(inner=image_table)
 
-        # Test adding a caption.
-        sample.add_caption("caption3")
+        sample.add_caption(caption="caption3")
         assert sample.captions == ["caption3"]
-        sample.add_caption("caption2")
-        assert sample.captions == ["caption3", "caption2"]
-        sample.add_caption("caption1")
+        sample.add_caption(caption="caption2")
+        sample.add_caption(caption="caption1")
         assert sample.captions == ["caption3", "caption2", "caption1"]
+
+    def test_add_captions(self, db_session: Session) -> None:
+        collection = create_collection(session=db_session)
+        image_table = create_image(
+            session=db_session,
+            collection_id=collection.collection_id,
+        )
+        sample = ImageSample(inner=image_table)
+
+        sample.add_captions(captions=["bright", "day", "city"])
+        assert sample.captions == ["bright", "day", "city"]
 
     def test_captions_setter(self, db_session: Session) -> None:
         collection = create_collection(session=db_session)
