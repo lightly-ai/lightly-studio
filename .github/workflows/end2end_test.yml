@@ -273,11 +273,11 @@ jobs:
 
       - &wait-for-server
         name: Wait for the server to start
-        timeout-minutes: 10
+        timeout-minutes: 6
         working-directory: lightly_studio
         run: |
           echo "Waiting for the server to become available..."
-          timeout=600
+          timeout=360
           elapsed=0
           interval=5
           
