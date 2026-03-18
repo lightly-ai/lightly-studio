@@ -277,7 +277,7 @@ jobs:
         working-directory: lightly_studio
         run: |
           echo "Waiting for the server to become available..."
-          timeout=360
+          timeout=600
           elapsed=0
           interval=5
           
