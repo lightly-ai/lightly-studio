@@ -115,11 +115,13 @@ jobs:
 
       ### Setup steps for the workflow ###
       - name: Set Up Python
+        if: steps.cache-build.outputs.cache-hit != 'true'
         uses: actions/setup-python@v5
         with:
           python-version: "3.9"
 
       - name: Set Up Uv
+        if: steps.cache-build.outputs.cache-hit != 'true'
         uses: astral-sh/setup-uv@v6
         with:
           version: "0.8.17"
@@ -345,7 +347,6 @@ jobs:
     runs-on: ubuntu-latest
     needs: prepare-caches
     # Skip the job if the success marker for this exact file hash already exists.
-    if: needs.prepare-caches.outputs.cache-videos-success != 'true'
     steps:
       - *setup-checkout-code
       - *setup-authenticate-gcp

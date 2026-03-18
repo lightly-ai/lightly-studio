@@ -102,7 +102,7 @@
     const { videoFramesBoundsValues } = useVideoFramesBounds();
     const videoFramesFilter = $derived<VideoFrameFilter>({
         sample_filter: {
-            ...sampleFilter,
+            ...sampleFilter
         },
         ...$videoFramesBoundsValues
     });
