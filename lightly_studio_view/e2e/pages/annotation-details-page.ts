@@ -194,11 +194,13 @@ export class AnnotationDetailsPage {
         const startX = box.x + box.width / 2;
         const startY = box.y + box.height / 2;
 
-        // Listen for the PUT annotation response before the drag ends.
+        // Listen for the POST annotation response before the drag ends.
+        // The query for count annotations is the las one that is retriggerd and we should wait
+        // untill it is received.
         const responsePromise = this.page.waitForResponse(
             (response) =>
-                response.request().method() === 'PUT' &&
-                response.url().includes('/annotations') &&
+                response.request().method() === 'POST' &&
+                response.url().includes('/annotations/count') &&
                 response.status() === 200
         );
 
