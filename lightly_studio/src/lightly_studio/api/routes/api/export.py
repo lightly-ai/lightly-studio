@@ -283,6 +283,8 @@ def export_collection_youtube_vis(
             "Content-Disposition": f"attachment; filename={output_path.name}",
         },
     )
+
+
 def _stream_export_dir(
     temp_dir: TemporaryDirectory[str],
     dir_path: PathlibPath,

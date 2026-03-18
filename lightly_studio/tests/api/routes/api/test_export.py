@@ -10,9 +10,7 @@ from fastapi.testclient import TestClient
 from PIL import Image as PILImage
 from sqlmodel import Session
 
-from lightly_studio.api.routes.api.status import (
-    HTTP_STATUS_OK,
-)
+from lightly_studio.api.routes.api.status import HTTP_STATUS_BAD_REQUEST, HTTP_STATUS_OK
 from lightly_studio.models.annotation.annotation_base import (
     AnnotationCreate,
     AnnotationType,
@@ -350,6 +348,7 @@ def test_export_collection_youtube_vis(
         == "attachment; filename=youtube_vis_instance_segmentation_export.json"
     )
 
+
 def test_export_collection_youtube_vis__wrong_collection_type(
     db_session: Session,
     test_client: TestClient,
@@ -361,6 +360,7 @@ def test_export_collection_youtube_vis__wrong_collection_type(
     )
 
     assert response.status_code == HTTP_STATUS_BAD_REQUEST
+
 
 def test_export_collection_youtube_vis__wrong_annotation_type(
     db_session: Session,
