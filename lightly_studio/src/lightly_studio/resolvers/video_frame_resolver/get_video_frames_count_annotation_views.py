@@ -16,7 +16,7 @@ from lightly_studio.resolvers.video_resolver.count_video_frame_annotations_by_co
 )
 
 
-def count_video_frames_annotations(
+def get_video_frames_count_annotation_views(
     session: Session,
     collection_id: UUID,
     filters: Optional[VideoFrameFilter] = None,

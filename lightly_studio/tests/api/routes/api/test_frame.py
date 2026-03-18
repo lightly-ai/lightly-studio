@@ -135,7 +135,7 @@ def test_get_by_id(
     assert result["video"]["file_path_abs"] == "/path/to/video1.mp4"
 
 
-def test_count_video_frames_annotations_without_annotations_filter(
+def test_get_video_frames_count_annotation_views_without_annotations_filter(
     db_session: Session,
     test_client: TestClient,
 ) -> None:

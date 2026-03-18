@@ -1,7 +1,7 @@
 """Resolvers for video_frame database operations."""
 
-from lightly_studio.resolvers.video_frame_resolver.count_video_frames_annotations import (
-    count_video_frames_annotations,
+from lightly_studio.resolvers.video_frame_resolver.get_video_frames_count_annotation_views import (
+    get_video_frames_count_annotation_views,
 )
 from lightly_studio.resolvers.video_frame_resolver.create_many import create_many
 from lightly_studio.resolvers.video_frame_resolver.get_adjacent_video_frames import (
@@ -25,7 +25,7 @@ from lightly_studio.resolvers.video_frame_resolver.video_frame_adjacent_filter i
 
 __all__ = [
     "VideoFrameAdjacentFilter",
-    "count_video_frames_annotations",
+    "get_video_frames_count_annotation_views",
     "create_many",
     "get_adjacent_video_frames",
     "get_all_by_collection_id",

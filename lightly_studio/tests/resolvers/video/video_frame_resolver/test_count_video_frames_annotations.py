@@ -9,7 +9,7 @@ from tests.helpers_resolvers import create_annotation, create_annotation_label, 
 from tests.resolvers.video.helpers import VideoStub, create_video_with_frames
 
 
-def test_count_video_frames_annotations_without_filter(db_session: Session) -> None:
+def test_get_video_frames_count_annotation_views_without_filter(db_session: Session) -> None:
     collection = create_collection(session=db_session, sample_type=SampleType.VIDEO)
 
     video_frames_data = create_video_with_frames(
@@ -49,7 +49,7 @@ def test_count_video_frames_annotations_without_filter(db_session: Session) -> N
         collection_id=video_frames_data.video_frames_collection_id,
     )
 
-    annotations = video_frame_resolver.count_video_frames_annotations(
+    annotations = video_frame_resolver.get_video_frames_count_annotation_views(
         session=db_session,
         collection_id=video_frames_data.video_frames_collection_id,
     )
@@ -65,7 +65,7 @@ def test_count_video_frames_annotations_without_filter(db_session: Session) -> N
     assert annotations[1].current_count == 1
 
 
-def test_count_video_frames_annotations_without_annotations_filter(db_session: Session) -> None:
+def test_get_video_frames_count_annotation_views_without_annotations_filter(db_session: Session) -> None:
     collection = create_collection(session=db_session, sample_type=SampleType.VIDEO)
 
     video_frames_data = create_video_with_frames(
@@ -105,7 +105,7 @@ def test_count_video_frames_annotations_without_annotations_filter(db_session: S
         collection_id=video_frames_data.video_frames_collection_id,
     )
 
-    annotations = video_frame_resolver.count_video_frames_annotations(
+    annotations = video_frame_resolver.get_video_frames_count_annotation_views(
         session=db_session,
         collection_id=video_frames_data.video_frames_collection_id,
         filters=VideoFrameFilter(

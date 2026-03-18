@@ -135,7 +135,7 @@ def count_video_frame_annotations(
     Returns:
         A list of annotations and counters.
     """
-    return video_frame_resolver.count_video_frames_annotations(
+    return video_frame_resolver.get_video_frames_count_annotation_views(
         session=session,
         collection_id=video_frame_collection_id,
         filters=body.filter,

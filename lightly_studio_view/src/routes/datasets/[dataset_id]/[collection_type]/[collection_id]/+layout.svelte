@@ -66,7 +66,10 @@
     } from '$lib/api/lightly_studio_local/types.gen.js';
     import type { AnnotationLabel } from '$lib/services/types.js';
     import { buildImageFilter } from '$lib/utils/buildImageFilter';
-
+    import {
+        buildVideoAnnotationCountsFilter,
+        buildVideoFrameAnnotationCountsFilter
+    } from '$lib/utils/buildAnnotationCountsFilters';
     const { data, children } = $props();
     const {
         collection,
@@ -236,34 +239,26 @@
             (isAnnotations && parentCollection?.sampleType == SampleType.VIDEO_FRAME)
         ) {
             let videoFrameCollectionId = collectionId;
-            // If we are on the fideo frame annotations page we must pass the parent collectionId as annotations
+            // If we are on the video frame annotations page we must pass the parent collectionId as annotations
             // collection is a child of video frame collection.
             if (isAnnotations && parentCollection?.sampleType == SampleType.VIDEO_FRAME)
                 videoFrameCollectionId = parentCollection.collectionId;
             return useVideoFrameAnnotationCounts({
                 collectionId: videoFrameCollectionId,
-                filter: {
-                    sample_filter: {
-                        metadata_filters: metadataFilters,
-                        ...(annotationFilter ? { annotations_filter: annotationFilter } : {})
-                    },
-                    ...$videoFramesBoundsValues
-                }
+                filter: buildVideoFrameAnnotationCountsFilter({
+                    metadataFilters,
+                    annotationFilter,
+                    videoFramesBoundsValues: $videoFramesBoundsValues
+                })
             });
         } else if (isVideos) {
             return useVideoAnnotationCounts({
                 collectionId,
-                filter: {
-                    sample_filter: {
-                        metadata_filters: metadataFilters
-                    },
-                    ...(annotationFilter
-                        ? {
-                              frame_annotation_filter: annotationFilter
-                          }
-                        : {}),
-                    ...$videoBoundsValues
-                }
+                filter: buildVideoAnnotationCountsFilter({
+                    metadataFilters,
+                    annotationFilter,
+                    videoBoundsValues: $videoBoundsValues
+                })
             });
         }
         return useAnnotationCounts({

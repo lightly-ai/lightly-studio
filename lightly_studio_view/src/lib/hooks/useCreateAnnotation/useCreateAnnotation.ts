@@ -3,10 +3,10 @@ import {
     type CreateAnnotationResponse
 } from '$lib/api/lightly_studio_local';
 import {
-    countAnnotationsByCollectionOptions,
     createAnnotationMutation
 } from '$lib/api/lightly_studio_local/@tanstack/svelte-query.gen';
 import { createMutation, useQueryClient } from '@tanstack/svelte-query';
+import { useAnnotationCountsQueryKey } from '$lib/hooks/useAnnotationCounts/useAnnotationCounts';
 
 import { get } from 'svelte/store';
 
@@ -16,10 +16,7 @@ export const useCreateAnnotation = ({ collectionId }: { collectionId: string }) 
 
     const refetch = () => {
         client.invalidateQueries({
-            queryKey: countAnnotationsByCollectionOptions({
-                path: { collection_id: collectionId },
-                body: {}
-            }).queryKey
+            queryKey: useAnnotationCountsQueryKey
         });
     };
     // We need to have this subscription to get onSuccess/onError events

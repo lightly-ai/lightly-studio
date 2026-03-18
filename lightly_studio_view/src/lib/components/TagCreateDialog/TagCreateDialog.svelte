@@ -92,7 +92,6 @@
                 sample_ids: isNormalModeParams($filterParams)
                     ? $filterParams.filters?.sample_ids
                     : undefined,
-                annotations_filter: annotationFilter,
                 ...sampleFilter
             },
             ...($dimensions ?? {})
@@ -104,7 +103,6 @@
     const videoFramesFilter = $derived<VideoFrameFilter>({
         sample_filter: {
             ...sampleFilter,
-            annotations_filter: annotationFilter
         },
         ...$videoFramesBoundsValues
     });
@@ -115,7 +113,8 @@
         frame_annotation_filter: annotationFilter,
         sample_filter: {
             sample_ids: $videoFilterParams?.filters?.sample_ids,
-            ...sampleFilter
+            ...sampleFilter,
+            annotations_filter: undefined
         },
         ...$videoBoundsValues
     });

@@ -1463,7 +1463,7 @@ export interface paths {
          *
          *     Args:
          *         session: The database session.
-         *         video_frame_collection_id: The ID of the collection to retrieve videos for.
+         *         video_frame_collection_id: The ID of the collection to count annotations for.
          *         body: The body containing filters.
          *
          *     Returns:
@@ -1491,7 +1491,7 @@ export interface paths {
          *
          *     Args:
          *         session: The database session.
-         *         collection_id: The ID of the collection to retrieve videos for.
+         *         collection_id: The ID of the collection to count annotations for.
          *         body: The body containing filters.
          *
          *     Returns:
