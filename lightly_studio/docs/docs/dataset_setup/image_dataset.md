@@ -265,15 +265,21 @@ standard formats. See [API reference](../api/dataset.md#lightly_studio.ImageData
     )
     ```
 
+    Images are by default expected to be in the `../images` folder, you can specify
+    `images_rel_path` to change it if needed.
+
     <details>
     <summary>The Lightly format details:</summary>
 
     ```
-    predictions/
-    ├── schema.json
-    ├── image1.json
-    ├── image2.json
-    └── ...
+    dataset/
+    ├── images/
+    │   ├── image1.jpg
+    │   └── image2.jpg
+    └── predictions/
+        ├── schema.json
+        ├── image1.json
+        └── image2.json
     ```
 
     The prediction folder contains a `schema.json` file defining the task type and
