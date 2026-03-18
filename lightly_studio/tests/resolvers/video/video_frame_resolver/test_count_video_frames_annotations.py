@@ -65,7 +65,9 @@ def test_get_video_frames_count_annotation_views_without_filter(db_session: Sess
     assert annotations[1].current_count == 1
 
 
-def test_get_video_frames_count_annotation_views_without_annotations_filter(db_session: Session) -> None:
+def test_get_video_frames_count_annotation_views_without_annotations_filter(
+    db_session: Session,
+) -> None:
     collection = create_collection(session=db_session, sample_type=SampleType.VIDEO)
 
     video_frames_data = create_video_with_frames(

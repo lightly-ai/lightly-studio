@@ -2,9 +2,7 @@ import {
     type AnnotationCreateInput,
     type CreateAnnotationResponse
 } from '$lib/api/lightly_studio_local';
-import {
-    createAnnotationMutation
-} from '$lib/api/lightly_studio_local/@tanstack/svelte-query.gen';
+import { createAnnotationMutation } from '$lib/api/lightly_studio_local/@tanstack/svelte-query.gen';
 import { createMutation, useQueryClient } from '@tanstack/svelte-query';
 import { useAnnotationCountsQueryKey } from '$lib/hooks/useAnnotationCounts/useAnnotationCounts';
 

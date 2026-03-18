@@ -7,8 +7,8 @@ import {
 import { countAnnotationsByCollection } from '$lib/api/lightly_studio_local/sdk.gen';
 
 export const useAnnotationCountsQueryKey = countAnnotationsByCollectionQueryKey({
-        path: { collection_id: '__static_value__' }
-    });
+    path: { collection_id: '__static_value__' }
+});
 export const useAnnotationCounts = ({
     collectionId,
     filter
@@ -36,4 +36,3 @@ export const useAnnotationCounts = ({
         }
     });
 };
-

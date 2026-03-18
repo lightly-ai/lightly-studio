@@ -1,6 +1,4 @@
-import {
-    readAnnotationsWithPayloadInfiniteOptions
-} from '$lib/api/lightly_studio_local/@tanstack/svelte-query.gen';
+import { readAnnotationsWithPayloadInfiniteOptions } from '$lib/api/lightly_studio_local/@tanstack/svelte-query.gen';
 import { createInfiniteQuery, useQueryClient } from '@tanstack/svelte-query';
 import { useUpdateAnnotationsMutation } from '$lib/hooks/useUpdateAnnotationsMutation/useUpdateAnnotationsMutation';
 import { toast } from 'svelte-sonner';

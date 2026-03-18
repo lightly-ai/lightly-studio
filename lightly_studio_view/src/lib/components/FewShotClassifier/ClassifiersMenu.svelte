@@ -14,9 +14,7 @@
     import { useClassifiers } from '$lib/hooks/useClassifiers/useClassifiers';
     import { useClassifiersMenu } from '$lib/hooks/useClassifiers/useClassifiersMenu';
     import { useQueryClient } from '@tanstack/svelte-query';
-    import {
-        readAnnotationLabelsOptions
-    } from '$lib/api/lightly_studio_local/@tanstack/svelte-query.gen';
+    import { readAnnotationLabelsOptions } from '$lib/api/lightly_studio_local/@tanstack/svelte-query.gen';
     import {
         Network as NetworkIcon,
         Pencil,
