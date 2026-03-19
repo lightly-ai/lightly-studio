@@ -52,7 +52,11 @@
 
     const hasClassifier = $derived(isSamples && hasEmbeddings);
     const hasSelection = $derived(isSamples || isVideos);
-    const hasExport = $derived(collection.sample_type == 'image');
+    const hasExport = $derived(
+        collection.sample_type == 'image' ||
+            collection.sample_type == 'video' ||
+            collection.sample_type == 'video_frame'
+    );
 
     const isEditor = $derived(hasMinimumRole(user?.role, 'editor'));
 

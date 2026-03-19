@@ -1,4 +1,4 @@
-import type { VideoFrameAnnotationsCounterFilter } from '$lib/api/lightly_studio_local';
+import type { VideoFrameFilter } from '$lib/api/lightly_studio_local';
 import { countVideoFrameAnnotationsOptions } from '$lib/api/lightly_studio_local/@tanstack/svelte-query.gen';
 import { createQuery } from '@tanstack/svelte-query';
 
@@ -7,7 +7,7 @@ export const useVideoFrameAnnotationCounts = ({
     filter
 }: {
     collectionId: string;
-    filter: VideoFrameAnnotationsCounterFilter;
+    filter: VideoFrameFilter;
 }) =>
     createQuery(
         countVideoFrameAnnotationsOptions({

@@ -20,6 +20,9 @@
     const hasClassifier = $derived(isSamples && hasEmbeddings);
     const hasSelection = $derived(isSamples || isVideos);
     const isImageCollection = $derived(collection.sample_type == 'image');
+    const isVideoCollection = $derived(
+        collection.sample_type == 'video' || collection.sample_type == 'video_frame'
+    );
 </script>
 
 {#if hasClassifier}
@@ -30,7 +33,7 @@
     <CreateSelectionDialog />
 {/if}
 
-{#if isImageCollection}
+{#if isImageCollection || isVideoCollection}
     <ExportSamples />
 {/if}
 
