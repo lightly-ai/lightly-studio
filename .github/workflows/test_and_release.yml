@@ -110,6 +110,7 @@ jobs:
           # behavior doesn't vary by Python version.
           # View tests (lightly_studio_view) run only once because they are
           # independent of the Python version.
+          # TODO(Mihnea, 03/2026): Extract view tests to a separate job.
           - python: "3.9"
             database: DuckDB
             make_target: test
