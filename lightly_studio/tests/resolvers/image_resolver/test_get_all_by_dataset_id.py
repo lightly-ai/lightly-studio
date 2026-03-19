@@ -212,7 +212,11 @@ def test_get_all_by_collection_id__with_annotation_filtering(
         session=db_session,
         collection_id=collection_id,
         filters=ImageFilter(
-            sample_filter=SampleFilter(annotation_label_ids=[cat_label.annotation_label_id])
+            sample_filter=SampleFilter(
+                annotations_filter=AnnotationsFilter(
+                    annotation_label_ids=[cat_label.annotation_label_id]
+                )
+            )
         ),
     )
     assert len(cat_result.samples) == 1

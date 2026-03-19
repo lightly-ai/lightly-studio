@@ -152,7 +152,7 @@ test-ci:
 	uv run pytest
 
 .PHONY: test-postgres
-test-postgres:
+test-postgres: build
 	@echo "Running tests against Postgres..."
 	uv run pytest --postgres
 
