@@ -208,9 +208,10 @@ describe('VideoPlayer', () => {
         expect(mockObserve).toHaveBeenCalledWith(video);
     });
 
-    it('should toggle play/pause when spacebar is pressed', async () => {
+    it('should toggle play/pause when spacebar is pressed while hovered', async () => {
         const { container } = render(VideoPlayer, { props: { src: 'test-video.mp4' } });
         const video = container.querySelector('video') as HTMLVideoElement;
+        const wrapper = container.querySelector('div') as HTMLDivElement;
 
         // Mock play and pause methods
         video.play = vi.fn().mockResolvedValue(undefined);
@@ -222,6 +223,10 @@ describe('VideoPlayer', () => {
             writable: true,
             configurable: true
         });
+
+        // Hover over the player
+        wrapper.dispatchEvent(new MouseEvent('mouseenter'));
+        await new Promise((resolve) => setTimeout(resolve, 0));
 
         // Press spacebar - should play
         const spaceEvent = new KeyboardEvent('keydown', { code: 'Space' });
@@ -297,5 +302,39 @@ describe('VideoPlayer', () => {
         expect(video.play).not.toHaveBeenCalled();
 
         document.body.removeChild(textarea);
+    });
+
+    it('should only respond to spacebar when player is hovered', async () => {
+        const { container } = render(VideoPlayer, { props: { src: 'test-video.mp4' } });
+        const video = container.querySelector('video') as HTMLVideoElement;
+        const wrapper = container.querySelector('div') as HTMLDivElement;
+
+        video.play = vi.fn().mockResolvedValue(undefined);
+        video.pause = vi.fn();
+        Object.defineProperty(video, 'paused', { value: true, writable: true });
+
+        // Press spacebar without hovering - should not play
+        const spaceEvent1 = new KeyboardEvent('keydown', { code: 'Space' });
+        window.dispatchEvent(spaceEvent1);
+        expect(video.play).not.toHaveBeenCalled();
+
+        // Hover over the player
+        wrapper.dispatchEvent(new MouseEvent('mouseenter'));
+        await new Promise((resolve) => setTimeout(resolve, 0));
+
+        // Press spacebar while hovering - should play
+        const spaceEvent2 = new KeyboardEvent('keydown', { code: 'Space' });
+        window.dispatchEvent(spaceEvent2);
+        expect(video.play).toHaveBeenCalled();
+
+        // Leave hover
+        wrapper.dispatchEvent(new MouseEvent('mouseleave'));
+        await new Promise((resolve) => setTimeout(resolve, 0));
+
+        // Press spacebar after leaving - should not pause
+        Object.defineProperty(video, 'paused', { value: false, writable: true });
+        const spaceEvent3 = new KeyboardEvent('keydown', { code: 'Space' });
+        window.dispatchEvent(spaceEvent3);
+        expect(video.pause).not.toHaveBeenCalled();
     });
 });

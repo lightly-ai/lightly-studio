@@ -33,6 +33,7 @@
 
     let previousSrc: string | null = null;
     let sourceLoadError = $state<string | null>(null);
+    let isHovered = $state(false);
 
     // HTMLMediaElement.error.code values.
     const MEDIA_ERROR_MESSAGES: Record<number, string> = {
@@ -103,6 +104,9 @@
     });
 
     function handleKeyDownEvent(event: KeyboardEvent) {
+        // Only handle keyboard shortcuts when the player is hovered
+        if (!isHovered) return;
+
         // Ignore when typing in inputs / textareas
         const target = event.target as HTMLElement;
         if (target?.tagName === 'INPUT' || target?.tagName === 'TEXTAREA') return;
@@ -128,7 +132,17 @@
 
 <svelte:window onkeydown={handleKeyDownEvent} />
 
-<div class="relative h-full w-full">
+<div
+    role="region"
+    aria-label="Video player"
+    class="relative h-full w-full"
+    onmouseenter={() => {
+        isHovered = true;
+    }}
+    onmouseleave={() => {
+        isHovered = false;
+    }}
+>
     <video
         bind:this={videoEl}
         {muted}
