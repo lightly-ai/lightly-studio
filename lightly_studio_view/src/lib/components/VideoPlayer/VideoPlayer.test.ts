@@ -2,13 +2,6 @@ import { describe, it, expect } from 'vitest';
 import { render } from '@testing-library/svelte';
 import VideoPlayer from './VideoPlayer.svelte';
 
-// Mock ResizeObserver (needed for bind:clientWidth and bind:clientHeight)
-global.ResizeObserver = class ResizeObserver {
-    observe() {}
-    unobserve() {}
-    disconnect() {}
-};
-
 describe('VideoPlayer', () => {
     it('should render video element', () => {
         const { container } = render(VideoPlayer, { props: { src: 'test-video.mp4' } });

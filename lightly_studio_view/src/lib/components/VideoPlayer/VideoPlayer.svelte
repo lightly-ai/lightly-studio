@@ -39,9 +39,17 @@
 
     const onmouseenter = () => {
         isHovered = true;
+        // Focus the video element to capture keyboard events
+        if (videoEl) {
+            videoEl.focus();
+        }
     };
     const onmouseleave = () => {
         isHovered = false;
+        // Remove focus when mouse leaves
+        if (videoEl) {
+            videoEl.blur();
+        }
     };
 </script>
 
@@ -51,6 +59,7 @@
         {onmouseleave}
         bind:this={videoEl}
         class={cn(videoClass, isHovered && hoverClass)}
+        tabindex="0"
         {src}
         onerror={handleVideoError}
         onloadeddata={() => (sourceLoadError = null)}

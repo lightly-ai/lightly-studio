@@ -53,6 +53,15 @@
     }}
 />
 
+<Story
+    name="Custom Hover Class"
+    args={{
+        src: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4',
+        videoProps: { controls: true },
+        hoverClass: 'outline outline-dashed outline-2 outline-green-500'
+    }}
+/>
+
 <Story name="Multiple Players" asChild>
     <div class="flex gap-4">
         <div class="h-64 w-64">
