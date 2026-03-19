@@ -1,107 +1,33 @@
 <script lang="ts">
+    import type { HTMLVideoAttributes } from 'svelte/elements';
+    import { MEDIA_ERROR_MESSAGES } from './errors';
+
     interface VideoPlayerProps {
         src: string;
-        controls?: boolean;
-        muted?: boolean;
-        playsinline?: boolean;
-        preload?: 'auto' | 'metadata' | 'none';
-        className?: string;
-        handleMouseEnter?: (event: MouseEvent) => void;
-        handleMouseLeave?: (event: MouseEvent) => void;
-        onplay?: () => void;
-        width?: number;
-        height?: number;
         videoEl?: HTMLVideoElement | null;
-        playbackTime?: number;
+        videoProps?: HTMLVideoAttributes;
     }
 
-    let {
-        src,
-        muted = true,
-        playsinline = true,
-        controls = false,
-        preload = 'metadata',
-        className = '',
-        handleMouseEnter = () => {},
-        handleMouseLeave = () => {},
-        onplay = () => {},
-        width = $bindable(0),
-        height = $bindable(0),
-        videoEl = $bindable(null),
-        playbackTime = $bindable(0)
-    }: VideoPlayerProps = $props();
+    let { src, videoEl = $bindable(null), videoProps = {} }: VideoPlayerProps = $props();
 
-    let previousSrc: string | null = null;
+    const defaultVideoProps: HTMLVideoAttributes = {
+        muted: true,
+        playsinline: true,
+        controls: false,
+        preload: 'metadata'
+    };
+
+    const mergedVideoProps = { ...defaultVideoProps, ...videoProps };
+
     let sourceLoadError = $state<string | null>(null);
     let isHovered = $state(false);
 
-    // HTMLMediaElement.error.code values.
-    const MEDIA_ERROR_MESSAGES: Record<number, string> = {
-        1: 'Video loading was canceled.',
-        2: 'Network error while loading the video.',
-        3: 'Video decoding failed.',
-        4: 'Video source is unavailable or unsupported.'
-    };
-
     function handleVideoError() {
         const errorCode = videoEl?.error?.code;
-        sourceLoadError =
-            (errorCode != null ? MEDIA_ERROR_MESSAGES[errorCode] : null) ??
-            'Failed to load video source.';
+        sourceLoadError = errorCode
+            ? MEDIA_ERROR_MESSAGES[errorCode]
+            : 'Failed to load video source.';
     }
-
-    function handleVideoLoadedData() {
-        sourceLoadError = null;
-    }
-
-    $effect(() => {
-        if (!videoEl) return;
-
-        if (previousSrc !== null && previousSrc !== src) {
-            videoEl.pause();
-            videoEl.removeAttribute('src');
-            videoEl.load();
-        }
-
-        sourceLoadError = null;
-        videoEl.src = src;
-        previousSrc = src;
-    });
-
-    // Track video element size and expose it via bindable props
-    $effect(() => {
-        if (!videoEl) return;
-
-        const updateSize = () => {
-            const rect = videoEl?.getBoundingClientRect();
-            width = rect?.width ?? 0;
-            height = rect?.height ?? 0;
-        };
-
-        updateSize();
-
-        const resizeObserver = new ResizeObserver(updateSize);
-        resizeObserver.observe(videoEl);
-
-        return () => resizeObserver.disconnect();
-    });
-
-    // Track playback time
-    $effect(() => {
-        if (!videoEl) return;
-
-        const handleTimeUpdate = () => {
-            playbackTime = videoEl?.currentTime ?? 0;
-        };
-
-        videoEl.addEventListener('timeupdate', handleTimeUpdate);
-        videoEl.addEventListener('seeked', handleTimeUpdate);
-
-        return () => {
-            videoEl?.removeEventListener('timeupdate', handleTimeUpdate);
-            videoEl?.removeEventListener('seeked', handleTimeUpdate);
-        };
-    });
 
     function handleKeyDownEvent(event: KeyboardEvent) {
         // Only handle keyboard shortcuts when the player is hovered
@@ -112,6 +38,9 @@
         if (target?.tagName === 'INPUT' || target?.tagName === 'TEXTAREA') return;
 
         if (event.code === 'Space') {
+            // Ignore repeat events when key is held down
+            if (event.repeat) return;
+
             event.preventDefault(); // prevent page scroll
 
             if (!videoEl) return;
@@ -123,11 +52,6 @@
             }
         }
     }
-
-    function onseeked(event: Event) {
-        const target = event.target as HTMLVideoElement;
-        playbackTime = target.currentTime;
-    }
 </script>
 
 <svelte:window onkeydown={handleKeyDownEvent} />
@@ -136,26 +60,15 @@
     role="region"
     aria-label="Video player"
     class="relative h-full w-full"
-    onmouseenter={() => {
-        isHovered = true;
-    }}
-    onmouseleave={() => {
-        isHovered = false;
-    }}
+    onmouseenter={() => (isHovered = true)}
+    onmouseleave={() => (isHovered = false)}
 >
     <video
         bind:this={videoEl}
-        {muted}
-        {playsinline}
-        {preload}
-        {controls}
-        class={className}
-        onmouseenter={handleMouseEnter}
-        onmouseleave={handleMouseLeave}
-        {onplay}
-        {onseeked}
+        {src}
         onerror={handleVideoError}
-        onloadeddata={handleVideoLoadedData}
+        onloadeddata={() => (sourceLoadError = null)}
+        {...mergedVideoProps}
     ></video>
     {#if sourceLoadError}
         <div

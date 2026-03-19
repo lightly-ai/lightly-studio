@@ -1,24 +1,15 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import { render } from '@testing-library/svelte';
 import VideoPlayer from './VideoPlayer.svelte';
 
-// Mock ResizeObserver
-const mockObserve = vi.fn();
-const mockUnobserve = vi.fn();
-const mockDisconnect = vi.fn();
-
-class ResizeObserverMock {
-    observe = mockObserve;
-    unobserve = mockUnobserve;
-    disconnect = mockDisconnect;
-}
-
-global.ResizeObserver = ResizeObserverMock as unknown as typeof ResizeObserver;
+// Mock ResizeObserver (needed for bind:clientWidth and bind:clientHeight)
+global.ResizeObserver = class ResizeObserver {
+    observe() {}
+    unobserve() {}
+    disconnect() {}
+};
 
 describe('VideoPlayer', () => {
-    beforeEach(() => {
-        vi.clearAllMocks();
-    });
     it('should render video element', () => {
         const { container } = render(VideoPlayer, { props: { src: 'test-video.mp4' } });
         const video = container.querySelector('video');
@@ -45,15 +36,15 @@ describe('VideoPlayer', () => {
 
     it('should show controls when controls prop is true', () => {
         const { container } = render(VideoPlayer, {
-            props: { src: 'test-video.mp4', controls: true }
+            props: { src: 'test-video.mp4', videoProps: { controls: true } }
         });
         const video = container.querySelector('video');
         expect(video?.hasAttribute('controls')).toBe(true);
     });
 
-    it('should apply custom className', () => {
+    it('should apply custom className via videoProps', () => {
         const { container } = render(VideoPlayer, {
-            props: { src: 'test-video.mp4', className: 'custom-video-class' }
+            props: { src: 'test-video.mp4', videoProps: { class: 'custom-video-class' } }
         });
         const video = container.querySelector('video');
         expect(video?.className).toContain('custom-video-class');
@@ -63,66 +54,6 @@ describe('VideoPlayer', () => {
         const { container } = render(VideoPlayer, { props: { src: 'test-video.mp4' } });
         const video = container.querySelector('video');
         expect(video?.hasAttribute('playsinline')).toBe(true);
-    });
-
-    it('should call onplay callback when video plays', async () => {
-        const onplay = vi.fn();
-        const { container } = render(VideoPlayer, { props: { src: 'test-video.mp4', onplay } });
-        const video = container.querySelector('video') as HTMLVideoElement;
-
-        video.dispatchEvent(new Event('play'));
-        expect(onplay).toHaveBeenCalled();
-    });
-
-    it('should update playbackTime when video is seeked', async () => {
-        let playbackTime = 0;
-        const { container } = render(VideoPlayer, {
-            props: {
-                src: 'test-video.mp4',
-                get playbackTime() {
-                    return playbackTime;
-                },
-                set playbackTime(value) {
-                    playbackTime = value;
-                }
-            }
-        });
-        const video = container.querySelector('video') as HTMLVideoElement;
-
-        // Set currentTime and dispatch seeked event
-        Object.defineProperty(video, 'currentTime', {
-            value: 10.5,
-            writable: true,
-            configurable: true
-        });
-        video.dispatchEvent(new Event('seeked'));
-
-        // Wait for state update
-        await new Promise((resolve) => setTimeout(resolve, 0));
-
-        expect(playbackTime).toBe(10.5);
-    });
-
-    it('should call handleMouseEnter callback on mouse enter', async () => {
-        const handleMouseEnter = vi.fn();
-        const { container } = render(VideoPlayer, {
-            props: { src: 'test-video.mp4', handleMouseEnter }
-        });
-        const video = container.querySelector('video') as HTMLVideoElement;
-
-        video.dispatchEvent(new MouseEvent('mouseenter'));
-        expect(handleMouseEnter).toHaveBeenCalled();
-    });
-
-    it('should call handleMouseLeave callback on mouse leave', async () => {
-        const handleMouseLeave = vi.fn();
-        const { container } = render(VideoPlayer, {
-            props: { src: 'test-video.mp4', handleMouseLeave }
-        });
-        const video = container.querySelector('video') as HTMLVideoElement;
-
-        video.dispatchEvent(new MouseEvent('mouseleave'));
-        expect(handleMouseLeave).toHaveBeenCalled();
     });
 
     it('should display error message when video fails to load', async () => {
@@ -180,7 +111,7 @@ describe('VideoPlayer', () => {
 
     it('should support unmuted video', () => {
         const { container } = render(VideoPlayer, {
-            props: { src: 'test-video.mp4', muted: false }
+            props: { src: 'test-video.mp4', videoProps: { muted: false } }
         });
         const video = container.querySelector('video') as HTMLVideoElement;
         expect(video?.muted).toBe(false);
@@ -188,24 +119,10 @@ describe('VideoPlayer', () => {
 
     it('should support different preload options', () => {
         const { container } = render(VideoPlayer, {
-            props: { src: 'test-video.mp4', preload: 'auto' }
+            props: { src: 'test-video.mp4', videoProps: { preload: 'auto' } }
         });
         const video = container.querySelector('video');
         expect(video?.getAttribute('preload')).toBe('auto');
-    });
-
-    it('should setup ResizeObserver to track video dimensions', async () => {
-        const { container } = render(VideoPlayer, {
-            props: { src: 'test-video.mp4' }
-        });
-        const video = container.querySelector('video') as HTMLVideoElement;
-
-        // Wait for the effect to run
-        await new Promise((resolve) => setTimeout(resolve, 50));
-
-        // The ResizeObserver should have been set up and observe called with the video element
-        // This verifies that the component is tracking video size changes
-        expect(mockObserve).toHaveBeenCalledWith(video);
     });
 
     it('should toggle play/pause when spacebar is pressed while hovered', async () => {
