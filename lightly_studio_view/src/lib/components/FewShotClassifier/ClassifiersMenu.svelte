@@ -14,10 +14,7 @@
     import { useClassifiers } from '$lib/hooks/useClassifiers/useClassifiers';
     import { useClassifiersMenu } from '$lib/hooks/useClassifiers/useClassifiersMenu';
     import { useQueryClient } from '@tanstack/svelte-query';
-    import {
-        readAnnotationLabelsOptions,
-        countAnnotationsByCollectionOptions
-    } from '$lib/api/lightly_studio_local/@tanstack/svelte-query.gen';
+    import { readAnnotationLabelsOptions } from '$lib/api/lightly_studio_local/@tanstack/svelte-query.gen';
     import {
         Network as NetworkIcon,
         Pencil,
@@ -27,6 +24,7 @@
         LoaderCircle as Loader2,
         Info
     } from '@lucide/svelte';
+    import { useAnnotationCountsQueryKey } from '$lib/hooks/useAnnotationCounts/useAnnotationCounts';
 
     const exportOptions: ClassifierExportType[] = ['sklearn', 'lightly'];
 
@@ -106,10 +104,7 @@
             }).queryKey
         });
         client.invalidateQueries({
-            queryKey: countAnnotationsByCollectionOptions({
-                path: { collection_id: collectionId },
-                body: {}
-            }).queryKey
+            queryKey: useAnnotationCountsQueryKey
         });
     }
 
