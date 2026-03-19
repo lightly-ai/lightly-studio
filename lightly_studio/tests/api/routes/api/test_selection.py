@@ -7,7 +7,12 @@ from sqlmodel import Session
 
 from lightly_studio.metadata import compute_typicality
 from lightly_studio.models.collection import SampleType
-from lightly_studio.resolvers import image_resolver, tag_resolver, video_resolver
+from lightly_studio.resolvers import (
+    image_resolver,
+    metadata_resolver,
+    tag_resolver,
+    video_resolver,
+)
 from lightly_studio.resolvers.image_filter import ImageFilter
 from lightly_studio.resolvers.sample_resolver.sample_filter import SampleFilter
 from lightly_studio.resolvers.video_resolver.video_filter import VideoFilter
@@ -53,6 +58,16 @@ def test_create_combination_selection__diversity_success(
         session=db_session, collection_id=collection_id, filters=tag_filter
     )
     assert len(result.samples) == 3
+    order_key = "test_combination_selection_order"
+    order_values = {
+        metadata_resolver.get_value_for_sample(
+            session=db_session,
+            sample_id=sample.sample_id,
+            key=order_key,
+        )
+        for sample in result.samples
+    }
+    assert order_values == {1, 2, 3}
 
 
 def test_create_combination_selection__diversity_success_videos(
