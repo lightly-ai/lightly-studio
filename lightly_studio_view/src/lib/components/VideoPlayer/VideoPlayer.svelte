@@ -75,9 +75,11 @@
 
     const onmouseenter = () => {
         isHovered = true;
+        videoEl?.focus();
     };
     const onmouseleave = () => {
         isHovered = false;
+        videoEl?.blur();
     };
 </script>
 
