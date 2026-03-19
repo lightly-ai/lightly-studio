@@ -76,11 +76,15 @@ describe('VideoPlayer', () => {
 
     it('should update playbackTime when video is seeked', async () => {
         let playbackTime = 0;
-        const { container, component } = render(VideoPlayer, {
+        const { container } = render(VideoPlayer, {
             props: {
                 src: 'test-video.mp4',
-                get playbackTime() { return playbackTime; },
-                set playbackTime(value) { playbackTime = value; }
+                get playbackTime() {
+                    return playbackTime;
+                },
+                set playbackTime(value) {
+                    playbackTime = value;
+                }
             }
         });
         const video = container.querySelector('video') as HTMLVideoElement;
