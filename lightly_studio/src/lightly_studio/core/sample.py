@@ -179,13 +179,13 @@ class Sample(ABC):
         """
         return self.sample_table.collection_id
 
-    def add_caption(self, caption: str) -> None:
+    def add_caption(self, text: str) -> None:
         """Add a caption to this sample.
 
         Args:
-            caption: The text of the caption to add.
+            text: The text of the caption to add.
         """
-        self.add_captions(captions=[caption])
+        self.add_captions(captions=[text])
 
     def add_captions(self, captions: Iterable[str]) -> None:
         """Add captions to this sample.
