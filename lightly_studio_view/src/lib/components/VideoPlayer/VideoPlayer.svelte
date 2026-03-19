@@ -73,20 +73,30 @@
             : 'Failed to load video source.';
     }
 
-    const onmouseenter = () => {
-        isHovered = true;
-        videoEl?.focus();
-    };
-    const onmouseleave = () => {
-        isHovered = false;
-        videoEl?.blur();
-    };
+    function handleMouseMove(event: MouseEvent) {
+        if (!videoEl) return;
+
+        const rect = videoEl.getBoundingClientRect();
+        const isWithinBounds =
+            event.clientX >= rect.left &&
+            event.clientX <= rect.right &&
+            event.clientY >= rect.top &&
+            event.clientY <= rect.bottom;
+
+        if (isWithinBounds && !isHovered) {
+            isHovered = true;
+            videoEl.focus();
+        } else if (!isWithinBounds && isHovered) {
+            isHovered = false;
+            videoEl.blur();
+        }
+    }
 </script>
+
+<svelte:window onmousemove={handleMouseMove} />
 
 <div role="region" aria-label="Video player" class="relative h-full w-full">
     <video
-        {onmouseenter}
-        {onmouseleave}
         bind:this={videoEl}
         class={cn(videoClass, isHovered && hoverClass)}
         {src}
