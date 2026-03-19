@@ -12,9 +12,23 @@ import http
 import os
 
 import requests
+from pydantic import BaseModel
 
 from lightly_studio import db_manager
 from lightly_studio.dataset.env import LIGHTLY_STUDIO_API_URL, LIGHTLY_STUDIO_TOKEN
+
+
+class _EnterpriseConnectResponse(BaseModel):
+    """Response model for the enterprise connect endpoint.
+
+    Mirrors the server-side ``EnterpriseConnectResponse`` defined in the
+    self-hosted auth service.
+    """
+
+    engine_url: str
+    aws_access_key_id: str | None = None
+    aws_secret_access_key: str | None = None
+
 
 _ENTERPRISE_CONNECT_ENDPOINT = "/auth/api/v1/enterprise-connect"
 
@@ -67,15 +81,17 @@ def connect(
 
     config = _fetch_connect_config(api_url=api_url, token=token)
 
-    if config.get("aws_access_key_id"):
-        os.environ["AWS_ACCESS_KEY_ID"] = config["aws_access_key_id"]
-    if config.get("aws_secret_access_key"):
-        os.environ["AWS_SECRET_ACCESS_KEY"] = config["aws_secret_access_key"]
+    if config.aws_access_key_id:
+        os.environ["AWS_ACCESS_KEY_ID"] = config.aws_access_key_id
+    if config.aws_secret_access_key:
+        os.environ["AWS_SECRET_ACCESS_KEY"] = config.aws_secret_access_key
 
-    db_manager.connect(engine_url=config["engine_url"])
+    db_manager.connect(engine_url=config.engine_url)
 
 
-def _fetch_connect_config(api_url: str, token: str) -> dict[str, str | None]:
+def _fetch_connect_config(
+    api_url: str, token: str
+) -> _EnterpriseConnectResponse:
     """Call the enterprise endpoint to retrieve the connection configuration.
 
     Args:
@@ -83,8 +99,7 @@ def _fetch_connect_config(api_url: str, token: str) -> dict[str, str | None]:
         token: JWT bearer token.
 
     Returns:
-        A dict with ``engine_url`` and optionally
-        ``aws_access_key_id`` and ``aws_secret_access_key``.
+        Parsed and validated response from the enterprise connect endpoint.
 
     Raises:
         ConnectionError: If the server is unreachable.
@@ -127,11 +142,9 @@ def _fetch_connect_config(api_url: str, token: str) -> dict[str, str | None]:
         )
 
     try:
-        data = response.json()
-        _ = data["engine_url"]  # Validate required field is present.
-    except (ValueError, KeyError):
+        return _EnterpriseConnectResponse.model_validate(response.json())
+    except Exception:
         raise RuntimeError(
-            "Unexpected response from LightlyStudio: response body does not contain `engine_url`."
+            "Unexpected response from LightlyStudio: response body does not "
+            "match expected schema (missing or invalid `engine_url`)."
         ) from None
-
-    return data
