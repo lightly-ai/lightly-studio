@@ -56,4 +56,3 @@ def test_apply__returns_empty_for_wrong_collection(db_session: Session) -> None:
     result = [row.sample_id for row in db_session.exec(filtered).all()]
 
     assert result == []
-
