@@ -11,9 +11,7 @@ from lightly_studio.models.annotation.annotation_base import AnnotationBaseTable
 from lightly_studio.models.annotation_label import AnnotationLabelTable
 from lightly_studio.models.sample import SampleTable
 from lightly_studio.models.video import VideoFrameTable, VideoTable
-from lightly_studio.resolvers.video_resolver.video_count_annotations_filter import (
-    VideoCountAnnotationsFilter,
-)
+from lightly_studio.resolvers.video_resolver.video_filter import VideoFilter
 
 
 class CountAnnotationsView(BaseModel):
@@ -25,7 +23,7 @@ class CountAnnotationsView(BaseModel):
 
 
 def count_video_frame_annotations_by_video_collection(
-    session: Session, collection_id: UUID, filters: Optional[VideoCountAnnotationsFilter] = None
+    session: Session, collection_id: UUID, filters: Optional[VideoFilter] = None
 ) -> list[CountAnnotationsView]:
     """Count the annotations by video frames."""
     unfiltered_query = (
@@ -37,7 +35,7 @@ def count_video_frame_annotations_by_video_collection(
         collection_id=collection_id, count_column_name="filtered_count"
     )
 
-    if filters:
+    if filters is not None:
         filtered_query = filters.apply(filtered_query)
 
     filtered_subquery = filtered_query.group_by(

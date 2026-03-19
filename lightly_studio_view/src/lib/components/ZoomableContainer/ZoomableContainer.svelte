@@ -4,6 +4,7 @@
     import { zoom as D3zoom, zoomIdentity, type D3ZoomEvent, type ZoomBehavior } from 'd3-zoom';
     import { onMount, type Snippet } from 'svelte';
     import { unscale } from './unscale';
+    import { useKeyboardPan } from './useKeyboardPan';
     import ZoomPanel from '../ZoomPanel/ZoomPanel.svelte';
 
     let svgContainer: SVGSVGElement | null = $state(null);
@@ -207,9 +208,30 @@
         }
     };
 
+    const {
+        handleContainerMouseEnter,
+        handleContainerMouseLeave,
+        handleWindowKeyDown,
+        handleWindowKeyUp,
+        handleWindowMouseDown,
+        handleWindowBlur,
+        cleanup: cleanupKeyboardPan
+    } = useKeyboardPan({
+        getContainerElement: () => svgContainer,
+        isPanEnabled: () => panEnabled,
+        isZoomEnabled: () => zoomEnabled,
+        panByPixels: (panX: number, panY: number) => {
+            if (!svgContainer || !zoom) return false;
+
+            select(svgContainer).call(zoom.translateBy, panX / transform.k, panY / transform.k);
+            return true;
+        }
+    });
+
     onMount(() => {
         setupZoom();
         registerResetFn?.(resetTransform);
+        return cleanupKeyboardPan;
     });
 
     $effect(() => {
@@ -240,9 +262,12 @@
             {/if}
         {/snippet}
     </ZoomPanel>
+    <!-- svelte-ignore a11y_no_static_element_interactions -->
     <svg
         bind:this={svgContainer}
         class="z-10 h-full w-full"
+        onmouseenter={handleContainerMouseEnter}
+        onmouseleave={handleContainerMouseLeave}
         preserveAspectRatio="xMidYMid meet"
         style={`cursor: ${cursor};`}
         viewBox={`${SVGViewBox.x} ${SVGViewBox.y} ${SVGViewBox.width} ${SVGViewBox.height}`}
@@ -260,3 +285,10 @@
     >
     </svg>
 </div>
+
+<svelte:window
+    onkeydowncapture={handleWindowKeyDown}
+    onkeyupcapture={handleWindowKeyUp}
+    onmousedown={handleWindowMouseDown}
+    onblur={handleWindowBlur}
+/>

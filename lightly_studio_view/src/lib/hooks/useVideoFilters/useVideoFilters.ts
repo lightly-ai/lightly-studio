@@ -4,6 +4,7 @@ import { createMetadataFilters } from '../useMetadataFilters/useMetadataFilters'
 import type { VideoFilter } from '$lib/api/lightly_studio_local/types.gen';
 import type { VideoFieldsBoundsView } from '$lib/api/lightly_studio_local/types.gen';
 
+type AnnotationsFilter = components['schemas']['AnnotationsFilter'];
 type SampleFilter = components['schemas']['SampleFilter'];
 type MetadataValues = Record<string, { min: number; max: number }>;
 
@@ -16,12 +17,11 @@ export type VideoFilterParams = {
         metadata_values?: MetadataValues;
     };
     video_bounds?: VideoFieldsBoundsView | null;
-    text_embedding?: Array<number>;
 };
 
 const filterParams = writable<VideoFilterParams | null>(null);
 
-const videoFilter = derived(filterParams, ($filterParams): VideoFilter | null => {
+export const buildVideoFilter = ($filterParams: VideoFilterParams | null): VideoFilter | null => {
     if (!$filterParams?.collection_id) {
         return null;
     }
@@ -63,11 +63,6 @@ const videoFilter = derived(filterParams, ($filterParams): VideoFilter | null =>
         sampleFilter.sample_ids = sampleIds;
     }
 
-    const annotationFramesLabelIds = $filterParams.filters?.annotation_frames_label_ids;
-    if (annotationFramesLabelIds && annotationFramesLabelIds.length > 0) {
-        filters.annotation_frames_label_ids = annotationFramesLabelIds;
-    }
-
     const tagIds = $filterParams.filters?.tag_ids;
     if (tagIds && tagIds.length > 0) {
         sampleFilter.tag_ids = tagIds;
@@ -83,9 +78,19 @@ const videoFilter = derived(filterParams, ($filterParams): VideoFilter | null =>
     if (Object.keys(sampleFilter).length > 0) {
         filters.sample_filter = sampleFilter;
     }
+    const annotationFramesLabelIds = $filterParams.filters?.annotation_frames_label_ids;
+    if (annotationFramesLabelIds && annotationFramesLabelIds.length > 0) {
+        filters.frame_annotation_filter = {
+            annotation_label_ids: annotationFramesLabelIds
+        } satisfies AnnotationsFilter;
+    }
 
     return Object.keys(filters).length > 0 ? filters : null;
-});
+};
+
+const videoFilter = derived(filterParams, ($filterParams): VideoFilter | null =>
+    buildVideoFilter($filterParams)
+);
 
 export const useVideoFilters = () => {
     const updateFilterParams = (params: VideoFilterParams) => {

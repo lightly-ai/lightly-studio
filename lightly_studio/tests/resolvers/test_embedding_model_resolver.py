@@ -254,7 +254,7 @@ def test_get_by_name__nonexistent_name(db_session: Session) -> None:
         embedding_model_name="embedding_model_1",
     )
 
-    with pytest.raises(ValueError, match="Embedding model with name `nonexistent` not found."):
+    with pytest.raises(ValueError, match=r"Embedding model with name `nonexistent` not found."):
         embedding_model_resolver.get_by_name(
             session=db_session, collection_id=collection_id, embedding_model_name="nonexistent"
         )
@@ -335,7 +335,7 @@ def test_get_or_create__conflicting_model_raises(db_session: Session) -> None:
 
     with pytest.raises(
         ValueError,
-        match="An embedding model with the same hash but different parameters already exists.",
+        match=r"An embedding model with the same hash but different parameters already exists.",
     ):
         embedding_model_resolver.get_or_create(
             session=db_session, embedding_model=conflicting_model_create

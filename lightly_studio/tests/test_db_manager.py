@@ -2,15 +2,27 @@
 # - DatabaseEngine
 # - session
 # - persistent_session
+
+from __future__ import annotations
+
 from pathlib import Path
+from uuid import uuid4
 
 import pytest
+import sqlalchemy
+import sqlmodel
 from pytest_mock import MockerFixture
+from sqlmodel import SQLModel
 
 from lightly_studio import ImageDataset, db_manager
 from lightly_studio.core.dataset_query.image_sample_field import ImageSampleField
 from lightly_studio.core.dataset_query.order_by import OrderByField
-from lightly_studio.db_manager import DatabaseBackend, DatabaseEngine, _detect_backend_from_url
+from lightly_studio.db_manager import (
+    DatabaseBackend,
+    DatabaseEngine,
+    _detect_backend_from_url,
+)
+from lightly_studio.models.collection import CollectionTable
 from lightly_studio.resolvers import image_resolver
 from tests.helpers_resolvers import (
     create_collection,
@@ -82,7 +94,9 @@ def test_set_engine__raises_if_already_set(
     """Test set_engine raises if the engine is already set."""
     engine_url = "duckdb:///:memory:"
     db_manager.set_engine(engine=DatabaseEngine(engine_url=engine_url, single_threaded=True))
-    with pytest.raises(RuntimeError, match="Database engine is already set and cannot be changed."):
+    with pytest.raises(
+        RuntimeError, match=r"Database engine is already set and cannot be changed."
+    ):
         db_manager.set_engine(
             engine=DatabaseEngine(engine_url="duckdb:///:memory:", single_threaded=True)
         )
@@ -100,7 +114,9 @@ def test_connect(
     assert engine._engine_url == f"duckdb:///{db_file}"
 
     # Cannot connect again, should raise.
-    with pytest.raises(RuntimeError, match="Database engine is already set and cannot be changed."):
+    with pytest.raises(
+        RuntimeError, match=r"Database engine is already set and cannot be changed."
+    ):
         db_manager.connect(db_file=str(db_file), cleanup_existing=True)
 
 
@@ -208,7 +224,7 @@ def test_detect_backend_from_url() -> None:
     assert (
         _detect_backend_from_url("postgres://user:pass@localhost/db") == DatabaseBackend.POSTGRESQL
     )
-    with pytest.raises(ValueError, match="Unsupported database URL scheme"):
+    with pytest.raises(ValueError, match=r"Unsupported database URL scheme"):
         _detect_backend_from_url("mysql://localhost/db")
 
 
@@ -252,7 +268,7 @@ def test_connect__with_engine_url(
 def test_connect__db_file_and_engine_url_raises(
     patch_engine_singleton: None,  # noqa: ARG001
 ) -> None:
-    with pytest.raises(ValueError, match="Cannot specify both db_file and engine_url"):
+    with pytest.raises(ValueError, match=r"Cannot specify both db_file and engine_url"):
         db_manager.connect(db_file="test.db", engine_url="duckdb:///other.db")
 
 
@@ -265,3 +281,78 @@ def test_get_backend(
 
     assert db_manager.get_backend() == DatabaseBackend.DUCKDB
     db_manager.close()
+
+
+def test_cleanup_postgres__drops_tables_when_cleanup_existing(
+    mocker: MockerFixture,
+) -> None:
+    mock_create_engine = mocker.patch.object(db_manager, "create_engine")
+    mock_engine = mock_create_engine.return_value
+    mock_drop_all = mocker.patch.object(SQLModel.metadata, "drop_all")
+    mocker.patch.object(SQLModel.metadata, "create_all")
+
+    DatabaseEngine(
+        engine_url="postgresql://user:pass@localhost:5432/testdb",
+        cleanup_existing=True,
+    )
+
+    mock_drop_all.assert_called_once_with(bind=mock_engine)
+
+
+def test_cleanup_postgres__no_drop_when_cleanup_existing_false(
+    mocker: MockerFixture,
+) -> None:
+    mocker.patch.object(db_manager, "create_engine")
+    mock_drop_all = mocker.patch.object(SQLModel.metadata, "drop_all")
+    mocker.patch.object(SQLModel.metadata, "create_all")
+
+    DatabaseEngine(
+        engine_url="postgresql://user:pass@localhost:5432/testdb",
+        cleanup_existing=False,
+    )
+
+    mock_drop_all.assert_not_called()
+
+
+def test_cleanup_postgres__integration(
+    postgres_url: str | None,
+) -> None:
+    if postgres_url is None:
+        pytest.skip("Requires --postgres flag")
+
+    # Create an isolated database within the same Postgres container.
+    base_url = sqlalchemy.make_url(postgres_url)
+    cleanup_db_name = f"test_cleanup_{uuid4().hex}"
+    cleanup_db_url = base_url.set(database=cleanup_db_name).render_as_string(hide_password=False)
+
+    # AUTOCOMMIT required because Postgres forbids CREATE/DROP DATABASE inside a transaction.
+    base_engine = sqlalchemy.create_engine(
+        url=base_url.render_as_string(hide_password=False), isolation_level="AUTOCOMMIT"
+    )
+    with base_engine.connect() as conn:
+        conn.execute(sqlalchemy.text(f"CREATE DATABASE {cleanup_db_name}"))
+
+    engine: DatabaseEngine | None = None
+    try:
+        # 1. Create engine and insert a row.
+        engine = DatabaseEngine(engine_url=cleanup_db_url, single_threaded=True)
+        with engine.session() as session:
+            create_collection(session=session, collection_name="should_be_deleted")
+        engine.close()
+        engine = None
+
+        # 2. Re-create engine with cleanup_existing=True -> data should be wiped.
+        engine = DatabaseEngine(
+            engine_url=cleanup_db_url, cleanup_existing=True, single_threaded=True
+        )
+        with engine.session() as session:
+            collections = session.exec(sqlmodel.select(CollectionTable)).all()
+            assert len(collections) == 0
+        engine.close()
+        engine = None
+    finally:
+        if engine is not None:
+            engine.close()
+        with base_engine.connect() as conn:
+            conn.execute(sqlalchemy.text(f"DROP DATABASE IF EXISTS {cleanup_db_name}"))
+        base_engine.dispose()

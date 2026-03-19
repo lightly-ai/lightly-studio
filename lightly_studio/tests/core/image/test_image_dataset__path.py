@@ -1,15 +1,14 @@
 from __future__ import annotations
 
+import logging
 from pathlib import Path
 
 import pytest
 from PIL import Image
 from pytest_mock import MockerFixture as Mocker
-from sqlmodel import Session
 
 from lightly_studio import ImageDataset
 from lightly_studio.core.image import add_images
-from tests import helpers_resolvers
 
 
 class TestDataset:
@@ -52,7 +51,7 @@ class TestDataset:
         images_path.touch()
 
         dataset = ImageDataset.create(name="test_dataset")
-        with pytest.raises(ValueError, match="File is not an image:.*file.txt"):
+        with pytest.raises(ValueError, match=r"File is not an image:.*file.txt"):
             dataset.add_images_from_path(path=images_path)
 
     def test_dataset_add_images_from_path__non_existent_dir(
@@ -63,7 +62,7 @@ class TestDataset:
         images_path = tmp_path / "non_existent"
 
         dataset = ImageDataset.create(name="test_dataset")
-        with pytest.raises(ValueError, match="Path does not exist:.*non_existent"):
+        with pytest.raises(ValueError, match=r"Path does not exist:.*non_existent"):
             dataset.add_images_from_path(path=images_path)
 
     def test_dataset_add_images_from_path__empty_dir(
@@ -155,8 +154,6 @@ class TestDataset:
             ]
         )
 
-        import logging
-
         caplog.set_level(logging.INFO)
 
         dataset = ImageDataset.create(name="test_dataset")
@@ -196,7 +193,6 @@ class TestDataset:
     def test_add_images_from_path_calls_tag_samples_by_directory(
         self,
         patch_collection: None,  # noqa: ARG002
-        db_session: Session,
         tmp_path: Path,
         mocker: Mocker,
     ) -> None:
@@ -204,14 +200,12 @@ class TestDataset:
         spy_tagger = mocker.spy(add_images, "tag_samples_by_directory")
 
         _create_sample_images([tmp_path / "image1.jpg"])
-        dataset_table = helpers_resolvers.create_collection(db_session, "test_dataset")
-        dataset = ImageDataset(collection=dataset_table)
-        dataset.session = db_session
+        dataset = ImageDataset.create(name="test_dataset")
 
         dataset.add_images_from_path(path=str(tmp_path), tag_depth=0, embed=False)
 
         spy_tagger.assert_called_once_with(
-            session=db_session,
+            session=dataset.session,
             collection_id=dataset.dataset_id,
             input_path=str(tmp_path),
             sample_ids=mocker.ANY,

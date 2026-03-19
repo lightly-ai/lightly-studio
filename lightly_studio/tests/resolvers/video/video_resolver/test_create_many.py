@@ -34,7 +34,7 @@ def test_create_many(db_session: Session) -> None:
             fps=30.0,
         ),
         VideoCreate(
-            file_path_abs="/path/to/video_1.mp4",
+            file_path_abs="/path/to/video_2.mp4",
             file_name="video_2.mp4",
             width=101,
             height=201,

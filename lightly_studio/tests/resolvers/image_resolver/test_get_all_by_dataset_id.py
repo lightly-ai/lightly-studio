@@ -7,6 +7,7 @@ from lightly_studio.resolvers import (
     image_resolver,
     tag_resolver,
 )
+from lightly_studio.resolvers.annotations.annotations_filter import AnnotationsFilter
 from lightly_studio.resolvers.image_filter import (
     FilterDimensions,
     ImageFilter,
@@ -195,7 +196,11 @@ def test_get_all_by_collection_id__with_annotation_filtering(
         session=db_session,
         collection_id=collection_id,
         filters=ImageFilter(
-            sample_filter=SampleFilter(annotation_label_ids=[dog_label.annotation_label_id])
+            sample_filter=SampleFilter(
+                annotations_filter=AnnotationsFilter(
+                    annotation_label_ids=[dog_label.annotation_label_id]
+                )
+            )
         ),
     )
     assert len(dog_result.samples) == 1
@@ -207,7 +212,11 @@ def test_get_all_by_collection_id__with_annotation_filtering(
         session=db_session,
         collection_id=collection_id,
         filters=ImageFilter(
-            sample_filter=SampleFilter(annotation_label_ids=[cat_label.annotation_label_id])
+            sample_filter=SampleFilter(
+                annotations_filter=AnnotationsFilter(
+                    annotation_label_ids=[cat_label.annotation_label_id]
+                )
+            )
         ),
     )
     assert len(cat_result.samples) == 1

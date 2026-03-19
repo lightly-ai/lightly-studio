@@ -24,6 +24,8 @@ from lightly_studio.resolvers import (
 from lightly_studio.resolvers.annotations.annotations_filter import (
     AnnotationsFilter,
 )
+from lightly_studio.resolvers.image_filter import ImageFilter
+from lightly_studio.resolvers.sample_resolver.sample_filter import SampleFilter
 from tests.helpers_resolvers import (
     create_annotation,
     create_annotation_label,
@@ -247,7 +249,15 @@ def test_count_annotations_by_collection_with_filtering(
 
     # Test with filtering by "dog"
     filtered_counts = annotation_resolver.count_annotations_by_collection(
-        session=db_session, collection_id=collection_id, filtered_labels=["dog"]
+        session=db_session,
+        collection_id=collection_id,
+        image_filter=ImageFilter(
+            sample_filter=SampleFilter(
+                annotations_filter=AnnotationsFilter(
+                    annotation_label_ids=[test_data.dog_label.annotation_label_id]
+                )
+            )
+        ),
     )
     filtered_dict = {label: (current, total) for label, current, total in filtered_counts}
     assert filtered_dict["dog"] == (2, 2)  # All dogs are visible
@@ -258,7 +268,15 @@ def test_count_annotations_by_collection_with_filtering(
 
     # Test with filtering by "cat"
     filtered_counts = annotation_resolver.count_annotations_by_collection(
-        session=db_session, collection_id=collection_id, filtered_labels=["cat"]
+        session=db_session,
+        collection_id=collection_id,
+        image_filter=ImageFilter(
+            sample_filter=SampleFilter(
+                annotations_filter=AnnotationsFilter(
+                    annotation_label_ids=[test_data.cat_label.annotation_label_id]
+                )
+            )
+        ),
     )
     filtered_dict = {label: (current, total) for label, current, total in filtered_counts}
     assert filtered_dict["dog"] == (
@@ -492,6 +510,7 @@ def test_get_all_by_collection_name(
     ground_truth = annotation_resolver.get_all_by_collection_name(
         session=db_session,
         collection_name="ground_truth",
+        parent_collection_id=collection.collection_id,
     ).annotations
     assert len(ground_truth) == 1
     assert ground_truth[0].object_detection_details is not None
@@ -503,6 +522,7 @@ def test_get_all_by_collection_name(
     prediction = annotation_resolver.get_all_by_collection_name(
         session=db_session,
         collection_name="predictions",
+        parent_collection_id=collection.collection_id,
     ).annotations
     assert len(prediction) == 1
     assert prediction[0].object_detection_details is not None
@@ -513,9 +533,11 @@ def test_get_all_by_collection_name(
     assert prediction[0].confidence == pytest.approx(0.7)
 
     # Test with non-existent collection name
-    with pytest.raises(ValueError, match="Collection with name 'non-existent' does not exist."):
+    with pytest.raises(ValueError, match=r"Collection with name 'non-existent' does not exist."):
         annotation_resolver.get_all_by_collection_name(
-            session=db_session, collection_name="non-existent"
+            session=db_session,
+            collection_name="non-existent",
+            parent_collection_id=collection.collection_id,
         )
 
 

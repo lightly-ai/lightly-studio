@@ -144,7 +144,7 @@ class TestRandomForestClassifier:
         )
         with pytest.raises(
             ValueError,
-            match="annotated_embeddings cannot be empty.",
+            match=r"annotated_embeddings cannot be empty.",
         ):
             classifier.train([])
 
@@ -172,7 +172,7 @@ class TestRandomForestClassifier:
         ]
         with pytest.raises(
             ValueError,
-            match="Found labels not in predefined classes: {'dog'}",
+            match=r"Found labels not in predefined classes: {'dog'}",
         ):
             classifier.train(annotated_embeddings)
 
@@ -180,7 +180,7 @@ class TestRandomForestClassifier:
         """Test initialization with empty class list."""
         with pytest.raises(
             ValueError,
-            match="Class list cannot be empty",
+            match=r"Class list cannot be empty",
         ):
             RandomForest(
                 name="classifier_name",

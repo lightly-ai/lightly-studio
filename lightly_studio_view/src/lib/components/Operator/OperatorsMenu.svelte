@@ -1,10 +1,21 @@
 <script lang="ts">
+    import { page } from '$app/stores';
+    import { derived as storeDerived } from 'svelte/store';
     import { onMount } from 'svelte';
-    import { getOperators, type RegisteredOperatorMetadata } from '$lib/api/lightly_studio_local';
+    import {
+        getOperators,
+        type RegisteredOperatorMetadata,
+        type SampleType,
+        OperatorScope
+    } from '$lib/api/lightly_studio_local';
     import { LoaderCircle as Loader2, AlertCircle, ChevronRight } from '@lucide/svelte';
     import * as Dialog from '$lib/components/ui/dialog';
     import { useOperatorsDialog } from '$lib/hooks/useOperatorsDialog/useOperatorsDialog';
     import OperatorDialog from '$lib/components/Operator/OperatorDialog.svelte';
+    import {
+        useOperatorContext,
+        type PageContext
+    } from '$lib/hooks/useOperatorContext/useOperatorContext';
 
     let operators: RegisteredOperatorMetadata[] = $state([]);
     let selectedOperatorId: string | undefined = $state(undefined);
@@ -44,6 +55,31 @@
         closeOperatorsDialog();
         isOperatorDialogOpen = true;
     };
+
+    const pageContext = storeDerived(
+        page,
+        ($p) =>
+            ({
+                routeId: $p.route.id,
+                collectionId: $p.params.collection_id ?? '',
+                sampleId: $p.params.sampleId || $p.params.sample_id || null,
+                annotationId: $p.params.annotationId || null,
+                sampleType: ($p.params.collection_type as SampleType) ?? null
+            }) satisfies PageContext
+    );
+
+    const { currentScope } = useOperatorContext(pageContext);
+
+    const isDataset = $derived($page.data.collection?.parent_collection_id === null);
+
+    const isApplicable = (operator: RegisteredOperatorMetadata): boolean => {
+        if ($currentScope === null) return false;
+        if (isDataset && operator.supported_scopes?.includes(OperatorScope.ROOT)) return true;
+        return operator.supported_scopes?.includes($currentScope) ?? false;
+    };
+
+    const applicableOperators = $derived(operators.filter((op) => isApplicable(op)));
+    const inapplicableOperators = $derived(operators.filter((op) => !isApplicable(op)));
 </script>
 
 <Dialog.Root
@@ -63,7 +99,7 @@
                 <span
                     class="inline-flex items-center rounded-full bg-secondary px-2 py-1 text-xs font-medium text-secondary-foreground"
                 >
-                    {operators.length}
+                    {applicableOperators.length}
                 </span>
             </div>
             <div
@@ -85,7 +121,7 @@
                     <div class="p-4 text-sm text-muted-foreground">No plugins available.</div>
                 {:else}
                     <ul class="divide-y divide-border">
-                        {#each operators as operator}
+                        {#each applicableOperators as operator}
                             <li>
                                 <button
                                     type="button"
@@ -102,6 +138,26 @@
                             </li>
                         {/each}
                     </ul>
+
+                    {#if inapplicableOperators.length > 0}
+                        <div class="border-t border-border">
+                            <p class="px-3 pb-1 pt-3 text-xs font-medium text-muted-foreground/60">
+                                Not applicable in current view
+                            </p>
+                            <ul class="divide-y divide-border">
+                                {#each inapplicableOperators as operator}
+                                    <li>
+                                        <div
+                                            class="flex w-full cursor-not-allowed items-center justify-between gap-2 p-3 text-left text-sm opacity-40"
+                                        >
+                                            <span class="font-medium">{operator.name}</span>
+                                            <ChevronRight class="size-4" />
+                                        </div>
+                                    </li>
+                                {/each}
+                            </ul>
+                        </div>
+                    {/if}
                 {/if}
             </div>
         </Dialog.Content>

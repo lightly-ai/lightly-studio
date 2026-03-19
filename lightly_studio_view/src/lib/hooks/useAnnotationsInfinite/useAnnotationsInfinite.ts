@@ -1,12 +1,10 @@
-import {
-    countAnnotationsByCollectionOptions,
-    readAnnotationsWithPayloadInfiniteOptions
-} from '$lib/api/lightly_studio_local/@tanstack/svelte-query.gen';
+import { readAnnotationsWithPayloadInfiniteOptions } from '$lib/api/lightly_studio_local/@tanstack/svelte-query.gen';
 import { createInfiniteQuery, useQueryClient } from '@tanstack/svelte-query';
 import { useUpdateAnnotationsMutation } from '$lib/hooks/useUpdateAnnotationsMutation/useUpdateAnnotationsMutation';
 import { toast } from 'svelte-sonner';
 import type { AnnotationUpdateInput } from '$lib/api/lightly_studio_local';
 import { writable } from 'svelte/store';
+import { useAnnotationCountsQueryKey } from '$lib/hooks/useAnnotationCounts/useAnnotationCounts';
 
 export const useAnnotationsInfinite = (
     ...props: Parameters<typeof readAnnotationsWithPayloadInfiniteOptions>
@@ -23,9 +21,7 @@ export const useAnnotationsInfinite = (
     const refresh = () => {
         client.invalidateQueries({ queryKey: annotationsOptions.queryKey });
         client.invalidateQueries({
-            queryKey: countAnnotationsByCollectionOptions({
-                path: { collection_id: collection_id }
-            }).queryKey
+            queryKey: useAnnotationCountsQueryKey
         });
     };
 

@@ -24,9 +24,6 @@ jobs:
     name: Build Cache
     runs-on: ubuntu-latest
     outputs:
-      cache-general-success: ${{ steps.cache-general-success.outputs.cache-hit }}
-      cache-videos-success: ${{ steps.cache-videos-success.outputs.cache-hit }}
-      cache-groups-success: ${{ steps.cache-groups-success.outputs.cache-hit }}
       file-hash: ${{ steps.file-hash.outputs.hash }}
     steps:
       - name: Checkout Code
@@ -87,31 +84,6 @@ jobs:
           # Manually update the cache key to invalidate caches when files relevant to the CI change
           # in the dataset_examples repo.
           key: &cache-example-dataset-key example-dataset-2026-03-09
-
-      - name: Check general e2e success cache
-        id: cache-general-success
-        uses: actions/cache@v4
-        with:
-          lookup-only: true
-          path: .e2e-success-general
-          key: e2e-success-general-${{ steps.file-hash.outputs.hash }}
-
-      - name: Check videos e2e success cache
-        id: cache-videos-success
-        uses: actions/cache@v4
-        with:
-          lookup-only: true
-          path: .e2e-success-videos
-          key: e2e-success-videos-${{ steps.file-hash.outputs.hash }}
-
-      - name: Check groups e2e success cache
-        id: cache-groups-success
-        uses: actions/cache@v4
-        with:
-          lookup-only: true
-          path: .e2e-success-groups
-          key: e2e-success-groups-${{ steps.file-hash.outputs.hash }}
-
 
       ### Setup steps for the workflow ###
       - name: Set Up Python
@@ -178,31 +150,90 @@ jobs:
           rm -rf lightly_studio/src/lightly_studio/dist_lightly_studio_view_app
           cp -r lightly_studio_view/build/ lightly_studio/src/lightly_studio/dist_lightly_studio_view_app
 
-  end-to-end-general:
-    name: General End2End Test
+  end-to-end:
+    name: End2End Test (${{ matrix.name }})
     runs-on: ubuntu-latest
     needs: prepare-caches
-    # Skip the job if the success marker for this exact file hash already exists.
-    if: needs.prepare-caches.outputs.cache-general-success != 'true'
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: General
+            index_script: index_general.py
+            playwright_project: general
+            success_marker: .e2e-success-general
+            success_key: e2e-success-general
+            artifact_name: Playwright Report (General)
+            postgres: false
+          - name: Videos
+            index_script: index_video.py
+            playwright_project: videos
+            success_marker: .e2e-success-videos
+            success_key: e2e-success-videos
+            artifact_name: Playwright Report (Videos)
+            postgres: false
+          - name: Groups
+            index_script: index_groups.py
+            playwright_project: groups
+            success_marker: .e2e-success-groups
+            success_key: e2e-success-groups
+            artifact_name: Playwright Report (Groups)
+            postgres: false
+          - name: General Postgres
+            index_script: index_general.py
+            playwright_project: general
+            success_marker: .e2e-success-general-postgres
+            success_key: e2e-success-general-postgres
+            artifact_name: Playwright Report (General Postgres)
+            postgres: true
+          - name: Videos Postgres
+            index_script: index_video.py
+            playwright_project: videos
+            success_marker: .e2e-success-videos-postgres
+            success_key: e2e-success-videos-postgres
+            artifact_name: Playwright Report (Videos Postgres)
+            postgres: true
+
+    services:
+      postgres:
+        image: ${{ matrix.postgres && 'pgvector/pgvector:0.8.1-pg18-bookworm' || '' }}
+        env:
+          POSTGRES_USER: lightly
+          POSTGRES_PASSWORD: lightly
+          POSTGRES_DB: lightly_studio
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U lightly -d lightly_studio"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
     steps:
-      - &setup-checkout-code
-        name: Checkout Code
+      - name: Checkout Code
         uses: actions/checkout@v4
         with:
           submodules: recursive
 
       # Authenticate to download lightly-edge-sdk.
-      - &setup-authenticate-gcp
-        name: Authenticate with GCP
+      - name: Authenticate with GCP
         uses: 'google-github-actions/auth@v2'
         with:
           project_id: boris-250909
           credentials_json: ${{ secrets.GCP_LIGHTLY_STUDIO_CI_READONLY }}
 
+      - name: Check e2e success cache
+        id: cache-success
+        uses: actions/cache@v4
+        with:
+          lookup-only: true
+          path: ${{ matrix.success_marker }}
+          key: ${{ matrix.success_key }}-${{ needs.prepare-caches.outputs.file-hash }}
+
       ### Restore caches ###
-      
-      - &setup-cache-build
-        name: Cache build
+
+      - name: Cache build
+        if: steps.cache-success.outputs.cache-hit != 'true'
         id: cache-build
         uses: actions/cache@v4
         with:
@@ -210,8 +241,8 @@ jobs:
           path: *cache-build-path
           key: python-build-${{ needs.prepare-caches.outputs.file-hash }}
 
-      - &setup-cache-playwright-browsers
-        name: Cache Playwright browsers
+      - name: Cache Playwright browsers
+        if: steps.cache-success.outputs.cache-hit != 'true'
         id: cache-playwright-browsers
         uses: actions/cache@v4
         with:
@@ -219,8 +250,8 @@ jobs:
           path: *cache-playwright-browsers-path
           key: *cache-playwright-browsers-key
 
-      - &setup-cache-example-dataset
-        name: Cache example dataset
+      - name: Cache example dataset
+        if: steps.cache-success.outputs.cache-hit != 'true'
         id: cache-example-dataset
         uses: actions/cache@v4
         with:
@@ -230,57 +261,63 @@ jobs:
 
       ### Setup ###
 
-      - &setup-python
-        name: Set Up Python
+      - name: Set Up Python
+        if: steps.cache-success.outputs.cache-hit != 'true'
         uses: actions/setup-python@v5
         with:
           python-version: "3.9"
 
-      - &setup-uv
-        name: Set Up Uv
+      - name: Set Up Uv
+        if: steps.cache-success.outputs.cache-hit != 'true'
         uses: astral-sh/setup-uv@v6
         with:
           version: "0.8.17"
           enable-cache: true
 
-      - &setup-nodejs
-        name: Set Up Node.js
+      - name: Set Up Node.js
+        if: steps.cache-success.outputs.cache-hit != 'true'
         uses: actions/setup-node@v4
         with:
           node-version-file: 'lightly_studio_view/.nvmrc'
           cache: 'npm'
           cache-dependency-path: lightly_studio_view/package-lock.json
 
-      - &setup-install-lightly-studio-view-deps
-        name: Install lightly_studio_view dependencies
+      - name: Install lightly_studio_view dependencies
+        if: steps.cache-success.outputs.cache-hit != 'true'
         working-directory: lightly_studio_view
         run: npm ci
 
-      - &setup-install-lightly-studio-deps
-        name: Install lightly_studio dependencies
+      - name: Install lightly_studio dependencies
+        if: steps.cache-success.outputs.cache-hit != 'true'
         working-directory: lightly_studio
         run: make install-optional-deps
 
       ### Run e2e tests ###
-      
+
       - name: Index dataset with using lightly_studio pypi package
+        if: steps.cache-success.outputs.cache-hit != 'true'
         working-directory: lightly_studio
         # TODO(Michal, 10/2025): Starting up the server redownloads the embedding model. Consider caching it.
         run: |
-          uv run e2e-tests/index_general.py > server.log 2>&1 &
+          if [ "${{ matrix.postgres }}" = "true" ]; then
+            LIGHTLY_STUDIO_DATABASE_URL=postgresql://lightly:lightly@localhost:5432/lightly_studio \
+              uv run e2e-tests/${{ matrix.index_script }} > server.log 2>&1 &
+          else
+            uv run e2e-tests/${{ matrix.index_script }} > server.log 2>&1 &
+          fi
           echo "SERVER_PID=$!" >> $GITHUB_ENV
         id: server
 
-      - &wait-for-server
-        name: Wait for the server to start
-        timeout-minutes: 5
+      - name: Wait for the server to start
+        if: steps.cache-success.outputs.cache-hit != 'true'
+        timeout-minutes: 6
         working-directory: lightly_studio
         run: |
           echo "Waiting for the server to become available..."
           timeout=360
           elapsed=0
           interval=5
-          
+
           while [ $elapsed -lt $timeout ]; do
             if curl -s -f ${E2E_BASE_URL}/healthz > /dev/null 2>&1; then
               echo "✅ Server is up and running after ${elapsed} seconds!"
@@ -297,7 +334,7 @@ jobs:
             sleep $interval
             elapsed=$((elapsed + interval))
           done
-          
+
           if [ $elapsed -ge $timeout ]; then
             echo "❌ Timed out waiting for server to become available"
             exit 1
@@ -305,167 +342,53 @@ jobs:
 
       ### Running end-to-end tests ###
       - name: Run end-to-end tests for indexed dataset
+        if: steps.cache-success.outputs.cache-hit != 'true'
         working-directory: lightly_studio_view
-        run: npx playwright test --reporter=html --trace=on --project=general
+        run: npx playwright test --reporter=html --trace=on --project=${{ matrix.playwright_project }}
         timeout-minutes: 10
 
       - name: Create e2e success marker
-        run: touch .e2e-success-general
+        if: steps.cache-success.outputs.cache-hit != 'true'
+        run: touch ${{ matrix.success_marker }}
 
       - name: Save e2e success marker
+        if: steps.cache-success.outputs.cache-hit != 'true'
         uses: actions/cache/save@v4
         with:
-          path: .e2e-success-general
-          key: e2e-success-general-${{ needs.prepare-caches.outputs.file-hash }}
+          path: ${{ matrix.success_marker }}
+          key: ${{ matrix.success_key }}-${{ needs.prepare-caches.outputs.file-hash }}
 
       ### Cleanup steps ###
-      - &cleanup-show-server-logs
-        name: Show server logs after failure
-        if: failure()
+      - name: Show server logs after failure
+        if: failure() && steps.cache-success.outputs.cache-hit != 'true'
         working-directory: lightly_studio
         run: |
           echo "Server logs:"
           cat server.log
 
-      - &cleanup-upload-playwright-report
-        name: Upload Playwright report after failure
+      - name: Upload Playwright report after failure
         uses: actions/upload-artifact@v4
-        if: failure()
+        if: failure() && steps.cache-success.outputs.cache-hit != 'true'
         with:
-          name: Upload Playwright Report
+          name: ${{ matrix.artifact_name }}
           path: lightly_studio_view/playwright-report
           retention-days: 5
 
-      - &cleanup-stop-server
-        name: Stop lightly_studio application running in background
-        if: always()
+      - name: Stop lightly_studio application running in background
+        if: always() && steps.cache-success.outputs.cache-hit != 'true'
         run: |
           kill ${{ env.SERVER_PID }} || true
-
-  end-to-end-videos:
-    name: Videos End2End Test
-    runs-on: ubuntu-latest
-    needs: prepare-caches
-    # Skip the job if the success marker for this exact file hash already exists.
-    if: needs.prepare-caches.outputs.cache-videos-success != 'true'
-    steps:
-      - *setup-checkout-code
-      - *setup-authenticate-gcp
-      - *setup-cache-build
-      - *setup-cache-playwright-browsers
-      - *setup-cache-example-dataset
-      - *setup-python
-      - *setup-uv
-      - *setup-nodejs
-      - *setup-install-lightly-studio-view-deps
-      - *setup-install-lightly-studio-deps
-
-      ### Run e2e tests ###
-      
-      - name: Index dataset with using lightly_studio pypi package
-        working-directory: lightly_studio
-        # TODO(Michal, 10/2025): Starting up the server redownloads the embedding model. Consider caching it.
-        run: |
-          uv run e2e-tests/index_video.py > server.log 2>&1 &
-          echo "SERVER_PID=$!" >> $GITHUB_ENV
-        id: server
-
-      - *wait-for-server
-
-      ### Running end-to-end tests ###
-      - name: Run end-to-end tests for indexed dataset
-        working-directory: lightly_studio_view
-        run: npx playwright test --reporter=html --trace=on --project=videos
-        timeout-minutes: 10
-
-      - name: Create e2e success marker
-        run: touch .e2e-success-videos
-
-      - name: Save e2e success marker
-        uses: actions/cache/save@v4
-        with:
-          path: .e2e-success-videos
-          key: e2e-success-videos-${{ needs.prepare-caches.outputs.file-hash }}
-
-      ### Cleanup steps ###
-
-      - *cleanup-show-server-logs
-      - *cleanup-upload-playwright-report
-      - *cleanup-stop-server
-
-  end-to-end-groups:
-    name: Groups End2End Test
-    runs-on: ubuntu-latest
-    needs: prepare-caches
-    # Skip the job if the success marker for this exact file hash already exists.
-    if: needs.prepare-caches.outputs.cache-groups-success != 'true'
-    steps:
-      - *setup-checkout-code
-      - *setup-authenticate-gcp
-      - *setup-cache-build
-      - *setup-cache-playwright-browsers
-      - *setup-cache-example-dataset
-      - *setup-python
-      - *setup-uv
-      - *setup-nodejs
-      - *setup-install-lightly-studio-view-deps
-      - *setup-install-lightly-studio-deps
-
-      ### Run e2e tests ###
-
-      - name: Index dataset with using lightly_studio pypi package
-        working-directory: lightly_studio
-        # TODO(Michal, 10/2025): Starting up the server redownloads the embedding model. Consider caching it.
-        run: |
-          uv run e2e-tests/index_groups.py > server.log 2>&1 &
-          echo "SERVER_PID=$!" >> $GITHUB_ENV
-        id: server
-
-      - *wait-for-server
-
-      ### Running end-to-end tests ###
-      - name: Run end-to-end tests for indexed dataset
-        working-directory: lightly_studio_view
-        run: npx playwright test --reporter=html --trace=on --project=groups
-        timeout-minutes: 10
-
-      - name: Create e2e success marker
-        run: touch .e2e-success-groups
-
-      - name: Save e2e success marker
-        uses: actions/cache/save@v4
-        with:
-          path: .e2e-success-groups
-          key: e2e-success-groups-${{ needs.prepare-caches.outputs.file-hash }}
-
-      ### Cleanup steps ###
-
-      - *cleanup-show-server-logs
-      - *cleanup-upload-playwright-report
-      - *cleanup-stop-server
 
   success-check:
     name: End2End Success Check
     runs-on: ubuntu-latest
     needs:
       - prepare-caches
-      - end-to-end-general
-      - end-to-end-videos
-      - end-to-end-groups
+      - end-to-end
     if: always()
     steps:
       - name: Check failure
-        if: |
-          (
-            needs.prepare-caches.outputs.cache-general-success != 'true' &&
-            needs.end-to-end-general.result != 'success'
-          ) || (
-            needs.prepare-caches.outputs.cache-videos-success != 'true' &&
-            needs.end-to-end-videos.result != 'success'
-          ) || (
-            needs.prepare-caches.outputs.cache-groups-success != 'true' &&
-            needs.end-to-end-groups.result != 'success'
-          )
+        if: needs.end-to-end.result != 'success'
         run: |
           echo "❌ End-to-End tests did not complete successfully."
           exit 1

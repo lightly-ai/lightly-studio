@@ -203,7 +203,7 @@ def test_export__include_or_exclude__both_provided(
 ) -> None:
     tag_1_of_4 = test_collection_export.tags["tag_1_of_4"]
 
-    with pytest.raises(ValueError, match="Cannot include and exclude at the same time."):
+    with pytest.raises(ValueError, match=r"Cannot include and exclude at the same time."):
         collection_resolver.export(
             session=db_session,
             collection_id=test_collection_export.collection.collection_id,
@@ -216,7 +216,7 @@ def test_export__include_or_exclude__none_provided(
     db_session: Session,
     test_collection_export: TestcollectionExport,
 ) -> None:
-    with pytest.raises(ValueError, match="Include or exclude filter is required."):
+    with pytest.raises(ValueError, match=r"Include or exclude filter is required."):
         collection_resolver.export(
             session=db_session, collection_id=test_collection_export.collection.collection_id
         )
@@ -226,19 +226,19 @@ def test_export__include_no_empty_list_provided(
     db_session: Session,
     test_collection_export: TestcollectionExport,
 ) -> None:
-    with pytest.raises(ValueError, match="List should have at least 1 item"):
+    with pytest.raises(ValueError, match=r"List should have at least 1 item"):
         collection_resolver.export(
             session=db_session,
             collection_id=test_collection_export.collection.collection_id,
             include=ExportFilter(tag_ids=[]),
         )
-    with pytest.raises(ValueError, match="List should have at least 1 item"):
+    with pytest.raises(ValueError, match=r"List should have at least 1 item"):
         collection_resolver.export(
             session=db_session,
             collection_id=test_collection_export.collection.collection_id,
             include=ExportFilter(sample_ids=[]),
         )
-    with pytest.raises(ValueError, match="List should have at least 1 item"):
+    with pytest.raises(ValueError, match=r"List should have at least 1 item"):
         collection_resolver.export(
             session=db_session,
             collection_id=test_collection_export.collection.collection_id,
@@ -256,7 +256,7 @@ def test_export__include_with_either_tag_ids_or_sample_ids_or_annotation_ids(
 
     with pytest.raises(
         ValueError,
-        match="Either tag_ids, sample_ids, or annotation_ids must be set.",
+        match=r"Either tag_ids, sample_ids, or annotation_ids must be set.",
     ):
         collection_resolver.export(
             session=db_session,
@@ -266,7 +266,7 @@ def test_export__include_with_either_tag_ids_or_sample_ids_or_annotation_ids(
 
     with pytest.raises(
         ValueError,
-        match="Either tag_ids, sample_ids, or annotation_ids must be set.",
+        match=r"Either tag_ids, sample_ids, or annotation_ids must be set.",
     ):
         collection_resolver.export(
             session=db_session,
@@ -279,7 +279,7 @@ def test_export__include_with_either_tag_ids_or_sample_ids_or_annotation_ids(
 
     with pytest.raises(
         ValueError,
-        match="Either tag_ids, sample_ids, or annotation_ids must be set.",
+        match=r"Either tag_ids, sample_ids, or annotation_ids must be set.",
     ):
         collection_resolver.export(
             session=db_session,
@@ -292,7 +292,7 @@ def test_export__include_with_either_tag_ids_or_sample_ids_or_annotation_ids(
 
     with pytest.raises(
         ValueError,
-        match="Either tag_ids, sample_ids, or annotation_ids must be set.",
+        match=r"Either tag_ids, sample_ids, or annotation_ids must be set.",
     ):
         collection_resolver.export(
             session=db_session,
@@ -511,7 +511,7 @@ def test_export__exclude_with_either_tag_ids_or_sample_ids(
 
     with pytest.raises(
         ValueError,
-        match="Either tag_ids, sample_ids, or annotation_ids must be set.",
+        match=r"Either tag_ids, sample_ids, or annotation_ids must be set.",
     ):
         ExportFilter(tag_ids=[tag_1_of_4.tag_id], sample_ids=[sample.sample_id])
 

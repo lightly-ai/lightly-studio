@@ -2,6 +2,7 @@ import pytest
 from sqlmodel import Session
 
 from lightly_studio.resolvers import image_resolver
+from lightly_studio.resolvers.annotations.annotations_filter import AnnotationsFilter
 from lightly_studio.resolvers.image_filter import ImageFilter
 from lightly_studio.resolvers.sample_resolver.sample_filter import SampleFilter
 from tests import helpers_resolvers
@@ -90,7 +91,7 @@ def test_get_adjacent_images__raises_with_filter_missing_collection_id(db_sessio
         file_path_abs="/images/a.png",
     )
 
-    with pytest.raises(ValueError, match="Collection ID must be provided in filters."):
+    with pytest.raises(ValueError, match=r"Collection ID must be provided in filters."):
         image_resolver.get_adjacent_images(
             session=db_session,
             sample_id=image.sample_id,
@@ -154,7 +155,9 @@ def test_get_adjacent_images__respects_annotation_filter(db_session: Session) ->
         filters=ImageFilter(
             sample_filter=SampleFilter(
                 collection_id=collection_id,
-                annotation_label_ids=[dog_label.annotation_label_id],
+                annotations_filter=AnnotationsFilter(
+                    annotation_label_ids=[dog_label.annotation_label_id],
+                ),
             )
         ),
     )

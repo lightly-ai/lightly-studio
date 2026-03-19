@@ -59,9 +59,17 @@
     import { useVideoFrameAnnotationCounts } from '$lib/hooks/useVideoFrameAnnotationsCount/useVideoFrameAnnotationsCount.js';
     import { useVideoFramesBounds } from '$lib/hooks/useVideoFramesBounds/useVideoFramesBounds.js';
     import { useVideoBounds } from '$lib/hooks/useVideosBounds/useVideosBounds.js';
-    import { SampleType } from '$lib/api/lightly_studio_local/types.gen.js';
+    import {
+        SampleType,
+        type AnnotationsFilter,
+        type ImageFilter
+    } from '$lib/api/lightly_studio_local/types.gen.js';
     import type { AnnotationLabel } from '$lib/services/types.js';
-
+    import { buildImageFilter } from '$lib/utils/buildImageFilter';
+    import {
+        buildVideoAnnotationCountsFilter,
+        buildVideoFrameAnnotationCountsFilter
+    } from '$lib/utils/buildAnnotationCountsFilters';
     const { data, children } = $props();
     const {
         collection,
@@ -206,11 +214,21 @@
             selected: selected.includes(annotation.label_name)
         }));
 
-    const annotationsLabels = $derived(
-        selectedAnnotationFilter.length > 0 ? selectedAnnotationFilter : undefined
+    const annotationFilter = $derived.by<AnnotationsFilter | undefined>(() =>
+        $selectedAnnotationFilterIds.size > 0
+            ? { annotation_label_ids: Array.from($selectedAnnotationFilterIds) }
+            : undefined
     );
     const metadataFilters = $derived(
         metadataValues ? createMetadataFilters($metadataValues) : undefined
+    );
+    const imageFilter = $derived.by<ImageFilter | undefined>(() =>
+        buildImageFilter({
+            dimensionsValues: $dimensionsValues ?? undefined,
+            annotationFilter,
+            metadataFilters,
+            collectionId: collectionId
+        })
     );
     const { videoFramesBoundsValues } = useVideoFramesBounds();
     const { videoBoundsValues } = useVideoBounds();
@@ -220,38 +238,32 @@
             isVideoFrames ||
             (isAnnotations && parentCollection?.sampleType == SampleType.VIDEO_FRAME)
         ) {
+            let videoFrameCollectionId = collectionId;
+            // If we are on the video frame annotations page we must pass the parent collectionId as annotations
+            // collection is a child of video frame collection.
+            if (isAnnotations && parentCollection?.sampleType == SampleType.VIDEO_FRAME)
+                videoFrameCollectionId = parentCollection.collectionId;
             return useVideoFrameAnnotationCounts({
-                collectionId: datasetId,
-                filter: {
-                    annotations_labels: annotationsLabels,
-                    video_filter: {
-                        sample_filter: {
-                            metadata_filters: metadataFilters
-                        },
-                        ...$videoFramesBoundsValues
-                    }
-                }
+                collectionId: videoFrameCollectionId,
+                filter: buildVideoFrameAnnotationCountsFilter({
+                    metadataFilters,
+                    annotationFilter,
+                    videoFramesBoundsValues: $videoFramesBoundsValues
+                })
             });
         } else if (isVideos) {
             return useVideoAnnotationCounts({
                 collectionId,
-                filter: {
-                    video_frames_annotations_labels: annotationsLabels,
-                    video_filter: {
-                        sample_filter: {
-                            metadata_filters: metadataFilters
-                        },
-                        ...$videoBoundsValues
-                    }
-                }
+                filter: buildVideoAnnotationCountsFilter({
+                    metadataFilters,
+                    annotationFilter,
+                    videoBoundsValues: $videoBoundsValues
+                })
             });
         }
         return useAnnotationCounts({
             collectionId: datasetId,
-            options: {
-                filtered_labels: annotationsLabels,
-                dimensions: $dimensionsValues ?? undefined
-            }
+            filter: imageFilter
         });
     });
 
@@ -442,10 +454,7 @@
             URL.revokeObjectURL(previewUrl);
             previewUrl = null;
         }
-        setTextEmbedding({
-            queryText: '',
-            embedding: []
-        });
+        setTextEmbedding(undefined);
     }
 
     function triggerFileInput() {
@@ -464,10 +473,18 @@
             setError(String(message));
             return;
         }
-        setTextEmbedding({
-            queryText: submittedQueryText,
-            embedding: $embedTextQuery.data || []
-        });
+
+        if (!submittedQueryText) {
+            setTextEmbedding(undefined);
+            return;
+        }
+
+        if ($embedTextQuery.isSuccess) {
+            setTextEmbedding({
+                queryText: submittedQueryText,
+                embedding: $embedTextQuery.data
+            });
+        }
     });
 
     const showLeftSidebar = $derived(

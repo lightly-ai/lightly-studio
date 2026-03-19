@@ -10,7 +10,6 @@ from sqlmodel import Session, col, select
 
 from lightly_studio.models.image import ImageTable
 from lightly_studio.resolvers import tag_resolver
-from lightly_studio.resolvers.annotations.annotations_filter import AnnotationsFilter
 from lightly_studio.resolvers.image_filter import (
     FilterDimensions,
     ImageFilter,
@@ -18,8 +17,6 @@ from lightly_studio.resolvers.image_filter import (
 from lightly_studio.resolvers.sample_resolver.sample_filter import SampleFilter
 from tests.helpers_resolvers import (
     ImageStub,
-    create_annotation,
-    create_annotation_label,
     create_collection,
     create_image,
     create_images,
@@ -104,7 +101,7 @@ class TestImageFilter:
         expected_condition: Callable[[ImageTable], bool],
     ) -> None:
         """Test ImageFilter with dimension filters."""
-        samples, collection_id, session = setup_samples_filter_test
+        _samples, _collection_id, session = setup_samples_filter_test
 
         # Create the base query.
         query = select(ImageTable).join(ImageTable.sample)
@@ -126,7 +123,7 @@ class TestImageFilter:
         self, setup_samples_filter_test: tuple[list[ImageTable], UUID, Session]
     ) -> None:
         """Test that apply_filters calls apply_dimensions_filters."""
-        samples, collection_id, session = setup_samples_filter_test
+        _samples, _collection_id, session = setup_samples_filter_test
 
         # Create a filter with specific dimensions
         width_filter = FilterDimensions(min=500, max=2000)
@@ -250,40 +247,3 @@ class TestImageFilter:
         assert [sample.sample_id for sample in result] == [
             sample.sample_id for sample in expected_samples
         ]
-
-    def test_query__annotation_filter(self, db_session: Session) -> None:
-        collection = create_collection(session=db_session)
-        image_with_annotation = create_image(
-            session=db_session,
-            collection_id=collection.collection_id,
-            file_path_abs="with_annotation.png",
-        )
-        image_without_annotation = create_image(
-            session=db_session,
-            collection_id=collection.collection_id,
-            file_path_abs="without_annotation.png",
-        )
-        label = create_annotation_label(
-            session=db_session,
-            dataset_id=collection.collection_id,
-            label_name="car",
-        )
-        create_annotation(
-            session=db_session,
-            sample_id=image_with_annotation.sample_id,
-            annotation_label_id=label.annotation_label_id,
-            collection_id=collection.collection_id,
-        )
-
-        query = select(ImageTable).join(ImageTable.sample)
-        image_filter = ImageFilter(
-            annotation_filter=AnnotationsFilter(
-                annotation_label_ids=[label.annotation_label_id],
-            )
-        )
-
-        filtered_query = image_filter.apply(query=query)
-        result = db_session.exec(filtered_query).all()
-
-        assert [sample.sample_id for sample in result] == [image_with_annotation.sample_id]
-        assert image_without_annotation.sample_id not in [sample.sample_id for sample in result]

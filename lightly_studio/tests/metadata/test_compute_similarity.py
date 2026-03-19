@@ -85,7 +85,7 @@ def test_compute_similarity_metadata_missing_query(db_session: Session) -> None:
         ],
     )
 
-    with pytest.raises(TagNotFoundError, match="Query tag .* not found"):
+    with pytest.raises(TagNotFoundError, match=r"Query tag .* not found"):
         compute_similarity.compute_similarity_metadata(
             session=db_session,
             key_collection_id=collection_id,

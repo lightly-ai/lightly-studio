@@ -3,10 +3,11 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
+from PIL import Image as PILImage
 from pytest_mock import MockerFixture
 from sqlmodel import Session
 
-from lightly_studio.core.annotation import CreateInstanceSegmentation
+from lightly_studio.core.annotation import CreateInstanceSegmentation, CreateSemanticSegmentation
 from lightly_studio.core.dataset_query import ImageSampleField
 from lightly_studio.core.dataset_query.dataset_query import DatasetQuery
 from lightly_studio.core.image.image_dataset import ImageDataset
@@ -229,6 +230,300 @@ class TestDatasetExport:
                 },
             ],
         }
+
+    def test_to_coco_instance_segmentations__skips_missing_mask(
+        self,
+        tmp_path: Path,
+        patch_collection: None,  # noqa: ARG002
+    ) -> None:
+        dataset = ImageDataset.create(name="test_dataset")
+        images = create_images(
+            db_session=dataset.session,
+            collection_id=dataset.dataset_id,
+            images=[ImageStub(path="image0.jpg", width=10, height=10)],
+        )
+
+        label = create_annotation_label(
+            session=dataset.session, dataset_id=dataset.dataset_id, label_name="dog"
+        )
+        # Create an annotation without a mask
+        annotation_resolver.create_many(
+            session=dataset.session,
+            parent_collection_id=dataset.dataset_id,
+            annotations=[
+                AnnotationCreate(
+                    parent_sample_id=images[0].sample_id,
+                    annotation_label_id=label.annotation_label_id,
+                    annotation_type=AnnotationType.INSTANCE_SEGMENTATION,
+                    x=2,
+                    y=0,
+                    width=3,
+                    height=2,
+                    segmentation_mask=None,
+                ),
+            ],
+        )
+
+        output_json = tmp_path / "task_inst_seg_skip.json"
+        dataset.export().to_coco_instance_segmentations(output_json=output_json)
+
+        # Load the generated JSON and verify its content
+        with open(output_json) as f:
+            coco_data = json.load(f)
+        # Annotation should be skipped, categories and images should still be there
+        assert coco_data == {
+            "images": [
+                {"id": 0, "file_name": "image0.jpg", "width": 10, "height": 10},
+            ],
+            "categories": [{"id": 0, "name": "dog"}],
+            "annotations": [],
+        }
+
+    def test_to_pascalvoc_semantic_segmentation(
+        self,
+        tmp_path: Path,
+        patch_collection: None,  # noqa: ARG002
+    ) -> None:
+        dataset = ImageDataset.create(name="test_dataset")
+        create_images(
+            db_session=dataset.session,
+            collection_id=dataset.dataset_id,
+            images=[ImageStub(path="image0.jpg", width=3, height=2)],
+        )
+
+        samples = list(dataset)
+        samples[0].add_annotation(
+            CreateSemanticSegmentation.from_rle_mask(
+                label="dog",
+                sample_2d=samples[0],
+                segmentation_mask=[1, 1, 4],
+            )
+        )
+
+        output_folder = tmp_path / "pascalvoc"
+        export_dataset.to_pascalvoc_semantic_segmentation(
+            session=dataset.session,
+            root_dataset_id=dataset.dataset_id,
+            samples=dataset.query(),
+            output_folder=output_folder,
+        )
+
+        class_map_path = output_folder / "class_id_to_name.json"
+        with class_map_path.open() as f:
+            class_map = json.load(f)
+        assert class_map == {"0": "background", "1": "dog"}
+
+        mask_path = output_folder / "SegmentationClass" / "image0.png"
+        with PILImage.open(mask_path) as mask:
+            mask_values = list(mask.getdata())
+        assert mask_values == [0, 1, 0, 0, 0, 0]
+
+    def test_to_pascalvoc_semantic_segmentation__background_and_dog_labels_partial_image(
+        self,
+        tmp_path: Path,
+        patch_collection: None,  # noqa: ARG002
+    ) -> None:
+        dataset = ImageDataset.create(name="test_dataset")
+        create_images(
+            db_session=dataset.session,
+            collection_id=dataset.dataset_id,
+            images=[ImageStub(path="image0.jpg", width=3, height=2)],
+        )
+        create_annotation_label(
+            session=dataset.session,
+            dataset_id=dataset.dataset_id,
+            label_name="background",
+        )
+        create_annotation_label(
+            session=dataset.session,
+            dataset_id=dataset.dataset_id,
+            label_name="dog",
+        )
+
+        samples = list(dataset)
+        samples[0].add_annotation(
+            CreateSemanticSegmentation.from_rle_mask(
+                label="dog",
+                sample_2d=samples[0],
+                segmentation_mask=[1, 1, 4],
+            )
+        )
+        samples[0].add_annotation(
+            CreateSemanticSegmentation.from_rle_mask(
+                label="background",
+                sample_2d=samples[0],
+                segmentation_mask=[4, 1, 1],
+            )
+        )
+
+        output_folder = tmp_path / "pascalvoc"
+        export_dataset.to_pascalvoc_semantic_segmentation(
+            session=dataset.session,
+            root_dataset_id=dataset.dataset_id,
+            samples=dataset.query(),
+            output_folder=output_folder,
+        )
+
+        class_map_path = output_folder / "class_id_to_name.json"
+        with class_map_path.open() as f:
+            class_map = json.load(f)
+        # Two "background" classes are expected: class 0 is reserved by labelformat,
+        # and class 1 is the user-defined "background" class.
+        assert class_map == {"0": "background", "1": "background", "2": "dog"}
+
+        mask_path = output_folder / "SegmentationClass" / "image0.png"
+        with PILImage.open(mask_path) as mask:
+            mask_values = list(mask.getdata())
+        assert mask_values == [0, 2, 0, 0, 1, 0]
+
+    def test_to_pascalvoc_semantic_segmentation__two_foreground_classes_on_one_image(
+        self,
+        tmp_path: Path,
+        patch_collection: None,  # noqa: ARG002
+    ) -> None:
+        dataset = ImageDataset.create(name="test_dataset")
+        create_images(
+            db_session=dataset.session,
+            collection_id=dataset.dataset_id,
+            images=[ImageStub(path="image0.jpg", width=3, height=2)],
+        )
+
+        samples = list(dataset)
+        samples[0].add_annotation(
+            CreateSemanticSegmentation.from_rle_mask(
+                label="cat",
+                sample_2d=samples[0],
+                segmentation_mask=[1, 1, 4],
+            )
+        )
+        samples[0].add_annotation(
+            CreateSemanticSegmentation.from_rle_mask(
+                label="dog",
+                sample_2d=samples[0],
+                segmentation_mask=[4, 1, 1],
+            )
+        )
+
+        output_folder = tmp_path / "pascalvoc"
+        export_dataset.to_pascalvoc_semantic_segmentation(
+            session=dataset.session,
+            root_dataset_id=dataset.dataset_id,
+            samples=dataset.query(),
+            output_folder=output_folder,
+        )
+
+        class_map_path = output_folder / "class_id_to_name.json"
+        with class_map_path.open() as f:
+            class_map = json.load(f)
+        assert class_map == {"0": "background", "1": "cat", "2": "dog"}
+
+        mask_path = output_folder / "SegmentationClass" / "image0.png"
+        with PILImage.open(mask_path) as mask:
+            mask_values = list(mask.getdata())
+
+        assert mask_values == [0, 1, 0, 0, 2, 0]
+
+    def test_to_pascalvoc_semantic_segmentation__two_parts_with_same_class_on_one_image(
+        self,
+        tmp_path: Path,
+        patch_collection: None,  # noqa: ARG002
+    ) -> None:
+        dataset = ImageDataset.create(name="test_dataset")
+        create_images(
+            db_session=dataset.session,
+            collection_id=dataset.dataset_id,
+            images=[ImageStub(path="image0.jpg", width=3, height=2)],
+        )
+
+        samples = list(dataset)
+        samples[0].add_annotation(
+            CreateSemanticSegmentation.from_rle_mask(
+                label="dog",
+                sample_2d=samples[0],
+                segmentation_mask=[1, 1, 4],
+            )
+        )
+        samples[0].add_annotation(
+            CreateSemanticSegmentation.from_rle_mask(
+                label="dog",
+                sample_2d=samples[0],
+                segmentation_mask=[4, 1, 1],
+            )
+        )
+
+        output_folder = tmp_path / "pascalvoc"
+        export_dataset.to_pascalvoc_semantic_segmentation(
+            session=dataset.session,
+            root_dataset_id=dataset.dataset_id,
+            samples=dataset.query(),
+            output_folder=output_folder,
+        )
+
+        class_map_path = output_folder / "class_id_to_name.json"
+        with class_map_path.open() as f:
+            class_map = json.load(f)
+        assert class_map == {"0": "background", "1": "dog"}
+
+        mask_path = output_folder / "SegmentationClass" / "image0.png"
+        with PILImage.open(mask_path) as mask:
+            mask_values = list(mask.getdata())
+        assert mask_values == [0, 1, 0, 0, 1, 0]
+
+    def test_to_pascalvoc_semantic_segmentation__two_images_with_parts_of_same_class(
+        self,
+        tmp_path: Path,
+        patch_collection: None,  # noqa: ARG002
+    ) -> None:
+        dataset = ImageDataset.create(name="test_dataset")
+        create_images(
+            db_session=dataset.session,
+            collection_id=dataset.dataset_id,
+            images=[
+                ImageStub(path="image0.jpg", width=3, height=2),
+                ImageStub(path="image1.jpg", width=3, height=2),
+            ],
+        )
+
+        samples = list(dataset)
+        sample_by_name = {sample.file_name: sample for sample in samples}
+
+        sample_by_name["image0.jpg"].add_annotation(
+            CreateSemanticSegmentation.from_rle_mask(
+                label="dog",
+                sample_2d=sample_by_name["image0.jpg"],
+                segmentation_mask=[1, 1, 4],
+            )
+        )
+        sample_by_name["image1.jpg"].add_annotation(
+            CreateSemanticSegmentation.from_rle_mask(
+                label="dog",
+                sample_2d=sample_by_name["image1.jpg"],
+                segmentation_mask=[4, 1, 1],
+            )
+        )
+
+        output_folder = tmp_path / "pascalvoc"
+        export_dataset.to_pascalvoc_semantic_segmentation(
+            session=dataset.session,
+            root_dataset_id=dataset.dataset_id,
+            samples=dataset.query(),
+            output_folder=output_folder,
+        )
+
+        class_map_path = output_folder / "class_id_to_name.json"
+        with class_map_path.open() as f:
+            class_map = json.load(f)
+        assert class_map == {"0": "background", "1": "dog"}
+
+        mask_path_0 = output_folder / "SegmentationClass" / "image0.png"
+        with PILImage.open(mask_path_0) as mask_0:
+            mask_values_0 = list(mask_0.getdata())
+        assert mask_values_0 == [0, 1, 0, 0, 0, 0]
+
+        mask_path_1 = output_folder / "SegmentationClass" / "image1.png"
+        with PILImage.open(mask_path_1) as mask_1:
+            mask_values_1 = list(mask_1.getdata())
+        assert mask_values_1 == [0, 0, 0, 0, 1, 0]
 
 
 def test_to_coco_object_detections(

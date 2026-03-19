@@ -5,7 +5,7 @@ from __future__ import annotations
 from datetime import datetime, timezone
 from uuid import UUID, uuid4
 
-from sqlmodel import CHAR, Column, Field, SQLModel
+from sqlmodel import VARCHAR, Column, Field, SQLModel
 
 
 class EmbeddingModelBase(SQLModel):
@@ -13,7 +13,7 @@ class EmbeddingModelBase(SQLModel):
 
     name: str
     parameter_count_in_mb: int | None = None
-    embedding_model_hash: str = Field(default="", sa_column=Column(CHAR(128)))
+    embedding_model_hash: str = Field(default="", sa_column=Column(VARCHAR(128)))
     embedding_dimension: int
     collection_id: UUID = Field(default=None, foreign_key="collection.collection_id")
 
