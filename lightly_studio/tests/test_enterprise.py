@@ -33,7 +33,7 @@ def test_connect__success(mocker: MockerFixture, patch_db_connect: MockType) -> 
     enterprise.connect(api_url="http://10.0.0.5:8100", token="token")
 
     mock_get.assert_called_once_with(
-        url="http://10.0.0.5:8100/auth/api/v1/db-connect-engine-url",
+        url="http://10.0.0.5:8100/auth/api/v1/enterprise-connect",
         headers={"Authorization": "Bearer token"},
         timeout=10,
     )
@@ -60,7 +60,7 @@ def test_connect__success_env_vars(
     enterprise.connect()
 
     mock_get.assert_called_once_with(
-        url="http://10.0.0.5:8100/auth/api/v1/db-connect-engine-url",
+        url="http://10.0.0.5:8100/auth/api/v1/enterprise-connect",
         headers={"Authorization": "Bearer token"},
         timeout=10,
     )
@@ -81,7 +81,7 @@ def test_connect__strips_trailing_slash(
     enterprise.connect(api_url="http://10.0.0.5:8100/", token="tok")
 
     mock_get.assert_called_once_with(
-        url="http://10.0.0.5:8100/auth/api/v1/db-connect-engine-url",
+        url="http://10.0.0.5:8100/auth/api/v1/enterprise-connect",
         headers={"Authorization": "Bearer tok"},
         timeout=10,
     )
@@ -106,7 +106,7 @@ def test_connect__explicit_params_over_env(
     enterprise.connect(api_url="http://10.0.0.6:8100", token="explicit-token")
 
     mock_get.assert_called_once_with(
-        url="http://10.0.0.6:8100/auth/api/v1/db-connect-engine-url",
+        url="http://10.0.0.6:8100/auth/api/v1/enterprise-connect",
         headers={"Authorization": "Bearer explicit-token"},
         timeout=10,
     )
