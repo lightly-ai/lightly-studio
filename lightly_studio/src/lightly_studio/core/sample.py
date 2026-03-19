@@ -185,6 +185,14 @@ class Sample(ABC):
         Args:
             text: The text of the caption to add.
         """
+        self.add_captions(captions=[text])
+
+    def add_captions(self, captions: Iterable[str]) -> None:
+        """Add captions to this sample.
+
+        Args:
+            captions: The texts of the captions to add.
+        """
         session = self.get_object_session()
         caption_resolver.create_many(
             session=session,
@@ -192,8 +200,9 @@ class Sample(ABC):
             captions=[
                 CaptionCreate(
                     parent_sample_id=self.sample_id,
-                    text=text,
-                ),
+                    text=caption,
+                )
+                for caption in captions
             ],
         )
 
@@ -261,7 +270,7 @@ class Sample(ABC):
         Args:
             annotation: The annotation to add.
         """
-        self.add_annotations([annotation])
+        self.add_annotations(annotations=[annotation])
 
     def add_annotations(self, annotations: Iterable[CreateAnnotation]) -> None:
         """Add annotations to this sample.

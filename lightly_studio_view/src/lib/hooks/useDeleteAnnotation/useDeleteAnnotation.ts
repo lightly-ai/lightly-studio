@@ -1,9 +1,7 @@
-import {
-    countAnnotationsByCollectionOptions,
-    deleteAnnotationMutation
-} from '$lib/api/lightly_studio_local/@tanstack/svelte-query.gen';
+import { deleteAnnotationMutation } from '$lib/api/lightly_studio_local/@tanstack/svelte-query.gen';
 import { createMutation, useQueryClient } from '@tanstack/svelte-query';
 import { get } from 'svelte/store';
+import { useAnnotationCountsQueryKey } from '$lib/hooks/useAnnotationCounts/useAnnotationCounts';
 
 export const useDeleteAnnotation = ({ collectionId }: { collectionId: string }) => {
     const mutation = createMutation(deleteAnnotationMutation());
@@ -15,9 +13,7 @@ export const useDeleteAnnotation = ({ collectionId }: { collectionId: string }) 
 
     const refetch = () => {
         client.invalidateQueries({
-            queryKey: countAnnotationsByCollectionOptions({
-                path: { collection_id: collectionId }
-            }).queryKey
+            queryKey: useAnnotationCountsQueryKey
         });
     };
 

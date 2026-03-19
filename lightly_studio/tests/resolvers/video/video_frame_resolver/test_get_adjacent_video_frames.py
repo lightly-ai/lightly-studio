@@ -4,6 +4,7 @@ from sqlmodel import Session
 from lightly_studio.models.collection import SampleType
 from lightly_studio.models.video import VideoFrameCreate
 from lightly_studio.resolvers import tag_resolver, video_frame_resolver
+from lightly_studio.resolvers.annotations.annotations_filter import AnnotationsFilter
 from lightly_studio.resolvers.sample_resolver.sample_filter import SampleFilter
 from lightly_studio.resolvers.video_frame_resolver import VideoFrameAdjacentFilter
 from lightly_studio.resolvers.video_frame_resolver.video_frame_filter import VideoFrameFilter
@@ -191,7 +192,9 @@ def test_get_adjacent_video_frames__respects_annotation_filter(db_session: Sessi
             video_frame_filter=VideoFrameFilter(
                 sample_filter=SampleFilter(
                     collection_id=frame_collection_id,
-                    annotation_label_ids=[dog_label.annotation_label_id],
+                    annotations_filter=AnnotationsFilter(
+                        annotation_label_ids=[dog_label.annotation_label_id]
+                    ),
                 )
             )
         ),
@@ -347,7 +350,9 @@ def test_get_adjacent_video_frames__filters_by_parent_video_annotations(
                 )
             ),
             video_filter=VideoFilter(
-                annotation_frames_label_ids=[label.annotation_label_id],
+                frame_annotation_filter=AnnotationsFilter(
+                    annotation_label_ids=[label.annotation_label_id]
+                ),
                 sample_filter=SampleFilter(
                     collection_id=collection.collection_id,
                 ),

@@ -8,6 +8,7 @@ from lightly_studio.resolvers import (
     metadata_resolver,
     video_resolver,
 )
+from lightly_studio.resolvers.annotations.annotations_filter import AnnotationsFilter
 from lightly_studio.resolvers.image_filter import FilterDimensions
 from lightly_studio.resolvers.metadata_resolver.metadata_filter import MetadataFilter
 from lightly_studio.resolvers.sample_resolver.sample_filter import SampleFilter
@@ -248,7 +249,11 @@ def test_get_all_by_collection_id__with_annotation_frames_label_filter(
     result = video_resolver.get_all_by_collection_id(
         session=db_session,
         collection_id=collection_id,
-        filters=VideoFilter(annotation_frames_label_ids=[car_label.annotation_label_id]),
+        filters=VideoFilter(
+            frame_annotation_filter=AnnotationsFilter(
+                annotation_label_ids=[car_label.annotation_label_id]
+            )
+        ),
     )
 
     samples = result.samples
