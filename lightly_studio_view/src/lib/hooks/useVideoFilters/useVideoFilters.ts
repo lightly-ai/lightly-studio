@@ -4,6 +4,7 @@ import { createMetadataFilters } from '../useMetadataFilters/useMetadataFilters'
 import type { VideoFilter } from '$lib/api/lightly_studio_local/types.gen';
 import type { VideoFieldsBoundsView } from '$lib/api/lightly_studio_local/types.gen';
 
+type AnnotationsFilter = components['schemas']['AnnotationsFilter'];
 type SampleFilter = components['schemas']['SampleFilter'];
 type MetadataValues = Record<string, { min: number; max: number }>;
 
@@ -62,11 +63,6 @@ export const buildVideoFilter = ($filterParams: VideoFilterParams | null): Video
         sampleFilter.sample_ids = sampleIds;
     }
 
-    const annotationFramesLabelIds = $filterParams.filters?.annotation_frames_label_ids;
-    if (annotationFramesLabelIds && annotationFramesLabelIds.length > 0) {
-        filters.annotation_frames_label_ids = annotationFramesLabelIds;
-    }
-
     const tagIds = $filterParams.filters?.tag_ids;
     if (tagIds && tagIds.length > 0) {
         sampleFilter.tag_ids = tagIds;
@@ -81,6 +77,12 @@ export const buildVideoFilter = ($filterParams: VideoFilterParams | null): Video
 
     if (Object.keys(sampleFilter).length > 0) {
         filters.sample_filter = sampleFilter;
+    }
+    const annotationFramesLabelIds = $filterParams.filters?.annotation_frames_label_ids;
+    if (annotationFramesLabelIds && annotationFramesLabelIds.length > 0) {
+        filters.frame_annotation_filter = {
+            annotation_label_ids: annotationFramesLabelIds
+        } satisfies AnnotationsFilter;
     }
 
     return Object.keys(filters).length > 0 ? filters : null;

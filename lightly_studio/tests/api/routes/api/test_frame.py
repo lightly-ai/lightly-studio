@@ -135,7 +135,7 @@ def test_get_by_id(
     assert result["video"]["file_path_abs"] == "/path/to/video1.mp4"
 
 
-def test_count_video_frames_annotations_without_annotations_filter(
+def test_get_video_frames_count_annotation_views_without_annotations_filter(
     db_session: Session,
     test_client: TestClient,
 ) -> None:
@@ -192,8 +192,16 @@ def test_count_video_frames_annotations_without_annotations_filter(
     )
 
     response = test_client.post(
-        f"/api/collections/{collection_id}/frame/annotations/count",
-        json={"filter": {"annotations_labels": [airplane_label.annotation_label_name]}},
+        f"/api/collections/{video_frame_collection_id}/frame/annotations/count",
+        json={
+            "filter": {
+                "sample_filter": {
+                    "annotations_filter": {
+                        "annotation_label_ids": [str(airplane_label.annotation_label_id)]
+                    }
+                }
+            }
+        },
     )
 
     assert response.status_code == HTTP_STATUS_OK

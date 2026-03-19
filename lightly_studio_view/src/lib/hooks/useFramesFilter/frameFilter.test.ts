@@ -47,7 +47,9 @@ describe('getFrameFilter', () => {
             sample_filter: {
                 collection_id: 'coll-1',
                 sample_ids: ['s1', 's2'],
-                annotation_label_ids: ['a1'],
+                annotations_filter: {
+                    annotation_label_ids: ['a1']
+                },
                 tag_ids: ['t1']
             }
         });

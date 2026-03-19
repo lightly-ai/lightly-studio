@@ -18,11 +18,23 @@
 
     const { isExportDialogOpen, openExportDialog, closeExportDialog } = useExportDialog();
 
+    $effect(() => {
+        if ($isExportDialogOpen) {
+            exportType = isVideoCollection ? 'youtube_vis_instance_segmentations' : 'samples';
+        }
+    });
+
+    const isVideoCollection = $derived(
+        page.data.collection?.sample_type === 'video' ||
+            page.data.collection?.sample_type === 'video_frame'
+    );
+
     let exportType = $state<
         | 'samples'
         | 'object_detections'
         | 'instance_segmentations'
         | 'captions'
+        | 'youtube_vis_instance_segmentations'
         | 'semantic_segmentations'
     >('samples');
     const exportTypeLabels: Record<typeof exportType, string> = {
@@ -30,7 +42,8 @@
         object_detections: 'Image Object Detections',
         instance_segmentations: 'Image Instance Segmentations',
         semantic_segmentations: 'Image Semantic Segmentations',
-        captions: 'Image Captions'
+        captions: 'Image Captions',
+        youtube_vis_instance_segmentations: 'YouTube-VIS Video Instance Segmentations'
     };
     const exportTypeTriggerContent = $derived(exportTypeLabels[exportType]);
     let collectionId = page.params.collection_id;
@@ -111,6 +124,9 @@
     const exportInstanceSegmentationsURL = `${PUBLIC_LIGHTLY_STUDIO_API_URL}api/collections/${collectionId}/export/annotations?ts=${Date.now()}&annotation_type=instance_segmentation`;
 
     //
+    // YouTube-VIS video instance segmentation export
+    //
+    const exportYoutubeVisInstanceSegmentationsURL = `${PUBLIC_LIGHTLY_STUDIO_API_URL}api/collections/${collectionId}/export/youtube-vis?ts=${Date.now()}&annotation_type=instance_segmentation`;
     // Semantic segmentation export
     //
     const exportSemanticSegmentationsURL = `${PUBLIC_LIGHTLY_STUDIO_API_URL}api/collections/${collectionId}/export/annotations?ts=${Date.now()}&annotation_type=semantic_segmentation`;
@@ -146,27 +162,35 @@
                                 {exportTypeTriggerContent}
                             </Select.Trigger>
                             <Select.Content>
-                                <Select.Item value="samples" label="Image Filenames"
-                                    >Image Filenames</Select.Item
-                                >
-                                <Select.Item
-                                    value="object_detections"
-                                    label="Image Object Detections"
-                                    >Image Object Detections</Select.Item
-                                >
-                                <Select.Item
-                                    value="instance_segmentations"
-                                    label="Image Instance Segmentations"
-                                    >Image Instance Segmentations</Select.Item
-                                >
-                                <Select.Item
-                                    value="semantic_segmentations"
-                                    label="Image Semantic Segmentations"
-                                    >Image Semantic Segmentations</Select.Item
-                                >
-                                <Select.Item value="captions" label="Image Captions"
-                                    >Image Captions</Select.Item
-                                >
+                                {#if isVideoCollection}
+                                    <Select.Item
+                                        value="youtube_vis_instance_segmentations"
+                                        label="YouTube-VIS Video Instance Segmentations"
+                                        >YouTube-VIS Video Instance Segmentations</Select.Item
+                                    >
+                                {:else}
+                                    <Select.Item value="samples" label="Image Filenames"
+                                        >Image Filenames</Select.Item
+                                    >
+                                    <Select.Item
+                                        value="object_detections"
+                                        label="Image Object Detections"
+                                        >Image Object Detections</Select.Item
+                                    >
+                                    <Select.Item
+                                        value="instance_segmentations"
+                                        label="Image Instance Segmentations"
+                                        >Image Instance Segmentations</Select.Item
+                                    >
+                                    <Select.Item
+                                        value="semantic_segmentations"
+                                        label="Image Semantic Segmentations"
+                                        >Image Semantic Segmentations</Select.Item
+                                    >
+                                    <Select.Item value="captions" label="Image Captions"
+                                        >Image Captions</Select.Item
+                                    >
+                                {/if}
                             </Select.Content>
                         </Select.Root>
                     </FormField>
@@ -306,6 +330,23 @@
                         </Button>
                     </Tabs.Content>
 
+                    {#if isVideoCollection}
+                        <Tabs.Content value="youtube_vis_instance_segmentations" class="pt-2">
+                            <p class="text-sm text-muted-foreground">
+                                The video instance segmentations will be exported in YouTube-VIS
+                                format.
+                            </p>
+
+                            <Button
+                                class="relative my-4 w-full"
+                                href={exportYoutubeVisInstanceSegmentationsURL}
+                                target="_blank"
+                                data-testid="submit-button-youtube-vis-instance-segmentations"
+                            >
+                                Download
+                            </Button>
+                        </Tabs.Content>
+                    {/if}
                     <Tabs.Content value="semantic_segmentations" class="pt-2">
                         <p class="text-sm text-muted-foreground">
                             The semantic segmentations will be exported in PASCAL VOC format.
