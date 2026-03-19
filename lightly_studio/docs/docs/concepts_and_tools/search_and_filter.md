@@ -9,9 +9,9 @@ On Images and Videos, the search bar sits above the grid. You can search by eith
 
 1. Type a text query.
 2. Paste an image from your clipboard into the search bar. You can e.g. right-click an image in your browser and select `Copy image`, then click the search bar and paste it with `Ctrl+V` or `Cmd+V`.
-3. Or click the image button to upload an image.
+3. Click the image button to upload an image.
 
-Then submit the search by hitting `Enter`. The number added to the search results is the similarity score of that image or video to the search queryClick `Clear search` to remove the search query and return to the normal input state.
+Then submit the search by hitting `Enter`. The number shown on each search result is its similarity score to the current query. Click `Clear search` to remove the search query and return to the normal input state.
 
 The screen recording below shows how to search for similar images by either using the text query "dog" or by pasting an image.
 
@@ -34,6 +34,6 @@ The left sidebar combines the most common ways to narrow a collection:
 ![Tag filters](https://storage.googleapis.com/lightly-public/studio/search_filter_tags_v2.png){ width="100%"}
 
 
-For videos, the side bar adds `Duration`. If the current video collection contains varying frame rates, it also shows `FPS`.
+For videos, the sidebar adds `Duration`. If the current video collection contains varying frame rates, it also shows `FPS`.
 
 ![Video filters](https://storage.googleapis.com/lightly-public/studio/search_filter_videos_v3.png){ width="100%" }
