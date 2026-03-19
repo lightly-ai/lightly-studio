@@ -17,6 +17,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Added instance segmentation export to YouTube-VIS in the GUI.
 - Added support for Python 3.14.
 - Added `ImageSample.add_annotations` method, as well as `VideoSample.add_annotations`.
+- Added `ImageSample.add_captions` method, as well as `VideoSample.add_captions`.
 
 ### Changed
 
