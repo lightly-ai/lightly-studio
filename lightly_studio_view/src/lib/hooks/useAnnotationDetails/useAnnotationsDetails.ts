@@ -1,12 +1,12 @@
 import { SampleType, type AnnotationUpdateInput } from '$lib/api/lightly_studio_local';
 import {
-    countAnnotationsByCollectionOptions,
     getAnnotationWithPayloadOptions,
     readAnnotationLabelsOptions
 } from '$lib/api/lightly_studio_local/@tanstack/svelte-query.gen';
 import { createQuery, useQueryClient } from '@tanstack/svelte-query';
 import { toast } from 'svelte-sonner';
 import { useUpdateAnnotationsMutation } from '../useUpdateAnnotationsMutation/useUpdateAnnotationsMutation';
+import { useAnnotationCountsQueryKey } from '../useAnnotationCounts/useAnnotationCounts';
 
 export const useAnnotationDetails = ({
     collectionId,
@@ -38,9 +38,7 @@ export const useAnnotationDetails = ({
             }).queryKey
         });
         client.invalidateQueries({
-            queryKey: countAnnotationsByCollectionOptions({
-                path: { collection_id: collectionId }
-            }).queryKey
+            queryKey: useAnnotationCountsQueryKey
         });
     };
 

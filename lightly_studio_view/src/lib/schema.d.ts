@@ -1483,7 +1483,7 @@ export interface paths {
          *
          *     Args:
          *         session: The database session.
-         *         video_frame_collection_id: The ID of the collection to retrieve videos for.
+         *         video_frame_collection_id: The ID of the collection to count annotations for.
          *         body: The body containing filters.
          *
          *     Returns:
@@ -1511,7 +1511,7 @@ export interface paths {
          *
          *     Args:
          *         session: The database session.
-         *         collection_id: The ID of the collection to retrieve videos for.
+         *         collection_id: The ID of the collection to count annotations for.
          *         body: The body containing filters.
          *
          *     Returns:
@@ -2886,7 +2886,7 @@ export interface components {
          */
         ReadCountVideoFramesAnnotationsRequest: {
             /** @description Filter parameters for video frames annotations counter */
-            filter?: components["schemas"]["VideoFrameAnnotationsCounterFilter"] | null;
+            filter?: components["schemas"]["VideoFrameFilter"] | null;
         };
         /**
          * ReadGroupsRequest
@@ -2930,7 +2930,7 @@ export interface components {
          */
         ReadVideoCountAnnotationsRequest: {
             /** @description Filter parameters for video annotations counter */
-            filter?: components["schemas"]["VideoCountAnnotationsFilter"] | null;
+            filter?: components["schemas"]["VideoFilter"] | null;
         };
         /**
          * ReadVideoFramesRequest
@@ -3009,8 +3009,6 @@ export interface components {
         SampleFilter: {
             /** Collection Id */
             collection_id?: string | null;
-            /** Annotation Label Ids */
-            annotation_label_ids?: string[] | null;
             /** Tag Ids */
             tag_ids?: string[] | null;
             /** Metadata Filters */
@@ -3388,15 +3386,6 @@ export interface components {
             file_path_abs: string;
         };
         /**
-         * VideoCountAnnotationsFilter
-         * @description Encapsulates filter parameters for querying video frame annotations counter.
-         */
-        VideoCountAnnotationsFilter: {
-            video_filter?: components["schemas"]["VideoFilter"] | null;
-            /** Video Frames Annotations Labels */
-            video_frames_annotations_labels?: string[] | null;
-        };
-        /**
          * VideoFieldsBoundsBody
          * @description The body to retrieve the fields bounds.
          */
@@ -3423,8 +3412,6 @@ export interface components {
             height?: components["schemas"]["FilterDimensions"] | null;
             fps?: components["schemas"]["FloatRange"] | null;
             duration_s?: components["schemas"]["FloatRange"] | null;
-            /** Annotation Frames Label Ids */
-            annotation_frames_label_ids?: string[] | null;
             sample_filter?: components["schemas"]["SampleFilter"] | null;
             frame_annotation_filter?: components["schemas"]["AnnotationsFilter"] | null;
         };
@@ -3471,15 +3458,6 @@ export interface components {
              */
             sample_id: string;
             video: components["schemas"]["VideoAnnotationView"];
-        };
-        /**
-         * VideoFrameAnnotationsCounterFilter
-         * @description Encapsulates filter parameters for querying video frame annotations counter.
-         */
-        VideoFrameAnnotationsCounterFilter: {
-            video_filter?: components["schemas"]["VideoFrameFilter"] | null;
-            /** Annotations Labels */
-            annotations_labels?: string[] | null;
         };
         /**
          * VideoFrameFieldsBoundsView
