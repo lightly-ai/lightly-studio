@@ -100,18 +100,34 @@ jobs:
         run: make static-checks
 
   test-unit:
-    name: Unit
+    name: Unit (${{ matrix.python }}, ${{ matrix.database }})
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
       matrix:
-        python: ["3.9", "3.14"]
+        include:
+          # Postgres is only tested on 3.14 because PostgreSQL dialect/driver
+          # behavior doesn't vary by Python version.
+          # View tests (lightly_studio_view) run only once because they are
+          # independent of the Python version.
+          - python: "3.9"
+            database: DuckDB
+            make_target: test
+            run_view_tests: false
+          - python: "3.14"
+            database: DuckDB
+            make_target: test
+            run_view_tests: true
+          - python: "3.14"
+            database: Postgres
+            make_target: test-postgres
+            run_view_tests: false
     steps:
       - name: Checkout Code
         uses: actions/checkout@v4
         with:
           submodules: recursive
-      
+
       # Authenticate to download lightly-edge-sdk.
       - name: Authenticate with GCP
         uses: 'google-github-actions/auth@v2'
@@ -129,7 +145,7 @@ jobs:
         uses: actions/setup-python@v5
         with:
           python-version: ${{ matrix.python }}
-      
+
       - name: Install LightlyStudio dependencies
         working-directory: lightly_studio
         env:
@@ -141,53 +157,11 @@ jobs:
         env:
           LIGHTLY_STUDIO_LICENSE_KEY: ${{ secrets.MUNDIG_LICENSE_KEY }}
           UV_PYTHON: ${{ matrix.python }}
-        run: make test
+        run: make ${{ matrix.make_target }}
 
       - name: Run Tests for lightly_studio_view
+        if: matrix.run_view_tests
         working-directory: lightly_studio_view
         env:
           UV_PYTHON: ${{ matrix.python }}
         run: make test
-
-  test-unit-postgres:
-    name: Unit (Postgres)
-    runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        python: ["3.14"]
-    steps:
-      - name: Checkout Code
-        uses: actions/checkout@v4
-        with:
-          submodules: recursive
-
-      # Authenticate to download lightly-edge-sdk.
-      - name: Authenticate with GCP
-        uses: 'google-github-actions/auth@v2'
-        with:
-          project_id: boris-250909
-          credentials_json: ${{ secrets.GCP_LIGHTLY_STUDIO_CI_READONLY }}
-
-      - name: Set Up uv
-        uses: astral-sh/setup-uv@v6
-        with:
-          version: "0.8.17"
-          enable-cache: true
-
-      - name: Set Up Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: ${{ matrix.python }}
-
-      - name: Install LightlyStudio dependencies
-        working-directory: lightly_studio
-        env:
-          UV_PYTHON: ${{ matrix.python }}
-        run: make install-optional-deps
-
-      - name: Run Tests for LightlyStudio (Postgres)
-        working-directory: lightly_studio
-        env:
-          LIGHTLY_STUDIO_LICENSE_KEY: ${{ secrets.MUNDIG_LICENSE_KEY }}
-          UV_PYTHON: ${{ matrix.python }}
-        run: make test-postgres
