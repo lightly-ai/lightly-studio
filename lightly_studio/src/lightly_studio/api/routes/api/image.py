@@ -26,7 +26,7 @@ from lightly_studio.resolvers.image_filter import (
     ImageFilter,
 )
 
-image_router = APIRouter(prefix="/collections/{collection_id}", tags=["image"])
+image_router = APIRouter(tags=["image"])
 
 
 class ReadImagesRequest(BaseModel):
@@ -40,7 +40,7 @@ class ReadImagesRequest(BaseModel):
     )
 
 
-@image_router.post("/images/list")
+@image_router.post("/collections/{collection_id}/images/list")
 def read_images(
     session: SessionDep,
     collection_id: Annotated[UUID, Path(title="collection Id")],
@@ -79,7 +79,7 @@ def read_images(
     )
 
 
-@image_router.get("/images/dimensions")
+@image_router.get("/collections/{collection_id}/images/dimensions")
 def get_image_dimensions(
     session: SessionDep,
     collection: Annotated[
