@@ -40,3 +40,5 @@ export { default as VideoDetails } from '$lib/components/VideoDetails/VideoDetai
 export { default as GroupComponent } from '$lib/components/GroupComponent/GroupComponent.svelte';
 export { default as Image } from '$lib/components/Image/Image.svelte';
 export { default as VideoPreview } from '$lib/components/VideoPreview/VideoPreview.svelte';
+export { default as VideoPlayer } from '$lib/components/VideoPlayer/VideoPlayer.svelte';
+export { default as VideoFrameDetails } from '$lib/components/VideoFrameDetails/VideoFrameDetails.svelte';

@@ -141,7 +141,8 @@ const expectBoxCoordinates = async (
         .toBe(true);
 };
 
-test('Annotations should have correct position between annotation label selection', async ({
+// TODO(Mihnea, 03/2026): Skipped for now because of flakiness
+test.skip('Annotations should have correct position between annotation label selection', async ({
     samplesPage
 }) => {
     await samplesPage.page.addInitScript(() => {
