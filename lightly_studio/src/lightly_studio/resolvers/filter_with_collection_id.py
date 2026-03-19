@@ -2,32 +2,21 @@
 
 from __future__ import annotations
 
-from typing import Any, Generic, Protocol, TypeVar, cast, runtime_checkable
+from typing import Generic, Protocol, TypeVar, runtime_checkable
 from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict
 from sqlmodel import col
-from typing_extensions import Self
 
 from lightly_studio.models.sample import SampleTable
-
-
-class QueryWithWhereProtocol(Protocol):
-    """Structural type for query objects that support .where()."""
-
-    def where(self, *args: Any, **kwargs: Any) -> Self:
-        """Add a WHERE clause and return the same query type."""
-        ...
-
-
-Q = TypeVar("Q", bound=QueryWithWhereProtocol)
+from lightly_studio.type_definitions import QueryType
 
 
 @runtime_checkable
 class FilterProtocol(Protocol):
     """Structural type for filters that have an apply method."""
 
-    def apply(self, query: Any) -> Any:
+    def apply(self, query: QueryType) -> QueryType:
         """Apply this filter to the query."""
         ...
 
@@ -45,9 +34,12 @@ class FilterWithCollectionId(BaseModel, Generic[T]):
 
     def apply(
         self,
-        query: Q,
-        sample_table: type[SampleTable] = SampleTable,
-    ) -> Q:
-        """Apply collection scope then the inner filter to the query."""
-        scoped = query.where(col(sample_table.collection_id) == self.collection_id)
-        return cast(Q, self.filter.apply(scoped))
+        query: QueryType,
+    ) -> QueryType:
+        """Apply collection scope then the inner filter to the query.
+
+        Args:
+            query: The query to filter.
+        """
+        scoped = query.where(col(SampleTable.collection_id) == self.collection_id)
+        return self.filter.apply(scoped)
