@@ -222,10 +222,10 @@ class TestImageSample:
         )
         sample = ImageSample(inner=image_table)
 
-        sample.add_caption(caption="caption3")
+        sample.add_caption(text="caption3")
         assert sample.captions == ["caption3"]
-        sample.add_caption(caption="caption2")
-        sample.add_caption(caption="caption1")
+        sample.add_caption(text="caption2")
+        sample.add_caption(text="caption1")
         assert sample.captions == ["caption3", "caption2", "caption1"]
 
     def test_add_captions(self, db_session: Session) -> None:
