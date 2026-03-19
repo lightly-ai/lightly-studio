@@ -2,19 +2,21 @@
 
 Provides ``connect`` to establish a database connection to a remote
 LightlyStudio enterprise instance. The function exchanges a JWT token
-for the database engine URL and delegates to ``db_manager.connect``.
+for the database engine URL, applies any server-provided cloud storage
+credentials, and delegates to ``db_manager.connect``.
 """
 
 from __future__ import annotations
 
 import http
+import os
 
 import requests
 
 from lightly_studio import db_manager
 from lightly_studio.dataset.env import LIGHTLY_STUDIO_API_URL, LIGHTLY_STUDIO_TOKEN
 
-_DB_CONNECT_ENDPOINT = "/auth/api/v1/db-connect-engine-url"
+_ENTERPRISE_CONNECT_ENDPOINT = "/auth/api/v1/enterprise-connect"
 
 
 def connect(
@@ -23,8 +25,10 @@ def connect(
 ) -> None:
     """Connect to a remote LightlyStudio enterprise instance.
 
-    Exchanges the JWT token for a database engine URL via the enterprise API,
-    then sets up the global database connection using ``db_manager.connect``.
+    Exchanges the JWT token for the connection configuration via the enterprise
+    API, applies any server-provided cloud storage credentials to the local
+    environment, then sets up the global database connection using
+    ``db_manager.connect``.
 
     Parameters can be passed explicitly or read from environment variables
     ``LIGHTLY_STUDIO_API_URL`` and ``LIGHTLY_STUDIO_TOKEN``. Explicit
@@ -61,26 +65,33 @@ def connect(
     # Strip trailing slash.
     api_url = api_url.rstrip("/")
 
-    engine_url = _fetch_engine_url(api_url=api_url, token=token)
-    db_manager.connect(engine_url=engine_url)
+    config = _fetch_connect_config(api_url=api_url, token=token)
+
+    if config.get("aws_access_key_id"):
+        os.environ["AWS_ACCESS_KEY_ID"] = config["aws_access_key_id"]
+    if config.get("aws_secret_access_key"):
+        os.environ["AWS_SECRET_ACCESS_KEY"] = config["aws_secret_access_key"]
+
+    db_manager.connect(engine_url=config["engine_url"])
 
 
-def _fetch_engine_url(api_url: str, token: str) -> str:
-    """Call the enterprise endpoint to exchange a token for the DB engine URL.
+def _fetch_connect_config(api_url: str, token: str) -> dict[str, str | None]:
+    """Call the enterprise endpoint to retrieve the connection configuration.
 
     Args:
         api_url: Base URL of the LightlyStudio enterprise instance.
         token: JWT bearer token.
 
     Returns:
-        The PostgreSQL engine URL.
+        A dict with ``engine_url`` and optionally
+        ``aws_access_key_id`` and ``aws_secret_access_key``.
 
     Raises:
         ConnectionError: If the server is unreachable.
         PermissionError: If authentication or authorization fails.
         RuntimeError: If the server returns an unexpected error.
     """
-    url = f"{api_url}{_DB_CONNECT_ENDPOINT}"
+    url = f"{api_url}{_ENTERPRISE_CONNECT_ENDPOINT}"
 
     try:
         response = requests.get(
@@ -116,10 +127,11 @@ def _fetch_engine_url(api_url: str, token: str) -> str:
         )
 
     try:
-        engine_url: str = response.json()["engine_url"]
+        data = response.json()
+        _ = data["engine_url"]  # Validate required field is present.
     except (ValueError, KeyError):
         raise RuntimeError(
             "Unexpected response from LightlyStudio: response body does not contain `engine_url`."
         ) from None
 
-    return engine_url
+    return data
