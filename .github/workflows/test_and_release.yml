@@ -108,21 +108,15 @@ jobs:
         include:
           # Postgres is only tested on 3.14 because PostgreSQL dialect/driver
           # behavior doesn't vary by Python version.
-          # View tests (lightly_studio_view) run only once because they are
-          # independent of the Python version.
-          # TODO(Mihnea, 03/2026): Extract view tests to a separate job.
           - python: "3.9"
             database: DuckDB
             make_target: test
-            run_view_tests: false
           - python: "3.14"
             database: DuckDB
             make_target: test
-            run_view_tests: true
           - python: "3.14"
             database: Postgres
             make_target: test-postgres
-            run_view_tests: false
     steps:
       - name: Checkout Code
         uses: actions/checkout@v4
@@ -160,9 +154,24 @@ jobs:
           UV_PYTHON: ${{ matrix.python }}
         run: make ${{ matrix.make_target }}
 
-      - name: Run Tests for lightly_studio_view
-        if: matrix.run_view_tests
+  test-unit-view:
+    name: Unit (View)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Set Up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version-file: 'lightly_studio_view/.nvmrc'
+          cache: 'npm'
+          cache-dependency-path: lightly_studio_view/package-lock.json
+
+      - name: Install dependencies
         working-directory: lightly_studio_view
-        env:
-          UV_PYTHON: ${{ matrix.python }}
-        run: make test
+        run: npm ci
+
+      - name: Run Tests for lightly_studio_view
+        working-directory: lightly_studio_view
+        run: npm run test:unit -- --run
