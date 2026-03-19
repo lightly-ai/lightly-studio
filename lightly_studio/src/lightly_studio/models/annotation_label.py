@@ -34,7 +34,7 @@ class AnnotationLabelTable(AnnotationLabelBase, table=True):
     """This class defines the AnnotationLabel model."""
 
     __tablename__ = "annotation_label"
-    # Ensure that the combination of annotation_label_name and dataset_id is unique.
+    # Ensure that the combination of annotation_label_name and root_collection_id is unique.
     __table_args__ = (UniqueConstraint("annotation_label_name", "root_collection_id"),)
 
     annotation_label_id: UUID = Field(default_factory=uuid4, primary_key=True)

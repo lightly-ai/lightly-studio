@@ -14,7 +14,7 @@ def get_all(session: Session, root_collection_id: UUID) -> list[AnnotationLabelT
 
     Args:
         session (Session): The database session.
-        root_collection_id (UUID): The root collection ID to to which the labels belong.
+        root_collection_id (UUID): The root collection ID to which the labels belong.
 
     Returns:
         list[AnnotationLabelTable]: A list of annotation labels.
