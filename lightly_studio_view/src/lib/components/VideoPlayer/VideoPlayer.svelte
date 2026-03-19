@@ -1,12 +1,48 @@
 <script lang="ts">
+    /**
+     * A video player component with hover state and customizable styling.
+     *
+     * Features:
+     * - Automatic hover detection with visual feedback
+     * - Error handling with user-friendly messages
+     * - Full control over video element attributes via videoProps
+     * - Bindable video element reference for direct access
+     *
+     * @example
+     * ```svelte
+     * <VideoPlayer
+     *   src="video.mp4"
+     *   videoProps={{ controls: true }}
+     *   hoverClass="ring-4 ring-green-500"
+     * />
+     * ```
+     */
     import type { HTMLVideoAttributes } from 'svelte/elements';
     import { cn } from '$lib/utils/shadcn.js';
     import { MEDIA_ERROR_MESSAGES } from './errors';
 
     interface VideoPlayerProps {
+        /**
+         * Video source URL (required)
+         */
         src: string;
+
+        /**
+         * Bindable reference to the video element
+         * @bindable
+         */
         videoEl?: HTMLVideoElement | null;
+
+        /**
+         * Additional HTML video element attributes
+         * Default: { muted: true, playsinline: true, controls: false, preload: 'metadata' }
+         */
         videoProps?: HTMLVideoAttributes;
+
+        /**
+         * CSS classes to apply when video is hovered
+         * @default 'outline outline-2 outline-blue-500'
+         */
         hoverClass?: string;
     }
 
@@ -39,17 +75,9 @@
 
     const onmouseenter = () => {
         isHovered = true;
-        // Focus the video element to capture keyboard events
-        if (videoEl) {
-            videoEl.focus();
-        }
     };
     const onmouseleave = () => {
         isHovered = false;
-        // Remove focus when mouse leaves
-        if (videoEl) {
-            videoEl.blur();
-        }
     };
 </script>
 
@@ -59,7 +87,6 @@
         {onmouseleave}
         bind:this={videoEl}
         class={cn(videoClass, isHovered && hoverClass)}
-        tabindex="0"
         {src}
         onerror={handleVideoError}
         onloadeddata={() => (sourceLoadError = null)}
