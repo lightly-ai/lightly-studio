@@ -15,6 +15,18 @@ export const TYPOGRAPHY_VARIANTS = [
 
 export type TypographyVariant = (typeof TYPOGRAPHY_VARIANTS)[number];
 
-export const COMPONENT_TYPES = ['h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'p', 'span', 'div'] as const;
+export const COMPONENT_TYPES = [
+    'h1',
+    'h2',
+    'h3',
+    'h4',
+    'h5',
+    'h6',
+    'p',
+    'span',
+    'div',
+    'dt',
+    'dd'
+] as const;
 
 export type ComponentType = (typeof COMPONENT_TYPES)[number];
