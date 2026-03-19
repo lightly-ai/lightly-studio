@@ -7,9 +7,15 @@
         src: string;
         videoEl?: HTMLVideoElement | null;
         videoProps?: HTMLVideoAttributes;
+        hoverClass?: string;
     }
 
-    let { src, videoEl = $bindable(null), videoProps = {} }: VideoPlayerProps = $props();
+    let {
+        src,
+        videoEl = $bindable(null),
+        videoProps = {},
+        hoverClass = 'outline outline-2 outline-blue-500'
+    }: VideoPlayerProps = $props();
 
     const defaultVideoProps: HTMLVideoAttributes = {
         muted: true,
@@ -48,7 +54,7 @@
 >
     <video
         bind:this={videoEl}
-        class={cn(videoClass, isHovered && 'outline outline-2 outline-blue-500')}
+        class={cn(videoClass, isHovered && hoverClass)}
         {src}
         onerror={handleVideoError}
         onloadeddata={() => (sourceLoadError = null)}
