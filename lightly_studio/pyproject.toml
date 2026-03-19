@@ -71,9 +71,8 @@ cloud-storage = [
     "adlfs>=2023.1.0",
 ]
 
-# Note: do not install this one, it's a workaround until the Linux slowdown for video annotations is
-# fixed.
-# TODO(lukas, 3/2026): Remove once we diagnose this properly
+# TODO(lukas, 3/2026): Do not install this one, it's a workaround until the Linux slowdown for video 
+# annotations is fixed. Remove once we diagnose this properly.
 linux-video-annotation-speedup = [
     "pandas==2.2.3; sys_platform == 'linux'",
 ]
