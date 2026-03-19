@@ -8,14 +8,7 @@
         tags: ['autodocs'],
         argTypes: {
             src: { control: 'text' },
-            controls: { control: 'boolean' },
-            muted: { control: 'boolean' },
-            playsinline: { control: 'boolean' },
-            preload: {
-                control: 'select',
-                options: ['auto', 'metadata', 'none']
-            },
-            className: { control: 'text' }
+            videoProps: { control: 'object' }
         }
     });
 </script>
@@ -24,7 +17,7 @@
     name="Default"
     args={{
         src: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4',
-        controls: true
+        videoProps: { controls: true }
     }}
 />
 
@@ -32,8 +25,7 @@
     name="With Controls"
     args={{
         src: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4',
-        controls: true,
-        muted: true
+        videoProps: { controls: true, muted: true }
     }}
 />
 
@@ -41,8 +33,7 @@
     name="Unmuted with Controls"
     args={{
         src: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4',
-        controls: true,
-        muted: false
+        videoProps: { controls: true, muted: false }
     }}
 />
 
@@ -50,8 +41,7 @@
     name="Custom Size"
     args={{
         src: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4',
-        controls: true,
-        className: 'h-96 w-96'
+        videoProps: { controls: true, class: 'h-96 w-96' }
     }}
 />
 
@@ -59,7 +49,7 @@
     name="No Controls"
     args={{
         src: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4',
-        controls: false
+        videoProps: { controls: false }
     }}
 />
 
@@ -68,15 +58,13 @@
         <div class="h-64 w-64">
             <VideoPlayer
                 src="https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4"
-                controls={true}
-                className="h-full w-full"
+                videoProps={{ controls: true, class: 'h-full w-full' }}
             />
         </div>
         <div class="h-64 w-64">
             <VideoPlayer
                 src="https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ElephantsDream.mp4"
-                controls={true}
-                className="h-full w-full"
+                videoProps={{ controls: true, class: 'h-full w-full' }}
             />
         </div>
     </div>
@@ -87,22 +75,19 @@
         <div class="h-32 w-full max-w-md">
             <VideoPlayer
                 src="https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4"
-                controls={true}
-                className="h-full w-full"
+                videoProps={{ controls: true, class: 'h-full w-full' }}
             />
         </div>
         <div class="h-48 w-full max-w-md">
             <VideoPlayer
                 src="https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4"
-                controls={true}
-                className="h-full w-full"
+                videoProps={{ controls: true, class: 'h-full w-full' }}
             />
         </div>
         <div class="h-64 w-full max-w-md">
             <VideoPlayer
                 src="https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4"
-                controls={true}
-                className="h-full w-full"
+                videoProps={{ controls: true, class: 'h-full w-full' }}
             />
         </div>
     </div>

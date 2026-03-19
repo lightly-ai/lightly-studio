@@ -1,5 +1,6 @@
 <script lang="ts">
     import type { HTMLVideoAttributes } from 'svelte/elements';
+    import { cn } from '$lib/utils/shadcn.js';
     import { MEDIA_ERROR_MESSAGES } from './errors';
 
     interface VideoPlayerProps {
@@ -17,7 +18,8 @@
         preload: 'metadata'
     };
 
-    const mergedVideoProps = { ...defaultVideoProps, ...videoProps };
+    const { class: videoClass, ...restVideoProps } = videoProps;
+    const mergedVideoProps = { ...defaultVideoProps, ...restVideoProps };
 
     let sourceLoadError = $state<string | null>(null);
     let isHovered = $state(false);
@@ -29,42 +31,24 @@
             : 'Failed to load video source.';
     }
 
-    function handleKeyDownEvent(event: KeyboardEvent) {
-        // Only handle keyboard shortcuts when the player is hovered
-        if (!isHovered) return;
-
-        // Ignore when typing in inputs / textareas
-        const target = event.target as HTMLElement;
-        if (target?.tagName === 'INPUT' || target?.tagName === 'TEXTAREA') return;
-
-        if (event.code === 'Space') {
-            // Ignore repeat events when key is held down
-            if (event.repeat) return;
-
-            event.preventDefault(); // prevent page scroll
-
-            if (!videoEl) return;
-
-            if (videoEl.paused) {
-                videoEl.play();
-            } else {
-                videoEl.pause();
-            }
-        }
-    }
+    const onmouseenter = () => {
+        isHovered = true;
+    };
+    const onmouseleave = () => {
+        isHovered = false;
+    };
 </script>
-
-<svelte:window onkeydown={handleKeyDownEvent} />
 
 <div
     role="region"
     aria-label="Video player"
     class="relative h-full w-full"
-    onmouseenter={() => (isHovered = true)}
-    onmouseleave={() => (isHovered = false)}
+    {onmouseenter}
+    {onmouseleave}
 >
     <video
         bind:this={videoEl}
+        class={cn(videoClass, isHovered && 'outline outline-2 outline-blue-500')}
         {src}
         onerror={handleVideoError}
         onloadeddata={() => (sourceLoadError = null)}
