@@ -45,14 +45,10 @@
     };
 </script>
 
-<div
-    role="region"
-    aria-label="Video player"
-    class="relative h-full w-full"
-    {onmouseenter}
-    {onmouseleave}
->
+<div role="region" aria-label="Video player" class="relative h-full w-full">
     <video
+        {onmouseenter}
+        {onmouseleave}
         bind:this={videoEl}
         class={cn(videoClass, isHovered && hoverClass)}
         {src}
