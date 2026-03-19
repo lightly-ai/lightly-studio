@@ -16,7 +16,7 @@ from lightly_studio.resolvers.video_resolver.count_video_frame_annotations_by_co
 )
 from lightly_studio.resolvers.video_resolver.video_filter import VideoFilter
 
-video_router = APIRouter(prefix="/collections/{collection_id}/video", tags=["video"])
+video_router = APIRouter(tags=["video"])
 
 
 class VideoFieldsBoundsBody(BaseModel):
@@ -46,7 +46,10 @@ class ReadVideoCountAnnotationsRequest(BaseModel):
     )
 
 
-@video_router.post("/annotations/count", response_model=list[CountAnnotationsView])
+@video_router.post(
+    "/collections/{collection_id}/video/annotations/count",
+    response_model=list[CountAnnotationsView],
+)
 def count_video_frame_annotations_by_video_collection(
     session: SessionDep,
     collection_id: Annotated[UUID, Path(title="collection Id")],
@@ -69,7 +72,7 @@ def count_video_frame_annotations_by_video_collection(
     )
 
 
-@video_router.post("/", response_model=VideoViewsWithCount)
+@video_router.post("/collections/{collection_id}/video/", response_model=VideoViewsWithCount)
 def get_all_videos(
     session: SessionDep,
     collection_id: Annotated[UUID, Path(title="collection Id")],
@@ -96,7 +99,7 @@ def get_all_videos(
     )
 
 
-@video_router.post("/sample_ids", response_model=list[UUID])
+@video_router.post("/collections/{collection_id}/video/sample_ids", response_model=list[UUID])
 def get_video_sample_ids(
     session: SessionDep,
     collection_id: Annotated[UUID, Path(title="collection Id")],
@@ -110,7 +113,7 @@ def get_video_sample_ids(
     return list(video_resolver.get_sample_ids(session=session, filters=filters))
 
 
-@video_router.get("/{sample_id}", response_model=VideoView)
+@video_router.get("/videos/{sample_id}", response_model=VideoView)
 def get_video_by_id(
     session: SessionDep,
     sample_id: Annotated[UUID, Path(title="Sample ID")],
@@ -127,7 +130,9 @@ def get_video_by_id(
     return video_resolver.get_view_by_id(session=session, sample_id=sample_id)
 
 
-@video_router.post("/bounds", response_model=Optional[VideoFieldsBoundsView])
+@video_router.post(
+    "/collections/{collection_id}/video/bounds", response_model=Optional[VideoFieldsBoundsView]
+)
 def get_fields_bounds(
     session: SessionDep,
     collection_id: Annotated[UUID, Path(title="collection Id")],
