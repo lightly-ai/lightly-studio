@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import os
+
 import pytest
 import requests
 from pytest_mock import MockerFixture, MockType
@@ -164,3 +166,47 @@ def test_connect__connection_error(mocker: MockerFixture, patch_db_connect: Mock
         enterprise.connect(api_url="http://unreachable:8100", token="tok")
 
     patch_db_connect.assert_not_called()
+
+
+def test_connect__sets_aws_env_vars(
+    mocker: MockerFixture, patch_db_connect: MockType  # noqa: ARG001
+) -> None:
+    access_key_id = "AKIAIOSFODNN7EXAMPLE"
+    secret_access_key = "wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY"
+
+    mocker.patch.dict(os.environ, {})
+    mock_response = mocker.MagicMock()
+    mock_response.status_code = 200
+    mock_response.ok = True
+    mock_response.json.return_value = {
+        "engine_url": "postgresql://lightly:secret@10.0.0.5:5433/lightly_studio",
+        "aws_access_key_id": access_key_id,
+        "aws_secret_access_key": secret_access_key,
+    }
+    mocker.patch.object(requests, "get", return_value=mock_response)
+
+    enterprise.connect(api_url="http://10.0.0.5:8100", token="token")
+
+    assert os.environ["AWS_ACCESS_KEY_ID"] == access_key_id
+    assert os.environ["AWS_SECRET_ACCESS_KEY"] == secret_access_key
+
+
+def test_connect__aws_missing_skips_env(
+    mocker: MockerFixture, patch_db_connect: MockType  # noqa: ARG001
+) -> None:
+    mocker.patch.dict(os.environ, {})
+    os.environ.pop("AWS_ACCESS_KEY_ID", None)
+    os.environ.pop("AWS_SECRET_ACCESS_KEY", None)
+
+    mock_response = mocker.MagicMock()
+    mock_response.status_code = 200
+    mock_response.ok = True
+    mock_response.json.return_value = {
+        "engine_url": "postgresql://lightly:secret@10.0.0.5:5433/lightly_studio",
+    }
+    mocker.patch.object(requests, "get", return_value=mock_response)
+
+    enterprise.connect(api_url="http://10.0.0.5:8100", token="token")
+
+    assert "AWS_ACCESS_KEY_ID" not in os.environ
+    assert "AWS_SECRET_ACCESS_KEY" not in os.environ
