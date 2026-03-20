@@ -9,3 +9,4 @@ export * from './isTextInputTarget';
 export { isImageView } from './isImageView/isImageView';
 export { isVideoView } from './isVideoView/isVideoView';
 export { getVideoURLById } from './getVideoURLById/getVideoURLById';
+export { getURL } from './getURL/getURL';
