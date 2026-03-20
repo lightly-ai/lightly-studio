@@ -1,0 +1,189 @@
+# Video Dataset
+
+This guide explains how to load videos into LightlyStudio, how to explore them
+in the GUI, and how to use the Python API to query and manipulate them.
+
+## Load a Video Dataset
+
+### From a Folder
+
+Use `add_videos_from_path` to load videos from a folder:
+
+```python title="Load a Video Dataset from a Folder"
+import lightly_studio as ls
+
+# We download an example dataset for this guide.
+dataset_path = ls.utils.download_example_dataset(download_dir="dataset_examples")
+
+# Create an empty dataset and add videos from a folder.
+dataset = ls.VideoDataset.create()
+dataset.add_videos_from_path(path=f"{dataset_path}/youtube_vis_50_videos/train/videos")
+```
+
+The `ls.VideoDataset.create()` method call is lightweight and initializes an empty dataset.
+
+The `add_videos_from_path(...)` method accepts a path to a file or a folder. If the path is a folder,
+it will recursively search for videos in it. A remote path like `s3://my-bucket/my-folder` is also
+supported, see [Using Cloud Storage](../api/index.md#using-cloud-storage) for more details.
+
+Videos are automatically embedded so that embedding plot and video search
+are enabled. To skip embedding, pass `embed=False` to the method.
+See the [API reference](../api/dataset.md#lightly_studio.VideoDataset.add_videos_from_path) for
+the full list of arguments.
+
+### From an Annotation Format
+
+VideoDataset can be loaded with annotations from the YouTube-VIS format. Currently, object detection
+and instance segmentation annotations are supported. See
+[API reference](../api/dataset.md#lightly_studio.VideoDataset.add_videos_from_youtube_vis) for full details.
+
+=== "YouTube-VIS Object Detections"
+
+    ```python
+    import lightly_studio as ls
+
+    # Download the example dataset (will be skipped if it already exists)
+    dataset_path = ls.utils.download_example_dataset(download_dir="dataset_examples")
+
+    dataset = ls.VideoDataset.create()
+    dataset.add_videos_from_youtube_vis(
+        annotations_json=f"{dataset_path}/youtube_vis_50_videos/train/instances_50.json",
+        videos_path=f"{dataset_path}/youtube_vis_50_videos/train/videos",
+    )
+    ```
+
+    <details>
+    <summary>The YouTube-VIS format details:</summary>
+
+    ```
+    dataset/
+    ├── videos/
+    │   ├── video1.mp4
+    │   ├── video2.mp4
+    │   └── ...
+    └── annotations.json        # Single JSON file containing all annotations
+    ```
+
+    YouTube-VIS uses a single JSON file containing all annotations, based on the COCO format.
+    The format consists of three main components:
+
+    - Videos: Defines metadata for each video in the dataset.
+    - Categories: Defines the object classes.
+    - Annotations: Defines object bounding boxes with per-frame tracking.
+
+    Note that the original YouTube-VIS format provides each video as a list of extracted frames.
+    LightlyStudio instead expects the videos as video files. The file name is deducted
+    from frame path. E.g. for `video003/00010.jpg`, the video file name is expected
+    to be `video003.*` with a video file extension. You can specify the exact name by setting the
+    folder in the frame path, e.g. `video003.mp4/00010.jpg`.
+
+    </details>
+
+=== "YouTube-VIS Instance Segmentations"
+
+    ```python
+    import lightly_studio as ls
+
+    # Download the example dataset (will be skipped if it already exists)
+    dataset_path = ls.utils.download_example_dataset(download_dir="dataset_examples")
+
+    dataset = ls.VideoDataset.create()
+    dataset.add_videos_from_youtube_vis(
+        annotations_json=f"{dataset_path}/youtube_vis_50_videos/train/instances_50.json",
+        videos_path=f"{dataset_path}/youtube_vis_50_videos/train/videos",
+        annotation_type=ls.AnnotationType.INSTANCE_SEGMENTATION,
+    )
+    ```
+
+    <details>
+    <summary>The YouTube-VIS format details:</summary>
+
+    ```
+    dataset/
+    ├── videos/
+    │   ├── video1.mp4
+    │   ├── video2.mp4
+    │   └── ...
+    └── annotations.json        # Single JSON file containing all annotations
+    ```
+
+    YouTube-VIS uses a single JSON file containing all annotations, based on the COCO format.
+    The format consists of three main components:
+
+    - Videos: Defines metadata for each video in the dataset.
+    - Categories: Defines the object classes.
+    - Annotations: Defines object instances with per-frame segmentation masks.
+
+    <copy note>
+
+    </details>
+
+### From a Pre-Existing Dataset
+
+Once a dataset is populated, the data is stored in a database. It can be loaded later as follows
+to skip indexing and embedding it again:
+
+```python title="Load a Video Dataset from a Database"
+import lightly_studio as ls
+
+# Load an existing dataset from the database.
+dataset = ls.VideoDataset.load()
+
+# A helper method that creates a dataset only if it does not exist yet.
+dataset = ls.VideoDataset.load_or_create()
+```
+
+All three functions `create()`, `load()`, and `load_or_create()` accept an optional `name` argument
+to store multiple datasets in the database, note however that the open-source version of LightlyStudio
+GUI displays only a single dataset.
+
+!!! tip
+    The `add_videos_from_path(...)` and `add_videos_from_youtube_vis(...)` methods skip adding videos
+    with duplicate paths. Therefore you can safely use them in a single script with `load_or_create()`,
+    adding and embedding the videos will be skipped on subsequent calls.
+
+
+## Video Dataset in the GUI
+
+Launch the GUI by calling `ls.start_gui()`, it starts a local web server. Click
+on the link printed in the console - by default `http://localhost:8001` - to open the GUI
+in your browser.
+
+```python title="Start the GUI"
+import lightly_studio as ls
+ls.start_gui()
+```
+
+### Grid View
+
+The main view shows a grid of video frames in your dataset. From here, you can perform multiple actions:
+
+- Use the left panel to filter the videos by tags, annotation labels or metadata.
+- Use the search bar to do similarity search by text or a video frame.
+- Use the `Show Embeddings` button to explore the data in embedding space.
+- Use the `Menu` dropdown for further actions like plugins, sampling, classification, export and more.
+
+Refer to dedicated pages in this documentation on every feature for more details.
+
+![Video Dataset Grid](https://storage.googleapis.com/lightly-public/studio/video_dataset_video_grid.png){ width="100%" }
+
+### Detail View
+
+Double-clicking on a video opens the video detail view. Here you can play the video, view
+frame-level annotations, add captions or view metadata.
+
+![Video Detail View](https://storage.googleapis.com/lightly-public/studio/video_dataset_video_detail.png){ width="100%" }
+
+### Frame Grid View
+
+![Video Frame Grid](https://storage.googleapis.com/lightly-public/studio/video_dataset_frame_grid.png){ width="100%" }
+
+### Frame Detail View
+
+![Video Frame Detail](https://storage.googleapis.com/lightly-public/studio/video_dataset_frame_detail.png){ width="100%" }
+
+
+<!-- TODO(Michal, 03/2026): Add Video Dataset in the Python API section with
+VideoDataset class, VideoSample class (file_name, file_path_abs, width, height,
+duration_s, fps, tags, captions, metadata, annotations), and querying examples
+using VideoSampleField. -->
