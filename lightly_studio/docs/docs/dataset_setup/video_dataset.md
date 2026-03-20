@@ -154,12 +154,16 @@ import lightly_studio as ls
 ls.start_gui()
 ```
 
-### Grid View
+The GUI for a video dataset has two main pages: **Videos** and **Frames**, accessible
+via the navigation bar at the top.
 
-The main view shows a grid of video frames in your dataset. From here, you can perform multiple actions:
+### Video Grid View
 
-- Use the left panel to filter the videos by tags, annotation labels or metadata.
-- Use the search bar to do similarity search by text or a video frame.
+The Videos page shows a grid of video thumbnails. From here, you can perform multiple actions:
+
+- Hover with a mouse over a video to see a quick playback preview.
+- Use the left panel to filter the videos by tags, annotation labels or metadata (width, height, duration).
+- Use the search bar to do similarity search by text or another video from the dataset.
 - Use the `Show Embeddings` button to explore the data in embedding space.
 - Use the `Menu` dropdown for further actions like plugins, sampling, classification, export and more.
 
@@ -167,18 +171,27 @@ Refer to dedicated pages in this documentation on every feature for more details
 
 ![Video Dataset Grid](https://storage.googleapis.com/lightly-public/studio/video_dataset_video_grid.png){ width="100%" }
 
-### Detail View
+### Video Detail View
 
 Double-clicking on a video opens the video detail view. Here you can play the video, view
-frame-level annotations, add captions or view metadata.
+frame-level annotations, add captions or view metadata. Use the `View frame` link to navigate
+to the frame detail view of the currently shown frame.
 
 ![Video Detail View](https://storage.googleapis.com/lightly-public/studio/video_dataset_video_detail.png){ width="100%" }
 
 ### Frame Grid View
 
+The Frames page shows a grid of individual video frames extracted from all videos.
+You can use the left panel to filter frames by tags, annotation labels or metadata.
+
 ![Video Frame Grid](https://storage.googleapis.com/lightly-public/studio/video_dataset_frame_grid.png){ width="100%" }
 
 ### Frame Detail View
+
+Double-clicking on a frame opens the frame detail view. Here you can edit
+frame-level annotations with object track IDs, add classifications or captions,
+and see the frame details (frame number, timestamp, source video file path).
+Use the `View video` link to navigate to the parent video.
 
 ![Video Frame Detail](https://storage.googleapis.com/lightly-public/studio/video_dataset_frame_detail.png){ width="100%" }
 
