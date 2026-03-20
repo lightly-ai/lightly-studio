@@ -86,10 +86,17 @@ def connect(
     os.environ.pop("AWS_ACCESS_KEY_ID", None)
     os.environ.pop("AWS_SECRET_ACCESS_KEY", None)
 
-    if config.aws_access_key_id:
-        os.environ["AWS_ACCESS_KEY_ID"] = config.aws_access_key_id
-    if config.aws_secret_access_key:
-        os.environ["AWS_SECRET_ACCESS_KEY"] = config.aws_secret_access_key
+    aws_access_key_id = config.aws_access_key_id
+    aws_secret_access_key = config.aws_secret_access_key
+    # Either both credentials must be provided or neither.
+    if (aws_access_key_id is None) != (aws_secret_access_key is None):
+        raise RuntimeError(
+            "Unexpected response from LightlyStudio: "
+            "`aws_access_key_id` and `aws_secret_access_key` must be provided together."
+        )
+    if aws_access_key_id is not None and aws_secret_access_key is not None:
+        os.environ["AWS_ACCESS_KEY_ID"] = aws_access_key_id
+        os.environ["AWS_SECRET_ACCESS_KEY"] = aws_secret_access_key
 
     db_manager.connect(engine_url=config.engine_url)
 
