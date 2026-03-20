@@ -8,7 +8,7 @@ from uuid import UUID
 import cv2
 import fsspec
 import numpy as np
-from lightly_edge_sdk import (
+from lightly_edge_sdk import (  # type: ignore[import-not-found]
     InferenceDeviceType,
     LightlyEdge,
     LightlyEdgeConfig,
@@ -96,7 +96,7 @@ class EdgeSDKEmbeddingGenerator(ImageEmbeddingGenerator):
         Returns:
             A list of floats representing the generated embedding.
         """
-        embeddings = self.lightly_edge.embed_texts([text])
+        embeddings: list[list[float]] = self.lightly_edge.embed_texts([text])
         if len(embeddings):
             return embeddings[0]
         return []
