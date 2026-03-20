@@ -22,7 +22,7 @@ export type AdjacentSamplesRequestBody =
       }
     | {
           sample_type: Extract<SampleType, 'video_frame'>;
-          filters: { filter_type: 'video_frame' } & VideoFrameAdjacentFilter;
+          filters: { filter_type: 'video_frame_adjacent' } & VideoFrameAdjacentFilter;
       }
     | {
           sample_type: Extract<SampleType, 'annotation'>;

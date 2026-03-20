@@ -8,7 +8,7 @@ from uuid import UUID
 import cv2
 import fsspec
 import numpy as np
-from lightly_edge_sdk import (  # type: ignore[import-not-found]
+from lightly_edge_sdk import (
     InferenceDeviceType,
     LightlyEdge,
     LightlyEdgeConfig,
