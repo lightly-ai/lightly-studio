@@ -81,6 +81,11 @@ def connect(
 
     config = _fetch_connect_config(api_url=api_url, token=token)
 
+    # Clear any previously-set AWS credentials so that a reconnect never
+    # silently reuses stale keys from an earlier call.
+    os.environ.pop("AWS_ACCESS_KEY_ID", None)
+    os.environ.pop("AWS_SECRET_ACCESS_KEY", None)
+
     if config.aws_access_key_id:
         os.environ["AWS_ACCESS_KEY_ID"] = config.aws_access_key_id
     if config.aws_secret_access_key:
