@@ -19,7 +19,7 @@ class VideoFrameAdjacentFilter(BaseModel):
         video_text_embedding: Text embedding to order parent videos; needs video collection_id.
     """
 
-    filter_type: Literal["video_frame"] = "video_frame"
+    filter_type: Literal["video_frame_adjacent"] = "video_frame_adjacent"
     video_frame_filter: VideoFrameFilter
     video_filter: VideoFilter | None = None
     video_text_embedding: list[float] | None = None

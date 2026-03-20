@@ -30,7 +30,7 @@ export const useAdjacentFrames = ({
             },
             video_filter: get(videoFilter),
             video_text_embedding: get(textEmbedding)?.embedding
-        };
+        } as { filter_type: 'video_frame' } & VideoFrameAdjacentFilter;
     } else {
         const { frameFilter } = useFramesFilter();
 
@@ -42,7 +42,7 @@ export const useAdjacentFrames = ({
                 },
                 frame_number: {}
             }
-        };
+        } as { filter_type: 'video_frame' } & VideoFrameAdjacentFilter;
     }
 
     return useAdjacentSamples({

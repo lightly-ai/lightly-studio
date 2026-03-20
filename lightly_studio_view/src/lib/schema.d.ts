@@ -3452,7 +3452,7 @@ export interface components {
              * @description discriminator enum property added by openapi-typescript
              * @enum {string}
              */
-            filter_type: "video_frame";
+            filter_type: "video_frame_adjacent";
             video_frame_filter: components["schemas"]["VideoFrameFilter"];
             video_filter?: components["schemas"]["VideoFilter"] | null;
             /** Video Text Embedding */
@@ -3503,6 +3503,12 @@ export interface components {
             /** Video Id */
             video_id?: string | null;
             sample_filter?: components["schemas"]["SampleFilter"] | null;
+            /**
+             * Filter Type
+             * @default video_frame
+             * @constant
+             */
+            filter_type: "video_frame";
         };
         /**
          * VideoFrameView
