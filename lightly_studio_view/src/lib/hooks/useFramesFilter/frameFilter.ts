@@ -53,6 +53,7 @@ export const getFrameFilter = (params: VideoFrameFilterParams | null): VideoFram
     const annotationLabelIds = params.filters?.annotation_label_ids;
     if (annotationLabelIds && annotationLabelIds.length > 0) {
         sampleFilter.annotations_filter = {
+            filter_type: 'annotations',
             annotation_label_ids: annotationLabelIds
         } satisfies AnnotationsFilter;
     }
