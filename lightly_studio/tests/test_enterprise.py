@@ -14,6 +14,7 @@ from lightly_studio import db_manager, enterprise
 @pytest.fixture(autouse=True)
 def _patch_env_vars(mocker: MockerFixture) -> None:
     """Clear enterprise env vars so tests are not affected by local config."""
+    mocker.patch.dict(os.environ, {}, clear=True)
     mocker.patch.object(enterprise, "LIGHTLY_STUDIO_API_URL", None)
     mocker.patch.object(enterprise, "LIGHTLY_STUDIO_TOKEN", None)
 
@@ -175,7 +176,6 @@ def test_connect__sets_aws_env_vars(
     access_key_id = "AKIAIOSFODNN7EXAMPLE"
     secret_access_key = "wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY"
 
-    mocker.patch.dict(os.environ, {})
     mock_response = mocker.MagicMock()
     mock_response.status_code = 200
     mock_response.ok = True
@@ -196,10 +196,6 @@ def test_connect__aws_missing_skips_env(
     mocker: MockerFixture,
     patch_db_connect: MockType,  # noqa: ARG001
 ) -> None:
-    mocker.patch.dict(os.environ, {})
-    os.environ.pop("AWS_ACCESS_KEY_ID", None)
-    os.environ.pop("AWS_SECRET_ACCESS_KEY", None)
-
     mock_response = mocker.MagicMock()
     mock_response.status_code = 200
     mock_response.ok = True
