@@ -13,6 +13,7 @@ from lightly_studio.models.collection import SampleType
 from lightly_studio.resolvers.annotations.annotations_filter import (
     AnnotationsFilter,
 )
+from lightly_studio.resolvers.filter_with_collection_id import FilterWithCollectionId
 from lightly_studio.resolvers.image_filter import ImageFilter
 from lightly_studio.resolvers.sample_resolver.sample_filter import SampleFilter
 from lightly_studio.resolvers.video_frame_resolver import VideoFrameAdjacentFilter
@@ -118,8 +119,9 @@ def test_get_adjacent_samples__delegates_to_video_frame_resolver(
 
     sample_id = uuid4()
     filters = VideoFrameAdjacentFilter(
-        video_frame_filter=VideoFrameFilter(
-            sample_filter=SampleFilter(collection_id=uuid4()),
+        video_frame_filter=FilterWithCollectionId(
+            collection_id=uuid4(),
+            filter=VideoFrameFilter(),
         )
     )
     request = AdjacentRequest(
