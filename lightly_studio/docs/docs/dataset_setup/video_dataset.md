@@ -114,7 +114,11 @@ and instance segmentation annotations are supported. See
     - Categories: Defines the object classes.
     - Annotations: Defines object instances with per-frame segmentation masks.
 
-    <copy note>
+    Note that the original YouTube-VIS format provides each video as a list of extracted frames.
+    LightlyStudio instead expects the videos as video files. The file name is deducted
+    from frame path. E.g. for `video003/00010.jpg`, the video file name is expected
+    to be `video003.*` with a video file extension. You can specify the exact name by setting the
+    folder in the frame path, e.g. `video003.mp4/00010.jpg`.
 
     </details>
 
