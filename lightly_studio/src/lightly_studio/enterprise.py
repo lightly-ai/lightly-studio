@@ -12,7 +12,7 @@ import http
 import os
 
 import requests
-from pydantic import BaseModel
+from pydantic import BaseModel, ValidationError
 
 from lightly_studio import db_manager
 from lightly_studio.dataset.env import LIGHTLY_STUDIO_API_URL, LIGHTLY_STUDIO_TOKEN
@@ -145,8 +145,15 @@ def _fetch_connect_config(api_url: str, token: str) -> _EnterpriseConnectRespons
         )
 
     try:
-        return _EnterpriseConnectResponse.model_validate(response.json())
-    except Exception:
+        data = response.json()
+    except ValueError:
+        raise RuntimeError(
+            "Unexpected response from LightlyStudio: response body is not valid JSON."
+        ) from None
+
+    try:
+        return _EnterpriseConnectResponse.model_validate(data)
+    except ValidationError:
         raise RuntimeError(
             "Unexpected response from LightlyStudio: response body does not "
             "match expected schema (missing or invalid `engine_url`)."
