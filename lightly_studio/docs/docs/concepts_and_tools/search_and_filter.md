@@ -5,7 +5,7 @@ Search helps you find visually or semantically similar samples from a text or im
 
 ## Search in GUI
 
-Use the search bar above the sample grid to search by similarity using one of these methods:
+Use the search bar above the grid to find similar samples in one of these ways:
 
 1. Type a text query.
 2. Paste an image from your clipboard into the search bar. You can e.g. right-click an image in your browser and select `Copy image`, then click the search bar and paste it with `Ctrl+V` or `Cmd+V`.
@@ -13,7 +13,7 @@ Use the search bar above the sample grid to search by similarity using one of th
 
 Then submit the search by hitting `Enter`. The number shown on each search result is its similarity score to the current query. Click the `x` button to remove the search query and return to the normal input state.
 
-The screen recording below shows how to search for similar images using the text query "dog" or by pasting an image.
+The screen recording below shows the search both by text query "dog" and by pasting an image.
 
 <video autoplay loop muted playsinline controls style="width: 100%;">
   <source src="https://storage.googleapis.com/lightly-public/studio/search_filter_search_v4.mp4" type="video/mp4">
