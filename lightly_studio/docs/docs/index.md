@@ -6,6 +6,7 @@
 
     ![Image title](https://storage.googleapis.com/lightly-public/studio/search.gif){ width="100%"}
     Discover insights instantly with AI-powered search and smart filters.
+    Learn more in [Search and Filter](concepts_and_tools/search_and_filter.md).
 
 === "Annotate"
 

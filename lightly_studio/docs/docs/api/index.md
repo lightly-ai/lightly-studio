@@ -281,7 +281,7 @@ for image_sample in dataset:
 You can programmatically filter samples by attributes (e.g., image size, tags), sort them, and select subsets. This is useful for creating training/validation splits, finding specific samples, or exporting filtered data.
 
 !!! tip "GUI Support"
-    These filtering and querying operations can also be performed directly for image datasets in the GUI using the search and filter panels.
+    These filtering and querying operations can also be performed directly in the GUI using [Search and Filter](../concepts_and_tools/search_and_filter.md).
 
 ```py
 from lightly_studio.core.dataset_query import AND, OR, NOT, OrderByField, ImageSampleField
