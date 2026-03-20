@@ -43,7 +43,9 @@ const imageFilter = derived(filterParams, ($filterParams): ImageFilter | null =>
         return null;
     }
 
-    const filters: ImageFilter = {};
+    const filters: ImageFilter = {
+        filter_type: 'image'
+    };
 
     const { width, height } = extractDimensions($filterParams.filters?.dimensions);
     if (width) {
@@ -64,6 +66,7 @@ const imageFilter = derived(filterParams, ($filterParams): ImageFilter | null =>
     const annotationLabelIds = $filterParams.filters?.annotation_label_ids;
     if (annotationLabelIds && annotationLabelIds.length > 0) {
         sampleFilter.annotations_filter = {
+            filter_type: 'annotations',
             annotation_label_ids: annotationLabelIds
         } satisfies AnnotationsFilter;
     }
