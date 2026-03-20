@@ -201,7 +201,124 @@ Use the `View video` link to navigate to the parent video.
 ![Video Frame Detail](https://storage.googleapis.com/lightly-public/studio/video_dataset_frame_detail.png){ width="100%" }
 
 
-<!-- TODO(Michal, 03/2026): Add Video Dataset in the Python API section with
-VideoDataset class, VideoSample class (file_name, file_path_abs, width, height,
-duration_s, fps, tags, captions, metadata, annotations), and querying examples
-using VideoSampleField. -->
+## Video Dataset in the Python API
+
+### VideoDataset class
+
+The main entrypoint is the [VideoDataset class](../api/dataset.md#videodataset).
+An instance of it can be created as described above by using one of the factory methods:
+
+```python title="Create or load a VideoDataset"
+dataset = ls.VideoDataset.create()
+dataset = ls.VideoDataset.load()
+dataset = ls.VideoDataset.load_or_create()
+```
+
+Once samples are added to the dataset, they can be iterated over, yielding `VideoSample` objects:
+
+```python title="Iterate over dataset samples"
+for video in dataset:
+    print(video.file_name)
+```
+
+### VideoSample class
+
+[VideoSample class](../api/sample.md#videosample) provides read and write access to the video data.
+
+```python title="Access video data"
+# Grab one sample
+video = next(iter(dataset))
+
+# Video properties
+print(video.file_name)
+print(video.file_path_abs)
+print(video.width)
+print(video.height)
+print(video.duration_s)
+print(video.fps)
+
+# Tags
+video.tags = ["tag1", "tag2"]
+video.add_tag("needs_review")
+video.remove_tag("needs_review")
+print(video.tags)
+
+# Captions
+video.captions = ["Caption 1", "Caption 2"]
+video.add_caption("Caption 3")
+print(video.captions)
+
+# Metadata
+video.metadata["my_key"] = "my_value"
+print(video.metadata["my_key"])
+```
+
+<!-- TODO(Michal, 03/2026)
+Find more details on [Tags](todo), [Captions](todo), [Metadata](todo) and [Annotations](todo)
+on dedicated pages.
+-->
+
+### Querying the Dataset
+
+You can programmatically filter samples by attributes (e.g., video duration, tags), sort them,
+and select subsets. This is useful for creating training/validation splits, finding specific
+samples, or exporting filtered data.
+
+!!! tip "GUI Support"
+    These filtering and querying operations can also be performed directly for video datasets
+    in the GUI using the search and filter panels.
+
+Create a query object by combining `match`, `order_by` and `slice` (or `[start:end]`) calls.
+The query is composed lazily, it is executed against the database once it is consumed, e.g. by
+iterating over it or calling `add_tag`.
+
+<!-- TODO(Michal, 03/2026): Link below a dedicated page on querying when ready. -->
+
+The listing below shows examples of working with queries. For details see the API reference
+for [DatasetQuery](../api/dataset_query.md#datasetquery) and [VideoSampleField](../api/dataset_query.md#videosamplefield).
+
+```python title="Query a VideoDataset"
+from lightly_studio.core.dataset_query import AND, OR, NOT, OrderByField, VideoSampleField
+
+###
+# Compose a query
+
+# match: Find all samples longer than 10s plus small samples (< 500px) that haven't been reviewed.
+query = dataset.match(
+    OR(
+        AND(
+            VideoSampleField.width < 500,
+            NOT(VideoSampleField.tags.contains("reviewed"))
+        ),
+        VideoSampleField.duration_s > 10
+    )
+)
+
+# order_by: Sort the samples by their duration descending.
+query.order_by(
+    OrderByField(VideoSampleField.duration_s).desc()
+)
+
+# slice: Extract a slice of samples.
+query[10:20]
+
+# chaining: The query can also be constructed in chained way
+query = dataset.match(...).order_by(...)[...]
+
+###
+# Consume a query
+
+# Tag this subset for easy filtering in the UI
+query.add_tag("needs-review")
+
+# Iterate over resulting samples
+for sample in query:
+    # Access the sample: see previous section
+    ...
+
+# Collect all resulting samples as list
+samples = query.to_list()
+
+# Export all resulting samples in YouTube-VIS format
+dataset.export(query).to_youtube_vis_instance_segmentation()
+```
