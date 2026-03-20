@@ -2037,6 +2037,11 @@ export interface components {
          */
         AnnotationsFilter: {
             /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            filter_type: "annotations";
+            /**
              * Annotation Types
              * @description Types of annotation to filter (e.g., 'object_detection')
              */
@@ -2643,6 +2648,11 @@ export interface components {
          * @description Encapsulates filter parameters for querying samples.
          */
         ImageFilter: {
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            filter_type: "image";
             sample_filter?: components["schemas"]["SampleFilter"] | null;
             width?: components["schemas"]["FilterDimensions"] | null;
             height?: components["schemas"]["FilterDimensions"] | null;
@@ -3416,6 +3426,11 @@ export interface components {
          * @description Encapsulates filter parameters for querying videos.
          */
         VideoFilter: {
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            filter_type: "video";
             width?: components["schemas"]["FilterDimensions"] | null;
             height?: components["schemas"]["FilterDimensions"] | null;
             fps?: components["schemas"]["FloatRange"] | null;
@@ -3433,6 +3448,11 @@ export interface components {
          *         video_text_embedding: Text embedding to order parent videos; needs video collection_id.
          */
         VideoFrameAdjacentFilter: {
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            filter_type: "video_frame";
             video_frame_filter: components["schemas"]["VideoFrameFilter"];
             video_filter?: components["schemas"]["VideoFilter"] | null;
             /** Video Text Embedding */

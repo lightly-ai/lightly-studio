@@ -50,7 +50,10 @@ describe('useAdjacentSamples', () => {
 
         const params = {
             sampleId: 'sample-1',
-            body: { sample_type: 'video', filters: { sample_filter: { collection_id: 'col-1' } } }
+            body: {
+                sample_type: 'video',
+                filters: { filter_type: 'video', sample_filter: { collection_id: 'col-1' } }
+            }
         };
 
         const createQuerySpy = vi.spyOn(tanstackQuery, 'createQuery');
@@ -83,7 +86,10 @@ describe('useAdjacentSamples', () => {
     it('invalidates the hook query key when refetch is called', () => {
         const params = {
             sampleId: 'sample-2',
-            body: { sample_type: 'image', filters: { sample_filter: { collection_id: 'col-2' } } }
+            body: {
+                sample_type: 'image',
+                filters: { filter_type: 'image', sample_filter: { collection_id: 'col-2' } }
+            }
         };
 
         const expectedOptions = getAdjacentSamplesOptions({

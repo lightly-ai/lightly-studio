@@ -14,13 +14,14 @@ export const useAdjacentFrames = ({
     collectionId: string;
     fromVideos?: boolean;
 }) => {
-    let filters: VideoFrameAdjacentFilter;
+    let filters: { filter_type: 'video_frame' } & VideoFrameAdjacentFilter;
 
     if (fromVideos) {
         const { videoFilter } = useVideoFilters();
         const { textEmbedding } = useGlobalStorage();
 
         filters = {
+            filter_type: 'video_frame',
             video_frame_filter: {
                 sample_filter: {
                     collection_id: collectionId
@@ -34,6 +35,7 @@ export const useAdjacentFrames = ({
         const { frameFilter } = useFramesFilter();
 
         filters = {
+            filter_type: 'video_frame',
             video_frame_filter: get(frameFilter) ?? {
                 sample_filter: {
                     collection_id: collectionId
