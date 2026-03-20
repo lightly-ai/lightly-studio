@@ -283,14 +283,14 @@ from lightly_studio.core.dataset_query import AND, OR, NOT, OrderByField, VideoS
 ###
 # Compose a query
 
-# match: Find all samples longer than 10s plus small samples (< 500px) that haven't been reviewed.
+# match: Find all samples with FPS > 10 plus small samples (< 500px) that haven't been reviewed.
 query = dataset.match(
     OR(
         AND(
             VideoSampleField.width < 500,
             NOT(VideoSampleField.tags.contains("reviewed"))
         ),
-        VideoSampleField.duration_s > 10
+        VideoSampleField.fps > 10
     )
 )
 
