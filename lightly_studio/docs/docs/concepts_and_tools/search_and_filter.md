@@ -1,6 +1,6 @@
 # Search and Filter
 
-Search helps you find visually or semantically similar samples from a text or image. Filters narrow the samples currently shown in the view by tags, labels, dimensions, and other numeric metadata.
+Search helps you find visually or semantically similar samples from a text or image. Filters narrow down the samples currently shown in the view by tags, labels, dimensions, and other numeric metadata.
 
 
 ## Search in GUI
@@ -11,7 +11,7 @@ Use the search bar above the grid to find similar samples in one of these ways:
 2. Paste an image from your clipboard into the search bar. You can e.g. right-click an image in your browser and select `Copy image`, then click the search bar and paste it with `Ctrl+V` or `Cmd+V`.
 3. Click the image button to upload an image.
 
-Then submit the search by hitting `Enter`. The number shown on each search result is its similarity score to the current query. Click the `x` button to remove the search query and return to the normal input state.
+Then submit the search by hitting `Enter`. The number shown on each search result is its similarity score to the current query. Click the `x` button to remove the search query.
 
 The screen recording below shows the search both by text query "dog" and by pasting an image.
 
@@ -20,7 +20,7 @@ The screen recording below shows the search both by text query "dog" and by past
 </video>
 
 !!! note "Search requires embeddings"
-    Search is available when embeddings exist.
+    Search is available only when embeddings were generated during data loading.
 
 ## Filter in GUI
 
@@ -29,7 +29,7 @@ The left sidebar combines the most common ways to narrow down the visible sample
 - `Tags`: Click one or more tags to focus on the subset you care about, such as `labeled` or `unlabeled`.
 - `Labels`: Click one or more labels to show items with those annotations.
 - `Dimensions`: Use `Width` and `Height` to constrain the visible item size.
-- `Extra numeric metadata`: If numeric metadata fields are available, they appear as additional sliders in the same area.
+- `Metadata`: If numeric metadata fields are available, they appear as additional sliders in the same area.
 
 ![Tag filters](https://storage.googleapis.com/lightly-public/studio/search_filter_tags_v3.png){ width="100%"}
 
