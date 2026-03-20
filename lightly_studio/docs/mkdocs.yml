@@ -41,6 +41,7 @@ nav:
     - Plugin: api/plugin.md
     - Annotation: api/annotation.md
   - Concepts & Tools:
+    - Search and Filter: concepts_and_tools/search_and_filter.md
     - Plugins: concepts_and_tools/plugins.md
   - Advanced:
     - Parallel Python and GUI: advanced/parallel_python_gui.md
