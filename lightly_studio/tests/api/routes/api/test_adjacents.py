@@ -11,7 +11,9 @@ from lightly_studio.api.routes.api.status import (
     HTTP_STATUS_OK,
     HTTP_STATUS_UNPROCESSABLE_ENTITY,
 )
+from lightly_studio.models.collection import SampleType
 from tests import helpers_resolvers
+from tests.resolvers.video.helpers import VideoStub, create_video
 
 
 def test_get_adjacent_samples__returns_adjacents_for_images(
@@ -42,6 +44,7 @@ def test_get_adjacent_samples__returns_adjacents_for_images(
         json={
             "sample_type": "image",
             "filters": {
+                "filter_type": "image",
                 "sample_filter": {"collection_id": str(collection_id)},
             },
         },
@@ -79,6 +82,7 @@ def test_get_adjacent_samples__first_sample_has_no_previous(
         json={
             "sample_type": "image",
             "filters": {
+                "filter_type": "image",
                 "sample_filter": {"collection_id": str(collection_id)},
             },
         },
@@ -116,6 +120,7 @@ def test_get_adjacent_samples__last_sample_has_no_next(
         json={
             "sample_type": "image",
             "filters": {
+                "filter_type": "image",
                 "sample_filter": {"collection_id": str(collection_id)},
             },
         },
@@ -149,6 +154,7 @@ def test_get_adjacent_samples__unknown_sample_returns_none(
         json={
             "sample_type": "image",
             "filters": {
+                "filter_type": "image",
                 "sample_filter": {"collection_id": str(collection_id)},
             },
         },
@@ -167,3 +173,51 @@ def test_get_adjacent_samples__missing_body_returns_unprocessable(
     )
 
     assert response.status_code == HTTP_STATUS_UNPROCESSABLE_ENTITY
+
+
+def test_get_adjacent_samples__returns_adjacents_for_videos(
+    db_session: Session,
+    test_client: TestClient,
+) -> None:
+    collection = helpers_resolvers.create_collection(
+        session=db_session,
+        sample_type=SampleType.VIDEO,
+    )
+    collection_id = collection.collection_id
+
+    video_a = create_video(
+        session=db_session,
+        collection_id=collection_id,
+        video=VideoStub(path="/videos/a.mp4"),
+    )
+    video_b = create_video(
+        session=db_session,
+        collection_id=collection_id,
+        video=VideoStub(path="/videos/b.mp4"),
+    )
+    video_c = create_video(
+        session=db_session,
+        collection_id=collection_id,
+        video=VideoStub(path="/videos/c.mp4"),
+    )
+
+    response = test_client.post(
+        f"/api/samples/{video_b.sample_id}/adjacents",
+        json={
+            "sample_type": "video",
+            "filters": {
+                "filter_type": "video",
+                "sample_filter": {
+                    "collection_id": str(collection_id),
+                },
+            },
+        },
+    )
+
+    assert response.status_code == HTTP_STATUS_OK
+    data = response.json()
+    assert data["previous_sample_id"] == str(video_a.sample_id)
+    assert data["sample_id"] == str(video_b.sample_id)
+    assert data["next_sample_id"] == str(video_c.sample_id)
+    assert data["current_sample_position"] == 2
+    assert data["total_count"] == 3

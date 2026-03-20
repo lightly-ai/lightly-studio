@@ -1,6 +1,6 @@
 """Utility functions for building database queries."""
 
-from typing import Optional
+from typing import Literal, Optional
 
 from pydantic import BaseModel
 from sqlmodel import col, select
@@ -16,6 +16,7 @@ from lightly_studio.type_definitions import QueryType
 class VideoFilter(BaseModel):
     """Encapsulates filter parameters for querying videos."""
 
+    filter_type: Literal["video"] = "video"
     width: Optional[FilterDimensions] = None
     height: Optional[FilterDimensions] = None
     fps: Optional[FloatRange] = None
