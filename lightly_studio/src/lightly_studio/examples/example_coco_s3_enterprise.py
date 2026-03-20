@@ -1,6 +1,5 @@
 """Example of how to add samples in coco format to a dataset."""
 
-
 import lightly_studio as ls
 
 ls.connect()

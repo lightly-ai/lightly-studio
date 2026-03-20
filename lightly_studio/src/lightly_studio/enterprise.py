@@ -89,9 +89,7 @@ def connect(
     db_manager.connect(engine_url=config.engine_url)
 
 
-def _fetch_connect_config(
-    api_url: str, token: str
-) -> _EnterpriseConnectResponse:
+def _fetch_connect_config(api_url: str, token: str) -> _EnterpriseConnectResponse:
     """Call the enterprise endpoint to retrieve the connection configuration.
 
     Args:

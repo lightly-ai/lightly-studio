@@ -169,7 +169,8 @@ def test_connect__connection_error(mocker: MockerFixture, patch_db_connect: Mock
 
 
 def test_connect__sets_aws_env_vars(
-    mocker: MockerFixture, patch_db_connect: MockType  # noqa: ARG001
+    mocker: MockerFixture,
+    patch_db_connect: MockType,  # noqa: ARG001
 ) -> None:
     access_key_id = "AKIAIOSFODNN7EXAMPLE"
     secret_access_key = "wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY"
@@ -192,7 +193,8 @@ def test_connect__sets_aws_env_vars(
 
 
 def test_connect__aws_missing_skips_env(
-    mocker: MockerFixture, patch_db_connect: MockType  # noqa: ARG001
+    mocker: MockerFixture,
+    patch_db_connect: MockType,  # noqa: ARG001
 ) -> None:
     mocker.patch.dict(os.environ, {})
     os.environ.pop("AWS_ACCESS_KEY_ID", None)
