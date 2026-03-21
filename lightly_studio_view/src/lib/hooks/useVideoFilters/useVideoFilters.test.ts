@@ -41,6 +41,7 @@ describe('useVideoFilters', () => {
             });
 
             expect(get(videoFilter)).toEqual({
+                filter_type: 'video',
                 sample_filter: { collection_id: 'coll-1' }
             });
         });

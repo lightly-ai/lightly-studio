@@ -118,7 +118,7 @@ def test_get_video_by_id(test_client: TestClient, db_session: Session) -> None:
     sample_id = videos[0].sample_id
 
     response = test_client.get(
-        f"/api/collections/{collection_id}/video/{sample_id}",
+        f"/api/videos/{sample_id}",
     )
 
     assert response.status_code == HTTP_STATUS_OK

@@ -392,7 +392,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/collections/{collection_id}/images/{sample_id}": {
+    "/api/images/{sample_id}": {
         parameters: {
             query?: never;
             header?: never;
@@ -1553,7 +1553,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/collections/{collection_id}/video/{sample_id}": {
+    "/api/videos/{sample_id}": {
         parameters: {
             query?: never;
             header?: never;
@@ -2016,6 +2016,11 @@ export interface components {
          * @description Handles filtering for annotation queries.
          */
         AnnotationsFilter: {
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            filter_type: "annotations";
             /**
              * Annotation Types
              * @description Types of annotation to filter (e.g., 'object_detection')
@@ -2623,6 +2628,11 @@ export interface components {
          * @description Encapsulates filter parameters for querying samples.
          */
         ImageFilter: {
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            filter_type: "image";
             sample_filter?: components["schemas"]["SampleFilter"] | null;
             width?: components["schemas"]["FilterDimensions"] | null;
             height?: components["schemas"]["FilterDimensions"] | null;
@@ -3407,6 +3417,11 @@ export interface components {
          * @description Encapsulates filter parameters for querying videos.
          */
         VideoFilter: {
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            filter_type: "video";
             width?: components["schemas"]["FilterDimensions"] | null;
             height?: components["schemas"]["FilterDimensions"] | null;
             fps?: components["schemas"]["FloatRange"] | null;
@@ -3426,6 +3441,11 @@ export interface components {
          *         video_text_embedding: Text embedding to order parent videos; needs video collection_id.
          */
         VideoFrameAdjacentFilter: {
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            filter_type: "video_frame_adjacent";
             video_frame_filter: components["schemas"]["VideoFrameFilter"];
             video_filter?: components["schemas"]["VideoFilter"] | null;
             /** Video Text Embedding */
@@ -3485,6 +3505,12 @@ export interface components {
             /** Video Id */
             video_id?: string | null;
             sample_filter?: components["schemas"]["SampleFilter"] | null;
+            /**
+             * Filter Type
+             * @default video_frame
+             * @constant
+             */
+            filter_type: "video_frame";
         };
         /**
          * VideoFrameView
