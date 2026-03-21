@@ -160,14 +160,14 @@ def _get_or_create_label_map(
     for category_id, label_name in class_map.items():
         label = annotation_label_resolver.get_by_label_name(
             session=session,
-            dataset_id=dataset_id,
+            root_collection_id=dataset_id,
             label_name=label_name,
         )
         if label is None:
             label = annotation_label_resolver.create(
                 session=session,
                 label=AnnotationLabelCreate(
-                    dataset_id=dataset_id,
+                    root_collection_id=dataset_id,
                     annotation_label_name=label_name,
                 ),
             )

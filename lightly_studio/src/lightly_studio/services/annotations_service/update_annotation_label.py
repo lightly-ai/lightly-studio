@@ -35,11 +35,11 @@ def update_annotation_label(
         raise ValueError(f"Annotation with id {annotation_id} does not exist.")
 
     # Get root collection id from the annotation's current label
-    dataset_id = annotation.annotation_label.dataset_id
+    root_collection_id = annotation.annotation_label.root_collection_id
 
     annotation_label = annotation_label_resolver.get_by_label_name(
         session=session,
-        dataset_id=dataset_id,
+        root_collection_id=root_collection_id,
         label_name=label_name,
     )
 
@@ -47,7 +47,7 @@ def update_annotation_label(
         annotation_label = annotation_label_resolver.create(
             session=session,
             label=AnnotationLabelCreate(
-                dataset_id=dataset_id,
+                root_collection_id=root_collection_id,
                 annotation_label_name=label_name,
             ),
         )
