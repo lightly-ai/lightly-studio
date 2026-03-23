@@ -107,26 +107,26 @@ def get_object_detection_annotation_create(
 
 def create_label_map(
     session: Session,
-    dataset_id: UUID,
+    root_collection_id: UUID,
     input_labels: _LabelsWithCategories,
 ) -> dict[int, UUID]:
     """Create a mapping of category IDs to annotation label IDs.
 
     Args:
         session: The database session.
-        dataset_id: The ID of the root collection the labels belong to.
+        root_collection_id: The ID of the root collection the labels belong to.
         input_labels: The labelformat input containing the categories.
     """
     label_map = {}
     for category in input_labels.get_categories():
         # Use label if already exists
         label = annotation_label_resolver.get_by_label_name(
-            session=session, dataset_id=dataset_id, label_name=category.name
+            session=session, root_collection_id=root_collection_id, label_name=category.name
         )
         if label is None:
             # Create new label
             label_create = AnnotationLabelCreate(
-                dataset_id=dataset_id,
+                root_collection_id=root_collection_id,
                 annotation_label_name=category.name,
             )
             label = annotation_label_resolver.create(session=session, label=label_create)

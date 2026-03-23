@@ -42,7 +42,7 @@ def test_load_into_collection_from_paths(db_session: Session, tmp_path: Path) ->
     # Act
     sample_ids = add_images.load_into_dataset_from_paths(
         session=db_session,
-        dataset_id=collection.collection_id,
+        root_collection_id=collection.collection_id,
         image_paths=image_paths,
     )
 

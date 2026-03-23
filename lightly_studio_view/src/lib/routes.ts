@@ -1,4 +1,5 @@
 import type { LayoutRouteId } from '../routes/$types';
+import { getURL } from './utils';
 
 const COLLECTION_BASE_ROUTE = '/datasets/[dataset_id]/[collection_type]/[collection_id]';
 
@@ -115,17 +116,10 @@ export const routes = {
             sampleId: string,
             frameNumber?: number
         ) => {
-            const basePath = `/datasets/${datasetId}/${collectionType}/${collectionId}/videos/${sampleId}`;
-
-            const params = new URLSearchParams();
-
-            if (frameNumber !== undefined) {
-                params.append('frame_number', String(frameNumber));
-            }
-
-            const query = params.toString();
-
-            return query ? `${basePath}?${query}` : basePath;
+            return getURL(
+                `/datasets/${datasetId}/${collectionType}/${collectionId}/videos/${sampleId}`,
+                frameNumber !== undefined ? { frame_number: frameNumber } : undefined
+            );
         },
         framesDetails: (
             datasetId: string,
@@ -134,13 +128,10 @@ export const routes = {
             sampleId: string,
             fromVideos?: boolean
         ) => {
-            const path = `/datasets/${datasetId}/${collectionType}/${collectionId}/frames/${sampleId}`;
-
-            if (fromVideos) {
-                return `${path}?from_video=true`;
-            }
-
-            return path;
+            return getURL(
+                `/datasets/${datasetId}/${collectionType}/${collectionId}/frames/${sampleId}`,
+                fromVideos ? { from_video: true } : undefined
+            );
         },
         groups: (datasetId: string, collectionType: string, collectionId: string) =>
             `/datasets/${datasetId}/${collectionType}/${collectionId}/groups`,

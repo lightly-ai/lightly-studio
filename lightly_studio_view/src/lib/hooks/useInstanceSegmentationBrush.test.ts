@@ -218,7 +218,7 @@ describe('useInstanceSegmentationBrush', () => {
         await finishBrush(mask, null, []);
 
         expect(createLabel).toHaveBeenCalledWith({
-            dataset_id: 'c1',
+            root_collection_id: 'c1',
             annotation_label_name: 'DEFAULT'
         });
 

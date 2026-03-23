@@ -21,7 +21,7 @@ def test_get_parent_collection_id__from_parent_collection(db_session: Session) -
     )
     car_label = create_annotation_label(
         session=db_session,
-        dataset_id=collection.collection_id,
+        root_collection_id=collection.collection_id,
         label_name="car",
     )
     annotation = create_annotation(

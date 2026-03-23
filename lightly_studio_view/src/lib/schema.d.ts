@@ -432,7 +432,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/samples/list": {
+    "/api/collections/{collection_id}/samples/list": {
         parameters: {
             query?: never;
             header?: never;
@@ -447,6 +447,7 @@ export interface paths {
          *
          *     Args:
          *         session: The database session.
+         *         collection_id: The ID of the collection to retrieve samples from.
          *         body: Optional request body containing filters.
          *         pagination: Pagination parameters (cursor and limit).
          *
@@ -1886,10 +1887,10 @@ export interface components {
          */
         AnnotationLabelCreate: {
             /**
-             * Dataset Id
+             * Root Collection Id
              * Format: uuid
              */
-            dataset_id: string;
+            root_collection_id: string;
             /** Annotation Label Name */
             annotation_label_name: string;
         };
@@ -1907,10 +1908,10 @@ export interface components {
          */
         AnnotationLabelTable: {
             /**
-             * Dataset Id
+             * Root Collection Id
              * Format: uuid
              */
-            dataset_id: string;
+            root_collection_id: string;
             /** Annotation Label Name */
             annotation_label_name: string;
             /**
@@ -2473,6 +2474,24 @@ export interface components {
             min?: number | null;
             /** Max */
             max?: number | null;
+        };
+        /** FilterWithCollectionId[VideoFilter] */
+        FilterWithCollectionId_VideoFilter_: {
+            /**
+             * Collection Id
+             * Format: uuid
+             */
+            collection_id: string;
+            filter: components["schemas"]["VideoFilter"];
+        };
+        /** FilterWithCollectionId[VideoFrameFilter] */
+        FilterWithCollectionId_VideoFrameFilter_: {
+            /**
+             * Collection Id
+             * Format: uuid
+             */
+            collection_id: string;
+            filter: components["schemas"]["VideoFrameFilter"];
         };
         /**
          * FloatRange
@@ -3453,8 +3472,8 @@ export interface components {
              * @enum {string}
              */
             filter_type: "video_frame_adjacent";
-            video_frame_filter: components["schemas"]["VideoFrameFilter"];
-            video_filter?: components["schemas"]["VideoFilter"] | null;
+            video_frame_filter: components["schemas"]["FilterWithCollectionId_VideoFrameFilter_"];
+            video_filter?: components["schemas"]["FilterWithCollectionId_VideoFilter_"] | null;
             /** Video Text Embedding */
             video_text_embedding?: number[] | null;
         };
@@ -4424,7 +4443,10 @@ export interface operations {
                 limit?: number;
             };
             header?: never;
-            path?: never;
+            path: {
+                /** @description The ID of the collection */
+                collection_id: string;
+            };
             cookie?: never;
         };
         requestBody: {

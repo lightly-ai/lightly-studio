@@ -160,7 +160,7 @@ class ImageDataset(BaseSampleDataset[ImageSample]):
         # Process images
         created_sample_ids = add_images.load_into_dataset_from_paths(
             session=self.session,
-            dataset_id=self.dataset_id,
+            root_collection_id=self.dataset_id,
             image_paths=image_paths,
         )
 

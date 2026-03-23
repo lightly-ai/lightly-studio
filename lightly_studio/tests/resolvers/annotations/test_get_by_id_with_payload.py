@@ -34,7 +34,7 @@ def test_get_by_id__with_image(
 
     car_label = create_annotation_label(
         session=db_session,
-        dataset_id=collection_id,
+        root_collection_id=collection_id,
         label_name="car",
     )
 
@@ -78,7 +78,7 @@ def test_get_all_with_payload__with_video_frame(db_session: Session) -> None:
 
     car_label = create_annotation_label(
         session=db_session,
-        dataset_id=collection.collection_id,
+        root_collection_id=collection.collection_id,
         label_name="car",
     )
 

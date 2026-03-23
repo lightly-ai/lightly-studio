@@ -70,7 +70,7 @@ class AnnotationImageData:
 
 def load_into_dataset_from_paths(
     session: Session,
-    dataset_id: UUID,
+    root_collection_id: UUID,
     image_paths: Iterable[str],
     show_progress: bool = True,
 ) -> list[UUID]:
@@ -78,7 +78,7 @@ def load_into_dataset_from_paths(
 
     Args:
         session: The database session.
-        dataset_id: The ID of the dataset to load images into.
+        root_collection_id: The ID of the dataset to load images into.
         image_paths: An iterable of file paths to the images to load.
         show_progress: Whether to display a progress bar and final summary of loading results.
 
@@ -91,7 +91,7 @@ def load_into_dataset_from_paths(
     logging_context = LoadingLoggingContext(
         n_samples_to_be_inserted=sum(1 for _ in image_paths),
         n_samples_before_loading=sample_resolver.count_by_collection_id(
-            session=session, collection_id=dataset_id
+            session=session, collection_id=root_collection_id
         ),
     )
 
@@ -120,7 +120,7 @@ def load_into_dataset_from_paths(
         # Process batch when it reaches SAMPLE_BATCH_SIZE
         if len(samples_to_create) >= SAMPLE_BATCH_SIZE:
             created_path_to_id, paths_not_inserted = _create_batch_samples(
-                session=session, collection_id=dataset_id, samples=samples_to_create
+                session=session, collection_id=root_collection_id, samples=samples_to_create
             )
             created_sample_ids.extend(created_path_to_id.values())
             logging_context.update_example_paths(paths_not_inserted)
@@ -129,14 +129,14 @@ def load_into_dataset_from_paths(
     # Handle remaining samples
     if samples_to_create:
         created_path_to_id, paths_not_inserted = _create_batch_samples(
-            session=session, collection_id=dataset_id, samples=samples_to_create
+            session=session, collection_id=root_collection_id, samples=samples_to_create
         )
         created_sample_ids.extend(created_path_to_id.values())
         logging_context.update_example_paths(paths_not_inserted)
 
     log_loading_results(
         session=session,
-        dataset_id=dataset_id,
+        dataset_id=root_collection_id,
         logging_context=logging_context,
         print_summary=show_progress,
     )
@@ -442,7 +442,7 @@ def _create_label_map(
     """
     return labelformat_helpers.create_label_map(
         session=session,
-        dataset_id=dataset_id,
+        root_collection_id=dataset_id,
         input_labels=input_labels,
     )
 

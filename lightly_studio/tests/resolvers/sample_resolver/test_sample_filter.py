@@ -112,10 +112,10 @@ class TestSampleFilter:
 
         # Create annotations
         cat_label = create_annotation_label(
-            session=db_session, dataset_id=collection_id, label_name="cat"
+            session=db_session, root_collection_id=collection_id, label_name="cat"
         )
         dog_label = create_annotation_label(
-            session=db_session, dataset_id=collection_id, label_name="dog"
+            session=db_session, root_collection_id=collection_id, label_name="dog"
         )
 
         # Add annotations to samples
@@ -166,10 +166,10 @@ class TestSampleFilter:
 
         # Create annotation labels
         cat_label = create_annotation_label(
-            session=db_session, dataset_id=collection_id, label_name="cat"
+            session=db_session, root_collection_id=collection_id, label_name="cat"
         )
         dog_label = create_annotation_label(
-            session=db_session, dataset_id=collection_id, label_name="dog"
+            session=db_session, root_collection_id=collection_id, label_name="dog"
         )
 
         # Add 2 cat and dog annotations to the first sample
