@@ -48,5 +48,4 @@ export { default as VideoDetailsNavigation } from '$lib/components/VideoDetailsN
 export { default as VideoFrameDetails } from '$lib/components/VideoFrameDetails/VideoFrameDetails.svelte';
 export { default as GroupsComponentsMenu } from '$lib/components/GroupsComponentsMenu/GroupsComponentsMenu.svelte';
 export { default as LayoutCard } from '$lib/components/LayoutCard/LayoutCard.svelte';
-export { default as QueryContainer } from '$lib/components/QueryContainer/QueryContainer.svelte';
 export { default as Separator } from '$lib/components/ui/separator/separator.svelte';
