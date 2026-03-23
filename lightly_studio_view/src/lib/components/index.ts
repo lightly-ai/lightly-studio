@@ -41,5 +41,12 @@ export { default as GroupComponent } from '$lib/components/GroupComponent/GroupC
 export { default as Image } from '$lib/components/Image/Image.svelte';
 export { default as VideoPreview } from '$lib/components/VideoPreview/VideoPreview.svelte';
 export { default as VideoPlayer } from '$lib/components/VideoPlayer/VideoPlayer.svelte';
-export { default as VideoFrameDetails } from '$lib/components/VideoFrameDetails/VideoFrameDetails.svelte';
 export { default as VideoSampleMetadata } from '$lib/components/VideoSampleMetadata/VideoSampleMetadata.svelte';
+export { default as SegmentTags } from '$lib/components/SegmentTags/SegmentTags.svelte';
+export { default as MetadataSegment } from '$lib/components/MetadataSegment/MetadataSegment.svelte';
+export { default as VideoDetailsNavigation } from '$lib/components/VideoDetailsNavigation/VideoDetailsNavigation.svelte';
+export { default as VideoFrameDetails } from '$lib/components/VideoFrameDetails/VideoFrameDetails.svelte';
+export { default as GroupsComponentsMenu } from '$lib/components/GroupsComponentsMenu/GroupsComponentsMenu.svelte';
+export { default as LayoutCard } from '$lib/components/LayoutCard/LayoutCard.svelte';
+export { default as QueryContainer } from '$lib/components/QueryContainer/QueryContainer.svelte';
+export { default as Separator } from '$lib/components/ui/separator/separator.svelte';

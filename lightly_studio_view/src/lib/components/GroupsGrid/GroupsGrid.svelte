@@ -14,7 +14,7 @@
         hasNextPage,
         isFetchingNextPage,
         onLoadMore,
-        navigateToGroupDetails
+        navigateToSampleDetailsByView
     }: {
         groups: GroupView[];
         isLoading: boolean;
@@ -22,13 +22,21 @@
         hasNextPage: boolean;
         isFetchingNextPage: boolean;
         onLoadMore: () => void;
-        navigateToGroupDetails?: (groupId: string) => void;
+        navigateToSampleDetailsByView: (view: GroupView) => void;
     } = $props();
 
     const { sampleSize } = useGlobalStorage();
     const columnCount = $derived($sampleSize.width);
 
     let clientWidth = $state(0);
+
+    const handleDblClick = (view: GroupView) => {
+        if (!view) {
+            throw new Error('View is missing for the selected group');
+        }
+        // For videos, we want to navigate to the group details page on double click
+        navigateToSampleDetailsByView(view);
+    };
 </script>
 
 <div class="h-full w-full" bind:clientWidth>
@@ -54,7 +62,7 @@
                         containerProps={{
                             tabindex: 0,
                             role: 'button',
-                            ondblclick: () => navigateToGroupDetails?.(groups[index].sample_id)
+                            ondblclick: () => handleDblClick(groups[index])
                         }}
                         {width}
                         {height}

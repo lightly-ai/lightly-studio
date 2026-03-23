@@ -72,7 +72,7 @@
         <div
             class="flex h-full min-h-0 flex-col space-y-4 overflow-y-auto dark:[color-scheme:dark]"
         >
-            <SegmentTags {tags} onClick={onRemoveTag} />
+            <SegmentTags {tags} onClickDelete={onRemoveTag} />
             {#if sample.annotations}
                 <SampleDetailsAnnotationSegment
                     bind:annotationsIdsToHide

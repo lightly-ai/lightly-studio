@@ -1,10 +1,9 @@
 <script lang="ts">
     import { Segment } from '$lib/components';
     import { TagsIcon } from '@lucide/svelte';
-    import { toast } from 'svelte-sonner';
 
     interface Tag {
-        tagId: string;
+        tag_id?: string;
         name: string;
     }
 
@@ -13,24 +12,14 @@
         onClick
     }: {
         tags: Tag[];
-        onClick: (tagId: string) => Promise<void>;
+        onClick: (tag_id: string) => Promise<void>;
     } = $props();
-
-    const handleRemoveTag = async (tagId: string) => {
-        try {
-            await onClick(tagId);
-            toast.success('Tag removed successfully');
-        } catch (error) {
-            toast.error('Failed to remove tag. Please try again.');
-            console.error('Error removing tag from sample:', error);
-        }
-    };
 </script>
 
 {#if tags.length > 0}
     <Segment title="Tags" icon={TagsIcon}>
         <div class="flex flex-wrap gap-1">
-            {#each tags as tag (tag.tagId)}
+            {#each tags as tag (tag.tag_id)}
                 <div class="inline-flex items-center gap-1 rounded-lg bg-card px-2 py-1 text-xs">
                     <span data-testid="segment-tag-name">{tag.name}</span>
                     <button
@@ -40,7 +29,10 @@
                         data-testid={`remove-tag-${tag.name}`}
                         onclick={(event) => {
                             event.stopPropagation();
-                            handleRemoveTag(tag.tagId);
+                            // TODO(Kondrat 17.03.2026): Fix the case when tag_id is undefined, we need proper TagView from the backend.
+                            if (tag.tag_id) {
+                                onClick(tag.tag_id);
+                            }
                         }}
                     >
                         x

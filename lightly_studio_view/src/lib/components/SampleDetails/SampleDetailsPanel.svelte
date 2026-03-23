@@ -44,7 +44,8 @@
         sidePanelItem,
         isOnAnnotationDetailsView = false,
         selectableBox,
-        dataTestId
+        dataTestId,
+        hideBreadcrumb = false
     }: {
         sampleId: string;
         collectionId: string;
@@ -66,6 +67,7 @@
         selectableBox?: Snippet;
         dataTestId?: string;
         isOnAnnotationDetailsView?: boolean;
+        hideBreadcrumb?: boolean;
     } = $props();
 
     const {
@@ -243,7 +245,7 @@
 {#if sample}
     <div class="flex h-full w-full flex-col space-y-4" data-testid={dataTestId}>
         <div class="flex w-full items-center justify-between">
-            {#if $datasetCollection.data}
+            {#if $datasetCollection.data && !hideBreadcrumb}
                 {@render breadcrumb({ collection: $datasetCollection.data })}
             {/if}
             {#if $isEditingMode}

@@ -344,6 +344,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/collections/{collection_id}/export/youtube-vis": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Export Collection Youtube Vis
+         * @description Export collection video annotations in YouTube-VIS instance segmentation format.
+         */
+        get: operations["export_collection_youtube_vis"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/collections/{collection_id}/images/list": {
         parameters: {
             query?: never;
@@ -1463,7 +1483,7 @@ export interface paths {
          *
          *     Args:
          *         session: The database session.
-         *         video_frame_collection_id: The ID of the collection to retrieve videos for.
+         *         video_frame_collection_id: The ID of the collection to count annotations for.
          *         body: The body containing filters.
          *
          *     Returns:
@@ -1491,7 +1511,7 @@ export interface paths {
          *
          *     Args:
          *         session: The database session.
-         *         collection_id: The ID of the collection to retrieve videos for.
+         *         collection_id: The ID of the collection to count annotations for.
          *         body: The body containing filters.
          *
          *     Returns:
@@ -1866,10 +1886,10 @@ export interface components {
          */
         AnnotationLabelCreate: {
             /**
-             * Root Collection Id
+             * Dataset Id
              * Format: uuid
              */
-            root_collection_id: string;
+            dataset_id: string;
             /** Annotation Label Name */
             annotation_label_name: string;
         };
@@ -1887,10 +1907,10 @@ export interface components {
          */
         AnnotationLabelTable: {
             /**
-             * Root Collection Id
+             * Dataset Id
              * Format: uuid
              */
-            root_collection_id: string;
+            dataset_id: string;
             /** Annotation Label Name */
             annotation_label_name: string;
             /**
@@ -2454,24 +2474,6 @@ export interface components {
             /** Max */
             max?: number | null;
         };
-        /** FilterWithCollectionId[VideoFilter] */
-        FilterWithCollectionId_VideoFilter_: {
-            /**
-             * Collection Id
-             * Format: uuid
-             */
-            collection_id: string;
-            filter: components["schemas"]["VideoFilter"];
-        };
-        /** FilterWithCollectionId[VideoFrameFilter] */
-        FilterWithCollectionId_VideoFrameFilter_: {
-            /**
-             * Collection Id
-             * Format: uuid
-             */
-            collection_id: string;
-            filter: components["schemas"]["VideoFrameFilter"];
-        };
         /**
          * FloatRange
          * @description Defines a range of floating-point values.
@@ -2896,7 +2898,7 @@ export interface components {
          */
         ReadCountVideoFramesAnnotationsRequest: {
             /** @description Filter parameters for video frames annotations counter */
-            filter?: components["schemas"]["VideoFrameAnnotationsCounterFilter"] | null;
+            filter?: components["schemas"]["VideoFrameFilter"] | null;
         };
         /**
          * ReadGroupsRequest
@@ -2940,7 +2942,7 @@ export interface components {
          */
         ReadVideoCountAnnotationsRequest: {
             /** @description Filter parameters for video annotations counter */
-            filter?: components["schemas"]["VideoCountAnnotationsFilter"] | null;
+            filter?: components["schemas"]["VideoFilter"] | null;
         };
         /**
          * ReadVideoFramesRequest
@@ -3019,8 +3021,6 @@ export interface components {
         SampleFilter: {
             /** Collection Id */
             collection_id?: string | null;
-            /** Annotation Label Ids */
-            annotation_label_ids?: string[] | null;
             /** Tag Ids */
             tag_ids?: string[] | null;
             /** Metadata Filters */
@@ -3404,15 +3404,6 @@ export interface components {
             file_path_abs: string;
         };
         /**
-         * VideoCountAnnotationsFilter
-         * @description Encapsulates filter parameters for querying video frame annotations counter.
-         */
-        VideoCountAnnotationsFilter: {
-            video_filter?: components["schemas"]["VideoFilter"] | null;
-            /** Video Frames Annotations Labels */
-            video_frames_annotations_labels?: string[] | null;
-        };
-        /**
          * VideoFieldsBoundsBody
          * @description The body to retrieve the fields bounds.
          */
@@ -3444,8 +3435,6 @@ export interface components {
             height?: components["schemas"]["FilterDimensions"] | null;
             fps?: components["schemas"]["FloatRange"] | null;
             duration_s?: components["schemas"]["FloatRange"] | null;
-            /** Annotation Frames Label Ids */
-            annotation_frames_label_ids?: string[] | null;
             sample_filter?: components["schemas"]["SampleFilter"] | null;
             frame_annotation_filter?: components["schemas"]["AnnotationsFilter"] | null;
         };
@@ -3464,8 +3453,8 @@ export interface components {
              * @enum {string}
              */
             filter_type: "video_frame_adjacent";
-            video_frame_filter: components["schemas"]["FilterWithCollectionId_VideoFrameFilter_"];
-            video_filter?: components["schemas"]["FilterWithCollectionId_VideoFilter_"] | null;
+            video_frame_filter: components["schemas"]["VideoFrameFilter"];
+            video_filter?: components["schemas"]["VideoFilter"] | null;
             /** Video Text Embedding */
             video_text_embedding?: number[] | null;
         };
@@ -3497,15 +3486,6 @@ export interface components {
              */
             sample_id: string;
             video: components["schemas"]["VideoAnnotationView"];
-        };
-        /**
-         * VideoFrameAnnotationsCounterFilter
-         * @description Encapsulates filter parameters for querying video frame annotations counter.
-         */
-        VideoFrameAnnotationsCounterFilter: {
-            video_filter?: components["schemas"]["VideoFrameFilter"] | null;
-            /** Annotations Labels */
-            annotations_labels?: string[] | null;
         };
         /**
          * VideoFrameFieldsBoundsView
@@ -4290,6 +4270,39 @@ export interface operations {
                 };
                 content: {
                     "application/json": number;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    export_collection_youtube_vis: {
+        parameters: {
+            query?: {
+                annotation_type?: components["schemas"]["AnnotationType"];
+            };
+            header?: never;
+            path: {
+                collection_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
                 };
             };
             /** @description Validation Error */

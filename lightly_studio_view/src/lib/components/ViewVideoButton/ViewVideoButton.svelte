@@ -11,13 +11,13 @@
     class="mt-4 w-full"
     data-testid="view-video-button"
     href={(() => {
-        return routeHelpers.toVideosDetails(
+        return routeHelpers.toVideosDetails({
             datasetId,
-            'video',
-            frame.video.sample.collection_id!,
-            frame.video.sample_id,
-            frame.frame_number
-        );
+            collectionType: 'video',
+            collectionId: frame.video.sample.collection_id!,
+            sampleId: frame.video.sample_id,
+            frameNumber: frame.frame_number
+        });
     })()}
 >
     View video
