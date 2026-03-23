@@ -20,6 +20,7 @@ export const useAdjacentAnnotations = ({
             body: {
                 sample_type: SampleType.ANNOTATION,
                 filters: {
+                    filter_type: 'annotations',
                     collection_ids: [collectionId],
                     annotation_label_ids:
                         get(selectedAnnotationFilterIds).size > 0

@@ -284,7 +284,7 @@ def _build_label_id_to_category(session: Session, dataset_id: UUID) -> dict[UUID
     """Build a mapping from annotation label UUID to YouTube-VIS category."""
     labels = annotation_label_resolver.get_all_sorted_alphabetically(
         session=session,
-        dataset_id=dataset_id,
+        root_collection_id=dataset_id,
     )
     return {
         label.annotation_label_id: Category(id=idx, name=label.annotation_label_name)

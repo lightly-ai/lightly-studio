@@ -54,9 +54,13 @@ describe('useAdjacentFrames', () => {
                 body: {
                     sample_type: SampleType.VIDEO_FRAME,
                     filters: {
+                        filter_type: 'video_frame_adjacent',
                         video_frame_filter: {
-                            sample_filter: { collection_id: 'col-1', sample_ids: ['a'] },
-                            frame_number: { min: 1, max: 2 }
+                            collection_id: 'col-1',
+                            filter: {
+                                sample_filter: { collection_id: 'col-1', sample_ids: ['a'] },
+                                frame_number: { min: 1, max: 2 }
+                            }
                         }
                     }
                 }
@@ -76,9 +80,12 @@ describe('useAdjacentFrames', () => {
                 body: {
                     sample_type: SampleType.VIDEO_FRAME,
                     filters: {
+                        filter_type: 'video_frame_adjacent',
                         video_frame_filter: {
-                            sample_filter: { collection_id: 'col-2' },
-                            frame_number: {}
+                            collection_id: 'col-2',
+                            filter: {
+                                frame_number: {}
+                            }
                         }
                     }
                 }
@@ -103,14 +110,20 @@ describe('useAdjacentFrames', () => {
                 body: {
                     sample_type: SampleType.VIDEO_FRAME,
                     filters: {
+                        filter_type: 'video_frame_adjacent',
                         video_frame_filter: {
-                            sample_filter: { collection_id: 'col-3' },
-                            frame_number: {}
+                            collection_id: 'col-3',
+                            filter: {
+                                frame_number: {}
+                            }
                         },
                         video_filter: {
-                            sample_filter: {
-                                collection_id: 'col-3',
-                                sample_ids: ['s1']
+                            collection_id: 'col-3',
+                            filter: {
+                                sample_filter: {
+                                    collection_id: 'col-3',
+                                    sample_ids: ['s1']
+                                }
                             }
                         },
                         video_text_embedding: [0.1, 0.2]

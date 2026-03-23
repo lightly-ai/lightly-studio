@@ -15,6 +15,7 @@ from sqlmodel.sql.expression import Select, SelectOfScalar
 from lightly_studio.models.adjacents import AdjacentResultView
 from lightly_studio.models.video import VideoFrameTable, VideoTable
 from lightly_studio.resolvers import adjacents, similarity_utils
+from lightly_studio.resolvers.filter_with_collection_id import FilterWithCollectionId
 from lightly_studio.resolvers.video_frame_resolver.video_frame_adjacent_filter import (
     VideoFrameAdjacentFilter,
 )
@@ -28,20 +29,9 @@ def get_adjacent_video_frames(
 ) -> AdjacentResultView | None:
     """Get the adjacent video frames for a given sample ID."""
     video_frame_filter = filters.video_frame_filter
-    collection_id = (
-        video_frame_filter.sample_filter.collection_id if video_frame_filter.sample_filter else None
-    )
-    if collection_id is None:
-        raise ValueError("Collection ID must be provided in video_frame_filter.sample_filter.")
-
     video_filter = filters.video_filter
 
-    video_collection_id: UUID | None = None
-    if video_filter and video_filter.sample_filter:
-        video_collection_id = video_filter.sample_filter.collection_id
-
-        if video_collection_id is None:
-            raise ValueError("Collection ID must be provided in video_filter.sample_filter")
+    video_collection_id: UUID | None = video_filter.collection_id if video_filter else None
 
     if filters.video_text_embedding and video_collection_id is None:
         raise ValueError("Collection ID must be resolvable when video_text_embedding is provided.")
@@ -112,7 +102,9 @@ def _default_ordering_expression() -> tuple[ColumnElement[Any], ColumnElement[An
     )
 
 
-def _video_ids_subquery(video_filter: VideoFilter | None) -> Subquery | None:
+def _video_ids_subquery(
+    video_filter: FilterWithCollectionId[VideoFilter] | None,
+) -> Subquery | None:
     if video_filter is None:
         return None
 

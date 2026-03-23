@@ -57,6 +57,8 @@
             <a
                 class="flex items-center gap-2 text-foreground/80 transition-colors hover:text-foreground"
                 href="https://www.lightly.ai/contact"
+                target="_blank"
+                rel="noreferrer"
             >
                 <Mail class="size-4" />
                 <span>Contact Us</span>

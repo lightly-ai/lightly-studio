@@ -24,7 +24,9 @@ def test_create_annotation_label(db_session: Session, test_client: TestClient) -
     assert result.json()["annotation_label_id"] is not None
 
     # Check that the label was created in the database
-    all_labels = annotation_label_resolver.get_all(session=db_session, dataset_id=collection_id)
+    all_labels = annotation_label_resolver.get_all(
+        session=db_session, root_collection_id=collection_id
+    )
     assert len(all_labels) == 1
     assert all_labels[0].annotation_label_name == "cat"
 
@@ -61,9 +63,8 @@ def test_update_annotation_label(db_session: Session, test_client: TestClient) -
     ).annotation_label_id
 
     updated_label = {
-        "annotation_label_id": str(label_id),
         "annotation_label_name": "dog",
-        "dataset_id": str(collection_id),
+        "root_collection_id": str(collection_id),
     }
 
     label_result = test_client.put(

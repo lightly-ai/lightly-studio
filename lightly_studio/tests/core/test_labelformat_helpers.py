@@ -161,7 +161,7 @@ def test_create_label_map(db_session: Session) -> None:
 
     label_map_1 = labelformat_helpers.create_label_map(
         session=db_session,
-        dataset_id=collection_id,
+        root_collection_id=collection_id,
         input_labels=label_input,
     )
 
@@ -177,7 +177,7 @@ def test_create_label_map(db_session: Session) -> None:
 
     label_map_2 = labelformat_helpers.create_label_map(
         session=db_session,
-        dataset_id=collection_id,
+        root_collection_id=collection_id,
         input_labels=label_input_2,
     )
 

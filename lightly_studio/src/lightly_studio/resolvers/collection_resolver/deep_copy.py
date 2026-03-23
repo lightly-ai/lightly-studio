@@ -243,7 +243,9 @@ def _copy_annotation_labels(
 ) -> None:
     """Copy annotation labels (belong to root collection only)."""
     labels = session.exec(
-        select(AnnotationLabelTable).where(AnnotationLabelTable.dataset_id == root_collection_id)
+        select(AnnotationLabelTable).where(
+            AnnotationLabelTable.root_collection_id == root_collection_id
+        )
     ).all()
 
     new_root_collection_id = ctx.collection_map[root_collection_id]
@@ -256,7 +258,7 @@ def _copy_annotation_labels(
             old_label,
             {
                 "annotation_label_id": new_id,
-                "dataset_id": new_root_collection_id,
+                "root_collection_id": new_root_collection_id,
             },
         )
         session.add(new_label)

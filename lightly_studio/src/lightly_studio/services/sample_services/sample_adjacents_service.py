@@ -2,9 +2,10 @@
 
 from __future__ import annotations
 
+from typing import Annotated
 from uuid import UUID
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from sqlmodel import Session
 
 from lightly_studio.models.adjacents import AdjacentResultView
@@ -27,7 +28,10 @@ class AdjacentRequest(BaseModel):
     """Request body for reading adjacent samples."""
 
     sample_type: SampleType
-    filters: ImageFilter | VideoFilter | VideoFrameAdjacentFilter | AnnotationsFilter
+    filters: Annotated[
+        ImageFilter | VideoFilter | VideoFrameAdjacentFilter | AnnotationsFilter,
+        Field(discriminator="filter_type"),
+    ]
     text_embedding: list[float] | None = None
 
 
