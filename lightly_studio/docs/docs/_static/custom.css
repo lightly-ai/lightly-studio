@@ -87,14 +87,14 @@
 .md-typeset .tabbed-labels {
   flex-wrap: wrap;
   overflow: visible;
-  /* Full-width separator line at the bottom of each tab row.
-     Row height = label <a> padding (10px + 8px) + line-height (1.6 * 0.8rem) ≈ 40.5px */
-  background-image: linear-gradient(
-    to bottom,
-    transparent calc(100% - 1px),
-    var(--md-default-fg-color--lightest) calc(100% - 1px)
-  );
-  background-size: 100% 40.5px;
+  border-bottom: 1px solid var(--md-default-fg-color--lightest);
+}
+
+/* Per-label bottom border creates separator between rows when tabs wrap */
+.md-typeset .tabbed-set > .tabbed-labels > label {
+  position: relative;
+  border-bottom: 1px solid var(--md-default-fg-color--lightest);
+  margin-bottom: -1px;
 }
 
 /* Hide the sliding indicator which breaks with wrapped tabs */
@@ -103,9 +103,6 @@
 }
 
 /* Per-tab underline with grow-from-center animation */
-.md-typeset .tabbed-set > .tabbed-labels > label {
-  position: relative;
-}
 
 .md-typeset .tabbed-set > .tabbed-labels > label::after {
   content: "";
