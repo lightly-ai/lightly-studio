@@ -278,7 +278,7 @@ for image_sample in dataset:
 
 ## Dataset Query
 
-You can filter, sort, and slice samples using `DatasetQuery`. This is useful for creating training/validation splits, finding specific samples, or exporting filtered data. See the [Search and Filter](../concepts_and_tools/search_and_filter.md#dataset-query-in-python) section for more details and examples.
+You can programmatically filter samples by attributes (e.g., image size, tags), sort them, and select subsets. This is useful for creating training/validation splits, finding specific samples, or exporting filtered data. See the [Search and Filter](../concepts_and_tools/search_and_filter.md#dataset-query-in-python) section on the DatasetQuery for more details and examples.
 
 
 ## Selection

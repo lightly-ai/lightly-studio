@@ -117,7 +117,7 @@ query.order_by(
     ```py
     query.match(<expression>)
     ```
-    To create an expression for filtering on certain sample fields, the `ImageSampleField.<field_name> <operator> <value>` syntax can be used. Available field names can be seen in [`ImageSampleField`](/api/core/#lightly_studio.core.dataset_query.image_sample_field.ImageSampleField).
+    To create an expression for filtering on certain sample fields, the `ImageSampleField.<field_name> <operator> <value>` syntax can be used. Available field names can be seen in [`ImageSampleField`](../api/dataset_query.md#lightly_studio.core.dataset_query.image_sample_field.ImageSampleField).
 
     <details>
     <summary>Examples:</summary>
@@ -143,7 +143,7 @@ query.order_by(
 
     </details>
 
-    The filtering on individual fields can flexibly be combined to create more complex match expression. For this, the boolean operators [`AND`](/api/core/#lightly_studio.core.dataset_query.boolean_expression.AND), [`OR`](/api/core/#lightly_studio.core.dataset_query.boolean_expression.OR), and [`NOT`](/api/core/#lightly_studio.core.dataset_query.boolean_expression.NOT) are available. Boolean operators can arbitrarily be nested.
+    The filtering on individual fields can flexibly be combined to create more complex match expression. For this, the boolean operators [`AND`](../api/dataset_query.md#lightly_studio.core.dataset_query.boolean_expression.AND), [`OR`](../api/dataset_query.md#lightly_studio.core.dataset_query.boolean_expression.OR), and [`NOT`](../api/dataset_query.md#lightly_studio.core.dataset_query.boolean_expression.NOT) are available. Boolean operators can arbitrarily be nested.
 
     <details>
     <summary>Examples:</summary>
