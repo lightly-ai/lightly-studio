@@ -16,6 +16,7 @@
     import { useCreateAnnotation } from '$lib/hooks/useCreateAnnotation/useCreateAnnotation';
     import { useDeleteAnnotation } from '$lib/hooks/useDeleteAnnotation/useDeleteAnnotation';
     import { useGlobalStorage } from '$lib/hooks/useGlobalStorage';
+    import { useSegmentationEraserTarget } from '$lib/hooks/useSegmentationEraserTarget/useSegmentationEraserTarget';
     import { useSegmentationMaskEraser } from '$lib/hooks/useSegmentationMaskEraser';
     import { addAnnotationDeleteToUndoStack } from '$lib/services/addAnnotationDeleteToUndoStack';
     import SampleAnnotationRect from '../SampleAnnotationRect/SampleAnnotationRect.svelte';
@@ -66,12 +67,26 @@
             refetch: annotationLabelContext.isOnAnnotationDetailsView ? undefined : refetch
         })
     );
+    const eraserTargetApi = $derived.by(() =>
+        useSegmentationEraserTarget({
+            sample,
+            collectionId
+        })
+    );
 
+    const activeAnnotationId = $derived.by(() => {
+        if (annotationLabelContext.annotationId) return annotationLabelContext.annotationId;
+        if (annotationLabelContext.isOnAnnotationDetailsView) {
+            return sample.annotations[0]?.sample_id ?? null;
+        }
+
+        return null;
+    });
     const annotationApi = $derived.by(() => {
-        if (!annotationLabelContext.annotationId) return null;
+        if (!activeAnnotationId) return null;
         return useAnnotation({
             collectionId,
-            annotationId: annotationLabelContext.annotationId
+            annotationId: activeAnnotationId
         });
     });
 
@@ -89,14 +104,25 @@
     };
 
     $effect(() => {
-        const annId = annotationLabelContext.annotationId;
-        if (!annId) {
+        if (!activeAnnotationId) {
+            selectedAnnotation = null;
             workingMask = null;
             previewDataUrl = '';
             return;
         }
 
-        const ann = sample.annotations.find((a) => a.sample_id === annId);
+        if (!annotationLabelContext.annotationId) {
+            setAnnotationId(activeAnnotationId);
+        }
+
+        const ann = sample.annotations.find((a) => a.sample_id === activeAnnotationId);
+        if (!ann) {
+            selectedAnnotation = null;
+            workingMask = null;
+            previewDataUrl = '';
+            return;
+        }
+
         const rle = ann?.segmentation_details?.segmentation_mask;
 
         if (!rle) {
@@ -132,31 +158,33 @@
         })
     );
 
-    async function deleteAnn() {
+    async function deleteAnn(annotationToDelete?: AnnotationView | null) {
         const labels = $annotationLabels.data;
 
-        const annotation = sample.annotations.find(
-            (a) => a.sample_id === annotationLabelContext.annotationId
-        );
+        const annotation =
+            annotationToDelete ??
+            sample.annotations.find((a) => a.sample_id === annotationLabelContext.annotationId);
 
-        if (!(annotation || labels)) return;
+        if (!annotation || !labels) return;
 
         try {
             addAnnotationDeleteToUndoStack({
-                annotation: annotation!,
-                labels: labels!,
+                annotation,
+                labels,
                 addReversibleAction,
                 createAnnotation,
                 refetch
             });
 
-            await deleteAnnotation(annotation!.sample_id);
+            await deleteAnnotation(annotation.sample_id);
             toast.success('Annotation deleted successfully');
 
             if (annotationLabelContext.isOnAnnotationDetailsView) return gotoNextAnnotation();
 
             refetch();
-            setAnnotationId(null);
+            if (annotationLabelContext.annotationId === annotation.sample_id) {
+                setAnnotationId(null);
+            }
         } catch (error) {
             toast.error('Failed to delete annotation. Please try again.');
             console.error('Error deleting annotation:', error);
@@ -186,12 +214,28 @@
     onpointerdown={(e) => {
         e.currentTarget?.setPointerCapture?.(e.pointerId);
 
-        if (!annotationLabelContext.annotationId)
-            return toast.error('No annotation selected for erasing');
-        if (!workingMask) return;
-
         const point = getImageCoordsFromMouse(e, interactionRect, sample.width, sample.height);
         if (!point) return;
+
+        const target = eraserTargetApi.resolveTargetAtPoint(point);
+        if (target.error === 'not_found') {
+            e.currentTarget?.releasePointerCapture?.(e.pointerId);
+            return toast.error('No annotation found under cursor');
+        }
+
+        if (target.error === 'locked') {
+            e.currentTarget?.releasePointerCapture?.(e.pointerId);
+            return toast.error('This annotation is locked');
+        }
+
+        if (!target.annotation || !target.workingMask) {
+            e.currentTarget?.releasePointerCapture?.(e.pointerId);
+            return;
+        }
+
+        selectedAnnotation = target.annotation;
+        workingMask = target.workingMask;
+        previewDataUrl = '';
 
         setIsDrawing(true);
         lastBrushPoint = point;
@@ -200,7 +244,12 @@
         updatePreview();
     }}
     onpointermove={(e) => {
-        if (!annotationLabelContext.isDrawing || !workingMask) return;
+        if (
+            !annotationLabelContext.isDrawing ||
+            !workingMask ||
+            eraserTargetApi.isLockedAnnotation(selectedAnnotation)
+        )
+            return;
 
         const point = getImageCoordsFromMouse(e, interactionRect, sample.width, sample.height);
         if (!point) return;
@@ -226,6 +275,14 @@
         e.currentTarget?.releasePointerCapture?.(e.pointerId);
 
         lastBrushPoint = null;
-        eraserApi.finishErase(workingMask, selectedAnnotation, updateAnnotation, deleteAnn);
+        if (eraserTargetApi.isLockedAnnotation(selectedAnnotation)) {
+            setIsDrawing(false);
+            return;
+        }
+
+        const annotationToDelete = selectedAnnotation;
+        eraserApi.finishErase(workingMask, selectedAnnotation, updateAnnotation, async () =>
+            deleteAnn(annotationToDelete)
+        );
     }}
 />
