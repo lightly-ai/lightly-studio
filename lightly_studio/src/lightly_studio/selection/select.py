@@ -32,7 +32,9 @@ class Selection:
 
     # Creation of a Selection instance.
 
-    Creation of an instance of this is easiest via the `DatasetQuery` class. By using
+    Creation of an instance of this is easiest via the
+    [`DatasetQuery`](../concepts_and_tools/search_and_filter.md#dataset-query-in-python)
+    class. By using
     a `match()` first, the samples to select from can be filtered down.
     ```python
     from lightly_studio.core.dataset_query import ImageSampleField
@@ -44,7 +46,8 @@ class Selection:
     query_narrow_images = dataset.query().match(ImageSampleField.width < 256)
     selection_among_narrow_images = query_narrow_images.selection()
     ```
-    See the `DatasetQuery.match()` documentation for more information on filtering.
+    See [Dataset Query in Python](../concepts_and_tools/search_and_filter.md#dataset-query-in-python)
+    for more information on filtering.
     By creating the `Selection` instance, the query is executed. Further changes to the
     query do not affect the selection instance.
 
