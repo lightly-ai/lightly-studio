@@ -251,7 +251,7 @@ def load_video_annotations_from_labelformat(
 
     label_map = labelformat_helpers.create_label_map(
         session=session,
-        dataset_id=dataset_id,
+        root_collection_id=dataset_id,
         input_labels=input_labels,
     )
 
