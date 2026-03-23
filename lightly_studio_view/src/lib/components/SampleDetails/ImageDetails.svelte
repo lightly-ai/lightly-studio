@@ -15,12 +15,10 @@
     const {
         sampleId,
         collection,
-        hideBreadcrumb = false,
         children
     }: {
         sampleId: string;
         collection: Collection;
-        hideBreadcrumb?: boolean;
         children?: Snippet;
     } = $props();
 
@@ -49,7 +47,6 @@
         {collectionId}
         {sampleId}
         {sampleURL}
-        {hideBreadcrumb}
         sample={{
             ...sampleImage.sample,
             width: sampleImage.width,
