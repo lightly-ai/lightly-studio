@@ -9,7 +9,7 @@ from sqlmodel import Session
 from lightly_studio.models.annotation.annotation_base import (
     AnnotationBaseTable,
 )
-from lightly_studio.resolvers import annotation_resolver
+from lightly_studio.resolvers import annotation_layer_resolver, annotation_resolver
 from lightly_studio.services import annotations_service
 from lightly_studio.services.annotations_service.update_annotation import AnnotationUpdate
 
@@ -40,6 +40,10 @@ def update_annotations(
             annotation_update,
         )
         results.append(result)
+        annotation_layer_resolver.move_annotation_to_top(
+            session=session,
+            annotation_id=result.sample_id,
+        )
 
         if annotation_update.label_name is not None and result.object_track_id is not None:
             # Overwriting the value reflects the last input update for that track

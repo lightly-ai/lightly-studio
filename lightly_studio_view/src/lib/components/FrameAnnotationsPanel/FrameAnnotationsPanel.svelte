@@ -40,13 +40,7 @@
     const annotationLabels = useAnnotationLabels({ collectionId });
     const items = $derived(getSelectionItems($annotationLabels.data || []));
     const annotations = $derived(
-        sample.sample.annotations
-            ? [...sample.sample.annotations].sort((a, b) =>
-                  a.annotation_label.annotation_label_name.localeCompare(
-                      b.annotation_label.annotation_label_name
-                  )
-              )
-            : []
+        sample.sample.annotations ? [...sample.sample.annotations] : []
     );
 </script>
 

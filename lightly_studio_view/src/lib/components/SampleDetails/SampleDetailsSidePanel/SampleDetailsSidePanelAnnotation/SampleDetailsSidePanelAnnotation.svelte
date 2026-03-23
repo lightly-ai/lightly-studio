@@ -26,9 +26,11 @@
         canHighlight = false,
         onClickSelectList,
         isLocked = false,
-        onToggleLock
+        onToggleLock,
+        position
     }: {
         annotation: AnnotationView;
+        position?: number;
         isSelected: boolean;
         onClick: () => void;
         onUpdate: () => void;
@@ -255,6 +257,9 @@
                 )}
             >
                 <span class="flex h-full items-center justify-center text-xs text-muted-foreground">
+                    {#if position != null}
+                        Layer {position} •
+                    {/if}
                     {formatAnnotationType(annotation.annotation_type)}
                     {#if getAnnotationDimensions(annotation)}
                         ({getAnnotationDimensions(annotation)})

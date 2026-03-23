@@ -12,7 +12,7 @@ See https://duckdb.org/docs/stable/sql/statements/create_table.html.
 
 from __future__ import annotations
 
-from sqlmodel import Session
+from sqlmodel import Session, col, select
 
 from lightly_studio.models.annotation.annotation_base import (
     AnnotationBaseTable,
@@ -20,6 +20,7 @@ from lightly_studio.models.annotation.annotation_base import (
 )
 from lightly_studio.models.annotation.object_detection import ObjectDetectionAnnotationTable
 from lightly_studio.models.annotation.segmentation import SegmentationAnnotationTable
+from lightly_studio.models.annotation_layer import AnnotationLayerTable
 from lightly_studio.resolvers import annotation_resolver
 
 
@@ -72,6 +73,12 @@ def update_annotation_object(
         else None
     )
 
+    existing_layer = session.exec(
+        select(AnnotationLayerTable).where(
+            col(AnnotationLayerTable.annotation_id) == annotation.sample_id
+        )
+    ).one_or_none()
+
     annotation_resolver.delete_annotation(session, annotation.sample_id, delete_sample=False)
 
     new_annotation = AnnotationBaseTable(
@@ -90,6 +97,16 @@ def update_annotation_object(
 
     if object_detection:
         session.add(object_detection)
+
+    if existing_layer:
+        session.add(
+            AnnotationLayerTable(
+                layer_id=existing_layer.layer_id,
+                annotation_id=annotation_copy.sample_id,
+                sample_id=existing_layer.sample_id,
+                position=existing_layer.position,
+            )
+        )
 
     session.commit()
     session.flush()

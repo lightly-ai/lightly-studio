@@ -21,6 +21,7 @@ from lightly_studio.models.annotation.segmentation import (
     SegmentationAnnotationTable,
 )
 from lightly_studio.models.annotation_label import AnnotationLabelTable
+from lightly_studio.models.annotation_layer import AnnotationLayerTable
 from lightly_studio.models.caption import CaptionTable
 from lightly_studio.models.collection import CollectionTable
 from lightly_studio.models.dataset import DatasetTable
@@ -121,6 +122,7 @@ def deep_copy(
     _copy_groups(session=session, old_sample_ids=old_sample_ids, ctx=ctx)
     _copy_captions(session=session, old_sample_ids=old_sample_ids, ctx=ctx)
     _copy_annotations(session=session, old_sample_ids=old_sample_ids, ctx=ctx)
+    _copy_annotation_layers(session=session, old_sample_ids=old_sample_ids, ctx=ctx)
     session.flush()
 
     # 5. Copy sample attachments.
@@ -471,6 +473,28 @@ def _copy_annotation_details(
         pass
     else:
         raise ValueError(f"Unsupported annotation type: {annotation_type}")
+
+
+def _copy_annotation_layers(
+    session: Session,
+    old_sample_ids: list[UUID],
+    ctx: DeepCopyContext,
+) -> None:
+    """Copy annotation layers, remapping annotation and parent sample IDs."""
+    layers = session.exec(
+        select(AnnotationLayerTable).where(col(AnnotationLayerTable.annotation_id).in_(old_sample_ids))
+    ).all()
+
+    for old_layer in layers:
+        new_layer = _copy_with_updates(
+            old_layer,
+            {
+                "layer_id": uuid4(),
+                "annotation_id": ctx.sample_map[old_layer.annotation_id],
+                "sample_id": ctx.sample_map[old_layer.sample_id],
+            },
+        )
+        session.add(new_layer)
 
 
 def _copy_metadata(

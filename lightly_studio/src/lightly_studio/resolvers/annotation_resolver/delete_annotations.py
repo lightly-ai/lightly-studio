@@ -9,6 +9,7 @@ from sqlmodel import Session, col, delete
 from lightly_studio.models.annotation.annotation_base import (
     AnnotationBaseTable,
 )
+from lightly_studio.models.annotation_layer import AnnotationLayerTable
 from lightly_studio.resolvers import annotation_resolver
 from lightly_studio.resolvers.annotations.annotations_filter import (
     AnnotationsFilter,
@@ -43,6 +44,11 @@ def delete_annotations(
     # Now delete the annotations themselves
     annotation_ids = [annotation.sample_id for annotation in annotations]
     if annotation_ids:
+        session.exec(
+            delete(AnnotationLayerTable).where(
+                col(AnnotationLayerTable.annotation_id).in_(annotation_ids)
+            )
+        )
         session.exec(
             delete(AnnotationBaseTable).where(
                 col(AnnotationBaseTable.sample_id).in_(annotation_ids)

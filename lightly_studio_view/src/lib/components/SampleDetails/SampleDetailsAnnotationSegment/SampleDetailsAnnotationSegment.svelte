@@ -46,18 +46,20 @@
     });
     const { selectAnnotation } = useAnnotationSelection();
 
-    const annotationsSort = $derived.by(() => {
-        return annotations
-            ? [...annotations]
-                  .filter(
-                      (annotation) => annotation.annotation_type !== AnnotationType.CLASSIFICATION
-                  )
-                  .sort((a, b) =>
-                      a.annotation_label.annotation_label_name.localeCompare(
-                          b.annotation_label?.annotation_label_name
-                      )
-                  )
-            : [];
+    const nonClassificationAnnotations = $derived.by(() =>
+        annotations
+            ? annotations.filter(
+                  (annotation) => annotation.annotation_type !== AnnotationType.CLASSIFICATION
+              )
+            : []
+    );
+
+    let orderedAnnotations = $state<AnnotationView[]>([]);
+    let draggedAnnotationId = $state<string | null>(null);
+    let dragOverAnnotationId = $state<string | null>(null);
+
+    $effect(() => {
+        orderedAnnotations = [...nonClassificationAnnotations];
     });
 
     const toggleAnnotationSelection = (annotationId: string) => {
@@ -116,48 +118,140 @@
                 : [...annotationsIdsToHide, annotationId]
         );
     };
+
+    const reorderAnnotationLayers = async (orderedAnnotationIds: string[]) => {
+        const parentSampleId = nonClassificationAnnotations[0]?.parent_sample_id;
+        if (!parentSampleId) return;
+
+        const response = await fetch(`/api/collections/${collectionId}/annotations/layers/reorder`, {
+            method: 'PUT',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                sample_id: parentSampleId,
+                ordered_annotation_ids: orderedAnnotationIds
+            })
+        });
+
+        if (!response.ok) {
+            throw new Error(await response.text());
+        }
+    };
+
+    const handleDragStart = (event: DragEvent, annotationId: string) => {
+        draggedAnnotationId = annotationId;
+        dragOverAnnotationId = null;
+        event.dataTransfer?.setData('text/plain', annotationId);
+        if (event.dataTransfer) {
+            event.dataTransfer.effectAllowed = 'move';
+        }
+    };
+
+    const handleDragOver = (event: DragEvent, annotationId: string) => {
+        if (!draggedAnnotationId || draggedAnnotationId === annotationId) {
+            return;
+        }
+        event.preventDefault();
+        dragOverAnnotationId = annotationId;
+        if (event.dataTransfer) {
+            event.dataTransfer.dropEffect = 'move';
+        }
+    };
+
+    const handleDragEnd = () => {
+        draggedAnnotationId = null;
+        dragOverAnnotationId = null;
+    };
+
+    const handleDrop = async (event: DragEvent, targetAnnotationId: string) => {
+        event.preventDefault();
+
+        if (!draggedAnnotationId || draggedAnnotationId === targetAnnotationId) {
+            handleDragEnd();
+            return;
+        }
+
+        const previousOrder = [...orderedAnnotations];
+        const draggedIndex = previousOrder.findIndex((item) => item.sample_id === draggedAnnotationId);
+        const targetIndex = previousOrder.findIndex((item) => item.sample_id === targetAnnotationId);
+        if (draggedIndex === -1 || targetIndex === -1) {
+            handleDragEnd();
+            return;
+        }
+
+        const nextOrder = [...previousOrder];
+        const [draggedAnnotation] = nextOrder.splice(draggedIndex, 1);
+        nextOrder.splice(targetIndex, 0, draggedAnnotation);
+        orderedAnnotations = nextOrder;
+        handleDragEnd();
+
+        try {
+            await reorderAnnotationLayers(nextOrder.map((item) => item.sample_id));
+            refetch();
+        } catch (error) {
+            orderedAnnotations = previousOrder;
+            toast.error('Failed to reorder annotation layers. Please try again.');
+            console.error('Error reordering annotation layers:', error);
+        }
+    };
 </script>
 
 <Segment title="Annotations">
     <div class="flex flex-col gap-2">
-        {#each annotationsSort as annotation}
-            <SampleDetailsSidePanelAnnotation
-                {annotation}
-                isSelected={annotationLabelContext.annotationId === annotation.sample_id}
-                onClick={() => toggleAnnotationSelection(annotation.sample_id)}
-                onDeleteAnnotation={() => handleDeleteAnnotation(annotation.sample_id)}
-                isHidden={annotationsIdsToHide.has(annotation.sample_id)}
-                isLocked={annotationLabelContext.lockedAnnotationIds?.has(annotation.sample_id) ??
-                    false}
-                onToggleShowAnnotation={(e) => {
-                    e.stopPropagation();
-                    onToggleShowAnnotation(annotation.sample_id);
-                }}
-                onToggleLock={(e) => {
-                    e.stopPropagation();
-                    toggleAnnotationLock(annotation.sample_id);
-                }}
-                onUpdate={refetch}
-                onChangeAnnotationLabel={(newLabel) => {
-                    // The annotation label is always the last selected label.
-                    setAnnotationLabel(newLabel);
-                    updateLastAnnotationLabel(collectionId, newLabel);
+        {#each orderedAnnotations as annotation, index}
+            <div
+                class="rounded-sm transition-colors"
+                class:ring-1={dragOverAnnotationId === annotation.sample_id}
+                class:ring-primary={dragOverAnnotationId === annotation.sample_id}
+                class:opacity-70={draggedAnnotationId === annotation.sample_id}
+                role="listitem"
+                aria-grabbed={draggedAnnotationId === annotation.sample_id}
+                draggable={!isPanModeEnabled && orderedAnnotations.length > 1}
+                ondragstart={(event) => handleDragStart(event, annotation.sample_id)}
+                ondragover={(event) => handleDragOver(event, annotation.sample_id)}
+                ondrop={(event) => handleDrop(event, annotation.sample_id)}
+                ondragend={handleDragEnd}
+            >
+                <SampleDetailsSidePanelAnnotation
+                    {annotation}
+                    position={orderedAnnotations.length - index}
+                    isSelected={annotationLabelContext.annotationId === annotation.sample_id}
+                    onClick={() => toggleAnnotationSelection(annotation.sample_id)}
+                    onDeleteAnnotation={() => handleDeleteAnnotation(annotation.sample_id)}
+                    isHidden={annotationsIdsToHide.has(annotation.sample_id)}
+                    isLocked={annotationLabelContext.lockedAnnotationIds?.has(annotation.sample_id) ??
+                        false}
+                    onToggleShowAnnotation={(e) => {
+                        e.stopPropagation();
+                        onToggleShowAnnotation(annotation.sample_id);
+                    }}
+                    onToggleLock={(e) => {
+                        e.stopPropagation();
+                        toggleAnnotationLock(annotation.sample_id);
+                    }}
+                    onUpdate={refetch}
+                    onChangeAnnotationLabel={(newLabel) => {
+                        // The annotation label is always the last selected label.
+                        setAnnotationLabel(newLabel);
+                        updateLastAnnotationLabel(collectionId, newLabel);
 
-                    setLastCreatedAnnotationId(null);
+                        setLastCreatedAnnotationId(null);
 
-                    if (
-                        annotationLabelContext.annotationType ===
-                        AnnotationType.INSTANCE_SEGMENTATION
-                    ) {
+                        if (
+                            annotationLabelContext.annotationType ===
+                            AnnotationType.INSTANCE_SEGMENTATION
+                        ) {
+                            setAnnotationId(annotation.sample_id);
+                        }
+                    }}
+                    canHighlight={annotationLabelContext.lastCreatedAnnotationId ===
+                        annotation.sample_id}
+                    onClickSelectList={() => {
                         setAnnotationId(annotation.sample_id);
-                    }
-                }}
-                canHighlight={annotationLabelContext.lastCreatedAnnotationId ===
-                    annotation.sample_id}
-                onClickSelectList={() => {
-                    setAnnotationId(annotation.sample_id);
-                }}
-            />
+                    }}
+                />
+            </div>
         {/each}
     </div>
 </Segment>

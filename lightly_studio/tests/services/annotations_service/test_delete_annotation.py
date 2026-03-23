@@ -5,8 +5,9 @@ from __future__ import annotations
 from uuid import UUID
 
 import pytest
-from sqlmodel import Session
+from sqlmodel import Session, col, select
 
+from lightly_studio.models.annotation_layer import AnnotationLayerTable
 from lightly_studio.resolvers import annotation_resolver
 from lightly_studio.services.annotations_service.delete_annotation import (
     delete_annotation,
@@ -28,12 +29,23 @@ def test_delete_annotation__success(
     assert (
         annotation_resolver.get_by_id(session=db_session, annotation_id=annotation_id) is not None
     )
+    assert db_session.exec(
+        select(AnnotationLayerTable).where(col(AnnotationLayerTable.annotation_id) == annotation_id)
+    ).one_or_none()
 
     # Delete the annotation
     delete_annotation(session=db_session, annotation_id=annotation_id)
 
     # Verify annotation was deleted
     assert annotation_resolver.get_by_id(session=db_session, annotation_id=annotation_id) is None
+    assert (
+        db_session.exec(
+            select(AnnotationLayerTable).where(
+                col(AnnotationLayerTable.annotation_id) == annotation_id
+            )
+        ).one_or_none()
+        is None
+    )
 
 
 def test_delete_annotation__raises_error_when_annotation_not_found(

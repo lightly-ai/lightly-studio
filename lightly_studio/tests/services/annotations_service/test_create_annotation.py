@@ -6,13 +6,14 @@ from uuid import UUID
 
 import pytest
 from pytest_mock import MockerFixture
-from sqlmodel import Session
+from sqlmodel import Session, col, select
 
 from lightly_studio.models.annotation.annotation_base import (
     AnnotationBaseTable,
     AnnotationType,
 )
 from lightly_studio.models.annotation_label import AnnotationLabelTable
+from lightly_studio.models.annotation_layer import AnnotationLayerTable
 from lightly_studio.models.collection import CollectionTable
 from lightly_studio.models.image import ImageTable
 from lightly_studio.services.annotations_service.create_annotation import (
@@ -52,6 +53,15 @@ def test_create_annotation_object_detection(
     assert result.object_detection_details.width == annotation.width
     assert result.object_detection_details.height == annotation.height
     assert result.segmentation_details is None
+
+    layer = db_session.exec(
+        select(AnnotationLayerTable).where(
+            col(AnnotationLayerTable.annotation_id) == result.sample_id
+        )
+    ).one_or_none()
+    assert layer is not None
+    assert layer.sample_id == annotation.parent_sample_id
+    assert layer.position == 1
 
 
 def test_create_annotation_instance_segmentation(

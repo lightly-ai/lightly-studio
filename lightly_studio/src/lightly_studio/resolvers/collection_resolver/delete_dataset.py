@@ -13,6 +13,7 @@ from lightly_studio.models.annotation.object_detection import (
 from lightly_studio.models.annotation.object_track import ObjectTrackTable
 from lightly_studio.models.annotation.segmentation import SegmentationAnnotationTable
 from lightly_studio.models.annotation_label import AnnotationLabelTable
+from lightly_studio.models.annotation_layer import AnnotationLayerTable
 from lightly_studio.models.caption import CaptionTable
 from lightly_studio.models.collection import CollectionTable
 from lightly_studio.models.dataset import DatasetTable
@@ -75,6 +76,7 @@ def delete_dataset(
     # 1. Delete all tables that reference annotation_base.
     _delete_object_detection_annotations(session=session, sample_ids=sample_ids)
     _delete_segmentation_annotations(session=session, sample_ids=sample_ids)
+    _delete_annotation_layers(session=session, sample_ids=sample_ids)
     session.commit()  # Commit before deleting annotation_base.
 
     # 2. Delete annotation_base and tables that reference sample type tables.
@@ -188,6 +190,15 @@ def _delete_annotation_base(session: Session, sample_ids: list[UUID]) -> None:
         return
     session.exec(
         delete(AnnotationBaseTable).where(col(AnnotationBaseTable.sample_id).in_(sample_ids))
+    )
+
+
+def _delete_annotation_layers(session: Session, sample_ids: list[UUID]) -> None:
+    """Delete annotation layers."""
+    if not sample_ids:
+        return
+    session.exec(
+        delete(AnnotationLayerTable).where(col(AnnotationLayerTable.annotation_id).in_(sample_ids))
     )
 
 

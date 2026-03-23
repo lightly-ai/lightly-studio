@@ -2,9 +2,10 @@
 
 from __future__ import annotations
 
-from sqlmodel import Session
+from sqlmodel import Session, col, select
 
 from lightly_studio.models.annotation.object_track import ObjectTrackCreate
+from lightly_studio.models.annotation_layer import AnnotationLayerTable
 from lightly_studio.resolvers import annotation_resolver, object_track_resolver
 from lightly_studio.services import annotations_service
 from lightly_studio.services.annotations_service.update_annotation import AnnotationUpdate
@@ -94,3 +95,68 @@ def test_update_annotations__updates_label_for_all_track_annotations(
     outside_after = annotation_resolver.get_by_id(db_session, track_b_annotations[0].sample_id)
     assert outside_after is not None
     assert outside_after.annotation_label_id == label_before.annotation_label_id
+
+
+def test_update_annotations__moves_updated_annotation_layer_to_top(
+    db_session: Session,
+) -> None:
+    """Updating an annotation moves its layer to the top of the stack."""
+    collection = create_collection(session=db_session)
+    label_a = create_annotation_label(
+        session=db_session,
+        dataset_id=collection.collection_id,
+        label_name="a",
+    )
+    label_b = create_annotation_label(
+        session=db_session,
+        dataset_id=collection.collection_id,
+        label_name="b",
+    )
+    image = create_image(
+        session=db_session,
+        collection_id=collection.collection_id,
+        file_path_abs="/tmp/layers.png",
+    )
+    annotations = create_annotations(
+        session=db_session,
+        collection_id=collection.collection_id,
+        annotations=[
+            AnnotationDetails(
+                sample_id=image.sample_id,
+                annotation_label_id=label_a.annotation_label_id,
+            ),
+            AnnotationDetails(
+                sample_id=image.sample_id,
+                annotation_label_id=label_b.annotation_label_id,
+            ),
+        ],
+    )
+    first_annotation = annotations[0]
+    second_annotation = annotations[1]
+
+    layers_before = db_session.exec(
+        select(AnnotationLayerTable).where(col(AnnotationLayerTable.sample_id) == image.sample_id)
+    ).all()
+    layer_positions_before = {layer.annotation_id: layer.position for layer in layers_before}
+    assert layer_positions_before[second_annotation.sample_id] > layer_positions_before[
+        first_annotation.sample_id
+    ]
+
+    annotations_service.update_annotations(
+        session=db_session,
+        annotation_updates=[
+            AnnotationUpdate(
+                annotation_id=first_annotation.sample_id,
+                collection_id=collection.collection_id,
+                label_name=label_b.annotation_label_name,
+            )
+        ],
+    )
+
+    layers_after = db_session.exec(
+        select(AnnotationLayerTable).where(col(AnnotationLayerTable.sample_id) == image.sample_id)
+    ).all()
+    layer_positions_after = {layer.annotation_id: layer.position for layer in layers_after}
+    assert layer_positions_after[first_annotation.sample_id] > layer_positions_after[
+        second_annotation.sample_id
+    ]

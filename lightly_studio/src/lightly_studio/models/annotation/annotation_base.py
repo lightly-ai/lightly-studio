@@ -28,6 +28,7 @@ if TYPE_CHECKING:
     from lightly_studio.models.annotation_label import (
         AnnotationLabelTable,
     )
+    from lightly_studio.models.annotation_layer import AnnotationLayerTable
     from lightly_studio.models.image import ImageTable
     from lightly_studio.models.tag import TagTable
 
@@ -35,6 +36,7 @@ else:
     TagTable = object
     AnnotationLabelTable = object
     ImageTable = object
+    AnnotationLayerTable = object
 
 
 class AnnotationType(str, Enum):
@@ -96,6 +98,12 @@ class AnnotationBaseTable(SQLModel, table=True):
     # The track this annotation belongs to, if any.
     object_track: Mapped[Optional["ObjectTrackTable"]] = Relationship(
         sa_relationship_kwargs={"lazy": "joined"},
+    )
+
+    # Layer metadata used to maintain stack order.
+    layer: Mapped[Optional["AnnotationLayerTable"]] = Relationship(
+        back_populates="annotation",
+        sa_relationship_kwargs={"lazy": "select", "uselist": False},
     )
 
 

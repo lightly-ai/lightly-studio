@@ -63,13 +63,13 @@
 
     let sampleId = $derived(sample.sampleId);
     const actualAnnotationsToShow = $derived.by(() => {
-        return sample.annotations
-            .filter((annotation) => !hideAnnotationsIds.has(annotation.sample_id))
-            .sort((a, b) => {
-                if (a.sample_id === annotationLabelContext.annotationId) return 1;
-                if (b.sample_id === annotationLabelContext.annotationId) return -1;
-                return 0;
-            });
+        const visibleAnnotations = sample.annotations.filter(
+            (annotation) => !hideAnnotationsIds.has(annotation.sample_id)
+        );
+
+        // sample.annotations is ordered from top -> bottom in the layer stack.
+        // SVG renders later nodes on top, so we paint bottom -> top.
+        return [...visibleAnnotations].reverse();
     });
 
     const drawerStrokeColor = $derived(

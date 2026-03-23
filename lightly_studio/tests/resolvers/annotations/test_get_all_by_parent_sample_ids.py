@@ -62,8 +62,8 @@ def test_get_all_by_parent_sample_ids(db_session: Session) -> None:
     )
     assert len(result) == 2
     assert [annotation.sample_id for annotation in result] == [
-        image_b_annotations[0].sample_id,
         image_b_annotations[1].sample_id,
+        image_b_annotations[0].sample_id,
     ]
 
 

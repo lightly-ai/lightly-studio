@@ -11,7 +11,10 @@ from pydantic import BaseModel
 
 from lightly_studio.api.routes.api import annotations as annotations_module
 from lightly_studio.api.routes.api.collection import get_and_validate_collection_id
-from lightly_studio.api.routes.api.status import HTTP_STATUS_NOT_FOUND
+from lightly_studio.api.routes.api.status import (
+    HTTP_STATUS_BAD_REQUEST,
+    HTTP_STATUS_NOT_FOUND,
+)
 from lightly_studio.api.routes.api.validators import Paginated, PaginatedWithCursor
 from lightly_studio.db_manager import SessionDep
 from lightly_studio.models.annotation.annotation_base import (
@@ -165,6 +168,13 @@ class AnnotationUpdateInput(BaseModel):
     segmentation_mask: list[int] | None = None
 
 
+class ReorderAnnotationLayersInput(BaseModel):
+    """API input model for reordering annotation layers."""
+
+    sample_id: UUID
+    ordered_annotation_ids: list[UUID]
+
+
 @annotations_router.put(
     "/annotations",
 )
@@ -190,6 +200,31 @@ def update_annotations(
             for annotation_update_input in annotation_update_inputs
         ],
     )
+
+
+@annotations_router.put("/annotations/layers/reorder")
+def reorder_annotation_layers(
+    session: SessionDep,
+    collection_id: Annotated[
+        UUID,
+        Path(title="collection Id"),
+    ],
+    reorder_input: Annotated[ReorderAnnotationLayersInput, Body()],
+) -> dict[str, str]:
+    """Reorder annotation layers for one sample."""
+    try:
+        annotations_service.reorder_annotation_layers(
+            session=session,
+            collection_id=collection_id,
+            parent_sample_id=reorder_input.sample_id,
+            ordered_annotation_ids=reorder_input.ordered_annotation_ids,
+        )
+        return {"status": "reordered"}
+    except ValueError as e:
+        raise HTTPException(
+            status_code=HTTP_STATUS_BAD_REQUEST,
+            detail=str(e),
+        ) from e
 
 
 @annotations_router.get("/annotations/{annotation_id}", response_model=AnnotationView)

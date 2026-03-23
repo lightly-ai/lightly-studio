@@ -634,6 +634,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/collections/{collection_id}/annotations/layers/reorder": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * Reorder Annotation Layers
+         * @description Reorder annotation layers for one sample.
+         */
+        put: operations["reorder_annotation_layers"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/collections/{collection_id}/annotations/{annotation_id}": {
         parameters: {
             query?: never;
@@ -2973,6 +2993,19 @@ export interface components {
             supported_scopes?: components["schemas"]["OperatorScope"][];
         };
         /**
+         * ReorderAnnotationLayersInput
+         * @description API input model for reordering annotation layers.
+         */
+        ReorderAnnotationLayersInput: {
+            /**
+             * Sample Id
+             * Format: uuid
+             */
+            sample_id: string;
+            /** Ordered Annotation Ids */
+            ordered_annotation_ids: string[];
+        };
+        /**
          * SampleAnnotationDetailsView
          * @description Response model for sample annotation details view.
          */
@@ -4867,6 +4900,43 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["AnnotationWithPayloadAndCountView"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    reorder_annotation_layers: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                collection_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ReorderAnnotationLayersInput"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: string;
+                    };
                 };
             };
             /** @description Validation Error */

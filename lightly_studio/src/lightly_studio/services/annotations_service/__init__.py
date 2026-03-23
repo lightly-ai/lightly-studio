@@ -9,6 +9,9 @@ from lightly_studio.services.annotations_service.delete_annotation import (
 from lightly_studio.services.annotations_service.get_annotation_by_id import (
     get_annotation_by_id,
 )
+from lightly_studio.services.annotations_service.reorder_annotation_layers import (
+    reorder_annotation_layers,
+)
 from lightly_studio.services.annotations_service.update_annotation import (
     update_annotation,
 )
@@ -29,6 +32,7 @@ __all__ = [
     "create_annotation",
     "delete_annotation",
     "get_annotation_by_id",
+    "reorder_annotation_layers",
     "update_annotation",
     "update_annotation_bounding_box",
     "update_annotation_label",

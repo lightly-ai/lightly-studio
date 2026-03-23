@@ -10,6 +10,7 @@ from sqlalchemy.orm import Mapped
 from sqlmodel import Field, Relationship, SQLModel
 
 from lightly_studio.models.annotation.annotation_base import AnnotationView
+from lightly_studio.models.annotation.ordering import sort_annotations_by_layer
 from lightly_studio.models.caption import CaptionView
 from lightly_studio.models.collection import SampleType
 from lightly_studio.models.metadata import SampleMetadataView
@@ -87,13 +88,14 @@ class ImageView(BaseModel):
         cls, image: "ImageTable", similarity_score: Optional[float] = None
     ) -> "ImageView":
         """Convert an ImageTable to an ImageView."""
+        sorted_annotations = sort_annotations_by_layer(image.sample.annotations)
         return cls(
             file_name=image.file_name,
             file_path_abs=image.file_path_abs,
             sample_id=image.sample_id,
             annotations=[
                 AnnotationView.from_annotation_table(annotation=annotation)
-                for annotation in image.sample.annotations
+                for annotation in sorted_annotations
             ],
             captions=[CaptionView.model_validate(caption) for caption in image.sample.captions],
             tags=[

@@ -11,6 +11,7 @@ from pydantic import BaseModel, Field
 from lightly_studio.api.routes.api.validators import Paginated, PaginatedWithCursor
 from lightly_studio.db_manager import SessionDep
 from lightly_studio.models.annotation.annotation_base import AnnotationView
+from lightly_studio.models.annotation.ordering import sort_annotations_by_layer
 from lightly_studio.models.caption import CaptionView
 from lightly_studio.models.metadata import SampleMetadataView
 from lightly_studio.models.sample import SampleTable, SampleView
@@ -143,6 +144,7 @@ def count_video_frame_annotations(
 
 
 def _build_sample_view(sample: SampleTable) -> SampleView:
+    sorted_annotations = sort_annotations_by_layer(sample.annotations)
     return SampleView(
         collection_id=sample.collection_id,
         sample_id=sample.sample_id,
@@ -156,7 +158,7 @@ def _build_sample_view(sample: SampleTable) -> SampleView:
         if sample.captions
         else [],
         annotations=[
-            AnnotationView.from_annotation_table(annotation=a) for a in sample.annotations
+            AnnotationView.from_annotation_table(annotation=a) for a in sorted_annotations
         ],
     )
 

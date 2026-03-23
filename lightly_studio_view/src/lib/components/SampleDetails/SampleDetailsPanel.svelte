@@ -9,7 +9,6 @@
     import { onMount, type Snippet } from 'svelte';
 
     import { get } from 'svelte/store';
-    import { getAnnotations } from '../SampleAnnotation/utils';
     import Spinner from '../Spinner/Spinner.svelte';
     import {
         AnnotationType,
@@ -183,7 +182,11 @@
         selectAnnotation({ annotationId, annotations: sample.annotations ?? [], collectionId });
     };
 
-    let annotationsToShow = $derived(sample?.annotations ? getAnnotations(sample.annotations) : []);
+    let annotationsToShow = $derived(
+        sample?.annotations
+            ? sample.annotations.filter((annotation) => annotation.annotation_type !== 'classification')
+            : []
+    );
 
     const handleRemoveTag = async (tagId: string) => {
         await removeTagFromSample(sampleId, tagId);

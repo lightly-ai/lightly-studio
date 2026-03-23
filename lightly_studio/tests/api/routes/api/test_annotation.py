@@ -6,13 +6,19 @@ import pytest
 from fastapi.testclient import TestClient
 from sqlmodel import Session
 
-from lightly_studio.api.routes.api.status import HTTP_STATUS_NOT_FOUND, HTTP_STATUS_OK
+from lightly_studio.api.routes.api.status import (
+    HTTP_STATUS_BAD_REQUEST,
+    HTTP_STATUS_NOT_FOUND,
+    HTTP_STATUS_OK,
+)
 from lightly_studio.models.collection import SampleType
 from lightly_studio.models.tag import TagTable
 from tests.conftest import AnnotationsTestData
 from tests.helpers_resolvers import (
+    AnnotationDetails,
     create_annotation,
     create_annotation_label,
+    create_annotations,
     create_collection,
     create_image,
 )
@@ -339,3 +345,99 @@ def test_get_annotation_with_payload(
 
     assert result["parent_sample_data"]["file_path_abs"] == "/path/to/sample2.png"
     assert result["parent_sample_data"]["sample"]["sample_id"] == str(image_1.sample.sample_id)
+
+
+def test_reorder_annotation_layers(
+    test_client: TestClient,
+    db_session: Session,
+) -> None:
+    collection = create_collection(session=db_session)
+    collection_id = collection.collection_id
+    image = create_image(
+        session=db_session,
+        collection_id=collection_id,
+        file_path_abs="/path/to/reorder.png",
+    )
+    label_a = create_annotation_label(
+        session=db_session,
+        dataset_id=collection_id,
+        label_name="a",
+    )
+    label_b = create_annotation_label(
+        session=db_session,
+        dataset_id=collection_id,
+        label_name="b",
+    )
+
+    annotations = create_annotations(
+        session=db_session,
+        collection_id=collection_id,
+        annotations=[
+            AnnotationDetails(
+                sample_id=image.sample_id,
+                annotation_label_id=label_a.annotation_label_id,
+            ),
+            AnnotationDetails(
+                sample_id=image.sample_id,
+                annotation_label_id=label_b.annotation_label_id,
+            ),
+        ],
+    )
+    first_annotation = annotations[0]
+    second_annotation = annotations[1]
+
+    response = test_client.put(
+        f"/api/collections/{collection_id}/annotations/layers/reorder",
+        json={
+            "sample_id": str(image.sample_id),
+            "ordered_annotation_ids": [
+                str(first_annotation.sample_id),
+                str(second_annotation.sample_id),
+            ],
+        },
+    )
+
+    assert response.status_code == HTTP_STATUS_OK
+    assert response.json() == {"status": "reordered"}
+
+    image_response = test_client.get(f"/api/images/{image.sample_id}")
+    assert image_response.status_code == HTTP_STATUS_OK
+    image_result = image_response.json()
+    assert [annotation["sample_id"] for annotation in image_result["annotations"]] == [
+        str(first_annotation.sample_id),
+        str(second_annotation.sample_id),
+    ]
+
+
+def test_reorder_annotation_layers_returns_bad_request_for_invalid_payload(
+    test_client: TestClient,
+    db_session: Session,
+) -> None:
+    collection = create_collection(session=db_session)
+    collection_id = collection.collection_id
+    image = create_image(
+        session=db_session,
+        collection_id=collection_id,
+        file_path_abs="/path/to/reorder_invalid.png",
+    )
+    label = create_annotation_label(
+        session=db_session,
+        dataset_id=collection_id,
+        label_name="label",
+    )
+    annotation = create_annotation(
+        session=db_session,
+        sample_id=image.sample_id,
+        annotation_label_id=label.annotation_label_id,
+        collection_id=collection_id,
+    )
+
+    response = test_client.put(
+        f"/api/collections/{collection_id}/annotations/layers/reorder",
+        json={
+            "sample_id": str(image.sample_id),
+            "ordered_annotation_ids": [str(annotation.sample_id), str(annotation.sample_id)],
+        },
+    )
+
+    assert response.status_code == HTTP_STATUS_BAD_REQUEST
