@@ -28,11 +28,11 @@ def get_filtered_samples(
     pagination: Paginated | None = None,
 ) -> SamplesWithCount:
     """Retrieve samples for a specific collection with optional filtering."""
-    samples_query = select(SampleTable).where(
-        col(SampleTable.collection_id) == collection_id
-    )
-    total_count_query = select(func.count()).select_from(SampleTable).where(
-        col(SampleTable.collection_id) == collection_id
+    samples_query = select(SampleTable).where(col(SampleTable.collection_id) == collection_id)
+    total_count_query = (
+        select(func.count())
+        .select_from(SampleTable)
+        .where(col(SampleTable.collection_id) == collection_id)
     )
 
     if filters is not None:
