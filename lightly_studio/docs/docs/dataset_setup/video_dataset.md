@@ -33,7 +33,7 @@ the full list of arguments.
 
 ### From an Annotation Format
 
-VideoDataset can be loaded with annotations from the YouTube-VIS format. Currently, object detection
+`VideoDataset` can be loaded with annotations from the YouTube-VIS format. Currently, object detection
 and instance segmentation annotations are supported. See
 [API reference](../api/dataset.md#lightly_studio.VideoDataset.add_videos_from_youtube_vis) for full details.
 
@@ -142,8 +142,9 @@ to store multiple datasets in the database, note however that the open-source ve
 GUI displays only a single dataset.
 
 !!! tip
-    The `add_videos_from_path(...)` and `add_videos_from_youtube_vis(...)` methods skip adding videos
-    with duplicate paths. Therefore you can safely use them in a single script with `load_or_create()`,
+    The `add_videos_from_path(...)` and `add_videos_from_youtube_vis(...)` methods skip
+    duplicate videos, the duplicates are detected based on absolute path.
+    Therefore you can safely use them in a single script with `load_or_create()`,
     adding and embedding the videos will be skipped on subsequent calls.
 
 
