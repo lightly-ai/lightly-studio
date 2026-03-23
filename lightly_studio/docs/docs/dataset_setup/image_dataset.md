@@ -34,7 +34,7 @@ folder name as a tag to each sample. See the [API reference](../api/dataset.md#l
 
 ### From an Annotation Format
 
-ImageDataset class exposes methods to load images with annotations from a number of
+`ImageDataset` class exposes methods to load images with annotations from a number of
 standard formats. See [API reference](../api/dataset.md#lightly_studio.ImageDataset) for full details.
 
 === "YOLO Object Detections"
@@ -342,8 +342,9 @@ to store multiple datasets in the database, note however that the open-source ve
 GUI displays only a single dataset.
 
 !!! tip
-    The `add_images_from_path(...)` and `add_samples_from_x(...)` methods skip adding images with
-    duplicate paths. Therefore you can safely use them in a single script with `load_or_create()`,
+    The `add_images_from_path(...)` and `add_samples_from_x(...)` methods skip
+    duplicate images, the duplicates are detected based on absolute path.
+    Therefore you can safely use them in a single script with `load_or_create()`,
     adding and embedding the images will be skipped on subsequent calls.
 
 
