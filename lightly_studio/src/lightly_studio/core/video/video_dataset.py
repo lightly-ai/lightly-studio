@@ -120,9 +120,9 @@ class VideoDataset(BaseSampleDataset[VideoSample]):
         logger.info(f"Found {len(video_paths)} videos in {path}.")
 
         # Process videos.
-        created_sample_ids, _ = add_videos.load_into_dataset_from_paths(
+        created_sample_ids, _ = add_videos.load_into_collection_from_paths(
             session=self.session,
-            dataset_id=self.dataset_id,
+            collection_id=self.dataset_id,
             video_paths=video_paths,
             num_decode_threads=num_decode_threads,
         )

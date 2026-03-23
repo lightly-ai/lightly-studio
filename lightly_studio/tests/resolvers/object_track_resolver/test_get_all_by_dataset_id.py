@@ -18,16 +18,18 @@ def test_get_all_by_dataset_id(db_session: Session) -> None:
     track_ids = object_track_resolver.create_many(
         session=db_session,
         tracks=[
-            ObjectTrackCreate(object_track_number=99, dataset_id=collection.collection_id),
-            ObjectTrackCreate(object_track_number=100, dataset_id=collection.collection_id),
-            ObjectTrackCreate(object_track_number=101, dataset_id=collection_2.collection_id),
+            ObjectTrackCreate(object_track_number=99, root_collection_id=collection.collection_id),
+            ObjectTrackCreate(object_track_number=100, root_collection_id=collection.collection_id),
+            ObjectTrackCreate(
+                object_track_number=101, root_collection_id=collection_2.collection_id
+            ),
         ],
     )
     assert len(track_ids) == 3
 
-    result = object_track_resolver.get_all_by_dataset_id(
+    result = object_track_resolver.get_all_by_root_collection_id(
         session=db_session,
-        dataset_id=collection.collection_id,
+        root_collection_id=collection.collection_id,
     )
 
     assert len(result) == 2
@@ -37,8 +39,8 @@ def test_get_all_by_dataset_id(db_session: Session) -> None:
 
 def test_get_all_by_dataset_id__dataset_id_not_found(db_session: Session) -> None:
     """Test that an empty list is returned for a non-existent dataset ID."""
-    result = object_track_resolver.get_all_by_dataset_id(
+    result = object_track_resolver.get_all_by_root_collection_id(
         session=db_session,
-        dataset_id=uuid4(),
+        root_collection_id=uuid4(),
     )
     assert len(result) == 0

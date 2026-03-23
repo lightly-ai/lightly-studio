@@ -118,7 +118,9 @@ class LightlyStudioYouTubeVISInstanceSegmentationTrackInput(
         if dataset_id is None:
             return []
 
-        tracks = object_track_resolver.get_all_by_dataset_id(session=session, dataset_id=dataset_id)
+        tracks = object_track_resolver.get_all_by_root_collection_id(
+            session=session, root_collection_id=dataset_id
+        )
         video_id_to_tracks: dict[UUID, list[SingleInstanceSegmentationTrack]] = defaultdict(list)
         for track in tracks:
             annotations = annotation_resolver.get_all_by_object_track_id(

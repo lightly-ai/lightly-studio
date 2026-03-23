@@ -111,7 +111,7 @@ def to_coco_object_detections(
     """
     export_input = LightlyStudioObjectDetectionInput(
         session=session,
-        dataset_id=root_dataset_id,
+        root_collection_id=root_dataset_id,
         samples=samples,
     )
     COCOObjectDetectionOutput(output_file=output_json).save(label_input=export_input)
@@ -136,7 +136,7 @@ def to_coco_instance_segmentations(
     """
     export_input = LightlyStudioInstanceSegmentationInput(
         session=session,
-        dataset_id=root_dataset_id,
+        root_collection_id=root_dataset_id,
         samples=samples,
     )
     COCOInstanceSegmentationOutput(output_file=output_json).save(label_input=export_input)
@@ -160,7 +160,7 @@ def to_pascalvoc_semantic_segmentation(
     """
     export_input = LightlyStudioSemanticSegmentationInput(
         session=session,
-        dataset_id=root_dataset_id,
+        root_collection_id=root_dataset_id,
         samples=samples,
     )
 
