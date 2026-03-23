@@ -25,7 +25,7 @@ class TestVideoDatasetExport:
         )
 
         label = create_annotation_label(
-            session=dataset.session, dataset_id=dataset.dataset_id, label_name="cat"
+            session=dataset.session, root_collection_id=dataset.dataset_id, label_name="cat"
         )
         object_track_id = object_track_resolver.create_many(
             session=dataset.session,

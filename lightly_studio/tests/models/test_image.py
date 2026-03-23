@@ -52,7 +52,7 @@ class TestImageView:
         )
         annotation_label = create_annotation_label(
             session=db_session,
-            dataset_id=collection.collection_id,
+            root_collection_id=collection.collection_id,
             label_name="cat",
         )
         annotation = create_annotation(
@@ -142,7 +142,7 @@ class TestImageView:
         # Add annotation.
         annotation_label = create_annotation_label(
             session=db_session,
-            dataset_id=collection.collection_id,
+            root_collection_id=collection.collection_id,
             label_name="dog",
         )
         annotation = create_annotation(
@@ -203,12 +203,12 @@ class TestImageView:
         # Add multiple annotations.
         label1 = create_annotation_label(
             session=db_session,
-            dataset_id=collection.collection_id,
+            root_collection_id=collection.collection_id,
             label_name="person",
         )
         label2 = create_annotation_label(
             session=db_session,
-            dataset_id=collection.collection_id,
+            root_collection_id=collection.collection_id,
             label_name="car",
         )
         annotation1 = create_annotation(
