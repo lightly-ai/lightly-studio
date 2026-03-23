@@ -121,3 +121,7 @@ code.doc-symbol-module {
   color: #0550ae;
 }
 
+/* Rounded corners for images in the main docs content */
+.md-content .md-typeset img {
+  border-radius: 8px;
+}
