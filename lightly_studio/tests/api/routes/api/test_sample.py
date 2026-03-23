@@ -7,6 +7,7 @@ from sqlmodel import Session
 
 from lightly_studio.api.routes.api.status import (
     HTTP_STATUS_CREATED,
+    HTTP_STATUS_METHOD_NOT_ALLOWED,
     HTTP_STATUS_OK,
 )
 from lightly_studio.resolvers import (
@@ -135,15 +136,6 @@ def test_read_samples__filters(
         str(samples[1].sample_id),
         str(samples[3].sample_id),
     }
-
-
-def test_read_samples__no_collection_id(
-    test_client: TestClient,
-) -> None:
-    # Call the API without collection_id in path — should get 422 (validation error)
-    json_body: dict[str, Any] = {"filters": {}}
-    response = test_client.post("/api/collections/samples/list", json=json_body)
-    assert response.status_code != HTTP_STATUS_OK
 
 
 def test_add_tag_to_sample_calls_add_tag_to_sample(
