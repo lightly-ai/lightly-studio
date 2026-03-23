@@ -15,7 +15,7 @@ def test_get_adjacent_annotations__orders_by_path(db_session: Session) -> None:
 
     label = helpers_resolvers.create_annotation_label(
         session=db_session,
-        dataset_id=collection_id,
+        root_collection_id=collection_id,
         label_name="label",
     )
 
@@ -79,7 +79,7 @@ def test_get_adjacent_annotations__raises_with_filter_missing_collection_id(
 
     label = helpers_resolvers.create_annotation_label(
         session=db_session,
-        dataset_id=collection_id,
+        root_collection_id=collection_id,
         label_name="label",
     )
 
@@ -112,12 +112,12 @@ def test_get_adjacent_annotations__respects_annotation_filter(db_session: Sessio
 
     dog_label = helpers_resolvers.create_annotation_label(
         session=db_session,
-        dataset_id=collection_id,
+        root_collection_id=collection_id,
         label_name="dog",
     )
     cat_label = helpers_resolvers.create_annotation_label(
         session=db_session,
-        dataset_id=collection_id,
+        root_collection_id=collection_id,
         label_name="cat",
     )
 
@@ -182,7 +182,7 @@ def test_get_adjacent_annotations__respects_annotation_tags(db_session: Session)
 
     dog_label = helpers_resolvers.create_annotation_label(
         session=db_session,
-        dataset_id=collection_id,
+        root_collection_id=collection_id,
         label_name="dog",
     )
 
@@ -273,7 +273,7 @@ def test_get_adjacent_annotations__respects_sample_tags(db_session: Session) -> 
 
     dog_label = helpers_resolvers.create_annotation_label(
         session=db_session,
-        dataset_id=collection_id,
+        root_collection_id=collection_id,
         label_name="dog",
     )
 
@@ -366,7 +366,7 @@ def test_get_adjacent_annotations__returns_none_when_sample_not_in_filter(
 
     dog_label = helpers_resolvers.create_annotation_label(
         session=db_session,
-        dataset_id=collection.collection_id,
+        root_collection_id=collection.collection_id,
         label_name="dog",
     )
 

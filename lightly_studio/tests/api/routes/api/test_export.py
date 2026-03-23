@@ -44,7 +44,7 @@ def test_export_collection_annotations(
         height=100,
     )
     label = create_annotation_label(
-        session=db_session, dataset_id=collection.collection_id, label_name="cat"
+        session=db_session, root_collection_id=collection.collection_id, label_name="cat"
     )
     annotation_resolver.create_many(
         session=db_session,
@@ -92,7 +92,7 @@ def test_export_collection_instance_segmentations(
         height=10,
     )
     label = create_annotation_label(
-        session=db_session, dataset_id=collection.collection_id, label_name="cat"
+        session=db_session, root_collection_id=collection.collection_id, label_name="cat"
     )
     annotation_resolver.create_many(
         session=db_session,
@@ -151,7 +151,7 @@ def test_export_collection_semantic_segmentations(
         height=2,
     )
     label = create_annotation_label(
-        session=db_session, dataset_id=collection.collection_id, label_name="dog"
+        session=db_session, root_collection_id=collection.collection_id, label_name="dog"
     )
     annotation_resolver.create_many(
         session=db_session,
@@ -274,7 +274,7 @@ def test_export_collection_youtube_vis(
 
     label = create_annotation_label(
         session=db_session,
-        dataset_id=collection.collection_id,
+        root_collection_id=collection.collection_id,
         label_name="cat",
     )
     object_track_id = object_track_resolver.create_many(

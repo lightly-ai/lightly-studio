@@ -25,9 +25,11 @@ def test_update_annotations__updates_label_for_all_track_annotations(
     dataset_id = collection.collection_id
 
     label_before = create_annotation_label(
-        session=db_session, dataset_id=dataset_id, label_name="a"
+        session=db_session, root_collection_id=dataset_id, label_name="a"
     )
-    label_after = create_annotation_label(session=db_session, dataset_id=dataset_id, label_name="b")
+    label_after = create_annotation_label(
+        session=db_session, root_collection_id=dataset_id, label_name="b"
+    )
 
     img_1 = create_image(session=db_session, collection_id=dataset_id, file_path_abs="/tmp/1.png")
     img_2 = create_image(session=db_session, collection_id=dataset_id, file_path_abs="/tmp/2.png")

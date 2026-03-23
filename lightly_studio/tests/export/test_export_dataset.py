@@ -44,7 +44,7 @@ class TestDatasetExport:
             db_session=dataset.session, collection_id=dataset.dataset_id, images=images_to_create
         )
         label = create_annotation_label(
-            session=dataset.session, dataset_id=dataset.dataset_id, label_name="dog"
+            session=dataset.session, root_collection_id=dataset.dataset_id, label_name="dog"
         )
         # TODO(lukas 9/2025): make this into a function
         annotation_resolver.create_many(
@@ -244,7 +244,7 @@ class TestDatasetExport:
         )
 
         label = create_annotation_label(
-            session=dataset.session, dataset_id=dataset.dataset_id, label_name="dog"
+            session=dataset.session, root_collection_id=dataset.dataset_id, label_name="dog"
         )
         # Create an annotation without a mask
         annotation_resolver.create_many(
@@ -331,12 +331,12 @@ class TestDatasetExport:
         )
         create_annotation_label(
             session=dataset.session,
-            dataset_id=dataset.dataset_id,
+            root_collection_id=dataset.dataset_id,
             label_name="background",
         )
         create_annotation_label(
             session=dataset.session,
-            dataset_id=dataset.dataset_id,
+            root_collection_id=dataset.dataset_id,
             label_name="dog",
         )
 
