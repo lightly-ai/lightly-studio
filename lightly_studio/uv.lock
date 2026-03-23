@@ -1450,44 +1450,6 @@ wheels = [
 ]
 
 [[package]]
-name = "faster-coco-eval"
-version = "1.7.2"
-source = { registry = "https://pypi.org/simple" }
-dependencies = [
-    { name = "numpy", version = "1.26.4", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.10'" },
-    { name = "numpy", version = "2.2.6", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version == '3.10.*'" },
-    { name = "numpy", version = "2.4.3", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.11'" },
-]
-sdist = { url = "https://files.pythonhosted.org/packages/9f/76/1e6a6abef23d1c736124482a7e4c58579509914264dc19ee5f513f54d4b6/faster_coco_eval-1.7.2.tar.gz", hash = "sha256:7f06cad6d60a4624c1e4a479b2d612be3e98565fc0dd4c8b41dabd5bdfe45557", size = 103791, upload-time = "2026-02-22T19:48:35.361Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/2c/3e/4ac3605dd3d13d615586c59557e5ea58f0ab5d83e3fbde426da3a553dc28/faster_coco_eval-1.7.2-cp310-cp310-macosx_11_0_arm64.whl", hash = "sha256:4f44282b348291c91eca76edaa62eb88532efb78a317a14c4ef4c0104544a431", size = 355376, upload-time = "2026-02-22T19:47:51.37Z" },
-    { url = "https://files.pythonhosted.org/packages/2f/a9/c49a6d9bbe17a831f698cbed3813bcd03dfd052603794f5624eb172e05b5/faster_coco_eval-1.7.2-cp310-cp310-manylinux_2_17_aarch64.manylinux2014_aarch64.whl", hash = "sha256:5c8231e0234b733eec66bd9ea86445c52f9f0283f36a986a4c35711bc074b99b", size = 580135, upload-time = "2026-02-22T19:47:53.03Z" },
-    { url = "https://files.pythonhosted.org/packages/b0/f7/a17d637a54d1af4b79bc04d7c61d8a9c286287561c878edb1134a112028b/faster_coco_eval-1.7.2-cp310-cp310-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:35a43a57d89551960ab9950f2e1a44f5040ada5becef47367a530e0cf4ab474b", size = 578187, upload-time = "2026-02-22T19:47:54.496Z" },
-    { url = "https://files.pythonhosted.org/packages/73/62/b7f322b203903ab45d3d28299d5a50bf21666565ab50846af9626347517b/faster_coco_eval-1.7.2-cp310-cp310-win_amd64.whl", hash = "sha256:d9dd0ddf59bfc215a93591fa812b97ece01f4f1514ff7e8c9b1914bce158e86d", size = 320650, upload-time = "2026-02-22T19:47:55.58Z" },
-    { url = "https://files.pythonhosted.org/packages/be/ee/256f6f2e80f0b1c7693ea6a3d58e47a8985fac8836e047ce308ca8f85869/faster_coco_eval-1.7.2-cp310-cp310-win_arm64.whl", hash = "sha256:1e286b7dbce43792f2e1204e3abd41cbed2e3795ca0286ffffd55de4f15a506b", size = 318257, upload-time = "2026-02-22T19:47:57.026Z" },
-    { url = "https://files.pythonhosted.org/packages/a4/df/c2e12f6d3c4053032708e4009be90a6cef91c243c025888b983ec2658c03/faster_coco_eval-1.7.2-cp311-cp311-macosx_11_0_arm64.whl", hash = "sha256:bbb61508d2695bdedb9529cad1916e24a309419214133babaee63f9ed412d468", size = 358427, upload-time = "2026-02-22T19:47:58.142Z" },
-    { url = "https://files.pythonhosted.org/packages/93/5b/5c9b2ba525fe8e9cbfeeafc67ba0f9fb7d2aac1e6f21e1f01aaf1e876681/faster_coco_eval-1.7.2-cp311-cp311-manylinux_2_17_aarch64.manylinux2014_aarch64.whl", hash = "sha256:19ef06f197b40e48bfa815b4024dbbb3ed7c0579edb0e41522248343e85154a2", size = 583299, upload-time = "2026-02-22T19:47:59.563Z" },
-    { url = "https://files.pythonhosted.org/packages/54/0e/b0813e0220501805178841b49d9e2ebfe739bfd0001f5e5d0467725b993d/faster_coco_eval-1.7.2-cp311-cp311-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:bb056f386e636584eeba166454f928f522dbd197cd1bd583de46f765e81758d1", size = 581657, upload-time = "2026-02-22T19:48:01.199Z" },
-    { url = "https://files.pythonhosted.org/packages/48/bd/d1264568620b9b22861594aa29f0a8ce2249476a2532945930bcf5f134a0/faster_coco_eval-1.7.2-cp311-cp311-win_amd64.whl", hash = "sha256:1cfe43beafd16622845317b50233c84d8da33b5034ef1ac7d5e76a181631d875", size = 321744, upload-time = "2026-02-22T19:48:02.605Z" },
-    { url = "https://files.pythonhosted.org/packages/62/35/039ae826bd58610dc6cd2aa1aa91ab6f3835c7ab854df23ed87e4169686e/faster_coco_eval-1.7.2-cp311-cp311-win_arm64.whl", hash = "sha256:0e0bf19fdcc8dd2ea08b761ce03178fbbee1525b04296f7b90c9a0a07a104f84", size = 319572, upload-time = "2026-02-22T19:48:03.716Z" },
-    { url = "https://files.pythonhosted.org/packages/3d/87/68e110a852b08b9580fa6b968706a8e416f0a925d580e7bce8bfd4187d9d/faster_coco_eval-1.7.2-cp312-cp312-macosx_11_0_arm64.whl", hash = "sha256:a0c2cbe9b86b772b2bafd345f09f746f818dbf778c076044e007bbf8c01da643", size = 357387, upload-time = "2026-02-22T19:48:05.13Z" },
-    { url = "https://files.pythonhosted.org/packages/5f/a9/f0f902f84a900bdff1768065c5aa881a49cc683b3f081b79046d4be62717/faster_coco_eval-1.7.2-cp312-cp312-manylinux_2_17_aarch64.manylinux2014_aarch64.whl", hash = "sha256:d323acfcfb70096d053bcbc38ebbb8244f8b95a660e7c2579b8f0bfc0a023c51", size = 583711, upload-time = "2026-02-22T19:48:06.857Z" },
-    { url = "https://files.pythonhosted.org/packages/29/fc/35048c6446b07df92fad6078ac9d6ff3d4a34d910e6a1ca2066024919e3e/faster_coco_eval-1.7.2-cp312-cp312-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:6a77a5dc5615b6519791e2243beb353a7c4f7ee4e9234b813a5fc276512d9f39", size = 588058, upload-time = "2026-02-22T19:48:08.298Z" },
-    { url = "https://files.pythonhosted.org/packages/de/59/a7b8c1f45c3cac9f25dcaa3a307f8902d75edef452f197a4940a1b896592/faster_coco_eval-1.7.2-cp312-cp312-win_amd64.whl", hash = "sha256:71de34e5a56a1bd487599d943821691c5c5dc46cac1e9a5acc784fab80cc06f7", size = 323791, upload-time = "2026-02-22T19:48:09.708Z" },
-    { url = "https://files.pythonhosted.org/packages/9a/b9/faee4d2bf28810dd11922cad137ba5de9a3dd290651886217b9a529c368a/faster_coco_eval-1.7.2-cp312-cp312-win_arm64.whl", hash = "sha256:e333c5f9b0047907ab4ecd2590ef023c92787fbfa4adb393c0122e02174abefd", size = 316936, upload-time = "2026-02-22T19:48:11.169Z" },
-    { url = "https://files.pythonhosted.org/packages/5b/39/6a13fdd23670f28eee6a2e820b00bda120fb5594902bc6571c765a050ff1/faster_coco_eval-1.7.2-cp313-cp313-macosx_11_0_arm64.whl", hash = "sha256:6cc42d18ca001bca4861920f0fd3992b4f488f765da7ae0a23c6715e1ba68e31", size = 357519, upload-time = "2026-02-22T19:48:12.272Z" },
-    { url = "https://files.pythonhosted.org/packages/03/b9/6e262051931d6f17f491d6d185cc65d813cfaf6b408bb02ecd5613a995f2/faster_coco_eval-1.7.2-cp313-cp313-manylinux_2_17_aarch64.manylinux2014_aarch64.whl", hash = "sha256:8237eadc146f8589c31f7e3f22a65a7008813516940805be44bc55085f7415ee", size = 583449, upload-time = "2026-02-22T19:48:13.339Z" },
-    { url = "https://files.pythonhosted.org/packages/0a/d2/fed28fc682b4d0e79506e4e3671ba248e67dad2b0210c8f3009f88f9b5d9/faster_coco_eval-1.7.2-cp313-cp313-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:b7b925a8e09ff02c31a9b2d60227db63d2e5641a24c98788f51238c1736b2a13", size = 587873, upload-time = "2026-02-22T19:48:14.677Z" },
-    { url = "https://files.pythonhosted.org/packages/69/75/983ad205d0f26db79e6088485f1d138c90d7432dfd410c6632edef87651e/faster_coco_eval-1.7.2-cp313-cp313-win_amd64.whl", hash = "sha256:303e84dd2f8f8d96c2f4134e74c9b3ab2a7fa25dc59d0d4773a477b561a82ceb", size = 323860, upload-time = "2026-02-22T19:48:16.906Z" },
-    { url = "https://files.pythonhosted.org/packages/e7/94/a20d5ad59e43b7f69955c64c80e127bdc7c75eca65adb03bde1683ee2340/faster_coco_eval-1.7.2-cp313-cp313-win_arm64.whl", hash = "sha256:ff1768f6593956c882defc3a4de47130c4ca0827530ef83453136ef52b4e0357", size = 316983, upload-time = "2026-02-22T19:48:18.331Z" },
-    { url = "https://files.pythonhosted.org/packages/2c/29/b882fedd99a56d555959ec5a149605f6842ac6f376cd2cb4a03ae8c3b59b/faster_coco_eval-1.7.2-cp39-cp39-macosx_11_0_arm64.whl", hash = "sha256:052d14f971dd4ed1ba2b23b1e4a8501489326ee673ee61087c36dc9055881f97", size = 355761, upload-time = "2026-02-22T19:48:29.68Z" },
-    { url = "https://files.pythonhosted.org/packages/7d/39/9e0ff8a977786a6df243b9f968999467637cf57860e802939aff58fb4cd6/faster_coco_eval-1.7.2-cp39-cp39-manylinux_2_17_aarch64.manylinux2014_aarch64.whl", hash = "sha256:e6e5a28e191723e1651950111a3e699fe9008fa66015c03db1cced10893d4393", size = 581946, upload-time = "2026-02-22T19:48:30.884Z" },
-    { url = "https://files.pythonhosted.org/packages/a2/bf/a678f89e72946f4c7f1cac88b2cf3e49e58579f058dad5f45a6184ce7658/faster_coco_eval-1.7.2-cp39-cp39-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:9fc7b641d31b399e808303469bd1494425baed9fd03a3d2d1b9dfcf91a4c9764", size = 578648, upload-time = "2026-02-22T19:48:32.023Z" },
-    { url = "https://files.pythonhosted.org/packages/91/a8/1e506181c794afdd4a3f51a9f4581fefadbc756e0524dcf0a2e1b568ded3/faster_coco_eval-1.7.2-cp39-cp39-win_amd64.whl", hash = "sha256:1d2c4343077b51d5f463c2e8df0ee5720730225c5b9409641fa26798e8db50aa", size = 327304, upload-time = "2026-02-22T19:48:33.092Z" },
-    { url = "https://files.pythonhosted.org/packages/ff/ad/733066c478494c7619a3d67e545df44c6c174a359bb09d49024a8841ef00/faster_coco_eval-1.7.2-cp39-cp39-win_arm64.whl", hash = "sha256:bb183ad39b624a8bf426c769f39a7d69e1daaa5aa7725e7bcac91c3bfaa90e80", size = 315095, upload-time = "2026-02-22T19:48:34.401Z" },
-]
-
-[[package]]
 name = "filelock"
 version = "3.19.1"
 source = { registry = "https://pypi.org/simple" }
@@ -2789,7 +2751,6 @@ name = "lightly-studio"
 version = "0.4.11"
 source = { editable = "." }
 dependencies = [
-    { name = "annotated-types" },
     { name = "av", version = "15.1.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.10'" },
     { name = "av", version = "17.0.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.10'" },
     { name = "duckdb", version = "1.4.4", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.10'" },
@@ -2800,7 +2761,6 @@ dependencies = [
     { name = "eval-type-backport" },
     { name = "fastapi", version = "0.128.8", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.10'" },
     { name = "fastapi", version = "0.135.1", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.10'" },
-    { name = "faster-coco-eval" },
     { name = "fsspec", version = "2025.10.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.10'" },
     { name = "fsspec", version = "2026.2.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.10'" },
     { name = "labelformat" },
@@ -2884,7 +2844,6 @@ docs = [
 [package.metadata]
 requires-dist = [
     { name = "adlfs", marker = "extra == 'cloud-storage'", specifier = ">=2023.1.0" },
-    { name = "annotated-types", specifier = "==0.7.0" },
     { name = "av", specifier = ">=10.0.0" },
     { name = "duckdb", specifier = ">=1.2.2,<1.6" },
     { name = "duckdb-engine", specifier = ">=0.15.0,<0.17" },
@@ -2892,7 +2851,6 @@ requires-dist = [
     { name = "environs", specifier = "<12.0.0" },
     { name = "eval-type-backport", specifier = ">=0.2.2" },
     { name = "fastapi", specifier = ">=0.115.5" },
-    { name = "faster-coco-eval", specifier = ">=1.6.5" },
     { name = "fsspec", specifier = ">=2023.1.0" },
     { name = "gcsfs", marker = "extra == 'cloud-storage'", specifier = ">=2023.1.0" },
     { name = "labelformat", git = "https://github.com/lightly-ai/labelformat.git?rev=c3a17e65500e1ce7a052258b10495f104d61bb88" },
