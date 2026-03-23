@@ -29,7 +29,6 @@ def test_get_sample_ids(db_session: Session) -> None:
     all_sample_ids = image_resolver.get_sample_ids(
         session=db_session,
         collection_id=collection.collection_id,
-        filters=ImageFilter(),
     )
     assert all_sample_ids == {img.sample_id for img in created_images}
 
@@ -41,14 +40,3 @@ def test_get_sample_ids(db_session: Session) -> None:
         ),
     )
     assert filtered_sample_ids == {created_images[1].sample_id}
-
-
-def test_get_sample_ids__no_filters(db_session: Session) -> None:
-    """Test that get_sample_ids works with default empty filters."""
-    collection = create_collection(session=db_session, sample_type=SampleType.IMAGE)
-    result = image_resolver.get_sample_ids(
-        session=db_session,
-        collection_id=collection.collection_id,
-        filters=ImageFilter(),
-    )
-    assert result == set()

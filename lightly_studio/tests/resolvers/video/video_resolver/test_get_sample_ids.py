@@ -31,7 +31,6 @@ def test_get_sample_ids(db_session: Session) -> None:
     all_sample_ids = video_resolver.get_sample_ids(
         session=db_session,
         collection_id=collection.collection_id,
-        filters=VideoFilter(),
     )
     assert all_sample_ids == set(created_video_ids)
 
@@ -43,14 +42,3 @@ def test_get_sample_ids(db_session: Session) -> None:
         ),
     )
     assert filtered_sample_ids == {created_video_ids[1]}
-
-
-def test_get_sample_ids__no_filters(db_session: Session) -> None:
-    """Test that get_sample_ids works with default empty filters."""
-    collection = create_collection(session=db_session, sample_type=SampleType.VIDEO)
-    result = video_resolver.get_sample_ids(
-        session=db_session,
-        collection_id=collection.collection_id,
-        filters=VideoFilter(),
-    )
-    assert result == set()
