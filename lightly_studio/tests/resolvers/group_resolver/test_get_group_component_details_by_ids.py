@@ -1,5 +1,7 @@
 """Tests for get_group_component_details_by_group_id resolver."""
 
+import uuid
+
 from sqlmodel import Session
 
 from lightly_studio.models.collection import SampleType
@@ -102,8 +104,6 @@ def test_get_group_component_details_by_group_id__empty_group(db_session: Sessio
 
 def test_get_group_component_details_by_group_id__nonexistent(db_session: Session) -> None:
     """Test getting group component details for non-existent group ID."""
-    import uuid
-
     non_existent_id = uuid.uuid4()
     results = group_resolver.get_group_component_details_by_group_id(
         session=db_session, group_id=non_existent_id

@@ -59,7 +59,7 @@ def read_dataset(
     collection_id: Annotated[UUID, Path(title="Collection Id")],
 ) -> CollectionTable:
     """Retrieve the root collection for a given collection."""
-    return collection_resolver.get_dataset(session=session, collection_id=collection_id)
+    return collection_resolver.get_root_collection(session=session, collection_id=collection_id)
 
 
 @collection_router.get(
@@ -70,7 +70,7 @@ def read_collection_hierarchy(
     collection_id: Annotated[UUID, Path(title="Root collection Id")],
 ) -> list[CollectionTable]:
     """Retrieve the collection hierarchy from the database, starting with the root node."""
-    return collection_resolver.get_hierarchy(session=session, dataset_id=collection_id)
+    return collection_resolver.get_hierarchy(session=session, root_collection_id=collection_id)
 
 
 @collection_router.get("/collections/overview", response_model=list[CollectionOverviewView])
@@ -156,7 +156,12 @@ def deep_copy(
     request: DeepCopyRequest,
 ) -> dict[str, str]:
     """Create a deep copy of a collection with all related data."""
-    existing = collection_resolver.get_by_name(session=session, name=request.copy_name)
+    existing = collection_resolver.get_by_name(
+        # parent_collection_id=None searches for root collections
+        session=session,
+        name=request.copy_name,
+        parent_collection_id=None,
+    )
     if existing:
         raise HTTPException(
             status_code=HTTP_STATUS_CONFLICT,

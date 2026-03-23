@@ -86,7 +86,7 @@ def test_update_segmentation_mask__unsupported_annotation_type(db_session: Sessi
         ],
     )[0]
 
-    with pytest.raises(ValueError, match="Annotation type does not support segmentation mask."):
+    with pytest.raises(ValueError, match=r"Annotation type does not support segmentation mask."):
         annotation_resolver.update_segmentation_mask(
             session=db_session, annotation_id=annotation_id, segmentation_mask=[1, 2, 3, 4]
         )

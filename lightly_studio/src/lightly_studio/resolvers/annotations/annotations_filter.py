@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from typing import Literal
 from uuid import UUID
 
 from pydantic import BaseModel, Field
@@ -17,6 +18,7 @@ from lightly_studio.type_definitions import QueryType
 class AnnotationsFilter(BaseModel):
     """Handles filtering for annotation queries."""
 
+    filter_type: Literal["annotations"] = "annotations"
     annotation_types: list[AnnotationType] | None = Field(
         default=None,
         description="Types of annotation to filter (e.g., 'object_detection')",
@@ -91,11 +93,7 @@ class AnnotationsFilter(BaseModel):
 
         # Filter by tags
         if self.tag_ids:
-            query = (
-                query.join(annotation_sample.tags)
-                .where(annotation_sample.tags.any(col(TagTable.tag_id).in_(self.tag_ids)))
-                .distinct()
-            )
+            query = query.where(annotation_sample.tags.any(col(TagTable.tag_id).in_(self.tag_ids)))
 
         # Filter by annotation type
         if self.annotation_types:

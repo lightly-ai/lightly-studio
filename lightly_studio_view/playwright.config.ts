@@ -11,8 +11,12 @@ export default defineConfig({
 
     use: {
         viewport: { width: 1600, height: 1200 },
-        // Base URL to use in actions like `await page.goto('/')`.
 
+        // Default timeouts for all actions and navigations.
+        actionTimeout: 5_000,
+        navigationTimeout: 5_000,
+
+        // Base URL to use in actions like `await page.goto('/')`.
         baseURL: process.env.CI ? process.env.E2E_BASE_URL : 'http://localhost:8001',
 
         // Store downloads to disk so tests can read them
@@ -38,12 +42,16 @@ export default defineConfig({
         {
             name: 'videos',
             testDir: './e2e/videos'
+        },
+        {
+            name: 'groups',
+            testDir: './e2e/groups'
         }
     ],
 
     // Glob patterns or regular expressions that match test files.
     testMatch: ['**/*.{e2e-test,e2e-spec}.{js,ts,mjs}'],
 
-    // max timeout for each test
+    // Timeout for each test function.
     timeout: 30_000
 });

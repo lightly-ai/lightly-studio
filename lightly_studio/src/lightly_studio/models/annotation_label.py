@@ -15,7 +15,7 @@ class AnnotationLabelBase(SQLModel):
     """Base class for the AnnotationLabel model."""
 
     # The root collection the label belongs to.
-    dataset_id: UUID = Field(foreign_key="collection.collection_id")
+    root_collection_id: UUID = Field(foreign_key="collection.collection_id")
 
     annotation_label_name: str
 
@@ -34,8 +34,8 @@ class AnnotationLabelTable(AnnotationLabelBase, table=True):
     """This class defines the AnnotationLabel model."""
 
     __tablename__ = "annotation_label"
-    # Ensure that the combination of annotation_label_name and dataset_id is unique.
-    __table_args__ = (UniqueConstraint("annotation_label_name", "dataset_id"),)
+    # Ensure that the combination of annotation_label_name and root_collection_id is unique.
+    __table_args__ = (UniqueConstraint("annotation_label_name", "root_collection_id"),)
 
     annotation_label_id: UUID = Field(default_factory=uuid4, primary_key=True)
     # TODO (Mihnea, 01/2026): change to datetime

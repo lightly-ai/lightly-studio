@@ -3,6 +3,7 @@ from sqlmodel import Session
 
 from lightly_studio.models.collection import SampleType
 from lightly_studio.resolvers import video_resolver
+from lightly_studio.resolvers.annotations.annotations_filter import AnnotationsFilter
 from lightly_studio.resolvers.sample_resolver.sample_filter import SampleFilter
 from lightly_studio.resolvers.video_resolver.video_filter import VideoFilter
 from tests import helpers_resolvers
@@ -97,7 +98,7 @@ def test_get_adjacent_videos__raises_with_filter_missing_collection_id(db_sessio
         video=video_helpers.VideoStub(path="/videos/a.mp4"),
     )
 
-    with pytest.raises(ValueError, match="Collection ID must be provided in filters."):
+    with pytest.raises(ValueError, match=r"Collection ID must be provided in filters."):
         video_resolver.get_adjacent_videos(
             session=db_session,
             sample_id=video.sample_id,
@@ -164,7 +165,9 @@ def test_get_adjacent_videos__respects_annotation_filter(db_session: Session) ->
             sample_filter=SampleFilter(
                 collection_id=collection_id,
             ),
-            annotation_frames_label_ids=[dog_label.annotation_label_id],
+            frame_annotation_filter=AnnotationsFilter(
+                annotation_label_ids=[dog_label.annotation_label_id]
+            ),
         ),
     )
 

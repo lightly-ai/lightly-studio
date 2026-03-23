@@ -56,8 +56,7 @@ class DatabaseEngine:
         Args:
             engine_url: The database engine URL. If None, reads from LIGHTLY_STUDIO_DATABASE_URL
                 env var, or defaults to a local DuckDB file.
-            cleanup_existing: If True, deletes the existing database file if it exists.
-                Only applicable for DuckDB.
+            cleanup_existing: If True, removes the existing database before use.
             single_threaded: If True, creates a single-threaded engine suitable for testing.
         """
         if engine_url is not None:
@@ -73,7 +72,6 @@ class DatabaseEngine:
         if self._backend == DatabaseBackend.POSTGRESQL:
             self._engine_url = _ensure_psycopg3_driver(self._engine_url)
 
-        # TODO (Mihnea, 02/2026): Support cleanup for Postgres too.
         if cleanup_existing and self._backend == DatabaseBackend.DUCKDB:
             _cleanup_database_file(engine_url=self._engine_url)
 
@@ -94,6 +92,10 @@ class DatabaseEngine:
             with self._engine.connect() as conn:
                 conn.execute(text("CREATE EXTENSION IF NOT EXISTS vector"))
                 conn.commit()
+
+        if cleanup_existing and self._backend == DatabaseBackend.POSTGRESQL:
+            SQLModel.metadata.drop_all(bind=self._engine)
+            logging.info("Dropped all tables in PostgreSQL database.")
 
         SQLModel.metadata.create_all(self._engine)
 
@@ -194,7 +196,7 @@ def connect(
 
     Args:
         db_file: Path to DuckDB file.
-        cleanup_existing: If True, deletes existing database file (DuckDB only).
+        cleanup_existing: If True, removes the existing database before use.
         engine_url: Full database URL.
 
     Raises:
@@ -251,9 +253,9 @@ def _detect_backend_from_url(engine_url: str) -> DatabaseBackend:
     Raises:
         ValueError: If the URL scheme is not supported.
     """
-    if engine_url.startswith("duckdb://"):
+    if engine_url.startswith("duckdb"):
         return DatabaseBackend.DUCKDB
-    if engine_url.startswith(("postgresql://", "postgres://")):
+    if engine_url.startswith("postgres"):
         return DatabaseBackend.POSTGRESQL
     raise ValueError(
         f"Unsupported database URL scheme: {engine_url}. "

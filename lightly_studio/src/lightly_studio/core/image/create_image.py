@@ -32,7 +32,7 @@ class CreateImage(CreateSample):
         """
         sample_ids = add_images.load_into_dataset_from_paths(
             session=session,
-            dataset_id=collection_id,
+            root_collection_id=collection_id,
             image_paths=[self.path],
             show_progress=False,
         )

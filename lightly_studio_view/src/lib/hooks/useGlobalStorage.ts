@@ -82,7 +82,7 @@ const rangeSelectionBycollection = writable<Record<string, Point[] | null>>({});
 // Rewrite the hook to return values and methods
 export const useGlobalStorage = () => {
     const reversibleActionsHook = useReversibleActions();
-    const setTextEmbedding = (_textEmbedding: TextEmbedding) => {
+    const setTextEmbedding = (_textEmbedding: TextEmbedding | undefined) => {
         textEmbedding.set(_textEmbedding);
     };
 

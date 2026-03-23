@@ -30,7 +30,10 @@ describe('useAdjacentImages', () => {
     beforeEach(() => {
         vi.clearAllMocks();
         useAdjacentSamplesMock.mockReset();
-        imageFilterStore.set({ sample_filter: { collection_id: 'collection-1' } });
+        imageFilterStore.set({
+            filter_type: 'image',
+            sample_filter: { collection_id: 'collection-1' }
+        });
         textEmbeddingStore.set({ embedding: [0.12, 0.34], queryText: 'cats' });
         useAdjacentSamplesMock.mockReturnValue({ query: 'query-result', refetch: vi.fn() });
     });
@@ -43,7 +46,10 @@ describe('useAdjacentImages', () => {
                 sampleId: 'sample-123',
                 body: {
                     sample_type: SampleType.IMAGE,
-                    filters: { sample_filter: { collection_id: 'collection-1' } },
+                    filters: {
+                        filter_type: 'image',
+                        sample_filter: { collection_id: 'collection-1' }
+                    },
                     text_embedding: [0.12, 0.34]
                 }
             }
@@ -61,7 +67,10 @@ describe('useAdjacentImages', () => {
                 sampleId: 'sample-789',
                 body: {
                     sample_type: SampleType.IMAGE,
-                    filters: { sample_filter: { collection_id: 'collection-1' } },
+                    filters: {
+                        filter_type: 'image',
+                        sample_filter: { collection_id: 'collection-1' }
+                    },
                     text_embedding: [0.12, 0.34]
                 }
             }
@@ -71,6 +80,7 @@ describe('useAdjacentImages', () => {
     it('sets text_embedding to undefined when no embedding is stored', () => {
         textEmbeddingStore.set(undefined);
         imageFilterStore.set({
+            filter_type: 'image',
             sample_filter: { collection_id: 'collection-2', tag_ids: ['tag-1'] }
         });
 
@@ -82,6 +92,7 @@ describe('useAdjacentImages', () => {
                 body: {
                     sample_type: SampleType.IMAGE,
                     filters: {
+                        filter_type: 'image',
                         sample_filter: { collection_id: 'collection-2', tag_ids: ['tag-1'] }
                     },
                     text_embedding: undefined

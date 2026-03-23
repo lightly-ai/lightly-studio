@@ -3,6 +3,7 @@ from pytest_mock import MockerFixture
 from sqlmodel import Session
 
 from lightly_studio.core.annotation import (
+    CreateAnnotation,
     CreateClassification,
     CreateInstanceSegmentation,
     CreateObjectDetection,
@@ -187,6 +188,28 @@ class TestImageSample:
         sample.metadata["string_key"] = "updated_value"
         assert sample.metadata["string_key"] == "updated_value"
 
+    def test_metadata__update(self, db_session: Session) -> None:
+        collection = create_collection(session=db_session)
+        image_table = create_image(
+            session=db_session,
+            collection_id=collection.collection_id,
+        )
+        sample = ImageSample(inner=image_table)
+
+        # Initial metadata
+        sample.metadata["key1"] = "val1"
+
+        # Update metadata using dict
+        sample.metadata.update({"key2": "val2", "key3": 3})
+        assert sample.metadata["key1"] == "val1"
+        assert sample.metadata["key2"] == "val2"
+        assert sample.metadata["key3"] == 3
+
+        # Update metadata using kwargs
+        sample.metadata.update(key1="new_val1", key4=4.0)
+        assert sample.metadata["key1"] == "new_val1"
+        assert sample.metadata["key4"] == 4.0
+
     def test_metadata__schema_must_match(self, db_session: Session) -> None:
         collection = create_collection(session=db_session)
         image_table1 = create_image(
@@ -221,13 +244,22 @@ class TestImageSample:
         )
         sample = ImageSample(inner=image_table)
 
-        # Test adding a caption.
-        sample.add_caption("caption3")
+        sample.add_caption(text="caption3")
         assert sample.captions == ["caption3"]
-        sample.add_caption("caption2")
-        assert sample.captions == ["caption3", "caption2"]
-        sample.add_caption("caption1")
+        sample.add_caption(text="caption2")
+        sample.add_caption(text="caption1")
         assert sample.captions == ["caption3", "caption2", "caption1"]
+
+    def test_add_captions(self, db_session: Session) -> None:
+        collection = create_collection(session=db_session)
+        image_table = create_image(
+            session=db_session,
+            collection_id=collection.collection_id,
+        )
+        sample = ImageSample(inner=image_table)
+
+        sample.add_captions(captions=["bright", "day", "city"])
+        assert sample.captions == ["bright", "day", "city"]
 
     def test_captions_setter(self, db_session: Session) -> None:
         collection = create_collection(session=db_session)
@@ -559,6 +591,42 @@ class TestImageSample:
         assert annotations[0].width == 100
         assert annotations[0].height == 100
         assert annotations[0].segmentation_mask == [0, 0, 1, 1, 0, 0]
+
+    def test_add_annotations(
+        self,
+        db_session: Session,
+    ) -> None:
+        collection = create_collection(session=db_session)
+        image_table = create_image(
+            session=db_session,
+            collection_id=collection.collection_id,
+        )
+        image = ImageSample(inner=image_table)
+
+        # Add multiple annotations.
+        annotations_create: list[CreateAnnotation] = [
+            CreateClassification(label="cat", confidence=0.75),
+            CreateObjectDetection(label="dog", confidence=0.9, x=10, y=20, width=30, height=40),
+        ]
+        image.add_annotations(annotations_create)
+
+        annotations = image.annotations
+        assert len(annotations) == 2
+        # Use sorted to ensure stable comparison if order is not guaranteed.
+        labels = sorted([a.label for a in annotations])
+        assert labels == ["cat", "dog"]
+
+        cat_ann = next(a for a in annotations if a.label == "cat")
+        assert isinstance(cat_ann, ClassificationAnnotation)
+        assert cat_ann.confidence == pytest.approx(0.75)
+
+        dog_ann = next(a for a in annotations if a.label == "dog")
+        assert isinstance(dog_ann, ObjectDetectionAnnotation)
+        assert dog_ann.confidence == pytest.approx(0.9)
+        assert dog_ann.x == 10
+        assert dog_ann.y == 20
+        assert dog_ann.width == 30
+        assert dog_ann.height == 40
 
     def test_delete_annotation(
         self,

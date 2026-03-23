@@ -41,6 +41,7 @@ describe('useVideoFilters', () => {
             });
 
             expect(get(videoFilter)).toEqual({
+                filter_type: 'video',
                 sample_filter: { collection_id: 'coll-1' }
             });
         });
@@ -82,7 +83,7 @@ describe('useVideoFilters', () => {
             });
         });
 
-        it('includes annotation_frames_label_ids when provided', () => {
+        it('includes frame_annotation_filter when labels are provided', () => {
             const { videoFilter, updateFilterParams } = useVideoFilters();
 
             updateFilterParams({
@@ -91,7 +92,9 @@ describe('useVideoFilters', () => {
             });
 
             expect(get(videoFilter)).toMatchObject({
-                annotation_frames_label_ids: ['label-1']
+                frame_annotation_filter: {
+                    annotation_label_ids: ['label-1']
+                }
             });
         });
 

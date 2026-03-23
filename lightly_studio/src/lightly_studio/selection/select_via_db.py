@@ -107,7 +107,7 @@ def _process_explicit_target_distribution(
         try:
             annotation_label = annotation_label_resolver.get_by_label_name(
                 session=session,
-                dataset_id=dataset_id,
+                root_collection_id=dataset_id,
                 label_name=label_name,
             )
         except sqlalchemy.exc.MultipleResultsFound as e:
@@ -210,7 +210,7 @@ def select_via_database(
         return
 
     # Get root dataset id for balancing strategies
-    root_dataset_id = collection_resolver.get_dataset(
+    root_dataset_id = collection_resolver.get_root_collection(
         session=session, collection_id=config.collection_id
     ).collection_id
 

@@ -1,13 +1,11 @@
 """Utility functions for building database queries."""
 # TODO(Michal, 11/2025): Move to image_resolver once CollectionTable.get_samples() is removed.
 
-from typing import Optional
+from typing import Literal, Optional
 
 from pydantic import BaseModel
-from sqlmodel import col
 
 from lightly_studio.models.image import ImageTable
-from lightly_studio.resolvers.annotations.annotations_filter import AnnotationsFilter
 from lightly_studio.resolvers.sample_resolver.sample_filter import SampleFilter
 from lightly_studio.type_definitions import QueryType
 
@@ -22,8 +20,8 @@ class FilterDimensions(BaseModel):
 class ImageFilter(BaseModel):
     """Encapsulates filter parameters for querying samples."""
 
+    filter_type: Literal["image"] = "image"
     sample_filter: Optional[SampleFilter] = None
-    annotation_filter: Optional[AnnotationsFilter] = None
     width: Optional[FilterDimensions] = None
     height: Optional[FilterDimensions] = None
 
@@ -32,11 +30,6 @@ class ImageFilter(BaseModel):
         # Apply sample filters to the query.
         if self.sample_filter is not None:
             query = self.sample_filter.apply(query)
-
-        if self.annotation_filter is not None:
-            query = self.annotation_filter.apply_to_parent_sample_query(
-                query=query, sample_id_column=col(ImageTable.sample_id)
-            )
 
         # Apply dimension-based filters to the query.
         query = self._apply_dimension_filters(query)

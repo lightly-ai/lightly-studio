@@ -1,14 +1,13 @@
 """Utility functions for building database queries."""
 
-from typing import Optional
-from uuid import UUID
+from typing import Literal, Optional
 
 from pydantic import BaseModel
 from sqlmodel import col, select
 
-from lightly_studio.models.annotation.annotation_base import AnnotationBaseTable
 from lightly_studio.models.range import FloatRange
 from lightly_studio.models.video import VideoFrameTable, VideoTable
+from lightly_studio.resolvers.annotations.annotations_filter import AnnotationsFilter
 from lightly_studio.resolvers.image_filter import FilterDimensions
 from lightly_studio.resolvers.sample_resolver.sample_filter import SampleFilter
 from lightly_studio.type_definitions import QueryType
@@ -17,12 +16,13 @@ from lightly_studio.type_definitions import QueryType
 class VideoFilter(BaseModel):
     """Encapsulates filter parameters for querying videos."""
 
+    filter_type: Literal["video"] = "video"
     width: Optional[FilterDimensions] = None
     height: Optional[FilterDimensions] = None
     fps: Optional[FloatRange] = None
     duration_s: Optional[FloatRange] = None
-    annotation_frames_label_ids: Optional[list[UUID]] = None
     sample_filter: Optional[SampleFilter] = None
+    frame_annotation_filter: Optional[AnnotationsFilter] = None
 
     def apply(self, query: QueryType) -> QueryType:
         """Apply the filters to the given query."""
@@ -30,10 +30,10 @@ class VideoFilter(BaseModel):
         query = self._apply_fps_filters(query)
         query = self._apply_duration_filters(query)
 
-        if self.annotation_frames_label_ids:
-            query = self._apply_annotations_ids(query)
         if self.sample_filter:
             query = self.sample_filter.apply(query)
+        if self.frame_annotation_filter is not None:
+            query = self._apply_annotation_filter(query)
 
         return query
 
@@ -79,20 +79,16 @@ class VideoFilter(BaseModel):
 
         return query
 
-    def _apply_annotations_ids(self, query: QueryType) -> QueryType:
+    def _apply_annotation_filter(self, query: QueryType) -> QueryType:
+        """For videos, annotation filters are applied to the frames."""
+        assert self.frame_annotation_filter is not None
+
+        frame_filtered_video_ids_subquery = select(VideoFrameTable.parent_sample_id)
         frame_filtered_video_ids_subquery = (
-            select(VideoTable.sample_id)
-            .join(VideoTable.frames)
-            .join(
-                AnnotationBaseTable,
-                col(AnnotationBaseTable.parent_sample_id) == VideoFrameTable.sample_id,
+            self.frame_annotation_filter.apply_to_parent_sample_query(
+                query=frame_filtered_video_ids_subquery,
+                sample_id_column=col(VideoFrameTable.sample_id),
             )
-            .where(
-                col(AnnotationBaseTable.annotation_label_id).in_(
-                    self.annotation_frames_label_ids or []
-                )
-            )
-            .distinct()
         )
 
         return query.where(col(VideoTable.sample_id).in_(frame_filtered_video_ids_subquery))

@@ -7,10 +7,12 @@ from typing import Any
 from uuid import UUID
 
 import pytest
+import sqlalchemy
 from fastapi.testclient import TestClient
 from pydantic import BaseModel
 from pytest_mock import MockerFixture
-from sqlmodel import Session
+from sqlmodel import Session, SQLModel
+from testcontainers.postgres import PostgresContainer  # type: ignore[import-untyped]
 
 from lightly_studio import db_manager
 from lightly_studio.api import features
@@ -44,11 +46,89 @@ from tests.helpers_resolvers import (
 )
 
 
+def pytest_addoption(parser: pytest.Parser) -> None:
+    """Add --postgres CLI option to run tests against a real Postgres container."""
+    parser.addoption(
+        "--postgres",
+        action="store_true",
+        default=False,
+        help="Run tests against a Postgres container instead of in-memory DuckDB.",
+    )
+
+
+def _truncate_tables(session: Session) -> None:
+    """Truncate all tables in the database to reset state between tests.
+
+    Uses TRUNCATE ... CASCADE on Postgres to handle foreign key constraints.
+    Table names are quoted to handle reserved words (e.g. "group").
+    """
+    table_names = [table.name for table in reversed(SQLModel.metadata.sorted_tables)]
+    for table_name in table_names:
+        session.execute(sqlalchemy.text(f'TRUNCATE TABLE "{table_name}" CASCADE'))
+    session.commit()
+
+
+@pytest.fixture(scope="session")
+def _use_postgres(request: pytest.FixtureRequest) -> bool:
+    """Return True when the test suite is running against Postgres."""
+    return bool(request.config.getoption("--postgres"))
+
+
+@pytest.fixture(scope="session")
+def postgres_url(_use_postgres: bool) -> Generator[str | None, None, None]:
+    """Start a Postgres container and yield its URL, or None for DuckDB."""
+    if not _use_postgres:
+        yield None
+        return
+
+    pg_container = PostgresContainer(
+        image="pgvector/pgvector:0.8.1-pg18-bookworm", driver="psycopg"
+    )
+    pg_container.start()
+    yield pg_container.get_connection_url()
+    pg_container.stop()
+
+
+@pytest.fixture(scope="session")
+def _postgres_engine(postgres_url: str | None) -> Generator[DatabaseEngine | None, None, None]:
+    """Create a session-scoped DatabaseEngine for Postgres, or None for DuckDB."""
+    if postgres_url is None:
+        yield None
+        return
+
+    engine = DatabaseEngine(engine_url=postgres_url, single_threaded=True)
+    yield engine
+    engine.close()
+
+
 @pytest.fixture
-def db_session() -> Generator[Session, None, None]:
+def _db_engine(
+    _use_postgres: bool,
+    _postgres_engine: DatabaseEngine | None,
+) -> Generator[DatabaseEngine, None, None]:
+    """Provide a single DatabaseEngine for each test.
+
+    DuckDB mode (default): creates a fresh in-memory engine per test.
+    Postgres mode (--postgres): reuses the session-scoped Postgres engine.
+    """
+    if _use_postgres:
+        assert _postgres_engine is not None
+        yield _postgres_engine
+        with _postgres_engine.session() as session:
+            session.rollback()
+            _truncate_tables(session)
+    else:
+        engine = DatabaseEngine("duckdb:///:memory:", single_threaded=True)
+        yield engine
+        engine.close()
+
+
+@pytest.fixture
+def db_session(
+    _db_engine: DatabaseEngine,
+) -> Generator[Session, None, None]:
     """Create a test database manager session."""
-    test_manager = DatabaseEngine("duckdb:///:memory:", single_threaded=True)
-    with test_manager.session() as session:
+    with _db_engine.session() as session:
         yield session
 
 
@@ -130,7 +210,7 @@ def annotation_labels(
     for i in range(5):
         label_input = AnnotationLabelCreate(
             annotation_label_name=f"test_label_{i}",
-            dataset_id=collection_id,
+            root_collection_id=collection_id,
         )
         label = annotation_label_resolver.create(db_session, label_input)
         labels.append(label)
@@ -406,16 +486,18 @@ def assert_contains_properties(
 @pytest.fixture
 def patch_collection(
     mocker: MockerFixture,
-) -> Generator[None, None, None]:
-    """Fixture to patch the collection resources."""
+    _db_engine: DatabaseEngine,
+) -> None:
+    """Fixture to patch the collection resources.
+
+    Patches get_engine() to return the per-test engine (in-memory DuckDB or
+    session-scoped Postgres). Table truncation is handled by _db_engine teardown.
+    """
     # Create a mock database manager.
     mocker.patch.object(
         db_manager,
         "get_engine",
-        return_value=db_manager.DatabaseEngine(
-            engine_url="duckdb:///:memory:",
-            single_threaded=True,
-        ),
+        return_value=_db_engine,
     )
 
     # Create a test-specific EmbeddingManager singleton.
@@ -434,5 +516,3 @@ def patch_collection(
 
     # Create test-specific lightly_studio_active_features.
     mocker.patch.object(features, "lightly_studio_active_features", [])
-
-    yield  # noqa

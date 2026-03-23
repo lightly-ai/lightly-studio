@@ -392,7 +392,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/collections/{collection_id}/images/{sample_id}": {
+    "/api/images/{sample_id}": {
         parameters: {
             query?: never;
             header?: never;
@@ -579,15 +579,15 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
+        get?: never;
+        put?: never;
         /**
          * Count Annotations By Collection
-         * @description Get annotation counts for a specific collection.
+         * @description Get annotation counts for a specific collection using an image filter body.
          *
          *     Returns a list of dictionaries with label name and count.
          */
-        get: operations["count_annotations_by_collection"];
-        put?: never;
-        post?: never;
+        post: operations["count_annotations_by_collection"];
         delete?: never;
         options?: never;
         head?: never;
@@ -1533,7 +1533,27 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/collections/{collection_id}/video/{sample_id}": {
+    "/api/collections/{collection_id}/video/sample_ids": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Get Video Sample Ids
+         * @description Retrieve all sample ids of videos matching the given filters.
+         */
+        post: operations["get_video_sample_ids"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/videos/{sample_id}": {
         parameters: {
             query?: never;
             header?: never;
@@ -1846,10 +1866,10 @@ export interface components {
          */
         AnnotationLabelCreate: {
             /**
-             * Dataset Id
+             * Root Collection Id
              * Format: uuid
              */
-            dataset_id: string;
+            root_collection_id: string;
             /** Annotation Label Name */
             annotation_label_name: string;
         };
@@ -1867,10 +1887,10 @@ export interface components {
          */
         AnnotationLabelTable: {
             /**
-             * Dataset Id
+             * Root Collection Id
              * Format: uuid
              */
-            dataset_id: string;
+            root_collection_id: string;
             /** Annotation Label Name */
             annotation_label_name: string;
             /**
@@ -1996,6 +2016,11 @@ export interface components {
          * @description Handles filtering for annotation queries.
          */
         AnnotationsFilter: {
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            filter_type: "annotations";
             /**
              * Annotation Types
              * @description Types of annotation to filter (e.g., 'object_detection')
@@ -2154,6 +2179,11 @@ export interface components {
              */
             collection_id?: string;
             /**
+             * Dataset Id
+             * Format: uuid
+             */
+            dataset_id: string;
+            /**
              * Created At
              * Format: date-time
              */
@@ -2183,6 +2213,11 @@ export interface components {
              * Format: uuid
              */
             collection_id: string;
+            /**
+             * Dataset Id
+             * Format: uuid
+             */
+            dataset_id: string;
             /**
              * Created At
              * Format: date-time
@@ -2218,6 +2253,11 @@ export interface components {
              * Format: uuid
              */
             collection_id: string;
+            /**
+             * Dataset Id
+             * Format: uuid
+             */
+            dataset_id: string;
             /**
              * Created At
              * Format: date-time
@@ -2368,7 +2408,9 @@ export interface components {
          */
         ExecuteOperatorRequest: {
             /** Parameters */
-            parameters: Record<string, never>;
+            parameters: {
+                [key: string]: unknown;
+            };
             context: components["schemas"]["OperatorContextRequest"];
         };
         /**
@@ -2586,6 +2628,11 @@ export interface components {
          * @description Encapsulates filter parameters for querying samples.
          */
         ImageFilter: {
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            filter_type: "image";
             sample_filter?: components["schemas"]["SampleFilter"] | null;
             width?: components["schemas"]["FilterDimensions"] | null;
             height?: components["schemas"]["FilterDimensions"] | null;
@@ -2819,6 +2866,13 @@ export interface components {
             limit: number;
         };
         /**
+         * ReadCountAnnotationsRequest
+         * @description Request body for reading annotation counts.
+         */
+        ReadCountAnnotationsRequest: {
+            filter?: components["schemas"]["ImageFilter"] | null;
+        };
+        /**
          * ReadCountVideoFramesAnnotationsRequest
          * @description Request body for reading video frames annotations counter.
          */
@@ -2877,6 +2931,14 @@ export interface components {
         ReadVideoFramesRequest: {
             /** @description Filter parameters for video frames */
             filter?: components["schemas"]["VideoFrameFilter"] | null;
+        };
+        /**
+         * ReadVideoSampleIdsRequest
+         * @description Request body for reading matching video sample ids.
+         */
+        ReadVideoSampleIdsRequest: {
+            /** @description Filter parameters for videos */
+            filter?: components["schemas"]["VideoFilter"] | null;
         };
         /**
          * ReadVideosRequest
@@ -2949,6 +3011,7 @@ export interface components {
             sample_ids?: string[] | null;
             /** Has Captions */
             has_captions?: boolean | null;
+            annotations_filter?: components["schemas"]["AnnotationsFilter"] | null;
         };
         /**
          * SampleIdsBody
@@ -2967,7 +3030,9 @@ export interface components {
          */
         SampleMetadataView: {
             /** Data */
-            data: Record<string, never>;
+            data: {
+                [key: string]: unknown;
+            };
         };
         /**
          * SampleType
@@ -3303,6 +3368,10 @@ export interface components {
             msg: string;
             /** Error Type */
             type: string;
+            /** Input */
+            input?: unknown;
+            /** Context */
+            ctx?: Record<string, never>;
         };
         /**
          * VideoAnnotationView
@@ -3348,6 +3417,11 @@ export interface components {
          * @description Encapsulates filter parameters for querying videos.
          */
         VideoFilter: {
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            filter_type: "video";
             width?: components["schemas"]["FilterDimensions"] | null;
             height?: components["schemas"]["FilterDimensions"] | null;
             fps?: components["schemas"]["FloatRange"] | null;
@@ -3355,6 +3429,7 @@ export interface components {
             /** Annotation Frames Label Ids */
             annotation_frames_label_ids?: string[] | null;
             sample_filter?: components["schemas"]["SampleFilter"] | null;
+            frame_annotation_filter?: components["schemas"]["AnnotationsFilter"] | null;
         };
         /**
          * VideoFrameAdjacentFilter
@@ -3366,6 +3441,11 @@ export interface components {
          *         video_text_embedding: Text embedding to order parent videos; needs video collection_id.
          */
         VideoFrameAdjacentFilter: {
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            filter_type: "video_frame_adjacent";
             video_frame_filter: components["schemas"]["VideoFrameFilter"];
             video_filter?: components["schemas"]["VideoFilter"] | null;
             /** Video Text Embedding */
@@ -3425,6 +3505,12 @@ export interface components {
             /** Video Id */
             video_id?: string | null;
             sample_filter?: components["schemas"]["SampleFilter"] | null;
+            /**
+             * Filter Type
+             * @default video_frame
+             * @constant
+             */
+            filter_type: "video_frame";
         };
         /**
          * VideoFrameView
@@ -4717,20 +4803,18 @@ export interface operations {
     };
     count_annotations_by_collection: {
         parameters: {
-            query?: {
-                filtered_labels?: string[] | null;
-                min_width?: number | null;
-                max_width?: number | null;
-                min_height?: number | null;
-                max_height?: number | null;
-            };
+            query?: never;
             header?: never;
             path: {
                 collection_id: string;
             };
             cookie?: never;
         };
-        requestBody?: never;
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["ReadCountAnnotationsRequest"] | null;
+            };
+        };
         responses: {
             /** @description Successful Response */
             200: {
@@ -5266,7 +5350,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": null;
+                    "application/json": unknown;
                 };
             };
             /** @description Validation Error */
@@ -5297,7 +5381,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": null;
+                    "application/json": unknown;
                 };
             };
             /** @description Validation Error */
@@ -5428,7 +5512,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": null;
+                    "application/json": unknown;
                 };
             };
             /** @description Validation Error */
@@ -5463,7 +5547,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": null;
+                    "application/json": unknown;
                 };
             };
             /** @description Validation Error */
@@ -5559,7 +5643,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": null;
+                    "application/json": unknown;
                 };
             };
             /** @description Validation Error */
@@ -6040,6 +6124,41 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["VideoViewsWithCount"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_video_sample_ids: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                collection_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ReadVideoSampleIdsRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": string[];
                 };
             };
             /** @description Validation Error */

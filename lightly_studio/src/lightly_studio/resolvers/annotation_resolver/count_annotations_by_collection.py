@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass
 from uuid import UUID
 
 from sqlmodel import Session, col, func, select
@@ -13,17 +12,13 @@ from lightly_studio.models.annotation.annotation_base import (
 from lightly_studio.models.annotation_label import AnnotationLabelTable
 from lightly_studio.models.image import ImageTable
 from lightly_studio.models.sample import SampleTable
-from lightly_studio.type_definitions import QueryType
+from lightly_studio.resolvers.image_filter import ImageFilter
 
 
-def count_annotations_by_collection(  # noqa: PLR0913 // FIXME: refactor to use proper pydantic
+def count_annotations_by_collection(
     session: Session,
     collection_id: UUID,
-    filtered_labels: list[str] | None = None,
-    min_width: int | None = None,
-    max_width: int | None = None,
-    min_height: int | None = None,
-    max_height: int | None = None,
+    image_filter: ImageFilter | None = None,
 ) -> list[tuple[str, int, int]]:
     """Count annotations for a specific collection.
 
@@ -31,17 +26,12 @@ def count_annotations_by_collection(  # noqa: PLR0913 // FIXME: refactor to use 
     label name and counted for total and filtered.
     Returns a list of (label_name, current_count, total_count) tuples.
     """
-    # TODO(Igor, 01/2026): Use _CountFilters as the input argument to simplify this API.
     total_counts = _get_total_counts(session=session, collection_id=collection_id)
-    filters = _CountFilters(
+    current_counts = _get_current_counts(
+        session=session,
         collection_id=collection_id,
-        filtered_labels=filtered_labels,
-        min_width=min_width,
-        max_width=max_width,
-        min_height=min_height,
-        max_height=max_height,
+        image_filter=image_filter,
     )
-    current_counts = _get_current_counts(session=session, filters=filters)
 
     return [
         (label, current_counts.get(label, 0), total_count)
@@ -77,17 +67,11 @@ def _get_total_counts(session: Session, collection_id: UUID) -> dict[str, int]:
     return {row[0]: row[1] for row in session.exec(total_counts_query).all()}
 
 
-@dataclass(frozen=True)
-class _CountFilters:
-    collection_id: UUID
-    filtered_labels: list[str] | None
-    min_width: int | None
-    max_width: int | None
-    min_height: int | None
-    max_height: int | None
-
-
-def _get_current_counts(session: Session, filters: _CountFilters) -> dict[str, int]:
+def _get_current_counts(
+    session: Session,
+    collection_id: UUID,
+    image_filter: ImageFilter | None,
+) -> dict[str, int]:
     """Returns filtered annotation counts per label for the collection."""
     filtered_query = (
         select(
@@ -107,34 +91,11 @@ def _get_current_counts(session: Session, filters: _CountFilters) -> dict[str, i
             SampleTable,
             col(SampleTable.sample_id) == col(ImageTable.sample_id),
         )
-        .where(SampleTable.collection_id == filters.collection_id)
+        .where(SampleTable.collection_id == collection_id)
     )
 
-    filtered_query = _apply_dimension_filters(
-        query=filtered_query,
-        min_width=filters.min_width,
-        max_width=filters.max_width,
-        min_height=filters.min_height,
-        max_height=filters.max_height,
-    )
-
-    # Add label filter if specified
-    if filters.filtered_labels:
-        filtered_query = filtered_query.where(
-            col(ImageTable.sample_id).in_(
-                select(ImageTable.sample_id)
-                .join(
-                    AnnotationBaseTable,
-                    col(ImageTable.sample_id) == col(AnnotationBaseTable.parent_sample_id),
-                )
-                .join(
-                    AnnotationLabelTable,
-                    col(AnnotationBaseTable.annotation_label_id)
-                    == col(AnnotationLabelTable.annotation_label_id),
-                )
-                .where(col(AnnotationLabelTable.annotation_label_name).in_(filters.filtered_labels))
-            )
-        )
+    if image_filter is not None:
+        filtered_query = image_filter.apply(filtered_query)
 
     # Group by label name and sort
     filtered_query = filtered_query.group_by(AnnotationLabelTable.annotation_label_name).order_by(
@@ -143,21 +104,3 @@ def _get_current_counts(session: Session, filters: _CountFilters) -> dict[str, i
 
     rows = session.exec(filtered_query).all()
     return {row[0]: row[1] for row in rows}
-
-
-def _apply_dimension_filters(
-    query: QueryType,
-    min_width: int | None,
-    max_width: int | None,
-    min_height: int | None,
-    max_height: int | None,
-) -> QueryType:
-    if min_width is not None:
-        query = query.where(ImageTable.width >= min_width)
-    if max_width is not None:
-        query = query.where(ImageTable.width <= max_width)
-    if min_height is not None:
-        query = query.where(ImageTable.height >= min_height)
-    if max_height is not None:
-        query = query.where(ImageTable.height <= max_height)
-    return query

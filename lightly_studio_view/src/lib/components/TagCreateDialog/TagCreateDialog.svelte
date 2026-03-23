@@ -7,8 +7,10 @@
         readImages,
         type ReadImagesRequest,
         getAllFrames,
+        type AnnotationsFilter,
         type VideoFrameFilter,
-        getAllVideos,
+        type VideoFilter,
+        getVideoSampleIds,
         readAnnotationsWithPayload,
         type SampleFilter
     } from '$lib/api/lightly_studio_local';
@@ -64,11 +66,23 @@
     const { dimensionsValues: dimensions } = useDimensions();
     const { filterParams } = useImageFilters();
     const { filterParams: videoFilterParams } = useVideoFilters();
+    const annotationLabelIds = $derived<string[] | undefined>(
+        $selectedAnnotationFilterIds?.size ? Array.from($selectedAnnotationFilterIds) : undefined
+    );
 
+    const annotationFilter = $derived<AnnotationsFilter | undefined>(
+        annotationLabelIds
+            ? {
+                  annotation_label_ids: annotationLabelIds
+              }
+            : undefined
+    );
     const sampleFilter = $derived<SampleFilter>({
-        annotation_label_ids: $selectedAnnotationFilterIds?.size
-            ? Array.from($selectedAnnotationFilterIds)
-            : [],
+        annotations_filter: annotationLabelIds
+            ? {
+                  annotation_label_ids: annotationLabelIds
+              }
+            : undefined,
         tag_ids: $tagsSelected.size > 0 ? Array.from($tagsSelected) : undefined,
         metadata_filters: $metadataValues ? createMetadataFilters($metadataValues) : undefined
     });
@@ -87,16 +101,20 @@
 
     const { videoFramesBoundsValues } = useVideoFramesBounds();
     const videoFramesFilter = $derived<VideoFrameFilter>({
-        sample_filter: sampleFilter,
+        sample_filter: {
+            ...sampleFilter
+        },
         ...$videoFramesBoundsValues
     });
 
     const { videoBoundsValues } = useVideoBounds();
 
-    const videosFilter = $derived<VideoFrameFilter>({
+    const videosFilter = $derived<VideoFilter>({
+        frame_annotation_filter: annotationFilter,
         sample_filter: {
             sample_ids: $videoFilterParams?.filters?.sample_ids,
-            ...sampleFilter
+            ...sampleFilter,
+            annotations_filter: undefined
         },
         ...$videoBoundsValues
     });
@@ -306,7 +324,7 @@
 
             itemsSelectedByFilter = new Set(sampleIds);
         } else if (gridType == 'videos') {
-            const videos = await getAllVideos({
+            const videoSampleIds = await getVideoSampleIds({
                 path: {
                     collection_id: collectionId
                 },
@@ -315,7 +333,7 @@
                 }
             });
 
-            const sampleIds = videos.data?.data?.map((e) => e.sample_id);
+            const sampleIds = videoSampleIds.data;
 
             itemsSelectedByFilter = new Set(sampleIds);
         } else if (gridType == 'annotations') {
