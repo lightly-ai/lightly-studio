@@ -39,7 +39,7 @@
     };
 </script>
 
-<div class="h-full w-full" bind:clientWidth>
+<div class="h-full w-full overflow-y-auto dark:[color-scheme:dark]" bind:clientWidth>
     {#if isLoading}
         <div class="flex h-full w-full items-center justify-center gap-2">
             <Spinner />
