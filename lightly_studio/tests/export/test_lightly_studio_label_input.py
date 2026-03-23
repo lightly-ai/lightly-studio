@@ -11,6 +11,7 @@ from sqlmodel import Session
 from lightly_studio.core.dataset_query.dataset_query import DatasetQuery
 from lightly_studio.export.lightly_studio_label_input import (
     LightlyStudioObjectDetectionInput,
+    LightlyStudioSemanticSegmentationInput,
 )
 from lightly_studio.models.annotation.annotation_base import (
     AnnotationCreate,
@@ -43,6 +44,24 @@ class TestLightlyStudioLabelInput:
             Category(id=0, name="cat"),
             Category(id=1, name="dog"),
             Category(id=2, name="zebra"),
+        ]
+
+    def test_get_categories__semantic_segmentation_starts_with_one(
+        self,
+        db_session: Session,
+        collection_with_annotations: CollectionTable,
+    ) -> None:
+        collection = collection_with_annotations
+
+        label_input = LightlyStudioSemanticSegmentationInput(
+            session=db_session,
+            dataset_id=collection.collection_id,
+            samples=DatasetQuery(dataset=collection, session=db_session),
+        )
+        assert list(label_input.get_categories()) == [
+            Category(id=1, name="cat"),
+            Category(id=2, name="dog"),
+            Category(id=3, name="zebra"),
         ]
 
     def test_get_categories__no_annotations(
@@ -169,7 +188,7 @@ class TestLightlyStudioLabelInput:
             db_session=db_session, collection_id=collection.collection_id, images=images_to_create
         )
         dog_label = create_annotation_label(
-            session=db_session, dataset_id=collection.collection_id, label_name="dog"
+            session=db_session, root_collection_id=collection.collection_id, label_name="dog"
         )
         annotation_resolver.create_many(
             session=db_session,

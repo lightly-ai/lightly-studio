@@ -52,15 +52,15 @@ class CreateAnnotationBase(BaseModel):
     confidence: float | None = None
     """Confidence expressed as probability between 0.0 and 1.0 (inclusive)."""
 
-    def _get_label_id(self, session: Session, dataset_id: UUID) -> UUID:
+    def _get_label_id(self, session: Session, root_collection_id: UUID) -> UUID:
         label = annotation_label_resolver.get_by_label_name(
-            session=session, dataset_id=dataset_id, label_name=self.label
+            session=session, root_collection_id=root_collection_id, label_name=self.label
         )
         if label is None:
             label = annotation_label_resolver.create(
                 session=session,
                 label=AnnotationLabelCreate(
-                    dataset_id=dataset_id, annotation_label_name=self.label
+                    root_collection_id=root_collection_id, annotation_label_name=self.label
                 ),
             )
         return label.annotation_label_id
@@ -74,7 +74,7 @@ class CreateClassification(CreateAnnotationBase):
     ) -> AnnotationCreate:
         """Convert to AnnotationCreate."""
         return AnnotationCreate(
-            annotation_label_id=self._get_label_id(session=session, dataset_id=dataset_id),
+            annotation_label_id=self._get_label_id(session=session, root_collection_id=dataset_id),
             annotation_type=AnnotationType.CLASSIFICATION,
             confidence=self.confidence,
             parent_sample_id=parent_sample_id,
@@ -98,7 +98,7 @@ class CreateObjectDetection(CreateAnnotationBase):
     ) -> AnnotationCreate:
         """Convert to AnnotationCreate."""
         return AnnotationCreate(
-            annotation_label_id=self._get_label_id(session=session, dataset_id=dataset_id),
+            annotation_label_id=self._get_label_id(session=session, root_collection_id=dataset_id),
             annotation_type=AnnotationType.OBJECT_DETECTION,
             confidence=self.confidence,
             parent_sample_id=parent_sample_id,
@@ -128,7 +128,7 @@ class CreateInstanceSegmentation(CreateAnnotationBase):
     ) -> AnnotationCreate:
         """Convert to AnnotationCreate."""
         return AnnotationCreate(
-            annotation_label_id=self._get_label_id(session=session, dataset_id=dataset_id),
+            annotation_label_id=self._get_label_id(session=session, root_collection_id=dataset_id),
             annotation_type=AnnotationType.INSTANCE_SEGMENTATION,
             confidence=self.confidence,
             parent_sample_id=parent_sample_id,
@@ -220,7 +220,7 @@ class CreateSemanticSegmentation(CreateAnnotationBase):
     ) -> AnnotationCreate:
         """Convert to AnnotationCreate."""
         return AnnotationCreate(
-            annotation_label_id=self._get_label_id(session=session, dataset_id=dataset_id),
+            annotation_label_id=self._get_label_id(session=session, root_collection_id=dataset_id),
             annotation_type=AnnotationType.SEMANTIC_SEGMENTATION,
             confidence=self.confidence,
             parent_sample_id=parent_sample_id,

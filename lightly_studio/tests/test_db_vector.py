@@ -28,8 +28,7 @@ def test_load_dialect_impl__from_session(db_session: Session) -> None:
 
 
 def test_load_dialect_impl__unsupported() -> None:
-    # SQLAlchemy dialect factory functions lack type stubs.
-    dialect = sqlite.dialect()  # type: ignore[no-untyped-call]
+    dialect = sqlite.dialect()
     vector_type = db_vector.VectorType()
     with pytest.raises(NotImplementedError, match="Unsupported dialect: sqlite"):
         vector_type.load_dialect_impl(dialect=dialect)
@@ -53,8 +52,7 @@ def test_cosine_distance__postgresql() -> None:
 def test_cosine_distance__unsupported() -> None:
     expr = db_vector.cosine_distance(sqlalchemy.column("col1"), sqlalchemy.column("col2"))
     with pytest.raises(NotImplementedError, match="Unsupported dialect: sqlite"):
-        # SQLAlchemy dialect factory functions lack type stubs.
-        expr.compile(dialect=sqlite.dialect())  # type: ignore[no-untyped-call]
+        expr.compile(dialect=sqlite.dialect())
 
 
 def test_vector_element__duckdb() -> None:
@@ -75,5 +73,4 @@ def test_vector_element__postgresql() -> None:
 def test_vector_element__unsupported() -> None:
     expr = db_vector.vector_element(sqlalchemy.column("col1"), sqlalchemy.literal_column("1"))
     with pytest.raises(NotImplementedError, match="Unsupported dialect: sqlite"):
-        # SQLAlchemy dialect factory functions lack type stubs.
-        expr.compile(dialect=sqlite.dialect())  # type: ignore[no-untyped-call]
+        expr.compile(dialect=sqlite.dialect())

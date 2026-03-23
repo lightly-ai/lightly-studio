@@ -14,16 +14,20 @@ export const useAdjacentImages = ({
     const { imageFilter } = useImageFilters();
     const { textEmbedding } = useGlobalStorage();
 
+    const filter = get(imageFilter);
     return useAdjacentSamples({
         params: {
             sampleId,
             body: {
                 sample_type: SampleType.IMAGE,
-                filters: get(imageFilter) ?? {
-                    sample_filter: {
-                        collection_id: collectionId
-                    }
-                },
+                filters: filter
+                    ? { ...filter }
+                    : {
+                          filter_type: 'image' as const,
+                          sample_filter: {
+                              collection_id: collectionId
+                          }
+                      },
                 text_embedding: get(textEmbedding)?.embedding
             }
         }

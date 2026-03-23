@@ -118,7 +118,7 @@ def test_get_video_by_id(test_client: TestClient, db_session: Session) -> None:
     sample_id = videos[0].sample_id
 
     response = test_client.get(
-        f"/api/collections/{collection_id}/video/{sample_id}",
+        f"/api/videos/{sample_id}",
     )
 
     assert response.status_code == HTTP_STATUS_OK
@@ -149,13 +149,13 @@ def test_get_fields_bounds(test_client: TestClient, db_session: Session) -> None
 
     car_label = create_annotation_label(
         session=db_session,
-        dataset_id=collection_id,
+        root_collection_id=collection_id,
         label_name="car",
     )
 
     airplane_label = create_annotation_label(
         session=db_session,
-        dataset_id=collection_id,
+        root_collection_id=collection_id,
         label_name="airplane",
     )
 
@@ -224,19 +224,19 @@ def test_count_video_frame_annotations_by_video_collection(
     # Create annotations labels
     car_label = create_annotation_label(
         session=db_session,
-        dataset_id=collection_id,
+        root_collection_id=collection_id,
         label_name="car",
     )
 
     airplane_label = create_annotation_label(
         session=db_session,
-        dataset_id=collection_id,
+        root_collection_id=collection_id,
         label_name="airplane",
     )
 
     create_annotation_label(
         session=db_session,
-        dataset_id=collection_id,
+        root_collection_id=collection_id,
         label_name="house",
     )
 
@@ -268,7 +268,9 @@ def test_count_video_frame_annotations_by_video_collection(
         },
         json={
             "filter": {
-                "video_frames_annotations_labels": [str(airplane_label.annotation_label_name)]
+                "frame_annotation_filter": {
+                    "annotation_label_ids": [str(airplane_label.annotation_label_id)]
+                }
             }
         },
     )

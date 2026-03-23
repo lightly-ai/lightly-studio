@@ -2,6 +2,7 @@ import pytest
 from sqlmodel import Session
 
 from lightly_studio.resolvers import image_resolver
+from lightly_studio.resolvers.annotations.annotations_filter import AnnotationsFilter
 from lightly_studio.resolvers.image_filter import ImageFilter
 from lightly_studio.resolvers.sample_resolver.sample_filter import SampleFilter
 from tests import helpers_resolvers
@@ -104,12 +105,12 @@ def test_get_adjacent_images__respects_annotation_filter(db_session: Session) ->
 
     dog_label = helpers_resolvers.create_annotation_label(
         session=db_session,
-        dataset_id=collection_id,
+        root_collection_id=collection_id,
         label_name="dog",
     )
     cat_label = helpers_resolvers.create_annotation_label(
         session=db_session,
-        dataset_id=collection_id,
+        root_collection_id=collection_id,
         label_name="cat",
     )
 
@@ -154,7 +155,9 @@ def test_get_adjacent_images__respects_annotation_filter(db_session: Session) ->
         filters=ImageFilter(
             sample_filter=SampleFilter(
                 collection_id=collection_id,
-                annotation_label_ids=[dog_label.annotation_label_id],
+                annotations_filter=AnnotationsFilter(
+                    annotation_label_ids=[dog_label.annotation_label_id],
+                ),
             )
         ),
     )

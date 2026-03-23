@@ -6,6 +6,7 @@
 
     ![Image title](https://storage.googleapis.com/lightly-public/studio/search.gif){ width="100%"}
     Discover insights instantly with AI-powered search and smart filters.
+    Learn more in [Search and Filter](concepts_and_tools/search_and_filter.md).
 
 === "Annotate"
 
@@ -24,7 +25,7 @@
 
 ## Installation
 
-Ensure you have **Python 3.9 or higher**. We strongly recommend using a virtual environment.
+Ensure you have **Python 3.9 to 3.14**. We strongly recommend using a virtual environment.
 
 The library is OS-independent and works on Windows, Linux, and macOS.
 
@@ -159,6 +160,8 @@ directly use your own image, video, or YOLO/COCO dataset.
     ```
 
     Run the script with `python example_video.py`. Now you can inspect videos in the app.
+
+    The same `dataset.add_videos_from_path()` call also accepts cloud storage URLs such as `s3://my-bucket/videos/` after installing `pip install "lightly-studio[cloud-storage]"`.
 
 
 === "YOLO Object Detection"
@@ -307,14 +310,14 @@ directly use your own image, video, or YOLO/COCO dataset.
 2.  The `dataset.add_<samples>_from_<source>` reads your images and annotations, calculates embeddings, and saves metadata to a local **`lightly_studio.db`** file (using DuckDB).
 3.  `lightly_studio.start_gui()` starts a **local Backend API** server.
 4.  This server reads from `lightly_studio.db` and serves data to the **UI Application** running in your browser (`http://localhost:8001`).
-5.  Images are streamed directly from your disk for display in the UI.
+5.  Images and videos are streamed from their original local folder or remote storage for display in the UI.
 
 !!! note "For Linux Users"
     We recommend using Firefox for the best experience with embedding plots, as other browsers might not render them correctly.
 
 ## Python API
 
-LightlyStudio has a powerful [Python interface](api/index.md). You can not only index datasets but also query and manipulate them using code.
+LightlyStudio has a powerful [Python interface](api/index.md). You can not only index datasets but also query and manipulate them using code. It supports local and cloud-hosted image and video folders; see [Using Cloud Storage](api/index.md#using-cloud-storage) for setup and limitations.
 
 ## Plugins
 

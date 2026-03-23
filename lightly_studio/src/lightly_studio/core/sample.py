@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from abc import ABC
-from collections.abc import Iterable
+from collections.abc import Iterable, Mapping
 from typing import Any, cast
 from uuid import UUID
 
@@ -185,6 +185,14 @@ class Sample(ABC):
         Args:
             text: The text of the caption to add.
         """
+        self.add_captions(captions=[text])
+
+    def add_captions(self, captions: Iterable[str]) -> None:
+        """Add captions to this sample.
+
+        Args:
+            captions: The texts of the captions to add.
+        """
         session = self.get_object_session()
         caption_resolver.create_many(
             session=session,
@@ -192,8 +200,9 @@ class Sample(ABC):
             captions=[
                 CaptionCreate(
                     parent_sample_id=self.sample_id,
-                    text=text,
-                ),
+                    text=caption,
+                )
+                for caption in captions
             ],
         )
 
@@ -261,18 +270,27 @@ class Sample(ABC):
         Args:
             annotation: The annotation to add.
         """
+        self.add_annotations(annotations=[annotation])
+
+    def add_annotations(self, annotations: Iterable[CreateAnnotation]) -> None:
+        """Add annotations to this sample.
+
+        Args:
+            annotations: The annotations to add.
+        """
         session = self.get_object_session()
-        annotations = [
+        annotation_creates = [
             annotation.to_annotation_create(
                 session=session,
                 dataset_id=self.dataset_id,
                 parent_sample_id=self.sample_id,
             )
+            for annotation in annotations
         ]
         annotation_resolver.create_many(
             session=session,
             parent_collection_id=self.dataset_id,
-            annotations=annotations,
+            annotations=annotation_creates,
         )
 
     def delete_annotation(self, annotation: Annotation) -> None:
@@ -326,4 +344,32 @@ class SampleMetadata:
             sample_id=self._sample.sample_id,
             key=key,
             value=value,
+        )
+
+    def update(
+        self,
+        other: Mapping[str, Any] | None = None,
+        **kwargs: Any,
+    ) -> None:
+        """Update the metadata with key-value pairs, overwriting existing keys.
+
+        It behaves similarly to `dict.update()`.
+        ```python
+        sample.metadata.update({"key1": "val1", "key2": 2})
+        sample.metadata.update(key3="val3", key4=4)
+        ```
+
+        Args:
+            other: An optional mapping of key-value pairs.
+            **kwargs: Key-value pairs to update.
+        """
+        # Dictionary from positional or named arguments.
+        new_metadata = dict(other or {}, **kwargs)
+        if not new_metadata:
+            return
+
+        session = self._sample.get_object_session()
+        metadata_resolver.bulk_update_metadata(
+            session=session,
+            sample_metadata=[(self._sample.sample_id, new_metadata)],
         )

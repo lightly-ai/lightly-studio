@@ -316,13 +316,13 @@ def test_select_via_database_with_annotation_class_balancing_target(
     sample_ids = _all_sample_ids(db_session, collection_id)
 
     label_cat = create_annotation_label(
-        session=db_session, dataset_id=collection_id, label_name="cat"
+        session=db_session, root_collection_id=collection_id, label_name="cat"
     )
     label_dog = create_annotation_label(
-        session=db_session, dataset_id=collection_id, label_name="dog"
+        session=db_session, root_collection_id=collection_id, label_name="dog"
     )
     label_bird = create_annotation_label(
-        session=db_session, dataset_id=collection_id, label_name="bird"
+        session=db_session, root_collection_id=collection_id, label_name="bird"
     )
 
     # Create annotations
@@ -428,13 +428,13 @@ def test_select_via_database_with_annotation_class_balancing_target_incomplete(
     )
     sample_ids = _all_sample_ids(db_session, collection_id)
     label_cat = create_annotation_label(
-        session=db_session, dataset_id=collection_id, label_name="cat"
+        session=db_session, root_collection_id=collection_id, label_name="cat"
     )
     label_dog = create_annotation_label(
-        session=db_session, dataset_id=collection_id, label_name="dog"
+        session=db_session, root_collection_id=collection_id, label_name="dog"
     )
     label_bird = create_annotation_label(
-        session=db_session, dataset_id=collection_id, label_name="bird"
+        session=db_session, root_collection_id=collection_id, label_name="bird"
     )
 
     # Create annotations
@@ -524,10 +524,10 @@ def test_select_via_database_with_annotation_class_balancing_target_over_1(
     )
     sample_ids = _all_sample_ids(db_session, collection_id)
     label_cat = create_annotation_label(
-        session=db_session, dataset_id=collection_id, label_name="cat"
+        session=db_session, root_collection_id=collection_id, label_name="cat"
     )
     label_dog = create_annotation_label(
-        session=db_session, dataset_id=collection_id, label_name="dog"
+        session=db_session, root_collection_id=collection_id, label_name="dog"
     )
 
     # Create annotations
@@ -586,13 +586,13 @@ def test_select_via_database_with_annotation_class_balancing_uniform(
     sample_ids = _all_sample_ids(db_session, collection_id)
 
     label_cat = create_annotation_label(
-        session=db_session, dataset_id=collection_id, label_name="cat"
+        session=db_session, root_collection_id=collection_id, label_name="cat"
     )
     label_dog = create_annotation_label(
-        session=db_session, dataset_id=collection_id, label_name="dog"
+        session=db_session, root_collection_id=collection_id, label_name="dog"
     )
     label_bird = create_annotation_label(
-        session=db_session, dataset_id=collection_id, label_name="bird"
+        session=db_session, root_collection_id=collection_id, label_name="bird"
     )
 
     # Create annotations
@@ -663,13 +663,13 @@ def test_select_via_database_with_annotation_class_balancing_input(
     sample_ids = _all_sample_ids(db_session, collection_id)
 
     label_cat = create_annotation_label(
-        session=db_session, dataset_id=collection_id, label_name="cat"
+        session=db_session, root_collection_id=collection_id, label_name="cat"
     )
     label_dog = create_annotation_label(
-        session=db_session, dataset_id=collection_id, label_name="dog"
+        session=db_session, root_collection_id=collection_id, label_name="dog"
     )
     label_bird = create_annotation_label(
-        session=db_session, dataset_id=collection_id, label_name="bird"
+        session=db_session, root_collection_id=collection_id, label_name="bird"
     )
 
     # Create annotations
@@ -847,10 +847,10 @@ def test_get_class_balancing_data_target(db_session: Session) -> None:
     """Test the 'target' (dict) distribution logic."""
     collection_id = create_collection(session=db_session).collection_id
     label_cat_obj = create_annotation_label(
-        session=db_session, dataset_id=collection_id, label_name="cat"
+        session=db_session, root_collection_id=collection_id, label_name="cat"
     )
     label_dog_obj = create_annotation_label(
-        session=db_session, dataset_id=collection_id, label_name="dog"
+        session=db_session, root_collection_id=collection_id, label_name="dog"
     )
 
     label_id_cat = label_cat_obj.annotation_label_id

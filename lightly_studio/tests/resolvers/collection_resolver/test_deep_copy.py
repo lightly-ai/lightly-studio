@@ -345,7 +345,7 @@ def test_deep_copy__can_delete_original_after_copy(db_session: Session) -> None:
         session=db_session, collection_id=original.collection_id, file_path_abs="/a.png"
     )
     label = create_annotation_label(
-        session=db_session, dataset_id=original.collection_id, label_name="test"
+        session=db_session, root_collection_id=original.collection_id, label_name="test"
     )
 
     create_annotation(
@@ -485,7 +485,7 @@ def test_deep_copy__with_annotations(db_session: Session) -> None:
         session=db_session, collection_id=original.collection_id, file_path_abs="/a.png"
     )
     label = create_annotation_label(
-        session=db_session, dataset_id=original.collection_id, label_name="test"
+        session=db_session, root_collection_id=original.collection_id, label_name="test"
     )
     (original_track_id,) = object_track_resolver.create_many(
         session=db_session,

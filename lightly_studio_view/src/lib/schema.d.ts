@@ -392,7 +392,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/collections/{collection_id}/images/{sample_id}": {
+    "/api/images/{sample_id}": {
         parameters: {
             query?: never;
             header?: never;
@@ -1553,7 +1553,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/collections/{collection_id}/video/{sample_id}": {
+    "/api/videos/{sample_id}": {
         parameters: {
             query?: never;
             header?: never;
@@ -1866,10 +1866,10 @@ export interface components {
          */
         AnnotationLabelCreate: {
             /**
-             * Dataset Id
+             * Root Collection Id
              * Format: uuid
              */
-            dataset_id: string;
+            root_collection_id: string;
             /** Annotation Label Name */
             annotation_label_name: string;
         };
@@ -1887,10 +1887,10 @@ export interface components {
          */
         AnnotationLabelTable: {
             /**
-             * Dataset Id
+             * Root Collection Id
              * Format: uuid
              */
-            dataset_id: string;
+            root_collection_id: string;
             /** Annotation Label Name */
             annotation_label_name: string;
             /**
@@ -2016,6 +2016,11 @@ export interface components {
          * @description Handles filtering for annotation queries.
          */
         AnnotationsFilter: {
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            filter_type: "annotations";
             /**
              * Annotation Types
              * @description Types of annotation to filter (e.g., 'object_detection')
@@ -2403,7 +2408,9 @@ export interface components {
          */
         ExecuteOperatorRequest: {
             /** Parameters */
-            parameters: Record<string, never>;
+            parameters: {
+                [key: string]: unknown;
+            };
             context: components["schemas"]["OperatorContextRequest"];
         };
         /**
@@ -2446,6 +2453,24 @@ export interface components {
             min?: number | null;
             /** Max */
             max?: number | null;
+        };
+        /** FilterWithCollectionId[VideoFilter] */
+        FilterWithCollectionId_VideoFilter_: {
+            /**
+             * Collection Id
+             * Format: uuid
+             */
+            collection_id: string;
+            filter: components["schemas"]["VideoFilter"];
+        };
+        /** FilterWithCollectionId[VideoFrameFilter] */
+        FilterWithCollectionId_VideoFrameFilter_: {
+            /**
+             * Collection Id
+             * Format: uuid
+             */
+            collection_id: string;
+            filter: components["schemas"]["VideoFrameFilter"];
         };
         /**
          * FloatRange
@@ -2621,6 +2646,11 @@ export interface components {
          * @description Encapsulates filter parameters for querying samples.
          */
         ImageFilter: {
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            filter_type: "image";
             sample_filter?: components["schemas"]["SampleFilter"] | null;
             width?: components["schemas"]["FilterDimensions"] | null;
             height?: components["schemas"]["FilterDimensions"] | null;
@@ -3018,7 +3048,9 @@ export interface components {
          */
         SampleMetadataView: {
             /** Data */
-            data: Record<string, never>;
+            data: {
+                [key: string]: unknown;
+            };
         };
         /**
          * SampleType
@@ -3354,6 +3386,10 @@ export interface components {
             msg: string;
             /** Error Type */
             type: string;
+            /** Input */
+            input?: unknown;
+            /** Context */
+            ctx?: Record<string, never>;
         };
         /**
          * VideoAnnotationView
@@ -3399,6 +3435,11 @@ export interface components {
          * @description Encapsulates filter parameters for querying videos.
          */
         VideoFilter: {
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            filter_type: "video";
             width?: components["schemas"]["FilterDimensions"] | null;
             height?: components["schemas"]["FilterDimensions"] | null;
             fps?: components["schemas"]["FloatRange"] | null;
@@ -3418,8 +3459,13 @@ export interface components {
          *         video_text_embedding: Text embedding to order parent videos; needs video collection_id.
          */
         VideoFrameAdjacentFilter: {
-            video_frame_filter: components["schemas"]["VideoFrameFilter"];
-            video_filter?: components["schemas"]["VideoFilter"] | null;
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            filter_type: "video_frame_adjacent";
+            video_frame_filter: components["schemas"]["FilterWithCollectionId_VideoFrameFilter_"];
+            video_filter?: components["schemas"]["FilterWithCollectionId_VideoFilter_"] | null;
             /** Video Text Embedding */
             video_text_embedding?: number[] | null;
         };
@@ -3477,6 +3523,12 @@ export interface components {
             /** Video Id */
             video_id?: string | null;
             sample_filter?: components["schemas"]["SampleFilter"] | null;
+            /**
+             * Filter Type
+             * @default video_frame
+             * @constant
+             */
+            filter_type: "video_frame";
         };
         /**
          * VideoFrameView
@@ -5316,7 +5368,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": null;
+                    "application/json": unknown;
                 };
             };
             /** @description Validation Error */
@@ -5347,7 +5399,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": null;
+                    "application/json": unknown;
                 };
             };
             /** @description Validation Error */
@@ -5478,7 +5530,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": null;
+                    "application/json": unknown;
                 };
             };
             /** @description Validation Error */
@@ -5513,7 +5565,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": null;
+                    "application/json": unknown;
                 };
             };
             /** @description Validation Error */
@@ -5609,7 +5661,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": null;
+                    "application/json": unknown;
                 };
             };
             /** @description Validation Error */

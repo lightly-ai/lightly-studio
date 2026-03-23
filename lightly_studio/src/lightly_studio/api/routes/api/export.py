@@ -2,27 +2,30 @@
 
 from __future__ import annotations
 
+import shutil
 from collections.abc import Generator
 from datetime import datetime, timezone
 from pathlib import Path as PathlibPath
 from tempfile import TemporaryDirectory
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, Path
+from fastapi import APIRouter, Depends, HTTPException, Path
 from fastapi.responses import PlainTextResponse, StreamingResponse
 from pydantic import BaseModel
 from sqlmodel import Field
 
 from lightly_studio.api.routes.api import collection as collection_api
 from lightly_studio.core.dataset_query.dataset_query import DatasetQuery
+from lightly_studio.core.video.video_sample import VideoSample
 from lightly_studio.db_manager import SessionDep
-from lightly_studio.export import export_dataset
+from lightly_studio.export import export_dataset, export_video_dataset
 from lightly_studio.models.annotation.annotation_base import AnnotationType
-from lightly_studio.models.collection import CollectionTable
+from lightly_studio.models.collection import CollectionTable, SampleType
 from lightly_studio.resolvers import collection_resolver
 from lightly_studio.resolvers.collection_resolver.export import ExportFilter
 
 export_router = APIRouter(prefix="/collections/{collection_id}", tags=["export"])
+_STREAM_CHUNK_SIZE_BYTES = 64 * 1024
 
 
 @export_router.get("/export/annotations")
@@ -70,7 +73,35 @@ def export_collection_annotations(
             temp_dir.cleanup()
             # Reraise.
             raise
-    elif annotation_type in {AnnotationType.CLASSIFICATION, AnnotationType.SEMANTIC_SEGMENTATION}:
+    elif annotation_type == AnnotationType.SEMANTIC_SEGMENTATION:
+        output_path = PathlibPath(temp_dir.name) / "pascalvoc"
+
+        try:
+            export_dataset.to_pascalvoc_semantic_segmentation(
+                session=session,
+                root_dataset_id=collection.collection_id,
+                samples=dataset_query,
+                output_folder=output_path,
+            )
+        except Exception:
+            temp_dir.cleanup()
+            # Reraise.
+            raise
+
+        # For semantic segmentation, the exporter produces a Pascal VOC directory,
+        # so this route should stream the folder as a .zip instead of streaming a single file.
+        return StreamingResponse(
+            content=_stream_export_dir(
+                temp_dir=temp_dir,
+                dir_path=output_path,
+            ),
+            media_type="application/zip",
+            headers={
+                "Access-Control-Expose-Headers": "Content-Disposition",
+                "Content-Disposition": f"attachment; filename={output_path.name}.zip",
+            },
+        )
+    elif annotation_type == AnnotationType.CLASSIFICATION:
         raise NotImplementedError
 
     return StreamingResponse(
@@ -202,6 +233,75 @@ def _stream_export_file(
     """Stream the export file and clean up the temporary directory afterwards."""
     try:
         with file_path.open("rb") as file:
-            yield from file
+            while chunk := file.read(_STREAM_CHUNK_SIZE_BYTES):
+                yield chunk
     finally:
         temp_dir.cleanup()
+
+
+@export_router.get("/export/youtube-vis")
+def export_collection_youtube_vis(
+    collection: Annotated[
+        CollectionTable,
+        Path(title="collection Id"),
+        Depends(collection_api.get_and_validate_collection_id),
+    ],
+    session: SessionDep,
+    annotation_type: AnnotationType = AnnotationType.INSTANCE_SEGMENTATION,
+) -> StreamingResponse:
+    """Export collection video annotations in YouTube-VIS instance segmentation format."""
+    if collection.sample_type != SampleType.VIDEO:
+        raise HTTPException(
+            status_code=400, detail="YouTube-VIS export is only supported for video collections."
+        )
+
+    if annotation_type != AnnotationType.INSTANCE_SEGMENTATION:
+        raise HTTPException(
+            status_code=400,
+            detail="Only instance segmentation annotations can be exported in YouTube-VIS format.",
+        )
+    dataset_query = DatasetQuery(dataset=collection, session=session, sample_class=VideoSample)
+
+    temp_dir = TemporaryDirectory()
+    output_path = PathlibPath(temp_dir.name) / "youtube_vis_instance_segmentation_export.json"
+
+    try:
+        export_video_dataset.to_youtube_vis_instance_segmentation(
+            session=session,
+            samples=dataset_query,
+            output_json=output_path,
+        )
+    except Exception:
+        temp_dir.cleanup()
+        raise
+
+    return StreamingResponse(
+        content=_stream_export_file(temp_dir=temp_dir, file_path=output_path),
+        media_type="application/json",
+        headers={
+            "Access-Control-Expose-Headers": "Content-Disposition",
+            "Content-Disposition": f"attachment; filename={output_path.name}",
+        },
+    )
+
+
+def _stream_export_dir(
+    temp_dir: TemporaryDirectory[str],
+    dir_path: PathlibPath,
+) -> Generator[bytes, None, None]:
+    """Zip and stream an export directory, then clean up the temporary directory."""
+    try:
+        archive_path = PathlibPath(
+            shutil.make_archive(
+                base_name=str(dir_path),
+                format="zip",
+                root_dir=dir_path.parent,
+                base_dir=dir_path.name,
+            )
+        )
+    except Exception:
+        temp_dir.cleanup()
+        # Reraise.
+        raise
+
+    yield from _stream_export_file(temp_dir=temp_dir, file_path=archive_path)

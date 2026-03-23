@@ -18,7 +18,7 @@ def test_update_segmentation_mask(db_session: Session) -> None:
 
     car_label = create_annotation_label(
         session=db_session,
-        dataset_id=collection_id,
+        root_collection_id=collection_id,
         label_name="car",
     )
 
@@ -60,7 +60,7 @@ def test_update_segmentation_mask__unsupported_annotation_type(db_session: Sessi
 
     car_label = create_annotation_label(
         session=db_session,
-        dataset_id=collection_id,
+        root_collection_id=collection_id,
         label_name="car",
     )
 

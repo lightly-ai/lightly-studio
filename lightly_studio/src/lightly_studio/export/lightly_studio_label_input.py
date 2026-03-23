@@ -30,6 +30,8 @@ from lightly_studio.resolvers import annotation_label_resolver
 class LightlyStudioInputBase:
     """Base class for Lightly Studio labelformat adapters."""
 
+    CATEGORY_ID_START = 0
+
     def __init__(self, session: Session, dataset_id: UUID, samples: Iterable[ImageSample]) -> None:
         """Initializes the adapter.
 
@@ -41,7 +43,9 @@ class LightlyStudioInputBase:
         """
         self._samples = list(samples)
         self._label_id_to_category = _build_label_id_to_category(
-            session=session, dataset_id=dataset_id
+            session=session,
+            dataset_id=dataset_id,
+            category_id_start=self.CATEGORY_ID_START,
         )
 
     @staticmethod
@@ -114,23 +118,87 @@ class LightlyStudioInstanceSegmentationInput(LightlyStudioInputBase, InstanceSeg
             )
 
 
-def _build_label_id_to_category(session: Session, dataset_id: UUID) -> dict[UUID, Category]:
+class LightlyStudioSemanticSegmentationInput(LightlyStudioInputBase, InstanceSegmentationInput):
+    """Labelformat adapter for semantic segmentation backed by dataset samples and annotations."""
+
+    # TODO(Leonardo, 03/26): Ensure Pascal VOC export maps user-defined background to class ID 0
+    # and void/ignore to 255 for spec compliance.
+    CATEGORY_ID_START = 1
+
+    @staticmethod
+    def _sample_to_image_sem_seg(
+        sample: ImageSample,
+        image_id: int,
+        label_id_to_category: dict[UUID, Category],
+    ) -> ImageInstanceSegmentation:
+        objects = []
+        for annotation in sample.sample_table.annotations:
+            if annotation.annotation_type == AnnotationType.SEMANTIC_SEGMENTATION:
+                obj = _annotation_to_single_inst_seg(
+                    annotation=annotation,
+                    label_id_to_category=label_id_to_category,
+                    image_width=sample.width,
+                    image_height=sample.height,
+                )
+                if obj is not None:
+                    objects.append(obj)
+
+        return ImageInstanceSegmentation(
+            image=_sample_to_image(
+                sample=sample,
+                image_id=image_id,
+                filename=sample.file_name,
+            ),
+            objects=objects,
+        )
+
+    def get_images(self) -> Iterable[Image]:
+        """Returns the images for export."""
+        for idx, sample in enumerate(self._samples):
+            # Pascal VOC derives mask filenames from image names,
+            # so an absolute path cannot be used.
+            yield _sample_to_image(
+                sample=sample,
+                image_id=idx,
+                filename=sample.file_name,
+            )
+
+    def get_labels(self) -> Iterable[ImageInstanceSegmentation]:
+        """Returns the labels for export."""
+        for idx, sample in enumerate(self._samples):
+            yield LightlyStudioSemanticSegmentationInput._sample_to_image_sem_seg(
+                sample=sample,
+                image_id=idx,
+                label_id_to_category=self._label_id_to_category,
+            )
+
+
+def _build_label_id_to_category(
+    session: Session,
+    dataset_id: UUID,
+    category_id_start: int = 0,
+) -> dict[UUID, Category]:
     labels = annotation_label_resolver.get_all_sorted_alphabetically(
         session=session,
-        dataset_id=dataset_id,
+        root_collection_id=dataset_id,
     )
     # TODO(Horatiu, 09/2025): We should get only labels that are attached to Object Detection
     # annotations.
     return {
-        label.annotation_label_id: Category(id=idx, name=label.annotation_label_name)
+        label.annotation_label_id: Category(
+            id=category_id_start + idx,
+            name=label.annotation_label_name,
+        )
         for idx, label in enumerate(labels)
     }
 
 
-def _sample_to_image(sample: ImageSample, image_id: int) -> Image:
+def _sample_to_image(sample: ImageSample, image_id: int, filename: str | None = None) -> Image:
+    if filename is None:
+        filename = sample.file_path_abs
     return Image(
         id=image_id,
-        filename=sample.file_path_abs,
+        filename=filename,
         width=sample.width,
         height=sample.height,
     )

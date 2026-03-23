@@ -43,6 +43,8 @@ class _ImageFileDatasetEdge(Dataset[tuple[bytes, int, int]]):
             # Decode image from bytes using OpenCV
             nparr = np.frombuffer(image_bytes, np.uint8)
             bgr_image = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
+            if bgr_image is None:
+                raise ValueError(f"Failed to decode image: {self.filepaths[idx]}")
             rgb_image = cv2.cvtColor(bgr_image, cv2.COLOR_BGR2RGB)
             rgb_bytes = rgb_image.tobytes()
             height, width, _ = rgb_image.shape
@@ -94,7 +96,7 @@ class EdgeSDKEmbeddingGenerator(ImageEmbeddingGenerator):
         Returns:
             A list of floats representing the generated embedding.
         """
-        embeddings = self.lightly_edge.embed_texts([text])
+        embeddings: list[list[float]] = self.lightly_edge.embed_texts([text])
         if len(embeddings):
             return embeddings[0]
         return []
