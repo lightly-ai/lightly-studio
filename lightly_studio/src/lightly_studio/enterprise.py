@@ -97,6 +97,9 @@ def connect(
     if aws_access_key_id is not None and aws_secret_access_key is not None:
         os.environ["AWS_ACCESS_KEY_ID"] = aws_access_key_id
         os.environ["AWS_SECRET_ACCESS_KEY"] = aws_secret_access_key
+        print("Applied AWS credentials from LightlyStudio enterprise configuration.")
+        print("AWS_ACCESS_KEY_ID:", aws_access_key_id)
+        print("AWS_SECRET_ACCESS_KEY:", "*" * len(aws_secret_access_key))
 
     db_manager.connect(engine_url=config.engine_url)
 
