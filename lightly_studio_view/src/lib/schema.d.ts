@@ -2475,6 +2475,24 @@ export interface components {
             /** Max */
             max?: number | null;
         };
+        /** FilterWithCollectionId[VideoFilter] */
+        FilterWithCollectionId_VideoFilter_: {
+            /**
+             * Collection Id
+             * Format: uuid
+             */
+            collection_id: string;
+            filter: components["schemas"]["VideoFilter"];
+        };
+        /** FilterWithCollectionId[VideoFrameFilter] */
+        FilterWithCollectionId_VideoFrameFilter_: {
+            /**
+             * Collection Id
+             * Format: uuid
+             */
+            collection_id: string;
+            filter: components["schemas"]["VideoFrameFilter"];
+        };
         /**
          * FloatRange
          * @description Defines a range of floating-point values.
@@ -3454,8 +3472,8 @@ export interface components {
              * @enum {string}
              */
             filter_type: "video_frame_adjacent";
-            video_frame_filter: components["schemas"]["VideoFrameFilter"];
-            video_filter?: components["schemas"]["VideoFilter"] | null;
+            video_frame_filter: components["schemas"]["FilterWithCollectionId_VideoFrameFilter_"];
+            video_filter?: components["schemas"]["FilterWithCollectionId_VideoFilter_"] | null;
             /** Video Text Embedding */
             video_text_embedding?: number[] | null;
         };
