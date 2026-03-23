@@ -20,25 +20,27 @@ def test_get_all_by_object_track_id_returns_only_track_annotations(
     db_session: Session,
 ) -> None:
     collection = create_collection(session=db_session)
-    dataset_id = collection.collection_id
+    root_collection_id = collection.collection_id
     label = create_annotation_label(
-        session=db_session, root_collection_id=dataset_id, label_name="label"
+        session=db_session, root_collection_id=root_collection_id, label_name="label"
     )
 
-    img_1 = create_image(session=db_session, collection_id=dataset_id, file_path_abs="/tmp/1.png")
+    img_1 = create_image(
+        session=db_session, collection_id=root_collection_id, file_path_abs="/tmp/1.png"
+    )
 
     track_ids = object_track_resolver.create_many(
         session=db_session,
         tracks=[
-            ObjectTrackCreate(object_track_number=1, dataset_id=dataset_id),
-            ObjectTrackCreate(object_track_number=2, dataset_id=dataset_id),
+            ObjectTrackCreate(object_track_number=1, dataset_id=root_collection_id),
+            ObjectTrackCreate(object_track_number=2, dataset_id=root_collection_id),
         ],
     )
     track_a, track_b = track_ids
 
     annotations = create_annotations(
         session=db_session,
-        collection_id=dataset_id,
+        collection_id=root_collection_id,
         annotations=[
             AnnotationDetails(
                 sample_id=img_1.sample_id,
@@ -75,25 +77,25 @@ def test_get_all_by_object_track_id__filter_by_annotation_type(
     db_session: Session,
 ) -> None:
     collection = create_collection(session=db_session)
-    dataset_id = collection.collection_id
+    root_collection_id = collection.collection_id
     label = create_annotation_label(
-        session=db_session, root_collection_id=dataset_id, label_name="label"
+        session=db_session, root_collection_id=root_collection_id, label_name="label"
     )
 
     image_sample = create_image(
-        session=db_session, collection_id=dataset_id, file_path_abs="/tmp/1.png"
+        session=db_session, collection_id=root_collection_id, file_path_abs="/tmp/1.png"
     )
 
     track_id = object_track_resolver.create_many(
         session=db_session,
         tracks=[
-            ObjectTrackCreate(object_track_number=1, dataset_id=dataset_id),
+            ObjectTrackCreate(object_track_number=1, dataset_id=root_collection_id),
         ],
     )[0]
 
     annotations = create_annotations(
         session=db_session,
-        collection_id=dataset_id,
+        collection_id=root_collection_id,
         annotations=[
             AnnotationDetails(
                 sample_id=image_sample.sample_id,
