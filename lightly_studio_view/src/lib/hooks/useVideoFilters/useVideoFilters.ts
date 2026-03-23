@@ -26,7 +26,9 @@ export const buildVideoFilter = ($filterParams: VideoFilterParams | null): Video
         return null;
     }
 
-    const filters: VideoFilter = {};
+    const filters: VideoFilter = {
+        filter_type: 'video'
+    };
 
     // Add video-specific bounds (width, height, fps, duration_s)
     if ($filterParams.video_bounds) {
@@ -81,6 +83,7 @@ export const buildVideoFilter = ($filterParams: VideoFilterParams | null): Video
     const annotationFramesLabelIds = $filterParams.filters?.annotation_frames_label_ids;
     if (annotationFramesLabelIds && annotationFramesLabelIds.length > 0) {
         filters.frame_annotation_filter = {
+            filter_type: 'annotations',
             annotation_label_ids: annotationFramesLabelIds
         } satisfies AnnotationsFilter;
     }
