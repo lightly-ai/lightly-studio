@@ -1,25 +1,29 @@
 <p align="center">
   <a href="https://lightly.ai/lightly-studio"> 
-    <img src="https://cdn.prod.website-files.com/62cd5ce03261cba217188442/66dac501a8e9a90495970876_Logo%20dark-short-p-800.png" height="50" alt="LightlyStudio logo" />
+    <picture>
+      <source
+        media="(prefers-color-scheme: dark)"
+        srcset="https://storage.googleapis.com/lightly-public/studio/lightlystudio_standard_horizontal_light.png"
+      />
+      <source
+        media="(prefers-color-scheme: light)"
+        srcset="https://storage.googleapis.com/lightly-public/studio/lightlystudio_standard_horizontal_dark.png"
+      />
+      <img
+        src="https://storage.googleapis.com/lightly-public/studio/lightlystudio_standard_horizontal_dark.png"
+        height="50"
+        alt="LightlyStudio logo"
+      />
+    </picture>
   </a>
 </p>
 <p align="center"><strong>Curate, Annotate, and Manage Your Data in LightlyStudio.</strong></p>
 <p align="center">
-  <a href="https://pypi.org/project/lightly-studio">
-    <img src="https://img.shields.io/pypi/pyversions/lightly-studio" alt="PyPI python" />
-  </a>
-  <a href="https://pypi.org/project/lightly-studio">
-    <img src="https://badge.fury.io/py/lightly-studio.svg" alt="PyPI version" />
-  </a>
-  <a href="LICENSE">
-    <img src="https://img.shields.io/badge/License-Apache%202.0-blue.svg" alt="License" />
-  </a>
-  <a href="https://docs.lightly.ai/studio">
-    <img src="https://img.shields.io/badge/Docs-blue" alt="Docs" />
-  </a>
-  <a href="https://colab.research.google.com/github/lightly-ai/lightly-studio/blob/main/lightly_studio/src/lightly_studio/examples/example_notebook.ipynb">
-    <img src="https://colab.research.google.com/assets/colab-badge.svg" alt="Open In Colab" />
-  </a>
+  <a href="https://pypi.org/project/lightly-studio"><img src="https://img.shields.io/pypi/pyversions/lightly-studio" alt="PyPI python" /></a>
+  <a href="https://pypi.org/project/lightly-studio"><img src="https://badge.fury.io/py/lightly-studio.svg" alt="PyPI version" /></a>
+  <a href="LICENSE"><img src="https://img.shields.io/badge/License-Apache%202.0-blue.svg" alt="License" /></a>
+  <a href="https://docs.lightly.ai/studio"><img src="https://img.shields.io/badge/Docs-blue" alt="Docs" /></a>
+  <a href="https://colab.research.google.com/github/lightly-ai/lightly-studio/blob/main/lightly_studio/src/lightly_studio/examples/example_notebook.ipynb"><img src="https://colab.research.google.com/assets/colab-badge.svg" alt="Open In Colab" /></a>
 </p>
 
 ---
