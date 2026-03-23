@@ -30,9 +30,10 @@ export const useAdjacentFrames = ({
                     frame_number: {}
                 }
             },
-            video_filter: videoFilterValue && videoCollectionId
-                ? { collection_id: videoCollectionId, filter: videoFilterValue }
-                : undefined,
+            video_filter:
+                videoFilterValue && videoCollectionId
+                    ? { collection_id: videoCollectionId, filter: videoFilterValue }
+                    : undefined,
             video_text_embedding: get(textEmbedding)?.embedding
         } as { filter_type: 'video_frame_adjacent' } & VideoFrameAdjacentFilter;
     } else {
