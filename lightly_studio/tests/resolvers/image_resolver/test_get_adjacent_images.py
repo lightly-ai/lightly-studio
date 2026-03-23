@@ -1,4 +1,3 @@
-import pytest
 from sqlmodel import Session
 
 from lightly_studio.resolvers import image_resolver
@@ -32,7 +31,8 @@ def test_get_adjacent_images__orders_by_path(db_session: Session) -> None:
     result = image_resolver.get_adjacent_images(
         session=db_session,
         sample_id=image_b.sample_id,
-        filters=ImageFilter(sample_filter=SampleFilter(collection_id=collection_id)),
+        collection_id=collection_id,
+        filters=ImageFilter(),
     )
 
     assert result is not None
@@ -66,10 +66,9 @@ def test_get_adjacent_images__respects_sample_ids(db_session: Session) -> None:
     result = image_resolver.get_adjacent_images(
         session=db_session,
         sample_id=image_c.sample_id,
+        collection_id=collection_id,
         filters=ImageFilter(
-            sample_filter=SampleFilter(
-                collection_id=collection_id, sample_ids=[image_b.sample_id, image_c.sample_id]
-            )
+            sample_filter=SampleFilter(sample_ids=[image_b.sample_id, image_c.sample_id])
         ),
     )
 
@@ -79,24 +78,6 @@ def test_get_adjacent_images__respects_sample_ids(db_session: Session) -> None:
     assert result.next_sample_id is None
     assert result.current_sample_position == 2
     assert result.total_count == 2
-
-
-def test_get_adjacent_images__raises_with_filter_missing_collection_id(db_session: Session) -> None:
-    collection = helpers_resolvers.create_collection(session=db_session)
-    collection_id = collection.collection_id
-
-    image = helpers_resolvers.create_image(
-        session=db_session,
-        collection_id=collection_id,
-        file_path_abs="/images/a.png",
-    )
-
-    with pytest.raises(ValueError, match=r"Collection ID must be provided in filters."):
-        image_resolver.get_adjacent_images(
-            session=db_session,
-            sample_id=image.sample_id,
-            filters=ImageFilter(sample_filter=SampleFilter()),
-        )
 
 
 def test_get_adjacent_images__respects_annotation_filter(db_session: Session) -> None:
@@ -152,9 +133,9 @@ def test_get_adjacent_images__respects_annotation_filter(db_session: Session) ->
     result = image_resolver.get_adjacent_images(
         session=db_session,
         sample_id=image_b.sample_id,
+        collection_id=collection_id,
         filters=ImageFilter(
             sample_filter=SampleFilter(
-                collection_id=collection_id,
                 annotations_filter=AnnotationsFilter(
                     annotation_label_ids=[dog_label.annotation_label_id],
                 ),
@@ -219,11 +200,8 @@ def test_get_adjacent_images__with_similarity(db_session: Session) -> None:
     result = image_resolver.get_adjacent_images(
         session=db_session,
         sample_id=image_c.sample_id,
-        filters=ImageFilter(
-            sample_filter=SampleFilter(
-                collection_id=collection_id,
-            )
-        ),
+        collection_id=collection_id,
+        filters=ImageFilter(),
         text_embedding=[1.0, 1.0],
     )
 
@@ -257,9 +235,9 @@ def test_get_adjacent_images__returns_none_when_sample_not_in_filter(db_session:
     result = image_resolver.get_adjacent_images(
         session=db_session,
         sample_id=image_a.sample_id,
+        collection_id=collection_1.collection_id,
         filters=ImageFilter(
             sample_filter=SampleFilter(
-                collection_id=collection_1.collection_id,
                 sample_ids=[],
             )
         ),

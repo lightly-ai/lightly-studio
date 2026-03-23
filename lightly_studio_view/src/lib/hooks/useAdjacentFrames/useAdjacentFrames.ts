@@ -20,8 +20,6 @@ export const useAdjacentFrames = ({
         const { videoFilter } = useVideoFilters();
         const { textEmbedding } = useGlobalStorage();
         const videoFilterValue = get(videoFilter);
-        // TODO(Horatiu, 03/2026): This is a temporaty implementation. collection_id will be removed
-        // from SampleFIlter and we will set it differently.
         const videoCollectionId = videoFilterValue?.sample_filter?.collection_id;
 
         filters = {
@@ -55,6 +53,7 @@ export const useAdjacentFrames = ({
             sampleId,
             body: {
                 sample_type: SampleType.VIDEO_FRAME,
+                collection_id: collectionId,
                 filters
             }
         }

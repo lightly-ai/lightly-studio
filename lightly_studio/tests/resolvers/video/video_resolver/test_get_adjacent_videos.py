@@ -1,4 +1,3 @@
-import pytest
 from sqlmodel import Session
 
 from lightly_studio.models.collection import SampleType
@@ -35,7 +34,8 @@ def test_get_adjacent_videos__orders_by_path(db_session: Session) -> None:
     result = video_resolver.get_adjacent_videos(
         session=db_session,
         sample_id=video_b.sample_id,
-        filters=VideoFilter(sample_filter=SampleFilter(collection_id=collection_id)),
+        collection_id=collection_id,
+        filters=VideoFilter(),
     )
 
     assert result is not None
@@ -71,10 +71,9 @@ def test_get_adjacent_videos__respects_sample_ids(db_session: Session) -> None:
     result = video_resolver.get_adjacent_videos(
         session=db_session,
         sample_id=video_c.sample_id,
+        collection_id=collection_id,
         filters=VideoFilter(
-            sample_filter=SampleFilter(
-                collection_id=collection_id, sample_ids=[video_b.sample_id, video_c.sample_id]
-            )
+            sample_filter=SampleFilter(sample_ids=[video_b.sample_id, video_c.sample_id])
         ),
     )
 
@@ -84,26 +83,6 @@ def test_get_adjacent_videos__respects_sample_ids(db_session: Session) -> None:
     assert result.next_sample_id is None
     assert result.current_sample_position == 2
     assert result.total_count == 2
-
-
-def test_get_adjacent_videos__raises_with_filter_missing_collection_id(db_session: Session) -> None:
-    collection = helpers_resolvers.create_collection(
-        session=db_session, sample_type=SampleType.VIDEO
-    )
-    collection_id = collection.collection_id
-
-    video = video_helpers.create_video(
-        session=db_session,
-        collection_id=collection_id,
-        video=video_helpers.VideoStub(path="/videos/a.mp4"),
-    )
-
-    with pytest.raises(ValueError, match=r"Collection ID must be provided in filters."):
-        video_resolver.get_adjacent_videos(
-            session=db_session,
-            sample_id=video.sample_id,
-            filters=VideoFilter(sample_filter=SampleFilter()),
-        )
 
 
 def test_get_adjacent_videos__respects_annotation_filter(db_session: Session) -> None:
@@ -161,10 +140,8 @@ def test_get_adjacent_videos__respects_annotation_filter(db_session: Session) ->
     result = video_resolver.get_adjacent_videos(
         session=db_session,
         sample_id=video_b.video_sample_id,
+        collection_id=collection_id,
         filters=VideoFilter(
-            sample_filter=SampleFilter(
-                collection_id=collection_id,
-            ),
             frame_annotation_filter=AnnotationsFilter(
                 annotation_label_ids=[dog_label.annotation_label_id]
             ),
@@ -230,11 +207,8 @@ def test_get_adjacent_videos__with_similarity(db_session: Session) -> None:
     result = video_resolver.get_adjacent_videos(
         session=db_session,
         sample_id=video_c.sample_id,
-        filters=VideoFilter(
-            sample_filter=SampleFilter(
-                collection_id=collection_id,
-            )
-        ),
+        collection_id=collection_id,
+        filters=VideoFilter(),
         text_embedding=[1.0, 1.0],
     )
 
@@ -265,9 +239,9 @@ def test_get_adjacent_videos__returns_none_when_sample_not_in_filter(db_session:
     result = video_resolver.get_adjacent_videos(
         session=db_session,
         sample_id=video_a.sample_id,
+        collection_id=collection_1.collection_id,
         filters=VideoFilter(
             sample_filter=SampleFilter(
-                collection_id=collection_1.collection_id,
                 sample_ids=[],
             )
         ),
