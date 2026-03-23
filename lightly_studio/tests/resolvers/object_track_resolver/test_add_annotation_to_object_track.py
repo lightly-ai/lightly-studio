@@ -19,7 +19,7 @@ def test_add_annotation_to_object_track(db_session: Session) -> None:
     """Test linking an object detection annotation to a track."""
     collection = create_collection(session=db_session)
     image = create_image(session=db_session, collection_id=collection.collection_id)
-    label = create_annotation_label(session=db_session, dataset_id=collection.collection_id)
+    label = create_annotation_label(session=db_session, root_collection_id=collection.collection_id)
 
     annotation = create_annotation(
         session=db_session,

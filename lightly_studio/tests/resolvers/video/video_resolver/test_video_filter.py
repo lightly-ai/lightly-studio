@@ -31,7 +31,7 @@ def test_query__annotation_filter(db_session: Session) -> None:
     )
     label = create_annotation_label(
         session=db_session,
-        dataset_id=video_with_annotation.video_frames_collection_id,
+        root_collection_id=video_with_annotation.video_frames_collection_id,
         label_name="car",
     )
     create_annotations(

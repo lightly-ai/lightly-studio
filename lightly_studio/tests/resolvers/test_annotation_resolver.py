@@ -79,17 +79,17 @@ def test_data(db_session: Session) -> _TestData:
     # Create labels
     dog_label = create_annotation_label(
         session=db_session,
-        dataset_id=collection1_id,
+        root_collection_id=collection1_id,
         label_name="dog",
     )
     cat_label = create_annotation_label(
         session=db_session,
-        dataset_id=collection1_id,
+        root_collection_id=collection1_id,
         label_name="cat",
     )
     mouse_label = create_annotation_label(
         session=db_session,
-        dataset_id=collection2_id,
+        root_collection_id=collection2_id,
         label_name="mouse",
     )
 
@@ -190,7 +190,7 @@ def test_create_and_get_annotation__for_video_frame_with_ordering(db_session: Se
     )
     annotation_label = create_annotation_label(
         session=db_session,
-        dataset_id=collection_id,
+        root_collection_id=collection_id,
         label_name="label_for_video_frame",
     )
 
@@ -469,7 +469,7 @@ def test_get_all_by_collection_name(
     collection = create_collection(session=db_session)
     image = create_image(session=db_session, collection_id=collection.collection_id)
     cat_label = create_annotation_label(
-        session=db_session, dataset_id=collection.collection_id, label_name="cat"
+        session=db_session, root_collection_id=collection.collection_id, label_name="cat"
     )
 
     annotation_resolver.create_many(
@@ -552,7 +552,9 @@ def test_get_all_ordered_by_sample_file_path(db_session: Session) -> None:
         session=db_session, collection_id=collection_id, file_path_abs="/a_dir/sample_1.png"
     )
 
-    label = create_annotation_label(session=db_session, dataset_id=collection_id, label_name="test")
+    label = create_annotation_label(
+        session=db_session, root_collection_id=collection_id, label_name="test"
+    )
 
     sample_2_ann_1 = create_annotation(
         session=db_session,
@@ -598,10 +600,10 @@ def test_get_all__with_tag_filtering(db_session: Session) -> None:
     )
     image = create_image(session=db_session, collection_id=collection.collection_id)
     anno_label_cat = create_annotation_label(
-        session=db_session, dataset_id=collection.collection_id, label_name="cat"
+        session=db_session, root_collection_id=collection.collection_id, label_name="cat"
     )
     anno_label_dog = create_annotation_label(
-        session=db_session, dataset_id=collection.collection_id, label_name="dog"
+        session=db_session, root_collection_id=collection.collection_id, label_name="dog"
     )
 
     total_annos = 10
@@ -682,7 +684,7 @@ def test_create_many_annotations(db_session: Session) -> None:
     collection = create_collection(session=db_session)
     image = create_image(session=db_session, collection_id=collection.collection_id)
     cat_label = create_annotation_label(
-        session=db_session, dataset_id=collection.collection_id, label_name="cat"
+        session=db_session, root_collection_id=collection.collection_id, label_name="cat"
     )
 
     annotations_to_create = [

@@ -337,7 +337,7 @@ class TestDataset:
         )
         zebra_label = create_annotation_label(
             session=dataset.session,
-            dataset_id=dataset.dataset_id,
+            root_collection_id=dataset.dataset_id,
             label_name="zebra",
         )
         create_annotation(

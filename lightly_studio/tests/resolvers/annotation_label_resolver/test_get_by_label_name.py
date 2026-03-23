@@ -16,17 +16,17 @@ def test_get_by_label_name__returns_label(
     collection_id_2 = create_collection(session=db_session, collection_name="col2").collection_id
     label_1 = create_annotation_label(
         session=db_session,
-        dataset_id=collection_id_1,
+        root_collection_id=collection_id_1,
         label_name="cat",
     )
     create_annotation_label(
         session=db_session,
-        dataset_id=collection_id_1,
+        root_collection_id=collection_id_1,
         label_name="dog",
     )
     create_annotation_label(
         session=db_session,
-        dataset_id=collection_id_2,
+        root_collection_id=collection_id_2,
         label_name="bird",
     )
 
@@ -46,12 +46,12 @@ def test_get_by_label_name__returns_none(
     collection_id_2 = create_collection(session=db_session, collection_name="col2").collection_id
     create_annotation_label(
         session=db_session,
-        dataset_id=collection_id_1,
+        root_collection_id=collection_id_1,
         label_name="cat",
     )
     create_annotation_label(
         session=db_session,
-        dataset_id=collection_id_1,
+        root_collection_id=collection_id_1,
         label_name="dog",
     )
 

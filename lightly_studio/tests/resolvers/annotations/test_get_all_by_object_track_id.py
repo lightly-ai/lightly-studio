@@ -21,7 +21,9 @@ def test_get_all_by_object_track_id_returns_only_track_annotations(
 ) -> None:
     collection = create_collection(session=db_session)
     dataset_id = collection.collection_id
-    label = create_annotation_label(session=db_session, dataset_id=dataset_id, label_name="label")
+    label = create_annotation_label(
+        session=db_session, root_collection_id=dataset_id, label_name="label"
+    )
 
     img_1 = create_image(session=db_session, collection_id=dataset_id, file_path_abs="/tmp/1.png")
 
@@ -74,7 +76,9 @@ def test_get_all_by_object_track_id__filter_by_annotation_type(
 ) -> None:
     collection = create_collection(session=db_session)
     dataset_id = collection.collection_id
-    label = create_annotation_label(session=db_session, dataset_id=dataset_id, label_name="label")
+    label = create_annotation_label(
+        session=db_session, root_collection_id=dataset_id, label_name="label"
+    )
 
     image_sample = create_image(
         session=db_session, collection_id=dataset_id, file_path_abs="/tmp/1.png"
