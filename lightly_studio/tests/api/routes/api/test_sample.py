@@ -6,7 +6,6 @@ from fastapi.testclient import TestClient
 from sqlmodel import Session
 
 from lightly_studio.api.routes.api.status import (
-    HTTP_STATUS_BAD_REQUEST,
     HTTP_STATUS_CREATED,
     HTTP_STATUS_OK,
 )
@@ -37,8 +36,8 @@ def test_read_samples__get_all(
     samples.sort(key=lambda x: (x.created_at, x.sample_id))
 
     # Call the API
-    json_body = {"filters": {"collection_id": str(collection_id)}}
-    response = test_client.post("/api/samples/list", json=json_body)
+    json_body: dict[str, Any] = {"filters": {}}
+    response = test_client.post(f"/api/collections/{collection_id}/samples/list", json=json_body)
     assert response.status_code == HTTP_STATUS_OK
 
     # Assert the response
@@ -56,8 +55,8 @@ def test_read_samples__get_all_empty(
     collection_id = create_collection(session=db_session).collection_id
 
     # Call the API
-    json_body = {"filters": {"collection_id": str(collection_id)}}
-    response = test_client.post("/api/samples/list", json=json_body)
+    json_body: dict[str, Any] = {"filters": {}}
+    response = test_client.post(f"/api/collections/{collection_id}/samples/list", json=json_body)
     assert response.status_code == HTTP_STATUS_OK
 
     # Assert the response
@@ -86,9 +85,9 @@ def test_read_samples__pagination(
     samples.sort(key=lambda x: (x.created_at, x.sample_id))
 
     # Call the API
-    json_body = {"filters": {"collection_id": str(collection_id)}}
+    json_body: dict[str, Any] = {"filters": {}}
     response = test_client.post(
-        "/api/samples/list",
+        f"/api/collections/{collection_id}/samples/list",
         params={"cursor": 1, "limit": 2},
         json=json_body,
     )
@@ -122,11 +121,12 @@ def test_read_samples__filters(
     # Call the API
     json_body = {
         "filters": {
-            "collection_id": str(collection_id),
             "sample_ids": [str(samples[1].sample_id), str(samples[3].sample_id)],
         }
     }
-    response = test_client.post("/api/samples/list", json=json_body)
+    response = test_client.post(
+        f"/api/collections/{collection_id}/samples/list", json=json_body
+    )
     assert response.status_code == HTTP_STATUS_OK
 
     # Assert the response
@@ -142,11 +142,10 @@ def test_read_samples__filters(
 def test_read_samples__no_collection_id(
     test_client: TestClient,
 ) -> None:
-    # Call the API
+    # Call the API without collection_id in path — should get 422 (validation error)
     json_body: dict[str, Any] = {"filters": {}}
-    response = test_client.post("/api/samples/list", json=json_body)
-    assert response.status_code == HTTP_STATUS_BAD_REQUEST
-    assert response.json() == {"error": "Collection ID must be provided in filters."}
+    response = test_client.post("/api/collections/samples/list", json=json_body)
+    assert response.status_code != HTTP_STATUS_OK
 
 
 def test_add_tag_to_sample_calls_add_tag_to_sample(

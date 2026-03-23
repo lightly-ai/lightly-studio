@@ -15,7 +15,6 @@ from lightly_studio.resolvers import (
     sample_resolver,
     tag_resolver,
 )
-from lightly_studio.resolvers.sample_resolver.sample_filter import SampleFilter
 from tests.helpers_resolvers import (
     AnnotationDetails,
     create_annotation_label,
@@ -229,7 +228,7 @@ def test_delete_dataset__does_not_affect_other_datasets(db_session: Session) -> 
 
     other_samples = sample_resolver.get_filtered_samples(
         session=db_session,
-        filters=SampleFilter(collection_id=other_collection_id),
+        collection_id=other_collection_id,
     )
     assert other_samples.total_count == 1
     assert other_samples.samples[0].sample_id == other_sample_id

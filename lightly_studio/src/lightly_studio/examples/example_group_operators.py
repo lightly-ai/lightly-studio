@@ -63,7 +63,9 @@ class DemoRootOperator(BaseOperator):
         context_filter = context.context_filter
         if isinstance(context_filter, SampleFilter):
             count = sample_resolver.get_filtered_samples(
-                session=session, filters=context_filter
+                session=session,
+                collection_id=context.collection_id,
+                filters=context_filter,
             ).total_count
         else:
             count = sample_resolver.count_by_collection_id(
@@ -228,7 +230,11 @@ class DemoAnnotationOperator(BaseOperator):
         """Execute the operator."""
         context_filter = context.context_filter
         if isinstance(context_filter, SampleFilter):
-            result = sample_resolver.get_filtered_samples(session=session, filters=context_filter)
+            result = sample_resolver.get_filtered_samples(
+                session=session,
+                collection_id=context.collection_id,
+                filters=context_filter,
+            )
             count = result.total_count
         else:
             if isinstance(context_filter, AnnotationsFilter):
