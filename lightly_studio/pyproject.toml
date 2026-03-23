@@ -20,6 +20,8 @@ classifiers = [
 dependencies = [
     "duckdb-engine>=0.15.0,<0.17",
     "duckdb>=1.2.2,<1.6",
+    # Pandas 3.0 requires Python 3.11 and higher, we have to stay at 2.2 or 2.3.
+    "pandas>=2.2.3,<3.0",
     "psycopg[binary]>=3.2.4",
     "pgvector>=0.4.0",
     "fastapi>=0.115.5",
@@ -67,12 +69,6 @@ cloud-storage = [
     "s3fs>=2023.1.0",
     "gcsfs>=2023.1.0",
     "adlfs>=2023.1.0",
-]
-
-# TODO(lukas, 3/2026): Do not install this one, it's a workaround until the Linux slowdown for video 
-# annotations is fixed. Remove once we diagnose this properly.
-linux-video-annotation-speedup = [
-    "pandas==2.2.3; sys_platform == 'linux'",
 ]
 
 [dependency-groups]
