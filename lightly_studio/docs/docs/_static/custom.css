@@ -83,35 +83,31 @@
 }
 
 
-/* Show all tab headers without overflow arrows */
+/* ===== Multi-row tab overrides ===== */
+
+/* Enable wrapping; remove theme's inset box-shadow and scroll behavior */
 .md-typeset .tabbed-labels {
   flex-wrap: wrap;
-  overflow: clip;
+  overflow: visible;
   box-shadow: none;
 }
 
-/* Hide the sliding indicator and scroll arrows which break with wrapped tabs */
+/* Hide the theme's sliding indicator and scroll arrows */
 .md-typeset .tabbed-labels::before,
 .md-typeset .tabbed-control {
   display: none !important;
 }
 
-/* Full-width row separator via ::before, clipped by container overflow:hidden */
+/* Labels: stretch to fill rows, draw separator line */
 .md-typeset .tabbed-set > .tabbed-labels > label {
+  flex-grow: 1;
+  text-align: center;
+  border-bottom: 1px solid var(--md-default-fg-color--lightest);
   position: relative;
+  white-space: nowrap;
 }
 
-.md-typeset .tabbed-set > .tabbed-labels > label::before {
-  content: "";
-  position: absolute;
-  bottom: 0;
-  left: 0;
-  width: 9999px;
-  height: 1px;
-  background: var(--md-default-fg-color--lightest);
-}
-
-/* Per-tab accent underline with grow-from-center animation */
+/* Active tab: accent-colored underline */
 .md-typeset .tabbed-set > .tabbed-labels > label::after {
   content: "";
   position: absolute;
@@ -124,6 +120,7 @@
   transition: transform 0.25s ease;
 }
 
+/* Activate underline for checked tab (up to 10 tabs) */
 .md-typeset .tabbed-set:has(> input:nth-child(1):checked) > .tabbed-labels > label:nth-child(1)::after,
 .md-typeset .tabbed-set:has(> input:nth-child(2):checked) > .tabbed-labels > label:nth-child(2)::after,
 .md-typeset .tabbed-set:has(> input:nth-child(3):checked) > .tabbed-labels > label:nth-child(3)::after,
