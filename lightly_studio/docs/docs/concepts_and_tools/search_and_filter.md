@@ -1,7 +1,7 @@
 # Search and Filter
 
 Search helps you find visually or semantically similar samples from a text or image. Filters narrow down the samples currently shown in the view by tags, labels, dimensions, and other numeric metadata.
-Search and filter are available both in the GUI and programmatically in python. The GUI is more convenient for quick exploration, while the python API allows you to define complex queries and use them for tagging, exporting, sampling, or iterating over the results.
+Use the GUI for similarity search and quick filtering, and use DatasetQuery in Python when you need reusable filtering, sorting, and slicing in code.
 
 
 ## Search in GUI
@@ -40,7 +40,7 @@ For videos, the sidebar adds `Duration`. If the videos in the current view conta
 ![Video filters](https://storage.googleapis.com/lightly-public/studio/search_filter_videos_v4.jpg){ width="100%" }
 
 
-## Dataset Query in python
+## Dataset Query in Python
 
 You can programmatically filter samples by attributes (e.g., image size, tags), sort them, and select subsets. This is useful for creating training/validation splits, finding specific samples, or exporting filtered data.
 
@@ -77,7 +77,7 @@ query.add_tag("needs-review")
 
 # Iterate over resulting samples
 for sample in query:
-    # Access the sample: see previous section
+    # Access sample attributes such as tags, file_name, or metadata
 
 # Collect all resulting samples as list
 samples = query.to_list()

@@ -278,7 +278,7 @@ for image_sample in dataset:
 
 ## Dataset Query
 
-You can filter, sort, and slice samples using `DatasetQuery`. This is useful for creating training/validation splits, finding specific samples, or exporting filtered data. See the [Search and Filter](../concepts_and_tools/search_and_filter.md) section for more details and examples.
+You can filter, sort, and slice samples using `DatasetQuery`. This is useful for creating training/validation splits, finding specific samples, or exporting filtered data. See the [Search and Filter](../concepts_and_tools/search_and_filter.md#dataset-query-in-python) section for more details and examples.
 
 
 ## Selection
@@ -304,7 +304,7 @@ You can choose from various and even combined selection strategies:
 
 === "Diverse"
 
-    Diversity selection can be configured directly from a `DatasetQuery`. The example below showcases a simple case of selecting diverse samples.
+    Diversity selection can be configured directly from a [DatasetQuery](../concepts_and_tools/search_and_filter.md#dataset-query-in-python). The example below showcases a simple case of selecting diverse samples.
 
     ```py
     import lightly_studio as ls
