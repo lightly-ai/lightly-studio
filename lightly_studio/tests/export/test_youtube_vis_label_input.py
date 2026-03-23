@@ -43,10 +43,10 @@ class TestLightlyStudioYouTubeVISInstanceSegmentationTrackInput:
             video=VideoStub(path="video_001.mp4"),
         )
         create_annotation_label(
-            session=db_session, dataset_id=collection.collection_id, label_name="cat"
+            session=db_session, root_collection_id=collection.collection_id, label_name="cat"
         )
         create_annotation_label(
-            session=db_session, dataset_id=collection.collection_id, label_name="dog"
+            session=db_session, root_collection_id=collection.collection_id, label_name="dog"
         )
         samples = DatasetQuery(dataset=collection, session=db_session, sample_class=VideoSample)
         label_input = LightlyStudioYouTubeVISInstanceSegmentationTrackInput(
@@ -147,7 +147,7 @@ class TestLightlyStudioYouTubeVISInstanceSegmentationTrackInput:
             video=VideoStub(path="video_001.mp4", width=3, height=2, duration_s=2.0, fps=1.0),
         )
         cat_label = create_annotation_label(
-            session=db_session, dataset_id=collection.collection_id, label_name="cat"
+            session=db_session, root_collection_id=collection.collection_id, label_name="cat"
         )
         object_track_ids = object_track_resolver.create_many(
             session=db_session,

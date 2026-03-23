@@ -48,7 +48,9 @@ def test_delete_dataset__with_images_and_annotations(db_session: Session) -> Non
     dataset = create_collection(session=db_session, collection_name="to_delete")
     collection_id = dataset.collection_id  # Capture before delete
     img = create_image(session=db_session, collection_id=collection_id, file_path_abs="/a.png")
-    label = create_annotation_label(session=db_session, dataset_id=collection_id, label_name="cat")
+    label = create_annotation_label(
+        session=db_session, root_collection_id=collection_id, label_name="cat"
+    )
     label_id = label.annotation_label_id  # Capture before delete
     create_annotations(
         session=db_session,

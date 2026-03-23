@@ -109,12 +109,12 @@ def test_get_adjacent_video_frames__respects_annotation_filter(db_session: Sessi
 
     dog_label = helpers_resolvers.create_annotation_label(
         session=db_session,
-        dataset_id=frame_collection_id,
+        root_collection_id=frame_collection_id,
         label_name="dog",
     )
     cat_label = helpers_resolvers.create_annotation_label(
         session=db_session,
-        dataset_id=frame_collection_id,
+        root_collection_id=frame_collection_id,
         label_name="cat",
     )
 
@@ -278,7 +278,7 @@ def test_get_adjacent_video_frames__filters_by_parent_video_annotations(
 
     label = helpers_resolvers.create_annotation_label(
         session=db_session,
-        dataset_id=video_a.video_frames_collection_id,
+        root_collection_id=video_a.video_frames_collection_id,
         label_name="keep-me",
     )
     helpers_resolvers.create_annotations(

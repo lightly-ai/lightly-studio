@@ -114,12 +114,12 @@ def test_get_adjacent_videos__respects_annotation_filter(db_session: Session) ->
 
     dog_label = helpers_resolvers.create_annotation_label(
         session=db_session,
-        dataset_id=collection_id,
+        root_collection_id=collection_id,
         label_name="dog",
     )
     cat_label = helpers_resolvers.create_annotation_label(
         session=db_session,
-        dataset_id=collection_id,
+        root_collection_id=collection_id,
         label_name="cat",
     )
 

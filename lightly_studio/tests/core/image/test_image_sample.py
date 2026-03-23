@@ -286,7 +286,7 @@ class TestImageSample:
         )
         zebra_label = create_annotation_label(
             session=db_session,
-            dataset_id=collection.collection_id,
+            root_collection_id=collection.collection_id,
             label_name="zebra",
         )
         image = ImageSample(inner=image_table)
@@ -319,7 +319,7 @@ class TestImageSample:
         )
         cat_label = create_annotation_label(
             session=db_session,
-            dataset_id=collection.collection_id,
+            root_collection_id=collection.collection_id,
             label_name="cat",
         )
         image = ImageSample(inner=image_table)
@@ -361,7 +361,7 @@ class TestImageSample:
         )
         cat_label = create_annotation_label(
             session=db_session,
-            dataset_id=collection.collection_id,
+            root_collection_id=collection.collection_id,
             label_name="cat",
         )
         image = ImageSample(inner=image_table)
@@ -391,7 +391,7 @@ class TestImageSample:
         )
         cat_label = create_annotation_label(
             session=db_session,
-            dataset_id=collection.collection_id,
+            root_collection_id=collection.collection_id,
             label_name="cat",
         )
         image = ImageSample(inner=image_table)
@@ -441,7 +441,7 @@ class TestImageSample:
         )
         road_label = create_annotation_label(
             session=db_session,
-            dataset_id=collection.collection_id,
+            root_collection_id=collection.collection_id,
             label_name="road",
         )
         image = ImageSample(inner=image_table)
