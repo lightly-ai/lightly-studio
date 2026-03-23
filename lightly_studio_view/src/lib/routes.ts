@@ -38,9 +38,7 @@ export const APP_ROUTES: Record<string, LayoutRouteId> = {
     frames: `${COLLECTION_BASE_ROUTE}/frames`,
     framesDetails: `${COLLECTION_BASE_ROUTE}/frames/[sample_id]`,
     videoDetails: `${COLLECTION_BASE_ROUTE}/videos/[sample_id]`,
-    groups: `${COLLECTION_BASE_ROUTE}/groups`,
-    groupDetails: `${COLLECTION_BASE_ROUTE}/groups/[sampleId]`,
-    groupComponentDetails: `${COLLECTION_BASE_ROUTE}/groups/[sampleId]/[componentId]`
+    groups: `${COLLECTION_BASE_ROUTE}/groups`
 };
 
 export const isSampleDetailsRoute = (routeId: string | null): boolean => {
