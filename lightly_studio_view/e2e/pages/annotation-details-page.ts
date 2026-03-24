@@ -137,8 +137,18 @@ export class AnnotationDetailsPage {
         await expect(this.getAnnotationHeight()).toHaveText(`${height}px`);
     }
 
-    getTags() {
-        return this.page.getByTestId('segment-tag-name');
+    /**
+     * Gets a tag element by its text content.
+     *
+     * @param tagName - The text content of the tag to find
+     * @returns A Playwright locator for the tag element matching the given text
+     *
+     * @example
+     * const tag = annotationDetailsPage.getTagByText('important');
+     * await expect(tag).toBeVisible();
+     */
+    getTagByText(tagName: string) {
+        return this.page.getByTestId('segment-tag-name').filter({ hasText: tagName });
     }
 
     async removeTag(tagName: string) {

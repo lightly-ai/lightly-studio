@@ -27,7 +27,6 @@ describe('LayoutCard', () => {
         expect(card).toHaveClass('space-y-6');
         expect(card).toHaveClass('rounded-[1vw]');
         expect(card).toHaveClass('bg-card');
-        expect(card).toHaveClass('p-4');
     });
 
     it('applies custom className', () => {

@@ -9,7 +9,7 @@
         hasNextPage,
         isFetchingNextPage,
         onLoadMore,
-        navigateToGroupDetails
+        navigateToSampleDetailsByView
     }: ComponentProps<typeof GroupsGrid> = $props();
 </script>
 
@@ -20,5 +20,5 @@
     {hasNextPage}
     {isFetchingNextPage}
     {onLoadMore}
-    {navigateToGroupDetails}
+    {navigateToSampleDetailsByView}
 />
