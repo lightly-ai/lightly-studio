@@ -7,7 +7,6 @@
         children,
         auxControls
     }: {
-        title?: string;
         showImageSizeControl?: boolean;
         children?: Snippet;
         auxControls?: Snippet;
