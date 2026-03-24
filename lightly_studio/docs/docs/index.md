@@ -134,7 +134,7 @@ directly use your own image, video, or YOLO/COCO dataset.
         import lightly_studio as ls
 
         # Download the example dataset (will be skipped if it already exists)
-        dataset_path = download_example_dataset(download_dir="dataset_examples")
+        dataset_path = ls.utils.download_example_dataset(download_dir="dataset_examples")
 
         dataset = ls.ImageDataset.create()
         dataset.add_samples_from_coco(
