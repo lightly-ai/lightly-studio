@@ -26,7 +26,7 @@
     import { getFrameBatchCursor } from '$lib/utils/frame';
     import VideoDetailsNavigation from '$lib/components/VideoDetailsNavigation/VideoDetailsNavigation.svelte';
 
-    const { video }: { video: VideoView } = $props();
+    const { video }: { video?: VideoView } = $props();
 
     // Route validations in +layout.ts ensure these params are always present and valid
     const datasetId = $derived(page.params.dataset_id!);
