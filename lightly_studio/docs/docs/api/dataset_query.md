@@ -18,10 +18,3 @@
     options:
         members: [VideoSampleField]
         show_if_no_docstring: true
-
-## Boolean Expressions
-
-::: lightly_studio.core.dataset_query.boolean_expression
-    options:
-        members: [AND, OR, NOT]
-        show_if_no_docstring: true
