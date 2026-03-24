@@ -22,7 +22,6 @@ from lightly_studio.resolvers import (
     sample_resolver,
 )
 from lightly_studio.resolvers.annotations.annotations_filter import AnnotationsFilter
-from lightly_studio.resolvers.sample_resolver.sample_filter import SampleFilter
 from tests.helpers_resolvers import (
     create_annotation,
     create_annotation_label,
@@ -73,7 +72,7 @@ def test_deep_copy__with_images(db_session: Session) -> None:
     # Assert - new collection has new samples
     copied_samples_result = sample_resolver.get_filtered_samples(
         session=db_session,
-        filters=SampleFilter(collection_id=copied.collection_id),
+        collection_id=copied.collection_id,
     )
     assert copied_samples_result.total_count == 2
 
@@ -93,14 +92,14 @@ def test_deep_copy__with_images(db_session: Session) -> None:
     # Assert - original collection has 3 samples
     original_samples_result = sample_resolver.get_filtered_samples(
         session=db_session,
-        filters=SampleFilter(collection_id=original.collection_id),
+        collection_id=original.collection_id,
     )
     assert original_samples_result.total_count == 3
 
     # Assert - copied collection remains with 2 samples
     copied_samples_result_after = sample_resolver.get_filtered_samples(
         session=db_session,
-        filters=SampleFilter(collection_id=copied.collection_id),
+        collection_id=copied.collection_id,
     )
     assert copied_samples_result_after.total_count == 2
 
@@ -168,7 +167,7 @@ def test_deep_copy__with_metadata(db_session: Session) -> None:
     # Assert - metadata gets copied
     copied_samples = sample_resolver.get_filtered_samples(
         session=db_session,
-        filters=SampleFilter(collection_id=copied.collection_id),
+        collection_id=copied.collection_id,
     )
     assert copied_samples.total_count == 1
     copied_sample = copied_samples.samples[0]
@@ -226,7 +225,7 @@ def test_deep_copy__with_nested_metadata(db_session: Session) -> None:
     # Get copied metadata
     copied_samples = sample_resolver.get_filtered_samples(
         session=db_session,
-        filters=SampleFilter(collection_id=copied.collection_id),
+        collection_id=copied.collection_id,
     )
     copied_sample = copied_samples.samples[0]
     copied_metadata = metadata_resolver.get_by_sample_id(
@@ -311,7 +310,7 @@ def test_deep_copy__with_embeddings(db_session: Session) -> None:
     # Assert - embeddings copied
     copied_samples = sample_resolver.get_filtered_samples(
         session=db_session,
-        filters=SampleFilter(collection_id=copied.collection_id),
+        collection_id=copied.collection_id,
     )
     assert copied_samples.total_count == 2
 
@@ -345,7 +344,7 @@ def test_deep_copy__can_delete_original_after_copy(db_session: Session) -> None:
         session=db_session, collection_id=original.collection_id, file_path_abs="/a.png"
     )
     label = create_annotation_label(
-        session=db_session, dataset_id=original.collection_id, label_name="test"
+        session=db_session, root_collection_id=original.collection_id, label_name="test"
     )
 
     create_annotation(
@@ -485,7 +484,7 @@ def test_deep_copy__with_annotations(db_session: Session) -> None:
         session=db_session, collection_id=original.collection_id, file_path_abs="/a.png"
     )
     label = create_annotation_label(
-        session=db_session, dataset_id=original.collection_id, label_name="test"
+        session=db_session, root_collection_id=original.collection_id, label_name="test"
     )
     (original_track_id,) = object_track_resolver.create_many(
         session=db_session,

@@ -24,7 +24,9 @@ def test_get_filtered_samples__all(db_session: Session) -> None:
     )
 
     # Act
-    result = sample_resolver.get_filtered_samples(session=db_session)
+    result = sample_resolver.get_filtered_samples(
+        session=db_session, collection_id=collection.collection_id
+    )
 
     # Assert
     assert len(result.samples) == 2
@@ -38,8 +40,13 @@ def test_get_filtered_samples__all(db_session: Session) -> None:
 def test_get_filtered_samples__empty_db(
     db_session: Session,
 ) -> None:
+    # Create a collection to pass its ID (even though DB has no samples)
+    collection = create_collection(session=db_session)
+
     # Act
-    result = sample_resolver.get_filtered_samples(session=db_session)
+    result = sample_resolver.get_filtered_samples(
+        session=db_session, collection_id=collection.collection_id
+    )
 
     # Assert
     assert len(result.samples) == 0
@@ -67,7 +74,9 @@ def test_get_filtered_samples__default_order(
     samples.sort(key=lambda x: (x.created_at, x.sample_id))
 
     # Act
-    result = sample_resolver.get_filtered_samples(session=db_session)
+    result = sample_resolver.get_filtered_samples(
+        session=db_session, collection_id=collection.collection_id
+    )
 
     # Assert - Check first page
     assert len(result.samples) == 5
@@ -101,15 +110,21 @@ def test_get_filtered_samples__pagination(
 
     # Act - Get first 2 samples
     result_page_1 = sample_resolver.get_filtered_samples(
-        session=db_session, pagination=Paginated(offset=0, limit=2)
+        session=db_session,
+        collection_id=collection.collection_id,
+        pagination=Paginated(offset=0, limit=2),
     )
     # Act - Get next 2 samples
     result_page_2 = sample_resolver.get_filtered_samples(
-        session=db_session, pagination=Paginated(offset=2, limit=2)
+        session=db_session,
+        collection_id=collection.collection_id,
+        pagination=Paginated(offset=2, limit=2),
     )
     # Act - Get remaining samples
     result_page_3 = sample_resolver.get_filtered_samples(
-        session=db_session, pagination=Paginated(offset=4, limit=2)
+        session=db_session,
+        collection_id=collection.collection_id,
+        pagination=Paginated(offset=4, limit=2),
     )
 
     # Assert - Check first page
@@ -131,7 +146,9 @@ def test_get_filtered_samples__pagination(
 
     # Assert - Check out of bounds (should return empty list)
     result_empty = sample_resolver.get_filtered_samples(
-        session=db_session, pagination=Paginated(offset=5, limit=2)
+        session=db_session,
+        collection_id=collection.collection_id,
+        pagination=Paginated(offset=5, limit=2),
     )
     assert len(result_empty.samples) == 0
     assert result_empty.total_count == 5
@@ -168,6 +185,7 @@ def test_get_filtered_samples__filters(
     # By sample IDs
     result = sample_resolver.get_filtered_samples(
         session=db_session,
+        collection_id=collection_id,
         filters=SampleFilter(sample_ids=[samples[0].sample_id, samples[2].sample_id]),
     )
     assert len(result.samples) == 2
@@ -180,7 +198,8 @@ def test_get_filtered_samples__filters(
     # By tag and collection ID
     result = sample_resolver.get_filtered_samples(
         session=db_session,
-        filters=SampleFilter(collection_id=collection_id, tag_ids=[tag.tag_id]),
+        collection_id=collection_id,
+        filters=SampleFilter(tag_ids=[tag.tag_id]),
     )
     assert len(result.samples) == 1
     assert result.total_count == 1

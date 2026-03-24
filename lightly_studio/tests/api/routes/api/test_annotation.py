@@ -154,12 +154,12 @@ def test_count_annotations_by_collection_with_image_filter(
 
     dog_label = create_annotation_label(
         session=db_session,
-        dataset_id=collection_id,
+        root_collection_id=collection_id,
         label_name="dog",
     )
     cat_label = create_annotation_label(
         session=db_session,
-        dataset_id=collection_id,
+        root_collection_id=collection_id,
         label_name="cat",
     )
 
@@ -253,13 +253,13 @@ def test_read_annotations_with_payload(
 
     car_label = create_annotation_label(
         session=db_session,
-        dataset_id=collection_id,
+        root_collection_id=collection_id,
         label_name="car",
     )
 
     airplane_label = create_annotation_label(
         session=db_session,
-        dataset_id=collection_id,
+        root_collection_id=collection_id,
         label_name="airplane",
     )
 
@@ -314,7 +314,7 @@ def test_get_annotation_with_payload(
 
     car_label = create_annotation_label(
         session=db_session,
-        dataset_id=collection_id,
+        root_collection_id=collection_id,
         label_name="car",
     )
 

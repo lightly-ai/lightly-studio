@@ -18,7 +18,7 @@ def test_get_all_by_parent_sample_ids(db_session: Session) -> None:
     collection = create_collection(session=db_session)
     label = create_annotation_label(
         session=db_session,
-        dataset_id=collection.collection_id,
+        root_collection_id=collection.collection_id,
         label_name="label",
     )
     image_b = create_image(

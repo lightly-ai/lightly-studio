@@ -38,7 +38,7 @@ def test_metadata_filter(db_session: Session) -> None:
     normal_filter = [Metadata("temperature") > 15]
     sample_filter = SampleFilter(metadata_filters=normal_filter)
     samples = sample_resolver.get_filtered_samples(
-        session=db_session, filters=sample_filter
+        session=db_session, collection_id=collection_id, filters=sample_filter
     ).samples
     assert len(samples) == 1
     assert samples[0].sample_id == sample1.sample_id
@@ -52,14 +52,14 @@ def test_metadata_filter(db_session: Session) -> None:
 
     sample_filter = SampleFilter(metadata_filters=[Metadata("test_dict.int_key") == 42])
     samples = sample_resolver.get_filtered_samples(
-        session=db_session, filters=sample_filter
+        session=db_session, collection_id=collection_id, filters=sample_filter
     ).samples
     assert len(samples) == 1
     assert samples[0]["test_dict"]["int_key"] == 42
 
     sample_filter = SampleFilter(metadata_filters=[Metadata("test_dict.nested_list[0]") == 1])
     samples = sample_resolver.get_filtered_samples(
-        session=db_session, filters=sample_filter
+        session=db_session, collection_id=collection_id, filters=sample_filter
     ).samples
     assert len(samples) == 1
     assert samples[0]["test_dict"]["nested_list"][0] == 1
@@ -102,7 +102,7 @@ def test_metadata_multiple_filters(db_session: Session) -> None:
         ]
     )
     samples = sample_resolver.get_filtered_samples(
-        session=db_session, filters=sample_filter
+        session=db_session, collection_id=collection_id, filters=sample_filter
     ).samples
     assert len(samples) == 1
     assert samples[0].sample_id == sample2.sample_id

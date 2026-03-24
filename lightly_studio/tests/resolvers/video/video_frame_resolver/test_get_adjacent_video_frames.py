@@ -5,6 +5,7 @@ from lightly_studio.models.collection import SampleType
 from lightly_studio.models.video import VideoFrameCreate
 from lightly_studio.resolvers import tag_resolver, video_frame_resolver
 from lightly_studio.resolvers.annotations.annotations_filter import AnnotationsFilter
+from lightly_studio.resolvers.filter_with_collection_id import FilterWithCollectionId
 from lightly_studio.resolvers.sample_resolver.sample_filter import SampleFilter
 from lightly_studio.resolvers.video_frame_resolver import VideoFrameAdjacentFilter
 from lightly_studio.resolvers.video_frame_resolver.video_frame_filter import VideoFrameFilter
@@ -37,8 +38,9 @@ def test_get_adjacent_video_frames__orders_by_path_and_frame_number(db_session: 
         session=db_session,
         sample_id=target_frame_id,
         filters=VideoFrameAdjacentFilter(
-            video_frame_filter=VideoFrameFilter(
-                sample_filter=SampleFilter(collection_id=frame_collection_id),
+            video_frame_filter=FilterWithCollectionId(
+                collection_id=frame_collection_id,
+                filter=VideoFrameFilter(),
             )
         ),
     )
@@ -75,9 +77,10 @@ def test_get_adjacent_video_frames__respects_sample_ids(db_session: Session) -> 
         session=db_session,
         sample_id=target_frame_id,
         filters=VideoFrameAdjacentFilter(
-            video_frame_filter=VideoFrameFilter(
-                sample_filter=SampleFilter(
-                    collection_id=frame_collection_id, sample_ids=sample_ids
+            video_frame_filter=FilterWithCollectionId(
+                collection_id=frame_collection_id,
+                filter=VideoFrameFilter(
+                    sample_filter=SampleFilter(sample_ids=sample_ids),
                 ),
             )
         ),
@@ -89,57 +92,6 @@ def test_get_adjacent_video_frames__respects_sample_ids(db_session: Session) -> 
     assert result.next_sample_id is None
     assert result.current_sample_position == 2
     assert result.total_count == len(sample_ids)
-
-
-def test_get_adjacent_video_frames__raises_without_collection_id(db_session: Session) -> None:
-    collection = helpers_resolvers.create_collection(
-        session=db_session, sample_type=SampleType.VIDEO
-    )
-    video_frames = video_helpers.create_video_with_frames(
-        session=db_session,
-        collection_id=collection.collection_id,
-        video=video_helpers.VideoStub(path="/videos/a.mp4", fps=1, duration_s=1.0),
-    )
-
-    with pytest.raises(
-        ValueError, match=r"Collection ID must be provided in video_frame_filter.sample_filter."
-    ):
-        video_frame_resolver.get_adjacent_video_frames(
-            session=db_session,
-            sample_id=video_frames.frame_sample_ids[0],
-            filters=VideoFrameAdjacentFilter(
-                video_frame_filter=VideoFrameFilter(sample_filter=SampleFilter())
-            ),
-        )
-
-
-def test_get_adjacent_video_frames__raises_without_parent_video_collection_id(
-    db_session: Session,
-) -> None:
-    collection = helpers_resolvers.create_collection(
-        session=db_session, sample_type=SampleType.VIDEO
-    )
-    video_frames = video_helpers.create_video_with_frames(
-        session=db_session,
-        collection_id=collection.collection_id,
-        video=video_helpers.VideoStub(path="/videos/a.mp4", fps=1, duration_s=1.0),
-    )
-
-    with pytest.raises(
-        ValueError, match=r"Collection ID must be provided in video_filter.sample_filter"
-    ):
-        video_frame_resolver.get_adjacent_video_frames(
-            session=db_session,
-            sample_id=video_frames.frame_sample_ids[0],
-            filters=VideoFrameAdjacentFilter(
-                video_frame_filter=VideoFrameFilter(
-                    sample_filter=SampleFilter(
-                        collection_id=video_frames.video_frames_collection_id,
-                    ),
-                ),
-                video_filter=VideoFilter(sample_filter=SampleFilter()),
-            ),
-        )
 
 
 def test_get_adjacent_video_frames__respects_annotation_filter(db_session: Session) -> None:
@@ -157,12 +109,12 @@ def test_get_adjacent_video_frames__respects_annotation_filter(db_session: Sessi
 
     dog_label = helpers_resolvers.create_annotation_label(
         session=db_session,
-        dataset_id=frame_collection_id,
+        root_collection_id=frame_collection_id,
         label_name="dog",
     )
     cat_label = helpers_resolvers.create_annotation_label(
         session=db_session,
-        dataset_id=frame_collection_id,
+        root_collection_id=frame_collection_id,
         label_name="cat",
     )
 
@@ -189,13 +141,15 @@ def test_get_adjacent_video_frames__respects_annotation_filter(db_session: Sessi
         session=db_session,
         sample_id=video_frames.frame_sample_ids[1],
         filters=VideoFrameAdjacentFilter(
-            video_frame_filter=VideoFrameFilter(
-                sample_filter=SampleFilter(
-                    collection_id=frame_collection_id,
-                    annotations_filter=AnnotationsFilter(
-                        annotation_label_ids=[dog_label.annotation_label_id]
-                    ),
-                )
+            video_frame_filter=FilterWithCollectionId(
+                collection_id=frame_collection_id,
+                filter=VideoFrameFilter(
+                    sample_filter=SampleFilter(
+                        annotations_filter=AnnotationsFilter(
+                            annotation_label_ids=[dog_label.annotation_label_id]
+                        ),
+                    )
+                ),
             )
         ),
     )
@@ -228,16 +182,17 @@ def test_get_adjacent_video_frames__filters_by_parent_video_filter(db_session: S
         session=db_session,
         sample_id=video_b.frame_sample_ids[1],
         filters=VideoFrameAdjacentFilter(
-            video_frame_filter=VideoFrameFilter(
-                sample_filter=SampleFilter(
-                    collection_id=video_a.video_frames_collection_id,
-                )
+            video_frame_filter=FilterWithCollectionId(
+                collection_id=video_a.video_frames_collection_id,
+                filter=VideoFrameFilter(),
             ),
-            video_filter=VideoFilter(
-                sample_filter=SampleFilter(
-                    collection_id=collection.collection_id,
-                    sample_ids=[video_b.video_sample_id],
-                )
+            video_filter=FilterWithCollectionId(
+                collection_id=collection.collection_id,
+                filter=VideoFilter(
+                    sample_filter=SampleFilter(
+                        sample_ids=[video_b.video_sample_id],
+                    )
+                ),
             ),
         ),
     )
@@ -280,16 +235,17 @@ def test_get_adjacent_video_frames__filters_by_parent_video_tags(db_session: Ses
         session=db_session,
         sample_id=video_b.frame_sample_ids[0],
         filters=VideoFrameAdjacentFilter(
-            video_frame_filter=VideoFrameFilter(
-                sample_filter=SampleFilter(
-                    collection_id=video_a.video_frames_collection_id,
-                )
+            video_frame_filter=FilterWithCollectionId(
+                collection_id=video_a.video_frames_collection_id,
+                filter=VideoFrameFilter(),
             ),
-            video_filter=VideoFilter(
-                sample_filter=SampleFilter(
-                    collection_id=collection.collection_id,
-                    tag_ids=[tag.tag_id],
-                )
+            video_filter=FilterWithCollectionId(
+                collection_id=collection.collection_id,
+                filter=VideoFilter(
+                    sample_filter=SampleFilter(
+                        tag_ids=[tag.tag_id],
+                    )
+                ),
             ),
         ),
     )
@@ -322,7 +278,7 @@ def test_get_adjacent_video_frames__filters_by_parent_video_annotations(
 
     label = helpers_resolvers.create_annotation_label(
         session=db_session,
-        dataset_id=video_a.video_frames_collection_id,
+        root_collection_id=video_a.video_frames_collection_id,
         label_name="keep-me",
     )
     helpers_resolvers.create_annotations(
@@ -344,17 +300,16 @@ def test_get_adjacent_video_frames__filters_by_parent_video_annotations(
         session=db_session,
         sample_id=video_b.frame_sample_ids[0],
         filters=VideoFrameAdjacentFilter(
-            video_frame_filter=VideoFrameFilter(
-                sample_filter=SampleFilter(
-                    collection_id=video_a.video_frames_collection_id,
-                )
+            video_frame_filter=FilterWithCollectionId(
+                collection_id=video_a.video_frames_collection_id,
+                filter=VideoFrameFilter(),
             ),
-            video_filter=VideoFilter(
-                frame_annotation_filter=AnnotationsFilter(
-                    annotation_label_ids=[label.annotation_label_id]
-                ),
-                sample_filter=SampleFilter(
-                    collection_id=collection.collection_id,
+            video_filter=FilterWithCollectionId(
+                collection_id=collection.collection_id,
+                filter=VideoFilter(
+                    frame_annotation_filter=AnnotationsFilter(
+                        annotation_label_ids=[label.annotation_label_id]
+                    ),
                 ),
             ),
         ),
@@ -419,11 +374,13 @@ def test_get_adjacent_video_frames__uses_video_text_embedding(db_session: Sessio
         session=db_session,
         sample_id=video_c.frame_sample_ids[0],
         filters=VideoFrameAdjacentFilter(
-            video_frame_filter=VideoFrameFilter(
-                sample_filter=SampleFilter(collection_id=video_a.video_frames_collection_id),
+            video_frame_filter=FilterWithCollectionId(
+                collection_id=video_a.video_frames_collection_id,
+                filter=VideoFrameFilter(),
             ),
-            video_filter=VideoFilter(
-                sample_filter=SampleFilter(collection_id=collection.collection_id)
+            video_filter=FilterWithCollectionId(
+                collection_id=collection.collection_id,
+                filter=VideoFilter(),
             ),
             video_text_embedding=[1.0, 1.0],
         ),
@@ -473,8 +430,9 @@ def test_get_adjacent_video_frames__requires_resolvable_collection_for_text_embe
             session=db_session,
             sample_id=frame_sample_id,
             filters=VideoFrameAdjacentFilter(
-                video_frame_filter=VideoFrameFilter(
-                    sample_filter=SampleFilter(collection_id=frame_collection.collection_id),
+                video_frame_filter=FilterWithCollectionId(
+                    collection_id=frame_collection.collection_id,
+                    filter=VideoFrameFilter(),
                 ),
                 video_text_embedding=[0.1, 0.2],
             ),
@@ -501,10 +459,9 @@ def test_get_adjacent_video_frames__returns_none_when_sample_not_in_filter(
         session=db_session,
         sample_id=video_frames.frame_sample_ids[1],
         filters=VideoFrameAdjacentFilter(
-            video_frame_filter=VideoFrameFilter(
-                sample_filter=SampleFilter(
-                    collection_id=collection_1.collection_id,
-                )
+            video_frame_filter=FilterWithCollectionId(
+                collection_id=collection_1.collection_id,
+                filter=VideoFrameFilter(),
             )
         ),
     )

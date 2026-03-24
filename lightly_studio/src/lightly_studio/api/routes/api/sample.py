@@ -36,9 +36,15 @@ class ReadSamplesRequest(BaseModel):
     filters: SampleFilter = Field(description="Filter parameters for samples")
 
 
-@sample_router.post("/samples/list", response_model=SampleViewsWithCount)
+@sample_router.post(
+    "/collections/{collection_id}/samples/list",
+    response_model=SampleViewsWithCount,
+)
 def read_samples(
     session: SessionDep,
+    collection_id: Annotated[
+        UUID, Path(title="Collection Id", description="The ID of the collection")
+    ],
     body: ReadSamplesRequest,
     pagination: Annotated[PaginatedWithCursor, Depends()],
 ) -> SamplesWithCount:
@@ -46,16 +52,16 @@ def read_samples(
 
     Args:
         session: The database session.
+        collection_id: The ID of the collection to retrieve samples from.
         body: Optional request body containing filters.
         pagination: Pagination parameters (cursor and limit).
 
     Returns:
         A list of filtered samples.
     """
-    if body.filters.collection_id is None:
-        raise ValueError("Collection ID must be provided in filters.")
     return sample_resolver.get_filtered_samples(
         session=session,
+        collection_id=collection_id,
         filters=body.filters,
         pagination=Paginated(offset=pagination.offset, limit=pagination.limit),
     )

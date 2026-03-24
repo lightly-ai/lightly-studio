@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from collections.abc import Sequence
+from uuid import UUID
 
 from pydantic import BaseModel
 from sqlmodel import Session, col, func, select
@@ -22,12 +23,17 @@ class SamplesWithCount(BaseModel):
 
 def get_filtered_samples(
     session: Session,
+    collection_id: UUID,
     filters: SampleFilter | None = None,
     pagination: Paginated | None = None,
 ) -> SamplesWithCount:
     """Retrieve samples for a specific collection with optional filtering."""
-    samples_query = select(SampleTable)
-    total_count_query = select(func.count()).select_from(SampleTable)
+    samples_query = select(SampleTable).where(col(SampleTable.collection_id) == collection_id)
+    total_count_query = (
+        select(func.count())
+        .select_from(SampleTable)
+        .where(col(SampleTable.collection_id) == collection_id)
+    )
 
     if filters is not None:
         samples_query = filters.apply(samples_query)
