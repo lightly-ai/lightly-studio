@@ -44,6 +44,7 @@ describe('useAdjacentAnnotations', () => {
                 sampleId: 'ann-123',
                 body: {
                     sample_type: SampleType.ANNOTATION,
+                    collection_id: 'col-9',
                     filters: {
                         filter_type: 'annotations',
                         collection_ids: ['col-9'],
@@ -64,6 +65,7 @@ describe('useAdjacentAnnotations', () => {
                 sampleId: 'ann-456',
                 body: {
                     sample_type: SampleType.ANNOTATION,
+                    collection_id: 'col-3',
                     filters: {
                         filter_type: 'annotations',
                         collection_ids: ['col-3'],
