@@ -5,13 +5,9 @@
 </script>
 
 {#if testCase === 'children-only'}
-    <GridHeader>
-        Test Title
-    </GridHeader>
+    <GridHeader>Test Title</GridHeader>
 {:else if testCase === 'no-image-size-control'}
-    <GridHeader showImageSizeControl={false}>
-        Test Title
-    </GridHeader>
+    <GridHeader showImageSizeControl={false}>Test Title</GridHeader>
 {:else if testCase === 'with-aux-controls'}
     <GridHeader>
         Test
