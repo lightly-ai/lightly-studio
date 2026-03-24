@@ -20,14 +20,8 @@ export const useAdjacentImages = ({
             sampleId,
             body: {
                 sample_type: SampleType.IMAGE,
-                filters: filter
-                    ? { ...filter }
-                    : {
-                          filter_type: 'image' as const,
-                          sample_filter: {
-                              collection_id: collectionId
-                          }
-                      },
+                collection_id: collectionId,
+                filters: filter ? { ...filter } : { filter_type: 'image' as const },
                 text_embedding: get(textEmbedding)?.embedding
             }
         }

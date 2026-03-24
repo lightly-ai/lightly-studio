@@ -20,14 +20,10 @@ export const useAdjacentVideos = ({
             sampleId,
             body: {
                 sample_type: SampleType.VIDEO,
+                collection_id: collectionId,
                 filters: filter
                     ? { filter_type: 'video' as const, ...filter }
-                    : {
-                          filter_type: 'video' as const,
-                          sample_filter: {
-                              collection_id: collectionId
-                          }
-                      },
+                    : { filter_type: 'video' as const },
                 text_embedding: get(textEmbedding)?.embedding
             }
         }
