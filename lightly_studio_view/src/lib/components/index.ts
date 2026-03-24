@@ -43,3 +43,4 @@ export { default as VideoPreview } from '$lib/components/VideoPreview/VideoPrevi
 export { default as VideoPlayer } from '$lib/components/VideoPlayer/VideoPlayer.svelte';
 export { default as VideoFrameDetails } from '$lib/components/VideoFrameDetails/VideoFrameDetails.svelte';
 export { default as VideoSampleMetadata } from '$lib/components/VideoSampleMetadata/VideoSampleMetadata.svelte';
+export { default as GridSearch } from '$lib/components/GridSearch/GridSearch.svelte';
