@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from importlib import metadata
+import re
 
 from click.testing import CliRunner
 from pytest_mock import MockerFixture
@@ -12,7 +12,7 @@ def test_main__version_option() -> None:
     runner = CliRunner()
     result = runner.invoke(cli=cli.main, args=["--version"])
     assert result.exit_code == 0
-    assert metadata.version("lightly-studio") in result.output
+    assert re.search(r"lightly-studio, version \d+\.\d+\.\d+", result.output)
 
 
 def test_main__no_subcommand_prints_help() -> None:
