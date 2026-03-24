@@ -1,12 +1,17 @@
 <script lang="ts">
-    import { useSamplesInfinite } from '$lib/hooks/useSamplesInfinite/useSamplesInfinite';
-    import { Separator } from '../ui/separator';
-    import { ImageSizeControl, LazyTrigger, Spinner } from '$lib/components';
     import { List } from 'svelte-virtual';
-    import { useGlobalStorage } from '$lib/hooks/useGlobalStorage';
-    import CaptionsItem from './CaptionsItem/CaptionsItem.svelte';
     import { readCollectionOptions } from '$lib/api/lightly_studio_local/@tanstack/svelte-query.gen';
     import { createQuery } from '@tanstack/svelte-query';
+
+    import { useSamplesInfinite, useGlobalStorage } from '$lib/hooks';
+    import {
+        LazyTrigger,
+        Spinner,
+        GridHeader,
+        CaptionsItem,
+        Separator,
+        Typography
+    } from '$lib/components';
 
     const {
         collectionId
@@ -87,16 +92,9 @@
 </script>
 
 <div class="flex flex-1 flex-col space-y-4">
-    <div class="my-2 flex items-center space-x-4">
-        <div class="flex-1">
-            <!-- Header -->
-            <div class="text-2xl font-semibold">Captions</div>
-        </div>
-
-        <div class="w-4/12">
-            <ImageSizeControl />
-        </div>
-    </div>
+    <GridHeader>
+        <Typography variant="h2">Captions</Typography>
+    </GridHeader>
     <Separator class="mb-4 bg-border-hard" />
 
     <div class="h-full w-full flex-1 overflow-hidden" bind:this={viewport} bind:clientWidth>

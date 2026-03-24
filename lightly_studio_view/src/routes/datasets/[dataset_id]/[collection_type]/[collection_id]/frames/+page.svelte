@@ -1,19 +1,25 @@
 <script lang="ts">
-    import { ImageSizeControl } from '$lib/components';
-    import Separator from '$lib/components/ui/separator/separator.svelte';
-    import { useGlobalStorage } from '$lib/hooks/useGlobalStorage';
-    import { useFrames } from '$lib/hooks/useFrames/useFrames';
-    import VideoFrameItem from '$lib/components/VideoFrameItem/VideoFrameItem.svelte';
-    import { useTags } from '$lib/hooks/useTags/useTags';
-    import { useVideoFramesBounds } from '$lib/hooks/useVideoFramesBounds/useVideoFramesBounds.js';
-    import { useMetadataFilters } from '$lib/hooks/useMetadataFilters/useMetadataFilters.js';
-    import SampleGrid from '$lib/components/SampleGrid/SampleGrid.svelte';
-    import SampleGridItem from '$lib/components/SampleGridItem/SampleGridItem.svelte';
+    import {
+        useGlobalStorage,
+        useFrames,
+        useTags,
+        useVideoFramesBounds,
+        useMetadataFilters,
+        useFramesFilter
+    } from '$lib/hooks';
+
     import { selectRangeByAnchor } from '$lib/utils/selectRangeByAnchor';
-    import { useFramesFilter } from '$lib/hooks/useFramesFilter/useFramesFilter';
     import { isEqual, omit } from 'lodash-es';
     import { page } from '$app/state';
     import type { VideoFrameFilterParams } from '$lib/hooks/useFramesFilter/frameFilter';
+    import {
+        GridHeader,
+        Typography,
+        Separator,
+        SampleGrid,
+        SampleGridItem,
+        VideoFrameItem
+    } from '$lib/components';
 
     const { data: dataProps } = $props();
     const collectionId = $derived(page.params.collection_id);
@@ -115,15 +121,9 @@
 </script>
 
 <div class="flex flex-1 flex-col space-y-4">
-    <div class="my-2 flex items-center space-x-4">
-        <div class="flex-1">
-            <div class="text-2xl font-semibold">Frames</div>
-        </div>
-
-        <div class="w-4/12">
-            <ImageSizeControl />
-        </div>
-    </div>
+    <GridHeader>
+        <Typography variant="h2">Frames</Typography>
+    </GridHeader>
     <Separator class="mb-4 bg-border-hard" />
 
     <SampleGrid
