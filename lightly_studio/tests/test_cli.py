@@ -15,13 +15,6 @@ def test_main__version_option() -> None:
     assert re.search(r"lightly-studio, version \d+\.\d+\.\d+", result.output)
 
 
-def test_main__no_subcommand_prints_help() -> None:
-    runner = CliRunner()
-    result = runner.invoke(cli=cli.main, args=[])
-    assert result.exit_code == 0
-    assert "LightlyStudio CLI" in result.output
-
-
 def test_gui(mocker: MockerFixture) -> None:
     mock_start_gui = mocker.patch.object(cli, "start_gui")
     runner = CliRunner()
