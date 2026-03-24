@@ -1,6 +1,10 @@
+"""Command line interface for LightlyStudio."""
+
 from importlib.metadata import version
 
 import click
+
+from lightly_studio import start_gui
 
 
 @click.group()
@@ -12,6 +16,4 @@ def main() -> None:
 @main.command()
 def gui() -> None:
     """Start the web interface."""
-    from lightly_studio import start_gui
-
     start_gui()

@@ -1,34 +1,30 @@
 from __future__ import annotations
 
-from importlib.metadata import version
-from unittest.mock import MagicMock
+from importlib import metadata
 
 from click.testing import CliRunner
+from pytest_mock import MockerFixture
 
-from lightly_studio.cli import main
+from lightly_studio import cli
 
 
-def test_version_option() -> None:
+def test_main__version_option() -> None:
     runner = CliRunner()
-    result = runner.invoke(main, ["--version"])
+    result = runner.invoke(cli=cli.main, args=["--version"])
     assert result.exit_code == 0
-    assert version("lightly-studio") in result.output
+    assert metadata.version("lightly-studio") in result.output
 
 
-def test_no_subcommand_prints_help() -> None:
+def test_main__no_subcommand_prints_help() -> None:
     runner = CliRunner()
-    result = runner.invoke(main, [])
+    result = runner.invoke(cli=cli.main, args=[])
     assert result.exit_code == 0
     assert "LightlyStudio CLI" in result.output
 
 
-def test_gui_calls_start_gui(monkeypatch: object) -> None:
-    mock_start_gui = MagicMock()
-    import lightly_studio
-
-    monkeypatch.setattr(lightly_studio, "start_gui", mock_start_gui)  # type: ignore[attr-defined]
-
+def test_gui(mocker: MockerFixture) -> None:
+    mock_start_gui = mocker.patch.object(cli, "start_gui")
     runner = CliRunner()
-    result = runner.invoke(main, ["gui"])
+    result = runner.invoke(cli=cli.main, args=["gui"])
     assert result.exit_code == 0
     mock_start_gui.assert_called_once()
