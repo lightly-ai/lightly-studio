@@ -60,6 +60,7 @@ def get_2d_embeddings(
     if filters:
         matching_sample_ids = _get_matching_sample_ids(
             session=session,
+            collection_id=collection_id,
             filters=filters,
         )
 
@@ -95,12 +96,14 @@ def get_2d_embeddings(
 
 def _get_matching_sample_ids(
     session: SessionDep,
+    collection_id: UUID,
     filters: ImageFilter | VideoFilter,
 ) -> set[UUID]:
     """Get the set of sample IDs that match the given filters.
 
     Args:
         session: Database session.
+        collection_id: The ID of the collection to scope results to.
         filters: Filter object specifying the criteria.
 
     Returns:
@@ -109,10 +112,12 @@ def _get_matching_sample_ids(
     if isinstance(filters, VideoFilter):
         return video_resolver.get_sample_ids(
             session=session,
+            collection_id=collection_id,
             filters=filters,
         )
     # Default to image_resolver for ImageFilter
     return image_resolver.get_sample_ids(
         session=session,
+        collection_id=collection_id,
         filters=filters,
     )
