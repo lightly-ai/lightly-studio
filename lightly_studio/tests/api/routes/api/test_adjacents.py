@@ -43,10 +43,7 @@ def test_get_adjacent_samples__returns_adjacents_for_images(
         f"/api/samples/{image_b.sample_id}/adjacents",
         json={
             "sample_type": "image",
-            "filters": {
-                "filter_type": "image",
-                "sample_filter": {"collection_id": str(collection_id)},
-            },
+            "collection_id": str(collection_id),
         },
     )
 
@@ -81,10 +78,7 @@ def test_get_adjacent_samples__first_sample_has_no_previous(
         f"/api/samples/{image_a.sample_id}/adjacents",
         json={
             "sample_type": "image",
-            "filters": {
-                "filter_type": "image",
-                "sample_filter": {"collection_id": str(collection_id)},
-            },
+            "collection_id": str(collection_id),
         },
     )
 
@@ -119,10 +113,7 @@ def test_get_adjacent_samples__last_sample_has_no_next(
         f"/api/samples/{image_b.sample_id}/adjacents",
         json={
             "sample_type": "image",
-            "filters": {
-                "filter_type": "image",
-                "sample_filter": {"collection_id": str(collection_id)},
-            },
+            "collection_id": str(collection_id),
         },
     )
 
@@ -153,10 +144,7 @@ def test_get_adjacent_samples__unknown_sample_returns_none(
         f"/api/samples/{unknown_sample_id}/adjacents",
         json={
             "sample_type": "image",
-            "filters": {
-                "filter_type": "image",
-                "sample_filter": {"collection_id": str(collection_id)},
-            },
+            "collection_id": str(collection_id),
         },
     )
 
@@ -205,12 +193,7 @@ def test_get_adjacent_samples__returns_adjacents_for_videos(
         f"/api/samples/{video_b.sample_id}/adjacents",
         json={
             "sample_type": "video",
-            "filters": {
-                "filter_type": "video",
-                "sample_filter": {
-                    "collection_id": str(collection_id),
-                },
-            },
+            "collection_id": str(collection_id),
         },
     )
 
