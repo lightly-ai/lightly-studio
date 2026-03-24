@@ -4,14 +4,8 @@
     import { createQuery } from '@tanstack/svelte-query';
 
     import { useSamplesInfinite, useGlobalStorage } from '$lib/hooks';
-    import {
-        LazyTrigger,
-        Spinner,
-        GridHeader,
-        CaptionsItem,
-        Separator,
-        Typography
-    } from '$lib/components';
+    import { LazyTrigger, Spinner, GridHeader, Separator, Typography } from '$lib/components';
+    import CaptionsItem from './CaptionsItem/CaptionsItem.svelte';
 
     const {
         collectionId
