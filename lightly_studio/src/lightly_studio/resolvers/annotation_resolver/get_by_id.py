@@ -30,5 +30,10 @@ def get_by_ids(session: Session, annotation_ids: Sequence[UUID]) -> Sequence[Ann
         A list of annotations matching the provided IDs.
     """
     return session.exec(
-        select(AnnotationBaseTable).where(col(AnnotationBaseTable.sample_id).in_(annotation_ids))
+        select(AnnotationBaseTable)
+        .where(col(AnnotationBaseTable.sample_id).in_(annotation_ids))
+        .order_by(
+            col(AnnotationBaseTable.created_at).asc(),
+            col(AnnotationBaseTable.sample_id).asc(),
+        )
     ).all()
