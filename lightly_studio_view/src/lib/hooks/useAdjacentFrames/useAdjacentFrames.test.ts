@@ -53,6 +53,7 @@ describe('useAdjacentFrames', () => {
                 sampleId: 'frame-1',
                 body: {
                     sample_type: SampleType.VIDEO_FRAME,
+                    collection_id: 'col-1',
                     filters: {
                         filter_type: 'video_frame_adjacent',
                         video_frame_filter: {
@@ -79,6 +80,7 @@ describe('useAdjacentFrames', () => {
                 sampleId: 'frame-2',
                 body: {
                     sample_type: SampleType.VIDEO_FRAME,
+                    collection_id: 'col-2',
                     filters: {
                         filter_type: 'video_frame_adjacent',
                         video_frame_filter: {
@@ -109,6 +111,7 @@ describe('useAdjacentFrames', () => {
                 sampleId: 'frame-3',
                 body: {
                     sample_type: SampleType.VIDEO_FRAME,
+                    collection_id: 'col-3',
                     filters: {
                         filter_type: 'video_frame_adjacent',
                         video_frame_filter: {

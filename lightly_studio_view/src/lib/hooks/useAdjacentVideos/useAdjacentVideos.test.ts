@@ -46,6 +46,7 @@ describe('useAdjacentVideos', () => {
                 sampleId: 'video-123',
                 body: {
                     sample_type: SampleType.VIDEO,
+                    collection_id: 'collection-1',
                     filters: {
                         filter_type: 'video',
                         sample_filter: { collection_id: 'collection-1', tag_ids: ['t1'] }
@@ -68,11 +69,9 @@ describe('useAdjacentVideos', () => {
                 sampleId: 'video-456',
                 body: {
                     sample_type: SampleType.VIDEO,
+                    collection_id: 'collection-1',
                     filters: {
-                        filter_type: 'video',
-                        sample_filter: {
-                            collection_id: 'collection-1'
-                        }
+                        filter_type: 'video'
                     },
                     text_embedding: undefined
                 }
