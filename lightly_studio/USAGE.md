@@ -1,22 +1,14 @@
 <p align="center">
   <a href="https://lightly.ai/lightly-studio"> 
-    <img src="https://cdn.prod.website-files.com/62cd5ce03261cba217188442/66dac501a8e9a90495970876_Logo%20dark-short-p-800.png" height="50" alt="LightlyStudio logo" />
+    <img src="https://storage.googleapis.com/lightly-public/studio/lightlystudio_standard_horizontal_dark.png" height="50" alt="LightlyStudio logo" />
   </a>
 </p>
 <p align="center"><strong>Curate, Annotate, and Manage Your Data in LightlyStudio.</strong></p>
 <p align="center">
-  <a href="https://pypi.org/project/lightly-studio">
-    <img src="https://img.shields.io/pypi/pyversions/lightly-studio" alt="PyPI python" />
-  </a>
-  <a href="https://pypi.org/project/lightly-studio">
-    <img src="https://badge.fury.io/py/lightly-studio.svg" alt="PyPI version" />
-  </a>
-  <a href="LICENSE">
-    <img src="https://img.shields.io/badge/License-Apache%202.0-blue.svg" alt="License" />
-  </a>
-  <a href="https://docs.lightly.ai/studio">
-    <img src="https://img.shields.io/badge/Docs-blue" alt="Docs" />
-  </a>
+  <a href="https://pypi.org/project/lightly-studio"><img src="https://img.shields.io/pypi/pyversions/lightly-studio" alt="PyPI python" /></a>
+  <a href="https://pypi.org/project/lightly-studio"><img src="https://badge.fury.io/py/lightly-studio.svg" alt="PyPI version" /></a>
+  <a href="LICENSE"><img src="https://img.shields.io/badge/License-Apache%202.0-blue.svg" alt="License" /></a>
+  <a href="https://docs.lightly.ai/studio"><img src="https://img.shields.io/badge/Docs-blue" alt="Docs" /></a>
 </p>
 
 ---

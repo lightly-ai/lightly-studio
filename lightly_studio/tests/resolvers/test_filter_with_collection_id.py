@@ -47,7 +47,6 @@ def test_apply__combines_collection_scope_and_inner_filter(db_session: Session) 
 
 
 def test_apply__returns_empty_for_wrong_collection(db_session: Session) -> None:
-
     query = select(ImageTable).join(ImageTable.sample)
     filtered = FilterWithCollectionId[ImageFilter](
         collection_id=uuid4(),

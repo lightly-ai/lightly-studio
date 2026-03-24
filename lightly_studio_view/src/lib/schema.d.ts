@@ -432,7 +432,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/samples/list": {
+    "/api/collections/{collection_id}/samples/list": {
         parameters: {
             query?: never;
             header?: never;
@@ -447,6 +447,7 @@ export interface paths {
          *
          *     Args:
          *         session: The database session.
+         *         collection_id: The ID of the collection to retrieve samples from.
          *         body: Optional request body containing filters.
          *         pagination: Pagination parameters (cursor and limit).
          *
@@ -4424,7 +4425,10 @@ export interface operations {
                 limit?: number;
             };
             header?: never;
-            path?: never;
+            path: {
+                /** @description The ID of the collection */
+                collection_id: string;
+            };
             cookie?: never;
         };
         requestBody: {

@@ -32,6 +32,9 @@ docs_dir: docs
 
 nav:
   - Getting Started: index.md
+  - Dataset Setup:
+    - Image Dataset: dataset_setup/image_dataset.md
+    - Video Dataset: dataset_setup/video_dataset.md
   - Python API:
     - api/index.md
     - Dataset: api/dataset.md

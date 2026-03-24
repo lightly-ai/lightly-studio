@@ -20,13 +20,13 @@ def test_get_video_frames_count_annotation_views_without_filter(db_session: Sess
 
     # Create annotation labels
     car_label = create_annotation_label(
-        session=db_session, dataset_id=collection.collection_id, label_name="car"
+        session=db_session, root_collection_id=collection.collection_id, label_name="car"
     )
     airplane_label = create_annotation_label(
-        session=db_session, dataset_id=collection.collection_id, label_name="airplane"
+        session=db_session, root_collection_id=collection.collection_id, label_name="airplane"
     )
     create_annotation_label(
-        session=db_session, dataset_id=collection.collection_id, label_name="house"
+        session=db_session, root_collection_id=collection.collection_id, label_name="house"
     )
 
     # Create annotations
@@ -78,13 +78,13 @@ def test_get_video_frames_count_annotation_views_without_annotations_filter(
 
     # Create annotation labels
     car_label = create_annotation_label(
-        session=db_session, dataset_id=collection.collection_id, label_name="car"
+        session=db_session, root_collection_id=collection.collection_id, label_name="car"
     )
     airplane_label = create_annotation_label(
-        session=db_session, dataset_id=collection.collection_id, label_name="airplane"
+        session=db_session, root_collection_id=collection.collection_id, label_name="airplane"
     )
     create_annotation_label(
-        session=db_session, dataset_id=collection.collection_id, label_name="house"
+        session=db_session, root_collection_id=collection.collection_id, label_name="house"
     )
 
     # Create annotations
