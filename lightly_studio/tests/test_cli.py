@@ -5,6 +5,7 @@ import re
 from click.testing import CliRunner
 from pytest_mock import MockerFixture
 
+import lightly_studio
 from lightly_studio import cli
 
 
@@ -16,7 +17,7 @@ def test_main__version_option() -> None:
 
 
 def test_gui(mocker: MockerFixture) -> None:
-    mock_start_gui = mocker.patch.object(cli, "start_gui")
+    mock_start_gui = mocker.patch.object(lightly_studio, "start_gui")
     runner = CliRunner()
     result = runner.invoke(cli=cli.main, args=["gui"])
     assert result.exit_code == 0
