@@ -83,7 +83,6 @@ describe('resolveContextFilter', () => {
                 annotationId: 'ann-1'
             };
             expect(resolveContextFilter(ctx, null, null, null, new Set(), new Set())).toEqual({
-                collection_id: 'coll-1',
                 sample_ids: ['ann-1']
             });
         });
@@ -95,7 +94,6 @@ describe('resolveContextFilter', () => {
                 sampleId: 'smp-1'
             };
             expect(resolveContextFilter(ctx, null, null, null, new Set(), new Set())).toEqual({
-                collection_id: 'coll-1',
                 sample_ids: ['smp-1']
             });
         });
@@ -105,7 +103,6 @@ describe('resolveContextFilter', () => {
         it('returns sampleId as sample_ids on sample detail', () => {
             const ctx = { ...BASE_CONTEXT, routeId: APP_ROUTES.sampleDetails, sampleId: 'smp-1' };
             expect(resolveContextFilter(ctx, null, null, null, new Set(), new Set())).toEqual({
-                collection_id: 'coll-1',
                 sample_ids: ['smp-1']
             });
         });
@@ -113,7 +110,6 @@ describe('resolveContextFilter', () => {
         it('returns sampleId as sample_ids on frame detail', () => {
             const ctx = { ...BASE_CONTEXT, routeId: APP_ROUTES.framesDetails, sampleId: 'frm-1' };
             expect(resolveContextFilter(ctx, null, null, null, new Set(), new Set())).toEqual({
-                collection_id: 'coll-1',
                 sample_ids: ['frm-1']
             });
         });
@@ -121,7 +117,6 @@ describe('resolveContextFilter', () => {
         it('returns sampleId as sample_ids on video detail', () => {
             const ctx = { ...BASE_CONTEXT, routeId: APP_ROUTES.videoDetails, sampleId: 'vid-1' };
             expect(resolveContextFilter(ctx, null, null, null, new Set(), new Set())).toEqual({
-                collection_id: 'coll-1',
                 sample_ids: ['vid-1']
             });
         });

@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from uuid import UUID
+
 from sqlalchemy.orm import joinedload, selectinload
 from sqlalchemy.orm.interfaces import LoaderOption
 from sqlmodel import Session, col, func, select
@@ -15,6 +17,7 @@ from lightly_studio.resolvers.group_resolver.group_filter import GroupFilter
 
 def get_all(
     session: Session,
+    collection_id: UUID,
     pagination: Paginated | None,
     filters: GroupFilter,
 ) -> GroupViewsWithCount:
@@ -25,6 +28,7 @@ def get_all(
 
     Args:
         session: Database session for executing queries.
+        collection_id: The ID of the collection to scope results to.
         pagination: Optional pagination parameters (offset and limit) for results.
         filters: Optional GroupFilter instance to apply additional filtering criteria.
 
@@ -44,15 +48,10 @@ def get_all(
         samples_query = filters.apply(samples_query)
         total_count_query = filters.apply(total_count_query)
 
-    samples_query = samples_query.order_by(col(SampleTable.created_at).asc())
-    group_collection_id = (
-        filters.sample_filter.collection_id
-        if filters and filters.sample_filter and filters.sample_filter.collection_id
-        else None
-    )
+    samples_query = samples_query.where(col(SampleTable.collection_id) == collection_id)
+    total_count_query = total_count_query.where(col(SampleTable.collection_id) == collection_id)
 
-    if group_collection_id is None:
-        raise ValueError("Collection ID must be provided in filters to fetch groups.")
+    samples_query = samples_query.order_by(col(SampleTable.created_at).asc())
 
     if pagination is not None:
         samples_query = samples_query.offset(pagination.offset).limit(pagination.limit)
@@ -74,7 +73,7 @@ def get_all(
     group_previews = group_resolver.get_group_previews(
         session=session,
         group_sample_ids=group_sample_ids,
-        group_collection_id=group_collection_id,
+        group_collection_id=collection_id,
     )
     group_sample_counts = group_resolver.get_group_sample_counts(
         session=session, group_sample_ids=group_sample_ids
