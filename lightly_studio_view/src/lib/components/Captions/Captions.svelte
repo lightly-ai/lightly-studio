@@ -5,7 +5,6 @@
 
     import { useSamplesInfinite, useGlobalStorage } from '$lib/hooks';
     import { LazyTrigger, Spinner, GridHeader, Separator, Typography } from '$lib/components';
-    import CaptionsItem from './CaptionsItem/CaptionsItem.svelte';
 
     const {
         collectionId
@@ -86,9 +85,7 @@
 </script>
 
 <div class="flex flex-1 flex-col space-y-4">
-    <GridHeader>
-        <Typography variant="h2">Captions</Typography>
-    </GridHeader>
+    <GridHeader />
     <Separator class="mb-4 bg-border-hard" />
 
     <div class="h-full w-full flex-1 overflow-hidden" bind:this={viewport} bind:clientWidth>

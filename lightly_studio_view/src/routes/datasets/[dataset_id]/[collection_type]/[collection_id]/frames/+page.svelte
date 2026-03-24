@@ -121,9 +121,7 @@
 </script>
 
 <div class="flex flex-1 flex-col space-y-4">
-    <GridHeader>
-        <Typography variant="h2">Frames</Typography>
-    </GridHeader>
+    <GridHeader />
     <Separator class="mb-4 bg-border-hard" />
 
     <SampleGrid

@@ -545,7 +545,7 @@
                 <PaneGroup direction="horizontal" class="flex-1">
                     <Pane defaultSize={50} minSize={30} class="flex">
                         <div class="flex flex-1 flex-col space-y-4 rounded-[1vw] bg-card p-4">
-                            <div class="my-2 flex items-center space-x-4">
+                            <GridHeader>
                                 <div class="flex-1">
                                     {#if hasEmbeddings}
                                         <div
@@ -634,9 +634,7 @@
                                         </div>
                                     {/if}
                                 </div>
-
-                                <ImageSizeControl />
-                            </div>
+                            </GridHeader>
                             <Separator class="mb-4 bg-border-hard" />
                             <div class="flex min-h-0 flex-1 overflow-hidden">
                                 {@render children()}
