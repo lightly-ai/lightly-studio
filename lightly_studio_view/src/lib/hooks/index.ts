@@ -7,3 +7,7 @@ export { useTags } from '$lib/hooks/useTags/useTags';
 export { useVideoFramesBounds } from '$lib/hooks/useVideoFramesBounds/useVideoFramesBounds';
 export { useMetadataFilters } from '$lib/hooks/useMetadataFilters/useMetadataFilters';
 export { useFramesFilter } from '$lib/hooks/useFramesFilter/useFramesFilter';
+export { useCaptions } from '$lib/hooks/useCaptions/useCaptions';
+export { useRemoveTagFromSample } from '$lib/hooks/useRemoveTagFromSample/useRemoveTagFromSample';
+export { useCollectionWithChildren } from '$lib/hooks/useCollection/useCollection';
+export { useVideo } from '$lib/hooks/useVideo/useVideo';
