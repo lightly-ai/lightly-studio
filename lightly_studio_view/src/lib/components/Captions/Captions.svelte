@@ -4,7 +4,7 @@
     import { createQuery } from '@tanstack/svelte-query';
 
     import { useSamplesInfinite, useGlobalStorage } from '$lib/hooks';
-    import { LazyTrigger, Spinner, GridHeader, Separator, Typography } from '$lib/components';
+    import { LazyTrigger, Spinner, GridHeader, Separator, CaptionsItem } from '$lib/components';
 
     const {
         collectionId
