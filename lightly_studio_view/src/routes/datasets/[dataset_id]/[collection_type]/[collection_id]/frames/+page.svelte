@@ -14,7 +14,6 @@
     import type { VideoFrameFilterParams } from '$lib/hooks/useFramesFilter/frameFilter';
     import {
         GridHeader,
-        Typography,
         Separator,
         SampleGrid,
         SampleGridItem,

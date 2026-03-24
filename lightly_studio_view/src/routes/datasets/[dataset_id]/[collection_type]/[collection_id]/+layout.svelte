@@ -5,7 +5,6 @@
         CreateClassifierDialog,
         CombinedMetadataDimensionsFilters,
         Footer,
-        ImageSizeControl,
         LabelsMenu,
         RefineClassifierDialog,
         TagCreateDialog,
