@@ -1,7 +1,8 @@
 # Search and Filter
 
 Search helps you find visually or semantically similar samples from a text or image. Filters narrow down the samples currently shown in the view by tags, labels, dimensions, and other numeric metadata.
-Use the GUI for similarity search and quick filtering, and use DatasetQuery in Python when you need reusable filtering, sorting, and slicing in code.
+Use the GUI for similarity search and quick filtering. 
+Use DatasetQuery in Python when you need reusable filtering, sorting, and slicing in code.
 
 
 ## Search in GUI
