@@ -1,6 +1,5 @@
 <script lang="ts">
     import { Logo } from '$lib/components';
-    import { useHasEmbeddings } from '$lib/hooks/useHasEmbeddings/useHasEmbeddings';
     import { useSettings } from '$lib/hooks/useSettings';
     import { isInputElement } from '$lib/utils';
     import { Pencil, Check, Undo2 } from '@lucide/svelte';
@@ -16,14 +15,17 @@
     import useAuth from '$lib/hooks/useAuth/useAuth';
     import { hasMinimumRole } from '$lib/hooks/useAuth/hasMinimumRole';
 
-    let { collection }: { collection: CollectionView } = $props();
+    let {
+        collection,
+        hasEmbeddings = false
+    }: {
+        collection: CollectionView;
+        hasEmbeddings?: boolean;
+    } = $props();
 
     const isSamples = $derived(isSamplesRoute(page.route.id));
     const isVideos = $derived(isVideosRoute(page.route.id));
     const { settingsStore } = useSettings();
-
-    const hasEmbeddingsQuery = useHasEmbeddings({ collectionId: collection.collection_id });
-    const hasEmbeddings = $derived(!!$hasEmbeddingsQuery.data);
 
     const datasetId = $derived(page.params.dataset_id!);
     const { collection: datasetCollection } = $derived.by(() =>

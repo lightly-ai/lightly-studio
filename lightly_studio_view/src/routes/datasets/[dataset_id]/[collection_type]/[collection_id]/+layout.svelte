@@ -1,117 +1,59 @@
 <script lang="ts">
     import { browser } from '$app/environment';
+    import { goto } from '$app/navigation';
     import { page } from '$app/state';
-    import {
-        CreateClassifierDialog,
-        CombinedMetadataDimensionsFilters,
-        Footer,
-        LabelsMenu,
-        RefineClassifierDialog,
-        TagCreateDialog,
-        TagsMenu
-    } from '$lib/components';
-    import Input from '$lib/components/ui/input/input.svelte';
-    import Separator from '$lib/components/ui/separator/separator.svelte';
-    import {
-        Search,
-        SlidersHorizontal,
-        Image as ImageIcon,
-        X,
-        ChartNetwork,
-        GripVertical
-    } from '@lucide/svelte';
-    import { onDestroy, onMount } from 'svelte';
-    import { get, toStore, writable } from 'svelte/store';
-    import { toast } from 'svelte-sonner';
-    import { Header } from '$lib/components';
-    import MenuDialogHost from '$lib/components/Header/MenuDialogHost.svelte';
-
-    import Segment from '$lib/components/Segment/Segment.svelte';
-    import { useHasEmbeddings } from '$lib/hooks/useHasEmbeddings/useHasEmbeddings';
+    import type { CollectionView, SampleType } from '$lib/api/lightly_studio_local';
+    import GridHeader from '$lib/components/GridHeader/GridHeader.svelte';
+    import Header from '$lib/components/Header/Header.svelte';
+    import { useGlobalStorage } from '$lib/hooks/useGlobalStorage.js';
     import { useHideAnnotations } from '$lib/hooks/useHideAnnotations';
-    import { useAnnotationLabels } from '$lib/hooks/useAnnotationLabels/useAnnotationLabels';
-    import { useDimensions } from '$lib/hooks/useDimensions/useDimensions';
     import {
         isAnnotationDetailsRoute,
         isAnnotationsRoute,
         isCaptionsRoute,
+        isGroupDetailsRoute,
+        isGroupsRoute,
         isSampleDetailsRoute,
         isSamplesRoute,
+        isVideoDetailsRoute,
         isVideoFramesRoute,
         isVideosRoute,
-        isGroupsRoute,
-        isGroupDetailsRoute,
-        isVideoDetailsRoute
+        routeHelpers
     } from '$lib/routes';
-    import { useEmbedText } from '$lib/hooks/useEmbedText/useEmbedText';
     import type { GridType } from '$lib/types';
-    import { useAnnotationCounts } from '$lib/hooks/useAnnotationCounts/useAnnotationCounts';
-    import { useGlobalStorage } from '$lib/hooks/useGlobalStorage.js';
-    import { Button } from '$lib/components/ui/index.js';
-    import { useVideoAnnotationCounts } from '$lib/hooks/useVideoAnnotationsCount/useVideoAnnotationsCount.js';
-    import {
-        createMetadataFilters,
-        useMetadataFilters
-    } from '$lib/hooks/useMetadataFilters/useMetadataFilters.js';
-    import { useVideoFrameAnnotationCounts } from '$lib/hooks/useVideoFrameAnnotationsCount/useVideoFrameAnnotationsCount.js';
-    import { useVideoFramesBounds } from '$lib/hooks/useVideoFramesBounds/useVideoFramesBounds.js';
-    import { useVideoBounds } from '$lib/hooks/useVideosBounds/useVideosBounds.js';
-    import {
-        SampleType,
-        type AnnotationsFilter,
-        type ImageFilter
-    } from '$lib/api/lightly_studio_local/types.gen.js';
-    import type { AnnotationLabel } from '$lib/services/types.js';
-    import { buildImageFilter } from '$lib/utils/buildImageFilter';
-    import {
-        buildVideoAnnotationCountsFilter,
-        buildVideoFrameAnnotationCountsFilter
-    } from '$lib/utils/buildAnnotationCountsFilters';
-    import { GridHeader } from '$lib/components';
+    import { GripVertical } from '@lucide/svelte';
+    import { onDestroy, onMount } from 'svelte';
 
+    type CollectionChromeDialogsModule = typeof import('./CollectionChromeDialogs.svelte');
+    type CollectionFooterModule = typeof import('./CollectionFooter.svelte');
+    type CollectionSidebarModule = typeof import('./CollectionSidebar.svelte');
+    type CollectionToolbarModule = typeof import('./CollectionToolbar.svelte');
     type PlotPanelModule = typeof import('$lib/components/PlotPanel/PlotPanel.svelte');
     type PaneforgeModule = typeof import('paneforge');
+    type IdleWindow = Window & typeof globalThis & {
+        requestIdleCallback?: (callback: () => void) => number;
+    };
 
     const { data, children } = $props();
     const {
         collection,
         globalStorage: {
-            setTextEmbedding,
-            textEmbedding,
             setLastGridType,
             clearSelectedSamples,
-            clearSelectedSampleAnnotationCrops,
-            selectedAnnotationFilterIds
+            clearSelectedSampleAnnotationCrops
         }
     } = $derived(data);
 
     const datasetId = $derived(page.params.dataset_id!);
     const collectionId = $derived(page.params.collection_id!);
-    const collectionIdStore = toStore(() => collectionId);
 
-    // Use hideAnnotations hook
     const { handleKeyEvent } = useHideAnnotations();
-
-    const { retrieveParentCollection, collections } = useGlobalStorage();
+    const { retrieveParentCollection, collections, setCollection, showPlot, setShowPlot } =
+        useGlobalStorage();
 
     const parentCollection = $derived.by(() =>
         retrieveParentCollection($collections, collectionId)
     );
-
-    // Setup event handlers for keyboard shortcuts
-    onMount(() => {
-        if (browser) {
-            window.addEventListener('keydown', handleKeyEvent);
-            window.addEventListener('keyup', handleKeyEvent);
-        }
-    });
-
-    onDestroy(() => {
-        if (browser) {
-            window.removeEventListener('keydown', handleKeyEvent);
-            window.removeEventListener('keyup', handleKeyEvent);
-        }
-    });
 
     const isSamples = $derived(isSamplesRoute(page.route.id));
     const isGroups = $derived(isGroupsRoute(page.route.id));
@@ -123,9 +65,13 @@
     const isVideos = $derived(isVideosRoute(page.route.id));
     const isVideoFrames = $derived(isVideoFramesRoute(page.route.id));
     const isVideoDetails = $derived(isVideoDetailsRoute(page.route.id));
+    const showLeftSidebar = $derived(
+        isSamples || isAnnotations || isVideos || isVideoFrames || isGroups
+    );
 
     let gridType = $state<GridType>('samples');
     let lastCollectionId: string | null = null;
+
     $effect(() => {
         let nextGridType: GridType | null = null;
         if (isAnnotations) {
@@ -153,350 +99,40 @@
 
         gridType = nextGridType;
         lastCollectionId = collectionId;
-
-        // Temporary hack to remember where the user was when navigating
-        // TODO: also remember state of tags, labels, metadata filters etc. Possible store it in pagestate
         setLastGridType(gridType);
     });
 
-    let query_text = $state($textEmbedding ? $textEmbedding.queryText : '');
-    let submittedQueryText = $state('');
-
-    const embedTextQuery = $derived(
-        useEmbedText({
-            collectionId,
-            queryText: submittedQueryText,
-            embeddingModelId: null
-        })
+    let CollectionChromeDialogsComponent = $state<CollectionChromeDialogsModule['default'] | null>(
+        null
     );
-
-    async function onKeyDown(event: KeyboardEvent) {
-        if (event.key === 'Enter') {
-            const trimmedQuery = query_text.trim();
-            submittedQueryText = trimmedQuery;
-        }
-    }
-
-    const hasEmbeddingsQuery = $derived(useHasEmbeddings({ collectionId }));
-    const hasEmbeddings = $derived(!!$hasEmbeddingsQuery.data);
-
-    const { metadataValues } = $derived.by(() => useMetadataFilters(collectionId));
-    const { dimensionsValues } = useDimensions(collectionIdStore);
-
-    const annotationLabels = $derived(useAnnotationLabels({ collectionId: collectionId ?? '' }));
-    const { showPlot, setShowPlot, filteredSampleCount, filteredAnnotationCount } =
-        useGlobalStorage();
-
-    // Create annotation filter labels mapping (name -> id)
-    const annotationFilterLabels = $derived.by(() =>
-        $annotationLabels?.data
-            ? $annotationLabels.data.reduce(
-                  (acc: Record<string, string>, label: AnnotationLabel) => ({
-                      ...acc,
-                      [label.annotation_label_name!]: label.annotation_label_id!
-                  }),
-                  {} as Record<string, string>
-              )
-            : {}
-    );
-
-    const selectedAnnotationFilter = $derived.by(() => {
-        const labelsMap = annotationFilterLabels;
-        const currentSelectedIds = Array.from($selectedAnnotationFilterIds);
-
-        return Object.entries(labelsMap)
-            .filter(([, id]) => currentSelectedIds.includes(id))
-            .map(([name]) => name);
-    });
-
-    // Helper function to add selection state to annotation counts
-    const getAnnotationFilters = (annotations: Array<AnnotationCount>, selected: string[]) =>
-        annotations.map((annotation) => ({
-            ...annotation,
-            selected: selected.includes(annotation.label_name)
-        }));
-
-    const annotationFilter = $derived.by<AnnotationsFilter | undefined>(() =>
-        $selectedAnnotationFilterIds.size > 0
-            ? { annotation_label_ids: Array.from($selectedAnnotationFilterIds) }
-            : undefined
-    );
-    const metadataFilters = $derived(
-        metadataValues ? createMetadataFilters($metadataValues) : undefined
-    );
-    const imageFilter = $derived.by<ImageFilter | undefined>(() =>
-        buildImageFilter({
-            dimensionsValues: $dimensionsValues ?? undefined,
-            annotationFilter,
-            metadataFilters,
-            collectionId: collectionId
-        })
-    );
-    const { videoFramesBoundsValues } = useVideoFramesBounds();
-    const { videoBoundsValues } = useVideoBounds();
-
-    const annotationCounts = $derived.by(() => {
-        if (
-            isVideoFrames ||
-            (isAnnotations && parentCollection?.sampleType == SampleType.VIDEO_FRAME)
-        ) {
-            let videoFrameCollectionId = collectionId;
-            // If we are on the video frame annotations page we must pass the parent collectionId as annotations
-            // collection is a child of video frame collection.
-            if (isAnnotations && parentCollection?.sampleType == SampleType.VIDEO_FRAME)
-                videoFrameCollectionId = parentCollection.collectionId;
-            return useVideoFrameAnnotationCounts({
-                collectionId: videoFrameCollectionId,
-                filter: buildVideoFrameAnnotationCountsFilter({
-                    metadataFilters,
-                    annotationFilter,
-                    videoFramesBoundsValues: $videoFramesBoundsValues
-                })
-            });
-        } else if (isVideos) {
-            return useVideoAnnotationCounts({
-                collectionId,
-                filter: buildVideoAnnotationCountsFilter({
-                    metadataFilters,
-                    annotationFilter,
-                    videoBoundsValues: $videoBoundsValues
-                })
-            });
-        }
-        return useAnnotationCounts({
-            collectionId: datasetId,
-            filter: imageFilter
-        });
-    });
-
-    type AnnotationCount = {
-        label_name: string;
-        total_count: number;
-        current_count?: number;
-    };
-
-    // Create a writable store for annotation filters that the component can subscribe to
-    const annotationFilters = writable<
-        Array<{
-            label_name: string;
-            total_count: number;
-            current_count?: number;
-            selected: boolean;
-        }>
-    >([]);
-
-    // Use effect to update the writable store when query data or selection changes
-    $effect(() => {
-        const countsData = $annotationCounts.data;
-        if (countsData) {
-            const filtersWithSelection = getAnnotationFilters(
-                countsData as AnnotationCount[],
-                selectedAnnotationFilter
-            );
-            annotationFilters.set(filtersWithSelection);
-        }
-    });
-
-    const toggleAnnotationFilterSelection = (labelName: string) => {
-        // Get the ID for this label
-        const labelId = annotationFilterLabels[labelName];
-
-        if (labelId) {
-            // Update the global Set in useGlobalStorage
-            selectedAnnotationFilterIds.update((state: Set<string>) => {
-                if (state.has(labelId)) {
-                    state.delete(labelId);
-                } else {
-                    state.add(labelId);
-                }
-                return state;
-            });
-        }
-    };
-
-    // Error handling for text embedding search
-    const setError = (errorMessage: string) => {
-        toast.error('Error', { description: errorMessage });
-    };
-
-    const totalAnnotations = $derived.by(() => {
-        const countsData = $annotationCounts.data;
-        if (!countsData) return 0;
-        return countsData.reduce((sum, item) => sum + Number(item.total_count), 0);
-    });
-
-    const MAX_IMAGE_SIZE_MB = 50;
-    const MAX_IMAGE_SIZE_BYTES = MAX_IMAGE_SIZE_MB * 1024 * 1024;
-
-    let dragOver = $state(false);
-    let activeImage = $state<string | null>(null);
-    let previewUrl = $state<string | null>(null);
-    let isUploading = $state(false);
-    let fileInput = $state<HTMLInputElement | null>(null);
-
-    function handleDragOver(e: DragEvent) {
-        e.preventDefault();
-        dragOver = true;
-    }
-
-    function handleDragLeave(e: DragEvent) {
-        e.preventDefault();
-        dragOver = false;
-    }
-
-    async function handleDrop(e: DragEvent) {
-        e.preventDefault();
-        dragOver = false;
-        if (e.dataTransfer?.files && e.dataTransfer.files.length > 0) {
-            const file = e.dataTransfer.files[0];
-            if (file.type.startsWith('image/')) {
-                await uploadImage(file);
-            } else {
-                setError('Please drop an image file.');
-            }
-        }
-    }
-
-    async function handlePaste(e: ClipboardEvent) {
-        const clipboardData = e.clipboardData;
-        if (!clipboardData) return;
-
-        // Check clipboardData.files first (most common case)
-        if (clipboardData.files && clipboardData.files.length > 0) {
-            const file = clipboardData.files[0];
-            if (file.type.startsWith('image/')) {
-                e.preventDefault();
-                await uploadImage(file);
-                return;
-            }
-        }
-
-        // Fallback: check clipboardData.items (screenshots, images copied from web)
-        const items = clipboardData.items;
-        if (items) {
-            for (const item of items) {
-                if (item.type.startsWith('image/')) {
-                    const file = item.getAsFile();
-                    if (file) {
-                        e.preventDefault();
-                        await uploadImage(file);
-                        return;
-                    }
-                }
-            }
-        }
-    }
-
-    async function handleFileSelect(e: Event) {
-        const target = e.target as HTMLInputElement;
-        if (target.files && target.files.length > 0) {
-            await uploadImage(target.files[0]);
-        }
-        // Reset input
-        target.value = '';
-    }
-
-    async function uploadImage(file: File) {
-        if (file.size > MAX_IMAGE_SIZE_BYTES) {
-            setError(`Image is too large. Maximum size is ${MAX_IMAGE_SIZE_MB}MB.`);
-            return;
-        }
-
-        const formData = new FormData();
-        formData.append('file', file);
-
-        isUploading = true;
-        try {
-            const currentCollectionId = page.params.collection_id;
-            if (!currentCollectionId) {
-                throw new Error('Collection ID is not available');
-            }
-            const response = await fetch(
-                `/api/image_embedding/from_file/for_collection/${currentCollectionId}`,
-                {
-                    method: 'POST',
-                    body: formData
-                }
-            );
-
-            if (!response.ok) {
-                throw new Error(`Error uploading image: ${response.statusText}`);
-            }
-
-            const embedding = await response.json();
-
-            // Clear text search state
-            query_text = '';
-            submittedQueryText = '';
-            activeImage = file.name;
-
-            // Create preview URL for the uploaded image
-            if (previewUrl) {
-                URL.revokeObjectURL(previewUrl);
-            }
-            previewUrl = URL.createObjectURL(file);
-
-            setTextEmbedding({
-                queryText: file.name,
-                embedding: embedding
-            });
-        } catch (err: unknown) {
-            const message = err instanceof Error ? err.message : 'Failed to upload image';
-            setError(message);
-        } finally {
-            isUploading = false;
-        }
-    }
-
-    function clearSearch() {
-        activeImage = null;
-        query_text = '';
-        submittedQueryText = '';
-        if (previewUrl) {
-            URL.revokeObjectURL(previewUrl);
-            previewUrl = null;
-        }
-        setTextEmbedding(undefined);
-    }
-
-    function triggerFileInput() {
-        fileInput?.click();
-    }
-
-    // Update effect to respect activeImage
-    $effect(() => {
-        if (activeImage) return;
-
-        if ($embedTextQuery.isError && $embedTextQuery.error) {
-            const queryError = $embedTextQuery.error as
-                | { error?: unknown; message?: string }
-                | Error;
-            const message = 'error' in queryError ? queryError.error : queryError.message;
-            setError(String(message));
-            return;
-        }
-
-        if (!submittedQueryText) {
-            setTextEmbedding(undefined);
-            return;
-        }
-
-        if ($embedTextQuery.isSuccess) {
-            setTextEmbedding({
-                queryText: submittedQueryText,
-                embedding: $embedTextQuery.data
-            });
-        }
-    });
-
-    const showLeftSidebar = $derived(
-        isSamples || isAnnotations || isVideos || isVideoFrames || isGroups
-    );
-
+    let CollectionFooterComponent = $state<CollectionFooterModule['default'] | null>(null);
+    let CollectionSidebarComponent = $state<CollectionSidebarModule['default'] | null>(null);
+    let CollectionToolbarComponent = $state<CollectionToolbarModule['default'] | null>(null);
     let PlotPanelComponent = $state<PlotPanelModule['default'] | null>(null);
     let PaneGroupComponent = $state<PaneforgeModule['PaneGroup'] | null>(null);
     let PaneComponent = $state<PaneforgeModule['Pane'] | null>(null);
     let PaneResizerComponent = $state<PaneforgeModule['PaneResizer'] | null>(null);
+    let chromeReady = $state(false);
+    let hasEmbeddings = $state(false);
+    let plotEnabledInSession = $state(false);
+
+    const loadChromeComponents = async () => {
+        if (!browser || CollectionToolbarComponent) {
+            return;
+        }
+
+        const [toolbarModule, sidebarModule, footerModule, dialogsModule] = await Promise.all([
+            import('./CollectionToolbar.svelte'),
+            import('./CollectionSidebar.svelte'),
+            import('./CollectionFooter.svelte'),
+            import('./CollectionChromeDialogs.svelte')
+        ]);
+
+        CollectionToolbarComponent = toolbarModule.default;
+        CollectionSidebarComponent = sidebarModule.default;
+        CollectionFooterComponent = footerModule.default;
+        CollectionChromeDialogsComponent = dialogsModule.default;
+    };
 
     const loadPlotLayout = async () => {
         if (!browser || PlotPanelComponent || !((isSamples || isVideos) && hasEmbeddings)) {
@@ -515,15 +151,128 @@
     };
 
     $effect(() => {
-        if ((isSamples || isVideos) && $showPlot) {
+        if (chromeReady && plotEnabledInSession && (isSamples || isVideos) && $showPlot) {
             void loadPlotLayout();
         }
     });
+
+    function scheduleChromeHydration() {
+        const run = () => {
+            chromeReady = true;
+            void loadChromeComponents();
+        };
+
+        const idleWindow = window as IdleWindow;
+        if (idleWindow.requestIdleCallback) {
+            idleWindow.requestIdleCallback(() => {
+                run();
+            });
+            return;
+        }
+
+        window.setTimeout(run, 1);
+    }
+
+    async function verifyRouteConsistency() {
+        if (!browser) {
+            return;
+        }
+
+        if (datasetId === collectionId) {
+            if (collection.parent_collection_id !== null) {
+                await goto(routeHelpers.toHome(), { replaceState: true });
+            }
+            return;
+        }
+
+        try {
+            const { readCollection, readCollectionHierarchy } = await import(
+                '$lib/api/lightly_studio_local/sdk.gen'
+            );
+            const [{ data: datasetCollection }, { data: hierarchyData }] = await Promise.all([
+                readCollection({
+                    path: { collection_id: datasetId }
+                }),
+                readCollectionHierarchy({
+                    path: { collection_id: datasetId }
+                })
+            ]);
+
+            if (!datasetCollection || datasetCollection.parent_collection_id !== null) {
+                await goto(routeHelpers.toHome(), { replaceState: true });
+                return;
+            }
+
+            setCollection(datasetCollection);
+
+            const hierarchy = hierarchyData ?? [];
+            for (const hierarchyCollection of hierarchy) {
+                setCollection(hierarchyCollection);
+            }
+
+            const collectionExists = hierarchy.some(
+                (candidate: CollectionView) => candidate.collection_id === collectionId
+            );
+
+            if (!collectionExists) {
+                await goto(routeHelpers.toHome(), { replaceState: true });
+            }
+        } catch {
+            await goto(routeHelpers.toHome(), { replaceState: true });
+        }
+    }
+
+    onMount(() => {
+        if (!browser) {
+            return;
+        }
+
+        window.addEventListener('keydown', handleKeyEvent);
+        window.addEventListener('keyup', handleKeyEvent);
+        scheduleChromeHydration();
+        void verifyRouteConsistency();
+    });
+
+    onDestroy(() => {
+        if (!browser) {
+            return;
+        }
+
+        window.removeEventListener('keydown', handleKeyEvent);
+        window.removeEventListener('keyup', handleKeyEvent);
+    });
+
+    const toolbarProps = $derived({
+        collectionId,
+        isAnnotations,
+        isGroups,
+        isSamples,
+        isVideos,
+        plotEnabled: plotEnabledInSession,
+        showPlot: $showPlot,
+        onTogglePlot: () => {
+            plotEnabledInSession = true;
+            setShowPlot(!$showPlot);
+        },
+        onHasEmbeddingsChange: (value: boolean) => {
+            hasEmbeddings = value;
+        }
+    });
+
+    const parentCollectionId = $derived(parentCollection?.collectionId ?? collection.parent_collection_id);
+    const parentSampleType = $derived(parentCollection?.sampleType as SampleType | null | undefined);
 </script>
 
 <div class="flex-none">
-    <Header {collection} />
-    <MenuDialogHost {isSamples} {isVideos} {hasEmbeddings} {collection} />
+    <Header {collection} {hasEmbeddings} />
+    {#if CollectionChromeDialogsComponent}
+        <CollectionChromeDialogsComponent
+            {collection}
+            {hasEmbeddings}
+            {isSamples}
+            {isVideos}
+        />
+    {/if}
 </div>
 
 <div class="relative flex min-h-0 flex-1 flex-col">
@@ -532,143 +281,49 @@
     {:else}
         <div class="flex min-h-0 flex-1 space-x-4 px-4">
             {#if showLeftSidebar}
-                <div class="flex h-full min-h-0 w-80 flex-col">
-                    <div class="flex min-h-0 flex-1 flex-col rounded-[1vw] bg-card py-4">
-                        <div
-                            class="min-h-0 flex-1 space-y-2 overflow-y-auto px-4 pb-2 dark:[color-scheme:dark]"
-                        >
-                            <div>
-                                <TagsMenu collection_id={collectionId} {gridType} />
-                                <TagCreateDialog
-                                    {collectionId}
-                                    {gridType}
-                                    {selectedAnnotationFilterIds}
-                                    textEmbedding={get(textEmbedding)}
-                                />
+                {#if CollectionSidebarComponent}
+                    <CollectionSidebarComponent
+                        {collectionId}
+                        {datasetId}
+                        {gridType}
+                        {isAnnotations}
+                        {isSamples}
+                        {isVideoFrames}
+                        {isVideos}
+                        {parentCollectionId}
+                        {parentSampleType}
+                    />
+                {:else}
+                    <div class="flex h-full min-h-0 w-80 flex-col">
+                        <div class="flex min-h-0 flex-1 flex-col rounded-[1vw] bg-card py-4">
+                            <div class="space-y-3 px-4">
+                                <div class="h-10 rounded-md bg-muted/60"></div>
+                                <div class="h-24 rounded-md bg-muted/40"></div>
+                                <div class="h-32 rounded-md bg-muted/30"></div>
                             </div>
-                            <Segment title="Filters" icon={SlidersHorizontal}>
-                                <div class="space-y-2">
-                                    <LabelsMenu
-                                        {annotationFilters}
-                                        onToggleAnnotationFilter={toggleAnnotationFilterSelection}
-                                    />
-
-                                    {#if isSamples || isVideos || isVideoFrames}
-                                        {#key collectionId}
-                                            <CombinedMetadataDimensionsFilters
-                                                {isVideos}
-                                                {isVideoFrames}
-                                            />
-                                        {/key}
-                                    {/if}
-                                </div>
-                            </Segment>
                         </div>
                     </div>
-                </div>
+                {/if}
             {/if}
 
             {#if (isSamples || isVideos) &&
+            plotEnabledInSession &&
             $showPlot &&
             PaneGroupComponent &&
             PaneComponent &&
             PaneResizerComponent &&
             PlotPanelComponent}
-                <!-- When plot is shown, use PaneGroup for the main content + plot -->
                 <PaneGroupComponent direction="horizontal" class="flex-1">
                     <PaneComponent defaultSize={50} minSize={30} class="flex">
                         <div class="flex flex-1 flex-col space-y-4 rounded-[1vw] bg-card p-4">
-                            <GridHeader>
-                                <div class="flex-1">
-                                    {#if hasEmbeddings}
-                                        <div
-                                            class="relative"
-                                            role="region"
-                                            aria-label="Search by image or text"
-                                            ondragover={handleDragOver}
-                                            ondragleave={handleDragLeave}
-                                            ondrop={handleDrop}
-                                        >
-                                            <Search
-                                                class="absolute left-2 top-[50%] h-4 w-4 translate-y-[-50%] text-muted-foreground"
-                                            />
-                                            {#if activeImage || submittedQueryText}
-                                                <div
-                                                    class="flex h-10 w-full items-center rounded-md border border-input bg-background px-3 py-2 pl-8 text-sm {dragOver
-                                                        ? 'ring-2 ring-primary'
-                                                        : ''}"
-                                                >
-                                                    {#if activeImage}
-                                                        <span
-                                                            class="mr-2 flex items-center gap-2 truncate text-muted-foreground"
-                                                        >
-                                                            {#if previewUrl}
-                                                                <img
-                                                                    src={previewUrl}
-                                                                    alt="Search preview"
-                                                                    class="h-6 w-6 rounded object-cover"
-                                                                />
-                                                            {:else}
-                                                                <ImageIcon class="h-4 w-4" />
-                                                            {/if}
-                                                            {activeImage}
-                                                        </span>
-                                                    {:else}
-                                                        <button
-                                                            type="button"
-                                                            class="mr-2 min-w-0 flex-1 cursor-text truncate text-left text-muted-foreground"
-                                                            onclick={() => {
-                                                                submittedQueryText = '';
-                                                            }}
-                                                        >
-                                                            {submittedQueryText}
-                                                        </button>
-                                                    {/if}
-                                                    <button
-                                                        class="ml-auto hover:text-foreground"
-                                                        onclick={clearSearch}
-                                                        title="Clear search"
-                                                        data-testid="search-clear-button"
-                                                    >
-                                                        <X class="h-4 w-4" />
-                                                    </button>
-                                                </div>
-                                            {:else}
-                                                <Input
-                                                    placeholder={isUploading
-                                                        ? 'Uploading...'
-                                                        : 'Search samples by description or image'}
-                                                    class="pl-8 pr-8 {dragOver
-                                                        ? 'ring-2 ring-primary'
-                                                        : ''}"
-                                                    bind:value={query_text}
-                                                    onkeydown={onKeyDown}
-                                                    onpaste={handlePaste}
-                                                    disabled={isUploading}
-                                                    data-testid="text-embedding-search-input"
-                                                />
-                                                <button
-                                                    class="absolute right-2 top-[50%] translate-y-[-50%] text-muted-foreground hover:text-foreground disabled:opacity-50"
-                                                    onclick={triggerFileInput}
-                                                    title="Upload image for search"
-                                                    disabled={isUploading}
-                                                >
-                                                    <ImageIcon class="h-4 w-4" />
-                                                </button>
-                                            {/if}
-                                            <input
-                                                type="file"
-                                                accept="image/*"
-                                                class="hidden"
-                                                bind:this={fileInput}
-                                                onchange={handleFileSelect}
-                                                disabled={isUploading}
-                                            />
-                                        </div>
-                                    {/if}
-                                </div>
-                            </GridHeader>
-                            <Separator class="mb-4 bg-border-hard" />
+                            {#if CollectionToolbarComponent}
+                                <CollectionToolbarComponent {...toolbarProps} />
+                            {:else}
+                                <GridHeader>
+                                    <div class="h-10 w-full rounded-md bg-muted/40"></div>
+                                </GridHeader>
+                                <div class="mb-4 h-px bg-border-hard"></div>
+                            {/if}
                             <div class="flex min-h-0 flex-1 overflow-hidden">
                                 {@render children()}
                             </div>
@@ -688,111 +343,14 @@
                     </PaneComponent>
                 </PaneGroupComponent>
             {:else}
-                <!-- When plot is hidden or not samples view, show normal layout -->
                 <div class="flex flex-1 flex-col space-y-4 rounded-[1vw] bg-card p-4 pb-2">
-                    {#if isSamples || isAnnotations || isVideos || isGroups}
+                    {#if CollectionToolbarComponent}
+                        <CollectionToolbarComponent {...toolbarProps} />
+                    {:else if isSamples || isAnnotations || isVideos || isGroups}
                         <GridHeader>
-                            {#snippet auxControls()}
-                                {#if (isSamples || isVideos) && hasEmbeddings}
-                                    <Button
-                                        class="flex items-center space-x-1"
-                                        data-testid="toggle-plot-button"
-                                        variant={$showPlot ? 'default' : 'ghost'}
-                                        onclick={() => setShowPlot(!$showPlot)}
-                                    >
-                                        <ChartNetwork class="size-4" />
-                                        <span>Show Embeddings</span>
-                                    </Button>
-                                {/if}
-                            {/snippet}
-                            {#if (isSamples || isVideos) && hasEmbeddings}
-                                <div
-                                    class="relative"
-                                    role="region"
-                                    aria-label="Search by image or text"
-                                    ondragover={handleDragOver}
-                                    ondragleave={handleDragLeave}
-                                    ondrop={handleDrop}
-                                >
-                                    <Search
-                                        class="absolute left-2 top-[50%] h-4 w-4 translate-y-[-50%] text-muted-foreground"
-                                    />
-                                    {#if activeImage || submittedQueryText}
-                                        <div
-                                            class="flex h-10 w-full items-center rounded-md border border-input bg-background px-3 py-2 pl-8 text-sm {dragOver
-                                                ? 'ring-2 ring-primary'
-                                                : ''}"
-                                        >
-                                            {#if activeImage}
-                                                <span
-                                                    class="mr-2 flex items-center gap-2 truncate text-muted-foreground"
-                                                >
-                                                    {#if previewUrl}
-                                                        <img
-                                                            src={previewUrl}
-                                                            alt="Search preview"
-                                                            class="h-6 w-6 rounded object-cover"
-                                                        />
-                                                    {:else}
-                                                        <ImageIcon class="h-4 w-4" />
-                                                    {/if}
-                                                    {activeImage}
-                                                </span>
-                                            {:else}
-                                                <button
-                                                    type="button"
-                                                    class="mr-2 min-w-0 flex-1 cursor-text truncate text-left text-muted-foreground"
-                                                    onclick={() => {
-                                                        submittedQueryText = '';
-                                                    }}
-                                                >
-                                                    {submittedQueryText}
-                                                </button>
-                                            {/if}
-                                            <button
-                                                class="ml-auto hover:text-foreground"
-                                                onclick={clearSearch}
-                                                title="Clear search"
-                                                data-testid="search-clear-button"
-                                            >
-                                                <X class="h-4 w-4" />
-                                            </button>
-                                        </div>
-                                    {:else}
-                                        <Input
-                                            placeholder={isUploading
-                                                ? 'Uploading...'
-                                                : 'Search samples by description or image'}
-                                            class="pl-8 pr-8 {dragOver
-                                                ? 'ring-2 ring-primary'
-                                                : ''}"
-                                            bind:value={query_text}
-                                            onkeydown={onKeyDown}
-                                            onpaste={handlePaste}
-                                            disabled={isUploading}
-                                            data-testid="text-embedding-search-input"
-                                        />
-                                        <button
-                                            class="absolute right-2 top-[50%] translate-y-[-50%] text-muted-foreground hover:text-foreground disabled:opacity-50"
-                                            onclick={triggerFileInput}
-                                            title="Upload image for search"
-                                            disabled={isUploading}
-                                        >
-                                            <ImageIcon class="h-4 w-4" />
-                                        </button>
-                                    {/if}
-                                    <input
-                                        type="file"
-                                        accept="image/*"
-                                        class="hidden"
-                                        bind:this={fileInput}
-                                        onchange={handleFileSelect}
-                                        disabled={isUploading}
-                                    />
-                                </div>
-                            {/if}
+                            <div class="h-10 w-full rounded-md bg-muted/40"></div>
                         </GridHeader>
-                        <Separator class="mb-4 bg-border-hard" />
+                        <div class="mb-4 h-px bg-border-hard"></div>
                     {/if}
 
                     <div class="flex min-h-0 flex-1">
@@ -800,16 +358,18 @@
                     </div>
                 </div>
             {/if}
-            {#if hasEmbeddings}
-                <CreateClassifierDialog />
-                <RefineClassifierDialog />
-            {/if}
         </div>
-        <Footer
-            totalSamples={collection?.total_sample_count}
-            filteredSamples={$filteredSampleCount}
-            {totalAnnotations}
-            filteredAnnotations={$filteredAnnotationCount}
-        />
+        {#if CollectionFooterComponent}
+            <CollectionFooterComponent
+                {collection}
+                {collectionId}
+                {datasetId}
+                {isAnnotations}
+                {isVideoFrames}
+                {isVideos}
+                {parentCollectionId}
+                {parentSampleType}
+            />
+        {/if}
     {/if}
 </div>

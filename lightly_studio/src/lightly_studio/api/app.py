@@ -4,10 +4,12 @@ from __future__ import annotations
 
 from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
+from time import perf_counter
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, FastAPI
+from fastapi import APIRouter, Depends, FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.middleware.gzip import GZipMiddleware
 from fastapi.routing import APIRoute
 from sqlmodel import Session
 
@@ -89,6 +91,23 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+app.add_middleware(GZipMiddleware, minimum_size=1024)
+
+
+@app.middleware("http")
+async def add_server_timing(request: Request, call_next):  # type: ignore[no-untyped-def]
+    """Expose backend handling time in DevTools via Server-Timing."""
+    start = perf_counter()
+    response = await call_next(request)
+    duration_ms = (perf_counter() - start) * 1000
+    existing_server_timing = response.headers.get("Server-Timing")
+    timing_value = f"app;dur={duration_ms:.1f}"
+    response.headers["Server-Timing"] = (
+        f"{existing_server_timing}, {timing_value}"
+        if existing_server_timing
+        else timing_value
+    )
+    return response
 
 
 def use_route_names_as_operation_ids(app: FastAPI) -> None:

@@ -7,6 +7,8 @@ from socket import AF_INET, SOCK_STREAM, socket
 from unittest.mock import MagicMock, patch
 
 import pytest
+from fastapi.middleware.cors import CORSMiddleware
+from fastapi.middleware.gzip import GZipMiddleware
 from fastapi.testclient import TestClient
 
 from lightly_studio.api.app import app
@@ -94,14 +96,30 @@ def test_server_static_webapp() -> None:
     assert static_file.status_code == HTTP_STATUS_NOT_FOUND
 
 
+def test_server_timing_header_is_present() -> None:
+    client = TestClient(app)
+
+    response = client.get("/healthz")
+
+    assert response.status_code == HTTP_STATUS_OK
+    assert response.headers["server-timing"].startswith("app;dur=")
+
+
+def test_app_has_gzip_middleware() -> None:
+    middleware_classes = [middleware.cls for middleware in app.user_middleware]
+
+    assert CORSMiddleware in middleware_classes
+    assert GZipMiddleware in middleware_classes
+
+
 def test__get_available_port__preferred_port_in_use() -> None:
     """Test that a different port is returned if the preferred port is used."""
     host = "localhost"
-    port = 8001
 
     # Bind to the preferred port to simulate it being in use.
     s = socket(AF_INET, SOCK_STREAM)
-    s.bind((host, port))
+    s.bind((host, 0))
+    port = s.getsockname()[1]
     s.listen(1)
 
     server = Server(host, port)
@@ -119,3 +137,18 @@ def test__is_ipv6_available(mock_socket: MagicMock) -> None:
     # Test False
     mock_socket.return_value.__enter__.return_value.bind.side_effect = OSError
     assert _is_ipv6_available() is False
+
+
+def test_create_uvicorn_server_uses_performance_defaults() -> None:
+    server = Server("127.0.0.1", 8000)
+
+    uvicorn_server = server.create_uvicorn_server()
+    config = uvicorn_server.config
+
+    assert config.loop == "auto"
+    assert config.http == "auto"
+    assert config.timeout_keep_alive == 30
+    assert config.access_log is False
+    assert config.limit_concurrency is None
+    assert config.server_header is False
+    assert config.date_header is False

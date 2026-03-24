@@ -39,14 +39,15 @@ class Server:
             app=app,
             host=self.host,
             port=self.port,
-            http="h11",
-            # https://uvicorn.dev/settings/#resource-limits
-            limit_concurrency=100,  # Max concurrent connections
-            limit_max_requests=10000,  # Max requests before worker restart
+            # Prefer native implementations when available; fall back automatically otherwise.
+            loop="auto",
+            http="auto",
             # https://uvicorn.dev/settings/#timeouts
-            timeout_keep_alive=5,  # Keep-alive timeout in seconds
+            timeout_keep_alive=30,  # Reuse connections during throttled request waterfalls
             timeout_graceful_shutdown=30,  # Graceful shutdown timeout
-            access_log=env.LIGHTLY_STUDIO_DEBUG,
+            access_log=False,
+            server_header=False,
+            date_header=False,
         )
         return uvicorn.Server(config=config)
 
