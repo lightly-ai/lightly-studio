@@ -1777,8 +1777,13 @@ export interface components {
          */
         AdjacentRequest: {
             sample_type: components["schemas"]["SampleType"];
+            /**
+             * Collection Id
+             * Format: uuid
+             */
+            collection_id: string;
             /** Filters */
-            filters: components["schemas"]["ImageFilter"] | components["schemas"]["VideoFilter"] | components["schemas"]["VideoFrameAdjacentFilter"] | components["schemas"]["AnnotationsFilter"];
+            filters?: (components["schemas"]["ImageFilter"] | components["schemas"]["VideoFilter"] | components["schemas"]["VideoFrameAdjacentFilter"] | components["schemas"]["AnnotationsFilter"]) | null;
             /** Text Embedding */
             text_embedding?: number[] | null;
         };

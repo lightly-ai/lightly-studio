@@ -28,10 +28,14 @@ class AdjacentRequest(BaseModel):
     """Request body for reading adjacent samples."""
 
     sample_type: SampleType
-    filters: Annotated[
-        ImageFilter | VideoFilter | VideoFrameAdjacentFilter | AnnotationsFilter,
-        Field(discriminator="filter_type"),
-    ]
+    collection_id: UUID
+    filters: (
+        Annotated[
+            ImageFilter | VideoFilter | VideoFrameAdjacentFilter | AnnotationsFilter,
+            Field(discriminator="filter_type"),
+        ]
+        | None
+    ) = None
     text_embedding: list[float] | None = None
 
 
@@ -49,28 +53,30 @@ def get_adjacent_samples(
         The adjacent samples result with previous/next IDs and position.
     """
     if request.sample_type == SampleType.IMAGE:
-        if not isinstance(request.filters, ImageFilter):
+        if request.filters is not None and not isinstance(request.filters, ImageFilter):
             raise ValueError(
                 "Invalid filter provided. Expected ImageFilter"
                 f" for sample type '{request.sample_type.value}'."
             )
         return image_resolver.get_adjacent_images(
             session=session,
+            sample_id=sample_id,
+            collection_id=request.collection_id,
             filters=request.filters,
             text_embedding=request.text_embedding,
-            sample_id=sample_id,
         )
     if request.sample_type == SampleType.VIDEO:
-        if not isinstance(request.filters, VideoFilter):
+        if request.filters is not None and not isinstance(request.filters, VideoFilter):
             raise ValueError(
                 "Invalid filter provided. Expected VideoFilter"
                 f" for sample type '{request.sample_type.value}'."
             )
         return video_resolver.get_adjacent_videos(
             session=session,
+            sample_id=sample_id,
+            collection_id=request.collection_id,
             filters=request.filters,
             text_embedding=request.text_embedding,
-            sample_id=sample_id,
         )
     if request.sample_type == SampleType.VIDEO_FRAME:
         if not isinstance(request.filters, VideoFrameAdjacentFilter):

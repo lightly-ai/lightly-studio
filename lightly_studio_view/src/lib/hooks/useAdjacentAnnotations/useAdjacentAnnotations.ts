@@ -19,6 +19,7 @@ export const useAdjacentAnnotations = ({
             sampleId,
             body: {
                 sample_type: SampleType.ANNOTATION,
+                collection_id: collectionId,
                 filters: {
                     filter_type: 'annotations',
                     collection_ids: [collectionId],

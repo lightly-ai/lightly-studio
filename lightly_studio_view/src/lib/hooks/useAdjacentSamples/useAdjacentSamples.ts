@@ -12,21 +12,25 @@ import type {
 export type AdjacentSamplesRequestBody =
     | {
           sample_type: Extract<SampleType, 'image'>;
-          filters: { filter_type: 'image' } & ImageFilter;
+          collection_id: string;
+          filters?: ({ filter_type: 'image' } & ImageFilter) | null;
           text_embedding?: number[];
       }
     | {
           sample_type: Extract<SampleType, 'video'>;
-          filters: { filter_type: 'video' } & VideoFilter;
+          collection_id: string;
+          filters?: ({ filter_type: 'video' } & VideoFilter) | null;
           text_embedding?: number[];
       }
     | {
           sample_type: Extract<SampleType, 'video_frame'>;
-          filters: { filter_type: 'video_frame_adjacent' } & VideoFrameAdjacentFilter;
+          collection_id: string;
+          filters?: ({ filter_type: 'video_frame_adjacent' } & VideoFrameAdjacentFilter) | null;
       }
     | {
           sample_type: Extract<SampleType, 'annotation'>;
-          filters: { filter_type: 'annotations' } & AnnotationsFilter;
+          collection_id: string;
+          filters?: ({ filter_type: 'annotations' } & AnnotationsFilter) | null;
       };
 
 type AdjacentSamplesParams = {

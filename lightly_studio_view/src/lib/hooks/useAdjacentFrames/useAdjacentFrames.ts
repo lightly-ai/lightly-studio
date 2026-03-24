@@ -55,6 +55,7 @@ export const useAdjacentFrames = ({
             sampleId,
             body: {
                 sample_type: SampleType.VIDEO_FRAME,
+                collection_id: collectionId,
                 filters
             }
         }
