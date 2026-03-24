@@ -1,6 +1,6 @@
 <script lang="ts">
     import type { Snippet } from 'svelte';
-    import { ImageSizeControl } from '..';
+    import { ImageSizeControl } from '$lib/components';
 
     let {
         showImageSizeControl = true,
