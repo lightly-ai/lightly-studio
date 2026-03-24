@@ -35,7 +35,6 @@ def test_get_adjacent_videos__orders_by_path(db_session: Session) -> None:
         session=db_session,
         sample_id=video_b.sample_id,
         collection_id=collection_id,
-        filters=VideoFilter(),
     )
 
     assert result is not None
@@ -208,7 +207,6 @@ def test_get_adjacent_videos__with_similarity(db_session: Session) -> None:
         session=db_session,
         sample_id=video_c.sample_id,
         collection_id=collection_id,
-        filters=VideoFilter(),
         text_embedding=[1.0, 1.0],
     )
 
@@ -240,11 +238,6 @@ def test_get_adjacent_videos__returns_none_when_sample_not_in_filter(db_session:
         session=db_session,
         sample_id=video_a.sample_id,
         collection_id=collection_1.collection_id,
-        filters=VideoFilter(
-            sample_filter=SampleFilter(
-                sample_ids=[],
-            )
-        ),
     )
 
     assert result is None
