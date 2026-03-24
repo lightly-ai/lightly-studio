@@ -47,9 +47,7 @@
     import type { GridType } from '$lib/types';
     import { useAnnotationCounts } from '$lib/hooks/useAnnotationCounts/useAnnotationCounts';
     import { useGlobalStorage } from '$lib/hooks/useGlobalStorage.js';
-    import PlotPanel from '$lib/components/PlotPanel/PlotPanel.svelte';
     import { Button } from '$lib/components/ui/index.js';
-    import { PaneGroup, Pane, PaneResizer } from 'paneforge';
     import { useVideoAnnotationCounts } from '$lib/hooks/useVideoAnnotationsCount/useVideoAnnotationsCount.js';
     import {
         createMetadataFilters,
@@ -70,6 +68,10 @@
         buildVideoFrameAnnotationCountsFilter
     } from '$lib/utils/buildAnnotationCountsFilters';
     import { GridHeader } from '$lib/components';
+
+    type PlotPanelModule = typeof import('$lib/components/PlotPanel/PlotPanel.svelte');
+    type PaneforgeModule = typeof import('paneforge');
+
     const { data, children } = $props();
     const {
         collection,
@@ -490,6 +492,33 @@
     const showLeftSidebar = $derived(
         isSamples || isAnnotations || isVideos || isVideoFrames || isGroups
     );
+
+    let PlotPanelComponent = $state<PlotPanelModule['default'] | null>(null);
+    let PaneGroupComponent = $state<PaneforgeModule['PaneGroup'] | null>(null);
+    let PaneComponent = $state<PaneforgeModule['Pane'] | null>(null);
+    let PaneResizerComponent = $state<PaneforgeModule['PaneResizer'] | null>(null);
+
+    const loadPlotLayout = async () => {
+        if (!browser || PlotPanelComponent || !((isSamples || isVideos) && hasEmbeddings)) {
+            return;
+        }
+
+        const [{ default: PlotPanel }, paneforge] = await Promise.all([
+            import('$lib/components/PlotPanel/PlotPanel.svelte'),
+            import('paneforge')
+        ]);
+
+        PlotPanelComponent = PlotPanel;
+        PaneGroupComponent = paneforge.PaneGroup;
+        PaneComponent = paneforge.Pane;
+        PaneResizerComponent = paneforge.PaneResizer;
+    };
+
+    $effect(() => {
+        if ((isSamples || isVideos) && $showPlot) {
+            void loadPlotLayout();
+        }
+    });
 </script>
 
 <div class="flex-none">
@@ -539,10 +568,15 @@
                 </div>
             {/if}
 
-            {#if (isSamples || isVideos) && $showPlot}
+            {#if (isSamples || isVideos) &&
+            $showPlot &&
+            PaneGroupComponent &&
+            PaneComponent &&
+            PaneResizerComponent &&
+            PlotPanelComponent}
                 <!-- When plot is shown, use PaneGroup for the main content + plot -->
-                <PaneGroup direction="horizontal" class="flex-1">
-                    <Pane defaultSize={50} minSize={30} class="flex">
+                <PaneGroupComponent direction="horizontal" class="flex-1">
+                    <PaneComponent defaultSize={50} minSize={30} class="flex">
                         <div class="flex flex-1 flex-col space-y-4 rounded-[1vw] bg-card p-4">
                             <GridHeader>
                                 <div class="flex-1">
@@ -639,20 +673,20 @@
                                 {@render children()}
                             </div>
                         </div>
-                    </Pane>
+                    </PaneComponent>
 
-                    <PaneResizer
+                    <PaneResizerComponent
                         class="relative mx-2 flex w-1 cursor-col-resize items-center justify-center"
                     >
                         <div class="bg-brand z-10 flex h-7 min-w-5 items-center justify-center">
                             <GripVertical class="text-diffuse-foreground" />
                         </div>
-                    </PaneResizer>
+                    </PaneResizerComponent>
 
-                    <Pane defaultSize={50} minSize={30} class="flex min-h-0 flex-col">
-                        <PlotPanel />
-                    </Pane>
-                </PaneGroup>
+                    <PaneComponent defaultSize={50} minSize={30} class="flex min-h-0 flex-col">
+                        <PlotPanelComponent />
+                    </PaneComponent>
+                </PaneGroupComponent>
             {:else}
                 <!-- When plot is hidden or not samples view, show normal layout -->
                 <div class="flex flex-1 flex-col space-y-4 rounded-[1vw] bg-card p-4 pb-2">

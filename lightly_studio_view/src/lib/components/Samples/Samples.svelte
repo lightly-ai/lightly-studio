@@ -28,11 +28,13 @@
 
     type SamplesProps = {
         collection_id: string;
+        collectionVersion?: string;
         selectedAnnotationFilterIds: Readable<string[]>;
         sampleWidth: number;
         textEmbedding: Readable<TextEmbedding | undefined>;
     };
-    const { collection_id, selectedAnnotationFilterIds, textEmbedding }: SamplesProps = $props();
+    const { collection_id, collectionVersion, selectedAnnotationFilterIds, textEmbedding }:
+        SamplesProps = $props();
 
     const { tagsSelected } = useTags({
         collection_id,
@@ -43,7 +45,6 @@
     const { metadataValues } = useMetadataFilters(collection_id);
 
     const {
-        getCollectionVersion,
         setfilteredSampleCount,
         getSelectedSampleIds,
         toggleSampleSelection
@@ -130,11 +131,6 @@
 
     onMount(async () => {
         initialize();
-        // Load collection version for caching
-        await getCollectionVersion(collection_id);
-
-        // Get the grid view rendering mode from settings
-
         isReady = true;
     });
 
@@ -219,7 +215,7 @@
 
 <SampleGrid
     itemCount={samples.length}
-    overScan={100}
+    overScan={12}
     scrollPosition={initialScrollPosition}
     scrollResetKey={$textEmbedding?.queryText ?? ''}
     onScroll={handleScroll}
@@ -263,6 +259,7 @@
                         <SampleImageGridItem
                             sample={samples[index]}
                             {objectFit}
+                            cachedCollectionVersion={collectionVersion}
                             {sampleSize}
                             {displayTextOnImage}
                         />

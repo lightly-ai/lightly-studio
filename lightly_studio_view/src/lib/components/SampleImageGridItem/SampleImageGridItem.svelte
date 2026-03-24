@@ -7,16 +7,18 @@
     const {
         sample,
         objectFit,
+        cachedCollectionVersion,
         displayTextOnImage
     }: {
         sample: ImageView;
         objectFit?: SampleImageObjectFit;
+        cachedCollectionVersion?: string;
         sampleSize: number;
         displayTextOnImage?: string;
     } = $props();
 </script>
 
-<SampleImage {sample} {objectFit} />
+<SampleImage {sample} {objectFit} {cachedCollectionVersion} />
 <SampleAnnotations {sample} {objectFit} />
 
 {#if sample.similarity_score !== undefined && sample.similarity_score !== null}
