@@ -1,5 +1,4 @@
 <script lang="ts">
-    import LayoutCard from '../LayoutCard/LayoutCard.svelte';
     import type { Snippet } from 'svelte';
 
     let {
@@ -15,20 +14,18 @@
     } = $props();
 </script>
 
-<LayoutCard>
-    <div class="flex w-[200px] flex-col gap-4 p-4">
-        {#each Array.from({ length: itemsCount }, (_, index) => index) as index}
-            <div
-                class="group-item overflow-hidden {index === selectedIndex
-                    ? 'rounded opacity-100 outline outline-4 outline-offset-2 outline-primary/80'
-                    : 'opacity-50'} [&_img]:transition-transform [&_img]:duration-300 [&_img]:ease-in-out hover:[&_img]:scale-125"
-                role="button"
-                tabindex="0"
-                onclick={() => onclick?.(index)}
-                onkeydown={(e) => e.key === 'Enter' && onclick?.(index)}
-            >
-                {@render renderItem({ index })}
-            </div>
-        {/each}
-    </div>
-</LayoutCard>
+<div class="flex flex-col gap-4">
+    {#each Array.from({ length: itemsCount }, (_, index) => index) as index}
+        <div
+            class="group-item relative overflow-hidden {index === selectedIndex
+                ? 'rounded opacity-100 outline outline-2 outline-offset-1 outline-primary/80'
+                : 'opacity-50'} "
+            role="button"
+            tabindex="0"
+            onclick={() => onclick?.(index)}
+            onkeydown={(e) => e.key === 'Enter' && onclick?.(index)}
+        >
+            {@render renderItem({ index })}
+        </div>
+    {/each}
+</div>

@@ -1,157 +1,82 @@
 <script lang="ts">
-    import { Card, CardContent, Segment } from '$lib/components';
-    import SegmentTags from '$lib/components/SegmentTags/SegmentTags.svelte';
-    import {
-        getAllFrames,
-        type FrameView,
-        type SampleView,
-        type VideoFrameView,
-        type VideoView
-    } from '$lib/api/lightly_studio_local';
-    import { Button } from '$lib/components/ui';
-    import { routeHelpers } from '$lib/routes';
-    import VideoFrameAnnotationItem from '$lib/components/VideoFrameAnnotationItem/VideoFrameAnnotationItem.svelte';
-    import Video from '$lib/components/Video/Video.svelte';
-    import MetadataSegment from '$lib/components/MetadataSegment/MetadataSegment.svelte';
-    import { useRemoveTagFromSample } from '$lib/hooks/useRemoveTagFromSample/useRemoveTagFromSample';
-    import { useCollectionWithChildren } from '$lib/hooks/useCollection/useCollection';
-    import { page } from '$app/state';
-    import CaptionField from '$lib/components/CaptionField/CaptionField.svelte';
-    import CreateCaptionField from '$lib/components/CaptionField/CreateCaptionField.svelte';
-    import { useDeleteCaption } from '$lib/hooks/useDeleteCaption/useDeleteCaption';
-    import { useCreateCaption } from '$lib/hooks/useCreateCaption/useCreateCaption';
     import { toast } from 'svelte-sonner';
-    import { useVideo } from '$lib/hooks/useVideo/useVideo';
+    import {
+        Card,
+        CardContent,
+        MetadataSegment,
+        SegmentTags,
+        VideoDetailsNavigation,
+        VideoFrameDetails,
+        VideoPlayer
+    } from '$lib/components';
+    import { useRemoveTagFromSample } from '$lib/hooks';
+    import { type FrameView, type SampleView, type VideoView } from '$lib/api/lightly_studio_local';
+    import { getVideoURLById } from '$lib/utils';
+    import VideoSampleMetadata from '../VideoSampleMetadata/VideoSampleMetadata.svelte';
+    import SampleDetailsCaptionSegment from '../SampleDetails/SampleDetailsCaptionsSegment/SampleDetailsCaptionSegment.svelte';
+    import { useVideoFrames } from '$lib/hooks/useVideoFrames/useVideoFrames';
     import { onMount } from 'svelte';
-    import { getFrameBatchCursor } from '$lib/utils/frame';
-    import VideoDetailsNavigation from '$lib/components/VideoDetailsNavigation/VideoDetailsNavigation.svelte';
+    import { routeHelpers } from '$lib/routes';
+    import VideoFrameAnnotationItem from '../VideoFrameAnnotationItem/VideoFrameAnnotationItem.svelte';
 
-    const { video }: { video: VideoView } = $props();
-
-    // Route validations in +layout.ts ensure these params are always present and valid
-    const datasetId = $derived(page.params.dataset_id!);
-    const collectionId = page.params.collection_id;
-
-    const { removeTagFromSample } = useRemoveTagFromSample({ collectionId });
-    const { refetch: refetchRootCollection } = $derived.by(() =>
-        useCollectionWithChildren({
-            collectionId: datasetId
-        })
-    );
-    const { deleteCaption } = useDeleteCaption();
-    const { createCaption } = useCreateCaption();
-    const { isEditingMode } = page.data.globalStorage;
-
-    // Use client-side query hook for video data
-    const { video: videoQuery, refetch: refetchVideo } = $derived(
-        useVideo({ sampleId: video?.sample_id ?? '' })
-    );
-    const videoData = $derived($videoQuery.data ?? video);
-
-    const tags = $derived(
-        ((videoData?.sample as SampleView)?.tags as Array<{ tag_id: string; name: string }>)?.map(
-            (t) => ({
-                tagId: t.tag_id,
-                name: t.name
-            })
-        ) ?? []
-    );
-
-    const handleRemoveTag = async (tagId: string) => {
-        if (!videoData?.sample_id) return;
-        await removeTagFromSample(videoData.sample_id, tagId);
-        refetchVideo();
+    type VideoDetailsProps = {
+        video: VideoView;
+        datasetId: string;
+        onVideoUpdate: () => void;
+        frameNumber?: number;
     };
+    const { video, datasetId, onVideoUpdate, frameNumber }: VideoDetailsProps = $props();
 
-    // Use videoData from query
-    const captions = $derived((videoData?.sample as SampleView)?.captions ?? []);
-
-    const handleDeleteCaption = async (sampleId: string) => {
-        if (!videoData?.sample_id) return;
-        try {
-            await deleteCaption(sampleId);
-            toast.success('Caption deleted successfully');
-            refetchVideo();
-        } catch (error) {
-            toast.error('Failed to delete caption. Please try again.');
-            console.error('Error deleting caption:', error);
-        }
-    };
-
-    const handleCreateCaption = async (sampleId: string, text: string): Promise<boolean> => {
-        if (!videoData?.sample_id) return false;
-        try {
-            await createCaption({ parent_sample_id: sampleId, text });
-            toast.success('Caption created successfully');
-            refetchVideo();
-            // If this is the first caption, refresh root collection to update navigation
-            if (!captions.length) {
-                refetchRootCollection();
-            }
-            return true;
-        } catch (error) {
-            toast.error('Failed to create caption. Please try again.');
-            console.error('Error creating caption:', error);
-            return false;
-        }
-    };
-
-    const onCaptionUpdate = () => {
-        refetchVideo();
-    };
-
-    let videoEl: HTMLVideoElement | null = $state(null);
-    let frames = $state<FrameView[]>([]);
-
-    let currentFrame: FrameView | null | undefined = $state();
-
-    let containerEl: HTMLDivElement | null = null;
-    let overlaySize = $state(0);
-    let overlayHeight = $state(0);
-    let currentIndex = 0;
-    let hasStarted = false;
-    let cursor = 0;
-    let loading = false;
-    let reachedEnd = false;
-    // This flag is used to prevent the onUpdate callback from changing the current frame while we are seeking to a specific frame number on load
-    let seekFrameNumber = false;
-    const BATCH_SIZE = 50;
-
-    let resizeObserver: ResizeObserver;
-
-    const frameNumber = $derived.by(() => {
-        const frameNumberParam = page.url.searchParams.get('frame_number');
-        return frameNumberParam ? parseInt(frameNumberParam) : null;
+    const { removeTagFromSample } = useRemoveTagFromSample({
+        collectionId: datasetId
     });
+
+    const deleteTag = async (tag_id: string) => {
+        try {
+            await removeTagFromSample(video.sample.sample_id, tag_id);
+            toast.success('Tag removed successfully');
+            onVideoUpdate();
+        } catch {
+            toast.error('Failed to remove tag. Please try again.');
+        }
+    };
+    let videoEl: HTMLVideoElement | null = $state(null);
+
+    const { currentFrame, loadFrameByPlaybackTime, loadFramesFromFrameNumber } = useVideoFrames({
+        video
+    });
+    const onseeked = (event: Event) => {
+        const target = event.target as HTMLVideoElement;
+        loadFrameByPlaybackTime(target.currentTime, video.fps);
+    };
+
+    const ontimeupdate = (event: Event) => {
+        const target = event.target as HTMLVideoElement;
+        loadFrameByPlaybackTime(target.currentTime, video.fps);
+    };
 
     onMount(() => {
-        loadFramesFromFrameNumber();
+        if (frameNumber !== undefined) {
+            loadFramesFromFrameNumber(frameNumber);
+            jumpToCurrentFrame = true;
+        } else {
+            loadFrameByPlaybackTime(0, video.fps);
+        }
     });
 
-    async function loadFramesFromFrameNumber() {
-        if (frameNumber !== null && videoEl) {
-            seekFrameNumber = true;
-            cursor = getFrameBatchCursor(frameNumber, BATCH_SIZE);
+    let videoWidth = $state(0);
+    let videoHeight = $state(0);
 
-            await loadFrames();
-
-            currentFrame = frames.find((frame) => frame.frame_number === frameNumber) ?? null;
-
-            if (currentFrame) videoEl!.currentTime = currentFrame.frame_timestamp_s + 0.002;
-        }
-
-        hasStarted = true;
-    }
+    let resizeObserver: ResizeObserver;
 
     $effect(() => {
         if (!videoEl) return;
 
         const updateOverlaySize = () => {
-            const rect = videoEl?.getBoundingClientRect();
-            overlaySize = rect?.width ?? 0;
-            overlayHeight = rect?.height ?? 0;
+            if (!videoEl) return;
+            videoWidth = videoEl.clientWidth;
+            videoHeight = videoEl.clientHeight;
         };
-
         updateOverlaySize();
 
         resizeObserver = new ResizeObserver(updateOverlaySize);
@@ -160,273 +85,88 @@
         return () => resizeObserver.disconnect();
     });
 
-    function onUpdate(frame: FrameView | VideoFrameView | null, index: number | null) {
-        if (!hasStarted || seekFrameNumber) return;
+    const getTimeByFrameNumber = (frame: FrameView) => {
+        return frame.frame_timestamp_s + 0.002;
+    };
 
-        currentFrame = frame;
+    // this param is used when we passed frame_number to jump to specific frame on video load, after that we want to jump to current frame only when user seek or play the video
+    let jumpToCurrentFrame: boolean = $state(false);
 
-        if (
-            index != null &&
-            cursor - index < BATCH_SIZE / 2 &&
-            index != 0 &&
-            currentIndex < index
-        ) {
-            loadFrames();
-        }
-    }
-
-    async function loadFrames() {
-        if (loading || reachedEnd) return;
-        loading = true;
-
-        const frameCollectionId = (videoData?.frame?.sample as SampleView)?.collection_id;
-        if (!frameCollectionId) {
-            loading = false;
-            return;
-        }
-
-        const res = await getAllFrames({
-            path: {
-                video_frame_collection_id: frameCollectionId
-            },
-            query: {
-                cursor,
-                limit: BATCH_SIZE
-            },
-            body: {
-                filter: {
-                    video_id: videoData?.sample_id
-                }
-            }
-        });
-
-        const newFrames = res?.data?.data ?? [];
-
-        if (newFrames.length === 0) {
-            reachedEnd = true;
-            loading = false;
-            return;
-        }
-
-        frames = mergeFrames(frames, newFrames);
-
-        cursor = res?.data?.nextCursor ?? cursor + BATCH_SIZE;
-
-        loading = false;
-    }
-
-    let lastVideoId: string | null = null;
-
+    // We track here if we have flag to jump to current frame
     $effect(() => {
-        if (!videoData) return;
-
-        const videoId = videoData.sample_id;
-
-        if (videoId !== lastVideoId && hasStarted) {
-            frames = videoData.frame ? [videoData.frame] : [];
-            currentFrame = videoData.frame ?? null;
-            cursor = 0;
-            currentIndex = 0;
-            loading = false;
-            reachedEnd = false;
-
-            lastVideoId = videoId;
-            loadFrames();
+        if (jumpToCurrentFrame && $currentFrame && videoEl) {
+            const targetTime = getTimeByFrameNumber($currentFrame);
+            videoEl.currentTime = targetTime;
+            jumpToCurrentFrame = false;
         }
     });
-
-    function handleKeyDownEvent(event: KeyboardEvent) {
-        // Ignore when typing in inputs / textareas
-        const target = event.target as HTMLElement;
-        if (target?.tagName === 'INPUT' || target?.tagName === 'TEXTAREA') return;
-
-        if (event.code === 'Space') {
-            event.preventDefault(); // prevent page scroll
-
-            if (!videoEl) return;
-
-            if (videoEl.paused) {
-                videoEl.play();
-            } else {
-                videoEl.pause();
-            }
-        }
-    }
-
-    async function onSeeked(event: Event) {
-        if (seekFrameNumber) seekFrameNumber = false;
-
-        const target = event.target as HTMLVideoElement;
-
-        if (!videoData) return;
-
-        // Estimate the frame index based on current time and video FPS
-        const frameIndex = Math.floor(target.currentTime * videoData.fps);
-
-        // Estimate the cursor position for fetching frames around the current frame index
-        cursor = getFrameBatchCursor(frameIndex, BATCH_SIZE);
-
-        await loadFrames();
-
-        // Find the exact frame
-        currentFrame = frames.find((frame) => frame.frame_number === frameIndex) ?? null;
-    }
-
-    function mergeFrames(existingFrames: FrameView[], newFrames: FrameView[]): FrameView[] {
-        if (existingFrames.at(-1)?.frame_number === newFrames[0]?.frame_number) {
-            // If the last existing frame is the same as the first new frame, we can just concatenate
-            return [...existingFrames, ...newFrames];
-        }
-
-        const frameMap = new Map<string, FrameView>();
-
-        existingFrames.forEach((frame) => frameMap.set(frame.sample_id, frame));
-        newFrames.forEach((frame) => frameMap.set(frame.sample_id, frame));
-
-        return Array.from(frameMap.values()).sort((a, b) => a.frame_number - b.frame_number);
-    }
 </script>
 
 <div class="flex h-full w-full flex-col space-y-4">
     <div class="flex min-h-0 flex-1 gap-4">
         <Card className="flex w-[60vw] flex-col">
             <CardContent className="flex h-full flex-col gap-4 overflow-hidden">
-                <div
-                    bind:this={containerEl}
-                    class="video-frame-container relative overflow-hidden rounded-lg bg-black"
-                >
+                <div class="video-frame-container relative overflow-hidden rounded-lg bg-black">
                     <VideoDetailsNavigation />
-                    {#key videoData?.sample_id}
-                        {#if videoData}
-                            <Video
-                                bind:videoEl
-                                video={videoData}
-                                {frames}
-                                muted={true}
-                                controls={true}
-                                update={onUpdate}
-                                className="block h-full w-full"
-                                onseeked={onSeeked}
-                            />
+                    <VideoPlayer
+                        src={getVideoURLById(video.sample_id)}
+                        bind:videoEl
+                        videoProps={{
+                            controls: true,
+                            muted: true,
+                            class: 'block h-full w-full',
+                            onplay,
+                            onseeked,
+                            ontimeupdate
+                        }}
+                    />
 
-                            {#if currentFrame && overlaySize > 0}
-                                <VideoFrameAnnotationItem
-                                    width={overlaySize}
-                                    height={overlayHeight}
-                                    sample={currentFrame}
-                                    showLabel={true}
-                                    sampleWidth={videoData.width}
-                                    sampleHeight={videoData.height}
-                                />
-                            {/if}
-                        {/if}
-                    {/key}
+                    {#if $currentFrame && videoWidth > 0}
+                        <VideoFrameAnnotationItem
+                            width={videoWidth}
+                            height={videoHeight}
+                            sample={$currentFrame}
+                            showLabel={true}
+                            sampleWidth={video.width}
+                            sampleHeight={video.height}
+                        />
+                    {/if}
                 </div>
             </CardContent>
         </Card>
 
         <Card className="flex flex-1 flex-col overflow-hidden">
             <CardContent className="h-full overflow-y-auto">
-                <SegmentTags {tags} onClick={handleRemoveTag} />
-                <Segment title="Sample details">
-                    <div class="min-w-full space-y-3 text-diffuse-foreground">
-                        <div class="flex items-start gap-3">
-                            <span class="truncate text-sm font-medium" title="File Name"
-                                >File Name:</span
-                            >
-                            <span class="text-sm" data-testid="video-file-name"
-                                >{videoData?.file_name}</span
-                            >
-                        </div>
-                        <div class="flex items-start gap-3">
-                            <span class="truncate text-sm font-medium" title="Width">Width:</span>
-                            <span class="text-sm" data-testid="video-width"
-                                >{videoData?.width}px</span
-                            >
-                        </div>
-                        <div class="flex items-start gap-3">
-                            <span class="truncate text-sm font-medium" title="Height">Height:</span>
-                            <span class="text-sm" data-testid="video-height"
-                                >{videoData?.height}px</span
-                            >
-                        </div>
-                        <div class="flex items-start gap-3">
-                            <span class="truncate text-sm font-medium" title="Duration"
-                                >Duration:</span
-                            >
-                            <span class="text-sm">{videoData?.duration_s?.toFixed(2)} seconds</span>
-                        </div>
-                        <div class="flex items-start gap-3">
-                            <span class="truncate text-sm font-medium" title="FPS">FPS:</span>
-                            <span class="text-sm">{videoData?.fps.toFixed(2)}</span>
-                        </div>
-                    </div>
-                </Segment>
-                <MetadataSegment metadata_dict={(videoData?.sample as SampleView).metadata_dict} />
-                <Segment title="Captions">
-                    <div class="flex flex-col gap-3 space-y-4">
-                        <div class="flex flex-col gap-2">
-                            {#each captions as caption (caption.sample_id)}
-                                <CaptionField
-                                    {caption}
-                                    onDeleteCaption={() => handleDeleteCaption(caption.sample_id)}
-                                    onUpdate={onCaptionUpdate}
-                                />
-                            {/each}
-                            <!-- Add new caption button -->
-                            {#if $isEditingMode}
-                                <CreateCaptionField
-                                    onCreate={(text) =>
-                                        handleCreateCaption(videoData?.sample_id ?? '', text)}
-                                />
-                            {/if}
-                        </div>
-                    </div>
-                </Segment>
-                <Segment title="Current Frame">
-                    {#if currentFrame}
-                        <div class="space-y-2 text-sm text-diffuse-foreground">
-                            <div class="flex items-center gap-2">
-                                <span class="font-medium">Frame #:</span>
-                                <span data-testid="current-frame-number"
-                                    >{currentFrame.frame_number}</span
-                                >
-                            </div>
-                            <div class="flex items-center gap-2">
-                                <span class="font-medium">Timestamp:</span>
-                                <span data-testid="current-frame-timestamp"
-                                    >{currentFrame.frame_timestamp_s.toFixed(3)} s</span
-                                >
-                            </div>
-                        </div>
-
-                        <Button
-                            variant="secondary"
-                            class="mt-4 w-full"
-                            href={(() => {
-                                const frameCollectionId = (currentFrame.sample as SampleView)
-                                    .collection_id;
-                                if (!frameCollectionId) return '#';
-                                return routeHelpers.toFramesDetails(
-                                    datasetId,
-                                    'video_frame',
-                                    frameCollectionId,
-                                    currentFrame.sample_id,
-                                    true
-                                );
-                            })()}
-                            data-testid="view-frame-button"
-                        >
-                            View frame
-                        </Button>
+                {@const tags = video?.sample?.tags ?? []}
+                {#if tags.length > 0}
+                    <SegmentTags {tags} onClick={deleteTag} />
+                {/if}
+                <VideoSampleMetadata {video} />
+                <MetadataSegment metadata_dict={(video?.sample as SampleView).metadata_dict} />
+                {#if video?.sample?.sample_id}
+                    <SampleDetailsCaptionSegment
+                        refetch={onVideoUpdate}
+                        captions={video?.sample?.captions ?? []}
+                        sampleId={video?.sample?.sample_id}
+                    />
+                {/if}
+                {#if $currentFrame}
+                    {@const frameSample = $currentFrame.sample as SampleView}
+                    {#if frameSample.collection_id && frameSample.sample_id}
+                        {@const frameURL = routeHelpers.toFramesDetails(
+                            datasetId,
+                            'video_frame',
+                            frameSample.collection_id,
+                            frameSample.sample_id,
+                            true
+                        )}
+                        <VideoFrameDetails frame={$currentFrame} {frameURL} />
                     {/if}
-                </Segment>
+                {/if}
             </CardContent>
         </Card>
     </div>
 </div>
-
-<svelte:window onkeydown={handleKeyDownEvent} />
 
 <style>
     .video-frame-container {
