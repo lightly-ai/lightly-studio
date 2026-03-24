@@ -2,15 +2,13 @@
     import type { Snippet } from 'svelte';
     import { ImageSizeControl } from '$lib/components';
 
-    let {
-        showImageSizeControl = true,
-        children,
-        auxControls
-    }: {
+    interface GridHeaderProps {
         showImageSizeControl?: boolean;
         children?: Snippet;
         auxControls?: Snippet;
-    } = $props();
+    }
+
+    let { showImageSizeControl = true, children, auxControls }: GridHeaderProps = $props();
 </script>
 
 <div class="my-2 flex items-center space-x-4">
