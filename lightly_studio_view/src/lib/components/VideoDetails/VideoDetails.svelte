@@ -26,7 +26,7 @@
     import { getFrameBatchCursor } from '$lib/utils/frame';
     import VideoDetailsNavigation from '$lib/components/VideoDetailsNavigation/VideoDetailsNavigation.svelte';
 
-    const { video }: { video?: VideoView } = $props();
+    const { video }: { video: VideoView } = $props();
 
     // Route validations in +layout.ts ensure these params are always present and valid
     const datasetId = $derived(page.params.dataset_id!);
@@ -287,7 +287,7 @@
     }
 </script>
 
-<div class="flex h-full w-full flex-col space-y-4">
+<div class="flex min-h-0 w-full flex-1 flex-col space-y-4">
     <div class="flex min-h-0 flex-1 gap-4">
         <Card className="flex w-[60vw] flex-col">
             <CardContent className="flex h-full flex-col gap-4 overflow-hidden">
