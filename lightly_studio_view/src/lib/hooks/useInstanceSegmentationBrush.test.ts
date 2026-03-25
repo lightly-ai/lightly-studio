@@ -170,6 +170,35 @@ describe('useInstanceSegmentationBrush', () => {
         expect(refetch).toHaveBeenCalled();
     });
 
+    it('refetches and shows error when selected annotation is locked', async () => {
+        const refetch = vi.fn();
+        const updateAnnotation = vi.fn();
+
+        const selectedAnnotation = {
+            sample_id: 'locked-id'
+        } as AnnotationView;
+
+        const { finishBrush } = useInstanceSegmentationBrush({
+            collectionId: 'c1',
+            sampleId: 's1',
+            sample,
+            refetch
+        });
+
+        await finishBrush(
+            mask,
+            selectedAnnotation,
+            [],
+            updateAnnotation,
+            new Set(['locked-id'])
+        );
+
+        expect(refetch).toHaveBeenCalledTimes(1);
+        expect(toast.error).toHaveBeenCalledWith('This annotation is locked');
+        expect(updateAnnotation).not.toHaveBeenCalled();
+        expect(createAnnotation).not.toHaveBeenCalled();
+    });
+
     it('creates a new annotation using an existing label', async () => {
         const refetch = vi.fn();
 

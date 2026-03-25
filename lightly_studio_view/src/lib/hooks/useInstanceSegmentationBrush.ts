@@ -100,6 +100,8 @@ export function useInstanceSegmentationBrush({
         const rle = encodeBinaryMaskToRLE(workingMask);
         if (selectedAnnotation) {
             if (lockedAnnotationIds?.has(selectedAnnotation.sample_id)) {
+                // Refetch to clear the previous state.
+                refetch()
                 toast.error('This annotation is locked');
                 return;
             }
