@@ -36,7 +36,7 @@ def start_gui(
     server = Server(host=host, port=port)
     uvicorn_server = server.create_uvicorn_server()
 
-    logger.info(f"Open the LightlyStudio GUI under: {server.app_url}")
+    logger.info(f"Open the LightlyStudio GUI under: {server.url}")
 
     _run_uvicorn_server(uvicorn_server)
     return server
@@ -82,7 +82,7 @@ def start_gui_background(
     state = _GuiBackgroundState(uvicorn_server=uvicorn_server, thread=thread)
     _GUI_BACKGROUND_STATE = state
 
-    logger.info(f"Open the LightlyStudio GUI under: {server.app_url}")
+    logger.info(f"Open the LightlyStudio GUI under: {server.url}")
 
     thread.start()
     # TODO(Malte, 01/26): Wait for server startup and surface background errors.

@@ -41,7 +41,7 @@ class Server:
         self.port = _get_available_port(host=self.host, preferred_port=self.port)
 
     @property
-    def app_url(self) -> str:
+    def url(self) -> str:
         """The full URL of the running server."""
         return f"{env.LIGHTLY_STUDIO_PROTOCOL}://{self.host}:{self.port}"
 
