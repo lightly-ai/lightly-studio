@@ -7,6 +7,7 @@
         readImages,
         type ReadImagesRequest,
         getAllFrames,
+        type AnnotationsFilter,
         type VideoFrameFilter,
         type VideoFilter,
         getVideoSampleIds,
@@ -69,6 +70,13 @@
         $selectedAnnotationFilterIds?.size ? Array.from($selectedAnnotationFilterIds) : undefined
     );
 
+    const annotationFilter = $derived<AnnotationsFilter | undefined>(
+        annotationLabelIds
+            ? {
+                  annotation_label_ids: annotationLabelIds
+              }
+            : undefined
+    );
     const sampleFilter = $derived<SampleFilter>({
         annotations_filter: annotationLabelIds
             ? {
@@ -94,8 +102,7 @@
     const { videoFramesBoundsValues } = useVideoFramesBounds();
     const videoFramesFilter = $derived<VideoFrameFilter>({
         sample_filter: {
-            ...sampleFilter,
-            annotation_label_ids: annotationLabelIds
+            ...sampleFilter
         },
         ...$videoFramesBoundsValues
     });
@@ -103,12 +110,11 @@
     const { videoBoundsValues } = useVideoBounds();
 
     const videosFilter = $derived<VideoFilter>({
-        annotation_frames_label_ids: $selectedAnnotationFilterIds?.size
-            ? Array.from($selectedAnnotationFilterIds)
-            : undefined,
+        frame_annotation_filter: annotationFilter,
         sample_filter: {
             sample_ids: $videoFilterParams?.filters?.sample_ids,
-            ...sampleFilter
+            ...sampleFilter,
+            annotations_filter: undefined
         },
         ...$videoBoundsValues
     });

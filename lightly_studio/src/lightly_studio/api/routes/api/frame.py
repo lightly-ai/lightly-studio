@@ -24,9 +24,6 @@ from lightly_studio.models.video import (
     VideoView,
 )
 from lightly_studio.resolvers import video_frame_resolver
-from lightly_studio.resolvers.video_frame_resolver.video_frame_annotations_counter_filter import (
-    VideoFrameAnnotationsCounterFilter,
-)
 from lightly_studio.resolvers.video_frame_resolver.video_frame_filter import (
     VideoFrameFilter,
 )
@@ -46,7 +43,7 @@ class ReadVideoFramesRequest(BaseModel):
 class ReadCountVideoFramesAnnotationsRequest(BaseModel):
     """Request body for reading video frames annotations counter."""
 
-    filter: VideoFrameAnnotationsCounterFilter | None = Field(
+    filter: VideoFrameFilter | None = Field(
         None, description="Filter parameters for video frames annotations counter"
     )
 
@@ -132,13 +129,13 @@ def count_video_frame_annotations(
 
     Args:
         session: The database session.
-        video_frame_collection_id: The ID of the collection to retrieve videos for.
+        video_frame_collection_id: The ID of the collection to count annotations for.
         body: The body containing filters.
 
     Returns:
         A list of annotations and counters.
     """
-    return video_frame_resolver.count_video_frames_annotations(
+    return video_frame_resolver.get_video_frames_count_annotation_views(
         session=session,
         collection_id=video_frame_collection_id,
         filters=body.filter,

@@ -18,16 +18,12 @@
     import { useRemoveTagFromSample } from '$lib/hooks/useRemoveTagFromSample/useRemoveTagFromSample';
     import { useCollectionWithChildren } from '$lib/hooks/useCollection/useCollection';
     import { page } from '$app/state';
-    import CaptionField from '$lib/components/CaptionField/CaptionField.svelte';
-    import CreateCaptionField from '$lib/components/CaptionField/CreateCaptionField.svelte';
-    import { useDeleteCaption } from '$lib/hooks/useDeleteCaption/useDeleteCaption';
-    import { useCreateCaption } from '$lib/hooks/useCreateCaption/useCreateCaption';
-    import { toast } from 'svelte-sonner';
     import { useVideo } from '$lib/hooks/useVideo/useVideo';
     import { onMount } from 'svelte';
     import { getFrameBatchCursor } from '$lib/utils/frame';
     import VideoDetailsNavigation from '$lib/components/VideoDetailsNavigation/VideoDetailsNavigation.svelte';
     import VideoDetailsBreadcrumb from '$lib/components/VideoDetailsBreadcrumb/VideoDetailsBreadcrumb.svelte';
+    import SampleDetailsCaptionSegment from '$lib/components/SampleDetails/SampleDetailsCaptionsSegment/SampleDetailsCaptionSegment.svelte';
 
     const { data }: { data: PageData } = $props();
     const {
@@ -42,14 +38,11 @@
     const collectionId = page.params.collection_id;
 
     const { removeTagFromSample } = useRemoveTagFromSample({ collectionId });
-    const { collection: datasetCollection, refetch: refetchRootCollection } = $derived.by(() =>
+    const { collection: datasetCollection } = $derived.by(() =>
         useCollectionWithChildren({
             collectionId: datasetId
         })
     );
-    const { deleteCaption } = useDeleteCaption();
-    const { createCaption } = useCreateCaption();
-    const { isEditingMode } = page.data.globalStorage;
 
     // Use client-side query hook for video data
     const { video: videoQuery, refetch: refetchVideo } = $derived(
@@ -70,39 +63,6 @@
         if (!videoData?.sample_id) return;
         await removeTagFromSample(videoData.sample_id, tagId);
         refetchVideo();
-    };
-
-    // Use videoData from query
-    const captions = $derived((videoData?.sample as SampleView)?.captions ?? []);
-
-    const handleDeleteCaption = async (sampleId: string) => {
-        if (!videoData?.sample_id) return;
-        try {
-            await deleteCaption(sampleId);
-            toast.success('Caption deleted successfully');
-            refetchVideo();
-        } catch (error) {
-            toast.error('Failed to delete caption. Please try again.');
-            console.error('Error deleting caption:', error);
-        }
-    };
-
-    const handleCreateCaption = async (sampleId: string, text: string): Promise<boolean> => {
-        if (!videoData?.sample_id) return false;
-        try {
-            await createCaption({ parent_sample_id: sampleId, text });
-            toast.success('Caption created successfully');
-            refetchVideo();
-            // If this is the first caption, refresh root collection to update navigation
-            if (!captions.length) {
-                refetchRootCollection();
-            }
-            return true;
-        } catch (error) {
-            toast.error('Failed to create caption. Please try again.');
-            console.error('Error creating caption:', error);
-            return false;
-        }
     };
 
     const onCaptionUpdate = () => {
@@ -380,26 +340,13 @@
                     </div>
                 </Segment>
                 <MetadataSegment metadata_dict={(videoData?.sample as SampleView).metadata_dict} />
-                <Segment title="Captions">
-                    <div class="flex flex-col gap-3 space-y-4">
-                        <div class="flex flex-col gap-2">
-                            {#each captions as caption (caption.sample_id)}
-                                <CaptionField
-                                    {caption}
-                                    onDeleteCaption={() => handleDeleteCaption(caption.sample_id)}
-                                    onUpdate={onCaptionUpdate}
-                                />
-                            {/each}
-                            <!-- Add new caption button -->
-                            {#if $isEditingMode}
-                                <CreateCaptionField
-                                    onCreate={(text) =>
-                                        handleCreateCaption(videoData?.sample_id ?? '', text)}
-                                />
-                            {/if}
-                        </div>
-                    </div>
-                </Segment>
+                {#if videoData?.sample?.sample_id}
+                    <SampleDetailsCaptionSegment
+                        refetch={onCaptionUpdate}
+                        captions={videoData?.sample?.captions ?? []}
+                        sampleId={videoData.sample.sample_id}
+                    />
+                {/if}
                 <Segment title="Current Frame">
                     {#if currentFrame}
                         <div class="space-y-2 text-sm text-diffuse-foreground">

@@ -146,7 +146,7 @@ export function useInstanceSegmentationBrush({
 
         if (!label) {
             label = await createLabel({
-                dataset_id: collectionId,
+                root_collection_id: collectionId,
                 annotation_label_name: 'DEFAULT'
             });
         }

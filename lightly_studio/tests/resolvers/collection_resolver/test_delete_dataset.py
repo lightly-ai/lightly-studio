@@ -15,7 +15,6 @@ from lightly_studio.resolvers import (
     sample_resolver,
     tag_resolver,
 )
-from lightly_studio.resolvers.sample_resolver.sample_filter import SampleFilter
 from tests.helpers_resolvers import (
     AnnotationDetails,
     create_annotation_label,
@@ -49,7 +48,9 @@ def test_delete_dataset__with_images_and_annotations(db_session: Session) -> Non
     dataset = create_collection(session=db_session, collection_name="to_delete")
     collection_id = dataset.collection_id  # Capture before delete
     img = create_image(session=db_session, collection_id=collection_id, file_path_abs="/a.png")
-    label = create_annotation_label(session=db_session, dataset_id=collection_id, label_name="cat")
+    label = create_annotation_label(
+        session=db_session, root_collection_id=collection_id, label_name="cat"
+    )
     label_id = label.annotation_label_id  # Capture before delete
     create_annotations(
         session=db_session,
@@ -229,7 +230,7 @@ def test_delete_dataset__does_not_affect_other_datasets(db_session: Session) -> 
 
     other_samples = sample_resolver.get_filtered_samples(
         session=db_session,
-        filters=SampleFilter(collection_id=other_collection_id),
+        collection_id=other_collection_id,
     )
     assert other_samples.total_count == 1
     assert other_samples.samples[0].sample_id == other_sample_id

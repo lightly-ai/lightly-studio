@@ -34,7 +34,8 @@
 
     const { data, query, loadMore, refresh } = $derived(
         useSamplesInfinite({
-            body: { filters: { collection_id: parentCollectionId, has_captions: true } }
+            path: { collection_id: parentCollectionId },
+            body: { filters: { has_captions: true } }
         })
     );
 

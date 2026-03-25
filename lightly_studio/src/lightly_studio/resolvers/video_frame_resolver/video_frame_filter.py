@@ -1,6 +1,6 @@
 """Utility functions for building database queries."""
 
-from typing import Optional
+from typing import Literal, Optional
 from uuid import UUID
 
 from pydantic import BaseModel
@@ -18,6 +18,7 @@ class VideoFrameFilter(BaseModel):
     frame_number: Optional[FilterDimensions] = None
     video_id: Optional[UUID] = None
     sample_filter: Optional[SampleFilter] = None
+    filter_type: Literal["video_frame"] = "video_frame"
 
     def apply(self, query: QueryType) -> QueryType:
         """Apply the filters to the given query."""

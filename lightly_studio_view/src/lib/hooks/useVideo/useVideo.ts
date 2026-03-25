@@ -13,8 +13,5 @@ export const useVideo = ({ sampleId }: { sampleId: string }) => {
         client.invalidateQueries({ queryKey: readVideo.queryKey });
     };
 
-    return {
-        refetch,
-        video
-    };
+    return { refetch, video };
 };

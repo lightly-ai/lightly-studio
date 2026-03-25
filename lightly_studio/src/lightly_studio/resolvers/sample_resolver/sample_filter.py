@@ -19,7 +19,6 @@ class SampleFilter(BaseModel):
     """Encapsulates filter parameters for querying samples."""
 
     collection_id: Optional[UUID] = None
-    annotation_label_ids: Optional[list[UUID]] = None
     tag_ids: Optional[list[UUID]] = None
     metadata_filters: Optional[list[MetadataFilter]] = None
     sample_ids: Optional[list[UUID]] = None
@@ -46,14 +45,9 @@ class SampleFilter(BaseModel):
         return query
 
     def _apply_annotation_filters(self, query: QueryType) -> QueryType:
-        annotations_filter = self.annotations_filter
-        # TODO(Horatiu, 03/2026): This is temporary until we refactor the resolvers to use the
-        # AnnotationsFilter directly instead of passing the annotation_label_ids to SampleFilter.
-        if annotations_filter is None and self.annotation_label_ids:
-            annotations_filter = AnnotationsFilter(annotation_label_ids=self.annotation_label_ids)
-        if annotations_filter is None:
+        if self.annotations_filter is None:
             return query
-        return annotations_filter.apply_to_parent_sample_query(
+        return self.annotations_filter.apply_to_parent_sample_query(
             query=query,
             sample_id_column=col(SampleTable.sample_id),
         )

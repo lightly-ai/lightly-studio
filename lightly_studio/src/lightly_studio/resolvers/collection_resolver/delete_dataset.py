@@ -246,7 +246,7 @@ def _delete_annotation_labels(session: Session, root_collection_id: UUID) -> Non
     """Delete annotation labels for the root collection."""
     session.exec(
         delete(AnnotationLabelTable).where(
-            col(AnnotationLabelTable.dataset_id) == root_collection_id
+            col(AnnotationLabelTable.root_collection_id) == root_collection_id
         )
     )
 
