@@ -1,5 +1,4 @@
-# General coding guidelines
-This document outlines general coding standards and best practices for development in LightlyStudio.
+# Pull Requests guidelines
 
 
 ## Atomic Pull Requests
