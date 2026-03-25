@@ -627,8 +627,12 @@ Components should be open for extension but closed for modification. Use composi
 <script lang="ts">
     import { cn } from '$lib/utils';
 
-    export let variant: 'primary' | 'secondary' | 'danger' = 'primary';
-    export let class: string = '';
+    interface Props {
+        variant?: 'primary' | 'secondary' | 'danger';
+        class?: string;
+    }
+
+    let { variant = 'primary', class: className = '' }: Props = $props();
 
     const variantClasses = {
         primary: 'bg-blue-500',
@@ -637,7 +641,7 @@ Components should be open for extension but closed for modification. Use composi
     };
 </script>
 
-<button class={cn(variantClasses[variant], class)}>
+<button class={cn(variantClasses[variant], className)}>
     <slot />
 </button>
 ```
