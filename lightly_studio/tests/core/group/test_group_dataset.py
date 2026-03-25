@@ -28,14 +28,13 @@ class TestGroupDataset:
             ],
             name="test_group_dataset",
         )
-        dataset_id = group_ds.collection_id
 
         assert group_ds.sample_type() == SampleType.GROUP
         assert group_ds.sample_class() == GroupSample
 
         session = group_ds.session
         component_cols = collection_resolver.get_group_components(
-            session=session, parent_collection_id=dataset_id
+            session=session, parent_collection_id=group_ds.collection_id
         )
         assert len(component_cols) == 2
         assert component_cols["img"].sample_type == SampleType.IMAGE

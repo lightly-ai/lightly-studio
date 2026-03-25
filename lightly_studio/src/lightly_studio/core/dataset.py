@@ -64,7 +64,7 @@ class Dataset(Generic[T], ABC):
 
     @property
     def collection_id(self) -> UUID:
-        """Get the dataset ID."""
+        """Get the collection ID."""
         return self._inner.collection_id
 
     @property

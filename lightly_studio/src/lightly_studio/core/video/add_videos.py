@@ -113,7 +113,7 @@ def load_into_collection_from_paths(  # noqa: PLR0913
         ),
     )
     video_logging_context.update_example_paths(file_paths_exist)
-    # Get the video frames dataset ID
+    # Get the video frames collection ID
     video_frames_collection_id = collection_resolver.get_or_create_child_collection(
         session=session, collection_id=collection_id, sample_type=SampleType.VIDEO_FRAME
     )
