@@ -185,13 +185,7 @@ describe('useInstanceSegmentationBrush', () => {
             refetch
         });
 
-        await finishBrush(
-            mask,
-            selectedAnnotation,
-            [],
-            updateAnnotation,
-            new Set(['locked-id'])
-        );
+        await finishBrush(mask, selectedAnnotation, [], updateAnnotation, new Set(['locked-id']));
 
         expect(refetch).toHaveBeenCalledTimes(1);
         expect(toast.error).toHaveBeenCalledWith('This annotation is locked');

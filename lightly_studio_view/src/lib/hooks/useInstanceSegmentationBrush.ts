@@ -101,7 +101,7 @@ export function useInstanceSegmentationBrush({
         if (selectedAnnotation) {
             if (lockedAnnotationIds?.has(selectedAnnotation.sample_id)) {
                 // Refetch to clear the previous state.
-                refetch()
+                refetch();
                 toast.error('This annotation is locked');
                 return;
             }
