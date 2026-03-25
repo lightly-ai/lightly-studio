@@ -75,9 +75,8 @@ directly use your own image, video, or YOLO/COCO dataset.
             path=f"{dataset_path}/coco_subset_128_images/images",
         )
 
-        # Start the UI server on port 8001. Use env variables to change port and host:
-        # LIGHTLY_STUDIO_PORT=8002
-        # LIGHTLY_STUDIO_HOST=0.0.0.0
+        # Start the UI server on localhost port 8001.
+        # Pass `host` and `port` parameters to customize.
         ls.start_gui()
         ```
 
