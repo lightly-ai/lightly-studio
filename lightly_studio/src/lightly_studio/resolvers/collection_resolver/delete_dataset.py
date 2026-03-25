@@ -196,7 +196,7 @@ def _delete_object_tracks(session: Session, collection_ids: list[UUID]) -> None:
     if not collection_ids:
         return
     session.exec(
-        delete(ObjectTrackTable).where(col(ObjectTrackTable.dataset_id).in_(collection_ids))
+        delete(ObjectTrackTable).where(col(ObjectTrackTable.root_collection_id).in_(collection_ids))
     )
 
 

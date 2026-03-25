@@ -151,7 +151,11 @@ class TestLightlyStudioYouTubeVISInstanceSegmentationTrackInput:
         )
         object_track_ids = object_track_resolver.create_many(
             session=db_session,
-            tracks=[ObjectTrackCreate(object_track_number=99, dataset_id=collection.collection_id)],
+            tracks=[
+                ObjectTrackCreate(
+                    object_track_number=99, root_collection_id=collection.collection_id
+                )
+            ],
         )
         annotation_resolver.create_many(
             session=db_session,

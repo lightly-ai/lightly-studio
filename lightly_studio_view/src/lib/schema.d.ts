@@ -1892,10 +1892,10 @@ export interface components {
          */
         AnnotationLabelCreate: {
             /**
-             * Dataset Id
+             * Root Collection Id
              * Format: uuid
              */
-            dataset_id: string;
+            root_collection_id: string;
             /** Annotation Label Name */
             annotation_label_name: string;
         };
@@ -1913,10 +1913,10 @@ export interface components {
          */
         AnnotationLabelTable: {
             /**
-             * Dataset Id
+             * Root Collection Id
              * Format: uuid
              */
-            dataset_id: string;
+            root_collection_id: string;
             /** Annotation Label Name */
             annotation_label_name: string;
             /**
@@ -2479,6 +2479,24 @@ export interface components {
             min?: number | null;
             /** Max */
             max?: number | null;
+        };
+        /** FilterWithCollectionId[VideoFilter] */
+        FilterWithCollectionId_VideoFilter_: {
+            /**
+             * Collection Id
+             * Format: uuid
+             */
+            collection_id: string;
+            filter: components["schemas"]["VideoFilter"];
+        };
+        /** FilterWithCollectionId[VideoFrameFilter] */
+        FilterWithCollectionId_VideoFrameFilter_: {
+            /**
+             * Collection Id
+             * Format: uuid
+             */
+            collection_id: string;
+            filter: components["schemas"]["VideoFrameFilter"];
         };
         /**
          * FloatRange
@@ -3459,8 +3477,8 @@ export interface components {
              * @enum {string}
              */
             filter_type: "video_frame_adjacent";
-            video_frame_filter: components["schemas"]["VideoFrameFilter"];
-            video_filter?: components["schemas"]["VideoFilter"] | null;
+            video_frame_filter: components["schemas"]["FilterWithCollectionId_VideoFrameFilter_"];
+            video_filter?: components["schemas"]["FilterWithCollectionId_VideoFilter_"] | null;
             /** Video Text Embedding */
             video_text_embedding?: number[] | null;
         };
