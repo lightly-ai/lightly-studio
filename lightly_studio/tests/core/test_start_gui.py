@@ -77,12 +77,31 @@ def test_start_gui__with_samples(
     # This should not raise an error
     start_gui()
 
-    # Verify that the server was created with expected args and started
+    # Verify that the server was created with default (env) args and started
     mock_server.assert_called_once_with(
         host=dataset_env.LIGHTLY_STUDIO_HOST,
         port=dataset_env.LIGHTLY_STUDIO_PORT,
     )
     mock_server_instance.create_uvicorn_server.assert_called_once_with()
+
+
+def test_start_gui__with_explicit_host_port(
+    mocker: MockerFixture,
+    patch_collection: None,  # noqa: ARG001
+    tmp_path: Path,
+) -> None:
+    """Test that start_gui forwards explicit host and port to the Server."""
+    image_path = tmp_path / "sample.jpg"
+    Image.new("RGB", (10, 10)).save(image_path)
+
+    dataset = ImageDataset.create("test_dataset")
+    dataset.add_images_from_path(path=tmp_path)
+
+    mock_server = mocker.patch.object(start_gui_module, "Server")
+
+    start_gui(host="0.0.0.0", port=9999)
+
+    mock_server.assert_called_once_with(host="0.0.0.0", port=9999)
 
 
 def test_start_gui__no_datasets(
