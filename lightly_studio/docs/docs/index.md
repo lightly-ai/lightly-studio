@@ -54,7 +54,7 @@ The library is OS-independent and works on Windows, Linux, and macOS.
     pip install lightly_studio
     ```
 
-## **Quickstart**
+## Quickstart
 
 The examples below download the required example data the first time you run them. You can also
 directly use your own image, video, or YOLO/COCO dataset.
