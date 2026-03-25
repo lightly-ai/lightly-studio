@@ -10,7 +10,6 @@
     import CursorToolbarButton from '../CursorToolbarButton/CursorToolbarButton.svelte';
     import DragToolbarButton from '../DragToolbarButton/DragToolbarButton.svelte';
     import { useSettings } from '$lib/hooks/useSettings';
-    import SemanticBrushToolbarButton from '../SemanticBrushToolbarButton/SemanticBrushToolbarButton.svelte';
 
     const { showSegmentationTool = true }: { showSegmentationTool?: boolean } = $props();
 
@@ -41,10 +40,6 @@
         } else if (key === $settingsStore.key_toolbar_drag) {
             e.preventDefault();
             onClickDrag();
-        } else if (key === $settingsStore.key_toolbar_semantic) {
-            if (!showSegmentationTool) return;
-            e.preventDefault();
-            onClickSemanticBrush();
         }
     };
 
@@ -85,7 +80,15 @@
         setStatus
     } = useSampleDetailsToolbarContext();
 
-    let lastSegmentationType: AnnotationType = AnnotationType.INSTANCE_SEGMENTATION;
+    const getBrushAnnotationType = () => {
+        const isSemanticAnnotationInDetailsView =
+            annotationLabelContext.isOnAnnotationDetailsView &&
+            annotationLabelContext.annotationType === AnnotationType.SEMANTIC_SEGMENTATION;
+
+        return isSemanticAnnotationInDetailsView
+            ? AnnotationType.SEMANTIC_SEGMENTATION
+            : AnnotationType.INSTANCE_SEGMENTATION;
+    };
 
     $effect(() => {
         // Reset annotation label and type when switching to cursor tool
@@ -108,9 +111,7 @@
                 }
                 setBrushMode('brush');
             } else if (sampleDetailsToolbarContext.status === 'brush') {
-                const typeToSet = annotationLabelContext.annotationType ?? lastSegmentationType;
-                lastSegmentationType = typeToSet;
-                setAnnotationType(typeToSet);
+                setAnnotationType(getBrushAnnotationType());
             }
         }
         if (sampleDetailsToolbarContext.status === 'drag') {
@@ -139,18 +140,7 @@
         if (!showSegmentationTool) return;
 
         setStatus('brush');
-        lastSegmentationType = AnnotationType.INSTANCE_SEGMENTATION;
-        setAnnotationType(lastSegmentationType);
-        if (!annotationLabelContext.isOnAnnotationDetailsView) setAnnotationId(null);
-        setLastCreatedAnnotationId(null);
-    };
-
-    const onClickSemanticBrush = () => {
-        if (!showSegmentationTool || annotationLabelContext.isOnAnnotationDetailsView) return;
-
-        setStatus('brush');
-        lastSegmentationType = AnnotationType.SEMANTIC_SEGMENTATION;
-        setAnnotationType(lastSegmentationType);
+        setAnnotationType(getBrushAnnotationType());
         if (!annotationLabelContext.isOnAnnotationDetailsView) setAnnotationId(null);
         setLastCreatedAnnotationId(null);
     };
@@ -208,20 +198,6 @@
                             AnnotationType.INSTANCE_SEGMENTATION}
                 />
             </SampleDetailsToolbarTooltip>
-            {#if !annotationLabelContext.isOnAnnotationDetailsView}
-                <SampleDetailsToolbarTooltip
-                    label="Semantic Segmentation Brush"
-                    shortcut={$settingsStore.key_toolbar_semantic.toUpperCase()}
-                    action="paint"
-                >
-                    <SemanticBrushToolbarButton
-                        onclick={onClickSemanticBrush}
-                        isActive={sampleDetailsToolbarContext.status === 'brush' &&
-                            annotationLabelContext.annotationType ===
-                                AnnotationType.SEMANTIC_SEGMENTATION}
-                    />
-                </SampleDetailsToolbarTooltip>
-            {/if}
         {/if}
     </div>
 </div>

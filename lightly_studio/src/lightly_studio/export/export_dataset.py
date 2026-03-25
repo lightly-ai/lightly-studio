@@ -148,7 +148,7 @@ def to_pascalvoc_semantic_segmentation(
     samples: Iterable[ImageSample],
     output_folder: Path,
 ) -> None:
-    """Exports semantic segmentation annotations to a Pascal VOC segmentation folder.
+    """Exports instance segmentation annotations to a Pascal VOC segmentation folder.
 
     This function is for internal use.
 

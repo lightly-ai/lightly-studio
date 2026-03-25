@@ -26,8 +26,7 @@ const settingsStore = writable({
     key_toolbar_selection: 's',
     key_toolbar_drag: 'd',
     key_toolbar_bounding_box: 'b',
-    key_toolbar_segmentation_mask: 'm',
-    key_toolbar_semantic: 'g'
+    key_toolbar_segmentation_mask: 'm'
 });
 
 vi.mock('$lib/hooks/useSettings', () => ({
@@ -126,31 +125,6 @@ describe('SampleDetailsToolbar', () => {
         expect(mockAnnotationLabelContext.annotationId).toBeNull();
     });
 
-    it('activates semantic brush and sets semantic segmentation', async () => {
-        mockAnnotationLabelContext.annotationLabel = 'road';
-        const { getByLabelText } = render(SampleDetailsToolbar);
-
-        await fireEvent.click(getByLabelText('Semantic Segmentation Brush'));
-
-        expect(mockSampleDetailsToolbarContext.status).toBe('brush');
-        expect(mockAnnotationLabelContext.annotationType).toBe(
-            AnnotationType.SEMANTIC_SEGMENTATION
-        );
-        expect(mockAnnotationLabelContext.annotationLabel).toBe('road');
-        expect(mockAnnotationLabelContext.annotationId).toBeNull();
-    });
-
-    it('activates semantic brush through the configured shortcut', async () => {
-        render(SampleDetailsToolbar);
-
-        await fireEvent.keyDown(window, { key: 'g' });
-
-        expect(mockSampleDetailsToolbarContext.status).toBe('brush');
-        expect(mockAnnotationLabelContext.annotationType).toBe(
-            AnnotationType.SEMANTIC_SEGMENTATION
-        );
-    });
-
     it('activates drag tool', async () => {
         mockAnnotationLabelContext.annotationLabel = 'car';
         const { getByLabelText } = render(SampleDetailsToolbar);
@@ -235,7 +209,6 @@ describe('SampleDetailsToolbar', () => {
         });
 
         expect(queryByLabelText('Instance Segmentation Brush')).not.toBeInTheDocument();
-        expect(queryByLabelText('Semantic Segmentation Brush')).not.toBeInTheDocument();
     });
 
     it('keeps eraser mode when switching from drag back to brush', async () => {
@@ -262,17 +235,6 @@ describe('SampleDetailsToolbar', () => {
         );
     });
 
-    it('keeps semantic brush active when remounting in brush mode', () => {
-        mockSampleDetailsToolbarContext.status = 'brush';
-        mockAnnotationLabelContext.annotationType = AnnotationType.SEMANTIC_SEGMENTATION;
-
-        render(SampleDetailsToolbar);
-
-        expect(mockAnnotationLabelContext.annotationType).toBe(
-            AnnotationType.SEMANTIC_SEGMENTATION
-        );
-    });
-
     it('syncs annotation type to instance segmentation when mounted in brush mode', () => {
         mockSampleDetailsToolbarContext.status = 'brush';
         mockAnnotationLabelContext.annotationType = null;
@@ -282,6 +244,11 @@ describe('SampleDetailsToolbar', () => {
         expect(mockAnnotationLabelContext.annotationType).toBe(
             AnnotationType.INSTANCE_SEGMENTATION
         );
+    });
+
+    it('does not render semantic segmentation brush control', () => {
+        const { queryByLabelText } = render(SampleDetailsToolbar);
+        expect(queryByLabelText('Semantic Segmentation Brush')).not.toBeInTheDocument();
     });
 
     it('does not trigger toolbar shortcuts while space is held', async () => {
