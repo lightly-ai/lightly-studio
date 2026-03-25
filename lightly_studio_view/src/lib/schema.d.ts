@@ -1893,10 +1893,10 @@ export interface components {
          */
         AnnotationLabelCreate: {
             /**
-             * Root Collection Id
+             * Dataset Id
              * Format: uuid
              */
-            root_collection_id: string;
+            dataset_id: string;
             /** Annotation Label Name */
             annotation_label_name: string;
         };
@@ -1914,10 +1914,10 @@ export interface components {
          */
         AnnotationLabelTable: {
             /**
-             * Root Collection Id
+             * Dataset Id
              * Format: uuid
              */
-            root_collection_id: string;
+            dataset_id: string;
             /** Annotation Label Name */
             annotation_label_name: string;
             /**
@@ -2480,24 +2480,6 @@ export interface components {
             min?: number | null;
             /** Max */
             max?: number | null;
-        };
-        /** FilterWithCollectionId[VideoFilter] */
-        FilterWithCollectionId_VideoFilter_: {
-            /**
-             * Collection Id
-             * Format: uuid
-             */
-            collection_id: string;
-            filter: components["schemas"]["VideoFilter"];
-        };
-        /** FilterWithCollectionId[VideoFrameFilter] */
-        FilterWithCollectionId_VideoFrameFilter_: {
-            /**
-             * Collection Id
-             * Format: uuid
-             */
-            collection_id: string;
-            filter: components["schemas"]["VideoFrameFilter"];
         };
         /**
          * FloatRange
@@ -3478,8 +3460,8 @@ export interface components {
              * @enum {string}
              */
             filter_type: "video_frame_adjacent";
-            video_frame_filter: components["schemas"]["FilterWithCollectionId_VideoFrameFilter_"];
-            video_filter?: components["schemas"]["FilterWithCollectionId_VideoFilter_"] | null;
+            video_frame_filter: components["schemas"]["VideoFrameFilter"];
+            video_filter?: components["schemas"]["VideoFilter"] | null;
             /** Video Text Embedding */
             video_text_embedding?: number[] | null;
         };

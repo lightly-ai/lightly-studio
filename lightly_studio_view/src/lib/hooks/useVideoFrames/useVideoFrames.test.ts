@@ -84,7 +84,7 @@ describe('useVideoFrames', () => {
     });
 
     it('should initialize with default values', () => {
-        const hook = useVideoFrames({ videoData: mockVideoData });
+        const hook = useVideoFrames({ video: mockVideoData });
 
         expect(get(hook.currentFrame)).toBeUndefined();
         expect(hook.loading).toBe(false);
@@ -102,7 +102,7 @@ describe('useVideoFrames', () => {
             error: undefined
         } as unknown as MockGetAllFramesResponse);
 
-        const hook = useVideoFrames({ videoData: mockVideoData });
+        const hook = useVideoFrames({ video: mockVideoData });
 
         // Subscribe to currentFrame store to verify reactivity
         const values: (FrameView | undefined)[] = [];
@@ -144,7 +144,7 @@ describe('useVideoFrames', () => {
             error: undefined
         } as unknown as MockGetAllFramesResponse);
 
-        const hook = useVideoFrames({ videoData: mockVideoData });
+        const hook = useVideoFrames({ video: mockVideoData });
 
         // Request frame 100, which doesn't exist in mockFrames
         await expect(hook.loadFramesFromFrameNumber(100)).rejects.toThrow(
@@ -162,7 +162,7 @@ describe('useVideoFrames', () => {
             error: undefined
         } as unknown as MockGetAllFramesResponse);
 
-        const hook = useVideoFrames({ videoData: mockVideoData });
+        const hook = useVideoFrames({ video: mockVideoData });
 
         // 0.05 * 30 = 1.5, which floors to 1
         await hook.loadFrameByPlaybackTime(0.05, 30);
@@ -182,7 +182,7 @@ describe('useVideoFrames', () => {
             error: undefined
         } as unknown as MockGetAllFramesResponse);
 
-        const hook = useVideoFrames({ videoData: mockVideoData });
+        const hook = useVideoFrames({ video: mockVideoData });
         await hook.loadFramesFromFrameNumber(1);
 
         // Verify frame was loaded
@@ -200,7 +200,7 @@ describe('useVideoFrames', () => {
                 error: undefined
             } as unknown as MockGetAllFramesResponse);
 
-            const hook = useVideoFrames({ videoData: mockVideoData });
+            const hook = useVideoFrames({ video: mockVideoData });
 
             // Request frame 100, which doesn't exist in mockFrames
             await expect(hook.loadFrameByPlaybackTime(100 / 30, 30)).rejects.toThrow(
@@ -210,7 +210,7 @@ describe('useVideoFrames', () => {
 
         it('should throw error when video data is not available', async () => {
             // Create hook with null videoData
-            const hook = useVideoFrames({ videoData: null as unknown as VideoView });
+            const hook = useVideoFrames({ video: null as unknown as VideoView });
 
             await expect(hook.loadFrameByPlaybackTime(0, 30)).rejects.toThrow(
                 'No video data available'
@@ -229,7 +229,7 @@ describe('useVideoFrames', () => {
                 error: undefined
             } as unknown as MockGetAllFramesResponse);
 
-            const hook = useVideoFrames({ videoData: mockVideoData });
+            const hook = useVideoFrames({ video: mockVideoData });
 
             const values: (FrameView | undefined)[] = [];
             const unsubscribe = hook.currentFrame.subscribe((value) => {

@@ -13,11 +13,11 @@
     } = $props();
 </script>
 
-<div class="relative flex h-60 w-60 items-start justify-start">
+<div class="relative flex h-40 w-40 items-start justify-start">
     {#if type === 'image'}
-        <Image className="object-contain" {src} />
+        <Image className="pointer-events-none object-contain" {src} />
     {:else if type === 'video'}
-        <VideoPreview className="object-contain" {src} />
+        <VideoPreview className="pointer-events-none object-contain" {src} />
     {/if}
     <Badge variant="secondary" class="badge absolute m-2">{title}</Badge>
 </div>

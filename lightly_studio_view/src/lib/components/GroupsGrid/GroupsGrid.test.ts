@@ -121,7 +121,8 @@ describe('GroupsGrid', () => {
                 isEmpty: false,
                 hasNextPage: false,
                 isFetchingNextPage: false,
-                onLoadMore: vi.fn()
+                onLoadMore: vi.fn(),
+                navigateToSampleDetailsByView: vi.fn()
             }
         });
 
@@ -138,7 +139,8 @@ describe('GroupsGrid', () => {
                 isEmpty: true,
                 hasNextPage: false,
                 isFetchingNextPage: false,
-                onLoadMore: vi.fn()
+                onLoadMore: vi.fn(),
+                navigateToSampleDetailsByView: vi.fn()
             }
         });
 
@@ -154,7 +156,8 @@ describe('GroupsGrid', () => {
                 isEmpty: false,
                 hasNextPage: false,
                 isFetchingNextPage: false,
-                onLoadMore: vi.fn()
+                onLoadMore: vi.fn(),
+                navigateToSampleDetailsByView: vi.fn()
             }
         });
 
@@ -170,7 +173,8 @@ describe('GroupsGrid', () => {
                 isEmpty: false,
                 hasNextPage: false,
                 isFetchingNextPage: false,
-                onLoadMore: vi.fn()
+                onLoadMore: vi.fn(),
+                navigateToSampleDetailsByView: vi.fn()
             }
         });
 
@@ -179,8 +183,8 @@ describe('GroupsGrid', () => {
         expect(gridScroll).toBeInTheDocument();
     });
 
-    it('calls navigateToGroupDetails on double-click for each grid item', () => {
-        const mockNavigateToGroupDetails = vi.fn();
+    it('calls navigateToSampleDetailsByView on double-click for each grid item', () => {
+        const mockNavigateToSampleDetailsByView = vi.fn();
 
         const { container } = render(GroupsGridTestWrapper, {
             props: {
@@ -190,7 +194,7 @@ describe('GroupsGrid', () => {
                 hasNextPage: false,
                 isFetchingNextPage: false,
                 onLoadMore: vi.fn(),
-                navigateToGroupDetails: mockNavigateToGroupDetails
+                navigateToSampleDetailsByView: mockNavigateToSampleDetailsByView
             }
         });
 
@@ -198,15 +202,15 @@ describe('GroupsGrid', () => {
         const gridItems = container.querySelectorAll('[role="button"]');
         expect(gridItems.length).toBe(mockGroups.length);
 
-        // Double-click each grid item and verify navigateToGroupDetails is called with correct sample_id
+        // Double-click each grid item and verify navigateToSampleDetailsByView is called with correct group
         mockGroups.forEach((group, index) => {
             const gridItem = gridItems[index] as HTMLElement;
             gridItem.dispatchEvent(new MouseEvent('dblclick', { bubbles: true }));
-            expect(mockNavigateToGroupDetails).toHaveBeenCalledWith(group.sample_id);
+            expect(mockNavigateToSampleDetailsByView).toHaveBeenCalledWith(group);
         });
 
         // Verify it was called exactly once per item
-        expect(mockNavigateToGroupDetails).toHaveBeenCalledTimes(mockGroups.length);
+        expect(mockNavigateToSampleDetailsByView).toHaveBeenCalledTimes(mockGroups.length);
     });
 
     it('shows loading spinner when fetching next page', () => {
@@ -217,7 +221,8 @@ describe('GroupsGrid', () => {
                 isEmpty: false,
                 hasNextPage: true,
                 isFetchingNextPage: true,
-                onLoadMore: vi.fn()
+                onLoadMore: vi.fn(),
+                navigateToSampleDetailsByView: vi.fn()
             }
         });
 
@@ -236,7 +241,8 @@ describe('GroupsGrid', () => {
                 isEmpty: false,
                 hasNextPage: true,
                 isFetchingNextPage: false,
-                onLoadMore: mockOnLoadMore
+                onLoadMore: mockOnLoadMore,
+                navigateToSampleDetailsByView: vi.fn()
             }
         });
 
@@ -255,7 +261,8 @@ describe('GroupsGrid', () => {
                 isEmpty: false,
                 hasNextPage: false,
                 isFetchingNextPage: false,
-                onLoadMore: mockOnLoadMore
+                onLoadMore: mockOnLoadMore,
+                navigateToSampleDetailsByView: vi.fn()
             }
         });
 
@@ -272,7 +279,8 @@ describe('GroupsGrid', () => {
                 isEmpty: false,
                 hasNextPage: false,
                 isFetchingNextPage: false,
-                onLoadMore: vi.fn()
+                onLoadMore: vi.fn(),
+                navigateToSampleDetailsByView: vi.fn()
             }
         });
 
