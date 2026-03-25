@@ -1280,17 +1280,23 @@ To test the interaction between components and functions. It tests the integrati
 
 ```typescript
 import { render, screen } from "@testing-library/svelte";
-import MyComponent from "./MyComponent.svelte";
 import { fireEvent } from "@testing-library/svelte";
-import { useCounter } from "./useCounter.ts";
+import MyComponent from "./MyComponent.svelte";
 
-describe("MyComponent calls useCounter", () => {
-  it("calls the increment function when clicked", async () => {
-    const { increment } = useCounter();
-    const incrementSpy = jest.spyOn(increment, "increment");
+describe("MyComponent with useCounter integration", () => {
+  it("increments count when button is clicked", async () => {
     render(MyComponent);
-    await fireEvent.click(screen.getByRole("button"));
-    expect(incrementSpy).toHaveBeenCalled();
+    const button = screen.getByRole("button");
+
+    // Initial state
+    expect(button).toHaveTextContent("Count: 0");
+
+    // Click and verify integration
+    await fireEvent.click(button);
+    expect(button).toHaveTextContent("Count: 1");
+
+    await fireEvent.click(button);
+    expect(button).toHaveTextContent("Count: 2");
   });
 });
 ```
