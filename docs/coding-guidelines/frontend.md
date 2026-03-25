@@ -186,6 +186,144 @@ PR 2: Add GridSearch component (uses useFileUpload)
    Purpose: Final integration
 ```
 
+### Splitting Work into Multiple PRs
+
+When you have multiple changes ready but need to split them into separate PRs, use one of these strategies:
+
+#### Strategy 1: Interactive Staging (Recommended for Simple Splits)
+
+Split changes by staging files selectively:
+
+```bash
+# You have: hookY, ComponentA, ComponentB all changed
+
+# Create branch for PR 1 (hookY)
+git checkout -b feat/add-use-y-hook main
+git add src/lib/hooks/useY/
+git commit -m "Add useY hook + tests"
+git push -u origin feat/add-use-y-hook
+
+# Create branch for PR 2 (ComponentA) - starts from main, cherry-pick needed files
+git checkout -b feat/add-component-a main
+git checkout feat/add-use-y-hook -- src/lib/hooks/useY/  # Get the hook
+git add src/lib/components/ComponentA/
+git commit -m "Add ComponentA using useY hook"
+git push -u origin feat/add-component-a
+
+# Create branch for PR 3 (ComponentB)
+git checkout -b feat/add-component-b main
+git checkout feat/add-use-y-hook -- src/lib/hooks/useY/  # Get the hook
+git add src/lib/components/ComponentB/
+git commit -m "Add ComponentB using useY hook"
+git push -u origin feat/add-component-b
+```
+
+#### Strategy 2: Interactive Add (Best for Mixed Changes)
+
+Use `git add -p` to stage parts of files:
+
+```bash
+# Create first branch
+git checkout -b feat/add-use-y-hook main
+
+# Stage only hook-related changes (even within same files)
+git add -p  # Interactively choose hunks
+git add src/lib/hooks/useY/  # Add entire hook folder
+
+git commit -m "Add useY hook + tests"
+git push -u origin feat/add-use-y-hook
+
+# Remaining changes stay uncommitted - create next branch
+git checkout -b feat/add-component-a main
+git add src/lib/components/ComponentA/
+git commit -m "Add ComponentA"
+git push -u origin feat/add-component-a
+```
+
+#### Strategy 3: Stacked Branches (For Sequential Dependencies)
+
+Create branches that build on each other:
+
+```bash
+# PR 1: Hook
+git checkout -b feat/pr1-add-use-y-hook main
+git add src/lib/hooks/useY/
+git commit -m "Add useY hook + tests"
+git push -u origin feat/pr1-add-use-y-hook
+
+# PR 2: ComponentA (built on top of PR 1)
+git checkout -b feat/pr2-add-component-a feat/pr1-add-use-y-hook
+git add src/lib/components/ComponentA/
+git commit -m "Add ComponentA using useY"
+git push -u origin feat/pr2-add-component-a
+
+# PR 3: ComponentB (built on top of PR 1)
+git checkout -b feat/pr3-add-component-b feat/pr1-add-use-y-hook
+git add src/lib/components/ComponentB/
+git commit -m "Add ComponentB using useY"
+git push -u origin feat/pr3-add-component-b
+
+# After PR 1 merges:
+git checkout feat/pr2-add-component-a
+git rebase main
+git push --force-with-lease
+
+git checkout feat/pr3-add-component-b
+git rebase main
+git push --force-with-lease
+```
+
+#### Strategy 4: Git Worktrees (Advanced - Multiple Directories)
+
+Use worktrees to work on multiple PRs simultaneously without switching branches:
+
+```bash
+# Main repo in ~/project/
+
+# Create worktree for PR 1
+git worktree add ../project-pr1-hook feat/pr1-add-use-y-hook
+
+# Create worktree for PR 2
+git worktree add ../project-pr2-component-a feat/pr2-add-component-a
+
+# Now you have:
+# ~/project/           (main branch)
+# ~/project-pr1-hook/  (PR 1 branch)
+# ~/project-pr2-component-a/ (PR 2 branch)
+
+# Work in each directory independently
+cd ../project-pr1-hook
+git add src/lib/hooks/useY/
+git commit -m "Add useY hook"
+git push
+
+cd ../project-pr2-component-a
+git add src/lib/components/ComponentA/
+git commit -m "Add ComponentA"
+git push
+
+# Cleanup when done
+git worktree remove ../project-pr1-hook
+git worktree remove ../project-pr2-component-a
+```
+
+#### Choosing the Right Strategy
+
+| Scenario | Best Strategy | Why |
+|----------|---------------|-----|
+| Files cleanly separated | Interactive Staging | Simple, fast, no conflicts |
+| Changes mixed in same files | Interactive Add (`-p`) | Fine-grained control |
+| PRs must be reviewed in order | Stacked Branches | Clear dependencies |
+| Many PRs, context switching | Git Worktrees | No branch switching needed |
+
+#### Best Practices
+
+- **Plan before coding**: Know you'll need multiple PRs? Create branches upfront
+- **Commit frequently**: Small commits are easier to split later
+- **Use descriptive branch names**: Include PR number for stacked branches
+- **Test each PR independently**: Don't assume dependencies will be merged
+- **Keep worktrees clean**: Remove unused worktrees to avoid confusion
+
 ### Handling Dependencies Between PRs
 
 When PRs depend on each other:
