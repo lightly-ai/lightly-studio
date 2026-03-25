@@ -1453,44 +1453,72 @@ describe("SearchInput", () => {
 });
 ```
 
-#### 2. Avoid Testing Opposites
+#### 2. Avoid Redundant Mirror Tests
 
-Don't test both enabled and disabled states - testing one implies the other:
+Don't create separate tests for opposite states when both tests exercise the exact same condition. However, test both states if they're controlled by different conditions.
+
+**Good: Test only one state when controlled by a single boolean**
 
 ```typescript
-// Good: Test only one state
+// Good: Testing the truthy case is sufficient
 it("disables input when isUploading is true", () => {
   render(SearchInput, { props: { ...defaultProps, isUploading: true } });
   expect(screen.getByRole("textbox")).toBeDisabled();
 });
 
-// Bad: Testing the opposite is redundant
-it("enables input when isUploading is false", () => {
-  render(SearchInput, { props: defaultProps });
-  expect(screen.getByRole("textbox")).not.toBeDisabled();
+// Redundant: The opposite case doesn't add coverage
+// it("enables input when isUploading is false", () => {
+//   render(SearchInput, { props: defaultProps });
+//   expect(screen.getByRole("textbox")).not.toBeDisabled();
+// });
+```
+
+**When to test both states:**
+
+```typescript
+// Good: Test both when different conditions control each state
+it("disables button when user lacks permission", () => {
+  render(ActionButton, { props: { hasPermission: false, isLoading: false } });
+  expect(screen.getByRole("button")).toBeDisabled();
+});
+
+it("disables button when loading", () => {
+  render(ActionButton, { props: { hasPermission: true, isLoading: true } });
+  expect(screen.getByRole("button")).toBeDisabled();
+});
+
+it("enables button when user has permission and not loading", () => {
+  render(ActionButton, { props: { hasPermission: true, isLoading: false } });
+  expect(screen.getByRole("button")).not.toBeDisabled();
 });
 ```
+
+In the second example, all three tests are valuable because:
+- Different conditions can cause the disabled state
+- The enabled state requires both conditions to be met
+- Each test verifies a distinct code path
 
 #### 3. Combine Related Tests
 
 Merge tests that check related functionality:
 
 ```typescript
-// Good: Combined test
-it("renders both search and image icons", () => {
-  const { container } = render(SearchInput, { props: defaultProps });
-  expect(container.querySelectorAll("svg").length).toBe(2);
+// Good: Combined test that verifies user-facing behavior
+it("renders search input with placeholder and accessible label", () => {
+  render(SearchInput, { props: defaultProps });
+  expect(screen.getByPlaceholderText("Search")).toBeInTheDocument();
+  expect(screen.getByRole("textbox")).toHaveAccessibleName("Search");
 });
 
-// Bad: Separate tests for the same concept
-it("renders search icon", () => {
-  const { container } = render(SearchInput, { props: defaultProps });
-  expect(container.querySelectorAll("svg").length).toBeGreaterThan(0);
+// Bad: Separate tests for closely related accessibility features
+it("renders search input with placeholder", () => {
+  render(SearchInput, { props: defaultProps });
+  expect(screen.getByPlaceholderText("Search")).toBeInTheDocument();
 });
 
-it("renders image icon", () => {
-  const { container } = render(SearchInput, { props: defaultProps });
-  expect(container.querySelectorAll("svg").length).toBe(2);
+it("renders search input with accessible label", () => {
+  render(SearchInput, { props: defaultProps });
+  expect(screen.getByRole("textbox")).toHaveAccessibleName("Search");
 });
 ```
 
