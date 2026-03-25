@@ -1169,6 +1169,250 @@ page.params.sampleId;
 - use reusable tiny hooks to avoid one big store for all the state management. E.g. [useTags](../../lightly_studio_view/src/lib/hooks/useTags/useTags.ts).
 - Separate state management logic from the component logic as much as possible for better maintanance. Use `src/lib/hooks` for reusable hooks.
 
+### Avoiding Props Drilling
+
+Props drilling occurs when you pass props through multiple component layers just to reach a deeply nested component. This makes code harder to maintain and components tightly coupled.
+
+#### Solution 1: Svelte Context API (Recommended for Component Trees)
+
+Use Svelte's `setContext` and `getContext` for sharing data within a component tree without passing props.
+
+**When to use:**
+- Data needed by multiple components in a subtree
+- Component-scoped state (e.g., theme, configuration)
+- Not needed globally across the entire app
+
+**Example:**
+
+```typescript
+// ✅ Good: Using Context API
+// ParentComponent.svelte
+<script lang="ts">
+  import { setContext } from 'svelte';
+  import { writable } from 'svelte/store';
+
+  interface UserContext {
+    user: { name: string; email: string };
+    updateUser: (user: { name: string; email: string }) => void;
+  }
+
+  const user = writable({ name: 'John', email: 'john@example.com' });
+
+  setContext<UserContext>('user', {
+    user,
+    updateUser: (newUser) => user.set(newUser)
+  });
+</script>
+
+<ChildComponent />
+
+// DeeplyNestedComponent.svelte
+<script lang="ts">
+  import { getContext } from 'svelte';
+
+  const { user, updateUser } = getContext<UserContext>('user');
+</script>
+
+<p>Welcome, {$user.name}!</p>
+<button onclick={() => updateUser({ name: 'Jane', email: 'jane@example.com' })}>
+  Update User
+</button>
+```
+
+**Bad - Props drilling:**
+
+```typescript
+// ❌ Bad: Passing props through every layer
+// ParentComponent.svelte
+<script lang="ts">
+  const user = { name: 'John', email: 'john@example.com' };
+</script>
+
+<MiddleComponent {user} />
+
+// MiddleComponent.svelte
+<script lang="ts">
+  interface Props {
+    user: { name: string; email: string };
+  }
+
+  let { user }: Props = $props();
+</script>
+
+<AnotherMiddle {user} />
+
+// AnotherMiddle.svelte
+<script lang="ts">
+  interface Props {
+    user: { name: string; email: string };
+  }
+
+  let { user }: Props = $props();
+</script>
+
+<DeeplyNestedComponent {user} />
+```
+
+#### Solution 2: Svelte Stores (For Global State)
+
+Use stores for truly global state that's needed across unrelated parts of the application.
+
+**When to use:**
+- Global application state (auth, user preferences)
+- State shared across unrelated component trees
+- State that persists across navigation
+
+**Example:**
+
+```typescript
+// ✅ Good: Using stores for global state
+// lib/stores/user.ts
+import { writable } from 'svelte/store';
+
+export const currentUser = writable({
+  name: 'John',
+  email: 'john@example.com'
+});
+
+// AnyComponent.svelte
+<script lang="ts">
+  import { currentUser } from '$lib/stores/user';
+</script>
+
+<p>Welcome, {$currentUser.name}!</p>
+
+// AnotherUnrelatedComponent.svelte
+<script lang="ts">
+  import { currentUser } from '$lib/stores/user';
+</script>
+
+<button onclick={() => currentUser.set({ name: 'Jane', email: 'jane@example.com' })}>
+  Update User
+</button>
+```
+
+#### Solution 3: SvelteKit `$app/state` (For Page-Level Data)
+
+Use SvelteKit's page state for data loaded via `+page.ts` or `+page.server.ts`.
+
+**When to use:**
+- Data loaded from the server
+- Page-specific state that comes from routing
+- Data that should be available to all components on a page
+
+**Example:**
+
+```typescript
+// ✅ Good: Using page state
+// routes/dashboard/+page.ts
+export const load = async ({ fetch }) => {
+  const user = await fetch('/api/user').then(r => r.json());
+  return { user };
+};
+
+// routes/dashboard/+page.svelte
+<script lang="ts">
+  import { page } from '$app/state';
+  import UserStats from './UserStats.svelte';
+  import UserProfile from './UserProfile.svelte';
+</script>
+
+<UserStats />
+<UserProfile />
+
+// routes/dashboard/UserProfile.svelte
+<script lang="ts">
+  import { page } from '$app/state';
+
+  // Access page data directly, no props needed
+  const user = page.data.user;
+</script>
+
+<p>{user.name}</p>
+```
+
+#### Solution 4: Component Composition with Snippets
+
+Sometimes props drilling indicates poor component structure. Use Svelte 5 snippets for flexible component composition.
+
+**Bad - Drilling props for UI customization:**
+
+```typescript
+// ❌ Bad: Drilling props for UI customization
+<Layout headerText="Dashboard" footerText="© 2024" />
+```
+
+**Good - Using Svelte 5 snippets:**
+
+```typescript
+// ✅ Good: Using Svelte 5 snippets for reusable content blocks
+// Layout.svelte
+<script lang="ts">
+  import type { Snippet } from 'svelte';
+
+  interface Props {
+    header?: Snippet;
+    footer?: Snippet;
+    children: Snippet;
+  }
+
+  let { header, footer, children }: Props = $props();
+</script>
+
+<div class="layout">
+  {#if header}
+    <header>{@render header()}</header>
+  {/if}
+
+  <main>{@render children()}</main>
+
+  {#if footer}
+    <footer>{@render footer()}</footer>
+  {/if}
+</div>
+
+// Usage in parent component
+<script lang="ts">
+  import Layout from './Layout.svelte';
+</script>
+
+<Layout>
+  {#snippet header()}
+    <h1>Dashboard</h1>
+  {/snippet}
+
+  <p>Main content goes here</p>
+
+  {#snippet footer()}
+    <p>© 2024</p>
+  {/snippet}
+</Layout>
+```
+
+**Benefits of snippets:**
+
+- **Type-safe**: Snippets are strongly typed with the `Snippet` type
+- **Flexible**: Can be passed as props, stored in variables, or conditionally rendered
+- **Clear API**: Component interface explicitly shows what content blocks are expected
+- **Better composition**: Easier to compose complex layouts without prop drilling
+
+#### Choosing the Right Solution
+
+| Use Case | Solution | Scope |
+|----------|----------|-------|
+| Component tree state | Context API | Subtree |
+| Global app state | Stores | Application-wide |
+| Page-loaded data | `$app/state` | Current page |
+| UI composition | Slots | Component-specific |
+
+**Best Practices:**
+
+- **Prefer Context API** for component-tree scoped state
+- **Use stores sparingly** - only for truly global state
+- **Leverage `$app/state`** for server-loaded data instead of prop drilling
+- **Consider composition** before reaching for state management
+- **Keep context keys type-safe** using TypeScript interfaces
+
 ### Svelte 5 Syntax
 
 #### Component Props
