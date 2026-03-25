@@ -46,6 +46,10 @@
     );
 
     // Prepare filter for embeddings API - use VideoFilter for videos, ImageFilter for images
+    // Strip sample_ids from sample_filter so the embeddings query returns all points.
+    // If sample_filter has no other fields, remove it entirely to keep the structure
+    // consistent — this prevents the baseFilter watcher from detecting a spurious change
+    // when sample_ids are added/removed, which would incorrectly trigger clearSelection().
     const filter = $derived.by(() => {
         const currentFilter = isVideos ? $videoFilter : $imageFilter;
         if (!currentFilter) return null;
@@ -54,6 +58,12 @@
             return currentFilter;
         }
 
+        const { sample_ids: _, ...restSampleFilter } = currentFilter.sample_filter;
+        if (Object.keys(restSampleFilter).length === 0) {
+            // sample_filter only had sample_ids — remove it entirely
+            const { sample_filter: __, ...restFilter } = currentFilter;
+            return restFilter;
+        }
         return {
             ...currentFilter,
             sample_filter: {
