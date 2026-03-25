@@ -88,16 +88,13 @@ directly use your own image, video, or YOLO/COCO dataset.
     ```python
     import lightly_studio as ls
     from lightly_studio.utils import download_example_dataset
-    from lightly_studio.dataset import env
 
     dataset_path = download_example_dataset(download_dir="dataset_examples")
     dataset = ls.ImageDataset.create()
     dataset.add_images_from_path(path=f"{dataset_path}/coco_subset_128_images/images")
 
     # Colab needs 0.0.0.0 to expose the port.
-    env.LIGHTLY_STUDIO_HOST = "0.0.0.0"
-
-    ls.start_gui()
+    server = ls.start_gui_background(host="0.0.0.0")
     ```
 
     Jupyter:
@@ -105,7 +102,7 @@ directly use your own image, video, or YOLO/COCO dataset.
     ```python
     from IPython.display import IFrame, display
 
-    display(IFrame(env.APP_URL, width=1000, height=800))
+    display(IFrame(server.url, width=1000, height=800))
     ```
 
     Colab:
@@ -113,7 +110,7 @@ directly use your own image, video, or YOLO/COCO dataset.
     ```python
     from google.colab import output
 
-    output.serve_kernel_port_as_iframe(env.LIGHTLY_STUDIO_PORT, width=1000, height=800)
+    output.serve_kernel_port_as_iframe(server.port, width=1000, height=800)
     ```
     
     **Tagging by Folder Structure**

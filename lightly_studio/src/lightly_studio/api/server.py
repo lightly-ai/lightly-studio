@@ -31,7 +31,6 @@ class Server:
         self.port = _get_available_port(host=self.host, preferred_port=port)
         if port != self.port:
             env.LIGHTLY_STUDIO_PORT = self.port
-            env.APP_URL = f"{env.LIGHTLY_STUDIO_PROTOCOL}://{env.LIGHTLY_STUDIO_HOST}:{env.LIGHTLY_STUDIO_PORT}"
 
     def create_uvicorn_server(self) -> uvicorn.Server:
         """Create a Uvicorn server instance."""
