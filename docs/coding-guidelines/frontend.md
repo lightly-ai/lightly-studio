@@ -887,7 +887,7 @@ function validateUser(user: User) {
 
 Split a component when:
 
-1. **It exceeds 100-150 lines** (including markup and script)
+1. **It exceeds 100 lines** (including markup and script)
 2. **It has multiple distinct UI sections** that could be named separately
 3. **Logic and presentation are mixed** - extract logic to hooks
 4. **You find yourself scrolling** to understand the component
@@ -1008,7 +1008,7 @@ export const UPLOAD_CONFIG = {
 
 Before finishing a component, check:
 
-- [ ] Component is under 150 lines
+- [ ] Component is under 100 lines
 - [ ] Function is under 20 lines
 - [ ] Nesting depth is under 3 levels
 - [ ] Props count is under 7
