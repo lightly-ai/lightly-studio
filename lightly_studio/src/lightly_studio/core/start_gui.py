@@ -17,11 +17,6 @@ from lightly_studio.resolvers import collection_resolver, sample_resolver
 logger = logging.getLogger(__name__)
 
 
-def _build_app_url(host: str, port: int) -> str:
-    """Compose the application URL from resolved host and port."""
-    return f"{env.LIGHTLY_STUDIO_PROTOCOL}://{host}:{port}"
-
-
 def start_gui(
     host: str | None = None,
     port: int | None = None,
@@ -36,15 +31,12 @@ def start_gui(
     """
     _validate_has_samples()
 
-    resolved_host = host if host is not None else env.LIGHTLY_STUDIO_HOST
-    resolved_port = port if port is not None else env.LIGHTLY_STUDIO_PORT
+    resolved_host, resolved_port, app_url = _resolve_server_config(host, port)
 
     server = Server(host=resolved_host, port=resolved_port)
     uvicorn_server = server.create_uvicorn_server()
 
-    logger.info(
-        f"Open the LightlyStudio GUI under: {_build_app_url(resolved_host, resolved_port)}"
-    )
+    logger.info(f"Open the LightlyStudio GUI under: {app_url}")
 
     _run_uvicorn_server(uvicorn_server)
 
@@ -74,8 +66,7 @@ def start_gui_background(
 
     _validate_has_samples()
 
-    resolved_host = host if host is not None else env.LIGHTLY_STUDIO_HOST
-    resolved_port = port if port is not None else env.LIGHTLY_STUDIO_PORT
+    resolved_host, resolved_port, app_url = _resolve_server_config(host, port)
 
     server = Server(host=resolved_host, port=resolved_port)
     uvicorn_server = server.create_uvicorn_server()
@@ -89,9 +80,7 @@ def start_gui_background(
     state = _GuiBackgroundState(uvicorn_server=uvicorn_server, thread=thread)
     _GUI_BACKGROUND_STATE = state
 
-    logger.info(
-        f"Open the LightlyStudio GUI under: {_build_app_url(resolved_host, resolved_port)}"
-    )
+    logger.info(f"Open the LightlyStudio GUI under: {app_url}")
 
     thread.start()
     # TODO(Malte, 01/26): Wait for server startup and surface background errors.
@@ -158,3 +147,22 @@ def _validate_has_samples() -> None:
             "No images have been indexed for the first dataset. "
             "Please ensure your dataset contains valid images and try loading again."
         )
+
+
+def _resolve_server_config(
+    host: str | None,
+    port: int | None,
+) -> tuple[str, int, str]:
+    """Resolve host/port and compose the application URL.
+
+    Args:
+        host: Explicit host or None to fall back to env var.
+        port: Explicit port or None to fall back to env var.
+
+    Returns:
+        Tuple of (resolved_host, resolved_port, app_url).
+    """
+    resolved_host = host if host is not None else env.LIGHTLY_STUDIO_HOST
+    resolved_port = port if port is not None else env.LIGHTLY_STUDIO_PORT
+    app_url = f"{env.LIGHTLY_STUDIO_PROTOCOL}://{resolved_host}:{resolved_port}"
+    return resolved_host, resolved_port, app_url

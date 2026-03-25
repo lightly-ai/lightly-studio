@@ -27,8 +27,6 @@ def test_gui(mocker: MockerFixture) -> None:
 def test_gui__with_host_port(mocker: MockerFixture) -> None:
     mock_start_gui = mocker.patch.object(lightly_studio, "start_gui")
     runner = CliRunner()
-    result = runner.invoke(
-        cli=cli.main, args=["gui", "--host", "0.0.0.0", "--port", "9999"]
-    )
+    result = runner.invoke(cli=cli.main, args=["gui", "--host", "0.0.0.0", "--port", "9999"])
     assert result.exit_code == 0
     mock_start_gui.assert_called_once_with(host="0.0.0.0", port=9999)
