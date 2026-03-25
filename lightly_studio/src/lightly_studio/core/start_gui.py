@@ -27,7 +27,7 @@ def start_gui(
         port: Port to bind the server to. Falls back to LIGHTLY_STUDIO_PORT env var.
 
     Returns:
-        The Server instance with the resolved host, port, and app_url.
+        The Server instance.
 
     This call blocks until the server stops.
     """
@@ -63,7 +63,7 @@ def start_gui_background(
         port: Port to bind the server to. Falls back to LIGHTLY_STUDIO_PORT env var.
 
     Returns:
-        The Server instance with the resolved host, port, and app_url.
+        The Server instance.
     """
     global _GUI_BACKGROUND_STATE  # noqa: PLW0603
     # TODO(Malte, 01/26): Handle start when a background server is already running.

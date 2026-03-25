@@ -36,10 +36,9 @@ class Server:
             # There is no config option for uvicorn to start in a IPv4-only mode. For the most
             # common case of binding to localhost, we can translate the adress to the IPv4 format.
             self.host = "127.0.0.1"  # IPv4-only
-        resolved_port = port if port is not None else env.LIGHTLY_STUDIO_PORT
-        self.port = _get_available_port(host=self.host, preferred_port=resolved_port)
-        if resolved_port != self.port:
-            env.LIGHTLY_STUDIO_PORT = self.port
+
+        self.port = port if port is not None else env.LIGHTLY_STUDIO_PORT
+        self.port = _get_available_port(host=self.host, preferred_port=self.port)
 
     @property
     def app_url(self) -> str:
