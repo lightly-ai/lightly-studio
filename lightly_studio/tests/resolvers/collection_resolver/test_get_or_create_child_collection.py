@@ -6,7 +6,7 @@ import pytest
 from sqlmodel import Session
 
 from lightly_studio.models.collection import CollectionCreate, SampleType
-from lightly_studio.resolvers import collection_resolver
+from lightly_studio.resolvers import collection_resolver, dataset_resolver
 
 
 def test_get_or_create_child_collection(
@@ -41,7 +41,7 @@ def test_get_or_create_child_collection(
     assert same_video_frames_collection_id == video_frames_collection_id
 
     # No new collection should be created.
-    collections = collection_resolver.get_hierarchy(
+    collections = dataset_resolver.get_hierarchy(
         session=db_session, root_collection_id=video_collection.collection_id
     )
     assert len(collections) == 2
@@ -77,7 +77,7 @@ def test_get_or_create_child_collection__existing_non_video_frame_collection_chi
 
     # New child should be created even though there is already a child collection
     # with a different sample type.
-    collections = collection_resolver.get_hierarchy(
+    collections = dataset_resolver.get_hierarchy(
         session=db_session, root_collection_id=video_collection.collection_id
     )
     assert len(collections) == 3

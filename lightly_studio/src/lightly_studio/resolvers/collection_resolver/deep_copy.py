@@ -32,7 +32,7 @@ from lightly_studio.models.sample import SampleTable, SampleTagLinkTable
 from lightly_studio.models.sample_embedding import SampleEmbeddingTable
 from lightly_studio.models.tag import TagTable
 from lightly_studio.models.video import VideoFrameTable, VideoTable
-from lightly_studio.resolvers import collection_resolver
+from lightly_studio.resolvers import collection_resolver, dataset_resolver
 from lightly_studio.resolvers.collection_resolver import table_coverage_utils
 
 T = TypeVar("T", bound=SQLModel)
@@ -87,13 +87,12 @@ def deep_copy(
     new_dataset_id = uuid4()
     db_dataset = DatasetTable(
         dataset_id=new_dataset_id,
-        root_collection_id=None,
     )
     session.add(db_dataset)
     session.flush([db_dataset])
 
     # 2. Copy collection hierarchy.
-    hierarchy = collection_resolver.get_hierarchy(
+    hierarchy = dataset_resolver.get_hierarchy(
         session=session, root_collection_id=root_collection_id
     )
     root = _copy_collections(

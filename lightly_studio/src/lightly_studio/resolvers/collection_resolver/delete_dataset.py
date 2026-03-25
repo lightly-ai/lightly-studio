@@ -24,7 +24,7 @@ from lightly_studio.models.sample import SampleTable, SampleTagLinkTable
 from lightly_studio.models.sample_embedding import SampleEmbeddingTable
 from lightly_studio.models.tag import TagTable
 from lightly_studio.models.video import VideoFrameTable, VideoTable
-from lightly_studio.resolvers import collection_resolver
+from lightly_studio.resolvers import collection_resolver, dataset_resolver
 from lightly_studio.resolvers.collection_resolver import (
     table_coverage_utils,
 )
@@ -59,7 +59,7 @@ def delete_dataset(
     dataset_id = root.dataset_id
 
     # Get the hierarchy and collect all IDs.
-    hierarchy = collection_resolver.get_hierarchy(
+    hierarchy = dataset_resolver.get_hierarchy(
         session=session, root_collection_id=root_collection_id
     )
     collection_ids = [coll.collection_id for coll in hierarchy]

@@ -14,6 +14,7 @@ from lightly_studio.models.collection import SampleType
 from lightly_studio.resolvers import (
     annotation_resolver,
     collection_resolver,
+    dataset_resolver,
     embedding_model_resolver,
     image_resolver,
     metadata_resolver,
@@ -124,7 +125,7 @@ def test_deep_copy__with_hierarchy(db_session: Session) -> None:
     )
 
     # Assert - hierarchy copied
-    hierarchy = collection_resolver.get_hierarchy(
+    hierarchy = dataset_resolver.get_hierarchy(
         session=db_session, root_collection_id=copied_root.collection_id
     )
     assert len(hierarchy) == 2
@@ -139,7 +140,7 @@ def test_deep_copy__with_hierarchy(db_session: Session) -> None:
     assert copied_child.collection_id != child.collection_id
 
     # Assert - original hierarchy unchanged
-    original_hierarchy = collection_resolver.get_hierarchy(
+    original_hierarchy = dataset_resolver.get_hierarchy(
         session=db_session, root_collection_id=root.collection_id
     )
     assert len(original_hierarchy) == 2
