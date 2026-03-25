@@ -1237,6 +1237,110 @@ const selectedAnnotationFilter = derived(
 // Then use it with $selectedAnnotationFilter in components
 ```
 
+### Passing Reactive Values to Hooks
+
+Avoid passing reactive values to hooks using `$derived`. Hooks should receive stable, non-reactive values as parameters.
+
+#### Best Practice: Pass Data via Page Load Function
+
+Instead of reading reactive values like `page.params` inside components and passing them to hooks, prefer passing data through SvelteKit's load function and accessing it via `$props()`.
+
+**Bad Example - Using `$derived` with hooks:**
+
+```typescript
+// ❌ Bad: Using $derived to pass reactive page params to hook
+<script lang="ts">
+  import { page } from '$app/state';
+  import { useVideo } from '$lib/hooks/useVideo';
+
+  const sampleId = $derived(page.params.sample_id);
+  const { video } = useVideo({ sampleId });
+</script>
+```
+
+**Good Example - Pass data through page load:**
+
+```typescript
+// ✅ Good: Pass params through page load function
+// +page.ts
+import type { PageLoad } from './$types';
+
+export const load: PageLoad = async ({ params, url }) => {
+  return {
+    groupId: url.searchParams.get('group_id') ?? undefined,
+    frameNumber: url.searchParams.get('frame_number') ?? undefined,
+    params
+  };
+};
+
+// +page.svelte
+<script lang="ts">
+  import type { PageData } from './$types';
+  import { useVideo } from '$lib/hooks/useVideo';
+
+  const { data }: { data: PageData } = $props();
+  const { video } = useVideo({
+    sampleId: data.params.sample_id
+  });
+</script>
+```
+
+#### Alternative: Pass Svelte Stores to Hooks
+
+If you need to pass reactive values to hooks, use Svelte stores (`writable`, `readable`, `derived`) instead of `$derived`.
+
+**Bad Example:**
+
+```typescript
+// ❌ Bad: Passing $derived value to hook
+<script lang="ts">
+  import { useAuthInfo } from '$lib/hooks/useAuthInfo';
+
+  const authInfo = $derived(useAuthInfo());
+</script>
+```
+
+**Good Example:**
+
+```typescript
+// ✅ Good: Use the hook directly without $derived
+<script lang="ts">
+  import { useAuthInfo } from '$lib/hooks/useAuthInfo';
+
+  const { user, isAuthenticated } = useAuthInfo();
+</script>
+
+{#if $isAuthenticated}
+  <p>Welcome, {$user.name}!</p>
+{/if}
+```
+
+**Good Example - Using stores when reactivity is needed:**
+
+```typescript
+// ✅ Good: If you need reactive parameters, use stores
+<script lang="ts">
+  import { writable, derived } from 'svelte/store';
+  import { useFilteredData } from '$lib/hooks/useFilteredData';
+
+  const searchQuery = writable('');
+  const { data } = useFilteredData({ query: searchQuery });
+</script>
+
+<input bind:value={$searchQuery} />
+{#each $data as item}
+  <div>{item.name}</div>
+{/each}
+```
+
+**Why this matters:**
+
+- **Separation of concerns**: Data fetching logic stays in load functions, not in components
+- **Type safety**: PageData types are automatically generated from load functions
+- **Better performance**: Data is loaded before the page renders
+- **Clearer dependencies**: Hooks receive explicit parameters, not reactive computations
+- **Easier testing**: Hooks can be tested with simple values instead of reactive state
+
 E.g. [separate state management example](https://svelte.dev/playground/hello-world?version=5.32.1#H4sIAAAAAAAAE3WRwW6DMBBEf2W1qhSioqS9koBU9TNKD8TZVFZhjex1kwr53yvjhkCVXjisZ2aHtwNy0xEW6B29Gs9CFujSdH1LmONJt-SweBtQvvuoigPMr56Xvt-4L2olzg6No3tzZViIxWGBe6es7gXahj_KGsXVWNUMAKC73liBAWY1Apys6WC12d6GG3GrXc3JpAy76FHxLQfNylJHLBCgnAVl613N-23aXUXz_uBFDINh1Wr1WQ7ZGsrqFpCtw2-vMaKA4WHcEWJO8lY1Y45CF8FCrKeQ_8No0X2J6e_TjNTE42y1NIeWJhqJ69aJsZRQJAxjQSgnw559dyBbZU_rUUWXMfHkWYk2vOADQ_rb9J0kMx5XRcLuWTa-PzZCWaZGdAoe4TkuioJwPdCUZMmRjOvuRTmS1HJhtiTe8p3z5rM4CLuaw_IS7zlKo9uz5iMWp6Z1FH4Aaa7hNOYCAAA=):
 
 ```typescript
