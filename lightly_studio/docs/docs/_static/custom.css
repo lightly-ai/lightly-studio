@@ -11,6 +11,22 @@
     gap: 1.25rem !important; /* More horizontal and vertical spacing */
 }
 
+/* Small card grid: up to 3 columns, responsive */
+.md-typeset .grid.cards.small {
+    grid-template-columns: repeat(auto-fill, minmax(10rem, 1fr)) !important;
+    gap: 0.75rem !important;
+}
+
+.md-typeset .grid.cards.small > ol > li,
+.md-typeset .grid.cards.small > ul > li {
+    padding: 0.5rem !important;
+    font-size: 0.75rem;
+}
+
+.md-typeset .grid.cards.small > ul > li > strong {
+    font-size: 0.7rem;
+}
+
 /* Optional: subtle hover effect for cards */
 .md-typeset .grid.cards > ol > li:hover,
 .md-typeset .grid.cards > ul > li:hover {
