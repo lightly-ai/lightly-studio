@@ -9,7 +9,7 @@ from sqlmodel import Session, and_, col, func, or_, select
 from sqlmodel.sql.expression import SelectOfScalar
 
 from lightly_studio.models.annotation.annotation_base import AnnotationBaseTable
-from lightly_studio.models.collection import SampleType
+from lightly_studio.models.collection import CollectionTable, SampleType
 from lightly_studio.models.image import ImageTable
 from lightly_studio.models.sample import SampleTable
 from lightly_studio.models.tag import TagTable
@@ -48,6 +48,7 @@ def export(
     include: ExportFilter | None = None,
     exclude: ExportFilter | None = None,
 ) -> list[str]:
+    # TODO(lukas, 03/2026): take dataset_id instead of collection_id
     """Retrieve samples for exporting from a collection.
 
     Only one of include or exclude should be set and not both.
@@ -81,6 +82,7 @@ def get_filtered_samples_count(
     include: ExportFilter | None = None,
     exclude: ExportFilter | None = None,
 ) -> int:
+    # TODO(lukas, 03/2026): take dataset_id instead of collection_id
     """Get statistics about the export query.
 
     Only one of include or exclude should be set and not both.
@@ -109,6 +111,8 @@ def get_filtered_samples_count(
 
 
 def _get_annotation_collection_ids(session: Session, collection_id: UUID) -> list[UUID]:
+    # TODO(lukas, 03/2026): take dataset_id instead of collection_id, it's what we pass to
+    # get_hierarchy()
     """Get all child collection IDs that could contain annotations.
 
     This includes the collection itself and all its child collections (recursively)
@@ -121,7 +125,11 @@ def _get_annotation_collection_ids(session: Session, collection_id: UUID) -> lis
     Returns:
         List of collection IDs that could contain annotations.
     """
-    hierarchy = get_hierarchy(session, collection_id)
+    collection = session.get(CollectionTable, collection_id)
+    if collection is None:
+        raise ValueError(f"Collection with ID {collection_id} not found.")
+
+    hierarchy = get_hierarchy(session, dataset_id=collection.dataset_id)
     return [col.collection_id for col in hierarchy if col.sample_type == SampleType.ANNOTATION]
 
 

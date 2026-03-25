@@ -59,9 +59,7 @@ def delete_dataset(
     dataset_id = root.dataset_id
 
     # Get the hierarchy and collect all IDs.
-    hierarchy = dataset_resolver.get_hierarchy(
-        session=session, root_collection_id=root_collection_id
-    )
+    hierarchy = dataset_resolver.get_hierarchy(session=session, dataset_id=dataset_id)
     collection_ids = [coll.collection_id for coll in hierarchy]
 
     # Collect all sample IDs from all collections.

@@ -92,9 +92,7 @@ def deep_copy(
     session.flush([db_dataset])
 
     # 2. Copy collection hierarchy.
-    hierarchy = dataset_resolver.get_hierarchy(
-        session=session, root_collection_id=root_collection_id
-    )
+    hierarchy = dataset_resolver.get_hierarchy(session=session, dataset_id=initial_root.dataset_id)
     root = _copy_collections(
         session=session,
         hierarchy=hierarchy,

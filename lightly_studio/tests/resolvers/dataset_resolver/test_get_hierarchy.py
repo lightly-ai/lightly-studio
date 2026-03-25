@@ -59,47 +59,30 @@ def test_get_collection_hierarchy(
     )
 
     # Test first tree whole
-    hierarchy = dataset_resolver.get_hierarchy(
-        session=db_session, root_collection_id=ds_a.collection_id
-    )
+    hierarchy = dataset_resolver.get_hierarchy(session=db_session, dataset_id=ds_a.dataset_id)
     assert len(hierarchy) == 4
-    hierarchy_ids = {ds.collection_id for ds in hierarchy}
-    assert hierarchy_ids == {
+    hierarchy_ids = [ds.collection_id for ds in hierarchy]
+    assert hierarchy_ids == [
         ds_a.collection_id,
         ds_b.collection_id,
         ds_c.collection_id,
         ds_d.collection_id,
-    }
+    ]
 
     # Test second tree whole
-    hierarchy = dataset_resolver.get_hierarchy(
-        session=db_session, root_collection_id=ds_e.collection_id
-    )
+    hierarchy = dataset_resolver.get_hierarchy(session=db_session, dataset_id=ds_e.dataset_id)
     assert len(hierarchy) == 2
-    hierarchy_ids = {ds.collection_id for ds in hierarchy}
-    assert hierarchy_ids == {ds_e.collection_id, ds_f.collection_id}
-
-    # Test subtree
-    hierarchy = dataset_resolver.get_hierarchy(
-        session=db_session, root_collection_id=ds_b.collection_id
-    )
-    assert len(hierarchy) == 2
-    hierarchy_ids = {ds.collection_id for ds in hierarchy}
-    assert hierarchy_ids == {ds_b.collection_id, ds_c.collection_id}
-
-    # Test leaf node
-    hierarchy = dataset_resolver.get_hierarchy(
-        session=db_session, root_collection_id=ds_f.collection_id
-    )
-    assert hierarchy == [ds_f]
+    hierarchy_ids = [ds.collection_id for ds in hierarchy]
+    assert hierarchy_ids == [ds_e.collection_id, ds_f.collection_id]
 
 
-def test_get_collection_hierarchy__non_existent_collection(
+def test_get_collection_hierarchy__non_existent_dataset(
     db_session: Session,
 ) -> None:
     with pytest.raises(
-        ValueError, match=r"Collection with id 00000000-0000-0000-0000-000000000000 not found."
+        ValueError,
+        match=r"Dataset with id 00000000-0000-0000-0000-000000000000 not found.",
     ):
         dataset_resolver.get_hierarchy(
-            session=db_session, root_collection_id=UUID("00000000-0000-0000-0000-000000000000")
+            session=db_session, dataset_id=UUID("00000000-0000-0000-0000-000000000000")
         )

@@ -69,8 +69,12 @@ def read_collection_hierarchy(
     session: SessionDep,
     collection_id: Annotated[UUID, Path(title="Root collection Id")],
 ) -> list[CollectionTable]:
+    # TODO(lukas 03/2026): Take dataset_id as a parameter instead of collection_id
     """Retrieve the collection hierarchy from the database, starting with the root node."""
-    return dataset_resolver.get_hierarchy(session=session, root_collection_id=collection_id)
+    collection = collection_resolver.get_by_id(session=session, collection_id=collection_id)
+    if collection is None:
+        raise HTTPException(status_code=HTTP_STATUS_NOT_FOUND, detail="Collection not found")
+    return dataset_resolver.get_hierarchy(session=session, dataset_id=collection.dataset_id)
 
 
 @collection_router.get("/collections/overview", response_model=list[CollectionOverviewView])
