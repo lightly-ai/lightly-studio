@@ -325,23 +325,33 @@ import { useData } from "./useData";
 ## TypeScript Usage
 
 - Use TypeScript for all code
-- Use interfaces for props.
+- Use interfaces for defining component props and function parameters.
   E.g.:
 
 ```typescript
-interface UseDataProps {
+// Hook example
+interface UseDataParams {
     title: string;
     onClick: () => void;
 }
 
 interface UseDataReturn {
+    data: string;
+    isLoading: boolean;
+}
+
+export function useData(params: UseDataParams): UseDataReturn {
+    // ... implementation
+    return { data: params.title, isLoading: false };
+}
+
+// Component example (see Component Props section for full details)
+interface Props {
     title: string;
     onClick: () => void;
 }
 
-export function useData(props: UseDataProps): UseDataReturn {
-    ...
-}
+let { title, onClick }: Props = $props();
 ```
 
 - Avoid exporting/importing types. Instead, use [TypeScript utility types](https://www.typescriptlang.org/docs/handbook/utility-types.html) to derive types from existing code. This approach:
@@ -354,25 +364,25 @@ Common utility type patterns:
 
 ```typescript
 // Derive parameter types from a function
-type UseDataParams = Parameters<typeof useData>;
+type UseDataParams = Parameters<typeof useData>[0];
 
 // Derive return type from a function
 type UseDataReturn = ReturnType<typeof useData>;
 
 // Make all properties optional
-type PartialData = Partial<UseDataProps>;
+type PartialData = Partial<UseDataParams>;
 
 // Pick specific properties
-type TitleOnly = Pick<UseDataProps, "title">;
+type TitleOnly = Pick<UseDataParams, "title">;
 
 // Omit specific properties
-type WithoutTitle = Omit<UseDataProps, "title">;
+type WithoutTitle = Omit<UseDataParams, "title">;
 
 // Make all properties required
-type RequiredData = Required<Partial<UseDataProps>>;
+type RequiredData = Required<Partial<UseDataParams>>;
 
 // Create a type from an object's keys
-type DataKeys = keyof UseDataProps;
+type DataKeys = keyof UseDataParams;
 ```
 
 ## UI and Styling
@@ -610,7 +620,11 @@ Components should be open for extension but closed for modification. Use composi
 ```typescript
 // ❌ Button.svelte - needs modification for each new variant
 <script lang="ts">
-    export let type: 'primary' | 'secondary' | 'danger' | 'success';
+    interface Props {
+        type: 'primary' | 'secondary' | 'danger' | 'success';
+    }
+
+    let { type }: Props = $props();
 </script>
 
 <button class={type === 'primary' ? 'bg-blue-500' :
@@ -657,16 +671,24 @@ Child components should be substitutable for their parent components without bre
 
 // TextSearchInput.svelte
 <script lang="ts">
-    export let value: string;
-    export let onSearch: (query: string) => void;
-    export let placeholder: string = 'Search by text';
+    interface Props {
+        value: string;
+        onSearch: (query: string) => void;
+        placeholder?: string;
+    }
+
+    let { value, onSearch, placeholder = 'Search by text' }: Props = $props();
 </script>
 
 // ImageSearchInput.svelte
 <script lang="ts">
-    export let value: string;
-    export let onSearch: (query: string) => void;
-    export let placeholder: string = 'Search by image';
+    interface Props {
+        value: string;
+        onSearch: (query: string) => void;
+        placeholder?: string;
+    }
+
+    let { value, onSearch, placeholder = 'Search by image' }: Props = $props();
 </script>
 ```
 
@@ -679,15 +701,19 @@ Don't force components to depend on props they don't use. Keep interfaces minima
 ```typescript
 // ❌ UserCard.svelte - receives entire user object but only uses 2 fields
 <script lang="ts">
-    export let user: {
-        id: string;
-        name: string;
-        email: string;
-        age: number;
-        address: string;
-        phoneNumber: string;
-        // ... 20 more fields
-    };
+    interface Props {
+        user: {
+            id: string;
+            name: string;
+            email: string;
+            age: number;
+            address: string;
+            phoneNumber: string;
+            // ... 20 more fields
+        };
+    }
+
+    let { user }: Props = $props();
 </script>
 
 <div>
@@ -701,8 +727,12 @@ Don't force components to depend on props they don't use. Keep interfaces minima
 ```typescript
 // ✅ UserCard.svelte - only receives what it needs
 <script lang="ts">
-    export let name: string;
-    export let email: string;
+    interface Props {
+        name: string;
+        email: string;
+    }
+
+    let { name, email }: Props = $props();
 </script>
 
 <div>
@@ -1052,6 +1082,67 @@ page.params.sampleId;
 - Separate state management logic from the component logic as much as possible for better maintanance. Use `src/lib/hooks` for reusable hooks.
 
 ### Svelte 5 Syntax
+
+#### Component Props
+
+Use Svelte 5 `$props()` rune instead of the old `export let` syntax for defining component props.
+
+**Bad Example (Svelte 4):**
+
+```typescript
+// ❌ Old Svelte 4 syntax
+<script lang="ts">
+  export let value: string;
+  export let placeholder: string = 'Enter text';
+  export let onSearch: (query: string) => void;
+  export let disabled: boolean = false;
+</script>
+
+<input
+  type="text"
+  {value}
+  {placeholder}
+  {disabled}
+  onchange={() => onSearch(value)}
+/>
+```
+
+**Good Example (Svelte 5):**
+
+```typescript
+// ✅ Svelte 5 $props() syntax
+<script lang="ts">
+  interface Props {
+    value: string;
+    placeholder?: string;
+    onSearch: (query: string) => void;
+    disabled?: boolean;
+  }
+
+  let {
+    value,
+    placeholder = 'Enter text',
+    onSearch,
+    disabled = false
+  }: Props = $props();
+</script>
+
+<input
+  type="text"
+  {value}
+  {placeholder}
+  {disabled}
+  onchange={() => onSearch(value)}
+/>
+```
+
+**Benefits of `$props()`:**
+
+- **Type safety**: Props are defined in a clear TypeScript interface
+- **Required vs optional**: Interface makes it explicit which props are required
+- **Better IDE support**: Autocomplete and type checking work better
+- **Destructuring with defaults**: Clear syntax for default values
+- **Future-proof**: Aligns with Svelte 5's direction
 
 #### Event Handlers
 
@@ -1444,8 +1535,11 @@ it("calls useEmbedText with correct parameters", () => {
 // Good: Test the actual behavior
 it("displays search results when query is submitted", async () => {
   render(GridSearch);
-  await userEvent.type(screen.getByRole("textbox"), "test query");
-  await userEvent.keyboard("{Enter}");
+  const input = screen.getByRole("textbox");
+
+  await fireEvent.input(input, { target: { value: "test query" } });
+  await fireEvent.keyDown(input, { key: "Enter" });
+
   expect(screen.getByText("test query")).toBeInTheDocument();
 });
 ```
