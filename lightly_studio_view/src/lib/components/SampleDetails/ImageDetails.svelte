@@ -2,7 +2,7 @@
     import { goto } from '$app/navigation';
     import { routeHelpers } from '$lib/routes';
     import { type Snippet } from 'svelte';
-    import { getImageURL } from '$lib/utils/getImageURL';
+    import { getImageURLById } from '$lib/utils';
     import { useImage } from '$lib/hooks/useImage/useImage';
     import type { Collection } from '$lib/services/types';
     import SampleDetailsPanel from './SampleDetailsPanel.svelte';
@@ -19,7 +19,7 @@
     }: {
         sampleId: string;
         collection: Collection;
-        children: Snippet | undefined;
+        children?: Snippet;
     } = $props();
 
     const collectionId = collection.collection_id!;
@@ -38,7 +38,7 @@
 
     const { image, refetch } = $derived(useImage({ sampleId }));
 
-    let sampleURL = $derived(getImageURL(sampleId));
+    let sampleURL = $derived(getImageURLById(sampleId));
     const sampleImage = $derived($image.data as ImageView | undefined);
 </script>
 

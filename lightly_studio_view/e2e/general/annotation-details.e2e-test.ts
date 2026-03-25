@@ -253,12 +253,12 @@ test('tags are shown and can be removed', async ({ annotationsPage, annotationDe
 
     // Navigate to annotation details and verify tag is visible
     await annotationsPage.clickAnnotation(0);
-    await expect(annotationDetailsPage.getTags()).toContainText([testTagName]);
+    await expect(annotationDetailsPage.getTagByText(testTagName)).toBeVisible();
 
     // Remove the tag
     await annotationDetailsPage.clickEditLabelButton();
     await annotationDetailsPage.removeTag(testTagName);
-    await expect(annotationDetailsPage.getTags()).not.toContainText([testTagName]);
+    await expect(annotationDetailsPage.getTagByText(testTagName)).not.toBeVisible();
 });
 
 test('annotation details keeps zoom stable while dragging bbox', async ({
