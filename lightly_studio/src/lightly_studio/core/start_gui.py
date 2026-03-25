@@ -150,5 +150,3 @@ def _validate_has_samples() -> None:
             "No images have been indexed for the first dataset. "
             "Please ensure your dataset contains valid images and try loading again."
         )
-
-

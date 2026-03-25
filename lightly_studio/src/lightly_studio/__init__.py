@@ -13,7 +13,6 @@ from lightly_studio.core.video.video_dataset import VideoDataset
 from lightly_studio.core.group.group_dataset import GroupDataset
 from lightly_studio.core.image.create_image import CreateImage
 from lightly_studio.core.video.create_video import CreateVideo
-from lightly_studio.api.server import Server
 from lightly_studio.core.start_gui import (
     start_gui,
     start_gui_background,
@@ -32,7 +31,6 @@ __all__ = [
     "CreateVideo",
     "GroupDataset",
     "ImageDataset",
-    "Server",
     "SampleType",
     "VideoDataset",
     "connect",
