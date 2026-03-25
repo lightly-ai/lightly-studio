@@ -403,7 +403,7 @@ type DataKeys = keyof UseDataParams;
   - Data display components (tables, lists)
 
 ```typescript
-// Good: Using Shadcn components directly for basic UI elements
+// ✅ Good: Using Shadcn components directly for basic UI elements
 import { Button } from '$lib/components/ui/button';
 import { Input } from '$lib/components/ui/input';
 
@@ -421,7 +421,7 @@ import { Input } from '$lib/components/ui/input';
   - Need to maintain consistent behavior across the application
 
 ```typescript
-// Good: Using project-specific components for complex features
+// ✅ Good: Using project-specific components for complex features
 import { DatasetCard } from '$lib/components';
 import { AnnotationToolbar } from '$lib/components';
 
@@ -436,7 +436,7 @@ import { AnnotationToolbar } from '$lib/components';
 - Keep component logic separate from UI elements
 
 ```typescript
-// Good: Composing components
+// ✅ Good: Composing components
 <script lang="ts">
   import { Card } from '$lib/components/ui/card';
   import { Button } from '$lib/components/ui/button';
@@ -469,7 +469,7 @@ import { AnnotationToolbar } from '$lib/components';
 - **Refactoring safety**: Changes to object shapes won't silently break components
 
 ```typescript
-// Bad: Blind object spreading - unclear what props are actually used
+// ❌ Bad: Blind object spreading - unclear what props are actually used
 <script lang="ts">
   interface User {
     id: string;
@@ -485,7 +485,7 @@ import { AnnotationToolbar } from '$lib/components';
 
 <UserCard {...user} />
 
-// Good: Explicit props - clear interface and intent
+// ✅ Good: Explicit props - clear interface and intent
 <script lang="ts">
   interface User {
     id: string;
@@ -1509,7 +1509,7 @@ When writing tests, focus on quality over quantity. Follow these principles to m
 Create `defaultProps` or setup functions to eliminate repeated prop objects:
 
 ```typescript
-// Good: DRY approach with defaultProps
+// ✅ Good: DRY approach with defaultProps
 describe("SearchInput", () => {
   const defaultProps = {
     queryText: "",
@@ -1529,7 +1529,7 @@ describe("SearchInput", () => {
   });
 });
 
-// Bad: Repeated prop objects
+// ❌ Bad: Repeated prop objects
 describe("SearchInput", () => {
   it("renders with correct placeholder", () => {
     render(SearchInput, {
@@ -1564,13 +1564,13 @@ Don't create separate tests for opposite states when both tests exercise the exa
 **Good: Test only one state when controlled by a single boolean**
 
 ```typescript
-// Good: Testing the truthy case is sufficient
+// ✅ Good: Testing the truthy case is sufficient
 it("disables input when isUploading is true", () => {
   render(SearchInput, { props: { ...defaultProps, isUploading: true } });
   expect(screen.getByRole("textbox")).toBeDisabled();
 });
 
-// Redundant: The opposite case doesn't add coverage
+// ❌ Redundant: The opposite case doesn't add coverage
 // it("enables input when isUploading is false", () => {
 //   render(SearchInput, { props: defaultProps });
 //   expect(screen.getByRole("textbox")).not.toBeDisabled();
@@ -1580,7 +1580,7 @@ it("disables input when isUploading is true", () => {
 **When to test both states:**
 
 ```typescript
-// Good: Test both when different conditions control each state
+// ✅ Good: Test both when different conditions control each state
 it("disables button when user lacks permission", () => {
   render(ActionButton, { props: { hasPermission: false, isLoading: false } });
   expect(screen.getByRole("button")).toBeDisabled();
@@ -1607,14 +1607,14 @@ In the second example, all three tests are valuable because:
 Merge tests that check related functionality:
 
 ```typescript
-// Good: Combined test that verifies user-facing behavior
+// ✅ Good: Combined test that verifies user-facing behavior
 it("renders search input with placeholder and accessible label", () => {
   render(SearchInput, { props: defaultProps });
   expect(screen.getByPlaceholderText("Search")).toBeInTheDocument();
   expect(screen.getByRole("textbox")).toHaveAccessibleName("Search");
 });
 
-// Bad: Separate tests for closely related accessibility features
+// ❌ Bad: Separate tests for closely related accessibility features
 it("renders search input with placeholder", () => {
   render(SearchInput, { props: defaultProps });
   expect(screen.getByPlaceholderText("Search")).toBeInTheDocument();
@@ -1631,7 +1631,7 @@ it("renders search input with accessible label", () => {
 Don't test internal implementation details like CSS classes or internal structure:
 
 ```typescript
-// Bad: Testing CSS classes (implementation detail)
+// ❌ Bad: Testing CSS classes (implementation detail)
 it("renders with correct CSS classes for layout", () => {
   const { container } = render(ActiveSearchDisplay, { props: defaultProps });
   const wrapper = container.querySelector(
@@ -1640,7 +1640,7 @@ it("renders with correct CSS classes for layout", () => {
   expect(wrapper).toBeInTheDocument();
 });
 
-// Good: Test user-visible behavior instead
+// ✅ Good: Test user-visible behavior instead
 it("displays active search query", () => {
   render(ActiveSearchDisplay, {
     props: { ...defaultProps, submittedQueryText: "test" },
@@ -1654,7 +1654,7 @@ it("displays active search query", () => {
 Focus on component behavior rather than testing how hooks are configured:
 
 ```typescript
-// Bad: Testing hook configuration (implementation detail)
+// ❌ Bad: Testing hook configuration (implementation detail)
 it("calls useEmbedText with correct parameters", () => {
   render(GridSearch);
   expect(mockUseEmbedText).toHaveBeenCalledWith({
@@ -1664,7 +1664,7 @@ it("calls useEmbedText with correct parameters", () => {
   });
 });
 
-// Good: Test the actual behavior
+// ✅ Good: Test the actual behavior
 it("displays search results when query is submitted", async () => {
   render(GridSearch);
   const input = screen.getByRole("textbox");
@@ -1681,7 +1681,7 @@ it("displays search results when query is submitted", async () => {
 Identify and remove tests that verify the same behavior:
 
 ```typescript
-// Bad: Both tests check the same thing
+// ❌ Bad: Both tests check the same thing
 it("renders SearchInput when no active search", () => {
   render(GridSearch);
   const input = screen.getByPlaceholderText("Search samples");
@@ -1693,7 +1693,7 @@ it("shows SearchInput initially", () => {
   expect(screen.getByTestId("search-input")).toBeInTheDocument();
 });
 
-// Good: One test is sufficient
+// ✅ Good: One test is sufficient
 it("shows SearchInput initially", () => {
   render(GridSearch);
   expect(screen.getByTestId("search-input")).toBeInTheDocument();
