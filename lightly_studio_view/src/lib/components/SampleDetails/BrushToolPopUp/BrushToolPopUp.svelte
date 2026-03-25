@@ -1,4 +1,5 @@
 <script lang="ts">
+    import { AnnotationType } from '$lib/api/lightly_studio_local';
     import { useAnnotationLabelContext } from '$lib/contexts/SampleDetailsAnnotation.svelte';
     import { useSampleDetailsToolbarContext } from '$lib/contexts/SampleDetailsToolbar.svelte';
     import { useSettings } from '$lib/hooks/useSettings';
@@ -9,7 +10,8 @@
     const {
         context: sampleDetailsToolbarContext,
         setBrushMode,
-        setBrushSize
+        setBrushSize,
+        setOneClassPerPixel
     } = useSampleDetailsToolbarContext();
     const { settingsStore } = useSettings();
 
@@ -19,6 +21,9 @@
         setLastCreatedAnnotationId,
         setIsChangingBrushSize
     } = useAnnotationLabelContext();
+    const showOneClassPerPixelToggle = $derived(
+        annotationLabelContext.annotationType === AnnotationType.INSTANCE_SEGMENTATION
+    );
 
     const normalizeShortcut = (key: string): string => (key.length === 1 ? key.toLowerCase() : key);
 
@@ -138,6 +143,25 @@
                     </button>
                 </div>
             </div>
+
+            {#if showOneClassPerPixelToggle}
+                <div class="flex items-center gap-4 pb-2 pt-2">
+                    <span class="w-16 text-sm text-muted-foreground"> Pixels: </span>
+                    <button
+                        type="button"
+                        aria-label="One class per pixel"
+                        class="rounded-lg border border-border px-2 py-1 text-sm transition hover:bg-muted"
+                        onclick={() =>
+                            setOneClassPerPixel(
+                                !sampleDetailsToolbarContext.brush.oneClassPerPixel
+                            )}
+                    >
+                        {sampleDetailsToolbarContext.brush.oneClassPerPixel
+                            ? 'One class per pixel'
+                            : 'Multi-class per pixel'}
+                    </button>
+                </div>
+            {/if}
 
             <div class="flex items-center gap-4 pb-2 pt-2">
                 <span class="w-16 text-sm text-muted-foreground"> Size: </span>

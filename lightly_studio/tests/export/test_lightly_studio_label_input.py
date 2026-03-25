@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from datetime import datetime, timezone
+
 from labelformat.model.bounding_box import BoundingBox
 from labelformat.model.category import Category
 from labelformat.model.image import Image
@@ -14,6 +16,7 @@ from lightly_studio.export.lightly_studio_label_input import (
     LightlyStudioSemanticSegmentationInput,
 )
 from lightly_studio.models.annotation.annotation_base import (
+    AnnotationBaseTable,
     AnnotationCreate,
     AnnotationType,
 )
@@ -224,3 +227,71 @@ class TestLightlyStudioLabelInput:
             image=Image(id=1, filename="img2", width=200, height=200),
             objects=[],
         )
+
+    def test_get_labels__semantic_input_reads_instance_annotations_ordered_by_timestamp_desc(
+        self,
+        db_session: Session,
+    ) -> None:
+        collection = create_collection(session=db_session)
+        images = create_images(
+            db_session=db_session,
+            collection_id=collection.collection_id,
+            images=[ImageStub(path="img1", width=100, height=100)],
+        )
+        cat_label = create_annotation_label(
+            session=db_session,
+            root_collection_id=collection.collection_id,
+            label_name="cat",
+        )
+        dog_label = create_annotation_label(
+            session=db_session,
+            root_collection_id=collection.collection_id,
+            label_name="dog",
+        )
+        annotation_ids = annotation_resolver.create_many(
+            session=db_session,
+            parent_collection_id=collection.collection_id,
+            annotations=[
+                AnnotationCreate(
+                    parent_sample_id=images[0].sample_id,
+                    annotation_label_id=cat_label.annotation_label_id,
+                    annotation_type=AnnotationType.INSTANCE_SEGMENTATION,
+                    confidence=None,
+                    x=0,
+                    y=0,
+                    width=10,
+                    height=10,
+                    segmentation_mask=[10_000],
+                ),
+                AnnotationCreate(
+                    parent_sample_id=images[0].sample_id,
+                    annotation_label_id=dog_label.annotation_label_id,
+                    annotation_type=AnnotationType.INSTANCE_SEGMENTATION,
+                    confidence=None,
+                    x=0,
+                    y=0,
+                    width=10,
+                    height=10,
+                    segmentation_mask=[10_000],
+                ),
+            ],
+        )
+
+        older_annotation = db_session.get(AnnotationBaseTable, annotation_ids[0])
+        newer_annotation = db_session.get(AnnotationBaseTable, annotation_ids[1])
+        assert older_annotation is not None
+        assert newer_annotation is not None
+        older_annotation.created_at = datetime(2024, 1, 1, tzinfo=timezone.utc)
+        newer_annotation.created_at = datetime(2024, 1, 2, tzinfo=timezone.utc)
+        db_session.add(older_annotation)
+        db_session.add(newer_annotation)
+        db_session.commit()
+
+        label_input = LightlyStudioSemanticSegmentationInput(
+            session=db_session,
+            dataset_id=collection.collection_id,
+            samples=DatasetQuery(dataset=collection, session=db_session),
+        )
+        labels = list(label_input.get_labels())
+        assert len(labels) == 1
+        assert [obj.category.name for obj in labels[0].objects] == ["dog", "cat"]

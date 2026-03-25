@@ -10,7 +10,6 @@
     import CursorToolbarButton from '../CursorToolbarButton/CursorToolbarButton.svelte';
     import DragToolbarButton from '../DragToolbarButton/DragToolbarButton.svelte';
     import { useSettings } from '$lib/hooks/useSettings';
-    import SemanticBrushToolbarButton from '../SemanticBrushToolbarButton/SemanticBrushToolbarButton.svelte';
 
     const { showSegmentationTool = true }: { showSegmentationTool?: boolean } = $props();
 
@@ -41,10 +40,6 @@
         } else if (key === $settingsStore.key_toolbar_drag) {
             e.preventDefault();
             onClickDrag();
-        } else if (key === $settingsStore.key_toolbar_semantic) {
-            if (!showSegmentationTool) return;
-            e.preventDefault();
-            onClickSemanticBrush();
         }
     };
 
@@ -144,16 +139,6 @@
         if (!annotationLabelContext.isOnAnnotationDetailsView) setAnnotationId(null);
         setLastCreatedAnnotationId(null);
     };
-
-    const onClickSemanticBrush = () => {
-        if (!showSegmentationTool || annotationLabelContext.isOnAnnotationDetailsView) return;
-
-        setStatus('brush');
-        lastSegmentationType = AnnotationType.SEMANTIC_SEGMENTATION;
-        setAnnotationType(lastSegmentationType);
-        if (!annotationLabelContext.isOnAnnotationDetailsView) setAnnotationId(null);
-        setLastCreatedAnnotationId(null);
-    };
 </script>
 
 <div class="pointer-events-none absolute left-1 top-1 z-20">
@@ -208,20 +193,6 @@
                             AnnotationType.INSTANCE_SEGMENTATION}
                 />
             </SampleDetailsToolbarTooltip>
-            {#if !annotationLabelContext.isOnAnnotationDetailsView}
-                <SampleDetailsToolbarTooltip
-                    label="Semantic Segmentation Brush"
-                    shortcut={$settingsStore.key_toolbar_semantic.toUpperCase()}
-                    action="paint"
-                >
-                    <SemanticBrushToolbarButton
-                        onclick={onClickSemanticBrush}
-                        isActive={sampleDetailsToolbarContext.status === 'brush' &&
-                            annotationLabelContext.annotationType ===
-                                AnnotationType.SEMANTIC_SEGMENTATION}
-                    />
-                </SampleDetailsToolbarTooltip>
-            {/if}
         {/if}
     </div>
 </div>

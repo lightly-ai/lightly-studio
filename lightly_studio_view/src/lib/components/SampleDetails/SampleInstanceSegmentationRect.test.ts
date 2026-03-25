@@ -5,15 +5,22 @@ import SampleInstanceSegmentationRect from './SampleInstanceSegmentationRect/Sam
 
 const {
     mockAnnotationContext,
+    mockToolbarContext,
     setAnnotationId,
     setIsDrawing,
     committedSampleIds,
+    brushHookCalls,
     useInstanceSegmentationBrushMock
 } = vi.hoisted(() => {
     const context = {
         annotationId: null as string | null,
         isDrawing: false,
         isOnAnnotationDetailsView: false
+    };
+    const toolbarContext = {
+        brush: {
+            oneClassPerPixel: false
+        }
     };
 
     const setAnnotationIdMock = vi.fn((id: string | null) => {
@@ -24,17 +31,35 @@ const {
     });
 
     const sampleIds: string[] = [];
-    const brushHookMock = vi.fn((params: { sampleId: string }) => ({
-        finishBrush: vi.fn(() => {
-            sampleIds.push(params.sampleId);
-        })
-    }));
+    const hookCalls: {
+        sampleId: string;
+        segmentationMode?: string;
+        annotationType?: string;
+        oneClassPerPixel?: boolean;
+    }[] = [];
+    const brushHookMock = vi.fn(
+        (params: {
+            sampleId: string;
+            segmentationMode?: string;
+            annotationType?: string;
+            oneClassPerPixel?: boolean;
+        }) => {
+            hookCalls.push(params);
+            return {
+                finishBrush: vi.fn(() => {
+                    sampleIds.push(params.sampleId);
+                })
+            };
+        }
+    );
 
     return {
         mockAnnotationContext: context,
+        mockToolbarContext: toolbarContext,
         setAnnotationId: setAnnotationIdMock,
         setIsDrawing: setIsDrawingMock,
         committedSampleIds: sampleIds,
+        brushHookCalls: hookCalls,
         useInstanceSegmentationBrushMock: brushHookMock
     };
 });
@@ -71,6 +96,12 @@ vi.mock('$lib/contexts/SampleDetailsAnnotation.svelte', () => ({
     })
 }));
 
+vi.mock('$lib/contexts/SampleDetailsToolbar.svelte', () => ({
+    useSampleDetailsToolbarContext: () => ({
+        context: mockToolbarContext
+    })
+}));
+
 vi.mock('$lib/hooks/useAnnotation/useAnnotation', () => ({
     useAnnotation: () => ({
         updateAnnotation: vi.fn()
@@ -99,7 +130,9 @@ describe('SampleInstanceSegmentationRect', () => {
         vi.clearAllMocks();
         mockAnnotationContext.annotationId = null;
         mockAnnotationContext.isDrawing = false;
+        mockToolbarContext.brush.oneClassPerPixel = false;
         committedSampleIds.length = 0;
+        brushHookCalls.length = 0;
     });
 
     it('uses the latest sample id for brush commit after rerender', async () => {
@@ -136,5 +169,37 @@ describe('SampleInstanceSegmentationRect', () => {
         await fireEvent.pointerUp(drawingRect as SVGRectElement, { pointerId: 1 });
 
         expect(committedSampleIds).toEqual(['sample-2']);
+    });
+
+    it('switches to one-class overlap mode when one class per pixel is enabled', async () => {
+        mockToolbarContext.brush.oneClassPerPixel = true;
+
+        const { container } = render(SampleInstanceSegmentationRect, {
+            props: {
+                collectionId: 'collection-1',
+                sampleId: 'sample-1',
+                brushRadius: 5,
+                drawerStrokeColor: 'rgb(0, 0, 255)',
+                mousePosition: null,
+                refetch: vi.fn(),
+                sample: { width: 100, height: 100, annotations: [] }
+            }
+        });
+
+        const drawingRect = container.querySelector('rect');
+        expect(drawingRect).not.toBeNull();
+
+        await fireEvent.pointerDown(drawingRect as SVGRectElement, {
+            pointerId: 1,
+            clientX: 20,
+            clientY: 20
+        });
+        await fireEvent.pointerUp(drawingRect as SVGRectElement, { pointerId: 1 });
+
+        expect(brushHookCalls.at(-1)).toMatchObject({
+            segmentationMode: 'instance',
+            annotationType: 'instance_segmentation',
+            oneClassPerPixel: true
+        });
     });
 });

@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from argparse import ArgumentParser
 from collections.abc import Iterable
+from datetime import datetime, timezone
 from uuid import UUID
 
 from labelformat.model.binary_mask_segmentation import BinaryMaskSegmentation
@@ -119,7 +120,7 @@ class LightlyStudioInstanceSegmentationInput(LightlyStudioInputBase, InstanceSeg
 
 
 class LightlyStudioSemanticSegmentationInput(LightlyStudioInputBase, InstanceSegmentationInput):
-    """Labelformat adapter for semantic segmentation backed by dataset samples and annotations."""
+    """Labelformat adapter for Pascal VOC segmentation export."""
 
     # TODO(Leonardo, 03/26): Ensure Pascal VOC export maps user-defined background to class ID 0
     # and void/ignore to 255 for spec compliance.
@@ -132,8 +133,15 @@ class LightlyStudioSemanticSegmentationInput(LightlyStudioInputBase, InstanceSeg
         label_id_to_category: dict[UUID, Category],
     ) -> ImageInstanceSegmentation:
         objects = []
-        for annotation in sample.sample_table.annotations:
-            if annotation.annotation_type == AnnotationType.SEMANTIC_SEGMENTATION:
+        for annotation in sorted(
+            sample.sample_table.annotations,
+            key=_annotation_export_timestamp,
+            reverse=True,
+        ):
+            if annotation.annotation_type in (
+                AnnotationType.SEMANTIC_SEGMENTATION,
+                AnnotationType.INSTANCE_SEGMENTATION,
+            ):
                 obj = _annotation_to_single_inst_seg(
                     annotation=annotation,
                     label_id_to_category=label_id_to_category,
@@ -171,6 +179,19 @@ class LightlyStudioSemanticSegmentationInput(LightlyStudioInputBase, InstanceSeg
                 image_id=idx,
                 label_id_to_category=self._label_id_to_category,
             )
+
+
+def _annotation_export_timestamp(annotation: AnnotationBaseTable) -> datetime:
+    """Returns the timestamp used to order annotations in export output."""
+    updated_at = getattr(annotation, "updated_at", None)
+    created_at = getattr(annotation, "created_at", None)
+
+    if isinstance(updated_at, datetime):
+        return updated_at
+    if isinstance(created_at, datetime):
+        return created_at
+
+    return datetime.min.replace(tzinfo=timezone.utc)
 
 
 def _build_label_id_to_category(

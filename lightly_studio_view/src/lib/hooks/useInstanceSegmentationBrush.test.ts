@@ -8,6 +8,9 @@ import {
     encodeBinaryMaskToRLE
 } from '$lib/components/SampleAnnotation/utils';
 import { toast } from 'svelte-sonner';
+const { applySegmentationMaskConstraints } = vi.hoisted(() => ({
+    applySegmentationMaskConstraints: vi.fn()
+}));
 
 const annotationLabelContext: AnnotationLabelContext = {
     isDrawing: true,
@@ -66,6 +69,10 @@ vi.mock('$lib/hooks/useCreateLabel/useCreateLabel', () => ({
     useCreateLabel: () => ({ createLabel })
 }));
 
+vi.mock('$lib/utils/segmentationOverlap', () => ({
+    applySegmentationMaskConstraints
+}));
+
 vi.mock('svelte-sonner', () => {
     return {
         toast: {
@@ -91,6 +98,7 @@ describe('useInstanceSegmentationBrush', () => {
 
         computeBoundingBoxFromMask.mockReturnValue(bbox);
         encodeBinaryMaskToRLE.mockReturnValue(rle);
+        applySegmentationMaskConstraints.mockResolvedValue([]);
 
         createAnnotation.mockResolvedValue({
             sample_id: 'new-annotation-id'
@@ -224,5 +232,56 @@ describe('useInstanceSegmentationBrush', () => {
 
         expect(createAnnotation).toHaveBeenCalled();
         expect(refetch).toHaveBeenCalled();
+    });
+
+    it('overrides semantic overlap mode to multi-class when one-class-per-pixel is disabled', async () => {
+        const refetch = vi.fn();
+
+        const { finishBrush } = useInstanceSegmentationBrush({
+            collectionId: 'c1',
+            sampleId: 's1',
+            sample,
+            annotationType: 'instance_segmentation',
+            oneClassPerPixel: false,
+            segmentationMode: 'semantic',
+            refetch
+        });
+
+        await finishBrush(mask, null, []);
+
+        expect(applySegmentationMaskConstraints).toHaveBeenCalledWith(
+            expect.objectContaining({
+                segmentationMode: 'instance'
+            })
+        );
+
+        expect(createAnnotation).toHaveBeenCalledWith(
+            expect.objectContaining({
+                annotation_type: 'instance_segmentation'
+            })
+        );
+        expect(annotationLabelContext.annotationType).toBe('instance_segmentation');
+    });
+
+    it('enables one-class overlap mode when one-class-per-pixel is enabled', async () => {
+        const refetch = vi.fn();
+
+        const { finishBrush } = useInstanceSegmentationBrush({
+            collectionId: 'c1',
+            sampleId: 's1',
+            sample,
+            annotationType: 'instance_segmentation',
+            oneClassPerPixel: true,
+            segmentationMode: 'instance',
+            refetch
+        });
+
+        await finishBrush(mask, null, []);
+
+        expect(applySegmentationMaskConstraints).toHaveBeenCalledWith(
+            expect.objectContaining({
+                segmentationMode: 'semantic'
+            })
+        );
     });
 });

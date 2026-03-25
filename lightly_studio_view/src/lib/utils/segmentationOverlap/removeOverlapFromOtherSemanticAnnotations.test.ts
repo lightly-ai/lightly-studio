@@ -11,10 +11,14 @@ vi.mock('$lib/components/SampleAnnotation/utils', () => ({
 }));
 
 const sample = { width: 4, height: 4 };
-const baseAnn = (id: string, mask: number[]): AnnotationView =>
+const baseAnn = (
+    id: string,
+    mask: number[],
+    annotationType: 'semantic_segmentation' | 'instance_segmentation' = 'semantic_segmentation'
+): AnnotationView =>
     ({
         sample_id: id,
-        annotation_type: 'semantic_segmentation',
+        annotation_type: annotationType,
         segmentation_details: { segmentation_mask: mask },
         annotation_label: { annotation_label_name: 'a', annotation_label_id: 'a' },
         parent_sample_id: 'p',
@@ -71,6 +75,22 @@ describe('removeOverlapFromOtherSemanticAnnotations', () => {
         });
 
         // Only one annotation overlaps; expect a single update payload.
+        expect(updateAnnotations).toHaveBeenCalledTimes(1);
+        const [updates] = updateAnnotations.mock.calls[0];
+        expect(updates[0].annotation_id).toBe('1');
+        expect(overriddenAnnotations.map((annotation) => annotation.sample_id)).toEqual(['1']);
+    });
+
+    it('also clears overlapping pixels on instance segmentation masks in one-class mode', async () => {
+        const overriddenAnnotations = await removeOverlapFromOtherSemanticAnnotations({
+            newMask: Uint8Array.from([1, 0, 0, 0]),
+            annotations: [baseAnn('1', [1, 1, 0, 0], 'instance_segmentation')],
+            segmentationMode: 'semantic',
+            sample,
+            collectionId: 'c',
+            updateAnnotations
+        });
+
         expect(updateAnnotations).toHaveBeenCalledTimes(1);
         const [updates] = updateAnnotations.mock.calls[0];
         expect(updates[0].annotation_id).toBe('1');

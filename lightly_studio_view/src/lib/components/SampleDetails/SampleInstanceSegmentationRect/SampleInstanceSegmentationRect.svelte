@@ -10,6 +10,7 @@
     } from '$lib/components/SampleAnnotation/utils';
     import parseColor from '$lib/components/SampleAnnotation/SampleAnnotationSegmentationRLE/calculateBinaryMaskFromRLE/parseColor';
     import { useAnnotationLabelContext } from '$lib/contexts/SampleDetailsAnnotation.svelte';
+    import { useSampleDetailsToolbarContext } from '$lib/contexts/SampleDetailsToolbar.svelte';
     import { useAnnotation } from '$lib/hooks/useAnnotation/useAnnotation';
     import { useAnnotationLabels } from '$lib/hooks/useAnnotationLabels/useAnnotationLabels';
     import { useInstanceSegmentationBrush } from '$lib/hooks/useInstanceSegmentationBrush';
@@ -46,6 +47,15 @@
         refetch
     }: SampleInstanceSegmentationRectProps = $props();
     const resolvedAnnotationType = $derived(annotationTypeProp);
+    const resolvedPersistedAnnotationType = $derived(
+        resolvedAnnotationType === 'semantic_segmentation'
+            ? 'semantic_segmentation'
+            : 'instance_segmentation'
+    );
+    const { context: sampleDetailsToolbarContext } = useSampleDetailsToolbarContext();
+    const resolvedSegmentationMode = $derived(
+        resolvedPersistedAnnotationType === 'semantic_segmentation' ? 'semantic' : 'instance'
+    );
 
     const labels = useAnnotationLabels({ collectionId });
     const activeAnnotationId = $derived.by(() => {
@@ -75,8 +85,9 @@
             sampleId,
             sample,
             annotations: sample.annotations,
-            segmentationMode:
-                resolvedAnnotationType === 'semantic_segmentation' ? 'semantic' : 'instance',
+            annotationType: resolvedPersistedAnnotationType,
+            oneClassPerPixel: sampleDetailsToolbarContext.brush.oneClassPerPixel,
+            segmentationMode: resolvedSegmentationMode,
             refetch,
             onAnnotationCreated: () => {
                 // Only refresh root collection if there were no annotations before

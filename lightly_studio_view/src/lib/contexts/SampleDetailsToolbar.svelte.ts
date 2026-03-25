@@ -8,6 +8,7 @@ export type SampleDetailsToolbarContext = {
     brush: {
         mode: BrushMode;
         size: number;
+        oneClassPerPixel: boolean;
     };
 };
 
@@ -16,7 +17,7 @@ const CONTEXT_KEY = 'sample-details-toolbar-type';
 export function createSampleDetailsToolbarContext(
     initiaValue: SampleDetailsToolbarContext = {
         status: 'cursor',
-        brush: { mode: 'brush', size: 50 }
+        brush: { mode: 'brush', size: 50, oneClassPerPixel: false }
     }
 ): SampleDetailsToolbarContext {
     const existingContext = getContext<SampleDetailsToolbarContext | undefined>(CONTEXT_KEY);
@@ -33,6 +34,7 @@ export function useSampleDetailsToolbarContext(): {
     context: SampleDetailsToolbarContext;
     setBrushMode: (mode: BrushMode) => void;
     setBrushSize: (size: number) => void;
+    setOneClassPerPixel: (value: boolean) => void;
     setStatus: (status: ToolbarStatus) => void;
 } {
     const context = getContext<SampleDetailsToolbarContext>(CONTEXT_KEY);
@@ -49,9 +51,13 @@ export function useSampleDetailsToolbarContext(): {
         context.brush.size = size;
     }
 
+    function setOneClassPerPixel(value: boolean) {
+        context.brush.oneClassPerPixel = value;
+    }
+
     function setStatus(status: ToolbarStatus) {
         context.status = status;
     }
 
-    return { context, setBrushMode, setBrushSize, setStatus };
+    return { context, setBrushMode, setBrushSize, setOneClassPerPixel, setStatus };
 }

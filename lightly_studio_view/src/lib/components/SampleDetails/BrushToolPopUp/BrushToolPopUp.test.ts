@@ -3,11 +3,13 @@ import { writable } from 'svelte/store';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import BrushTool from './BrushToolPopUp.svelte';
 import { BrushMode } from '$lib/contexts/SampleDetailsToolbar.svelte';
+import { AnnotationType } from '$lib/api/lightly_studio_local';
 
 let mockContext: {
     brush: {
         mode: 'brush' | 'eraser';
         size: number;
+        oneClassPerPixel: boolean;
     };
 };
 
@@ -18,7 +20,8 @@ const mockAnnotationLabelContext = {
     isDrawing: false,
     isErasing: false,
     isChangingBrushSize: false,
-    isOnAnnotationDetailsView: false
+    isOnAnnotationDetailsView: false,
+    annotationType: AnnotationType.INSTANCE_SEGMENTATION as AnnotationType | null
 };
 
 const settingsStore = writable({
@@ -41,6 +44,9 @@ vi.mock('$lib/contexts/SampleDetailsToolbar.svelte', () => {
             },
             setBrushSize: (value: number) => {
                 mockContext.brush.size = value;
+            },
+            setOneClassPerPixel: (value: boolean) => {
+                mockContext.brush.oneClassPerPixel = value;
             }
         })
     };
@@ -66,13 +72,15 @@ describe('BrushTool component', () => {
         mockContext = {
             brush: {
                 mode: 'brush',
-                size: 10
+                size: 10,
+                oneClassPerPixel: false
             }
         };
         mockAnnotationLabelContext.annotationId = null;
         mockAnnotationLabelContext.lastCreatedAnnotationId = null;
         mockAnnotationLabelContext.isChangingBrushSize = false;
         mockAnnotationLabelContext.isOnAnnotationDetailsView = false;
+        mockAnnotationLabelContext.annotationType = AnnotationType.INSTANCE_SEGMENTATION;
     });
 
     it('switches to eraser mode when eraser button is clicked', async () => {
@@ -216,5 +224,14 @@ describe('BrushTool component', () => {
         const finishButton = queryByLabelText(container, 'Finish');
 
         expect(finishButton).toBeNull();
+    });
+
+    it('enables one class per pixel mode when button is clicked', async () => {
+        const { container } = render(BrushTool);
+
+        const oneClassPerPixelButton = getByLabelText(container, 'One class per pixel');
+        await fireEvent.click(oneClassPerPixelButton);
+
+        expect(mockContext.brush.oneClassPerPixel).toBe(true);
     });
 });
