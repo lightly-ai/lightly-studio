@@ -74,7 +74,7 @@ class _LightlyStudioYouTubeVISTrackInputBase:
                 categories=[],
             )
 
-        root_collection_id = samples[0].dataset_id
+        root_collection_id = samples[0].collection_id
         uuid_to_videos, frame_to_video_id_and_index = _build_videos_and_frame_map(
             session=session, samples=samples
         )

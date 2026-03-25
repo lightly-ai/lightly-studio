@@ -63,7 +63,7 @@ class Dataset(Generic[T], ABC):
         """Get a single sample from the dataset by its ID."""
 
     @property
-    def dataset_id(self) -> UUID:
+    def collection_id(self) -> UUID:
         """Get the dataset ID."""
         return self._inner.collection_id
 
@@ -150,12 +150,12 @@ class Dataset(Generic[T], ABC):
         """
         embedding_model_id = embedding_model_resolver.get_by_name(
             session=self.session,
-            collection_id=self.dataset_id,
+            collection_id=self.collection_id,
             embedding_model_name=embedding_model_name,
         ).embedding_model_id
         compute_typicality.compute_typicality_metadata(
             session=self.session,
-            collection_id=self.dataset_id,
+            collection_id=self.collection_id,
             embedding_model_id=embedding_model_id,
             metadata_name=metadata_name,
         )
@@ -183,17 +183,17 @@ class Dataset(Generic[T], ABC):
         """
         embedding_model_id = embedding_model_resolver.get_by_name(
             session=self.session,
-            collection_id=self.dataset_id,
+            collection_id=self.collection_id,
             embedding_model_name=embedding_model_name,
         ).embedding_model_id
         query_tag = tag_resolver.get_by_name(
-            session=self.session, tag_name=query_tag_name, collection_id=self.dataset_id
+            session=self.session, tag_name=query_tag_name, collection_id=self.collection_id
         )
         if query_tag is None:
             raise ValueError("Query tag not found")
         return compute_similarity.compute_similarity_metadata(
             session=self.session,
-            key_collection_id=self.dataset_id,
+            key_collection_id=self.collection_id,
             embedding_model_id=embedding_model_id,
             query_tag_id=query_tag.tag_id,
             metadata_name=metadata_name,

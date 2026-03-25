@@ -28,7 +28,7 @@ class TestGroupDataset:
             ],
             name="test_group_dataset",
         )
-        dataset_id = group_ds.dataset_id
+        dataset_id = group_ds.collection_id
 
         assert group_ds.sample_type() == SampleType.GROUP
         assert group_ds.sample_class() == GroupSample
@@ -52,7 +52,7 @@ class TestGroupDataset:
 
         group_ds = GroupDataset.load(name="test_group_dataset")
 
-        assert group_ds.dataset_id == group_col.collection_id
+        assert group_ds.collection_id == group_col.collection_id
         assert group_ds.name == "test_group_dataset"
 
     def test_load_or_create(
@@ -64,7 +64,7 @@ class TestGroupDataset:
 
         # Second call loads the existing dataset
         group_ds_2 = GroupDataset.load_or_create(components=[("img", SampleType.IMAGE)])
-        assert group_ds_1.dataset_id == group_ds_2.dataset_id
+        assert group_ds_1.collection_id == group_ds_2.collection_id
 
         # Mismatched schema raises ValueError
         with pytest.raises(
