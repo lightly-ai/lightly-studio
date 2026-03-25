@@ -289,38 +289,127 @@ We follow a framework-agnostic approach, which means we minimize the use of fram
 
 ## Naming Conventions
 
-- Use PascalCase for component names (e.g., `components/AuthForm.svelte`).
-- Use camelCase for non-component files (e.g., `hooks/useAuth.ts`).
+- Use PascalCase for component names and their folders (e.g., `components/AuthForm/AuthForm.svelte`).
+- Use camelCase for non-component files (e.g., `hooks/useAuth/useAuth.ts`).
 - Use camelCase for variables, functions, and props (e.g., `const myVariable = 0;`).
-- Use the component or function name as a prefix for related logic files (e.g., tests).
+- Always place components in their own folders to scope all related files together (tests, subcomponents, stories).
+
+**Component Structure:**
+
+Each component lives in its own folder with the same name, containing the component file, tests, and any related files:
 
 ```
 src/
   components/
-    MyComponent/
-      MyComponent.svelte
-      MyComponent.test.ts
+    AuthForm/
+      AuthForm.svelte          # Main component file
+      AuthForm.test.ts         # Tests for the component
+      AuthForm.stories.svelte  # Storybook stories (if needed)
+```
+
+**Component with Subcomponents:**
+
+When a component grows complex, split it into subcomponents within the same folder:
+
+```
+src/
+  components/
+    UserDashboard/
+      UserDashboard.svelte
+      UserDashboard.test.ts
+      UserProfile/
+        UserProfile.svelte
+        UserProfile.test.ts
+      UserStats/
+        UserStats.svelte
+        UserStats.test.ts
+```
+
+**Hook Structure:**
+
+Similarly, hooks are stored in their own folders:
+
+```
+src/
+  lib/
+    hooks/
+      useAuth/
+        useAuth.ts
+        useAuth.test.ts
 ```
 
 ## Import/Export Conventions
 
-- Use absolute imports for components and hooks. Example:
+### Barrel Exports (index.ts)
 
-```typescript
-import { useData } from "$lib/hooks/useData";
+Use barrel exports via `index.ts` files to create clean, centralized module imports. This approach:
+
+- **Reduces import complexity**: Import from module level instead of deep paths
+- **Better change control**: Swap implementations internally without affecting consumers
+- **Clear public API**: The `index.ts` explicitly defines what's exported from the module
+
+**Hook Module Structure:**
+
+```
+src/
+  lib/
+    hooks/
+      index.ts              # Barrel export file
+      useAuth/
+        useAuth.ts
+        useAuth.test.ts
+      useData/
+        useData.ts
+        useData.test.ts
 ```
 
-instead of:
+**Barrel Export File (`index.ts`):**
 
 ```typescript
-import { useData } from "../../../lib/hooks/useData";
+// src/lib/hooks/index.ts
+export { useAuth } from './useAuth/useAuth';
+export { useData } from './useData/useData';
+export { useVideo } from './useVideo/useVideo';
 ```
 
-- Use relative imports only for local files. Example:
+**Good - Import from module:**
 
 ```typescript
-import { useData } from "./useData";
+// ✅ Good: Import from module level via barrel export
+import { useData, useAuth } from "$lib/hooks";
 ```
+
+**Bad - Import from deep paths:**
+
+```typescript
+// ❌ Bad: Deep imports bypass the module's public API
+import { useData } from "$lib/hooks/useData/useData";
+```
+
+### Absolute vs Relative Imports
+
+- **Use absolute imports** for shared modules (components, hooks, utils):
+
+```typescript
+// ✅ Good: Absolute imports for shared code
+import { useData } from "$lib/hooks";
+import { Button } from "$lib/components/ui/button";
+```
+
+- **Use relative imports** only for local files within the same module:
+
+```typescript
+// ✅ Good: Relative import within the same component folder
+// In: src/components/UserDashboard/UserProfile/UserProfile.svelte
+import { formatName } from "../UserDashboard.helpers";
+```
+
+**Benefits of this approach:**
+
+- **Cleaner imports**: `from "$lib/hooks"` vs `from "$lib/hooks/useData/useData"`
+- **Easier refactoring**: Move files within module without breaking external imports
+- **Controlled API surface**: Only export what should be public
+- **Better tree-shaking**: Bundlers can optimize based on explicit exports
 
 ## TypeScript Usage
 
@@ -422,8 +511,7 @@ import { Input } from '$lib/components/ui/input';
 
 ```typescript
 // ✅ Good: Using project-specific components for complex features
-import { DatasetCard } from '$lib/components';
-import { AnnotationToolbar } from '$lib/components';
+import { DatasetCard, AnnotationToolbar } from '$lib/components';
 
 <DatasetCard dataset={dataset} />
 <AnnotationToolbar onSave={handleSave} />
@@ -440,7 +528,7 @@ import { AnnotationToolbar } from '$lib/components';
 <script lang="ts">
   import { Card } from '$lib/components/ui/card';
   import { Button } from '$lib/components/ui/button';
-  import { useDataset } from '$lib/hooks/useDataset';
+  import { useDataset } from '$lib/hooks';
 
   const { dataset, isLoading } = useDataset();
 </script>
