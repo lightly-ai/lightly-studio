@@ -287,7 +287,7 @@ def load_video_annotations_from_labelformat(
         object_track_map = _create_object_tracks(
             session=session,
             video_annotation=video_annotation,
-            dataset_id=dataset_id,
+            root_collection_id=dataset_id,
         )
 
         if isinstance(video_annotation, VideoInstanceSegmentationTrack):
@@ -489,14 +489,14 @@ def _resolve_video_paths_from_labelformat(
 def _create_object_tracks(
     session: Session,
     video_annotation: VideoInstanceSegmentationTrack | VideoObjectDetectionTrack,
-    dataset_id: UUID,
+    root_collection_id: UUID,
 ) -> dict[int, UUID]:
     """Create an ObjectTrackTable entry for each tracked object in the video.
 
     Args:
         session: Database session.
         video_annotation: The labelformat video annotation containing objects.
-        dataset_id: UUID of the root collection (dataset).
+        root_collection_id: UUID of the root collection (dataset).
 
     Returns:
         Mapping from object index (position in video_annotation.objects) to the
@@ -516,7 +516,7 @@ def _create_object_tracks(
         tracks_to_create.append(
             ObjectTrackCreate(
                 object_track_number=object_track_number,
-                root_collection_id=dataset_id,
+                root_collection_id=root_collection_id,
             )
         )
         object_indices.append(obj_idx)
