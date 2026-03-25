@@ -41,8 +41,7 @@ describe('useVideoFilters', () => {
             });
 
             expect(get(videoFilter)).toEqual({
-                filter_type: 'video',
-                sample_filter: { collection_id: 'coll-1' }
+                filter_type: 'video'
             });
         });
 
@@ -77,7 +76,6 @@ describe('useVideoFilters', () => {
 
             expect(get(videoFilter)).toMatchObject({
                 sample_filter: {
-                    collection_id: 'coll-1',
                     sample_ids: ['id-1', 'id-2']
                 }
             });
@@ -108,7 +106,6 @@ describe('useVideoFilters', () => {
 
             expect(get(videoFilter)).toMatchObject({
                 sample_filter: {
-                    collection_id: 'coll-1',
                     tag_ids: ['tag-1']
                 }
             });
@@ -156,7 +153,6 @@ describe('useVideoFilters', () => {
             });
 
             expect(get(videoFilter)?.sample_filter).toMatchObject({
-                collection_id: 'coll-1',
                 sample_ids: ['sample-a', 'sample-b'],
                 tag_ids: ['tag-1']
             });

@@ -24,7 +24,6 @@ describe('getFrameFilter', () => {
                 collection_id: 'coll-1'
             })
         ).toEqual({
-            sample_filter: { collection_id: 'coll-1' },
             frame_number: {}
         });
     });
@@ -45,7 +44,6 @@ describe('getFrameFilter', () => {
             video_id: 'vid-1',
             frame_number: { min: 1, max: 5 },
             sample_filter: {
-                collection_id: 'coll-1',
                 sample_ids: ['s1', 's2'],
 
                 annotations_filter: {
@@ -72,7 +70,6 @@ describe('getFrameFilter', () => {
 
         expect(filter).toEqual({
             sample_filter: {
-                collection_id: 'coll-1',
                 metadata_filters: [{ key: 'temp', value: 10, op: '>=' }]
             },
             frame_number: {}

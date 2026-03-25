@@ -226,8 +226,7 @@
         buildImageFilter({
             dimensionsValues: $dimensionsValues ?? undefined,
             annotationFilter,
-            metadataFilters,
-            collectionId: collectionId
+            metadataFilters
         })
     );
     const { videoFramesBoundsValues } = useVideoFramesBounds();

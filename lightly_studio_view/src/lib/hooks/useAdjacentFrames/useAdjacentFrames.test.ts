@@ -2,11 +2,13 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { writable, type Writable } from 'svelte/store';
 import { SampleType, type VideoFilter, type VideoFrameFilter } from '$lib/api/lightly_studio_local';
 import type { TextEmbedding } from '$lib/hooks/useGlobalStorage';
+import type { VideoFilterParams } from '../useVideoFilters/useVideoFilters';
 import { useAdjacentFrames } from './useAdjacentFrames';
 
 const useAdjacentSamplesMock = vi.fn();
 const frameFilterStore: Writable<VideoFrameFilter | null> = writable(null);
 const videoFilterStore: Writable<VideoFilter | null> = writable(null);
+const videoFilterParamsStore: Writable<VideoFilterParams | null> = writable(null);
 const textEmbeddingStore = writable<TextEmbedding | undefined>(undefined);
 
 vi.mock('../useAdjacentSamples/useAdjacentSamples', () => ({
@@ -21,7 +23,8 @@ vi.mock('../useFramesFilter/useFramesFilter', () => ({
 
 vi.mock('../useVideoFilters/useVideoFilters', () => ({
     useVideoFilters: () => ({
-        videoFilter: videoFilterStore
+        videoFilter: videoFilterStore,
+        filterParams: videoFilterParamsStore
     })
 }));
 
@@ -36,13 +39,14 @@ describe('useAdjacentFrames', () => {
         vi.clearAllMocks();
         frameFilterStore.set(null);
         videoFilterStore.set(null);
+        videoFilterParamsStore.set(null);
         textEmbeddingStore.set(undefined);
         useAdjacentSamplesMock.mockReturnValue({ query: 'result' });
     });
 
     it('passes the derived frameFilter to useAdjacentSamples', () => {
         frameFilterStore.set({
-            sample_filter: { collection_id: 'col-1', sample_ids: ['a'] },
+            sample_filter: { sample_ids: ['a'] },
             frame_number: { min: 1, max: 2 }
         });
 
@@ -59,7 +63,7 @@ describe('useAdjacentFrames', () => {
                         video_frame_filter: {
                             collection_id: 'col-1',
                             filter: {
-                                sample_filter: { collection_id: 'col-1', sample_ids: ['a'] },
+                                sample_filter: { sample_ids: ['a'] },
                                 frame_number: { min: 1, max: 2 }
                             }
                         }
@@ -98,7 +102,6 @@ describe('useAdjacentFrames', () => {
     it('includes video filter and text embedding when fetching from videos', () => {
         videoFilterStore.set({
             sample_filter: {
-                collection_id: 'col-3',
                 sample_ids: ['s1']
             }
         });
@@ -124,7 +127,6 @@ describe('useAdjacentFrames', () => {
                             collection_id: 'col-3',
                             filter: {
                                 sample_filter: {
-                                    collection_id: 'col-3',
                                     sample_ids: ['s1']
                                 }
                             }
