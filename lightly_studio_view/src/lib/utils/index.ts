@@ -8,5 +8,6 @@ export * from './isInputElement';
 export * from './isTextInputTarget';
 export { isImageView } from './isImageView/isImageView';
 export { isVideoView } from './isVideoView/isVideoView';
+export { getImageURL as getImageURLById } from './getImageURL';
 export { getVideoURLById } from './getVideoURLById/getVideoURLById';
 export { getURL } from './getURL/getURL';

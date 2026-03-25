@@ -118,7 +118,7 @@ class TestDatasetExport:
         # Check that a default output path was used
         mock_to_coco_object_detections.assert_called_once_with(
             session=dataset.session,
-            root_dataset_id=dataset.dataset_id,
+            root_collection_id=dataset.dataset_id,
             samples=mocker.ANY,
             output_json=Path("coco_export.json"),
         )
@@ -303,7 +303,7 @@ class TestDatasetExport:
         output_folder = tmp_path / "pascalvoc"
         export_dataset.to_pascalvoc_semantic_segmentation(
             session=dataset.session,
-            root_dataset_id=dataset.dataset_id,
+            root_collection_id=dataset.dataset_id,
             samples=dataset.query(),
             output_folder=output_folder,
         )
@@ -359,7 +359,7 @@ class TestDatasetExport:
         output_folder = tmp_path / "pascalvoc"
         export_dataset.to_pascalvoc_semantic_segmentation(
             session=dataset.session,
-            root_dataset_id=dataset.dataset_id,
+            root_collection_id=dataset.dataset_id,
             samples=dataset.query(),
             output_folder=output_folder,
         )
@@ -407,7 +407,7 @@ class TestDatasetExport:
         output_folder = tmp_path / "pascalvoc"
         export_dataset.to_pascalvoc_semantic_segmentation(
             session=dataset.session,
-            root_dataset_id=dataset.dataset_id,
+            root_collection_id=dataset.dataset_id,
             samples=dataset.query(),
             output_folder=output_folder,
         )
@@ -454,7 +454,7 @@ class TestDatasetExport:
         output_folder = tmp_path / "pascalvoc"
         export_dataset.to_pascalvoc_semantic_segmentation(
             session=dataset.session,
-            root_dataset_id=dataset.dataset_id,
+            root_collection_id=dataset.dataset_id,
             samples=dataset.query(),
             output_folder=output_folder,
         )
@@ -505,7 +505,7 @@ class TestDatasetExport:
         output_folder = tmp_path / "pascalvoc"
         export_dataset.to_pascalvoc_semantic_segmentation(
             session=dataset.session,
-            root_dataset_id=dataset.dataset_id,
+            root_collection_id=dataset.dataset_id,
             samples=dataset.query(),
             output_folder=output_folder,
         )
@@ -538,7 +538,7 @@ def test_to_coco_object_detections(
     output_json = tmp_path / "task_obj_det_1.json"
     export_dataset.to_coco_object_detections(
         session=db_session,
-        root_dataset_id=dataset.collection_id,
+        root_collection_id=dataset.collection_id,
         samples=DatasetQuery(dataset=dataset, session=db_session),
         output_json=output_json,
     )
@@ -580,7 +580,7 @@ def test_to_coco_object_detections__no_annotations(
     output_json = tmp_path / "task_no_ann.json"
     export_dataset.to_coco_object_detections(
         session=db_session,
-        root_dataset_id=dataset.collection_id,
+        root_collection_id=dataset.collection_id,
         samples=DatasetQuery(dataset=dataset, session=db_session),
         output_json=output_json,
     )

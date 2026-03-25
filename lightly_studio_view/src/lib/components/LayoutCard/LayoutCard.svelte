@@ -10,6 +10,6 @@
     } = $props();
 </script>
 
-<div class={`h-full w-full space-y-6 rounded-[1vw] bg-card p-4 ${className}`}>
+<div class={`h-full w-full space-y-6 rounded-[1vw] bg-card ${className}`}>
     {@render children()}
 </div>

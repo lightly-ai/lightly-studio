@@ -130,7 +130,7 @@ def _process_explicit_target_distribution(
 def _get_class_balancing_data(  # noqa: PLR0913
     session: Session,
     strat: AnnotationClassBalancingStrategy,
-    dataset_id: UUID,
+    root_collection_id: UUID,
     annotation_label_ids: Sequence[UUID],
     input_sample_ids: Sequence[UUID],
     sample_id_to_annotation_label_ids: Mapping[UUID, list[UUID]],
@@ -151,7 +151,7 @@ def _get_class_balancing_data(  # noqa: PLR0913
         label_id_to_target, unused_label_ids, remaining_ratio = (
             _process_explicit_target_distribution(
                 session=session,
-                dataset_id=dataset_id,
+                dataset_id=root_collection_id,
                 target_distribution=strat.target_distribution,
                 annotation_label_ids=annotation_label_ids,
             )
@@ -210,7 +210,7 @@ def select_via_database(
         return
 
     # Get root dataset id for balancing strategies
-    root_dataset_id = collection_resolver.get_root_collection(
+    root_collection_id = collection_resolver.get_root_collection(
         session=session, collection_id=config.collection_id
     ).collection_id
 
@@ -255,7 +255,7 @@ def select_via_database(
             class_distributions, target_values = _get_class_balancing_data(
                 session=session,
                 strat=strat,
-                dataset_id=root_dataset_id,
+                root_collection_id=root_collection_id,
                 annotation_label_ids=annotation_label_ids,
                 input_sample_ids=input_sample_ids,
                 sample_id_to_annotation_label_ids=sample_id_to_annotation_label_ids,
