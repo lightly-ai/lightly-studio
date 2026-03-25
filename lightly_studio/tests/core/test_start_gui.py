@@ -14,7 +14,6 @@ from lightly_studio import ImageDataset, db_manager
 from lightly_studio.api.server import Server
 from lightly_studio.core import start_gui as start_gui_module
 from lightly_studio.core.start_gui import start_gui
-from lightly_studio.dataset import env as dataset_env
 from lightly_studio.models.collection import CollectionCreate, SampleType
 from lightly_studio.resolvers import collection_resolver
 
@@ -77,11 +76,8 @@ def test_start_gui__with_samples(
     # This should not raise an error
     start_gui()
 
-    # Verify that the server was created with default (env) args and started
-    mock_server.assert_called_once_with(
-        host=dataset_env.LIGHTLY_STUDIO_HOST,
-        port=dataset_env.LIGHTLY_STUDIO_PORT,
-    )
+    # Verify that the server was created with None defaults (env fallback is in Server)
+    mock_server.assert_called_once_with(host=None, port=None)
     mock_server_instance.create_uvicorn_server.assert_called_once_with()
 
 

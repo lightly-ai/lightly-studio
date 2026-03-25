@@ -1,5 +1,7 @@
 """This module contains the Server class for running the API using Uvicorn."""
 
+from __future__ import annotations
+
 import random
 import socket
 from contextlib import suppress
@@ -16,21 +18,33 @@ class Server:
     port: int
     host: str
 
-    def __init__(self, host: str, port: int) -> None:
+    def __init__(
+        self,
+        host: str | None = None,
+        port: int | None = None,
+    ) -> None:
         """Initialize the Server with host and port.
 
         Args:
-            host (str): The hostname to bind the server to.
-            port (int): The port number to run the server on.
+            host: The hostname to bind the server to. Falls back to
+                LIGHTLY_STUDIO_HOST env var.
+            port: The port number to run the server on. Falls back to
+                LIGHTLY_STUDIO_PORT env var.
         """
-        self.host = host
+        self.host = host if host is not None else env.LIGHTLY_STUDIO_HOST
         if self.host == "localhost" and not _is_ipv6_available():
             # There is no config option for uvicorn to start in a IPv4-only mode. For the most
             # common case of binding to localhost, we can translate the adress to the IPv4 format.
             self.host = "127.0.0.1"  # IPv4-only
-        self.port = _get_available_port(host=self.host, preferred_port=port)
-        if port != self.port:
+        resolved_port = port if port is not None else env.LIGHTLY_STUDIO_PORT
+        self.port = _get_available_port(host=self.host, preferred_port=resolved_port)
+        if resolved_port != self.port:
             env.LIGHTLY_STUDIO_PORT = self.port
+
+    @property
+    def app_url(self) -> str:
+        """The full URL of the running server."""
+        return f"{env.LIGHTLY_STUDIO_PROTOCOL}://{self.host}:{self.port}"
 
     def create_uvicorn_server(self) -> uvicorn.Server:
         """Create a Uvicorn server instance."""

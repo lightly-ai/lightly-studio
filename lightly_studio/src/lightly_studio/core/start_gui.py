@@ -11,32 +11,15 @@ import uvicorn
 
 from lightly_studio import db_manager
 from lightly_studio.api.server import Server
-from lightly_studio.dataset import env
 from lightly_studio.resolvers import collection_resolver, sample_resolver
 
 logger = logging.getLogger(__name__)
 
 
-@dataclass(frozen=True)
-class ServerInfo:
-    """Resolved server configuration returned by :func:`start_gui` and
-    :func:`start_gui_background`.
-
-    Attributes:
-        host: The host the server is bound to.
-        port: The port the server is listening on.
-        url: The full URL of the running server.
-    """
-
-    host: str
-    port: int
-    url: str
-
-
 def start_gui(
     host: str | None = None,
     port: int | None = None,
-) -> ServerInfo:
+) -> Server:
     """Launch the web interface for the loaded dataset.
 
     Args:
@@ -44,21 +27,19 @@ def start_gui(
         port: Port to bind the server to. Falls back to LIGHTLY_STUDIO_PORT env var.
 
     Returns:
-        ServerInfo with the resolved host, port, and URL.
+        The Server instance with the resolved host, port, and app_url.
 
     This call blocks until the server stops.
     """
     _validate_has_samples()
 
-    info = _resolve_server_config(host, port)
-
-    server = Server(host=info.host, port=info.port)
+    server = Server(host=host, port=port)
     uvicorn_server = server.create_uvicorn_server()
 
-    logger.info(f"Open the LightlyStudio GUI under: {info.url}")
+    logger.info(f"Open the LightlyStudio GUI under: {server.app_url}")
 
     _run_uvicorn_server(uvicorn_server)
-    return info
+    return server
 
 
 @dataclass
@@ -74,7 +55,7 @@ _GUI_BACKGROUND_STATE: _GuiBackgroundState | None = None
 def start_gui_background(
     host: str | None = None,
     port: int | None = None,
-) -> ServerInfo:
+) -> Server:
     """Launch the web interface in a background thread.
 
     Args:
@@ -82,16 +63,14 @@ def start_gui_background(
         port: Port to bind the server to. Falls back to LIGHTLY_STUDIO_PORT env var.
 
     Returns:
-        ServerInfo with the resolved host, port, and URL.
+        The Server instance with the resolved host, port, and app_url.
     """
     global _GUI_BACKGROUND_STATE  # noqa: PLW0603
     # TODO(Malte, 01/26): Handle start when a background server is already running.
 
     _validate_has_samples()
 
-    info = _resolve_server_config(host, port)
-
-    server = Server(host=info.host, port=info.port)
+    server = Server(host=host, port=port)
     uvicorn_server = server.create_uvicorn_server()
 
     thread = threading.Thread(
@@ -103,11 +82,11 @@ def start_gui_background(
     state = _GuiBackgroundState(uvicorn_server=uvicorn_server, thread=thread)
     _GUI_BACKGROUND_STATE = state
 
-    logger.info(f"Open the LightlyStudio GUI under: {info.url}")
+    logger.info(f"Open the LightlyStudio GUI under: {server.app_url}")
 
     thread.start()
     # TODO(Malte, 01/26): Wait for server startup and surface background errors.
-    return info
+    return server
 
 
 def stop_gui_background() -> None:
@@ -173,20 +152,3 @@ def _validate_has_samples() -> None:
         )
 
 
-def _resolve_server_config(
-    host: str | None,
-    port: int | None,
-) -> ServerInfo:
-    """Resolve host/port and compose the application URL.
-
-    Args:
-        host: Explicit host or None to fall back to env var.
-        port: Explicit port or None to fall back to env var.
-
-    Returns:
-        ServerInfo with resolved host, port, and URL.
-    """
-    resolved_host = host if host is not None else env.LIGHTLY_STUDIO_HOST
-    resolved_port = port if port is not None else env.LIGHTLY_STUDIO_PORT
-    app_url = f"{env.LIGHTLY_STUDIO_PROTOCOL}://{resolved_host}:{resolved_port}"
-    return ServerInfo(host=resolved_host, port=resolved_port, url=app_url)
