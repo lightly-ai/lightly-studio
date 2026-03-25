@@ -22,14 +22,14 @@ def start_gui(
 ) -> Server:
     """Launch the web interface for the loaded dataset.
 
+    This call blocks until the server stops.
+
     Args:
         host: Host to bind the server to. Falls back to LIGHTLY_STUDIO_HOST env var.
         port: Port to bind the server to. Falls back to LIGHTLY_STUDIO_PORT env var.
 
     Returns:
         The Server instance.
-
-    This call blocks until the server stops.
     """
     _validate_has_samples()
 

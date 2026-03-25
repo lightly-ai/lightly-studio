@@ -80,7 +80,7 @@ dataset = ls.ImageDataset.create()
 dataset.add_images_from_path(path=f"{dataset_path}/coco_subset_128_images/images")
 
 # Start the UI server on localhost:8001.
-# Use env variables LIGHTLY_STUDIO_HOST and LIGHTLY_STUDIO_PORT to customize it.
+# Use `host` and `port` arguments to customize it.
 ls.start_gui()
 ```
 
