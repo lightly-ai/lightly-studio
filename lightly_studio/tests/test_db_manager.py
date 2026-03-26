@@ -265,10 +265,10 @@ def test_connect__with_engine_url(
     db_manager.close()
 
 
-def test_connect__db_file_and_engine_url_raises(
+def test_connect__db_file_and_db_url_raises(
     patch_engine_singleton: None,  # noqa: ARG001
 ) -> None:
-    with pytest.raises(ValueError, match=r"Cannot specify both db_file and engine_url"):
+    with pytest.raises(ValueError, match=r"Cannot specify both db_file and db_url"):
         db_manager.connect(db_file="test.db", db_url="duckdb:///other.db")
 
 
