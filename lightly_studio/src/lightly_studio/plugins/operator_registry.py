@@ -3,14 +3,17 @@
 from __future__ import annotations
 
 import logging
+import sys
 import uuid
 from dataclasses import dataclass, field
+from importlib.metadata import entry_points
 
 from .base_operator import BaseOperator, OperatorStatus
 from .operator_context import OperatorScope
 
 logger = logging.getLogger(__name__)
 
+ENTRY_POINT_GROUP = "lightly_studio.plugins"
 
 @dataclass
 class RegisteredOperatorMetadata:
@@ -84,6 +87,43 @@ class OperatorRegistry:
         """Get an operator by its ID."""
         return self._operators.get(operator_id)
 
+    def discover_plugins(self) -> None:
+        """Auto-discover and register operators from installed packages.
+
+        Scans for packages that declare entry points in the ``lightly_studio.plugins`` group.
+        Each entry point should reference a ``BaseOperator`` subclass. The entry point name
+        is used as the ``operator_id``.
+
+        Example entry in an external packages ``pyproject.toml``:
+
+            [project.entry-points."lightly_studio.plugins"]
+            grounding_dino = "my_package:GroundingDinoOperator"
+        """
+        if sys.version_info >= (3, 10):
+            eps = entry_points(group=ENTRY_POINT_GROUP)
+        else:
+            eps = entry_points().get(ENTRY_POINT_GROUP, [])
+
+        for ep in eps:
+            try:
+                operator_class = ep.load()
+                operator = operator_class()
+                if not isinstance(operator, BaseOperator):
+                    logger.warning(
+                        "Plugin '%s' (%s) is not a BaseOperator subclass, skipping.",
+                        ep.name,
+                        ep.value,
+                    )
+                    continue
+                self.register(operator)
+                logger.info("Discovered plugin '%s' from %s", ep.name, ep.value)
+            except Exception:
+                logger.warning(
+                    "Failed to load plugin '%s' from %s",
+                    ep.name,
+                    ep.value,
+                    exc_info=True,
+                )
 
 # Global registry instance
 operator_registry = OperatorRegistry()
