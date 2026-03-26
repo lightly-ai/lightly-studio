@@ -3044,8 +3044,6 @@ export interface components {
          * @description Encapsulates filter parameters for querying samples.
          */
         SampleFilter: {
-            /** Collection Id */
-            collection_id?: string | null;
             /** Tag Ids */
             tag_ids?: string[] | null;
             /** Metadata Filters */
