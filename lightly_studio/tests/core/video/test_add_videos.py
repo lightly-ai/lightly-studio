@@ -34,6 +34,7 @@ from lightly_studio.models.video import VideoCreate
 from lightly_studio.resolvers import (
     annotation_resolver,
     collection_resolver,
+    dataset_resolver,
     video_frame_resolver,
     video_resolver,
 )
@@ -83,9 +84,9 @@ def test_load_into_collection_from_paths(db_session: Session, tmp_path: Path) ->
 
     # Check the correct collection hierarchy was created. There should be one extra collection
     # created with the video frames.
-    collection_hierarchy = collection_resolver.get_hierarchy(
+    collection_hierarchy = dataset_resolver.get_hierarchy(
         session=db_session,
-        root_collection_id=collection.collection_id,
+        dataset_id=collection.dataset_id,
     )
     assert len(collection_hierarchy) == 2
     assert collection_hierarchy[0].sample_type == SampleType.VIDEO
