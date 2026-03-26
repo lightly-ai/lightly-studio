@@ -96,6 +96,7 @@ def _postgres_engine(postgres_url: str | None) -> Generator[DatabaseEngine | Non
         yield None
         return
 
+    print("Creating Postgres engine with URL:", postgres_url)
     engine = DatabaseEngine(engine_url=postgres_url, single_threaded=True)
     yield engine
     engine.close()

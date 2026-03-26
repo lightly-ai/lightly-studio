@@ -273,6 +273,31 @@ def test_connect__db_file_and_db_url_raises(
         db_manager.connect(db_file="test.db", db_url="duckdb:///other.db")
 
 
+def test_connect__must_exist(
+    tmp_path: Path,
+    postgres_url: str | None,
+    patch_engine_singleton: None,  # noqa: ARG001
+) -> None:
+    """Test that must_exist=True rejects a database that does not exist yet."""
+    if postgres_url is not None:
+        # Testcontainers always create the database for Postgres, change the db name.
+        db_url = postgres_url + "_nonexistent"
+    else:
+        db_url = f"duckdb:///{tmp_path / 'duck.db'}"
+
+    # The DB does not exist yet, should raise.
+    with pytest.raises(FileNotFoundError, match="Database does not exist"):
+        db_manager.connect(db_url=db_url, must_exist=True)
+
+    # must_exist=False should succeed and create the DB.
+    db_manager.connect(db_url=db_url, must_exist=False)
+    db_manager.close()
+
+    # Now that the DB exists, must_exist=True should succeed.
+    db_manager.connect(db_url=db_url, must_exist=True)
+    db_manager.close()
+
+
 def test_get_backend(
     tmp_path: Path,
     patch_engine_singleton: None,  # noqa: ARG001
@@ -284,53 +309,35 @@ def test_get_backend(
     db_manager.close()
 
 
-def test_must_exist(
-    tmp_path: Path,
-    postgres_url: str | None,
-) -> None:
-    """Test that must_exist=True rejects a database that does not exist yet."""
-    db_url = postgres_url if postgres_url is not None else f"duckdb:///{tmp_path / 'duck.db'}"
-
-    # The DB does not exist yet, should raise.
-    with pytest.raises(FileNotFoundError, match="Database does not exist"):
-        DatabaseEngine(engine_url=db_url, must_exist=True, single_threaded=True)
-
-    # must_exist=False should succeed and create the DB.
-    engine = DatabaseEngine(engine_url=db_url, must_exist=False, single_threaded=True)
-    engine.close()
-
-    # Now that the DB exists, must_exist=True should succeed.
-    engine = DatabaseEngine(engine_url=db_url, must_exist=True, single_threaded=True)
-    engine.close()
-
-
 def test_cleanup_postgres__drops_tables_when_cleanup_existing(
     mocker: MockerFixture,
+    postgres_url: str | None,
 ) -> None:
+    if postgres_url is None:
+        pytest.skip("Requires --postgres flag")
+
     mock_create_engine = mocker.patch.object(db_manager, "create_engine")
     mock_engine = mock_create_engine.return_value
     mock_drop_all = mocker.patch.object(SQLModel.metadata, "drop_all")
     mocker.patch.object(SQLModel.metadata, "create_all")
 
-    DatabaseEngine(
-        engine_url="postgresql://user:pass@localhost:5432/testdb",
-        cleanup_existing=True,
-    )
+    DatabaseEngine(engine_url=postgres_url, cleanup_existing=True)
 
     mock_drop_all.assert_called_once_with(bind=mock_engine)
 
 
 def test_cleanup_postgres__no_drop_when_cleanup_existing_false(
     mocker: MockerFixture,
+    postgres_url: str | None,
 ) -> None:
+    if postgres_url is None:
+        pytest.skip("Requires --postgres flag")
+
     mocker.patch.object(db_manager, "create_engine")
     mock_drop_all = mocker.patch.object(SQLModel.metadata, "drop_all")
     mocker.patch.object(SQLModel.metadata, "create_all")
 
-    DatabaseEngine(
-        engine_url="postgresql://user:pass@localhost:5432/testdb",
-        cleanup_existing=False,
-    )
+    DatabaseEngine(engine_url=postgres_url, cleanup_existing=False)
 
     mock_drop_all.assert_not_called()
 

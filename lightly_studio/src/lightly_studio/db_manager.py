@@ -75,7 +75,8 @@ class DatabaseEngine:
         if self._backend == DatabaseBackend.POSTGRESQL:
             self._engine_url = _ensure_psycopg3_driver(self._engine_url)
 
-        if must_exist and not _database_exists(self._engine_url, self._backend):
+        db_exists = _database_exists(self._engine_url, self._backend)
+        if must_exist and not db_exists:
             raise FileNotFoundError(f"Database does not exist at {self._engine_url}.")
 
         if cleanup_existing and self._backend == DatabaseBackend.DUCKDB:
@@ -94,7 +95,11 @@ class DatabaseEngine:
                 max_overflow=40,
             )
 
+        # For DuckDB, create_engine will create the database file if it does not exist.
+        # For Postgres, we need to create the database.
         if self._backend == DatabaseBackend.POSTGRESQL:
+            if not db_exists:
+                sqlalchemy_utils.create_database(self._engine_url)
             with self._engine.connect() as conn:
                 conn.execute(text("CREATE EXTENSION IF NOT EXISTS vector"))
                 conn.commit()
