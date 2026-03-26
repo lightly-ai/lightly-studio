@@ -51,6 +51,7 @@ const tags = writable<Record<string, Tag[]>>({});
 const classifiers = writable<ClassifierInfo[]>([]);
 // Cache collection versions for more efficient image cache busting
 const collectionVersions = writable<Record<string, string>>({});
+const collectionVersionRequests = new Map<string, Promise<string>>();
 
 const isEditingMode = writable<boolean>(false);
 const setIsEditingMode = (isEditing: boolean) => {
@@ -173,19 +174,32 @@ export const useGlobalStorage = () => {
                 return versions[collectionId];
             }
 
-            const { data } = await readCollection({
-                path: { collection_id: collectionId }
-            });
-            if (data?.created_at) {
-                const version = new Date(data.created_at).getTime().toString();
-                collectionVersions.update((versions) => ({
-                    ...versions,
-                    [collectionId]: version
-                }));
-                return version;
+            const existingRequest = collectionVersionRequests.get(collectionId);
+            if (existingRequest) {
+                return existingRequest;
             }
 
-            return '';
+            const request = readCollection({
+                path: { collection_id: collectionId }
+            })
+                .then(({ data }) => {
+                    if (!data?.created_at) {
+                        return '';
+                    }
+
+                    const version = new Date(data.created_at).getTime().toString();
+                    collectionVersions.update((currentVersions) => ({
+                        ...currentVersions,
+                        [collectionId]: version
+                    }));
+                    return version;
+                })
+                .finally(() => {
+                    collectionVersionRequests.delete(collectionId);
+                });
+
+            collectionVersionRequests.set(collectionId, request);
+            return request;
         },
 
         // Individual sample selection methods

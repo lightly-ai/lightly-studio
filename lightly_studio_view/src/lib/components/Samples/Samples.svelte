@@ -1,7 +1,10 @@
 <script lang="ts">
     import { useDimensions } from '$lib/hooks/useDimensions/useDimensions';
     import { type TextEmbedding, useGlobalStorage } from '$lib/hooks/useGlobalStorage';
-    import { useMetadataFilters } from '$lib/hooks/useMetadataFilters/useMetadataFilters';
+    import {
+        createMetadataFilters,
+        useMetadataFilters
+    } from '$lib/hooks/useMetadataFilters/useMetadataFilters';
     import { useSettings } from '$lib/hooks/useSettings';
     import { useTags } from '$lib/hooks/useTags/useTags';
     import { routeHelpers } from '$lib/routes';
@@ -28,26 +31,55 @@
 
     type SamplesProps = {
         collection_id: string;
+        collectionVersion?: string;
         selectedAnnotationFilterIds: Readable<string[]>;
         sampleWidth: number;
         textEmbedding: Readable<TextEmbedding | undefined>;
     };
-    const { collection_id, selectedAnnotationFilterIds, textEmbedding }: SamplesProps = $props();
+    const { collection_id, collectionVersion, selectedAnnotationFilterIds, textEmbedding }:
+        SamplesProps = $props();
 
     const { tagsSelected } = useTags({
         collection_id,
         kind: ['sample']
     });
 
-    const { dimensionsValues: dimensions } = useDimensions();
+    const { dimensionsBounds, dimensionsValues: dimensions } = useDimensions();
     const { metadataValues } = useMetadataFilters(collection_id);
 
     const {
-        getCollectionVersion,
         setfilteredSampleCount,
         getSelectedSampleIds,
         toggleSampleSelection
     } = useGlobalStorage();
+
+    const activeDimensions = $derived.by(() => {
+        const values = $dimensions;
+        const bounds = $dimensionsBounds;
+
+        if (!values || !bounds) {
+            return undefined;
+        }
+
+        const hasActiveWidthFilter =
+            values.min_width !== bounds.min_width || values.max_width !== bounds.max_width;
+        const hasActiveHeightFilter =
+            values.min_height !== bounds.min_height || values.max_height !== bounds.max_height;
+
+        if (!hasActiveWidthFilter && !hasActiveHeightFilter) {
+            return undefined;
+        }
+
+        return values;
+    });
+
+    const activeMetadataValues = $derived.by(() => {
+        if (!$metadataValues) {
+            return undefined;
+        }
+
+        return createMetadataFilters($metadataValues).length > 0 ? $metadataValues : undefined;
+    });
 
     const samplesParams = $derived({
         collection_id,
@@ -57,9 +89,9 @@
                 ? $selectedAnnotationFilterIds
                 : undefined,
             tag_ids: $tagsSelected.size > 0 ? Array.from($tagsSelected) : undefined,
-            dimensions: $dimensions ?? undefined
+            dimensions: activeDimensions
         },
-        metadata_values: $metadataValues,
+        metadata_values: activeMetadataValues,
         text_embedding: $textEmbedding?.embedding
     });
 
@@ -130,11 +162,6 @@
 
     onMount(async () => {
         initialize();
-        // Load collection version for caching
-        await getCollectionVersion(collection_id);
-
-        // Get the grid view rendering mode from settings
-
         isReady = true;
     });
 
@@ -142,9 +169,9 @@
         const parts = [
             $selectedAnnotationFilterIds.join(','),
             Array.from($tagsSelected).join(','),
-            `${$dimensions?.min_width}-${$dimensions?.max_width}`,
-            `${$dimensions?.min_height}-${$dimensions?.max_height}`,
-            JSON.stringify($metadataValues),
+            `${activeDimensions?.min_width}-${activeDimensions?.max_width}`,
+            `${activeDimensions?.min_height}-${activeDimensions?.max_height}`,
+            JSON.stringify(activeMetadataValues),
             $textEmbedding?.queryText || ''
         ];
 
@@ -219,7 +246,7 @@
 
 <SampleGrid
     itemCount={samples.length}
-    overScan={100}
+    overScan={12}
     scrollPosition={initialScrollPosition}
     scrollResetKey={$textEmbedding?.queryText ?? ''}
     onScroll={handleScroll}
@@ -263,6 +290,7 @@
                         <SampleImageGridItem
                             sample={samples[index]}
                             {objectFit}
+                            cachedCollectionVersion={collectionVersion}
                             {sampleSize}
                             {displayTextOnImage}
                         />

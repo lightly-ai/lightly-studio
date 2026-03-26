@@ -8,6 +8,7 @@
 
     const {
         sampleSize,
+        collection,
         selectedAnnotationFilterIds,
         globalStorage: { textEmbedding }
     } = data;
@@ -31,6 +32,7 @@
 
 <Samples
     sampleWidth={$sampleSize.width}
+    collectionVersion={collection.created_at ? new Date(collection.created_at).getTime().toString() : ''}
     {textEmbedding}
     {collection_id}
     {selectedAnnotationFilterIds}

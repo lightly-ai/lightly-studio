@@ -71,6 +71,7 @@
             .map(mapToCanvasAnnotation)
             .filter((annotation): annotation is AnnotationCanvasAnnotation => annotation != null)
     );
+    const hasAnnotationsWithVisuals = $derived(annotationsWithVisuals.length > 0);
     const objectFitClass = $derived(objectFit === 'cover' ? 'object-cover' : 'object-contain');
 
     let showAnnotations = $state(false);
@@ -84,7 +85,7 @@
     });
 </script>
 
-{#if showAnnotations && !$isHidden}
+{#if showAnnotations && hasAnnotationsWithVisuals && !$isHidden}
     <div data-testid="sample-annotation-item">
         <AnnotationCanvas
             width={sample.width}

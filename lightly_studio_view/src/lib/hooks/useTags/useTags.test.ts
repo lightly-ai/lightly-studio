@@ -229,4 +229,29 @@ describe('useTags Hook', () => {
         expect(get(tags1SelectedAgain).has('2')).toBe(true);
         expect(get(tags1SelectedAgain).size).toBe(2);
     });
+
+    it('should share the same in-flight request across hook instances', async () => {
+        let resolveRequest: ((value: { data: TagView[]; error: undefined }) => void) | undefined;
+        const request = new Promise<{ data: TagView[]; error: undefined }>((resolve) => {
+            resolveRequest = resolve;
+        });
+
+        const readTagsSpy = vi.spyOn(lightly_studio_local, 'readTags').mockImplementation(
+            () => request
+        );
+
+        const firstHook = useTags({ collection_id: 'shared-collection' });
+        const secondHook = useTags({ collection_id: 'shared-collection' });
+
+        expect(readTagsSpy).toHaveBeenCalledTimes(1);
+
+        resolveRequest?.({
+            data: mockTags,
+            error: undefined
+        });
+
+        await waitFor(() => expect(get(firstHook.tags)).toEqual(mockTags));
+        expect(get(secondHook.tags)).toEqual(mockTags);
+        expect(readTagsSpy).toHaveBeenCalledTimes(1);
+    });
 });

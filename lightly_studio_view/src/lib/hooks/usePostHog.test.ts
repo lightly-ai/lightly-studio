@@ -27,9 +27,9 @@ describe('usePostHog', () => {
         mockCapture.mockClear();
     });
 
-    it('should initialize PostHog with correct configuration', () => {
+    it('should initialize PostHog with correct configuration', async () => {
         const { init } = usePostHog();
-        init();
+        await init();
 
         expect(mockInit).toHaveBeenCalledWith('prod-key', {
             api_host: 'https://eu.i.posthog.com',
@@ -40,9 +40,9 @@ describe('usePostHog', () => {
         });
     });
 
-    it('should track events after initialization', () => {
+    it('should track events after initialization', async () => {
         const { init, trackEvent } = usePostHog();
-        init();
+        await init();
         trackEvent('test_event', { test: 'data' });
 
         expect(mockCapture).toHaveBeenCalledWith('test_event', { test: 'data' });

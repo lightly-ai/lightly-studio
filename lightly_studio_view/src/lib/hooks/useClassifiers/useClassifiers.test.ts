@@ -124,6 +124,32 @@ describe('useClassifiers Hook', () => {
             expect(get(classifiersSelected).size).toBe(0);
         });
 
+        it('should share the same in-flight load across hook instances', async () => {
+            let resolveRequest:
+                | ((value: { data: { classifiers: ClassifierInfo[] } | null }) => void)
+                | undefined;
+            const request = new Promise<{ data: { classifiers: ClassifierInfo[] } | null }>(
+                (resolve) => {
+                    resolveRequest = resolve;
+                }
+            );
+
+            const loadSpy = vi.spyOn(collection, 'GET').mockImplementation(() => request);
+
+            const firstHook = useClassifiers();
+            const secondHook = useClassifiers();
+
+            expect(loadSpy).toHaveBeenCalledTimes(1);
+
+            resolveRequest?.({
+                data: { classifiers: mockClassifiers }
+            });
+
+            await waitFor(() => expect(get(firstHook.classifiers)).toEqual(mockClassifiers));
+            expect(get(secondHook.classifiers)).toEqual(mockClassifiers);
+            expect(loadSpy).toHaveBeenCalledTimes(1);
+        });
+
         it('should save classifier successfully', async () => {
             // Mock the POST request
             const mockBlob = new Blob(['test data'], { type: 'application/octet-stream' });
