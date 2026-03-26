@@ -219,22 +219,22 @@ class TestDatasetQueryMatch:
         """Test tag contains expression with three samples and two tags."""
         # Arrange
         dataset = create_collection(session=db_session)
-        dataset_id = dataset.collection_id
+        collection_id = dataset.collection_id
 
         # Create three samples
         _image1 = create_image(
-            session=db_session, collection_id=dataset_id, file_path_abs="/path/to/sample1.jpg"
+            session=db_session, collection_id=collection_id, file_path_abs="/path/to/sample1.jpg"
         )  # no tags
         image2 = create_image(
-            session=db_session, collection_id=dataset_id, file_path_abs="/path/to/sample2.jpg"
+            session=db_session, collection_id=collection_id, file_path_abs="/path/to/sample2.jpg"
         )  # dog only
         image3 = create_image(
-            session=db_session, collection_id=dataset_id, file_path_abs="/path/to/sample3.jpg"
+            session=db_session, collection_id=collection_id, file_path_abs="/path/to/sample3.jpg"
         )  # dog and cat
 
         # Create two tags
-        dog_tag = create_tag(session=db_session, collection_id=dataset_id, tag_name="dog")
-        cat_tag = create_tag(session=db_session, collection_id=dataset_id, tag_name="cat")
+        dog_tag = create_tag(session=db_session, collection_id=collection_id, tag_name="dog")
+        cat_tag = create_tag(session=db_session, collection_id=collection_id, tag_name="cat")
 
         # Assign tags
         tag_resolver.add_tag_to_sample(

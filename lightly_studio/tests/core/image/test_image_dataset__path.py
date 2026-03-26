@@ -206,7 +206,7 @@ class TestDataset:
 
         spy_tagger.assert_called_once_with(
             session=dataset.session,
-            collection_id=dataset.dataset_id,
+            collection_id=dataset.collection_id,
             input_path=str(tmp_path),
             sample_ids=mocker.ANY,
             tag_depth=0,

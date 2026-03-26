@@ -21,6 +21,6 @@ class TestImageSample:
         assert sample.file_name == "sample1.mp4"
         assert sample.width == 320
         assert sample.height == 240
-        assert sample.dataset_id == collection.collection_id
+        assert sample.collection_id == collection.collection_id
         assert sample.file_path_abs == "/path/to/sample1.mp4"
         assert sample.sample_id == video_table.sample_id

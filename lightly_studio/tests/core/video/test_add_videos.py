@@ -252,7 +252,7 @@ def test_load_video_annotations_from_labelformat(
     collection = create_collection(db_session, sample_type=SampleType.VIDEO)
     _, frame_sample_ids = add_videos.load_video_annotations_from_labelformat(
         session=db_session,
-        dataset_id=collection.collection_id,
+        collection_id=collection.collection_id,
         video_paths=video_paths,
         input_labels=input_labels,
         input_labels_paths_root=tmp_path,
@@ -322,7 +322,7 @@ def test_load_video_annotations_from_labelformat__multiple_videos(
     collection = create_collection(db_session, sample_type=SampleType.VIDEO)
     add_videos.load_video_annotations_from_labelformat(
         session=db_session,
-        dataset_id=collection.collection_id,
+        collection_id=collection.collection_id,
         video_paths=video_paths,
         input_labels=input_labels,
         input_labels_paths_root=tmp_path,
@@ -386,7 +386,7 @@ def test_load_video_annotations_from_labelformat__same_name_in_different_folders
     collection = create_collection(db_session, sample_type=SampleType.VIDEO)
     created_video_sample_ids, _ = add_videos.load_video_annotations_from_labelformat(
         session=db_session,
-        dataset_id=collection.collection_id,
+        collection_id=collection.collection_id,
         video_paths=video_paths,
         input_labels=input_labels,
         input_labels_paths_root=tmp_path,
@@ -528,7 +528,7 @@ def test_load_video_annotations_from_labelformat__raises_on_frame_mismatch(
     with pytest.raises(ValueError, match="Number of frames in annotation"):
         add_videos.load_video_annotations_from_labelformat(
             session=db_session,
-            dataset_id=collection.collection_id,
+            collection_id=collection.collection_id,
             video_paths=video_paths,
             input_labels=input_labels,
             input_labels_paths_root=tmp_path,
@@ -566,7 +566,7 @@ def test_load_video_annotations_from_labelformat__raises_on_missing_video(
     with pytest.raises(FileNotFoundError, match="No video file found"):
         add_videos.load_video_annotations_from_labelformat(
             session=db_session,
-            dataset_id=collection.collection_id,
+            collection_id=collection.collection_id,
             video_paths=video_paths,
             input_labels=input_labels,
             input_labels_paths_root=tmp_path,
