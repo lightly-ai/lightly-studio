@@ -82,7 +82,14 @@
         const collectionId = (video.sample as SampleView).collection_id;
 
         if (datasetId && collectionId) {
-            goto(routeHelpers.toVideosDetails(datasetId, 'video', collectionId, video.sample_id));
+            goto(
+                routeHelpers.toVideosDetails({
+                    datasetId,
+                    collectionType: 'video',
+                    collectionId,
+                    sampleId: video.sample_id
+                })
+            );
         }
     }
 

@@ -22,31 +22,37 @@ def test_update_annotations__updates_label_for_all_track_annotations(
 ) -> None:
     """Updating one annotation label updates all track siblings."""
     collection = create_collection(session=db_session)
-    dataset_id = collection.collection_id
+    root_collection_id = collection.collection_id
 
     label_before = create_annotation_label(
-        session=db_session, root_collection_id=dataset_id, label_name="a"
+        session=db_session, root_collection_id=root_collection_id, label_name="a"
     )
     label_after = create_annotation_label(
-        session=db_session, root_collection_id=dataset_id, label_name="b"
+        session=db_session, root_collection_id=root_collection_id, label_name="b"
     )
 
-    img_1 = create_image(session=db_session, collection_id=dataset_id, file_path_abs="/tmp/1.png")
-    img_2 = create_image(session=db_session, collection_id=dataset_id, file_path_abs="/tmp/2.png")
-    img_3 = create_image(session=db_session, collection_id=dataset_id, file_path_abs="/tmp/3.png")
+    img_1 = create_image(
+        session=db_session, collection_id=root_collection_id, file_path_abs="/tmp/1.png"
+    )
+    img_2 = create_image(
+        session=db_session, collection_id=root_collection_id, file_path_abs="/tmp/2.png"
+    )
+    img_3 = create_image(
+        session=db_session, collection_id=root_collection_id, file_path_abs="/tmp/3.png"
+    )
 
     track_ids = object_track_resolver.create_many(
         session=db_session,
         tracks=[
-            ObjectTrackCreate(object_track_number=1, dataset_id=dataset_id),
-            ObjectTrackCreate(object_track_number=2, dataset_id=dataset_id),
+            ObjectTrackCreate(object_track_number=1, root_collection_id=root_collection_id),
+            ObjectTrackCreate(object_track_number=2, root_collection_id=root_collection_id),
         ],
     )
     assert len(track_ids) == 2
     track_a, track_b = track_ids
     annotations = create_annotations(
         session=db_session,
-        collection_id=dataset_id,
+        collection_id=root_collection_id,
         annotations=[
             AnnotationDetails(
                 sample_id=img_1.sample_id,
@@ -77,7 +83,7 @@ def test_update_annotations__updates_label_for_all_track_annotations(
         annotation_updates=[
             AnnotationUpdate(
                 annotation_id=track_a_annotations[0].sample_id,
-                collection_id=dataset_id,
+                collection_id=root_collection_id,
                 label_name=label_after.annotation_label_name,
             )
         ],

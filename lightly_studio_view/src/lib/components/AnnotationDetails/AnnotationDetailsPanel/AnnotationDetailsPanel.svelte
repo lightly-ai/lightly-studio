@@ -25,7 +25,7 @@
     } = $props();
     const { removeTagFromSample } = useRemoveTagFromSample({ collectionId });
 
-    const tags = $derived(annotation.tags?.map((t) => ({ tagId: t.tag_id, name: t.name })) ?? []);
+    const tags = $derived(annotation.tags ?? []);
 
     const onRemoveTag = async (tagId: string) => {
         await removeTagFromSample(annotation.sample_id, tagId);

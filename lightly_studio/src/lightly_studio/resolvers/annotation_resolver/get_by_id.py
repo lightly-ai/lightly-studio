@@ -22,6 +22,8 @@ def get_by_id(session: Session, annotation_id: UUID) -> AnnotationBaseTable | No
 def get_by_ids(session: Session, annotation_ids: Sequence[UUID]) -> Sequence[AnnotationBaseTable]:
     """Retrieve multiple annotations by their IDs.
 
+    Output order matches the input order.
+
     Args:
         session: The database session to use for the query.
         annotation_ids: A list of annotation IDs to retrieve.
@@ -29,6 +31,9 @@ def get_by_ids(session: Session, annotation_ids: Sequence[UUID]) -> Sequence[Ann
     Returns:
         A list of annotations matching the provided IDs.
     """
-    return session.exec(
+    results = session.exec(
         select(AnnotationBaseTable).where(col(AnnotationBaseTable.sample_id).in_(annotation_ids))
     ).all()
+
+    annotation_map = {annotation.sample_id: annotation for annotation in results}
+    return [annotation_map[id_] for id_ in annotation_ids if id_ in annotation_map]
