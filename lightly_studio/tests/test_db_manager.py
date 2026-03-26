@@ -137,6 +137,7 @@ def test_connect__db_file_none(
     mock_engine_class.assert_called_once_with(
         engine_url=None,
         cleanup_existing=True,
+        must_exist=False,
     )
 
 
