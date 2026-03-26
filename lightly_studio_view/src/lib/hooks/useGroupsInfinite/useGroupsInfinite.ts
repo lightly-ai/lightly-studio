@@ -82,8 +82,7 @@ export const useGroupsInfinite = (collectionId: string) => {
     const readGroupsOptions = getAllGroupsInfiniteOptions({
         path: { collection_id: collectionId },
         query: { limit: 30 },
-        body: {
-        }
+        body: {}
     });
 
     const query = createInfiniteQuery({
