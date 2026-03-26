@@ -58,10 +58,10 @@
             return currentFilter;
         }
 
-        const { sample_ids: _, ...restSampleFilter } = currentFilter.sample_filter;
+        const { sample_ids: _sample_ids, ...restSampleFilter } = currentFilter.sample_filter;
         if (Object.keys(restSampleFilter).length === 0) {
             // sample_filter only had sample_ids — remove it entirely
-            const { sample_filter: __, ...restFilter } = currentFilter;
+            const { sample_filter: _sample_filter, ...restFilter } = currentFilter;
             return restFilter;
         }
         return {
