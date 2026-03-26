@@ -156,12 +156,12 @@ def test_session_data_consistency(mocker: MockerFixture, tmp_path: Path) -> None
     )
     # Arrange: Create initial dataset and sample using short-lived database session.
     with db_manager.session() as session:
-        dataset_id = create_collection(
+        collection_id = create_collection(
             session=session, collection_name="test_session_dataset"
         ).collection_id
         create_image(
             session=session,
-            collection_id=dataset_id,
+            collection_id=collection_id,
             file_path_abs="image.png",
         )
         # Session commits automatically when exiting the context manager
@@ -178,11 +178,11 @@ def test_session_data_consistency(mocker: MockerFixture, tmp_path: Path) -> None
     with db_manager.session() as session:
         create_image(
             session=session,
-            collection_id=dataset.dataset_id,
+            collection_id=dataset.collection_id,
             file_path_abs="image2.png",
         )
         samples_from_resolver = image_resolver.get_all_by_collection_id(
-            session=session, collection_id=dataset.dataset_id
+            session=session, collection_id=dataset.collection_id
         ).samples
         assert len(samples_from_resolver) == 2
 

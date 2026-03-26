@@ -62,7 +62,7 @@ class EmbeddingManager:
     def __init__(self) -> None:
         """Initialize the embedding manager."""
         self._models: dict[UUID, EmbeddingGenerator] = {}
-        self._dataset_id_to_default_model_id: dict[UUID, UUID] = {}
+        self._collection_id_to_default_model_id: dict[UUID, UUID] = {}
 
     def register_embedding_model(
         self,
@@ -99,8 +99,8 @@ class EmbeddingManager:
         self._models[model_id] = embedding_generator
 
         # Set as default if requested or if it's the first model
-        if set_as_default or collection_id not in self._dataset_id_to_default_model_id:
-            self._dataset_id_to_default_model_id[collection_id] = model_id
+        if set_as_default or collection_id not in self._collection_id_to_default_model_id:
+            self._collection_id_to_default_model_id[collection_id] = model_id
 
         return db_model
 
@@ -285,13 +285,13 @@ class EmbeddingManager:
         """
         # Return the existing default model ID if available.
 
-        if collection_id in self._dataset_id_to_default_model_id:
-            return self._dataset_id_to_default_model_id[collection_id]
+        if collection_id in self._collection_id_to_default_model_id:
+            return self._collection_id_to_default_model_id[collection_id]
 
         # Load the embedding generator based on sample_type from the env var.
         dataset = collection_resolver.get_by_id(session=session, collection_id=collection_id)
         if dataset is None:
-            raise ValueError("Provided dataset_id could not be found.")
+            raise ValueError("Provided collection_id could not be found.")
 
         embedding_generator = _load_embedding_generator_from_env(sample_type=dataset.sample_type)
         if embedding_generator is None:
@@ -315,7 +315,7 @@ class EmbeddingManager:
         If embedding_model_id is not provided, returns the default model for collection_id.
         If embedding_model_id is provided, validates that the model has been loaded and returns it.
         """
-        default_model_id = self._dataset_id_to_default_model_id.get(collection_id, None)
+        default_model_id = self._collection_id_to_default_model_id.get(collection_id, None)
         if embedding_model_id is None and default_model_id is None:
             raise ValueError(
                 "No embedding_model_id provided and no default embedding model registered."

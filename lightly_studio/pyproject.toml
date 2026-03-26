@@ -61,6 +61,7 @@ dependencies = [
     "einops>=0.6.0",
     "opencv-python-headless>=4.11.0.86",
     "click>=8.0.0",
+    "brotli-asgi>=1.4.0",
 ]
 
 [project.scripts]
