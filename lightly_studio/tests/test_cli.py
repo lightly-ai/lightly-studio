@@ -60,6 +60,9 @@ def test_gui__with_db_file_and_db_url(mocker: MockerFixture) -> None:
     mocker.patch.object(db_manager, "connect")
     mocker.patch.object(lightly_studio, "start_gui")
     runner = CliRunner()
-    result = runner.invoke(cli=cli.main, args=["gui", "--db-file", "my.duckdb", "--db-url", "postgresql://localhost/mydb"])
+    result = runner.invoke(
+        cli=cli.main,
+        args=["gui", "--db-file", "my.duckdb", "--db-url", "postgresql://localhost/mydb"],
+    )
     assert result.exit_code != 0
     assert "mutually exclusive" in result.output

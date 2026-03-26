@@ -185,31 +185,31 @@ def set_engine(engine: DatabaseEngine) -> None:
 
 
 def connect(
-    db_file: str | None = None,
     cleanup_existing: bool = False,
-    engine_url: str | None = None,
+    db_file: str | None = None,
+    db_url: str | None = None,
 ) -> None:
     """Set up the database connection.
 
     Helper function to set up the database engine. Supports both DuckDB (default)
-    and PostgreSQL via the engine_url parameter or LIGHTLY_STUDIO_DATABASE_URL env var.
+    and PostgreSQL via the db_url parameter or LIGHTLY_STUDIO_DATABASE_URL env var.
 
     Args:
         db_file: Path to DuckDB file.
         cleanup_existing: If True, removes the existing database before use.
-        engine_url: Full database URL.
+        db_url: Full database URL.
 
     Raises:
-        ValueError: If both db_file and engine_url are provided.
+        ValueError: If both db_file and db_url are provided.
     """
-    if db_file is not None and engine_url is not None:
-        raise ValueError("Cannot specify both db_file and engine_url")
+    if db_file is not None and db_url is not None:
+        raise ValueError("Cannot specify both db_file and db_url")
 
-    if engine_url is None and db_file is not None:
-        engine_url = f"duckdb:///{db_file}"
+    if db_url is None and db_file is not None:
+        db_url = f"duckdb:///{db_file}"
 
     engine = DatabaseEngine(
-        engine_url=engine_url,
+        engine_url=db_url,
         cleanup_existing=cleanup_existing,
     )
     set_engine(engine=engine)
