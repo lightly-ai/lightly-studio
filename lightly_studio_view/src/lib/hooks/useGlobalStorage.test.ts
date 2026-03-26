@@ -1,6 +1,11 @@
+import { readCollection } from '$lib/api/lightly_studio_local/sdk.gen';
 import { get } from 'svelte/store';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { useGlobalStorage } from './useGlobalStorage';
+
+vi.mock('$lib/api/lightly_studio_local/sdk.gen', () => ({
+    readCollection: vi.fn()
+}));
 
 describe('useGlobalStorage', () => {
     let storage: ReturnType<typeof useGlobalStorage>;
@@ -8,13 +13,14 @@ describe('useGlobalStorage', () => {
     const testCollectionId2 = 'test-collection-2';
 
     beforeEach(() => {
+        vi.clearAllMocks();
         storage = useGlobalStorage();
         // Clear all selections before each test
         storage.clearSelectedSamples(testCollectionId);
         storage.clearSelectedSampleAnnotationCrops(testCollectionId);
-
         storage.clearSelectedSamples(testCollectionId2);
         storage.clearSelectedSampleAnnotationCrops(testCollectionId2);
+        storage.collectionVersions.set({});
     });
 
     describe('Sample selection', () => {
@@ -211,6 +217,44 @@ describe('useGlobalStorage', () => {
             // Change again
             storage.setIsEditingMode(false);
             expect(subscriber).toHaveBeenCalledWith(false);
+        });
+    });
+
+    describe('Collection versions', () => {
+        it('should reuse the same in-flight request for concurrent version lookups', async () => {
+            let resolveRequest: ((value: { data: { created_at: string } }) => void) | undefined;
+            const request = new Promise<{ data: { created_at: string } }>((resolve) => {
+                resolveRequest = resolve;
+            });
+
+            vi.mocked(readCollection).mockImplementation(
+                () =>
+                    request as unknown as ReturnType<typeof readCollection>
+            );
+
+            const firstRequest = storage.getCollectionVersion(testCollectionId);
+            const secondRequest = storage.getCollectionVersion(testCollectionId);
+
+            expect(readCollection).toHaveBeenCalledTimes(1);
+
+            resolveRequest?.({
+                data: {
+                    created_at: '2024-01-02T03:04:05.000Z'
+                }
+            });
+
+            await expect(Promise.all([firstRequest, secondRequest])).resolves.toEqual([
+                '1704164645000',
+                '1704164645000'
+            ]);
+            expect(get(storage.collectionVersions)).toEqual({
+                [testCollectionId]: '1704164645000'
+            });
+
+            await expect(storage.getCollectionVersion(testCollectionId)).resolves.toBe(
+                '1704164645000'
+            );
+            expect(readCollection).toHaveBeenCalledTimes(1);
         });
     });
 });

@@ -79,6 +79,7 @@ const {
     clearClassifierSelectedSamples,
     toggleClassifierSampleSelection
 } = useClassifierState();
+const classifierRequestsByCollection = new Map<string, Promise<void>>();
 
 export function useClassifiers(): UseClassifiersReturn {
     // Use the utility functions
@@ -91,14 +92,27 @@ export function useClassifiers(): UseClassifiersReturn {
         useCreateClassifiersPanel();
 
     const loadClassifiers = async () => {
-        if (get(isLoading)) return;
+        const collectionId = page.params.collection_id;
+        if (!collectionId) {
+            return;
+        }
+
+        const existingRequest = classifierRequestsByCollection.get(collectionId);
+        if (existingRequest) {
+            isLoading.set(true);
+            await existingRequest.finally(() => {
+                isLoading.set(false);
+            });
+            return;
+        }
+
         error.set(null);
         isLoading.set(true);
 
-        try {
+        const request = (async () => {
             const response = await client.GET('/api/classifiers/get_all_classifiers', {
                 params: {
-                    query: { collection_id: page.params.collection_id }
+                    query: { collection_id: collectionId }
                 }
             });
             if (response.data?.classifiers) {
@@ -107,11 +121,17 @@ export function useClassifiers(): UseClassifiersReturn {
             } else {
                 classifiersData.set([]); // Set empty array if no data.
             }
-        } catch (err) {
-            error.set(err as Error);
-        } finally {
-            isLoading.set(false);
-        }
+        })()
+            .catch((err) => {
+                error.set(err as Error);
+            })
+            .finally(() => {
+                classifierRequestsByCollection.delete(collectionId);
+                isLoading.set(false);
+            });
+
+        classifierRequestsByCollection.set(collectionId, request);
+        await request;
     };
 
     // Initialize classifiers on hook creation

@@ -19,20 +19,29 @@ interface UseTagsReturn {
 }
 
 const tagsSelectedByCollection = writable<Record<string, Set<string>>>({});
+const tagRequestsByCollection = new Map<string, Promise<void>>();
 
 export function useTags(options: UseTagsOptions): UseTagsReturn {
     const { collection_id, kind } = options;
     const { tags: tagsData } = useGlobalStorage();
-    const isLoaded = writable(false);
     const error = writable<Error | null>(null);
     const isLoading = writable(false);
 
     const loadTags = () => {
-        if (get(isLoading)) return;
         if (!collection_id) return;
+        if (get(tagsData)[collection_id] !== undefined) return;
+
+        const existingRequest = tagRequestsByCollection.get(collection_id);
+        if (existingRequest) {
+            isLoading.set(true);
+            void existingRequest.finally(() => {
+                isLoading.set(false);
+            });
+            return;
+        }
 
         isLoading.set(true);
-        readTags({
+        const request = readTags({
             path: {
                 collection_id
             }
@@ -53,14 +62,16 @@ export function useTags(options: UseTagsOptions): UseTagsReturn {
                 error.set(err as Error);
             })
             .finally(() => {
+                tagRequestsByCollection.delete(collection_id);
                 isLoading.set(false);
             });
+
+        tagRequestsByCollection.set(collection_id, request);
     };
 
     // Auto-load tags when hook is initialized
-    if (!get(isLoaded) && collection_id) {
+    if (collection_id && get(tagsData)[collection_id] === undefined) {
         loadTags();
-        isLoaded.set(true);
     }
 
     const tags = derived(tagsData, ($tagsData) => {
