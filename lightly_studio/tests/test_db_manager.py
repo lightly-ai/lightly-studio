@@ -258,18 +258,18 @@ def test_connect__with_engine_url(
     patch_engine_singleton: None,  # noqa: ARG001
 ) -> None:
     engine_url = f"duckdb:///{tmp_path / 'test.db'}"
-    db_manager.connect(engine_url=engine_url)
+    db_manager.connect(db_url=engine_url)
 
     engine = db_manager.get_engine()
     assert engine._engine_url == engine_url
     db_manager.close()
 
 
-def test_connect__db_file_and_engine_url_raises(
+def test_connect__db_file_and_db_url_raises(
     patch_engine_singleton: None,  # noqa: ARG001
 ) -> None:
-    with pytest.raises(ValueError, match=r"Cannot specify both db_file and engine_url"):
-        db_manager.connect(db_file="test.db", engine_url="duckdb:///other.db")
+    with pytest.raises(ValueError, match=r"Cannot specify both db_file and db_url"):
+        db_manager.connect(db_file="test.db", db_url="duckdb:///other.db")
 
 
 def test_get_backend(
@@ -277,7 +277,7 @@ def test_get_backend(
     patch_engine_singleton: None,  # noqa: ARG001
 ) -> None:
     engine_url = f"duckdb:///{tmp_path / 'test.db'}"
-    db_manager.connect(engine_url=engine_url)
+    db_manager.connect(db_url=engine_url)
 
     assert db_manager.get_backend() == DatabaseBackend.DUCKDB
     db_manager.close()
