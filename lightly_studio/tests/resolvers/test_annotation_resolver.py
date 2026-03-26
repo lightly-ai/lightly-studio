@@ -18,6 +18,7 @@ from lightly_studio.models.video import VideoFrameCreate
 from lightly_studio.resolvers import (
     annotation_resolver,
     collection_resolver,
+    image_resolver,
     tag_resolver,
     video_frame_resolver,
 )
@@ -219,7 +220,7 @@ def test_create_and_get_annotation__for_video_frame_with_ordering(db_session: Se
 def test_count_annotations_labels_by_collection(db_session: Session, test_data: _TestData) -> None:
     collection = test_data.collection
 
-    annotation_counts = annotation_resolver.count_annotations_by_collection(
+    annotation_counts = image_resolver.count_image_annotations_by_collection(
         session=db_session, collection_id=collection.collection_id
     )
 
@@ -237,7 +238,7 @@ def test_count_annotations_by_collection_with_filtering(
     collection_id = collection.collection_id
 
     # Test without filtering
-    counts = annotation_resolver.count_annotations_by_collection(
+    counts = image_resolver.count_image_annotations_by_collection(
         session=db_session, collection_id=collection_id
     )
     counts_dict = {label: (current, total) for label, current, total in counts}
@@ -248,7 +249,7 @@ def test_count_annotations_by_collection_with_filtering(
     assert counts_dict["cat"] == (1, 1)
 
     # Test with filtering by "dog"
-    filtered_counts = annotation_resolver.count_annotations_by_collection(
+    filtered_counts = image_resolver.count_image_annotations_by_collection(
         session=db_session,
         collection_id=collection_id,
         image_filter=ImageFilter(
@@ -267,7 +268,7 @@ def test_count_annotations_by_collection_with_filtering(
     )  # Cat from sample1 is visible (because sample1 has a dog)
 
     # Test with filtering by "cat"
-    filtered_counts = annotation_resolver.count_annotations_by_collection(
+    filtered_counts = image_resolver.count_image_annotations_by_collection(
         session=db_session,
         collection_id=collection_id,
         image_filter=ImageFilter(

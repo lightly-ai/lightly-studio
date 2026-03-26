@@ -432,6 +432,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/collections/{collection_id}/images/annotations/count": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Count Image Annotations By Collection
+         * @description Get image annotation counts for a specific collection.
+         */
+        post: operations["count_image_annotations_by_collection"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/collections/{collection_id}/samples/list": {
         parameters: {
             query?: never;
@@ -587,28 +607,6 @@ export interface paths {
          * @description Create a new annotation.
          */
         post: operations["create_annotation"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/collections/{collection_id}/annotations/count": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /**
-         * Count Annotations By Collection
-         * @description Get annotation counts for a specific collection using an image filter body.
-         *
-         *     Returns a list of dictionaries with label name and count.
-         */
-        post: operations["count_annotations_by_collection"];
         delete?: never;
         options?: never;
         head?: never;
@@ -1892,10 +1890,10 @@ export interface components {
          */
         AnnotationLabelCreate: {
             /**
-             * Dataset Id
+             * Root Collection Id
              * Format: uuid
              */
-            dataset_id: string;
+            root_collection_id: string;
             /** Annotation Label Name */
             annotation_label_name: string;
         };
@@ -1913,10 +1911,10 @@ export interface components {
          */
         AnnotationLabelTable: {
             /**
-             * Dataset Id
+             * Root Collection Id
              * Format: uuid
              */
-            dataset_id: string;
+            root_collection_id: string;
             /** Annotation Label Name */
             annotation_label_name: string;
             /**
@@ -2480,6 +2478,24 @@ export interface components {
             /** Max */
             max?: number | null;
         };
+        /** FilterWithCollectionId[VideoFilter] */
+        FilterWithCollectionId_VideoFilter_: {
+            /**
+             * Collection Id
+             * Format: uuid
+             */
+            collection_id: string;
+            filter: components["schemas"]["VideoFilter"];
+        };
+        /** FilterWithCollectionId[VideoFrameFilter] */
+        FilterWithCollectionId_VideoFrameFilter_: {
+            /**
+             * Collection Id
+             * Format: uuid
+             */
+            collection_id: string;
+            filter: components["schemas"]["VideoFrameFilter"];
+        };
         /**
          * FloatRange
          * @description Defines a range of floating-point values.
@@ -2892,10 +2908,10 @@ export interface components {
             limit: number;
         };
         /**
-         * ReadCountAnnotationsRequest
-         * @description Request body for reading annotation counts.
+         * ReadCountImageAnnotationsRequest
+         * @description Request body for reading image annotation counts.
          */
-        ReadCountAnnotationsRequest: {
+        ReadCountImageAnnotationsRequest: {
             filter?: components["schemas"]["ImageFilter"] | null;
         };
         /**
@@ -3459,8 +3475,8 @@ export interface components {
              * @enum {string}
              */
             filter_type: "video_frame_adjacent";
-            video_frame_filter: components["schemas"]["VideoFrameFilter"];
-            video_filter?: components["schemas"]["VideoFilter"] | null;
+            video_frame_filter: components["schemas"]["FilterWithCollectionId_VideoFrameFilter_"];
+            video_filter?: components["schemas"]["FilterWithCollectionId_VideoFilter_"] | null;
             /** Video Text Embedding */
             video_text_embedding?: number[] | null;
         };
@@ -4423,6 +4439,43 @@ export interface operations {
             };
         };
     };
+    count_image_annotations_by_collection: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                collection_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["ReadCountImageAnnotationsRequest"] | null;
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: string | number;
+                    }[];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     read_samples: {
         parameters: {
             query?: {
@@ -4828,43 +4881,6 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["AnnotationView"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    count_annotations_by_collection: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                collection_id: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: {
-            content: {
-                "application/json": components["schemas"]["ReadCountAnnotationsRequest"] | null;
-            };
-        };
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": {
-                        [key: string]: string | number;
-                    }[];
                 };
             };
             /** @description Validation Error */

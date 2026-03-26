@@ -1,8 +1,5 @@
 """Resolvers for database operations."""
 
-from lightly_studio.resolvers.annotation_resolver.count_annotations_by_collection import (
-    count_annotations_by_collection,
-)
 from lightly_studio.resolvers.annotation_resolver.create_many import create_many
 from lightly_studio.resolvers.annotation_resolver.delete_annotation import (
     delete_annotation,
@@ -41,7 +38,6 @@ from lightly_studio.resolvers.annotation_resolver.update_segmentation_mask impor
 )
 
 __all__ = [
-    "count_annotations_by_collection",
     "create_many",
     "delete_annotation",
     "delete_annotations",
