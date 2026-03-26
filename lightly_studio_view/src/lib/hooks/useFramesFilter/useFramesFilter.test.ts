@@ -24,7 +24,6 @@ describe('useFramesFilter', () => {
             updateFilterParams({ collection_id: 'coll-1' });
 
             expect(get(frameFilter)).toEqual({
-                sample_filter: { collection_id: 'coll-1' },
                 frame_number: {}
             });
         });
@@ -84,7 +83,6 @@ describe('useFramesFilter', () => {
             });
 
             expect(get(frameFilter)?.sample_filter).toMatchObject({
-                collection_id: 'coll-1',
                 sample_ids: ['sample-a', 'sample-b'],
                 tag_ids: ['tag-1']
             });

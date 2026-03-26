@@ -52,7 +52,7 @@ describe('useAdjacentSamples', () => {
             sampleId: 'sample-1',
             body: {
                 sample_type: 'video',
-                filters: { filter_type: 'video', sample_filter: { collection_id: 'col-1' } }
+                filters: { filter_type: 'video', sample_filter: {} }
             }
         };
 
@@ -88,7 +88,7 @@ describe('useAdjacentSamples', () => {
             sampleId: 'sample-2',
             body: {
                 sample_type: 'image',
-                filters: { filter_type: 'image', sample_filter: { collection_id: 'col-2' } }
+                filters: { filter_type: 'image', sample_filter: {} }
             }
         };
 

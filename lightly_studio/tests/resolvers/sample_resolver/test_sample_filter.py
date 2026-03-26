@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from sqlmodel import Session, select
+from sqlmodel import Session, col, select
 
 from lightly_studio.models.caption import CaptionCreate
 from lightly_studio.models.sample import SampleTable
@@ -46,32 +46,6 @@ class TestSampleFilter:
             samples[0].sample_id,
             samples[1].sample_id,
         }
-
-    def test_apply__collection_id_filter(self, db_session: Session) -> None:
-        # Create samples
-        collection1 = create_collection(session=db_session)
-        create_images(
-            db_session=db_session,
-            collection_id=collection1.collection_id,
-            images=[ImageStub(path="sample_1.png")],
-        )
-        collection2 = create_collection(session=db_session, collection_name="collection_2")
-        sample2 = create_images(
-            db_session=db_session,
-            collection_id=collection2.collection_id,
-            images=[ImageStub(path="sample_2.png")],
-        )[0]
-
-        # Create the filter
-        sample_filter = SampleFilter(collection_id=collection2.collection_id)
-
-        # Apply the filter
-        filtered_query = sample_filter.apply(query=select(SampleTable))
-        result = db_session.exec(filtered_query).all()
-
-        # Should only return one sample
-        assert len(result) == 1
-        assert result[0].sample_id == sample2.sample_id
 
     def test_apply__sample_id_filter(self, db_session: Session) -> None:
         # Create samples
@@ -370,9 +344,13 @@ class TestSampleFilter:
             ],
         )
 
+        base_query = select(SampleTable).where(
+            col(SampleTable.collection_id) == collection.collection_id
+        )
+
         # Create a positive filter
-        sample_filter = SampleFilter(has_captions=True, collection_id=collection.collection_id)
-        filtered_query = sample_filter.apply(query=select(SampleTable))
+        sample_filter = SampleFilter(has_captions=True)
+        filtered_query = sample_filter.apply(query=base_query)
         result = db_session.exec(filtered_query).all()
 
         # Should return samples[0]
@@ -380,8 +358,8 @@ class TestSampleFilter:
         assert result[0].sample_id == samples[0].sample_id
 
         # Create a negative filter
-        sample_filter = SampleFilter(has_captions=False, collection_id=collection.collection_id)
-        filtered_query = sample_filter.apply(query=select(SampleTable))
+        sample_filter = SampleFilter(has_captions=False)
+        filtered_query = sample_filter.apply(query=base_query)
         result = db_session.exec(filtered_query).all()
 
         # Should return samples[1]

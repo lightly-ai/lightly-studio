@@ -56,7 +56,6 @@ const imageFilter = derived(filterParams, ($filterParams): ImageFilter | null =>
     }
 
     const sampleFilter: SampleFilter = {};
-    sampleFilter.collection_id = $filterParams?.collection_id;
 
     const sampleIds = $filterParams.filters?.sample_ids;
     if (sampleIds && sampleIds.length > 0) {

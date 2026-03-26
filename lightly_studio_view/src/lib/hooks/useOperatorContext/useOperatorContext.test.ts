@@ -169,9 +169,9 @@ describe('resolveContextFilter', () => {
     });
 
     describe('collection routes with route-specific filters', () => {
-        const imageFilter = { sample_filter: { collection_id: 'coll-1' } };
-        const videoFilter = { sample_filter: { collection_id: 'coll-1' } };
-        const frameFilter = { sample_filter: { collection_id: 'coll-1' } };
+        const imageFilter = { sample_filter: {} };
+        const videoFilter = { sample_filter: {} };
+        const frameFilter = { sample_filter: {} };
 
         it('returns imageFilter for samples route', () => {
             const ctx = { ...BASE_CONTEXT, routeId: APP_ROUTES.samples };
