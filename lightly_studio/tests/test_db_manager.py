@@ -284,6 +284,40 @@ def test_get_backend(
     db_manager.close()
 
 
+def test_must_exist__raises_for_nonexistent_database(
+    tmp_path: Path,
+    postgres_url: str | None,
+) -> None:
+    """Test that must_exist=True rejects a database that does not exist yet."""
+    if postgres_url is None:
+        engine_url = f"duckdb:///{tmp_path / 'missing.db'}"
+    else:
+        base = sqlalchemy.make_url(postgres_url)
+        engine_url = base.set(database=f"missing_{uuid4().hex}").render_as_string(
+            hide_password=False
+        )
+
+    with pytest.raises(FileNotFoundError, match="Database does not exist"):
+        DatabaseEngine(engine_url=engine_url, must_exist=True, single_threaded=True)
+
+
+def test_must_exist__succeeds_for_existing_database(
+    tmp_path: Path,
+    postgres_url: str | None,
+) -> None:
+    """Test that must_exist=True accepts a database that already exists."""
+    if postgres_url is None:
+        db_file = tmp_path / "existing.db"
+        engine_url = f"duckdb:///{db_file}"
+        existing_engine = DatabaseEngine(engine_url=engine_url, single_threaded=True)
+        existing_engine.close()
+    else:
+        engine_url = postgres_url
+
+    engine = DatabaseEngine(engine_url=engine_url, must_exist=True, single_threaded=True)
+    engine.close()
+
+
 def test_cleanup_postgres__drops_tables_when_cleanup_existing(
     mocker: MockerFixture,
 ) -> None:
