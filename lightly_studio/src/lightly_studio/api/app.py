@@ -12,6 +12,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.gzip import GZipMiddleware
 from fastapi.routing import APIRoute
 from sqlmodel import Session
+from starlette.middleware.gzip import GZipMiddleware
 
 from lightly_studio import db_manager
 from lightly_studio.api.routes import (
@@ -108,6 +109,8 @@ async def add_server_timing(request: Request, call_next):  # type: ignore[no-unt
         else timing_value
     )
     return response
+
+app.add_middleware(GZipMiddleware, minimum_size=1000)
 
 
 def use_route_names_as_operation_ids(app: FastAPI) -> None:
