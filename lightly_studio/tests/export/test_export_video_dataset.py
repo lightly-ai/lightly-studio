@@ -20,17 +20,17 @@ class TestVideoDatasetExport:
         dataset = VideoDataset.create(name="test_video_dataset")
         video_with_frames = create_video_with_frames(
             session=dataset.session,
-            collection_id=dataset.dataset_id,
+            collection_id=dataset.collection_id,
             video=VideoStub(path="video_001.mp4", width=3, height=2, duration_s=2.0, fps=1.0),
         )
 
         label = create_annotation_label(
-            session=dataset.session, root_collection_id=dataset.dataset_id, label_name="cat"
+            session=dataset.session, root_collection_id=dataset.collection_id, label_name="cat"
         )
         object_track_id = object_track_resolver.create_many(
             session=dataset.session,
             tracks=[
-                ObjectTrackCreate(object_track_number=99, root_collection_id=dataset.dataset_id)
+                ObjectTrackCreate(object_track_number=99, root_collection_id=dataset.collection_id)
             ],
         )[0]
 

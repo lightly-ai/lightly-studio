@@ -41,7 +41,7 @@ class TestImageSample:
         assert sample.file_name == "sample1.png"
         assert sample.width == 640
         assert sample.height == 480
-        assert sample.dataset_id == collection.collection_id
+        assert sample.collection_id == collection.collection_id
         assert sample.file_path_abs == "/path/to/sample1.png"
         assert sample.sample_id == image_table.sample_id
         assert sample.created_at == image_table.created_at

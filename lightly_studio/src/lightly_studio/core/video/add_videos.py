@@ -113,8 +113,8 @@ def load_into_collection_from_paths(  # noqa: PLR0913
         ),
     )
     video_logging_context.update_example_paths(file_paths_exist)
-    # Get the video frames dataset ID
-    video_frames_dataset_id = collection_resolver.get_or_create_child_collection(
+    # Get the video frames collection ID
+    video_frames_collection_id = collection_resolver.get_or_create_child_collection(
         session=session, collection_id=collection_id, sample_type=SampleType.VIDEO_FRAME
     )
 
@@ -166,7 +166,7 @@ def load_into_collection_from_paths(  # noqa: PLR0913
                 # Create video frame samples by parsing all frames
                 extraction_context = FrameExtractionContext(
                     session=session,
-                    collection_id=video_frames_dataset_id,
+                    collection_id=video_frames_collection_id,
                     video_sample_id=video_sample_ids[0],
                 )
                 frame_sample_ids = _create_video_frame_samples(
@@ -188,7 +188,7 @@ def load_into_collection_from_paths(  # noqa: PLR0913
 
     loading_log.log_loading_results(
         session=session,
-        dataset_id=collection_id,
+        collection_id=collection_id,
         logging_context=video_logging_context,
         print_summary=show_progress,
     )
@@ -198,7 +198,7 @@ def load_into_collection_from_paths(  # noqa: PLR0913
 
 def load_video_annotations_from_labelformat(
     session: Session,
-    dataset_id: UUID,
+    collection_id: UUID,
     video_paths: Iterable[str],
     input_labels: ObjectDetectionTrackInput | InstanceSegmentationTrackInput,
     input_labels_paths_root: Path | str,
@@ -214,7 +214,7 @@ def load_video_annotations_from_labelformat(
 
     Args:
         session: The database session.
-        dataset_id: The ID of the video dataset to load annotations into.
+        collection_id: The ID of the video collection to load annotations into.
         video_paths: An iterable of file paths to the videos to load.
             Note: This is used for file names from input_labels, that don't have a file extension.
         input_labels: The labelformat input containing video annotations.
@@ -233,7 +233,7 @@ def load_video_annotations_from_labelformat(
 
     created_sample_ids, created_video_frame_sample_ids = load_into_collection_from_paths(
         session=session,
-        collection_id=dataset_id,
+        collection_id=collection_id,
         video_paths=video_paths_labelformat,
     )
 
@@ -251,7 +251,7 @@ def load_video_annotations_from_labelformat(
 
     label_map = labelformat_helpers.create_label_map(
         session=session,
-        root_collection_id=dataset_id,
+        root_collection_id=collection_id,
         input_labels=input_labels,
     )
 
@@ -287,7 +287,7 @@ def load_video_annotations_from_labelformat(
         object_track_map = _create_object_tracks(
             session=session,
             video_annotation=video_annotation,
-            root_collection_id=dataset_id,
+            root_collection_id=collection_id,
         )
 
         if isinstance(video_annotation, VideoInstanceSegmentationTrack):
@@ -308,7 +308,7 @@ def load_video_annotations_from_labelformat(
             raise ValueError(f"Unsupported annotation type: {type(video_annotation)}")
         # Use frames collection as parent for annotations collection
         frames_collection_id = collection_resolver.get_or_create_child_collection(
-            session=session, collection_id=dataset_id, sample_type=SampleType.VIDEO_FRAME
+            session=session, collection_id=collection_id, sample_type=SampleType.VIDEO_FRAME
         )
         annotation_resolver.create_many(
             session=session,

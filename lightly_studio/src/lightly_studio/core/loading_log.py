@@ -35,7 +35,10 @@ class LoadingLoggingContext:
 
 
 def log_loading_results(
-    session: Session, dataset_id: UUID, logging_context: LoadingLoggingContext, print_summary: bool
+    session: Session,
+    collection_id: UUID,
+    logging_context: LoadingLoggingContext,
+    print_summary: bool,
 ) -> None:
     """Log the results of loading samples into a dataset.
 
@@ -46,7 +49,7 @@ def log_loading_results(
     """
     if print_summary:
         n_samples_end = sample_resolver.count_by_collection_id(
-            session=session, collection_id=dataset_id
+            session=session, collection_id=collection_id
         )
         n_samples_inserted = n_samples_end - logging_context.n_samples_before_loading
         logger.info(
