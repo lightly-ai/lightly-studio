@@ -1,72 +1,180 @@
 # Frontend coding guidelines
+
 This document outlines coding standards and best practices for frontend development in LightlyStudio using SvelteKit and TypeScript.
 
-
 ## Key Principles
+
 - Write concise, technical TypeScript code with minimal dependency on framework-specific features. While Svelte provides powerful features like runes, use them only when necessary within components that are processed by the Svelte compiler.
 - Keep your code simple, lean, and readable. Avoid creating components longer than 100 lines. Focus on wise separation of concerns and split code into logical parts. This approach makes the code easier to maintain, understand, and test.
 - Embrace Test-Driven Development (TDD) and write tests for your code. Use the [vitest](https://vitest.dev/) testing framework for unit and integration tests. If you need help with testing, ask for assistance or refer to online resources.
 - Follow [Svelte's](https://svelte.dev/docs) and [SvelteKit's](https://kit.svelte.dev/docs) official documentation.
 
-
 ## Framework-agnostic approach
+
 We follow a framework-agnostic approach, which means we minimize the use of framework-specific structures and logic. This is based on the following engineering principles:
+
 - Clear dependencies and documentation: Framework-specific features like runes are processed without explicit imports, making dependencies less clear. In contrast, using [writable](https://svelte.dev/docs/svelte/svelte-store) always has clear import dependencies and better documentation.
 - Reduced framework coupling: The less framework-specific syntax we use, the better it is for code maintainability and understanding.
 - Better developer experience: Code that relies less on framework-specific features is easier to understand for developers who might not be deeply familiar with Svelte's internals.
 - Future-proofing: Reduced dependency on framework-specific features makes the codebase more resilient to framework updates and changes.
 - State management: Prefer using Svelte stores (writable, readable, derived) over runes for state management. Stores provide clear dependencies, better documentation, and are more framework-agnostic. Use runes only when their specific features are necessary for component-level reactivity.
 
-
 ## Naming Conventions
-- Use PascalCase for component names (e.g., `components/AuthForm.svelte`).
-- Use camelCase for non-component files (e.g., `hooks/useAuth.ts`).
+
+- Use PascalCase for component names and their folders (e.g., `components/AuthForm/AuthForm.svelte`).
+- Use camelCase for non-component files (e.g., `hooks/useAuth/useAuth.ts`).
 - Use camelCase for variables, functions, and props (e.g., `const myVariable = 0;`).
-- Use the component or function name as a prefix for related logic files (e.g., tests).
+- Always place components in their own folders to scope all related files together (tests, subcomponents, stories).
+
+**Component Structure:**
+
+Each component lives in its own folder with the same name, containing the component file, tests, and any related files:
+
 ```
 src/
   components/
-    MyComponent/
-      MyComponent.svelte
-      MyComponent.test.ts
+    AuthForm/
+      AuthForm.svelte          # Main component file
+      AuthForm.test.ts         # Tests for the component
+      AuthForm.stories.svelte  # Storybook stories (if needed)
+```
+
+**Component with Subcomponents:**
+
+When a component grows complex, split it into subcomponents within the same folder:
+
+```
+src/
+  components/
+    UserDashboard/
+      UserDashboard.svelte
+      UserDashboard.test.ts
+      UserProfile/
+        UserProfile.svelte
+        UserProfile.test.ts
+      UserStats/
+        UserStats.svelte
+        UserStats.test.ts
+```
+
+**Hook Structure:**
+
+Similarly, hooks are stored in their own folders:
+
+```
+src/
+  lib/
+    hooks/
+      useAuth/
+        useAuth.ts
+        useAuth.test.ts
 ```
 
 ## Import/Export Conventions
-- Use absolute imports for components and hooks. Example:
-```typescript
-import { useData } from '$lib/hooks/useData';
+
+### Barrel Exports (index.ts)
+
+Use barrel exports via `index.ts` files to create clean, centralized module imports. This approach:
+
+- **Reduces import complexity**: Import from module level instead of deep paths
+- **Better change control**: Swap implementations internally without affecting consumers
+- **Clear public API**: The `index.ts` explicitly defines what's exported from the module
+
+**Hook Module Structure:**
+
 ```
-instead of:
-```typescript
-import { useData } from '../../../lib/hooks/useData';
+src/
+  lib/
+    hooks/
+      index.ts              # Barrel export file
+      useAuth/
+        useAuth.ts
+        useAuth.test.ts
+      useData/
+        useData.ts
+        useData.test.ts
 ```
 
-- Use relative imports only for local files. Example:
+**Barrel Export File (`index.ts`):**
+
 ```typescript
-import { useData } from './useData';
+// src/lib/hooks/index.ts
+export { useAuth } from './useAuth/useAuth';
+export { useData } from './useData/useData';
+export { useVideo } from './useVideo/useVideo';
 ```
 
+**Good - Import from module:**
 
+```typescript
+// ✅ Good: Import from module level via barrel export
+import { useData, useAuth } from "$lib/hooks";
+```
+
+**Bad - Import from deep paths:**
+
+```typescript
+// ❌ Bad: Deep imports bypass the module's public API
+import { useData } from "$lib/hooks/useData/useData";
+```
+
+### Absolute vs Relative Imports
+
+- **Use absolute imports** for shared modules (components, hooks, utils):
+
+```typescript
+// ✅ Good: Absolute imports for shared code
+import { useData } from "$lib/hooks";
+import { Button } from "$lib/components/ui/button";
+```
+
+- **Use relative imports** only for local files within the same module:
+
+```typescript
+// ✅ Good: Relative import within the same component folder
+// In: src/components/UserDashboard/UserProfile/UserProfile.svelte
+import { formatName } from "../UserDashboard.helpers";
+```
+
+**Benefits of this approach:**
+
+- **Cleaner imports**: `from "$lib/hooks"` vs `from "$lib/hooks/useData/useData"`
+- **Easier refactoring**: Move files within module without breaking external imports
+- **Controlled API surface**: Only export what should be public
+- **Better tree-shaking**: Bundlers can optimize based on explicit exports
 
 ## TypeScript Usage
+
 - Use TypeScript for all code
-- Use interfaces for props.
-E.g.:
+- Use interfaces for defining component props and function parameters.
+  E.g.:
+
 ```typescript
-interface UseDataProps {
+// Hook example
+interface UseDataParams {
     title: string;
     onClick: () => void;
 }
 
 interface UseDataReturn {
+    data: string;
+    isLoading: boolean;
+}
+
+export function useData(params: UseDataParams): UseDataReturn {
+    // ... implementation
+    return { data: params.title, isLoading: false };
+}
+
+// Component example (see Component Props section for full details)
+interface Props {
     title: string;
     onClick: () => void;
 }
 
-export function useData(props: UseDataProps): UseDataReturn {
-    ...
-}
+let { title, onClick }: Props = $props();
 ```
+
 - Avoid exporting/importing types. Instead, use [TypeScript utility types](https://www.typescriptlang.org/docs/handbook/utility-types.html) to derive types from existing code. This approach:
   - Reduces type duplication
   - Ensures type consistency with the source code
@@ -74,37 +182,39 @@ export function useData(props: UseDataProps): UseDataReturn {
   - Keeps the codebase DRY (Don't Repeat Yourself)
 
 Common utility type patterns:
+
 ```typescript
 // Derive parameter types from a function
-type UseDataParams = Parameters<typeof useData>;
+type UseDataParams = Parameters<typeof useData>[0];
 
 // Derive return type from a function
 type UseDataReturn = ReturnType<typeof useData>;
 
 // Make all properties optional
-type PartialData = Partial<UseDataProps>;
+type PartialData = Partial<UseDataParams>;
 
 // Pick specific properties
-type TitleOnly = Pick<UseDataProps, 'title'>;
+type TitleOnly = Pick<UseDataParams, "title">;
 
 // Omit specific properties
-type WithoutTitle = Omit<UseDataProps, 'title'>;
+type WithoutTitle = Omit<UseDataParams, "title">;
 
 // Make all properties required
-type RequiredData = Required<Partial<UseDataProps>>;
+type RequiredData = Required<Partial<UseDataParams>>;
 
 // Create a type from an object's keys
-type DataKeys = keyof UseDataProps;
+type DataKeys = keyof UseDataParams;
 ```
 
-
 ## UI and Styling
+
 - Use [Shadcn](https://next.shadcn-svelte.com/) components for pre-built, customizable UI elements. Shadcn is a collection of re-usable components built using [Bits-UI](https://www.bits-ui.com/) and [Tailwind CSS](https://tailwindcss.com/). It's not a component library but rather a collection of re-usable components that you can copy and customize for your project.
 - Use [Bits-UI](https://www.bits-ui.com/) as the base component library. Bits-UI is a collection of unstyled, accessible components for Svelte. It provides the foundation for our Shadcn components.
 
 ### Component Import Guidelines
 
 #### Using Shadcn Components (`$lib/components/ui`)
+
 - Import and use Shadcn components directly from `$lib/components/ui` for basic UI elements that don't require project-specific customization. These components are pre-styled and follow our design system.
 - Examples of when to use Shadcn components directly:
   - Basic form elements (inputs, buttons, checkboxes)
@@ -114,7 +224,7 @@ type DataKeys = keyof UseDataProps;
   - Data display components (tables, lists)
 
 ```typescript
-// Good: Using Shadcn components directly for basic UI elements
+// ✅ Good: Using Shadcn components directly for basic UI elements
 import { Button } from '$lib/components/ui/button';
 import { Input } from '$lib/components/ui/input';
 
@@ -123,6 +233,7 @@ import { Input } from '$lib/components/ui/input';
 ```
 
 #### Using LightlyStudio Components (`$lib/components`)
+
 - Import from `$lib/components` for project-specific components that:
   - Combine multiple Shadcn components
   - Add project-specific business logic
@@ -131,25 +242,25 @@ import { Input } from '$lib/components/ui/input';
   - Need to maintain consistent behavior across the application
 
 ```typescript
-// Good: Using project-specific components for complex features
-import { DatasetCard } from '$lib/components';
-import { AnnotationToolbar } from '$lib/components';
+// ✅ Good: Using project-specific components for complex features
+import { DatasetCard, AnnotationToolbar } from '$lib/components';
 
 <DatasetCard dataset={dataset} />
 <AnnotationToolbar onSave={handleSave} />
 ```
 
 #### Component Composition
+
 - When building new components, prefer composition over inheritance
 - Use Shadcn components as building blocks for more complex components
 - Keep component logic separate from UI elements
 
 ```typescript
-// Good: Composing components
+// ✅ Good: Composing components
 <script lang="ts">
   import { Card } from '$lib/components/ui/card';
   import { Button } from '$lib/components/ui/button';
-  import { useDataset } from '$lib/hooks/useDataset';
+  import { useDataset } from '$lib/hooks';
 
   const { dataset, isLoading } = useDataset();
 </script>
@@ -165,18 +276,20 @@ import { AnnotationToolbar } from '$lib/components';
 ```
 
 #### Explicit Props vs. Prop Spreading
+
 - Prefer explicit props over blindly spreading objects into components
 - Components should only receive the specific props they need, making the interface clear and maintainable
 - Avoid spreading entire objects unless the component is intentionally designed as a proxy/wrapper
 
 **Benefits of explicit props:**
+
 - **Type safety**: Clear understanding of what props the component uses
 - **Maintainability**: Easy to track which props are relevant
 - **Intent clarity**: The relationship between data and UI is explicit
 - **Refactoring safety**: Changes to object shapes won't silently break components
 
 ```typescript
-// Bad: Blind object spreading - unclear what props are actually used
+// ❌ Bad: Blind object spreading - unclear what props are actually used
 <script lang="ts">
   interface User {
     id: string;
@@ -192,7 +305,7 @@ import { AnnotationToolbar } from '$lib/components';
 
 <UserCard {...user} />
 
-// Good: Explicit props - clear interface and intent
+// ✅ Good: Explicit props - clear interface and intent
 <script lang="ts">
   interface User {
     id: string;
@@ -210,6 +323,7 @@ import { AnnotationToolbar } from '$lib/components';
 ```
 
 **Exception**: Spreading is acceptable when:
+
 - Forwarding HTML attributes using `...rest` pattern
 - The component is intentionally designed as a wrapper/proxy
 - You immediately destructure with explicit TypeScript types in the component definition
@@ -217,20 +331,22 @@ import { AnnotationToolbar } from '$lib/components';
 - Organize Tailwind classes using the `cn()` utility from `$lib/utils`. This utility helps combine Tailwind classes conditionally and prevents class conflicts.
 
 ### Icons
+
 - Use [Lucide Icons](https://lucide.dev/icons/) for all icons in the application.
 - Import icons directly from `@lucide/svelte`:
 
 ```typescript
-import { Check, X, ChevronDown } from '@lucide/svelte';
+import { Check, X, ChevronDown } from "@lucide/svelte";
 ```
 
 - Use descriptive icon names that match their purpose in the UI.
 - Keep icon imports at the top of the script section with other imports.
 
-
 ## Component Development
+
 - Create .svelte files for Svelte components in `src/components`.
 - Create directory for each component with the following structure to scope it:
+
 ```
 src/
   components/
@@ -239,7 +355,9 @@ src/
       MyComponent.helpers.ts
       MyComponent.test.ts
 ```
+
 - Use subcomponents for complex components:
+
 ```
 src/
   components/
@@ -260,116 +378,1035 @@ src/
 - Leverage Svelte's reactive declarations for local state management.
 - Leverage [$app/state](https://svelte.dev/tutorial/kit/page-state) for global state management and access to already loaded data.
 
+## Component Optimization Principles
+
+### SOLID Principles for Components
+
+Apply SOLID principles to create maintainable, scalable components:
+
+#### 1. Single Responsibility Principle (SRP)
+
+Each component should have one clear purpose and one reason to change.
+
+**Bad Example** - Component doing too much:
+
+```typescript
+// ❌ UserDashboard.svelte - handles authentication, data fetching, rendering, and navigation
+<script lang="ts">
+    import { writable } from 'svelte/store';
+
+    const user = writable(null);
+    const isAuthenticated = writable(false);
+    const userPosts = writable([]);
+    const notifications = writable([]);
+
+    async function login() { /* auth logic */ }
+    async function fetchUserData() { /* fetch logic */ }
+    async function fetchPosts() { /* posts logic */ }
+    async function navigateToProfile() { /* navigation */ }
+</script>
+
+<!-- Complex UI mixing concerns -->
+```
+
+**Good Example** - Separated responsibilities:
+
+```typescript
+// ✅ UserDashboard.svelte - only orchestrates child components
+<script lang="ts">
+    import { useAuth } from '$lib/hooks/useAuth';
+    import { useUserData } from '$lib/hooks/useUserData';
+    import UserProfile from './UserProfile/UserProfile.svelte';
+    import UserPosts from './UserPosts/UserPosts.svelte';
+    import NotificationPanel from './NotificationPanel/NotificationPanel.svelte';
+
+    const { isAuthenticated } = useAuth();
+    const { user } = useUserData();
+</script>
+
+{#if $isAuthenticated}
+    <UserProfile {user} />
+    <UserPosts userId={user.id} />
+    <NotificationPanel userId={user.id} />
+{/if}
+```
+
+#### 2. Open/Closed Principle (OCP)
+
+Components should be open for extension but closed for modification. Use composition and configuration over changing existing code.
+
+**Bad Example** - Hardcoded variations:
+
+```typescript
+// ❌ Button.svelte - needs modification for each new variant
+<script lang="ts">
+    interface Props {
+        type: 'primary' | 'secondary' | 'danger' | 'success';
+    }
+
+    let { type }: Props = $props();
+</script>
+
+<button class={type === 'primary' ? 'bg-blue-500' :
+               type === 'secondary' ? 'bg-gray-500' :
+               type === 'danger' ? 'bg-red-500' : 'bg-green-500'}>
+    <slot />
+</button>
+```
+
+**Good Example** - Extensible through composition:
+
+```typescript
+// ✅ Button.svelte - accepts custom classes
+<script lang="ts">
+    import { cn } from '$lib/utils';
+
+    interface Props {
+        variant?: 'primary' | 'secondary' | 'danger';
+        class?: string;
+    }
+
+    let { variant = 'primary', class: className = '' }: Props = $props();
+
+    const variantClasses = {
+        primary: 'bg-blue-500',
+        secondary: 'bg-gray-500',
+        danger: 'bg-red-500'
+    };
+</script>
+
+<button class={cn(variantClasses[variant], className)}>
+    <slot />
+</button>
+```
+
+#### 3. Liskov Substitution Principle (LSP)
+
+Child components should be substitutable for their parent components without breaking functionality.
+
+**Good Example** - Consistent interface:
+
+```typescript
+// ✅ Both components accept the same props interface and can be used interchangeably
+
+// TextSearchInput.svelte
+<script lang="ts">
+    interface Props {
+        value: string;
+        onSearch: (query: string) => void;
+        placeholder?: string;
+    }
+
+    let { value, onSearch, placeholder = 'Search by text' }: Props = $props();
+</script>
+
+// ImageSearchInput.svelte
+<script lang="ts">
+    interface Props {
+        value: string;
+        onSearch: (query: string) => void;
+        placeholder?: string;
+    }
+
+    let { value, onSearch, placeholder = 'Search by image' }: Props = $props();
+</script>
+```
+
+#### 4. Interface Segregation Principle (ISP)
+
+Don't force components to depend on props they don't use. Keep interfaces minimal and specific.
+
+**Bad Example** - Bloated props:
+
+```typescript
+// ❌ UserCard.svelte - receives entire user object but only uses 2 fields
+<script lang="ts">
+    interface Props {
+        user: {
+            id: string;
+            name: string;
+            email: string;
+            age: number;
+            address: string;
+            phoneNumber: string;
+            // ... 20 more fields
+        };
+    }
+
+    let { user }: Props = $props();
+</script>
+
+<div>
+    <h3>{user.name}</h3>
+    <p>{user.email}</p>
+</div>
+```
+
+**Good Example** - Minimal props:
+
+```typescript
+// ✅ UserCard.svelte - only receives what it needs
+<script lang="ts">
+    interface Props {
+        name: string;
+        email: string;
+    }
+
+    let { name, email }: Props = $props();
+</script>
+
+<div>
+    <h3>{name}</h3>
+    <p>{email}</p>
+</div>
+```
+
+#### 5. Dependency Inversion Principle (DIP)
+
+Depend on abstractions (hooks, stores) rather than concrete implementations.
+
+**Bad Example** - Direct API calls in component:
+
+```typescript
+// ❌ UserList.svelte - tightly coupled to API
+<script lang="ts">
+    import { writable } from 'svelte/store';
+
+    const users = writable([]);
+
+    async function loadUsers() {
+        const response = await fetch('/api/users');
+        users.set(await response.json());
+    }
+</script>
+```
+
+**Good Example** - Depend on abstraction:
+
+```typescript
+// ✅ UserList.svelte - depends on hook abstraction
+<script lang="ts">
+    import { useUsers } from '$lib/hooks/useUsers';
+
+    const { data: users, isLoading } = useUsers();
+</script>
+
+{#if $isLoading}
+    <p>Loading...</p>
+{:else}
+    {#each $users as user}
+        <UserCard name={user.name} email={user.email} />
+    {/each}
+{/if}
+```
+
+### Reducing Complexity
+
+#### 1. Horizontal Complexity (Width)
+
+Reduce the number of things a component does at once.
+
+**Metrics:**
+
+- Number of props (keep < 7)
+- Number of state variables (keep < 5)
+- Number of event handlers (keep < 5)
+- Number of imports (keep < 10)
+
+**Example - Reducing horizontal complexity:**
+
+```typescript
+// ❌ Before: Too many responsibilities (6 state variables, 7 event handlers, 5 imports)
+<script lang="ts">
+    import { page } from '$app/state';
+    import { toast } from 'svelte-sonner';
+    import { useGlobalStorage } from '$lib/hooks/useGlobalStorage';
+    import { useEmbedText } from '$lib/hooks/useEmbedText/useEmbedText';
+    import { useFileUpload } from '$lib/hooks/useFileUpload/useFileUpload';
+    import { writable } from 'svelte/store';
+
+    const activeImage = writable<string | null>(null);
+    const submittedQueryText = writable('');
+    const previewUrl = writable<string | null>(null);
+    const query_text = writable('');
+    const fileInput = writable<HTMLInputElement | null>(null);
+    const dragOver = writable(false);
+
+    function handleDragOver() { /* ... */ }
+    function handleDragLeave() { /* ... */ }
+    function handleDrop() { /* ... */ }
+    function handlePaste() { /* ... */ }
+    function handleFileSelect() { /* ... */ }
+    function onKeyDown() { /* ... */ }
+    function clearSearch() { /* ... */ }
+</script>
+```
+
+**✅ After: Split into smaller components and hooks**
+
+```typescript
+// GridSearch.svelte - orchestrator only
+<script lang="ts">
+    import { useImageUploadHandlers } from './hooks/useImageUploadHandlers';
+    import SearchInput from './SearchInput/SearchInput.svelte';
+    import ActiveSearchDisplay from './ActiveSearchDisplay/ActiveSearchDisplay.svelte';
+
+    const { dragOver, handleDragOver, handleDrop } = useImageUploadHandlers();
+    // Much simpler!
+</script>
+
+// SearchInput.svelte - handles text input
+// ActiveSearchDisplay.svelte - handles display
+// useImageUploadHandlers.ts - handles file upload logic
+```
+
+#### 2. Vertical Complexity (Depth)
+
+Reduce nesting and deeply nested logic.
+
+**Metrics:**
+
+- Nesting depth (keep < 3 levels)
+- Lines of code in component (keep < 150 lines)
+- Lines in functions (keep < 20 lines)
+
+**Example - Reducing vertical complexity:**
+
+```typescript
+// ❌ Before: Deep nesting (4 levels)
+function processUser(user) {
+  if (user) {
+    if (user.isActive) {
+      if (user.permissions) {
+        if (user.permissions.includes("admin")) {
+          return "Admin User";
+        }
+      }
+    }
+  }
+  return "Regular User";
+}
+
+// ✅ After: Early returns (1-2 levels)
+function processUser(user) {
+  if (!user) return "Regular User";
+  if (!user.isActive) return "Regular User";
+  if (!user.permissions) return "Regular User";
+  if (!user.permissions.includes("admin")) return "Regular User";
+
+  return "Admin User";
+}
+```
+
+#### 3. Cyclomatic Complexity
+
+Reduce the number of independent paths through code.
+
+**Metrics:**
+
+- Number of conditional branches (keep < 5 per function)
+- Number of logical operators (&&, ||) per expression (keep < 3)
+
+**Example - Reducing cyclomatic complexity:**
+
+```typescript
+// ❌ Before: High cyclomatic complexity (CC = 8)
+function validateUser(user: User) {
+  if (user.name && user.email) {
+    if (user.age > 18 || user.hasParentalConsent) {
+      if (user.country === "US" || user.country === "CA") {
+        if (user.verified && !user.banned) {
+          return true;
+        }
+      }
+    }
+  }
+  return false;
+}
+
+// ✅ After: Reduced complexity (CC = 4)
+function validateUser(user: User) {
+  const hasBasicInfo = user.name && user.email;
+  const isAgeCompliant = user.age > 18 || user.hasParentalConsent;
+  const isAllowedCountry = ["US", "CA"].includes(user.country);
+  const hasGoodStanding = user.verified && !user.banned;
+
+  return hasBasicInfo && isAgeCompliant && isAllowedCountry && hasGoodStanding;
+}
+```
+
+### Component Splitting Guidelines
+
+#### When to Split Components
+
+Split a component when:
+
+1. **It exceeds 100 lines** (including markup and script)
+2. **It has multiple distinct UI sections** that could be named separately
+3. **Logic and presentation are mixed** - extract logic to hooks
+4. **You find yourself scrolling** to understand the component
+5. **Testing becomes difficult** due to many responsibilities
+
+#### How to Split Components
+
+**Strategy 1: Extract Subcomponents**
+
+```typescript
+// ❌ Before: Monolithic component (200+ lines)
+// GridSearch.svelte
+<script>
+    // 100 lines of logic
+</script>
+
+<div>
+    <!-- Search input UI -->
+    <!-- Active search display UI -->
+    <!-- Upload handling UI -->
+</div>
+
+// ✅ After: Split into focused subcomponents
+// GridSearch.svelte (50 lines)
+<script>
+    import SearchInput from './SearchInput/SearchInput.svelte';
+    import ActiveSearchDisplay from './ActiveSearchDisplay/ActiveSearchDisplay.svelte';
+</script>
+
+<div>
+    {#if hasActiveSearch}
+        <ActiveSearchDisplay />
+    {:else}
+        <SearchInput />
+    {/if}
+</div>
+
+// SearchInput/SearchInput.svelte (40 lines)
+// ActiveSearchDisplay/ActiveSearchDisplay.svelte (50 lines)
+```
+
+**Strategy 2: Extract Hooks**
+
+```typescript
+// ❌ Before: Logic mixed with UI (100+ lines in component)
+<script lang="ts">
+    import { writable } from 'svelte/store';
+
+    const dragOver = writable(false);
+
+    function handleDragOver(e: DragEvent) {
+        e.preventDefault();
+        dragOver.set(true);
+    }
+
+    function handleDrop(e: DragEvent) {
+        e.preventDefault();
+        const files = Array.from(e.dataTransfer?.files || []);
+        // 30 more lines of file handling...
+    }
+</script>
+
+// ✅ After: Extract to hook (component now 40 lines, hook 50 lines)
+<script lang="ts">
+    import { useImageUpload } from './hooks/useImageUpload';
+
+    const { dragOver, handleDragOver, handleDrop } = useImageUpload();
+</script>
+
+// hooks/useImageUpload.ts - 50 lines of pure, testable logic
+```
+
+**Strategy 3: Extract Configuration**
+
+```typescript
+// ❌ Before: Hardcoded configuration mixed with logic
+const MAX_SIZE = 50 * 1024 * 1024;
+const ALLOWED_TYPES = ["image/png", "image/jpeg"];
+
+// ✅ After: Extract to constants file
+// constants/upload.ts
+export const UPLOAD_CONFIG = {
+  MAX_SIZE: 50 * 1024 * 1024,
+  ALLOWED_TYPES: ["image/png", "image/jpeg"],
+} as const;
+```
+
+### Real Example: GridSearch Component Optimization
+
+**Before optimization** (GridSearch.svelte - 131 lines, multiple responsibilities):
+
+- Text search handling
+- Image upload handling
+- Drag and drop logic
+- File input management
+- State management
+- API integration
+- Error handling
+
+**After optimization:**
+
+- **GridSearch.svelte** (50 lines) - Orchestration only
+- **SearchInput.svelte** (40 lines) - Text input UI
+- **ActiveSearchDisplay.svelte** (50 lines) - Search results display
+- **useImageUploadHandlers.ts** (60 lines) - File upload logic
+- **useFileUpload.ts** (80 lines) - Generic file upload hook
+
+**Benefits:**
+
+- **Each file has one clear purpose** (SRP)
+- **Reduced horizontal complexity** (fewer props, state variables)
+- **Reduced vertical complexity** (no deep nesting)
+- **Lower cyclomatic complexity** (simpler conditionals)
+- **Better testability** (each piece can be tested in isolation)
+- **Better reusability** (useFileUpload can be used elsewhere)
+
+### Complexity Checklist
+
+Before finishing a component, check:
+
+- [ ] Component is under 100 lines
+- [ ] Function is under 20 lines
+- [ ] Nesting depth is under 3 levels
+- [ ] Props count is under 7
+- [ ] State variables count is under 5
+- [ ] Event handlers count is under 5
+- [ ] Cyclomatic complexity is under 5 per function
+- [ ] Component has one clear responsibility
+- [ ] Logic is separated from presentation
+- [ ] No hardcoded configuration mixed with logic
+- [ ] Easy to test in isolation
+
 ### Page State Access
+
 Use `$app/state` instead of `$app/stores` for accessing page state.
 
 **Bad Example:**
+
 ```typescript
-import { page } from '$app/stores';
+import { page } from "$app/stores";
 
 // Accessing params with stores requires $ prefix
-$page.params.sampleId
+$page.params.sampleId;
 ```
 
 **Good Example:**
+
 ```typescript
-import { page } from '$app/state';
+import { page } from "$app/state";
 
 // Accessing params directly without $ prefix
-page.params.sampleId
+page.params.sampleId;
 ```
 
-
 ## State Management
+
 - use reusable tiny hooks to avoid one big store for all the state management. E.g. [useTags](../../lightly_studio_view/src/lib/hooks/useTags/useTags.ts).
-- Separate state management logic from the component logic as much as possible for better maintanance. Use `src/lib/hooks` for reusable hooks.
+- Separate state management logic from the component logic as much as possible for better maintenance. Use `src/lib/hooks` for reusable hooks.
+
+### Avoiding Props Drilling
+
+Props drilling occurs when you pass props through multiple component layers just to reach a deeply nested component. This makes code harder to maintain and components tightly coupled.
+
+#### Solution 1: Svelte Context API (Recommended for Component Trees)
+
+Use Svelte's `setContext` and `getContext` for sharing data within a component tree without passing props.
+
+**When to use:**
+- Data needed by multiple components in a subtree
+- Component-scoped state (e.g., theme, configuration)
+- Not needed globally across the entire app
+
+**Example:**
+
+```typescript
+// ✅ Good: Using Context API
+// ParentComponent.svelte
+<script lang="ts">
+  import { setContext } from 'svelte';
+  import { writable } from 'svelte/store';
+
+  interface UserContext {
+    user: { name: string; email: string };
+    updateUser: (user: { name: string; email: string }) => void;
+  }
+
+  const user = writable({ name: 'John', email: 'john@example.com' });
+
+  setContext<UserContext>('user', {
+    user,
+    updateUser: (newUser) => user.set(newUser)
+  });
+</script>
+
+<ChildComponent />
+
+// DeeplyNestedComponent.svelte
+<script lang="ts">
+  import { getContext } from 'svelte';
+
+  const { user, updateUser } = getContext<UserContext>('user');
+</script>
+
+<p>Welcome, {$user.name}!</p>
+<button onclick={() => updateUser({ name: 'Jane', email: 'jane@example.com' })}>
+  Update User
+</button>
+```
+
+**Bad - Props drilling:**
+
+```typescript
+// ❌ Bad: Passing props through every layer
+// ParentComponent.svelte
+<script lang="ts">
+  const user = { name: 'John', email: 'john@example.com' };
+</script>
+
+<MiddleComponent {user} />
+
+// MiddleComponent.svelte
+<script lang="ts">
+  interface Props {
+    user: { name: string; email: string };
+  }
+
+  let { user }: Props = $props();
+</script>
+
+<AnotherMiddle {user} />
+
+// AnotherMiddle.svelte
+<script lang="ts">
+  interface Props {
+    user: { name: string; email: string };
+  }
+
+  let { user }: Props = $props();
+</script>
+
+<DeeplyNestedComponent {user} />
+```
+
+#### Solution 2: Svelte Stores (For Global State)
+
+Use stores for truly global state that's needed across unrelated parts of the application.
+
+**When to use:**
+- Global application state (auth, user preferences)
+- State shared across unrelated component trees
+- State that persists across navigation
+
+**Example:**
+
+```typescript
+// ✅ Good: Using stores for global state
+// lib/stores/user.ts
+import { writable } from 'svelte/store';
+
+export const currentUser = writable({
+  name: 'John',
+  email: 'john@example.com'
+});
+
+// AnyComponent.svelte
+<script lang="ts">
+  import { currentUser } from '$lib/stores/user';
+</script>
+
+<p>Welcome, {$currentUser.name}!</p>
+
+// AnotherUnrelatedComponent.svelte
+<script lang="ts">
+  import { currentUser } from '$lib/stores/user';
+</script>
+
+<button onclick={() => currentUser.set({ name: 'Jane', email: 'jane@example.com' })}>
+  Update User
+</button>
+```
+
+#### Solution 3: SvelteKit `$app/state` (For Page-Level Data)
+
+Use SvelteKit's page state for data loaded via `+page.ts` or `+page.server.ts`.
+
+**When to use:**
+- Data loaded from the server
+- Page-specific state that comes from routing
+- Data that should be available to all components on a page
+
+**Example:**
+
+```typescript
+// ✅ Good: Using page state
+// routes/dashboard/+page.ts
+export const load = async ({ fetch }) => {
+  const user = await fetch('/api/user').then(r => r.json());
+  return { user };
+};
+
+// routes/dashboard/+page.svelte
+<script lang="ts">
+  import { page } from '$app/state';
+  import UserStats from './UserStats.svelte';
+  import UserProfile from './UserProfile.svelte';
+</script>
+
+<UserStats />
+<UserProfile />
+
+// routes/dashboard/UserProfile.svelte
+<script lang="ts">
+  import { page } from '$app/state';
+
+  // Access page data directly, no props needed
+  const user = page.data.user;
+</script>
+
+<p>{user.name}</p>
+```
+
+#### Solution 4: Component Composition with Snippets
+
+Sometimes props drilling indicates poor component structure. Use Svelte 5 snippets for flexible component composition.
+
+**Bad - Drilling props for UI customization:**
+
+```typescript
+// ❌ Bad: Drilling props for UI customization
+<Layout headerText="Dashboard" footerText="© 2024" />
+```
+
+**Good - Using Svelte 5 snippets:**
+
+```typescript
+// ✅ Good: Using Svelte 5 snippets for reusable content blocks
+// Layout.svelte
+<script lang="ts">
+  import type { Snippet } from 'svelte';
+
+  interface Props {
+    header?: Snippet;
+    footer?: Snippet;
+    children: Snippet;
+  }
+
+  let { header, footer, children }: Props = $props();
+</script>
+
+<div class="layout">
+  {#if header}
+    <header>{@render header()}</header>
+  {/if}
+
+  <main>{@render children()}</main>
+
+  {#if footer}
+    <footer>{@render footer()}</footer>
+  {/if}
+</div>
+
+// Usage in parent component
+<script lang="ts">
+  import Layout from './Layout.svelte';
+</script>
+
+<Layout>
+  {#snippet header()}
+    <h1>Dashboard</h1>
+  {/snippet}
+
+  <p>Main content goes here</p>
+
+  {#snippet footer()}
+    <p>© 2024</p>
+  {/snippet}
+</Layout>
+```
+
+**Benefits of snippets:**
+
+- **Type-safe**: Snippets are strongly typed with the `Snippet` type
+- **Flexible**: Can be passed as props, stored in variables, or conditionally rendered
+- **Clear API**: Component interface explicitly shows what content blocks are expected
+- **Better composition**: Easier to compose complex layouts without prop drilling
+
+#### Choosing the Right Solution
+
+| Use Case | Solution | Scope |
+|----------|----------|-------|
+| Component tree state | Context API | Subtree |
+| Global app state | Stores | Application-wide |
+| Page-loaded data | `$app/state` | Current page |
+| UI composition | Slots | Component-specific |
+
+**Best Practices:**
+
+- **Prefer Context API** for component-tree scoped state
+- **Use stores sparingly** - only for truly global state
+- **Leverage `$app/state`** for server-loaded data instead of prop drilling
+- **Consider composition** before reaching for state management
+- **Keep context keys type-safe** using TypeScript interfaces
 
 ### Svelte 5 Syntax
 
+#### Component Props
+
+Use Svelte 5 `$props()` rune instead of the old `export let` syntax for defining component props.
+
+**Bad Example (Svelte 4):**
+
+```typescript
+// ❌ Old Svelte 4 syntax
+<script lang="ts">
+  export let value: string;
+  export let placeholder: string = 'Enter text';
+  export let onSearch: (query: string) => void;
+  export let disabled: boolean = false;
+</script>
+
+<input
+  type="text"
+  {value}
+  {placeholder}
+  {disabled}
+  onchange={() => onSearch(value)}
+/>
+```
+
+**Good Example (Svelte 5):**
+
+```typescript
+// ✅ Svelte 5 $props() syntax
+<script lang="ts">
+  interface Props {
+    value: string;
+    placeholder?: string;
+    onSearch: (query: string) => void;
+    disabled?: boolean;
+  }
+
+  let {
+    value,
+    placeholder = 'Enter text',
+    onSearch,
+    disabled = false
+  }: Props = $props();
+</script>
+
+<input
+  type="text"
+  {value}
+  {placeholder}
+  {disabled}
+  onchange={() => onSearch(value)}
+/>
+```
+
+**Benefits of `$props()`:**
+
+- **Type safety**: Props are defined in a clear TypeScript interface
+- **Required vs optional**: Interface makes it explicit which props are required
+- **Better IDE support**: Autocomplete and type checking work better
+- **Destructuring with defaults**: Clear syntax for default values
+- **Future-proof**: Aligns with Svelte 5's direction
+
 #### Event Handlers
+
 Use Svelte 5 event handler syntax (`onclick`, `onchange`, etc.) instead of Svelte 4 syntax (`on:click`, `on:change`).
 
 **Bad Example (Svelte 4):**
+
 ```typescript
 <button on:click={() => handleClick()}>Click me</button>
 <input on:change={(e) => handleChange(e)} />
 ```
 
 **Good Example (Svelte 5):**
+
 ```typescript
 <button onclick={() => handleClick()}>Click me</button>
 <input onchange={(e) => handleChange(e)} />
 ```
 
 #### Reactive Declarations
+
 Avoid using Svelte 4 reactive syntax (`$:`) in new code. Instead, use Svelte 5 runes or derived stores.
 
 **Bad Example (Svelte 4):**
+
 ```typescript
-$: fullName = firstName + ' ' + lastName;
-$: isValid = email.includes('@');
+$: fullName = firstName + " " + lastName;
+$: isValid = email.includes("@");
 ```
 
 **Good Example (Svelte 5 Runes):**
+
 ```typescript
-const fullName = $derived(firstName + ' ' + lastName);
-const isValid = $derived(email.includes('@'));
+const fullName = $derived(firstName + " " + lastName);
+const isValid = $derived(email.includes("@"));
 ```
 
 **Good Example (Svelte Stores - Framework-agnostic):**
+
 ```typescript
-import { derived } from 'svelte/store';
+import { derived } from "svelte/store";
 
 const fullName = derived([firstName, lastName], ([$firstName, $lastName]) => {
-    return $firstName + ' ' + $lastName;
+  return $firstName + " " + $lastName;
 });
 ```
 
 ### Avoid Mixing Svelte 4 Stores with Svelte 5 Runes
+
 Do not mix `derived` from `svelte/store` with `$derived` rune syntax. Choose one approach and use it consistently.
 
 **Bad Example:**
+
 ```typescript
-import { derived } from 'svelte/store';
-import { annotationFilterLabels } from './stores';
+import { derived } from "svelte/store";
+import { annotationFilterLabels } from "./stores";
 
 // ❌ Wrong: Trying to use $derived on the derived function
 const selectedAnnotationFilter = $derived.by(() => {
-    const labelsMap = $annotationFilterLabels;
-    // ... logic
+  const labelsMap = $annotationFilterLabels;
+  // ... logic
 });
 ```
 
 **Good Example (Svelte 5 Runes):**
+
 ```typescript
-import { annotationFilterLabels } from './stores';
+import { annotationFilterLabels } from "./stores";
 
 // ✅ Correct: Using $derived.by() without importing derived
 const selectedAnnotationFilter = $derived.by(() => {
-    const labelsMap = $annotationFilterLabels;
-    // ... logic
+  const labelsMap = $annotationFilterLabels;
+  // ... logic
 });
 ```
 
 **Good Example (Svelte 4 Stores):**
+
 ```typescript
-import { derived } from 'svelte/store';
-import { annotationFilterLabels } from './stores';
+import { derived } from "svelte/store";
+import { annotationFilterLabels } from "./stores";
 
 // ✅ Correct: Using derived() to create a store
 const selectedAnnotationFilter = derived(
-    annotationFilterLabels,
-    ($annotationFilterLabels) => {
-        // ... logic
-        return result;
-    }
+  annotationFilterLabels,
+  ($annotationFilterLabels) => {
+    // ... logic
+    return result;
+  },
 );
 
 // Then use it with $selectedAnnotationFilter in components
 ```
 
+### Passing Reactive Values to Hooks
+
+Avoid passing reactive values to hooks using `$derived`. Hooks should receive stable, non-reactive values as parameters.
+
+#### Best Practice: Pass Data via Page Load Function
+
+Instead of reading reactive values like `page.params` inside components and passing them to hooks, prefer passing data through SvelteKit's load function and accessing it via `$props()`.
+
+**Bad Example - Using `$derived` with hooks:**
+
+```typescript
+// ❌ Bad: Using $derived to pass reactive page params to hook
+<script lang="ts">
+  import { page } from '$app/state';
+  import { useVideo } from '$lib/hooks/useVideo';
+
+  const sampleId = $derived(page.params.sample_id);
+  const { video } = useVideo({ sampleId });
+</script>
+```
+
+**Good Example - Pass data through page load:**
+
+```typescript
+// ✅ Good: Pass params through page load function
+// +page.ts
+import type { PageLoad } from './$types';
+
+export const load: PageLoad = async ({ params, url }) => {
+  return {
+    groupId: url.searchParams.get('group_id') ?? undefined,
+    frameNumber: url.searchParams.get('frame_number') ?? undefined,
+    params
+  };
+};
+
+// +page.svelte
+<script lang="ts">
+  import type { PageData } from './$types';
+  import { useVideo } from '$lib/hooks/useVideo';
+
+  const { data }: { data: PageData } = $props();
+  const { video } = useVideo({
+    sampleId: data.params.sample_id
+  });
+</script>
+```
+
+#### Alternative: Pass Svelte Stores to Hooks
+
+If you need to pass reactive values to hooks, use Svelte stores (`writable`, `readable`, `derived`) instead of `$derived`.
+
+**Bad Example:**
+
+```typescript
+// ❌ Bad: Passing $derived value to hook
+<script lang="ts">
+  import { useAuthInfo } from '$lib/hooks/useAuthInfo';
+
+  const authInfo = $derived(useAuthInfo());
+</script>
+```
+
+**Good Example:**
+
+```typescript
+// ✅ Good: Use the hook directly without $derived
+<script lang="ts">
+  import { useAuthInfo } from '$lib/hooks/useAuthInfo';
+
+  const { user, isAuthenticated } = useAuthInfo();
+</script>
+
+{#if $isAuthenticated}
+  <p>Welcome, {$user.name}!</p>
+{/if}
+```
+
+**Good Example - Using stores when reactivity is needed:**
+
+```typescript
+// ✅ Good: If you need reactive parameters, use stores
+<script lang="ts">
+  import { writable, derived } from 'svelte/store';
+  import { useFilteredData } from '$lib/hooks/useFilteredData';
+
+  const searchQuery = writable('');
+  const { data } = useFilteredData({ query: searchQuery });
+</script>
+
+<input bind:value={$searchQuery} />
+{#each $data as item}
+  <div>{item.name}</div>
+{/each}
+```
+
+**Why this matters:**
+
+- **Separation of concerns**: Data fetching logic stays in load functions, not in components
+- **Type safety**: PageData types are automatically generated from load functions
+- **Better performance**: Data is loaded before the page renders
+- **Clearer dependencies**: Hooks receive explicit parameters, not reactive computations
+- **Easier testing**: Hooks can be tested with simple values instead of reactive state
 
 E.g. [separate state management example](https://svelte.dev/playground/hello-world?version=5.32.1#H4sIAAAAAAAAE3WRwW6DMBBEf2W1qhSioqS9koBU9TNKD8TZVFZhjex1kwr53yvjhkCVXjisZ2aHtwNy0xEW6B29Gs9CFujSdH1LmONJt-SweBtQvvuoigPMr56Xvt-4L2olzg6No3tzZViIxWGBe6es7gXahj_KGsXVWNUMAKC73liBAWY1Apys6WC12d6GG3GrXc3JpAy76FHxLQfNylJHLBCgnAVl613N-23aXUXz_uBFDINh1Wr1WQ7ZGsrqFpCtw2-vMaKA4WHcEWJO8lY1Y45CF8FCrKeQ_8No0X2J6e_TjNTE42y1NIeWJhqJ69aJsZRQJAxjQSgnw559dyBbZU_rUUWXMfHkWYk2vOADQ_rb9J0kMx5XRcLuWTa-PzZCWaZGdAoe4TkuioJwPdCUZMmRjOvuRTmS1HJhtiTe8p3z5rM4CLuaw_IS7zlKo9uz5iMWp6Z1FH4Aaa7hNOYCAAA=):
+
 ```typescript
 // File: useCounter.ts
 import { writable } from 'svelte/store';
@@ -377,7 +1414,7 @@ import { writable } from 'svelte/store';
 const count = writable<number>(0);
 
 export function useCounter() {
-    
+
     function increment() {
         count.update((c) => c + 1);
     }
@@ -402,18 +1439,20 @@ export function useCounter() {
 ```
 
 ## Routing and Pages
+
 - Utilize [SvelteKit's file-based routing system in the src/routes/](https://svelte.dev/tutorial/kit/layouts) directory.
 - Utilize dynamic routes using [slug](https://svelte.dev/tutorial/kit/params) syntax. E.g. sample details [example](../../lightly_studio_view/src/routes/samples/[sample_id]/).
 - Use +layout.svelte for shared layout components. E.g. [shared layout for samples/annotations Grid](../../lightly_studio_view/src/routes/collections/[collection_id]/+layout.svelte).
 
-
 ## Data Fetching and API Routes
+
 - We leverage the [hook design pattern](https://medium.com/@beecodeguy/the-hook-pattern-building-reusable-logic-db6db49b83be) to write scalable and maintainable code. E.g. [useFeatureFlags](../../lightly_studio_view/src/lib/hooks/useFeatureFlags/useFeatureFlags.ts). You can use this pattern to create reusable hooks for data fetching, state management, and other logic.
 - We don't use `services` folder for data fetching. Instead, we use hooks. Unless we have a specific reason to create a service, we use a hook design pattern.
 - Implement proper error handling for data fetching operations.
 - Implement proper request handling and response formatting in API routes.
 
 ## Hook design pattern
+
 - Use the hook design pattern for reusable logic and state management.
 - Put it to `src/lib/hooks` if it is a generic hook that can be reused in multiple components. Put it to the component directory if it is a specific hook that is only used in that component.
 
@@ -423,11 +1462,11 @@ export function useUsers() {
   const isLoading = writable(false);
   const users = writable<User[]>([]);
   const error = writable<Error | null>(null);
-  
+
   async function fetchUsers() {
     isLoading.set(true);
     try {
-      const response = await fetch('/api/users');
+      const response = await fetch("/api/users");
       const data = await response.json();
       users.set(data);
     } catch (err) {
@@ -436,18 +1475,19 @@ export function useUsers() {
       isLoading.set(false);
     }
   }
-  
-  return { data:users, isLoading, error, fetchUsers };
+
+  return { data: users, isLoading, error, fetchUsers };
 }
 ```
-
 
 ## Storybook
 
 ### Story Syntax
+
 When creating Storybook stories, use the simplified syntax without explicit `{#snippet children()}` blocks for better readability:
 
 **Good Example:**
+
 ```typescript
 <Story name="H1" args={{ variant: 'h1' }}>
     Heading 1 - Large Page Title
@@ -455,6 +1495,7 @@ When creating Storybook stories, use the simplified syntax without explicit `{#s
 ```
 
 **Bad Example:**
+
 ```typescript
 <Story name="H1" args={{ variant: 'h1' }}>
     {#snippet children()}
@@ -468,6 +1509,7 @@ The explicit snippet syntax is not required for simple text content and makes st
 ## Testing
 
 ### Motivation
+
 - Writing the tests is a crucial part of the development process.
 - It helps to ensure that your code works as expected and prevents regressions in the future.
 - It shows maturity of the code and helps to write the more scalable and maintainable code.
@@ -479,38 +1521,293 @@ The explicit snippet syntax is not required for simple text content and makes st
 - Integration tests: Test the interaction between components and functions.
 - End-to-end tests: Test the entire application flow, including routing and API interactions.
 
-
 ##### Unit tests
+
 To test individual components and functions in isolation.
 
 ```typescript
-import { render, screen } from '@testing-library/svelte';
-import MyComponent from './MyComponent.svelte';
+import { render, screen } from "@testing-library/svelte";
+import MyComponent from "./MyComponent.svelte";
 
-describe('MyComponent', () => {
-    it('renders the title', () => {
-        render(MyComponent, { props: { title: 'Hello World' } });
-        expect(screen.getByText('Hello World')).toBeInTheDocument();
-    });
+describe("MyComponent", () => {
+  it("renders the title", () => {
+    render(MyComponent, { props: { title: "Hello World" } });
+    expect(screen.getByText("Hello World")).toBeInTheDocument();
+  });
 });
 ```
 
 ##### Integration tests
+
 To test the interaction between components and functions. It tests the integration of multiple components and their interactions with each other.
 
 ```typescript
-import { render, screen } from '@testing-library/svelte';
-import MyComponent from './MyComponent.svelte';
-import { fireEvent } from '@testing-library/svelte';
-import { useCounter } from './useCounter.ts';
- 
-describe('MyComponent calls useCounter', () => {
-    it('calls the increment function when clicked', async () => {
-        const { increment } = useCounter();
-        const incrementSpy = jest.spyOn(increment, 'increment');
-        render(MyComponent);
-        await fireEvent.click(screen.getByRole('button'));
-        expect(incrementSpy).toHaveBeenCalled();
-    });
+import { render, screen } from "@testing-library/svelte";
+import { fireEvent } from "@testing-library/svelte";
+import MyComponent from "./MyComponent.svelte";
+
+describe("MyComponent with useCounter integration", () => {
+  it("increments count when button is clicked", async () => {
+    render(MyComponent);
+    const button = screen.getByRole("button");
+
+    // Initial state
+    expect(button).toHaveTextContent("Count: 0");
+
+    // Click and verify integration
+    await fireEvent.click(button);
+    expect(button).toHaveTextContent("Count: 1");
+
+    await fireEvent.click(button);
+    expect(button).toHaveTextContent("Count: 2");
+  });
 });
 ```
+
+### Test Optimization Principles
+
+When writing tests, focus on quality over quantity. Follow these principles to minimize duplication and keep tests maintainable:
+
+#### 1. Use Helper Functions for Repeated Setup
+
+Create `defaultProps` or setup functions to eliminate repeated prop objects:
+
+```typescript
+// ✅ Good: DRY approach with defaultProps
+describe("SearchInput", () => {
+  const defaultProps = {
+    queryText: "",
+    isUploading: false,
+    onkeydown: vi.fn(),
+    onpaste: vi.fn(),
+  };
+
+  it("renders with correct placeholder", () => {
+    render(SearchInput, { props: defaultProps });
+    expect(screen.getByPlaceholderText("Search")).toBeInTheDocument();
+  });
+
+  it("disables input when uploading", () => {
+    render(SearchInput, { props: { ...defaultProps, isUploading: true } });
+    expect(screen.getByRole("textbox")).toBeDisabled();
+  });
+});
+
+// ❌ Bad: Repeated prop objects
+describe("SearchInput", () => {
+  it("renders with correct placeholder", () => {
+    render(SearchInput, {
+      props: {
+        queryText: "",
+        isUploading: false,
+        onkeydown: vi.fn(),
+        onpaste: vi.fn(),
+      },
+    });
+    expect(screen.getByPlaceholderText("Search")).toBeInTheDocument();
+  });
+
+  it("disables input when uploading", () => {
+    render(SearchInput, {
+      props: {
+        queryText: "",
+        isUploading: true,
+        onkeydown: vi.fn(),
+        onpaste: vi.fn(),
+      },
+    });
+    expect(screen.getByRole("textbox")).toBeDisabled();
+  });
+});
+```
+
+#### 2. Avoid Redundant Mirror Tests
+
+Don't create separate tests for opposite states when both tests exercise the exact same condition. However, test both states if they're controlled by different conditions.
+
+**Good: Test only one state when controlled by a single boolean**
+
+```typescript
+// ✅ Good: Testing the truthy case is sufficient
+it("disables input when isUploading is true", () => {
+  render(SearchInput, { props: { ...defaultProps, isUploading: true } });
+  expect(screen.getByRole("textbox")).toBeDisabled();
+});
+
+// ❌ Redundant: The opposite case doesn't add coverage
+// it("enables input when isUploading is false", () => {
+//   render(SearchInput, { props: defaultProps });
+//   expect(screen.getByRole("textbox")).not.toBeDisabled();
+// });
+```
+
+**When to test both states:**
+
+```typescript
+// ✅ Good: Test both when different conditions control each state
+it("disables button when user lacks permission", () => {
+  render(ActionButton, { props: { hasPermission: false, isLoading: false } });
+  expect(screen.getByRole("button")).toBeDisabled();
+});
+
+it("disables button when loading", () => {
+  render(ActionButton, { props: { hasPermission: true, isLoading: true } });
+  expect(screen.getByRole("button")).toBeDisabled();
+});
+
+it("enables button when user has permission and not loading", () => {
+  render(ActionButton, { props: { hasPermission: true, isLoading: false } });
+  expect(screen.getByRole("button")).not.toBeDisabled();
+});
+```
+
+In the second example, all three tests are valuable because:
+- Different conditions can cause the disabled state
+- The enabled state requires both conditions to be met
+- Each test verifies a distinct code path
+
+#### 3. Combine Related Tests
+
+Merge tests that check related functionality:
+
+```typescript
+// ✅ Good: Combined test that verifies user-facing behavior
+it("renders search input with placeholder and accessible label", () => {
+  render(SearchInput, { props: defaultProps });
+  expect(screen.getByPlaceholderText("Search")).toBeInTheDocument();
+  expect(screen.getByRole("textbox")).toHaveAccessibleName("Search");
+});
+
+// ❌ Bad: Separate tests for closely related accessibility features
+it("renders search input with placeholder", () => {
+  render(SearchInput, { props: defaultProps });
+  expect(screen.getByPlaceholderText("Search")).toBeInTheDocument();
+});
+
+it("renders search input with accessible label", () => {
+  render(SearchInput, { props: defaultProps });
+  expect(screen.getByRole("textbox")).toHaveAccessibleName("Search");
+});
+```
+
+#### 4. Avoid Testing Implementation Details
+
+Don't test internal implementation details like CSS classes or internal structure:
+
+```typescript
+// ❌ Bad: Testing CSS classes (implementation detail)
+it("renders with correct CSS classes for layout", () => {
+  const { container } = render(ActiveSearchDisplay, { props: defaultProps });
+  const wrapper = container.querySelector(
+    ".flex.h-10.w-full.items-center.rounded-md.border.border-input.bg-background",
+  );
+  expect(wrapper).toBeInTheDocument();
+});
+
+// ✅ Good: Test user-visible behavior instead
+it("displays active search query", () => {
+  render(ActiveSearchDisplay, {
+    props: { ...defaultProps, submittedQueryText: "test" },
+  });
+  expect(screen.getByText("test")).toBeInTheDocument();
+});
+```
+
+#### 5. Test Behavior, Not Configuration
+
+Focus on component behavior rather than testing how hooks are configured:
+
+```typescript
+// ❌ Bad: Testing hook configuration (implementation detail)
+it("calls useEmbedText with correct parameters", () => {
+  render(GridSearch);
+  expect(mockUseEmbedText).toHaveBeenCalledWith({
+    collectionId: "test-collection-id",
+    queryText: "",
+    embeddingModelId: null,
+  });
+});
+
+// ✅ Good: Test the actual behavior
+it("displays search results when query is submitted", async () => {
+  render(GridSearch);
+  const input = screen.getByRole("textbox");
+
+  await fireEvent.input(input, { target: { value: "test query" } });
+  await fireEvent.keyDown(input, { key: "Enter" });
+
+  expect(screen.getByText("test query")).toBeInTheDocument();
+});
+```
+
+#### 6. Remove Duplicate Tests
+
+Identify and remove tests that verify the same behavior:
+
+```typescript
+// ❌ Bad: Both tests check the same thing
+it("renders SearchInput when no active search", () => {
+  render(GridSearch);
+  const input = screen.getByPlaceholderText("Search samples");
+  expect(input).toBeInTheDocument();
+});
+
+it("shows SearchInput initially", () => {
+  render(GridSearch);
+  expect(screen.getByTestId("search-input")).toBeInTheDocument();
+});
+
+// ✅ Good: One test is sufficient
+it("shows SearchInput initially", () => {
+  render(GridSearch);
+  expect(screen.getByTestId("search-input")).toBeInTheDocument();
+});
+```
+
+#### Example: Optimizing Test Suite
+
+**Before optimization** (51 tests with duplication):
+
+- Repeated prop objects in every test
+- Tests for both enabled and disabled states
+- Separate tests for related functionality
+- Tests for CSS classes and internal structure
+- Tests for hook configuration
+- Duplicate tests for the same behavior
+
+**After optimization** (46 tests, cleaner and more maintainable):
+
+- `defaultProps` helper eliminates duplication
+- Only test one state (disabled/enabled)
+- Combined related tests (icon rendering)
+- Removed CSS class tests
+- Removed hook configuration tests
+- Removed duplicate tests
+
+This approach results in:
+
+- **~10% fewer tests** while maintaining full coverage
+- **Better test maintainability** with less duplication
+- **Faster test execution** with fewer redundant tests
+- **Clearer test intent** by focusing on behavior
+
+### Running Tests and Checks
+
+Before submitting code, always run the following commands to ensure code quality:
+
+```bash
+# Run static checks (type checking, linting, formatting)
+make static-checks
+
+# Run tests
+npm run test:unit
+```
+
+The `make static-checks` command will:
+
+- Run TypeScript type checking
+- Run ESLint for code quality
+- Run Prettier to verify formatting
+- Run Svelte check for component validation
+
+Make sure all checks pass before committing your changes.
