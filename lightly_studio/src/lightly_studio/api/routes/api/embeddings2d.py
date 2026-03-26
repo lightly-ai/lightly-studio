@@ -3,10 +3,11 @@
 from __future__ import annotations
 
 import io
+from typing import Annotated
 from uuid import UUID
 
 import pyarrow as pa
-from fastapi import APIRouter, Response
+from fastapi import APIRouter, Path, Response
 from pyarrow import ipc
 from pydantic import BaseModel, Field
 from sqlmodel import select
@@ -28,18 +29,13 @@ class GetEmbeddings2DRequest(BaseModel):
     )
 
 
-@embeddings2d_router.post("/embeddings2d/default")
+@embeddings2d_router.post("/collections/{collection_id}/embeddings2d/default")
 def get_2d_embeddings(
     session: SessionDep,
+    collection_id: Annotated[UUID, Path(title="Collection Id")],
     body: GetEmbeddings2DRequest,
 ) -> Response:
     """Return 2D embeddings serialized as an Arrow stream."""
-    collection_id = (
-        body.filters.sample_filter.collection_id if body.filters.sample_filter is not None else None
-    )
-    if collection_id is None:
-        raise ValueError("Collection ID must be provided in filters.")
-
     # TODO(Malte, 09/2025): Support choosing the embedding model via API parameter.
     embedding_model = session.exec(
         select(EmbeddingModelTable)

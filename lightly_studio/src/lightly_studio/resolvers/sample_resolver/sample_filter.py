@@ -18,7 +18,6 @@ from lightly_studio.type_definitions import QueryType
 class SampleFilter(BaseModel):
     """Encapsulates filter parameters for querying samples."""
 
-    collection_id: Optional[UUID] = None
     tag_ids: Optional[list[UUID]] = None
     metadata_filters: Optional[list[MetadataFilter]] = None
     sample_ids: Optional[list[UUID]] = None
@@ -27,17 +26,11 @@ class SampleFilter(BaseModel):
 
     def apply(self, query: QueryType) -> QueryType:
         """Apply the filters to the given query."""
-        query = self._apply_collection_filter(query)
         query = self._apply_sample_ids_filter(query)
         query = self._apply_annotation_filters(query)
         query = self._apply_tag_filters(query)
         query = self._apply_metadata_filters(query)
         return self._apply_captions_filter(query)
-
-    def _apply_collection_filter(self, query: QueryType) -> QueryType:
-        if self.collection_id:
-            return query.where(col(SampleTable.collection_id) == self.collection_id)
-        return query
 
     def _apply_sample_ids_filter(self, query: QueryType) -> QueryType:
         if self.sample_ids:

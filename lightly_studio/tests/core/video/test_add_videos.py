@@ -58,9 +58,9 @@ def test_load_into_collection_from_paths(db_session: Session, tmp_path: Path) ->
         num_frames=30,
         fps=2,
     )
-    video_sample_ids, frame_sample_ids = add_videos.load_into_dataset_from_paths(
+    video_sample_ids, frame_sample_ids = add_videos.load_into_collection_from_paths(
         session=db_session,
-        dataset_id=collection.collection_id,
+        collection_id=collection.collection_id,
         video_paths=[str(first_video_path), str(second_video_path)],
     )
     assert len(video_sample_ids) == 2

@@ -32,7 +32,7 @@ describe('useAdjacentVideos', () => {
         useAdjacentSamplesMock.mockReset();
         videoFilterStore.set({
             filter_type: 'video',
-            sample_filter: { collection_id: 'collection-1', tag_ids: ['t1'] }
+            sample_filter: { tag_ids: ['t1'] }
         });
         textEmbeddingStore.set({ embedding: [0.11, 0.22], queryText: 'query' });
         useAdjacentSamplesMock.mockReturnValue({ query: 'query-result', refetch: vi.fn() });
@@ -49,7 +49,7 @@ describe('useAdjacentVideos', () => {
                     collection_id: 'collection-1',
                     filters: {
                         filter_type: 'video',
-                        sample_filter: { collection_id: 'collection-1', tag_ids: ['t1'] }
+                        sample_filter: { tag_ids: ['t1'] }
                     },
                     text_embedding: [0.11, 0.22]
                 }

@@ -29,7 +29,9 @@ class TestVideoDatasetExport:
         )
         object_track_id = object_track_resolver.create_many(
             session=dataset.session,
-            tracks=[ObjectTrackCreate(object_track_number=99, dataset_id=dataset.dataset_id)],
+            tracks=[
+                ObjectTrackCreate(object_track_number=99, root_collection_id=dataset.dataset_id)
+            ],
         )[0]
 
         frame_0, frame_1 = video_with_frames.frame_sample_ids

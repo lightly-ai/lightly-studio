@@ -32,7 +32,7 @@ describe('useAdjacentImages', () => {
         useAdjacentSamplesMock.mockReset();
         imageFilterStore.set({
             filter_type: 'image',
-            sample_filter: { collection_id: 'collection-1' }
+            sample_filter: {}
         });
         textEmbeddingStore.set({ embedding: [0.12, 0.34], queryText: 'cats' });
         useAdjacentSamplesMock.mockReturnValue({ query: 'query-result', refetch: vi.fn() });
@@ -49,7 +49,7 @@ describe('useAdjacentImages', () => {
                     collection_id: 'collection-1',
                     filters: {
                         filter_type: 'image',
-                        sample_filter: { collection_id: 'collection-1' }
+                        sample_filter: {}
                     },
                     text_embedding: [0.12, 0.34]
                 }
@@ -82,7 +82,7 @@ describe('useAdjacentImages', () => {
         textEmbeddingStore.set(undefined);
         imageFilterStore.set({
             filter_type: 'image',
-            sample_filter: { collection_id: 'collection-2', tag_ids: ['tag-1'] }
+            sample_filter: { tag_ids: ['tag-1'] }
         });
 
         useAdjacentImages({ sampleId: 'sample-456', collectionId: 'collection-2' });
@@ -95,7 +95,7 @@ describe('useAdjacentImages', () => {
                     collection_id: 'collection-2',
                     filters: {
                         filter_type: 'image',
-                        sample_filter: { collection_id: 'collection-2', tag_ids: ['tag-1'] }
+                        sample_filter: { tag_ids: ['tag-1'] }
                     },
                     text_embedding: undefined
                 }
