@@ -20,12 +20,13 @@ group_router = APIRouter(tags=["group"])
 class ReadGroupsRequest(BaseModel):
     """Request body for reading groups."""
 
-    filter: GroupFilter = Field(description="Filter parameters for groups")
+    filter: GroupFilter | None = Field(None, description="Filter parameters for groups")
 
 
-@group_router.post("/groups", response_model=GroupViewsWithCount)
+@group_router.post("/collections/{collection_id}/groups", response_model=GroupViewsWithCount)
 def get_all_groups(
     session: SessionDep,
+    collection_id: Annotated[UUID, Path(title="Collection Id")],
     pagination: Annotated[PaginatedWithCursor, Depends()],
     body: ReadGroupsRequest,
 ) -> GroupViewsWithCount:
@@ -33,14 +34,16 @@ def get_all_groups(
 
     Args:
         session: The database session.
+        collection_id: The ID of the collection to fetch groups for.
         pagination: Pagination parameters including offset and limit.
-        body: The body containing filters, including collection_id in sample_filter.
+        body: The body containing filters.
 
     Returns:
         A list of groups along with the total count.
     """
     return group_resolver.get_all(
         session=session,
+        collection_id=collection_id,
         pagination=Paginated(offset=pagination.offset, limit=pagination.limit),
         filters=body.filter,
     )

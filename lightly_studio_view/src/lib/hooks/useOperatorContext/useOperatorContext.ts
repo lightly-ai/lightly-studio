@@ -57,7 +57,7 @@ export function resolveScopeLabel(sampleType: SampleType | null, isOnDetailPage:
 }
 
 export function resolveContextFilter(
-    { routeId, collectionId, sampleId, annotationId }: PageContext,
+    { routeId, sampleId, annotationId }: PageContext,
     imageFilter: ImageFilter | null,
     videoFilter: VideoFilter | null,
     frameFilter: VideoFrameFilter | null,
@@ -65,10 +65,10 @@ export function resolveContextFilter(
     tagsSelected: Set<string>
 ): OperatorContextFilter {
     if (isAnnotationDetailsRoute(routeId) && annotationId) {
-        return { collection_id: collectionId, sample_ids: [annotationId] } satisfies SampleFilter;
+        return { sample_ids: [annotationId] } satisfies SampleFilter;
     }
     if (resolveIsDetailPage(routeId) && sampleId) {
-        return { collection_id: collectionId, sample_ids: [sampleId] } satisfies SampleFilter;
+        return { sample_ids: [sampleId] } satisfies SampleFilter;
     }
     if (isAnnotationsRoute(routeId)) {
         const labelIds = Array.from(annotationFilterIds);
