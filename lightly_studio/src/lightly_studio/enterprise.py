@@ -81,8 +81,7 @@ def connect(
     config = _fetch_connect_config(api_url=api_url, token=token)
 
     if config.cloud_credentials:
-        for key, value in config.cloud_credentials.items():
-            os.environ[key] = value
+        os.environ.update(config.cloud_credentials)
         print("Applied cloud credentials from LightlyStudio enterprise configuration.")
         for key, value in config.cloud_credentials.items():
             masked = value if "ID" in key else "*" * len(value)
