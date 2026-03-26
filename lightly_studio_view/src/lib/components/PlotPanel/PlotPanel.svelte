@@ -58,9 +58,9 @@
             return currentFilter;
         }
 
-        const sampleFilterWithoutSampleIds  = { ...currentFilter.sample_filter };
+        const sampleFilterWithoutSampleIds = { ...currentFilter.sample_filter };
         delete sampleFilterWithoutSampleIds.sample_ids;
-        if (Object.keys(sampleFilterWithoutSampleIds ).length === 0) {
+        if (Object.keys(sampleFilterWithoutSampleIds).length === 0) {
             // sample_filter only had sample_ids — remove it entirely
             const filterWithoutSampleFilter = { ...currentFilter };
             delete filterWithoutSampleFilter.sample_filter;
