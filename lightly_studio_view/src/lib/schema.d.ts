@@ -2931,7 +2931,7 @@ export interface components {
          */
         ReadGroupsRequest: {
             /** @description Filter parameters for groups */
-            filter: components["schemas"]["GroupFilter"];
+            filter?: components["schemas"]["GroupFilter"] | null;
         };
         /**
          * ReadImagesRequest

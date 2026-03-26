@@ -40,7 +40,6 @@ def test_get_all__basic(db_session: Session) -> None:
         session=db_session,
         collection_id=group_col.collection_id,
         pagination=None,
-        filters=GroupFilter(),
     )
 
     assert len(result.samples) == 2
@@ -86,7 +85,6 @@ def test_get_all__with_pagination(db_session: Session) -> None:
         session=db_session,
         collection_id=group_col.collection_id,
         pagination=Paginated(offset=0, limit=2),
-        filters=GroupFilter(),
     )
 
     assert len(result.samples) == 2
@@ -155,7 +153,6 @@ def test_get_all__empty(db_session: Session) -> None:
         session=db_session,
         collection_id=group_col.collection_id,
         pagination=None,
-        filters=GroupFilter(),
     )
 
     assert result.samples == []
@@ -211,7 +208,6 @@ def test_get_all__sample_counts(db_session: Session) -> None:
         session=db_session,
         collection_id=group_col.collection_id,
         pagination=None,
-        filters=GroupFilter(),
     )
 
     assert len(result.samples) == 3

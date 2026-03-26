@@ -20,7 +20,7 @@ group_router = APIRouter(tags=["group"])
 class ReadGroupsRequest(BaseModel):
     """Request body for reading groups."""
 
-    filter: GroupFilter = Field(description="Filter parameters for groups")
+    filter: GroupFilter | None = Field(None, description="Filter parameters for groups")
 
 
 @group_router.post("/collections/{collection_id}/groups", response_model=GroupViewsWithCount)

@@ -83,7 +83,6 @@ export const useGroupsInfinite = (collectionId: string) => {
         path: { collection_id: collectionId },
         query: { limit: 30 },
         body: {
-            filter: {}
         }
     });
 

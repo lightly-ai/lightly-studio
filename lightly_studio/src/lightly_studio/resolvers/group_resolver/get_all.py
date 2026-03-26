@@ -19,7 +19,7 @@ def get_all(
     session: Session,
     collection_id: UUID,
     pagination: Paginated | None,
-    filters: GroupFilter,
+    filters: GroupFilter | None = None,
 ) -> GroupViewsWithCount:
     """Retrieve groups ordered by creation time.
 
@@ -48,10 +48,10 @@ def get_all(
         samples_query = filters.apply(samples_query)
         total_count_query = filters.apply(total_count_query)
 
-    samples_query = samples_query.where(col(SampleTable.collection_id) == collection_id)
+    samples_query = samples_query.where(col(SampleTable.collection_id) == collection_id).order_by(
+        col(SampleTable.created_at).asc()
+    )
     total_count_query = total_count_query.where(col(SampleTable.collection_id) == collection_id)
-
-    samples_query = samples_query.order_by(col(SampleTable.created_at).asc())
 
     if pagination is not None:
         samples_query = samples_query.offset(pagination.offset).limit(pagination.limit)
