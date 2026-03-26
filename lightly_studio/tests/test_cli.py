@@ -22,7 +22,7 @@ def test_gui(mocker: MockerFixture) -> None:
     runner = CliRunner()
     result = runner.invoke(cli=cli.main, args=["gui"])
     assert result.exit_code == 0
-    mock_connect.assert_called_once_with(db_file=None, db_url=None)
+    mock_connect.assert_called_once_with(db_file=None, db_url=None, must_exist=True)
     mock_start_gui.assert_called_once_with(host=None, port=None)
 
 
@@ -32,7 +32,7 @@ def test_gui__with_host_port(mocker: MockerFixture) -> None:
     runner = CliRunner()
     result = runner.invoke(cli=cli.main, args=["gui", "--host", "0.0.0.0", "--port", "9999"])
     assert result.exit_code == 0
-    mock_connect.assert_called_once_with(db_file=None, db_url=None)
+    mock_connect.assert_called_once_with(db_file=None, db_url=None, must_exist=True)
     mock_start_gui.assert_called_once_with(host="0.0.0.0", port=9999)
 
 
@@ -42,7 +42,7 @@ def test_gui__with_db_file(mocker: MockerFixture) -> None:
     runner = CliRunner()
     result = runner.invoke(cli=cli.main, args=["gui", "--db-file", "my_duck.db"])
     assert result.exit_code == 0
-    mock_connect.assert_called_once_with(db_file="my_duck.db", db_url=None)
+    mock_connect.assert_called_once_with(db_file="my_duck.db", db_url=None, must_exist=True)
     mock_start_gui.assert_called_once_with(host=None, port=None)
 
 
@@ -52,7 +52,9 @@ def test_gui__with_db_url(mocker: MockerFixture) -> None:
     runner = CliRunner()
     result = runner.invoke(cli=cli.main, args=["gui", "--db-url", "postgresql://localhost/mydb"])
     assert result.exit_code == 0
-    mock_connect.assert_called_once_with(db_file=None, db_url="postgresql://localhost/mydb")
+    mock_connect.assert_called_once_with(
+        db_file=None, db_url="postgresql://localhost/mydb", must_exist=True
+    )
     mock_start_gui.assert_called_once_with(host=None, port=None)
 
 

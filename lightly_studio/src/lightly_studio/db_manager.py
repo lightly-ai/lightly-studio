@@ -21,11 +21,11 @@ from enum import Enum
 from pathlib import Path
 from typing import Annotated
 
+import sqlalchemy_utils
 from fastapi import Depends
 from sqlalchemy import StaticPool, text
 from sqlalchemy.engine import Engine
 from sqlmodel import Session, SQLModel, create_engine
-import sqlalchemy_utils
 
 import lightly_studio.api.db_tables  # noqa: F401, required for SQLModel to work properly
 from lightly_studio.dataset.env import LIGHTLY_STUDIO_DATABASE_URL
@@ -76,9 +76,7 @@ class DatabaseEngine:
             self._engine_url = _ensure_psycopg3_driver(self._engine_url)
 
         if must_exist and not _database_exists(self._engine_url, self._backend):
-            raise FileNotFoundError(
-                f"Database does not exist at {self._engine_url}."
-            )
+            raise FileNotFoundError(f"Database does not exist at {self._engine_url}.")
 
         if cleanup_existing and self._backend == DatabaseBackend.DUCKDB:
             _cleanup_database_file(engine_url=self._engine_url)
@@ -307,8 +305,7 @@ def _database_exists(engine_url: str, backend: DatabaseBackend) -> bool:
         if db_path == ":memory:":
             return True
         return Path(db_path).exists()
-    else:
-        return sqlalchemy_utils.database_exists(engine_url)
+    return bool(sqlalchemy_utils.database_exists(engine_url))
 
 
 def _cleanup_database_file(engine_url: str) -> None:
