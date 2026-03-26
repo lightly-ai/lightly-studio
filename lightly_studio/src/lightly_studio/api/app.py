@@ -91,7 +91,16 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-app.add_middleware(BrotliMiddleware, minimum_size=1024)
+app.add_middleware(
+    BrotliMiddleware,
+    minimum_size=1024,
+    # Exclude already-compressed media from compression (images, videos, video frames)
+    excluded_handlers=[
+        r"/images/sample/",
+        r"/videos/media/",
+        r"/frames/media/",
+    ],
+)
 
 
 def use_route_names_as_operation_ids(app: FastAPI) -> None:

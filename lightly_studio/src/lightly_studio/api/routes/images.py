@@ -62,8 +62,6 @@ async def serve_image_by_sample_id(
                 # Cache for 1 hour
                 "Cache-Control": "public, max-age=3600",
                 "Content-Length": str(len(content)),
-                # Prevent compression middleware from compressing already-compressed images
-                "Content-Encoding": "identity",
             },
         )
 
