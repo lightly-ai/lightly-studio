@@ -245,5 +245,7 @@ async def stream_frame(
         headers={
             "Cache-Control": "public, max-age=3600",
             "Content-Length": str(buffer.nbytes),
+            # Prevent compression middleware from compressing already-compressed images
+            "Content-Encoding": "identity",
         },
     )

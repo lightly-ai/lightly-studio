@@ -178,6 +178,8 @@ async def serve_video_by_sample_id(
                     "Content-Range": f"bytes {start}-{end}/{file_size}",
                     "Content-Length": str(content_length),
                     "Cache-Control": "public, max-age=3600",
+                    # Prevent compression middleware from compressing already-compressed videos
+                    "Content-Encoding": "identity",
                 },
             )
 
@@ -189,6 +191,8 @@ async def serve_video_by_sample_id(
                 "Accept-Ranges": "bytes",
                 "Content-Length": str(file_size),
                 "Cache-Control": "public, max-age=3600",
+                # Prevent compression middleware from compressing already-compressed videos
+                "Content-Encoding": "identity",
             },
         )
     except FileNotFoundError as exc:
