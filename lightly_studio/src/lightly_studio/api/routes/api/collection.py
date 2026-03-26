@@ -160,6 +160,8 @@ def deep_copy(
     request: DeepCopyRequest,
 ) -> dict[str, str]:
     """Create a deep copy of a collection with all related data."""
+    if collection.parent_collection_id is not None:
+        raise ValueError("Only root collections can be deep copied.")
     existing = collection_resolver.get_by_name(
         # parent_collection_id=None searches for root collections
         session=session,
@@ -172,9 +174,9 @@ def deep_copy(
             detail=f"A collection with name '{request.copy_name}' already exists.",
         )
 
-    new_collection = collection_resolver.deep_copy(
+    new_collection = dataset_resolver.deep_copy(
         session=session,
-        root_collection_id=collection.collection_id,
+        dataset_id=collection.dataset_id,
         copy_name=request.copy_name,
     )
 
@@ -191,9 +193,11 @@ def delete_dataset(
     ],
 ) -> dict[str, str]:
     """Delete a dataset and all related data."""
-    collection_resolver.delete_dataset(
+    if collection.parent_collection_id is not None:
+        raise ValueError("Only root collections can be deleted.")
+    dataset_resolver.delete_dataset(
         session=session,
-        root_collection_id=collection.collection_id,
+        dataset_id=collection.dataset_id,
     )
 
     return {"status": "deleted"}

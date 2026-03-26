@@ -38,9 +38,9 @@ def test_deep_copy__empty_collection(db_session: Session) -> None:
     original = create_collection(session=db_session, collection_name="original")
 
     # Act
-    copied = collection_resolver.deep_copy(
+    copied = dataset_resolver.deep_copy(
         session=db_session,
-        root_collection_id=original.collection_id,
+        dataset_id=original.dataset_id,
         copy_name="copied",
     )
 
@@ -62,9 +62,9 @@ def test_deep_copy__with_images(db_session: Session) -> None:
     )
 
     # Act
-    copied = collection_resolver.deep_copy(
+    copied = dataset_resolver.deep_copy(
         session=db_session,
-        root_collection_id=original.collection_id,
+        dataset_id=original.dataset_id,
         copy_name="copied",
     )
     # Add another image to the original collection after copying
@@ -118,9 +118,9 @@ def test_deep_copy__with_hierarchy(db_session: Session) -> None:
     )
 
     # Act
-    copied_root = collection_resolver.deep_copy(
+    copied_root = dataset_resolver.deep_copy(
         session=db_session,
-        root_collection_id=root.collection_id,
+        dataset_id=root.dataset_id,
         copy_name="copied_dataset",
     )
 
@@ -159,9 +159,9 @@ def test_deep_copy__with_metadata(db_session: Session) -> None:
     img.sample["gps_location"] = GPSCoordinate(lat=40.7128, lon=-74.0060)
 
     # Act
-    copied = collection_resolver.deep_copy(
+    copied = dataset_resolver.deep_copy(
         session=db_session,
-        root_collection_id=original.collection_id,
+        dataset_id=original.dataset_id,
         copy_name="copied",
     )
 
@@ -217,9 +217,9 @@ def test_deep_copy__with_nested_metadata(db_session: Session) -> None:
     img.sample["some_list"] = ["el1", "el2"]
 
     # Act
-    copied = collection_resolver.deep_copy(
+    copied = dataset_resolver.deep_copy(
         session=db_session,
-        root_collection_id=original.collection_id,
+        dataset_id=original.dataset_id,
         copy_name="copied",
     )
 
@@ -290,9 +290,9 @@ def test_deep_copy__with_embeddings(db_session: Session) -> None:
     )
 
     # Act
-    copied = collection_resolver.deep_copy(
+    copied = dataset_resolver.deep_copy(
         session=db_session,
-        root_collection_id=original.collection_id,
+        dataset_id=original.dataset_id,
         copy_name="copied",
     )
 
@@ -406,14 +406,14 @@ def test_deep_copy__can_delete_original_after_copy(db_session: Session) -> None:
     )
 
     # Act - deep copy, then delete original
-    copied = collection_resolver.deep_copy(
+    copied = dataset_resolver.deep_copy(
         session=db_session,
-        root_collection_id=original.collection_id,
+        dataset_id=original.dataset_id,
         copy_name="copied",
     )
-    collection_resolver.delete_dataset(
+    dataset_resolver.delete_dataset(
         session=db_session,
-        root_collection_id=original.collection_id,
+        dataset_id=original.dataset_id,
     )
 
     # Assert - copied collection still exists with its data
@@ -447,33 +447,15 @@ def test_deep_copy__can_delete_original_after_copy(db_session: Session) -> None:
     assert copied_annotations.total_count == 4
 
 
-def test_deep_copy__raises_for_non_root_collection(db_session: Session) -> None:
-    # Arrange
-    root = create_collection(session=db_session, collection_name="root")
-    child = create_collection(
-        session=db_session,
-        collection_name="child",
-        parent_collection_id=root.collection_id,
-    )
-
-    # Act & Assert
-    with pytest.raises(ValueError, match="Only root collections can be deep copied"):
-        collection_resolver.deep_copy(
-            session=db_session,
-            root_collection_id=child.collection_id,
-            copy_name="test",
-        )
-
-
-def test_deep_copy__raises_for_nonexistent_collection(db_session: Session) -> None:
+def test_deep_copy__raises_for_nonexistent_dataset(db_session: Session) -> None:
     # Arrange
     nonexistent_id = uuid.uuid4()
 
     # Act & Assert
     with pytest.raises(ValueError, match="not found"):
-        collection_resolver.deep_copy(
+        dataset_resolver.deep_copy(
             session=db_session,
-            root_collection_id=nonexistent_id,
+            dataset_id=nonexistent_id,
             copy_name="test",
         )
 
@@ -552,9 +534,9 @@ def test_deep_copy__with_annotations(db_session: Session) -> None:
     }
 
     # Act
-    copied = collection_resolver.deep_copy(
+    copied = dataset_resolver.deep_copy(
         session=db_session,
-        root_collection_id=original.collection_id,
+        dataset_id=original.dataset_id,
         copy_name="copied",
     )
 
