@@ -195,8 +195,8 @@ def connect(
     and PostgreSQL via the db_url parameter or LIGHTLY_STUDIO_DATABASE_URL env var.
 
     Args:
-        db_file: Path to DuckDB file.
         cleanup_existing: If True, removes the existing database before use.
+        db_file: Path to DuckDB file.
         db_url: Full database URL.
 
     Raises:
