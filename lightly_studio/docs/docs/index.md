@@ -54,7 +54,7 @@ The library is OS-independent and works on Windows, Linux, and macOS.
     pip install lightly_studio
     ```
 
-## **Quickstart**
+## Quickstart
 
 The examples below download the required example data the first time you run them. You can also
 directly use your own image, video, or YOLO/COCO dataset.
@@ -75,9 +75,8 @@ directly use your own image, video, or YOLO/COCO dataset.
             path=f"{dataset_path}/coco_subset_128_images/images",
         )
 
-        # Start the UI server on port 8001. Use env variables to change port and host:
-        # LIGHTLY_STUDIO_PORT=8002
-        # LIGHTLY_STUDIO_HOST=0.0.0.0
+        # Start the UI server on localhost port 8001.
+        # Pass `host` and `port` parameters to customize.
         ls.start_gui()
         ```
 
@@ -163,13 +162,72 @@ directly use your own image, video, or YOLO/COCO dataset.
     We recommend using Firefox for the best experience with embedding plots, as other browsers might
     not render them correctly.
 
+## Feature Overview
+
+### Datasets
+
+<div class="grid cards small" markdown>
+
+-   **[Image Dataset](dataset_setup/image_dataset.md)**
+
+    [![Image Dataset](https://storage.googleapis.com/lightly-public/studio/docs_cards/image_dataset.png)](dataset_setup/image_dataset.md)
+
+-   **[Video Dataset](dataset_setup/video_dataset.md)**
+
+    [![Video Dataset](https://storage.googleapis.com/lightly-public/studio/docs_cards/video_dataset.png)](dataset_setup/video_dataset.md)
+
+</div>
+
+### Concepts
+
+<div class="grid cards small" markdown>
+
+-   **[Annotations](concepts_and_tools/annotations.md)**
+
+    [![Annotations](https://storage.googleapis.com/lightly-public/studio/docs_cards/annotation.png)](concepts_and_tools/annotations.md)
+
+-   **[Tags](concepts_and_tools/tags.md)**
+
+    [![Tags](https://storage.googleapis.com/lightly-public/studio/docs_cards/tags.png)](concepts_and_tools/tags.md)
+
+-   **[Captions](concepts_and_tools/captions.md)**
+
+    [![Captions](https://storage.googleapis.com/lightly-public/studio/docs_cards/captions.png)](concepts_and_tools/captions.md)
+
+-   **[Metadata](concepts_and_tools/metadata.md)**
+
+    [![Metadata](https://storage.googleapis.com/lightly-public/studio/docs_cards/metadata.png)](concepts_and_tools/metadata.md)
+
+-   **[Embeddings](concepts_and_tools/embeddings.md)**
+
+    [![Embeddings](https://storage.googleapis.com/lightly-public/studio/docs_cards/embeddings.png)](concepts_and_tools/embeddings.md)
+
+</div>
+
+### Tools
+
+<div class="grid cards small" markdown>
+
+-   **[Search and Filter](concepts_and_tools/search_and_filter.md)**
+
+    [![Search and Filter](https://storage.googleapis.com/lightly-public/studio/docs_cards/search_and_filter.png)](concepts_and_tools/search_and_filter.md)
+
+-   **[Export](concepts_and_tools/export.md)**
+
+    [![Export](https://storage.googleapis.com/lightly-public/studio/docs_cards/export.png)](concepts_and_tools/export.md)
+
+-   **[Sampling](concepts_and_tools/sampling.md)**
+
+    [![Sampling](https://storage.googleapis.com/lightly-public/studio/docs_cards/sampling.png)](concepts_and_tools/sampling.md)
+
+-   **[Plugins](concepts_and_tools/plugins.md)**
+
+    [![Plugins](https://storage.googleapis.com/lightly-public/studio/docs_cards/plugins.png)](concepts_and_tools/plugins.md)
+
+</div>
+
 ## Python API
 
 LightlyStudio has a powerful [Python interface](api/index.md). You can not only index datasets but
 also query and manipulate them using code. It supports local and cloud-hosted image and video
 folders; see [Using Cloud Storage](api/index.md#using-cloud-storage) for setup and limitations.
-
-## Plugins
-
-LightlyStudio offers the possibility to extend its functionality by using
-[plugins](concepts_and_tools/plugins.md). Users can define their own plugins or use pre-defined ones.

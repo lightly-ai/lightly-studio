@@ -9,7 +9,6 @@ load some data, start the GUI in the background, and run Python code while the G
 ### Cell 1: Imports
 ```python
 import lightly_studio as ls
-from lightly_studio.dataset import env
 from lightly_studio.utils import download_example_dataset
 ```
 
@@ -29,8 +28,8 @@ Unlike `ls.start_gui()`, the command `ls.start_gui_background()` does not block 
 so you can run Python code while the GUI is still open.
 
 ```python
-env.LIGHTLY_STUDIO_HOST = "0.0.0.0"  # Colab needs 0.0.0.0 to expose the port.
-ls.start_gui_background()
+# Colab needs 0.0.0.0 to expose the port.
+server = ls.start_gui_background(host="0.0.0.0")
 ```
 
 ### Cell 4: Open the GUI
@@ -45,7 +44,7 @@ to open the GUI in your browser.
 ```python
 from IPython.display import IFrame, display
 
-display(IFrame(env.APP_URL, width=1000, height=800))
+display(IFrame(server.url, width=1000, height=800))
 ```
 
 #### IFrame in a Colab Notebook
@@ -53,7 +52,7 @@ display(IFrame(env.APP_URL, width=1000, height=800))
 ```python
 from google.colab import output
 
-output.serve_kernel_port_as_iframe(env.LIGHTLY_STUDIO_PORT, width=1000, height=800)
+output.serve_kernel_port_as_iframe(server.port, width=1000, height=800)
 ```
 
 ### Cell 5: Stop the background GUI server

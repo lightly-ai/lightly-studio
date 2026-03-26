@@ -1,5 +1,7 @@
 """Command line interface for LightlyStudio."""
 
+from __future__ import annotations
+
 from importlib import metadata
 
 import click
@@ -14,6 +16,8 @@ def main() -> None:
 
 
 @main.command()
-def gui() -> None:
+@click.option("--host", default=None, type=str, help="Host to bind the server to.")
+@click.option("--port", default=None, type=int, help="Port to bind the server to.")
+def gui(host: str | None, port: int | None) -> None:
     """Start the web interface."""
-    lightly_studio.start_gui()
+    lightly_studio.start_gui(host=host, port=port)
