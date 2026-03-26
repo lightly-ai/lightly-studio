@@ -105,6 +105,9 @@ describe('useAdjacentFrames', () => {
                 sample_ids: ['s1']
             }
         });
+        videoFilterParamsStore.set({
+            collection_id: 'col-3'
+        });
         textEmbeddingStore.set({ embedding: [0.1, 0.2], queryText: 'car' });
 
         useAdjacentFrames({ sampleId: 'frame-3', collectionId: 'col-3', fromVideos: true });

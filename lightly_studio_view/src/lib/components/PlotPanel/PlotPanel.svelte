@@ -58,11 +58,13 @@
             return currentFilter;
         }
 
-        const { sample_ids: _sample_ids, ...restSampleFilter } = currentFilter.sample_filter;
-        if (Object.keys(restSampleFilter).length === 0) {
+        const sampleFilterWithoutSampleIds  = { ...currentFilter.sample_filter };
+        delete sampleFilterWithoutSampleIds.sample_ids;
+        if (Object.keys(sampleFilterWithoutSampleIds ).length === 0) {
             // sample_filter only had sample_ids — remove it entirely
-            const { sample_filter: _sample_filter, ...restFilter } = currentFilter;
-            return restFilter;
+            const filterWithoutSampleFilter = { ...currentFilter };
+            delete filterWithoutSampleFilter.sample_filter;
+            return filterWithoutSampleFilter;
         }
         return {
             ...currentFilter,
