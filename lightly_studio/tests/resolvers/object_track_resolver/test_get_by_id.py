@@ -16,7 +16,9 @@ def test_get_by_id(db_session: Session) -> None:
     collection = create_collection(session=db_session)
     track_id = object_track_resolver.create_many(
         session=db_session,
-        tracks=[ObjectTrackCreate(object_track_number=99, dataset_id=collection.collection_id)],
+        tracks=[
+            ObjectTrackCreate(object_track_number=99, root_collection_id=collection.collection_id)
+        ],
     )[0]
     assert track_id is not None
     result = object_track_resolver.get_by_id(
@@ -27,7 +29,7 @@ def test_get_by_id(db_session: Session) -> None:
     assert result is not None
     assert result.object_track_id == track_id
     assert result.object_track_number == 99
-    assert result.dataset_id == collection.collection_id
+    assert result.root_collection_id == collection.collection_id
 
 
 def test_get_by_id__not_found(db_session: Session) -> None:
