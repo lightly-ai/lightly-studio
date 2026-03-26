@@ -12,16 +12,14 @@ env.read_env()
 # Cleanup an existing database
 db_manager.connect(cleanup_existing=True)
 
-# Define data paths
-dataset_path = env.path("EXAMPLES_VIDEO_DATASET_PATH", "/path/to/your/dataset")
-annotations_path = env.path("EXAMPLES_VIDEO_YVIS_JSON_PATH", "/path/to/your/dataset/instances.json")
+# Define the path to the dataset directory
+dataset_path = env.path("EXAMPLES_DATASET_PATH", "/path/to/your/dataset")
 
 # Create a Dataset from a path
-dataset = ls.VideoDataset.create()
-dataset.add_videos_from_youtube_vis(
-    annotations_json=annotations_path,
-    videos_path=dataset_path,
-    annotation_type=ls.AnnotationType.INSTANCE_SEGMENTATION,
-)
+dataset = ls.ImageDataset.create()
+dataset.add_images_from_path(path=dataset_path)
+
+for sample in dataset:
+    print(sample)
 
 ls.start_gui()
