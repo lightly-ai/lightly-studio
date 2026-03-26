@@ -50,7 +50,10 @@ export const useCollectionWithChildren = ({ collectionId }: { collectionId: stri
                 data: $query.data[0] as CollectionView // First item is the root collection with children
             };
         }
-        return $query;
+        return {
+            ...$query,
+            data: undefined
+        };
     });
 
     const refetch = () => {
