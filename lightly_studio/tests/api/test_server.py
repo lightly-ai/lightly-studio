@@ -98,7 +98,7 @@ def test_server_static_webapp() -> None:
 def test_app_has_brotli_middleware() -> None:
     middleware_classes = [middleware.cls for middleware in app.user_middleware]
 
-    assert BrotliMiddleware in middleware_classes
+    assert BrotliMiddleware in middleware_classes  # type: ignore[comparison-overlap]
 
 
 def test__get_available_port__preferred_port_in_use() -> None:
