@@ -290,7 +290,6 @@
 
     onMount(() => {
         rgbaParser = createColorParser();
-        render($customLabelColorsStore);
 
         if (canvasEl && 'ResizeObserver' in window) {
             resizeObserver = new ResizeObserver(() => render());
