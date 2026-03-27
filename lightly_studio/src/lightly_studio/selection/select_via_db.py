@@ -76,7 +76,7 @@ def _aggregate_class_distributions(
 
 def _process_explicit_target_distribution(
     session: Session,
-    dataset_id: UUID,
+    root_collection_id: UUID,
     target_distribution: dict[str, float],
     annotation_label_ids: Sequence[UUID],
 ) -> tuple[dict[UUID, float], set[UUID], float]:
@@ -84,7 +84,7 @@ def _process_explicit_target_distribution(
 
     Args:
         session: The SQLAlchemy session.
-        dataset_id: The root collection ID to look for annotation labels.
+        root_collection_id: The root collection ID to look for annotation labels.
         target_distribution:
             A dictionary mapping annotation label names to their target proportions.
         annotation_label_ids:
@@ -107,7 +107,7 @@ def _process_explicit_target_distribution(
         try:
             annotation_label = annotation_label_resolver.get_by_label_name(
                 session=session,
-                root_collection_id=dataset_id,
+                root_collection_id=root_collection_id,
                 label_name=label_name,
             )
         except sqlalchemy.exc.MultipleResultsFound as e:
@@ -151,7 +151,7 @@ def _get_class_balancing_data(  # noqa: PLR0913
         label_id_to_target, unused_label_ids, remaining_ratio = (
             _process_explicit_target_distribution(
                 session=session,
-                dataset_id=root_collection_id,
+                root_collection_id=root_collection_id,
                 target_distribution=strat.target_distribution,
                 annotation_label_ids=annotation_label_ids,
             )

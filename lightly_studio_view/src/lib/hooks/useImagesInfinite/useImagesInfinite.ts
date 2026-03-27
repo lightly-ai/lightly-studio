@@ -5,6 +5,7 @@ import { readImages, type ReadImagesRequest } from '$lib/api/lightly_studio_loca
 import type { DimensionBounds } from '$lib/services/loadDimensionBounds';
 import { createMetadataFilters } from '$lib/hooks/useMetadataFilters/useMetadataFilters';
 import type { MetadataValues } from '$lib/services/types';
+import { GRID_PAGE_SIZE } from '$lib/constants';
 
 // Define mode-aware parameter types.
 interface ClassifierSamples {
@@ -99,7 +100,7 @@ const buildRequestBody = (params: ImagesInfiniteParams, pageParam: number): Read
     const baseBody: ReadImagesRequest = {
         pagination: {
             offset: pageParam,
-            limit: 50
+            limit: GRID_PAGE_SIZE
         },
         text_embedding: params.text_embedding,
         filters: {
