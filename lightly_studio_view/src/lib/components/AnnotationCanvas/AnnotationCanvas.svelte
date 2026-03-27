@@ -273,9 +273,14 @@
         };
 
         if (canvasEl.transferControlToOffscreen) {
-            const offscreen = canvasEl.transferControlToOffscreen();
-            worker.postMessage({ type: 'init', canvas: offscreen }, [offscreen]);
-            hasOffscreen = true;
+            try {
+                const offscreen = canvasEl.transferControlToOffscreen();
+                worker.postMessage({ type: 'init', canvas: offscreen }, [offscreen]);
+                hasOffscreen = true;
+            } catch {
+                // The canvas may already have a 2D context; keep worker in image-data fallback mode.
+                hasOffscreen = false;
+            }
         } else {
             hasOffscreen = false;
         }

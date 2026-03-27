@@ -41,7 +41,9 @@ const handleRender = ({ width, height, masks, boxes, scaleX = 1, scaleY = 1 }: R
         drawBoxesOnContext(ctx, boxes, width, height, stroke);
     } else {
         // Fallback: send pixel data and boxes back to main thread for painting.
-        postMessage({ type: 'image', width, height, data: pixelData, boxes, stroke });
+        postMessage({ type: 'image', width, height, data: pixelData, boxes, stroke }, [
+            pixelData.buffer
+        ]);
     }
 };
 
