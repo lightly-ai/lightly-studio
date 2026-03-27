@@ -1,7 +1,7 @@
 import { getVideoByIdOptions } from '$lib/api/lightly_studio_local/@tanstack/svelte-query.gen';
 import type { VideoView } from '$lib/api/lightly_studio_local/types.gen';
 import { createQuery, useQueryClient } from '@tanstack/svelte-query';
-import { get, writable, type Writable } from 'svelte/store';
+import { writable, type Writable } from 'svelte/store';
 
 export const useVideo = () => {
     const data: Writable<VideoView | undefined> = writable(undefined);

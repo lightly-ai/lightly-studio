@@ -32,7 +32,9 @@ describe('useVideo', () => {
 
     beforeEach(() => {
         vi.clearAllMocks();
-        vi.mocked(useQueryClient).mockReturnValue(mockQueryClient as any);
+        vi.mocked(useQueryClient).mockReturnValue(
+            mockQueryClient as ReturnType<typeof useQueryClient>
+        );
     });
 
     it('should initialize with undefined data, null error, and false isLoading', () => {
@@ -49,7 +51,7 @@ describe('useVideo', () => {
             error: null,
             isLoading: false
         });
-        vi.mocked(createQuery).mockReturnValue(mockQueryStore as any);
+        vi.mocked(createQuery).mockReturnValue(mockQueryStore as ReturnType<typeof createQuery>);
 
         const { data, error, isLoading, loadById } = useVideo();
 
@@ -80,8 +82,8 @@ describe('useVideo', () => {
         });
 
         vi.mocked(createQuery)
-            .mockReturnValueOnce(mockQueryStore1 as any)
-            .mockReturnValueOnce(mockQueryStore2 as any);
+            .mockReturnValueOnce(mockQueryStore1 as ReturnType<typeof createQuery>)
+            .mockReturnValueOnce(mockQueryStore2 as ReturnType<typeof createQuery>);
 
         const { loadById, data } = useVideo();
 
@@ -107,7 +109,7 @@ describe('useVideo', () => {
             error: mockError,
             isLoading: false
         });
-        vi.mocked(createQuery).mockReturnValue(mockQueryStore as any);
+        vi.mocked(createQuery).mockReturnValue(mockQueryStore as ReturnType<typeof createQuery>);
 
         const { data, error, isLoading, loadById } = useVideo();
 
@@ -124,7 +126,7 @@ describe('useVideo', () => {
             error: null,
             isLoading: false
         });
-        vi.mocked(createQuery).mockReturnValue(mockQueryStore as any);
+        vi.mocked(createQuery).mockReturnValue(mockQueryStore as ReturnType<typeof createQuery>);
 
         const { loadById, refetch } = useVideo();
 
@@ -144,12 +146,12 @@ describe('useVideo', () => {
             error: null,
             isLoading: true
         });
-        vi.mocked(createQuery).mockReturnValue(mockQueryStore as any);
+        vi.mocked(createQuery).mockReturnValue(mockQueryStore as ReturnType<typeof createQuery>);
 
         const { data, error, isLoading, loadById } = useVideo();
 
-        const dataValues: any[] = [];
-        const errorValues: any[] = [];
+        const dataValues: (VideoView | undefined)[] = [];
+        const errorValues: (Error | null)[] = [];
         const loadingValues: boolean[] = [];
 
         const unsubData = data.subscribe((value) => dataValues.push(value));
