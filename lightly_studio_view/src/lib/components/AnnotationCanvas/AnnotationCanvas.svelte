@@ -149,7 +149,70 @@
         return { masks, boxes };
     };
 
+    const drawBoxes = (
+        ctx: CanvasRenderingContext2D,
+        boxes: BoxPayload[],
+        canvasWidth: number,
+        canvasHeight: number,
+        stroke: number
+    ) => {
+        if (!boxes.length) {
+            return;
+        }
+
+        ctx.save();
+        ctx.lineWidth = stroke;
+        const clamp = (value: number, min: number, max: number) =>
+            Math.min(Math.max(value, min), max);
+
+        for (const box of boxes) {
+            ctx.strokeStyle = `rgba(${box.color[0]}, ${box.color[1]}, ${box.color[2]}, ${
+                box.color[3] / 255
+            })`;
+            const x = clamp(box.x, 0, canvasWidth);
+            const y = clamp(box.y, 0, canvasHeight);
+            const wBox = clamp(box.width, 0, canvasWidth - x);
+            const hBox = clamp(box.height, 0, canvasHeight - y);
+
+            if (wBox === 0 || hBox === 0) {
+                continue;
+            }
+
+            ctx.strokeRect(x, y, wBox, hBox);
+        }
+
+        ctx.restore();
+    };
+
     const render = (customLabelColors: CustomLabelColorMap = $customLabelColorsStore) => {
+        const payload = buildRenderPayload(customLabelColors);
+        const scaleX = canvasEl && width ? canvasEl.clientWidth / width : 1;
+        const scaleY = canvasEl && height ? canvasEl.clientHeight / height : 1;
+
+        if (!workerReady && payload.masks.length === 0) {
+            if (!canvasEl) {
+                return;
+            }
+
+            const ctx = canvasEl.getContext('2d', { willReadFrequently: true });
+            if (!ctx) {
+                return;
+            }
+
+            ctx.clearRect(0, 0, width, height);
+            if (!payload.boxes.length) {
+                return;
+            }
+
+            const scale = Math.max(scaleX, scaleY) || 1;
+            drawBoxes(ctx, payload.boxes, width, height, 2 / scale);
+            return;
+        }
+
+        if (!workerReady) {
+            setupWorker();
+        }
+
         if (!worker || !workerReady) {
             return;
         }
@@ -161,21 +224,18 @@
         }
 
         // Include current CSS scale so the worker can keep stroke widths consistent.
-        const scaleX = canvasEl && width ? canvasEl.clientWidth / width : 1;
-        const scaleY = canvasEl && height ? canvasEl.clientHeight / height : 1;
-
         worker.postMessage({
             type: 'render',
             width,
             height,
             scaleX,
             scaleY,
-            ...buildRenderPayload(customLabelColors)
+            ...payload
         });
     };
 
     const setupWorker = () => {
-        if (!canvasEl) {
+        if (!canvasEl || worker) {
             return;
         }
 
@@ -209,31 +269,7 @@
 
             const imageData = new ImageData(new Uint8ClampedArray(data), w, h);
             ctx.putImageData(imageData, 0, 0);
-
-            if (boxes.length) {
-                ctx.save();
-                ctx.lineWidth = stroke;
-                const clamp = (value: number, min: number, max: number) =>
-                    Math.min(Math.max(value, min), max);
-
-                for (const box of boxes) {
-                    ctx.strokeStyle = `rgba(${box.color[0]}, ${box.color[1]}, ${box.color[2]}, ${
-                        box.color[3] / 255
-                    })`;
-                    const x = clamp(box.x, 0, w);
-                    const y = clamp(box.y, 0, h);
-                    const wBox = clamp(box.width, 0, w - x);
-                    const hBox = clamp(box.height, 0, h - y);
-
-                    if (wBox === 0 || hBox === 0) {
-                        continue;
-                    }
-
-                    ctx.strokeRect(x, y, wBox, hBox);
-                }
-
-                ctx.restore();
-            }
+            drawBoxes(ctx, boxes, w, h, stroke);
         };
 
         if (canvasEl.transferControlToOffscreen) {
@@ -245,12 +281,11 @@
         }
 
         workerReady = true;
-        render($customLabelColorsStore);
     };
 
     onMount(() => {
         rgbaParser = createColorParser();
-        setupWorker();
+        render($customLabelColorsStore);
 
         if (canvasEl && 'ResizeObserver' in window) {
             resizeObserver = new ResizeObserver(() => render());
@@ -265,9 +300,7 @@
 
     $effect(() => {
         const customLabelColors = $customLabelColorsStore;
-        if (workerReady) {
-            render(customLabelColors);
-        }
+        render(customLabelColors);
     });
 </script>
 

@@ -121,6 +121,7 @@
     let selectionAnchorSampleId = $state<string | null>(null);
 
     let isReady = $state(false);
+    const SAMPLE_GRID_OVERSCAN = 30;
 
     // Initialize objectFit with default and update when settings are loaded
     let objectFit = $state($gridViewSampleRenderingStore); // Use store value directly
@@ -219,7 +220,7 @@
 
 <SampleGrid
     itemCount={samples.length}
-    overScan={100}
+    overScan={SAMPLE_GRID_OVERSCAN}
     scrollPosition={initialScrollPosition}
     scrollResetKey={$textEmbedding?.queryText ?? ''}
     onScroll={handleScroll}
