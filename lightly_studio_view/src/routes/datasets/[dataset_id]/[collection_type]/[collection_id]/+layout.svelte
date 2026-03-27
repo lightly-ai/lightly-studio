@@ -158,7 +158,8 @@
     });
 
     let query_text = $state($textEmbedding ? $textEmbedding.queryText : '');
-    let submittedQueryText = $state('');
+    let submittedQueryText = $state($textEmbedding ? $textEmbedding.queryText : '');
+    let syncedTextEmbeddingQuery = $state($textEmbedding ? $textEmbedding.queryText : '');
 
     const embedTextQuery = $derived(
         useEmbedText({
@@ -169,9 +170,30 @@
     );
 
     async function onKeyDown(event: KeyboardEvent) {
+        const input = event.currentTarget as HTMLInputElement | null;
+
         if (event.key === 'Enter') {
+            event.preventDefault();
             const trimmedQuery = query_text.trim();
+            if (!trimmedQuery) {
+                clearSearch();
+                input?.blur();
+                return;
+            }
+
+            query_text = trimmedQuery;
             submittedQueryText = trimmedQuery;
+            input?.blur();
+        }
+
+        if (event.key === 'Escape') {
+            event.preventDefault();
+            if (submittedQueryText) {
+                query_text = submittedQueryText;
+            } else {
+                query_text = '';
+            }
+            input?.blur();
         }
     }
 
@@ -456,6 +478,28 @@
         setTextEmbedding(undefined);
     }
 
+    $effect(() => {
+        const committedQuery = $textEmbedding?.queryText ?? '';
+        if (committedQuery === syncedTextEmbeddingQuery) {
+            return;
+        }
+
+        syncedTextEmbeddingQuery = committedQuery;
+
+        if (activeImage) {
+            return;
+        }
+
+        if (!committedQuery) {
+            submittedQueryText = '';
+            query_text = '';
+            return;
+        }
+
+        submittedQueryText = committedQuery;
+        query_text = committedQuery;
+    });
+
     function triggerFileInput() {
         fileInput?.click();
     }
@@ -557,38 +601,26 @@
                                             <Search
                                                 class="absolute left-2 top-[50%] h-4 w-4 translate-y-[-50%] text-muted-foreground"
                                             />
-                                            {#if activeImage || submittedQueryText}
+                                            {#if activeImage}
                                                 <div
                                                     class="flex h-10 w-full items-center rounded-md border border-input bg-background px-3 py-2 pl-8 text-sm {dragOver
                                                         ? 'ring-2 ring-primary'
                                                         : ''}"
                                                 >
-                                                    {#if activeImage}
-                                                        <span
-                                                            class="mr-2 flex items-center gap-2 truncate text-muted-foreground"
-                                                        >
-                                                            {#if previewUrl}
-                                                                <img
-                                                                    src={previewUrl}
-                                                                    alt="Search preview"
-                                                                    class="h-6 w-6 rounded object-cover"
-                                                                />
-                                                            {:else}
-                                                                <ImageIcon class="h-4 w-4" />
-                                                            {/if}
-                                                            {activeImage}
-                                                        </span>
-                                                    {:else}
-                                                        <button
-                                                            type="button"
-                                                            class="mr-2 min-w-0 flex-1 cursor-text truncate text-left text-muted-foreground"
-                                                            onclick={() => {
-                                                                submittedQueryText = '';
-                                                            }}
-                                                        >
-                                                            {submittedQueryText}
-                                                        </button>
-                                                    {/if}
+                                                    <span
+                                                        class="mr-2 flex items-center gap-2 truncate text-muted-foreground"
+                                                    >
+                                                        {#if previewUrl}
+                                                            <img
+                                                                src={previewUrl}
+                                                                alt="Search preview"
+                                                                class="h-6 w-6 rounded object-cover"
+                                                            />
+                                                        {:else}
+                                                            <ImageIcon class="h-4 w-4" />
+                                                        {/if}
+                                                        {activeImage}
+                                                    </span>
                                                     <button
                                                         class="ml-auto hover:text-foreground"
                                                         onclick={clearSearch}
@@ -612,6 +644,16 @@
                                                     disabled={isUploading}
                                                     data-testid="text-embedding-search-input"
                                                 />
+                                                {#if submittedQueryText}
+                                                    <button
+                                                        class="absolute right-8 top-[50%] translate-y-[-50%] text-muted-foreground hover:text-foreground"
+                                                        onclick={clearSearch}
+                                                        title="Clear search"
+                                                        data-testid="search-clear-button"
+                                                    >
+                                                        <X class="h-4 w-4" />
+                                                    </button>
+                                                {/if}
                                                 <button
                                                     class="absolute right-2 top-[50%] translate-y-[-50%] text-muted-foreground hover:text-foreground disabled:opacity-50"
                                                     onclick={triggerFileInput}
@@ -682,38 +724,26 @@
                                     <Search
                                         class="absolute left-2 top-[50%] h-4 w-4 translate-y-[-50%] text-muted-foreground"
                                     />
-                                    {#if activeImage || submittedQueryText}
+                                    {#if activeImage}
                                         <div
                                             class="flex h-10 w-full items-center rounded-md border border-input bg-background px-3 py-2 pl-8 text-sm {dragOver
                                                 ? 'ring-2 ring-primary'
                                                 : ''}"
                                         >
-                                            {#if activeImage}
-                                                <span
-                                                    class="mr-2 flex items-center gap-2 truncate text-muted-foreground"
-                                                >
-                                                    {#if previewUrl}
-                                                        <img
-                                                            src={previewUrl}
-                                                            alt="Search preview"
-                                                            class="h-6 w-6 rounded object-cover"
-                                                        />
-                                                    {:else}
-                                                        <ImageIcon class="h-4 w-4" />
-                                                    {/if}
-                                                    {activeImage}
-                                                </span>
-                                            {:else}
-                                                <button
-                                                    type="button"
-                                                    class="mr-2 min-w-0 flex-1 cursor-text truncate text-left text-muted-foreground"
-                                                    onclick={() => {
-                                                        submittedQueryText = '';
-                                                    }}
-                                                >
-                                                    {submittedQueryText}
-                                                </button>
-                                            {/if}
+                                            <span
+                                                class="mr-2 flex items-center gap-2 truncate text-muted-foreground"
+                                            >
+                                                {#if previewUrl}
+                                                    <img
+                                                        src={previewUrl}
+                                                        alt="Search preview"
+                                                        class="h-6 w-6 rounded object-cover"
+                                                    />
+                                                {:else}
+                                                    <ImageIcon class="h-4 w-4" />
+                                                {/if}
+                                                {activeImage}
+                                            </span>
                                             <button
                                                 class="ml-auto hover:text-foreground"
                                                 onclick={clearSearch}
@@ -737,6 +767,16 @@
                                             disabled={isUploading}
                                             data-testid="text-embedding-search-input"
                                         />
+                                        {#if submittedQueryText}
+                                            <button
+                                                class="absolute right-8 top-[50%] translate-y-[-50%] text-muted-foreground hover:text-foreground"
+                                                onclick={clearSearch}
+                                                title="Clear search"
+                                                data-testid="search-clear-button"
+                                            >
+                                                <X class="h-4 w-4" />
+                                            </button>
+                                        {/if}
                                         <button
                                             class="absolute right-2 top-[50%] translate-y-[-50%] text-muted-foreground hover:text-foreground disabled:opacity-50"
                                             onclick={triggerFileInput}
