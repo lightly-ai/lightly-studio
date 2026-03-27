@@ -58,12 +58,14 @@
                     </div>
                     <Separator class="mb-4 bg-border-hard" />
                 {/if}
-                <VideoDetails
-                    video={$video}
-                    onVideoUpdate={$refetch}
-                    datasetId={data.params.dataset_id}
-                    {frameNumber}
-                />
+                {#key $video.sample_id}
+                    <VideoDetails
+                        video={$video}
+                        onVideoUpdate={$refetch}
+                        datasetId={data.params.dataset_id}
+                        {frameNumber}
+                    />
+                {/key}
             </div>
         </LayoutCard>
     {/if}
