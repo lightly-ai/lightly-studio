@@ -62,6 +62,7 @@ async def lifespan(_: FastAPI) -> AsyncGenerator[None, None]:
         None when the application is ready.
     """
     try:
+        operator_registry.discover_plugins()
         operator_registry.startup_all()
         yield
     finally:  # we need an explicit close for the db manager to make a final write to disk
