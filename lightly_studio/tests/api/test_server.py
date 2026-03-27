@@ -7,6 +7,7 @@ from socket import AF_INET, SOCK_STREAM, socket
 from unittest.mock import MagicMock, patch
 
 import pytest
+from brotli_asgi import BrotliMiddleware
 from fastapi.testclient import TestClient
 
 from lightly_studio.api.app import app
@@ -92,6 +93,12 @@ def test_server_static_webapp() -> None:
 
     static_file = client.get("/non-existing-file.png")
     assert static_file.status_code == HTTP_STATUS_NOT_FOUND
+
+
+def test_app_has_brotli_middleware() -> None:
+    middleware_classes = [middleware.cls for middleware in app.user_middleware]
+
+    assert BrotliMiddleware in middleware_classes  # type: ignore[comparison-overlap]
 
 
 def test__get_available_port__preferred_port_in_use() -> None:
