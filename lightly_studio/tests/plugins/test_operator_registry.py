@@ -96,9 +96,7 @@ def test_operator_registry__startup_all_continues_after_failure() -> None:
     assert healthy.status == OperatorStatus.READY
 
 
-def _patch_entry_points(
-    mocker: MockerFixture, eps: list[Any]
-) -> None:
+def _patch_entry_points(mocker: MockerFixture, eps: list[Any]) -> None:
     """Patch ``entry_points`` to return *eps*."""
 
     def _side_effect(group: str | None = None) -> Any:

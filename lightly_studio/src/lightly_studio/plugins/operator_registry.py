@@ -15,6 +15,7 @@ logger = logging.getLogger(__name__)
 
 ENTRY_POINT_GROUP = "lightly_studio.plugins"
 
+
 @dataclass
 class RegisteredOperatorMetadata:
     """Meta data for a registered operator."""
@@ -91,8 +92,7 @@ class OperatorRegistry:
         """Auto-discover and register operators from installed packages.
 
         Scans for packages that declare entry points in the ``lightly_studio.plugins`` group.
-        Each entry point should reference a ``BaseOperator`` subclass. The entry point name
-        is used as the ``operator_id``.
+        Each entry point should reference a ``BaseOperator`` subclass.
 
         Example entry in an external packages ``pyproject.toml``:
 
@@ -124,6 +124,7 @@ class OperatorRegistry:
                     ep.value,
                     exc_info=True,
                 )
+
 
 # Global registry instance
 operator_registry = OperatorRegistry()
