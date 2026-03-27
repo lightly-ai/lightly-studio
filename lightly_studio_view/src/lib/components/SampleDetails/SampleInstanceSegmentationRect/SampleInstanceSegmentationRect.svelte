@@ -90,7 +90,8 @@
     const {
         context: annotationLabelContext,
         setIsDrawing,
-        setAnnotationId
+        setAnnotationId,
+        isAnnotationLocked
     } = useAnnotationLabelContext();
 
     let brushPath = $state<{ x: number; y: number }[]>([]);
@@ -173,11 +174,7 @@
     onpointermove={(e) => {
         if (!annotationLabelContext.isDrawing || !workingMask) return;
         const currentAnnotation = resolveSelectedAnnotation();
-        if (
-            currentAnnotation &&
-            annotationLabelContext.isAnnotationLocked?.(currentAnnotation.sample_id)
-        )
-            return;
+        if (currentAnnotation && isAnnotationLocked?.(currentAnnotation.sample_id)) return;
 
         const point = getImageCoordsFromMouse(e, interactionRect, sample.width, sample.height);
         if (!point) return;
@@ -206,10 +203,7 @@
         e.currentTarget?.releasePointerCapture?.(e.pointerId);
 
         const targetAnnotation = resolveSelectedAnnotation();
-        if (
-            targetAnnotation &&
-            annotationLabelContext.isAnnotationLocked?.(targetAnnotation.sample_id)
-        ) {
+        if (targetAnnotation && isAnnotationLocked?.(targetAnnotation.sample_id)) {
             return;
         }
 
@@ -232,10 +226,7 @@
         }
 
         const targetAnnotation = resolveSelectedAnnotation();
-        if (
-            targetAnnotation &&
-            annotationLabelContext.isAnnotationLocked?.(targetAnnotation.sample_id)
-        ) {
+        if (targetAnnotation && isAnnotationLocked?.(targetAnnotation.sample_id)) {
             e.currentTarget?.releasePointerCapture?.(e.pointerId);
             return;
         }
