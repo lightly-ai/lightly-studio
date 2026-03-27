@@ -110,5 +110,4 @@ export class VideosPage {
             timeout: 10000
         });
     }
-
 }
