@@ -13,17 +13,45 @@ vi.mock('$lib/hooks', () => ({
     useCollectionWithChildren: vi.fn()
 }));
 
-vi.mock('$lib/components', () => ({
-    LayoutCard: vi.fn(() => ({ default: {} })),
-    GroupsComponentsMenu: vi.fn(() => ({ default: {} })),
-    VideoDetails: vi.fn(() => ({ default: {} })),
-    Alert: vi.fn(() => ({ default: {} })),
-    Spinner: vi.fn(() => ({ default: {} })),
-    Separator: vi.fn(() => ({ default: {} }))
-}));
+// Track which components were rendered
+let renderedComponents: string[] = [];
+
+vi.mock('$lib/components', () => {
+    const createMockComponent = (name: string) => {
+        function MockComponent() {
+            renderedComponents.push(name);
+            // @ts-expect-error - Svelte component interface
+            this.$set = () => {};
+            // @ts-expect-error - Svelte component interface
+            this.$on = () => {};
+            // @ts-expect-error - Svelte component interface
+            this.$destroy = () => {};
+        }
+        // Make function work with both `new` and direct calls
+        MockComponent.prototype.constructor = MockComponent;
+        return MockComponent;
+    };
+
+    return {
+        LayoutCard: createMockComponent('LayoutCard'),
+        GroupsComponentsMenu: createMockComponent('GroupsComponentsMenu'),
+        VideoDetails: createMockComponent('VideoDetails'),
+        Alert: createMockComponent('Alert'),
+        Spinner: createMockComponent('Spinner'),
+        Separator: createMockComponent('Separator')
+    };
+});
 
 vi.mock('$lib/components/VideoDetailsBreadcrumb/VideoDetailsBreadcrumb.svelte', () => ({
-    default: {}
+    default: function MockVideoDetailsBreadcrumb() {
+        renderedComponents.push('VideoDetailsBreadcrumb');
+        // @ts-expect-error - Svelte component interface
+        this.$set = () => {};
+        // @ts-expect-error - Svelte component interface
+        this.$on = () => {};
+        // @ts-expect-error - Svelte component interface
+        this.$destroy = () => {};
+    }
 }));
 
 describe('Video Detail Page', () => {
@@ -72,6 +100,7 @@ describe('Video Detail Page', () => {
 
     beforeEach(async () => {
         vi.clearAllMocks();
+        renderedComponents = [];
         useVideoMock = vi.mocked(useVideo);
         useCollectionWithChildrenMock = vi.mocked(useCollectionWithChildren);
     });
@@ -91,10 +120,13 @@ describe('Video Detail Page', () => {
             }
         } as ReturnType<typeof useCollectionWithChildrenMock>);
 
-        const { container } = render(Page, { props: { data: mockPageData } });
+        render(Page, { props: { data: mockPageData } });
 
-        // Since Spinner is mocked, we check that the video content is not rendered
-        expect(container.querySelector('.flex.h-full.gap-4.px-4.pb-4')).toBeNull();
+        // Verify Spinner is rendered
+        expect(renderedComponents).toContain('Spinner');
+        // Verify video content is not rendered
+        expect(renderedComponents).not.toContain('VideoDetails');
+        expect(renderedComponents).not.toContain('Alert');
     });
 
     it('should show error alert when video fails to load', () => {
@@ -115,10 +147,11 @@ describe('Video Detail Page', () => {
 
         render(Page, { props: { data: mockPageData } });
 
-        // Since Alert is mocked, we verify the component would be rendered
-        // by checking that the success path is not rendered
-        const { container } = render(Page, { props: { data: mockPageData } });
-        expect(container.querySelector('.flex.h-full.gap-4.px-4.pb-4')).toBeNull();
+        // Verify Alert is rendered
+        expect(renderedComponents).toContain('Alert');
+        // Verify video content is not rendered
+        expect(renderedComponents).not.toContain('VideoDetails');
+        expect(renderedComponents).not.toContain('Spinner');
     });
 
     it('should render group layout when collection_type is group and groupId is provided', () => {
@@ -145,10 +178,15 @@ describe('Video Detail Page', () => {
             groupId: 'group-1'
         };
 
-        const { container } = render(Page, { props: { data: groupPageData } });
+        render(Page, { props: { data: groupPageData } });
 
-        // Check for group layout structure
-        expect(container.querySelector('.flex.h-full.gap-4.px-4.pb-4')).toBeTruthy();
+        // Verify group layout renders LayoutCard and VideoDetails
+        // GroupsComponentsMenu is inside LayoutCard so won't be tracked by our mock
+        expect(renderedComponents).toContain('LayoutCard');
+        expect(renderedComponents).toContain('VideoDetails');
+        // Verify error/loading states are not rendered
+        expect(renderedComponents).not.toContain('Spinner');
+        expect(renderedComponents).not.toContain('Alert');
     });
 
     it('should render standard layout when collection_type is not group', () => {
@@ -168,10 +206,12 @@ describe('Video Detail Page', () => {
 
         render(Page, { props: { data: mockPageData } });
 
-        // Verify that useCollectionWithChildren was called with correct params
-        expect(useCollectionWithChildrenMock).toHaveBeenCalledWith({
-            collectionId: 'dataset-1'
-        });
+        // Verify standard layout renders LayoutCard
+        // VideoDetails and VideoDetailsBreadcrumb are inside LayoutCard so won't be tracked by our mock
+        expect(renderedComponents).toContain('LayoutCard');
+        // Verify error/loading states are not rendered
+        expect(renderedComponents).not.toContain('Spinner');
+        expect(renderedComponents).not.toContain('Alert');
     });
 
     it('should call loadById with correct sample_id when mounted', () => {
