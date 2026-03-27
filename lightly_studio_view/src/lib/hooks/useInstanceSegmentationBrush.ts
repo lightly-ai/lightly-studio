@@ -65,6 +65,16 @@ export function useInstanceSegmentationBrush({
 
         setIsDrawing(false);
 
+        if (
+            selectedAnnotation?.sample_id &&
+            lockedAnnotationIds?.has(selectedAnnotation.sample_id)
+        ) {
+            // Prevent any overlap updates or mask mutations when the selected annotation is locked.
+            refetch();
+            toast.error('This annotation is locked');
+            return;
+        }
+
         const overriddenAnnotations = await applySegmentationMaskConstraints({
             workingMask,
             skipId: selectedAnnotation?.sample_id,
@@ -99,12 +109,6 @@ export function useInstanceSegmentationBrush({
 
         const rle = encodeBinaryMaskToRLE(workingMask);
         if (selectedAnnotation) {
-            if (lockedAnnotationIds?.has(selectedAnnotation.sample_id)) {
-                // Refetch to clear the previous state.
-                refetch();
-                toast.error('This annotation is locked');
-                return;
-            }
             try {
                 if (!updateAnnotation) return;
                 await updateAnnotation({

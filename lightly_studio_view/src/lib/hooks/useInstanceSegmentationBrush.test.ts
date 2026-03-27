@@ -7,6 +7,7 @@ import {
     computeBoundingBoxFromMask,
     encodeBinaryMaskToRLE
 } from '$lib/components/SampleAnnotation/utils';
+import { applySegmentationMaskConstraints } from '$lib/utils/segmentationOverlap';
 import { toast } from 'svelte-sonner';
 
 const annotationLabelContext: AnnotationLabelContext = {
@@ -43,6 +44,10 @@ vi.mock('$lib/components/SampleAnnotation/utils', () => ({
     computeBoundingBoxFromMask: vi.fn(),
     encodeBinaryMaskToRLE: vi.fn(),
     getBoundingBox: vi.fn()
+}));
+
+vi.mock('$lib/utils/segmentationOverlap', () => ({
+    applySegmentationMaskConstraints: vi.fn(async () => [])
 }));
 
 const createAnnotation = vi.fn();
@@ -91,6 +96,7 @@ describe('useInstanceSegmentationBrush', () => {
 
         computeBoundingBoxFromMask.mockReturnValue(bbox);
         encodeBinaryMaskToRLE.mockReturnValue(rle);
+        vi.mocked(applySegmentationMaskConstraints).mockResolvedValue([]);
 
         createAnnotation.mockResolvedValue({
             sample_id: 'new-annotation-id'
@@ -191,6 +197,28 @@ describe('useInstanceSegmentationBrush', () => {
         expect(toast.error).toHaveBeenCalledWith('This annotation is locked');
         expect(updateAnnotation).not.toHaveBeenCalled();
         expect(createAnnotation).not.toHaveBeenCalled();
+    });
+
+    it('does not apply constraints when selected annotation is locked', async () => {
+        const refetch = vi.fn();
+        const updateAnnotation = vi.fn();
+        const selectedAnnotation = {
+            sample_id: 'locked-id'
+        } as AnnotationView;
+
+        const { finishBrush } = useInstanceSegmentationBrush({
+            collectionId: 'c1',
+            sampleId: 's1',
+            sample,
+            segmentationMode: 'semantic',
+            refetch
+        });
+
+        await finishBrush(mask, selectedAnnotation, [], updateAnnotation, new Set(['locked-id']));
+
+        expect(applySegmentationMaskConstraints).not.toHaveBeenCalled();
+        expect(updateAnnotation).not.toHaveBeenCalled();
+        expect(refetch).toHaveBeenCalledTimes(1);
     });
 
     it('creates a new annotation using an existing label', async () => {
