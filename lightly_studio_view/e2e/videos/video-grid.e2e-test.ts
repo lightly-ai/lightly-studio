@@ -70,6 +70,36 @@ test.describe('videos-page-flow', () => {
         );
     });
 
+    test('video text search stays editable until submit or clear', async ({ page, videosPage }) => {
+        await videosPage.textSearch('airplane');
+
+        const searchInput = videosPage.getSearchInput();
+        await expect(searchInput).toHaveValue('airplane');
+        await expect(searchInput).not.toBeFocused();
+        await expect(videosPage.getSearchClearButton()).toBeVisible();
+
+        await searchInput.click();
+        await expect(searchInput).toBeFocused();
+        await searchInput.fill('bird');
+        await expect(searchInput).toHaveValue('bird');
+
+        await page.waitForTimeout(200);
+        await expect(videosPage.getSearchClearButton()).toBeVisible();
+
+        await page.keyboard.press('Escape');
+        await expect(searchInput).toHaveValue('airplane');
+        await expect(searchInput).not.toBeFocused();
+
+        const resubmitResponsePromise = page.waitForResponse(
+            (response) => response.url().includes('query_text=bird') && response.status() === 200
+        );
+        await searchInput.fill('bird');
+        await page.keyboard.press('Enter');
+        await resubmitResponsePromise;
+        await expect(searchInput).toHaveValue('bird');
+        await expect(searchInput).not.toBeFocused();
+    });
+
     // TODO (Kondrat 02/25): Test is disabled due to flakiness, needs to be fixed in the future
     test.skip('go to video details', async ({ page, videosPage }) => {
         expect(await videosPage.getVideos().count()).toBe(youtubeVisVideosDataset.defaultPageSize);

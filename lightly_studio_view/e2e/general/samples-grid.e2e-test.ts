@@ -74,6 +74,64 @@ test('Tag filtering shows distinct samples only', async ({ page, samplesPage }) 
     expect(sampleCount).toBe(5);
 });
 
+test('text search stays active until submit or explicit clear', async ({ page, samplesPage }) => {
+    await samplesPage.textSearch('dog');
+
+    const searchInput = samplesPage.getSearchInput();
+    await expect(searchInput).toHaveValue('dog');
+    await expect(searchInput).not.toBeFocused();
+    await expect(samplesPage.getSearchClearButton()).toBeVisible();
+
+    await searchInput.click();
+    await expect(searchInput).toBeFocused();
+    await expect(searchInput).toHaveValue('dog');
+    await expect(samplesPage.getSearchClearButton()).toBeVisible();
+
+    await searchInput.fill('bear');
+    await expect(searchInput).toHaveValue('bear');
+
+    await page.waitForTimeout(200);
+    await expect(samplesPage.getSearchClearButton()).toBeVisible();
+
+    await page.keyboard.press('Escape');
+    await expect(searchInput).toHaveValue('dog');
+    await expect(searchInput).not.toBeFocused();
+    await expect(samplesPage.getSearchClearButton()).toBeVisible();
+
+    const resubmitResponsePromise = page.waitForResponse(
+        (response) => response.url().includes('query_text=bear') && response.status() === 200
+    );
+    await searchInput.fill('bear');
+    await page.keyboard.press('Enter');
+    await resubmitResponsePromise;
+    await expect(searchInput).toHaveValue('bear');
+    await expect(searchInput).not.toBeFocused();
+
+    const clearByEmptyResponsePromise = page.waitForResponse(
+        (response) =>
+            response.url().includes('/images/list') &&
+            !response.url().includes('query_text=') &&
+            response.status() === 200
+    );
+    await searchInput.fill('');
+    await page.keyboard.press('Enter');
+    await clearByEmptyResponsePromise;
+    await expect(searchInput).not.toBeFocused();
+    await expect(samplesPage.getSearchClearButton()).toBeHidden();
+
+    await samplesPage.textSearch('dog');
+    const explicitClearResponsePromise = page.waitForResponse(
+        (response) =>
+            response.url().includes('/images/list') &&
+            !response.url().includes('query_text=') &&
+            response.status() === 200
+    );
+    await samplesPage.getSearchClearButton().click();
+    await explicitClearResponsePromise;
+    await expect(samplesPage.getSearchClearButton()).toBeHidden();
+    await expect(searchInput).toHaveValue('');
+});
+
 test('Diversity selection creates tag with correct number of samples', async ({
     page,
     samplesPage
