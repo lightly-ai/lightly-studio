@@ -174,7 +174,7 @@ class GroupDataset(Dataset[GroupSample]):
         """
         comp_collections = collection_resolver.get_group_components(
             session=self.session,
-            parent_collection_id=self.dataset_id,
+            parent_collection_id=self.collection_id,
         )
         # Validate components
         for comp_name, create_sample in components.items():
@@ -198,7 +198,7 @@ class GroupDataset(Dataset[GroupSample]):
         # Create group sample
         group_sample_id = group_resolver.create_many(
             session=self.session,
-            collection_id=self.dataset_id,
+            collection_id=self.collection_id,
             groups=[component_sample_ids],
         )[0]
 

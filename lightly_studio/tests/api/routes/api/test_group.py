@@ -39,18 +39,12 @@ def test_get_all_groups(test_client: TestClient, db_session: Session) -> None:
 
     # Act
     response = test_client.post(
-        "/api/groups",
+        f"/api/collections/{group_col.collection_id}/groups",
         params={
             "offset": 0,
             "limit": 10,
         },
-        json={
-            "filter": {
-                "sample_filter": {
-                    "collection_id": str(group_col.collection_id),
-                }
-            }
-        },
+        json={"filter": {}},
     )
 
     # Assert
@@ -93,18 +87,12 @@ def test_get_all_groups__with_pagination(test_client: TestClient, db_session: Se
 
     # Act - Get first page
     response = test_client.post(
-        "/api/groups",
+        f"/api/collections/{group_col.collection_id}/groups",
         params={
             "cursor": 0,
             "limit": 2,
         },
-        json={
-            "filter": {
-                "sample_filter": {
-                    "collection_id": str(group_col.collection_id),
-                }
-            }
-        },
+        json={"filter": {}},
     )
 
     # Assert first page
@@ -116,18 +104,12 @@ def test_get_all_groups__with_pagination(test_client: TestClient, db_session: Se
 
     # Act - Get second page
     response = test_client.post(
-        "/api/groups",
+        f"/api/collections/{group_col.collection_id}/groups",
         params={
             "cursor": 2,
             "limit": 2,
         },
-        json={
-            "filter": {
-                "sample_filter": {
-                    "collection_id": str(group_col.collection_id),
-                }
-            }
-        },
+        json={"filter": {}},
     )
 
     # Assert second page
@@ -172,7 +154,7 @@ def test_get_all_groups__with_tag_filter(test_client: TestClient, db_session: Se
 
     # Act - Filter by tag_ids
     response = test_client.post(
-        "/api/groups",
+        f"/api/collections/{group_col.collection_id}/groups",
         params={
             "offset": 0,
             "limit": 10,
@@ -180,7 +162,6 @@ def test_get_all_groups__with_tag_filter(test_client: TestClient, db_session: Se
         json={
             "filter": {
                 "sample_filter": {
-                    "collection_id": str(group_col.collection_id),
                     "tag_ids": [str(tag.tag_id)],
                 },
             }
@@ -199,7 +180,7 @@ def test_get_all_groups__with_tag_filter(test_client: TestClient, db_session: Se
         session=db_session, collection_id=group_col.collection_id, tag_name="other_tag"
     )
     response = test_client.post(
-        "/api/groups",
+        f"/api/collections/{group_col.collection_id}/groups",
         params={
             "offset": 0,
             "limit": 10,
@@ -208,7 +189,6 @@ def test_get_all_groups__with_tag_filter(test_client: TestClient, db_session: Se
             "filter": {
                 "sample_filter": {
                     "tag_ids": [str(other_tag.tag_id)],
-                    "collection_id": str(group_col.collection_id),
                 },
             }
         },
@@ -228,18 +208,12 @@ def test_get_all_groups__empty_collection(test_client: TestClient, db_session: S
 
     # Act
     response = test_client.post(
-        "/api/groups",
+        f"/api/collections/{group_col.collection_id}/groups",
         params={
             "offset": 0,
             "limit": 10,
         },
-        json={
-            "filter": {
-                "sample_filter": {
-                    "collection_id": str(group_col.collection_id),
-                }
-            }
-        },
+        json={"filter": {}},
     )
 
     # Assert
@@ -280,18 +254,12 @@ def test_get_all_groups__returns_first_sample_image(
 
     # Act
     response = test_client.post(
-        "/api/groups",
+        f"/api/collections/{group_col.collection_id}/groups",
         params={
             "offset": 0,
             "limit": 10,
         },
-        json={
-            "filter": {
-                "sample_filter": {
-                    "collection_id": str(group_col.collection_id),
-                }
-            }
-        },
+        json={"filter": {}},
     )
 
     # Assert
@@ -317,25 +285,6 @@ def test_get_all_groups__returns_first_sample_image(
     # Verify sample_count is present and correct (each group has 1 sample)
     assert all("sample_count" in group for group in result["data"])
     assert all(group["sample_count"] == 1 for group in result["data"])
-
-
-def test_get_all_groups__without_collection_id(test_client: TestClient) -> None:
-    """Test GET all groups endpoint without collection_id returns 400 error."""
-    # Act - Query without collection_id should return error
-    response = test_client.post(
-        "/api/groups",
-        params={
-            "offset": 0,
-            "limit": 10,
-        },
-        json={"filter": {"sample_filter": {}}},
-    )
-
-    # Assert - should return 400 Bad Request
-    assert response.status_code == 400
-    assert response.json() == {
-        "error": "Collection ID must be provided in filters to fetch groups."
-    }
 
 
 def test_get_all_groups__returns_first_sample_with_images_and_videos(
@@ -389,18 +338,12 @@ def test_get_all_groups__returns_first_sample_with_images_and_videos(
 
     # Act
     response = test_client.post(
-        "/api/groups",
+        f"/api/collections/{group_col.collection_id}/groups",
         params={
             "offset": 0,
             "limit": 10,
         },
-        json={
-            "filter": {
-                "sample_filter": {
-                    "collection_id": str(group_col.collection_id),
-                }
-            }
-        },
+        json={"filter": {}},
     )
 
     # Assert

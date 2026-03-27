@@ -66,7 +66,7 @@ class _LightlyStudioYouTubeVISTrackInputBase:
         """Load shared video metadata and categories for YouTube-VIS export."""
         if not samples:
             return _YouTubeVISExportContext(
-                dataset_id=None,
+                root_collection_id=None,
                 videos=[],
                 uuid_to_videos={},
                 frame_to_video_id_and_index={},
@@ -74,13 +74,15 @@ class _LightlyStudioYouTubeVISTrackInputBase:
                 categories=[],
             )
 
-        dataset_id = samples[0].dataset_id
+        root_collection_id = samples[0].collection_id
         uuid_to_videos, frame_to_video_id_and_index = _build_videos_and_frame_map(
             session=session, samples=samples
         )
-        label_uuid_to_category = _build_label_id_to_category(session=session, dataset_id=dataset_id)
+        label_uuid_to_category = _build_label_id_to_category(
+            session=session, root_collection_id=root_collection_id
+        )
         return _YouTubeVISExportContext(
-            dataset_id=dataset_id,
+            root_collection_id=root_collection_id,
             videos=list(uuid_to_videos.values()),
             uuid_to_videos=uuid_to_videos,
             frame_to_video_id_and_index=frame_to_video_id_and_index,
@@ -114,11 +116,13 @@ class LightlyStudioYouTubeVISInstanceSegmentationTrackInput(
         session: Session,
     ) -> list[VideoInstanceSegmentationTrack]:
         """Load per-video instance segmentation tracks for YouTube-VIS export."""
-        dataset_id = self._export_context.dataset_id
-        if dataset_id is None:
+        root_collection_id = self._export_context.root_collection_id
+        if root_collection_id is None:
             return []
 
-        tracks = object_track_resolver.get_all_by_dataset_id(session=session, dataset_id=dataset_id)
+        tracks = object_track_resolver.get_all_by_root_collection_id(
+            session=session, root_collection_id=root_collection_id
+        )
         video_id_to_tracks: dict[UUID, list[SingleInstanceSegmentationTrack]] = defaultdict(list)
         for track in tracks:
             annotations = annotation_resolver.get_all_by_object_track_id(
@@ -152,7 +156,7 @@ class LightlyStudioYouTubeVISInstanceSegmentationTrackInput(
 
 @dataclass(frozen=True)
 class _YouTubeVISExportContext:
-    dataset_id: UUID | None
+    root_collection_id: UUID | None
     videos: list[Video]
     uuid_to_videos: dict[UUID, Video]
     frame_to_video_id_and_index: dict[UUID, tuple[UUID, int]]
@@ -280,11 +284,11 @@ def _build_segmentation_track_entry_from_annotations(
     )
 
 
-def _build_label_id_to_category(session: Session, dataset_id: UUID) -> dict[UUID, Category]:
+def _build_label_id_to_category(session: Session, root_collection_id: UUID) -> dict[UUID, Category]:
     """Build a mapping from annotation label UUID to YouTube-VIS category."""
     labels = annotation_label_resolver.get_all_sorted_alphabetically(
         session=session,
-        root_collection_id=dataset_id,
+        root_collection_id=root_collection_id,
     )
     return {
         label.annotation_label_id: Category(id=idx, name=label.annotation_label_name)

@@ -32,8 +32,8 @@ def test_get_all_by_object_track_id_returns_only_track_annotations(
     track_ids = object_track_resolver.create_many(
         session=db_session,
         tracks=[
-            ObjectTrackCreate(object_track_number=1, dataset_id=root_collection_id),
-            ObjectTrackCreate(object_track_number=2, dataset_id=root_collection_id),
+            ObjectTrackCreate(object_track_number=1, root_collection_id=root_collection_id),
+            ObjectTrackCreate(object_track_number=2, root_collection_id=root_collection_id),
         ],
     )
     track_a, track_b = track_ids
@@ -89,7 +89,7 @@ def test_get_all_by_object_track_id__filter_by_annotation_type(
     track_id = object_track_resolver.create_many(
         session=db_session,
         tracks=[
-            ObjectTrackCreate(object_track_number=1, dataset_id=root_collection_id),
+            ObjectTrackCreate(object_track_number=1, root_collection_id=root_collection_id),
         ],
     )[0]
 

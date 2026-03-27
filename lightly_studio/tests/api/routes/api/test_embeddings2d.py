@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import time
-from typing import Any
 
 import numpy as np
 import pyarrow as pa
@@ -41,10 +40,8 @@ def test_get_embeddings2d__2d(
         embedding_model_names=["model_a"],
         embedding_dimension=EMBEDDING_DIMENSION,
     )
-    image_filter = ImageFilter(sample_filter=SampleFilter(collection_id=collection_id))
-
     response = test_client.post(
-        "/api/embeddings2d/default", json={"filters": image_filter.model_dump(mode="json")}
+        f"/api/collections/{collection_id}/embeddings2d/default", json={"filters": {}}
     )
 
     assert response.status_code == 200
@@ -81,15 +78,6 @@ def test_get_embeddings2d__2d(
     assert set(sample_ids) == set(expected_sample_ids)
 
 
-def test_get_embeddings2d__no_collection_id(
-    test_client: TestClient,
-) -> None:
-    json_body: dict[str, Any] = {"filters": {"type": "image"}}
-    response = test_client.post("/api/embeddings2d/default", json=json_body)
-    assert response.status_code == 400
-    assert response.json() == {"error": "Collection ID must be provided in filters."}
-
-
 def test_get_embeddings2d__2d__with_tag_filter(
     test_client: TestClient,
     db_session: Session,
@@ -122,7 +110,6 @@ def test_get_embeddings2d__2d__with_tag_filter(
 
     image_filter = ImageFilter(
         sample_filter=SampleFilter(
-            collection_id=collection_id,
             tag_ids=[tag.tag_id],
         )
     )
@@ -130,7 +117,7 @@ def test_get_embeddings2d__2d__with_tag_filter(
     spy_sample_resolver = mocker.spy(image_resolver, "get_sample_ids")
 
     response = test_client.post(
-        "/api/embeddings2d/default",
+        f"/api/collections/{collection_id}/embeddings2d/default",
         json={"filters": image_filter.model_dump(mode="json")},
     )
 
@@ -206,7 +193,6 @@ def test_get_embeddings2d__with_video_filter(
 
     video_filter = VideoFilter(
         sample_filter=SampleFilter(
-            collection_id=collection_id,
             tag_ids=[tag.tag_id],
         ),
     )
@@ -214,7 +200,7 @@ def test_get_embeddings2d__with_video_filter(
     spy_video_resolver = mocker.spy(video_resolver, "get_sample_ids")
 
     response = test_client.post(
-        "/api/embeddings2d/default",
+        f"/api/collections/{collection_id}/embeddings2d/default",
         json={"filters": video_filter.model_dump(mode="json")},
     )
 

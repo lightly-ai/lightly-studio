@@ -2,6 +2,7 @@ import { getAllGroupsInfiniteOptions } from '$lib/api/lightly_studio_local/@tans
 import { createInfiniteQuery, useQueryClient } from '@tanstack/svelte-query';
 import { get, writable } from 'svelte/store';
 import type { GroupView } from '$lib/api/lightly_studio_local/types.gen';
+import { GRID_PAGE_SIZE } from '$lib/constants';
 
 /**
  * A Svelte hook for infinite scrolling of groups data with pagination support.
@@ -80,14 +81,9 @@ import type { GroupView } from '$lib/api/lightly_studio_local/types.gen';
  */
 export const useGroupsInfinite = (collectionId: string) => {
     const readGroupsOptions = getAllGroupsInfiniteOptions({
-        query: { limit: 30 },
-        body: {
-            filter: {
-                sample_filter: {
-                    collection_id: collectionId
-                }
-            }
-        }
+        path: { collection_id: collectionId },
+        query: { limit: GRID_PAGE_SIZE },
+        body: {}
     });
 
     const query = createInfiniteQuery({

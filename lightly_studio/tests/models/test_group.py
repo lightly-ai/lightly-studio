@@ -44,7 +44,6 @@ def test_group_component_view_from_image_table(db_session: Session) -> None:
 
     component_collection = ComponentCollectionView(
         name=collection.name,
-        dataset_id=collection.dataset_id,
         parent_collection_id=collection.parent_collection_id,
         sample_type=collection.sample_type,
         group_component_name="front_camera",
@@ -82,7 +81,6 @@ def test_group_component_view_from_video_table(db_session: Session) -> None:
 
     component_collection = ComponentCollectionView(
         name=collection.name,
-        dataset_id=collection.dataset_id,
         parent_collection_id=collection.parent_collection_id,
         sample_type=collection.sample_type,
         group_component_name="rear_camera",

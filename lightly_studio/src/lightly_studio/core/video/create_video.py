@@ -37,9 +37,9 @@ class CreateVideo(CreateSample):
         Raises:
             ValueError: If the video could not be added.
         """
-        video_ids, _ = add_videos.load_into_dataset_from_paths(
+        video_ids, _ = add_videos.load_into_collection_from_paths(
             session=session,
-            dataset_id=collection_id,
+            collection_id=collection_id,
             video_paths=[self.path],
             video_channel=self.video_channel,
             num_decode_threads=self.num_decode_threads,

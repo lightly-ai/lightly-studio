@@ -24,7 +24,7 @@ from lightly_studio.models.sample import SampleTable, SampleTagLinkTable
 from lightly_studio.models.sample_embedding import SampleEmbeddingTable
 from lightly_studio.models.tag import TagTable
 from lightly_studio.models.video import VideoFrameTable, VideoTable
-from lightly_studio.resolvers import collection_resolver
+from lightly_studio.resolvers import collection_resolver, dataset_resolver
 from lightly_studio.resolvers.collection_resolver import (
     table_coverage_utils,
 )
@@ -59,9 +59,7 @@ def delete_dataset(
     dataset_id = root.dataset_id
 
     # Get the hierarchy and collect all IDs.
-    hierarchy = collection_resolver.get_hierarchy(
-        session=session, root_collection_id=root_collection_id
-    )
+    hierarchy = dataset_resolver.get_hierarchy(session=session, dataset_id=dataset_id)
     collection_ids = [coll.collection_id for coll in hierarchy]
 
     # Collect all sample IDs from all collections.
@@ -196,7 +194,7 @@ def _delete_object_tracks(session: Session, collection_ids: list[UUID]) -> None:
     if not collection_ids:
         return
     session.exec(
-        delete(ObjectTrackTable).where(col(ObjectTrackTable.dataset_id).in_(collection_ids))
+        delete(ObjectTrackTable).where(col(ObjectTrackTable.root_collection_id).in_(collection_ids))
     )
 
 

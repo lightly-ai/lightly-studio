@@ -19,11 +19,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Added `ImageSample.add_annotations` method, as well as `VideoSample.add_annotations`.
 - Added `ImageSample.add_captions` method, as well as `VideoSample.add_captions`.
 - Added `SampleMetadata.update` method, allowing batch metadata updates of samples.
+- Added `lightly-studio` command line command. Use `lightly-studio gui` to start the GUI.
 
 ### Changed
 
 - Smarter font loading reduces initial download from 500kB to 150kB
+- Reduced grid page size to 32 items to improve grid view performance.
 - Added DatasetTable to the database model, databases from previous versions are incompatible with this one.
+- Improved the documentation structure.
 
 ### Deprecated
 

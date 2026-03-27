@@ -120,9 +120,9 @@ class VideoDataset(BaseSampleDataset[VideoSample]):
         logger.info(f"Found {len(video_paths)} videos in {path}.")
 
         # Process videos.
-        created_sample_ids, _ = add_videos.load_into_dataset_from_paths(
+        created_sample_ids, _ = add_videos.load_into_collection_from_paths(
             session=self.session,
-            dataset_id=self.dataset_id,
+            collection_id=self.collection_id,
             video_paths=video_paths,
             num_decode_threads=num_decode_threads,
         )
@@ -130,7 +130,7 @@ class VideoDataset(BaseSampleDataset[VideoSample]):
         if embed:
             _generate_embeddings_video(
                 session=self.session,
-                dataset_id=self.dataset_id,
+                collection_id=self.collection_id,
                 sample_ids=created_sample_ids,
             )
 
@@ -175,7 +175,7 @@ class VideoDataset(BaseSampleDataset[VideoSample]):
 
         created_sample_ids, _ = add_videos.load_video_annotations_from_labelformat(
             session=self.session,
-            dataset_id=self.dataset_id,
+            collection_id=self.collection_id,
             video_paths=video_paths,
             input_labels=input_labels,
             input_labels_paths_root=videos_path,
@@ -184,21 +184,21 @@ class VideoDataset(BaseSampleDataset[VideoSample]):
         if embed:
             _generate_embeddings_video(
                 session=self.session,
-                dataset_id=self.dataset_id,
+                collection_id=self.collection_id,
                 sample_ids=created_sample_ids,
             )
 
 
 def _generate_embeddings_video(
     session: Session,
-    dataset_id: UUID,
+    collection_id: UUID,
     sample_ids: list[UUID],
 ) -> None:
     """Generate and store embeddings for samples.
 
     Args:
         session: Database session for resolver operations.
-        dataset_id: The ID of the dataset to associate with the embedding model.
+        collection_id: The ID of the collection to associate with the embedding model.
         sample_ids: List of sample IDs to generate embeddings for.
     """
     if not sample_ids:
@@ -206,7 +206,7 @@ def _generate_embeddings_video(
 
     embedding_manager = EmbeddingManagerProvider.get_embedding_manager()
     model_id = embedding_manager.load_or_get_default_model(
-        session=session, collection_id=dataset_id
+        session=session, collection_id=collection_id
     )
     if model_id is None:
         logger.warning("No embedding model loaded. Skipping embedding generation.")
@@ -214,7 +214,7 @@ def _generate_embeddings_video(
 
     embedding_manager.embed_videos(
         session=session,
-        collection_id=dataset_id,
+        collection_id=collection_id,
         sample_ids=sample_ids,
         embedding_model_id=model_id,
     )

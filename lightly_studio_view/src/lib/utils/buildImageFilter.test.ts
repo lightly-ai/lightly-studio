@@ -4,8 +4,7 @@ describe('buildImageFilter', () => {
     const baseArgs = {
         dimensionsValues: null,
         annotationFilter: undefined,
-        metadataFilters: undefined,
-        collectionId: 'dataset-1'
+        metadataFilters: undefined
     } as const;
 
     test('returns undefined when no filters are provided', () => {
@@ -40,7 +39,6 @@ describe('buildImageFilter', () => {
 
         expect(result).toEqual({
             sample_filter: {
-                collection_id: 'dataset-1',
                 annotations_filter: {
                     annotation_label_ids: ['a', 'b']
                 }
@@ -58,7 +56,6 @@ describe('buildImageFilter', () => {
 
         expect(result).toEqual({
             sample_filter: {
-                collection_id: 'dataset-1',
                 metadata_filters: metadataFilters
             }
         });
@@ -77,15 +74,13 @@ describe('buildImageFilter', () => {
             annotationFilter: {
                 annotation_label_ids: ['x']
             },
-            metadataFilters,
-            collectionId: 'dataset-1'
+            metadataFilters
         });
 
         expect(result).toEqual({
             width: { min: 1, max: 2 },
             height: { min: 3, max: 4 },
             sample_filter: {
-                collection_id: 'dataset-1',
                 annotations_filter: {
                     annotation_label_ids: ['x']
                 },

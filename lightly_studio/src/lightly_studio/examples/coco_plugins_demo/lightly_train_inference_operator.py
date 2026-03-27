@@ -82,7 +82,7 @@ class LightlyTrainObjectDetectionInferenceOperator(BaseOperator):
         model = lightly_train.load_model(model=model_name)
         label_map = _get_or_create_label_map(
             session=session,
-            dataset_id=collection_id,
+            root_collection_id=collection_id,
             class_map=model.classes,
         )
 
@@ -152,7 +152,7 @@ class LightlyTrainObjectDetectionInferenceOperator(BaseOperator):
 def _get_or_create_label_map(
     *,
     session: Session,
-    dataset_id: UUID,
+    root_collection_id: UUID,
     class_map: dict[int, str],
 ) -> dict[int, UUID]:
     """Ensure labels exist for all class names and return {category_id: label_id}."""
@@ -160,14 +160,14 @@ def _get_or_create_label_map(
     for category_id, label_name in class_map.items():
         label = annotation_label_resolver.get_by_label_name(
             session=session,
-            root_collection_id=dataset_id,
+            root_collection_id=root_collection_id,
             label_name=label_name,
         )
         if label is None:
             label = annotation_label_resolver.create(
                 session=session,
                 label=AnnotationLabelCreate(
-                    root_collection_id=dataset_id,
+                    root_collection_id=root_collection_id,
                     annotation_label_name=label_name,
                 ),
             )

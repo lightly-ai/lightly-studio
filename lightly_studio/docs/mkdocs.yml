@@ -44,10 +44,19 @@ nav:
     - Plugin: api/plugin.md
     - Annotation: api/annotation.md
   - Concepts & Tools:
-    - Search and Filter: concepts_and_tools/search_and_filter.md
-    - Plugins: concepts_and_tools/plugins.md
+    - Concepts:
+      - Annotations: concepts_and_tools/annotations.md
+      - Tags: concepts_and_tools/tags.md
+      - Captions: concepts_and_tools/captions.md
+      - Metadata: concepts_and_tools/metadata.md
+      - Embeddings: concepts_and_tools/embeddings.md
+    - Tools:
+      - Search and Filter: concepts_and_tools/search_and_filter.md
+      - Export: concepts_and_tools/export.md
+      - Sampling: concepts_and_tools/sampling.md
+      - Plugins: concepts_and_tools/plugins.md
   - Advanced:
-    - Parallel Python and GUI: advanced/parallel_python_gui.md
+    - Run LightlyStudio from a Notebook: advanced/notebooks.md
   - About Us: about-us.md
 
 extra_css:

@@ -14,6 +14,7 @@ from lightly_studio.models.collection import SampleType
 from lightly_studio.resolvers import (
     annotation_resolver,
     collection_resolver,
+    dataset_resolver,
     embedding_model_resolver,
     image_resolver,
     metadata_resolver,
@@ -124,8 +125,8 @@ def test_deep_copy__with_hierarchy(db_session: Session) -> None:
     )
 
     # Assert - hierarchy copied
-    hierarchy = collection_resolver.get_hierarchy(
-        session=db_session, root_collection_id=copied_root.collection_id
+    hierarchy = dataset_resolver.get_hierarchy(
+        session=db_session, dataset_id=copied_root.dataset_id
     )
     assert len(hierarchy) == 2
 
@@ -139,8 +140,8 @@ def test_deep_copy__with_hierarchy(db_session: Session) -> None:
     assert copied_child.collection_id != child.collection_id
 
     # Assert - original hierarchy unchanged
-    original_hierarchy = collection_resolver.get_hierarchy(
-        session=db_session, root_collection_id=root.collection_id
+    original_hierarchy = dataset_resolver.get_hierarchy(
+        session=db_session, dataset_id=root.dataset_id
     )
     assert len(original_hierarchy) == 2
     assert original_hierarchy[1].parent_collection_id == root.collection_id
@@ -488,7 +489,9 @@ def test_deep_copy__with_annotations(db_session: Session) -> None:
     )
     (original_track_id,) = object_track_resolver.create_many(
         session=db_session,
-        tracks=[ObjectTrackCreate(object_track_number=7, dataset_id=original.collection_id)],
+        tracks=[
+            ObjectTrackCreate(object_track_number=7, root_collection_id=original.collection_id)
+        ],
     )
 
     classification = create_annotation(
@@ -590,7 +593,7 @@ def test_deep_copy__with_annotations(db_session: Session) -> None:
     )
     assert copied_track is not None
     assert copied_track.object_track_number == 7
-    assert copied_track.dataset_id == copied.collection_id
+    assert copied_track.root_collection_id == copied.collection_id
 
     # Assert - semantic segmentation detail table copied
     copied_ss = copied_by_type[AnnotationType.SEMANTIC_SEGMENTATION]

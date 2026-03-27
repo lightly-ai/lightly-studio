@@ -15,7 +15,6 @@ from lightly_studio.resolvers.annotations.annotations_filter import (
 )
 from lightly_studio.resolvers.filter_with_collection_id import FilterWithCollectionId
 from lightly_studio.resolvers.image_filter import ImageFilter
-from lightly_studio.resolvers.sample_resolver.sample_filter import SampleFilter
 from lightly_studio.resolvers.video_frame_resolver import VideoFrameAdjacentFilter
 from lightly_studio.resolvers.video_frame_resolver.video_frame_filter import (
     VideoFrameFilter,
@@ -49,10 +48,11 @@ def test_get_adjacent_samples__delegates_to_image_resolver(
 
     sample_id = uuid4()
     collection_id = uuid4()
-    filters = ImageFilter(sample_filter=SampleFilter(collection_id=collection_id))
+    filters = ImageFilter()
     text_embedding = [0.1, 0.2, 0.3]
     request = AdjacentRequest(
         sample_type=SampleType.IMAGE,
+        collection_id=collection_id,
         filters=filters,
         text_embedding=text_embedding,
     )
@@ -66,9 +66,10 @@ def test_get_adjacent_samples__delegates_to_image_resolver(
     assert result == expected
     mock_get_adjacent_images.assert_called_once_with(
         session=db_session,
+        sample_id=sample_id,
+        collection_id=collection_id,
         filters=filters,
         text_embedding=text_embedding,
-        sample_id=sample_id,
     )
 
 
@@ -84,10 +85,11 @@ def test_get_adjacent_samples__delegates_to_video_resolver(
 
     sample_id = uuid4()
     collection_id = uuid4()
-    filters = VideoFilter(sample_filter=SampleFilter(collection_id=collection_id))
+    filters = VideoFilter()
     text_embedding = [0.4, 0.5]
     request = AdjacentRequest(
         sample_type=SampleType.VIDEO,
+        collection_id=collection_id,
         filters=filters,
         text_embedding=text_embedding,
     )
@@ -101,9 +103,10 @@ def test_get_adjacent_samples__delegates_to_video_resolver(
     assert result == expected
     mock_get_adjacent_videos.assert_called_once_with(
         session=db_session,
+        sample_id=sample_id,
+        collection_id=collection_id,
         filters=filters,
         text_embedding=text_embedding,
-        sample_id=sample_id,
     )
 
 
@@ -126,6 +129,7 @@ def test_get_adjacent_samples__delegates_to_video_frame_resolver(
     )
     request = AdjacentRequest(
         sample_type=SampleType.VIDEO_FRAME,
+        collection_id=uuid4(),
         filters=filters,
     )
 
@@ -157,6 +161,7 @@ def test_get_adjacent_samples__delegates_to_annotation_resolver(
     filters = AnnotationsFilter(collection_ids=[uuid4()])
     request = AdjacentRequest(
         sample_type=SampleType.ANNOTATION,
+        collection_id=uuid4(),
         filters=filters,
     )
 
@@ -179,7 +184,8 @@ def test_get_adjacent_samples__raises_for_image_with_wrong_filter_type(
 ) -> None:
     request = AdjacentRequest(
         sample_type=SampleType.IMAGE,
-        filters=VideoFilter(sample_filter=SampleFilter(collection_id=uuid4())),
+        collection_id=uuid4(),
+        filters=VideoFilter(),
     )
 
     with pytest.raises(ValueError, match=r"Invalid filter provided. Expected ImageFilter"):
@@ -195,7 +201,8 @@ def test_get_adjacent_samples__raises_for_video_with_wrong_filter_type(
 ) -> None:
     request = AdjacentRequest(
         sample_type=SampleType.VIDEO,
-        filters=ImageFilter(sample_filter=SampleFilter(collection_id=uuid4())),
+        collection_id=uuid4(),
+        filters=ImageFilter(),
     )
 
     with pytest.raises(ValueError, match=r"Invalid filter provided. Expected VideoFilter"):
@@ -211,7 +218,8 @@ def test_get_adjacent_samples__raises_for_video_frame_with_wrong_filter_type(
 ) -> None:
     request = AdjacentRequest(
         sample_type=SampleType.VIDEO_FRAME,
-        filters=ImageFilter(sample_filter=SampleFilter(collection_id=uuid4())),
+        collection_id=uuid4(),
+        filters=ImageFilter(),
     )
 
     with pytest.raises(
@@ -229,7 +237,8 @@ def test_get_adjacent_samples__raises_for_annotation_with_wrong_filter_type(
 ) -> None:
     request = AdjacentRequest(
         sample_type=SampleType.ANNOTATION,
-        filters=ImageFilter(sample_filter=SampleFilter(collection_id=uuid4())),
+        collection_id=uuid4(),
+        filters=ImageFilter(),
     )
 
     with pytest.raises(ValueError, match=r"Invalid filter provided. Expected AnnotationsFilter"):
@@ -245,7 +254,8 @@ def test_get_adjacent_samples__raises_not_implemented_for_unsupported_type(
 ) -> None:
     request = AdjacentRequest(
         sample_type=SampleType.CAPTION,
-        filters=ImageFilter(sample_filter=SampleFilter(collection_id=uuid4())),
+        collection_id=uuid4(),
+        filters=ImageFilter(),
     )
 
     with pytest.raises(NotImplementedError, match=r"not implemented for sample type"):

@@ -101,7 +101,7 @@ def connect(
         print("AWS_ACCESS_KEY_ID:", aws_access_key_id)
         print("AWS_SECRET_ACCESS_KEY:", "*" * len(aws_secret_access_key))
 
-    db_manager.connect(engine_url=config.engine_url)
+    db_manager.connect(db_url=config.engine_url)
 
 
 def _fetch_connect_config(api_url: str, token: str) -> _EnterpriseConnectResponse:
