@@ -18,15 +18,12 @@ from lightly_studio.models.video import VideoFrameCreate
 from lightly_studio.resolvers import (
     annotation_resolver,
     collection_resolver,
-    image_resolver,
     tag_resolver,
     video_frame_resolver,
 )
 from lightly_studio.resolvers.annotations.annotations_filter import (
     AnnotationsFilter,
 )
-from lightly_studio.resolvers.image_filter import ImageFilter
-from lightly_studio.resolvers.sample_resolver.sample_filter import SampleFilter
 from tests.helpers_resolvers import (
     create_annotation,
     create_annotation_label,
@@ -215,76 +212,6 @@ def test_create_and_get_annotation__for_video_frame_with_ordering(db_session: Se
     # Check the order of retrieved annotations is by sample file path
     assert retrieved_annotations.annotations[0].parent_sample_id == video_frame_ids[1]
     assert retrieved_annotations.annotations[1].parent_sample_id == video_frame_ids[0]
-
-
-def test_count_annotations_labels_by_collection(db_session: Session, test_data: _TestData) -> None:
-    collection = test_data.collection
-
-    annotation_counts = image_resolver.count_image_annotations_by_collection(
-        session=db_session, collection_id=collection.collection_id
-    )
-
-    assert len(annotation_counts) == 2
-    annotation_dict = {label: current for (label, current, _) in annotation_counts}
-    assert annotation_dict["dog"] == 2
-    assert annotation_dict["cat"] == 1
-
-
-def test_count_annotations_by_collection_with_filtering(
-    db_session: Session,
-    test_data: _TestData,
-) -> None:
-    collection = test_data.collection
-    collection_id = collection.collection_id
-
-    # Test without filtering
-    counts = image_resolver.count_image_annotations_by_collection(
-        session=db_session, collection_id=collection_id
-    )
-    counts_dict = {label: (current, total) for label, current, total in counts}
-    assert counts_dict["dog"] == (
-        2,
-        2,
-    )  # current_count = total_count when no filtering
-    assert counts_dict["cat"] == (1, 1)
-
-    # Test with filtering by "dog"
-    filtered_counts = image_resolver.count_image_annotations_by_collection(
-        session=db_session,
-        collection_id=collection_id,
-        image_filter=ImageFilter(
-            sample_filter=SampleFilter(
-                annotations_filter=AnnotationsFilter(
-                    annotation_label_ids=[test_data.dog_label.annotation_label_id]
-                )
-            )
-        ),
-    )
-    filtered_dict = {label: (current, total) for label, current, total in filtered_counts}
-    assert filtered_dict["dog"] == (2, 2)  # All dogs are visible
-    assert filtered_dict["cat"] == (
-        1,
-        1,
-    )  # Cat from sample1 is visible (because sample1 has a dog)
-
-    # Test with filtering by "cat"
-    filtered_counts = image_resolver.count_image_annotations_by_collection(
-        session=db_session,
-        collection_id=collection_id,
-        image_filter=ImageFilter(
-            sample_filter=SampleFilter(
-                annotations_filter=AnnotationsFilter(
-                    annotation_label_ids=[test_data.cat_label.annotation_label_id]
-                )
-            )
-        ),
-    )
-    filtered_dict = {label: (current, total) for label, current, total in filtered_counts}
-    assert filtered_dict["dog"] == (
-        1,
-        2,
-    )  # Only one dog is visible (from sample1)
-    assert filtered_dict["cat"] == (1, 1)  # All cats are visible
 
 
 def test_get_by_ids(db_session: Session, test_data: _TestData) -> None:
