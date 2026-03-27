@@ -3,6 +3,7 @@ import { getAllVideosInfiniteOptions } from '$lib/api/lightly_studio_local/@tans
 import { createInfiniteQuery, useQueryClient } from '@tanstack/svelte-query';
 import { get, writable } from 'svelte/store';
 import type { VideoFilter, VideoView } from '$lib/api/lightly_studio_local/types.gen';
+import { GRID_PAGE_SIZE } from '$lib/constants';
 
 export const useVideos = (
     collection_id: string,
@@ -11,7 +12,7 @@ export const useVideos = (
 ) => {
     const readVideosOptions = getAllVideosInfiniteOptions({
         path: { collection_id },
-        query: { limit: 30 },
+        query: { limit: GRID_PAGE_SIZE },
         body: {
             filter,
             text_embedding
