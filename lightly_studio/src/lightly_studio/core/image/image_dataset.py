@@ -102,7 +102,9 @@ class ImageDataset(BaseSampleDataset[ImageSample]):
         """
         if query is None:
             query = self.query()
-        return DatasetExport(session=self.session, root_dataset_id=self.dataset_id, samples=query)
+        return DatasetExport(
+            session=self.session, root_collection_id=self.collection_id, samples=query
+        )
 
     def get_sample(self, sample_id: UUID) -> ImageSample:
         """Get a single sample from the dataset by its ID.
@@ -160,14 +162,14 @@ class ImageDataset(BaseSampleDataset[ImageSample]):
         # Process images
         created_sample_ids = add_images.load_into_dataset_from_paths(
             session=self.session,
-            root_collection_id=self.dataset_id,
+            root_collection_id=self.collection_id,
             image_paths=image_paths,
         )
 
         if created_sample_ids:
             add_images.tag_samples_by_directory(
                 session=self.session,
-                collection_id=self.dataset_id,
+                collection_id=self.collection_id,
                 input_path=path,
                 sample_ids=created_sample_ids,
                 tag_depth=tag_depth,
@@ -175,7 +177,9 @@ class ImageDataset(BaseSampleDataset[ImageSample]):
 
         if embed:
             _generate_embeddings_image(
-                session=self.session, collection_id=self.dataset_id, sample_ids=created_sample_ids
+                session=self.session,
+                collection_id=self.collection_id,
+                sample_ids=created_sample_ids,
             )
 
     def add_samples_from_labelformat(
@@ -198,14 +202,14 @@ class ImageDataset(BaseSampleDataset[ImageSample]):
 
         created_sample_ids = add_images.load_into_dataset_from_labelformat(
             session=self.session,
-            dataset_id=self.dataset_id,
+            root_collection_id=self.collection_id,
             input_labels=input_labels,
             images_path=images_path,
         )
 
         _postprocess_created_images(
             session=self.session,
-            collection_id=self.dataset_id,
+            collection_id=self.collection_id,
             sample_ids=created_sample_ids,
             tag=split,
             embed=embed,
@@ -246,7 +250,7 @@ class ImageDataset(BaseSampleDataset[ImageSample]):
 
             created_sample_ids = add_images.load_into_dataset_from_labelformat(
                 session=self.session,
-                dataset_id=self.dataset_id,
+                root_collection_id=self.collection_id,
                 input_labels=label_input,
                 images_path=images_path,
             )
@@ -254,7 +258,7 @@ class ImageDataset(BaseSampleDataset[ImageSample]):
             # Tag samples with split name
             _postprocess_created_images(
                 session=self.session,
-                collection_id=self.dataset_id,
+                collection_id=self.collection_id,
                 sample_ids=created_sample_ids,
                 tag=split,
                 embed=False,
@@ -265,7 +269,7 @@ class ImageDataset(BaseSampleDataset[ImageSample]):
         # Generate embeddings for all samples at once
         _postprocess_created_images(
             session=self.session,
-            collection_id=self.dataset_id,
+            collection_id=self.collection_id,
             sample_ids=all_created_sample_ids,
             tag=None,
             embed=embed,
@@ -309,14 +313,14 @@ class ImageDataset(BaseSampleDataset[ImageSample]):
 
         created_sample_ids = add_images.load_into_dataset_from_labelformat(
             session=self.session,
-            dataset_id=self.dataset_id,
+            root_collection_id=self.collection_id,
             input_labels=label_input,
             images_path=images_path,
         )
 
         _postprocess_created_images(
             session=self.session,
-            collection_id=self.dataset_id,
+            collection_id=self.collection_id,
             sample_ids=created_sample_ids,
             tag=split,
             embed=embed,
@@ -351,7 +355,7 @@ class ImageDataset(BaseSampleDataset[ImageSample]):
 
         created_sample_ids = add_images.load_into_dataset_from_labelformat(
             session=self.session,
-            dataset_id=self.dataset_id,
+            root_collection_id=self.collection_id,
             input_labels=label_input,
             images_path=images_path,
             annotation_type=AnnotationType.SEMANTIC_SEGMENTATION,
@@ -359,7 +363,7 @@ class ImageDataset(BaseSampleDataset[ImageSample]):
 
         _postprocess_created_images(
             session=self.session,
-            collection_id=self.dataset_id,
+            collection_id=self.collection_id,
             sample_ids=created_sample_ids,
             tag=split,
             embed=embed,
@@ -391,14 +395,14 @@ class ImageDataset(BaseSampleDataset[ImageSample]):
 
         created_sample_ids = add_images.load_into_dataset_from_labelformat(
             session=self.session,
-            dataset_id=self.dataset_id,
+            root_collection_id=self.collection_id,
             input_labels=label_input,
             images_path=images_path,
         )
 
         _postprocess_created_images(
             session=self.session,
-            collection_id=self.dataset_id,
+            collection_id=self.collection_id,
             sample_ids=created_sample_ids,
             tag=split,
             embed=embed,
@@ -428,14 +432,14 @@ class ImageDataset(BaseSampleDataset[ImageSample]):
 
         created_sample_ids = add_images.load_into_dataset_from_coco_captions(
             session=self.session,
-            dataset_id=self.dataset_id,
+            root_collection_id=self.collection_id,
             annotations_json=annotations_json,
             images_path=images_path,
         )
 
         _postprocess_created_images(
             session=self.session,
-            collection_id=self.dataset_id,
+            collection_id=self.collection_id,
             sample_ids=created_sample_ids,
             tag=split,
             embed=embed,

@@ -38,7 +38,7 @@ class CreateAnnotation(Protocol):
     """Protocol from converting to AnnotationCreate."""
 
     def to_annotation_create(
-        self, session: Session, dataset_id: UUID, parent_sample_id: UUID
+        self, session: Session, root_collection_id: UUID, parent_sample_id: UUID
     ) -> AnnotationCreate:
         """Convert to AnnotationCreate."""
         ...
@@ -70,11 +70,13 @@ class CreateClassification(CreateAnnotationBase):
     """Input model for creating classification annotations."""
 
     def to_annotation_create(
-        self, session: Session, dataset_id: UUID, parent_sample_id: UUID
+        self, session: Session, root_collection_id: UUID, parent_sample_id: UUID
     ) -> AnnotationCreate:
         """Convert to AnnotationCreate."""
         return AnnotationCreate(
-            annotation_label_id=self._get_label_id(session=session, root_collection_id=dataset_id),
+            annotation_label_id=self._get_label_id(
+                session=session, root_collection_id=root_collection_id
+            ),
             annotation_type=AnnotationType.CLASSIFICATION,
             confidence=self.confidence,
             parent_sample_id=parent_sample_id,
@@ -94,11 +96,13 @@ class CreateObjectDetection(CreateAnnotationBase):
     """Height (px) of the object detection bounding box."""
 
     def to_annotation_create(
-        self, session: Session, dataset_id: UUID, parent_sample_id: UUID
+        self, session: Session, root_collection_id: UUID, parent_sample_id: UUID
     ) -> AnnotationCreate:
         """Convert to AnnotationCreate."""
         return AnnotationCreate(
-            annotation_label_id=self._get_label_id(session=session, root_collection_id=dataset_id),
+            annotation_label_id=self._get_label_id(
+                session=session, root_collection_id=root_collection_id
+            ),
             annotation_type=AnnotationType.OBJECT_DETECTION,
             confidence=self.confidence,
             parent_sample_id=parent_sample_id,
@@ -124,11 +128,13 @@ class CreateInstanceSegmentation(CreateAnnotationBase):
     """Segmentation mask given as a run-length encoding."""
 
     def to_annotation_create(
-        self, session: Session, dataset_id: UUID, parent_sample_id: UUID
+        self, session: Session, root_collection_id: UUID, parent_sample_id: UUID
     ) -> AnnotationCreate:
         """Convert to AnnotationCreate."""
         return AnnotationCreate(
-            annotation_label_id=self._get_label_id(session=session, root_collection_id=dataset_id),
+            annotation_label_id=self._get_label_id(
+                session=session, root_collection_id=root_collection_id
+            ),
             annotation_type=AnnotationType.INSTANCE_SEGMENTATION,
             confidence=self.confidence,
             parent_sample_id=parent_sample_id,
@@ -216,11 +222,13 @@ class CreateSemanticSegmentation(CreateAnnotationBase):
     """Segmentation mask given as a run-length encoding."""
 
     def to_annotation_create(
-        self, session: Session, dataset_id: UUID, parent_sample_id: UUID
+        self, session: Session, root_collection_id: UUID, parent_sample_id: UUID
     ) -> AnnotationCreate:
         """Convert to AnnotationCreate."""
         return AnnotationCreate(
-            annotation_label_id=self._get_label_id(session=session, root_collection_id=dataset_id),
+            annotation_label_id=self._get_label_id(
+                session=session, root_collection_id=root_collection_id
+            ),
             annotation_type=AnnotationType.SEMANTIC_SEGMENTATION,
             confidence=self.confidence,
             parent_sample_id=parent_sample_id,

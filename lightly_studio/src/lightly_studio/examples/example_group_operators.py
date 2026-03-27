@@ -281,10 +281,13 @@ class DemoGroupOperator(BaseOperator):
         elif isinstance(context_filter, SampleFilter):
             group_filter = GroupFilter(sample_filter=context_filter)
         else:
-            group_filter = GroupFilter(
-                sample_filter=SampleFilter(collection_id=context.collection_id)
-            )
-        result = group_resolver.get_all(session=session, pagination=None, filters=group_filter)
+            group_filter = GroupFilter()
+        result = group_resolver.get_all(
+            session=session,
+            collection_id=context.collection_id,
+            pagination=None,
+            filters=group_filter,
+        )
         return OperatorResult(
             success=True,
             message=(

@@ -11,6 +11,7 @@ from sqlmodel.sql.expression import Select
 
 from lightly_studio.models.adjacents import AdjacentResultView
 from lightly_studio.models.image import ImageTable
+from lightly_studio.models.sample import SampleTable
 from lightly_studio.resolvers import adjacents, similarity_utils
 from lightly_studio.resolvers.image_filter import ImageFilter
 
@@ -18,15 +19,13 @@ from lightly_studio.resolvers.image_filter import ImageFilter
 def get_adjacent_images(
     session: Session,
     sample_id: UUID,
-    filters: ImageFilter,
+    collection_id: UUID,
+    filters: ImageFilter | None = None,
     text_embedding: list[float] | None = None,
 ) -> AdjacentResultView | None:
     """Get the adjacent images for a given sample ID."""
-    collection_id = filters.sample_filter.collection_id if filters.sample_filter else None
-    if collection_id is None:
-        raise ValueError("Collection ID must be provided in filters.")
-
     base_query = _base_query()
+    base_query = base_query.where(col(SampleTable.collection_id) == collection_id)
 
     embedding_model_id, distance_expr = similarity_utils.get_distance_expression(
         session=session,
@@ -36,7 +35,9 @@ def get_adjacent_images(
 
     if distance_expr is not None and embedding_model_id is not None:
         base_query = similarity_utils.apply_similarity_join(
-            query=_base_query(ordering_expression=[distance_expr]),
+            query=_base_query(ordering_expression=[distance_expr]).where(
+                col(SampleTable.collection_id) == collection_id
+            ),
             sample_id_column=col(ImageTable.sample_id),
             embedding_model_id=embedding_model_id,
         )

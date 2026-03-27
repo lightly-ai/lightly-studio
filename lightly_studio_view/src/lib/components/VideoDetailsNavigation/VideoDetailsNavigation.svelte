@@ -25,7 +25,14 @@
         const sampleNext = sampleAdjacentData?.next_sample_id;
         if (!sampleNext) return null;
 
-        goto(routeHelpers.toVideosDetails(datasetId, collectionType, collectionId, sampleNext));
+        goto(
+            routeHelpers.toVideosDetails({
+                datasetId,
+                collectionType,
+                collectionId,
+                sampleId: sampleNext
+            })
+        );
     }
 
     function goToPreviousVideo() {
@@ -34,7 +41,14 @@
         const samplePrevious = sampleAdjacentData?.previous_sample_id;
         if (!samplePrevious) return null;
 
-        goto(routeHelpers.toVideosDetails(datasetId, collectionType, collectionId, samplePrevious));
+        goto(
+            routeHelpers.toVideosDetails({
+                datasetId,
+                collectionType,
+                collectionId,
+                sampleId: samplePrevious
+            })
+        );
     }
 </script>
 

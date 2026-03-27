@@ -32,19 +32,21 @@ class LightlyStudioInputBase:
 
     CATEGORY_ID_START = 0
 
-    def __init__(self, session: Session, dataset_id: UUID, samples: Iterable[ImageSample]) -> None:
+    def __init__(
+        self, session: Session, root_collection_id: UUID, samples: Iterable[ImageSample]
+    ) -> None:
         """Initializes the adapter.
 
         Args:
             session: The SQLModel session to use for database access. Used only in the
                 constructor to fetch the labels for the given annotation task.
-            dataset_id: The root collection ID for label retrieval.
+            root_collection_id: The root collection ID for label retrieval.
             samples: Dataset samples.
         """
         self._samples = list(samples)
         self._label_id_to_category = _build_label_id_to_category(
             session=session,
-            dataset_id=dataset_id,
+            root_collection_id=root_collection_id,
             category_id_start=self.CATEGORY_ID_START,
         )
 
@@ -175,12 +177,12 @@ class LightlyStudioSemanticSegmentationInput(LightlyStudioInputBase, InstanceSeg
 
 def _build_label_id_to_category(
     session: Session,
-    dataset_id: UUID,
+    root_collection_id: UUID,
     category_id_start: int = 0,
 ) -> dict[UUID, Category]:
     labels = annotation_label_resolver.get_all_sorted_alphabetically(
         session=session,
-        root_collection_id=dataset_id,
+        root_collection_id=root_collection_id,
     )
     # TODO(Horatiu, 09/2025): We should get only labels that are attached to Object Detection
     # annotations.

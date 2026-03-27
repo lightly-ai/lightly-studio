@@ -31,7 +31,6 @@ from lightly_studio.resolvers.annotations.annotations_filter import (
     AnnotationsFilter,
 )
 from lightly_studio.resolvers.image_filter import ImageFilter
-from lightly_studio.resolvers.sample_resolver.sample_filter import SampleFilter
 from lightly_studio.services import annotations_service
 from lightly_studio.services.annotations_service.update_annotation import (
     AnnotationUpdate,
@@ -82,9 +81,6 @@ def count_annotations_by_collection(
     Returns a list of dictionaries with label name and count.
     """
     image_filter = body.filter if body and body.filter else ImageFilter()
-    sample_filter = image_filter.sample_filter or SampleFilter()
-    sample_filter.collection_id = collection.collection_id
-    image_filter.sample_filter = sample_filter
     counts = annotation_resolver.count_annotations_by_collection(
         session=session,
         collection_id=collection.collection_id,

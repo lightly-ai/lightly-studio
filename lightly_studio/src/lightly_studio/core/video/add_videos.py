@@ -75,9 +75,9 @@ class FrameExtractionContext:
     video_sample_id: UUID
 
 
-def load_into_dataset_from_paths(  # noqa: PLR0913
+def load_into_collection_from_paths(  # noqa: PLR0913
     session: Session,
-    dataset_id: UUID,
+    collection_id: UUID,
     video_paths: Iterable[str],
     video_channel: int = DEFAULT_VIDEO_CHANNEL,
     num_decode_threads: int | None = None,
@@ -87,7 +87,7 @@ def load_into_dataset_from_paths(  # noqa: PLR0913
 
     Args:
         session: The database session.
-        dataset_id: The ID of the dataset to load video samples into. It should have
+        collection_id: The ID of the collection to load video samples into. It should have
         sample_type == SampleType.VIDEO.
         video_paths: An iterable of file paths to the videos to load.
         video_channel: The video channel from which frames are loaded.
@@ -104,18 +104,18 @@ def load_into_dataset_from_paths(  # noqa: PLR0913
     created_video_frame_sample_ids: list[UUID] = []
     video_paths_list = list(video_paths)
     file_paths_new, file_paths_exist = video_resolver.filter_new_paths(
-        session=session, collection_id=dataset_id, file_paths_abs=video_paths_list
+        session=session, collection_id=collection_id, file_paths_abs=video_paths_list
     )
     video_logging_context = loading_log.LoadingLoggingContext(
         n_samples_to_be_inserted=len(video_paths_list),
         n_samples_before_loading=sample_resolver.count_by_collection_id(
-            session=session, collection_id=dataset_id
+            session=session, collection_id=collection_id
         ),
     )
     video_logging_context.update_example_paths(file_paths_exist)
-    # Get the video frames dataset ID
-    video_frames_dataset_id = collection_resolver.get_or_create_child_collection(
-        session=session, collection_id=dataset_id, sample_type=SampleType.VIDEO_FRAME
+    # Get the video frames collection ID
+    video_frames_collection_id = collection_resolver.get_or_create_child_collection(
+        session=session, collection_id=collection_id, sample_type=SampleType.VIDEO_FRAME
     )
 
     for video_path in tqdm(
@@ -145,7 +145,7 @@ def load_into_dataset_from_paths(  # noqa: PLR0913
                 # Create video sample
                 video_sample_ids = video_resolver.create_many(
                     session=session,
-                    collection_id=dataset_id,
+                    collection_id=collection_id,
                     samples=[
                         VideoCreate(
                             file_path_abs=video_path,
@@ -166,7 +166,7 @@ def load_into_dataset_from_paths(  # noqa: PLR0913
                 # Create video frame samples by parsing all frames
                 extraction_context = FrameExtractionContext(
                     session=session,
-                    collection_id=video_frames_dataset_id,
+                    collection_id=video_frames_collection_id,
                     video_sample_id=video_sample_ids[0],
                 )
                 frame_sample_ids = _create_video_frame_samples(
@@ -188,7 +188,7 @@ def load_into_dataset_from_paths(  # noqa: PLR0913
 
     loading_log.log_loading_results(
         session=session,
-        dataset_id=dataset_id,
+        collection_id=collection_id,
         logging_context=video_logging_context,
         print_summary=show_progress,
     )
@@ -198,7 +198,7 @@ def load_into_dataset_from_paths(  # noqa: PLR0913
 
 def load_video_annotations_from_labelformat(
     session: Session,
-    dataset_id: UUID,
+    collection_id: UUID,
     video_paths: Iterable[str],
     input_labels: ObjectDetectionTrackInput | InstanceSegmentationTrackInput,
     input_labels_paths_root: Path | str,
@@ -214,7 +214,7 @@ def load_video_annotations_from_labelformat(
 
     Args:
         session: The database session.
-        dataset_id: The ID of the video dataset to load annotations into.
+        collection_id: The ID of the video collection to load annotations into.
         video_paths: An iterable of file paths to the videos to load.
             Note: This is used for file names from input_labels, that don't have a file extension.
         input_labels: The labelformat input containing video annotations.
@@ -231,9 +231,9 @@ def load_video_annotations_from_labelformat(
         input_labels=input_labels, root_path=root_path, video_paths=video_paths
     )
 
-    created_sample_ids, created_video_frame_sample_ids = load_into_dataset_from_paths(
+    created_sample_ids, created_video_frame_sample_ids = load_into_collection_from_paths(
         session=session,
-        dataset_id=dataset_id,
+        collection_id=collection_id,
         video_paths=video_paths_labelformat,
     )
 
@@ -251,7 +251,7 @@ def load_video_annotations_from_labelformat(
 
     label_map = labelformat_helpers.create_label_map(
         session=session,
-        root_collection_id=dataset_id,
+        root_collection_id=collection_id,
         input_labels=input_labels,
     )
 
@@ -287,7 +287,7 @@ def load_video_annotations_from_labelformat(
         object_track_map = _create_object_tracks(
             session=session,
             video_annotation=video_annotation,
-            dataset_id=dataset_id,
+            root_collection_id=collection_id,
         )
 
         if isinstance(video_annotation, VideoInstanceSegmentationTrack):
@@ -308,7 +308,7 @@ def load_video_annotations_from_labelformat(
             raise ValueError(f"Unsupported annotation type: {type(video_annotation)}")
         # Use frames collection as parent for annotations collection
         frames_collection_id = collection_resolver.get_or_create_child_collection(
-            session=session, collection_id=dataset_id, sample_type=SampleType.VIDEO_FRAME
+            session=session, collection_id=collection_id, sample_type=SampleType.VIDEO_FRAME
         )
         annotation_resolver.create_many(
             session=session,
@@ -489,14 +489,14 @@ def _resolve_video_paths_from_labelformat(
 def _create_object_tracks(
     session: Session,
     video_annotation: VideoInstanceSegmentationTrack | VideoObjectDetectionTrack,
-    dataset_id: UUID,
+    root_collection_id: UUID,
 ) -> dict[int, UUID]:
     """Create an ObjectTrackTable entry for each tracked object in the video.
 
     Args:
         session: Database session.
         video_annotation: The labelformat video annotation containing objects.
-        dataset_id: UUID of the root collection (dataset).
+        root_collection_id: UUID of the root collection (dataset).
 
     Returns:
         Mapping from object index (position in video_annotation.objects) to the
@@ -516,7 +516,7 @@ def _create_object_tracks(
         tracks_to_create.append(
             ObjectTrackCreate(
                 object_track_number=object_track_number,
-                dataset_id=dataset_id,
+                root_collection_id=root_collection_id,
             )
         )
         object_indices.append(obj_idx)
