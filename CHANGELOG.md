@@ -36,7 +36,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Speedup frontend by eliminating two redundant initial video list requests.
 - Fixed semantic text search in image and video grids so editing an active query no longer resets or clears the search unexpectedly.
-- Improved video details playback so annotation overlays update more smoothly under higher browser latency, and fixed playback stopping one frame before the end.
+- Improved video details playback so annotation overlays update more smoothly under higher browser latency.
+- Fixed video details playback stopping one frame before the end.
 
 ### Security
 

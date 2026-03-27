@@ -32,6 +32,8 @@ interface UseVideoFramesState {
     seekFrameNumber: boolean;
     /** Current playback time in seconds */
     playbackTime: number;
+    /** Promise for the current frame batch load, if any */
+    pendingLoad: Promise<void> | null;
 }
 
 /**
@@ -74,7 +76,8 @@ export function useVideoFrames({ video }: { video: VideoView }) {
         hasStarted: false,
         lastVideoId: null,
         seekFrameNumber: false,
-        playbackTime: 0
+        playbackTime: 0,
+        pendingLoad: null
     };
 
     function setCurrentFrame(frame: FrameView | null | undefined): void {
@@ -103,50 +106,55 @@ export function useVideoFrames({ video }: { video: VideoView }) {
      * @throws Error if the API request fails
      */
     async function loadFrames(): Promise<void> {
-        if (state.loading || state.reachedEnd) return;
-        state.loading = true;
+        if (state.loading) {
+            await state.pendingLoad;
+            return;
+        }
+        if (state.reachedEnd) return;
 
         const frameCollectionId = (video?.frame?.sample as SampleView)?.collection_id;
         if (!frameCollectionId) {
-            state.loading = false;
             return;
         }
 
-        try {
-            const res = await getAllFrames({
-                path: {
-                    video_frame_collection_id: frameCollectionId
-                },
-                query: {
-                    cursor: state.cursor,
-                    limit: BATCH_SIZE
-                },
-                body: {
-                    filter: {
-                        video_id: video?.sample_id
+        state.loading = true;
+        state.pendingLoad = (async () => {
+            try {
+                const res = await getAllFrames({
+                    path: {
+                        video_frame_collection_id: frameCollectionId
+                    },
+                    query: {
+                        cursor: state.cursor,
+                        limit: BATCH_SIZE
+                    },
+                    body: {
+                        filter: {
+                            video_id: video?.sample_id
+                        }
                     }
+                });
+
+                const newFrames = res?.data?.data ?? [];
+
+                if (newFrames.length === 0) {
+                    state.reachedEnd = true;
+                    return;
                 }
-            });
 
-            const newFrames = res?.data?.data ?? [];
-
-            if (newFrames.length === 0) {
-                state.reachedEnd = true;
+                state.frames = mergeFrames(state.frames, newFrames);
+                // Update cursor for next batch: use server-provided nextCursor if available,
+                // otherwise increment by BATCH_SIZE for client-side pagination
+                const nextCursor = res?.data?.nextCursor;
+                state.cursor = nextCursor ?? state.cursor + BATCH_SIZE;
+                state.reachedEnd = nextCursor == null;
+            } finally {
                 state.loading = false;
-                return;
+                state.pendingLoad = null;
             }
+        })();
 
-            state.frames = mergeFrames(state.frames, newFrames);
-            // Update cursor for next batch: use server-provided nextCursor if available,
-            // otherwise increment by BATCH_SIZE for client-side pagination
-            const nextCursor = res?.data?.nextCursor;
-            state.cursor = nextCursor ?? state.cursor + BATCH_SIZE;
-            state.reachedEnd = nextCursor === null;
-            state.loading = false;
-        } catch (error) {
-            state.loading = false;
-            throw error;
-        }
+        await state.pendingLoad;
     }
 
     /**
