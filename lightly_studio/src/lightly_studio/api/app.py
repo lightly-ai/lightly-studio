@@ -6,6 +6,7 @@ from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
 from typing import Annotated
 
+from brotli_asgi import BrotliMiddleware
 from fastapi import APIRouter, Depends, FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.routing import APIRoute
@@ -89,6 +90,17 @@ app.add_middleware(
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
+)
+
+app.add_middleware(
+    BrotliMiddleware,
+    minimum_size=1024,
+    # Exclude already-compressed media from compression (images, videos, video frames)
+    excluded_handlers=[
+        r"/images/sample/",
+        r"/videos/media/",
+        r"/frames/media/",
+    ],
 )
 
 

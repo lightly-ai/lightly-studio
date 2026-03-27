@@ -46,7 +46,9 @@ def test_register_embedding_model(
     # Check that the model was registered in memory.
     assert model_id in embedding_manager._models
     assert embedding_manager._models[model_id] == random_model
-    assert embedding_manager._dataset_id_to_default_model_id[collection.collection_id] == model_id
+    assert (
+        embedding_manager._collection_id_to_default_model_id[collection.collection_id] == model_id
+    )
 
     # Check that the model was stored in the database.
     stored_model = db_session.exec(
@@ -100,7 +102,9 @@ def test_register_multiple_models(
     # Check that both models were registered in memory
     assert model_id1 in embedding_manager._models
     assert model_id2 in embedding_manager._models
-    assert embedding_manager._dataset_id_to_default_model_id[collection.collection_id] == model_id1
+    assert (
+        embedding_manager._collection_id_to_default_model_id[collection.collection_id] == model_id1
+    )
 
     # Check that both models were stored in the database
     stored_models = db_session.exec(select(EmbeddingModelTable)).all()
@@ -378,7 +382,7 @@ def test_default_model(
     ).embedding_model_id
     # The first model is always set as default.
     assert (
-        embedding_manager._dataset_id_to_default_model_id[collection.collection_id]
+        embedding_manager._collection_id_to_default_model_id[collection.collection_id]
         == first_model_id
     )
 
@@ -391,7 +395,7 @@ def test_default_model(
     ).embedding_model_id
 
     assert (
-        embedding_manager._dataset_id_to_default_model_id[collection.collection_id]
+        embedding_manager._collection_id_to_default_model_id[collection.collection_id]
         == second_model_id
     )
 
@@ -401,10 +405,10 @@ def test_embed_videos(
 ) -> None:
     """Test generating embeddings for video samples."""
     video_collection = create_collection(session=db_session, sample_type=SampleType.VIDEO)
-    dataset_id = video_collection.collection_id
+    collection_id = video_collection.collection_id
     video_ids = create_videos(
         session=db_session,
-        collection_id=dataset_id,
+        collection_id=collection_id,
         videos=[
             VideoStub(path=f"/videos/video_{idx}.mp4", duration_s=1.0 + idx, fps=24.0)
             for idx in range(3)
@@ -414,11 +418,11 @@ def test_embed_videos(
     model_id = manager.register_embedding_model(
         session=db_session,
         embedding_generator=RandomEmbeddingGenerator(),
-        collection_id=dataset_id,
+        collection_id=collection_id,
         set_as_default=True,
     ).embedding_model_id
 
-    manager.embed_videos(session=db_session, collection_id=dataset_id, sample_ids=video_ids)
+    manager.embed_videos(session=db_session, collection_id=collection_id, sample_ids=video_ids)
 
     stored_embeddings = db_session.exec(
         select(SampleEmbeddingTable).where(SampleEmbeddingTable.embedding_model_id == model_id)
@@ -432,17 +436,17 @@ def test_embed_videos(
 def test_embed_videos_with_incompatible_generator(db_session: Session) -> None:
     """Ensure we raise when the default lacks video support."""
     video_collection = create_collection(session=db_session, sample_type=SampleType.VIDEO)
-    dataset_id = video_collection.collection_id
+    collection_id = video_collection.collection_id
     manager = EmbeddingManager()
     manager.register_embedding_model(
         session=db_session,
         embedding_generator=TextOnlyEmbeddingGenerator(),
-        collection_id=dataset_id,
+        collection_id=collection_id,
         set_as_default=True,
     )
 
     with pytest.raises(ValueError, match=r"Embedding model not compatible with videos."):
-        manager.embed_videos(session=db_session, collection_id=dataset_id, sample_ids=[uuid4()])
+        manager.embed_videos(session=db_session, collection_id=collection_id, sample_ids=[uuid4()])
 
 
 class TextOnlyEmbeddingGenerator:

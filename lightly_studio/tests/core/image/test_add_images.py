@@ -80,7 +80,7 @@ def test_load_into_collection_from_labelformat__obj_det(
 
     sample_ids = add_images.load_into_dataset_from_labelformat(
         session=db_session,
-        dataset_id=collection.collection_id,
+        root_collection_id=collection.collection_id,
         input_labels=label_input,
         images_path=images_path,
     )
@@ -156,7 +156,7 @@ def test_load_into_collection_from_labelformat__ins_seg(
     collection = helpers_resolvers.create_collection(session=db_session)
     sample_ids = add_images.load_into_dataset_from_labelformat(
         session=db_session,
-        dataset_id=collection.collection_id,
+        root_collection_id=collection.collection_id,
         input_labels=TestLabelInput(),
         images_path=images_path,
     )
@@ -196,7 +196,7 @@ def test_load_into_collection_from_coco_captions(db_session: Session, tmp_path: 
 
     _ = add_images.load_into_dataset_from_coco_captions(
         session=db_session,
-        dataset_id=collection.collection_id,
+        root_collection_id=collection.collection_id,
         annotations_json=annotations_path,
         images_path=tmp_path,
     )
@@ -302,7 +302,7 @@ def test_create_label_map(db_session: Session) -> None:
 
     label_map_1 = add_images._create_label_map(
         session=db_session,
-        dataset_id=collection_id,
+        root_collection_id=collection_id,
         input_labels=label_input,
     )
 
@@ -312,7 +312,7 @@ def test_create_label_map(db_session: Session) -> None:
 
     label_map_2 = add_images._create_label_map(
         session=db_session,
-        dataset_id=collection_id,
+        root_collection_id=collection_id,
         input_labels=label_input_2,
     )
 

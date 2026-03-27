@@ -41,15 +41,15 @@ class TestDatasetExport:
             ImageStub(path="image2.jpg", width=300, height=300),
         ]
         images = create_images(
-            db_session=dataset.session, collection_id=dataset.dataset_id, images=images_to_create
+            db_session=dataset.session, collection_id=dataset.collection_id, images=images_to_create
         )
         label = create_annotation_label(
-            session=dataset.session, root_collection_id=dataset.dataset_id, label_name="dog"
+            session=dataset.session, root_collection_id=dataset.collection_id, label_name="dog"
         )
         # TODO(lukas 9/2025): make this into a function
         annotation_resolver.create_many(
             session=dataset.session,
-            parent_collection_id=dataset.dataset_id,
+            parent_collection_id=dataset.collection_id,
             annotations=[
                 AnnotationCreate(
                     parent_sample_id=images[0].sample_id,
@@ -91,7 +91,9 @@ class TestDatasetExport:
         """Tests DatasetExport exporting to COCO format."""
         dataset = ImageDataset.create(name="test_dataset")
         images = [ImageStub(path="image0.jpg", width=100, height=100)]
-        create_images(db_session=dataset.session, collection_id=dataset.dataset_id, images=images)
+        create_images(
+            db_session=dataset.session, collection_id=dataset.collection_id, images=images
+        )
 
         output_json = tmp_path / "export.json"
         # Provide the export path as a string
@@ -118,7 +120,7 @@ class TestDatasetExport:
         # Check that a default output path was used
         mock_to_coco_object_detections.assert_called_once_with(
             session=dataset.session,
-            root_collection_id=dataset.dataset_id,
+            root_collection_id=dataset.collection_id,
             samples=mocker.ANY,
             output_json=Path("coco_export.json"),
         )
@@ -131,12 +133,12 @@ class TestDatasetExport:
         dataset = ImageDataset.create(name="test_dataset")
         image = create_images(
             db_session=dataset.session,
-            collection_id=dataset.dataset_id,
+            collection_id=dataset.collection_id,
             images=[ImageStub(path="/path/image0.jpg", width=100, height=100)],
         )[0]
         create_caption(
             session=dataset.session,
-            collection_id=dataset.dataset_id,
+            collection_id=dataset.collection_id,
             parent_sample_id=image.sample_id,
             text="caption one",
         )
@@ -196,7 +198,7 @@ class TestDatasetExport:
         dataset = ImageDataset.create(name="test_dataset")
         create_images(
             db_session=dataset.session,
-            collection_id=dataset.dataset_id,
+            collection_id=dataset.collection_id,
             images=[ImageStub(path="image0.jpg", width=10, height=10)],
         )
 
@@ -239,17 +241,17 @@ class TestDatasetExport:
         dataset = ImageDataset.create(name="test_dataset")
         images = create_images(
             db_session=dataset.session,
-            collection_id=dataset.dataset_id,
+            collection_id=dataset.collection_id,
             images=[ImageStub(path="image0.jpg", width=10, height=10)],
         )
 
         label = create_annotation_label(
-            session=dataset.session, root_collection_id=dataset.dataset_id, label_name="dog"
+            session=dataset.session, root_collection_id=dataset.collection_id, label_name="dog"
         )
         # Create an annotation without a mask
         annotation_resolver.create_many(
             session=dataset.session,
-            parent_collection_id=dataset.dataset_id,
+            parent_collection_id=dataset.collection_id,
             annotations=[
                 AnnotationCreate(
                     parent_sample_id=images[0].sample_id,
@@ -287,7 +289,7 @@ class TestDatasetExport:
         dataset = ImageDataset.create(name="test_dataset")
         create_images(
             db_session=dataset.session,
-            collection_id=dataset.dataset_id,
+            collection_id=dataset.collection_id,
             images=[ImageStub(path="image0.jpg", width=3, height=2)],
         )
 
@@ -303,7 +305,7 @@ class TestDatasetExport:
         output_folder = tmp_path / "pascalvoc"
         export_dataset.to_pascalvoc_semantic_segmentation(
             session=dataset.session,
-            root_collection_id=dataset.dataset_id,
+            root_collection_id=dataset.collection_id,
             samples=dataset.query(),
             output_folder=output_folder,
         )
@@ -326,17 +328,17 @@ class TestDatasetExport:
         dataset = ImageDataset.create(name="test_dataset")
         create_images(
             db_session=dataset.session,
-            collection_id=dataset.dataset_id,
+            collection_id=dataset.collection_id,
             images=[ImageStub(path="image0.jpg", width=3, height=2)],
         )
         create_annotation_label(
             session=dataset.session,
-            root_collection_id=dataset.dataset_id,
+            root_collection_id=dataset.collection_id,
             label_name="background",
         )
         create_annotation_label(
             session=dataset.session,
-            root_collection_id=dataset.dataset_id,
+            root_collection_id=dataset.collection_id,
             label_name="dog",
         )
 
@@ -359,7 +361,7 @@ class TestDatasetExport:
         output_folder = tmp_path / "pascalvoc"
         export_dataset.to_pascalvoc_semantic_segmentation(
             session=dataset.session,
-            root_collection_id=dataset.dataset_id,
+            root_collection_id=dataset.collection_id,
             samples=dataset.query(),
             output_folder=output_folder,
         )
@@ -384,7 +386,7 @@ class TestDatasetExport:
         dataset = ImageDataset.create(name="test_dataset")
         create_images(
             db_session=dataset.session,
-            collection_id=dataset.dataset_id,
+            collection_id=dataset.collection_id,
             images=[ImageStub(path="image0.jpg", width=3, height=2)],
         )
 
@@ -407,7 +409,7 @@ class TestDatasetExport:
         output_folder = tmp_path / "pascalvoc"
         export_dataset.to_pascalvoc_semantic_segmentation(
             session=dataset.session,
-            root_collection_id=dataset.dataset_id,
+            root_collection_id=dataset.collection_id,
             samples=dataset.query(),
             output_folder=output_folder,
         )
@@ -431,7 +433,7 @@ class TestDatasetExport:
         dataset = ImageDataset.create(name="test_dataset")
         create_images(
             db_session=dataset.session,
-            collection_id=dataset.dataset_id,
+            collection_id=dataset.collection_id,
             images=[ImageStub(path="image0.jpg", width=3, height=2)],
         )
 
@@ -454,7 +456,7 @@ class TestDatasetExport:
         output_folder = tmp_path / "pascalvoc"
         export_dataset.to_pascalvoc_semantic_segmentation(
             session=dataset.session,
-            root_collection_id=dataset.dataset_id,
+            root_collection_id=dataset.collection_id,
             samples=dataset.query(),
             output_folder=output_folder,
         )
@@ -477,7 +479,7 @@ class TestDatasetExport:
         dataset = ImageDataset.create(name="test_dataset")
         create_images(
             db_session=dataset.session,
-            collection_id=dataset.dataset_id,
+            collection_id=dataset.collection_id,
             images=[
                 ImageStub(path="image0.jpg", width=3, height=2),
                 ImageStub(path="image1.jpg", width=3, height=2),
@@ -505,7 +507,7 @@ class TestDatasetExport:
         output_folder = tmp_path / "pascalvoc"
         export_dataset.to_pascalvoc_semantic_segmentation(
             session=dataset.session,
-            root_collection_id=dataset.dataset_id,
+            root_collection_id=dataset.collection_id,
             samples=dataset.query(),
             output_folder=output_folder,
         )
