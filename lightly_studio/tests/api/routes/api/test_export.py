@@ -282,7 +282,7 @@ def test_export_collection_youtube_vis(
         tracks=[
             ObjectTrackCreate(
                 object_track_number=99,
-                dataset_id=collection.collection_id,
+                root_collection_id=collection.collection_id,
             )
         ],
     )[0]

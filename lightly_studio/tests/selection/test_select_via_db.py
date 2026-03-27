@@ -790,7 +790,7 @@ def test_get_class_balancing_data_input(db_session: Session) -> None:
     class_dist, target_vals = _get_class_balancing_data(
         session=db_session,
         strat=strat,
-        dataset_id=dataset_id,
+        root_collection_id=dataset_id,
         annotation_label_ids=all_annotation_labels,
         input_sample_ids=input_sample_ids,
         sample_id_to_annotation_label_ids=sample_id_to_annotation_label_ids,
@@ -827,7 +827,7 @@ def test_get_class_balancing_data_uniform(db_session: Session) -> None:
     class_dist, target_vals = _get_class_balancing_data(
         session=db_session,
         strat=strat,
-        dataset_id=dataset_id,
+        root_collection_id=dataset_id,
         annotation_label_ids=all_annotation_labels,
         input_sample_ids=input_sample_ids,
         sample_id_to_annotation_label_ids=sample_id_to_annotation_label_ids,
@@ -877,7 +877,7 @@ def test_get_class_balancing_data_target(db_session: Session) -> None:
     class_dist, target_vals = _get_class_balancing_data(
         session=db_session,
         strat=strat,
-        dataset_id=collection_id,
+        root_collection_id=collection_id,
         annotation_label_ids=all_annotation_labels,
         input_sample_ids=input_sample_ids,
         sample_id_to_annotation_label_ids=sample_id_to_annotation_label_ids,

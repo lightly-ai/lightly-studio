@@ -1152,7 +1152,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/embeddings2d/default": {
+    "/api/collections/{collection_id}/embeddings2d/default": {
         parameters: {
             query?: never;
             header?: never;
@@ -1627,7 +1627,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/groups": {
+    "/api/collections/{collection_id}/groups": {
         parameters: {
             query?: never;
             header?: never;
@@ -1642,8 +1642,9 @@ export interface paths {
          *
          *     Args:
          *         session: The database session.
+         *         collection_id: The ID of the collection to fetch groups for.
          *         pagination: Pagination parameters including offset and limit.
-         *         body: The body containing filters, including collection_id in sample_filter.
+         *         body: The body containing filters.
          *
          *     Returns:
          *         A list of groups along with the total count.
@@ -2928,7 +2929,7 @@ export interface components {
          */
         ReadGroupsRequest: {
             /** @description Filter parameters for groups */
-            filter: components["schemas"]["GroupFilter"];
+            filter?: components["schemas"]["GroupFilter"] | null;
         };
         /**
          * ReadImagesRequest
@@ -3041,8 +3042,6 @@ export interface components {
          * @description Encapsulates filter parameters for querying samples.
          */
         SampleFilter: {
-            /** Collection Id */
-            collection_id?: string | null;
             /** Tag Ids */
             tag_ids?: string[] | null;
             /** Metadata Filters */
@@ -5717,7 +5716,9 @@ export interface operations {
         parameters: {
             query?: never;
             header?: never;
-            path?: never;
+            path: {
+                collection_id: string;
+            };
             cookie?: never;
         };
         requestBody: {
@@ -6301,7 +6302,9 @@ export interface operations {
                 limit?: number;
             };
             header?: never;
-            path?: never;
+            path: {
+                collection_id: string;
+            };
             cookie?: never;
         };
         requestBody: {
