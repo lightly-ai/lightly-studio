@@ -96,8 +96,9 @@ class OperatorRegistry:
 
         Example entry in an external packages ``pyproject.toml``:
 
-            [project.entry-points."lightly_studio.plugins"]
-            grounding_dino = "my_package:GroundingDinoOperator"
+        [project.entry-points."lightly_studio.plugins"]
+            bbox_auto_propagation_nano_tracker =
+            "lightly_plugins_bbox_auto_propagation_nano_tracker.operator:AutoPropagateOperator"
         """
         if sys.version_info >= (3, 10):
             eps = entry_points(group=ENTRY_POINT_GROUP)

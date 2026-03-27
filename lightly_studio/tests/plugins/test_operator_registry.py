@@ -134,6 +134,25 @@ def test_operator_registry__discover_plugins_registers_valid_operator(
     assert metadata[0].name == "test operator"
 
 
+def test_operator_registry__discover_plugins_and_manual_register(
+    mocker: MockerFixture,
+) -> None:
+    ep = mocker.MagicMock()
+    ep.value = "my_package:TestOp"
+    ep.load.return_value = TestOperator
+
+    _patch_entry_points(mocker, [ep])
+    registry = OperatorRegistry()
+    registry.discover_plugins()
+
+    registry.register(operator=FailingStartupOperator())
+
+    metadata = registry.get_all_metadata()
+    assert len(metadata) == 2
+    assert metadata[0].name == "test operator"
+    assert metadata[1].name == "failing operator"
+
+
 def test_operator_registry__discover_plugins_skips_non_base_operator(
     mocker: MockerFixture,
 ) -> None:
