@@ -1,7 +1,6 @@
 <script lang="ts">
     import { useCollectionWithChildren, useVideo } from '$lib/hooks';
     import type { PageData } from './$types';
-
     import {
         LayoutCard,
         GroupsComponentsMenu,
@@ -13,21 +12,17 @@
     import VideoDetailsBreadcrumb from '$lib/components/VideoDetailsBreadcrumb/VideoDetailsBreadcrumb.svelte';
 
     const { data }: { data: PageData } = $props();
-    const { video } = useVideo({
-        sampleId: data.params.sample_id
+    const { data: video, isLoading, loadById, error, refetch } = useVideo();
+    $effect(() => {
+        loadById(data.params.sample_id);
     });
-
     const frameNumber = data.frameNumber ? parseInt(data.frameNumber) : undefined;
     const { collection } = useCollectionWithChildren({
         collectionId: data.params.dataset_id
     });
 </script>
 
-{#if $video.isLoading}
-    <Spinner />
-{:else if $video.error}
-    <Alert title="Error loading video">{$video.error.message}</Alert>
-{:else if $video.data}
+{#if typeof $video !== 'undefined'}
     {#if data.params.collection_type === 'group' && data.groupId}
         <div class="flex h-full gap-4 px-4 pb-4">
             <div class="flex-none">
@@ -42,8 +37,8 @@
             </div>
             <div class="grow">
                 <VideoDetails
-                    video={$video.data}
-                    onVideoUpdate={() => $video.refetch()}
+                    video={$video}
+                    onVideoUpdate={$refetch}
                     datasetId={data.params.dataset_id}
                     {frameNumber}
                 />
@@ -63,14 +58,17 @@
                     </div>
                     <Separator class="mb-4 bg-border-hard" />
                 {/if}
-
                 <VideoDetails
-                    video={$video.data}
-                    onVideoUpdate={() => $video.refetch()}
+                    video={$video}
+                    onVideoUpdate={$refetch}
                     datasetId={data.params.dataset_id}
                     {frameNumber}
                 />
             </div>
         </LayoutCard>
     {/if}
+{:else if $isLoading}
+    <Spinner />
+{:else if $error}
+    <Alert title="Error loading video">{$error.message}</Alert>
 {/if}
