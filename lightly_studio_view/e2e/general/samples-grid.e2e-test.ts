@@ -106,6 +106,8 @@ test('text search stays active until submit or explicit clear', async ({ page, s
     await resubmitResponsePromise;
     await expect(searchInput).toHaveValue('bear');
     await expect(searchInput).not.toBeFocused();
+    await page.waitForTimeout(200);
+    await expect(searchInput).toHaveValue('bear');
 
     const clearByEmptyResponsePromise = page.waitForResponse(
         (response) =>

@@ -159,7 +159,7 @@
 
     let query_text = $state($textEmbedding ? $textEmbedding.queryText : '');
     let submittedQueryText = $state($textEmbedding ? $textEmbedding.queryText : '');
-    let syncedTextEmbeddingQuery = $state($textEmbedding ? $textEmbedding.queryText : '');
+    let lastAppliedTextEmbeddingQuery = $state($textEmbedding ? $textEmbedding.queryText : '');
 
     const embedTextQuery = $derived(
         useEmbedText({
@@ -480,11 +480,11 @@
 
     $effect(() => {
         const committedQuery = $textEmbedding?.queryText ?? '';
-        if (committedQuery === syncedTextEmbeddingQuery) {
+        if (committedQuery === lastAppliedTextEmbeddingQuery) {
             return;
         }
 
-        syncedTextEmbeddingQuery = committedQuery;
+        lastAppliedTextEmbeddingQuery = committedQuery;
 
         if (activeImage) {
             return;
