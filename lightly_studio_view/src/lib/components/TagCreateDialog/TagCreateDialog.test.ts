@@ -108,14 +108,22 @@ const renderComponent = (props: Partial<UseTagsCreateDialog> = {}) => {
     });
 };
 
-const setup = () => {
+const buildMockTags = (count: number): TagView[] =>
+    Array.from({ length: count }, (_, index) => ({
+        tag_id: `tag-${index + 1}`,
+        name: `Test Tag ${index + 1}`,
+        kind: 'sample',
+        description: `Test Tag ${index + 1} description`
+    }));
+
+const setup = (tags: TagView[] = mockSampleTags) => {
     vi.mocked(useAuth).mockReturnValue({
         user: { username: 'testuser', email: 'test@test.com', role: 'labeler' },
         token: 'mock-token',
         isAuthenticated: true
     });
     vi.spyOn(useTags, 'useTags').mockReturnValueOnce({
-        tags: readable(mockSampleTags)
+        tags: readable(tags)
     } as ReturnType<typeof useTags.useTags>);
 };
 
@@ -168,6 +176,17 @@ describe.each<{
         // Check filtered results
         expect(screen.getByText('Test Tag 1')).toBeInTheDocument();
         expect(screen.queryByText('Test Tag 2')).not.toBeInTheDocument();
+    });
+
+    it('should render tags inside a scrollable container', async () => {
+        renderComponent(defaultProps[gridType]);
+
+        await fireEvent.click(screen.getByText(`Tag selected items`));
+
+        const tagList = screen.getByTestId('tag-create-dialog-tag-list');
+
+        expect(tagList).toHaveClass('max-h-80');
+        expect(tagList).toHaveClass('overflow-y-auto');
     });
 
     it('should allow selecting existing tags', async () => {
@@ -270,6 +289,18 @@ describe.each<{
 
         // Verify error is displayed
         expect(await screen.findByText('Error occured')).toBeInTheDocument();
+    });
+
+    it('should keep long tag lists rendered inside the scroll region', async () => {
+        setup(buildMockTags(40));
+        renderComponent(defaultProps[gridType]);
+
+        await fireEvent.click(screen.getByText(`Tag selected items`));
+
+        const tagList = screen.getByTestId('tag-create-dialog-tag-list');
+
+        expect(tagList).toContainElement(screen.getByText('Test Tag 40'));
+        expect(screen.getAllByText(/Test Tag \d+/)).toHaveLength(40);
     });
 });
 
