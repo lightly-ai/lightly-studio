@@ -399,7 +399,7 @@
                     data-testid="tag-create-dialog-input"
                 />
             </div>
-            <div class="max-h-80 overflow-y-auto pr-1" data-testid="tag-create-dialog-tag-list">
+            <div class="min-h-0 flex-1 overflow-y-auto pr-1" data-testid="tag-create-dialog-tag-list">
                 {#each tagsFiltered as tag (tag.tag_id)}
                     <div class="flex space-x-2 py-1">
                         <Checkbox
@@ -414,7 +414,7 @@
                     <Button
                         type="button"
                         variant="outline"
-                        class={cn('mt-1 w-full', ...buttonVariants({ variant: 'outline' }))}
+                        class={cn('mt-1 w-full', buttonVariants({ variant: 'outline' }))}
                         onclick={onEnlisttagsEnlistedToCreate}
                         data-testid="tag-create-dialog-create">Create tag "{tagsQueryTerm}"</Button
                     >

@@ -108,11 +108,11 @@ const renderComponent = (props: Partial<UseTagsCreateDialog> = {}) => {
     });
 };
 
-const buildMockTags = (count: number): TagView[] =>
+const buildMockTags = (count: number, kind: TagView['kind'] = 'sample'): TagView[] =>
     Array.from({ length: count }, (_, index) => ({
         tag_id: `tag-${index + 1}`,
         name: `Test Tag ${index + 1}`,
-        kind: 'sample',
+        kind,
         description: `Test Tag ${index + 1} description`
     }));
 
@@ -122,7 +122,7 @@ const setup = (tags: TagView[] = mockSampleTags) => {
         token: 'mock-token',
         isAuthenticated: true
     });
-    vi.spyOn(useTags, 'useTags').mockReturnValueOnce({
+    vi.spyOn(useTags, 'useTags').mockReturnValue({
         tags: readable(tags)
     } as ReturnType<typeof useTags.useTags>);
 };
@@ -155,7 +155,7 @@ describe.each<{
     beforeEach(() => {
         // Reset all mocks
         vi.resetAllMocks();
-        setup();
+        setup(gridType === 'annotations' ? mockAnnoTags : mockSampleTags);
     });
 
     it('should render when items are selected', () => {
@@ -185,7 +185,8 @@ describe.each<{
 
         const tagList = screen.getByTestId('tag-create-dialog-tag-list');
 
-        expect(tagList).toHaveClass('max-h-80');
+        expect(tagList).toHaveClass('flex-1');
+        expect(tagList).toHaveClass('min-h-0');
         expect(tagList).toHaveClass('overflow-y-auto');
     });
 
@@ -292,7 +293,7 @@ describe.each<{
     });
 
     it('should keep long tag lists rendered inside the scroll region', async () => {
-        setup(buildMockTags(40));
+        setup(buildMockTags(40, tagKind));
         renderComponent(defaultProps[gridType]);
 
         await fireEvent.click(screen.getByText(`Tag selected items`));
