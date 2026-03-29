@@ -6,9 +6,13 @@ import { AnnotationType } from '$lib/api/lightly_studio_local';
 import { BrushMode, ToolbarStatus } from '$lib/contexts/SampleDetailsToolbar.svelte';
 
 const mockSampleDetailsToolbarContext = {
-    status: 'cursor' as 'cursor' | 'bounding-box' | 'brush',
+    status: 'cursor' as 'cursor' | 'bounding-box' | 'brush' | 'slic',
     brush: {
         mode: 'brush' as 'brush' | 'eraser'
+    },
+    slic: {
+        level: 'medium' as 'coarse' | 'medium' | 'fine',
+        status: 'idle' as 'idle' | 'computing' | 'ready' | 'error'
     }
 };
 
@@ -121,6 +125,29 @@ describe('SampleDetailsToolbar', () => {
         expect(mockAnnotationLabelContext.annotationType).toBe(AnnotationType.SEGMENTATION_MASK);
         expect(mockAnnotationLabelContext.annotationLabel).toBe('car');
         expect(mockAnnotationLabelContext.annotationId).toBeNull();
+    });
+
+    it('activates the SLIC tool and sets segmentation mask type', async () => {
+        const { getByLabelText } = render(SampleDetailsToolbar);
+
+        await fireEvent.click(getByLabelText('SLIC Segmentation Tool'));
+
+        expect(mockSampleDetailsToolbarContext.status).toBe('slic');
+        expect(mockAnnotationLabelContext.annotationType).toBe(AnnotationType.SEGMENTATION_MASK);
+    });
+
+    it('keeps the selected segmentation annotation when activating the SLIC tool', async () => {
+        mockSampleDetailsToolbarContext.status = 'brush';
+        mockAnnotationLabelContext.annotationId = 'ann-1';
+        mockAnnotationLabelContext.annotationType = AnnotationType.SEGMENTATION_MASK;
+
+        const { getByLabelText } = render(SampleDetailsToolbar);
+
+        await fireEvent.click(getByLabelText('SLIC Segmentation Tool'));
+
+        expect(mockSampleDetailsToolbarContext.status).toBe('slic');
+        expect(mockAnnotationLabelContext.annotationId).toBe('ann-1');
+        expect(mockAnnotationLabelContext.annotationType).toBe(AnnotationType.SEGMENTATION_MASK);
     });
 
     it('activates drag tool', async () => {

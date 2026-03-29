@@ -10,8 +10,12 @@
     import CursorToolbarButton from '../CursorToolbarButton/CursorToolbarButton.svelte';
     import DragToolbarButton from '../DragToolbarButton/DragToolbarButton.svelte';
     import { useSettings } from '$lib/hooks/useSettings';
+    import SlicToolbarButton from '../SlicToolbarButton/SlicToolbarButton.svelte';
 
-    const { showSegmentationTool = true }: { showSegmentationTool?: boolean } = $props();
+    const {
+        showSegmentationTool = true,
+        showSlicTool = true
+    }: { showSegmentationTool?: boolean; showSlicTool?: boolean } = $props();
 
     const { settingsStore } = useSettings();
     let isSpacePressed = false;
@@ -78,7 +82,7 @@
         context: sampleDetailsToolbarContext,
         setBrushMode,
         setStatus
-    } = useSampleDetailsToolbarContext();
+        } = useSampleDetailsToolbarContext();
 
     $effect(() => {
         // Reset annotation label and type when switching to cursor tool
@@ -92,7 +96,8 @@
             setBrushMode('brush');
         } else if (
             sampleDetailsToolbarContext.status === 'bounding-box' ||
-            sampleDetailsToolbarContext.status === 'brush'
+            sampleDetailsToolbarContext.status === 'brush' ||
+            sampleDetailsToolbarContext.status === 'slic'
         ) {
             setLastCreatedAnnotationId(null);
             if (sampleDetailsToolbarContext.status === 'bounding-box') {
@@ -102,6 +107,9 @@
                 setBrushMode('brush');
             } else if (sampleDetailsToolbarContext.status === 'brush') {
                 setAnnotationType(AnnotationType.SEGMENTATION_MASK);
+            } else if (sampleDetailsToolbarContext.status === 'slic') {
+                setAnnotationType(AnnotationType.SEGMENTATION_MASK);
+                setBrushMode('brush');
             }
         }
         if (sampleDetailsToolbarContext.status === 'drag') {
@@ -132,6 +140,21 @@
         setStatus('brush');
         setAnnotationType(AnnotationType.SEGMENTATION_MASK);
         if (!annotationLabelContext.isOnAnnotationDetailsView) setAnnotationId(null);
+        setLastCreatedAnnotationId(null);
+    };
+
+    const onClickSlic = () => {
+        if (!showSlicTool) return;
+
+        const shouldKeepSelectedAnnotation =
+            annotationLabelContext.annotationId != null &&
+            annotationLabelContext.annotationType === AnnotationType.SEGMENTATION_MASK;
+
+        setStatus('slic');
+        setAnnotationType(AnnotationType.SEGMENTATION_MASK);
+        if (!annotationLabelContext.isOnAnnotationDetailsView && !shouldKeepSelectedAnnotation) {
+            setAnnotationId(null);
+        }
         setLastCreatedAnnotationId(null);
     };
 </script>
@@ -173,6 +196,18 @@
                 action="draw"
             >
                 <BoundingBoxToolbarButton onclick={onClickBoundingBox} />
+            </SampleDetailsToolbarTooltip>
+        {/if}
+        {#if showSlicTool}
+            <SampleDetailsToolbarTooltip
+                label="AI-Assisted Labeling"
+                action="toggle superpixels"
+                hint="Computes SLIC superpixels for click-to-toggle mask edits"
+            >
+                <SlicToolbarButton
+                    onclick={onClickSlic}
+                    isActive={sampleDetailsToolbarContext.status === 'slic'}
+                />
             </SampleDetailsToolbarTooltip>
         {/if}
         {#if showSegmentationTool}

@@ -61,141 +61,175 @@ export function useSegmentationMaskBrush({
             annotation_label_name?: string;
         }[],
         updateAnnotation?: (input: AnnotationUpdateInput) => Promise<void>,
-        lockedAnnotationIds?: Set<string>
-    ) => {
+        lockedAnnotationIds?: Set<string>,
+        options?: {
+            deferDrawingReset?: boolean;
+            skipImageRefetch?: boolean;
+            refreshAnnotations?: (annotation: AnnotationView) => void | Promise<void>;
+        }
+    ): Promise<AnnotationView | null> => {
         if (!annotationLabelContext.isDrawing || !workingMask) {
-            return;
+            return null;
         }
 
-        setIsDrawing(false);
-
-        if (
-            selectedAnnotation?.sample_id &&
-            lockedAnnotationIds?.has(selectedAnnotation.sample_id)
-        ) {
-            // Prevent any overlap updates or mask mutations when the selected annotation is locked.
-            refetch();
-            toast.error('This annotation is locked');
-            return;
+        const deferDrawingReset = options?.deferDrawingReset ?? false;
+        const skipImageRefetch = options?.skipImageRefetch ?? false;
+        const refreshAnnotations = options?.refreshAnnotations;
+        if (!deferDrawingReset) {
+            setIsDrawing(false);
         }
 
-        let annotationLabelName = annotationLabelContext.annotationLabel;
-        if (!selectedAnnotation && !annotationLabelName) {
-            const result = requestLabel ? await requestLabel() : null;
-            if (!result?.label) {
-                toast.error('Please select a class before creating an annotation');
-                return;
-            }
-            annotationLabelName = result.label;
-            setAnnotationLabel(annotationLabelName);
-            updateLastAnnotationLabel(collectionId, annotationLabelName);
-        }
-
-        const overriddenAnnotations = await applySegmentationMaskConstraints({
-            workingMask,
-            skipId: selectedAnnotation?.sample_id,
-            lockedAnnotationIds,
-            annotations,
-            sample,
-            collectionId,
-            updateAnnotations
-        });
-
-        const restoreOverriddenAnnotations = async () => {
-            await restoreOverriddenSegmentationAnnotationsForUndo({
-                collectionId,
-                overriddenAnnotations,
-                labels,
-                updateAnnotations,
-                createAnnotation
-            });
-        };
-
-        const bbox: BoundingBox | null = computeBoundingBoxFromMask(
-            workingMask,
-            sample.width,
-            sample.height
-        );
-
-        if (!bbox) {
-            toast.error('Invalid segmentation mask');
-            return;
-        }
-
-        const rle = encodeBinaryMaskToRLE(workingMask);
-        if (selectedAnnotation) {
-            try {
-                if (!updateAnnotation) return;
-
-                await updateAnnotation({
-                    annotation_id: selectedAnnotation.sample_id!,
-                    collection_id: collectionId,
-                    bounding_box: bbox,
-                    segmentation_mask: rle
-                });
-
-                setAnnotationType('segmentation_mask');
+        try {
+            if (
+                selectedAnnotation?.sample_id &&
+                lockedAnnotationIds?.has(selectedAnnotation.sample_id)
+            ) {
+                // Prevent any overlap updates or mask mutations when the selected annotation is locked.
                 refetch();
+                toast.error('This annotation is locked');
+                return null;
+            }
 
-                addAnnotationUpdateToUndoStack({
-                    annotation: selectedAnnotation,
-                    collection_id: collectionId,
-                    addReversibleAction,
-                    updateAnnotation,
-                    onUndo: async () => {
-                        await restoreOverriddenAnnotations();
+            let annotationLabelName = annotationLabelContext.annotationLabel;
+            if (!selectedAnnotation && !annotationLabelName) {
+                const result = requestLabel ? await requestLabel() : null;
+                if (!result?.label) {
+                    toast.error('Please select a class before creating an annotation');
+                    return null;
+                }
+                annotationLabelName = result.label;
+                setAnnotationLabel(annotationLabelName);
+                updateLastAnnotationLabel(collectionId, annotationLabelName);
+            }
+
+            const overriddenAnnotations = await applySegmentationMaskConstraints({
+                workingMask,
+                skipId: selectedAnnotation?.sample_id,
+                lockedAnnotationIds,
+                annotations,
+                sample,
+                collectionId,
+                updateAnnotations
+            });
+
+            const restoreOverriddenAnnotations = async () => {
+                await restoreOverriddenSegmentationAnnotationsForUndo({
+                    collectionId,
+                    overriddenAnnotations,
+                    labels,
+                    updateAnnotations,
+                    createAnnotation
+                });
+            };
+
+            const bbox: BoundingBox | null = computeBoundingBoxFromMask(
+                workingMask,
+                sample.width,
+                sample.height
+            );
+
+            if (!bbox) {
+                toast.error('Invalid segmentation mask');
+                return null;
+            }
+
+            const rle = encodeBinaryMaskToRLE(workingMask);
+            if (selectedAnnotation) {
+                try {
+                    if (!updateAnnotation) return null;
+
+                    await updateAnnotation({
+                        annotation_id: selectedAnnotation.sample_id!,
+                        collection_id: collectionId,
+                        bounding_box: bbox,
+                        segmentation_mask: rle
+                    });
+
+                    setAnnotationType('segmentation_mask');
+                    const updatedAnnotation: AnnotationView = {
+                        ...selectedAnnotation,
+                        segmentation_details: {
+                            x: bbox.x,
+                            y: bbox.y,
+                            width: bbox.width,
+                            height: bbox.height,
+                            segmentation_mask: rle
+                        }
+                    };
+
+                    if (!skipImageRefetch) {
                         refetch();
                     }
-                });
+                    await refreshAnnotations?.(updatedAnnotation);
 
-                return;
-            } catch (error) {
-                console.error('Failed to update annotation:', (error as Error).message);
-                return;
-            }
-        }
+                    addAnnotationUpdateToUndoStack({
+                        annotation: selectedAnnotation,
+                        collection_id: collectionId,
+                        addReversibleAction,
+                        updateAnnotation,
+                        onUndo: async () => {
+                            await restoreOverriddenAnnotations();
+                            refetch();
+                        }
+                    });
 
-        let label = labels?.find((l) => l.annotation_label_name === annotationLabelName);
-
-        if (!label) {
-            label = await createLabel({
-                dataset_id: datasetId,
-                annotation_label_name: annotationLabelName!
-            });
-        }
-
-        const newAnnotation = await createAnnotation({
-            parent_sample_id: sampleId,
-            annotation_type: 'segmentation_mask',
-            x: bbox.x,
-            y: bbox.y,
-            width: bbox.width,
-            height: bbox.height,
-            segmentation_mask: rle,
-            annotation_label_id: label.annotation_label_id!,
-            annotation_collection_name: annotationLabelContext.annotationSource ?? undefined
-        });
-
-        addAnnotationCreateToUndoStack({
-            annotation: newAnnotation,
-            addReversibleAction,
-            deleteAnnotation,
-            refetch,
-            onUndo: restoreOverriddenAnnotations,
-            onDelete: () => {
-                if (annotationLabelContext.annotationId === newAnnotation.sample_id) {
-                    setAnnotationId(null);
+                    return updatedAnnotation;
+                } catch (error) {
+                    console.error('Failed to update annotation:', (error as Error).message);
+                    return null;
                 }
             }
-        });
 
-        setAnnotationType('segmentation_mask');
-        setAnnotationLabel(label.annotation_label_name!);
-        setAnnotationId(newAnnotation.sample_id);
-        setLastCreatedAnnotationId(newAnnotation.sample_id);
+            let label = labels?.find((l) => l.annotation_label_name === annotationLabelName);
 
-        refetch();
-        onAnnotationCreated?.();
+            if (!label) {
+                label = await createLabel({
+                    dataset_id: datasetId,
+                    annotation_label_name: annotationLabelName!
+                });
+            }
+
+            const newAnnotation = await createAnnotation({
+                parent_sample_id: sampleId,
+                annotation_type: 'segmentation_mask',
+                x: bbox.x,
+                y: bbox.y,
+                width: bbox.width,
+                height: bbox.height,
+                segmentation_mask: rle,
+                annotation_label_id: label.annotation_label_id!,
+                annotation_collection_name: annotationLabelContext.annotationSource ?? undefined
+            });
+
+            addAnnotationCreateToUndoStack({
+                annotation: newAnnotation,
+                addReversibleAction,
+                deleteAnnotation,
+                refetch,
+                onUndo: restoreOverriddenAnnotations,
+                onDelete: () => {
+                    if (annotationLabelContext.annotationId === newAnnotation.sample_id) {
+                        setAnnotationId(null);
+                    }
+                }
+            });
+
+            setAnnotationType('segmentation_mask');
+            setAnnotationLabel(label.annotation_label_name!);
+            setAnnotationId(newAnnotation.sample_id);
+            setLastCreatedAnnotationId(newAnnotation.sample_id);
+
+            if (!skipImageRefetch) {
+                refetch();
+            }
+            await refreshAnnotations?.(newAnnotation);
+            onAnnotationCreated?.();
+            return newAnnotation;
+        } finally {
+            if (deferDrawingReset) {
+                setIsDrawing(false);
+            }
+        }
     };
 
     return { finishBrush };

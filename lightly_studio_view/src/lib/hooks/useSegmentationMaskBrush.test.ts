@@ -190,6 +190,123 @@ describe('useSegmentationMaskBrush', () => {
         expect(refetch).toHaveBeenCalled();
     });
 
+    it('returns the updated annotation and delegates annotation refresh when requested', async () => {
+        const refetch = vi.fn();
+        const updateAnnotation = vi.fn().mockResolvedValue(true);
+        const refreshAnnotations = vi.fn();
+
+        annotationLabelContext.annotationId = 'existing-id';
+
+        const selectedAnnotation = {
+            sample_id: 'existing-id',
+            annotation_type: 'segmentation_mask',
+            annotation_label: {
+                annotation_label_name: 'car'
+            }
+        } as AnnotationView;
+
+        const { finishBrush } = useSegmentationMaskBrush({
+            collectionId: 'c1',
+            datasetId,
+            sampleId: 's1',
+            sample,
+            refetch,
+            deleteAnnotation
+        });
+
+        const updatedAnnotation = await finishBrush(
+            mask,
+            selectedAnnotation,
+            [],
+            updateAnnotation,
+            undefined,
+            { refreshAnnotations }
+        );
+
+        expect(refreshAnnotations).toHaveBeenCalledWith(
+            expect.objectContaining({
+                sample_id: 'existing-id',
+                segmentation_details: {
+                    x: bbox.x,
+                    y: bbox.y,
+                    width: bbox.width,
+                    height: bbox.height,
+                    segmentation_mask: rle
+                }
+            })
+        );
+        expect(updatedAnnotation).toEqual(
+            expect.objectContaining({
+                sample_id: 'existing-id'
+            })
+        );
+    });
+
+    it('skips image refetch and delegates annotation refresh when requested', async () => {
+        const refetch = vi.fn();
+        const refreshAnnotations = vi.fn();
+
+        annotationLabelContext.annotationLabel = 'car';
+
+        const { finishBrush } = useSegmentationMaskBrush({
+            collectionId: 'c1',
+            datasetId,
+            sampleId: 's1',
+            sample,
+            refetch,
+            deleteAnnotation
+        });
+
+        await finishBrush(
+            mask,
+            null,
+            [{ annotation_label_id: 'car-label-id', annotation_label_name: 'car' }],
+            undefined,
+            undefined,
+            { skipImageRefetch: true, refreshAnnotations }
+        );
+
+        expect(refetch).not.toHaveBeenCalled();
+        expect(refreshAnnotations).toHaveBeenCalledWith(
+            expect.objectContaining({
+                sample_id: 'new-annotation-id'
+            })
+        );
+    });
+
+    it('keeps drawing active until finish completes when deferDrawingReset is set', async () => {
+        const refetch = vi.fn();
+
+        annotationLabelContext.annotationLabel = 'car';
+
+        let isDrawingDuringCreate: boolean | null = null;
+        createAnnotation.mockImplementation(async () => {
+            isDrawingDuringCreate = annotationLabelContext.isDrawing;
+            return { sample_id: 'new-annotation-id' };
+        });
+
+        const { finishBrush } = useSegmentationMaskBrush({
+            collectionId: 'c1',
+            datasetId,
+            sampleId: 's1',
+            sample,
+            refetch,
+            deleteAnnotation
+        });
+
+        await finishBrush(
+            mask,
+            null,
+            [{ annotation_label_id: 'car-label-id', annotation_label_name: 'car' }],
+            undefined,
+            undefined,
+            { deferDrawingReset: true }
+        );
+
+        expect(isDrawingDuringCreate).toBe(true);
+        expect(annotationLabelContext.isDrawing).toBe(false);
+    });
+
     it('refetches and shows error when selected annotation is locked', async () => {
         const refetch = vi.fn();
         const updateAnnotation = vi.fn();
