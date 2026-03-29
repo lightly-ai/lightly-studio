@@ -75,8 +75,9 @@ export default function calculateBinaryMaskFromRLE(
         const isFillSegment = index % 2 !== 0;
 
         if (isFillSegment) {
-            // Fill 'count' pixels
             const endPixelIndex = currentPixelIndex + count;
+
+            // Fill 'count' pixels
             while (currentPixelIndex < endPixelIndex) {
                 // Calculate buffer index *only once* per pixel
                 const y = Math.floor(currentPixelIndex / width);

@@ -8,10 +8,12 @@
     import SampleEraserRect from '../SampleEraserRect/SampleEraserRect.svelte';
     import SampleInstanceSegmentationRect from '../SampleInstanceSegmentationRect/SampleInstanceSegmentationRect.svelte';
     import SampleObjectDetectionRect from '../SampleObjectDetectionRect/SampleObjectDetectionRect.svelte';
+    import SampleSlicRect from '../SampleSlicRect/SampleSlicRect.svelte';
     import { select } from 'd3-selection';
     import { getColorByLabel } from '$lib/utils';
     import { throttle } from 'lodash-es';
     import BrushToolPopUp from '../BrushToolPopUp/BrushToolPopUp.svelte';
+    import SlicToolPopUp from '../SlicToolPopUp/SlicToolPopUp.svelte';
     import SampleDetailsToolbar from '../SampleDetailsToolbar/SampleDetailsToolbar.svelte';
     import { useAnnotationLabelContext } from '$lib/contexts/SampleDetailsAnnotation.svelte';
     import { useSampleDetailsToolbarContext } from '$lib/contexts/SampleDetailsToolbar.svelte';
@@ -174,12 +176,29 @@
             sampleDetailsToolbarContext.status === 'brush'
         );
     });
+    const shouldShowSlicToolPopup = $derived.by(() => {
+        if (!$isEditingMode) return false;
+        if (sampleDetailsToolbarContext.status !== 'slic') return false;
+
+        if (annotationLabelContext.isOnAnnotationDetailsView) {
+            return sample.annotations[0]?.annotation_type === AnnotationType.INSTANCE_SEGMENTATION;
+        }
+
+        return true;
+    });
     const shouldShowSegmentationToolInToolbar = $derived.by(() => {
         if (annotationLabelContext.isOnAnnotationDetailsView) {
             return (
                 sample.annotations[0]?.annotation_type !== AnnotationType.SEMANTIC_SEGMENTATION &&
                 isSegmentationType(sample.annotations[0]?.annotation_type)
             );
+        }
+
+        return true;
+    });
+    const shouldShowSlicToolInToolbar = $derived.by(() => {
+        if (annotationLabelContext.isOnAnnotationDetailsView) {
+            return sample.annotations[0]?.annotation_type === AnnotationType.INSTANCE_SEGMENTATION;
         }
 
         return true;
@@ -199,12 +218,18 @@
 >
     {#snippet toolbarContent()}
         {#if $isEditingMode}
-            <SampleDetailsToolbar showSegmentationTool={shouldShowSegmentationToolInToolbar} />
+            <SampleDetailsToolbar
+                showSegmentationTool={shouldShowSegmentationToolInToolbar}
+                showSlicTool={shouldShowSlicToolInToolbar}
+            />
         {/if}
     {/snippet}
     {#snippet zoomPanelContent()}
         {#if shouldShowBrushToolPopup}
             <BrushToolPopUp />
+        {/if}
+        {#if shouldShowSlicToolPopup}
+            <SlicToolPopUp />
         {/if}
     {/snippet}
     {#snippet zoomableContent({ scale })}
@@ -239,7 +264,7 @@
                     />
                 </g>
             {/each}
-            {#if mousePosition && $isEditingMode && (sampleDetailsToolbarContext.status === 'brush' || sampleDetailsToolbarContext.status === 'bounding-box') && !annotationLabelContext.isDrawing && !isHoveringBoundingBox}
+            {#if mousePosition && $isEditingMode && (sampleDetailsToolbarContext.status === 'brush' || sampleDetailsToolbarContext.status === 'bounding-box' || sampleDetailsToolbarContext.status === 'slic') && !annotationLabelContext.isDrawing && !isHoveringBoundingBox}
                 <!-- Horizontal crosshair line -->
                 <line
                     x1="0"
@@ -288,6 +313,16 @@
                     {drawerStrokeColor}
                     {sample}
                     annotationType={annotationTypeInCurrentView}
+                />
+            {:else if sampleDetailsToolbarContext.status === 'slic' && shouldShowSlicToolPopup}
+                <SampleSlicRect
+                    bind:interactionRect
+                    {sample}
+                    {sampleId}
+                    {collectionId}
+                    {drawerStrokeColor}
+                    {imageUrl}
+                    {refetch}
                 />
             {:else if sampleDetailsToolbarContext.status === 'bounding-box' && !annotationLabelContext.isOnAnnotationDetailsView && annotationTypeInCurrentView == AnnotationType.OBJECT_DETECTION}
                 <SampleObjectDetectionRect

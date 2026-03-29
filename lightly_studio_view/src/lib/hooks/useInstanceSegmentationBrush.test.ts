@@ -9,6 +9,7 @@ import {
 } from '$lib/components/SampleAnnotation/utils';
 import { applySegmentationMaskConstraints } from '$lib/utils/segmentationOverlap';
 import { toast } from 'svelte-sonner';
+import { readAnnotationLabels } from '$lib/api/lightly_studio_local/sdk.gen';
 
 const annotationLabelContext: AnnotationLabelContext = {
     isDrawing: true,
@@ -48,6 +49,10 @@ vi.mock('$lib/components/SampleAnnotation/utils', () => ({
 
 vi.mock('$lib/utils/segmentationOverlap', () => ({
     applySegmentationMaskConstraints: vi.fn(async () => [])
+}));
+
+vi.mock('$lib/api/lightly_studio_local/sdk.gen', () => ({
+    readAnnotationLabels: vi.fn(async () => ({ data: [] }))
 }));
 
 const createAnnotation = vi.fn();
@@ -106,6 +111,7 @@ describe('useInstanceSegmentationBrush', () => {
             annotation_label_id: 'default-label-id',
             annotation_label_name: 'DEFAULT'
         });
+        vi.mocked(readAnnotationLabels).mockResolvedValue({ data: [] });
     });
 
     it('does nothing when not drawing', async () => {
@@ -149,11 +155,16 @@ describe('useInstanceSegmentationBrush', () => {
     it('updates an existing annotation when selectedAnnotation is provided', async () => {
         const refetch = vi.fn();
         const updateAnnotation = vi.fn().mockResolvedValue(true);
+        const refreshAnnotations = vi.fn();
 
         annotationLabelContext.annotationId = 'existing-id';
 
         const selectedAnnotation = {
-            sample_id: 'existing-id'
+            sample_id: 'existing-id',
+            annotation_type: 'instance_segmentation',
+            annotation_label: {
+                annotation_label_name: 'DEFAULT'
+            }
         } as AnnotationView;
 
         const { finishBrush } = useInstanceSegmentationBrush({
@@ -163,7 +174,9 @@ describe('useInstanceSegmentationBrush', () => {
             refetch
         });
 
-        await finishBrush(mask, selectedAnnotation, [], updateAnnotation);
+        const updatedAnnotation = await finishBrush(mask, selectedAnnotation, [], updateAnnotation, undefined, {
+            refreshAnnotations
+        });
 
         expect(updateAnnotation).toHaveBeenCalledWith({
             annotation_id: 'existing-id',
@@ -174,6 +187,23 @@ describe('useInstanceSegmentationBrush', () => {
 
         expect(createAnnotation).not.toHaveBeenCalled();
         expect(refetch).toHaveBeenCalled();
+        expect(refreshAnnotations).toHaveBeenCalledWith(
+            expect.objectContaining({
+                sample_id: 'existing-id',
+                segmentation_details: {
+                    x: bbox.x,
+                    y: bbox.y,
+                    width: bbox.width,
+                    height: bbox.height,
+                    segmentation_mask: rle
+                }
+            })
+        );
+        expect(updatedAnnotation).toEqual(
+            expect.objectContaining({
+                sample_id: 'existing-id'
+            })
+        );
     });
 
     it('refetches and shows error when selected annotation is locked', async () => {
@@ -275,5 +305,88 @@ describe('useInstanceSegmentationBrush', () => {
 
         expect(createAnnotation).toHaveBeenCalled();
         expect(refetch).toHaveBeenCalled();
+    });
+
+    it('reuses default label from backend when local labels are stale', async () => {
+        const refetch = vi.fn();
+        vi.mocked(readAnnotationLabels).mockResolvedValue({
+            data: [
+                {
+                    annotation_label_id: 'default-label-id',
+                    annotation_label_name: 'DEFAULT'
+                }
+            ]
+        });
+
+        const { finishBrush } = useInstanceSegmentationBrush({
+            collectionId: 'c1',
+            sampleId: 's1',
+            sample,
+            refetch
+        });
+
+        await finishBrush(mask, null, []);
+
+        expect(createLabel).not.toHaveBeenCalled();
+        expect(createAnnotation).toHaveBeenCalledWith(
+            expect.objectContaining({
+                annotation_label_id: 'default-label-id'
+            })
+        );
+    });
+
+    it('reuses default label after create conflict by rereading labels', async () => {
+        const refetch = vi.fn();
+        vi.mocked(readAnnotationLabels)
+            .mockResolvedValueOnce({ data: [] })
+            .mockResolvedValueOnce({
+                data: [
+                    {
+                        annotation_label_id: 'default-label-id',
+                        annotation_label_name: 'DEFAULT'
+                    }
+                ]
+            });
+        createLabel.mockRejectedValueOnce(new Error('409 conflict'));
+
+        const { finishBrush } = useInstanceSegmentationBrush({
+            collectionId: 'c1',
+            sampleId: 's1',
+            sample,
+            refetch
+        });
+
+        await finishBrush(mask, null, []);
+
+        expect(createLabel).toHaveBeenCalledTimes(1);
+        expect(createAnnotation).toHaveBeenCalledWith(
+            expect.objectContaining({
+                annotation_label_id: 'default-label-id'
+            })
+        );
+    });
+
+    it('skips image refetch and delegates annotation refresh when requested', async () => {
+        const refetch = vi.fn();
+        const refreshAnnotations = vi.fn();
+
+        const { finishBrush } = useInstanceSegmentationBrush({
+            collectionId: 'c1',
+            sampleId: 's1',
+            sample,
+            refetch
+        });
+
+        await finishBrush(mask, null, [], undefined, undefined, {
+            skipImageRefetch: true,
+            refreshAnnotations
+        });
+
+        expect(refetch).not.toHaveBeenCalled();
+        expect(refreshAnnotations).toHaveBeenCalledWith(
+            expect.objectContaining({
+                sample_id: 'new-annotation-id'
+            })
+        );
     });
 });

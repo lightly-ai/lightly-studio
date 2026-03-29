@@ -3,7 +3,7 @@ import { AnnotationType } from '$lib/api/lightly_studio_local';
 import { useAnnotationSelection } from './useAnnotationSelection';
 
 const mockSampleDetailsToolbarContext = {
-    status: 'cursor' as 'cursor' | 'brush'
+    status: 'cursor' as 'cursor' | 'brush' | 'slic'
 };
 
 const mockAnnotationLabelContext = {
@@ -16,7 +16,7 @@ const mockAnnotationLabelContext = {
 vi.mock('$lib/contexts/SampleDetailsToolbar.svelte', () => ({
     useSampleDetailsToolbarContext: () => ({
         context: mockSampleDetailsToolbarContext,
-        setStatus(status: 'cursor' | 'brush') {
+        setStatus(status: 'cursor' | 'brush' | 'slic') {
             mockSampleDetailsToolbarContext.status = status;
         }
     })
@@ -58,6 +58,34 @@ describe('useAnnotationSelection', () => {
         mockAnnotationLabelContext.lastCreatedAnnotationId = 'prev-id';
 
         updateLastAnnotationLabelMock.mockClear();
+    });
+
+    it('keeps slic mode when selecting an existing instance annotation from the list', () => {
+        mockSampleDetailsToolbarContext.status = 'slic';
+
+        const annotations = [
+            {
+                sample_id: 'a-slic',
+                annotation_type: AnnotationType.INSTANCE_SEGMENTATION,
+                annotation_label: {
+                    annotation_label_name: 'Plane'
+                }
+            }
+        ];
+
+        const { selectAnnotation } = useAnnotationSelection();
+
+        selectAnnotation({
+            annotationId: 'a-slic',
+            collectionId: 'collection-1',
+            annotations
+        });
+
+        expect(mockSampleDetailsToolbarContext.status).toBe('slic');
+        expect(mockAnnotationLabelContext.annotationId).toBe('a-slic');
+        expect(mockAnnotationLabelContext.annotationType).toBe(
+            AnnotationType.INSTANCE_SEGMENTATION
+        );
     });
 
     it('selects instance segmentation annotation and enables brush', () => {
