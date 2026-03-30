@@ -45,7 +45,7 @@ For videos, the sidebar adds `Duration`. If the videos in the current view conta
 
 You can programmatically filter samples by attributes (e.g., image size, tags), sort them, and select subsets. This is useful for creating training/validation splits, finding specific samples, or exporting filtered data.
 
-Create a query object by combining `match`, `order_by` and `slice` (or `[start:end]`) calls. The query is composed lazily, it is executed against the database once it is consumed, e.g. by iterating over it or calling `add_tag`.
+Create a query object by combining `match`, `order_by` and `slice` (or `[start:end]`) calls. The query is composed lazily and executed against the database once it is consumed, e.g. by iterating over it or calling `add_tag`.
 
 ```py
 from lightly_studio.core.dataset_query import AND, OR, NOT, OrderByField, ImageSampleField

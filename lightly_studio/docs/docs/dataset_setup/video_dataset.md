@@ -260,4 +260,4 @@ on dedicated pages.
 
 ### Querying the Dataset
 
-Use [Dataset Query in Python](../concepts_and_tools/search_and_filter.md#dataset-query-in-python) when you need reusable subsets in code for filtering, sorting, slicing, export, or selection. Video queries use the `VideoSampleField`.
+Use [Dataset Query in Python](../concepts_and_tools/search_and_filter.md#dataset-query-in-python) when you need reusable subsets in code for filtering, sorting, slicing, export, or selection. Video query expressions use `VideoSampleField`.
