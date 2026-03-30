@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render } from '@testing-library/svelte';
 import Page from './+page.svelte';
-import { writable, derived } from 'svelte/store';
+import { writable } from 'svelte/store';
 import type { VideoView, CollectionView } from '$lib/api/lightly_studio_local/types.gen';
 import { SampleType } from '$lib/api/lightly_studio_local';
 import { useVideo, useCollectionWithChildren } from '$lib/hooks';
@@ -89,9 +89,6 @@ describe('Video Detail Page', () => {
         groupId: undefined,
         collection: mockCollection as unknown as LayoutLoadResult['collection'],
         globalStorage: mockGlobalStorage,
-        selectedAnnotationFilterIds: derived(writable(new Set<string>()), ($set) =>
-            Array.from($set)
-        ),
         sampleSize: writable({ width: 256, height: 256 })
     };
 

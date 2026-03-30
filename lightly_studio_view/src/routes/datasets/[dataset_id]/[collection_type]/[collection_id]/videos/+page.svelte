@@ -4,6 +4,7 @@
     import { useGlobalStorage } from '$lib/hooks/useGlobalStorage';
     import VideoItem from '$lib/components/VideoItem/VideoItem.svelte';
     import { useMetadataFilters } from '$lib/hooks/useMetadataFilters/useMetadataFilters';
+    import { useSelectedAnnotationsFilter } from '$lib/hooks/useAnnotationsFilter/useAnnotationsFilter';
     import { useTags } from '$lib/hooks/useTags/useTags';
     import { useVideoBounds } from '$lib/hooks/useVideosBounds/useVideosBounds';
     import { buildVideoFilter, useVideoFilters } from '$lib/hooks/useVideoFilters/useVideoFilters';
@@ -25,7 +26,8 @@
     );
 
     const { metadataValues } = useMetadataFilters();
-    const selectedAnnotationsFilterIds = $derived(propsData.selectedAnnotationFilterIds);
+    const { selectedAnnotationFilterIdsArray: selectedAnnotationsFilterIds } =
+        useSelectedAnnotationsFilter();
     const { videoBoundsValues } = $derived.by(() => useVideoBounds(collectionId));
 
     const { textEmbedding, getSelectedSampleIds, toggleSampleSelection } = useGlobalStorage();

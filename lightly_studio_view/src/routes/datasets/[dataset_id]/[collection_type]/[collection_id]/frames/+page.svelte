@@ -7,6 +7,7 @@
         useMetadataFilters,
         useFramesFilter
     } from '$lib/hooks';
+    import { useSelectedAnnotationsFilter } from '$lib/hooks/useAnnotationsFilter/useAnnotationsFilter';
 
     import { selectRangeByAnchor } from '$lib/utils/selectRangeByAnchor';
     import { isEqual, omit } from 'lodash-es';
@@ -26,7 +27,8 @@
     const { metadataValues } = $derived(useMetadataFilters(collectionId));
     const { videoFramesBoundsValues } = $derived(useVideoFramesBounds(collectionId));
 
-    const selectedAnnotationFilterIds = $derived(dataProps.selectedAnnotationFilterIds);
+    const { selectedAnnotationFilterIdsArray: selectedAnnotationFilterIds } =
+        useSelectedAnnotationsFilter();
     const { tagsSelected } = $derived(
         useTags({
             collection_id: collectionId,

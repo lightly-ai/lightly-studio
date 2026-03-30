@@ -35,9 +35,9 @@
     import { useVideoFramesBounds } from '$lib/hooks/useVideoFramesBounds/useVideoFramesBounds';
     import { useVideoBounds } from '$lib/hooks/useVideosBounds/useVideosBounds';
     import Spinner from '../Spinner/Spinner.svelte';
-    import type { Writable } from 'svelte/store';
     import { useImageFilters } from '$lib/hooks/useImageFilters/useImageFilters';
     import { useVideoFilters } from '$lib/hooks/useVideoFilters/useVideoFilters';
+    import { useSelectedAnnotationsFilter } from '$lib/hooks/useAnnotationsFilter/useAnnotationsFilter';
     import { isNormalModeParams } from '$lib/hooks/useImagesInfinite/useImagesInfinite';
     import useAuth from '$lib/hooks/useAuth/useAuth';
     import { hasMinimumRole } from '$lib/hooks/useAuth/hasMinimumRole';
@@ -45,16 +45,10 @@
     export type UseTagsCreateDialog = {
         collectionId: string;
         gridType: GridType;
-        selectedAnnotationFilterIds?: Writable<Set<string>>;
         textEmbedding?: TextEmbedding;
     };
 
-    let {
-        collectionId,
-        gridType,
-        selectedAnnotationFilterIds,
-        textEmbedding
-    }: UseTagsCreateDialog = $props();
+    let { collectionId, gridType, textEmbedding }: UseTagsCreateDialog = $props();
 
     const { metadataValues } = useMetadataFilters(collectionId);
     let tagKind: TagKind = $derived(
@@ -66,23 +60,14 @@
     const { dimensionsValues: dimensions } = useDimensions();
     const { filterParams } = useImageFilters();
     const { filterParams: videoFilterParams } = useVideoFilters();
-    const annotationLabelIds = $derived<string[] | undefined>(
-        $selectedAnnotationFilterIds?.size ? Array.from($selectedAnnotationFilterIds) : undefined
-    );
+    const { annotationLabelIds: annotationLabelIdsStore, annotationFilter: annotationFilterStore } =
+        useSelectedAnnotationsFilter();
 
-    const annotationFilter = $derived<AnnotationsFilter | undefined>(
-        annotationLabelIds
-            ? {
-                  annotation_label_ids: annotationLabelIds
-              }
-            : undefined
-    );
+    const annotationLabelIds = $derived($annotationLabelIdsStore);
+    const annotationFilter = $derived($annotationFilterStore);
+
     const sampleFilter = $derived<SampleFilter>({
-        annotations_filter: annotationLabelIds
-            ? {
-                  annotation_label_ids: annotationLabelIds
-              }
-            : undefined,
+        annotations_filter: annotationFilter,
         tag_ids: $tagsSelected.size > 0 ? Array.from($tagsSelected) : undefined,
         metadata_filters: $metadataValues ? createMetadataFilters($metadataValues) : undefined
     });
@@ -120,9 +105,7 @@
     });
 
     const annotationsQueryParams = $derived({
-        annotation_label_ids: $selectedAnnotationFilterIds?.size
-            ? Array.from($selectedAnnotationFilterIds)
-            : undefined,
+        annotation_label_ids: annotationLabelIds,
         tag_ids: $tagsSelected.size > 0 ? Array.from($tagsSelected) : undefined
     });
 
