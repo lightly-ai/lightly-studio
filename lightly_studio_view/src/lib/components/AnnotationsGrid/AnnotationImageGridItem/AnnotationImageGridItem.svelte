@@ -1,7 +1,7 @@
 <script lang="ts">
-    import { PUBLIC_SAMPLES_URL } from '$env/static/public';
     import type { AnnotationView, ImageAnnotationView } from '$lib/api/lightly_studio_local';
     import { useGlobalStorage } from '$lib/hooks/useGlobalStorage';
+    import { getImageURLById } from '$lib/utils';
     import AnnotationItem from '../AnnotationItem/AnnotationItem.svelte';
 
     type Props = {
@@ -50,9 +50,7 @@
     // Force CSS background to reload by using an incrementally different URL
     // This is a more aggressive approach to force the browser to reload the image
     const uniqueImageUrl = $derived(
-        image
-            ? `${PUBLIC_SAMPLES_URL}/sample/${image.sample_id}${collectionVersion ? `?v=${collectionVersion}` : ''}`
-            : ''
+        image ? getImageURLById(image.sample_id, collectionVersion) : ''
     );
 
     const sample = $derived({

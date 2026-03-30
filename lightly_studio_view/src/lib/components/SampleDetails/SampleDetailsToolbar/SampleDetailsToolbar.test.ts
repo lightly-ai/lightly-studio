@@ -6,9 +6,13 @@ import { AnnotationType } from '$lib/api/lightly_studio_local';
 import { BrushMode, ToolbarStatus } from '$lib/contexts/SampleDetailsToolbar.svelte';
 
 const mockSampleDetailsToolbarContext = {
-    status: 'cursor' as 'cursor' | 'bounding-box' | 'brush',
+    status: 'cursor' as 'cursor' | 'bounding-box' | 'brush' | 'slic',
     brush: {
         mode: 'brush' as 'brush' | 'eraser'
+    },
+    slic: {
+        level: 'medium' as 'coarse' | 'medium' | 'fine',
+        status: 'idle' as 'idle' | 'computing' | 'ready' | 'error'
     }
 };
 
@@ -148,6 +152,33 @@ describe('SampleDetailsToolbar', () => {
         expect(mockSampleDetailsToolbarContext.status).toBe('brush');
         expect(mockAnnotationLabelContext.annotationType).toBe(
             AnnotationType.SEMANTIC_SEGMENTATION
+        );
+    });
+
+    it('activates the SLIC tool and keeps instance segmentation selected', async () => {
+        const { getByLabelText } = render(SampleDetailsToolbar);
+
+        await fireEvent.click(getByLabelText('SLIC Segmentation Tool'));
+
+        expect(mockSampleDetailsToolbarContext.status).toBe('slic');
+        expect(mockAnnotationLabelContext.annotationType).toBe(
+            AnnotationType.INSTANCE_SEGMENTATION
+        );
+    });
+
+    it('keeps the selected instance annotation when activating the SLIC tool', async () => {
+        mockSampleDetailsToolbarContext.status = 'brush';
+        mockAnnotationLabelContext.annotationId = 'ann-1';
+        mockAnnotationLabelContext.annotationType = AnnotationType.INSTANCE_SEGMENTATION;
+
+        const { getByLabelText } = render(SampleDetailsToolbar);
+
+        await fireEvent.click(getByLabelText('SLIC Segmentation Tool'));
+
+        expect(mockSampleDetailsToolbarContext.status).toBe('slic');
+        expect(mockAnnotationLabelContext.annotationId).toBe('ann-1');
+        expect(mockAnnotationLabelContext.annotationType).toBe(
+            AnnotationType.INSTANCE_SEGMENTATION
         );
     });
 

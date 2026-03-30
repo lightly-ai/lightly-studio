@@ -12,7 +12,7 @@ export function useAnnotationSelection() {
         setLastCreatedAnnotationId
     } = useAnnotationLabelContext();
 
-    const { setStatus } = useSampleDetailsToolbarContext();
+    const { context: toolbarContext, setStatus } = useSampleDetailsToolbarContext();
     const { updateLastAnnotationLabel } = useGlobalStorage();
 
     function selectAnnotation({
@@ -34,7 +34,12 @@ export function useAnnotationSelection() {
         ) {
             setAnnotationType(annotation.annotation_type);
             setAnnotationLabel(annotation.annotation_label?.annotation_label_name ?? null);
-            setStatus('brush');
+            setStatus(
+                annotation.annotation_type === 'instance_segmentation' &&
+                    toolbarContext.status === 'slic'
+                    ? 'slic'
+                    : 'brush'
+            );
         } else {
             setStatus('cursor');
         }

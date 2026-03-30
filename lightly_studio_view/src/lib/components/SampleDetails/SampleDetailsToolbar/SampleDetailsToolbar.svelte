@@ -11,8 +11,12 @@
     import DragToolbarButton from '../DragToolbarButton/DragToolbarButton.svelte';
     import { useSettings } from '$lib/hooks/useSettings';
     import SemanticBrushToolbarButton from '../SemanticBrushToolbarButton/SemanticBrushToolbarButton.svelte';
+    import SlicToolbarButton from '../SlicToolbarButton/SlicToolbarButton.svelte';
 
-    const { showSegmentationTool = true }: { showSegmentationTool?: boolean } = $props();
+    const {
+        showSegmentationTool = true,
+        showSlicTool = true
+    }: { showSegmentationTool?: boolean; showSlicTool?: boolean } = $props();
 
     const { settingsStore } = useSettings();
     let isSpacePressed = false;
@@ -83,7 +87,7 @@
         context: sampleDetailsToolbarContext,
         setBrushMode,
         setStatus
-    } = useSampleDetailsToolbarContext();
+        } = useSampleDetailsToolbarContext();
 
     let lastSegmentationType: AnnotationType = AnnotationType.INSTANCE_SEGMENTATION;
 
@@ -99,7 +103,8 @@
             setBrushMode('brush');
         } else if (
             sampleDetailsToolbarContext.status === 'bounding-box' ||
-            sampleDetailsToolbarContext.status === 'brush'
+            sampleDetailsToolbarContext.status === 'brush' ||
+            sampleDetailsToolbarContext.status === 'slic'
         ) {
             setLastCreatedAnnotationId(null);
             if (sampleDetailsToolbarContext.status === 'bounding-box') {
@@ -111,6 +116,10 @@
                 const typeToSet = annotationLabelContext.annotationType ?? lastSegmentationType;
                 lastSegmentationType = typeToSet;
                 setAnnotationType(typeToSet);
+            } else if (sampleDetailsToolbarContext.status === 'slic') {
+                lastSegmentationType = AnnotationType.INSTANCE_SEGMENTATION;
+                setAnnotationType(AnnotationType.INSTANCE_SEGMENTATION);
+                setBrushMode('brush');
             }
         }
         if (sampleDetailsToolbarContext.status === 'drag') {
@@ -154,6 +163,24 @@
         if (!annotationLabelContext.isOnAnnotationDetailsView) setAnnotationId(null);
         setLastCreatedAnnotationId(null);
     };
+
+    const onClickSlic = () => {
+        if (!showSlicTool) return;
+
+        const shouldKeepSelectedAnnotation =
+            annotationLabelContext.annotationId != null &&
+            (annotationLabelContext.annotationType === AnnotationType.INSTANCE_SEGMENTATION ||
+                (sampleDetailsToolbarContext.status === 'brush' &&
+                    lastSegmentationType === AnnotationType.INSTANCE_SEGMENTATION));
+
+        setStatus('slic');
+        lastSegmentationType = AnnotationType.INSTANCE_SEGMENTATION;
+        setAnnotationType(lastSegmentationType);
+        if (!annotationLabelContext.isOnAnnotationDetailsView && !shouldKeepSelectedAnnotation) {
+            setAnnotationId(null);
+        }
+        setLastCreatedAnnotationId(null);
+    };
 </script>
 
 <div class="pointer-events-none absolute left-1 top-1 z-20">
@@ -193,6 +220,18 @@
                 action="draw"
             >
                 <BoundingBoxToolbarButton onclick={onClickBoundingBox} />
+            </SampleDetailsToolbarTooltip>
+        {/if}
+        {#if showSlicTool}
+            <SampleDetailsToolbarTooltip
+                label="AI-Assisted Labeling"
+                action="toggle superpixels"
+                hint="Computes SLIC superpixels for click-to-toggle mask edits"
+            >
+                <SlicToolbarButton
+                    onclick={onClickSlic}
+                    isActive={sampleDetailsToolbarContext.status === 'slic'}
+                />
             </SampleDetailsToolbarTooltip>
         {/if}
         {#if showSegmentationTool}

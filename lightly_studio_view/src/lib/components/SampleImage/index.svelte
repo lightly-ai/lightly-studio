@@ -1,8 +1,7 @@
 <script lang="ts">
-    import { PUBLIC_SAMPLES_URL } from '$env/static/public';
     import { useGlobalStorage } from '$lib/hooks/useGlobalStorage';
     import type { ImageSample } from '$lib/services/types';
-    import { cn } from '$lib/utils';
+    import { cn, getImageURLById } from '$lib/utils';
     import { onMount } from 'svelte';
     import type { SampleImageObjectFit } from './types';
 
@@ -33,7 +32,7 @@
 </script>
 
 <img
-    src={`${PUBLIC_SAMPLES_URL}/sample/${sample.sample_id}${collectionVersion ? `?v=${collectionVersion}` : ''}`}
+    src={getImageURLById(sample.sample_id, collectionVersion)}
     alt={sample.file_path_abs}
     class={cn('sample-image rounded-lg bg-black', className)}
     style="--object-fit: {objectFit}"
