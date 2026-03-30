@@ -208,6 +208,11 @@ def test_count_image_annotations_by_collection_with_image_filter(
         collection_id=collection_id,
         file_path_abs="/path/to/sample2.png",
     )
+    image_3 = create_image(
+        session=db_session,
+        collection_id=collection_id,
+        file_path_abs="/path/to/sample3.png",
+    )
 
     dog_label = create_annotation_label(
         session=db_session,
@@ -223,12 +228,6 @@ def test_count_image_annotations_by_collection_with_image_filter(
     create_annotation(
         session=db_session,
         sample_id=image_1.sample_id,
-        annotation_label_id=dog_label.annotation_label_id,
-        collection_id=collection_id,
-    )
-    create_annotation(
-        session=db_session,
-        sample_id=image_1.sample_id,
         annotation_label_id=cat_label.annotation_label_id,
         collection_id=collection_id,
     )
@@ -238,12 +237,22 @@ def test_count_image_annotations_by_collection_with_image_filter(
         annotation_label_id=dog_label.annotation_label_id,
         collection_id=collection_id,
     )
+    create_annotation(
+        session=db_session,
+        sample_id=image_3.sample_id,
+        annotation_label_id=dog_label.annotation_label_id,
+        collection_id=collection_id,
+    )
 
     response = test_client.post(
         f"/api/collections/{collection_id}/images/annotations/count",
         json={
             "filter": {
-                "annotation_filter": {"annotation_label_ids": [str(dog_label.annotation_label_id)]}
+                "sample_filter": {
+                    "annotations_filter": {
+                        "annotation_label_ids": [str(dog_label.annotation_label_id)]
+                    }
+                }
             }
         },
     )
@@ -252,7 +261,7 @@ def test_count_image_annotations_by_collection_with_image_filter(
     result = response.json()
 
     assert result == [
-        {"label_name": "cat", "current_count": 1, "total_count": 1},
+        {"label_name": "cat", "current_count": 0, "total_count": 1},
         {"label_name": "dog", "current_count": 2, "total_count": 2},
     ]
 
