@@ -234,6 +234,9 @@ export async function measureElementRendering(page: Page, locator: Locator): Pro
  *
  * @param page - Playwright Page object
  * @param preset - Network preset name from NETWORK_PRESETS (e.g., 'Fast4G')
+ *
+ * @example
+ * await setNetworkThrottling(page, 'Fast4G');
  */
 export async function setNetworkThrottling(page: Page, preset: NetworkPreset): Promise<void> {
     const client = await page.context().newCDPSession(page);
