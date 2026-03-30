@@ -52,6 +52,7 @@ from lightly_studio.core.dataset_query import AND, OR, NOT, OrderByField, ImageS
 
 # QUERY: Define a lazy query, composed by: match, order_by, slice
 # match: Find all samples that need labeling plus small samples (< 500px) that haven't been reviewed.
+# For video datasets: use VideoSampleField instead of ImageSampleField.
 query = dataset.match(
     OR(
         AND(
@@ -86,10 +87,10 @@ samples = query.to_list()
 
 # Export all resulting samples in coco format
 dataset.export(query).to_coco_object_detections()
+# For video datasets: export in a video format
+# dataset.export(query).to_youtube_vis_instance_segmentation()
 
 ```
-
-For video datasets, use `VideoSampleField` instead of `ImageSampleField`. The query-building API is otherwise the same.
 
 ### Reference
 
