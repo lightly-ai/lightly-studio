@@ -34,10 +34,7 @@ vi.mock('../useTags/useTags', () => ({
     })
 }));
 
-import {
-    useSelectedAnnotationsFilter,
-    useAnnotationsFilter
-} from './useAnnotationsFilter';
+import { useSelectedAnnotationsFilter, useAnnotationsFilter } from './useAnnotationsFilter';
 
 describe('useSelectedAnnotationsFilter', () => {
     beforeEach(() => {
@@ -75,9 +72,7 @@ describe('useSelectedAnnotationsFilter', () => {
     it('returns selectedAnnotationFilterIdsArray as string[]', () => {
         selectedAnnotationFilterIds.set(new Set(['a', 'b']));
         const { selectedAnnotationFilterIdsArray } = useSelectedAnnotationsFilter();
-        expect(get(selectedAnnotationFilterIdsArray)).toEqual(
-            expect.arrayContaining(['a', 'b'])
-        );
+        expect(get(selectedAnnotationFilterIdsArray)).toEqual(expect.arrayContaining(['a', 'b']));
     });
 
     it('toggleSelectedAnnotationFilterId adds and removes ids', () => {

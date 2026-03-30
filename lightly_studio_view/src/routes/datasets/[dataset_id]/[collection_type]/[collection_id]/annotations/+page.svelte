@@ -29,7 +29,4 @@
     });
 </script>
 
-<AnnotationsGrid
-    itemWidth={$sampleSize.width}
-    collection_id={collectionId}
-/>
+<AnnotationsGrid itemWidth={$sampleSize.width} collection_id={collectionId} />

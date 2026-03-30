@@ -36,9 +36,7 @@ export function useSelectedAnnotationsFilter(collectionId?: string) {
     );
 
     const annotationFilter: Readable<AnnotationsFilter | undefined> = derived(
-        tagsSelected
-            ? [selectedAnnotationFilterIds, tagsSelected]
-            : [selectedAnnotationFilterIds],
+        tagsSelected ? [selectedAnnotationFilterIds, tagsSelected] : [selectedAnnotationFilterIds],
         (stores) => {
             const $set = stores[0] as Set<string>;
             const $tags = stores[1] as Set<string> | undefined;

@@ -60,10 +60,8 @@
     const { dimensionsValues: dimensions } = useDimensions();
     const { filterParams } = useImageFilters();
     const { filterParams: videoFilterParams } = useVideoFilters();
-    const {
-        annotationLabelIds: annotationLabelIdsStore,
-        annotationFilter: annotationFilterStore
-    } = useSelectedAnnotationsFilter();
+    const { annotationLabelIds: annotationLabelIdsStore, annotationFilter: annotationFilterStore } =
+        useSelectedAnnotationsFilter();
 
     const annotationLabelIds = $derived($annotationLabelIdsStore);
     const annotationFilter = $derived($annotationFilterStore);

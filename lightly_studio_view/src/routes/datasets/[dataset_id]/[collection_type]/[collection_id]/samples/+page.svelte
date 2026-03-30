@@ -28,8 +28,4 @@
     });
 </script>
 
-<Samples
-    sampleWidth={$sampleSize.width}
-    {textEmbedding}
-    {collection_id}
-/>
+<Samples sampleWidth={$sampleSize.width} {textEmbedding} {collection_id} />
