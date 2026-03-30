@@ -20,6 +20,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Added `ImageSample.add_captions` method, as well as `VideoSample.add_captions`.
 - Added `SampleMetadata.update` method, allowing batch metadata updates of samples.
 - Added `lightly-studio` command line command. Use `lightly-studio gui` to start the GUI.
+- Added `Dataset.update_metadata` method to update metadata of multiple samples at once.
 
 ### Changed
 

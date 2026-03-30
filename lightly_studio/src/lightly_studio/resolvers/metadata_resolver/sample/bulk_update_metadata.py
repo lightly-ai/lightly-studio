@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from collections.abc import Iterable, Mapping
 from typing import Any
 from uuid import UUID
 
@@ -12,7 +13,7 @@ from lightly_studio.models.metadata import SampleMetadataTable
 
 def bulk_update_metadata(
     session: Session,
-    sample_metadata: list[tuple[UUID, dict[str, Any]]],
+    sample_metadata: Iterable[tuple[UUID, Mapping[str, Any]]],
 ) -> None:
     """Bulk insert or update metadata for multiple samples.
 
