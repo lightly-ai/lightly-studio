@@ -19,7 +19,7 @@ export const cocoDataset = {
     totalLabels: 71,
 
     /** Default page size when loading samples */
-    defaultPageSize: 50,
+    defaultPageSize: 32,
 
     /** Filename of the first sample in the dataset */
     firstSampleName: '000000001732.jpg',

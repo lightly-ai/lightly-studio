@@ -103,7 +103,7 @@ class Sample(ABC):
 
         # Get or create the tag for this dataset.
         tag = tag_resolver.get_or_create_sample_tag_by_name(
-            session=session, collection_id=self.dataset_id, tag_name=name
+            session=session, collection_id=self.collection_id, tag_name=name
         )
 
         # Add the tag to the sample if not already associated.
@@ -122,7 +122,7 @@ class Sample(ABC):
 
         # Find the tag by name for this dataset.
         existing_tag = tag_resolver.get_by_name(
-            session=session, tag_name=name, collection_id=self.dataset_id
+            session=session, tag_name=name, collection_id=self.collection_id
         )
 
         # Remove the tag from the sample if it exists and is associated
@@ -171,11 +171,11 @@ class Sample(ABC):
         return self._metadata
 
     @property
-    def dataset_id(self) -> UUID:
-        """Get the dataset ID this sample belongs to.
+    def collection_id(self) -> UUID:
+        """Get the collection ID this sample belongs to.
 
         Returns:
-            The UUID of the dataset.
+            The UUID of the collection.
         """
         return self.sample_table.collection_id
 
@@ -196,7 +196,7 @@ class Sample(ABC):
         session = self.get_object_session()
         caption_resolver.create_many(
             session=session,
-            parent_collection_id=self.dataset_id,
+            parent_collection_id=self.collection_id,
             captions=[
                 CaptionCreate(
                     parent_sample_id=self.sample_id,
@@ -229,7 +229,7 @@ class Sample(ABC):
         if captions:
             caption_resolver.create_many(
                 session=session,
-                parent_collection_id=self.dataset_id,
+                parent_collection_id=self.collection_id,
                 captions=[
                     CaptionCreate(parent_sample_id=self.sample_id, text=text) for text in captions
                 ],
@@ -282,14 +282,14 @@ class Sample(ABC):
         annotation_creates = [
             annotation.to_annotation_create(
                 session=session,
-                dataset_id=self.dataset_id,
+                root_collection_id=self.collection_id,
                 parent_sample_id=self.sample_id,
             )
             for annotation in annotations
         ]
         annotation_resolver.create_many(
             session=session,
-            parent_collection_id=self.dataset_id,
+            parent_collection_id=self.collection_id,
             annotations=annotation_creates,
         )
 

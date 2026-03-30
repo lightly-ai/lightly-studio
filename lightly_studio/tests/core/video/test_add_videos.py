@@ -34,6 +34,7 @@ from lightly_studio.models.video import VideoCreate
 from lightly_studio.resolvers import (
     annotation_resolver,
     collection_resolver,
+    dataset_resolver,
     video_frame_resolver,
     video_resolver,
 )
@@ -58,9 +59,9 @@ def test_load_into_collection_from_paths(db_session: Session, tmp_path: Path) ->
         num_frames=30,
         fps=2,
     )
-    video_sample_ids, frame_sample_ids = add_videos.load_into_dataset_from_paths(
+    video_sample_ids, frame_sample_ids = add_videos.load_into_collection_from_paths(
         session=db_session,
-        dataset_id=collection.collection_id,
+        collection_id=collection.collection_id,
         video_paths=[str(first_video_path), str(second_video_path)],
     )
     assert len(video_sample_ids) == 2
@@ -83,9 +84,9 @@ def test_load_into_collection_from_paths(db_session: Session, tmp_path: Path) ->
 
     # Check the correct collection hierarchy was created. There should be one extra collection
     # created with the video frames.
-    collection_hierarchy = collection_resolver.get_hierarchy(
+    collection_hierarchy = dataset_resolver.get_hierarchy(
         session=db_session,
-        root_collection_id=collection.collection_id,
+        dataset_id=collection.dataset_id,
     )
     assert len(collection_hierarchy) == 2
     assert collection_hierarchy[0].sample_type == SampleType.VIDEO
@@ -251,7 +252,7 @@ def test_load_video_annotations_from_labelformat(
     collection = create_collection(db_session, sample_type=SampleType.VIDEO)
     _, frame_sample_ids = add_videos.load_video_annotations_from_labelformat(
         session=db_session,
-        dataset_id=collection.collection_id,
+        collection_id=collection.collection_id,
         video_paths=video_paths,
         input_labels=input_labels,
         input_labels_paths_root=tmp_path,
@@ -321,7 +322,7 @@ def test_load_video_annotations_from_labelformat__multiple_videos(
     collection = create_collection(db_session, sample_type=SampleType.VIDEO)
     add_videos.load_video_annotations_from_labelformat(
         session=db_session,
-        dataset_id=collection.collection_id,
+        collection_id=collection.collection_id,
         video_paths=video_paths,
         input_labels=input_labels,
         input_labels_paths_root=tmp_path,
@@ -385,7 +386,7 @@ def test_load_video_annotations_from_labelformat__same_name_in_different_folders
     collection = create_collection(db_session, sample_type=SampleType.VIDEO)
     created_video_sample_ids, _ = add_videos.load_video_annotations_from_labelformat(
         session=db_session,
-        dataset_id=collection.collection_id,
+        collection_id=collection.collection_id,
         video_paths=video_paths,
         input_labels=input_labels,
         input_labels_paths_root=tmp_path,
@@ -527,7 +528,7 @@ def test_load_video_annotations_from_labelformat__raises_on_frame_mismatch(
     with pytest.raises(ValueError, match="Number of frames in annotation"):
         add_videos.load_video_annotations_from_labelformat(
             session=db_session,
-            dataset_id=collection.collection_id,
+            collection_id=collection.collection_id,
             video_paths=video_paths,
             input_labels=input_labels,
             input_labels_paths_root=tmp_path,
@@ -565,7 +566,7 @@ def test_load_video_annotations_from_labelformat__raises_on_missing_video(
     with pytest.raises(FileNotFoundError, match="No video file found"):
         add_videos.load_video_annotations_from_labelformat(
             session=db_session,
-            dataset_id=collection.collection_id,
+            collection_id=collection.collection_id,
             video_paths=video_paths,
             input_labels=input_labels,
             input_labels_paths_root=tmp_path,

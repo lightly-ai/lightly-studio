@@ -38,7 +38,7 @@ class TestDataset:
         assert dataset._inner.name == "test_dataset"
         samples = image_resolver.get_all_by_collection_id(
             session=dataset.session,
-            collection_id=dataset.dataset_id,
+            collection_id=dataset.collection_id,
         ).samples
         assert len(samples) == 0
 
@@ -73,7 +73,7 @@ class TestDataset:
         # Load an existing dataset
         loaded_dataset1 = ImageDataset.load(name="dataset1")
         assert loaded_dataset1.name == "dataset1"
-        assert loaded_dataset1.dataset_id == dataset1.dataset_id
+        assert loaded_dataset1.collection_id == dataset1.collection_id
 
         # Load non-existent dataset
         with pytest.raises(ValueError, match="Dataset with name 'non_existent' not found"):
@@ -89,7 +89,7 @@ class TestDataset:
 
         # Load the dataset with the default name
         loaded_dataset1 = ImageDataset.load()
-        assert loaded_dataset1.dataset_id == dataset1.dataset_id
+        assert loaded_dataset1.collection_id == dataset1.collection_id
 
     def test_load_or_create(
         self,
@@ -100,12 +100,12 @@ class TestDataset:
 
         # Load existing dataset
         loaded_dataset1 = ImageDataset.load_or_create(name="dataset1")
-        assert loaded_dataset1.dataset_id == dataset1.dataset_id
+        assert loaded_dataset1.collection_id == dataset1.collection_id
 
         # Create new dataset
         new_dataset = ImageDataset.load_or_create(name="new_dataset")
         assert new_dataset.name == "new_dataset"
-        assert new_dataset.dataset_id != dataset1.dataset_id
+        assert new_dataset.collection_id != dataset1.collection_id
 
     def test_load_or_create__default_name(
         self,
@@ -117,7 +117,7 @@ class TestDataset:
 
         # Load existing dataset with default name
         loaded_dataset1 = ImageDataset.load_or_create()
-        assert loaded_dataset1.dataset_id == dataset1.dataset_id
+        assert loaded_dataset1.collection_id == dataset1.collection_id
 
     def test_load_or_create__sample_type(
         self,
@@ -147,7 +147,9 @@ class TestDataset:
             ImageStub(path="/path/to/image1.jpg", width=640, height=480),
             ImageStub(path="/path/to/image2.jpg", width=1024, height=768),
         ]
-        create_images(db_session=dataset.session, collection_id=dataset.dataset_id, images=images)
+        create_images(
+            db_session=dataset.session, collection_id=dataset.collection_id, images=images
+        )
 
         # Collect samples using the iterator interface
         collected_samples = sorted(iter(dataset), key=lambda sample: sample.file_path_abs)
@@ -172,14 +174,14 @@ class TestDataset:
 
         image1 = create_image(
             session=dataset.session,
-            collection_id=dataset.dataset_id,
+            collection_id=dataset.collection_id,
             file_path_abs="/path/to/image1.jpg",
             width=640,
             height=480,
         )
         image2 = create_image(
             session=dataset.session,
-            collection_id=dataset.dataset_id,
+            collection_id=dataset.collection_id,
             file_path_abs="/path/to/image2.jpg",
             width=640,
             height=480,
@@ -202,7 +204,7 @@ class TestDataset:
 
         image = create_image(
             session=dataset.session,
-            collection_id=dataset.dataset_id,
+            collection_id=dataset.collection_id,
             file_path_abs="/path/to/image1.jpg",
             width=640,
             height=480,
@@ -232,12 +234,12 @@ class TestDataset:
         dataset = ImageDataset.create(name="test_dataset")
         image1 = create_image(
             session=dataset.session,
-            collection_id=dataset.dataset_id,
+            collection_id=dataset.collection_id,
             file_path_abs="/path/to/image1.jpg",
         )
         create_image(
             session=dataset.session,
-            collection_id=dataset.dataset_id,
+            collection_id=dataset.collection_id,
             file_path_abs="/path/to/image2.jpg",
         )
         samples = dataset.query().match(ImageSampleField.file_name == "image1.jpg").to_list()
@@ -251,12 +253,12 @@ class TestDataset:
         dataset = ImageDataset.create(name="test_dataset")
         image1 = create_image(
             session=dataset.session,
-            collection_id=dataset.dataset_id,
+            collection_id=dataset.collection_id,
             file_path_abs="/path/to/image1.jpg",
         )
         create_image(
             session=dataset.session,
-            collection_id=dataset.dataset_id,
+            collection_id=dataset.collection_id,
             file_path_abs="/path/to/image2.jpg",
         )
         samples = dataset.match(ImageSampleField.file_name == "image1.jpg").to_list()
@@ -270,17 +272,17 @@ class TestDataset:
         dataset = ImageDataset.create(name="test_dataset")
         create_image(
             session=dataset.session,
-            collection_id=dataset.dataset_id,
+            collection_id=dataset.collection_id,
             file_path_abs="/path/to/zebra.jpg",
         )
         create_image(
             session=dataset.session,
-            collection_id=dataset.dataset_id,
+            collection_id=dataset.collection_id,
             file_path_abs="/path/to/alpha.jpg",
         )
         create_image(
             session=dataset.session,
-            collection_id=dataset.dataset_id,
+            collection_id=dataset.collection_id,
             file_path_abs="/path/to/beta.jpg",
         )
 
@@ -304,17 +306,17 @@ class TestDataset:
         dataset = ImageDataset.create(name="test_dataset")
         create_image(
             session=dataset.session,
-            collection_id=dataset.dataset_id,
+            collection_id=dataset.collection_id,
             file_path_abs="/path/to/zebra.jpg",
         )
         create_image(
             session=dataset.session,
-            collection_id=dataset.dataset_id,
+            collection_id=dataset.collection_id,
             file_path_abs="/path/to/alpha.jpg",
         )
         create_image(
             session=dataset.session,
-            collection_id=dataset.dataset_id,
+            collection_id=dataset.collection_id,
             file_path_abs="/path/to/beta.jpg",
         )
         result_samples = dataset.order_by(OrderByField(ImageSampleField.file_name).desc()).to_list()
@@ -332,17 +334,17 @@ class TestDataset:
         dataset = ImageDataset.create(name="test_dataset")
         image = create_image(
             session=dataset.session,
-            collection_id=dataset.dataset_id,
+            collection_id=dataset.collection_id,
             file_path_abs="/path/to/zebra.jpg",
         )
         zebra_label = create_annotation_label(
             session=dataset.session,
-            root_collection_id=dataset.dataset_id,
+            root_collection_id=dataset.collection_id,
             label_name="zebra",
         )
         create_annotation(
             session=dataset.session,
-            collection_id=dataset.dataset_id,
+            collection_id=dataset.collection_id,
             sample_id=image.sample_id,
             annotation_label_id=zebra_label.annotation_label_id,
         )
@@ -362,12 +364,12 @@ class TestDataset:
         dataset = ImageDataset.create(name="test_dataset")
         embedding_model = create_embedding_model(
             session=dataset.session,
-            collection_id=dataset.dataset_id,
+            collection_id=dataset.collection_id,
             embedding_model_name="example_embedding_model",
         )
         create_samples_with_embeddings(
             session=dataset.session,
-            collection_id=dataset.dataset_id,
+            collection_id=dataset.collection_id,
             embedding_model_id=embedding_model.embedding_model_id,
             images_and_embeddings=[
                 (ImageStub(path="sample0.jpg"), [1.0, 0.0, 0.0]),
@@ -389,12 +391,12 @@ class TestDataset:
         dataset = ImageDataset.create(name="test_dataset")
         embedding_model = create_embedding_model(
             session=dataset.session,
-            collection_id=dataset.dataset_id,
+            collection_id=dataset.collection_id,
             embedding_model_name="example_embedding_model",
         )
         create_samples_with_embeddings(
             session=dataset.session,
-            collection_id=dataset.dataset_id,
+            collection_id=dataset.collection_id,
             embedding_model_id=embedding_model.embedding_model_id,
             images_and_embeddings=[
                 (ImageStub(path="img0.jpg"), [1.0, 0.0, 0.0]),
@@ -406,7 +408,7 @@ class TestDataset:
 
         samples = list(dataset.query())
         query_tag = create_tag(
-            session=dataset.session, collection_id=dataset.dataset_id, tag_name="query"
+            session=dataset.session, collection_id=dataset.collection_id, tag_name="query"
         )
         tag_resolver.add_sample_ids_to_tag_id(
             session=dataset.session,

@@ -55,7 +55,7 @@ MAX_EXAMPLE_PATHS_TO_SHOW = 5
 class _AnnotationProcessingContext:
     """Context for processing annotations for a single sample."""
 
-    dataset_id: UUID
+    collection_id: UUID
     sample_id: UUID
     label_map: dict[int, UUID]
 
@@ -136,7 +136,7 @@ def load_into_dataset_from_paths(
 
     log_loading_results(
         session=session,
-        dataset_id=root_collection_id,
+        collection_id=root_collection_id,
         logging_context=logging_context,
         print_summary=show_progress,
     )
@@ -145,7 +145,7 @@ def load_into_dataset_from_paths(
 
 def load_into_dataset_from_labelformat(
     session: Session,
-    dataset_id: UUID,
+    root_collection_id: UUID,
     input_labels: ObjectDetectionInput | InstanceSegmentationInput,
     images_path: PathLike,
     annotation_type: AnnotationType | None = None,
@@ -154,7 +154,7 @@ def load_into_dataset_from_labelformat(
 
     Args:
         session: The database session.
-        dataset_id: The ID of the dataset to load samples into.
+        root_collection_id: The ID of the root collection to load samples into.
         input_labels: The labelformat input containing images and annotations.
         images_path: The path to the directory containing the images.
         annotation_type: The type of annotations to store in the database. If None,
@@ -169,14 +169,14 @@ def load_into_dataset_from_labelformat(
     logging_context = LoadingLoggingContext(
         n_samples_to_be_inserted=sum(1 for _ in input_labels.get_labels()),
         n_samples_before_loading=sample_resolver.count_by_collection_id(
-            session=session, collection_id=dataset_id
+            session=session, collection_id=root_collection_id
         ),
     )
 
     # Create label mapping
     label_map = _create_label_map(
         session=session,
-        dataset_id=dataset_id,
+        root_collection_id=root_collection_id,
         input_labels=input_labels,
     )
 
@@ -215,7 +215,7 @@ def load_into_dataset_from_labelformat(
 
         if len(samples_to_create) >= SAMPLE_BATCH_SIZE:
             created_path_to_id, paths_not_inserted = _create_batch_samples(
-                session=session, collection_id=dataset_id, samples=samples_to_create
+                session=session, collection_id=root_collection_id, samples=samples_to_create
             )
             created_sample_ids.extend(created_path_to_id.values())
             logging_context.update_example_paths(paths_not_inserted)
@@ -223,7 +223,7 @@ def load_into_dataset_from_labelformat(
                 session=session,
                 created_path_to_id=created_path_to_id,
                 path_to_anno_data=path_to_anno_data,
-                dataset_id=dataset_id,
+                collection_id=root_collection_id,
                 label_map=label_map,
             )
             samples_to_create.clear()
@@ -231,7 +231,7 @@ def load_into_dataset_from_labelformat(
 
     if samples_to_create:
         created_path_to_id, paths_not_inserted = _create_batch_samples(
-            session=session, collection_id=dataset_id, samples=samples_to_create
+            session=session, collection_id=root_collection_id, samples=samples_to_create
         )
         created_sample_ids.extend(created_path_to_id.values())
         logging_context.update_example_paths(paths_not_inserted)
@@ -239,19 +239,22 @@ def load_into_dataset_from_labelformat(
             session=session,
             created_path_to_id=created_path_to_id,
             path_to_anno_data=path_to_anno_data,
-            dataset_id=dataset_id,
+            collection_id=root_collection_id,
             label_map=label_map,
         )
 
     log_loading_results(
-        session=session, dataset_id=dataset_id, logging_context=logging_context, print_summary=True
+        session=session,
+        collection_id=root_collection_id,
+        logging_context=logging_context,
+        print_summary=True,
     )
     return created_sample_ids
 
 
 def load_into_dataset_from_coco_captions(
     session: Session,
-    dataset_id: UUID,
+    root_collection_id: UUID,
     annotations_json: Path,
     images_path: Path,
 ) -> list[UUID]:
@@ -259,7 +262,7 @@ def load_into_dataset_from_coco_captions(
 
     Args:
         session: Database session used for resolver operations.
-        dataset_id: Identifier of the dataset that receives the samples.
+        root_collection_id: Identifier of the root collection that receives the samples.
         annotations_json: Path to the COCO captions annotations file.
         images_path: Directory containing the referenced images.
 
@@ -288,7 +291,7 @@ def load_into_dataset_from_coco_captions(
     logging_context = LoadingLoggingContext(
         n_samples_to_be_inserted=len(images),
         n_samples_before_loading=sample_resolver.count_by_collection_id(
-            session=session, collection_id=dataset_id
+            session=session, collection_id=root_collection_id
         ),
     )
 
@@ -316,13 +319,13 @@ def load_into_dataset_from_coco_captions(
 
         if len(samples_to_create) >= SAMPLE_BATCH_SIZE:
             created_path_to_id, paths_not_inserted = _create_batch_samples(
-                session=session, collection_id=dataset_id, samples=samples_to_create
+                session=session, collection_id=root_collection_id, samples=samples_to_create
             )
             created_sample_ids.extend(created_path_to_id.values())
             logging_context.update_example_paths(paths_not_inserted)
             _process_batch_captions(
                 session=session,
-                dataset_id=dataset_id,
+                collection_id=root_collection_id,
                 created_path_to_id=created_path_to_id,
                 path_to_captions=path_to_captions,
             )
@@ -331,19 +334,22 @@ def load_into_dataset_from_coco_captions(
 
     if samples_to_create:
         created_path_to_id, paths_not_inserted = _create_batch_samples(
-            session=session, collection_id=dataset_id, samples=samples_to_create
+            session=session, collection_id=root_collection_id, samples=samples_to_create
         )
         created_sample_ids.extend(created_path_to_id.values())
         logging_context.update_example_paths(paths_not_inserted)
         _process_batch_captions(
             session=session,
-            dataset_id=dataset_id,
+            collection_id=root_collection_id,
             created_path_to_id=created_path_to_id,
             path_to_captions=path_to_captions,
         )
 
     log_loading_results(
-        session=session, dataset_id=dataset_id, logging_context=logging_context, print_summary=True
+        session=session,
+        collection_id=root_collection_id,
+        logging_context=logging_context,
+        print_summary=True,
     )
     return created_sample_ids
 
@@ -430,19 +436,19 @@ def _create_batch_samples(
 
 def _create_label_map(
     session: Session,
-    dataset_id: UUID,
+    root_collection_id: UUID,
     input_labels: ObjectDetectionInput | InstanceSegmentationInput,
 ) -> dict[int, UUID]:
     """Create a mapping of category IDs to annotation label IDs.
 
     Args:
         session: The database session.
-        dataset_id: The ID of the root collection the labels belong to.
+        root_collection_id: The ID of the root collection the labels belong to.
         input_labels: The labelformat input containing the categories.
     """
     return labelformat_helpers.create_label_map(
         session=session,
-        root_collection_id=dataset_id,
+        root_collection_id=root_collection_id,
         input_labels=input_labels,
     )
 
@@ -503,7 +509,7 @@ def _process_batch_annotations(
     session: Session,
     created_path_to_id: Mapping[str, UUID],
     path_to_anno_data: Mapping[str, AnnotationImageData],
-    dataset_id: UUID,
+    collection_id: UUID,
     label_map: dict[int, UUID],
 ) -> None:
     """Process annotations for a batch of samples."""
@@ -516,7 +522,7 @@ def _process_batch_annotations(
         anno_data = path_to_anno_data[sample_path]
 
         context = _AnnotationProcessingContext(
-            dataset_id=dataset_id,
+            collection_id=collection_id,
             sample_id=sample_id,
             label_map=label_map,
         )
@@ -538,13 +544,13 @@ def _process_batch_annotations(
         annotations_to_create.extend(new_annotations)
 
     annotation_resolver.create_many(
-        session=session, parent_collection_id=dataset_id, annotations=annotations_to_create
+        session=session, parent_collection_id=collection_id, annotations=annotations_to_create
     )
 
 
 def _process_batch_captions(
     session: Session,
-    dataset_id: UUID,
+    collection_id: UUID,
     created_path_to_id: Mapping[str, UUID],
     path_to_captions: Mapping[str, list[str]],
 ) -> None:
@@ -567,5 +573,5 @@ def _process_batch_captions(
             captions_to_create.append(caption)
 
     caption_resolver.create_many(
-        session=session, parent_collection_id=dataset_id, captions=captions_to_create
+        session=session, parent_collection_id=collection_id, captions=captions_to_create
     )

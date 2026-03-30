@@ -41,7 +41,7 @@ def test_connect__success(mocker: MockerFixture, patch_db_connect: MockType) -> 
         timeout=10,
     )
     patch_db_connect.assert_called_once_with(
-        engine_url="postgresql://lightly:secret@10.0.0.5:5433/lightly_studio"
+        db_url="postgresql://lightly:secret@10.0.0.5:5433/lightly_studio"
     )
 
 

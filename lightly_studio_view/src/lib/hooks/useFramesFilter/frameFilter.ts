@@ -43,7 +43,6 @@ export const getFrameFilter = (params: VideoFrameFilterParams | null): VideoFram
     }
 
     const sampleFilter: SampleFilter = {};
-    sampleFilter.collection_id = params.collection_id;
 
     const sampleIds = params.filters?.sample_ids;
     if (sampleIds && sampleIds.length > 0) {

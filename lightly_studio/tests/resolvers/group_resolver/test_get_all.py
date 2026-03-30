@@ -1,6 +1,5 @@
 """Tests for get_all function."""
 
-import pytest
 from sqlmodel import Session
 
 from lightly_studio.api.routes.api.validators import Paginated
@@ -39,8 +38,8 @@ def test_get_all__basic(db_session: Session) -> None:
 
     result = group_resolver.get_all(
         session=db_session,
+        collection_id=group_col.collection_id,
         pagination=None,
-        filters=GroupFilter(sample_filter=SampleFilter(collection_id=group_col.collection_id)),
     )
 
     assert len(result.samples) == 2
@@ -84,8 +83,8 @@ def test_get_all__with_pagination(db_session: Session) -> None:
 
     result = group_resolver.get_all(
         session=db_session,
+        collection_id=group_col.collection_id,
         pagination=Paginated(offset=0, limit=2),
-        filters=GroupFilter(sample_filter=SampleFilter(collection_id=group_col.collection_id)),
     )
 
     assert len(result.samples) == 2
@@ -133,10 +132,9 @@ def test_get_all__with_filters(db_session: Session) -> None:
 
     result = group_resolver.get_all(
         session=db_session,
+        collection_id=group_col.collection_id,
         pagination=None,
-        filters=GroupFilter(
-            sample_filter=SampleFilter(collection_id=group_col.collection_id, tag_ids=[tag.tag_id])
-        ),
+        filters=GroupFilter(sample_filter=SampleFilter(tag_ids=[tag.tag_id])),
     )
 
     assert len(result.samples) == 2
@@ -153,25 +151,13 @@ def test_get_all__empty(db_session: Session) -> None:
 
     result = group_resolver.get_all(
         session=db_session,
+        collection_id=group_col.collection_id,
         pagination=None,
-        filters=GroupFilter(sample_filter=SampleFilter(collection_id=group_col.collection_id)),
     )
 
     assert result.samples == []
     assert result.total_count == 0
     assert result.next_cursor is None
-
-
-def test_get_all__without_collection_id(db_session: Session) -> None:
-    """Test that request without collection_id raises an error."""
-    with pytest.raises(
-        ValueError, match=r"Collection ID must be provided in filters to fetch groups."
-    ):
-        group_resolver.get_all(
-            session=db_session,
-            pagination=None,
-            filters=GroupFilter(sample_filter=SampleFilter()),
-        )
 
 
 def test_get_all__sample_counts(db_session: Session) -> None:
@@ -220,8 +206,8 @@ def test_get_all__sample_counts(db_session: Session) -> None:
 
     result = group_resolver.get_all(
         session=db_session,
+        collection_id=group_col.collection_id,
         pagination=None,
-        filters=GroupFilter(sample_filter=SampleFilter(collection_id=group_col.collection_id)),
     )
 
     assert len(result.samples) == 3
