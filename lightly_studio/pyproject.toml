@@ -26,6 +26,7 @@ dependencies = [
     "pgvector>=0.4.0",
     "fastapi>=0.115.5",
     "fsspec>=2023.1.0",
+    "sqlalchemy-utils>=0.41.0",
     "sqlmodel>=0.0.22",
     "typing-extensions>=4.12.2",
     "uvicorn>=0.32.1",
@@ -127,6 +128,10 @@ ignore_missing_imports = true
 
 [[tool.mypy.overrides]]
 module = "pgvector.*"
+ignore_missing_imports = true
+
+[[tool.mypy.overrides]]
+module = "sqlalchemy_utils.*"
 ignore_missing_imports = true
 
 
