@@ -9,6 +9,7 @@ credentials, and delegates to ``db_manager.connect``.
 from __future__ import annotations
 
 import http
+import logging
 import os
 
 import requests
@@ -16,6 +17,8 @@ from pydantic import BaseModel, ValidationError
 
 from lightly_studio import db_manager
 from lightly_studio.dataset.env import LIGHTLY_STUDIO_API_URL, LIGHTLY_STUDIO_TOKEN
+
+logger = logging.getLogger(__name__)
 
 
 class _EnterpriseConnectResponse(BaseModel):
@@ -82,10 +85,10 @@ def connect(
 
     if config.cloud_credentials:
         os.environ.update(config.cloud_credentials)
-        print("Applied cloud credentials from LightlyStudio enterprise configuration.")
+        logger.info("Applied cloud credentials from LightlyStudio enterprise configuration.")
         for key, value in config.cloud_credentials.items():
-            masked = value if "ID" in key else "*" * len(value)
-            print(f"  {key}: {masked}")
+            masked = "*" * len(value)
+            logger.info(f"  {key}: {masked}")
 
     db_manager.connect(db_url=config.engine_url)
 
