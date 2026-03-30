@@ -45,6 +45,7 @@ For videos, the sidebar adds `Duration`. If the videos in the current view conta
 
 You can programmatically filter samples by attributes (e.g., image size, tags), sort them, and select subsets. This is useful for creating training/validation splits, finding specific samples, or exporting filtered data.
 
+Create a query object by combining `match`, `order_by` and `slice` (or `[start:end]`) calls. The query is composed lazily, it is executed against the database once it is consumed, e.g. by iterating over it or calling `add_tag`.
 
 ```py
 from lightly_studio.core.dataset_query import AND, OR, NOT, OrderByField, ImageSampleField
@@ -88,27 +89,7 @@ dataset.export(query).to_coco_object_detections()
 
 ```
 
-For video, use `VideoSampleField` instead. For example, the following code works for video.
-```py
-from lightly_studio.core.dataset_query import AND, OR, NOT, OrderByField, VideoSampleField
-
-# QUERY: Define a lazy query, composed by: match, order_by, slice
-# match: Find all samples that need labeling plus small samples (< 500px) that have small FPS.
-query = dataset.match(
-    OR(
-        AND(
-            VideoSampleField.width < 500,
-            NOT(VideoSampleField.fps >= 30)
-        ),
-        VideoSampleField.tags.contains("needs-labeling")
-    )
-)
-
-# order_by: Sort the samples by their width descending.
-query.order_by(
-    OrderByField(VideoSampleField.width).desc()
-)
-```
+For video datasets, use `VideoSampleField` instead of `ImageSampleField`. The query-building API is otherwise the same.
 
 ### Reference
 
