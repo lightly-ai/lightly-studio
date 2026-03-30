@@ -21,7 +21,6 @@
         VideoFrameItem
     } from '$lib/components';
 
-    const { data: dataProps } = $props();
     const collectionId = $derived(page.params.collection_id);
 
     const { metadataValues } = $derived(useMetadataFilters(collectionId));

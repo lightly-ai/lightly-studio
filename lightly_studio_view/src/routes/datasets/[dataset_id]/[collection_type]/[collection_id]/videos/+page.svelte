@@ -15,8 +15,6 @@
     import { get } from 'svelte/store';
     import { selectRangeByAnchor } from '$lib/utils/selectRangeByAnchor';
 
-    const { data: propsData } = $props();
-
     const collectionId = $derived($page.params.collection_id!);
     const { tagsSelected } = $derived.by(() =>
         useTags({

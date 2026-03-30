@@ -28,9 +28,10 @@ vi.mock('../useGlobalStorage', () => ({
     })
 }));
 
+const mockTagsSelected = writable<Set<string>>(new Set());
 vi.mock('../useTags/useTags', () => ({
     useTags: () => ({
-        tagsSelected: writable(new Set<string>())
+        tagsSelected: mockTagsSelected
     })
 }));
 
@@ -88,6 +89,20 @@ describe('useSelectedAnnotationsFilter', () => {
 
         clear();
         expect(clearSelectedAnnotationFilterIds).toHaveBeenCalled();
+    });
+
+    it('returns filter with only tag_ids when no labels selected but tags are selected', () => {
+        mockTagsSelected.set(new Set(['tag-1', 'tag-2']));
+        const { annotationFilter } = useSelectedAnnotationsFilter('some-collection-id');
+
+        const filter = get(annotationFilter);
+        expect(filter).toEqual({
+            filter_type: 'annotations',
+            tag_ids: expect.arrayContaining(['tag-1', 'tag-2'])
+        });
+        expect(filter?.annotation_label_ids).toBeUndefined();
+
+        mockTagsSelected.set(new Set());
     });
 });
 

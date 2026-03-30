@@ -41,14 +41,16 @@ export function useSelectedAnnotationsFilter(collectionId?: string) {
             const $set = stores[0] as Set<string>;
             const $tags = stores[1] as Set<string> | undefined;
 
-            if ($set.size === 0) {
+            if ($set.size === 0 && (!$tags || $tags.size === 0)) {
                 return undefined;
             }
 
             const filter: AnnotationsFilter = {
-                filter_type: 'annotations',
-                annotation_label_ids: Array.from($set)
+                filter_type: 'annotations'
             };
+            if ($set && $set.size > 0) {
+                filter.annotation_label_ids = Array.from($set);
+            }
 
             if ($tags && $tags.size > 0) {
                 filter.tag_ids = Array.from($tags);
