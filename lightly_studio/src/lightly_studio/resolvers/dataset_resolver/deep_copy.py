@@ -66,7 +66,7 @@ def deep_copy(
     Args:
         session: Database session.
         dataset_id: Dataset ID to copy.
-        copy_name: Name for the new root collection.
+        copy_name: Name for the new dataset.
 
     Returns:
         The newly created root collection.
