@@ -19,7 +19,7 @@ export const youtubeVisVideosDataset = {
     totalFrames: 50,
 
     /** Default page size when loading samples */
-    defaultPageSize: 30,
+    defaultPageSize: 32,
 
     /** Labels actively used in tests with their sample/frame counts */
     labels: {

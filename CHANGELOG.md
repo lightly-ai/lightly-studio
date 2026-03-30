@@ -24,6 +24,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 
 - Smarter font loading reduces initial download from 500kB to 150kB
+- Reduced grid page size to 32 items to improve grid view performance.
 - Added DatasetTable to the database model, databases from previous versions are incompatible with this one.
 - Improved the documentation structure.
 
@@ -34,6 +35,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Fixed
 
 - Speedup frontend by eliminating two redundant initial video list requests.
+- Fixed semantic text search in image and video grids so editing an active query no longer resets or clears the search unexpectedly.
 
 ### Security
 
