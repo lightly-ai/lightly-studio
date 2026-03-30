@@ -3,11 +3,13 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Any
 
+from pytest_mock import MockerFixture
 from sqlmodel import Session
 
+import lightly_studio.plugins.operator_registry as _registry_mod
 from lightly_studio.plugins.base_operator import BaseOperator, OperatorResult, OperatorStatus
 from lightly_studio.plugins.operator_context import ExecutionContext, OperatorScope
-from lightly_studio.plugins.operator_registry import OperatorRegistry
+from lightly_studio.plugins.operator_registry import ENTRY_POINT_GROUP, OperatorRegistry
 from lightly_studio.plugins.parameter import BaseParameter, BoolParameter, StringParameter
 from tests.helpers_resolvers import create_collection
 
@@ -92,6 +94,93 @@ def test_operator_registry__startup_all_continues_after_failure() -> None:
 
     assert failing.status == OperatorStatus.ERROR
     assert healthy.status == OperatorStatus.READY
+
+
+def _patch_entry_points(mocker: MockerFixture, eps: list[Any]) -> None:
+    """Patch ``entry_points`` to return *eps*."""
+
+    def _side_effect(group: str | None = None) -> Any:
+        if group is not None:
+            return eps
+        return {ENTRY_POINT_GROUP: eps}
+
+    mocker.patch.object(_registry_mod, "entry_points", side_effect=_side_effect)
+
+
+def test_operator_registry__discover_plugins_no_entry_points(
+    mocker: MockerFixture,
+) -> None:
+    _patch_entry_points(mocker, [])
+    registry = OperatorRegistry()
+    registry.discover_plugins()
+
+    assert registry.get_all_metadata() == []
+
+
+def test_operator_registry__discover_plugins_registers_valid_operator(
+    mocker: MockerFixture,
+) -> None:
+    ep = mocker.MagicMock()
+    ep.name = "test_plugin"
+    ep.value = "my_package:TestOp"
+    ep.load.return_value = TestOperator
+
+    _patch_entry_points(mocker, [ep])
+    registry = OperatorRegistry()
+    registry.discover_plugins()
+
+    metadata = registry.get_all_metadata()
+    assert len(metadata) == 1
+    assert metadata[0].name == "test operator"
+
+
+def test_operator_registry__discover_plugins_and_manual_register(
+    mocker: MockerFixture,
+) -> None:
+    ep = mocker.MagicMock()
+    ep.value = "my_package:TestOp"
+    ep.load.return_value = TestOperator
+
+    _patch_entry_points(mocker, [ep])
+    registry = OperatorRegistry()
+    registry.discover_plugins()
+
+    registry.register(operator=FailingStartupOperator())
+
+    metadata = registry.get_all_metadata()
+    assert len(metadata) == 2
+    assert metadata[0].name == "test operator"
+    assert metadata[1].name == "failing operator"
+
+
+def test_operator_registry__discover_plugins_skips_non_base_operator(
+    mocker: MockerFixture,
+) -> None:
+    ep = mocker.MagicMock()
+    ep.name = "bad_plugin"
+    ep.value = "my_package:NotAnOperator"
+    ep.load.return_value = lambda: "not an operator"
+
+    _patch_entry_points(mocker, [ep])
+    registry = OperatorRegistry()
+    registry.discover_plugins()
+
+    assert registry.get_all_metadata() == []
+
+
+def test_operator_registry__discover_plugins_skips_failing_entry_point(
+    mocker: MockerFixture,
+) -> None:
+    ep = mocker.MagicMock()
+    ep.name = "broken_plugin"
+    ep.value = "my_package:Broken"
+    ep.load.side_effect = ImportError("module not found")
+
+    _patch_entry_points(mocker, [ep])
+    registry = OperatorRegistry()
+    registry.discover_plugins()
+
+    assert registry.get_all_metadata() == []
 
 
 @dataclass

@@ -3,11 +3,12 @@ import { getAllFramesInfiniteOptions } from '$lib/api/lightly_studio_local/@tans
 import { createInfiniteQuery, useQueryClient } from '@tanstack/svelte-query';
 import { get, writable } from 'svelte/store';
 import type { VideoFrameFilter, VideoFrameView } from '$lib/api/lightly_studio_local/types.gen';
+import { GRID_PAGE_SIZE } from '$lib/constants';
 
 export const useFrames = (video_frame_collection_id: string, filter: VideoFrameFilter) => {
     const readCaptionsOptions = getAllFramesInfiniteOptions({
         path: { video_frame_collection_id },
-        query: { limit: 30 },
+        query: { limit: GRID_PAGE_SIZE },
         body: {
             filter
         }
