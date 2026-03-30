@@ -24,43 +24,30 @@ from lightly_studio.models.sample import SampleTable, SampleTagLinkTable
 from lightly_studio.models.sample_embedding import SampleEmbeddingTable
 from lightly_studio.models.tag import TagTable
 from lightly_studio.models.video import VideoFrameTable, VideoTable
-from lightly_studio.resolvers import collection_resolver, dataset_resolver
-from lightly_studio.resolvers.collection_resolver import (
-    table_coverage_utils,
-)
+from lightly_studio.resolvers import dataset_resolver
+from lightly_studio.resolvers.dataset_resolver import table_coverage_utils
 
 
 def delete_dataset(
     session: Session,
-    root_collection_id: UUID,
+    dataset_id: UUID,
 ) -> None:
-    """Delete a root collection with all related entities.
+    """Delete a dataset with all related entities.
 
-    This performs a complete delete of a root collection, removing all associated samples, tags,
+    This performs a complete delete of a dataset, removing all associated samples, tags,
     annotations, embeddings, metadata, etc.
 
     Args:
         session: Database session.
-        root_collection_id: Root collection ID to delete.
-
-    Raises:
-        ValueError: If the collection is not a root collection.
+        dataset_id: Dataset ID to delete.
     """
     # Ensure all tables are handled - fails if new tables were added without updating this function.
     table_coverage_utils.verify_table_coverage()
 
-    # Verify it's a root collection.
-    root = collection_resolver.get_by_id(session=session, collection_id=root_collection_id)
-    if root is None:
-        raise ValueError(f"Collection with ID {root_collection_id} not found.")
-    if root.parent_collection_id is not None:
-        raise ValueError("Only root collections can be deleted.")
-
-    dataset_id = root.dataset_id
-
     # Get the hierarchy and collect all IDs.
     hierarchy = dataset_resolver.get_hierarchy(session=session, dataset_id=dataset_id)
     collection_ids = [coll.collection_id for coll in hierarchy]
+    root_collection_id = collection_ids[0]
 
     # Collect all sample IDs from all collections.
     sample_ids = _get_sample_ids(session=session, collection_ids=collection_ids)

@@ -32,8 +32,8 @@ from lightly_studio.models.sample import SampleTable, SampleTagLinkTable
 from lightly_studio.models.sample_embedding import SampleEmbeddingTable
 from lightly_studio.models.tag import TagTable
 from lightly_studio.models.video import VideoFrameTable, VideoTable
-from lightly_studio.resolvers import collection_resolver, dataset_resolver
-from lightly_studio.resolvers.collection_resolver import table_coverage_utils
+from lightly_studio.resolvers import dataset_resolver
+from lightly_studio.resolvers.dataset_resolver import table_coverage_utils
 
 T = TypeVar("T", bound=SQLModel)
 
@@ -55,36 +55,29 @@ class DeepCopyContext:
 
 def deep_copy(
     session: Session,
-    root_collection_id: UUID,
+    dataset_id: UUID,
     copy_name: str,
 ) -> CollectionTable:
-    """Deep copy a root collection with all related entities.
+    """Deep copy a dataset with all related entities.
 
-    This performs a complete deep copy of a root collection, creating new UUIDs for all
+    This performs a complete deep copy of a dataset, creating new UUIDs for all
     entities while preserving relationships through ID remapping.
 
     Args:
         session: Database session.
-        root_collection_id: Root collection ID to copy.
-        copy_name: Name for the new collection.
+        dataset_id: Dataset ID to copy.
+        copy_name: Name for the new dataset.
 
     Returns:
         The newly created root collection.
     """
     # If this fails, a new table was added. Update deep_copy to handle it, then update this count.
     table_coverage_utils.verify_table_coverage()
-
-    # Verify it's a root collection.
-    initial_root = collection_resolver.get_by_id(session=session, collection_id=root_collection_id)
-    if initial_root is None:
-        raise ValueError(f"Collection with ID {root_collection_id} not found.")
-    if initial_root.parent_collection_id is not None:
-        raise ValueError("Only root collections can be deep copied.")
-
     ctx = DeepCopyContext()
 
     # 1. Create new dataset entry.
     new_dataset_id = uuid4()
+    # TODO(lukas, 03/2026): `copy_name` should be stored in DatasetTable
     db_dataset = DatasetTable(
         dataset_id=new_dataset_id,
     )
@@ -92,7 +85,7 @@ def deep_copy(
     session.flush([db_dataset])
 
     # 2. Copy collection hierarchy.
-    hierarchy = dataset_resolver.get_hierarchy(session=session, dataset_id=initial_root.dataset_id)
+    hierarchy = dataset_resolver.get_hierarchy(session=session, dataset_id=dataset_id)
     root = _copy_collections(
         session=session,
         hierarchy=hierarchy,
@@ -100,6 +93,7 @@ def deep_copy(
         ctx=ctx,
         dataset_id=new_dataset_id,
     )
+    root_collection_id = hierarchy[0].collection_id
 
     # 3. Copy collection-scoped entities.
     old_collection_ids = list(ctx.collection_map.keys())

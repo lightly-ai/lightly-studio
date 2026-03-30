@@ -123,6 +123,14 @@ export class SamplesPage {
         });
     }
 
+    getSearchInput() {
+        return this.page.getByTestId('text-embedding-search-input');
+    }
+
+    getSearchClearButton() {
+        return this.page.getByTestId('search-clear-button');
+    }
+
     async createSelection(
         strategy: 'diversity' | 'typicality',
         nSamples: number,
