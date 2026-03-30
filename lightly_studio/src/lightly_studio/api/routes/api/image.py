@@ -25,7 +25,6 @@ from lightly_studio.resolvers import (
 from lightly_studio.resolvers.image_filter import (
     ImageFilter,
 )
-from lightly_studio.resolvers.sample_resolver.sample_filter import SampleFilter
 
 image_router = APIRouter(tags=["image"])
 
@@ -135,11 +134,7 @@ def count_image_annotations_by_collection(
     body: ReadCountImageAnnotationsRequest | None = None,
 ) -> list[dict[str, str | int]]:
     """Get image annotation counts for a specific collection."""
-    image_filter = body.filter if body and body.filter else ImageFilter()
-    sample_filter = image_filter.sample_filter or SampleFilter()
-    sample_filter.collection_id = collection.collection_id
-    image_filter.sample_filter = sample_filter
-
+    image_filter = body.filter if body and body.filter else None
     counts = image_resolver.count_image_annotations_by_collection(
         session=session,
         collection_id=collection.collection_id,

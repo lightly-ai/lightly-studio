@@ -130,4 +130,3 @@ def test_count_image_annotations_by_collection_with_filtering(
     filtered_dict = {label: (current, total) for label, current, total in filtered_counts}
     assert filtered_dict["dog"] == (1, 2)
     assert filtered_dict["cat"] == (1, 1)
-

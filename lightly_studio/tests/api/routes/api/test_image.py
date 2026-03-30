@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from uuid import UUID, uuid4
+from uuid import uuid4
 
 from fastapi.testclient import TestClient
 from pytest_mock import MockerFixture
@@ -259,10 +259,35 @@ def test_count_image_annotations_by_collection_with_image_filter(
 
 def test_count_image_annotations_by_collection_without_body(
     test_client: TestClient,
-    annotation_collection_id: UUID,
+    db_session: Session,
 ) -> None:
+    collection = create_collection(session=db_session)
+    collection_id = collection.collection_id
+
+    image_1 = create_image(
+        session=db_session,
+        collection_id=collection_id,
+        file_path_abs="/path/to/sample1.png",
+    )
+    dog_label = create_annotation_label(
+        session=db_session,
+        root_collection_id=collection_id,
+        label_name="dog",
+    )
+
+    create_annotation(
+        session=db_session,
+        sample_id=image_1.sample_id,
+        annotation_label_id=dog_label.annotation_label_id,
+        collection_id=collection_id,
+    )
     response = test_client.post(
-        f"/api/collections/{annotation_collection_id}/images/annotations/count",
+        f"/api/collections/{collection_id}/images/annotations/count",
     )
 
     assert response.status_code == HTTP_STATUS_OK
+    result = response.json()
+
+    assert result == [
+        {"label_name": "dog", "current_count": 1, "total_count": 1},
+    ]
