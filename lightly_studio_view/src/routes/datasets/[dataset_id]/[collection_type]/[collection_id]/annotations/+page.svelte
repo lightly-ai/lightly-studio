@@ -7,7 +7,7 @@
     import { page } from '$app/state';
 
     const { data }: { data: PageData } = $props();
-    const { sampleSize, selectedAnnotationFilterIds } = $derived(data);
+    const { sampleSize } = $derived(data);
     const datasetId = $derived(page.params.dataset_id!);
     const collectionId = $derived(page.params.collection_id!);
 
@@ -32,5 +32,4 @@
 <AnnotationsGrid
     itemWidth={$sampleSize.width}
     collection_id={collectionId}
-    {selectedAnnotationFilterIds}
 />

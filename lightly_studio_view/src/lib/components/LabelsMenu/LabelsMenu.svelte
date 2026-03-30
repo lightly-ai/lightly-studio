@@ -4,14 +4,14 @@
     import { Label } from '$lib/components/ui/label/index.js';
     import type { Annotation } from '$lib/types';
     import { formatInteger } from '$lib/utils';
-    import { type Writable } from 'svelte/store';
+    import { type Readable } from 'svelte/store';
     import AnnotationColorLegend from '../AnnotationColorLegend/AnnotationColorLegend.svelte';
 
     let {
         annotationFilters,
         onToggleAnnotationFilter
     }: {
-        annotationFilters: Writable<Annotation[]>;
+        annotationFilters: Readable<Annotation[]>;
         onToggleAnnotationFilter: (label: string) => void;
     } = $props();
 </script>
