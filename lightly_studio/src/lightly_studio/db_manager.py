@@ -74,13 +74,13 @@ class DatabaseEngine:
 
         self._backend = _detect_backend_from_url(engine_url=self._engine_url)
 
-        db_exists = _database_exists(engine_url=self._engine_url, backend=self._backend)
-        if must_exist and not db_exists:
-            raise FileNotFoundError(f"Database does not exist at {self._engine_url}.")
-
         # Ensure the psycopg3 driver is used for Postgres connections.
         if self._backend == DatabaseBackend.POSTGRESQL:
             self._engine_url = _ensure_psycopg3_driver(engine_url=self._engine_url)
+
+        db_exists = _database_exists(engine_url=self._engine_url, backend=self._backend)
+        if must_exist and not db_exists:
+            raise FileNotFoundError(f"Database does not exist at {self._engine_url}.")
 
         if cleanup_existing and self._backend == DatabaseBackend.DUCKDB:
             _cleanup_database_file(engine_url=self._engine_url)
