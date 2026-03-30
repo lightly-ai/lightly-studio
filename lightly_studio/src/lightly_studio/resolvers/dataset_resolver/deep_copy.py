@@ -77,6 +77,7 @@ def deep_copy(
 
     # 1. Create new dataset entry.
     new_dataset_id = uuid4()
+    # TODO(lukas, 03/2026): `copy_name` should be stored in DatasetTable
     db_dataset = DatasetTable(
         dataset_id=new_dataset_id,
     )
