@@ -5,7 +5,7 @@ from __future__ import annotations
 from typing import Any
 from uuid import UUID
 
-from sqlalchemy.orm import aliased, joinedload, load_only
+from sqlalchemy.orm import aliased, joinedload, load_only, selectinload
 from sqlmodel import Session, col, func, select
 from sqlmodel.sql.expression import Select
 
@@ -117,6 +117,12 @@ def _build_base_query(
                 joinedload(ImageTable.sample).load_only(
                     SampleTable.collection_id,  # type: ignore[arg-type]
                 ),
+                joinedload(AnnotationBaseTable.annotation_label),
+                joinedload(AnnotationBaseTable.object_detection_details),
+                joinedload(AnnotationBaseTable.segmentation_details),
+                selectinload(AnnotationBaseTable.sample).options(
+                    selectinload(SampleTable.tags),
+                ),
             )
         )
 
@@ -134,6 +140,12 @@ def _build_base_query(
                     VideoTable.height,  # type: ignore[arg-type]
                     VideoTable.width,  # type: ignore[arg-type]
                     VideoTable.file_path_abs,  # type: ignore[arg-type]
+                ),
+                joinedload(AnnotationBaseTable.annotation_label),
+                joinedload(AnnotationBaseTable.object_detection_details),
+                joinedload(AnnotationBaseTable.segmentation_details),
+                selectinload(AnnotationBaseTable.sample).options(
+                    selectinload(SampleTable.tags),
                 ),
             )
         )
