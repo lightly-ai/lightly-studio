@@ -33,6 +33,7 @@ test('sample details renders within 5 seconds', async ({
 }) => {
     await samplesPage.goto();
     await samplesPage.doubleClickFirstSample();
+    await setNetworkThrottling(page, 'Fast4G');
 
     const paintTime = await measureElementRendering(page, sampleDetailsPage.getSampleDetails());
     const passed = paintTime < MAX_RENDER_TIME_MS;
