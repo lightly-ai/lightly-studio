@@ -191,7 +191,7 @@ def test_get_samples_dimensions_calls_get_dimension_bounds(
     )
 
 
-def test_count_image_annotations_by_collection_with_image_filter(
+def test_count_image_annotations_by_collection__with_image_filter(
     test_client: TestClient,
     db_session: Session,
 ) -> None:
@@ -266,7 +266,7 @@ def test_count_image_annotations_by_collection_with_image_filter(
     ]
 
 
-def test_count_image_annotations_by_collection_without_body(
+def test_count_image_annotations_by_collection__without_body(
     test_client: TestClient,
     db_session: Session,
 ) -> None:
