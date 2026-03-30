@@ -6,7 +6,7 @@ import {
 import { createQuery, useQueryClient } from '@tanstack/svelte-query';
 import { toast } from 'svelte-sonner';
 import { useUpdateAnnotationsMutation } from '../useUpdateAnnotationsMutation/useUpdateAnnotationsMutation';
-import { useAnnotationCountsQueryKey } from '../useAnnotationCounts/useAnnotationCounts';
+import { useImageAnnotationCountsQueryKey } from '../useImageAnnotationCounts/useImageAnnotationCounts';
 
 export const useAnnotation = ({
     collectionId,
@@ -38,7 +38,7 @@ export const useAnnotation = ({
             }).queryKey
         });
         client.invalidateQueries({
-            queryKey: useAnnotationCountsQueryKey
+            queryKey: useImageAnnotationCountsQueryKey
         });
     };
 

@@ -172,6 +172,27 @@ describe('useVideoFrames', () => {
         expect(currentFrame?.sample_id).toBe('frame-2');
     });
 
+    it('should not fetch again when playback stays inside the loaded frame window', async () => {
+        vi.mocked(api.getAllFrames).mockResolvedValue({
+            data: {
+                data: mockFrames,
+                nextCursor: 50,
+                total_count: mockFrames.length
+            },
+            error: undefined
+        } as unknown as MockGetAllFramesResponse);
+
+        const hook = useVideoFrames({ video: mockVideoData });
+        await hook.loadFramesFromFrameNumber(0);
+
+        vi.mocked(api.getAllFrames).mockClear();
+
+        await hook.loadFrameByPlaybackTime(0.05, 30);
+
+        expect(api.getAllFrames).not.toHaveBeenCalled();
+        expect(get(hook.currentFrame)?.frame_number).toBe(1);
+    });
+
     it('should set currentFrame from frame number', async () => {
         vi.mocked(api.getAllFrames).mockResolvedValue({
             data: {
@@ -245,6 +266,44 @@ describe('useVideoFrames', () => {
             expect(values[2]?.frame_number).toBe(1);
 
             unsubscribe();
+        });
+
+        it('should keep the last frame selected at the end of the video', async () => {
+            const finalFrames = [
+                {
+                    sample_id: 'frame-1',
+                    frame_number: 0,
+                    frame_timestamp_s: 0,
+                    sample: mockFrameSample1,
+                    video: mockVideoData
+                },
+                {
+                    sample_id: 'frame-2',
+                    frame_number: 1,
+                    frame_timestamp_s: 0.4,
+                    sample: mockFrameSample2,
+                    video: mockVideoData
+                }
+            ] as VideoFrameView[];
+
+            vi.mocked(api.getAllFrames).mockResolvedValue({
+                data: {
+                    data: finalFrames,
+                    nextCursor: null,
+                    total_count: finalFrames.length
+                },
+                error: undefined
+            } as unknown as MockGetAllFramesResponse);
+
+            const hook = useVideoFrames({ video: mockVideoData });
+            await hook.loadFramesFromFrameNumber(0);
+
+            vi.mocked(api.getAllFrames).mockClear();
+
+            await hook.loadFrameByPlaybackTime(1, 30);
+
+            expect(api.getAllFrames).not.toHaveBeenCalled();
+            expect(get(hook.currentFrame)?.frame_number).toBe(1);
         });
     });
 });
