@@ -1,4 +1,4 @@
-import { expect, Page, test as base } from '@playwright/test';
+import { expect, type Locator, Page, test as base } from '@playwright/test';
 import type { Request } from '@playwright/test';
 import {
     AnnotationsPage,
@@ -10,6 +10,9 @@ import {
     VideoFramesPage,
     VideoFrameDetailsPage
 } from './pages';
+import { NETWORK_PRESETS, type NetworkPreset } from './constants';
+
+export { expect };
 
 export async function gotoFirstPage(page: Page): Promise<void> {
     await page.goto('/');
@@ -169,4 +172,70 @@ export async function waitForRequestsToSettle(
     });
 }
 
-export { expect } from '@playwright/test';
+/**
+ * Measures when a specific element is actually rendered (painted) on screen.
+ *
+ * Unlike LCP which measures the largest content paint, this function measures
+ * when a specific element becomes visible and painted in the viewport.
+ *
+ * Implementation details:
+ * - Waits for the element to be attached to the DOM (timeout: 10 seconds)
+ * - Uses the element's data-testid attribute to identify it in the page context
+ * - Uses IntersectionObserver to detect when the element enters the viewport
+ * - Threshold of 0.1 means at least 10% of the element must be visible
+ * - Uses requestAnimationFrame to ensure the browser has completed painting
+ * - Returns performance.now() timestamp in milliseconds from navigation start
+ * - Falls back to current time if element is not found
+ *
+ * Use cases:
+ * - Measuring render time of specific UI components (grids, images, etc.)
+ * - Different from LCP as it targets specific elements, not the largest one
+ * - Useful for measuring time-to-interactive for critical UI elements
+ *
+ * @param page - Playwright Page object
+ * @param locator - Playwright Locator for the element to measure
+ * @returns Promise resolving to render time in milliseconds from navigation start
+ */
+export async function measureElementRendering(page: Page, locator: Locator): Promise<number> {
+    await locator.waitFor({ state: 'attached', timeout: 10000 });
+    const testId = await locator.getAttribute('data-testid');
+    if (!testId) {
+        throw new Error('Element must have a data-testid attribute for performance measurement');
+    }
+    const selector = `[data-testid="${testId}"]`;
+
+    return page.evaluate((sel) => {
+        return new Promise<number>((resolve) => {
+            const element = document.querySelector(sel);
+            if (!element) {
+                resolve(performance.now());
+                return;
+            }
+
+            const observer = new IntersectionObserver(
+                (entries) => {
+                    if (entries[0].isIntersecting && entries[0].intersectionRatio > 0) {
+                        observer.disconnect();
+                        // Use requestAnimationFrame to ensure paint has occurred
+                        requestAnimationFrame(() => {
+                            resolve(performance.now());
+                        });
+                    }
+                },
+                { threshold: 0.1 }
+            );
+            observer.observe(element);
+        });
+    }, selector);
+}
+
+/**
+ * Sets network throttling for the page using Chrome DevTools Protocol.
+ *
+ * @param page - Playwright Page object
+ * @param preset - Network preset name from NETWORK_PRESETS (e.g., 'Fast4G')
+ */
+export async function setNetworkThrottling(page: Page, preset: NetworkPreset): Promise<void> {
+    const client = await page.context().newCDPSession(page);
+    await client.send('Network.emulateNetworkConditions', NETWORK_PRESETS[preset]);
+}

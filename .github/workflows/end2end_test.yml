@@ -347,6 +347,39 @@ jobs:
         run: npx playwright test --reporter=html --trace=on --project=${{ matrix.playwright_project }}
         timeout-minutes: 10
 
+      - name: Generate performance summary
+        if: steps.cache-success.outputs.cache-hit != 'true' && (matrix.playwright_project == 'general' || matrix.playwright_project == 'videos')
+        working-directory: lightly_studio_view
+        run: |
+          if [ -f performance-metrics.json ]; then
+            echo "## 🚀 Performance Test Results" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "| Test | Render Time | Status |" >> $GITHUB_STEP_SUMMARY
+            echo "|------|-------------|--------|" >> $GITHUB_STEP_SUMMARY
+
+            node -e "
+              const metrics = require('./performance-metrics.json');
+              metrics.forEach(m => {
+                const status = m.passed ? '✅ Pass' : '❌ Fail';
+                const time = Math.round(m.renderTime);
+                console.log(\`| \${m.test} | \${time}ms | \${status} |\`);
+              });
+            " >> $GITHUB_STEP_SUMMARY
+
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "_Max render time: 5000ms_" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "⚠️ No performance metrics found" >> $GITHUB_STEP_SUMMARY
+          fi
+
+      - name: Upload performance metrics
+        if: steps.cache-success.outputs.cache-hit != 'true' && (matrix.playwright_project == 'general' || matrix.playwright_project == 'videos')
+        uses: actions/upload-artifact@v4
+        with:
+          name: performance-metrics-${{ matrix.name }}
+          path: lightly_studio_view/performance-metrics.json
+          if-no-files-found: warn
+
       - name: Create e2e success marker
         if: steps.cache-success.outputs.cache-hit != 'true'
         run: touch ${{ matrix.success_marker }}
