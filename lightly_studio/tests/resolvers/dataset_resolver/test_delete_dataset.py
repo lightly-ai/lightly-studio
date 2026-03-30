@@ -10,6 +10,7 @@ from lightly_studio.models.collection import SampleType
 from lightly_studio.resolvers import (
     annotation_label_resolver,
     collection_resolver,
+    dataset_resolver,
     metadata_resolver,
     sample_embedding_resolver,
     sample_resolver,
@@ -34,9 +35,9 @@ def test_delete_dataset__empty_collection(db_session: Session) -> None:
     collection_id = dataset.collection_id  # Capture before delete
 
     # Act
-    collection_resolver.delete_dataset(
+    dataset_resolver.delete_dataset(
         session=db_session,
-        root_collection_id=collection_id,
+        dataset_id=dataset.dataset_id,
     )
 
     # Assert - collection deleted
@@ -68,9 +69,9 @@ def test_delete_dataset__with_images_and_annotations(db_session: Session) -> Non
     child_collection_id = root.children[0].collection_id
 
     # Act
-    collection_resolver.delete_dataset(
+    dataset_resolver.delete_dataset(
         session=db_session,
-        root_collection_id=collection_id,
+        dataset_id=dataset.dataset_id,
     )
 
     # Assert - collection, annotations, and labels deleted
@@ -97,9 +98,9 @@ def test_delete_dataset__with_video_and_frames(db_session: Session) -> None:
     child_collection_id = root.children[0].collection_id  # Capture before delete
 
     # Act
-    collection_resolver.delete_dataset(
+    dataset_resolver.delete_dataset(
         session=db_session,
-        root_collection_id=root_collection_id,
+        dataset_id=root.dataset_id,
     )
 
     # Assert - entire hierarchy deleted
@@ -121,9 +122,9 @@ def test_delete_dataset__with_metadata(db_session: Session) -> None:
     img.sample["location"] = "city"
 
     # Act
-    collection_resolver.delete_dataset(
+    dataset_resolver.delete_dataset(
         session=db_session,
-        root_collection_id=collection_id,
+        dataset_id=dataset.dataset_id,
     )
 
     # Assert - collection and metadata deleted
@@ -152,9 +153,9 @@ def test_delete_dataset__with_embeddings(db_session: Session) -> None:
     )
 
     # Act
-    collection_resolver.delete_dataset(
+    dataset_resolver.delete_dataset(
         session=db_session,
-        root_collection_id=collection_id,
+        dataset_id=dataset.dataset_id,
     )
 
     # Assert - collection deleted, embeddings deleted
@@ -177,9 +178,9 @@ def test_delete_dataset__with_tags(db_session: Session) -> None:
     tag_resolver.add_tag_to_sample(session=db_session, tag_id=tag_id, sample=img.sample)
 
     # Act
-    collection_resolver.delete_dataset(
+    dataset_resolver.delete_dataset(
         session=db_session,
-        root_collection_id=collection_id,
+        dataset_id=dataset.dataset_id,
     )
 
     # Assert - collection and tags deleted
@@ -209,9 +210,9 @@ def test_delete_dataset__does_not_affect_other_datasets(db_session: Session) -> 
     other_tag_id = other_tag.tag_id  # Capture before delete
 
     # Act
-    collection_resolver.delete_dataset(
+    dataset_resolver.delete_dataset(
         session=db_session,
-        root_collection_id=delete_collection_id,
+        dataset_id=dataset_to_delete.dataset_id,
     )
 
     # Assert - deleted dataset is gone
@@ -236,30 +237,13 @@ def test_delete_dataset__does_not_affect_other_datasets(db_session: Session) -> 
     assert other_samples.samples[0].sample_id == other_sample_id
 
 
-def test_delete_dataset__raises_for_non_root_collection(db_session: Session) -> None:
-    # Arrange
-    root = create_collection(session=db_session, collection_name="root")
-    child = create_collection(
-        session=db_session,
-        collection_name="child",
-        parent_collection_id=root.collection_id,
-    )
-
-    # Act & Assert
-    with pytest.raises(ValueError, match="Only root collections can be deleted"):
-        collection_resolver.delete_dataset(
-            session=db_session,
-            root_collection_id=child.collection_id,
-        )
-
-
-def test_delete_dataset__raises_for_nonexistent_collection(db_session: Session) -> None:
+def test_delete_dataset__raises_for_nonexistent_dataset(db_session: Session) -> None:
     # Arrange
     nonexistent_id = uuid.uuid4()
 
     # Act & Assert
     with pytest.raises(ValueError, match="not found"):
-        collection_resolver.delete_dataset(
+        dataset_resolver.delete_dataset(
             session=db_session,
-            root_collection_id=nonexistent_id,
+            dataset_id=nonexistent_id,
         )
