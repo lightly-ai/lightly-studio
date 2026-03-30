@@ -32,6 +32,8 @@ interface UseVideoFramesState {
     seekFrameNumber: boolean;
     /** Current playback time in seconds */
     playbackTime: number;
+    /** Promise for the current frame batch load, if any */
+    pendingLoad: Promise<void> | null;
 }
 
 /**
@@ -74,8 +76,27 @@ export function useVideoFrames({ video }: { video: VideoView }) {
         hasStarted: false,
         lastVideoId: null,
         seekFrameNumber: false,
-        playbackTime: 0
+        playbackTime: 0,
+        pendingLoad: null
     };
+
+    function setCurrentFrame(frame: FrameView | null | undefined): void {
+        const nextFrame = frame ?? undefined;
+        if (state.currentFrame?.sample_id === nextFrame?.sample_id) {
+            return;
+        }
+
+        state.currentFrame = nextFrame;
+        currentFrame.set(nextFrame);
+    }
+
+    function getFrameByNumber(frameNumber: number): FrameView | null {
+        return state.frames.find((frame) => frame.frame_number === frameNumber) ?? null;
+    }
+
+    function getLastLoadedFrame(): FrameView | null {
+        return state.frames.at(-1) ?? null;
+    }
 
     /**
      * Loads the next batch of frames from the API.
@@ -85,48 +106,55 @@ export function useVideoFrames({ video }: { video: VideoView }) {
      * @throws Error if the API request fails
      */
     async function loadFrames(): Promise<void> {
-        if (state.loading || state.reachedEnd) return;
-        state.loading = true;
+        if (state.loading) {
+            await state.pendingLoad;
+            return;
+        }
+        if (state.reachedEnd) return;
 
         const frameCollectionId = (video?.frame?.sample as SampleView)?.collection_id;
         if (!frameCollectionId) {
-            state.loading = false;
             return;
         }
 
-        try {
-            const res = await getAllFrames({
-                path: {
-                    video_frame_collection_id: frameCollectionId
-                },
-                query: {
-                    cursor: state.cursor,
-                    limit: BATCH_SIZE
-                },
-                body: {
-                    filter: {
-                        video_id: video?.sample_id
+        state.loading = true;
+        state.pendingLoad = (async () => {
+            try {
+                const res = await getAllFrames({
+                    path: {
+                        video_frame_collection_id: frameCollectionId
+                    },
+                    query: {
+                        cursor: state.cursor,
+                        limit: BATCH_SIZE
+                    },
+                    body: {
+                        filter: {
+                            video_id: video?.sample_id
+                        }
                     }
+                });
+
+                const newFrames = res?.data?.data ?? [];
+
+                if (newFrames.length === 0) {
+                    state.reachedEnd = true;
+                    return;
                 }
-            });
 
-            const newFrames = res?.data?.data ?? [];
-
-            if (newFrames.length === 0) {
-                state.reachedEnd = true;
+                state.frames = mergeFrames(state.frames, newFrames);
+                // Update cursor for next batch: use server-provided nextCursor if available,
+                // otherwise increment by BATCH_SIZE for client-side pagination
+                const nextCursor = res?.data?.nextCursor;
+                state.cursor = nextCursor ?? state.cursor + BATCH_SIZE;
+                state.reachedEnd = nextCursor == null;
+            } finally {
                 state.loading = false;
-                return;
+                state.pendingLoad = null;
             }
+        })();
 
-            state.frames = mergeFrames(state.frames, newFrames);
-            // Update cursor for next batch: use server-provided nextCursor if available,
-            // otherwise increment by BATCH_SIZE for client-side pagination
-            state.cursor = res?.data?.nextCursor ?? state.cursor + BATCH_SIZE;
-            state.loading = false;
-        } catch (error) {
-            state.loading = false;
-            throw error;
-        }
+        await state.pendingLoad;
     }
 
     /**
@@ -142,11 +170,11 @@ export function useVideoFrames({ video }: { video: VideoView }) {
             state.seekFrameNumber = true;
 
             // Check if frame is already loaded
-            const existingFrame = state.frames.find((frame) => frame.frame_number === frameNumber);
+            const existingFrame = getFrameByNumber(frameNumber);
 
             if (existingFrame) {
                 // Frame already loaded, just set it as current
-                currentFrame.set(existingFrame);
+                setCurrentFrame(existingFrame);
                 playbackTime.set(existingFrame.frame_timestamp_s + playbackStep);
             } else {
                 // Frame not loaded yet, fetch it
@@ -155,13 +183,12 @@ export function useVideoFrames({ video }: { video: VideoView }) {
 
                 await loadFrames();
 
-                const frame =
-                    state.frames.find((frame) => frame.frame_number === frameNumber) ?? null;
+                const frame = getFrameByNumber(frameNumber);
 
                 if (!frame) {
                     throw new Error('Frame not found for the given frame number');
                 }
-                currentFrame.set(frame);
+                setCurrentFrame(frame);
 
                 if (frame) {
                     playbackTime.set(frame.frame_timestamp_s + playbackStep);
@@ -193,31 +220,31 @@ export function useVideoFrames({ video }: { video: VideoView }) {
 
         if (!video) throw new Error('No video data available');
 
-        // Estimate the frame index based on current time and video FPS
         const frameIndex = Math.floor(currentTime * fps);
-
-        // Check if frame is already loaded
-        const existingFrame = state.frames.find((frame) => frame.frame_number === frameIndex);
+        const existingFrame = getFrameByNumber(frameIndex);
 
         if (existingFrame) {
-            // Frame already loaded, just set it as current
-            currentFrame.set(existingFrame);
+            setCurrentFrame(existingFrame);
         } else {
-            // Frame not loaded yet, fetch it
-            // Estimate the cursor position for fetching frames around the current frame index
+            const lastLoadedFrame = getLastLoadedFrame();
+            if (state.reachedEnd && lastLoadedFrame && frameIndex > lastLoadedFrame.frame_number) {
+                setCurrentFrame(lastLoadedFrame);
+                return;
+            }
+
             state.cursor = getFrameBatchCursor(frameIndex, BATCH_SIZE);
             state.reachedEnd = false; // Reset since we're seeking to a new position
 
             await loadFrames();
 
-            // Find the exact frame
-            const frame = state.frames.find((frame) => frame.frame_number === frameIndex) ?? null;
+            const frame =
+                getFrameByNumber(frameIndex) ?? (state.reachedEnd ? getLastLoadedFrame() : null);
 
             if (!frame) {
                 throw new Error('Frame not found for the given playback time');
             }
 
-            currentFrame.set(frame);
+            setCurrentFrame(frame);
         }
     }
 

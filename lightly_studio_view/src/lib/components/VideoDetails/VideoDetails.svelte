@@ -41,27 +41,65 @@
         }
     };
     let videoEl: HTMLVideoElement | null = $state(null);
+    let frameRequestId: number | null = $state(null);
 
     const { currentFrame, loadFrameByPlaybackTime, loadFramesFromFrameNumber } = useVideoFrames({
         video
     });
-    const onseeked = (event: Event) => {
-        const target = event.target as HTMLVideoElement;
-        loadFrameByPlaybackTime(target.currentTime, video.fps);
+
+    function stopFrameSyncLoop() {
+        if (frameRequestId !== null) {
+            cancelAnimationFrame(frameRequestId);
+            frameRequestId = null;
+        }
+    }
+
+    function startFrameSyncLoop() {
+        stopFrameSyncLoop();
+
+        const tick = () => {
+            if (!videoEl) {
+                frameRequestId = null;
+                return;
+            }
+
+            void loadFrameByPlaybackTime(videoEl.currentTime, video.fps);
+            frameRequestId = requestAnimationFrame(tick);
+        };
+
+        frameRequestId = requestAnimationFrame(tick);
+    }
+
+    const onplay = () => {
+        startFrameSyncLoop();
     };
 
-    const ontimeupdate = (event: Event) => {
+    const onpause = () => {
+        stopFrameSyncLoop();
+    };
+
+    const onended = (event: Event) => {
         const target = event.target as HTMLVideoElement;
-        loadFrameByPlaybackTime(target.currentTime, video.fps);
+        void loadFrameByPlaybackTime(target.currentTime, video.fps);
+        stopFrameSyncLoop();
+    };
+
+    const onseeked = (event: Event) => {
+        const target = event.target as HTMLVideoElement;
+        void loadFrameByPlaybackTime(target.currentTime, video.fps);
     };
 
     onMount(() => {
         if (frameNumber !== undefined) {
-            loadFramesFromFrameNumber(frameNumber);
+            void loadFramesFromFrameNumber(frameNumber);
             jumpToCurrentFrame = true;
         } else {
-            loadFrameByPlaybackTime(0, video.fps);
+            void loadFrameByPlaybackTime(0, video.fps);
         }
+    });
+
+    $effect(() => {
+        return () => stopFrameSyncLoop();
     });
 
     let videoWidth = $state(0);
@@ -116,8 +154,9 @@
                             muted: true,
                             class: 'block h-full w-full',
                             onplay,
-                            onseeked,
-                            ontimeupdate
+                            onpause,
+                            onended,
+                            onseeked
                         }}
                     />
 
