@@ -51,7 +51,6 @@ test('samples grid renders within 5 seconds', async ({ page, samplesPage }) => {
         passed
     });
     saveMetrics();
-
     expect(result.median).toBeLessThan(MAX_RENDER_TIME_MS);
 });
 
@@ -61,6 +60,7 @@ test('sample details renders within 5 seconds', async ({
     sampleDetailsPage
 }) => {
     await samplesPage.goto();
+
     await setNetworkThrottling(page, 'Fast4G');
 
     const result = await measureWithMedian(async () => {
@@ -72,7 +72,6 @@ test('sample details renders within 5 seconds', async ({
     }, MEASUREMENT_ITERATIONS);
 
     const passed = result.median < MAX_RENDER_TIME_MS;
-
     console.log('sample-details measurements:', result);
 
     metrics.push({
@@ -99,8 +98,6 @@ test('annotations grid renders within 5 seconds', async ({ page, annotationsPage
     }, MEASUREMENT_ITERATIONS);
 
     const passed = result.median < MAX_RENDER_TIME_MS;
-
-    console.log('annotations-grid measurements:', result);
 
     metrics.push({
         test: 'annotations-grid',
@@ -134,8 +131,6 @@ test('annotation details renders within 5 seconds', async ({
     }, MEASUREMENT_ITERATIONS);
 
     const passed = result.median < MAX_RENDER_TIME_MS;
-
-    console.log('annotation-details measurements:', result);
 
     metrics.push({
         test: 'annotation-details',
