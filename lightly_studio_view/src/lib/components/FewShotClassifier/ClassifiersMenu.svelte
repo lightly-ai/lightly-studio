@@ -24,7 +24,7 @@
         LoaderCircle as Loader2,
         Info
     } from '@lucide/svelte';
-    import { useAnnotationCountsQueryKey } from '$lib/hooks/useAnnotationCounts/useAnnotationCounts';
+    import { useImageAnnotationCountsQueryKey } from '$lib/hooks/useImageAnnotationCounts/useImageAnnotationCounts';
 
     const exportOptions: ClassifierExportType[] = ['sklearn', 'lightly'];
 
@@ -104,7 +104,7 @@
             }).queryKey
         });
         client.invalidateQueries({
-            queryKey: useAnnotationCountsQueryKey
+            queryKey: useImageAnnotationCountsQueryKey
         });
     }
 

@@ -10,7 +10,6 @@ from fastapi.params import Query
 from pydantic import BaseModel
 
 from lightly_studio.api.routes.api import annotations as annotations_module
-from lightly_studio.api.routes.api.collection import get_and_validate_collection_id
 from lightly_studio.api.routes.api.status import HTTP_STATUS_NOT_FOUND
 from lightly_studio.api.routes.api.validators import Paginated, PaginatedWithCursor
 from lightly_studio.db_manager import SessionDep
@@ -21,7 +20,6 @@ from lightly_studio.models.annotation.annotation_base import (
     AnnotationViewsWithCount,
     AnnotationWithPayloadAndCountView,
 )
-from lightly_studio.models.collection import CollectionTable
 from lightly_studio.resolvers import annotation_resolver
 from lightly_studio.resolvers.annotation_resolver.get_all import (
     GetAllAnnotationsResult,
@@ -30,7 +28,6 @@ from lightly_studio.resolvers.annotation_resolver.update_bounding_box import Bou
 from lightly_studio.resolvers.annotations.annotations_filter import (
     AnnotationsFilter,
 )
-from lightly_studio.resolvers.image_filter import ImageFilter
 from lightly_studio.services import annotations_service
 from lightly_studio.services.annotations_service.update_annotation import (
     AnnotationUpdate,
@@ -58,43 +55,6 @@ def _get_annotation_query_params(
         annotation_label_ids=annotation_label_ids,
         tag_ids=tag_ids,
     )
-
-
-class ReadCountAnnotationsRequest(BaseModel):
-    """Request body for reading annotation counts."""
-
-    filter: ImageFilter | None = None
-
-
-@annotations_router.post("/annotations/count")
-def count_annotations_by_collection(
-    collection: Annotated[
-        CollectionTable,
-        Path(title="collection Id"),
-        Depends(get_and_validate_collection_id),
-    ],
-    session: SessionDep,
-    body: ReadCountAnnotationsRequest | None = None,
-) -> list[dict[str, str | int]]:
-    """Get annotation counts for a specific collection using an image filter body.
-
-    Returns a list of dictionaries with label name and count.
-    """
-    image_filter = body.filter if body and body.filter else ImageFilter()
-    counts = annotation_resolver.count_annotations_by_collection(
-        session=session,
-        collection_id=collection.collection_id,
-        image_filter=image_filter,
-    )
-
-    return [
-        {
-            "label_name": label_name,
-            "current_count": current_count,
-            "total_count": total_count,
-        }
-        for label_name, current_count, total_count in counts
-    ]
 
 
 @annotations_router.get(
