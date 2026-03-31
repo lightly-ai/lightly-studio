@@ -181,8 +181,10 @@ def test_connect__sets_aws_env_vars(
     mock_response.ok = True
     mock_response.json.return_value = {
         "engine_url": "postgresql://lightly:secret@10.0.0.5:5433/lightly_studio",
-        "aws_access_key_id": access_key_id,
-        "aws_secret_access_key": secret_access_key,
+        "cloud_credentials": {
+            "AWS_ACCESS_KEY_ID": access_key_id,
+            "AWS_SECRET_ACCESS_KEY": secret_access_key,
+        },
     }
     mocker.patch.object(requests, "get", return_value=mock_response)
 
@@ -196,58 +198,6 @@ def test_connect__aws_missing_skips_env(
     mocker: MockerFixture,
     patch_db_connect: MockType,  # noqa: ARG001
 ) -> None:
-    mock_response = mocker.MagicMock()
-    mock_response.status_code = 200
-    mock_response.ok = True
-    mock_response.json.return_value = {
-        "engine_url": "postgresql://lightly:secret@10.0.0.5:5433/lightly_studio",
-    }
-    mocker.patch.object(requests, "get", return_value=mock_response)
-
-    enterprise.connect(api_url="http://10.0.0.5:8100", token="token")
-
-    assert "AWS_ACCESS_KEY_ID" not in os.environ
-    assert "AWS_SECRET_ACCESS_KEY" not in os.environ
-
-
-@pytest.mark.parametrize(
-    "partial_creds",
-    [
-        {"aws_access_key_id": "AKIAIOSFODNN7EXAMPLE"},
-        {"aws_secret_access_key": "wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY"},
-    ],
-)
-def test_connect__aws_half_credentials_raises(
-    mocker: MockerFixture,
-    patch_db_connect: MockType,
-    partial_creds: dict[str, str],
-) -> None:
-    mock_response = mocker.MagicMock()
-    mock_response.status_code = 200
-    mock_response.ok = True
-    mock_response.json.return_value = {
-        "engine_url": "postgresql://lightly:secret@10.0.0.5:5433/lightly_studio",
-        **partial_creds,
-    }
-    mocker.patch.object(requests, "get", return_value=mock_response)
-
-    with pytest.raises(RuntimeError, match="must be provided together"):
-        enterprise.connect(api_url="http://10.0.0.5:8100", token="token")
-
-    patch_db_connect.assert_not_called()
-
-
-def test_connect__clears_stale_aws_credentials(
-    mocker: MockerFixture,
-    patch_db_connect: MockType,  # noqa: ARG001
-) -> None:
-    mocker.patch.dict(
-        os.environ,
-        {
-            "AWS_ACCESS_KEY_ID": "OLD_KEY",
-            "AWS_SECRET_ACCESS_KEY": "OLD_SECRET",
-        },
-    )
     mock_response = mocker.MagicMock()
     mock_response.status_code = 200
     mock_response.ok = True

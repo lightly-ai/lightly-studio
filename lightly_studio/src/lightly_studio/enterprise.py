@@ -9,6 +9,7 @@ credentials, and delegates to ``db_manager.connect``.
 from __future__ import annotations
 
 import http
+import logging
 import os
 
 import requests
@@ -16,6 +17,8 @@ from pydantic import BaseModel, ValidationError
 
 from lightly_studio import db_manager
 from lightly_studio.dataset.env import LIGHTLY_STUDIO_API_URL, LIGHTLY_STUDIO_TOKEN
+
+logger = logging.getLogger(__name__)
 
 
 class _EnterpriseConnectResponse(BaseModel):
@@ -26,8 +29,7 @@ class _EnterpriseConnectResponse(BaseModel):
     """
 
     engine_url: str
-    aws_access_key_id: str | None = None
-    aws_secret_access_key: str | None = None
+    cloud_credentials: dict[str, str] | None = None
 
 
 _ENTERPRISE_CONNECT_ENDPOINT = "/auth/api/v1/enterprise-connect"
@@ -81,25 +83,12 @@ def connect(
 
     config = _fetch_connect_config(api_url=api_url, token=token)
 
-    # Clear any previously-set AWS credentials so that a reconnect never
-    # silently reuses stale keys from an earlier call.
-    os.environ.pop("AWS_ACCESS_KEY_ID", None)
-    os.environ.pop("AWS_SECRET_ACCESS_KEY", None)
-
-    aws_access_key_id = config.aws_access_key_id
-    aws_secret_access_key = config.aws_secret_access_key
-    # Either both credentials must be provided or neither.
-    if (aws_access_key_id is None) != (aws_secret_access_key is None):
-        raise RuntimeError(
-            "Unexpected response from LightlyStudio: "
-            "`aws_access_key_id` and `aws_secret_access_key` must be provided together."
-        )
-    if aws_access_key_id is not None and aws_secret_access_key is not None:
-        os.environ["AWS_ACCESS_KEY_ID"] = aws_access_key_id
-        os.environ["AWS_SECRET_ACCESS_KEY"] = aws_secret_access_key
-        print("Applied AWS credentials from LightlyStudio enterprise configuration.")
-        print("AWS_ACCESS_KEY_ID:", aws_access_key_id)
-        print("AWS_SECRET_ACCESS_KEY:", "*" * len(aws_secret_access_key))
+    if config.cloud_credentials:
+        os.environ.update(config.cloud_credentials)
+        logger.info("Applied cloud credentials from LightlyStudio enterprise configuration.")
+        for key, value in config.cloud_credentials.items():
+            masked = "*" * len(value)
+            logger.info(f"  {key}: {masked}")
 
     db_manager.connect(db_url=config.engine_url)
 
