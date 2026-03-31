@@ -688,7 +688,7 @@
                     </PaneResizer>
 
                     <Pane defaultSize={50} minSize={30} class="flex min-h-0 flex-col">
-                        {#await import('$lib/components/PlotPanel/PlotPanel.svelte') then {default: PlotPanel}}
+                        {#await import('$lib/components/PlotPanel/PlotPanel.svelte') then { default: PlotPanel }}
                             <PlotPanel />
                         {/await}
                     </Pane>
@@ -805,10 +805,10 @@
                 </div>
             {/if}
             {#if hasEmbeddings}
-                {#await import('$lib/components/FewShotClassifier/CreateClassifierDialog.svelte') then {default: CreateClassifierDialog}}
+                {#await import('$lib/components/FewShotClassifier/CreateClassifierDialog.svelte') then { default: CreateClassifierDialog }}
                     <CreateClassifierDialog />
                 {/await}
-                {#await import('$lib/components/FewShotClassifier/RefineClassifierDialog.svelte') then {default: RefineClassifierDialog}}
+                {#await import('$lib/components/FewShotClassifier/RefineClassifierDialog.svelte') then { default: RefineClassifierDialog }}
                     <RefineClassifierDialog />
                 {/await}
             {/if}
