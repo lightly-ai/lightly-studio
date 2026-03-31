@@ -40,17 +40,19 @@ For videos, the sidebar adds `Duration`. If the videos in the current view conta
 
 ![Video filters](https://storage.googleapis.com/lightly-public/studio/search_filter_videos_v4.jpg){ width="100%" }
 
-
-## Dataset Query in Python
+## Query in Python
 
 You can programmatically filter samples by attributes (e.g., image size, tags), sort them, and select subsets. This is useful for creating training/validation splits, finding specific samples, or exporting filtered data.
 
+Create a query object by combining `match`, `order_by` and `slice` (or `[start:end]`) calls. The query is composed lazily and executed against the database once it is consumed, e.g. by iterating over it or calling `add_tag`.
 
+The example below uses the `ImageSampleField` for demonstration, for video datasets, use `VideoSampleField` instead.
 ```py
 from lightly_studio.core.dataset_query import AND, OR, NOT, OrderByField, ImageSampleField
 
 # QUERY: Define a lazy query, composed by: match, order_by, slice
 # match: Find all samples that need labeling plus small samples (< 500px) that haven't been reviewed.
+# For video datasets: use VideoSampleField instead of ImageSampleField.
 query = dataset.match(
     OR(
         AND(
@@ -85,32 +87,15 @@ samples = query.to_list()
 
 # Export all resulting samples in coco format
 dataset.export(query).to_coco_object_detections()
+# For video datasets: export in a video format
+# dataset.export(query).to_youtube_vis_instance_segmentation()
 
-```
-
-For video, use `VideoSampleField` instead. For example, the following code works for video.
-```py
-from lightly_studio.core.dataset_query import AND, OR, NOT, OrderByField, VideoSampleField
-
-# QUERY: Define a lazy query, composed by: match, order_by, slice
-# match: Find all samples that need labeling plus small samples (< 500px) that have small FPS.
-query = dataset.match(
-    OR(
-        AND(
-            VideoSampleField.width < 500,
-            NOT(VideoSampleField.fps >= 30)
-        ),
-        VideoSampleField.tags.contains("needs-labeling")
-    )
-)
-
-# order_by: Sort the samples by their width descending.
-query.order_by(
-    OrderByField(VideoSampleField.width).desc()
-)
 ```
 
 ### Reference
+
+The following sections explain the available methods for defining a query in more detail.
+They use the `ImageSampleField` for demonstration, but the same applies to `VideoSampleField` for video datasets.
 
 === "`match`"
 
@@ -119,9 +104,6 @@ query.order_by(
     query.match(<expression>)
     ```
     To create an expression for filtering on certain sample fields, the `ImageSampleField.<field_name> <operator> <value>` syntax can be used. Available field names can be seen in [`ImageSampleField`](../api/dataset_query.md#lightly_studio.core.dataset_query.image_sample_field.ImageSampleField).
-
-    <details>
-    <summary>Examples:</summary>
 
     ```py
     from lightly_studio.core.dataset_query import ImageSampleField
@@ -142,12 +124,8 @@ query.order_by(
     query.match(expr)
     ```
 
-    </details>
-
     The filtering on individual fields can flexibly be combined to create more complex match expression. For this, the boolean operators [`AND`](../api/dataset_query.md#lightly_studio.core.dataset_query.boolean_expression.AND), [`OR`](../api/dataset_query.md#lightly_studio.core.dataset_query.boolean_expression.OR), and [`NOT`](../api/dataset_query.md#lightly_studio.core.dataset_query.boolean_expression.NOT) are available. Boolean operators can arbitrarily be nested.
 
-    <details>
-    <summary>Examples:</summary>
 
     ```py
     from lightly_studio.core.dataset_query import AND, OR, NOT, ImageSampleField
@@ -183,7 +161,6 @@ query.order_by(
     # Assign any of the previous expressions to a query:
     query.match(expr)
     ```
-    </details>
 
 === "`order_by`"
 
@@ -194,8 +171,6 @@ query.order_by(
 
     The order expression can be defined by `OrderByField(ImageSampleField.<field_name>).<order_direction>()`.
 
-    <details>
-    <summary>Examples:</summary>
 
     ```py
     from lightly_studio.core.dataset_query import OrderByField, ImageSampleField
@@ -210,7 +185,6 @@ query.order_by(
     # Assign any of the previous expressions to a query:
     query.order_by(expr)
     ```
-    </details>
 
 === "`slice`"
 
@@ -220,9 +194,6 @@ query.order_by(
     # OR
     query[<offset>:<stop>]
     ```
-
-    <details>
-    <summary>Examples:</summary>
 
     ```py
     # Slice 2:5
@@ -237,6 +208,5 @@ query.order_by(
     query.slice(offset=5)
     query[5:]
     ```
-    </details>
 
 For more details, see the [API reference](../api/dataset_query.md#datasetquery) of `DatasetQuery`.

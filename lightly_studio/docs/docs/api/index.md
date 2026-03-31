@@ -278,7 +278,7 @@ for image_sample in dataset:
 
 ## Dataset Query
 
-You can programmatically filter samples by attributes (e.g., image size, tags), sort them, and select subsets. This is useful for creating training/validation splits, finding specific samples, or exporting filtered data. See the [DatasetQuery](../concepts_and_tools/search_and_filter.md#dataset-query-in-python) section on the Search and Filter page for more details and examples.
+You can programmatically filter samples by attributes (e.g., image size, tags), sort them, and select subsets. This is useful for creating training/validation splits, finding specific samples, or exporting filtered data. See the [DatasetQuery](../concepts_and_tools/search_and_filter.md#query-in-python) section on the Search and Filter page for more details and examples.
 
 
 ## Selection
@@ -304,7 +304,7 @@ You can choose from various and even combined selection strategies:
 
 === "Diverse"
 
-    Diversity selection can be configured directly from a [DatasetQuery](../concepts_and_tools/search_and_filter.md#dataset-query-in-python). The example below showcases a simple case of selecting diverse samples.
+    Diversity selection can be configured directly from a [DatasetQuery](../concepts_and_tools/search_and_filter.md#query-in-python). The example below showcases a simple case of selecting diverse samples.
 
     ```py
     import lightly_studio as ls
