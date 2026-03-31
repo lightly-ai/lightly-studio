@@ -41,7 +41,7 @@ For videos, the sidebar adds `Duration`. If the videos in the current view conta
 ![Video filters](https://storage.googleapis.com/lightly-public/studio/search_filter_videos_v4.jpg){ width="100%" }
 
 
-## Dataset Query in Python
+## Query in Python
 
 You can programmatically filter samples by attributes (e.g., image size, tags), sort them, and select subsets. This is useful for creating training/validation splits, finding specific samples, or exporting filtered data.
 
@@ -94,6 +94,9 @@ dataset.export(query).to_coco_object_detections()
 
 ### Reference
 
+The following sections explain the available methods for defining a query in more detail.
+They use the `ImageSampleField` for demonstration, but the same applies to `VideoSampleField` for video datasets.
+
 === "`match`"
 
     You can define query filters with:
@@ -101,9 +104,6 @@ dataset.export(query).to_coco_object_detections()
     query.match(<expression>)
     ```
     To create an expression for filtering on certain sample fields, the `ImageSampleField.<field_name> <operator> <value>` syntax can be used. Available field names can be seen in [`ImageSampleField`](../api/dataset_query.md#lightly_studio.core.dataset_query.image_sample_field.ImageSampleField).
-
-    <details>
-    <summary>Examples:</summary>
 
     ```py
     from lightly_studio.core.dataset_query import ImageSampleField
@@ -124,12 +124,8 @@ dataset.export(query).to_coco_object_detections()
     query.match(expr)
     ```
 
-    </details>
-
     The filtering on individual fields can flexibly be combined to create more complex match expression. For this, the boolean operators [`AND`](../api/dataset_query.md#lightly_studio.core.dataset_query.boolean_expression.AND), [`OR`](../api/dataset_query.md#lightly_studio.core.dataset_query.boolean_expression.OR), and [`NOT`](../api/dataset_query.md#lightly_studio.core.dataset_query.boolean_expression.NOT) are available. Boolean operators can arbitrarily be nested.
 
-    <details>
-    <summary>Examples:</summary>
 
     ```py
     from lightly_studio.core.dataset_query import AND, OR, NOT, ImageSampleField
@@ -165,7 +161,6 @@ dataset.export(query).to_coco_object_detections()
     # Assign any of the previous expressions to a query:
     query.match(expr)
     ```
-    </details>
 
 === "`order_by`"
 
@@ -176,8 +171,6 @@ dataset.export(query).to_coco_object_detections()
 
     The order expression can be defined by `OrderByField(ImageSampleField.<field_name>).<order_direction>()`.
 
-    <details>
-    <summary>Examples:</summary>
 
     ```py
     from lightly_studio.core.dataset_query import OrderByField, ImageSampleField
@@ -192,7 +185,6 @@ dataset.export(query).to_coco_object_detections()
     # Assign any of the previous expressions to a query:
     query.order_by(expr)
     ```
-    </details>
 
 === "`slice`"
 
@@ -202,9 +194,6 @@ dataset.export(query).to_coco_object_detections()
     # OR
     query[<offset>:<stop>]
     ```
-
-    <details>
-    <summary>Examples:</summary>
 
     ```py
     # Slice 2:5
@@ -219,6 +208,5 @@ dataset.export(query).to_coco_object_detections()
     query.slice(offset=5)
     query[5:]
     ```
-    </details>
 
 For more details, see the [API reference](../api/dataset_query.md#datasetquery) of `DatasetQuery`.
