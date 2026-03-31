@@ -1,10 +1,25 @@
-import { expect, measureElementRendering, setNetworkThrottling, test } from '../utils';
+import {
+    expect,
+    measureElementRendering,
+    measureWithMedian,
+    setNetworkThrottling,
+    test
+} from '../utils';
 import * as fs from 'fs';
 import * as path from 'path';
 
 const MAX_RENDER_TIME_MS = 5000;
+const MEASUREMENT_ITERATIONS = 5;
 
-const metrics: Array<{ test: string; renderTime: number; passed: boolean }> = [];
+const metrics: Array<{
+    test: string;
+    measurements: number[];
+    median: number;
+    min: number;
+    max: number;
+    average: number;
+    passed: boolean;
+}> = [];
 
 function saveMetrics() {
     if (process.env.CI) {
@@ -15,15 +30,27 @@ function saveMetrics() {
 
 test('samples grid renders within 5 seconds', async ({ page, samplesPage }) => {
     await setNetworkThrottling(page, 'Fast4G');
-    await samplesPage.goto();
 
-    const paintTime = await measureElementRendering(page, samplesPage.getSampleByIndex(1));
-    const passed = paintTime < MAX_RENDER_TIME_MS;
+    const result = await measureWithMedian(async () => {
+        await page.reload();
+        await samplesPage.goto();
+        return await measureElementRendering(page, samplesPage.getSampleByIndex(1));
+    }, MEASUREMENT_ITERATIONS);
 
-    metrics.push({ test: 'samples-grid', renderTime: paintTime, passed });
+    const passed = result.median < MAX_RENDER_TIME_MS;
+
+    metrics.push({
+        test: 'samples-grid',
+        measurements: result.measurements,
+        median: result.median,
+        min: result.min,
+        max: result.max,
+        average: result.average,
+        passed
+    });
     saveMetrics();
 
-    expect(paintTime).toBeLessThan(MAX_RENDER_TIME_MS);
+    expect(result.median).toBeLessThan(MAX_RENDER_TIME_MS);
 });
 
 test('sample details renders within 5 seconds', async ({
@@ -32,29 +59,55 @@ test('sample details renders within 5 seconds', async ({
     sampleDetailsPage
 }) => {
     await samplesPage.goto();
-    await samplesPage.doubleClickFirstSample();
     await setNetworkThrottling(page, 'Fast4G');
 
-    const paintTime = await measureElementRendering(page, sampleDetailsPage.getSampleDetails());
-    const passed = paintTime < MAX_RENDER_TIME_MS;
+    const result = await measureWithMedian(async () => {
+        await samplesPage.goto();
+        await samplesPage.doubleClickFirstSample();
+        const time = await measureElementRendering(page, sampleDetailsPage.getSampleDetails());
+        await page.goBack();
+        return time;
+    }, MEASUREMENT_ITERATIONS);
 
-    metrics.push({ test: 'sample-details', renderTime: paintTime, passed });
+    const passed = result.median < MAX_RENDER_TIME_MS;
+
+    metrics.push({
+        test: 'sample-details',
+        measurements: result.measurements,
+        median: result.median,
+        min: result.min,
+        max: result.max,
+        average: result.average,
+        passed
+    });
     saveMetrics();
 
-    expect(paintTime).toBeLessThan(MAX_RENDER_TIME_MS);
+    expect(result.median).toBeLessThan(MAX_RENDER_TIME_MS);
 });
 
 test('annotations grid renders within 5 seconds', async ({ page, annotationsPage }) => {
     await setNetworkThrottling(page, 'Fast4G');
-    await annotationsPage.goto();
 
-    const paintTime = await measureElementRendering(page, annotationsPage.getAnnotations().nth(1));
-    const passed = paintTime < MAX_RENDER_TIME_MS;
+    const result = await measureWithMedian(async () => {
+        await page.reload();
+        await annotationsPage.goto();
+        return await measureElementRendering(page, annotationsPage.getAnnotations().nth(1));
+    }, MEASUREMENT_ITERATIONS);
 
-    metrics.push({ test: 'annotations-grid', renderTime: paintTime, passed });
+    const passed = result.median < MAX_RENDER_TIME_MS;
+
+    metrics.push({
+        test: 'annotations-grid',
+        measurements: result.measurements,
+        median: result.median,
+        min: result.min,
+        max: result.max,
+        average: result.average,
+        passed
+    });
     saveMetrics();
 
-    expect(paintTime).toBeLessThan(MAX_RENDER_TIME_MS);
+    expect(result.median).toBeLessThan(MAX_RENDER_TIME_MS);
 });
 
 test('annotation details renders within 5 seconds', async ({
@@ -64,14 +117,28 @@ test('annotation details renders within 5 seconds', async ({
 }) => {
     await annotationsPage.goto();
     await setNetworkThrottling(page, 'Fast4G');
-    await annotationsPage.clickAnnotation(0);
-    await annotationDetailsPage.waitForNavigation();
 
-    const paintTime = await measureElementRendering(page, annotationDetailsPage.getAnnotationBox());
-    const passed = paintTime < MAX_RENDER_TIME_MS;
+    const result = await measureWithMedian(async () => {
+        await annotationsPage.goto();
+        await annotationsPage.clickAnnotation(0);
+        await annotationDetailsPage.waitForNavigation();
+        const time = await measureElementRendering(page, annotationDetailsPage.getAnnotationBox());
+        await page.goBack();
+        return time;
+    }, MEASUREMENT_ITERATIONS);
 
-    metrics.push({ test: 'annotation-details', renderTime: paintTime, passed });
+    const passed = result.median < MAX_RENDER_TIME_MS;
+
+    metrics.push({
+        test: 'annotation-details',
+        measurements: result.measurements,
+        median: result.median,
+        min: result.min,
+        max: result.max,
+        average: result.average,
+        passed
+    });
     saveMetrics();
 
-    expect(paintTime).toBeLessThan(MAX_RENDER_TIME_MS);
+    expect(result.median).toBeLessThan(MAX_RENDER_TIME_MS);
 });

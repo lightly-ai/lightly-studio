@@ -230,6 +230,65 @@ export async function measureElementRendering(page: Page, locator: Locator): Pro
 }
 
 /**
+ * Calculates the median value from an array of numbers.
+ *
+ * @param values - Array of numbers
+ * @returns Median value
+ */
+function calculateMedian(values: number[]): number {
+    if (values.length === 0) throw new Error('Cannot calculate median of empty array');
+
+    const sorted = [...values].sort((a, b) => a - b);
+    const mid = Math.floor(sorted.length / 2);
+
+    if (sorted.length % 2 === 0) {
+        return (sorted[mid - 1] + sorted[mid]) / 2;
+    }
+    return sorted[mid];
+}
+
+/**
+ * Measures element rendering time multiple times and returns statistics including the median.
+ * This provides more stable performance measurements by reducing the impact of outliers.
+ *
+ * @param measureFn - Async function that performs a single measurement
+ * @param iterations - Number of times to run the measurement (default: 5)
+ * @returns Object containing all measurements, median, min, max, and average
+ *
+ * @example
+ * const result = await measureWithMedian(async () => {
+ *   await page.goto('/samples');
+ *   return await measureElementRendering(page, samplesPage.getSampleByIndex(1));
+ * });
+ * console.log(result.median); // 1234
+ */
+export async function measureWithMedian(
+    measureFn: () => Promise<number>,
+    iterations: number = 5
+): Promise<{
+    measurements: number[];
+    median: number;
+    min: number;
+    max: number;
+    average: number;
+}> {
+    const measurements: number[] = [];
+
+    for (let i = 0; i < iterations; i++) {
+        const measurement = await measureFn();
+        measurements.push(measurement);
+    }
+
+    return {
+        measurements,
+        median: calculateMedian(measurements),
+        min: Math.min(...measurements),
+        max: Math.max(...measurements),
+        average: measurements.reduce((a, b) => a + b, 0) / measurements.length
+    };
+}
+
+/**
  * Sets network throttling for the page using Chrome DevTools Protocol.
  *
  * @param page - Playwright Page object
