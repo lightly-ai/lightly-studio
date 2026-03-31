@@ -210,7 +210,7 @@
     // Initialize annotation filter hook (must be before annotationCounts to avoid init-order crash)
     const {
         annotationFilter: annotationFilterStore,
-        annotationFilters,
+        annotationFilterRows,
         toggleAnnotationFilterSelection,
         setAnnotationCounts
     } = useAnnotationsFilter({
@@ -502,7 +502,7 @@
                             <Segment title="Filters" icon={SlidersHorizontal}>
                                 <div class="space-y-2">
                                     <LabelsMenu
-                                        {annotationFilters}
+                                        {annotationFilterRows}
                                         onToggleAnnotationFilter={toggleAnnotationFilterSelection}
                                     />
 

@@ -8,17 +8,17 @@
     import AnnotationColorLegend from '../AnnotationColorLegend/AnnotationColorLegend.svelte';
 
     let {
-        annotationFilters,
+        annotationFilterRows,
         onToggleAnnotationFilter
     }: {
-        annotationFilters: Readable<Annotation[]>;
+        annotationFilterRows: Readable<Annotation[]>;
         onToggleAnnotationFilter: (label: string) => void;
     } = $props();
 </script>
 
 <Segment title="Labels">
     <div class="width-full space-y-2 overflow-hidden">
-        {#each $annotationFilters as { label_name, current_count, total_count, selected } (label_name)}
+        {#each $annotationFilterRows as { label_name, current_count, total_count, selected } (label_name)}
             <div class="width-full flex items-center space-x-2" title={label_name}>
                 <Checkbox
                     id={label_name}

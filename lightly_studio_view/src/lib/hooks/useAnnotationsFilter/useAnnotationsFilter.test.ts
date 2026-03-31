@@ -120,17 +120,17 @@ describe('useAnnotationsFilter', () => {
         annotationLabels = writable<AnnotationLabel[] | undefined>(mockLabels);
     });
 
-    it('returns empty annotationFilters when no counts set', () => {
-        const { annotationFilters } = useAnnotationsFilter({
+    it('returns empty annotationFilterRows when no counts set', () => {
+        const { annotationFilterRows } = useAnnotationsFilter({
             annotationLabels
         });
-        expect(get(annotationFilters)).toEqual([]);
+        expect(get(annotationFilterRows)).toEqual([]);
     });
 
-    it('returns annotationFilters with selection state when counts are set', () => {
+    it('returns annotationFilterRows with selection state when counts are set', () => {
         selectedAnnotationFilterIds.set(new Set(['id-1']));
 
-        const { annotationFilters, setAnnotationCounts } = useAnnotationsFilter({
+        const { annotationFilterRows, setAnnotationCounts } = useAnnotationsFilter({
             annotationLabels
         });
 
@@ -139,7 +139,7 @@ describe('useAnnotationsFilter', () => {
             { label_name: 'dog', total_count: 8 }
         ]);
 
-        const filters = get(annotationFilters);
+        const filters = get(annotationFilterRows);
         expect(filters).toEqual([
             { label_name: 'cat', total_count: 10, current_count: 5, selected: true },
             { label_name: 'dog', total_count: 8, selected: false }

@@ -1,4 +1,4 @@
-import { derived, readonly, writable, type Readable } from 'svelte/store';
+import { derived, get, readonly, writable, type Readable } from 'svelte/store';
 import type { components } from '$lib/schema';
 import type { Annotation } from '$lib/types';
 import type { AnnotationLabel } from '$lib/services/types';
@@ -48,7 +48,7 @@ export function useSelectedAnnotationsFilter(collectionId?: string) {
             const filter: AnnotationsFilter = {
                 filter_type: 'annotations'
             };
-            if ($set && $set.size > 0) {
+            if ($set.size > 0) {
                 filter.annotation_label_ids = Array.from($set);
             }
 
@@ -111,8 +111,8 @@ export function useAnnotationsFilter({
         ($labels) => {
             if (!$labels) return {};
             return $labels.reduce(
-                (acc: Record<string, string>, label: AnnotationLabel) => ({
-                    ...acc,
+                (nameToIdMap: Record<string, string>, label: AnnotationLabel) => ({
+                    ...nameToIdMap,
                     [label.annotation_label_name!]: label.annotation_label_id!
                 }),
                 {}
@@ -132,7 +132,7 @@ export function useAnnotationsFilter({
     );
 
     // UI-ready rows for LabelsMenu
-    const annotationFilters: Readable<Annotation[]> = derived(
+    const annotationFilterRows: Readable<Annotation[]> = derived(
         [annotationCountsStore, selectedAnnotationFilterNames],
         ([$counts, $selectedNames]) => {
             if (!$counts) return [];
@@ -145,7 +145,7 @@ export function useAnnotationsFilter({
 
     // Toggle by label name
     const toggleAnnotationFilterSelection = (labelName: string) => {
-        const labelsMap = storeGet(annotationFilterLabels);
+        const labelsMap = get(annotationFilterLabels);
         const labelId = labelsMap[labelName];
         if (labelId) {
             toggleSelectedAnnotationFilterId(labelId);
@@ -157,7 +157,7 @@ export function useAnnotationsFilter({
         selectedAnnotationFilterIdsArray,
         annotationLabelIds,
         annotationFilter,
-        annotationFilters,
+        annotationFilterRows,
         annotationFilterLabels,
         selectedAnnotationFilterNames,
         setAnnotationCounts,
@@ -165,11 +165,4 @@ export function useAnnotationsFilter({
         toggleSelectedAnnotationFilterId,
         clearSelectedAnnotationFilterIds
     };
-}
-
-/** Synchronously read the current value of a readable store. */
-function storeGet<T>(store: Readable<T>): T {
-    let value: T;
-    store.subscribe((v) => (value = v))();
-    return value!;
 }
