@@ -72,6 +72,5 @@ test('annotation details renders within 5 seconds', async ({
 
     metrics.push({ test: 'annotation-details', renderTime: paintTime, passed });
     saveMetrics();
-
     expect(paintTime).toBeLessThan(MAX_RENDER_TIME_MS);
 });
