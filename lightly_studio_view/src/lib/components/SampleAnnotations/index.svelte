@@ -84,7 +84,7 @@
     });
 </script>
 
-{#if showAnnotations && !$isHidden}
+{#if showAnnotations && !$isHidden && annotationsWithVisuals.length > 0}
     <div data-testid="sample-annotation-item">
         <AnnotationCanvas
             width={sample.width}
