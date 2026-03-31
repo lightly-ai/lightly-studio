@@ -4,7 +4,7 @@ import { useUpdateAnnotationsMutation } from '$lib/hooks/useUpdateAnnotationsMut
 import { toast } from 'svelte-sonner';
 import type { AnnotationUpdateInput } from '$lib/api/lightly_studio_local';
 import { writable } from 'svelte/store';
-import { useAnnotationCountsQueryKey } from '$lib/hooks/useAnnotationCounts/useAnnotationCounts';
+import { useImageAnnotationCountsQueryKey } from '$lib/hooks/useImageAnnotationCounts/useImageAnnotationCounts';
 
 export const useAnnotationsInfinite = (
     ...props: Parameters<typeof readAnnotationsWithPayloadInfiniteOptions>
@@ -21,7 +21,7 @@ export const useAnnotationsInfinite = (
     const refresh = () => {
         client.invalidateQueries({ queryKey: annotationsOptions.queryKey });
         client.invalidateQueries({
-            queryKey: useAnnotationCountsQueryKey
+            queryKey: useImageAnnotationCountsQueryKey
         });
     };
 

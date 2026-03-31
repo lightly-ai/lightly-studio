@@ -432,6 +432,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/collections/{collection_id}/images/annotations/count": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Count Image Annotations By Collection
+         * @description Get image annotation counts for a specific collection.
+         */
+        post: operations["count_image_annotations_by_collection"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/collections/{collection_id}/samples/list": {
         parameters: {
             query?: never;
@@ -587,28 +607,6 @@ export interface paths {
          * @description Create a new annotation.
          */
         post: operations["create_annotation"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/collections/{collection_id}/annotations/count": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /**
-         * Count Annotations By Collection
-         * @description Get annotation counts for a specific collection using an image filter body.
-         *
-         *     Returns a list of dictionaries with label name and count.
-         */
-        post: operations["count_annotations_by_collection"];
         delete?: never;
         options?: never;
         head?: never;
@@ -2911,10 +2909,10 @@ export interface components {
             limit: number;
         };
         /**
-         * ReadCountAnnotationsRequest
-         * @description Request body for reading annotation counts.
+         * ReadCountImageAnnotationsRequest
+         * @description Request body for reading image annotation counts.
          */
-        ReadCountAnnotationsRequest: {
+        ReadCountImageAnnotationsRequest: {
             filter?: components["schemas"]["ImageFilter"] | null;
         };
         /**
@@ -4440,6 +4438,43 @@ export interface operations {
             };
         };
     };
+    count_image_annotations_by_collection: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                collection_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["ReadCountImageAnnotationsRequest"] | null;
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: string | number;
+                    }[];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     read_samples: {
         parameters: {
             query?: {
@@ -4845,43 +4880,6 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["AnnotationView"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    count_annotations_by_collection: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                collection_id: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: {
-            content: {
-                "application/json": components["schemas"]["ReadCountAnnotationsRequest"] | null;
-            };
-        };
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": {
-                        [key: string]: string | number;
-                    }[];
                 };
             };
             /** @description Validation Error */

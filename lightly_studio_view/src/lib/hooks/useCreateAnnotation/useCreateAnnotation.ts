@@ -4,7 +4,7 @@ import {
 } from '$lib/api/lightly_studio_local';
 import { createAnnotationMutation } from '$lib/api/lightly_studio_local/@tanstack/svelte-query.gen';
 import { createMutation, useQueryClient } from '@tanstack/svelte-query';
-import { useAnnotationCountsQueryKey } from '$lib/hooks/useAnnotationCounts/useAnnotationCounts';
+import { useImageAnnotationCountsQueryKey } from '$lib/hooks/useImageAnnotationCounts/useImageAnnotationCounts';
 
 import { get } from 'svelte/store';
 
@@ -14,7 +14,7 @@ export const useCreateAnnotation = ({ collectionId }: { collectionId: string }) 
 
     const refetch = () => {
         client.invalidateQueries({
-            queryKey: useAnnotationCountsQueryKey
+            queryKey: useImageAnnotationCountsQueryKey
         });
     };
     // We need to have this subscription to get onSuccess/onError events

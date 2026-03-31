@@ -1,7 +1,10 @@
+from __future__ import annotations
+
 from uuid import uuid4
 
 from fastapi.testclient import TestClient
 from pytest_mock import MockerFixture
+from sqlmodel import Session
 
 from lightly_studio.api.routes.api.status import (
     HTTP_STATUS_OK,
@@ -20,6 +23,12 @@ from lightly_studio.resolvers.image_resolver.get_all_by_collection_id import (
     GetAllSamplesByCollectionIdResult,
 )
 from lightly_studio.resolvers.sample_resolver.sample_filter import SampleFilter
+from tests.helpers_resolvers import (
+    create_annotation,
+    create_annotation_label,
+    create_collection,
+    create_image,
+)
 
 
 def test_read_samples_calls_get_all(mocker: MockerFixture, test_client: TestClient) -> None:
@@ -180,3 +189,114 @@ def test_get_samples_dimensions_calls_get_dimension_bounds(
         collection_id=collection_id,
         annotation_label_ids=None,
     )
+
+
+def test_count_image_annotations_by_collection__with_image_filter(
+    test_client: TestClient,
+    db_session: Session,
+) -> None:
+    collection = create_collection(session=db_session)
+    collection_id = collection.collection_id
+
+    image_1 = create_image(
+        session=db_session,
+        collection_id=collection_id,
+        file_path_abs="/path/to/sample1.png",
+    )
+    image_2 = create_image(
+        session=db_session,
+        collection_id=collection_id,
+        file_path_abs="/path/to/sample2.png",
+    )
+    image_3 = create_image(
+        session=db_session,
+        collection_id=collection_id,
+        file_path_abs="/path/to/sample3.png",
+    )
+
+    dog_label = create_annotation_label(
+        session=db_session,
+        root_collection_id=collection_id,
+        label_name="dog",
+    )
+    cat_label = create_annotation_label(
+        session=db_session,
+        root_collection_id=collection_id,
+        label_name="cat",
+    )
+
+    create_annotation(
+        session=db_session,
+        sample_id=image_1.sample_id,
+        annotation_label_id=cat_label.annotation_label_id,
+        collection_id=collection_id,
+    )
+    create_annotation(
+        session=db_session,
+        sample_id=image_2.sample_id,
+        annotation_label_id=dog_label.annotation_label_id,
+        collection_id=collection_id,
+    )
+    create_annotation(
+        session=db_session,
+        sample_id=image_3.sample_id,
+        annotation_label_id=dog_label.annotation_label_id,
+        collection_id=collection_id,
+    )
+
+    response = test_client.post(
+        f"/api/collections/{collection_id}/images/annotations/count",
+        json={
+            "filter": {
+                "sample_filter": {
+                    "annotations_filter": {
+                        "annotation_label_ids": [str(dog_label.annotation_label_id)]
+                    }
+                }
+            }
+        },
+    )
+
+    assert response.status_code == HTTP_STATUS_OK
+    result = response.json()
+
+    assert result == [
+        {"label_name": "cat", "current_count": 0, "total_count": 1},
+        {"label_name": "dog", "current_count": 2, "total_count": 2},
+    ]
+
+
+def test_count_image_annotations_by_collection__without_body(
+    test_client: TestClient,
+    db_session: Session,
+) -> None:
+    collection = create_collection(session=db_session)
+    collection_id = collection.collection_id
+
+    image_1 = create_image(
+        session=db_session,
+        collection_id=collection_id,
+        file_path_abs="/path/to/sample1.png",
+    )
+    dog_label = create_annotation_label(
+        session=db_session,
+        root_collection_id=collection_id,
+        label_name="dog",
+    )
+
+    create_annotation(
+        session=db_session,
+        sample_id=image_1.sample_id,
+        annotation_label_id=dog_label.annotation_label_id,
+        collection_id=collection_id,
+    )
+    response = test_client.post(
+        f"/api/collections/{collection_id}/images/annotations/count",
+    )
+
+    assert response.status_code == HTTP_STATUS_OK
+    result = response.json()
+
+    assert result == [
+        {"label_name": "dog", "current_count": 1, "total_count": 1},
+    ]

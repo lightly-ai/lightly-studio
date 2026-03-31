@@ -1,4 +1,4 @@
-"""Handler for database operations related to annotations."""
+"""Count image-scoped annotation label totals and filtered counts."""
 
 from __future__ import annotations
 
@@ -6,21 +6,19 @@ from uuid import UUID
 
 from sqlmodel import Session, col, func, select
 
-from lightly_studio.models.annotation.annotation_base import (
-    AnnotationBaseTable,
-)
+from lightly_studio.models.annotation.annotation_base import AnnotationBaseTable
 from lightly_studio.models.annotation_label import AnnotationLabelTable
 from lightly_studio.models.image import ImageTable
 from lightly_studio.models.sample import SampleTable
 from lightly_studio.resolvers.image_filter import ImageFilter
 
 
-def count_annotations_by_collection(
+def count_image_annotations_by_collection(
     session: Session,
     collection_id: UUID,
     image_filter: ImageFilter | None = None,
 ) -> list[tuple[str, int, int]]:
-    """Count annotations for a specific collection.
+    """Count annotations for a specific image collection.
 
     Annotations for a specific collection are grouped by annotation
     label name and counted for total and filtered.
