@@ -39,6 +39,8 @@ test('samples grid renders within 5 seconds', async ({ page, samplesPage }) => {
 
     const passed = result.median < MAX_RENDER_TIME_MS;
 
+    console.log('samples-grid measurements:', result);
+
     metrics.push({
         test: 'samples-grid',
         measurements: result.measurements,
@@ -71,6 +73,8 @@ test('sample details renders within 5 seconds', async ({
 
     const passed = result.median < MAX_RENDER_TIME_MS;
 
+    console.log('sample-details measurements:', result);
+
     metrics.push({
         test: 'sample-details',
         measurements: result.measurements,
@@ -95,6 +99,8 @@ test('annotations grid renders within 5 seconds', async ({ page, annotationsPage
     }, MEASUREMENT_ITERATIONS);
 
     const passed = result.median < MAX_RENDER_TIME_MS;
+
+    console.log('annotations-grid measurements:', result);
 
     metrics.push({
         test: 'annotations-grid',
@@ -128,6 +134,8 @@ test('annotation details renders within 5 seconds', async ({
     }, MEASUREMENT_ITERATIONS);
 
     const passed = result.median < MAX_RENDER_TIME_MS;
+
+    console.log('annotation-details measurements:', result);
 
     metrics.push({
         test: 'annotation-details',

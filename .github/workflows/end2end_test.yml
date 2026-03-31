@@ -361,7 +361,7 @@ jobs:
               const metrics = require('./performance-metrics.json');
               metrics.forEach(m => {
                 const status = m.passed ? '✅ Pass' : '❌ Fail';
-                const time = Math.round(m.renderTime);
+                const time = Math.round(m.median);
                 console.log(\`| \${m.test} | \${time}ms | \${status} |\`);
               });
             " >> $GITHUB_STEP_SUMMARY
