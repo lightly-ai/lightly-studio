@@ -51,6 +51,7 @@ test('samples grid renders within 5 seconds', async ({ page, samplesPage }) => {
         passed
     });
     saveMetrics();
+
     expect(result.median).toBeLessThan(MAX_RENDER_TIME_MS);
 });
 
