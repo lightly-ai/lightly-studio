@@ -4,7 +4,10 @@ import { writeFileSync } from 'fs';
 import { join } from 'path';
 
 // Plugin to report large chunks
-function chunkSizeReporter(limitKb: number = 500, logFile: string = 'build-chunk-sizes.log'): Plugin {
+function chunkSizeReporter(
+    limitKb: number = 500,
+    logFile: string = 'build-chunk-sizes.log'
+): Plugin {
     return {
         name: 'chunk-size-reporter',
         enforce: 'post',
@@ -35,17 +38,16 @@ function chunkSizeReporter(limitKb: number = 500, logFile: string = 'build-chunk
                 writeFileSync(logPath, logMessage + '\n', { flag: 'a' });
 
                 // Also log to console
-                console.error('\n⚠️  WARNING: Large chunks detected! See ' + logFile + ' for details.\n');
+                console.error(
+                    '\n⚠️  WARNING: Large chunks detected! See ' + logFile + ' for details.\n'
+                );
             }
         }
     };
 }
 
 export default defineConfig({
-    plugins: [
-        sveltekit(),
-        ...(process.env.REPORT_CHUNK_SIZES ? [chunkSizeReporter(500)] : [])
-    ],
+    plugins: [sveltekit(), ...(process.env.REPORT_CHUNK_SIZES ? [chunkSizeReporter(500)] : [])],
 
     build: {
         rollupOptions: {
