@@ -46,7 +46,7 @@
     } from '$lib/routes';
     import { useEmbedText } from '$lib/hooks/useEmbedText/useEmbedText';
     import type { GridType } from '$lib/types';
-    import { useAnnotationCounts } from '$lib/hooks/useAnnotationCounts/useAnnotationCounts';
+    import { useImageAnnotationCounts } from '$lib/hooks/useImageAnnotationCounts/useImageAnnotationCounts';
     import { useGlobalStorage } from '$lib/hooks/useGlobalStorage.js';
     import PlotPanel from '$lib/components/PlotPanel/PlotPanel.svelte';
     import { Button } from '$lib/components/ui/index.js';
@@ -256,7 +256,7 @@
                 })
             });
         }
-        return useAnnotationCounts({
+        return useImageAnnotationCounts({
             collectionId: datasetId,
             filter: imageFilter
         });

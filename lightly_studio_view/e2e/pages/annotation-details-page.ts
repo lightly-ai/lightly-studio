@@ -210,7 +210,8 @@ export class AnnotationDetailsPage {
         const responsePromise = this.page.waitForResponse(
             (response) =>
                 response.request().method() === 'POST' &&
-                response.url().includes('/annotations/count') &&
+                (response.url().includes('/images/annotations/count') ||
+                    response.url().includes('/annotations/count')) &&
                 response.status() === 200
         );
 

@@ -1,5 +1,8 @@
 """Resolvers for database operations."""
 
+from lightly_studio.resolvers.image_resolver.count_image_annotations_by_collection import (
+    count_image_annotations_by_collection,
+)
 from lightly_studio.resolvers.image_resolver.create_many import create_many
 from lightly_studio.resolvers.image_resolver.delete import delete
 from lightly_studio.resolvers.image_resolver.filter_new_paths import filter_new_paths
@@ -14,6 +17,7 @@ from lightly_studio.resolvers.image_resolver.get_sample_ids import get_sample_id
 from lightly_studio.resolvers.image_resolver.get_samples_excluding import get_samples_excluding
 
 __all__ = [
+    "count_image_annotations_by_collection",
     "create_many",
     "delete",
     "filter_new_paths",
