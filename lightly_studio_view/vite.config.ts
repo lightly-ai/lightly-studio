@@ -44,7 +44,7 @@ function chunkSizeReporter(limitKb: number = 500, logFile: string = 'build-chunk
 export default defineConfig({
     plugins: [
         sveltekit(),
-        chunkSizeReporter(500) // Report chunks over 500kb
+        ...(process.env.REPORT_CHUNK_SIZES ? [chunkSizeReporter(500)] : [])
     ],
 
     build: {
