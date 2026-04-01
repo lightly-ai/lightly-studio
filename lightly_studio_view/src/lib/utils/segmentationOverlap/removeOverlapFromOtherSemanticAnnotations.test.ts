@@ -11,10 +11,14 @@ vi.mock('$lib/components/SampleAnnotation/utils', () => ({
 }));
 
 const sample = { width: 4, height: 4 };
-const baseAnn = (id: string, mask: number[]): AnnotationView =>
+const baseAnn = (
+    id: string,
+    mask: number[],
+    annotationType: 'instance_segmentation' | 'semantic_segmentation' = 'instance_segmentation'
+): AnnotationView =>
     ({
         sample_id: id,
-        annotation_type: 'semantic_segmentation',
+        annotation_type: annotationType,
         segmentation_details: { segmentation_mask: mask },
         annotation_label: { annotation_label_name: 'a', annotation_label_id: 'a' },
         parent_sample_id: 'p',
@@ -29,9 +33,9 @@ describe('removeOverlapFromOtherSemanticAnnotations', () => {
         vi.clearAllMocks();
     });
 
-    it('skips overlap removal when mode is instance segmentation', async () => {
+    it('clears overlapping pixels on other instance masks and sends an update', async () => {
         const overriddenAnnotations = await removeOverlapFromOtherSemanticAnnotations({
-            newMask: new Uint8Array(16),
+            newMask: Uint8Array.from([1, 0, 0, 0]),
             annotations: [baseAnn('1', [1, 1, 0, 0])],
             segmentationMode: 'instance',
             sample,
@@ -39,16 +43,18 @@ describe('removeOverlapFromOtherSemanticAnnotations', () => {
             updateAnnotations
         });
 
-        // In instance mode, we should not alter other semantic masks.
-        expect(updateAnnotations).not.toHaveBeenCalled();
-        expect(overriddenAnnotations).toEqual([]);
+        // In instance mode, one-pixel ownership is enforced across instance masks.
+        expect(updateAnnotations).toHaveBeenCalledTimes(1);
+        const [updates] = updateAnnotations.mock.calls[0];
+        expect(updates[0].annotation_id).toBe('1');
+        expect(overriddenAnnotations.map((annotation) => annotation.sample_id)).toEqual(['1']);
     });
 
     it('respects locked annotations and leaves them untouched', async () => {
         const overriddenAnnotations = await removeOverlapFromOtherSemanticAnnotations({
             newMask: Uint8Array.from([1, 0, 0, 0]),
             annotations: [baseAnn('1', [1, 0, 0, 0])],
-            segmentationMode: 'semantic',
+            segmentationMode: 'instance',
             sample,
             collectionId: 'c',
             lockedAnnotationIds: new Set(['1']),
@@ -60,10 +66,10 @@ describe('removeOverlapFromOtherSemanticAnnotations', () => {
         expect(overriddenAnnotations).toEqual([]);
     });
 
-    it('clears overlapping pixels on other semantic masks and sends an update', async () => {
+    it('clears overlapping pixels on other semantic masks and sends an update in semantic mode', async () => {
         const overriddenAnnotations = await removeOverlapFromOtherSemanticAnnotations({
             newMask: Uint8Array.from([1, 0, 0, 0]),
-            annotations: [baseAnn('1', [1, 1, 0, 0])],
+            annotations: [baseAnn('1', [1, 1, 0, 0], 'semantic_segmentation')],
             segmentationMode: 'semantic',
             sample,
             collectionId: 'c',
