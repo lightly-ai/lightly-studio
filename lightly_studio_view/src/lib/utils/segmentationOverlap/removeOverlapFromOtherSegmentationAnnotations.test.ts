@@ -12,9 +12,7 @@ vi.mock('$lib/components/SampleAnnotation/utils', () => ({
 
 const sample = { width: 4, height: 4 };
 const MAX_MASK_PIXELS = 16;
-const NEW_MASK_FIRST_PIXEL = Uint8Array.from([
-    1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
-]);
+const NEW_MASK_FIRST_PIXEL = Uint8Array.from([1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]);
 const OVERLAP_FIRST_TWO_PIXELS = [1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
 const OVERLAP_FIRST_PIXEL = [1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
 
@@ -77,7 +75,11 @@ describe('removeOverlapFromOtherSegmentationAnnotations', () => {
         const overriddenAnnotations = await removeOverlapFromOtherSegmentationAnnotations({
             newMask: Uint8Array.from(NEW_MASK_FIRST_PIXEL),
             annotations: [
-                baseAnn('1', OVERLAP_FIRST_TWO_PIXELS.slice(0, MAX_MASK_PIXELS), 'semantic_segmentation')
+                baseAnn(
+                    '1',
+                    OVERLAP_FIRST_TWO_PIXELS.slice(0, MAX_MASK_PIXELS),
+                    'semantic_segmentation'
+                )
             ],
             segmentationMode: 'semantic',
             sample,
