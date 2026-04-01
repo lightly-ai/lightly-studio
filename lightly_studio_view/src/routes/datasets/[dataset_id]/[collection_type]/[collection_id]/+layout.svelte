@@ -2,11 +2,9 @@
     import { browser } from '$app/environment';
     import { page } from '$app/state';
     import {
-        CreateClassifierDialog,
         CombinedMetadataDimensionsFilters,
         Footer,
         LabelsMenu,
-        RefineClassifierDialog,
         TagCreateDialog,
         TagsMenu
     } from '$lib/components';
@@ -21,7 +19,7 @@
         GripVertical
     } from '@lucide/svelte';
     import { onDestroy, onMount } from 'svelte';
-    import { get, toStore, writable } from 'svelte/store';
+    import { get, toStore } from 'svelte/store';
     import { toast } from 'svelte-sonner';
     import { Header } from '$lib/components';
     import MenuDialogHost from '$lib/components/Header/MenuDialogHost.svelte';
@@ -30,6 +28,7 @@
     import { useHasEmbeddings } from '$lib/hooks/useHasEmbeddings/useHasEmbeddings';
     import { useHideAnnotations } from '$lib/hooks/useHideAnnotations';
     import { useAnnotationLabels } from '$lib/hooks/useAnnotationLabels/useAnnotationLabels';
+    import { useAnnotationsFilter } from '$lib/hooks/useAnnotationsFilter/useAnnotationsFilter';
     import { useDimensions } from '$lib/hooks/useDimensions/useDimensions';
     import {
         isAnnotationDetailsRoute,
@@ -47,7 +46,6 @@
     import type { GridType } from '$lib/types';
     import { useImageAnnotationCounts } from '$lib/hooks/useImageAnnotationCounts/useImageAnnotationCounts';
     import { useGlobalStorage } from '$lib/hooks/useGlobalStorage.js';
-    import PlotPanel from '$lib/components/PlotPanel/PlotPanel.svelte';
     import { Button } from '$lib/components/ui/index.js';
     import { PaneGroup, Pane, PaneResizer } from 'paneforge';
     import { useVideoAnnotationCounts } from '$lib/hooks/useVideoAnnotationsCount/useVideoAnnotationsCount.js';
@@ -58,12 +56,7 @@
     import { useVideoFrameAnnotationCounts } from '$lib/hooks/useVideoFrameAnnotationsCount/useVideoFrameAnnotationsCount.js';
     import { useVideoFramesBounds } from '$lib/hooks/useVideoFramesBounds/useVideoFramesBounds.js';
     import { useVideoBounds } from '$lib/hooks/useVideosBounds/useVideosBounds.js';
-    import {
-        SampleType,
-        type AnnotationsFilter,
-        type ImageFilter
-    } from '$lib/api/lightly_studio_local/types.gen.js';
-    import type { AnnotationLabel } from '$lib/services/types.js';
+    import { SampleType, type ImageFilter } from '$lib/api/lightly_studio_local/types.gen.js';
     import { buildImageFilter } from '$lib/utils/buildImageFilter';
     import {
         buildVideoAnnotationCountsFilter,
@@ -78,8 +71,7 @@
             textEmbedding,
             setLastGridType,
             clearSelectedSamples,
-            clearSelectedSampleAnnotationCrops,
-            selectedAnnotationFilterIds
+            clearSelectedSampleAnnotationCrops
         }
     } = $derived(data);
 
@@ -203,51 +195,32 @@
     const { metadataValues } = $derived.by(() => useMetadataFilters(collectionId));
     const { dimensionsValues } = useDimensions(collectionIdStore);
 
-    const annotationLabels = $derived(useAnnotationLabels({ collectionId: collectionId ?? '' }));
+    const annotationLabelsQuery = $derived(
+        useAnnotationLabels({ collectionId: collectionId ?? '' })
+    );
+    const annotationLabelsData = $derived($annotationLabelsQuery?.data);
     const { showPlot, setShowPlot, filteredSampleCount, filteredAnnotationCount } =
         useGlobalStorage();
 
-    // Create annotation filter labels mapping (name -> id)
-    const annotationFilterLabels = $derived.by(() =>
-        $annotationLabels?.data
-            ? $annotationLabels.data.reduce(
-                  (acc: Record<string, string>, label: AnnotationLabel) => ({
-                      ...acc,
-                      [label.annotation_label_name!]: label.annotation_label_id!
-                  }),
-                  {} as Record<string, string>
-              )
-            : {}
-    );
+    const annotationLabelsStore = toStore(() => annotationLabelsData);
 
-    const selectedAnnotationFilter = $derived.by(() => {
-        const labelsMap = annotationFilterLabels;
-        const currentSelectedIds = Array.from($selectedAnnotationFilterIds);
-
-        return Object.entries(labelsMap)
-            .filter(([, id]) => currentSelectedIds.includes(id))
-            .map(([name]) => name);
+    // Initialize annotation filter hook (must be before annotationCounts to avoid init-order crash)
+    const {
+        annotationFilter: annotationFilterStore,
+        annotationFilterRows,
+        toggleAnnotationFilterSelection,
+        setAnnotationCounts
+    } = useAnnotationsFilter({
+        annotationLabels: annotationLabelsStore
     });
 
-    // Helper function to add selection state to annotation counts
-    const getAnnotationFilters = (annotations: Array<AnnotationCount>, selected: string[]) =>
-        annotations.map((annotation) => ({
-            ...annotation,
-            selected: selected.includes(annotation.label_name)
-        }));
-
-    const annotationFilter = $derived.by<AnnotationsFilter | undefined>(() =>
-        $selectedAnnotationFilterIds.size > 0
-            ? { annotation_label_ids: Array.from($selectedAnnotationFilterIds) }
-            : undefined
-    );
     const metadataFilters = $derived(
         metadataValues ? createMetadataFilters($metadataValues) : undefined
     );
     const imageFilter = $derived.by<ImageFilter | undefined>(() =>
         buildImageFilter({
             dimensionsValues: $dimensionsValues ?? undefined,
-            annotationFilter,
+            annotationFilter: $annotationFilterStore,
             metadataFilters
         })
     );
@@ -260,15 +233,13 @@
             (isAnnotations && parentCollection?.sampleType == SampleType.VIDEO_FRAME)
         ) {
             let videoFrameCollectionId = collectionId;
-            // If we are on the video frame annotations page we must pass the parent collectionId as annotations
-            // collection is a child of video frame collection.
             if (isAnnotations && parentCollection?.sampleType == SampleType.VIDEO_FRAME)
                 videoFrameCollectionId = parentCollection.collectionId;
             return useVideoFrameAnnotationCounts({
                 collectionId: videoFrameCollectionId,
                 filter: buildVideoFrameAnnotationCountsFilter({
                     metadataFilters,
-                    annotationFilter,
+                    annotationFilter: $annotationFilterStore,
                     videoFramesBoundsValues: $videoFramesBoundsValues
                 })
             });
@@ -277,7 +248,7 @@
                 collectionId,
                 filter: buildVideoAnnotationCountsFilter({
                     metadataFilters,
-                    annotationFilter,
+                    annotationFilter: $annotationFilterStore,
                     videoBoundsValues: $videoBoundsValues
                 })
             });
@@ -288,50 +259,16 @@
         });
     });
 
-    type AnnotationCount = {
-        label_name: string;
-        total_count: number;
-        current_count?: number;
-    };
-
-    // Create a writable store for annotation filters that the component can subscribe to
-    const annotationFilters = writable<
-        Array<{
-            label_name: string;
-            total_count: number;
-            current_count?: number;
-            selected: boolean;
-        }>
-    >([]);
-
-    // Use effect to update the writable store when query data or selection changes
+    // Feed annotation counts back into the hook for UI-ready filter rows.
+    // Only update when data is present to avoid flicker during query refetch.
     $effect(() => {
         const countsData = $annotationCounts.data;
         if (countsData) {
-            const filtersWithSelection = getAnnotationFilters(
-                countsData as AnnotationCount[],
-                selectedAnnotationFilter
+            setAnnotationCounts(
+                countsData as { label_name: string; total_count: number; current_count?: number }[]
             );
-            annotationFilters.set(filtersWithSelection);
         }
     });
-
-    const toggleAnnotationFilterSelection = (labelName: string) => {
-        // Get the ID for this label
-        const labelId = annotationFilterLabels[labelName];
-
-        if (labelId) {
-            // Update the global Set in useGlobalStorage
-            selectedAnnotationFilterIds.update((state: Set<string>) => {
-                if (state.has(labelId)) {
-                    state.delete(labelId);
-                } else {
-                    state.add(labelId);
-                }
-                return state;
-            });
-        }
-    };
 
     // Error handling for text embedding search
     const setError = (errorMessage: string) => {
@@ -556,14 +493,13 @@
                                 <TagCreateDialog
                                     {collectionId}
                                     {gridType}
-                                    {selectedAnnotationFilterIds}
                                     textEmbedding={get(textEmbedding)}
                                 />
                             </div>
                             <Segment title="Filters" icon={SlidersHorizontal}>
                                 <div class="space-y-2">
                                     <LabelsMenu
-                                        {annotationFilters}
+                                        {annotationFilterRows}
                                         onToggleAnnotationFilter={toggleAnnotationFilterSelection}
                                     />
 
@@ -691,7 +627,9 @@
                     </PaneResizer>
 
                     <Pane defaultSize={50} minSize={30} class="flex min-h-0 flex-col">
-                        <PlotPanel />
+                        {#await import('$lib/components/PlotPanel/PlotPanel.svelte') then { default: PlotPanel }}
+                            <PlotPanel />
+                        {/await}
                     </Pane>
                 </PaneGroup>
             {:else}
@@ -806,8 +744,12 @@
                 </div>
             {/if}
             {#if hasEmbeddings}
-                <CreateClassifierDialog />
-                <RefineClassifierDialog />
+                {#await import('$lib/components/FewShotClassifier/CreateClassifierDialog.svelte') then { default: CreateClassifierDialog }}
+                    <CreateClassifierDialog />
+                {/await}
+                {#await import('$lib/components/FewShotClassifier/RefineClassifierDialog.svelte') then { default: RefineClassifierDialog }}
+                    <RefineClassifierDialog />
+                {/await}
             {/if}
         </div>
         <Footer

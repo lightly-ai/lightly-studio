@@ -4,6 +4,7 @@
     import { useGlobalStorage } from '$lib/hooks/useGlobalStorage';
     import VideoItem from '$lib/components/VideoItem/VideoItem.svelte';
     import { useMetadataFilters } from '$lib/hooks/useMetadataFilters/useMetadataFilters';
+    import { useSelectedAnnotationsFilter } from '$lib/hooks/useAnnotationsFilter/useAnnotationsFilter';
     import { useTags } from '$lib/hooks/useTags/useTags';
     import { useVideoBounds } from '$lib/hooks/useVideosBounds/useVideosBounds';
     import { buildVideoFilter, useVideoFilters } from '$lib/hooks/useVideoFilters/useVideoFilters';
@@ -14,8 +15,6 @@
     import { get } from 'svelte/store';
     import { selectRangeByAnchor } from '$lib/utils/selectRangeByAnchor';
 
-    const { data: propsData } = $props();
-
     const collectionId = $derived($page.params.collection_id!);
     const { tagsSelected } = $derived.by(() =>
         useTags({
@@ -25,7 +24,8 @@
     );
 
     const { metadataValues } = useMetadataFilters();
-    const selectedAnnotationsFilterIds = $derived(propsData.selectedAnnotationFilterIds);
+    const { selectedAnnotationFilterIdsArray: selectedAnnotationsFilterIds } =
+        useSelectedAnnotationsFilter();
     const { videoBoundsValues } = $derived.by(() => useVideoBounds(collectionId));
 
     const { textEmbedding, getSelectedSampleIds, toggleSampleSelection } = useGlobalStorage();
