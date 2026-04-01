@@ -1,5 +1,7 @@
 # Contributing to LightlyStudio
+
 ### Welcome! We are glad that you want to contribute to our project!
+
 We welcome contributions of all kinds, including:  
 - Bug fixes  
 - Documentation improvements (README, docs folder, examples)  
@@ -38,7 +40,8 @@ make static-checks
 make test
 ```
 
-When updating the code please follow our coding guidelines for [backend](./docs/coding-guidelines/backend.md) and [frontend](./docs/coding-guidelines/frontend.md).
+When updating the code please follow our coding guidelines in [./ai_guidelines](./ai_guidelines).
+AI coding tools will be able to assist.
 
 ### End-to-End Testing
 
@@ -98,10 +101,10 @@ written in Markdown (MyST flavor). For more information regarding formatting, se
 ## Development Environment Setup
 
 ### Requirements
-- Python **3.9** <= version <= **3.13**
+- Python **3.9+**
 - Uv version **0.8.17+**
 - Node.js **22.11+**
-- Access to **Google Cloud Platform** (request permission from @IgorSusmelj)
+- Access to **Google Cloud Platform** (request permissions from @IgorSusmelj)
 
 ### Clone the Repository with Test Data
 
