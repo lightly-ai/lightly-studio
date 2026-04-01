@@ -148,7 +148,6 @@ def load_into_dataset_from_labelformat(
     root_collection_id: UUID,
     input_labels: ObjectDetectionInput | InstanceSegmentationInput,
     images_path: PathLike,
-    annotation_type: AnnotationType | None = None,
 ) -> list[UUID]:
     """Load samples and their annotations from a labelformat input into the dataset.
 
@@ -157,11 +156,6 @@ def load_into_dataset_from_labelformat(
         root_collection_id: The ID of the root collection to load samples into.
         input_labels: The labelformat input containing images and annotations.
         images_path: The path to the directory containing the images.
-        annotation_type: The type of annotations to store in the database. If None,
-            it is inferred from input_labels type.
-            Note: Currently (01/2026) semantic segmentation is provided as
-            InstanceSegmentationInput, in that case callers need to specify
-            annotation_type explicitly.
 
     Returns:
         A list of UUIDs of the created samples.
@@ -180,6 +174,13 @@ def load_into_dataset_from_labelformat(
         input_labels=input_labels,
     )
 
+    if isinstance(input_labels, InstanceSegmentationInput):
+        annotation_type = AnnotationType.INSTANCE_SEGMENTATION
+    elif isinstance(input_labels, ObjectDetectionInput):
+        annotation_type = AnnotationType.OBJECT_DETECTION
+    else:
+        raise ValueError(f"Unsupported input labels type: {type(input_labels)}")
+
     samples_to_create: list[ImageCreate] = []
     created_sample_ids: list[UUID] = []
     path_to_anno_data: dict[str, AnnotationImageData] = {}
@@ -188,18 +189,6 @@ def load_into_dataset_from_labelformat(
         image: Image = image_data.image  # type: ignore[attr-defined]
 
         typed_image_data: ImageInstanceSegmentation | ImageObjectDetection = image_data  # type: ignore[assignment]
-
-        # In the first iteration, determine the annotation type if not provided.
-        # Note that currently (01/2026) semantic segmentation is provided
-        # as InstanceSegmentationInput, in that case callers need to specify annotation_type
-        # explicitly.
-        if annotation_type is None:
-            if isinstance(typed_image_data, ImageInstanceSegmentation):
-                annotation_type = AnnotationType.INSTANCE_SEGMENTATION
-            elif isinstance(typed_image_data, ImageObjectDetection):
-                annotation_type = AnnotationType.OBJECT_DETECTION
-            else:
-                raise ValueError(f"Unsupported annotation data type: {type(typed_image_data)}")
 
         sample = ImageCreate(
             file_name=str(image.filename),
