@@ -3,9 +3,9 @@
 When working on the LightlyStudio codebase, always follow these coding guidelines:
 
 ## Coding Guidelines
-- **For Pull Requests**: [../ai_guidelines/pull_requests.md](../ai_guidelines/pull_requests.md)
-- **Frontend** (SvelteKit/TypeScript): [../docs/coding-guidelines/frontend.md](../docs/coding-guidelines/frontend.md)
-- **Backend** (Python): [../docs/coding-guidelines/backend.md](../docs/coding-guidelines/backend.md)
+- **For Pull Requests**: [./pull_requests.md](./pull_requests.md)
+- **Frontend** (SvelteKit/TypeScript): [./frontend.md](./frontend.md)
+- **Backend** (Python): [./backend.md](./backend.md)
 - **Contributing**: [../CONTRIBUTING.md](../CONTRIBUTING.md)
 
 ## Key Frontend Reminders
