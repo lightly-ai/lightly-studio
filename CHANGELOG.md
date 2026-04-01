@@ -23,7 +23,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
-- Add tooltips to features in annotation items in the right panel to improve usability.
+- Added tooltips to features in annotation items in the right panel to improve usability.
 - Added instance segmentation export to COCO in the GUI.
 - Added scopes to operators: now operators are tied to certain scopes and also retrieve filters. This enables to execute operators on specific collections, with specific filters, or even on individual samples.
 - Added semantic segmentation export to PASCAL VOC in the GUI.
