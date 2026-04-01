@@ -8,7 +8,6 @@
 
     const {
         sampleSize,
-        selectedAnnotationFilterIds,
         globalStorage: { textEmbedding }
     } = data;
 
@@ -29,9 +28,4 @@
     });
 </script>
 
-<Samples
-    sampleWidth={$sampleSize.width}
-    {textEmbedding}
-    {collection_id}
-    {selectedAnnotationFilterIds}
-/>
+<Samples sampleWidth={$sampleSize.width} {textEmbedding} {collection_id} />

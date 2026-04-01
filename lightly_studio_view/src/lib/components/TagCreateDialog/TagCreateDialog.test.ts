@@ -54,6 +54,9 @@ vi.mock('$lib/hooks/useGlobalStorage', () => ({
         return {
             getSelectedSampleIds,
             selectedSampleAnnotationCropIds,
+            selectedAnnotationFilterIds: writable(new Set<string>()),
+            setSelectedAnnotationFilterIds: vi.fn(),
+            clearSelectedAnnotationFilterIds: vi.fn(),
             clearSelectedSamples: vi.fn(),
             clearSelectedSampleAnnotationCrops: vi.fn(),
             // In Svelte 5, we need to make sure all stores are properly subscribed
