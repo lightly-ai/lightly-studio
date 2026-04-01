@@ -27,6 +27,7 @@ from lightly_studio.models.video import VideoFrameTable
 from lightly_studio.resolvers import (
     annotation_label_resolver,
     annotation_resolver,
+    collection_resolver,
     object_track_resolver,
     video_frame_resolver,
 )
@@ -67,6 +68,7 @@ class _LightlyStudioYouTubeVISTrackInputBase:
         if not samples:
             return _YouTubeVISExportContext(
                 root_collection_id=None,
+                dataset_id=None,
                 videos=[],
                 uuid_to_videos={},
                 frame_to_video_id_and_index={},
@@ -75,6 +77,14 @@ class _LightlyStudioYouTubeVISTrackInputBase:
             )
 
         root_collection_id = samples[0].collection_id
+        root_collection = collection_resolver.get_by_id(
+            session=session, collection_id=root_collection_id
+        )
+        if root_collection is None:
+            raise RuntimeError(
+                f"Sample is pointing to a non-existing collection ID: {root_collection_id}"
+            )
+        dataset_id = root_collection.dataset_id
         uuid_to_videos, frame_to_video_id_and_index = _build_videos_and_frame_map(
             session=session, samples=samples
         )
@@ -83,6 +93,7 @@ class _LightlyStudioYouTubeVISTrackInputBase:
         )
         return _YouTubeVISExportContext(
             root_collection_id=root_collection_id,
+            dataset_id=dataset_id,
             videos=list(uuid_to_videos.values()),
             uuid_to_videos=uuid_to_videos,
             frame_to_video_id_and_index=frame_to_video_id_and_index,
@@ -157,6 +168,7 @@ class LightlyStudioYouTubeVISInstanceSegmentationTrackInput(
 @dataclass(frozen=True)
 class _YouTubeVISExportContext:
     root_collection_id: UUID | None
+    dataset_id: UUID | None
     videos: list[Video]
     uuid_to_videos: dict[UUID, Video]
     frame_to_video_id_and_index: dict[UUID, tuple[UUID, int]]
