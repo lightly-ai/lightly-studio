@@ -2652,10 +2652,6 @@ dependencies = [
     { name = "pyyaml" },
     { name = "tqdm" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/f7/96/09f072ec46b06771d1233298db46b8b5b9630cbcc562a27cb3d41ea62630/labelformat-0.1.13.tar.gz", hash = "sha256:4c187d67f17d97cbd64a1bdcfcb59992aa99ecef8cf4bd05ad82b7d8c6bc18d0", size = 38219, upload-time = "2026-04-01T07:38:45.015Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/a8/72/5f620f1d112b3a3d63f1d7462e19abcd3abbb4fafdf1e16fa98811d173ec/labelformat-0.1.13-py3-none-any.whl", hash = "sha256:45db260a5525201cdf3d859ecce355f3ffa9e4f989982f047063b98964d0c5d1", size = 56492, upload-time = "2026-04-01T07:38:47.241Z" },
-]
 
 [[package]]
 name = "lazy-object-proxy"
