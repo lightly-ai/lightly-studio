@@ -73,7 +73,7 @@
 {#if annotationMetadata.length > 0}
     <Segment title="Annotation details">
         <div class="flex flex-col gap-4">
-            <div class="grid grid-cols-[6rem_1fr] gap-y-3 text-diffuse-foreground">
+            <div class="grid grid-cols-[6rem_minmax(0,1fr)] gap-y-3 text-diffuse-foreground">
                 {#each annotationMetadata as { label, value, id } (label)}
                     {#if id === 'label' && isEditingMode}
                         <AnnotationMetadataLabel

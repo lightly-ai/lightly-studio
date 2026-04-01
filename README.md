@@ -30,13 +30,17 @@
 
 # Welcome to LightlyStudio!
 
-We at **[Lightly](https://lightly.ai)** created **[LightlyStudio](https://www.lightly.ai/lightly-studio)**, an open-source tool designed to unify your data workflows from curation, annotation and management in a single tool. Since we're big fans of Rust we used it to speed things up. You can work with COCO and ImageNet on a Macbook Pro with M1 and 16GB of memory!
+We at Lightly created **LightlyStudio**, an open-source tool designed to unify your data workflows from curation, annotation and management in a single tool. Since we're big fans of Rust we used it to speed things up. You can work with COCO and ImageNet on a Macbook Pro with M1 and 16GB of memory!
 
 <p align="center">
   <img alt="LightlyStudio Overview" src="https://storage.googleapis.com/lightly-public/studio/studio_overview.gif" width="70%">
   <br/>
   <em>Curate, Annotate, and Manage Your Data in LightlyStudio.</em>
 </p>
+
+## 📖 Documentation
+
+Head over to the [official LightlyStudio documentation](https://docs.lightly.ai/studio).
 
 ## 💻 Installation
 
@@ -51,9 +55,9 @@ Supported features:
 
 | Feature / Task | Classification | Detection | Sem. Segmentation | Inst. Segmentation | Captions (img+text) | Video | Keypoints | 3D Point Clouds | Text |
 |----------------|:--------------:|:---------:|:---------------------:|:---------------------:|:-------------:|:-----:|:---------:|:---------------:|:---------:|
-| Visualisation | 🛠️ | ✅ | 🛠️ | ✅ | ✅ | ✅ | ❌ | 🛠️ | 🛠️ |
-| Filtering | 🛠️ | ✅ | ✅ | 🛠️ | ✅ | ✅ | ❌ | 🛠️ | 🛠️ |
-| Labeling | 🛠️ | ✅ |🛠️ | 🛠️ | ✅ | 🛠️ | ❌ | ❌ | 🛠️ |
+| Visualisation | 🛠️ | ✅ | ✅ | ✅ | ✅ | ✅ | ❌ | 🛠️ | 🛠️ |
+| Filtering | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ❌ | 🛠️ | 🛠️ |
+| Labeling | 🛠️ | ✅ | ✅ | ✅ | ✅ | ✅ | ❌ | ❌ | 🛠️ |
 
 ✅ - supported<br>
 🛠️ - support in progress (ETA <2 months)<br>

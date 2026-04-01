@@ -8,15 +8,12 @@ export type LayoutLoadResult = {
     samplesSelectedTagsIds: ReturnType<typeof useTags>['tagsSelected'];
     samplesDimensions: ReturnType<typeof useDimensions>['dimensionsValues'];
     samplesTextEmbedding: ReturnType<typeof useGlobalStorage>['textEmbedding'];
-    samplesSelectedAnnotationLabelsIds: ReturnType<
-        typeof useGlobalStorage
-    >['selectedAnnotationFilterIds'];
 };
 
 export const load: LayoutLoad = async ({
     params: { collection_id }
 }: LayoutLoadEvent): Promise<LayoutLoadResult> => {
-    const { selectedAnnotationFilterIds, textEmbedding } = useGlobalStorage();
+    const { textEmbedding } = useGlobalStorage();
 
     const { tagsSelected } = useTags({
         collection_id: collection_id as string,
@@ -28,7 +25,6 @@ export const load: LayoutLoad = async ({
     return {
         samplesSelectedTagsIds: tagsSelected,
         samplesDimensions: dimensionsValues,
-        samplesTextEmbedding: textEmbedding,
-        samplesSelectedAnnotationLabelsIds: selectedAnnotationFilterIds
+        samplesTextEmbedding: textEmbedding
     };
 };

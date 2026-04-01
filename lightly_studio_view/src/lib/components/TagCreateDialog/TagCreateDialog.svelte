@@ -7,7 +7,6 @@
         readImages,
         type ReadImagesRequest,
         getAllFrames,
-        type AnnotationsFilter,
         type VideoFrameFilter,
         type VideoFilter,
         getVideoSampleIds,
@@ -35,9 +34,9 @@
     import { useVideoFramesBounds } from '$lib/hooks/useVideoFramesBounds/useVideoFramesBounds';
     import { useVideoBounds } from '$lib/hooks/useVideosBounds/useVideosBounds';
     import Spinner from '../Spinner/Spinner.svelte';
-    import type { Writable } from 'svelte/store';
     import { useImageFilters } from '$lib/hooks/useImageFilters/useImageFilters';
     import { useVideoFilters } from '$lib/hooks/useVideoFilters/useVideoFilters';
+    import { useSelectedAnnotationsFilter } from '$lib/hooks/useAnnotationsFilter/useAnnotationsFilter';
     import { isNormalModeParams } from '$lib/hooks/useImagesInfinite/useImagesInfinite';
     import useAuth from '$lib/hooks/useAuth/useAuth';
     import { hasMinimumRole } from '$lib/hooks/useAuth/hasMinimumRole';
@@ -45,16 +44,10 @@
     export type UseTagsCreateDialog = {
         collectionId: string;
         gridType: GridType;
-        selectedAnnotationFilterIds?: Writable<Set<string>>;
         textEmbedding?: TextEmbedding;
     };
 
-    let {
-        collectionId,
-        gridType,
-        selectedAnnotationFilterIds,
-        textEmbedding
-    }: UseTagsCreateDialog = $props();
+    let { collectionId, gridType, textEmbedding }: UseTagsCreateDialog = $props();
 
     const { metadataValues } = useMetadataFilters(collectionId);
     let tagKind: TagKind = $derived(
@@ -66,23 +59,14 @@
     const { dimensionsValues: dimensions } = useDimensions();
     const { filterParams } = useImageFilters();
     const { filterParams: videoFilterParams } = useVideoFilters();
-    const annotationLabelIds = $derived<string[] | undefined>(
-        $selectedAnnotationFilterIds?.size ? Array.from($selectedAnnotationFilterIds) : undefined
-    );
+    const { annotationLabelIds: annotationLabelIdsStore, annotationFilter: annotationFilterStore } =
+        useSelectedAnnotationsFilter();
 
-    const annotationFilter = $derived<AnnotationsFilter | undefined>(
-        annotationLabelIds
-            ? {
-                  annotation_label_ids: annotationLabelIds
-              }
-            : undefined
-    );
+    const annotationLabelIds = $derived($annotationLabelIdsStore);
+    const annotationFilter = $derived($annotationFilterStore);
+
     const sampleFilter = $derived<SampleFilter>({
-        annotations_filter: annotationLabelIds
-            ? {
-                  annotation_label_ids: annotationLabelIds
-              }
-            : undefined,
+        annotations_filter: annotationFilter,
         tag_ids: $tagsSelected.size > 0 ? Array.from($tagsSelected) : undefined,
         metadata_filters: $metadataValues ? createMetadataFilters($metadataValues) : undefined
     });
@@ -120,9 +104,7 @@
     });
 
     const annotationsQueryParams = $derived({
-        annotation_label_ids: $selectedAnnotationFilterIds?.size
-            ? Array.from($selectedAnnotationFilterIds)
-            : undefined,
+        annotation_label_ids: annotationLabelIds,
         tag_ids: $tagsSelected.size > 0 ? Array.from($tagsSelected) : undefined
     });
 
@@ -376,7 +358,7 @@
     </div>
 {/if}
 <Dialog.Root onOpenChange={changeDialogOpenState} open={isDialogOpened}>
-    <Dialog.Content class="sm:max-w-[425px]">
+    <Dialog.Content class="flex max-h-[85vh] flex-col overflow-hidden sm:max-w-[425px]">
         {#await fetchSamples()}
             <Spinner />
         {:then}
@@ -399,7 +381,10 @@
                     data-testid="tag-create-dialog-input"
                 />
             </div>
-            <div>
+            <div
+                class="min-h-0 flex-1 overflow-y-auto pr-1"
+                data-testid="tag-create-dialog-tag-list"
+            >
                 {#each tagsFiltered as tag (tag.tag_id)}
                     <div class="flex space-x-2 py-1">
                         <Checkbox
@@ -414,7 +399,7 @@
                     <Button
                         type="button"
                         variant="outline"
-                        class={cn('', ...buttonVariants({ variant: 'outline' }))}
+                        class={cn('mt-1 w-full', buttonVariants({ variant: 'outline' }))}
                         onclick={onEnlisttagsEnlistedToCreate}
                         data-testid="tag-create-dialog-create">Create tag "{tagsQueryTerm}"</Button
                     >

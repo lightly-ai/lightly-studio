@@ -8,17 +8,32 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- Added `Dataset.update_metadata` method to update metadata of multiple samples at once.
 
-- Add tooltips to features in annotation items in the right panel to improve usability.
-- Added instance segmentation export to COCO in the GUI.
-- Added scopes to operators: now operators are tied to certain scopes and also retrieve filters. This enables to execute operators on specific collections, with specific filters, or even on individual samples.
-- Added semantic segmentation export to PASCAL VOC in the GUI.
+### Changed
+
+### Deprecated
+
+### Removed
+
+### Fixed
+
+### Security
+
+## \[0.4.12\] - 2026-04-01
+
+### Added
+
+- Added tooltips to features in annotation items in the right panel to improve usability.
 - Added keyboard navigation (Space + W/A/S/D) for moving within the zoomable image container.
+- Added instance segmentation export to COCO in the GUI.
+- Added semantic segmentation export to PASCAL VOC in the GUI.
 - Added instance segmentation export to YouTube-VIS in the GUI.
-- Added support for Python 3.14.
+- Added scopes to operators: now operators are tied to certain scopes and also retrieve filters. This enables to execute operators on specific collections, with specific filters, or even on individual samples.
 - Added `ImageSample.add_annotations` method, as well as `VideoSample.add_annotations`.
 - Added `ImageSample.add_captions` method, as well as `VideoSample.add_captions`.
 - Added `SampleMetadata.update` method, allowing batch metadata updates of samples.
+- Added support for Python 3.14.
 - Added `lightly-studio` command line command. Use `lightly-studio gui` to start the GUI.
 
 ### Changed
@@ -28,18 +43,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Added DatasetTable to the database model, databases from previous versions are incompatible with this one.
 - Improved the documentation structure.
 
-### Deprecated
-
-### Removed
-
 ### Fixed
 
 - Speedup frontend by eliminating two redundant initial video list requests.
 - Fixed semantic text search in image and video grids so editing an active query no longer resets or clears the search unexpectedly.
+- Fixed tag creation dialog layout so long tag lists stay scrollable instead of expanding the modal.
 - Improved video details playback so annotation overlays update more smoothly under higher browser latency.
 - Fixed video details playback stopping one frame before the end.
-
-### Security
 
 ## \[0.4.11\] - 2026-03-10
 
