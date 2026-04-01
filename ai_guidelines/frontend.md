@@ -454,8 +454,8 @@ page.params.sampleId;
 
 ## State Management
 
-- use reusable tiny hooks to avoid one big store for all the state management. E.g. [useTags](../../lightly_studio_view/src/lib/hooks/useTags/useTags.ts).
-- Use `src/lib/hooks` for reusable hooks.
+Create reusable tiny hooks in `src/lib/hooks` to avoid one big store for all the state management.
+E.g. [useTags](../../lightly_studio_view/src/lib/hooks/useTags/useTags.ts).
 
 ### Avoiding Props Drilling
 
