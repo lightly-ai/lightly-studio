@@ -69,6 +69,11 @@ class Dataset(Generic[T], ABC):
         return self._inner.collection_id
 
     @property
+    def dataset_id(self) -> UUID:
+        """Get the dataset ID."""
+        return self._inner.dataset_id
+
+    @property
     def name(self) -> str:
         """Get the dataset name."""
         return self._inner.name
