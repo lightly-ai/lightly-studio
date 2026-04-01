@@ -4,11 +4,14 @@ from collections.abc import Mapping
 from typing import Any
 from uuid import UUID
 
+import pytest
+
 from lightly_studio.core.image.image_dataset import ImageDataset
 from lightly_studio.core.image.image_sample import ImageSample
 from tests.helpers_resolvers import create_image
 
 
+@pytest.mark.usefixtures("patch_collection")
 def test_update_metadata() -> None:
     dataset = ImageDataset.create(name="update_metadata_dataset1")
     img1 = create_image(
@@ -38,6 +41,7 @@ def test_update_metadata() -> None:
     assert s2.metadata["key3"] == 3.5
 
 
+@pytest.mark.usefixtures("patch_collection")
 def test_update_metadata__empty() -> None:
     dataset = ImageDataset.create(name="update_metadata_empty_dataset")
     dataset.update_metadata([])  # Should not raise anything.
