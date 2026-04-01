@@ -29,3 +29,5 @@ src/lib/api/lightly_studio_local
 
 # Generated version info
 src/lib/version.json
+
+build-chunk-sizes.log

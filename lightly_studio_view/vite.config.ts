@@ -7,7 +7,40 @@ export default defineConfig({
     build: {
         rollupOptions: {
             output: {
-                manualChunks: undefined // Let SvelteKit handle chunking
+                manualChunks(id) {
+                    // Split embedding-atlas into its own chunk
+                    if (id.includes('node_modules/embedding-atlas')) {
+                        return 'vendor-embedding-atlas';
+                    }
+                    // Split apache-arrow into its own chunk
+                    if (id.includes('node_modules/apache-arrow')) {
+                        return 'vendor-apache-arrow';
+                    }
+                    // Split d3 libraries
+                    if (id.includes('node_modules/d3-')) {
+                        return 'vendor-d3';
+                    }
+                    // Split tanstack query
+                    if (id.includes('node_modules/@tanstack')) {
+                        return 'vendor-tanstack';
+                    }
+                    // Split svelte ecosystem
+                    if (
+                        id.includes('node_modules/svelte-') ||
+                        id.includes('node_modules/bits-ui') ||
+                        id.includes('node_modules/paneforge')
+                    ) {
+                        return 'vendor-svelte-ui';
+                    }
+                    // Split lodash
+                    if (id.includes('node_modules/lodash')) {
+                        return 'vendor-lodash';
+                    }
+                    // Group other large vendor libraries
+                    if (id.includes('node_modules')) {
+                        return 'vendor';
+                    }
+                }
             }
         },
         chunkSizeWarningLimit: 500
