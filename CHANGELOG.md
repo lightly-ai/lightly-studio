@@ -8,6 +8,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- Added `Dataset.update_metadata` method to update metadata of multiple samples at once.
 
 ### Changed
 
@@ -34,7 +35,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Added `SampleMetadata.update` method, allowing batch metadata updates of samples.
 - Added support for Python 3.14.
 - Added `lightly-studio` command line command. Use `lightly-studio gui` to start the GUI.
-- Added `Dataset.update_metadata` method to update metadata of multiple samples at once.
 
 ### Changed
 
