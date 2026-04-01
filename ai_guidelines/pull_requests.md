@@ -9,8 +9,8 @@ As a rule of thumb, a PR should be reviewable in under 15 minutes.
 
 - Ideal PR size is under 100 changed lines. Under 200 lines is usually acceptable. Larger
   changes should be split into multiple PRs unless there is a reason not to.
-- It is ok to have a larger PR if it is mostly mechanical changes, such as generated files, test
-  data, or formatting. But the core PR logic should still be ideally under 100 lines.
+- It is okay to have a larger PR if it is mostly mechanical changes, such as generated files, test
+  data, or formatting. But the core PR logic should ideally remain under 100 lines.
 - Use stacked PRs to work on larger features without being blocked by review.
 
 ### 2. One Purpose Per PR
@@ -35,7 +35,7 @@ means:
    - screenshots or recordings for UI changes
    - line comments for non-obvious code changes
 
-In some some cases, the tests or a docs change may be in a separate PR if it would be too large to
+In some cases, the tests or a docs change may be in a separate PR if it would be too large to
 review together.
 
 ## Exceptions
