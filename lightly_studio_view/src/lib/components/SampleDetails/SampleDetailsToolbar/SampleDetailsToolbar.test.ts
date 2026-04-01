@@ -26,8 +26,7 @@ const settingsStore = writable({
     key_toolbar_selection: 's',
     key_toolbar_drag: 'd',
     key_toolbar_bounding_box: 'b',
-    key_toolbar_segmentation_mask: 'm',
-    key_toolbar_semantic: 'g'
+    key_toolbar_segmentation_mask: 'm'
 });
 
 vi.mock('$lib/hooks/useSettings', () => ({

@@ -19,7 +19,6 @@ vi.mock('$lib/hooks/useSettings', () => {
         key_toolbar_drag: 'd',
         key_toolbar_bounding_box: 'b',
         key_toolbar_segmentation_mask: 'm',
-        key_toolbar_semantic: 'g',
         key_toolbar_brush: 'r',
         key_toolbar_eraser: 'x'
     });

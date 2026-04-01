@@ -3245,12 +3245,6 @@ export interface components {
              */
             key_toolbar_segmentation_mask: string;
             /**
-             * Key Toolbar Semantic
-             * @description Key to activate semantic segmentation in the toolbar
-             * @default g
-             */
-            key_toolbar_semantic: string;
-            /**
              * Key Toolbar Brush
              * @description Key to activate brush mode in the segmentation tool
              * @default r

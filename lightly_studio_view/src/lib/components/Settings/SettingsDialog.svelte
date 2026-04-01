@@ -22,7 +22,6 @@
         keyToolbarDrag: $settingsStore.key_toolbar_drag,
         keyToolbarBoundingBox: $settingsStore.key_toolbar_bounding_box,
         keyToolbarSegmentationMask: $settingsStore.key_toolbar_segmentation_mask,
-        keyToolbarSemantic: $settingsStore.key_toolbar_semantic,
         keyToolbarBrush: $settingsStore.key_toolbar_brush || 'r',
         keyToolbarEraser: $settingsStore.key_toolbar_eraser || 'x'
     });
@@ -44,7 +43,6 @@
                 keyToolbarDrag: $settingsStore.key_toolbar_drag,
                 keyToolbarBoundingBox: $settingsStore.key_toolbar_bounding_box,
                 keyToolbarSegmentationMask: $settingsStore.key_toolbar_segmentation_mask,
-                keyToolbarSemantic: $settingsStore.key_toolbar_semantic,
                 keyToolbarBrush: $settingsStore.key_toolbar_brush || 'r',
                 keyToolbarEraser: $settingsStore.key_toolbar_eraser || 'x'
             };
@@ -92,7 +90,6 @@
                 key_toolbar_drag: shortcutSettings.keyToolbarDrag,
                 key_toolbar_bounding_box: shortcutSettings.keyToolbarBoundingBox,
                 key_toolbar_segmentation_mask: shortcutSettings.keyToolbarSegmentationMask,
-                key_toolbar_semantic: shortcutSettings.keyToolbarSemantic,
                 key_toolbar_brush: shortcutSettings.keyToolbarBrush,
                 key_toolbar_eraser: shortcutSettings.keyToolbarEraser
             });
@@ -299,29 +296,6 @@
                                     <span class="italic opacity-70">Press a key...</span>
                                 {:else}
                                     <span>{shortcutSettings.keyToolbarSegmentationMask}</span>
-                                {/if}
-                            </button>
-                        </div>
-                        <div class="grid grid-cols-2 items-center gap-4">
-                            <Label
-                                for="toolbar-semantic-segmentation"
-                                class="text-right text-foreground"
-                            >
-                                Toolbar semantic segmentation
-                            </Label>
-                            <button
-                                id="toolbar-semantic-segmentation"
-                                type="button"
-                                class="rounded-md border border-input bg-background p-2 text-left text-foreground"
-                                onclick={(e) => {
-                                    e.preventDefault();
-                                    startRecording('keyToolbarSemantic');
-                                }}
-                            >
-                                {#if recordingShortcut === 'keyToolbarSemantic'}
-                                    <span class="italic opacity-70">Press a key...</span>
-                                {:else}
-                                    <span>{shortcutSettings.keyToolbarSemantic}</span>
                                 {/if}
                             </button>
                         </div>
