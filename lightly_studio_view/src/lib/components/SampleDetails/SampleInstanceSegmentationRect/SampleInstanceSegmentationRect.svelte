@@ -42,10 +42,8 @@
         brushRadius,
         drawerStrokeColor,
         mousePosition,
-        annotationType: annotationTypeProp = 'instance_segmentation',
         refetch
     }: SampleInstanceSegmentationRectProps = $props();
-    const resolvedAnnotationType = $derived(annotationTypeProp);
 
     const labels = useAnnotationLabels({ collectionId });
     const activeAnnotationId = $derived.by(() => {
@@ -75,8 +73,6 @@
             sampleId,
             sample,
             annotations: sample.annotations,
-            segmentationMode:
-                resolvedAnnotationType === 'semantic_segmentation' ? 'semantic' : 'instance',
             refetch,
             onAnnotationCreated: () => {
                 // Only refresh root collection if there were no annotations before

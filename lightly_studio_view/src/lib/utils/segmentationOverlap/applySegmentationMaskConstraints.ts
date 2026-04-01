@@ -1,4 +1,4 @@
-import { removeOverlapFromOtherSemanticAnnotations } from './removeOverlapFromOtherSemanticAnnotations';
+import { removeOverlapFromOtherSegmentationAnnotations } from './removeOverlapFromOtherSegmentationAnnotations';
 import { stripLockedPixels } from './stripLockedPixels';
 import type { ApplyMaskConstraintsParams, OverriddenSegmentationAnnotations } from './types';
 
@@ -19,7 +19,7 @@ export const applySegmentationMaskConstraints = async ({
         sample: rest.sample
     });
 
-    return removeOverlapFromOtherSemanticAnnotations({
+    return removeOverlapFromOtherSegmentationAnnotations({
         newMask: maskForOverlap,
         ...rest
     });

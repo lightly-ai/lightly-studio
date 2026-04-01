@@ -14,7 +14,7 @@ const sample = { width: 4, height: 4 };
 const baseAnn = (id: string, mask: number[]): AnnotationView =>
     ({
         sample_id: id,
-        annotation_type: 'semantic_segmentation',
+        annotation_type: 'instance_segmentation',
         segmentation_details: { segmentation_mask: mask },
         annotation_label: { annotation_label_name: 'a', annotation_label_id: 'a' },
         parent_sample_id: 'p',
@@ -38,7 +38,7 @@ describe('applySegmentationMaskConstraints', () => {
             workingMask,
             lockedAnnotationIds: locked,
             annotations,
-            segmentationMode: 'semantic',
+            segmentationMode: 'instance',
             sample,
             skipId: 'new',
             collectionId: 'c',
