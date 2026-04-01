@@ -9,6 +9,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+### Changed
+
+### Deprecated
+
+### Removed
+
+### Fixed
+
+### Security
+
+## \[0.4.12\] - 2026-04-01
+
+### Added
+
 - Add tooltips to features in annotation items in the right panel to improve usability.
 - Added instance segmentation export to COCO in the GUI.
 - Added scopes to operators: now operators are tied to certain scopes and also retrieve filters. This enables to execute operators on specific collections, with specific filters, or even on individual samples.
@@ -28,10 +42,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Added DatasetTable to the database model, databases from previous versions are incompatible with this one.
 - Improved the documentation structure.
 
-### Deprecated
-
-### Removed
-
 ### Fixed
 
 - Speedup frontend by eliminating two redundant initial video list requests.
@@ -39,8 +49,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Fixed tag creation dialog layout so long tag lists stay scrollable instead of expanding the modal.
 - Improved video details playback so annotation overlays update more smoothly under higher browser latency.
 - Fixed video details playback stopping one frame before the end.
-
-### Security
 
 ## \[0.4.11\] - 2026-03-10
 
