@@ -1,4 +1,7 @@
-"""Example of how to create a dataset with semantic segmentation annotations."""
+"""Example of how to load Pascal VOC segmentations.
+
+Imported masks are stored as instance segmentation annotations.
+"""
 
 import json
 from pathlib import Path
@@ -28,13 +31,10 @@ class_id_to_name_path = env.path(
 json_dict = json.loads(Path(class_id_to_name_path).read_text())
 class_id_to_name = {int(k): v for k, v in json_dict.items()}
 
-# Create a Dataset and add load samples with semantic segmentation annotations
+# Create a dataset and load Pascal VOC masks as instance segmentation annotations.
 dataset = ls.ImageDataset.create()
 dataset.add_samples_from_pascal_voc_segmentations(
     images_path=images_path,
     masks_path=masks_path,
     class_id_to_name=class_id_to_name,
 )
-
-# TODO(Michal, 01/2026): Add frontend support for displaying semantic segmentations.
-# ls.start_gui()

@@ -334,7 +334,11 @@ class ImageDataset(BaseSampleDataset[ImageSample]):
         split: str | None = None,
         embed: bool = True,
     ) -> None:
-        """Load a semantic segmentation dataset in Pascal VOC format and store in DB.
+        """Load a Pascal VOC segmentation dataset and store in DB.
+
+        Pascal VOC masks encode class IDs per pixel (semantic segmentation).
+        Imported masks are persisted as `AnnotationType.INSTANCE_SEGMENTATION`.
+        Query and export workflows should use instance segmentation type filters.
 
         Args:
             images_path: Path to the folder containing the images.
