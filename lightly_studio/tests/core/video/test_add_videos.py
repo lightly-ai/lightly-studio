@@ -253,6 +253,7 @@ def test_load_video_annotations_from_labelformat(
     _, frame_sample_ids = add_videos.load_video_annotations_from_labelformat(
         session=db_session,
         collection_id=collection.collection_id,
+        dataset_id=collection.dataset_id,
         video_paths=video_paths,
         input_labels=input_labels,
         input_labels_paths_root=tmp_path,
@@ -323,6 +324,7 @@ def test_load_video_annotations_from_labelformat__multiple_videos(
     add_videos.load_video_annotations_from_labelformat(
         session=db_session,
         collection_id=collection.collection_id,
+        dataset_id=collection.dataset_id,
         video_paths=video_paths,
         input_labels=input_labels,
         input_labels_paths_root=tmp_path,
@@ -385,8 +387,9 @@ def test_load_video_annotations_from_labelformat__same_name_in_different_folders
     # Act
     collection = create_collection(db_session, sample_type=SampleType.VIDEO)
     created_video_sample_ids, _ = add_videos.load_video_annotations_from_labelformat(
-        session=db_session,
         collection_id=collection.collection_id,
+        dataset_id=collection.dataset_id,
+        session=db_session,
         video_paths=video_paths,
         input_labels=input_labels,
         input_labels_paths_root=tmp_path,
@@ -529,6 +532,7 @@ def test_load_video_annotations_from_labelformat__raises_on_frame_mismatch(
         add_videos.load_video_annotations_from_labelformat(
             session=db_session,
             collection_id=collection.collection_id,
+            dataset_id=collection.dataset_id,
             video_paths=video_paths,
             input_labels=input_labels,
             input_labels_paths_root=tmp_path,
@@ -567,6 +571,7 @@ def test_load_video_annotations_from_labelformat__raises_on_missing_video(
         add_videos.load_video_annotations_from_labelformat(
             session=db_session,
             collection_id=collection.collection_id,
+            dataset_id=collection.dataset_id,
             video_paths=video_paths,
             input_labels=input_labels,
             input_labels_paths_root=tmp_path,

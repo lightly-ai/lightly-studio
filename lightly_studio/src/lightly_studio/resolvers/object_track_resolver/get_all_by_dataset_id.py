@@ -10,12 +10,10 @@ from sqlmodel import Session, col, select
 from lightly_studio.models.annotation.object_track import ObjectTrackTable
 
 
-def get_all_by_root_collection_id(
+def get_all_by_dataset_id(
     session: Session,
-    root_collection_id: UUID,
+    dataset_id: UUID,
 ) -> Sequence[ObjectTrackTable]:
-    """Retrieve all object tracks for a given root collection."""
-    stmt = select(ObjectTrackTable).where(
-        col(ObjectTrackTable.root_collection_id) == root_collection_id
-    )
+    """Retrieve all object tracks for a given dataset."""
+    stmt = select(ObjectTrackTable).where(col(ObjectTrackTable.dataset_id) == dataset_id)
     return session.exec(stmt).all()

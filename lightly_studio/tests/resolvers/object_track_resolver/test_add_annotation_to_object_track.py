@@ -31,9 +31,7 @@ def test_add_annotation_to_object_track(db_session: Session) -> None:
 
     track_id = object_track_resolver.create_many(
         session=db_session,
-        tracks=[
-            ObjectTrackCreate(object_track_number=99, root_collection_id=collection.collection_id)
-        ],
+        tracks=[ObjectTrackCreate(object_track_number=99, dataset_id=collection.dataset_id)],
     )[0]
     assert track_id is not None
 
