@@ -342,6 +342,59 @@ import { Check, X, ChevronDown } from "@lucide/svelte";
 - Use descriptive icon names that match their purpose in the UI.
 - Keep icon imports at the top of the script section with other imports.
 
+## Performance
+
+### Bundle Size and Code Splitting
+
+Keep JavaScript chunk sizes below 500KB to maintain optimal application performance:
+
+- **Why it matters**: Large chunks increase initial page load time, worsen user experience, and can cause performance issues on slower networks or devices.
+- **Monitor chunk sizes**: Check build output for warnings about chunk sizes exceeding the 500KB threshold.
+- **Code splitting strategies**:
+  - Use dynamic imports for routes and large components
+  - Lazy load heavy dependencies that aren't needed immediately
+  - Split vendor libraries into separate chunks
+  - Consider splitting large UI libraries and visualization components
+
+**Example - Dynamic import for code splitting:**
+
+```typescript
+// ✅ Good: Lazy load heavy components
+<script lang="ts">
+  import { onMount } from 'svelte';
+
+  let HeavyChart;
+
+  onMount(async () => {
+    const module = await import('$lib/components/HeavyChart.svelte');
+    HeavyChart = module.default;
+  });
+</script>
+
+{#if HeavyChart}
+  <svelte:component this={HeavyChart} />
+{/if}
+
+// ❌ Bad: Import large components directly
+import HeavyChart from '$lib/components/HeavyChart.svelte';
+```
+
+**Monitoring chunk sizes:**
+
+```bash
+# Build and check chunk sizes
+npm run build
+
+# Look for warnings like:
+# ⚠ Some chunks are larger than 500KB after minification
+```
+
+If you see chunks exceeding 500KB:
+1. Identify the large dependencies using build analysis tools
+2. Consider lazy loading or splitting the problematic modules
+3. Review if all imported dependencies are actually needed
+4. Check for duplicate dependencies that could be deduplicated
+
 ## Component Development
 
 - Create .svelte files for Svelte components in `src/components`.
