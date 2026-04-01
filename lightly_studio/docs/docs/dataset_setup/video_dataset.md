@@ -150,14 +150,15 @@ GUI displays only a single dataset.
 
 ## Video Dataset in the GUI
 
-Launch the GUI by calling `ls.start_gui()`, it starts a local web server. Click
-on the link printed in the console - by default `http://localhost:8001` - to open the GUI
-in your browser.
+Launch the GUI from your terminal:
 
-```python title="Start the GUI"
-import lightly_studio as ls
-ls.start_gui()
+```shell
+lightly-studio gui
 ```
+
+The command starts a local web server. Click the link printed in the console - by default
+`http://localhost:8001` - to open the GUI in your browser. Note that the GUI can also be
+started from a Python script by calling `ls.start_gui()`.
 
 The GUI for a video dataset has two main pages: **Videos** and **Frames**, accessible
 via the navigation bar at the top.
@@ -260,61 +261,4 @@ on dedicated pages.
 
 ### Querying the Dataset
 
-You can programmatically filter samples by attributes (e.g., video duration, tags), sort them,
-and select subsets. This is useful for creating training/validation splits, finding specific
-samples, or exporting filtered data.
-
-Create a query object by combining `match`, `order_by` and `slice` (or `[start:end]`) calls.
-The query is composed lazily, it is executed against the database once it is consumed, e.g. by
-iterating over it or calling `add_tag`.
-
-<!-- TODO(Michal, 03/2026): Link below a dedicated page on querying when ready. -->
-
-The listing below shows examples of working with queries. For details see the API reference
-for [DatasetQuery](../api/dataset_query.md#datasetquery) and [VideoSampleField](../api/dataset_query.md#videosamplefield).
-
-```python title="Query a VideoDataset"
-from lightly_studio.core.dataset_query import AND, OR, NOT, OrderByField, VideoSampleField
-
-###
-# Compose a query
-
-# match: Find all samples with FPS > 10 plus small samples (< 500px) that haven't been reviewed.
-query = dataset.match(
-    OR(
-        AND(
-            VideoSampleField.width < 500,
-            NOT(VideoSampleField.tags.contains("reviewed"))
-        ),
-        VideoSampleField.fps > 10
-    )
-)
-
-# order_by: Sort the samples by their duration descending.
-query.order_by(
-    OrderByField(VideoSampleField.duration_s).desc()
-)
-
-# slice: Extract a slice of samples.
-query[10:20]
-
-# chaining: The query can also be constructed in chained way
-query = dataset.match(...).order_by(...)[...]
-
-###
-# Consume a query
-
-# Tag this subset for easy filtering in the UI
-query.add_tag("needs-review")
-
-# Iterate over resulting samples
-for sample in query:
-    # Access the sample: see previous section
-    ...
-
-# Collect all resulting samples as list
-samples = query.to_list()
-
-# Export all resulting samples in YouTube-VIS format
-dataset.export(query).to_youtube_vis_instance_segmentation()
-```
+Use [Dataset Query in Python](../concepts_and_tools/search_and_filter.md#query-in-python) when you need reusable subsets in code for filtering, sorting, slicing, export, or selection. Video query expressions use `VideoSampleField`.

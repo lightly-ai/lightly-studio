@@ -1,12 +1,12 @@
 <script lang="ts">
     import { AnnotationsGridItem, SelectableBox, LazyTrigger } from '$lib/components';
+    import { useSelectedAnnotationsFilter } from '$lib/hooks/useAnnotationsFilter/useAnnotationsFilter';
     import { useGlobalStorage } from '$lib/hooks/useGlobalStorage';
     import { useSettings } from '$lib/hooks/useSettings';
     import { useTags } from '$lib/hooks/useTags/useTags';
     import { routeHelpers } from '$lib/routes';
     import { onMount } from 'svelte';
     import { Grid } from 'svelte-virtual';
-    import { type Readable } from 'svelte/store';
     import { page } from '$app/state';
     import { useAnnotationsInfinite } from '$lib/hooks/useAnnotationsInfinite/useAnnotationsInfinite';
     import Spinner from '../Spinner/Spinner.svelte';
@@ -22,10 +22,12 @@
 
     type AnnotationsProps = {
         collection_id: string;
-        selectedAnnotationFilterIds: Readable<string[]>;
         itemWidth: number;
     };
-    const { collection_id, selectedAnnotationFilterIds, itemWidth }: AnnotationsProps = $props();
+    const { collection_id, itemWidth }: AnnotationsProps = $props();
+
+    const { selectedAnnotationFilterIdsArray: selectedAnnotationFilterIds } =
+        useSelectedAnnotationsFilter();
 
     // Use the collection_id for tags - tags should use the specific collection, not root
     const { tagsSelected } = $derived(

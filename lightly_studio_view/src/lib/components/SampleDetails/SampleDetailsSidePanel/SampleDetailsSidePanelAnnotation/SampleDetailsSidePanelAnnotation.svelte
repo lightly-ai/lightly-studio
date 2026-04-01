@@ -112,27 +112,28 @@
 >
     <button
         type="button"
-        class="flex w-full items-stretch justify-between text-left"
+        class="flex w-full min-w-0 items-stretch justify-between text-left"
         data-annotation-id={annotation.sample_id}
         onclick={onClick}
     >
         <div class="w-full">
-            <div class="flex">
-                <div class="flex flex-1 flex-col gap-1">
+            <div class="flex min-w-0">
+                <div class="flex min-w-0 flex-1 flex-col gap-1">
                     <div
-                        class="flex w-full items-center gap-2 text-sm font-medium leading-5"
+                        class="flex w-full min-w-0 items-center gap-2 text-sm font-medium leading-5"
                         data-testid="sample-details-pannel-annotation-name"
                     >
-                        <div class="h-4">
+                        <div class="h-4 shrink-0">
                             <AnnotationColorLegend
                                 labelName={annotationLabelName}
                                 className="h-4 w-4"
                                 selected={isSelected}
                             />
                         </div>
-                        <div class="flex flex-col justify-center gap-1">
+                        <div class="flex min-w-0 flex-1 flex-col justify-center gap-1">
                             {#if $isEditingMode}
                                 <div
+                                    class="min-w-0"
                                     role="button"
                                     tabindex="0"
                                     onkeydown={(e) => {
@@ -152,6 +153,8 @@
                                         selectedItem={items.find((i) => i.value === value?.value)}
                                         name="annotation-label"
                                         placeholder="Select or create a label"
+                                        className="w-full min-w-0"
+                                        contentClassName="w-full min-w-0"
                                         onSelect={async (item) => {
                                             addAnnotationLabelChangeToUndoStack({
                                                 annotations: [
@@ -182,15 +185,19 @@
                                     </SelectList>
                                 </div>
                             {:else}
-                                <div class="flex w-full min-w-0 flex-1 flex-col gap-1">
+                                <div
+                                    class="flex w-full min-w-0 flex-1 flex-col gap-1 overflow-hidden"
+                                >
                                     <span class="truncate">{annotationLabelName}</span>
                                 </div>
                             {/if}
                         </div>
                     </div>
                 </div>
-                <div class="flex flex-col items-end justify-center gap-2 self-stretch pl-1">
-                    <div class="flex gap-3">
+                <div
+                    class="flex shrink-0 flex-col items-end justify-center gap-2 self-stretch pl-1"
+                >
+                    <div class="flex shrink-0 gap-3">
                         {#if $isEditingMode && annotation.annotation_type != 'object_detection'}
                             {#if isLocked}
                                 <Tooltip content="Unlock annotation">

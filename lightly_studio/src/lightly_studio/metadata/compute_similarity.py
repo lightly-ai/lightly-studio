@@ -1,7 +1,8 @@
 """Computes similarity from embeddings."""
 
+from collections.abc import Mapping
 from datetime import datetime, timezone
-from typing import Optional
+from typing import Any, Optional
 from uuid import UUID
 
 from lightly_mundig import Similarity  # type: ignore[import-untyped]
@@ -75,7 +76,7 @@ def compute_similarity_metadata(
         formatted_date = date.isoformat()[:19]
         metadata_name = f"similarity_{query_tag.name}_{formatted_date}"
 
-    metadata = [
+    metadata: list[tuple[UUID, Mapping[str, Any]]] = [
         (sample.sample_id, {metadata_name: similarity})
         for sample, similarity in zip(key_samples, similarity_values)
     ]

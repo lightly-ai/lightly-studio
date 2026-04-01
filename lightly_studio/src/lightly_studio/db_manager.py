@@ -21,6 +21,7 @@ from enum import Enum
 from pathlib import Path
 from typing import Annotated
 
+import sqlalchemy_utils
 from fastapi import Depends
 from sqlalchemy import StaticPool, text
 from sqlalchemy.engine import Engine
@@ -49,6 +50,7 @@ class DatabaseEngine:
         self,
         engine_url: str | None = None,
         cleanup_existing: bool = False,
+        must_exist: bool = False,
         single_threaded: bool = False,
     ) -> None:
         """Create a new instance of the DatabaseEngine.
@@ -57,7 +59,11 @@ class DatabaseEngine:
             engine_url: The database engine URL. If None, reads from LIGHTLY_STUDIO_DATABASE_URL
                 env var, or defaults to a local DuckDB file.
             cleanup_existing: If True, removes the existing database before use.
+            must_exist: If True, raises FileNotFoundError when the database does not exist.
             single_threaded: If True, creates a single-threaded engine suitable for testing.
+
+        Raises:
+            FileNotFoundError: If must_exist is True and the database does not exist.
         """
         if engine_url is not None:
             self._engine_url = engine_url
@@ -66,11 +72,15 @@ class DatabaseEngine:
         else:
             self._engine_url = "duckdb:///lightly_studio.db"
 
-        self._backend = _detect_backend_from_url(self._engine_url)
+        self._backend = _detect_backend_from_url(engine_url=self._engine_url)
 
         # Ensure the psycopg3 driver is used for Postgres connections.
         if self._backend == DatabaseBackend.POSTGRESQL:
-            self._engine_url = _ensure_psycopg3_driver(self._engine_url)
+            self._engine_url = _ensure_psycopg3_driver(engine_url=self._engine_url)
+
+        db_exists = _database_exists(engine_url=self._engine_url, backend=self._backend)
+        if must_exist and not db_exists:
+            raise FileNotFoundError(f"Database does not exist at {self._engine_url}.")
 
         if cleanup_existing and self._backend == DatabaseBackend.DUCKDB:
             _cleanup_database_file(engine_url=self._engine_url)
@@ -88,7 +98,11 @@ class DatabaseEngine:
                 max_overflow=40,
             )
 
+        # For DuckDB, create_engine will create the database file if it does not exist.
+        # For Postgres, we need to create the database.
         if self._backend == DatabaseBackend.POSTGRESQL:
+            if not db_exists:
+                sqlalchemy_utils.create_database(self._engine_url)
             with self._engine.connect() as conn:
                 conn.execute(text("CREATE EXTENSION IF NOT EXISTS vector"))
                 conn.commit()
@@ -186,6 +200,7 @@ def set_engine(engine: DatabaseEngine) -> None:
 
 def connect(
     cleanup_existing: bool = False,
+    must_exist: bool = False,
     db_file: str | None = None,
     db_url: str | None = None,
 ) -> None:
@@ -196,6 +211,7 @@ def connect(
 
     Args:
         cleanup_existing: If True, removes the existing database before use.
+        must_exist: If True, raises FileNotFoundError when the database does not exist.
         db_file: Path to DuckDB file.
         db_url: Full database URL.
 
@@ -211,6 +227,7 @@ def connect(
     engine = DatabaseEngine(
         engine_url=db_url,
         cleanup_existing=cleanup_existing,
+        must_exist=must_exist,
     )
     set_engine(engine=engine)
 
@@ -278,6 +295,26 @@ def _ensure_psycopg3_driver(engine_url: str) -> str:
     """
     # Only rewrite if no explicit driver is specified.
     return re.sub(r"^(postgresql|postgres)://", "postgresql+psycopg://", engine_url)
+
+
+def _database_exists(engine_url: str, backend: DatabaseBackend) -> bool:
+    """Check if the database exists.
+
+    Args:
+        engine_url: The database engine URL.
+        backend: The database backend type.
+
+    Returns:
+        True if the database exists, False otherwise.
+    """
+    # `sqlalchemy_utils.database_exists` does not support DuckDB, the backend always
+    # creates a new database.
+    if backend == DatabaseBackend.DUCKDB:
+        db_path = engine_url.replace("duckdb:///", "")
+        if db_path == ":memory:":
+            return True
+        return Path(db_path).exists()
+    return bool(sqlalchemy_utils.database_exists(engine_url))
 
 
 def _cleanup_database_file(engine_url: str) -> None:

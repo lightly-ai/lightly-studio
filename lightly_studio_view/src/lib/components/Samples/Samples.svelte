@@ -3,6 +3,7 @@
     import { type TextEmbedding, useGlobalStorage } from '$lib/hooks/useGlobalStorage';
     import { useMetadataFilters } from '$lib/hooks/useMetadataFilters/useMetadataFilters';
     import { useSettings } from '$lib/hooks/useSettings';
+    import { useSelectedAnnotationsFilter } from '$lib/hooks/useAnnotationsFilter/useAnnotationsFilter';
     import { useTags } from '$lib/hooks/useTags/useTags';
     import { routeHelpers } from '$lib/routes';
     import { onMount } from 'svelte';
@@ -28,11 +29,13 @@
 
     type SamplesProps = {
         collection_id: string;
-        selectedAnnotationFilterIds: Readable<string[]>;
         sampleWidth: number;
         textEmbedding: Readable<TextEmbedding | undefined>;
     };
-    const { collection_id, selectedAnnotationFilterIds, textEmbedding }: SamplesProps = $props();
+    const { collection_id, textEmbedding }: SamplesProps = $props();
+
+    const { selectedAnnotationFilterIdsArray: selectedAnnotationFilterIds } =
+        useSelectedAnnotationsFilter();
 
     const { tagsSelected } = useTags({
         collection_id,
@@ -121,6 +124,7 @@
     let selectionAnchorSampleId = $state<string | null>(null);
 
     let isReady = $state(false);
+    const sampleGridOverscan = 30;
 
     // Initialize objectFit with default and update when settings are loaded
     let objectFit = $state($gridViewSampleRenderingStore); // Use store value directly
@@ -219,7 +223,7 @@
 
 <SampleGrid
     itemCount={samples.length}
-    overScan={100}
+    overScan={sampleGridOverscan}
     scrollPosition={initialScrollPosition}
     scrollResetKey={$textEmbedding?.queryText ?? ''}
     onScroll={handleScroll}

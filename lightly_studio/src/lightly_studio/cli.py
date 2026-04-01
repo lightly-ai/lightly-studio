@@ -42,5 +42,5 @@ def gui(
     """Start the web interface."""
     if db_file is not None and db_url is not None:
         raise click.UsageError("Options '--db-file' and '--db-url' are mutually exclusive.")
-    db_manager.connect(db_file=db_file, db_url=db_url)
+    db_manager.connect(db_file=db_file, db_url=db_url, must_exist=True)
     lightly_studio.start_gui(host=host, port=port)

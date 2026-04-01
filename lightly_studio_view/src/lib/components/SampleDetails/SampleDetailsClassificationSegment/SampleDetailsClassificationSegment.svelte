@@ -185,8 +185,8 @@
                     class="flex w-full items-center justify-between gap-2 rounded-sm bg-card px-4 py-3 text-left"
                     data-annotation-id={annotation.sample_id}
                 >
-                    <span class="flex flex-1 flex-col gap-1">
-                        <span class="text-sm font-medium">
+                    <span class="flex min-w-0 flex-1 flex-col gap-1">
+                        <span class="min-w-0 text-sm font-medium">
                             {#if $isEditingMode}
                                 <SelectList
                                     {items}
@@ -195,7 +195,8 @@
                                     )}
                                     name="classification-label"
                                     placeholder="Select or create a label"
-                                    className="w-full"
+                                    className="w-full min-w-0"
+                                    contentClassName="w-full min-w-0"
                                     onSelect={async (item) => {
                                         await updateClassificationLabel(annotation, item.value);
                                     }}
@@ -205,16 +206,18 @@
                                     {/snippet}
                                 </SelectList>
                             {:else}
-                                {annotation.annotation_label.annotation_label_name}
+                                <span class="block min-w-0 truncate">
+                                    {annotation.annotation_label.annotation_label_name}
+                                </span>
                                 {#if annotation.object_track_number != null}
-                                    <span class="font-mono text-xs opacity-80"
+                                    <span class="shrink-0 font-mono text-xs opacity-80"
                                         >#{annotation.object_track_number}</span
                                     >
                                 {/if}
                             {/if}
                         </span>
                     </span>
-                    <div class="flex items-center gap-3">
+                    <div class="flex shrink-0 items-center gap-3">
                         {#if $isEditingMode}
                             <button
                                 type="button"
@@ -238,13 +241,14 @@
                         )}
                         data-annotation-id={draftId}
                     >
-                        <span class="flex flex-1 flex-col gap-1">
-                            <span class="text-sm font-medium">
+                        <span class="flex min-w-0 flex-1 flex-col gap-1">
+                            <span class="min-w-0 text-sm font-medium">
                                 <SelectList
                                     {items}
                                     name="classification-label"
                                     placeholder="Select or create a label"
-                                    className="w-full"
+                                    className="w-full min-w-0"
+                                    contentClassName="w-full min-w-0"
                                     onSelect={async (item) => {
                                         const created = await createClassificationAnnotation(
                                             item.value
@@ -260,7 +264,7 @@
                                 </SelectList>
                             </span>
                         </span>
-                        <div class="flex items-center gap-3">
+                        <div class="flex shrink-0 items-center gap-3">
                             <Trash2
                                 class="size-6 text-muted-foreground"
                                 onclick={() => {
