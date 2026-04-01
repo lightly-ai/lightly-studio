@@ -123,6 +123,12 @@ Keep JS chunk sizes **below 500KB**. Use dynamic imports for heavy components:
 {/if}
 ```
 
+When reviewing bundle size:
+
+- Check build output for chunk-size warnings.
+- Identify heavy dependencies before adding them to eagerly loaded routes.
+- Prefer lazy loading, vendor splitting, or dependency deduplication when a chunk exceeds the limit.
+
 ## Svelte 5 syntax
 
 Use Svelte 5 patterns in all new code:
@@ -162,6 +168,8 @@ page.params.sampleId; // no $ prefix needed
 
 ```typescript
 // +page.ts
+import type { PageLoad } from './$types';
+
 export const load: PageLoad = async ({ params, url }) => {
   return {
     groupId: url.searchParams.get('group_id') ?? undefined,
@@ -187,6 +195,12 @@ Create small, reusable hooks in `src/lib/hooks` - avoid monolithic stores. We do
 Ref: [useTags](../../lightly_studio_view/src/lib/hooks/useTags/useTags.ts), [useFeatureFlags](../../lightly_studio_view/src/lib/hooks/useFeatureFlags/useFeatureFlags.ts).
 
 Generic hooks go in `src/lib/hooks`; component-specific hooks go in the component's folder.
+
+For data fetching and API work:
+
+- Use hooks for client-side data fetching unless there is a specific reason to introduce a service.
+- Implement proper error handling for data fetching operations.
+- Implement proper request handling and response formatting in API routes.
 
 **Hook pattern example:**
 
@@ -223,8 +237,14 @@ import { writable } from 'svelte/store';
 const count = writable<number>(0);
 
 export function useCounter() {
-  function increment() { count.update((c) => c + 1); }
-  function resetCount() { count.set(0); }
+  function increment() {
+    count.update((c) => c + 1);
+  }
+
+  function resetCount() {
+    count.set(0);
+  }
+
   return { count, increment, resetCount };
 }
 
