@@ -49,7 +49,6 @@ nav:
       - Tags: concepts_and_tools/tags.md
       - Captions: concepts_and_tools/captions.md
       - Metadata: concepts_and_tools/metadata.md
-      - Embeddings: concepts_and_tools/embeddings.md
     - Tools:
       - Search and Filter: concepts_and_tools/search_and_filter.md
       - Export: concepts_and_tools/export.md
