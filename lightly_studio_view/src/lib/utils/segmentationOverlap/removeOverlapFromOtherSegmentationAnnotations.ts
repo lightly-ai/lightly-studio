@@ -7,10 +7,10 @@ import {
 import type { OverriddenSegmentationAnnotations, RemoveOverlapParams } from './types';
 
 /**
- * Clears pixels from other semantic masks that overlap the new mask,
- * respecting locked annotations and the current segmentation mode.
+ * Clears pixels from other segmentation annotations that overlap the new mask,
+ * respecting locked annotations and the active segmentation mode (instance or semantic).
  */
-export const removeOverlapFromOtherSemanticAnnotations = async ({
+export const removeOverlapFromOtherSegmentationAnnotations = async ({
     newMask,
     skipId,
     lockedAnnotationIds,
@@ -20,19 +20,20 @@ export const removeOverlapFromOtherSemanticAnnotations = async ({
     collectionId,
     updateAnnotations
 }: RemoveOverlapParams): Promise<OverriddenSegmentationAnnotations> => {
-    if (segmentationMode !== 'semantic') return [];
     if (!annotations?.length) return [];
 
+    const targetAnnotationType =
+        segmentationMode === 'semantic' ? 'semantic_segmentation' : 'instance_segmentation';
     const updates: AnnotationUpdateInput[] = [];
     const overriddenAnnotations: OverriddenSegmentationAnnotations = [];
 
     annotations
         .filter((ann) => {
-            const isSemantic = ann.annotation_type === 'semantic_segmentation';
+            const isTargetType = ann.annotation_type === targetAnnotationType;
             const hasMask = ann.segmentation_details?.segmentation_mask;
             const isSame = ann.sample_id === skipId;
             const isLocked = lockedAnnotationIds?.has(ann.sample_id);
-            return isSemantic && hasMask && !isSame && !isLocked;
+            return isTargetType && hasMask && !isSame && !isLocked;
         })
         .forEach((ann) => {
             const segmentationMask = ann.segmentation_details?.segmentation_mask;

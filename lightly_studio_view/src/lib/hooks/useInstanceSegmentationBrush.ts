@@ -21,7 +21,6 @@ export function useInstanceSegmentationBrush({
     sampleId,
     sample,
     annotations = [],
-    segmentationMode = 'instance',
     refetch,
     onAnnotationCreated
 }: {
@@ -29,7 +28,6 @@ export function useInstanceSegmentationBrush({
     sampleId: string;
     sample: { width: number; height: number };
     annotations?: AnnotationView[];
-    segmentationMode?: 'instance' | 'semantic';
     refetch: () => void;
     onAnnotationCreated?: () => void;
 }) {
@@ -80,7 +78,7 @@ export function useInstanceSegmentationBrush({
             skipId: selectedAnnotation?.sample_id,
             lockedAnnotationIds,
             annotations,
-            segmentationMode,
+            segmentationMode: 'instance',
             sample,
             collectionId,
             updateAnnotations
@@ -118,11 +116,7 @@ export function useInstanceSegmentationBrush({
                     segmentation_mask: rle
                 });
 
-                setAnnotationType(
-                    segmentationMode === 'semantic'
-                        ? 'semantic_segmentation'
-                        : 'instance_segmentation'
-                );
+                setAnnotationType('instance_segmentation');
                 refetch();
 
                 addAnnotationUpdateToUndoStack({
@@ -157,8 +151,7 @@ export function useInstanceSegmentationBrush({
 
         const newAnnotation = await createAnnotation({
             parent_sample_id: sampleId,
-            annotation_type:
-                segmentationMode === 'semantic' ? 'semantic_segmentation' : 'instance_segmentation',
+            annotation_type: 'instance_segmentation',
             x: bbox.x,
             y: bbox.y,
             width: bbox.width,
@@ -175,9 +168,7 @@ export function useInstanceSegmentationBrush({
             onUndo: restoreOverriddenAnnotations
         });
 
-        setAnnotationType(
-            segmentationMode === 'semantic' ? 'semantic_segmentation' : 'instance_segmentation'
-        );
+        setAnnotationType('instance_segmentation');
         setAnnotationLabel(label.annotation_label_name!);
         setAnnotationId(newAnnotation.sample_id);
         setLastCreatedAnnotationId(newAnnotation.sample_id);
