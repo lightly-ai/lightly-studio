@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from collections.abc import Iterable, Mapping
+from collections.abc import Mapping
 from typing import Any
 from uuid import UUID
 
@@ -13,7 +13,7 @@ from lightly_studio.models.metadata import SampleMetadataTable
 
 def bulk_update_metadata(
     session: Session,
-    sample_metadata: Iterable[tuple[UUID, Mapping[str, Any]]],
+    sample_metadata: list[tuple[UUID, Mapping[str, Any]]],
 ) -> None:
     """Bulk insert or update metadata for multiple samples.
 
@@ -22,7 +22,7 @@ def bulk_update_metadata(
 
     Args:
         session: The database session.
-        sample_metadata: iterable of (sample_id, metadata_mapping) tuples.
+        sample_metadata: list of (sample_id, metadata_mapping) tuples.
     """
     # TODO(Mihnea, 10/2025): Consider using SQLAlchemy's bulk operations
     #  (Session.bulk_insert/update_mappings) if performance becomes a bottleneck.

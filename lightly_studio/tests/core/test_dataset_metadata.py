@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from collections.abc import Mapping
 from typing import Any
 from uuid import UUID
 
@@ -19,7 +20,7 @@ def test_update_metadata() -> None:
     samples = [ImageSample(img1), ImageSample(img2)]
 
     samples[0].metadata["key1"] = "overwritten_value"
-    sample_metadata: list[tuple[UUID, dict[str, Any]]] = [
+    sample_metadata: list[tuple[UUID, Mapping[str, Any]]] = [
         (samples[0].sample_id, {"key1": "val1", "key2": 2}),
         (samples[1].sample_id, {"key3": 3.5}),
     ]

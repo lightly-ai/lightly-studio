@@ -11,6 +11,8 @@ from __future__ import annotations
 
 import random
 import time
+from collections.abc import Mapping
+from typing import Any
 from uuid import UUID
 
 from environs import Env
@@ -54,7 +56,7 @@ def add_bulk_metadata(session: Session, sample_ids: list[UUID]) -> None:
     print("\n Adding bulk metadata to all samples...")
 
     # Prepare bulk metadata with random values
-    sample_metadata = []
+    sample_metadata: list[tuple[UUID, Mapping[str, Any]]] = []
     for sample_id in sample_ids:
         # Generate random metadata
         temp = random.randint(10, 40)

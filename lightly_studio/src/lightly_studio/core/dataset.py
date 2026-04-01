@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import logging
 from abc import ABC, abstractmethod
-from collections.abc import Iterable, Iterator, Mapping
+from collections.abc import Iterator, Mapping
 from typing import Any, Generic
 from uuid import UUID
 
@@ -202,7 +202,7 @@ class Dataset(Generic[T], ABC):
 
     def update_metadata(
         self,
-        sample_metadata: Iterable[tuple[UUID, Mapping[str, Any]]],
+        sample_metadata: list[tuple[UUID, Mapping[str, Any]]],
     ) -> None:
         """Bulk update metadata for multiple samples in the dataset.
 
@@ -213,7 +213,7 @@ class Dataset(Generic[T], ABC):
         dataset.
 
         Args:
-            sample_metadata: Iterable of (sample ID, metadata_map) tuples. `metadata_map` is a
+            sample_metadata: List of (sample ID, metadata_map) tuples. `metadata_map` is a
             mapping from string to any type, e.g. `{"weather": "cloudy", "temperature": 25}`.
 
         Example:
