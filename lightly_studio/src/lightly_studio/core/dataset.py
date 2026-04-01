@@ -213,8 +213,8 @@ class Dataset(Generic[T], ABC):
         dataset.
 
         Args:
-            sample_metadata: Iterable of (sample ID, metadata_dict) tuples. `metadata_dict` is a
-            dictionary from string to any type, e.g. `{"weather": "cloudy", "temperature": 25}`.
+            sample_metadata: Iterable of (sample ID, metadata_map) tuples. `metadata_map` is a
+            mapping from string to any type, e.g. `{"weather": "cloudy", "temperature": 25}`.
 
         Example:
             >>> dataset.update_metadata([
