@@ -2,11 +2,9 @@
     import { browser } from '$app/environment';
     import { page } from '$app/state';
     import {
-        CreateClassifierDialog,
         CombinedMetadataDimensionsFilters,
         Footer,
         LabelsMenu,
-        RefineClassifierDialog,
         TagCreateDialog,
         TagsMenu
     } from '$lib/components';
@@ -48,7 +46,6 @@
     import type { GridType } from '$lib/types';
     import { useImageAnnotationCounts } from '$lib/hooks/useImageAnnotationCounts/useImageAnnotationCounts';
     import { useGlobalStorage } from '$lib/hooks/useGlobalStorage.js';
-    import PlotPanel from '$lib/components/PlotPanel/PlotPanel.svelte';
     import { Button } from '$lib/components/ui/index.js';
     import { PaneGroup, Pane, PaneResizer } from 'paneforge';
     import { useVideoAnnotationCounts } from '$lib/hooks/useVideoAnnotationsCount/useVideoAnnotationsCount.js';
@@ -630,7 +627,9 @@
                     </PaneResizer>
 
                     <Pane defaultSize={50} minSize={30} class="flex min-h-0 flex-col">
-                        <PlotPanel />
+                        {#await import('$lib/components/PlotPanel/PlotPanel.svelte') then { default: PlotPanel }}
+                            <PlotPanel />
+                        {/await}
                     </Pane>
                 </PaneGroup>
             {:else}
@@ -745,8 +744,12 @@
                 </div>
             {/if}
             {#if hasEmbeddings}
-                <CreateClassifierDialog />
-                <RefineClassifierDialog />
+                {#await import('$lib/components/FewShotClassifier/CreateClassifierDialog.svelte') then { default: CreateClassifierDialog }}
+                    <CreateClassifierDialog />
+                {/await}
+                {#await import('$lib/components/FewShotClassifier/RefineClassifierDialog.svelte') then { default: RefineClassifierDialog }}
+                    <RefineClassifierDialog />
+                {/await}
             {/if}
         </div>
         <Footer
