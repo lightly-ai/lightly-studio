@@ -88,7 +88,7 @@ def export_collection_annotations(
             # Reraise.
             raise
 
-        # For semantic segmentation, the exporter produces a Pascal VOC directory,
+        # For Pascal VOC export, the exporter produces a directory,
         # so this route should stream the folder as a .zip instead of streaming a single file.
         return StreamingResponse(
             content=_stream_export_dir(

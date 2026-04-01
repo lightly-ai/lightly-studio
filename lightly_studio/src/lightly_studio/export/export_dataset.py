@@ -148,7 +148,7 @@ def to_pascalvoc_semantic_segmentation(
     samples: Iterable[ImageSample],
     output_folder: Path,
 ) -> None:
-    """Exports semantic segmentation annotations to a Pascal VOC segmentation folder.
+    """Exports instance segmentation annotations to a Pascal VOC segmentation folder.
 
     This function is for internal use.
 
@@ -164,8 +164,8 @@ def to_pascalvoc_semantic_segmentation(
         samples=samples,
     )
 
-    # Keep `background_class_id` unchanged: `LightlyStudioSemanticSegmentationInput`
-    # defines category IDs and reserves class 0 for background.
+    # Keep `background_class_id` unchanged: the label input defines category IDs and
+    # reserves class 0 for background.
     PascalVOCSemanticSegmentationOutput(
         output_folder=output_folder,
     ).save(label_input=export_input)
