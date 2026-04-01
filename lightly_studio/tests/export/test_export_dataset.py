@@ -303,7 +303,7 @@ class TestDatasetExport:
         )
 
         output_folder = tmp_path / "pascalvoc"
-        export_dataset.to_pascalvoc_semantic_segmentation(
+        export_dataset.to_pascalvoc_instance_segmentation(
             session=dataset.session,
             root_collection_id=dataset.collection_id,
             samples=dataset.query(),
@@ -359,7 +359,7 @@ class TestDatasetExport:
         )
 
         output_folder = tmp_path / "pascalvoc"
-        export_dataset.to_pascalvoc_semantic_segmentation(
+        export_dataset.to_pascalvoc_instance_segmentation(
             session=dataset.session,
             root_collection_id=dataset.collection_id,
             samples=dataset.query(),
@@ -407,7 +407,7 @@ class TestDatasetExport:
         )
 
         output_folder = tmp_path / "pascalvoc"
-        export_dataset.to_pascalvoc_semantic_segmentation(
+        export_dataset.to_pascalvoc_instance_segmentation(
             session=dataset.session,
             root_collection_id=dataset.collection_id,
             samples=dataset.query(),
@@ -454,7 +454,7 @@ class TestDatasetExport:
         )
 
         output_folder = tmp_path / "pascalvoc"
-        export_dataset.to_pascalvoc_semantic_segmentation(
+        export_dataset.to_pascalvoc_instance_segmentation(
             session=dataset.session,
             root_collection_id=dataset.collection_id,
             samples=dataset.query(),
@@ -505,7 +505,7 @@ class TestDatasetExport:
         )
 
         output_folder = tmp_path / "pascalvoc"
-        export_dataset.to_pascalvoc_semantic_segmentation(
+        export_dataset.to_pascalvoc_instance_segmentation(
             session=dataset.session,
             root_collection_id=dataset.collection_id,
             samples=dataset.query(),

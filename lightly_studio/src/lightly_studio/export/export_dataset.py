@@ -19,7 +19,7 @@ from lightly_studio.export import coco_captions
 from lightly_studio.export.lightly_studio_label_input import (
     LightlyStudioInstanceSegmentationInput,
     LightlyStudioObjectDetectionInput,
-    LightlyStudioSemanticSegmentationInput,
+    LightlyStudioPascalVOCInstanceSegmentationInput,
 )
 from lightly_studio.type_definitions import PathLike
 
@@ -142,7 +142,7 @@ def to_coco_instance_segmentations(
     COCOInstanceSegmentationOutput(output_file=output_json).save(label_input=export_input)
 
 
-def to_pascalvoc_semantic_segmentation(
+def to_pascalvoc_instance_segmentation(
     session: Session,
     root_collection_id: UUID,
     samples: Iterable[ImageSample],
@@ -158,7 +158,7 @@ def to_pascalvoc_semantic_segmentation(
         samples: The samples to export.
         output_folder: The folder where Pascal VOC segmentation files are written.
     """
-    export_input = LightlyStudioSemanticSegmentationInput(
+    export_input = LightlyStudioPascalVOCInstanceSegmentationInput(
         session=session,
         root_collection_id=root_collection_id,
         samples=samples,

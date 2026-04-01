@@ -120,7 +120,9 @@ class LightlyStudioInstanceSegmentationInput(LightlyStudioInputBase, InstanceSeg
             )
 
 
-class LightlyStudioSemanticSegmentationInput(LightlyStudioInputBase, InstanceSegmentationInput):
+class LightlyStudioPascalVOCInstanceSegmentationInput(
+    LightlyStudioInputBase, InstanceSegmentationInput
+):
     """Labelformat adapter for Pascal VOC export from instance segmentation annotations."""
 
     # TODO(Leonardo, 03/26): Ensure Pascal VOC export maps user-defined background to class ID 0
@@ -128,7 +130,7 @@ class LightlyStudioSemanticSegmentationInput(LightlyStudioInputBase, InstanceSeg
     CATEGORY_ID_START = 1
 
     @staticmethod
-    def _sample_to_image_pascalvoc_segmentation(
+    def _sample_to_image_pascalvoc_instance_segmentation(
         sample: ImageSample,
         image_id: int,
         label_id_to_category: dict[UUID, Category],
@@ -168,7 +170,7 @@ class LightlyStudioSemanticSegmentationInput(LightlyStudioInputBase, InstanceSeg
     def get_labels(self) -> Iterable[ImageInstanceSegmentation]:
         """Returns the labels for Pascal VOC export."""
         for idx, sample in enumerate(self._samples):
-            yield LightlyStudioSemanticSegmentationInput._sample_to_image_pascalvoc_segmentation(
+            yield self._sample_to_image_pascalvoc_instance_segmentation(
                 sample=sample,
                 image_id=idx,
                 label_id_to_category=self._label_id_to_category,

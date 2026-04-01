@@ -11,7 +11,7 @@ from sqlmodel import Session
 from lightly_studio.core.dataset_query.dataset_query import DatasetQuery
 from lightly_studio.export.lightly_studio_label_input import (
     LightlyStudioObjectDetectionInput,
-    LightlyStudioSemanticSegmentationInput,
+    LightlyStudioPascalVOCInstanceSegmentationInput,
 )
 from lightly_studio.models.annotation.annotation_base import (
     AnnotationCreate,
@@ -46,14 +46,14 @@ class TestLightlyStudioLabelInput:
             Category(id=2, name="zebra"),
         ]
 
-    def test_get_categories__semantic_segmentation_starts_with_one(
+    def test_get_categories__pascalvoc_instance_segmentation_starts_with_one(
         self,
         db_session: Session,
         collection_with_annotations: CollectionTable,
     ) -> None:
         collection = collection_with_annotations
 
-        label_input = LightlyStudioSemanticSegmentationInput(
+        label_input = LightlyStudioPascalVOCInstanceSegmentationInput(
             session=db_session,
             root_collection_id=collection.collection_id,
             samples=DatasetQuery(dataset=collection, session=db_session),

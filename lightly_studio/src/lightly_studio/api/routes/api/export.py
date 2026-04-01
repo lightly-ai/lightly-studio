@@ -77,7 +77,7 @@ def export_collection_annotations(
         output_path = PathlibPath(temp_dir.name) / "pascalvoc"
 
         try:
-            export_dataset.to_pascalvoc_semantic_segmentation(
+            export_dataset.to_pascalvoc_instance_segmentation(
                 session=session,
                 root_collection_id=collection.collection_id,
                 samples=dataset_query,
