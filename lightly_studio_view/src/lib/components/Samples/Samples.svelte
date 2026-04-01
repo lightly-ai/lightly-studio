@@ -3,6 +3,7 @@
     import { type TextEmbedding, useGlobalStorage } from '$lib/hooks/useGlobalStorage';
     import { useMetadataFilters } from '$lib/hooks/useMetadataFilters/useMetadataFilters';
     import { useSettings } from '$lib/hooks/useSettings';
+    import { useSelectedAnnotationsFilter } from '$lib/hooks/useAnnotationsFilter/useAnnotationsFilter';
     import { useTags } from '$lib/hooks/useTags/useTags';
     import { routeHelpers } from '$lib/routes';
     import { onMount } from 'svelte';
@@ -28,11 +29,13 @@
 
     type SamplesProps = {
         collection_id: string;
-        selectedAnnotationFilterIds: Readable<string[]>;
         sampleWidth: number;
         textEmbedding: Readable<TextEmbedding | undefined>;
     };
-    const { collection_id, selectedAnnotationFilterIds, textEmbedding }: SamplesProps = $props();
+    const { collection_id, textEmbedding }: SamplesProps = $props();
+
+    const { selectedAnnotationFilterIdsArray: selectedAnnotationFilterIds } =
+        useSelectedAnnotationsFilter();
 
     const { tagsSelected } = useTags({
         collection_id,
