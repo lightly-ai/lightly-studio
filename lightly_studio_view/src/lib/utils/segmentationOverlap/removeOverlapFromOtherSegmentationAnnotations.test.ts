@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import type { AnnotationView } from '$lib/api/lightly_studio_local';
-import { removeOverlapFromOtherSemanticAnnotations } from './removeOverlapFromOtherSemanticAnnotations';
+import { removeOverlapFromOtherSegmentationAnnotations } from './removeOverlapFromOtherSegmentationAnnotations';
 
 vi.mock('$lib/components/SampleAnnotation/utils', () => ({
     decodeRLEToBinaryMask: vi.fn((mask: number[], width: number, height: number) =>
@@ -11,6 +11,13 @@ vi.mock('$lib/components/SampleAnnotation/utils', () => ({
 }));
 
 const sample = { width: 4, height: 4 };
+const MAX_MASK_PIXELS = 16;
+const NEW_MASK_FIRST_PIXEL = Uint8Array.from([
+    1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+]);
+const OVERLAP_FIRST_TWO_PIXELS = [1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
+const OVERLAP_FIRST_PIXEL = [1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
+
 const baseAnn = (
     id: string,
     mask: number[],
@@ -26,7 +33,7 @@ const baseAnn = (
         tags: []
     }) as unknown as AnnotationView;
 
-describe('removeOverlapFromOtherSemanticAnnotations', () => {
+describe('removeOverlapFromOtherSegmentationAnnotations', () => {
     const updateAnnotations = vi.fn();
 
     beforeEach(() => {
@@ -34,9 +41,9 @@ describe('removeOverlapFromOtherSemanticAnnotations', () => {
     });
 
     it('clears overlapping pixels on other instance masks and sends an update', async () => {
-        const overriddenAnnotations = await removeOverlapFromOtherSemanticAnnotations({
-            newMask: Uint8Array.from([1, 0, 0, 0]),
-            annotations: [baseAnn('1', [1, 1, 0, 0])],
+        const overriddenAnnotations = await removeOverlapFromOtherSegmentationAnnotations({
+            newMask: Uint8Array.from(NEW_MASK_FIRST_PIXEL),
+            annotations: [baseAnn('1', OVERLAP_FIRST_TWO_PIXELS.slice(0, MAX_MASK_PIXELS))],
             segmentationMode: 'instance',
             sample,
             collectionId: 'c',
@@ -51,9 +58,9 @@ describe('removeOverlapFromOtherSemanticAnnotations', () => {
     });
 
     it('respects locked annotations and leaves them untouched', async () => {
-        const overriddenAnnotations = await removeOverlapFromOtherSemanticAnnotations({
-            newMask: Uint8Array.from([1, 0, 0, 0]),
-            annotations: [baseAnn('1', [1, 0, 0, 0])],
+        const overriddenAnnotations = await removeOverlapFromOtherSegmentationAnnotations({
+            newMask: Uint8Array.from(NEW_MASK_FIRST_PIXEL),
+            annotations: [baseAnn('1', OVERLAP_FIRST_PIXEL.slice(0, MAX_MASK_PIXELS))],
             segmentationMode: 'instance',
             sample,
             collectionId: 'c',
@@ -67,9 +74,11 @@ describe('removeOverlapFromOtherSemanticAnnotations', () => {
     });
 
     it('clears overlapping pixels on other semantic masks and sends an update in semantic mode', async () => {
-        const overriddenAnnotations = await removeOverlapFromOtherSemanticAnnotations({
-            newMask: Uint8Array.from([1, 0, 0, 0]),
-            annotations: [baseAnn('1', [1, 1, 0, 0], 'semantic_segmentation')],
+        const overriddenAnnotations = await removeOverlapFromOtherSegmentationAnnotations({
+            newMask: Uint8Array.from(NEW_MASK_FIRST_PIXEL),
+            annotations: [
+                baseAnn('1', OVERLAP_FIRST_TWO_PIXELS.slice(0, MAX_MASK_PIXELS), 'semantic_segmentation')
+            ],
             segmentationMode: 'semantic',
             sample,
             collectionId: 'c',
