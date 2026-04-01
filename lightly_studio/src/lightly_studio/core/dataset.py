@@ -4,8 +4,8 @@ from __future__ import annotations
 
 import logging
 from abc import ABC, abstractmethod
-from collections.abc import Iterator
-from typing import Generic
+from collections.abc import Iterator, Mapping
+from typing import Any, Generic
 from uuid import UUID
 
 from typing_extensions import Self, TypeVar
@@ -20,6 +20,7 @@ from lightly_studio.models.collection import CollectionCreate, CollectionTable, 
 from lightly_studio.resolvers import (
     collection_resolver,
     embedding_model_resolver,
+    metadata_resolver,
     tag_resolver,
 )
 
@@ -197,6 +198,33 @@ class Dataset(Generic[T], ABC):
             embedding_model_id=embedding_model_id,
             query_tag_id=query_tag.tag_id,
             metadata_name=metadata_name,
+        )
+
+    def update_metadata(
+        self,
+        sample_metadata: list[tuple[UUID, Mapping[str, Any]]],
+    ) -> None:
+        """Bulk update metadata for multiple samples in the dataset.
+
+        If a sample does not have metadata, a new metadata row is created. If a sample already has
+        metadata, the new key-value pairs are merged with the existing metadata.
+
+        Note: we do not check for performance reasons if the sample IDs actually belong to this
+        dataset.
+
+        Args:
+            sample_metadata: List of (sample ID, metadata_map) tuples. `metadata_map` is a
+            mapping from string to any type, e.g. `{"weather": "cloudy", "temperature": 25}`.
+
+        Example:
+            >>> dataset.update_metadata([
+            ...     (UUID("..."), {"weather": "sunny"}),
+            ...     (UUID("..."), {"weather": "cloudy", "temperature": 25}),
+            ... ])
+        """
+        metadata_resolver.bulk_update_metadata(
+            session=self.session,
+            sample_metadata=sample_metadata,
         )
 
 

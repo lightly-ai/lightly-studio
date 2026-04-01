@@ -1,5 +1,9 @@
 """Test metadata resolver bulk set metadata."""
 
+from collections.abc import Mapping
+from typing import Any
+from uuid import UUID
+
 from sqlmodel import Session, select
 
 from lightly_studio.models.metadata import SampleMetadataTable
@@ -29,7 +33,7 @@ def test_bulk_update_metadata(
         file_path_abs="/path/to/sample2.png",
     ).sample
     # Prepare metadata for all samples
-    sample_metadata = []
+    sample_metadata: list[tuple[UUID, Mapping[str, Any]]] = []
     sample_metadata.append(
         (
             sample1.sample_id,
@@ -68,7 +72,7 @@ def test_bulk_update_metadata__existing_metadata(
         file_path_abs="/path/to/sample.png",
     ).sample
     # Prepare metadata for all samples
-    sample_metadata = [
+    sample_metadata: list[tuple[UUID, Mapping[str, Any]]] = [
         (
             sample.sample_id,
             {
@@ -83,7 +87,7 @@ def test_bulk_update_metadata__existing_metadata(
     assert sample["location"] == "city"
 
     # Test updating existing metadata.
-    sample_metadata_update = [
+    sample_metadata_update: list[tuple[UUID, Mapping[str, Any]]] = [
         (
             sample.sample_id,
             {
@@ -122,7 +126,7 @@ def test_bulk_update_metadata__overwrite_existing_metadata(
         file_path_abs="/path/to/sample.png",
     ).sample
     # Prepare metadata for all samples
-    sample_metadata = [
+    sample_metadata: list[tuple[UUID, Mapping[str, Any]]] = [
         (
             sample.sample_id,
             {
@@ -137,7 +141,7 @@ def test_bulk_update_metadata__overwrite_existing_metadata(
     assert sample["temperature"] == 25
 
     # Test updating existing metadata.
-    sample_metadata_update = [
+    sample_metadata_update: list[tuple[UUID, Mapping[str, Any]]] = [
         (
             sample.sample_id,
             {

@@ -1,5 +1,7 @@
 """Computes typicality from embeddings."""
 
+from collections.abc import Mapping
+from typing import Any
 from uuid import UUID
 
 from lightly_mundig import Typicality  # type: ignore[import-untyped]
@@ -59,7 +61,7 @@ def compute_typicality_metadata(
         "The number of samples and computed typicality values must match"
     )
 
-    metadata = [
+    metadata: list[tuple[UUID, Mapping[str, Any]]] = [
         (sample.sample_id, {metadata_name: typicality})
         for sample, typicality in zip(samples, typicality_values)
     ]
