@@ -99,21 +99,23 @@
 <Popover.Root bind:open>
     <Popover.Trigger bind:ref={triggerRef}>
         {#snippet child({ props }: ChildProps)}
-            <div class="flex items-center space-x-4">
+            <div class="flex min-w-0 items-center space-x-4">
                 <Button
                     {...props}
                     variant="secondary"
                     {disabled}
-                    class={cn('w-[200px] justify-between', className)}
+                    class={cn('w-[200px] min-w-0 justify-between', className)}
                     role="combobox"
                     aria-expanded={open}
                     data-testid="select-list-trigger"
                 >
-                    {selectedItem?.label || label}
-                    <ChevronsUpDownIcon class="opacity-50" />
+                    <span class="min-w-0 flex-1 truncate text-left">
+                        {selectedItem?.label || label}
+                    </span>
+                    <ChevronsUpDownIcon class="shrink-0 opacity-50" />
                 </Button>
                 {#if isLoading}
-                    <Loader2Icon class="mr-2 h-4 w-4 animate-spin" />
+                    <Loader2Icon class="mr-2 h-4 w-4 shrink-0 animate-spin" />
                 {/if}
             </div>
         {/snippet}
@@ -142,7 +144,7 @@
                             <CheckIcon
                                 class={cn(selectedValue !== item.value && 'text-transparent')}
                             />
-                            {item.label}
+                            <span class="min-w-0 flex-1 truncate">{item.label}</span>
                         </Command.Item>
                     {/each}
                 </Command.Group>

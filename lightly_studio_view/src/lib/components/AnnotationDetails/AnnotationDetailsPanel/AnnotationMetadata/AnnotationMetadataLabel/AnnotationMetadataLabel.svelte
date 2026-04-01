@@ -51,36 +51,40 @@
 <span class="text-sm">{label}</span>
 
 {#if $isEditingMode}
-    <SelectList
-        {items}
-        selectedItem={items.find((i) => i.value === value?.value)}
-        name="annotation-label"
-        placeholder="Select or create a label"
-        onSelect={(item) => {
-            addAnnotationLabelChangeToUndoStack({
-                annotations: [
-                    {
-                        sample_id: annotationId,
-                        annotation_label: { annotation_label_name: currentValue }
-                    }
-                ],
-                collectionId,
-                addReversibleAction,
-                updateAnnotations: updateAnnotationsRaw,
-                refresh: refetch
-            });
+    <div class="min-w-0">
+        <SelectList
+            {items}
+            selectedItem={items.find((i) => i.value === value?.value)}
+            name="annotation-label"
+            placeholder="Select or create a label"
+            className="w-full min-w-0"
+            contentClassName="w-full min-w-0"
+            onSelect={(item) => {
+                addAnnotationLabelChangeToUndoStack({
+                    annotations: [
+                        {
+                            sample_id: annotationId,
+                            annotation_label: { annotation_label_name: currentValue }
+                        }
+                    ],
+                    collectionId,
+                    addReversibleAction,
+                    updateAnnotations: updateAnnotationsRaw,
+                    refresh: refetch
+                });
 
-            updateAnnotation({
-                annotation_id: annotationId,
-                collection_id: collectionId,
-                label_name: item.value
-            });
-        }}
-    >
-        {#snippet notFound({ inputValue })}
-            <LabelNotFound label={inputValue} />
-        {/snippet}
-    </SelectList>
+                updateAnnotation({
+                    annotation_id: annotationId,
+                    collection_id: collectionId,
+                    label_name: item.value
+                });
+            }}
+        >
+            {#snippet notFound({ inputValue })}
+                <LabelNotFound label={inputValue} />
+            {/snippet}
+        </SelectList>
+    </div>
 {:else}
     <span class="break-all text-sm" data-testid={`annotation-metadata-label`}>
         {currentValue}
