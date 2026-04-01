@@ -2638,7 +2638,7 @@ wheels = [
 [[package]]
 name = "labelformat"
 version = "0.1.13"
-source = { git = "https://github.com/lightly-ai/labelformat.git?rev=f9cf7d5#f9cf7d51dd2b058d27d91d733a87475a404c1f18" }
+source = { git = "https://github.com/lightly-ai/labelformat.git?rev=f9cf7d51dd2b058d27d91d733a87475a404c1f18#f9cf7d51dd2b058d27d91d733a87475a404c1f18" }
 dependencies = [
     { name = "fsspec", version = "2025.10.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.10'" },
     { name = "fsspec", version = "2026.2.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.10'" },
@@ -2940,7 +2940,7 @@ requires-dist = [
     { name = "fastapi", specifier = ">=0.115.5" },
     { name = "fsspec", specifier = ">=2023.1.0" },
     { name = "gcsfs", marker = "extra == 'cloud-storage'", specifier = ">=2023.1.0" },
-    { name = "labelformat", git = "https://github.com/lightly-ai/labelformat.git?rev=f9cf7d5" },
+    { name = "labelformat", git = "https://github.com/lightly-ai/labelformat.git?rev=f9cf7d51dd2b058d27d91d733a87475a404c1f18" },
     { name = "lightly-edge-sdk", marker = "extra == 'lightly-edge'", specifier = ">=1.0.3.post1", index = "https://europe-west3-python.pkg.dev/boris-250909/lightly-pypi/simple/" },
     { name = "lightly-mundig", specifier = "==0.1.10" },
     { name = "open-clip-torch", specifier = ">=2.20.0" },

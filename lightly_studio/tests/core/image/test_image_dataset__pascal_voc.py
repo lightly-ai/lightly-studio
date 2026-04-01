@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from pathlib import Path
-from uuid import uuid4
+import uuid
 
 import fsspec
 import numpy as np
@@ -144,7 +144,7 @@ class TestImageDataset:
         self,
         patch_collection: None,  # noqa: ARG002
     ) -> None:
-        remote_root = f"memory://voc_remote_{uuid4().hex}"
+        remote_root = f"memory://voc_remote_{uuid.uuid4().hex}"
         images_path = f"{remote_root}/JPEGImages"
         masks_path = f"{remote_root}/SegmentationClass"
 
