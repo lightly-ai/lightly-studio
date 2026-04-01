@@ -40,8 +40,8 @@ make static-checks
 make test
 ```
 
-When updating the code please follow our coding guidelines in [./ai_guidelines](). AI coding
-tools will be able to assist.
+When updating the code please follow our coding guidelines in [./ai_guidelines](./ai_guidelines).
+AI coding tools will be able to assist.
 
 ### End-to-End Testing
 
