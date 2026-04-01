@@ -8,6 +8,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- Added `Dataset.update_metadata` method to update metadata of multiple samples at once.
 
 ### Changed
 
