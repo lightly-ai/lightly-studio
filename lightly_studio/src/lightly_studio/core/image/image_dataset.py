@@ -358,7 +358,7 @@ class ImageDataset(BaseSampleDataset[ImageSample]):
             root_collection_id=self.collection_id,
             input_labels=label_input,
             images_path=images_path,
-            annotation_type=AnnotationType.SEMANTIC_SEGMENTATION,
+            annotation_type=AnnotationType.INSTANCE_SEGMENTATION,
         )
 
         _postprocess_created_images(
