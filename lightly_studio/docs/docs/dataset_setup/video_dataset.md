@@ -150,14 +150,15 @@ GUI displays only a single dataset.
 
 ## Video Dataset in the GUI
 
-Launch the GUI by calling `ls.start_gui()`, it starts a local web server. Click
-on the link printed in the console - by default `http://localhost:8001` - to open the GUI
-in your browser.
+Launch the GUI from your terminal:
 
-```python title="Start the GUI"
-import lightly_studio as ls
-ls.start_gui()
+```shell
+lightly-studio gui
 ```
+
+The command starts a local web server. Click the link printed in the console - by default
+`http://localhost:8001` - to open the GUI in your browser. Note that the GUI can also be
+started from a Python script by calling `ls.start_gui()`.
 
 The GUI for a video dataset has two main pages: **Videos** and **Frames**, accessible
 via the navigation bar at the top.
