@@ -77,7 +77,6 @@ describe('+layout.ts', () => {
         expect(result.collection).toBeDefined();
         expect(result.collection?.collection_id).toBe(mockCollectionId);
         expect(result.globalStorage).toBeDefined();
-        expect(result.selectedAnnotationFilterIds).toBeDefined();
         expect(result.sampleSize).toBeDefined();
     });
 

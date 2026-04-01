@@ -3,14 +3,12 @@ import type { LayoutLoad, LayoutLoadEvent } from './$types';
 import { readCollection, readCollectionHierarchy } from '$lib/api/lightly_studio_local/sdk.gen';
 import { routeHelpers } from '$lib/routes';
 import { redirect, error } from '@sveltejs/kit';
-import { derived, type Readable } from 'svelte/store';
 import { validate as validateUUID } from 'uuid';
 import type { CollectionViewWithCount, CollectionView } from '$lib/api/lightly_studio_local';
 
 export type LayoutLoadResult = {
     collection: CollectionViewWithCount;
     globalStorage: ReturnType<typeof useGlobalStorage>;
-    selectedAnnotationFilterIds: Readable<string[]>;
     sampleSize: ReturnType<typeof useGlobalStorage>['sampleSize'];
 };
 
@@ -111,16 +109,9 @@ export const load: LayoutLoad = async ({
 
     const globalStorage = useGlobalStorage();
 
-    // Convert Set<string> to string[] for backward compatibility with child components
-    const selectedAnnotationFilterIdsArray = derived(
-        globalStorage.selectedAnnotationFilterIds,
-        ($selectedSet) => Array.from($selectedSet)
-    );
-
     return {
         collection: collectionData,
         globalStorage,
-        selectedAnnotationFilterIds: selectedAnnotationFilterIdsArray,
         sampleSize: globalStorage.sampleSize
     };
 };
