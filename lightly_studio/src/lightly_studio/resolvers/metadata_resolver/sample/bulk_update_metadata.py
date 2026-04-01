@@ -22,7 +22,7 @@ def bulk_update_metadata(
 
     Args:
         session: The database session.
-        sample_metadata: List of (sample_id, metadata_dict) tuples.
+        sample_metadata: iterable of (sample_id, metadata_mapping) tuples.
     """
     # TODO(Mihnea, 10/2025): Consider using SQLAlchemy's bulk operations
     #  (Session.bulk_insert/update_mappings) if performance becomes a bottleneck.

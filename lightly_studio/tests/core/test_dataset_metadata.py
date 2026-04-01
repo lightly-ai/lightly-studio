@@ -10,8 +10,12 @@ from tests.helpers_resolvers import create_image
 
 def test_update_metadata() -> None:
     dataset = ImageDataset.create(name="update_metadata_dataset1")
-    img1 = create_image(dataset.session, dataset.collection_id, file_path_abs="img1.jpg")
-    img2 = create_image(dataset.session, dataset.collection_id, file_path_abs="img2.jpg")
+    img1 = create_image(
+        session=dataset.session, collection_id=dataset.collection_id, file_path_abs="img1.jpg"
+    )
+    img2 = create_image(
+        session=dataset.session, collection_id=dataset.collection_id, file_path_abs="img2.jpg"
+    )
     samples = [ImageSample(img1), ImageSample(img2)]
 
     samples[0].metadata["key1"] = "overwritten_value"
