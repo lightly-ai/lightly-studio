@@ -19,7 +19,7 @@ from lightly_studio.export import coco_captions
 from lightly_studio.export.lightly_studio_label_input import (
     LightlyStudioInstanceSegmentationInput,
     LightlyStudioObjectDetectionInput,
-    LightlyStudioSemanticSegmentationInput,
+    LightlyStudioPascalVOCInstanceSegmentationInput,
 )
 from lightly_studio.type_definitions import PathLike
 
@@ -142,13 +142,13 @@ def to_coco_instance_segmentations(
     COCOInstanceSegmentationOutput(output_file=output_json).save(label_input=export_input)
 
 
-def to_pascalvoc_semantic_segmentation(
+def to_pascalvoc_instance_segmentation(
     session: Session,
     root_collection_id: UUID,
     samples: Iterable[ImageSample],
     output_folder: Path,
 ) -> None:
-    """Exports semantic segmentation annotations to a Pascal VOC segmentation folder.
+    """Exports instance segmentation annotations to a Pascal VOC segmentation folder.
 
     This function is for internal use.
 
@@ -158,14 +158,14 @@ def to_pascalvoc_semantic_segmentation(
         samples: The samples to export.
         output_folder: The folder where Pascal VOC segmentation files are written.
     """
-    export_input = LightlyStudioSemanticSegmentationInput(
+    export_input = LightlyStudioPascalVOCInstanceSegmentationInput(
         session=session,
         root_collection_id=root_collection_id,
         samples=samples,
     )
 
-    # Keep `background_class_id` unchanged: `LightlyStudioSemanticSegmentationInput`
-    # defines category IDs and reserves class 0 for background.
+    # Keep `background_class_id` unchanged: the label input defines category IDs and
+    # reserves class 0 for background.
     PascalVOCSemanticSegmentationOutput(
         output_folder=output_folder,
     ).save(label_input=export_input)

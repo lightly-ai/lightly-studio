@@ -138,7 +138,7 @@ def test_export_collection_instance_segmentations(
     )
 
 
-def test_export_collection_semantic_segmentations(
+def test_export_collection_pascalvoc_from_instance_segmentations(
     db_session: Session,
     test_client: TestClient,
 ) -> None:
@@ -159,7 +159,7 @@ def test_export_collection_semantic_segmentations(
         annotations=[
             AnnotationCreate(
                 annotation_label_id=label.annotation_label_id,
-                annotation_type=AnnotationType.SEMANTIC_SEGMENTATION,
+                annotation_type=AnnotationType.INSTANCE_SEGMENTATION,
                 parent_sample_id=image.sample_id,
                 x=1,
                 y=0,
