@@ -16,6 +16,7 @@
         annotation,
         imageWidth,
         showLabel = false,
+        showBoundingBox = true,
         isResizable = false,
         scale = 1,
         constraintBox,
@@ -24,6 +25,7 @@
     }: {
         annotation: Annotation;
         showLabel?: boolean;
+        showBoundingBox?: boolean;
         imageWidth: number;
         isResizable?: boolean;
         scale?: number;
@@ -123,26 +125,28 @@
         />
     {/if}
 
-    <!--Disable resizable rectangle for segmentation masks since we don’t support it yet.-->
-    {#if isResizable && constraintBox && !segmentationMask}
-        <ResizableRectangle
-            bind:bbox={boundingBox}
-            {colorStroke}
-            {colorFill}
-            opacity={boundingBoxOpacity}
-            {scale}
-            {onResize}
-            {onMove}
-            {onDragEnd}
-        />
-    {:else if annotation.annotation_type !== 'semantic_segmentation'}
-        <SampleAnnotationBox
-            {bbox}
-            {annotationId}
-            {label}
-            {colorStroke}
-            {colorFill}
-            opacity={boundingBoxOpacity}
-        />
+    {#if showBoundingBox}
+        <!--Disable resizable rectangle for segmentation masks since we don’t support it yet.-->
+        {#if isResizable && constraintBox && !segmentationMask}
+            <ResizableRectangle
+                bind:bbox={boundingBox}
+                {colorStroke}
+                {colorFill}
+                opacity={boundingBoxOpacity}
+                {scale}
+                {onResize}
+                {onMove}
+                {onDragEnd}
+            />
+        {:else if annotation.annotation_type !== 'semantic_segmentation'}
+            <SampleAnnotationBox
+                {bbox}
+                {annotationId}
+                {label}
+                {colorStroke}
+                {colorFill}
+                opacity={boundingBoxOpacity}
+            />
+        {/if}
     {/if}
 </g>

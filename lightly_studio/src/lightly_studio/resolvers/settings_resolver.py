@@ -62,6 +62,9 @@ def set_settings(session: Session, settings: SettingView) -> SettingView:
     # Update sample filename visibility
     current_settings.show_sample_filenames = settings.show_sample_filenames
 
+    # Update segmentation bounding box visibility
+    current_settings.show_bounding_boxes_for_segmentation = settings.show_bounding_boxes_for_segmentation
+
     session.commit()
     session.refresh(current_settings)
 

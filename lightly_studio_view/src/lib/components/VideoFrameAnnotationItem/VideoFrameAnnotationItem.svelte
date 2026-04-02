@@ -1,5 +1,6 @@
 <script lang="ts">
     import { useHideAnnotations } from '$lib/hooks/useHideAnnotations';
+    import { useSettings } from '$lib/hooks/useSettings';
     import { type ComponentProps } from 'svelte';
     import SampleAnnotation from '../SampleAnnotation/SampleAnnotation.svelte';
     import type { SampleImageObjectFit } from '../SampleImage/types';
@@ -30,6 +31,7 @@
     } = $props();
 
     const { isHidden } = useHideAnnotations();
+    const { showBoundingBoxesForSegmentationStore } = useSettings();
     const annotations: AnnotationView[] = $derived((sample.sample as SampleView).annotations ?? []);
     const annotationsWithVisuals = $derived(
         annotations.filter((annotation) => annotation.annotation_type !== 'classification')
@@ -57,7 +59,13 @@
     >
         <g class="sample-annotation" class:invisible={$isHidden}>
             {#each annotationsWithVisuals as annotation (annotation.sample_id)}
-                <SampleAnnotation {annotation} {showLabel} imageWidth={sampleWidth} />
+                <SampleAnnotation
+                    {annotation}
+                    {showLabel}
+                    showBoundingBox={annotation.annotation_type !== 'instance_segmentation' ||
+                        $showBoundingBoxesForSegmentationStore}
+                    imageWidth={sampleWidth}
+                />
             {/each}
         </g>
     </svg>

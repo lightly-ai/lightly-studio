@@ -49,6 +49,11 @@ class SettingBase(SQLModel):
         description="Controls whether to show sample filenames in the samples grid view",
     )
 
+    show_bounding_boxes_for_segmentation: bool = Field(
+        default=True,
+        description="Controls whether to show annotation bounding boxes for segmentation",
+    )
+
     # Toolbar shortcuts
     key_toolbar_selection: str = Field(
         default="s", description="Key to activate the selection tool in the toolbar"

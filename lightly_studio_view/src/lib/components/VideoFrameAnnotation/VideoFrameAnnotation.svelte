@@ -24,7 +24,7 @@
         toggleAnnotationSelection: (annotationId: string) => void;
     } = $props();
     const { addReversibleAction } = useGlobalStorage();
-    const { showAnnotationTextLabelsStore } = useSettings();
+    const { showAnnotationTextLabelsStore, showBoundingBoxesForSegmentationStore } = useSettings();
 
     const { annotation: annotationResp, updateAnnotation } = $derived(
         useAnnotation({
@@ -36,6 +36,10 @@
     let annotation = $derived($annotationResp.data);
 
     let selectionBox = $derived(annotation ? getBoundingBox(annotation!) : undefined);
+    const showBoundingBox = $derived(
+        annotation?.annotation_type !== 'instance_segmentation' ||
+            $showBoundingBoxesForSegmentationStore
+    );
 
     const onBoundingBoxChanged = (bbox: BoundingBox) => {
         const _update = async () => {
@@ -71,6 +75,7 @@
             <SampleAnnotation
                 {annotation}
                 showLabel={$showAnnotationTextLabelsStore}
+                {showBoundingBox}
                 imageWidth={sample.video.width}
                 constraintBox={{
                     x: 0,
