@@ -177,7 +177,7 @@
         {/if}
         {#if showSegmentationTool}
             <SampleDetailsToolbarTooltip
-                label="Instance Segmentation Brush"
+                label="Segmentation Mask Brush"
                 shortcut={$settingsStore.key_toolbar_segmentation_mask.toUpperCase()}
                 action="paint"
             >

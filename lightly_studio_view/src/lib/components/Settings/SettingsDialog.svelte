@@ -277,11 +277,14 @@
                             </button>
                         </div>
                         <div class="grid grid-cols-2 items-center gap-4">
-                            <Label for="toggle-edit-mode" class="text-right text-foreground">
-                                Toolbar instance segmentation
+                            <Label
+                                for="toggle-toolbar-segmentation-mask"
+                                class="text-right text-foreground"
+                            >
+                                Toolbar segmentation mask
                             </Label>
                             <button
-                                id="toggle-edit-mode"
+                                id="toggle-toolbar-segmentation-mask"
                                 type="button"
                                 class="rounded-md border border-input bg-background p-2 text-left text-foreground"
                                 onclick={(e) => {
