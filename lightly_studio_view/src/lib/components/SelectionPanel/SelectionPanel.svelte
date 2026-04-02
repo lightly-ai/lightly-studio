@@ -34,12 +34,23 @@
         gridType: GridType;
         tagKind: 'sample' | 'annotation';
         onClear: () => void;
+        onSelectAll: () => void | Promise<void>;
+        isSelectingAll?: boolean;
         /** Call after creating a new tag so TagsMenu list updates immediately. */
         loadTags: () => void;
     }
 
-    let { collectionId, selectedSampleIds, allTags, gridType, tagKind, onClear, loadTags }: Props =
-        $props();
+    let {
+        collectionId,
+        selectedSampleIds,
+        allTags,
+        gridType,
+        tagKind,
+        onClear,
+        onSelectAll,
+        isSelectingAll = false,
+        loadTags
+    }: Props = $props();
 
     const { adjustTagSampleCount } = useGlobalStorage();
 
@@ -61,6 +72,12 @@
     );
 
     const N = $derived(selectedSampleIds.size);
+    const selectionLabel = $derived.by(() => {
+        if (gridType === 'annotations') return N === 1 ? 'annotation' : 'annotations';
+        if (gridType === 'videos') return N === 1 ? 'video' : 'videos';
+        if (gridType === 'video_frames') return N === 1 ? 'frame' : 'frames';
+        return N === 1 ? 'image' : 'images';
+    });
 
     function setCoverageFromPairs(tagPairs: Array<{ itemId: string; tagId: string }>) {
         const nextCoverage: Record<string, Set<string>> = {};
@@ -321,108 +338,123 @@
     <!-- Header -->
     <div class="mb-2 flex items-center justify-between">
         <span class="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-            {N} image{N === 1 ? '' : 's'} selected
+            {N} {selectionLabel} selected
         </span>
-        <button
-            type="button"
-            class="rounded p-0.5 text-muted-foreground hover:text-foreground"
-            aria-label="Clear selection"
-            onclick={onClear}
-        >
-            <X class="size-3.5" />
-        </button>
-    </div>
-
-    <!-- Assign / create input -->
-    <div class="relative mb-2">
-        <div class="flex items-center gap-1 rounded-md border bg-background px-2 py-1">
-            <Plus class="size-3.5 shrink-0 text-muted-foreground" />
-            <!-- svelte-ignore a11y_autofocus -->
-            <input
-                type="text"
-                placeholder="Assign or create tag..."
-                bind:value={assignQuery}
-                disabled={assignBusy}
-                class="min-w-0 flex-1 bg-transparent text-xs outline-none placeholder:text-muted-foreground"
-                oninput={() => (showDropdown = true)}
-                onkeydown={handleAssignKeydown}
-                onfocus={() => (showDropdown = true)}
-            />
+        <div class="flex items-center gap-1">
+            {#if N === 0}
+                <button
+                    type="button"
+                    class="rounded px-1.5 py-0.5 text-[10px] text-muted-foreground ring-1 ring-border hover:bg-accent hover:text-foreground disabled:cursor-not-allowed disabled:opacity-50"
+                    onclick={() => void onSelectAll()}
+                    disabled={isSelectingAll}
+                >
+                    {isSelectingAll ? 'Selecting...' : 'Select all'}
+                </button>
+            {:else}
+                <button
+                    type="button"
+                    class="rounded p-0.5 text-muted-foreground hover:text-foreground"
+                    aria-label="Clear selection"
+                    onclick={onClear}
+                >
+                    <X class="size-3.5" />
+                </button>
+            {/if}
         </div>
-        {#if showDropdown && (assignOptions.length > 0 || (assignQuery.trim() && !hasExactMatch))}
-            <div
-                class="absolute left-0 top-full z-50 mt-1 max-h-44 w-full overflow-auto rounded-md border bg-popover shadow-md"
-            >
-                {#each assignOptions as opt (opt.tag_id)}
-                    <button
-                        type="button"
-                        class="flex w-full items-center px-2 py-1.5 text-xs hover:bg-accent"
-                        onclick={() => handleAssignExisting(opt)}
-                    >
-                        {opt.name}
-                    </button>
-                {/each}
-                {#if assignQuery.trim() && !hasExactMatch}
-                    <button
-                        type="button"
-                        class="flex w-full items-center px-2 py-1.5 text-xs text-muted-foreground hover:bg-accent"
-                        onclick={() => handleCreateAndAssign(assignQuery.trim())}
-                    >
-                        Create "{assignQuery.trim()}"
-                    </button>
-                {/if}
-            </div>
-        {/if}
     </div>
 
-    <!-- Divider -->
-    {#if isLoadingCoverage}
-        <div class="my-2 border-t border-border"></div>
-        <p class="text-xs text-muted-foreground">Loading tags for selection...</p>
-    {:else if activeTags.length > 0}
-        <div class="my-2 border-t border-border"></div>
-
-        <!-- Tag coverage list -->
-        <div class="space-y-1.5">
-            {#each activeTags as { tag, count } (tag.tag_id)}
-                {@const isAll = count === N}
-                <div class="flex items-center gap-2 text-xs">
-                    <!-- ● / ◑ indicator -->
-                    <span
-                        class="shrink-0 text-sm leading-none {isAll
-                            ? 'text-primary'
-                            : 'text-muted-foreground'}"
-                        title={isAll ? 'All selected' : `${count}/${N} selected`}
-                    >
-                        {isAll ? '●' : '◑'}
-                    </span>
-                    <!-- Tag name + fraction -->
-                    <span class="min-w-0 flex-1 truncate font-medium">{tag.name}</span>
-                    {#if !isAll}
-                        <span class="shrink-0 text-muted-foreground">{count}/{N}</span>
-                    {/if}
-                    <!-- Action buttons -->
-                    <div class="flex shrink-0 items-center gap-1">
-                        {#if !isAll}
-                            <button
-                                type="button"
-                                class="rounded px-1.5 py-0.5 text-[10px] text-muted-foreground ring-1 ring-border hover:bg-accent hover:text-foreground"
-                                onclick={() => assignAll(tag)}
-                            >
-                                + All
-                            </button>
-                        {/if}
+    {#if N > 0}
+        <!-- Assign / create input -->
+        <div class="relative mb-2">
+            <div class="flex items-center gap-1 rounded-md border bg-background px-2 py-1">
+                <Plus class="size-3.5 shrink-0 text-muted-foreground" />
+                <!-- svelte-ignore a11y_autofocus -->
+                <input
+                    type="text"
+                    placeholder="Assign or create tag..."
+                    bind:value={assignQuery}
+                    disabled={assignBusy}
+                    class="min-w-0 flex-1 bg-transparent text-xs outline-none placeholder:text-muted-foreground"
+                    oninput={() => (showDropdown = true)}
+                    onkeydown={handleAssignKeydown}
+                    onfocus={() => (showDropdown = true)}
+                />
+            </div>
+            {#if showDropdown && (assignOptions.length > 0 || (assignQuery.trim() && !hasExactMatch))}
+                <div
+                    class="absolute left-0 top-full z-50 mt-1 max-h-44 w-full overflow-auto rounded-md border bg-popover shadow-md"
+                >
+                    {#each assignOptions as opt (opt.tag_id)}
                         <button
                             type="button"
-                            class="rounded px-1.5 py-0.5 text-[10px] text-muted-foreground ring-1 ring-border hover:bg-destructive/20 hover:text-destructive"
-                            onclick={() => removeAll(tag)}
+                            class="flex w-full items-center px-2 py-1.5 text-xs hover:bg-accent"
+                            onclick={() => handleAssignExisting(opt)}
                         >
-                            − All
+                            {opt.name}
                         </button>
-                    </div>
+                    {/each}
+                    {#if assignQuery.trim() && !hasExactMatch}
+                        <button
+                            type="button"
+                            class="flex w-full items-center px-2 py-1.5 text-xs text-muted-foreground hover:bg-accent"
+                            onclick={() => handleCreateAndAssign(assignQuery.trim())}
+                        >
+                            Create "{assignQuery.trim()}"
+                        </button>
+                    {/if}
                 </div>
-            {/each}
+            {/if}
         </div>
+
+        <!-- Divider -->
+        {#if isLoadingCoverage}
+            <div class="my-2 border-t border-border"></div>
+            <p class="text-xs text-muted-foreground">Loading tags for selection...</p>
+        {:else if activeTags.length > 0}
+            <div class="my-2 border-t border-border"></div>
+
+            <!-- Tag coverage list -->
+            <div class="space-y-1.5">
+                {#each activeTags as { tag, count } (tag.tag_id)}
+                    {@const isAll = count === N}
+                    <div class="flex items-center gap-2 text-xs">
+                        <!-- ● / ◑ indicator -->
+                        <span
+                            class="shrink-0 text-sm leading-none {isAll
+                                ? 'text-primary'
+                                : 'text-muted-foreground'}"
+                            title={isAll ? 'All selected' : `${count}/${N} selected`}
+                        >
+                            {isAll ? '●' : '◑'}
+                        </span>
+                        <!-- Tag name + fraction -->
+                        <span class="min-w-0 flex-1 truncate font-medium">{tag.name}</span>
+                        {#if !isAll}
+                            <span class="shrink-0 text-muted-foreground">{count}/{N}</span>
+                        {/if}
+                        <!-- Action buttons -->
+                        <div class="flex shrink-0 items-center gap-1">
+                            {#if !isAll}
+                                <button
+                                    type="button"
+                                    class="rounded px-1.5 py-0.5 text-[10px] text-muted-foreground ring-1 ring-border hover:bg-accent hover:text-foreground"
+                                    onclick={() => assignAll(tag)}
+                                >
+                                    + All
+                                </button>
+                            {/if}
+                            <button
+                                type="button"
+                                class="rounded px-1.5 py-0.5 text-[10px] text-muted-foreground ring-1 ring-border hover:bg-destructive/20 hover:text-destructive"
+                                onclick={() => removeAll(tag)}
+                            >
+                                − All
+                            </button>
+                        </div>
+                    </div>
+                {/each}
+            </div>
+        {/if}
     {/if}
 </div>
 

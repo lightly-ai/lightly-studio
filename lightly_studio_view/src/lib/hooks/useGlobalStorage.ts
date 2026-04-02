@@ -217,6 +217,12 @@ export const useGlobalStorage = () => {
                 };
             });
         },
+        setSelectedSamples: (collection_id: string, sampleIds: string[]) => {
+            selectedSampleIdsByCollection.update((selectedByCollection) => ({
+                ...selectedByCollection,
+                [collection_id]: new Set(sampleIds)
+            }));
+        },
 
         // Individual sample annotation crop selection methods
         toggleSampleAnnotationCropSelection: (collectionId: string, annotationId: string) => {
@@ -242,6 +248,12 @@ export const useGlobalStorage = () => {
                     [collectionId]: new Set<string>()
                 };
             });
+        },
+        setSelectedSampleAnnotationCrops: (collectionId: string, annotationIds: string[]) => {
+            selectedSampleAnnotationCropIds.update((state) => ({
+                ...state,
+                [collectionId]: new Set(annotationIds)
+            }));
         },
 
         // remember the last grid type used even after multiple consecutive navigations

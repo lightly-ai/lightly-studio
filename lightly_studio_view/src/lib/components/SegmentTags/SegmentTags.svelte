@@ -38,7 +38,8 @@
         tagKind?: TagView['kind'];
         collectionId?: string;
         sampleId?: string;
-        onRemoveTag: (tagId: string) => Promise<void>;
+        onRemoveTag?: (tagId: string) => Promise<void>;
+        onClick?: (tagId: string) => Promise<void>;
         onRefetch?: () => void;
     }
 
@@ -49,8 +50,10 @@
         collectionId = '',
         sampleId = '',
         onRemoveTag,
+        onClick,
         onRefetch = () => {}
     }: Props = $props();
+    const removeTagHandler = onRemoveTag ?? onClick ?? (async () => undefined);
 
     const { tags: tagsByCollection, adjustTagSampleCount } = useGlobalStorage();
 
@@ -265,7 +268,7 @@
     }
 
     async function handleRemoveExisting(tagId: string) {
-        await onRemoveTag(tagId);
+        await removeTagHandler(tagId);
         adjustTagSampleCount(tagId, -1);
     }
 </script>
