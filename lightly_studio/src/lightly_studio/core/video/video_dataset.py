@@ -176,6 +176,7 @@ class VideoDataset(BaseSampleDataset[VideoSample]):
         created_sample_ids, _ = add_videos.load_video_annotations_from_labelformat(
             session=self.session,
             collection_id=self.collection_id,
+            dataset_id=self.dataset_id,
             video_paths=video_paths,
             input_labels=input_labels,
             input_labels_paths_root=videos_path,

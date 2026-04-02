@@ -88,7 +88,7 @@ def delete_dataset(
     _delete_annotation_labels(session=session, root_collection_id=root_collection_id)
     _delete_tags(session=session, collection_ids=collection_ids)
     _delete_embedding_models(session=session, collection_ids=collection_ids)
-    _delete_object_tracks(session=session, collection_ids=collection_ids)
+    _delete_object_tracks(session=session, dataset_id=dataset_id)
     session.commit()  # Required before deleting collections.
 
     # 6. Delete collections (with individual commits due to self-referential FKs).
@@ -176,13 +176,9 @@ def _delete_annotation_base(session: Session, sample_ids: list[UUID]) -> None:
     )
 
 
-def _delete_object_tracks(session: Session, collection_ids: list[UUID]) -> None:
-    """Delete object tracks for the given collections."""
-    if not collection_ids:
-        return
-    session.exec(
-        delete(ObjectTrackTable).where(col(ObjectTrackTable.root_collection_id).in_(collection_ids))
-    )
+def _delete_object_tracks(session: Session, dataset_id: UUID) -> None:
+    """Delete object tracks for the given dataset."""
+    session.exec(delete(ObjectTrackTable).where(col(ObjectTrackTable.dataset_id) == dataset_id))
 
 
 def _delete_captions(session: Session, sample_ids: list[UUID]) -> None:

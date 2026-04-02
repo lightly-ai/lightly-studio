@@ -471,9 +471,7 @@ def test_deep_copy__with_annotations(db_session: Session) -> None:
     )
     (original_track_id,) = object_track_resolver.create_many(
         session=db_session,
-        tracks=[
-            ObjectTrackCreate(object_track_number=7, root_collection_id=original.collection_id)
-        ],
+        tracks=[ObjectTrackCreate(object_track_number=7, dataset_id=original.dataset_id)],
     )
 
     classification = create_annotation(
@@ -575,7 +573,7 @@ def test_deep_copy__with_annotations(db_session: Session) -> None:
     )
     assert copied_track is not None
     assert copied_track.object_track_number == 7
-    assert copied_track.root_collection_id == copied.collection_id
+    assert copied_track.dataset_id == copied.dataset_id
 
     # Assert - semantic segmentation detail table copied
     copied_ss = copied_by_type[AnnotationType.SEMANTIC_SEGMENTATION]
