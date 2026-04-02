@@ -11,7 +11,7 @@ from lightly_studio.resolvers import object_track_resolver
 from tests.helpers_resolvers import create_collection
 
 
-def test_get_all_by_root_collection_id(db_session: Session) -> None:
+def test_get_all_by_dataset_id(db_session: Session) -> None:
     """Test retrieving all tracks for a dataset."""
     collection = create_collection(session=db_session)
     collection_2 = create_collection(session=db_session)
@@ -35,7 +35,7 @@ def test_get_all_by_root_collection_id(db_session: Session) -> None:
     assert result[1].object_track_id == track_ids[1]
 
 
-def test_get_all_by_root_collection_id__root_collection_id_not_found(db_session: Session) -> None:
+def test_get_all_by_dataset_id__dataset_id_not_found(db_session: Session) -> None:
     """Test that an empty list is returned for a non-existent dataset ID."""
     result = object_track_resolver.get_all_by_dataset_id(
         session=db_session,

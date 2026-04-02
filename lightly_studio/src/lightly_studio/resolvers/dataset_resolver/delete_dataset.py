@@ -177,7 +177,7 @@ def _delete_annotation_base(session: Session, sample_ids: list[UUID]) -> None:
 
 
 def _delete_object_tracks(session: Session, dataset_id: UUID) -> None:
-    """Delete object tracks for the given collections."""
+    """Delete object tracks for the given dataset."""
     session.exec(delete(ObjectTrackTable).where(col(ObjectTrackTable.dataset_id) == dataset_id))
 
 

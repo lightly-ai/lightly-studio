@@ -388,7 +388,7 @@ def _copy_object_tracks(
     new_dataset_id: UUID,
     ctx: DeepCopyContext,
 ) -> None:
-    """Copy object tracks, remapping collection_id."""
+    """Copy object tracks, remapping dataset ID."""
     tracks = session.exec(
         select(ObjectTrackTable).where(col(ObjectTrackTable.dataset_id) == old_dataset_id)
     ).all()
