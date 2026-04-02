@@ -77,7 +77,7 @@ def export_collection_annotations(
         output_path = PathlibPath(temp_dir.name) / "pascalvoc"
 
         try:
-            export_dataset.to_pascalvoc_semantic_segmentation(
+            export_dataset.to_pascalvoc_instance_segmentation(
                 session=session,
                 root_collection_id=collection.collection_id,
                 samples=dataset_query,
@@ -88,7 +88,7 @@ def export_collection_annotations(
             # Reraise.
             raise
 
-        # For semantic segmentation, the exporter produces a Pascal VOC directory,
+        # For Pascal VOC export, the exporter produces a directory,
         # so this route should stream the folder as a .zip instead of streaming a single file.
         return StreamingResponse(
             content=_stream_export_dir(
