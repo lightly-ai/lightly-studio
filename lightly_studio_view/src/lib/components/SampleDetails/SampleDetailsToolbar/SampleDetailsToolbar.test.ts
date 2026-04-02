@@ -26,8 +26,7 @@ const settingsStore = writable({
     key_toolbar_selection: 's',
     key_toolbar_drag: 'd',
     key_toolbar_bounding_box: 'b',
-    key_toolbar_segmentation_mask: 'm',
-    key_toolbar_semantic: 'g'
+    key_toolbar_segmentation_mask: 'm'
 });
 
 vi.mock('$lib/hooks/useSettings', () => ({
@@ -116,7 +115,7 @@ describe('SampleDetailsToolbar', () => {
         mockAnnotationLabelContext.annotationLabel = 'car';
         const { getByLabelText } = render(SampleDetailsToolbar);
 
-        await fireEvent.click(getByLabelText('Instance Segmentation Brush'));
+        await fireEvent.click(getByLabelText('Segmentation Mask Brush'));
 
         expect(mockSampleDetailsToolbarContext.status).toBe('brush');
         expect(mockAnnotationLabelContext.annotationType).toBe(
@@ -192,7 +191,7 @@ describe('SampleDetailsToolbar', () => {
         mockAnnotationLabelContext.isOnAnnotationDetailsView = true;
         const { getByLabelText } = render(SampleDetailsToolbar);
 
-        await fireEvent.click(getByLabelText('Instance Segmentation Brush'));
+        await fireEvent.click(getByLabelText('Segmentation Mask Brush'));
 
         expect(mockSampleDetailsToolbarContext.status).toBe('brush');
         expect(mockAnnotationLabelContext.annotationType).toBe(
@@ -209,7 +208,7 @@ describe('SampleDetailsToolbar', () => {
             }
         });
 
-        expect(queryByLabelText('Instance Segmentation Brush')).not.toBeInTheDocument();
+        expect(queryByLabelText('Segmentation Mask Brush')).not.toBeInTheDocument();
     });
 
     it('keeps eraser mode when switching from drag back to brush', async () => {
@@ -218,7 +217,7 @@ describe('SampleDetailsToolbar', () => {
         mockSampleDetailsToolbarContext.brush.mode = 'eraser';
 
         await fireEvent.click(getByLabelText('Drag'));
-        await fireEvent.click(getByLabelText('Instance Segmentation Brush'));
+        await fireEvent.click(getByLabelText('Segmentation Mask Brush'));
 
         expect(mockSampleDetailsToolbarContext.status).toBe('brush');
         expect(mockSampleDetailsToolbarContext.brush.mode).toBe('eraser');
