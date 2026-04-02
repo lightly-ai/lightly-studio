@@ -21,11 +21,7 @@ def test_get_settings_creates_default_settings(
     assert settings.grid_view_sample_rendering == GridViewSampleRenderingType.CONTAIN
     assert settings.show_annotation_text_labels is False
     assert settings.show_sample_filenames is False
-<<<<<<< HEAD
-=======
     assert settings.show_bounding_boxes_for_segmentation is True
-    assert settings.key_toolbar_semantic == "g"
->>>>>>> c7b19565 (add global settings toggle for bounding box visibility)
     assert settings.key_toolbar_brush == "r"
     assert settings.key_toolbar_eraser == "x"
 
