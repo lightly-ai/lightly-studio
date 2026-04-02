@@ -70,6 +70,7 @@
     const brushApi = $derived.by(() =>
         useInstanceSegmentationBrush({
             collectionId,
+            datasetId,
             sampleId,
             sample,
             annotations: sample.annotations,
