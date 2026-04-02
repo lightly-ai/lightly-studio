@@ -47,7 +47,6 @@ def delete_dataset(
     # Get the hierarchy and collect all IDs.
     hierarchy = dataset_resolver.get_hierarchy(session=session, dataset_id=dataset_id)
     collection_ids = [coll.collection_id for coll in hierarchy]
-    root_collection_id = collection_ids[0]
 
     # Collect all sample IDs from all collections.
     sample_ids = _get_sample_ids(session=session, collection_ids=collection_ids)
@@ -85,7 +84,7 @@ def delete_dataset(
 
     # 5. Delete samples and collection-scoped entities.
     _delete_samples(session=session, sample_ids=sample_ids)
-    _delete_annotation_labels(session=session, root_collection_id=root_collection_id)
+    _delete_annotation_labels(session=session, dataset_id=dataset_id)
     _delete_tags(session=session, collection_ids=collection_ids)
     _delete_embedding_models(session=session, collection_ids=collection_ids)
     _delete_object_tracks(session=session, dataset_id=dataset_id)
@@ -223,12 +222,10 @@ def _delete_samples(session: Session, sample_ids: list[UUID]) -> None:
     session.exec(delete(SampleTable).where(col(SampleTable.sample_id).in_(sample_ids)))
 
 
-def _delete_annotation_labels(session: Session, root_collection_id: UUID) -> None:
+def _delete_annotation_labels(session: Session, dataset_id: UUID) -> None:
     """Delete annotation labels for the root collection."""
     session.exec(
-        delete(AnnotationLabelTable).where(
-            col(AnnotationLabelTable.root_collection_id) == root_collection_id
-        )
+        delete(AnnotationLabelTable).where(col(AnnotationLabelTable.dataset_id) == dataset_id)
     )
 
 

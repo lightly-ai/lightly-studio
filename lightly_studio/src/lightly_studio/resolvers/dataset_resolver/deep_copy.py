@@ -93,7 +93,6 @@ def deep_copy(
         ctx=ctx,
         dataset_id=new_dataset_id,
     )
-    root_collection_id = hierarchy[0].collection_id
 
     # 3. Copy collection-scoped entities.
     old_collection_ids = list(ctx.collection_map.keys())
@@ -104,7 +103,12 @@ def deep_copy(
         new_dataset_id=new_dataset_id,
         ctx=ctx,
     )
-    _copy_annotation_labels(session=session, root_collection_id=root_collection_id, ctx=ctx)
+    _copy_annotation_labels(
+        session=session,
+        old_dataset_id=dataset_id,
+        new_dataset_id=new_dataset_id,
+        ctx=ctx,
+    )
     _copy_embedding_models(session=session, old_collection_ids=old_collection_ids, ctx=ctx)
     _copy_samples(session=session, old_collection_ids=old_collection_ids, ctx=ctx)
     session.flush()
@@ -234,17 +238,14 @@ def _copy_tags(
 
 def _copy_annotation_labels(
     session: Session,
-    root_collection_id: UUID,
+    old_dataset_id: UUID,
+    new_dataset_id: UUID,
     ctx: DeepCopyContext,
 ) -> None:
     """Copy annotation labels (belong to root collection only)."""
     labels = session.exec(
-        select(AnnotationLabelTable).where(
-            AnnotationLabelTable.root_collection_id == root_collection_id
-        )
+        select(AnnotationLabelTable).where(AnnotationLabelTable.dataset_id == old_dataset_id)
     ).all()
-
-    new_root_collection_id = ctx.collection_map[root_collection_id]
 
     for old_label in labels:
         new_id = uuid4()
@@ -254,7 +255,7 @@ def _copy_annotation_labels(
             old_label,
             {
                 "annotation_label_id": new_id,
-                "root_collection_id": new_root_collection_id,
+                "dataset_id": new_dataset_id,
             },
         )
         session.add(new_label)

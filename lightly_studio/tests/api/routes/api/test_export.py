@@ -17,7 +17,12 @@ from lightly_studio.models.annotation.annotation_base import (
 )
 from lightly_studio.models.annotation.object_track import ObjectTrackCreate
 from lightly_studio.models.collection import SampleType
-from lightly_studio.resolvers import annotation_resolver, object_track_resolver, tag_resolver
+from lightly_studio.resolvers import (
+    annotation_label_resolver,
+    annotation_resolver,
+    object_track_resolver,
+    tag_resolver,
+)
 from tests.helpers_resolvers import (
     ImageStub,
     create_annotation_label,
@@ -76,6 +81,13 @@ def test_export_collection_annotations(
 
     # Check the export file name. Quotes are intentionally omitted.
     assert response.headers["Content-Disposition"] == "attachment; filename=coco_export.json"
+
+    # Check that the label was created in the database
+    all_labels = annotation_label_resolver.get_all(
+        session=db_session, dataset_id=collection.dataset_id
+    )
+    assert len(all_labels) == 1
+    assert all_labels[0].annotation_label_name == "cat"
 
 
 def test_export_collection_instance_segmentations(

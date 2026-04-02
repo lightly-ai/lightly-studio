@@ -768,7 +768,7 @@ def test_aggregate_class_distributions() -> None:
 
 def test_get_class_balancing_data_input(db_session: Session) -> None:
     """Test the 'input' distribution logic."""
-    root_collection_id = UUID("00000000-0000-0000-0000-000000000000")
+    dataset_id = UUID("00000000-0000-0000-0000-000000000000")
     label_id_cat = UUID("00000000-0000-0000-0000-000000000001")
     label_id_dog = UUID("00000000-0000-0000-0000-000000000002")
     sample_id_1 = UUID("11111111-1111-1111-1111-111111111111")
@@ -790,7 +790,7 @@ def test_get_class_balancing_data_input(db_session: Session) -> None:
     class_dist, target_vals = _get_class_balancing_data(
         session=db_session,
         strat=strat,
-        root_collection_id=root_collection_id,
+        dataset_id=dataset_id,
         annotation_label_ids=all_annotation_labels,
         input_sample_ids=input_sample_ids,
         sample_id_to_annotation_label_ids=sample_id_to_annotation_label_ids,
@@ -808,7 +808,7 @@ def test_get_class_balancing_data_input(db_session: Session) -> None:
 
 def test_get_class_balancing_data_uniform(db_session: Session) -> None:
     """Test the 'uniform' distribution logic."""
-    root_collection_id = UUID("00000000-0000-0000-0000-000000000000")
+    dataset_id = UUID("00000000-0000-0000-0000-000000000000")
     label_id_cat = UUID("00000000-0000-0000-0000-000000000001")
     label_id_dog = UUID("00000000-0000-0000-0000-000000000002")
     sample_id_1 = UUID("11111111-1111-1111-1111-111111111111")
@@ -827,7 +827,7 @@ def test_get_class_balancing_data_uniform(db_session: Session) -> None:
     class_dist, target_vals = _get_class_balancing_data(
         session=db_session,
         strat=strat,
-        root_collection_id=root_collection_id,
+        dataset_id=dataset_id,
         annotation_label_ids=all_annotation_labels,
         input_sample_ids=input_sample_ids,
         sample_id_to_annotation_label_ids=sample_id_to_annotation_label_ids,
@@ -845,7 +845,8 @@ def test_get_class_balancing_data_uniform(db_session: Session) -> None:
 
 def test_get_class_balancing_data_target(db_session: Session) -> None:
     """Test the 'target' (dict) distribution logic."""
-    collection_id = create_collection(session=db_session).collection_id
+    collection = create_collection(session=db_session)
+    collection_id = collection.collection_id
     label_cat_obj = create_annotation_label(
         session=db_session, root_collection_id=collection_id, label_name="cat"
     )
@@ -877,12 +878,11 @@ def test_get_class_balancing_data_target(db_session: Session) -> None:
     class_dist, target_vals = _get_class_balancing_data(
         session=db_session,
         strat=strat,
-        root_collection_id=collection_id,
+        dataset_id=collection.dataset_id,
         annotation_label_ids=all_annotation_labels,
         input_sample_ids=input_sample_ids,
         sample_id_to_annotation_label_ids=sample_id_to_annotation_label_ids,
     )
-
     expected_vals = [0.7, 0.3]
     assert target_vals == pytest.approx(expected_vals, abs=1e-9)
 
