@@ -223,7 +223,7 @@ def _delete_samples(session: Session, sample_ids: list[UUID]) -> None:
 
 
 def _delete_annotation_labels(session: Session, dataset_id: UUID) -> None:
-    """Delete annotation labels for the root collection."""
+    """Delete annotation labels for the dataset."""
     session.exec(
         delete(AnnotationLabelTable).where(col(AnnotationLabelTable.dataset_id) == dataset_id)
     )

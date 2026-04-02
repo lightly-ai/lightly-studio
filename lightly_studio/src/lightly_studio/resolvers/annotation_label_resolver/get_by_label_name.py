@@ -18,7 +18,7 @@ def get_by_label_name(
 
     Args:
         session: The database session to use for the query.
-        dataset_id: The root collection ID to which the label belongs.
+        dataset_id: The dataset ID to which the label belongs.
         label_name: The name of the annotation label to retrieve.
 
     Returns:

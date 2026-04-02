@@ -32,7 +32,7 @@ def get_all_sorted_alphabetically(session: Session, dataset_id: UUID) -> list[An
 
     Args:
         session (Session): The database session.
-        dataset_id (UUID): The root collection ID to to which the labels belong.
+        dataset_id (UUID): The dataset ID to which the labels belong.
 
     Returns:
         list[AnnotationLabelTable]: A list of annotation labels.
