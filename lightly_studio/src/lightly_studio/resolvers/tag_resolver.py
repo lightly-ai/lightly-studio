@@ -6,6 +6,7 @@ from datetime import datetime, timezone
 from uuid import UUID
 
 import sqlmodel
+from sqlalchemy.exc import IntegrityError
 from sqlmodel import Session, col, select
 
 from lightly_studio.models.sample import SampleTable, SampleTagLinkTable
@@ -60,25 +61,57 @@ def update(session: Session, tag_id: UUID, tag_data: TagUpdate) -> TagTable | No
     if not tag:
         return None
 
-    # due to duckdb/OLAP optimisations, update operations effecting unique
-    # constraints (e.g colums) will lead to a unique constraint violation.
-    # This is due to a update is implemented as delete+insert. The error
-    # happens only within the same session.
-    # To fix it, we can delete, commit + insert a new tag.
-    # https://duckdb.org/docs/sql/indexes#over-eager-unique-constraint-checking
-    session.delete(tag)
-    session.commit()
+    existing_tag = session.exec(
+        select(TagTable).where(
+            TagTable.collection_id == tag.collection_id,
+            TagTable.kind == tag_data.kind,
+            TagTable.name == tag_data.name,
+            TagTable.tag_id != tag_id,
+        )
+    ).one_or_none()
+    if existing_tag is not None:
+        raise IntegrityError(
+            statement="update tag",
+            params={"tag_id": tag_id, "name": tag_data.name},
+            orig=ValueError("duplicate tag name"),
+        )
 
-    # create clone of tag with updated values
-    tag_updated = TagTable.model_validate(tag)
-    tag_updated.name = tag_data.name
-    tag_updated.description = tag_data.description
-    tag_updated.updated_at = datetime.now(timezone.utc)
+    linked_sample_ids = list(
+        session.exec(
+            select(SampleTagLinkTable.sample_id).where(SampleTagLinkTable.tag_id == tag_id)
+        ).all()
+    )
 
-    session.add(tag_updated)
+    if linked_sample_ids:
+        session.exec(
+            sqlmodel.delete(SampleTagLinkTable).where(col(SampleTagLinkTable.tag_id) == tag_id)
+        )
+        session.commit()
+
+    try:
+        session.exec(
+            sqlmodel.update(TagTable)
+            .where(TagTable.tag_id == tag_id)
+            .values(
+                name=tag_data.name,
+                description=tag_data.description,
+                kind=tag_data.kind,
+                updated_at=datetime.now(timezone.utc),
+            )
+        )
+        session.commit()
+    except Exception:
+        session.rollback()
+        for sample_id in linked_sample_ids:
+            session.merge(SampleTagLinkTable(sample_id=sample_id, tag_id=tag_id))
+        session.commit()
+        raise
+
+    for sample_id in linked_sample_ids:
+        session.merge(SampleTagLinkTable(sample_id=sample_id, tag_id=tag_id))
+
     session.commit()
-    session.refresh(tag_updated)
-    return tag_updated
+    return get_by_id(session=session, tag_id=tag_id)
 
 
 def delete(session: Session, tag_id: UUID) -> bool:
@@ -87,7 +120,9 @@ def delete(session: Session, tag_id: UUID) -> bool:
     if not tag:
         return False
 
-    session.delete(tag)
+    session.exec(sqlmodel.delete(SampleTagLinkTable).where(col(SampleTagLinkTable.tag_id) == tag_id))
+    session.commit()
+    session.exec(sqlmodel.delete(TagTable).where(TagTable.tag_id == tag_id))
     session.commit()
     return True
 

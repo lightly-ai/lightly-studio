@@ -49,6 +49,12 @@ const lastAnnotationBrushSize = useSessionStorage<Record<string, number>>(
 // Store tags grouped by collection_id
 const tags = writable<Record<string, Tag[]>>({});
 const classifiers = writable<ClassifierInfo[]>([]);
+
+// Tag sample counts (tag_id -> count). Keep them across reloads within the same session.
+const tagSampleCounts = useSessionStorage<Record<string, number>>(
+    'lightlyStudio_tag_sample_counts',
+    {}
+);
 // Cache collection versions for more efficient image cache busting
 const collectionVersions = writable<Record<string, string>>({});
 
@@ -215,7 +221,7 @@ export const useGlobalStorage = () => {
         // Individual sample annotation crop selection methods
         toggleSampleAnnotationCropSelection: (collectionId: string, annotationId: string) => {
             selectedSampleAnnotationCropIds.update((state) => {
-                const annotations = state[collectionId] ?? new Set();
+                const annotations = new Set(state[collectionId] ?? []);
 
                 if (annotations.has(annotationId)) {
                     annotations.delete(annotationId);
@@ -223,19 +229,18 @@ export const useGlobalStorage = () => {
                     annotations.add(annotationId);
                 }
 
-                state[collectionId] = annotations;
-                return state;
+                return {
+                    ...state,
+                    [collectionId]: annotations
+                };
             });
         },
         clearSelectedSampleAnnotationCrops: (collectionId: string) => {
             selectedSampleAnnotationCropIds.update((state) => {
-                const annotations = state[collectionId];
-                if (annotations) {
-                    annotations.clear();
-                    state[collectionId] = annotations;
-                }
-
-                return state;
+                return {
+                    ...state,
+                    [collectionId]: new Set<string>()
+                };
             });
         },
 
@@ -319,6 +324,21 @@ export const useGlobalStorage = () => {
                 return value;
             });
         },
+        // Tag sample counts (prototype: starts at 0, updated on assign/remove)
+        tagSampleCounts,
+        adjustTagSampleCount: (tagId: string, delta: number) => {
+            tagSampleCounts.update((counts) => ({
+                ...counts,
+                [tagId]: Math.max(0, (counts[tagId] ?? 0) + delta)
+            }));
+        },
+        initTagSampleCount: (tagId: string, count: number) => {
+            tagSampleCounts.update((counts) => ({
+                ...counts,
+                [tagId]: count
+            }));
+        },
+
         // Reversible actions
         ...reversibleActionsHook
     };

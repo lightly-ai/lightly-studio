@@ -5,9 +5,10 @@
         CombinedMetadataDimensionsFilters,
         Footer,
         LabelsMenu,
-        TagCreateDialog,
         TagsMenu
     } from '$lib/components';
+    import SelectionPanel from '$lib/components/SelectionPanel/SelectionPanel.svelte';
+    import { useTags } from '$lib/hooks/useTags/useTags.js';
     import Input from '$lib/components/ui/input/input.svelte';
     import Separator from '$lib/components/ui/separator/separator.svelte';
     import {
@@ -19,7 +20,7 @@
         GripVertical
     } from '@lucide/svelte';
     import { onDestroy, onMount } from 'svelte';
-    import { get, toStore } from 'svelte/store';
+    import { toStore } from 'svelte/store';
     import { toast } from 'svelte-sonner';
     import { Header } from '$lib/components';
     import MenuDialogHost from '$lib/components/Header/MenuDialogHost.svelte';
@@ -199,8 +200,37 @@
         useAnnotationLabels({ collectionId: collectionId ?? '' })
     );
     const annotationLabelsData = $derived($annotationLabelsQuery?.data);
-    const { showPlot, setShowPlot, filteredSampleCount, filteredAnnotationCount } =
-        useGlobalStorage();
+    const {
+        showPlot,
+        setShowPlot,
+        filteredSampleCount,
+        filteredAnnotationCount,
+        getSelectedSampleIds,
+        selectedSampleAnnotationCropIds,
+        clearSelectedSamples: clearSelectedSamplesGlobal
+    } = useGlobalStorage();
+
+    // Tags + selection for the SelectionPanel
+    const tagKindForPanel = $derived(
+        (['samples', 'videos', 'video_frames'] as GridType[]).includes(gridType)
+            ? ('sample' as const)
+            : ('annotation' as const)
+    );
+    const { tags: allTagsForPanel, loadTags: loadTagsForPanel } = $derived(
+        useTags({ collection_id: collectionId, kind: [tagKindForPanel] })
+    );
+    // Use annotation crop IDs for annotation grids, sample IDs for everything else
+    const selectedSampleIdsForPanel = $derived(getSelectedSampleIds(collectionId));
+    const effectiveSelectedIds = $derived(
+        tagKindForPanel === 'annotation'
+            ? ($selectedSampleAnnotationCropIds[collectionId] ?? new Set<string>())
+            : $selectedSampleIdsForPanel
+    );
+    const clearEffectiveSelection = $derived(
+        tagKindForPanel === 'annotation'
+            ? () => clearSelectedSampleAnnotationCrops(collectionId)  // from data prop
+            : () => clearSelectedSamplesGlobal(collectionId)
+    );
 
     const annotationLabelsStore = toStore(() => annotationLabelsData);
 
@@ -489,12 +519,18 @@
                             class="min-h-0 flex-1 space-y-2 overflow-y-auto px-4 pb-2 dark:[color-scheme:dark]"
                         >
                             <div>
+                                {#if effectiveSelectedIds.size > 0}
+                                    <SelectionPanel
+                                        {collectionId}
+                                        selectedSampleIds={effectiveSelectedIds}
+                                        allTags={$allTagsForPanel}
+                                        {gridType}
+                                        tagKind={tagKindForPanel}
+                                        onClear={clearEffectiveSelection}
+                                        loadTags={loadTagsForPanel}
+                                    />
+                                {/if}
                                 <TagsMenu collection_id={collectionId} {gridType} />
-                                <TagCreateDialog
-                                    {collectionId}
-                                    {gridType}
-                                    textEmbedding={get(textEmbedding)}
-                                />
                             </div>
                             <Segment title="Filters" icon={SlidersHorizontal}>
                                 <div class="space-y-2">
