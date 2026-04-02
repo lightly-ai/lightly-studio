@@ -3,7 +3,9 @@ import type { ComponentProps } from 'svelte';
 import { beforeEach, describe, expect, it } from 'vitest';
 import SampleAnnotation from './SampleAnnotation.svelte';
 
-const createInstanceSegmentationAnnotation = (): ComponentProps<typeof SampleAnnotation>['annotation'] =>
+const createInstanceSegmentationAnnotation = (): ComponentProps<
+    typeof SampleAnnotation
+>['annotation'] =>
     ({
         sample_id: 'instance-segmentation-1',
         annotation_type: 'instance_segmentation',
