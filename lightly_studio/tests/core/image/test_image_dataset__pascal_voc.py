@@ -3,7 +3,6 @@ from __future__ import annotations
 import uuid
 from collections.abc import Callable
 from pathlib import Path
-from typing import Union
 
 import fsspec
 import numpy as np
@@ -13,50 +12,16 @@ from PIL import Image
 from lightly_studio import ImageDataset
 from lightly_studio.core.annotation.semantic_segmentation import SemanticSegmentationAnnotation
 
-PascalVocPaths = tuple[Union[Path, str], Union[Path, str], str, str]
+PascalVocPaths = tuple[str, str, str, str]
 PascalVocPathsBuilder = Callable[[Path], PascalVocPaths]
 
 
-def _build_pascal_voc_local_paths(tmp_path: Path) -> PascalVocPaths:
-    images_path = tmp_path / "images"
-    masks_path = tmp_path / "masks"
-    images_path.mkdir(parents=True, exist_ok=True)
-    masks_path.mkdir(parents=True, exist_ok=True)
-
-    image1_path = images_path / "image1.jpg"
-    image2_path = images_path / "image2.jpg"
-    mask1_path = masks_path / "image1.png"
-    mask2_path = masks_path / "image2.png"
-
-    Image.new("RGB", (4, 3)).save(image1_path)
-    Image.new("RGB", (3, 2)).save(image2_path)
-
-    mask1 = np.array(
-        [
-            [0, 1, 0, 0],
-            [1, 0, 0, 2],
-            [0, 0, 2, 2],
-        ],
-        dtype=np.uint8,
-    )
-    Image.fromarray(mask1).save(mask1_path)
-
-    mask2 = np.array(
-        [
-            [0, 0, 0],
-            [0, 0, 0],
-        ],
-        dtype=np.uint8,
-    )
-    Image.fromarray(mask2).save(mask2_path)
-
-    return images_path, masks_path, str(image1_path), str(image2_path)
-
-
-def _build_pascal_voc_remote_paths(tmp_path: Path) -> PascalVocPaths:  # noqa: ARG001
-    remote_root = f"memory://voc_remote_{uuid.uuid4().hex}"
-    images_path = f"{remote_root}/JPEGImages"
-    masks_path = f"{remote_root}/SegmentationClass"
+def _build_pascal_voc_paths(
+    root_path: Path | str,
+) -> PascalVocPaths:
+    root_path_str = str(root_path)
+    images_path = f"{root_path_str}/JPEGImages"
+    masks_path = f"{root_path_str}/SegmentationClass"
 
     images_fs, images_fs_path = fsspec.core.url_to_fs(url=images_path)
     images_fs.makedirs(images_fs_path, exist_ok=True)
@@ -95,6 +60,15 @@ def _build_pascal_voc_remote_paths(tmp_path: Path) -> PascalVocPaths:  # noqa: A
         Image.fromarray(mask2).save(mask_file, format="PNG")
 
     return images_path, masks_path, image1_path, image2_path
+
+
+def _build_pascal_voc_local_paths(tmp_path: Path) -> PascalVocPaths:
+    return _build_pascal_voc_paths(root_path=tmp_path)
+
+
+def _build_pascal_voc_remote_paths(tmp_path: Path) -> PascalVocPaths:  # noqa: ARG001
+    remote_root = f"memory://voc_remote_{uuid.uuid4().hex}"
+    return _build_pascal_voc_paths(root_path=remote_root)
 
 
 class TestImageDataset:
