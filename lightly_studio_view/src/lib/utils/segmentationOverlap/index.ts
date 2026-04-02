@@ -1,4 +1,4 @@
 export * from './types';
-export * from './removeOverlapFromOtherSemanticAnnotations';
+export * from './removeOverlapFromOtherSegmentationAnnotations';
 export * from './stripLockedPixels';
 export * from './applySegmentationMaskConstraints';
