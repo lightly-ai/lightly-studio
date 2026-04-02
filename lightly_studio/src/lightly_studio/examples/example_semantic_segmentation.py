@@ -1,5 +1,4 @@
-"""Example of how to load Pascal VOC segmentations.
-"""
+"""Example of how to load Pascal VOC segmentations."""
 
 import json
 from pathlib import Path
