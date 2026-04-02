@@ -406,54 +406,8 @@
             {/if}
         </div>
 
-        <!-- Divider -->
         {#if isLoadingCoverage}
-            <div class="my-2 border-t border-border"></div>
             <p class="text-xs text-muted-foreground">Loading tags for selection...</p>
-        {:else if activeTags.length > 0}
-            <div class="my-2 border-t border-border"></div>
-
-            <!-- Tag coverage list -->
-            <div class="space-y-1.5">
-                {#each activeTags as { tag, count } (tag.tag_id)}
-                    {@const isAll = count === N}
-                    <div class="flex items-center gap-2 text-xs">
-                        <!-- ● / ◑ indicator -->
-                        <span
-                            class="shrink-0 text-sm leading-none {isAll
-                                ? 'text-primary'
-                                : 'text-muted-foreground'}"
-                            title={isAll ? 'All selected' : `${count}/${N} selected`}
-                        >
-                            {isAll ? '●' : '◑'}
-                        </span>
-                        <!-- Tag name + fraction -->
-                        <span class="min-w-0 flex-1 truncate font-medium">{tag.name}</span>
-                        {#if !isAll}
-                            <span class="shrink-0 text-muted-foreground">{count}/{N}</span>
-                        {/if}
-                        <!-- Action buttons -->
-                        <div class="flex shrink-0 items-center gap-1">
-                            {#if !isAll}
-                                <button
-                                    type="button"
-                                    class="rounded px-1.5 py-0.5 text-[10px] text-muted-foreground ring-1 ring-border hover:bg-accent hover:text-foreground"
-                                    onclick={() => assignAll(tag)}
-                                >
-                                    + All
-                                </button>
-                            {/if}
-                            <button
-                                type="button"
-                                class="rounded px-1.5 py-0.5 text-[10px] text-muted-foreground ring-1 ring-border hover:bg-destructive/20 hover:text-destructive"
-                                onclick={() => removeAll(tag)}
-                            >
-                                − All
-                            </button>
-                        </div>
-                    </div>
-                {/each}
-            </div>
         {/if}
     {/if}
 </div>
