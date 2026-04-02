@@ -15,12 +15,11 @@
      * - allCollectionTags from useTags({ collection_id, kind:['sample'] }) in parent.
      */
     import { Segment } from '$lib/components';
-    import { TagsIcon, Pencil, Plus, X } from '@lucide/svelte';
+    import { TagsIcon, Plus, X } from '@lucide/svelte';
     import type { TagView } from '$lib/services/types';
     import {
         createTag,
-        addSampleIdsToTagId,
-        removeTagFromSample as removeTagFromSampleApi
+        addSampleIdsToTagId
     } from '$lib/api/lightly_studio_local';
     import { toast } from 'svelte-sonner';
     import { useGlobalStorage } from '$lib/hooks/useGlobalStorage';
@@ -57,14 +56,6 @@
 
     const { tags: tagsByCollection, adjustTagSampleCount } = useGlobalStorage();
 
-    // Chip-swap and add-tag require collectionId + sampleId to be wired up.
-    const canEdit = $derived(!!collectionId && !!sampleId);
-
-    // ── Chip swap state ─────────────────────────────────────────────────────────
-    let editingTagId = $state<string | null>(null);
-    let editQuery = $state('');
-    let showEditDropdown = $state(false);
-
     // ── Add-tag state ────────────────────────────────────────────────────────────
     let showAddInput = $state(false);
     let addQuery = $state('');
@@ -72,15 +63,6 @@
     let addBusy = $state(false);
 
     // ── Derived option lists ─────────────────────────────────────────────────────
-    const editOptions = $derived(
-        allCollectionTags.filter(
-            (t) =>
-                t.tag_id !== editingTagId &&
-                t.name.toLowerCase().includes(editQuery.toLowerCase()) &&
-                !tags.some((existing) => existing.tag_id === t.tag_id)
-        )
-    );
-
     const addOptions = $derived(
         allCollectionTags.filter(
             (t) =>
@@ -92,24 +74,6 @@
     const hasExactAddMatch = $derived(
         allCollectionTags.some((t) => t.name.toLowerCase() === addQuery.trim().toLowerCase())
     );
-
-    const hasExactEditMatch = $derived(
-        allCollectionTags.some((t) => t.name.toLowerCase() === editQuery.trim().toLowerCase())
-    );
-
-    // ── Chip-swap handlers ───────────────────────────────────────────────────────
-    function startEdit(tag: TagItem) {
-        if (!tag.tag_id) return;
-        editingTagId = tag.tag_id;
-        editQuery = tag.name;
-        showEditDropdown = true;
-    }
-
-    function cancelEdit() {
-        editingTagId = null;
-        editQuery = '';
-        showEditDropdown = false;
-    }
 
     function addCreatedTagToGlobalStore(tag: TagView) {
         if (!collectionId) return;
@@ -125,65 +89,6 @@
                 [collectionId]: [...existingTags, tag]
             };
         });
-    }
-
-    async function applyTagSwap(oldTagId: string, newTag: TagView) {
-        if (newTag.tag_id === oldTagId) {
-            cancelEdit();
-            return;
-        }
-        // Call API directly to avoid onRemoveTag triggering an intermediate refetch
-        const removeResponse = await removeTagFromSampleApi({
-            path: { collection_id: collectionId, sample_id: sampleId, tag_id: oldTagId }
-        });
-        if (removeResponse.error) {
-            toast.error('Failed to update tag. Please try again.');
-            return;
-        }
-        const addResponse = await addSampleIdsToTagId({
-            path: { collection_id: collectionId, tag_id: newTag.tag_id },
-            body: { sample_ids: [sampleId] }
-        });
-        if (addResponse.error) {
-            await addSampleIdsToTagId({
-                path: { collection_id: collectionId, tag_id: oldTagId },
-                body: { sample_ids: [sampleId] }
-            });
-            toast.error('Failed to update tag. Please try again.');
-            return;
-        }
-        adjustTagSampleCount(oldTagId, -1);
-        adjustTagSampleCount(newTag.tag_id, 1);
-        cancelEdit();
-        onRefetch();
-    }
-
-    async function handleCreateAndSwap(oldTagId: string, name: string) {
-        const trimmed = name.trim();
-        if (!trimmed) return;
-
-        const currentTag = tags.find((tag) => tag.tag_id === oldTagId);
-        if (!currentTag) {
-            cancelEdit();
-            return;
-        }
-        if (currentTag.name.toLowerCase() === trimmed.toLowerCase()) {
-            cancelEdit();
-            return;
-        }
-
-        const response = await createTag({
-            path: { collection_id: collectionId },
-            body: { name: trimmed, description: `${trimmed} description`, kind: tagKind }
-        });
-        if (response.error || !response.data) {
-            toast.error('Failed to update tag. Please try again.');
-            return;
-        }
-
-        addCreatedTagToGlobalStore(response.data);
-
-        await applyTagSwap(oldTagId, response.data);
     }
 
     // ── Add-tag handlers ─────────────────────────────────────────────────────────
@@ -253,17 +158,17 @@
         onRefetch();
     }
 
-    function handleEditKeydown(event: KeyboardEvent) {
-        if (event.key === 'Escape') cancelEdit();
-        if (event.key === 'Enter' && editingTagId && editQuery.trim() && !hasExactEditMatch) {
-            void handleCreateAndSwap(editingTagId, editQuery);
-        }
-    }
-
     function handleAddKeydown(event: KeyboardEvent) {
         if (event.key === 'Escape') closeAddInput();
-        if (event.key === 'Enter' && addQuery.trim() && !hasExactAddMatch) {
-            handleCreateAndAdd(addQuery);
+        if (event.key === 'Enter' && addQuery.trim()) {
+            const exactMatch = addOptions.find(
+                (tag) => tag.name.toLowerCase() === addQuery.trim().toLowerCase()
+            );
+            if (exactMatch) {
+                void handleAddExisting(exactMatch);
+                return;
+            }
+            void handleCreateAndAdd(addQuery);
         }
     }
 
@@ -276,94 +181,21 @@
 <Segment title="Tags" icon={TagsIcon}>
     <div class="flex flex-wrap gap-1">
         {#each tags as tag (tag.tag_id)}
-            {#if editingTagId === tag.tag_id}
-                <!-- Inline combobox for tag reassignment -->
-                <div class="relative">
-                    <div
-                        class="flex items-center gap-1 rounded-lg border border-primary bg-card px-2 py-1 text-xs"
-                    >
-                        <!-- svelte-ignore a11y_autofocus -->
-                        <input
-                            type="text"
-                            bind:value={editQuery}
-                            class="w-24 bg-transparent outline-none"
-                            autofocus
-                            oninput={() => (showEditDropdown = true)}
-                            onkeydown={handleEditKeydown}
-                        />
-                        <button
-                            type="button"
-                            onclick={cancelEdit}
-                            class="text-muted-foreground hover:text-foreground"
-                            aria-label="Cancel edit"
-                        >
-                            <X class="size-3" />
-                        </button>
-                    </div>
-                    {#if showEditDropdown && editOptions.length > 0}
-                        <div
-                            class="absolute left-0 top-full z-50 mt-1 max-h-40 w-40 overflow-auto rounded-md border bg-popover shadow-md"
-                        >
-                            {#each editOptions as opt (opt.tag_id)}
-                                <button
-                                    type="button"
-                                    class="flex w-full items-center px-2 py-1.5 text-xs hover:bg-accent"
-                                    onclick={() => tag.tag_id && applyTagSwap(tag.tag_id, opt)}
-                                >
-                                    {opt.name}
-                                </button>
-                            {/each}
-                            {#if editQuery.trim() && !hasExactEditMatch && tag.tag_id}
-                                <button
-                                    type="button"
-                                    class="flex w-full items-center px-2 py-1.5 text-xs text-muted-foreground hover:bg-accent"
-                                    onclick={() => handleCreateAndSwap(tag.tag_id!, editQuery)}
-                                >
-                                    Create "{editQuery.trim()}"
-                                </button>
-                            {/if}
-                        </div>
-                    {:else if showEditDropdown && editQuery.trim() && !hasExactEditMatch && tag.tag_id}
-                        <div
-                            class="absolute left-0 top-full z-50 mt-1 max-h-40 w-40 overflow-auto rounded-md border bg-popover shadow-md"
-                        >
-                            <button
-                                type="button"
-                                class="flex w-full items-center px-2 py-1.5 text-xs text-muted-foreground hover:bg-accent"
-                                onclick={() => handleCreateAndSwap(tag.tag_id!, editQuery)}
-                            >
-                                Create "{editQuery.trim()}"
-                            </button>
-                        </div>
-                    {/if}
-                </div>
-            {:else}
-                <div class="group inline-flex items-center gap-1 rounded-lg bg-card px-2 py-1 text-xs">
-                    {#if canEdit}
-                        <button
-                            type="button"
-                            class="text-muted-foreground opacity-0 transition group-hover:opacity-100 hover:text-foreground"
-                            aria-label={`Reassign tag ${tag.name}`}
-                            onclick={() => startEdit(tag)}
-                        >
-                            <Pencil class="size-3" />
-                        </button>
-                    {/if}
-                    <span data-testid="segment-tag-name">{tag.name}</span>
-                    <button
-                        type="button"
-                        class="flex size-4 items-center justify-center rounded-full text-muted-foreground transition hover:text-destructive focus:outline-none disabled:cursor-not-allowed disabled:opacity-50"
-                        aria-label={`Remove tag ${tag.name}`}
-                        data-testid={`remove-tag-${tag.name}`}
-                        onclick={(event) => {
-                            event.stopPropagation();
-                            if (tag.tag_id) void handleRemoveExisting(tag.tag_id);
-                        }}
-                    >
-                        x
-                    </button>
-                </div>
-            {/if}
+            <div class="group inline-flex items-center gap-1 rounded-lg bg-card px-2 py-1 text-xs">
+                <span data-testid="segment-tag-name">{tag.name}</span>
+                <button
+                    type="button"
+                    class="flex size-4 items-center justify-center rounded-full text-muted-foreground transition hover:text-destructive focus:outline-none disabled:cursor-not-allowed disabled:opacity-50"
+                    aria-label={`Remove tag ${tag.name}`}
+                    data-testid={`remove-tag-${tag.name}`}
+                    onclick={(event) => {
+                        event.stopPropagation();
+                        if (tag.tag_id) void handleRemoveExisting(tag.tag_id);
+                    }}
+                >
+                    x
+                </button>
+            </div>
         {/each}
     </div>
 

@@ -224,24 +224,16 @@
         clearSelectedSamples: clearSelectedSamplesGlobal
     } = useGlobalStorage();
 
-    // Tags + selection for the SelectionPanel
-    const tagKindForPanel = $derived(
-        (['samples', 'videos', 'video_frames'] as GridType[]).includes(gridType)
-            ? ('sample' as const)
-            : ('annotation' as const)
-    );
-    const { tags: allTagsForPanel, loadTags: loadTagsForPanel, tagsSelected } = $derived(
-        useTags({ collection_id: collectionId, kind: [tagKindForPanel] })
-    );
+    const { tagsSelected } = $derived(useTags({ collection_id: collectionId, kind: ['annotation'] }));
     // Use annotation crop IDs for annotation grids, sample IDs for everything else
     const selectedSampleIdsForPanel = $derived(getSelectedSampleIds(collectionId));
     const effectiveSelectedIds = $derived(
-        tagKindForPanel === 'annotation'
+        gridType === 'annotations'
             ? ($selectedSampleAnnotationCropIds[collectionId] ?? new Set<string>())
             : $selectedSampleIdsForPanel
     );
     const clearEffectiveSelection = $derived(
-        tagKindForPanel === 'annotation'
+        gridType === 'annotations'
             ? () => clearSelectedSampleAnnotationCrops(collectionId)  // from data prop
             : () => clearSelectedSamplesGlobal(collectionId)
     );
@@ -642,15 +634,11 @@
                         >
                             <div>
                                 <SelectionPanel
-                                    {collectionId}
                                     selectedSampleIds={effectiveSelectedIds}
-                                    allTags={$allTagsForPanel}
                                     {gridType}
-                                    tagKind={tagKindForPanel}
                                     onClear={clearEffectiveSelection}
                                     onSelectAll={selectAllMatchingCurrentFilter}
                                     {isSelectingAll}
-                                    loadTags={loadTagsForPanel}
                                 />
                                 <TagsMenu collection_id={collectionId} {gridType} />
                             </div>

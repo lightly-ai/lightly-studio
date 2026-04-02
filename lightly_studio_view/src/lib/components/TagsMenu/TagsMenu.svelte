@@ -24,7 +24,16 @@
     import type { TagView } from '$lib/services/types';
     import { useTags } from '$lib/hooks/useTags/useTags.js';
     import { useGlobalStorage } from '$lib/hooks/useGlobalStorage';
-    import { createTag, updateTag, deleteTag } from '$lib/api/lightly_studio_local';
+    import {
+        createTag,
+        updateTag,
+        deleteTag,
+        addSampleIdsToTagId,
+        getAllFrames,
+        getAllVideos,
+        getAnnotation,
+        readImages
+    } from '$lib/api/lightly_studio_local';
     import * as Dialog from '$lib/components/ui/dialog/index.js';
     import { Button } from '$lib/components/ui/button/index.js';
     import { Input } from '$lib/components/ui/input/index.js';
@@ -42,8 +51,12 @@
         useTags({ collection_id, kind: [tagKind] })
     );
 
-    const { tagSampleCounts, adjustTagSampleCount, getSelectedSampleIds, selectedSampleAnnotationCropIds } =
-        useGlobalStorage();
+    const {
+        tagSampleCounts,
+        adjustTagSampleCount,
+        getSelectedSampleIds,
+        selectedSampleAnnotationCropIds
+    } = useGlobalStorage();
 
     // Whether ANY items are currently selected (hides the search input per spec).
     // Samples grids use selectedSampleIds; annotation grids use selectedSampleAnnotationCropIds.
@@ -53,11 +66,118 @@
             ? ($selectedSampleAnnotationCropIds[collection_id]?.size ?? 0) > 0
             : $selectedSampleIds.size > 0
     );
+    const selectedIds = $derived(
+        tagKind === 'annotation'
+            ? ($selectedSampleAnnotationCropIds[collection_id] ?? new Set<string>())
+            : $selectedSampleIds
+    );
 
-    // ── Search / filter input ────────────────────────────────────────────────────
+    // ── Selection assignment input ───────────────────────────────────────────────
     let searchQuery = $state('');
+    let assignBusy = $state(false);
+    let showAssignDropdown = $state(false);
+    let selectionTagCoverage = $state<Record<string, Set<string>>>({});
+    let coverageRequestId = 0;
 
-    const filteredTags: TagView[] = $derived(
+    async function loadSelectionCoverage(ids: string[]) {
+        if (ids.length === 0) {
+            selectionTagCoverage = {};
+            return;
+        }
+
+        const requestId = ++coverageRequestId;
+        const nextCoverage: Record<string, Set<string>> = {};
+
+        try {
+            if (gridType === 'samples') {
+                const response = await readImages({
+                    path: { collection_id },
+                    body: { sample_ids: ids }
+                });
+                if (response.error) throw new Error('load images failed');
+
+                for (const image of response.data?.data ?? []) {
+                    for (const tag of image.sample.tags ?? []) {
+                        nextCoverage[tag.tag_id!] ??= new Set<string>();
+                        nextCoverage[tag.tag_id!].add(image.sample_id);
+                    }
+                }
+            } else if (gridType === 'videos') {
+                const response = await getAllVideos({
+                    path: { collection_id },
+                    body: {
+                        filter: {
+                            sample_filter: {
+                                sample_ids: ids
+                            }
+                        }
+                    }
+                });
+                if (response.error) throw new Error('load videos failed');
+
+                for (const video of response.data?.data ?? []) {
+                    for (const tag of video.sample.tags ?? []) {
+                        nextCoverage[tag.tag_id!] ??= new Set<string>();
+                        nextCoverage[tag.tag_id!].add(video.sample_id);
+                    }
+                }
+            } else if (gridType === 'video_frames') {
+                const response = await getAllFrames({
+                    path: { video_frame_collection_id: collection_id },
+                    body: {
+                        filter: {
+                            sample_filter: {
+                                sample_ids: ids
+                            }
+                        }
+                    }
+                });
+                if (response.error) throw new Error('load frames failed');
+
+                for (const frame of response.data?.data ?? []) {
+                    for (const tag of frame.sample.tags ?? []) {
+                        nextCoverage[tag.tag_id!] ??= new Set<string>();
+                        nextCoverage[tag.tag_id!].add(frame.sample_id);
+                    }
+                }
+            } else {
+                const responses = await Promise.all(
+                    ids.map((id) =>
+                        getAnnotation({
+                            path: {
+                                collection_id,
+                                annotation_id: id
+                            }
+                        })
+                    )
+                );
+
+                for (const response of responses) {
+                    if (response.error) throw new Error('load annotations failed');
+
+                    for (const tag of response.data?.tags ?? []) {
+                        nextCoverage[tag.tag_id] ??= new Set<string>();
+                        nextCoverage[tag.tag_id].add(response.data.sample_id);
+                    }
+                }
+            }
+
+            if (requestId === coverageRequestId) {
+                selectionTagCoverage = nextCoverage;
+            }
+        } catch {
+            if (requestId === coverageRequestId) {
+                selectionTagCoverage = {};
+            }
+        }
+    }
+
+    $effect(() => {
+        void loadSelectionCoverage([...selectedIds]);
+    });
+
+    const filteredTags: TagView[] = $derived($tags);
+    const assignOptions: TagView[] = $derived(
         searchQuery.trim()
             ? $tags.filter((t: TagView) =>
                   t.name.toLowerCase().includes(searchQuery.toLowerCase())
@@ -72,24 +192,82 @@
     async function handleCreateFromSearch() {
         const name = searchQuery.trim();
         if (!name || hasExactMatch) return;
+        if (!hasSelection) return;
+        assignBusy = true;
         const response = await createTag({
             path: { collection_id },
             body: { name, description: `${name} description`, kind: tagKind }
         });
-        if (response.error) {
+        if (response.error || !response.data?.tag_id) {
+            assignBusy = false;
             toast.error('Failed to create tag. Please try again.');
             return;
         }
-        if (response.data?.tag_id) {
-            adjustTagSampleCount(response.data.tag_id, 0);
+        const ids = [...selectedIds];
+        const assignResponse = await addSampleIdsToTagId({
+            path: { collection_id, tag_id: response.data.tag_id },
+            body: { sample_ids: ids }
+        });
+        assignBusy = false;
+        if (assignResponse.error) {
+            toast.error('Failed to assign tag. Please try again.');
+            return;
         }
+        adjustTagSampleCount(response.data.tag_id, ids.length);
+        selectionTagCoverage = {
+            ...selectionTagCoverage,
+            [response.data.tag_id]: new Set(ids)
+        };
         searchQuery = '';
+        showAssignDropdown = false;
         loadTags();
     }
 
     function handleSearchKeydown(event: KeyboardEvent) {
-        if (event.key === 'Enter') handleCreateFromSearch();
-        if (event.key === 'Escape') searchQuery = '';
+        if (event.key === 'Enter') {
+            const exactMatch = $tags.find(
+                (t: TagView) => t.name.toLowerCase() === searchQuery.trim().toLowerCase()
+            );
+            if (exactMatch && hasSelection) {
+                void handleAssignExisting(exactMatch);
+                return;
+            }
+            void handleCreateFromSearch();
+        }
+        if (event.key === 'Escape') {
+            searchQuery = '';
+            showAssignDropdown = false;
+        }
+    }
+
+    async function handleAssignExisting(tag: TagView) {
+        if (!hasSelection) return;
+        assignBusy = true;
+        const currentCoverage = selectionTagCoverage[tag.tag_id] ?? new Set<string>();
+        const ids = [...selectedIds].filter((id) => !currentCoverage.has(id));
+        if (ids.length === 0) {
+            assignBusy = false;
+            searchQuery = '';
+            showAssignDropdown = false;
+            return;
+        }
+        const response = await addSampleIdsToTagId({
+            path: { collection_id, tag_id: tag.tag_id },
+            body: { sample_ids: ids }
+        });
+        assignBusy = false;
+        if (response.error) {
+            toast.error('Failed to assign tag. Please try again.');
+            return;
+        }
+        selectionTagCoverage = {
+            ...selectionTagCoverage,
+            [tag.tag_id]: new Set([...currentCoverage, ...ids])
+        };
+        adjustTagSampleCount(tag.tag_id, ids.length);
+        searchQuery = '';
+        showAssignDropdown = false;
+        loadTags();
     }
 
     // ── ⋯ Context menu ──────────────────────────────────────────────────────────
@@ -191,145 +369,171 @@
     );
 </script>
 
-<!-- Close context menu on outside click -->
-<svelte:window onclick={closeMenu} />
+<!-- Close context menu / assignment dropdown on outside click -->
+<svelte:window
+    onclick={(event) => {
+        closeMenu();
+        if (showAssignDropdown && !(event.target as Element)?.closest('.relative')) {
+            showAssignDropdown = false;
+        }
+    }}
+/>
 
 <Segment title="Tags" icon={TagsIcon}>
     <div class="mb-3 w-full space-y-1">
-        <!-- Search / create input — hidden while images are selected -->
-        {#if !hasSelection}
-            <div class="mb-2">
-                <Input
-                    type="text"
-                    placeholder="Search or create tag..."
-                    bind:value={searchQuery}
-                    onkeydown={handleSearchKeydown}
-                    class="h-8 text-xs"
-                />
-                {#if searchQuery.trim() && !hasExactMatch}
-                    <button
-                        type="button"
-                        class="mt-1 flex w-full items-center gap-1 rounded px-2 py-1 text-xs text-muted-foreground hover:bg-accent"
-                        onclick={handleCreateFromSearch}
-                    >
-                        Create "{searchQuery.trim()}"
-                    </button>
-                {/if}
-            </div>
-        {/if}
-
         <!-- Tag rows -->
-        {#each filteredTags as tag (tag.tag_id)}
-            <div class="group flex items-center justify-between py-0.5" data-testid="tag-menu-item">
-                {#if renamingTagId === tag.tag_id}
-                    <!-- Inline rename -->
-                    <div class="flex flex-1 flex-col gap-0.5">
-                        <!-- svelte-ignore a11y_autofocus -->
-                        <input
-                            type="text"
-                            bind:value={renameValue}
-                            autofocus
-                            class="flex-1 rounded border border-primary bg-transparent px-1 text-xs outline-none"
-                            onkeydown={(e) => handleRenameKeydown(e, tag.tag_id)}
-                            onblur={cancelRename}
-                        />
-                        {#if renameError}
-                            <span class="text-xs text-destructive">{renameError}</span>
-                        {/if}
-                    </div>
-                    <div class="flex shrink-0 items-center gap-1 pl-1">
-                        <button
-                            type="button"
-                            onmousedown={(e) => {
-                                e.preventDefault();
-                                commitRename(tag.tag_id);
-                            }}
-                            class="text-muted-foreground hover:text-foreground"
-                            aria-label="Save"
-                        >
-                            <Check class="size-3" />
-                        </button>
-                        <button
-                            type="button"
-                            onmousedown={(e) => {
-                                e.preventDefault();
-                                cancelRename();
-                            }}
-                            class="text-muted-foreground hover:text-foreground"
-                            aria-label="Cancel"
-                        >
-                            <X class="size-3" />
-                        </button>
-                    </div>
-                {:else}
-                    <!-- Normal row: checkbox + count badge + ⋯ menu -->
-                    <div class="flex min-w-0 flex-1 items-center space-x-2">
-                        <Checkbox
-                            name={tag.tag_id}
-                            isChecked={$tagsSelected.has(tag.tag_id)}
-                            label={tag.name}
-                            onCheckedChange={() => tagSelectionToggle(tag.tag_id)}
-                        />
-                    </div>
-                    <div class="flex shrink-0 items-center gap-1 pl-1">
-                        <!-- Count badge — only shown when we have a known count > 0 -->
-                        {#if ($tagSampleCounts[tag.tag_id] ?? 0) > 0}
-                            <span
-                                class="rounded-full bg-muted px-1.5 py-0.5 text-[10px] text-muted-foreground"
-                            >
-                                {$tagSampleCounts[tag.tag_id]}
-                            </span>
-                        {/if}
-                        <!-- ⋯ context menu trigger -->
-                        <div class="relative">
-                            <button
-                                type="button"
-                                class="rounded p-0.5 text-muted-foreground opacity-0 transition group-hover:opacity-100 hover:bg-accent hover:text-foreground"
-                                aria-label="Tag options"
-                                onclick={(e) => toggleMenu(tag.tag_id, e)}
-                            >
-                                <MoreHorizontal class="size-3.5" />
-                            </button>
-                            {#if openMenuTagId === tag.tag_id}
-                                <div
-                                    class="absolute right-0 top-full z-50 mt-1 min-w-[110px] rounded-md border bg-popover py-1 shadow-md"
-                                    role="menu"
-                                >
-                                    <button
-                                        type="button"
-                                        role="menuitem"
-                                        class="flex w-full items-center px-3 py-1.5 text-xs hover:bg-accent"
-                                        onclick={(e) => {
-                                            e.stopPropagation();
-                                            startRename(tag.tag_id, tag.name);
-                                        }}
-                                    >
-                                        Rename
-                                    </button>
-                                    <button
-                                        type="button"
-                                        role="menuitem"
-                                        class="flex w-full items-center px-3 py-1.5 text-xs text-destructive hover:bg-accent"
-                                        onclick={(e) => {
-                                            e.stopPropagation();
-                                            openDeleteDialog(tag.tag_id, tag.name);
-                                        }}
-                                    >
-                                        Delete tag
-                                    </button>
-                                </div>
+        <div class="space-y-1">
+            {#each filteredTags as tag (tag.tag_id)}
+                <div class="group flex items-center justify-between py-0.5" data-testid="tag-menu-item">
+                    {#if renamingTagId === tag.tag_id}
+                        <!-- Inline rename -->
+                        <div class="flex flex-1 flex-col gap-0.5">
+                            <!-- svelte-ignore a11y_autofocus -->
+                            <input
+                                type="text"
+                                bind:value={renameValue}
+                                autofocus
+                                class="flex-1 rounded border border-primary bg-transparent px-1 text-xs outline-none"
+                                onkeydown={(e) => handleRenameKeydown(e, tag.tag_id)}
+                                onblur={cancelRename}
+                            />
+                            {#if renameError}
+                                <span class="text-xs text-destructive">{renameError}</span>
                             {/if}
                         </div>
-                    </div>
-                {/if}
-            </div>
-        {:else}
-            {#if searchQuery.trim()}
-                <p class="text-xs text-muted-foreground">No tags match "{searchQuery}"</p>
+                        <div class="flex shrink-0 items-center gap-1 pl-1">
+                            <button
+                                type="button"
+                                onmousedown={(e) => {
+                                    e.preventDefault();
+                                    commitRename(tag.tag_id);
+                                }}
+                                class="text-muted-foreground hover:text-foreground"
+                                aria-label="Save"
+                            >
+                                <Check class="size-3" />
+                            </button>
+                            <button
+                                type="button"
+                                onmousedown={(e) => {
+                                    e.preventDefault();
+                                    cancelRename();
+                                }}
+                                class="text-muted-foreground hover:text-foreground"
+                                aria-label="Cancel"
+                            >
+                                <X class="size-3" />
+                            </button>
+                        </div>
+                    {:else}
+                        <!-- Normal row: checkbox + count badge + ⋯ menu -->
+                        <div class="flex min-w-0 flex-1 items-center space-x-2">
+                            <Checkbox
+                                name={tag.tag_id}
+                                isChecked={$tagsSelected.has(tag.tag_id)}
+                                label={tag.name}
+                                onCheckedChange={() => tagSelectionToggle(tag.tag_id)}
+                            />
+                        </div>
+                        <div class="flex shrink-0 items-center gap-1 pl-1">
+                            <!-- Count badge — only shown when we have a known count > 0 -->
+                            {#if ($tagSampleCounts[tag.tag_id] ?? 0) > 0}
+                                <span
+                                    class="rounded-full bg-muted px-1.5 py-0.5 text-[10px] text-muted-foreground"
+                                >
+                                    {$tagSampleCounts[tag.tag_id]}
+                                </span>
+                            {/if}
+                            <!-- ⋯ context menu trigger -->
+                            <div class="relative">
+                                <button
+                                    type="button"
+                                    class="rounded p-0.5 text-muted-foreground opacity-0 transition group-hover:opacity-100 hover:bg-accent hover:text-foreground"
+                                    aria-label="Tag options"
+                                    onclick={(e) => toggleMenu(tag.tag_id, e)}
+                                >
+                                    <MoreHorizontal class="size-3.5" />
+                                </button>
+                                {#if openMenuTagId === tag.tag_id}
+                                    <div
+                                        class="absolute right-0 top-full z-50 mt-1 min-w-[110px] rounded-md border bg-popover py-1 shadow-md"
+                                        role="menu"
+                                    >
+                                        <button
+                                            type="button"
+                                            role="menuitem"
+                                            class="flex w-full items-center px-3 py-1.5 text-xs hover:bg-accent"
+                                            onclick={(e) => {
+                                                e.stopPropagation();
+                                                startRename(tag.tag_id, tag.name);
+                                            }}
+                                        >
+                                            Rename
+                                        </button>
+                                        <button
+                                            type="button"
+                                            role="menuitem"
+                                            class="flex w-full items-center px-3 py-1.5 text-xs text-destructive hover:bg-accent"
+                                            onclick={(e) => {
+                                                e.stopPropagation();
+                                                openDeleteDialog(tag.tag_id, tag.name);
+                                            }}
+                                        >
+                                            Delete tag
+                                        </button>
+                                    </div>
+                                {/if}
+                            </div>
+                        </div>
+                    {/if}
+                </div>
             {:else}
                 <p class="text-xs text-muted-foreground">No tags yet</p>
+            {/each}
+        </div>
+
+        <!-- Selection assign / create input -->
+        <div class="relative pt-2">
+            <Input
+                type="text"
+                placeholder="Assign tag to selection"
+                bind:value={searchQuery}
+                onkeydown={handleSearchKeydown}
+                oninput={() => (showAssignDropdown = true)}
+                onfocus={() => (showAssignDropdown = true)}
+                onblur={() => {
+                    setTimeout(() => {
+                        showAssignDropdown = false;
+                    }, 100);
+                }}
+                class="h-8 text-xs disabled:opacity-60"
+                disabled={!hasSelection || assignBusy}
+            />
+            {#if showAssignDropdown && hasSelection && (assignOptions.length > 0 || (searchQuery.trim() && !hasExactMatch))}
+                <div
+                    class="absolute left-0 top-full z-50 mt-1 max-h-44 w-full overflow-auto rounded-md border bg-popover shadow-md"
+                >
+                    {#each assignOptions as tag (tag.tag_id)}
+                        <button
+                            type="button"
+                            class="flex w-full items-center px-2 py-1.5 text-xs hover:bg-accent"
+                            onclick={() => handleAssignExisting(tag)}
+                        >
+                            {tag.name}
+                        </button>
+                    {/each}
+                    {#if searchQuery.trim() && !hasExactMatch}
+                        <button
+                            type="button"
+                            class="flex w-full items-center gap-1 px-2 py-1.5 text-xs text-muted-foreground hover:bg-accent"
+                            onclick={handleCreateFromSearch}
+                        >
+                            Create "{searchQuery.trim()}"
+                        </button>
+                    {/if}
+                </div>
             {/if}
-        {/each}
+        </div>
     </div>
 </Segment>
 
