@@ -1,6 +1,4 @@
 """Example of how to load Pascal VOC segmentations.
-
-Imported masks are stored as instance segmentation annotations.
 """
 
 import json
