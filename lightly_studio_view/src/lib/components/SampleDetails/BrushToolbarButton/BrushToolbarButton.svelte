@@ -9,7 +9,7 @@
 <button
     type="button"
     {onclick}
-    aria-label="Instance Segmentation Brush"
+    aria-label="Segmentation Mask Brush"
     class={`flex
  items-center justify-center rounded-md p-2 transition-colors
         focus:outline-none
