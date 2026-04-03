@@ -20,7 +20,7 @@ def test_refresh_cloud_credentials__sets_env_vars(
         },
     )
 
-    assert response.status_code == 200
+    assert response.status_code == 204
     assert os.environ["AWS_ACCESS_KEY_ID"] == "test-key-id"
     assert os.environ["AWS_SECRET_ACCESS_KEY"] == "test-secret"
 
@@ -36,7 +36,7 @@ def test_refresh_cloud_credentials__clears_s3_cache(
         json={"AWS_ACCESS_KEY_ID": "x"},
     )
 
-    assert response.status_code == 200
+    assert response.status_code == 204
     spy.assert_called_once()
 
 
@@ -62,6 +62,6 @@ def test_refresh_cloud_credentials__invalidates_cached_s3_filesystem(
         },
     )
 
-    assert response.status_code == 200
+    assert response.status_code == 204
     assert not S3FileSystem._cache
     assert fsspec.filesystem("s3", anon=False) is not old_fs  # fresh instance

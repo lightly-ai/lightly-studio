@@ -1688,9 +1688,9 @@ export interface paths {
          * Refresh Cloud Credentials
          * @description Receive cloud storage credentials.
          *
-         *     Sets the credentials as environment variables and clears all fsspec
-         *     filesystem instance caches so that subsequent file operations pick up the
-         *     new credentials.
+         *     Sets the credentials as environment variables and clears the S3 fsspec
+         *     instance cache so that subsequent file operations pick up the new
+         *     credentials.
          */
         put: operations["refresh_cloud_credentials"];
         post?: never;
@@ -6398,13 +6398,11 @@ export interface operations {
         };
         responses: {
             /** @description Successful Response */
-            200: {
+            204: {
                 headers: {
                     [name: string]: unknown;
                 };
-                content: {
-                    "application/json": unknown;
-                };
+                content?: never;
             };
             /** @description Validation Error */
             422: {
