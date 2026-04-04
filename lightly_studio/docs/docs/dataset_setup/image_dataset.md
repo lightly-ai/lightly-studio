@@ -191,7 +191,7 @@ standard formats. See [API reference](../api/dataset.md#lightly_studio.ImageData
 
     </details>
 
-=== "Pascal VOC Semantic Segmentations"
+=== "Pascal VOC Segmentations"
 
     ```python
     import json
@@ -219,6 +219,8 @@ standard formats. See [API reference](../api/dataset.md#lightly_studio.ImageData
     To load Pascal VOC format, the mapping from class IDs to class names is not a part of the
     format and must be provided separately. In the example above, we load it from a JSON file,
     but you can also create it manually in Python.
+
+    Imported masks are stored as `AnnotationType.INSTANCE_SEGMENTATION`. Use instance segmentation type filters for querying and exporting these annotations.
 
     <details>
     <summary>The Pascal VOC format details:</summary>

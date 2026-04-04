@@ -16,8 +16,8 @@ def test_create_many(db_session: Session) -> None:
     track_ids = object_track_resolver.create_many(
         session=db_session,
         tracks=[
-            ObjectTrackCreate(object_track_number=10, root_collection_id=collection.collection_id),
-            ObjectTrackCreate(object_track_number=20, root_collection_id=collection.collection_id),
+            ObjectTrackCreate(object_track_number=10, dataset_id=collection.dataset_id),
+            ObjectTrackCreate(object_track_number=20, dataset_id=collection.dataset_id),
         ],
     )
 
@@ -29,7 +29,7 @@ def test_create_many(db_session: Session) -> None:
     )
     assert track1 is not None
     assert track1.object_track_number == 10
-    assert track1.root_collection_id == collection.collection_id
+    assert track1.dataset_id == collection.dataset_id
 
     track2 = object_track_resolver.get_by_id(
         session=db_session,
@@ -37,4 +37,4 @@ def test_create_many(db_session: Session) -> None:
     )
     assert track2 is not None
     assert track2.object_track_number == 20
-    assert track2.root_collection_id == collection.collection_id
+    assert track2.dataset_id == collection.dataset_id

@@ -210,7 +210,6 @@ describe('useInstanceSegmentationBrush', () => {
             collectionId: 'c1',
             sampleId: 's1',
             sample,
-            segmentationMode: 'semantic',
             refetch
         });
 

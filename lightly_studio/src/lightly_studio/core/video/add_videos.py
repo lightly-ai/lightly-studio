@@ -196,9 +196,10 @@ def load_into_collection_from_paths(  # noqa: PLR0913
     return created_video_sample_ids, created_video_frame_sample_ids
 
 
-def load_video_annotations_from_labelformat(
+def load_video_annotations_from_labelformat(  # noqa: PLR0913
     session: Session,
     collection_id: UUID,
+    dataset_id: UUID,
     video_paths: Iterable[str],
     input_labels: ObjectDetectionTrackInput | InstanceSegmentationTrackInput,
     input_labels_paths_root: Path | str,
@@ -215,6 +216,7 @@ def load_video_annotations_from_labelformat(
     Args:
         session: The database session.
         collection_id: The ID of the video collection to load annotations into.
+        dataset_id: The ID of the dataset this collection belongs to.
         video_paths: An iterable of file paths to the videos to load.
             Note: This is used for file names from input_labels, that don't have a file extension.
         input_labels: The labelformat input containing video annotations.
@@ -287,7 +289,7 @@ def load_video_annotations_from_labelformat(
         object_track_map = _create_object_tracks(
             session=session,
             video_annotation=video_annotation,
-            root_collection_id=collection_id,
+            dataset_id=dataset_id,
         )
 
         if isinstance(video_annotation, VideoInstanceSegmentationTrack):
@@ -489,14 +491,14 @@ def _resolve_video_paths_from_labelformat(
 def _create_object_tracks(
     session: Session,
     video_annotation: VideoInstanceSegmentationTrack | VideoObjectDetectionTrack,
-    root_collection_id: UUID,
+    dataset_id: UUID,
 ) -> dict[int, UUID]:
     """Create an ObjectTrackTable entry for each tracked object in the video.
 
     Args:
         session: Database session.
         video_annotation: The labelformat video annotation containing objects.
-        root_collection_id: UUID of the root collection (dataset).
+        dataset_id: UUID of the dataset.
 
     Returns:
         Mapping from object index (position in video_annotation.objects) to the
@@ -516,7 +518,7 @@ def _create_object_tracks(
         tracks_to_create.append(
             ObjectTrackCreate(
                 object_track_number=object_track_number,
-                root_collection_id=root_collection_id,
+                dataset_id=dataset_id,
             )
         )
         object_indices.append(obj_idx)

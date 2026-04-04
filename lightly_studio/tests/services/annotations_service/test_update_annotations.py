@@ -44,8 +44,8 @@ def test_update_annotations__updates_label_for_all_track_annotations(
     track_ids = object_track_resolver.create_many(
         session=db_session,
         tracks=[
-            ObjectTrackCreate(object_track_number=1, root_collection_id=root_collection_id),
-            ObjectTrackCreate(object_track_number=2, root_collection_id=root_collection_id),
+            ObjectTrackCreate(object_track_number=1, dataset_id=collection.dataset_id),
+            ObjectTrackCreate(object_track_number=2, dataset_id=collection.dataset_id),
         ],
     )
     assert len(track_ids) == 2

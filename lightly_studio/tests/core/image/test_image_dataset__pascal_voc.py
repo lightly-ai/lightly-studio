@@ -10,7 +10,9 @@ import pytest
 from PIL import Image
 
 from lightly_studio import ImageDataset
-from lightly_studio.core.annotation.semantic_segmentation import SemanticSegmentationAnnotation
+from lightly_studio.core.annotation.instance_segmentation import (
+    InstanceSegmentationAnnotation,
+)
 
 PascalVocPaths = tuple[str, str, str, str]
 PascalVocPathsBuilder = Callable[[Path], PascalVocPaths]
@@ -108,7 +110,7 @@ class TestImageDataset:
 
         # Verify the first annotation
         ann = annotations[0]
-        assert isinstance(ann, SemanticSegmentationAnnotation)
+        assert isinstance(ann, InstanceSegmentationAnnotation)
         assert ann.label == "bg"
         assert ann.x == 0
         assert ann.y == 0
@@ -118,7 +120,7 @@ class TestImageDataset:
 
         # Verify the second annotation
         ann = annotations[1]
-        assert isinstance(ann, SemanticSegmentationAnnotation)
+        assert isinstance(ann, InstanceSegmentationAnnotation)
         assert ann.label == "cat"
         assert ann.x == 0
         assert ann.y == 0
@@ -128,7 +130,7 @@ class TestImageDataset:
 
         # Verify the third annotation
         ann = annotations[2]
-        assert isinstance(ann, SemanticSegmentationAnnotation)
+        assert isinstance(ann, InstanceSegmentationAnnotation)
         assert ann.label == "dog"
         assert ann.x == 2
         assert ann.y == 1
@@ -139,7 +141,7 @@ class TestImageDataset:
         # Second sample
         assert len(samples[1].annotations) == 1
         ann = samples[1].annotations[0]
-        assert isinstance(ann, SemanticSegmentationAnnotation)
+        assert isinstance(ann, InstanceSegmentationAnnotation)
         assert ann.label == "bg"
         assert ann.x == 0
         assert ann.y == 0
