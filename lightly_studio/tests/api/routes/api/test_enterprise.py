@@ -29,6 +29,7 @@ def test_refresh_cloud_credentials__clears_s3_cache(
     test_client: TestClient,
     mocker: MockerFixture,
 ) -> None:
+    mocker.patch.dict(os.environ, clear=False)
     spy = mocker.spy(S3FileSystem, "clear_instance_cache")
 
     response = test_client.put(
