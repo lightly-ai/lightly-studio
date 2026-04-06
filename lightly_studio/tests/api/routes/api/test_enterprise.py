@@ -66,3 +66,5 @@ def test_refresh_cloud_credentials__invalidates_cached_s3_filesystem(
     assert response.status_code == 204
     assert not S3FileSystem._cache
     assert fsspec.filesystem("s3", anon=False) is not old_fs  # fresh instance
+
+    S3FileSystem.clear_instance_cache()
