@@ -9,6 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 - Added `Dataset.update_metadata` method to update metadata of multiple samples at once.
+- Added cloud storage support for Pascal VOC semantic segmentation annotations.
 
 ### Changed
 
