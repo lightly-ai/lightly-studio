@@ -3,7 +3,7 @@ import os
 import fsspec
 from fastapi.testclient import TestClient
 from pytest_mock import MockerFixture
-from s3fs import S3FileSystem
+from s3fs import S3FileSystem # type: ignore[import-untyped]
 
 
 def test_refresh_cloud_credentials__sets_env_vars(

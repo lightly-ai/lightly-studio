@@ -20,6 +20,6 @@ def refresh_cloud_credentials(credentials: dict[str, str]) -> None:
     os.environ.update(credentials)
 
     # We currently support only AWS - this will need to be updated once support for other providers.
-    from s3fs import S3FileSystem  # noqa: PLC0415 lazy: s3fs is an optional dependency
+    from s3fs import S3FileSystem  # type: ignore[import-untyped]  # noqa: PLC0415 lazy: s3fs is an optional dependency
 
     S3FileSystem.clear_instance_cache()
