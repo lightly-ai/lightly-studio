@@ -16,10 +16,17 @@ def refresh_cloud_credentials(credentials: dict[str, str]) -> None:
     Sets the credentials as environment variables and clears the S3 fsspec
     instance cache so that subsequent file operations pick up the new
     credentials.
+
+    TODO Mihnea (04/2026) Security:
+     This endpoint has no authentication and accepts arbitrary env var
+     keys. This is acceptable for air-gapped on-prem (behind Docker isolation with no internet).
+     For the hosted version, this endpoint must be secured with authentication and input validation.
     """
     os.environ.update(credentials)
 
     # We currently support only AWS - this will need to be updated once support for other providers.
-    from s3fs import S3FileSystem  # type: ignore[import-untyped]  # noqa: PLC0415 lazy: s3fs is an optional dependency
+    from s3fs import (  # noqa: PLC0415 lazy: s3fs is an optional dependency
+        S3FileSystem,  # type: ignore[import-untyped]
+    )
 
     S3FileSystem.clear_instance_cache()
