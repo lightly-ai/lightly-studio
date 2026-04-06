@@ -2474,7 +2474,7 @@ export interface components {
          * @description Supported export formats for API export endpoints.
          * @enum {string}
          */
-        ExportFormat: "object_detection_coco" | "segmentation_mask_coco" | "pascal_voc" | "youtube_vis";
+        ExportFormat: "object_detection_coco" | "segmentation_mask_coco" | "pascal_voc" | "youtube_vis_segmentation";
         /**
          * FilterDimensions
          * @description Encapsulates dimension-based filter parameters for querying samples.

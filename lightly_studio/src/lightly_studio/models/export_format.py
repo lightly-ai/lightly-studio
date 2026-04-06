@@ -9,4 +9,4 @@ class ExportFormat(str, Enum):
     OBJECT_DETECTION_COCO = "object_detection_coco"
     SEGMENTATION_MASK_COCO = "segmentation_mask_coco"
     PASCAL_VOC = "pascal_voc"
-    YOUTUBE_VIS = "youtube_vis"
+    YOUTUBE_VIS_SEGMENTATION = "youtube_vis_segmentation"

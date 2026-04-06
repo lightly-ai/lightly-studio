@@ -308,7 +308,7 @@ def test_export_collection_youtube_vis(
 
     response = test_client.get(
         f"/api/collections/{collection.collection_id}/export/youtube-vis",
-        params={"export_format": "youtube_vis"},
+        params={"export_format": "youtube_vis_segmentation"},
     )
 
     assert response.status_code == HTTP_STATUS_OK
@@ -356,7 +356,7 @@ def test_export_collection_youtube_vis__wrong_collection_type(
     collection = create_collection(session=db_session)
     response = test_client.get(
         f"/api/collections/{collection.collection_id}/export/youtube-vis",
-        params={"export_format": "youtube_vis"},
+        params={"export_format": "youtube_vis_segmentation"},
     )
 
     assert response.status_code == HTTP_STATUS_BAD_REQUEST
