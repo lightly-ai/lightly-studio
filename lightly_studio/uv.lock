@@ -2638,7 +2638,7 @@ wheels = [
 [[package]]
 name = "labelformat"
 version = "0.1.13"
-source = { registry = "https://pypi.org/simple" }
+source = { git = "https://github.com/lightly-ai/labelformat.git?rev=f9cf7d51dd2b058d27d91d733a87475a404c1f18#f9cf7d51dd2b058d27d91d733a87475a404c1f18" }
 dependencies = [
     { name = "fsspec", version = "2025.10.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.10'" },
     { name = "fsspec", version = "2026.2.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.10'" },
@@ -2651,10 +2651,6 @@ dependencies = [
     { name = "pydantic-xml" },
     { name = "pyyaml" },
     { name = "tqdm" },
-]
-sdist = { url = "https://files.pythonhosted.org/packages/f7/96/09f072ec46b06771d1233298db46b8b5b9630cbcc562a27cb3d41ea62630/labelformat-0.1.13.tar.gz", hash = "sha256:4c187d67f17d97cbd64a1bdcfcb59992aa99ecef8cf4bd05ad82b7d8c6bc18d0", size = 38219, upload-time = "2026-04-01T07:38:45.015Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/a8/72/5f620f1d112b3a3d63f1d7462e19abcd3abbb4fafdf1e16fa98811d173ec/labelformat-0.1.13-py3-none-any.whl", hash = "sha256:45db260a5525201cdf3d859ecce355f3ffa9e4f989982f047063b98964d0c5d1", size = 56492, upload-time = "2026-04-01T07:38:47.241Z" },
 ]
 
 [[package]]
@@ -2944,7 +2940,7 @@ requires-dist = [
     { name = "fastapi", specifier = ">=0.115.5" },
     { name = "fsspec", specifier = ">=2023.1.0" },
     { name = "gcsfs", marker = "extra == 'cloud-storage'", specifier = ">=2023.1.0" },
-    { name = "labelformat", specifier = ">=0.1.13" },
+    { name = "labelformat", git = "https://github.com/lightly-ai/labelformat.git?rev=f9cf7d51dd2b058d27d91d733a87475a404c1f18" },
     { name = "lightly-edge-sdk", marker = "extra == 'lightly-edge'", specifier = ">=1.0.3.post1", index = "https://europe-west3-python.pkg.dev/boris-250909/lightly-pypi/simple/" },
     { name = "lightly-mundig", specifier = "==0.1.10" },
     { name = "open-clip-torch", specifier = ">=2.20.0" },
