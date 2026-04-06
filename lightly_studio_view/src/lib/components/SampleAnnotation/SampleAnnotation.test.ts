@@ -1,6 +1,6 @@
 import { render, screen } from '@testing-library/svelte';
 import type { ComponentProps } from 'svelte';
-import { beforeEach, describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import SampleAnnotation from './SampleAnnotation.svelte';
 
 const BASE_ANNOTATION_FIELDS = {
@@ -42,11 +42,23 @@ const createObjectDetectionAnnotation = (): ComponentProps<typeof SampleAnnotati
     }) satisfies ComponentProps<typeof SampleAnnotation>['annotation'];
 
 describe('SampleAnnotation', () => {
+    let originalGetBBox: PropertyDescriptor | undefined;
+
     beforeEach(() => {
+        originalGetBBox = Object.getOwnPropertyDescriptor(SVGElement.prototype, 'getBBox');
         Object.defineProperty(SVGElement.prototype, 'getBBox', {
             configurable: true,
             value: () => ({ x: 0, y: 0, width: 30, height: 12 })
         });
+    });
+
+    afterEach(() => {
+        if (originalGetBBox !== undefined) {
+            Object.defineProperty(SVGElement.prototype, 'getBBox', originalGetBBox);
+            return;
+        }
+
+        Reflect.deleteProperty(SVGElement.prototype, 'getBBox');
     });
 
     it('hides instance-segmentation label when bounding boxes are hidden', () => {
@@ -69,6 +81,18 @@ describe('SampleAnnotation', () => {
                 imageWidth: 100,
                 showLabel: true,
                 showBoundingBox: true
+            }
+        });
+
+        expect(screen.getByTestId('svg-annotation-text')).toHaveTextContent('person');
+    });
+
+    it('shows instance-segmentation label when bounding-box visibility is omitted', () => {
+        render(SampleAnnotation, {
+            props: {
+                annotation: createInstanceSegmentationAnnotation(),
+                imageWidth: 100,
+                showLabel: true
             }
         });
 
