@@ -9,6 +9,7 @@ from uuid import UUID
 
 import fsspec
 import yaml
+from fsspec.implementations.local import LocalFileSystem
 from labelformat.formats import (
     COCOInstanceSegmentationInput,
     COCOObjectDetectionInput,
@@ -348,8 +349,8 @@ class ImageDataset(BaseSampleDataset[ImageSample]):
                 If provided, all samples will be tagged with this name.
             embed: If True, generate embeddings for the newly added samples.
         """
-        images_path = Path(images_path).absolute()
-        masks_path = Path(masks_path).absolute()
+        images_path = _normalize_input_path(path=images_path)
+        masks_path = _normalize_input_path(path=masks_path)
 
         label_input = PascalVOCSemanticSegmentationInput.from_dirs(
             images_dir=images_path,
@@ -483,6 +484,14 @@ def _postprocess_created_images(
             collection_id=collection_id,
             sample_ids=sample_ids,
         )
+
+
+def _normalize_input_path(path: PathLike) -> PathLike:
+    """Return absolute path for local inputs and preserve remote URIs."""
+    fs, _ = fsspec.core.url_to_fs(url=str(path))
+    if isinstance(fs, LocalFileSystem):
+        return Path(path).absolute()
+    return str(path)
 
 
 def _generate_embeddings_image(
