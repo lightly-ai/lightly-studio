@@ -16,7 +16,7 @@ test.describe('Export Instance Segmentations', () => {
         await page.getByRole('option', { name: 'Image Instance Segmentations' }).click();
         await expect(page.getByTestId('submit-button-instance-segmentations')).toHaveAttribute(
             'href',
-            /\/api\/collections\/.*\/export\/annotations\?ts=\d+&annotation_type=instance_segmentation/
+            /\/api\/collections\/.*\/export\/annotations\?ts=\d+&export_format=segmentation_mask_coco/
         );
 
         // Remove target to avoid popup and keep navigation in the same page context
