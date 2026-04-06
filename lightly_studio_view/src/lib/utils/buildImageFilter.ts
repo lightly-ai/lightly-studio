@@ -10,11 +10,13 @@ type MetadataFilters = ReturnType<typeof createMetadataFilters>;
 export function buildImageFilter({
     dimensionsValues,
     annotationFilter,
-    metadataFilters
+    metadataFilters,
+    sampleIds
 }: {
     dimensionsValues: DimensionBounds | null | undefined;
     annotationFilter: AnnotationsFilter | undefined;
     metadataFilters: MetadataFilters | undefined;
+    sampleIds?: string[];
 }): ImageFilter | undefined {
     const filter: ImageFilter = {};
 
@@ -47,6 +49,13 @@ export function buildImageFilter({
         filter.sample_filter = {
             ...(filter.sample_filter ?? {}),
             metadata_filters: metadataFilters
+        };
+    }
+
+    if (sampleIds && sampleIds.length > 0) {
+        filter.sample_filter = {
+            ...(filter.sample_filter ?? {}),
+            sample_ids: sampleIds
         };
     }
 
