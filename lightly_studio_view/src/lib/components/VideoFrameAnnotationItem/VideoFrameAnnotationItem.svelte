@@ -10,6 +10,7 @@
         SampleView,
         VideoFrameView
     } from '$lib/api/lightly_studio_local';
+    import { shouldShowBoundingBoxForAnnotation } from '$lib/services/types';
     import { SampleAnnotations } from '..';
 
     const {
@@ -62,8 +63,10 @@
                 <SampleAnnotation
                     {annotation}
                     {showLabel}
-                    showBoundingBox={annotation.annotation_type !== 'instance_segmentation' ||
-                        $showBoundingBoxesForSegmentationStore}
+                    showBoundingBox={shouldShowBoundingBoxForAnnotation(
+                        annotation,
+                        $showBoundingBoxesForSegmentationStore
+                    )}
                     imageWidth={sampleWidth}
                 />
             {/each}

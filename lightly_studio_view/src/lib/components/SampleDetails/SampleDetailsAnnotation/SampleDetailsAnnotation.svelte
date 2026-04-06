@@ -8,6 +8,7 @@
     import { useGlobalStorage } from '$lib/hooks/useGlobalStorage';
     import { addAnnotationUpdateToUndoStack } from '$lib/services/addAnnotationUpdateToUndoStack';
     import { useAnnotationLabelContext } from '$lib/contexts/SampleDetailsAnnotation.svelte';
+    import { shouldShowBoundingBoxForAnnotation } from '$lib/services/types';
 
     const {
         annotationId,
@@ -47,8 +48,7 @@
 
     let selectionBox = $derived(annotation ? getBoundingBox(annotation!) : undefined);
     const showBoundingBox = $derived(
-        annotation?.annotation_type !== 'instance_segmentation' ||
-            $showBoundingBoxesForSegmentationStore
+        shouldShowBoundingBoxForAnnotation(annotation, $showBoundingBoxesForSegmentationStore)
     );
 
     const onBoundingBoxChanged = (bbox: BoundingBox) => {

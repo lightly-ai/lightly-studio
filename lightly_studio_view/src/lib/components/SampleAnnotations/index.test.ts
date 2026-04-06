@@ -1,22 +1,66 @@
 import { render, waitFor } from '@testing-library/svelte';
 import type { ComponentProps } from 'svelte';
+import type { Readable, Writable } from 'svelte/store';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import SampleAnnotations from './index.svelte';
 import { useSettings } from '$lib/hooks/useSettings';
 
+type UseSettingsReturn = ReturnType<typeof useSettings>;
+type SettingsStoreValue =
+    UseSettingsReturn['settingsStore'] extends Writable<infer Value> ? Value : never;
+type ShowBoundingBoxesForSegmentationValue =
+    UseSettingsReturn['showBoundingBoxesForSegmentationStore'] extends Readable<infer Value>
+        ? Value
+        : never;
+type MockedUseSettingsStoreSlice = Pick<
+    UseSettingsReturn,
+    'settingsStore' | 'showBoundingBoxesForSegmentationStore'
+>;
+type MockUseSettingsControls = {
+    setShowBoundingBoxesForSegmentation: (value: ShowBoundingBoxesForSegmentationValue) => void;
+};
+
+const mockUseSettingsControls: MockUseSettingsControls = vi.hoisted(() => ({
+    setShowBoundingBoxesForSegmentation: () => {
+        throw new Error('showBoundingBoxesForSegmentationStore is not initialized');
+    }
+}));
+
 vi.mock('$lib/hooks/useSettings', async () => {
     const { writable } = await import('svelte/store');
 
-    const settingsStore = writable({
-        key_hide_annotations: 'v'
+    const settingsStore = writable<SettingsStoreValue>({
+        setting_id: '00000000-0000-0000-0000-000000000000',
+        grid_view_sample_rendering: 'contain',
+        key_hide_annotations: 'v',
+        key_go_back: 'Escape',
+        key_toggle_edit_mode: 'e',
+        show_annotation_text_labels: false,
+        show_sample_filenames: true,
+        show_bounding_boxes_for_segmentation: true,
+        created_at: '1970-01-01T00:00:00.000Z',
+        updated_at: '1970-01-01T00:00:00.000Z',
+        key_toolbar_selection: 's',
+        key_toolbar_drag: 'd',
+        key_toolbar_bounding_box: 'b',
+        key_toolbar_segmentation_mask: 'm',
+        key_toolbar_brush: 'r',
+        key_toolbar_eraser: 'x'
     });
-    const showBoundingBoxesForSegmentationStore = writable(true);
+    const showBoundingBoxesForSegmentationStore =
+        writable<ShowBoundingBoxesForSegmentationValue>(true);
+
+    mockUseSettingsControls.setShowBoundingBoxesForSegmentation = (value) => {
+        showBoundingBoxesForSegmentationStore.set(value);
+    };
+
+    const mockedUseSettingsStoreSlice: MockedUseSettingsStoreSlice = {
+        settingsStore,
+        showBoundingBoxesForSegmentationStore
+    };
 
     return {
-        useSettings: () => ({
-            settingsStore,
-            showBoundingBoxesForSegmentationStore
-        })
+        useSettings: () => mockedUseSettingsStoreSlice
     };
 });
 
@@ -77,11 +121,8 @@ const hasStrokeRectCall = (
     );
 };
 
-const setShowBoundingBoxesForSegmentation = (value: boolean) => {
-    const { showBoundingBoxesForSegmentationStore } = useSettings();
-    (showBoundingBoxesForSegmentationStore as unknown as { set: (enabled: boolean) => void }).set(
-        value
-    );
+const setShowBoundingBoxesForSegmentation = (value: ShowBoundingBoxesForSegmentationValue) => {
+    mockUseSettingsControls.setShowBoundingBoxesForSegmentation(value);
 };
 
 describe('SampleAnnotations', () => {

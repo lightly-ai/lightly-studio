@@ -5,6 +5,7 @@
     import { useAnnotation } from '$lib/hooks/useAnnotation/useAnnotation';
     import { useGlobalStorage } from '$lib/hooks/useGlobalStorage';
     import { addAnnotationUpdateToUndoStack } from '$lib/services/addAnnotationUpdateToUndoStack';
+    import { shouldShowBoundingBoxForAnnotation } from '$lib/services/types';
     import { type VideoFrameView } from '$lib/api/lightly_studio_local';
     import { getBoundingBox } from '../SampleAnnotation/utils';
 
@@ -37,8 +38,7 @@
 
     let selectionBox = $derived(annotation ? getBoundingBox(annotation!) : undefined);
     const showBoundingBox = $derived(
-        annotation?.annotation_type !== 'instance_segmentation' ||
-            $showBoundingBoxesForSegmentationStore
+        shouldShowBoundingBoxForAnnotation(annotation, $showBoundingBoxesForSegmentationStore)
     );
 
     const onBoundingBoxChanged = (bbox: BoundingBox) => {
