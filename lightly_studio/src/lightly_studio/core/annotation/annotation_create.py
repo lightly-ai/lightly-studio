@@ -206,6 +206,7 @@ class CreateInstanceSegmentation(CreateAnnotationBase):
             confidence=confidence,
         )
 
+
 def _segmentation_mask_and_bounding_box(
     binary_mask: NDArray[np.int_],
 ) -> tuple[list[int], list[int]]:
