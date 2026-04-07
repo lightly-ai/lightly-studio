@@ -176,10 +176,13 @@
 
         <Card className="flex flex-1 flex-col overflow-hidden">
             <CardContent className="h-full overflow-y-auto">
-                {@const tags = video?.sample?.tags ?? []}
-                {#if tags.length > 0}
-                    <SegmentTags {tags} onRemoveTag={deleteTag} />
-                {/if}
+                <SegmentTags
+                    tags={video?.sample?.tags ?? []}
+                    collectionId={datasetId}
+                    sampleId={video?.sample?.sample_id}
+                    onRemoveTag={deleteTag}
+                    onRefetch={onVideoUpdate}
+                />
                 <VideoSampleMetadata {video} />
                 <MetadataSegment metadata_dict={(video?.sample as SampleView).metadata_dict} />
                 {#if video?.sample?.sample_id}
