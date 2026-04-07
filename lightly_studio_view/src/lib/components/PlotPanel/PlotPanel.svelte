@@ -46,10 +46,6 @@
     );
 
     // Prepare filter for embeddings API - use VideoFilter for videos, ImageFilter for images
-    // Strip sample_ids from sample_filter so the embeddings query returns all points.
-    // If sample_filter has no other fields, remove it entirely to keep the structure
-    // consistent — this prevents the baseFilter watcher from detecting a spurious change
-    // when sample_ids are added/removed, which would incorrectly trigger clearSelection().
     const filter = $derived.by(() => {
         const currentFilter = isVideos ? $videoFilter : $imageFilter;
         if (!currentFilter) return null;
@@ -58,14 +54,6 @@
             return currentFilter;
         }
 
-        const sampleFilterWithoutSampleIds = { ...currentFilter.sample_filter };
-        delete sampleFilterWithoutSampleIds.sample_ids;
-        if (Object.keys(sampleFilterWithoutSampleIds).length === 0) {
-            // sample_filter only had sample_ids — remove it entirely
-            const filterWithoutSampleFilter = { ...currentFilter };
-            delete filterWithoutSampleFilter.sample_filter;
-            return filterWithoutSampleFilter;
-        }
         return {
             ...currentFilter,
             sample_filter: {
@@ -199,24 +187,6 @@
         updateSampleIds([]);
     };
     const hasActiveSelection = $derived($rangeSelection !== null || activeSampleIds.length > 0);
-    const baseFilter = $derived(filter);
-    let previousBaseFilter = $state<typeof baseFilter | undefined>(undefined);
-
-    $effect(() => {
-        if (previousBaseFilter === undefined) {
-            previousBaseFilter = baseFilter;
-            return;
-        }
-
-        if (isEqual(previousBaseFilter, baseFilter)) {
-            return;
-        }
-        previousBaseFilter = baseFilter;
-
-        if (hasActiveSelection) {
-            clearSelection();
-        }
-    });
 
     const onWindowKeyDown = (event: KeyboardEvent) => {
         if (event.key !== 'Escape') {
