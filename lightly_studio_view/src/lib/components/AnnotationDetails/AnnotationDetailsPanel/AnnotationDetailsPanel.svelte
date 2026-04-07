@@ -74,7 +74,7 @@
                 {tags}
                 {collectionId}
                 sampleId={annotation.sample_id}
-                onRemoveTag={onRemoveTag}
+                {onRemoveTag}
                 onRefetch={onUpdate}
             />
             <AnnotationMetadata {annotation} {onUpdate} />

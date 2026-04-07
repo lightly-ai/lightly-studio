@@ -60,9 +60,7 @@
     });
 
     function handleSelect(name: string) {
-        const existing = addTag.options.find(
-            (t) => t.name.toLowerCase() === name.toLowerCase()
-        );
+        const existing = addTag.options.find((t) => t.name.toLowerCase() === name.toLowerCase());
         if (existing) {
             void addTag.addExisting(existing);
         } else {
@@ -112,15 +110,14 @@
                     <Command.Empty>No tags found</Command.Empty>
                     <Command.Group>
                         {#each addTag.options as opt (opt.tag_id)}
-                            <Command.Item
-                                value={opt.name}
-                                onSelect={() => handleSelect(opt.name)}
-                            >
+                            <Command.Item value={opt.name} onSelect={() => handleSelect(opt.name)}>
                                 {opt.name}
                             </Command.Item>
                         {/each}
                     </Command.Group>
-                    {#if inputValue.trim() && addTag.options.some((t) => t.name.toLowerCase() === inputValue.trim().toLowerCase()) === false}
+                    {#if inputValue.trim() && addTag.options.some((t) => t.name.toLowerCase() === inputValue
+                                    .trim()
+                                    .toLowerCase()) === false}
                         <div class="border-t">
                             <Command.Item
                                 value="__create__"

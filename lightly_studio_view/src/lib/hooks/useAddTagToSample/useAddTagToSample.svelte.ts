@@ -79,8 +79,12 @@ export function useAddTagToSample({
     }
 
     return {
-        get busy() { return busy; },
-        get options() { return options; },
+        get busy() {
+            return busy;
+        },
+        get options() {
+            return options;
+        },
         addExisting,
         createAndAdd
     };

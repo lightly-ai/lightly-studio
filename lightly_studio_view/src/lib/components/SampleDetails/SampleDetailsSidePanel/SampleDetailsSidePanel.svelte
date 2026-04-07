@@ -66,7 +66,7 @@
                 tags={sample.tags ?? []}
                 {collectionId}
                 sampleId={sample.sample_id}
-                onRemoveTag={onRemoveTag}
+                {onRemoveTag}
                 onRefetch={onUpdate}
             />
             {#if sample.annotations}
