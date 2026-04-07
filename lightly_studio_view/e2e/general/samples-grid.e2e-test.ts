@@ -249,7 +249,7 @@ test('We can see clicked element when navigating back from details', async ({
     expect(await isInViewport({ element: samplesPage.getSampleByIndex(30), viewport })).toBe(false);
 
     await viewport.evaluate((element) => {
-        element.scrollBy({ top: 300, behavior: 'instant' });
+        element.scrollBy({ top: 400, behavior: 'instant' });
     });
 
     expect(await isInViewport({ element: samplesPage.getSampleByIndex(0), viewport })).toBe(false);
