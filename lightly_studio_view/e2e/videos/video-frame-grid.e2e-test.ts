@@ -1,4 +1,4 @@
-import { test, expect } from '../utils';
+import { test, expect, isInViewport } from '../utils';
 import { youtubeVisVideosDataset } from './fixtures/youtubeVisVideosDataset';
 
 test.describe('video-frames-page-flow', () => {
@@ -57,4 +57,35 @@ test.describe('video-frames-page-flow', () => {
                 youtubeVisVideosDataset.labels.elephant.frameCount
         );
     });
+});
+
+test('Scroll position is restored when navigating back from details', async ({
+    page,
+    videoFramesPage
+}) => {
+    await page.setViewportSize({ width: 800, height: 400 });
+
+    const gridContainer = page.getByTestId('video-frames-grid');
+    await expect(gridContainer).toBeVisible();
+
+    expect(await isInViewport(videoFramesPage.getVideoFrameByIndex(0))).toBe(true);
+    expect(await isInViewport(videoFramesPage.getVideoFrameByIndex(30))).toBe(false);
+
+    await gridContainer.evaluate((element) => {
+        element.scrollBy({ top: 300, behavior: 'instant' });
+    });
+
+    expect(await isInViewport(videoFramesPage.getVideoFrameByIndex(0))).toBe(false);
+    expect(await isInViewport(videoFramesPage.getVideoFrameByIndex(30))).toBe(true);
+
+    await videoFramesPage.getVideoFrameByIndex(30).dblclick();
+
+    await expect(page.getByText('Video frame details')).toBeVisible();
+
+    await page.goBack();
+
+    await expect(gridContainer).toBeVisible();
+
+    expect(await isInViewport(videoFramesPage.getVideoFrameByIndex(30))).toBe(true);
+    expect(await isInViewport(videoFramesPage.getVideoFrameByIndex(0))).toBe(false);
 });
