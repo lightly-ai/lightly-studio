@@ -139,7 +139,7 @@ describe('PlotPanel.svelte', () => {
         expect(mockSetRangeSelectionForcollection).toHaveBeenCalledWith('test-collection-id', null);
     });
 
-    it('should clear embedding selection when base filters change', async () => {
+    it('should not clear embedding selection when base filters change', async () => {
         rangeSelectionStore = writable([
             { x: 0, y: 0 },
             { x: 1, y: 0 },
@@ -167,11 +167,8 @@ describe('PlotPanel.svelte', () => {
         });
 
         await waitFor(() => {
-            expect(mockSetRangeSelectionForcollection).toHaveBeenCalledWith(
-                'test-collection-id',
-                null
-            );
-            expect(mockUpdateSampleIds).toHaveBeenCalledWith([]);
+            expect(mockSetRangeSelectionForcollection).not.toHaveBeenCalled();
+            expect(mockUpdateSampleIds).not.toHaveBeenCalled();
         });
     });
 
