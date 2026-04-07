@@ -84,15 +84,15 @@ test('Scroll position is restored when navigating back from annotation details',
     const gridContainer = page.getByTestId('annotations-grid');
     await expect(gridContainer).toBeVisible();
 
-    expect(annotationsPage.getAnnotationByIndex(0)).toBeVisible();
-    expect(annotationsPage.getAnnotationByIndex(30)).not.toBeVisible();
+    expect(await isInViewport(annotationsPage.getAnnotationByIndex(0))).toBeTruthy();
+    expect(await isInViewport(annotationsPage.getAnnotationByIndex(30))).toBeFalsy();
 
     await gridContainer.evaluate((element) => {
         element.scrollBy({ top: 300, behavior: 'instant' });
     });
 
-    expect(annotationsPage.getAnnotationByIndex(0)).not.toBeVisible();
-    expect(annotationsPage.getAnnotationByIndex(30)).toBeVisible();
+    expect(await isInViewport(annotationsPage.getAnnotationByIndex(0))).toBeFalsy();
+    expect(await isInViewport(annotationsPage.getAnnotationByIndex(30))).toBeTruthy();
 
     await annotationsPage.getAnnotationByIndex(30).dblclick();
 
@@ -102,6 +102,6 @@ test('Scroll position is restored when navigating back from annotation details',
 
     await expect(gridContainer).toBeVisible();
 
-    expect(annotationsPage.getAnnotationByIndex(0)).not.toBeVisible();
-    expect(annotationsPage.getAnnotationByIndex(30)).toBeVisible();
+    expect(await isInViewport(annotationsPage.getAnnotationByIndex(0))).toBeFalsy();
+    expect(await isInViewport(annotationsPage.getAnnotationByIndex(30))).toBeTruthy();
 });

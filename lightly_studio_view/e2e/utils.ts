@@ -304,6 +304,10 @@ export async function setNetworkThrottling(page: Page, preset: NetworkPreset): P
 
 // Helper function to check if element is in viewport (like IntersectionObserver).
 export const isInViewport = async (element: Locator) => {
+    const count = await element.count();
+    if (count === 0 || (await element.isVisible()) === false) {
+        return false;
+    }
     return await element.evaluate((el: Element) => {
         const rect = el.getBoundingClientRect();
         return (
