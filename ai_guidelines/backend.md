@@ -46,6 +46,11 @@ Use the layers with the following intent:
 
 Thin endpoints may call resolvers directly. Services are mainly for cross-entity operations, not as a mandatory wrapper around every route.
 
+## Error handling
+
+- Raise specific exceptions in the `api/` layer. FastAPI will handle converting them to HTTP responses. Do not raise `HTTPException` directly.
+- We let exceptions raised from the rest of Python code propagate cleanly to the api layer, and be ultimately handled by FastAPI.
+
 ## Runtime, persistence and the database
 
 - `db_manager.py` centralizes engine and session management.
