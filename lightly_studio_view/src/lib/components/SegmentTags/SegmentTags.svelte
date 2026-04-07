@@ -7,6 +7,8 @@
     import { useTags } from '$lib/hooks/useTags/useTags.js';
     import { useGlobalStorage } from '$lib/hooks/useGlobalStorage';
     import { useAddTagToSample } from '$lib/hooks/useAddTagToSample/useAddTagToSample.svelte.js';
+    import { useRemoveTagFromSample } from '$lib/hooks/useRemoveTagFromSample/useRemoveTagFromSample';
+    import { toast } from 'svelte-sonner';
 
     interface TagItem {
         tag_id?: string;
@@ -17,8 +19,6 @@
         tags: TagItem[];
         collectionId?: string;
         sampleId?: string;
-        onRemoveTag?: (tagId: string) => Promise<void>;
-        onClick?: (tagId: string) => Promise<void>;
         onRefetch?: () => void;
     }
 
@@ -26,12 +26,20 @@
         tags,
         collectionId = '',
         sampleId = '',
-        onRemoveTag,
-        onClick,
         onRefetch = () => {}
     }: Props = $props();
 
-    const removeTagHandler = onRemoveTag ?? onClick ?? (async () => undefined);
+    const { removeTagFromSample } = useRemoveTagFromSample({ collectionId });
+
+    async function handleRemoveTag(tagId: string) {
+        try {
+            await removeTagFromSample(sampleId, tagId);
+        } catch {
+            toast.error('Failed to remove tag. Please try again.');
+            return;
+        }
+        onRefetch();
+    }
 
     const { collections } = useGlobalStorage();
     const tagKind = $derived(
@@ -46,11 +54,13 @@
         collectionId,
         sampleId,
         getTagKind: () => tagKind,
-        getTags: () => tags,
-        getAllCollectionTags: () => $allCollectionTags,
         onRefetch,
         onTagsRefetch: () => loadTags()
     });
+
+    const options = $derived(
+        $allCollectionTags.filter((t) => !tags.some((existing) => existing.tag_id === t.tag_id))
+    );
 
     let open = $state(false);
     let inputValue = $state('');
@@ -60,7 +70,7 @@
     });
 
     function handleSelect(name: string) {
-        const existing = addTag.options.find((t) => t.name.toLowerCase() === name.toLowerCase());
+        const existing = options.find((t) => t.name.toLowerCase() === name.toLowerCase());
         if (existing) {
             void addTag.addExisting(existing);
         } else {
@@ -82,7 +92,7 @@
                     data-testid={`remove-tag-${tag.name}`}
                     onclick={(event) => {
                         event.stopPropagation();
-                        if (tag.tag_id) void removeTagHandler(tag.tag_id);
+                        if (tag.tag_id) void handleRemoveTag(tag.tag_id);
                     }}
                 >
                     x
@@ -109,13 +119,13 @@
                 <Command.List>
                     <Command.Empty>No tags found</Command.Empty>
                     <Command.Group>
-                        {#each addTag.options as opt (opt.tag_id)}
+                        {#each options as opt (opt.tag_id)}
                             <Command.Item value={opt.name} onSelect={() => handleSelect(opt.name)}>
                                 {opt.name}
                             </Command.Item>
                         {/each}
                     </Command.Group>
-                    {#if inputValue.trim() && addTag.options.some((t) => t.name.toLowerCase() === inputValue
+                    {#if inputValue.trim() && options.some((t) => t.name.toLowerCase() === inputValue
                                     .trim()
                                     .toLowerCase()) === false}
                         <div class="border-t">

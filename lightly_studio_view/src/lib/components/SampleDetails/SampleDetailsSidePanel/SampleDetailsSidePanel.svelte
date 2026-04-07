@@ -20,7 +20,6 @@
             tags?: TagTable[];
         };
         onUpdate: () => void;
-        onRemoveTag: (tagId: string) => Promise<void>;
         annotationsIdsToHide: Set<string>;
         collectionId: string;
         isPanModeEnabled: boolean;
@@ -30,7 +29,6 @@
         annotationsIdsToHide = $bindable<Set<string>>(new Set()),
         sample,
         onUpdate,
-        onRemoveTag,
         collectionId,
         isPanModeEnabled,
         metadataItem
@@ -66,7 +64,6 @@
                 tags={sample.tags ?? []}
                 {collectionId}
                 sampleId={sample.sample_id}
-                {onRemoveTag}
                 onRefetch={onUpdate}
             />
             {#if sample.annotations}

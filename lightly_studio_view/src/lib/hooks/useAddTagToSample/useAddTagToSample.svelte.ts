@@ -2,17 +2,10 @@ import { createTag, addSampleIdsToTagId } from '$lib/api/lightly_studio_local';
 import type { TagView } from '$lib/services/types';
 import { toast } from 'svelte-sonner';
 
-interface TagItem {
-    tag_id?: string;
-    name: string;
-}
-
 interface Options {
     collectionId: string;
     sampleId: string;
     getTagKind: () => TagView['kind'];
-    getTags: () => TagItem[];
-    getAllCollectionTags: () => TagView[];
     onRefetch: () => void;
     onTagsRefetch: () => void;
 }
@@ -21,18 +14,10 @@ export function useAddTagToSample({
     collectionId,
     sampleId,
     getTagKind,
-    getTags,
-    getAllCollectionTags,
     onRefetch,
     onTagsRefetch
 }: Options) {
     let busy = $state(false);
-
-    const options = $derived(
-        getAllCollectionTags().filter(
-            (t) => !getTags().some((existing) => existing.tag_id === t.tag_id)
-        )
-    );
 
     async function addExisting(tag: TagView) {
         busy = true;
@@ -81,9 +66,6 @@ export function useAddTagToSample({
     return {
         get busy() {
             return busy;
-        },
-        get options() {
-            return options;
         },
         addExisting,
         createAndAdd
