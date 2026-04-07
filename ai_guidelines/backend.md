@@ -68,4 +68,4 @@ Thin endpoints may call resolvers directly. Services are mainly for cross-entity
 - Check `services/` when the endpoint coordinates multiple entities or sample types.
 - Go to `resolvers/` for query logic, filtering, and persistence details.
 - Look in `models/` for request bodies, response models, and database tables.
-- Tests mirror this split under `lightly_studio/tests/api` and `lightly_studio/tests/resolvers`.
+- Tests mirror this split under `lightly_studio/tests/`.
