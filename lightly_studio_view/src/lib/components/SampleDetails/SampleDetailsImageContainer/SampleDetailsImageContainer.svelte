@@ -156,8 +156,7 @@
             : undefined
     );
     const isSegmentationType = (type: string | null | undefined) =>
-        type === AnnotationType.INSTANCE_SEGMENTATION ||
-        type === AnnotationType.SEMANTIC_SEGMENTATION;
+        type === AnnotationType.INSTANCE_SEGMENTATION;
 
     const shouldShowBrushToolPopup = $derived.by(() => {
         if (!$isEditingMode) return false;
@@ -176,10 +175,7 @@
     });
     const shouldShowSegmentationToolInToolbar = $derived.by(() => {
         if (annotationLabelContext.isOnAnnotationDetailsView) {
-            return (
-                sample.annotations[0]?.annotation_type !== AnnotationType.SEMANTIC_SEGMENTATION &&
-                isSegmentationType(sample.annotations[0]?.annotation_type)
-            );
+            return isSegmentationType(sample.annotations[0]?.annotation_type);
         }
 
         return true;

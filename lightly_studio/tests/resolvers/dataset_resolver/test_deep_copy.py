@@ -368,7 +368,7 @@ def test_deep_copy__can_delete_original_after_copy(db_session: Session) -> None:
         collection_id=original.collection_id,
         sample_id=img.sample_id,
         annotation_label_id=label.annotation_label_id,
-        annotation_type=AnnotationType.SEMANTIC_SEGMENTATION,
+        annotation_type=AnnotationType.INSTANCE_SEGMENTATION,
         annotation_data={
             "x": 5,
             "y": 15,
@@ -495,12 +495,12 @@ def test_deep_copy__with_annotations(db_session: Session) -> None:
             "object_track_id": original_track_id,
         },
     )
-    semantic_seg = create_annotation(
+    instance_seg_a = create_annotation(
         session=db_session,
         collection_id=original.collection_id,
         sample_id=img.sample_id,
         annotation_label_id=label.annotation_label_id,
-        annotation_type=AnnotationType.SEMANTIC_SEGMENTATION,
+        annotation_type=AnnotationType.INSTANCE_SEGMENTATION,
         annotation_data={
             "x": 5,
             "y": 15,
@@ -527,7 +527,7 @@ def test_deep_copy__with_annotations(db_session: Session) -> None:
     original_sample_ids = {
         classification.sample_id,
         obj_detection.sample_id,
-        semantic_seg.sample_id,
+        instance_seg_a.sample_id,
         instance_seg.sample_id,
     }
 
@@ -549,8 +549,12 @@ def test_deep_copy__with_annotations(db_session: Session) -> None:
     copied_sample_ids = {a.sample_id for a in result.annotations}
     assert original_sample_ids.isdisjoint(copied_sample_ids)
 
-    # Build lookup by annotation type for copied annotations
-    copied_by_type = {a.annotation_type: a for a in result.annotations}
+    # Build lookup by annotation type for non-segmentation annotations.
+    copied_by_type = {
+        a.annotation_type: a
+        for a in result.annotations
+        if a.annotation_type != AnnotationType.INSTANCE_SEGMENTATION
+    }
 
     # Assert - classification annotation copied (no detail tables)
     copied_cls = copied_by_type[AnnotationType.CLASSIFICATION]
@@ -575,22 +579,30 @@ def test_deep_copy__with_annotations(db_session: Session) -> None:
     assert copied_track.object_track_number == 7
     assert copied_track.dataset_id == copied.dataset_id
 
-    # Assert - semantic segmentation detail table copied
-    copied_ss = copied_by_type[AnnotationType.SEMANTIC_SEGMENTATION]
-    ss_detail = db_session.get(SegmentationAnnotationTable, copied_ss.sample_id)
-    assert ss_detail is not None
-    assert ss_detail.x == 5
-    assert ss_detail.y == 15
-    assert ss_detail.width == 25
-    assert ss_detail.height == 35
-    assert ss_detail.segmentation_mask == [0, 1, 1, 0]
+    # Assert - both segmentation detail rows were copied.
+    copied_seg_annotations = [
+        annotation
+        for annotation in result.annotations
+        if annotation.annotation_type == AnnotationType.INSTANCE_SEGMENTATION
+    ]
+    assert len(copied_seg_annotations) == 2
 
-    # Assert - instance segmentation detail table copied
-    copied_is = copied_by_type[AnnotationType.INSTANCE_SEGMENTATION]
-    is_detail = db_session.get(SegmentationAnnotationTable, copied_is.sample_id)
-    assert is_detail is not None
-    assert is_detail.x == 2
-    assert is_detail.y == 4
-    assert is_detail.width == 6
-    assert is_detail.height == 8
-    assert is_detail.segmentation_mask == [1, 0, 0, 1]
+    copied_seg_details = [
+        db_session.get(SegmentationAnnotationTable, annotation.sample_id)
+        for annotation in copied_seg_annotations
+    ]
+    assert all(detail is not None for detail in copied_seg_details)
+    assert {
+        (
+            detail.x,
+            detail.y,
+            detail.width,
+            detail.height,
+            tuple(detail.segmentation_mask or []),
+        )
+        for detail in copied_seg_details
+        if detail is not None
+    } == {
+        (5, 15, 25, 35, (0, 1, 1, 0)),
+        (2, 4, 6, 8, (1, 0, 0, 1)),
+    }

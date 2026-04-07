@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from collections.abc import Iterable
-from typing import Literal, Protocol
+from typing import Protocol
 from uuid import UUID
 
 from labelformat.model.binary_mask_segmentation import BinaryMaskSegmentation
@@ -32,9 +32,6 @@ def get_segmentation_annotation_create(
     parent_sample_id: UUID,
     annotation_label_id: UUID,
     segmentation: MultiPolygon | BinaryMaskSegmentation,
-    annotation_type: Literal[
-        AnnotationType.INSTANCE_SEGMENTATION, AnnotationType.SEMANTIC_SEGMENTATION
-    ] = AnnotationType.INSTANCE_SEGMENTATION,
     object_track_id: UUID | None = None,
 ) -> AnnotationCreate:
     """Get a AnnotationCreate instance for the provided labelformat instance segmentation.
@@ -43,7 +40,6 @@ def get_segmentation_annotation_create(
         parent_sample_id: ID of the parent sample of the annotation.
         annotation_label_id: ID of the label for the annotation.
         segmentation: Instance segmentation in labelformat.
-        annotation_type: Instance or Semantic segmentation type.
         object_track_id: The track ID of the object (indicating that it is part of a track).
 
     Returns:
@@ -62,7 +58,7 @@ def get_segmentation_annotation_create(
     return AnnotationCreate(
         parent_sample_id=parent_sample_id,
         annotation_label_id=annotation_label_id,
-        annotation_type=annotation_type,
+        annotation_type=AnnotationType.INSTANCE_SEGMENTATION,
         x=int(x),
         y=int(y),
         width=int(width),

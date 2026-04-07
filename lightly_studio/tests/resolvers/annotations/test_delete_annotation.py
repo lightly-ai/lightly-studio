@@ -18,7 +18,7 @@ def test_delete_annotation__success(
         annotations[0].sample_id,  # classification
         annotations[3].sample_id,  # object detection
         annotations[6].sample_id,  # instance segmentation
-        annotations[9].sample_id,  # semantic segmentation
+        annotations[9].sample_id,  # additional instance segmentation variant
     ]
 
     for annotation_id in annotation_ids_to_delete:

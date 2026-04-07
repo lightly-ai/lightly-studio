@@ -98,9 +98,7 @@
     ]);
 
     const showAnnotationLabel = $derived(
-        showLabel &&
-            (highlight === 'auto' || highlight === 'active') &&
-            annotation.annotation_type !== 'semantic_segmentation'
+        showLabel && (highlight === 'auto' || highlight === 'active')
     );
 </script>
 
@@ -135,7 +133,7 @@
             {onMove}
             {onDragEnd}
         />
-    {:else if annotation.annotation_type !== 'semantic_segmentation'}
+    {:else}
         <SampleAnnotationBox
             {bbox}
             {annotationId}

@@ -81,7 +81,7 @@ def filter_test_data(
             AnnotationCreate(
                 annotation_label_id=label2.annotation_label_id,
                 parent_sample_id=image2.sample_id,
-                annotation_type=AnnotationType.SEMANTIC_SEGMENTATION,
+                annotation_type=AnnotationType.INSTANCE_SEGMENTATION,
                 segmentation_mask=[1, 2, 3, 4, 5],
                 x=0,
                 y=0,

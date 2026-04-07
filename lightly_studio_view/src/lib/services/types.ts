@@ -70,10 +70,7 @@ export function isInstanceSegmentationAnnotation(
 export function isSegmentationAnnotation(
     annotation: Annotation | AnnotationSegmentation
 ): annotation is AnnotationSegmentation {
-    return (
-        annotation.annotation_type === 'instance_segmentation' ||
-        annotation.annotation_type === 'semantic_segmentation'
-    );
+    return annotation.annotation_type === 'instance_segmentation';
 }
 
 export function isClassificationAnnotation(

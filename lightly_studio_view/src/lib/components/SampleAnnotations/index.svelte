@@ -41,14 +41,6 @@
             } satisfies AnnotationCanvasAnnotation;
         }
 
-        if (annotation.annotation_type === 'semantic_segmentation') {
-            return {
-                annotation_type: 'semantic_segmentation',
-                annotation_label_name,
-                segmentation_mask: annotation.segmentation_details?.segmentation_mask ?? []
-            } satisfies AnnotationCanvasAnnotation;
-        }
-
         if (
             annotation.annotation_type === 'instance_segmentation' &&
             annotation.segmentation_details

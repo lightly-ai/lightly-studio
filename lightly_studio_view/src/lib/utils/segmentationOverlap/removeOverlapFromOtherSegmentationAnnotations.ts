@@ -15,21 +15,18 @@ export const removeOverlapFromOtherSegmentationAnnotations = async ({
     skipId,
     lockedAnnotationIds,
     annotations,
-    segmentationMode,
     sample,
     collectionId,
     updateAnnotations
 }: RemoveOverlapParams): Promise<OverriddenSegmentationAnnotations> => {
     if (!annotations?.length) return [];
 
-    const targetAnnotationType =
-        segmentationMode === 'semantic' ? 'semantic_segmentation' : 'instance_segmentation';
     const updates: AnnotationUpdateInput[] = [];
     const overriddenAnnotations: OverriddenSegmentationAnnotations = [];
 
     annotations
         .filter((ann) => {
-            const isTargetType = ann.annotation_type === targetAnnotationType;
+            const isTargetType = ann.annotation_type === 'instance_segmentation';
             const hasMask = ann.segmentation_details?.segmentation_mask;
             const isSame = ann.sample_id === skipId;
             const isLocked = lockedAnnotationIds?.has(ann.sample_id);

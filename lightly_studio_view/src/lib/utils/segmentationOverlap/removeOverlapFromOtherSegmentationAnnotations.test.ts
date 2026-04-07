@@ -18,12 +18,11 @@ const OVERLAP_FIRST_PIXEL = [1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
 
 const baseAnn = (
     id: string,
-    mask: number[],
-    annotationType: 'instance_segmentation' | 'semantic_segmentation' = 'instance_segmentation'
+    mask: number[]
 ): AnnotationView =>
     ({
         sample_id: id,
-        annotation_type: annotationType,
+        annotation_type: 'instance_segmentation',
         segmentation_details: { segmentation_mask: mask },
         annotation_label: { annotation_label_name: 'a', annotation_label_id: 'a' },
         parent_sample_id: 'p',
@@ -42,7 +41,6 @@ describe('removeOverlapFromOtherSegmentationAnnotations', () => {
         const overriddenAnnotations = await removeOverlapFromOtherSegmentationAnnotations({
             newMask: Uint8Array.from(NEW_MASK_FIRST_PIXEL),
             annotations: [baseAnn('1', OVERLAP_FIRST_TWO_PIXELS.slice(0, MAX_MASK_PIXELS))],
-            segmentationMode: 'instance',
             sample,
             collectionId: 'c',
             updateAnnotations
@@ -59,7 +57,6 @@ describe('removeOverlapFromOtherSegmentationAnnotations', () => {
         const overriddenAnnotations = await removeOverlapFromOtherSegmentationAnnotations({
             newMask: Uint8Array.from(NEW_MASK_FIRST_PIXEL),
             annotations: [baseAnn('1', OVERLAP_FIRST_PIXEL.slice(0, MAX_MASK_PIXELS))],
-            segmentationMode: 'instance',
             sample,
             collectionId: 'c',
             lockedAnnotationIds: new Set(['1']),
@@ -71,17 +68,10 @@ describe('removeOverlapFromOtherSegmentationAnnotations', () => {
         expect(overriddenAnnotations).toEqual([]);
     });
 
-    it('clears overlapping pixels on other semantic masks and sends an update in semantic mode', async () => {
+    it('clears overlapping pixels on other instance masks and sends an update', async () => {
         const overriddenAnnotations = await removeOverlapFromOtherSegmentationAnnotations({
             newMask: Uint8Array.from(NEW_MASK_FIRST_PIXEL),
-            annotations: [
-                baseAnn(
-                    '1',
-                    OVERLAP_FIRST_TWO_PIXELS.slice(0, MAX_MASK_PIXELS),
-                    'semantic_segmentation'
-                )
-            ],
-            segmentationMode: 'semantic',
+            annotations: [baseAnn('1', OVERLAP_FIRST_TWO_PIXELS.slice(0, MAX_MASK_PIXELS))],
             sample,
             collectionId: 'c',
             updateAnnotations

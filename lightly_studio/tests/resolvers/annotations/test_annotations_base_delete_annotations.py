@@ -1,4 +1,4 @@
-"""Tests for semantic segmentation resolver."""
+"""Tests for annotation deletion resolver."""
 
 from __future__ import annotations
 

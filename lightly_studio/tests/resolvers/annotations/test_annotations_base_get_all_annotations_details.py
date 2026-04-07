@@ -40,48 +40,29 @@ def test_segmentation_details(
     db_session: Session,
     annotations_test_data: None,  # noqa: ARG001
 ) -> None:
-    """Test that object detection details are correctly loaded."""
+    """Test that segmentation details are correctly loaded."""
     annotations = annotation_resolver.get_all(
         db_session,
         filters=AnnotationsFilter(annotation_types=[AnnotationType.INSTANCE_SEGMENTATION]),
     ).annotations
 
+    details = set()
     for annotation in annotations:
         assert annotation.segmentation_details is not None
-        assert annotation.segmentation_details.x == 15.0
-        assert annotation.segmentation_details.y == 25.0
-        assert annotation.segmentation_details.width == 150.0
-        assert annotation.segmentation_details.height == 250.0
-        assert annotation.segmentation_details.segmentation_mask == [
-            1,
-            2,
-            3,
-            4,
-        ]
+        details.add(
+            (
+                annotation.segmentation_details.x,
+                annotation.segmentation_details.y,
+                annotation.segmentation_details.width,
+                annotation.segmentation_details.height,
+                tuple(annotation.segmentation_details.segmentation_mask or []),
+            )
+        )
 
-
-def test_semantic_segmentation_details(
-    db_session: Session,
-    annotations_test_data: None,  # noqa: ARG001
-) -> None:
-    """Test that semantic segmentation details are correctly loaded."""
-    annotations = annotation_resolver.get_all(
-        db_session,
-        filters=AnnotationsFilter(annotation_types=[AnnotationType.SEMANTIC_SEGMENTATION]),
-    ).annotations
-
-    for annotation in annotations:
-        assert annotation.segmentation_details is not None
-        assert annotation.segmentation_details.x == 17.0
-        assert annotation.segmentation_details.y == 27.0
-        assert annotation.segmentation_details.width == 170.0
-        assert annotation.segmentation_details.height == 270.0
-        assert annotation.segmentation_details.segmentation_mask == [
-            5,
-            6,
-            7,
-            8,
-        ]
+    assert details == {
+        (15.0, 25.0, 150.0, 250.0, (1, 2, 3, 4)),
+        (17.0, 27.0, 170.0, 270.0, (5, 6, 7, 8)),
+    }
 
 
 def test_default_ordering_by_file_path_abs(
