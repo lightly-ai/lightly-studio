@@ -216,7 +216,8 @@ export function useUsers() {
     isLoading.set(true);
     try {
       const response = await fetch("/api/users");
-      users.set(await response.json());
+      const data = await response.json();
+      users.set(data);
     } catch (err) {
       error.set(err instanceof Error ? err : new Error(String(err)));
     } finally {
@@ -250,7 +251,7 @@ export function useCounter() {
 
 // Counter.svelte
 <script lang="ts">
-  import { useCounter } from './useCounter.ts';
+  import { useCounter } from './useCounter';
   const { count, increment } = useCounter();
 </script>
 
