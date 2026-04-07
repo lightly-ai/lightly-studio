@@ -1,5 +1,6 @@
 import { createTag, addSampleIdsToTagId } from '$lib/api/lightly_studio_local';
 import type { TagView } from '$lib/services/types';
+import { get, readonly, writable } from 'svelte/store';
 import { toast } from 'svelte-sonner';
 
 interface Options {
@@ -17,10 +18,12 @@ export function useAddTagToSample({
     onRefetch,
     onTagsRefetch
 }: Options) {
-    let busy = $state(false);
+    const _busy = writable(false);
+    const busy = readonly(_busy);
 
     async function addExisting(tag: TagView) {
-        busy = true;
+        if (get(_busy)) return;
+        _busy.set(true);
         try {
             const response = await addSampleIdsToTagId({
                 path: { collection_id: collectionId, tag_id: tag.tag_id },
@@ -31,15 +34,15 @@ export function useAddTagToSample({
             toast.error('Failed to add tag. Please try again.');
             return;
         } finally {
-            busy = false;
+            _busy.set(false);
         }
         onRefetch();
     }
 
     async function createAndAdd(name: string) {
         const trimmed = name.trim();
-        if (!trimmed) return;
-        busy = true;
+        if (!trimmed || get(_busy)) return;
+        _busy.set(true);
         try {
             const response = await createTag({
                 path: { collection_id: collectionId },
@@ -57,17 +60,11 @@ export function useAddTagToSample({
             toast.error('Failed to add tag. Please try again.');
             return;
         } finally {
-            busy = false;
+            _busy.set(false);
         }
         onTagsRefetch();
         onRefetch();
     }
 
-    return {
-        get busy() {
-            return busy;
-        },
-        addExisting,
-        createAndAdd
-    };
+    return { busy, addExisting, createAndAdd };
 }

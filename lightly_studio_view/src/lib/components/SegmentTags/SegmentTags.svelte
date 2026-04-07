@@ -1,14 +1,11 @@
 <script lang="ts">
     import { Segment } from '$lib/components';
-    import { TagsIcon, Plus } from '@lucide/svelte';
+    import { TagsIcon } from '@lucide/svelte';
     import { SampleType } from '$lib/api/lightly_studio_local';
-    import * as Command from '$lib/components/ui/command/index.js';
-    import * as Popover from '$lib/components/ui/popover/index.js';
-    import { useTags } from '$lib/hooks/useTags/useTags.js';
-    import { useGlobalStorage } from '$lib/hooks/useGlobalStorage';
-    import { useAddTagToSample } from '$lib/hooks/useAddTagToSample/useAddTagToSample.svelte.js';
+    import { useTags, useGlobalStorage, useAddTagToSample } from '$lib/hooks';
     import { useRemoveTagFromSample } from '$lib/hooks/useRemoveTagFromSample/useRemoveTagFromSample';
     import { toast } from 'svelte-sonner';
+    import AddTagPopover from './AddTagPopover.svelte';
 
     interface TagItem {
         tag_id?: string;
@@ -17,17 +14,12 @@
 
     interface Props {
         tags: TagItem[];
-        collectionId?: string;
-        sampleId?: string;
+        collectionId: string;
+        sampleId: string;
         onRefetch?: () => void;
     }
 
-    let {
-        tags,
-        collectionId = '',
-        sampleId = '',
-        onRefetch = () => {}
-    }: Props = $props();
+    let { tags, collectionId, sampleId, onRefetch = () => {} }: Props = $props();
 
     const { removeTagFromSample } = useRemoveTagFromSample({ collectionId });
 
@@ -50,7 +42,11 @@
         useTags({ collection_id: collectionId, kind: [tagKind] })
     );
 
-    const addTag = useAddTagToSample({
+    const {
+        busy: addTagBusy,
+        addExisting,
+        createAndAdd
+    } = useAddTagToSample({
         collectionId,
         sampleId,
         getTagKind: () => tagKind,
@@ -62,21 +58,20 @@
         $allCollectionTags.filter((t) => !tags.some((existing) => existing.tag_id === t.tag_id))
     );
 
-    let open = $state(false);
-    let inputValue = $state('');
-
-    $effect(() => {
-        if (!open) inputValue = '';
-    });
+    const attachedTagNames = $derived(new Set(tags.map((t) => t.name.trim().toLowerCase())));
 
     function handleSelect(name: string) {
-        const existing = options.find((t) => t.name.toLowerCase() === name.toLowerCase());
+        const trimmed = name.trim();
+        const normalized = trimmed.toLowerCase();
+
+        if (attachedTagNames.has(normalized)) return;
+
+        const existing = options.find((t) => t.name.toLowerCase() === normalized);
         if (existing) {
-            void addTag.addExisting(existing);
+            void addExisting(existing);
         } else {
-            void addTag.createAndAdd(name);
+            void createAndAdd(trimmed);
         }
-        open = false;
     }
 </script>
 
@@ -101,47 +96,5 @@
         {/each}
     </div>
 
-    <Popover.Root bind:open>
-        <Popover.Trigger
-            class="mt-2 flex items-center gap-1 rounded px-1 py-0.5 text-xs text-muted-foreground transition hover:text-foreground"
-            disabled={addTag.busy}
-        >
-            <Plus class="size-3" />
-            Add tag
-        </Popover.Trigger>
-        <Popover.Content class="w-48 p-0" side="right" align="start">
-            <Command.Root>
-                <Command.Input
-                    placeholder="Tag name…"
-                    bind:value={inputValue}
-                    disabled={addTag.busy}
-                />
-                <Command.List>
-                    <Command.Empty>No tags found</Command.Empty>
-                    <Command.Group>
-                        {#each options as opt (opt.tag_id)}
-                            <Command.Item value={opt.name} onSelect={() => handleSelect(opt.name)}>
-                                {opt.name}
-                            </Command.Item>
-                        {/each}
-                    </Command.Group>
-                    {#if inputValue.trim() && options.some((t) => t.name.toLowerCase() === inputValue
-                                    .trim()
-                                    .toLowerCase()) === false}
-                        <div class="border-t">
-                            <Command.Item
-                                value="__create__"
-                                onSelect={() => handleSelect(inputValue)}
-                                forceMount
-                                keywords={[]}
-                            >
-                                <span class="opacity-50">Create:</span>
-                                <span class="ml-1 font-semibold">{inputValue.trim()}</span>
-                            </Command.Item>
-                        </div>
-                    {/if}
-                </Command.List>
-            </Command.Root>
-        </Popover.Content>
-    </Popover.Root>
+    <AddTagPopover {options} {attachedTagNames} busy={$addTagBusy} onSelect={handleSelect} />
 </Segment>
