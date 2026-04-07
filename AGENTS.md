@@ -9,21 +9,11 @@ Guidelines are stored in the `ai_guidelines` folder.
 - [Frontend](./ai_guidelines/frontend.md): Architecture overview. We use TypeScript with SvelteKit.
 - [Backend](./ai_guidelines/backend.md): Architecture overview. We use Python with FastAPI and SQLModel.
 - [Python](./ai_guidelines/python.md): Python-specific style guidelines.
-- [Contributing](../CONTRIBUTING.md): Contribution guidelines, including development setup and testing instructions.
+- [Contributing](./CONTRIBUTING.md): Contribution guidelines, including development setup and testing instructions.
 
 ## Validation
 
 ### Backend
-
-```
-cd lightly_studio_view
-make static-checks
-make test
-```
-
-Read `lightly_studio_view/Makefile` and `lightly_studio_view/package.json` for detailed commands.
-
-### Frontend
 
 ```
 cd lightly_studio
@@ -32,6 +22,16 @@ make test
 ```
 
 Read `lightly_studio/Makefile` for detailed commands.
+
+### Frontend
+
+```
+cd lightly_studio_view
+make static-checks
+make test
+```
+
+Read `lightly_studio_view/Makefile` and `lightly_studio_view/package.json` for detailed commands.
 
 ## Review Guidelines
 
