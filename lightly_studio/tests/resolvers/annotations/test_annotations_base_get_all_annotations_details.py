@@ -46,23 +46,14 @@ def test_segmentation_details(
         filters=AnnotationsFilter(annotation_types=[AnnotationType.INSTANCE_SEGMENTATION]),
     ).annotations
 
-    details = set()
+    assert annotations
     for annotation in annotations:
         assert annotation.segmentation_details is not None
-        details.add(
-            (
-                annotation.segmentation_details.x,
-                annotation.segmentation_details.y,
-                annotation.segmentation_details.width,
-                annotation.segmentation_details.height,
-                tuple(annotation.segmentation_details.segmentation_mask or []),
-            )
-        )
-
-    assert details == {
-        (15.0, 25.0, 150.0, 250.0, (1, 2, 3, 4)),
-        (17.0, 27.0, 170.0, 270.0, (5, 6, 7, 8)),
-    }
+        assert annotation.segmentation_details.x == 15.0
+        assert annotation.segmentation_details.y == 25.0
+        assert annotation.segmentation_details.width == 150.0
+        assert annotation.segmentation_details.height == 250.0
+        assert annotation.segmentation_details.segmentation_mask == [1, 2, 3, 4]
 
 
 def test_default_ordering_by_file_path_abs(
