@@ -235,7 +235,7 @@ test('Selection shows error toast when tag already exists', async ({ page, sampl
     }
 });
 
-test('Scroll position is restored when navigating back from sample details', async ({
+test('We can see clicked element when navigating back from details', async ({
     page,
     samplesPage,
     sampleDetailsPage

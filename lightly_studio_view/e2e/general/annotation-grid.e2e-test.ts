@@ -75,7 +75,7 @@ test('user can change label of an annotation grid page', async ({ annotationsPag
     );
 });
 
-test('Scroll position is restored when navigating back from annotation details', async ({
+test('We can see clicked element when navigating back from details', async ({
     page,
     annotationsPage
 }) => {

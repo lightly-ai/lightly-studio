@@ -197,7 +197,7 @@ test.describe('videos-page-flow', () => {
     });
 });
 
-test('Scroll position is restored when navigating back from sample details', async ({
+test('We can see clicked element when navigating back from details', async ({
     page,
     videosPage
 }) => {
