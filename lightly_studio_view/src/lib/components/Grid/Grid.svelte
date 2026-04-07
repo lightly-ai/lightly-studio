@@ -2,7 +2,6 @@
     import VirtualGrid from 'svelte-virtual/grid';
     import type { ComponentProps, Snippet } from 'svelte';
     import type { HTMLAttributes } from 'svelte/elements';
-    import Grid from 'svelte-virtual/grid';
 
     let viewport: HTMLElement | null = null;
     let clientWidth = $state(0);
@@ -49,20 +48,20 @@
         }
     });
 
-    let grid: ReturnType<typeof Grid> | undefined = $state();
+    let grid: ReturnType<typeof VirtualGrid> | undefined = $state();
 
     $effect(() => {
-        if (grid && scrollToIndex !== undefined && itemSize > 0 && clientHeight > 0) {
+        if (grid && itemSize > 0 && clientHeight > 0) {
             // Use requestAnimationFrame to ensure DOM is fully updated
-            requestAnimationFrame(() => {
-                grid?.scrollToIndex(scrollToIndex);
-            });
-        }
-
-        if (grid && scrollPosition !== undefined && itemSize > 0 && clientHeight > 0) {
-            requestAnimationFrame(() => {
-                grid?.scrollToPosition(scrollPosition);
-            });
+            if (scrollToIndex !== undefined) {
+                requestAnimationFrame(() => {
+                    grid?.scrollToIndex(scrollToIndex);
+                });
+            } else if (scrollPosition !== undefined) {
+                requestAnimationFrame(() => {
+                    grid?.scrollToPosition(scrollPosition);
+                });
+            }
         }
     });
 
