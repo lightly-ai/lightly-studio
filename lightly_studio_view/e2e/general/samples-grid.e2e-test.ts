@@ -1,4 +1,4 @@
-import { expect, test, pressButton } from '../utils';
+import { expect, test, pressButton, isInViewport } from '../utils';
 import { cocoDataset } from './fixtures';
 
 test('Shift+click adds the full range in image grid', async ({ samplesPage }) => {
@@ -233,4 +233,36 @@ test('Selection shows error toast when tag already exists', async ({ page, sampl
         // Close the selection dialog to reset for the next iteration.
         await pressButton(page, 'selection-dialog-cancel');
     }
+});
+
+test('Scroll position is restored when navigating back from sample details', async ({
+    page,
+    samplesPage,
+    sampleDetailsPage
+}) => {
+    await page.setViewportSize({ width: 800, height: 400 });
+
+    const gridContainer = page.getByTestId('images-grid');
+    await expect(gridContainer).toBeVisible();
+
+    expect(await isInViewport(samplesPage.getSampleByIndex(0))).toBe(true);
+    expect(await isInViewport(samplesPage.getSampleByIndex(30))).toBe(false);
+
+    await gridContainer.evaluate((element) => {
+        element.scrollBy({ top: 300, behavior: 'instant' });
+    });
+
+    expect(await isInViewport(samplesPage.getSampleByIndex(0))).toBe(false);
+    expect(await isInViewport(samplesPage.getSampleByIndex(30))).toBe(true);
+
+    await samplesPage.getSampleByIndex(30).dblclick();
+
+    await expect(sampleDetailsPage.getSampleDetails()).toBeVisible();
+
+    await page.goBack();
+
+    await expect(gridContainer).toBeVisible();
+
+    expect(await isInViewport(samplesPage.getSampleByIndex(30))).toBe(true);
+    expect(await isInViewport(samplesPage.getSampleByIndex(0))).toBe(false);
 });

@@ -71,6 +71,25 @@
         }
         prevScrollResetKey = scrollResetKey;
     });
+
+    let hasScrolledToInitialPosition = false;
+
+    // Manually scroll to position after grid is mounted and dimensions are calculated
+    $effect(() => {
+        if (
+            grid &&
+            scrollPosition &&
+            itemSize > 0 &&
+            clientHeight > 0 &&
+            !hasScrolledToInitialPosition
+        ) {
+            // Use requestAnimationFrame to ensure DOM is fully updated
+            requestAnimationFrame(() => {
+                grid?.scrollToPosition(scrollPosition);
+                hasScrolledToInitialPosition = true;
+            });
+        }
+    });
 </script>
 
 {#if status.loading}
@@ -95,7 +114,6 @@
             itemWidth={itemSize}
             height={clientHeight}
             {columnCount}
-            {scrollPosition}
             onscroll={onScroll}
             class="sample-grid-scroll overflow-y-auto dark:[color-scheme:dark]"
             style="--sample-width: {sampleItemSize}px; --sample-height: {sampleItemSize}px;"

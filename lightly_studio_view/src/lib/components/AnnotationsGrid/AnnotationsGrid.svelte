@@ -229,6 +229,25 @@
     });
     const annotationSize = $derived(Math.max(size - gridGap, 0));
     const viewportHeight = $derived(clientHeight);
+
+    let grid: ReturnType<typeof Grid> | undefined = $state();
+    let hasScrolledToInitialPosition = $state(false);
+
+    $effect(() => {
+        if (
+            grid &&
+            initialScrollPosition &&
+            size > 0 &&
+            clientHeight > 0 &&
+            !hasScrolledToInitialPosition
+        ) {
+            // Use requestAnimationFrame to ensure DOM is fully updated
+            requestAnimationFrame(() => {
+                grid?.scrollToPosition(initialScrollPosition);
+                hasScrolledToInitialPosition = true;
+            });
+        }
+    });
 </script>
 
 {#if $infiniteAnnotations.isFetched && annotations.length === 0}
@@ -249,12 +268,12 @@
         <div class="viewport flex-1">
             {#key infiniteLoaderIdentifier}
                 <Grid
+                    bind:this={grid}
                     itemCount={annotations?.length}
                     itemHeight={size}
                     itemWidth={size}
                     height={viewportHeight}
                     columnCount={itemWidth}
-                    scrollPosition={annotations.length > 0 ? initialScrollPosition : 0}
                     onscroll={handleScroll}
                     class="annotations-grid-scroll overflow-y-auto dark:[color-scheme:dark]"
                     style="--sample-width: {annotationSize}px; --sample-height: {annotationSize}px;"

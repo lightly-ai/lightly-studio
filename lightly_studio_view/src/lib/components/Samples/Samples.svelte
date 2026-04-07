@@ -226,6 +226,7 @@
     overScan={sampleGridOverscan}
     scrollPosition={initialScrollPosition}
     scrollResetKey={$textEmbedding?.queryText ?? ''}
+    testId="images-grid"
     onScroll={handleScroll}
     message={{
         loading: 'Loading samples...',

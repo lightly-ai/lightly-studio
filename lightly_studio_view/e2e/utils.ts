@@ -301,3 +301,16 @@ export async function setNetworkThrottling(page: Page, preset: NetworkPreset): P
     const client = await page.context().newCDPSession(page);
     await client.send('Network.emulateNetworkConditions', NETWORK_PRESETS[preset]);
 }
+
+// Helper function to check if element is in viewport (like IntersectionObserver).
+export const isInViewport = async (element: Locator) => {
+    return await element.evaluate((el: Element) => {
+        const rect = el.getBoundingClientRect();
+        return (
+            rect.top >= 0 &&
+            rect.left >= 0 &&
+            rect.bottom <= (window.innerHeight || document.documentElement.clientHeight) &&
+            rect.right <= (window.innerWidth || document.documentElement.clientWidth)
+        );
+    });
+};

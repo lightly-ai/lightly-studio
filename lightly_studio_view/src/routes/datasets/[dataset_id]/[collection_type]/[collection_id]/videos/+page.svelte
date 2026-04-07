@@ -14,6 +14,8 @@
     import { isEqual, omit } from 'lodash-es';
     import { get } from 'svelte/store';
     import { selectRangeByAnchor } from '$lib/utils/selectRangeByAnchor';
+    import { onMount } from 'svelte';
+    import { useScrollRestoration } from '$lib/hooks/useScrollRestoration/useScrollRestoration';
 
     const collectionId = $derived($page.params.collection_id!);
     const { tagsSelected } = $derived.by(() =>
@@ -142,6 +144,19 @@
                 toggleSampleSelection(selectedSampleId, collectionId)
         });
     }
+
+    const filterHash = $derived(JSON.stringify($filterParams));
+    const { initialize, savePosition, getRestoredPosition } = useScrollRestoration('frames_scroll');
+    onMount(async () => {
+        initialize();
+    });
+
+    const initialScrollPosition = $derived(getRestoredPosition(filterHash));
+
+    function handleScroll(event: Event) {
+        const scrollTop = (event.target as HTMLElement).scrollTop;
+        savePosition(scrollTop, filterHash);
+    }
 </script>
 
 <div class="flex flex-1 flex-col space-y-4">
@@ -149,6 +164,8 @@
         itemCount={items.length}
         overScan={20}
         scrollResetKey={$textEmbedding?.queryText ?? ''}
+        onScroll={handleScroll}
+        scrollPosition={initialScrollPosition}
         testId="video-grid"
         message={{
             loading: 'Loading videos...',
