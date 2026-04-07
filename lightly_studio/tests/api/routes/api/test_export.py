@@ -113,7 +113,7 @@ def test_export_collection_instance_segmentations(
 
     response = test_client.get(
         f"/api/collections/{collection.collection_id}/export/annotations",
-        params={"annotation_type": "instance_segmentation"},
+        params={"export_format": "segmentation_mask_coco"},
     )
 
     assert response.status_code == HTTP_STATUS_OK
@@ -138,7 +138,7 @@ def test_export_collection_instance_segmentations(
     )
 
 
-def test_export_collection_semantic_segmentations(
+def test_export_collection_pascalvoc_from_instance_segmentations(
     db_session: Session,
     test_client: TestClient,
 ) -> None:
@@ -159,7 +159,7 @@ def test_export_collection_semantic_segmentations(
         annotations=[
             AnnotationCreate(
                 annotation_label_id=label.annotation_label_id,
-                annotation_type=AnnotationType.SEMANTIC_SEGMENTATION,
+                annotation_type=AnnotationType.INSTANCE_SEGMENTATION,
                 parent_sample_id=image.sample_id,
                 x=1,
                 y=0,
@@ -172,7 +172,7 @@ def test_export_collection_semantic_segmentations(
 
     response = test_client.get(
         f"/api/collections/{collection.collection_id}/export/annotations",
-        params={"annotation_type": "semantic_segmentation"},
+        params={"export_format": "pascal_voc"},
     )
 
     assert response.status_code == HTTP_STATUS_OK
@@ -282,7 +282,7 @@ def test_export_collection_youtube_vis(
         tracks=[
             ObjectTrackCreate(
                 object_track_number=99,
-                root_collection_id=collection.collection_id,
+                dataset_id=collection.dataset_id,
             )
         ],
     )[0]
@@ -308,7 +308,7 @@ def test_export_collection_youtube_vis(
 
     response = test_client.get(
         f"/api/collections/{collection.collection_id}/export/youtube-vis",
-        params={"annotation_type": "instance_segmentation"},
+        params={"export_format": "youtube_vis_segmentation"},
     )
 
     assert response.status_code == HTTP_STATUS_OK
@@ -356,20 +356,20 @@ def test_export_collection_youtube_vis__wrong_collection_type(
     collection = create_collection(session=db_session)
     response = test_client.get(
         f"/api/collections/{collection.collection_id}/export/youtube-vis",
-        params={"annotation_type": "instance_segmentation"},
+        params={"export_format": "youtube_vis_segmentation"},
     )
 
     assert response.status_code == HTTP_STATUS_BAD_REQUEST
 
 
-def test_export_collection_youtube_vis__wrong_annotation_type(
+def test_export_collection_youtube_vis__wrong_export_format(
     db_session: Session,
     test_client: TestClient,
 ) -> None:
     collection = create_collection(session=db_session, sample_type=SampleType.VIDEO)
     response = test_client.get(
         f"/api/collections/{collection.collection_id}/export/youtube-vis",
-        params={"annotation_type": "object_detection"},
+        params={"export_format": "object_detection_coco"},
     )
 
     assert response.status_code == HTTP_STATUS_BAD_REQUEST

@@ -21,8 +21,8 @@ class ObjectTrackTable(SQLModel, table=True):
     # Numeric identifier for the object track.
     object_track_number: int
 
-    # The root collection the object track belongs to.
-    root_collection_id: UUID = Field(foreign_key="collection.collection_id")
+    # The dataset the object track belongs to.
+    dataset_id: UUID = Field(foreign_key="dataset.dataset_id")
 
 
 class ObjectTrackView(BaseModel):
@@ -32,14 +32,14 @@ class ObjectTrackView(BaseModel):
 
     object_track_id: UUID
     object_track_number: int
-    root_collection_id: UUID
+    dataset_id: UUID
 
 
 class ObjectTrackCreate(SQLModel):
     """Input model for creating an object track."""
 
     object_track_number: int
-    root_collection_id: UUID
+    dataset_id: UUID
 
 
 class ObjectTrackWithCountView(BaseModel):

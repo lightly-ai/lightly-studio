@@ -98,7 +98,12 @@ def deep_copy(
     # 3. Copy collection-scoped entities.
     old_collection_ids = list(ctx.collection_map.keys())
     _copy_tags(session=session, old_collection_ids=old_collection_ids, ctx=ctx)
-    _copy_object_tracks(session=session, old_collection_ids=old_collection_ids, ctx=ctx)
+    _copy_object_tracks(
+        session=session,
+        old_dataset_id=dataset_id,
+        new_dataset_id=new_dataset_id,
+        ctx=ctx,
+    )
     _copy_annotation_labels(session=session, root_collection_id=root_collection_id, ctx=ctx)
     _copy_embedding_models(session=session, old_collection_ids=old_collection_ids, ctx=ctx)
     _copy_samples(session=session, old_collection_ids=old_collection_ids, ctx=ctx)
@@ -379,14 +384,13 @@ def _copy_captions(
 
 def _copy_object_tracks(
     session: Session,
-    old_collection_ids: list[UUID],
+    old_dataset_id: UUID,
+    new_dataset_id: UUID,
     ctx: DeepCopyContext,
 ) -> None:
-    """Copy object tracks, remapping collection_id."""
+    """Copy object tracks, remapping dataset ID."""
     tracks = session.exec(
-        select(ObjectTrackTable).where(
-            col(ObjectTrackTable.root_collection_id).in_(old_collection_ids)
-        )
+        select(ObjectTrackTable).where(col(ObjectTrackTable.dataset_id) == old_dataset_id)
     ).all()
 
     for old_track in tracks:
@@ -397,7 +401,7 @@ def _copy_object_tracks(
             {
                 "object_track_id": new_track_id,
                 "object_track_number": old_track.object_track_number,
-                "root_collection_id": ctx.collection_map[old_track.root_collection_id],
+                "dataset_id": new_dataset_id,
             },
         )
         session.add(new_track)

@@ -19,8 +19,8 @@ from lightly_studio.core.dataset_query.dataset_query import DatasetQuery
 from lightly_studio.core.video.video_sample import VideoSample
 from lightly_studio.db_manager import SessionDep
 from lightly_studio.export import export_dataset, export_video_dataset
-from lightly_studio.models.annotation.annotation_base import AnnotationType
 from lightly_studio.models.collection import CollectionTable, SampleType
+from lightly_studio.models.export_format import ExportFormat
 from lightly_studio.resolvers import collection_resolver
 from lightly_studio.resolvers.collection_resolver.export import ExportFilter
 
@@ -36,9 +36,9 @@ def export_collection_annotations(
         Depends(collection_api.get_and_validate_collection_id),
     ],
     session: SessionDep,
-    annotation_type: AnnotationType = AnnotationType.OBJECT_DETECTION,
+    export_format: ExportFormat = ExportFormat.OBJECT_DETECTION_COCO,
 ) -> StreamingResponse:
-    """Export collection annotations for an object detection task in COCO format."""
+    """Export collection annotations in the selected export format."""
     # Query to export - all samples in the collection.
     dataset_query = DatasetQuery(dataset=collection, session=session)
 
@@ -46,7 +46,7 @@ def export_collection_annotations(
     # because the directory should be deleted only after the file has finished streaming.
     temp_dir = TemporaryDirectory()
 
-    if annotation_type == AnnotationType.OBJECT_DETECTION:
+    if export_format == ExportFormat.OBJECT_DETECTION_COCO:
         output_path = PathlibPath(temp_dir.name) / "coco_export.json"
         try:
             export_dataset.to_coco_object_detections(
@@ -59,7 +59,7 @@ def export_collection_annotations(
             temp_dir.cleanup()
             # Reraise.
             raise
-    elif annotation_type == AnnotationType.INSTANCE_SEGMENTATION:
+    elif export_format == ExportFormat.SEGMENTATION_MASK_COCO:
         output_path = PathlibPath(temp_dir.name) / "coco_instance_segmentation_export.json"
 
         try:
@@ -73,11 +73,11 @@ def export_collection_annotations(
             temp_dir.cleanup()
             # Reraise.
             raise
-    elif annotation_type == AnnotationType.SEMANTIC_SEGMENTATION:
+    elif export_format == ExportFormat.PASCAL_VOC:
         output_path = PathlibPath(temp_dir.name) / "pascalvoc"
 
         try:
-            export_dataset.to_pascalvoc_semantic_segmentation(
+            export_dataset.to_pascalvoc_instance_segmentation(
                 session=session,
                 root_collection_id=collection.collection_id,
                 samples=dataset_query,
@@ -88,7 +88,7 @@ def export_collection_annotations(
             # Reraise.
             raise
 
-        # For semantic segmentation, the exporter produces a Pascal VOC directory,
+        # For Pascal VOC export, the exporter produces a directory,
         # so this route should stream the folder as a .zip instead of streaming a single file.
         return StreamingResponse(
             content=_stream_export_dir(
@@ -101,8 +101,11 @@ def export_collection_annotations(
                 "Content-Disposition": f"attachment; filename={output_path.name}.zip",
             },
         )
-    elif annotation_type == AnnotationType.CLASSIFICATION:
-        raise NotImplementedError
+    else:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Export format '{export_format.value}' is not supported for this endpoint.",
+        )
 
     return StreamingResponse(
         content=_stream_export_file(
@@ -247,18 +250,18 @@ def export_collection_youtube_vis(
         Depends(collection_api.get_and_validate_collection_id),
     ],
     session: SessionDep,
-    annotation_type: AnnotationType = AnnotationType.INSTANCE_SEGMENTATION,
+    export_format: ExportFormat = ExportFormat.YOUTUBE_VIS_SEGMENTATION,
 ) -> StreamingResponse:
-    """Export collection video annotations in YouTube-VIS instance segmentation format."""
+    """Export collection video annotations in the selected export format."""
     if collection.sample_type != SampleType.VIDEO:
         raise HTTPException(
             status_code=400, detail="YouTube-VIS export is only supported for video collections."
         )
 
-    if annotation_type != AnnotationType.INSTANCE_SEGMENTATION:
+    if export_format != ExportFormat.YOUTUBE_VIS_SEGMENTATION:
         raise HTTPException(
             status_code=400,
-            detail="Only instance segmentation annotations can be exported in YouTube-VIS format.",
+            detail="Only YouTube-VIS segmentation format is supported for this endpoint.",
         )
     dataset_query = DatasetQuery(dataset=collection, session=session, sample_class=VideoSample)
 
