@@ -15,6 +15,7 @@ const DEFAULT_SETTINGS: SettingView = {
     key_toggle_edit_mode: 'e',
     show_annotation_text_labels: false,
     show_sample_filenames: true,
+    show_bounding_boxes_for_segmentation: true,
     created_at: new Date().toISOString(),
     updated_at: new Date().toISOString(),
     key_toolbar_selection: 's',
@@ -45,6 +46,11 @@ const showAnnotationTextLabelsStore = derived(
 const showSampleFilenamesStore = derived(
     settingsStore,
     ($settings) => $settings.show_sample_filenames ?? true
+);
+
+const showBoundingBoxesForSegmentationStore = derived(
+    settingsStore,
+    ($settings) => $settings.show_bounding_boxes_for_segmentation ?? true
 );
 
 // Initialize settings by loading from API
@@ -101,6 +107,10 @@ const saveSettings = async (
                 updatedSettings.show_sample_filenames !== undefined
                     ? updatedSettings.show_sample_filenames
                     : (currentSettings.show_sample_filenames ?? true),
+            show_bounding_boxes_for_segmentation:
+                updatedSettings.show_bounding_boxes_for_segmentation !== undefined
+                    ? updatedSettings.show_bounding_boxes_for_segmentation
+                    : (currentSettings.show_bounding_boxes_for_segmentation ?? true),
             created_at: currentSettings.created_at || new Date().toISOString(),
             updated_at: new Date().toISOString(),
             key_toolbar_selection:
@@ -222,6 +232,7 @@ export function useSettings() {
         gridViewSampleRenderingStore,
         showAnnotationTextLabelsStore,
         showSampleFilenamesStore,
+        showBoundingBoxesForSegmentationStore,
 
         // Functions
         initSettings,
