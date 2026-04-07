@@ -1,5 +1,6 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { render } from '@testing-library/svelte';
+import { tick, type ComponentProps } from 'svelte';
 import GridTestWrapper from './GridTestWrapper.test.svelte';
 
 class MockResizeObserver {
@@ -29,7 +30,14 @@ class MockResizeObserver {
     disconnect() {}
 }
 
+type GridProps = ComponentProps<typeof GridTestWrapper>;
+
 describe('Grid', () => {
+    const defaultProps: GridProps = {
+        itemCount: 100,
+        columnCount: 3,
+        gridItem: vi.fn()
+    };
     beforeEach(() => {
         global.ResizeObserver = MockResizeObserver as unknown as typeof ResizeObserver;
 
@@ -116,5 +124,77 @@ describe('Grid', () => {
             // Should be able to scroll and see grid-item-19
             expect(item19).toBeInTheDocument();
         }
+    });
+
+    it('calls onScroll callback when scrolling', async () => {
+        const onScroll = vi.fn();
+        const { container } = render(GridTestWrapper, { onScroll, ...defaultProps });
+
+        const gridScroll = container.querySelector('.grid-scroll');
+        expect(gridScroll).toBeInTheDocument();
+
+        if (gridScroll) {
+            Object.defineProperty(gridScroll, 'scrollTop', {
+                writable: true,
+                configurable: true,
+                value: 100
+            });
+
+            const scrollEvent = new Event('scroll');
+            gridScroll.dispatchEvent(scrollEvent);
+
+            await new Promise((resolve) => setTimeout(resolve, 50));
+
+            expect(onScroll).toHaveBeenCalled();
+        }
+    });
+
+    it('scrolls to index when scrollToIndex is provided', async () => {
+        vi.clearAllMocks();
+        render(GridTestWrapper, { scrollToIndex: 10, ...defaultProps });
+
+        await new Promise((resolve) => setTimeout(resolve, 100));
+
+        // scrollTo should have been called due to scrollToIndex
+        expect(Element.prototype.scrollTo).toHaveBeenCalled();
+    });
+
+    it('scrolls to position when scrollPosition is provided', async () => {
+        vi.clearAllMocks();
+        render(GridTestWrapper, { scrollPosition: 500, ...defaultProps });
+
+        await new Promise((resolve) => setTimeout(resolve, 100));
+
+        // scrollTo should have been called with the target position
+        expect(Element.prototype.scrollTo).toHaveBeenCalled();
+    });
+
+    it('calls scrollToIndex on underlying grid when scrollToIndex prop is provided', async () => {
+        vi.clearAllMocks();
+        render(GridTestWrapper, {
+            scrollToIndex: 5,
+            ...defaultProps
+        } as ComponentProps<typeof GridTestWrapper>);
+
+        await tick();
+        await new Promise((resolve) => setTimeout(resolve, 100));
+
+        // scrollTo should have been called at least once due to scrollToIndex
+        expect(Element.prototype.scrollTo).toHaveBeenCalled();
+    });
+
+    it('calls scrollToPosition on underlying grid when scrollPosition prop is provided', async () => {
+        vi.clearAllMocks();
+        render(GridTestWrapper, {
+            itemCount: 100,
+            columnCount: 3,
+            scrollPosition: 100
+        } as ComponentProps<typeof GridTestWrapper>);
+
+        await tick();
+        await new Promise((resolve) => setTimeout(resolve, 100));
+
+        // scrollTo should have been called at least once due to scrollPosition
+        expect(Element.prototype.scrollTo).toHaveBeenCalled();
     });
 });

@@ -2,21 +2,25 @@
     import VirtualGrid from 'svelte-virtual/grid';
     import type { ComponentProps, Snippet } from 'svelte';
     import type { HTMLAttributes } from 'svelte/elements';
+    import Grid from 'svelte-virtual/grid';
 
     let viewport: HTMLElement | null = null;
     let clientWidth = $state(0);
     const GRID_GAP = 20;
 
     const {
-        columnCount,
+        columnCount = 4,
         itemCount,
         gridItem,
         footerItem,
         viewportProps,
-        gridProps
+        gridProps,
+        scrollToIndex,
+        scrollPosition,
+        onScroll
     }: {
         /** Number of columns in the grid */
-        columnCount: number;
+        columnCount?: number;
         /** Total number of items to display */
         itemCount: number;
         /** Snippet to render each grid item. Receives index, style, width, and height */
@@ -27,6 +31,10 @@
         viewportProps?: HTMLAttributes<HTMLDivElement>;
         /** Additional props to pass to the VirtualGrid component */
         gridProps?: Partial<ComponentProps<typeof VirtualGrid>>;
+
+        scrollToIndex?: number;
+        scrollPosition?: number;
+        onScroll?: (event: Event) => void;
     } = $props();
 
     $effect(() => {
@@ -38,6 +46,23 @@
             });
             resizeObserver.observe(viewport);
             return () => resizeObserver.disconnect();
+        }
+    });
+
+    let grid: ReturnType<typeof Grid> | undefined = $state();
+
+    $effect(() => {
+        if (grid && scrollToIndex !== undefined && itemSize > 0 && clientHeight > 0) {
+            // Use requestAnimationFrame to ensure DOM is fully updated
+            requestAnimationFrame(() => {
+                grid?.scrollToIndex(scrollToIndex);
+            });
+        }
+
+        if (grid && scrollPosition !== undefined && itemSize > 0 && clientHeight > 0) {
+            requestAnimationFrame(() => {
+                grid?.scrollToPosition(scrollPosition);
+            });
         }
     });
 
@@ -56,9 +81,11 @@
         itemHeight={itemSize + GRID_GAP}
         itemWidth={itemSize + GRID_GAP}
         height={clientHeight}
+        onscroll={onScroll}
         {itemCount}
         {columnCount}
         {...gridProps}
+        bind:this={grid}
     >
         {#snippet item({ index, style })}
             {@render gridItem({
