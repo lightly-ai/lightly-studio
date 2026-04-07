@@ -36,16 +36,6 @@
         metadataItem
     }: Props = $props();
 
-    const tags = $derived(
-        sample.tags
-            ? sample.tags.reduce((accumulator: { tagId: string; name: string }[], tag) => {
-                  if (tag.tag_id) {
-                      accumulator.push({ tagId: tag.tag_id, name: tag.name });
-                  }
-                  return accumulator;
-              }, [])
-            : []
-    );
     const { context: annotationLabelContext } = useAnnotationLabelContext();
 
     // Auto-scroll to selected annotation
@@ -72,7 +62,13 @@
         <div
             class="flex h-full min-h-0 flex-col space-y-4 overflow-y-auto dark:[color-scheme:dark]"
         >
-            <SegmentTags {tags} onClick={onRemoveTag} />
+            <SegmentTags
+                tags={sample.tags ?? []}
+                {collectionId}
+                sampleId={sample.sample_id}
+                onRemoveTag={onRemoveTag}
+                onRefetch={onUpdate}
+            />
             {#if sample.annotations}
                 <SampleDetailsAnnotationSegment
                     bind:annotationsIdsToHide

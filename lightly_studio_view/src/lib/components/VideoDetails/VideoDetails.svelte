@@ -178,7 +178,7 @@
             <CardContent className="h-full overflow-y-auto">
                 {@const tags = video?.sample?.tags ?? []}
                 {#if tags.length > 0}
-                    <SegmentTags {tags} onClick={deleteTag} />
+                    <SegmentTags {tags} onRemoveTag={deleteTag} />
                 {/if}
                 <VideoSampleMetadata {video} />
                 <MetadataSegment metadata_dict={(video?.sample as SampleView).metadata_dict} />

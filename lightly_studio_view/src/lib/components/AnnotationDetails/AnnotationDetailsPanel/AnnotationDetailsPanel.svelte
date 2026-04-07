@@ -70,7 +70,13 @@
         <div
             class="flex h-full min-h-0 flex-col space-y-4 overflow-hidden dark:[color-scheme:dark]"
         >
-            <SegmentTags {tags} onClick={onRemoveTag} />
+            <SegmentTags
+                {tags}
+                {collectionId}
+                sampleId={annotation.sample_id}
+                onRemoveTag={onRemoveTag}
+                onRefetch={onUpdate}
+            />
             <AnnotationMetadata {annotation} {onUpdate} />
 
             {@render children()}
