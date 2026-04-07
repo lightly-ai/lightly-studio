@@ -19,6 +19,7 @@
         GripVertical
     } from '@lucide/svelte';
     import { onDestroy, onMount } from 'svelte';
+    import { fly } from 'svelte/transition';
     import { get, toStore } from 'svelte/store';
     import { toast } from 'svelte-sonner';
     import { Header } from '$lib/components';
@@ -82,7 +83,18 @@
     // Use hideAnnotations hook
     const { handleKeyEvent } = useHideAnnotations();
 
-    const { retrieveParentCollection, collections } = useGlobalStorage();
+    const {
+        retrieveParentCollection,
+        collections,
+        getSelectedSampleIds,
+        selectedSampleAnnotationCropIds
+    } = useGlobalStorage();
+
+    const selectedSampleIds = $derived(getSelectedSampleIds(collectionId));
+    const selectedAnnotationCropIds = $derived(
+        $selectedSampleAnnotationCropIds[collectionId] ?? new Set<string>()
+    );
+    const selectedCount = $derived($selectedSampleIds.size + selectedAnnotationCropIds.size);
 
     const parentCollection = $derived.by(() =>
         retrieveParentCollection($collections, collectionId)
@@ -472,6 +484,33 @@
     );
 </script>
 
+{#snippet selectionPanel()}
+    {#if selectedCount > 0}
+        <div
+            class="pointer-events-none absolute bottom-4 left-1/2 z-30 -translate-x-1/2"
+            transition:fly={{ y: 20, duration: 200 }}
+        >
+            <div
+                class="pointer-events-auto flex items-center gap-3 rounded-full border border-primary/30 bg-primary/90 px-4 py-2 shadow-lg backdrop-blur-sm"
+            >
+                <span class="text-sm font-medium text-primary-foreground">
+                    {selectedCount} selected
+                </span>
+                <button
+                    class="flex h-6 w-6 items-center justify-center rounded-full text-primary-foreground opacity-70 transition-opacity hover:opacity-100"
+                    onclick={() => {
+                        clearSelectedSamples(collectionId);
+                        clearSelectedSampleAnnotationCrops(collectionId);
+                    }}
+                    data-testid="clear-selection-button"
+                >
+                    <X class="h-4 w-4" />
+                </button>
+            </div>
+        </div>
+    {/if}
+{/snippet}
+
 <div class="flex-none">
     <Header {collection} />
     <MenuDialogHost {isSamples} {isVideos} {hasEmbeddings} {collection} />
@@ -522,7 +561,9 @@
                 <!-- When plot is shown, use PaneGroup for the main content + plot -->
                 <PaneGroup direction="horizontal" class="flex-1">
                     <Pane defaultSize={50} minSize={30} class="flex">
-                        <div class="flex flex-1 flex-col space-y-4 rounded-[1vw] bg-card p-4">
+                        <div
+                            class="relative flex flex-1 flex-col space-y-4 rounded-[1vw] bg-card p-4"
+                        >
                             <GridHeader>
                                 <div class="flex-1">
                                     {#if hasEmbeddings}
@@ -615,6 +656,7 @@
                             <div class="flex min-h-0 flex-1 overflow-hidden">
                                 {@render children()}
                             </div>
+                            {@render selectionPanel()}
                         </div>
                     </Pane>
 
@@ -634,7 +676,7 @@
                 </PaneGroup>
             {:else}
                 <!-- When plot is hidden or not samples view, show normal layout -->
-                <div class="flex flex-1 flex-col space-y-4 rounded-[1vw] bg-card p-4 pb-2">
+                <div class="relative flex flex-1 flex-col space-y-4 rounded-[1vw] bg-card p-4 pb-2">
                     {#if isSamples || isAnnotations || isVideos || isGroups}
                         <GridHeader>
                             {#snippet auxControls()}
@@ -741,6 +783,7 @@
                     <div class="flex min-h-0 flex-1">
                         {@render children()}
                     </div>
+                    {@render selectionPanel()}
                 </div>
             {/if}
             {#if hasEmbeddings}
