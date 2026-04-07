@@ -46,12 +46,12 @@ Use the layers with the following intent:
 
 Thin endpoints may call resolvers directly. Services are mainly for cross-entity operations, not as a mandatory wrapper around every route.
 
-## Runtime and persistence
+## Runtime, persistence and the database
 
 - `db_manager.py` centralizes engine and session management.
-- The backend supports DuckDB by default and PostgreSQL as an alternative backend.
 - FastAPI dependencies provide short-lived sessions for request handling.
 - The app lifespan also initializes and shuts down plugins, then closes the database engine cleanly.
+- Python API classes in `core/` use a long-lived `db_manager.persistent_session()`. Currently this is a design limitation, causing issues with DuckDB's single-writer model.
 
 ## Build and generated artifacts
 
