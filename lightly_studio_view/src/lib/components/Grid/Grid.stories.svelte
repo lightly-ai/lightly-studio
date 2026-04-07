@@ -11,7 +11,16 @@
     });
 </script>
 
-<Story name="Base example" args={{ itemCount: 100, onScroll: fn() }}>
+<Story
+    name="Base example"
+    args={{
+        itemCount: 100,
+        gridProps: {
+            scrollPosition: 400
+        },
+        onScroll: fn()
+    }}
+>
     {#snippet template(args)}
         <Grid {...args}>
             {#snippet gridItem({ index, style, width, height })}
