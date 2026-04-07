@@ -16,10 +16,7 @@ const NEW_MASK_FIRST_PIXEL = Uint8Array.from([1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
 const OVERLAP_FIRST_TWO_PIXELS = [1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
 const OVERLAP_FIRST_PIXEL = [1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
 
-const baseAnn = (
-    id: string,
-    mask: number[]
-): AnnotationView =>
+const baseAnn = (id: string, mask: number[]): AnnotationView =>
     ({
         sample_id: id,
         annotation_type: 'instance_segmentation',

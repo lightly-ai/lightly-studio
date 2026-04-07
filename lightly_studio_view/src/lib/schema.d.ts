@@ -353,7 +353,7 @@ export interface paths {
         };
         /**
          * Export Collection Youtube Vis
-         * @description Export collection video annotations in YouTube-VIS instance segmentation format.
+         * @description Export collection video annotations in the selected export format.
          */
         get: operations["export_collection_youtube_vis"];
         put?: never;

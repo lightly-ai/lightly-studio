@@ -18,9 +18,7 @@
         segmentation_mask?: undefined;
     };
 
-    type AnnotationCanvasAnnotation =
-        | InstanceAnnotation
-        | ObjectDetectionAnnotation;
+    type AnnotationCanvasAnnotation = InstanceAnnotation | ObjectDetectionAnnotation;
 
     const {
         width,

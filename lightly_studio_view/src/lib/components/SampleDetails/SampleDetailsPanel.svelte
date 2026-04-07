@@ -225,9 +225,7 @@
 
         // If user navigates from mask editing to a non-segmentation annotation,
         // force toolbar state back to a safe default.
-        if (
-            currentAnnotationType !== AnnotationType.INSTANCE_SEGMENTATION
-        ) {
+        if (currentAnnotationType !== AnnotationType.INSTANCE_SEGMENTATION) {
             sampleDetailsToolbarContext.status = 'cursor';
             sampleDetailsToolbarContext.brush.mode = 'brush';
         }
