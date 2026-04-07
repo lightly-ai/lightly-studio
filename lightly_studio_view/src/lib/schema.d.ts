@@ -273,7 +273,7 @@ export interface paths {
         };
         /**
          * Export Collection Annotations
-         * @description Export collection annotations for an object detection task in COCO format.
+         * @description Export collection annotations in the selected export format.
          */
         get: operations["export_collection_annotations"];
         put?: never;
@@ -2470,6 +2470,12 @@ export interface components {
             annotation_ids?: string[] | null;
         };
         /**
+         * ExportFormat
+         * @description Supported export formats for API export endpoints.
+         * @enum {string}
+         */
+        ExportFormat: "object_detection_coco" | "segmentation_mask_coco" | "pascal_voc" | "youtube_vis_segmentation";
+        /**
          * FilterDimensions
          * @description Encapsulates dimension-based filter parameters for querying samples.
          */
@@ -4167,7 +4173,7 @@ export interface operations {
     export_collection_annotations: {
         parameters: {
             query?: {
-                annotation_type?: components["schemas"]["AnnotationType"];
+                export_format?: components["schemas"]["ExportFormat"];
             };
             header?: never;
             path: {
@@ -4301,7 +4307,7 @@ export interface operations {
     export_collection_youtube_vis: {
         parameters: {
             query?: {
-                annotation_type?: components["schemas"]["AnnotationType"];
+                export_format?: components["schemas"]["ExportFormat"];
             };
             header?: never;
             path: {
