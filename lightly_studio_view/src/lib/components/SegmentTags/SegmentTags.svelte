@@ -55,7 +55,14 @@
     });
 
     const options = $derived(
-        $allCollectionTags.filter((t) => !tags.some((existing) => existing.tag_id === t.tag_id))
+        $allCollectionTags.filter(
+            (t) =>
+                !tags.some(
+                    (existing) =>
+                        existing.tag_id === t.tag_id ||
+                        existing.name.trim().toLowerCase() === t.name.trim().toLowerCase()
+                )
+        )
     );
 
     const attachedTagNames = $derived(new Set(tags.map((t) => t.name.trim().toLowerCase())));
