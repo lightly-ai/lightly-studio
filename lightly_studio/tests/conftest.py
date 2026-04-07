@@ -351,44 +351,17 @@ def annotations_test_data(
     samples_assigned_with_tags: tuple[list[ImageTable], list[TagTable]],
 ) -> AnnotationsTestData:
     """Create test data in test database."""
-    annotation_variants: list[tuple[AnnotationType, dict[str, Any]]] = [
-        (AnnotationType.CLASSIFICATION, {}),
-        (
-            AnnotationType.OBJECT_DETECTION,
-            {
-                "x": 10,
-                "y": 20,
-                "width": 100,
-                "height": 200,
-            },
-        ),
-        (
-            AnnotationType.INSTANCE_SEGMENTATION,
-            {
-                "x": 15,
-                "y": 25,
-                "width": 150,
-                "height": 250,
-                "segmentation_mask": [1, 2, 3, 4],
-            },
-        ),
-        (
-            AnnotationType.INSTANCE_SEGMENTATION,
-            {
-                "x": 17,
-                "y": 27,
-                "width": 170,
-                "height": 270,
-                "segmentation_mask": [5, 6, 7, 8],
-            },
-        ),
+    annotation_types: list[AnnotationType] = [
+        AnnotationType.CLASSIFICATION,
+        AnnotationType.OBJECT_DETECTION,
+        AnnotationType.INSTANCE_SEGMENTATION,
     ]
 
     annotations_to_create_first_collection: list[AnnotationCreate] = []
     annotations_to_create_second_collection: list[AnnotationCreate] = []
 
-    # create annotation for every annotation variant
-    for annotation_type, annotation_details in annotation_variants:
+    # Create annotation for every annotation type.
+    for annotation_type in annotation_types:
         # Create 3 annotations for each type
         for i in range(3):
             # We distribute annotation labels across the annotations
@@ -403,8 +376,17 @@ def annotations_test_data(
                 parent_sample_id=samples[i % 2].sample_id,
                 annotation_type=annotation_type,
             )
-            for field_name, field_value in annotation_details.items():
-                setattr(annotation, field_name, field_value)
+            if annotation_type == AnnotationType.OBJECT_DETECTION:
+                annotation.x = 10
+                annotation.y = 20
+                annotation.width = 100
+                annotation.height = 200
+            elif annotation_type == AnnotationType.INSTANCE_SEGMENTATION:
+                annotation.x = 15
+                annotation.y = 25
+                annotation.width = 150
+                annotation.height = 250
+                annotation.segmentation_mask = [1, 2, 3, 4]
             if i % 2 == 0:
                 annotations_to_create_first_collection.append(annotation)
             else:

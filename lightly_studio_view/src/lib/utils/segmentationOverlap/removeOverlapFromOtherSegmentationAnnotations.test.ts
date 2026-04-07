@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import type { AnnotationView } from '$lib/api/lightly_studio_local';
+import type { AnnotationUpdateInput, AnnotationView } from '$lib/api/lightly_studio_local';
 import { removeOverlapFromOtherSegmentationAnnotations } from './removeOverlapFromOtherSegmentationAnnotations';
 
 vi.mock('$lib/components/SampleAnnotation/utils', () => ({
@@ -45,7 +45,7 @@ describe('removeOverlapFromOtherSegmentationAnnotations', () => {
 
         // In instance mode, one-pixel ownership is enforced across instance masks.
         expect(updateAnnotations).toHaveBeenCalledTimes(1);
-        const [updates] = updateAnnotations.mock.calls[0];
+        const [updates] = updateAnnotations.mock.calls[0] as [AnnotationUpdateInput[]];
         expect(updates[0].annotation_id).toBe('1');
         expect(overriddenAnnotations.map((annotation) => annotation.sample_id)).toEqual(['1']);
     });
@@ -65,19 +65,22 @@ describe('removeOverlapFromOtherSegmentationAnnotations', () => {
         expect(overriddenAnnotations).toEqual([]);
     });
 
-    it('clears overlapping pixels on other instance masks and sends an update', async () => {
+    it('updates all overlapping instance masks in one request', async () => {
         const overriddenAnnotations = await removeOverlapFromOtherSegmentationAnnotations({
             newMask: Uint8Array.from(NEW_MASK_FIRST_PIXEL),
-            annotations: [baseAnn('1', OVERLAP_FIRST_TWO_PIXELS.slice(0, MAX_MASK_PIXELS))],
+            annotations: [
+                baseAnn('1', OVERLAP_FIRST_TWO_PIXELS.slice(0, MAX_MASK_PIXELS)),
+                baseAnn('2', OVERLAP_FIRST_PIXEL.slice(0, MAX_MASK_PIXELS))
+            ],
             sample,
             collectionId: 'c',
             updateAnnotations
         });
 
-        // Only one annotation overlaps; expect a single update payload.
+        // Multiple overlaps should be batched into a single update call.
         expect(updateAnnotations).toHaveBeenCalledTimes(1);
-        const [updates] = updateAnnotations.mock.calls[0];
-        expect(updates[0].annotation_id).toBe('1');
-        expect(overriddenAnnotations.map((annotation) => annotation.sample_id)).toEqual(['1']);
+        const [updates] = updateAnnotations.mock.calls[0] as [AnnotationUpdateInput[]];
+        expect(updates.map((update) => update.annotation_id)).toEqual(['1', '2']);
+        expect(overriddenAnnotations.map((annotation) => annotation.sample_id)).toEqual(['1', '2']);
     });
 });

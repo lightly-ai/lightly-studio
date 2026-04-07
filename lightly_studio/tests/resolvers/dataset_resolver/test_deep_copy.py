@@ -601,7 +601,6 @@ def test_deep_copy__with_annotations(db_session: Session) -> None:
             tuple(detail.segmentation_mask or []),
         )
         for detail in copied_seg_details
-        if detail is not None
     } == {
         (5, 15, 25, 35, (0, 1, 1, 0)),
         (2, 4, 6, 8, (1, 0, 0, 1)),
