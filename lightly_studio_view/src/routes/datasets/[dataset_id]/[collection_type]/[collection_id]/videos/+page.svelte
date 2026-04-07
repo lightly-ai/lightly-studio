@@ -157,13 +157,14 @@
         const scrollTop = (event.target as HTMLElement).scrollTop;
         savePosition(scrollTop, filterHash);
     }
+    const scrollResetKey = $derived(filterHash + ($textEmbedding?.queryText ?? ''));
 </script>
 
 <div class="flex flex-1 flex-col space-y-4">
     <SampleGrid
         itemCount={items.length}
         overScan={20}
-        scrollResetKey={$textEmbedding?.queryText ?? ''}
+        {scrollResetKey}
         onScroll={handleScroll}
         scrollPosition={initialScrollPosition}
         testId="video-grid"

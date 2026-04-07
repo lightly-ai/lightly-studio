@@ -1,4 +1,4 @@
-import { test, expect } from '../utils';
+import { test, expect, isInViewport } from '../utils';
 import { cocoDataset } from './fixtures';
 
 test.beforeEach(async ({ annotationsPage }) => {
@@ -73,4 +73,35 @@ test('user can change label of an annotation grid page', async ({ annotationsPag
     await expect(annotationsPage.getAnnotations()).toHaveCount(
         cocoDataset.labels.airplane.annotationCount
     );
+});
+
+test('Scroll position is restored when navigating back from annotation details', async ({
+    page,
+    annotationsPage
+}) => {
+    await page.setViewportSize({ width: 800, height: 400 });
+
+    const gridContainer = page.getByTestId('annotations-grid');
+    await expect(gridContainer).toBeVisible();
+
+    expect(annotationsPage.getAnnotationByIndex(0)).toBeVisible();
+    expect(annotationsPage.getAnnotationByIndex(30)).not.toBeVisible();
+
+    await gridContainer.evaluate((element) => {
+        element.scrollBy({ top: 300, behavior: 'instant' });
+    });
+
+    expect(annotationsPage.getAnnotationByIndex(0)).not.toBeVisible();
+    expect(annotationsPage.getAnnotationByIndex(30)).toBeVisible();
+
+    await annotationsPage.getAnnotationByIndex(30).dblclick();
+
+    await expect(page.getByText('Annotation Details')).toBeVisible();
+
+    await page.goBack();
+
+    await expect(gridContainer).toBeVisible();
+
+    expect(annotationsPage.getAnnotationByIndex(0)).not.toBeVisible();
+    expect(annotationsPage.getAnnotationByIndex(30)).toBeVisible();
 });

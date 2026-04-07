@@ -132,6 +132,7 @@
         const scrollTop = (event.target as HTMLElement).scrollTop;
         savePosition(scrollTop, filterHash);
     }
+    const scrollResetKey = $derived(filterHash);
 </script>
 
 <div class="flex flex-1 flex-col space-y-4">
@@ -144,6 +145,7 @@
         testId="video-frames-grid"
         onScroll={handleScroll}
         scrollPosition={initialScrollPosition}
+        {scrollResetKey}
         message={{
             loading: 'Loading video frames...',
             error: 'Error loading video frames',
