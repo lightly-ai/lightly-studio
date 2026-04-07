@@ -303,18 +303,25 @@ export async function setNetworkThrottling(page: Page, preset: NetworkPreset): P
 }
 
 // Helper function to check if element is in viewport (like IntersectionObserver).
-export const isInViewport = async (element: Locator) => {
+export const isInViewport = async ({
+    element,
+    viewport
+}: {
+    element: Locator;
+    viewport: Locator;
+}) => {
     const count = await element.count();
     if (count === 0 || (await element.isVisible()) === false) {
         return false;
     }
-    return await element.evaluate((el: Element) => {
+    const viewportRect = await viewport.evaluate((el: Element) => el.getBoundingClientRect());
+    return await element.evaluate((el: Element, viewportRect: DOMRect) => {
         const rect = el.getBoundingClientRect();
         return (
-            rect.top >= 0 &&
-            rect.left >= 0 &&
-            rect.bottom <= (window.innerHeight || document.documentElement.clientHeight) &&
-            rect.right <= (window.innerWidth || document.documentElement.clientWidth)
+            rect.top >= viewportRect.top &&
+            rect.left >= viewportRect.left &&
+            rect.bottom <= viewportRect.bottom &&
+            rect.right <= viewportRect.right
         );
-    });
+    }, viewportRect);
 };

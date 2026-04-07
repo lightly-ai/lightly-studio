@@ -81,18 +81,26 @@ test('We can see clicked element when navigating back from details', async ({
 }) => {
     await page.setViewportSize({ width: 800, height: 400 });
 
-    const gridContainer = page.getByTestId('annotations-grid');
-    await expect(gridContainer).toBeVisible();
+    const viewport = page.getByTestId('annotations-grid');
+    await expect(viewport).toBeVisible();
 
-    expect(await isInViewport(annotationsPage.getAnnotationByIndex(0))).toBeTruthy();
-    expect(await isInViewport(annotationsPage.getAnnotationByIndex(30))).toBeFalsy();
+    expect(
+        await isInViewport({ element: annotationsPage.getAnnotationByIndex(0), viewport })
+    ).toBeTruthy();
+    expect(
+        await isInViewport({ element: annotationsPage.getAnnotationByIndex(30), viewport })
+    ).toBeFalsy();
 
-    await gridContainer.evaluate((element) => {
+    await viewport.evaluate((element) => {
         element.scrollBy({ top: 300, behavior: 'instant' });
     });
 
-    expect(await isInViewport(annotationsPage.getAnnotationByIndex(0))).toBeFalsy();
-    expect(await isInViewport(annotationsPage.getAnnotationByIndex(30))).toBeTruthy();
+    expect(
+        await isInViewport({ element: annotationsPage.getAnnotationByIndex(0), viewport })
+    ).toBeFalsy();
+    expect(
+        await isInViewport({ element: annotationsPage.getAnnotationByIndex(30), viewport })
+    ).toBeTruthy();
 
     await annotationsPage.getAnnotationByIndex(30).dblclick();
 
@@ -100,8 +108,12 @@ test('We can see clicked element when navigating back from details', async ({
 
     await page.goBack();
 
-    await expect(gridContainer).toBeVisible();
+    await expect(viewport).toBeVisible();
 
-    expect(await isInViewport(annotationsPage.getAnnotationByIndex(0))).toBeFalsy();
-    expect(await isInViewport(annotationsPage.getAnnotationByIndex(30))).toBeTruthy();
+    expect(
+        await isInViewport({ element: annotationsPage.getAnnotationByIndex(0), viewport })
+    ).toBeFalsy();
+    expect(
+        await isInViewport({ element: annotationsPage.getAnnotationByIndex(30), viewport })
+    ).toBeTruthy();
 });

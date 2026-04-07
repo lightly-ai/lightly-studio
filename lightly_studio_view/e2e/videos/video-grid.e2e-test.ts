@@ -203,18 +203,38 @@ test('We can see clicked element when navigating back from details', async ({
 }) => {
     await page.setViewportSize({ width: 800, height: 400 });
 
-    const gridContainer = page.getByTestId('video-grid');
-    await expect(gridContainer).toBeVisible();
+    const viewport = page.getByTestId('video-grid');
+    await expect(viewport).toBeVisible();
 
-    expect(await isInViewport(videosPage.getVideoByIndex(0))).toBe(true);
-    expect(await isInViewport(videosPage.getVideoByIndex(30))).toBe(false);
+    expect(
+        await isInViewport({
+            element: videosPage.getVideoByIndex(0),
+            viewport
+        })
+    ).toBe(true);
+    expect(
+        await isInViewport({
+            element: videosPage.getVideoByIndex(30),
+            viewport
+        })
+    ).toBe(false);
 
-    await gridContainer.evaluate((element) => {
+    await viewport.evaluate((element) => {
         element.scrollBy({ top: 300, behavior: 'instant' });
     });
 
-    expect(await isInViewport(videosPage.getVideoByIndex(0))).toBe(false);
-    expect(await isInViewport(videosPage.getVideoByIndex(30))).toBe(true);
+    expect(
+        await isInViewport({
+            element: videosPage.getVideoByIndex(0),
+            viewport
+        })
+    ).toBe(false);
+    expect(
+        await isInViewport({
+            element: videosPage.getVideoByIndex(30),
+            viewport
+        })
+    ).toBe(true);
 
     await videosPage.getVideoByIndex(30).dblclick();
 
@@ -222,8 +242,18 @@ test('We can see clicked element when navigating back from details', async ({
 
     await page.goBack();
 
-    await expect(gridContainer).toBeVisible();
+    await expect(viewport).toBeVisible();
 
-    expect(await isInViewport(videosPage.getVideoByIndex(30))).toBe(true);
-    expect(await isInViewport(videosPage.getVideoByIndex(0))).toBe(false);
+    expect(
+        await isInViewport({
+            element: videosPage.getVideoByIndex(30),
+            viewport
+        })
+    ).toBe(true);
+    expect(
+        await isInViewport({
+            element: videosPage.getVideoByIndex(0),
+            viewport
+        })
+    ).toBe(false);
 });
