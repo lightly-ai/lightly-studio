@@ -199,24 +199,6 @@
         updateSampleIds([]);
     };
     const hasActiveSelection = $derived($rangeSelection !== null || activeSampleIds.length > 0);
-    const baseFilter = $derived(filter);
-    let previousBaseFilter = $state<typeof baseFilter | undefined>(undefined);
-
-    $effect(() => {
-        if (previousBaseFilter === undefined) {
-            previousBaseFilter = baseFilter;
-            return;
-        }
-
-        if (isEqual(previousBaseFilter, baseFilter)) {
-            return;
-        }
-        previousBaseFilter = baseFilter;
-
-        if (hasActiveSelection) {
-            clearSelection();
-        }
-    });
 
     const onWindowKeyDown = (event: KeyboardEvent) => {
         if (event.key !== 'Escape') {
