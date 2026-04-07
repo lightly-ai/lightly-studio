@@ -56,6 +56,9 @@
     import { useVideoFrameAnnotationCounts } from '$lib/hooks/useVideoFrameAnnotationsCount/useVideoFrameAnnotationsCount.js';
     import { useVideoFramesBounds } from '$lib/hooks/useVideoFramesBounds/useVideoFramesBounds.js';
     import { useVideoBounds } from '$lib/hooks/useVideosBounds/useVideosBounds.js';
+    import { isNormalModeParams, type ImagesInfiniteParams } from '$lib/hooks/useImagesInfinite/useImagesInfinite';
+    import { useImageFilters } from '$lib/hooks/useImageFilters/useImageFilters';
+    import { useVideoFilters } from '$lib/hooks/useVideoFilters/useVideoFilters';
     import { SampleType, type ImageFilter } from '$lib/api/lightly_studio_local/types.gen.js';
     import { buildImageFilter } from '$lib/utils/buildImageFilter';
     import {
@@ -63,6 +66,7 @@
         buildVideoFrameAnnotationCountsFilter
     } from '$lib/utils/buildAnnotationCountsFilters';
     import { GridHeader } from '$lib/components';
+    import PlotSelectionBanner from '$lib/components/PlotPanel/PlotSelectionBanner.svelte';
     const { data, children } = $props();
     const {
         collection,
@@ -199,8 +203,17 @@
         useAnnotationLabels({ collectionId: collectionId ?? '' })
     );
     const annotationLabelsData = $derived($annotationLabelsQuery?.data);
-    const { showPlot, setShowPlot, filteredSampleCount, filteredAnnotationCount } =
-        useGlobalStorage();
+    const {
+        showPlot,
+        setShowPlot,
+        filteredSampleCount,
+        filteredAnnotationCount,
+        setRangeSelectionForcollection
+    } = useGlobalStorage();
+    const { filterParams: imageFilterParams, updateSampleIds: updateImageSampleIds } =
+        useImageFilters();
+    const { filterParams: videoFilterParams, updateSampleIds: updateVideoSampleIds } =
+        useVideoFilters();
 
     const annotationLabelsStore = toStore(() => annotationLabelsData);
 
@@ -470,6 +483,100 @@
     const showLeftSidebar = $derived(
         isSamples || isAnnotations || isVideos || isVideoFrames || isGroups
     );
+
+    const activePlotSelectionSampleIds = $derived.by(() => {
+        if (isVideos) {
+            if ($videoFilterParams?.collection_id !== collectionId) {
+                return [];
+            }
+            return $videoFilterParams.filters?.sample_ids ?? [];
+        }
+
+        if (isSamples) {
+            const params = $imageFilterParams as ImagesInfiniteParams;
+            if (!params?.collection_id || params.collection_id !== collectionId) {
+                return [];
+            }
+            if (!isNormalModeParams(params)) {
+                return [];
+            }
+            return params.filters?.sample_ids ?? [];
+        }
+
+        return [];
+    });
+
+    let pausedPlotSelectionByCollection = $state<Record<string, string[]>>({});
+    const pausedPlotSelectionSampleIds = $derived(pausedPlotSelectionByCollection[collectionId] ?? []);
+    const isPlotSelectionApplied = $derived(activePlotSelectionSampleIds.length > 0);
+    const plotSelectionCount = $derived.by(() =>
+        activePlotSelectionSampleIds.length > 0
+            ? activePlotSelectionSampleIds.length
+            : pausedPlotSelectionSampleIds.length
+    );
+    const hasPlotSelectionContext = $derived(
+        (isSamples || isVideos) &&
+            (activePlotSelectionSampleIds.length > 0 || pausedPlotSelectionSampleIds.length > 0)
+    );
+    const plotSelectionItemLabel = $derived(isVideos ? 'video' : 'sample');
+
+    function setPausedPlotSelection(sampleIds: string[]) {
+        pausedPlotSelectionByCollection = {
+            ...pausedPlotSelectionByCollection,
+            [collectionId]: sampleIds
+        };
+    }
+
+    function clearPausedPlotSelection() {
+        setPausedPlotSelection([]);
+    }
+
+    function togglePlotSelectionApplied() {
+        if (activePlotSelectionSampleIds.length > 0) {
+            setPausedPlotSelection(activePlotSelectionSampleIds);
+            if (isVideos) {
+                updateVideoSampleIds([]);
+            } else if (isSamples) {
+                updateImageSampleIds([]);
+            }
+            return;
+        }
+
+        if (pausedPlotSelectionSampleIds.length === 0) {
+            return;
+        }
+
+        if (isVideos) {
+            updateVideoSampleIds(pausedPlotSelectionSampleIds);
+        } else if (isSamples) {
+            updateImageSampleIds(pausedPlotSelectionSampleIds);
+        }
+    }
+
+    function showPlotWithSelection() {
+        if (pausedPlotSelectionSampleIds.length > 0 && activePlotSelectionSampleIds.length === 0) {
+            if (isVideos) {
+                updateVideoSampleIds(pausedPlotSelectionSampleIds);
+            } else if (isSamples) {
+                updateImageSampleIds(pausedPlotSelectionSampleIds);
+            }
+        }
+        setShowPlot(true);
+    }
+
+    function clearPlotSelection() {
+        setRangeSelectionForcollection(collectionId, null);
+        clearPausedPlotSelection();
+
+        if (isVideos) {
+            updateVideoSampleIds([]);
+            return;
+        }
+
+        if (isSamples) {
+            updateImageSampleIds([]);
+        }
+    }
 </script>
 
 <div class="flex-none">
@@ -478,6 +585,21 @@
 </div>
 
 <div class="relative flex min-h-0 flex-1 flex-col">
+    {#snippet plotSelectionNotice()}
+        {#if hasPlotSelectionContext && !$showPlot}
+            <PlotSelectionBanner
+                selectionCount={plotSelectionCount}
+                selectionApplied={isPlotSelectionApplied}
+                itemLabel={plotSelectionItemLabel}
+                showPlot={$showPlot}
+                canShowPlot={hasEmbeddings}
+                onToggleSelectionApplied={togglePlotSelectionApplied}
+                onShowPlot={showPlotWithSelection}
+                onClear={clearPlotSelection}
+            />
+        {/if}
+    {/snippet}
+
     {#if isSampleDetails || isAnnotationDetails || isGroupDetails || isVideoDetails}
         {@render children()}
     {:else}
@@ -612,6 +734,7 @@
                                 </div>
                             </GridHeader>
                             <Separator class="mb-4 bg-border-hard" />
+                            {@render plotSelectionNotice()}
                             <div class="flex min-h-0 flex-1 overflow-hidden">
                                 {@render children()}
                             </div>
@@ -643,7 +766,8 @@
                                         class="flex items-center space-x-1"
                                         data-testid="toggle-plot-button"
                                         variant={$showPlot ? 'default' : 'ghost'}
-                                        onclick={() => setShowPlot(!$showPlot)}
+                                        onclick={() =>
+                                            $showPlot ? setShowPlot(false) : showPlotWithSelection()}
                                     >
                                         <ChartNetwork class="size-4" />
                                         <span>Show Embeddings</span>
@@ -736,6 +860,7 @@
                             {/if}
                         </GridHeader>
                         <Separator class="mb-4 bg-border-hard" />
+                        {@render plotSelectionNotice()}
                     {/if}
 
                     <div class="flex min-h-0 flex-1">
