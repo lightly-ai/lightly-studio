@@ -72,21 +72,12 @@
         prevScrollResetKey = scrollResetKey;
     });
 
-    let hasScrolledToInitialPosition = false;
-
     // Manually scroll to position after grid is mounted and dimensions are calculated
     $effect(() => {
-        if (
-            grid &&
-            scrollPosition &&
-            itemSize > 0 &&
-            clientHeight > 0 &&
-            !hasScrolledToInitialPosition
-        ) {
+        if (grid && scrollPosition && itemSize > 0) {
             // Use requestAnimationFrame to ensure DOM is fully updated
             requestAnimationFrame(() => {
                 grid?.scrollToPosition(scrollPosition);
-                hasScrolledToInitialPosition = true;
             });
         }
     });

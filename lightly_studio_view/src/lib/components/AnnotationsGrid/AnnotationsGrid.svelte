@@ -231,20 +231,11 @@
     const viewportHeight = $derived(clientHeight);
 
     let grid: ReturnType<typeof Grid> | undefined = $state();
-    let hasScrolledToInitialPosition = $state(false);
 
     $effect(() => {
-        if (
-            grid &&
-            initialScrollPosition &&
-            size > 0 &&
-            clientHeight > 0 &&
-            !hasScrolledToInitialPosition
-        ) {
-            // Use requestAnimationFrame to ensure DOM is fully updated
+        if (grid && initialScrollPosition && size > 0) {
             requestAnimationFrame(() => {
                 grid?.scrollToPosition(initialScrollPosition);
-                hasScrolledToInitialPosition = true;
             });
         }
     });
