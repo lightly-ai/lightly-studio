@@ -35,6 +35,7 @@ class LightlyStudioInputBase:
 
     CATEGORY_ID_START = 0
 
+    # TODO(lukas 04/2026): change root_collection_id to dataset_id
     def __init__(
         self, session: Session, root_collection_id: UUID, samples: Iterable[ImageSample]
     ) -> None:
