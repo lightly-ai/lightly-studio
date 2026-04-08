@@ -21,7 +21,6 @@
     const { tags, tagsSelected, tagSelectionToggle, loadTags } = $derived(
         useTags({ collection_id, kind: [tagKind] })
     );
-    const tagList = $derived<TagView[]>($tags as TagView[]);
 
     const { getSelectedSampleIds, selectedSampleAnnotationCropIds } = useGlobalStorage();
 
@@ -80,7 +79,7 @@
 <Segment title="Tags" icon={TagsIcon}>
     <div class="mb-3 w-full space-y-1">
         <div class="space-y-1">
-            {#each tagList as tag (tag.tag_id)}
+            {#each $tags as tag (tag.tag_id)}
                 <div class="flex items-center py-0.5" data-testid="tag-menu-item">
                     <Checkbox
                         name={tag.tag_id}
