@@ -695,9 +695,7 @@
                                         data-testid="toggle-plot-button"
                                         variant={$showPlot ? 'default' : 'ghost'}
                                         onclick={() =>
-                                            $showPlot
-                                                ? setShowPlot(false)
-                                                : setShowPlot(true)}
+                                            $showPlot ? setShowPlot(false) : setShowPlot(true)}
                                     >
                                         <ChartNetwork class="size-4" />
                                         <span>Show Embeddings</span>

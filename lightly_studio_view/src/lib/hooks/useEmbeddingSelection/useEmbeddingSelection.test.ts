@@ -17,7 +17,10 @@ describe('useEmbeddingSelection', () => {
         const updateImageSampleIds = vi.fn((sampleIds: string[]) => {
             imageFilterParams.update((params) => ({
                 ...params,
-                filters: { ...params.filters, sample_ids: sampleIds.length > 0 ? sampleIds : undefined }
+                filters: {
+                    ...params.filters,
+                    sample_ids: sampleIds.length > 0 ? sampleIds : undefined
+                }
             }));
         });
         const updateVideoSampleIds = vi.fn();

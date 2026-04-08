@@ -26,7 +26,8 @@
         <div class="min-w-0 flex-1">
             <div class="truncate text-sm font-medium">Embedding Selection</div>
             <div class="text-xs text-muted-foreground">
-                {selectionCount} {selectionCount === 1 ? itemLabel : `${itemLabel}s`}
+                {selectionCount}
+                {selectionCount === 1 ? itemLabel : `${itemLabel}s`}
             </div>
         </div>
         <button

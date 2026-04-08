@@ -1,5 +1,8 @@
 import { derived, get, writable, type Readable } from 'svelte/store';
-import { isNormalModeParams, type ImagesInfiniteParams } from '$lib/hooks/useImagesInfinite/useImagesInfinite';
+import {
+    isNormalModeParams,
+    type ImagesInfiniteParams
+} from '$lib/hooks/useImagesInfinite/useImagesInfinite';
 import type { VideoFilterParams } from '$lib/hooks/useVideoFilters/useVideoFilters';
 
 type UseEmbeddingSelectionParams = {
@@ -58,7 +61,10 @@ export function useEmbeddingSelection({
             $hiddenEmbeddingSelectionsByCollection[$collectionId] ?? []
     );
 
-    const isPlotSelectionApplied = derived(activePlotSelectionSampleIds, ($activeIds) => $activeIds.length > 0);
+    const isPlotSelectionApplied = derived(
+        activePlotSelectionSampleIds,
+        ($activeIds) => $activeIds.length > 0
+    );
     const effectiveEmbeddingSelectionIds = derived(
         [activePlotSelectionSampleIds, hiddenEmbeddingSelectionSampleIds],
         ([$activeIds, $hiddenIds]) => ($activeIds.length > 0 ? $activeIds : $hiddenIds)
@@ -72,7 +78,9 @@ export function useEmbeddingSelection({
         ([$isSamples, $isVideos, $effectiveEmbeddingSelectionIds]) =>
             ($isSamples || $isVideos) && $effectiveEmbeddingSelectionIds.length > 0
     );
-    const plotSelectionItemLabel = derived(isVideos, ($isVideos) => ($isVideos ? 'video' : 'sample'));
+    const plotSelectionItemLabel = derived(isVideos, ($isVideos) =>
+        $isVideos ? 'video' : 'sample'
+    );
 
     function updateEmbeddingSelectionSampleIds(sampleIds: string[]) {
         if (get(isVideos)) {
@@ -116,17 +124,13 @@ export function useEmbeddingSelection({
     }
 
     function setEmbeddingSelectionVisibility(shouldShow: boolean) {
-        if (shouldShow) {
-            if (
-                get(activePlotSelectionSampleIds).length > 0 ||
-                get(hiddenEmbeddingSelectionSampleIds).length === 0
-            ) {
-                return;
-            }
-            showEmbeddingSelections();
+        if (!shouldShow) {
+            hideEmbeddingSelections();
             return;
         }
-        hideEmbeddingSelections();
+        const alreadyApplied = get(activePlotSelectionSampleIds).length > 0;
+        const hasHidden = get(hiddenEmbeddingSelectionSampleIds).length > 0;
+        if (!alreadyApplied && hasHidden) showEmbeddingSelections();
     }
 
     function clearPlotSelection() {
