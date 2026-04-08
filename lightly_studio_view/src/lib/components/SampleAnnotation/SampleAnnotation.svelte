@@ -125,26 +125,28 @@
         />
     {/if}
 
-    <!--Disable resizable rectangle for segmentation masks since we don’t support it yet.-->
-    {#if showBoundingBox && isResizable && constraintBox && !segmentationMask}
-        <ResizableRectangle
-            bind:bbox={boundingBox}
-            {colorStroke}
-            {colorFill}
-            opacity={boundingBoxOpacity}
-            {scale}
-            {onResize}
-            {onMove}
-            {onDragEnd}
-        />
-    {:else}
-        <SampleAnnotationBox
-            {bbox}
-            {annotationId}
-            {label}
-            {colorStroke}
-            {colorFill}
-            opacity={boundingBoxOpacity}
-        />
+    {#if showBoundingBox}
+        <!--Disable resizable rectangle for segmentation masks since we don’t support it yet.-->
+        {#if isResizable && constraintBox && !segmentationMask}
+            <ResizableRectangle
+                bind:bbox={boundingBox}
+                {colorStroke}
+                {colorFill}
+                opacity={boundingBoxOpacity}
+                {scale}
+                {onResize}
+                {onMove}
+                {onDragEnd}
+            />
+        {:else}
+            <SampleAnnotationBox
+                {bbox}
+                {annotationId}
+                {label}
+                {colorStroke}
+                {colorFill}
+                opacity={boundingBoxOpacity}
+            />
+        {/if}
     {/if}
 </g>
