@@ -208,7 +208,7 @@ def _populate_database(config: BenchmarkConfig, image_path: Path) -> UUID:
             annotation_label_resolver.create(
                 session=session,
                 label=AnnotationLabelCreate(
-                    root_collection_id=root_collection.collection_id,
+                    dataset_id=root_collection.dataset_id,
                     annotation_label_name=name,
                 ),
             ).annotation_label_id
