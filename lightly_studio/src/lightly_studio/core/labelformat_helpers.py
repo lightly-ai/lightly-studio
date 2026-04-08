@@ -121,10 +121,10 @@ def create_label_map(
         root_collection_id: The ID of the root collection the labels belong to.
         input_labels: The labelformat input containing the categories.
     """
-    root_collection = collection_resolver.get_root_collection(
-        session=session, collection_id=root_collection_id
-    )
-    dataset_id = root_collection.dataset_id
+    collection = collection_resolver.get_by_id(session=session, collection_id=root_collection_id)
+    if collection is None:
+        raise ValueError("Collection {root_collection_id} doesn't exist")
+    dataset_id = collection.dataset_id
 
     label_map = {}
     for category in input_labels.get_categories():

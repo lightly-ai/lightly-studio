@@ -48,9 +48,12 @@ class LightlyStudioInputBase:
         """
         self._samples = list(samples)
         # Resolve dataset_id from the provided collection_id.
-        dataset_id = collection_resolver.get_root_collection(
+        collection = collection_resolver.get_by_id(
             session=session, collection_id=root_collection_id
-        ).dataset_id
+        )
+        if collection is None:
+            raise ValueError("Collection {root_collection_id} doesn't exist")
+        dataset_id = collection.dataset_id
 
         self._label_id_to_category = _build_label_id_to_category(
             session=session,

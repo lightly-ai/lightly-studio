@@ -58,10 +58,12 @@ class CreateAnnotationBase(BaseModel):
 
     # TODO(lukas 04/2026): change `root_collection_id` to `dataset_id`
     def _get_label_id(self, session: Session, root_collection_id: UUID) -> UUID:
-        root_collection = collection_resolver.get_root_collection(
+        collection = collection_resolver.get_by_id(
             session=session, collection_id=root_collection_id
         )
-        dataset_id = root_collection.dataset_id
+        if collection is None:
+            raise ValueError("Collection {root_collection_id} doesn't exist")
+        dataset_id = collection.dataset_id
 
         label = annotation_label_resolver.get_by_label_name(
             session=session, dataset_id=dataset_id, label_name=self.label

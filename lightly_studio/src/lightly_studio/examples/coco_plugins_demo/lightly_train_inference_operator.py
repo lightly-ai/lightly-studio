@@ -157,10 +157,10 @@ def _get_or_create_label_map(
     class_map: dict[int, str],
 ) -> dict[int, UUID]:
     """Ensure labels exist for all class names and return {category_id: label_id}."""
-    root_collection = collection_resolver.get_root_collection(
-        session=session, collection_id=root_collection_id
-    )
-    dataset_id = root_collection.dataset_id
+    collection = collection_resolver.get_by_id(session=session, collection_id=root_collection_id)
+    if collection is None:
+        raise ValueError("Collection {root_collection_id} doesn't exist")
+    dataset_id = collection.dataset_id
 
     label_map: dict[int, UUID] = {}
     for category_id, label_name in class_map.items():
