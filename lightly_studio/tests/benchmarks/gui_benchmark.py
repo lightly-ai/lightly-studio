@@ -10,14 +10,14 @@ from __future__ import annotations
 import argparse
 import time
 from dataclasses import dataclass
+from enum import Enum
 from pathlib import Path
 from tempfile import TemporaryDirectory
 from uuid import UUID, uuid4
 
 import numpy as np
+import pyarrow as pa
 from PIL import Image
-from sqlalchemy import insert
-from sqlmodel import Session
 from tqdm import tqdm
 
 import lightly_studio.core.start_gui as start_gui_module
@@ -153,54 +153,66 @@ def _initialize_database(db_path: Path) -> None:
 def _populate_database(config: BenchmarkConfig, image_path: Path) -> None:
     """Populate the benchmark dataset with images, embeddings, and annotations."""
     rng = np.random.default_rng(config.seed)
-    session = db_manager.persistent_session()
-
-    root_collection = collection_resolver.create(
-        session=session,
-        collection=CollectionCreate(
-            name=DEFAULT_DATASET_NAME,
-            sample_type=SampleType.IMAGE,
-        ),
-    )
-    annotation_collection_id = collection_resolver.get_or_create_child_collection(
-        session=session,
-        collection_id=root_collection.collection_id,
-        sample_type=SampleType.ANNOTATION,
-        name=DEFAULT_ANNOTATION_COLLECTION_NAME,
-    )
-    embedding_model = embedding_model_resolver.create(
-        session=session,
-        embedding_model=EmbeddingModelCreate(
-            collection_id=root_collection.collection_id,
-            name=DEFAULT_EMBEDDING_MODEL_NAME,
-            embedding_dimension=config.embedding_dim,
-        ),
-    )
-    annotation_label = annotation_label_resolver.create(
-        session=session,
-        label=AnnotationLabelCreate(
-            root_collection_id=root_collection.collection_id,
-            annotation_label_name=DEFAULT_ANNOTATION_LABEL_NAME,
-        ),
-    )
-    _set_default_embedding_model(
-        collection_id=root_collection.collection_id,
-        embedding_model_id=embedding_model.embedding_model_id,
-    )
-    for batch_start in tqdm(range(0, config.num_images, config.batch_size), desc="Populating database"):
-        batch_count = min(config.batch_size, config.num_images - batch_start)
-        batch_data = _build_batch_data(
-            config=config,
-            batch_start=batch_start,
-            batch_count=batch_count,
-            rng=rng,
-            image_collection_id=root_collection.collection_id,
-            annotation_collection_id=annotation_collection_id,
-            embedding_model_id=embedding_model.embedding_model_id,
-            annotation_label_id=annotation_label.annotation_label_id,
-            shared_image_path=image_path,
+    with db_manager.session() as session:
+        root_collection = collection_resolver.create(
+            session=session,
+            collection=CollectionCreate(
+                name=DEFAULT_DATASET_NAME,
+                sample_type=SampleType.IMAGE,
+            ),
         )
-        _insert_batch(session=session, batch_data=batch_data)
+        annotation_collection_id = collection_resolver.get_or_create_child_collection(
+            session=session,
+            collection_id=root_collection.collection_id,
+            sample_type=SampleType.ANNOTATION,
+            name=DEFAULT_ANNOTATION_COLLECTION_NAME,
+        )
+        embedding_model = embedding_model_resolver.create(
+            session=session,
+            embedding_model=EmbeddingModelCreate(
+                collection_id=root_collection.collection_id,
+                name=DEFAULT_EMBEDDING_MODEL_NAME,
+                embedding_dimension=config.embedding_dim,
+            ),
+        )
+        annotation_label = annotation_label_resolver.create(
+            session=session,
+            label=AnnotationLabelCreate(
+                root_collection_id=root_collection.collection_id,
+                annotation_label_name=DEFAULT_ANNOTATION_LABEL_NAME,
+            ),
+        )
+        root_collection_id = root_collection.collection_id
+        annotation_label_id = annotation_label.annotation_label_id
+        embedding_model_id = embedding_model.embedding_model_id
+
+    _set_default_embedding_model(
+        collection_id=root_collection_id,
+        embedding_model_id=embedding_model_id,
+    )
+    raw_connection = db_manager.get_engine()._engine.raw_connection()
+    try:
+        connection = raw_connection.driver_connection
+        for batch_start in tqdm(
+            range(0, config.num_images, config.batch_size),
+            desc="Populating database",
+        ):
+            batch_count = min(config.batch_size, config.num_images - batch_start)
+            batch_data = _build_batch_data(
+                config=config,
+                batch_start=batch_start,
+                batch_count=batch_count,
+                rng=rng,
+                image_collection_id=root_collection_id,
+                annotation_collection_id=annotation_collection_id,
+                embedding_model_id=embedding_model_id,
+                annotation_label_id=annotation_label_id,
+                shared_image_path=image_path,
+            )
+            _insert_batch(connection=connection, batch_data=batch_data)
+        raw_connection.commit()
+    finally:
+        raw_connection.close()
 
 
 def _set_default_embedding_model(collection_id: UUID, embedding_model_id: UUID) -> None:
@@ -219,6 +231,16 @@ class BatchData:
     annotation_samples: list[Row]
     annotations: list[Row]
     object_detections: list[Row]
+
+
+@dataclass(frozen=True)
+class ArrowInsertSpec:
+    """Specification for inserting Arrow-backed rows into a table."""
+
+    table_name: str
+    source_columns: tuple[str, ...]
+    insert_columns: tuple[str, ...] | None = None
+    select_columns_sql: str | None = None
 
 
 def _build_batch_data(  # noqa: PLR0913
@@ -361,18 +383,130 @@ def _build_annotation_rows(  # noqa: PLR0913
     return annotations, object_detections
 
 
-def _insert_batch(session: Session, batch_data: BatchData) -> None:
+def _insert_batch(connection: object, batch_data: BatchData) -> None:
     """Insert a single batch into the database."""
-    session.execute(insert(SampleTable), batch_data.image_samples)
-    session.execute(insert(ImageTable), batch_data.images)
-    session.execute(insert(SampleEmbeddingTable), batch_data.embeddings)
+    _insert_arrow_rows(
+        connection=connection,
+        rows=batch_data.image_samples,
+        spec=ArrowInsertSpec(
+            table_name=SampleTable.__tablename__,
+            source_columns=("sample_id", "collection_id"),
+            insert_columns=("sample_id", "collection_id", "created_at", "updated_at"),
+            select_columns_sql="sample_id, collection_id, current_timestamp, current_timestamp",
+        ),
+    )
+    _insert_arrow_rows(
+        connection=connection,
+        rows=batch_data.images,
+        spec=ArrowInsertSpec(
+            table_name=ImageTable.__tablename__,
+            source_columns=("sample_id", "file_name", "width", "height", "file_path_abs"),
+            insert_columns=(
+                "sample_id",
+                "file_name",
+                "width",
+                "height",
+                "file_path_abs",
+                "created_at",
+                "updated_at",
+            ),
+            select_columns_sql=(
+                "sample_id, file_name, width, height, file_path_abs, "
+                "current_timestamp, current_timestamp"
+            ),
+        ),
+    )
+    _insert_arrow_rows(
+        connection=connection,
+        rows=batch_data.embeddings,
+        spec=ArrowInsertSpec(
+            table_name=SampleEmbeddingTable.__tablename__,
+            source_columns=("sample_id", "embedding_model_id", "embedding"),
+        ),
+    )
 
     if batch_data.annotation_samples:
-        session.execute(insert(SampleTable), batch_data.annotation_samples)
-        session.execute(insert(AnnotationBaseTable), batch_data.annotations)
-        session.execute(insert(ObjectDetectionAnnotationTable), batch_data.object_detections)
+        _insert_arrow_rows(
+            connection=connection,
+            rows=batch_data.annotation_samples,
+            spec=ArrowInsertSpec(
+                table_name=SampleTable.__tablename__,
+                source_columns=("sample_id", "collection_id"),
+                insert_columns=("sample_id", "collection_id", "created_at", "updated_at"),
+                select_columns_sql="sample_id, collection_id, current_timestamp, current_timestamp",
+            ),
+        )
+        _insert_arrow_rows(
+            connection=connection,
+            rows=batch_data.annotations,
+            spec=ArrowInsertSpec(
+                table_name=AnnotationBaseTable.__tablename__,
+                source_columns=(
+                    "sample_id",
+                    "annotation_type",
+                    "annotation_label_id",
+                    "parent_sample_id",
+                ),
+                insert_columns=(
+                    "sample_id",
+                    "annotation_type",
+                    "annotation_label_id",
+                    "parent_sample_id",
+                    "created_at",
+                ),
+                select_columns_sql=(
+                    "sample_id, annotation_type, annotation_label_id, parent_sample_id, "
+                    "current_timestamp"
+                ),
+            ),
+        )
+        _insert_arrow_rows(
+            connection=connection,
+            rows=batch_data.object_detections,
+            spec=ArrowInsertSpec(
+                table_name=ObjectDetectionAnnotationTable.__tablename__,
+                source_columns=("sample_id", "x", "y", "width", "height"),
+            ),
+        )
 
-    session.commit()
+
+def _insert_arrow_rows(
+    connection: object,
+    rows: list[Row],
+    spec: ArrowInsertSpec,
+) -> None:
+    """Insert rows into DuckDB through an Arrow table."""
+    if not rows:
+        return
+
+    arrow_table = pa.table(
+        {
+            column: [_normalize_arrow_value(row[column]) for row in rows]
+            for column in spec.source_columns
+        }
+    )
+    temp_table_name = f"tmp_{spec.table_name}_{uuid4().hex}"
+    connection.register(temp_table_name, arrow_table)  # type: ignore[attr-defined]
+
+    column_list = ", ".join(spec.insert_columns or spec.source_columns)
+    select_list = spec.select_columns_sql or ", ".join(spec.source_columns)
+    try:
+        cursor = connection.cursor()  # type: ignore[attr-defined]
+        cursor.execute(
+            f"INSERT INTO {spec.table_name} ({column_list}) "
+            f"SELECT {select_list} FROM {temp_table_name}"
+        )
+    finally:
+        connection.unregister(temp_table_name)  # type: ignore[attr-defined]
+
+
+def _normalize_arrow_value(value: object) -> object:
+    """Convert Python objects into Arrow-friendly scalar values."""
+    if isinstance(value, UUID):
+        return str(value)
+    if isinstance(value, Enum):
+        return value.name
+    return value
 
 
 if __name__ == "__main__":
