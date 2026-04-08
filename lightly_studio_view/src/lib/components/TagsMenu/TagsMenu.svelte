@@ -13,11 +13,7 @@
     let { collection_id, gridType }: Parameters<typeof useTags>[0] & { gridType: GridType } =
         $props();
 
-    const tagKind = $derived(
-        (['samples', 'videos', 'video_frames'] as GridType[]).includes(gridType)
-            ? ('sample' as const)
-            : ('annotation' as const)
-    );
+    const tagKind = $derived(gridType === 'annotations' ? 'annotation' : 'sample');
 
     const { tags, tagsSelected, tagSelectionToggle, loadTags } = $derived(
         useTags({ collection_id, kind: [tagKind] })
