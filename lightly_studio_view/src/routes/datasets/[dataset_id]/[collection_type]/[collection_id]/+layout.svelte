@@ -67,7 +67,6 @@
         buildVideoFrameAnnotationCountsFilter
     } from '$lib/utils/buildAnnotationCountsFilters';
     import { GridHeader } from '$lib/components';
-    import PlotSelectionBanner from '$lib/components/PlotPanel/PlotSelectionBanner.svelte';
     const { data, children } = $props();
     const {
         collection,
@@ -520,12 +519,6 @@
             (activePlotSelectionSampleIds.length > 0 || pausedPlotSelectionSampleIds.length > 0)
     );
     const plotSelectionItemLabel = $derived(isVideos ? 'video' : 'sample');
-    const showEmbeddingsLabel = $derived.by(() =>
-        hasPlotSelectionContext
-            ? `Show Embeddings (${plotSelectionCount} selected)`
-            : 'Show Embeddings'
-    );
-    let isEmbeddingSelectionChipOpen = $state(false);
 
     function setPausedPlotSelection(sampleIds: string[]) {
         pausedPlotSelectionByCollection = {
@@ -538,16 +531,26 @@
         setPausedPlotSelection([]);
     }
 
+    function applyPausedPlotSelection() {
+        if (pausedPlotSelectionSampleIds.length === 0) {
+            return;
+        }
+
+        if (isVideos) {
+            updateVideoSampleIds(pausedPlotSelectionSampleIds);
+        } else if (isSamples) {
+            updateImageSampleIds(pausedPlotSelectionSampleIds);
+        }
+
+        clearPausedPlotSelection();
+    }
+
     function setPlotSelectionApplied(shouldApply: boolean) {
         if (shouldApply) {
             if (activePlotSelectionSampleIds.length > 0 || pausedPlotSelectionSampleIds.length === 0) {
                 return;
             }
-            if (isVideos) {
-                updateVideoSampleIds(pausedPlotSelectionSampleIds);
-            } else if (isSamples) {
-                updateImageSampleIds(pausedPlotSelectionSampleIds);
-            }
+            applyPausedPlotSelection();
             return;
         }
 
@@ -568,11 +571,7 @@
 
     function showPlotWithSelection() {
         if (pausedPlotSelectionSampleIds.length > 0 && activePlotSelectionSampleIds.length === 0) {
-            if (isVideos) {
-                updateVideoSampleIds(pausedPlotSelectionSampleIds);
-            } else if (isSamples) {
-                updateImageSampleIds(pausedPlotSelectionSampleIds);
-            }
+            applyPausedPlotSelection();
         }
         setShowPlot(true);
     }
@@ -598,21 +597,6 @@
 </div>
 
 <div class="relative flex min-h-0 flex-1 flex-col">
-    {#snippet plotSelectionNotice()}
-        {#if hasPlotSelectionContext && !$showPlot}
-            <PlotSelectionBanner
-                selectionCount={plotSelectionCount}
-                selectionApplied={isPlotSelectionApplied}
-                itemLabel={plotSelectionItemLabel}
-                showPlot={$showPlot}
-                canShowPlot={hasEmbeddings}
-                onToggleSelectionApplied={togglePlotSelectionApplied}
-                onShowPlot={showPlotWithSelection}
-                onClear={clearPlotSelection}
-            />
-        {/if}
-    {/snippet}
-
     {#if isSampleDetails || isAnnotationDetails || isGroupDetails || isVideoDetails}
         {@render children()}
     {:else}
@@ -633,7 +617,7 @@
                             </div>
                             <Segment title="Filters" icon={SlidersHorizontal}>
                                 <div class="space-y-2">
-                                    {#if hasPlotSelectionContext}
+                                    {#if hasPlotSelectionContext && !$showPlot}
                                         <div
                                             class="rounded-md border border-amber-500/35 bg-amber-500/10 px-2 py-1.5"
                                             data-testid="embedding-selection-filter-chip"
@@ -645,20 +629,17 @@
                                                         setPlotSelectionApplied(checked === true)}
                                                     data-testid="embedding-selection-filter-chip-checkbox"
                                                 />
-                                                <button
-                                                    class="flex min-w-0 flex-1 items-center justify-between gap-1.5 text-left"
-                                                    onclick={() =>
-                                                        (isEmbeddingSelectionChipOpen =
-                                                            !isEmbeddingSelectionChipOpen)}
-                                                    data-testid="embedding-selection-filter-chip-toggle"
-                                                >
-                                                    <span class="truncate text-sm font-medium">
-                                                        Embedding Selection ({plotSelectionCount}{' '}
+                                                <div class="min-w-0 flex-1">
+                                                    <div class="truncate text-sm font-medium">
+                                                        Embedding Selection
+                                                    </div>
+                                                    <div class="text-xs text-muted-foreground">
+                                                        {plotSelectionCount}{' '}
                                                         {plotSelectionCount === 1
                                                             ? plotSelectionItemLabel
-                                                            : `${plotSelectionItemLabel}s`})
-                                                    </span>
-                                                </button>
+                                                            : `${plotSelectionItemLabel}s`}
+                                                    </div>
+                                                </div>
                                                 <button
                                                     class="text-muted-foreground hover:text-foreground"
                                                     onclick={clearPlotSelection}
@@ -669,19 +650,6 @@
                                                     <X class="size-4" />
                                                 </button>
                                             </div>
-                                            {#if isEmbeddingSelectionChipOpen}
-                                                <div class="mt-2 flex flex-wrap gap-2 pl-6">
-                                                    {#if hasEmbeddings && !$showPlot}
-                                                        <Button
-                                                            variant="outline"
-                                                            size="sm"
-                                                            onclick={showPlotWithSelection}
-                                                        >
-                                                            Show plot
-                                                        </Button>
-                                                    {/if}
-                                                </div>
-                                            {/if}
                                         </div>
                                     {/if}
                                     <LabelsMenu
@@ -798,7 +766,6 @@
                                 </div>
                             </GridHeader>
                             <Separator class="mb-4 bg-border-hard" />
-                            {@render plotSelectionNotice()}
                             <div class="flex min-h-0 flex-1 overflow-hidden">
                                 {@render children()}
                             </div>
@@ -826,35 +793,16 @@
                         <GridHeader>
                             {#snippet auxControls()}
                                 {#if (isSamples || isVideos) && hasEmbeddings}
-                                    <div class="flex items-center gap-1">
-                                        <Button
-                                            class="flex items-center space-x-1"
-                                            data-testid="toggle-plot-button"
-                                            variant={$showPlot || hasPlotSelectionContext
-                                                ? 'default'
-                                                : 'ghost'}
-                                            onclick={() =>
-                                                $showPlot
-                                                    ? setShowPlot(false)
-                                                    : showPlotWithSelection()}
-                                        >
-                                            <ChartNetwork class="size-4" />
-                                            <span>{showEmbeddingsLabel}</span>
-                                        </Button>
-                                        {#if hasPlotSelectionContext}
-                                            <Button
-                                                variant="ghost"
-                                                size="icon"
-                                                class="h-8 w-8"
-                                                title="Clear embedding selection"
-                                                aria-label="Clear embedding selection"
-                                                data-testid="toggle-plot-clear-selection-button"
-                                                onclick={clearPlotSelection}
-                                            >
-                                                <X class="size-4" />
-                                            </Button>
-                                        {/if}
-                                    </div>
+                                    <Button
+                                        class="flex items-center space-x-1"
+                                        data-testid="toggle-plot-button"
+                                        variant={$showPlot ? 'default' : 'ghost'}
+                                        onclick={() =>
+                                            $showPlot ? setShowPlot(false) : showPlotWithSelection()}
+                                    >
+                                        <ChartNetwork class="size-4" />
+                                        <span>Show Embeddings</span>
+                                    </Button>
                                 {/if}
                             {/snippet}
                             {#if (isSamples || isVideos) && hasEmbeddings}
@@ -943,7 +891,6 @@
                             {/if}
                         </GridHeader>
                         <Separator class="mb-4 bg-border-hard" />
-                        {@render plotSelectionNotice()}
                     {/if}
 
                     <div class="flex min-h-0 flex-1">
