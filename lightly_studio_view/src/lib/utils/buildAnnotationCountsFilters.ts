@@ -30,15 +30,18 @@ export function buildVideoFrameAnnotationCountsFilter({
 export function buildVideoAnnotationCountsFilter({
     metadataFilters,
     annotationFilter,
-    videoBoundsValues
+    videoBoundsValues,
+    sampleIds
 }: {
     metadataFilters: MetadataFilters | undefined;
     annotationFilter: AnnotationsFilter | undefined;
     videoBoundsValues: VideoFieldsBoundsView | null | undefined;
+    sampleIds?: string[];
 }): VideoFilter {
     return {
         sample_filter: {
-            metadata_filters: metadataFilters
+            metadata_filters: metadataFilters,
+            ...(sampleIds && sampleIds.length > 0 ? { sample_ids: sampleIds } : {})
         },
         ...(annotationFilter ? { frame_annotation_filter: annotationFilter } : {}),
         ...(videoBoundsValues ?? {})

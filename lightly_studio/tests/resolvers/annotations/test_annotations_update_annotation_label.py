@@ -176,47 +176,6 @@ def test_update_annotation_label_instance_segmentation(
     )
 
 
-def test_update_annotation_label_semantic_segmentation(
-    db_session: Session,
-    annotations_test_data: AnnotationsTestData,
-) -> None:
-    """Test updating annotation labels."""
-    annotations = annotation_resolver.get_all(
-        db_session,
-    ).annotations
-    annotation = get_annotation_by_type(
-        annotations=annotations, annotation_type=AnnotationType.SEMANTIC_SEGMENTATION
-    )
-    annotation_id = annotation.sample_id
-    current_annotation_label_id = annotation.annotation_label_id
-    new_annotation_label_id = annotations_test_data.annotation_labels[1].annotation_label_id
-
-    assert annotation.segmentation_details
-    segmentation_mask = annotation.segmentation_details.segmentation_mask
-
-    assert current_annotation_label_id != new_annotation_label_id
-    assert annotation.segmentation_details is not None
-
-    # Update the label of the first annotation
-    annotation_resolver.update_annotation_label(
-        db_session,
-        annotation_id,
-        new_annotation_label_id,
-    )
-
-    # Verify that the label has been updated
-    updated_annotation = annotation_resolver.get_by_id(db_session, annotation_id)
-
-    assert updated_annotation is not None
-    assert updated_annotation.annotation_label_id == new_annotation_label_id
-    assert_contains_properties(
-        updated_annotation.segmentation_details,
-        {
-            "segmentation_mask": segmentation_mask,
-        },
-    )
-
-
 def test_update_annotation_label_raise_error_on_wrong_annotation_id(
     db_session: Session,
     annotations_test_data: AnnotationsTestData,

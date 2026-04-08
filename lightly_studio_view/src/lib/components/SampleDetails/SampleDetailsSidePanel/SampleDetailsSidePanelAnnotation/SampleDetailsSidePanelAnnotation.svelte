@@ -47,7 +47,6 @@
             case 'object_detection':
                 return 'Object Detection';
             case 'instance_segmentation':
-            case 'semantic_segmentation':
                 return 'Segmentation Mask';
             case 'classification':
                 return 'Image Classification';

@@ -51,6 +51,7 @@ class DeepCopyContext:
     object_track_map: dict[UUID, UUID] = field(default_factory=dict)
     annotation_label_map: dict[UUID, UUID] = field(default_factory=dict)
     embedding_model_map: dict[UUID, UUID] = field(default_factory=dict)
+    new_dataset_id: UUID | None = None
 
 
 def deep_copy(
@@ -77,6 +78,7 @@ def deep_copy(
 
     # 1. Create new dataset entry.
     new_dataset_id = uuid4()
+    ctx.new_dataset_id = new_dataset_id
     # TODO(lukas, 03/2026): `copy_name` should be stored in DatasetTable
     db_dataset = DatasetTable(
         dataset_id=new_dataset_id,
@@ -93,7 +95,6 @@ def deep_copy(
         ctx=ctx,
         dataset_id=new_dataset_id,
     )
-    root_collection_id = hierarchy[0].collection_id
 
     # 3. Copy collection-scoped entities.
     old_collection_ids = list(ctx.collection_map.keys())
@@ -101,10 +102,13 @@ def deep_copy(
     _copy_object_tracks(
         session=session,
         old_dataset_id=dataset_id,
-        new_dataset_id=new_dataset_id,
         ctx=ctx,
     )
-    _copy_annotation_labels(session=session, root_collection_id=root_collection_id, ctx=ctx)
+    _copy_annotation_labels(
+        session=session,
+        old_dataset_id=dataset_id,
+        ctx=ctx,
+    )
     _copy_embedding_models(session=session, old_collection_ids=old_collection_ids, ctx=ctx)
     _copy_samples(session=session, old_collection_ids=old_collection_ids, ctx=ctx)
     session.flush()
@@ -234,17 +238,13 @@ def _copy_tags(
 
 def _copy_annotation_labels(
     session: Session,
-    root_collection_id: UUID,
+    old_dataset_id: UUID,
     ctx: DeepCopyContext,
 ) -> None:
-    """Copy annotation labels (belong to root collection only)."""
+    """Copy annotation labels belonging to a dataset."""
     labels = session.exec(
-        select(AnnotationLabelTable).where(
-            AnnotationLabelTable.root_collection_id == root_collection_id
-        )
+        select(AnnotationLabelTable).where(AnnotationLabelTable.dataset_id == old_dataset_id)
     ).all()
-
-    new_root_collection_id = ctx.collection_map[root_collection_id]
 
     for old_label in labels:
         new_id = uuid4()
@@ -252,10 +252,7 @@ def _copy_annotation_labels(
 
         new_label = _copy_with_updates(
             old_label,
-            {
-                "annotation_label_id": new_id,
-                "root_collection_id": new_root_collection_id,
-            },
+            {"annotation_label_id": new_id, "dataset_id": ctx.new_dataset_id},
         )
         session.add(new_label)
 
@@ -385,7 +382,6 @@ def _copy_captions(
 def _copy_object_tracks(
     session: Session,
     old_dataset_id: UUID,
-    new_dataset_id: UUID,
     ctx: DeepCopyContext,
 ) -> None:
     """Copy object tracks, remapping dataset ID."""
@@ -401,7 +397,7 @@ def _copy_object_tracks(
             {
                 "object_track_id": new_track_id,
                 "object_track_number": old_track.object_track_number,
-                "dataset_id": new_dataset_id,
+                "dataset_id": ctx.new_dataset_id,
             },
         )
         session.add(new_track)
@@ -454,10 +450,7 @@ def _copy_annotation_details(
                 {"sample_id": new_sample_id},
             )
             session.add(new_obj_det)
-    elif annotation_type in (
-        AnnotationType.INSTANCE_SEGMENTATION,
-        AnnotationType.SEMANTIC_SEGMENTATION,
-    ):
+    elif annotation_type == AnnotationType.INSTANCE_SEGMENTATION:
         old_seg = session.get(SegmentationAnnotationTable, old_sample_id)
         if old_seg:
             new_seg = _copy_with_updates(
