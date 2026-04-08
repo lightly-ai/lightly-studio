@@ -8,6 +8,7 @@
     import { useGlobalStorage } from '$lib/hooks/useGlobalStorage';
     import { addAnnotationUpdateToUndoStack } from '$lib/services/addAnnotationUpdateToUndoStack';
     import { useAnnotationLabelContext } from '$lib/contexts/SampleDetailsAnnotation.svelte';
+    import { shouldShowBoundingBoxForAnnotation } from '$lib/utils/shouldShowBoundingBoxForAnnotation';
 
     const {
         annotationId,
@@ -33,7 +34,7 @@
         scale: number;
     } = $props();
     const { addReversibleAction } = useGlobalStorage();
-    const { showAnnotationTextLabelsStore } = useSettings();
+    const { showAnnotationTextLabelsStore, showBoundingBoxesForSegmentationStore } = useSettings();
 
     const { annotation: annotationResp, updateAnnotation } = $derived(
         useAnnotation({
@@ -46,6 +47,9 @@
     let annotation = $derived($annotationResp.data);
 
     let selectionBox = $derived(annotation ? getBoundingBox(annotation!) : undefined);
+    const showBoundingBox = $derived(
+        shouldShowBoundingBoxForAnnotation(annotation, $showBoundingBoxesForSegmentationStore)
+    );
 
     const onBoundingBoxChanged = (bbox: BoundingBox) => {
         setCurrentBoundingBox(bbox);
@@ -82,6 +86,7 @@
             <SampleAnnotation
                 {annotation}
                 showLabel={$showAnnotationTextLabelsStore}
+                {showBoundingBox}
                 imageWidth={sample.width}
                 constraintBox={{
                     x: 0,
