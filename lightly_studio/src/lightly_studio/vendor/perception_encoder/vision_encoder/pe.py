@@ -409,7 +409,7 @@ class VisionTransformer(nn.Module):
             )
 
 
-    def load_ckpt(self, ckpt_path: str, verbose: bool = True):
+    def load_ckpt(self, ckpt_path: str, verbose: bool = False):
         _sd = torch.load(ckpt_path, weights_only=True)
         if "state_dict" in _sd:
             _sd = _sd["state_dict"]
@@ -426,8 +426,6 @@ class VisionTransformer(nn.Module):
         if verbose or (m or u):
             logger.info(f"Missing keys for loading vision encoder: {m}")
             logger.info(f"Unexpected keys for loading vision encoder: {u}")
-            print(f"Missing keys for loading vision encoder: {m}")
-            print(f"Unexpected keys for loading vision encoder: {u}")
 
 
     def truncate(self, layer_idx: int):
@@ -631,7 +629,7 @@ class TextTransformer(nn.Module):
         mask.triu_(1)  # zero out the lower diagonal
         return mask
 
-    def load_ckpt(self, ckpt_path: str, verbose: bool = True):
+    def load_ckpt(self, ckpt_path: str, verbose: bool = False):
         _sd = torch.load(ckpt_path, weights_only=True)
         if "state_dict" in _sd:
             _sd = _sd["state_dict"]
@@ -642,7 +640,7 @@ class TextTransformer(nn.Module):
 
         m, u = self.load_state_dict(_sd, strict=False)
         
-        if verbose or (m or u):
+        if verbose or m or u:
             logger.info(f"Missing keys for loading model: {m}")
             logger.info(f"Unexpected keys for loading model: {u}")
 
