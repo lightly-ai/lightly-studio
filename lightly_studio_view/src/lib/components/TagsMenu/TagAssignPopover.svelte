@@ -1,7 +1,5 @@
 <script lang="ts">
-    import { Plus } from '@lucide/svelte';
-    import * as Command from '$lib/components/ui/command/index.js';
-    import * as Popover from '$lib/components/ui/popover/index.js';
+    import { Input } from '$lib/components/ui/input/index.js';
     import type { TagView } from '$lib/services/types';
 
     interface Props {
@@ -12,58 +10,77 @@
 
     let { options, busy, onSelect }: Props = $props();
 
-    let open = $state(false);
-    let inputValue = $state('');
+    let searchQuery = $state('');
+    let showDropdown = $state(false);
 
-    $effect(() => {
-        if (!open) inputValue = '';
-    });
+    const filteredOptions = $derived<TagView[]>(
+        searchQuery.trim()
+            ? options.filter((t) => t.name.toLowerCase().includes(searchQuery.toLowerCase()))
+            : options
+    );
+
+    const hasExactMatch = $derived(
+        options.some((t) => t.name.toLowerCase() === searchQuery.trim().toLowerCase())
+    );
 
     function handleSelect(name: string) {
         onSelect(name);
-        open = false;
+        searchQuery = '';
+        showDropdown = false;
     }
 
-    const showCreate = $derived(
-        inputValue.trim() !== '' &&
-            !options.some((t) => t.name.toLowerCase() === inputValue.trim().toLowerCase())
-    );
+    function handleKeydown(event: KeyboardEvent) {
+        if (event.key === 'Enter') {
+            const exactMatch = options.find(
+                (t) => t.name.toLowerCase() === searchQuery.trim().toLowerCase()
+            );
+            if (exactMatch) {
+                handleSelect(exactMatch.name);
+            } else if (searchQuery.trim()) {
+                handleSelect(searchQuery.trim());
+            }
+        }
+        if (event.key === 'Escape') {
+            searchQuery = '';
+            showDropdown = false;
+        }
+    }
 </script>
 
-<Popover.Root bind:open>
-    <Popover.Trigger
-        class="mt-2 flex items-center gap-1 rounded px-1 py-0.5 text-xs text-muted-foreground transition hover:text-foreground"
+<div class="relative pt-2">
+    <Input
+        type="text"
+        placeholder="Assign tag to selection"
+        bind:value={searchQuery}
+        onkeydown={handleKeydown}
+        oninput={() => (showDropdown = true)}
+        onfocus={() => (showDropdown = true)}
+        onblur={() => setTimeout(() => (showDropdown = false), 100)}
+        class="h-8 text-xs disabled:opacity-60"
         disabled={busy}
-    >
-        <Plus class="size-3" />
-        Add tag
-    </Popover.Trigger>
-    <Popover.Content class="w-48 p-0" side="right" align="start">
-        <Command.Root>
-            <Command.Input placeholder="Tag name…" bind:value={inputValue} disabled={busy} />
-            <Command.List>
-                <Command.Empty>No tags found</Command.Empty>
-                <Command.Group>
-                    {#each options as opt (opt.tag_id)}
-                        <Command.Item value={opt.name} onSelect={() => handleSelect(opt.name)}>
-                            {opt.name}
-                        </Command.Item>
-                    {/each}
-                </Command.Group>
-                {#if showCreate}
-                    <div class="border-t">
-                        <Command.Item
-                            value="__create__"
-                            onSelect={() => handleSelect(inputValue.trim())}
-                            forceMount
-                            keywords={[]}
-                        >
-                            <span class="opacity-50">Create:</span>
-                            <span class="ml-1 font-semibold">{inputValue.trim()}</span>
-                        </Command.Item>
-                    </div>
-                {/if}
-            </Command.List>
-        </Command.Root>
-    </Popover.Content>
-</Popover.Root>
+    />
+    {#if showDropdown && (filteredOptions.length > 0 || (searchQuery.trim() && !hasExactMatch))}
+        <div
+            class="absolute left-0 top-full z-50 mt-1 max-h-44 w-full overflow-auto rounded-md border bg-popover shadow-md"
+        >
+            {#each filteredOptions as tag (tag.tag_id)}
+                <button
+                    type="button"
+                    class="flex w-full items-center px-2 py-1.5 text-xs hover:bg-accent"
+                    onclick={() => handleSelect(tag.name)}
+                >
+                    {tag.name}
+                </button>
+            {/each}
+            {#if searchQuery.trim() && !hasExactMatch}
+                <button
+                    type="button"
+                    class="flex w-full items-center gap-1 px-2 py-1.5 text-xs text-muted-foreground hover:bg-accent"
+                    onclick={() => handleSelect(searchQuery.trim())}
+                >
+                    Create "{searchQuery.trim()}"
+                </button>
+            {/if}
+        </div>
+    {/if}
+</div>
