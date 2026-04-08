@@ -353,7 +353,7 @@ export interface paths {
         };
         /**
          * Export Collection Youtube Vis
-         * @description Export collection video annotations in YouTube-VIS instance segmentation format.
+         * @description Export collection video annotations in the selected export format.
          */
         get: operations["export_collection_youtube_vis"];
         put?: never;
@@ -1395,13 +1395,14 @@ export interface paths {
         put?: never;
         /**
          * Get All Frames
-         * @description Retrieve a list of all frames for a given collection ID with pagination.
+         * @description Retrieve a list of all frames for a given collection ID with optional pagination.
          *
          *     Args:
          *         session: The database session.
          *         video_frame_collection_id: The ID of the collection to retrieve frames for.
-         *         pagination: Pagination parameters including offset and limit.
          *         body: The body containing the filters
+         *         pagination: Optional pagination parameters including offset and limit.
+         *
          *     Returns:
          *         A list of frames along with the total count.
          */
@@ -5989,8 +5990,10 @@ export interface operations {
     get_all_frames: {
         parameters: {
             query?: {
-                cursor?: number;
-                limit?: number;
+                /** @description Offset for pagination */
+                cursor?: number | null;
+                /** @description Limit for pagination */
+                limit?: number | null;
             };
             header?: never;
             path: {

@@ -46,6 +46,46 @@ def test_get_all_frames(
     assert data[1]["video"]["file_path_abs"] == "video1.mp4"
 
 
+def test_get_all_frames__without_explicit_pagination(
+    test_client: TestClient,
+    db_session: Session,
+) -> None:
+    collection = create_collection(session=db_session, sample_type=SampleType.VIDEO)
+    collection_id = collection.collection_id
+
+    # Create a video with 150 frames to test that pagination is removed
+    video_frame = create_video_with_frames(
+        session=db_session,
+        collection_id=collection_id,
+        video=VideoStub(path="video1.mp4", duration_s=15, fps=10),
+    )
+
+    video_frame_collection_id = video_frame.video_frames_collection_id
+
+    # Test without any pagination parameters - should return all 150 frames
+    response = test_client.post(
+        f"/api/collections/{video_frame_collection_id}/frame/",
+        json={},
+    )
+
+    assert response.status_code == HTTP_STATUS_OK
+    result = response.json()
+    data = result["data"]
+
+    assert result["total_count"] == 150
+    assert len(data) == 150
+
+    # Verify first frame
+    assert data[0]["frame_number"] == 0
+    assert UUID(data[0]["video"]["sample_id"]) == video_frame.video_sample_id
+    assert data[0]["video"]["file_path_abs"] == "video1.mp4"
+
+    # Verify last frame
+    assert data[149]["frame_number"] == 149
+    assert UUID(data[149]["video"]["sample_id"]) == video_frame.video_sample_id
+    assert data[149]["video"]["file_path_abs"] == "video1.mp4"
+
+
 def test_get_all_frames__with_video_id_filter(
     test_client: TestClient,
     db_session: Session,
