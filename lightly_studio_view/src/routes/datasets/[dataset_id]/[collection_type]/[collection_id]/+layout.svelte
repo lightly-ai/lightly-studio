@@ -491,13 +491,13 @@
             transition:fly={{ y: 20, duration: 200 }}
         >
             <div
-                class="pointer-events-auto flex items-center gap-3 rounded-full border border-primary/30 bg-primary/90 px-4 py-2 shadow-lg backdrop-blur-sm"
+                class="pointer-events-auto flex items-center gap-3 rounded-xl border border-primary/30 bg-primary/90 px-4 py-2 shadow-lg backdrop-blur-sm"
             >
                 <span class="text-sm font-medium text-primary-foreground">
                     {selectedCount} selected
                 </span>
                 <button
-                    class="flex h-6 w-6 items-center justify-center rounded-full text-primary-foreground opacity-70 transition-opacity hover:opacity-100"
+                    class="flex h-6.5 w-6.5 items-center justify-center rounded-full text-primary-foreground opacity-80 transition-[background-color,opacity,transform] duration-150 hover:scale-105 hover:bg-primary-foreground/10 hover:opacity-100"
                     onclick={() => {
                         clearSelectedSamples(collectionId);
                         clearSelectedSampleAnnotationCrops(collectionId);
