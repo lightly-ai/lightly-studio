@@ -617,7 +617,7 @@
                             </div>
                             <Segment title="Filters" icon={SlidersHorizontal}>
                                 <div class="space-y-2">
-                                    {#if hasPlotSelectionContext && !$showPlot}
+                                    {#if hasPlotSelectionContext}
                                         <div
                                             class="rounded-md border border-amber-500/35 bg-amber-500/10 px-2 py-1.5"
                                             data-testid="embedding-selection-filter-chip"
