@@ -92,6 +92,8 @@ def connect(
 
     db_manager.connect(db_url=config.engine_url)
 
+    print(f"Successfully connected to LightlyStudio enterprise instance at {api_url}.")
+
 
 def _fetch_connect_config(api_url: str, token: str) -> _EnterpriseConnectResponse:
     """Call the enterprise endpoint to retrieve the connection configuration.
