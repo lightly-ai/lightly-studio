@@ -1,8 +1,9 @@
-import { fireEvent, render, screen, waitFor } from '@testing-library/svelte';
+import { fireEvent, render, screen } from '@testing-library/svelte';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import PlotPanel from './PlotPanel.svelte';
 import { useEmbeddings } from '$lib/hooks/useEmbeddings/useEmbeddings';
 import { writable, type Writable } from 'svelte/store';
+import { tick } from 'svelte';
 
 let rangeSelectionStore: Writable<Array<{ x: number; y: number }> | null>;
 let selectedSampleIdsStore: Writable<string[]>;
@@ -139,7 +140,7 @@ describe('PlotPanel.svelte', () => {
         expect(mockSetRangeSelectionForcollection).toHaveBeenCalledWith('test-collection-id', null);
     });
 
-    it('should clear embedding selection when base filters change', async () => {
+    it('should not clear embedding selection when base filters change', async () => {
         rangeSelectionStore = writable([
             { x: 0, y: 0 },
             { x: 1, y: 0 },
@@ -166,13 +167,9 @@ describe('PlotPanel.svelte', () => {
             }
         });
 
-        await waitFor(() => {
-            expect(mockSetRangeSelectionForcollection).toHaveBeenCalledWith(
-                'test-collection-id',
-                null
-            );
-            expect(mockUpdateSampleIds).toHaveBeenCalledWith([]);
-        });
+        await tick();
+        expect(mockSetRangeSelectionForcollection).not.toHaveBeenCalled();
+        expect(mockUpdateSampleIds).not.toHaveBeenCalled();
     });
 
     it('should clear sample_ids when selecting all selectable points', async () => {

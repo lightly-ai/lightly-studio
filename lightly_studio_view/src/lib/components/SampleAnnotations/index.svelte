@@ -1,5 +1,6 @@
 <script lang="ts">
     import { useHideAnnotations } from '$lib/hooks/useHideAnnotations';
+    import { useSettings } from '$lib/hooks/useSettings';
     import { onMount, type ComponentProps } from 'svelte';
     import type { AnnotationView } from '$lib/api/lightly_studio_local';
     import { AnnotationCanvas } from '$lib/components';
@@ -24,9 +25,11 @@
     } = $props();
 
     const { isHidden } = useHideAnnotations();
+    const { showBoundingBoxesForSegmentationStore } = useSettings();
 
     const mapToCanvasAnnotation = (
-        annotation: SampleView['annotations'][number]
+        annotation: SampleView['annotations'][number],
+        showInstanceSegmentationBoundingBoxes: boolean
     ): AnnotationCanvasAnnotation | null => {
         const annotation_label_name = annotation.annotation_label.annotation_label_name;
 
@@ -50,19 +53,25 @@
                 annotation_type: 'instance_segmentation',
                 annotation_label_name,
                 segmentation_mask: segmentation_mask ?? [],
-                object_detection_details: { x, y, width, height }
+                object_detection_details: showInstanceSegmentationBoundingBoxes
+                    ? { x, y, width, height }
+                    : undefined
             } satisfies AnnotationCanvasAnnotation;
         }
 
         return null;
     };
 
-    const annotationsWithVisuals: AnnotationCanvasAnnotation[] = $derived(
-        sample.annotations
+    const annotationsWithVisuals: AnnotationCanvasAnnotation[] = $derived.by(() => {
+        const showInstanceSegmentationBoundingBoxes = $showBoundingBoxesForSegmentationStore;
+
+        return sample.annotations
             .filter((annotation) => annotation.annotation_type !== 'classification')
-            .map(mapToCanvasAnnotation)
-            .filter((annotation): annotation is AnnotationCanvasAnnotation => annotation != null)
-    );
+            .map((annotation) =>
+                mapToCanvasAnnotation(annotation, showInstanceSegmentationBoundingBoxes)
+            )
+            .filter((annotation): annotation is AnnotationCanvasAnnotation => annotation != null);
+    });
     const objectFitClass = $derived(objectFit === 'cover' ? 'object-cover' : 'object-contain');
 
     let showAnnotations = $state(false);

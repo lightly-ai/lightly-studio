@@ -16,6 +16,7 @@
         annotation,
         imageWidth,
         showLabel = false,
+        showBoundingBox = true,
         isResizable = false,
         scale = 1,
         constraintBox,
@@ -24,6 +25,7 @@
     }: {
         annotation: Annotation;
         showLabel?: boolean;
+        showBoundingBox?: boolean;
         imageWidth: number;
         isResizable?: boolean;
         scale?: number;
@@ -98,7 +100,9 @@
     ]);
 
     const showAnnotationLabel = $derived(
-        showLabel && (highlight === 'auto' || highlight === 'active')
+        showLabel &&
+            (highlight === 'auto' || highlight === 'active') &&
+            (annotation.annotation_type !== 'instance_segmentation' || showBoundingBox)
     );
 </script>
 
@@ -122,7 +126,7 @@
     {/if}
 
     <!--Disable resizable rectangle for segmentation masks since we don’t support it yet.-->
-    {#if isResizable && constraintBox && !segmentationMask}
+    {#if showBoundingBox && isResizable && constraintBox && !segmentationMask}
         <ResizableRectangle
             bind:bbox={boundingBox}
             {colorStroke}

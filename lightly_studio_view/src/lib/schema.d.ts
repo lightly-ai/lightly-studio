@@ -3227,6 +3227,12 @@ export interface components {
              */
             show_sample_filenames: boolean;
             /**
+             * Show Bounding Boxes For Segmentation
+             * @description Controls whether to show annotation bounding boxes for segmentation
+             * @default true
+             */
+            show_bounding_boxes_for_segmentation: boolean;
+            /**
              * Key Toolbar Selection
              * @description Key to activate the selection tool in the toolbar
              * @default s
