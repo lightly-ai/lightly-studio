@@ -2090,13 +2090,17 @@ export interface components {
         Body_embed_image_from_file_api_image_embedding_from_file_for_collection__collection_id__post: {
             /**
              * File
+             * Format: binary
              * @description The image file to embed.
              */
             file: string;
         };
         /** Body_load_classifier_from_buffer_api_classifiers_load_classifier_from_buffer_post */
         Body_load_classifier_from_buffer_api_classifiers_load_classifier_from_buffer_post: {
-            /** File */
+            /**
+             * File
+             * Format: binary
+             */
             file: string;
         };
         /** BoundingBoxCoordinates */
@@ -3222,6 +3226,12 @@ export interface components {
              * @default false
              */
             show_sample_filenames: boolean;
+            /**
+             * Show Bounding Boxes For Segmentation
+             * @description Controls whether to show annotation bounding boxes for segmentation
+             * @default true
+             */
+            show_bounding_boxes_for_segmentation: boolean;
             /**
              * Key Toolbar Selection
              * @description Key to activate the selection tool in the toolbar
