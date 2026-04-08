@@ -38,10 +38,13 @@ export function buildVideoAnnotationCountsFilter({
     videoBoundsValues: VideoFieldsBoundsView | null | undefined;
     sampleIds?: string[];
 }): VideoFilter {
+    console.log('Building video annotation counts filter with:', {
+        sampleIds
+    });
     return {
         sample_filter: {
             metadata_filters: metadataFilters,
-            ...(sampleIds ? { sample_ids: sampleIds } : {})
+            ...(sampleIds && sampleIds.length > 0 ? { sample_ids: sampleIds } : {})
         },
         ...(annotationFilter ? { frame_annotation_filter: annotationFilter } : {}),
         ...(videoBoundsValues ?? {})
