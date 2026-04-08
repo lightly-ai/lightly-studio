@@ -41,7 +41,6 @@ class AnnotationType(str, Enum):
     """The type of annotation task."""
 
     CLASSIFICATION = "classification"
-    SEMANTIC_SEGMENTATION = "semantic_segmentation"
     INSTANCE_SEGMENTATION = "instance_segmentation"
     OBJECT_DETECTION = "object_detection"
 
@@ -87,7 +86,7 @@ class AnnotationBaseTable(SQLModel, table=True):
         sa_relationship_kwargs={"lazy": "select"},
     )
 
-    # Details about instance and semantic segmentation.
+    # Details about segmentation.
     segmentation_details: Mapped[Optional["SegmentationAnnotationTable"]] = Relationship(
         back_populates="annotation_base",
         sa_relationship_kwargs={"lazy": "select"},
@@ -117,7 +116,7 @@ class AnnotationCreate(ABC, SQLModel):
     width: Optional[int] = None
     height: Optional[int] = None
 
-    # Optional properties for instance and semantic segmentation.
+    # Optional properties for segmentation.
     segmentation_mask: Optional[list[int]] = None
 
 

@@ -28,10 +28,7 @@ export function useAnnotationSelection() {
 
         if (!annotation) return;
 
-        if (
-            annotation.annotation_type === 'instance_segmentation' ||
-            annotation.annotation_type === 'semantic_segmentation'
-        ) {
+        if (annotation.annotation_type === 'instance_segmentation') {
             setAnnotationType(annotation.annotation_type);
             setAnnotationLabel(annotation.annotation_label?.annotation_label_name ?? null);
             setStatus('brush');

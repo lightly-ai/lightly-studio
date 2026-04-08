@@ -23,7 +23,6 @@ def test_get_segmentation_annotation_create__with_multipolygon() -> None:
         parent_sample_id=parent_sample_id,
         annotation_label_id=annotation_label_id,
         segmentation=multipolygon,
-        annotation_type=AnnotationType.INSTANCE_SEGMENTATION,
     )
 
     object_track_id = uuid4()
@@ -31,7 +30,6 @@ def test_get_segmentation_annotation_create__with_multipolygon() -> None:
         parent_sample_id=parent_sample_id,
         annotation_label_id=annotation_label_id,
         segmentation=multipolygon,
-        annotation_type=AnnotationType.INSTANCE_SEGMENTATION,
         object_track_id=object_track_id,
     )
 
@@ -67,12 +65,11 @@ def test_get_segmentation_annotation_create__with_binary_mask() -> None:
         parent_sample_id=parent_sample_id,
         annotation_label_id=annotation_label_id,
         segmentation=binary_mask,
-        annotation_type=AnnotationType.SEMANTIC_SEGMENTATION,
     )
 
     assert annotation.parent_sample_id == parent_sample_id
     assert annotation.annotation_label_id == annotation_label_id
-    assert annotation.annotation_type == AnnotationType.SEMANTIC_SEGMENTATION
+    assert annotation.annotation_type == AnnotationType.INSTANCE_SEGMENTATION
     assert annotation.x == 0
     assert annotation.y == 0
     assert annotation.width == 2
