@@ -10,7 +10,8 @@
     import TagAssignInput from './TagAssignInput.svelte';
     import { toast } from 'svelte-sonner';
 
-    let { collection_id, gridType }: { collection_id: string; gridType: GridType } = $props();
+    let { collection_id, gridType }: Parameters<typeof useTags>[0] & { gridType: GridType } =
+        $props();
 
     const tagKind = $derived(
         (['samples', 'videos', 'video_frames'] as GridType[]).includes(gridType)
