@@ -205,12 +205,12 @@ def annotation_labels(
     db_session: Session, collections: list[CollectionTable]
 ) -> list[AnnotationLabelTable]:
     """Create multiple test annotation labels."""
-    collection_id = collections[0].collection_id
+    dataset_id = collections[0].dataset_id
     labels = []
     for i in range(5):
         label_input = AnnotationLabelCreate(
             annotation_label_name=f"test_label_{i}",
-            root_collection_id=collection_id,
+            dataset_id=dataset_id,
         )
         label = annotation_label_resolver.create(db_session, label_input)
         labels.append(label)
