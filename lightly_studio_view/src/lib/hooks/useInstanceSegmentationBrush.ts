@@ -18,6 +18,7 @@ import { restoreOverriddenSegmentationAnnotationsForUndo } from '$lib/services/r
 
 export function useInstanceSegmentationBrush({
     collectionId,
+    datasetId,
     sampleId,
     sample,
     annotations = [],
@@ -25,6 +26,7 @@ export function useInstanceSegmentationBrush({
     onAnnotationCreated
 }: {
     collectionId: string;
+    datasetId: string;
     sampleId: string;
     sample: { width: number; height: number };
     annotations?: AnnotationView[];
@@ -143,7 +145,7 @@ export function useInstanceSegmentationBrush({
 
         if (!label) {
             label = await createLabel({
-                root_collection_id: collectionId,
+                dataset_id: datasetId,
                 annotation_label_name: 'DEFAULT'
             });
         }

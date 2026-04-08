@@ -17,7 +17,10 @@ from lightly_studio.models.annotation.annotation_base import (
     AnnotationType,
 )
 from lightly_studio.models.annotation_label import AnnotationLabelCreate
-from lightly_studio.resolvers import annotation_label_resolver
+from lightly_studio.resolvers import (
+    annotation_label_resolver,
+    collection_resolver,
+)
 
 
 class _LabelsWithCategories(Protocol):
@@ -101,6 +104,7 @@ def get_object_detection_annotation_create(
     )
 
 
+# TODO(lukas 04/2026): change `root_collection_id` to `dataset_id`
 def create_label_map(
     session: Session,
     root_collection_id: UUID,
@@ -113,16 +117,21 @@ def create_label_map(
         root_collection_id: The ID of the root collection the labels belong to.
         input_labels: The labelformat input containing the categories.
     """
+    collection = collection_resolver.get_by_id(session=session, collection_id=root_collection_id)
+    if collection is None:
+        raise ValueError(f"Collection {root_collection_id} doesn't exist")
+    dataset_id = collection.dataset_id
+
     label_map = {}
     for category in input_labels.get_categories():
         # Use label if already exists
         label = annotation_label_resolver.get_by_label_name(
-            session=session, root_collection_id=root_collection_id, label_name=category.name
+            session=session, dataset_id=dataset_id, label_name=category.name
         )
         if label is None:
             # Create new label
             label_create = AnnotationLabelCreate(
-                root_collection_id=root_collection_id,
+                dataset_id=dataset_id,
                 annotation_label_name=category.name,
             )
             label = annotation_label_resolver.create(session=session, label=label_create)
