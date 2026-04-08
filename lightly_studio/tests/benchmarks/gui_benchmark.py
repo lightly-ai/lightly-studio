@@ -10,10 +10,9 @@ from __future__ import annotations
 import argparse
 import time
 from dataclasses import dataclass
-from enum import Enum
 from pathlib import Path
 from tempfile import TemporaryDirectory
-from uuid import UUID, uuid4
+from uuid import UUID
 
 import numpy as np
 import pyarrow as pa
@@ -53,7 +52,12 @@ DEFAULT_DATASET_NAME = "gui_benchmark"
 DEFAULT_ANNOTATION_COLLECTION_NAME = "benchmark_annotations"
 DEFAULT_ANNOTATION_LABEL_NAME = "object"
 DEFAULT_EMBEDDING_MODEL_NAME = "benchmark_embeddings"
-Row = dict[str, object]
+
+
+def _make_uuid_str(i: int) -> str:
+    """Format an integer as a UUID string without creating a UUID object."""
+    h = format(i, "032x")
+    return f"{h[:8]}-{h[8:12]}-{h[12:16]}-{h[16:20]}-{h[20:]}"
 
 
 @dataclass(frozen=True)
@@ -223,22 +227,21 @@ def _set_default_embedding_model(collection_id: UUID, embedding_model_id: UUID) 
 
 @dataclass(frozen=True)
 class BatchData:
-    """Rows to insert for a single batch."""
+    """Arrow tables to insert for a single batch."""
 
-    image_samples: list[Row]
-    images: list[Row]
-    embeddings: list[Row]
-    annotation_samples: list[Row]
-    annotations: list[Row]
-    object_detections: list[Row]
+    image_samples: pa.Table
+    images: pa.Table
+    embeddings: pa.Table
+    annotation_samples: pa.Table
+    annotations: pa.Table
+    object_detections: pa.Table
 
 
 @dataclass(frozen=True)
 class ArrowInsertSpec:
-    """Specification for inserting Arrow-backed rows into a table."""
+    """Specification for inserting an Arrow table into a database table."""
 
     table_name: str
-    source_columns: tuple[str, ...]
     insert_columns: tuple[str, ...] | None = None
     select_columns_sql: str | None = None
 
@@ -254,38 +257,47 @@ def _build_batch_data(  # noqa: PLR0913
     annotation_label_id: UUID,
     shared_image_path: Path,
 ) -> BatchData:
-    """Build all row payloads for a batch."""
-    image_sample_ids = [uuid4() for _ in range(batch_count)]
-    image_samples: list[Row] = [
-        {"sample_id": sample_id, "collection_id": image_collection_id}
-        for sample_id in image_sample_ids
-    ]
-    images = _build_image_rows(
+    """Build all Arrow tables for a batch."""
+    image_id_strs = [_make_uuid_str(batch_start + i) for i in range(batch_count)]
+
+    image_samples = _build_image_samples_table(
+        image_id_strs=image_id_strs,
+        collection_id_str=str(image_collection_id),
+    )
+    images = _build_images_table(
         batch_start=batch_start,
+        image_id_strs=image_id_strs,
         image_size=config.image_size,
-        image_sample_ids=image_sample_ids,
         shared_image_path=shared_image_path,
     )
-    embeddings = _build_embedding_rows(
+    embeddings = _build_embeddings_table(
         rng=rng,
+        image_id_strs=image_id_strs,
         embedding_dim=config.embedding_dim,
-        embedding_model_id=embedding_model_id,
-        image_sample_ids=image_sample_ids,
+        embedding_model_id_str=str(embedding_model_id),
     )
 
     annotation_count = batch_count * config.boxes_per_image
-    annotation_sample_ids = [uuid4() for _ in range(annotation_count)]
-    annotation_samples: list[Row] = [
-        {"sample_id": sample_id, "collection_id": annotation_collection_id}
-        for sample_id in annotation_sample_ids
+    annotation_id_base = config.num_images + batch_start * config.boxes_per_image
+    annotation_id_strs = [
+        _make_uuid_str(annotation_id_base + i) for i in range(annotation_count)
     ]
-    annotations, object_detections = _build_annotation_rows(
-        rng=rng,
-        image_size=config.image_size,
+
+    annotation_samples = _build_annotation_samples_table(
+        annotation_id_strs=annotation_id_strs,
+        collection_id_str=str(annotation_collection_id),
+    )
+    annotations = _build_annotations_table(
+        annotation_id_strs=annotation_id_strs,
+        image_id_strs=image_id_strs,
         boxes_per_image=config.boxes_per_image,
-        annotation_label_id=annotation_label_id,
-        annotation_sample_ids=annotation_sample_ids,
-        image_sample_ids=image_sample_ids,
+        annotation_label_id_str=str(annotation_label_id),
+    )
+    object_detections = _build_object_detections_table(
+        rng=rng,
+        annotation_id_strs=annotation_id_strs,
+        annotation_count=annotation_count,
+        image_size=config.image_size,
     )
 
     return BatchData(
@@ -298,109 +310,146 @@ def _build_batch_data(  # noqa: PLR0913
     )
 
 
-def _build_image_rows(
-    batch_start: int,
-    image_size: int,
-    image_sample_ids: list[UUID],
-    shared_image_path: Path,
-) -> list[Row]:
-    """Build image rows for a batch."""
-    rows: list[Row] = []
-    shared_image_path_str = str(shared_image_path)
-    for index, sample_id in enumerate(image_sample_ids, start=batch_start):
-        rows.append(
-            {
-                "sample_id": sample_id,
-                "file_name": f"benchmark_{index:06d}.jpg",
-                "file_path_abs": shared_image_path_str,
-                "width": image_size,
-                "height": image_size,
-            }
-        )
-    return rows
-
-
-def _build_embedding_rows(
-    rng: np.random.Generator,
-    embedding_dim: int,
-    embedding_model_id: UUID,
-    image_sample_ids: list[UUID],
-) -> list[Row]:
-    """Build embedding rows for a batch."""
-    embeddings = rng.random((len(image_sample_ids), embedding_dim))
-    return [
+def _build_image_samples_table(
+    image_id_strs: list[str],
+    collection_id_str: str,
+) -> pa.Table:
+    """Build the image samples Arrow table."""
+    n = len(image_id_strs)
+    return pa.table(
         {
-            "sample_id": sample_id,
-            "embedding_model_id": embedding_model_id,
-            "embedding": embedding.tolist(),
+            "sample_id": pa.array(image_id_strs, type=pa.string()),
+            "collection_id": pa.array([collection_id_str] * n, type=pa.string()),
         }
-        for sample_id, embedding in zip(image_sample_ids, embeddings)
-    ]
+    )
 
 
-def _build_annotation_rows(  # noqa: PLR0913
-    rng: np.random.Generator,
+def _build_images_table(
+    batch_start: int,
+    image_id_strs: list[str],
     image_size: int,
+    shared_image_path: Path,
+) -> pa.Table:
+    """Build the images Arrow table."""
+    n = len(image_id_strs)
+    file_path_str = str(shared_image_path)
+    file_names = [f"benchmark_{batch_start + i:06d}.jpg" for i in range(n)]
+    return pa.table(
+        {
+            "sample_id": pa.array(image_id_strs, type=pa.string()),
+            "file_name": pa.array(file_names, type=pa.string()),
+            "file_path_abs": pa.array([file_path_str] * n, type=pa.string()),
+            "width": pa.array([image_size] * n, type=pa.int32()),
+            "height": pa.array([image_size] * n, type=pa.int32()),
+        }
+    )
+
+
+def _build_embeddings_table(
+    rng: np.random.Generator,
+    image_id_strs: list[str],
+    embedding_dim: int,
+    embedding_model_id_str: str,
+) -> pa.Table:
+    """Build the embeddings Arrow table using a FixedSizeListArray."""
+    n = len(image_id_strs)
+    flat = rng.random(n * embedding_dim).astype(np.float32)
+    embedding_array = pa.FixedSizeListArray.from_arrays(
+        pa.array(flat, type=pa.float32()),
+        embedding_dim,
+    )
+    return pa.table(
+        {
+            "sample_id": pa.array(image_id_strs, type=pa.string()),
+            "embedding_model_id": pa.array([embedding_model_id_str] * n, type=pa.string()),
+            "embedding": embedding_array,
+        }
+    )
+
+
+def _build_annotation_samples_table(
+    annotation_id_strs: list[str],
+    collection_id_str: str,
+) -> pa.Table:
+    """Build the annotation samples Arrow table."""
+    n = len(annotation_id_strs)
+    return pa.table(
+        {
+            "sample_id": pa.array(annotation_id_strs, type=pa.string()),
+            "collection_id": pa.array([collection_id_str] * n, type=pa.string()),
+        }
+    )
+
+
+def _build_annotations_table(
+    annotation_id_strs: list[str],
+    image_id_strs: list[str],
     boxes_per_image: int,
-    annotation_label_id: UUID,
-    annotation_sample_ids: list[UUID],
-    image_sample_ids: list[UUID],
-) -> tuple[list[Row], list[Row]]:
-    """Build annotation rows for a batch."""
-    if boxes_per_image == 0:
-        return [], []
+    annotation_label_id_str: str,
+) -> pa.Table:
+    """Build the annotations Arrow table."""
+    n = len(annotation_id_strs)
+    annotation_type_str = AnnotationType.OBJECT_DETECTION.name
+    repeated_parent_ids = np.repeat(np.array(image_id_strs), boxes_per_image)
+    return pa.table(
+        {
+            "sample_id": pa.array(annotation_id_strs, type=pa.string()),
+            "annotation_type": pa.array([annotation_type_str] * n, type=pa.string()),
+            "annotation_label_id": pa.array([annotation_label_id_str] * n, type=pa.string()),
+            "parent_sample_id": pa.array(repeated_parent_ids, type=pa.string()),
+        }
+    )
 
-    repeated_parent_ids = [
-        sample_id for sample_id in image_sample_ids for _ in range(boxes_per_image)
-    ]
-    box_count = len(annotation_sample_ids)
+
+def _build_object_detections_table(
+    rng: np.random.Generator,
+    annotation_id_strs: list[str],
+    annotation_count: int,
+    image_size: int,
+) -> pa.Table:
+    """Build the object detections Arrow table."""
+    if annotation_count == 0:
+        return pa.table(
+            {
+                "sample_id": pa.array([], type=pa.string()),
+                "x": pa.array([], type=pa.int32()),
+                "y": pa.array([], type=pa.int32()),
+                "width": pa.array([], type=pa.int32()),
+                "height": pa.array([], type=pa.int32()),
+            }
+        )
     max_box_size = max(2, image_size // 4)
-    widths = rng.integers(1, max_box_size + 1, size=box_count, dtype=np.int32)
-    heights = rng.integers(1, max_box_size + 1, size=box_count, dtype=np.int32)
-    x_values = rng.integers(0, image_size - widths + 1, size=box_count, dtype=np.int32)
-    y_values = rng.integers(0, image_size - heights + 1, size=box_count, dtype=np.int32)
-
-    annotations: list[Row] = []
-    object_detections: list[Row] = []
-    for index, annotation_sample_id in enumerate(annotation_sample_ids):
-        annotations.append(
-            {
-                "sample_id": annotation_sample_id,
-                "annotation_type": AnnotationType.OBJECT_DETECTION,
-                "annotation_label_id": annotation_label_id,
-                "parent_sample_id": repeated_parent_ids[index],
-            }
-        )
-        object_detections.append(
-            {
-                "sample_id": annotation_sample_id,
-                "x": int(x_values[index]),
-                "y": int(y_values[index]),
-                "width": int(widths[index]),
-                "height": int(heights[index]),
-            }
-        )
-    return annotations, object_detections
+    widths = rng.integers(1, max_box_size + 1, size=annotation_count, dtype=np.int32)
+    heights = rng.integers(1, max_box_size + 1, size=annotation_count, dtype=np.int32)
+    x_values = rng.integers(0, image_size - widths + 1, size=annotation_count, dtype=np.int32)
+    y_values = rng.integers(0, image_size - heights + 1, size=annotation_count, dtype=np.int32)
+    return pa.table(
+        {
+            "sample_id": pa.array(annotation_id_strs, type=pa.string()),
+            "x": pa.array(x_values, type=pa.int32()),
+            "y": pa.array(y_values, type=pa.int32()),
+            "width": pa.array(widths, type=pa.int32()),
+            "height": pa.array(heights, type=pa.int32()),
+        }
+    )
 
 
 def _insert_batch(connection: object, batch_data: BatchData) -> None:
     """Insert a single batch into the database."""
-    _insert_arrow_rows(
+    _insert_arrow_table(
         connection=connection,
-        rows=batch_data.image_samples,
+        table=batch_data.image_samples,
         spec=ArrowInsertSpec(
             table_name=SampleTable.__tablename__,
-            source_columns=("sample_id", "collection_id"),
             insert_columns=("sample_id", "collection_id", "created_at", "updated_at"),
             select_columns_sql="sample_id, collection_id, current_timestamp, current_timestamp",
         ),
     )
-    _insert_arrow_rows(
+    _insert_arrow_table(
         connection=connection,
-        rows=batch_data.images,
+        table=batch_data.images,
         spec=ArrowInsertSpec(
             table_name=ImageTable.__tablename__,
-            source_columns=("sample_id", "file_name", "width", "height", "file_path_abs"),
             insert_columns=(
                 "sample_id",
                 "file_name",
@@ -416,37 +465,29 @@ def _insert_batch(connection: object, batch_data: BatchData) -> None:
             ),
         ),
     )
-    _insert_arrow_rows(
+    _insert_arrow_table(
         connection=connection,
-        rows=batch_data.embeddings,
+        table=batch_data.embeddings,
         spec=ArrowInsertSpec(
             table_name=SampleEmbeddingTable.__tablename__,
-            source_columns=("sample_id", "embedding_model_id", "embedding"),
         ),
     )
 
-    if batch_data.annotation_samples:
-        _insert_arrow_rows(
+    if len(batch_data.annotation_samples) > 0:
+        _insert_arrow_table(
             connection=connection,
-            rows=batch_data.annotation_samples,
+            table=batch_data.annotation_samples,
             spec=ArrowInsertSpec(
                 table_name=SampleTable.__tablename__,
-                source_columns=("sample_id", "collection_id"),
                 insert_columns=("sample_id", "collection_id", "created_at", "updated_at"),
                 select_columns_sql="sample_id, collection_id, current_timestamp, current_timestamp",
             ),
         )
-        _insert_arrow_rows(
+        _insert_arrow_table(
             connection=connection,
-            rows=batch_data.annotations,
+            table=batch_data.annotations,
             spec=ArrowInsertSpec(
                 table_name=AnnotationBaseTable.__tablename__,
-                source_columns=(
-                    "sample_id",
-                    "annotation_type",
-                    "annotation_label_id",
-                    "parent_sample_id",
-                ),
                 insert_columns=(
                     "sample_id",
                     "annotation_type",
@@ -460,53 +501,38 @@ def _insert_batch(connection: object, batch_data: BatchData) -> None:
                 ),
             ),
         )
-        _insert_arrow_rows(
+        _insert_arrow_table(
             connection=connection,
-            rows=batch_data.object_detections,
+            table=batch_data.object_detections,
             spec=ArrowInsertSpec(
                 table_name=ObjectDetectionAnnotationTable.__tablename__,
-                source_columns=("sample_id", "x", "y", "width", "height"),
             ),
         )
 
 
-def _insert_arrow_rows(
+def _insert_arrow_table(
     connection: object,
-    rows: list[Row],
+    table: pa.Table,
     spec: ArrowInsertSpec,
 ) -> None:
-    """Insert rows into DuckDB through an Arrow table."""
-    if not rows:
+    """Register an Arrow table in DuckDB and INSERT it into the target table."""
+    if len(table) == 0:
         return
 
-    arrow_table = pa.table(
-        {
-            column: [_normalize_arrow_value(row[column]) for row in rows]
-            for column in spec.source_columns
-        }
-    )
-    temp_table_name = f"tmp_{spec.table_name}_{uuid4().hex}"
-    connection.register(temp_table_name, arrow_table)  # type: ignore[attr-defined]
+    source_cols = table.column_names
+    insert_cols = spec.insert_columns or tuple(source_cols)
+    select_sql = spec.select_columns_sql or ", ".join(source_cols)
+    column_list = ", ".join(insert_cols)
 
-    column_list = ", ".join(spec.insert_columns or spec.source_columns)
-    select_list = spec.select_columns_sql or ", ".join(spec.source_columns)
+    temp_name = f"tmp_{spec.table_name}"
+    connection.register(temp_name, table)  # type: ignore[attr-defined]
     try:
-        cursor = connection.cursor()  # type: ignore[attr-defined]
-        cursor.execute(
+        connection.cursor().execute(  # type: ignore[attr-defined]
             f"INSERT INTO {spec.table_name} ({column_list}) "
-            f"SELECT {select_list} FROM {temp_table_name}"
+            f"SELECT {select_sql} FROM {temp_name}"
         )
     finally:
-        connection.unregister(temp_table_name)  # type: ignore[attr-defined]
-
-
-def _normalize_arrow_value(value: object) -> object:
-    """Convert Python objects into Arrow-friendly scalar values."""
-    if isinstance(value, UUID):
-        return str(value)
-    if isinstance(value, Enum):
-        return value.name
-    return value
+        connection.unregister(temp_name)  # type: ignore[attr-defined]
 
 
 if __name__ == "__main__":
