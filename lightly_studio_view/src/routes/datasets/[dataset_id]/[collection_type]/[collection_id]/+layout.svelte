@@ -261,7 +261,7 @@
         return useImageAnnotationCounts({
             collectionId: datasetId,
             filter: buildImageFilter({
-                dimensionsValues: $dimensionsValues ?? undefined,
+                dimensionsValues: $dimensionsValues,
                 annotationFilter: $annotationFilterStore,
                 metadataFilters,
                 sampleIds: isAnnotations ? [] : plotSelectionImageSampleIds

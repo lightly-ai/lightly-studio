@@ -41,7 +41,7 @@ export function buildVideoAnnotationCountsFilter({
     return {
         sample_filter: {
             metadata_filters: metadataFilters,
-            ...(sampleIds && sampleIds.length > 0 ? { sample_ids: sampleIds } : {})
+            ...(sampleIds ? { sample_ids: sampleIds } : {})
         },
         ...(annotationFilter ? { frame_annotation_filter: annotationFilter } : {}),
         ...(videoBoundsValues ?? {})
