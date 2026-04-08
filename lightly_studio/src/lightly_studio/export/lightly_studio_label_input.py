@@ -53,7 +53,7 @@ class LightlyStudioInputBase:
             session=session, collection_id=root_collection_id
         )
         if collection is None:
-            raise ValueError("Collection {root_collection_id} doesn't exist")
+            raise ValueError(f"Collection {root_collection_id} doesn't exist")
         dataset_id = collection.dataset_id
 
         self._label_id_to_category = _build_label_id_to_category(

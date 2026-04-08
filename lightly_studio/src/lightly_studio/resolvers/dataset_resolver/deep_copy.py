@@ -51,6 +51,7 @@ class DeepCopyContext:
     object_track_map: dict[UUID, UUID] = field(default_factory=dict)
     annotation_label_map: dict[UUID, UUID] = field(default_factory=dict)
     embedding_model_map: dict[UUID, UUID] = field(default_factory=dict)
+    new_dataset_id: UUID | None = None
 
 
 def deep_copy(
@@ -77,6 +78,7 @@ def deep_copy(
 
     # 1. Create new dataset entry.
     new_dataset_id = uuid4()
+    ctx.new_dataset_id = new_dataset_id
     # TODO(lukas, 03/2026): `copy_name` should be stored in DatasetTable
     db_dataset = DatasetTable(
         dataset_id=new_dataset_id,
@@ -100,13 +102,11 @@ def deep_copy(
     _copy_object_tracks(
         session=session,
         old_dataset_id=dataset_id,
-        new_dataset_id=new_dataset_id,
         ctx=ctx,
     )
     _copy_annotation_labels(
         session=session,
         old_dataset_id=dataset_id,
-        new_dataset_id=new_dataset_id,
         ctx=ctx,
     )
     _copy_embedding_models(session=session, old_collection_ids=old_collection_ids, ctx=ctx)
@@ -239,7 +239,6 @@ def _copy_tags(
 def _copy_annotation_labels(
     session: Session,
     old_dataset_id: UUID,
-    new_dataset_id: UUID,
     ctx: DeepCopyContext,
 ) -> None:
     """Copy annotation labels belonging to a dataset."""
@@ -253,10 +252,7 @@ def _copy_annotation_labels(
 
         new_label = _copy_with_updates(
             old_label,
-            {
-                "annotation_label_id": new_id,
-                "dataset_id": new_dataset_id,
-            },
+            {"annotation_label_id": new_id, "dataset_id": ctx.new_dataset_id},
         )
         session.add(new_label)
 
@@ -386,7 +382,6 @@ def _copy_captions(
 def _copy_object_tracks(
     session: Session,
     old_dataset_id: UUID,
-    new_dataset_id: UUID,
     ctx: DeepCopyContext,
 ) -> None:
     """Copy object tracks, remapping dataset ID."""
@@ -402,7 +397,7 @@ def _copy_object_tracks(
             {
                 "object_track_id": new_track_id,
                 "object_track_number": old_track.object_track_number,
-                "dataset_id": new_dataset_id,
+                "dataset_id": ctx.new_dataset_id,
             },
         )
         session.add(new_track)
