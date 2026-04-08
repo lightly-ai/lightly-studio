@@ -47,7 +47,9 @@ from lightly_studio.resolvers import (
 DEFAULT_NUM_IMAGES = 100_000
 DEFAULT_BOXES_PER_IMAGE = 10
 DEFAULT_EMBEDDING_DIM = 512
-DEFAULT_IMAGE_SIZE = 640
+DEFAULT_IMAGE_WIDTH = 1920
+DEFAULT_IMAGE_HEIGHT = 1080
+DEFAULT_IMAGE_FORMAT = "jpg"
 DEFAULT_BATCH_SIZE = 5_000
 DEFAULT_SEED = 0
 DEFAULT_DATASET_NAME = "gui_benchmark"
@@ -69,7 +71,9 @@ class BenchmarkConfig:
     num_images: int
     boxes_per_image: int
     embedding_dim: int
-    image_size: int
+    image_width: int
+    image_height: int
+    image_format: str
     batch_size: int
     seed: int
     host: str | None
@@ -83,7 +87,9 @@ def main() -> None:
         num_images=args.num_images,
         boxes_per_image=args.boxes_per_image,
         embedding_dim=args.embedding_dim,
-        image_size=args.image_size,
+        image_width=args.image_width,
+        image_height=args.image_height,
+        image_format=args.image_format,
         batch_size=args.batch_size,
         seed=args.seed,
         host=args.host,
@@ -94,10 +100,14 @@ def main() -> None:
     with TemporaryDirectory(prefix="lightly_studio_gui_benchmark_") as tmp_dir:
         benchmark_dir = Path(tmp_dir)
         db_path = benchmark_dir / "benchmark.db"
-        image_path = benchmark_dir / "shared.jpg"
+        image_path = benchmark_dir / f"shared.{config.image_format}"
 
         setup_started = time.perf_counter()
-        _create_shared_image(image_path=image_path, image_size=config.image_size)
+        _create_shared_image(
+            image_path=image_path,
+            image_width=config.image_width,
+            image_height=config.image_height,
+        )
         _initialize_database(db_path=db_path)
         root_collection_id = _populate_database(config=config, image_path=image_path)
         _verify_annotation_counts(
@@ -127,7 +137,14 @@ def _parse_args() -> argparse.Namespace:
     parser.add_argument("--num-images", type=int, default=DEFAULT_NUM_IMAGES)
     parser.add_argument("--boxes-per-image", type=int, default=DEFAULT_BOXES_PER_IMAGE)
     parser.add_argument("--embedding-dim", type=int, default=DEFAULT_EMBEDDING_DIM)
-    parser.add_argument("--image-size", type=int, default=DEFAULT_IMAGE_SIZE)
+    parser.add_argument("--image-width", type=int, default=DEFAULT_IMAGE_WIDTH)
+    parser.add_argument("--image-height", type=int, default=DEFAULT_IMAGE_HEIGHT)
+    parser.add_argument(
+        "--image-format",
+        type=str,
+        default=DEFAULT_IMAGE_FORMAT,
+        choices=["jpg", "jpeg", "png", "bmp", "webp", "tiff"],
+    )
     parser.add_argument("--batch-size", type=int, default=DEFAULT_BATCH_SIZE)
     parser.add_argument("--seed", type=int, default=DEFAULT_SEED)
     parser.add_argument("--host", type=str, default=None)
@@ -143,15 +160,17 @@ def _validate_config(config: BenchmarkConfig) -> None:
         raise ValueError("--boxes-per-image must be zero or greater.")
     if config.embedding_dim <= 0:
         raise ValueError("--embedding-dim must be greater than zero.")
-    if config.image_size <= 0:
-        raise ValueError("--image-size must be greater than zero.")
+    if config.image_width <= 0:
+        raise ValueError("--image-width must be greater than zero.")
+    if config.image_height <= 0:
+        raise ValueError("--image-height must be greater than zero.")
     if config.batch_size <= 0:
         raise ValueError("--batch-size must be greater than zero.")
 
 
-def _create_shared_image(image_path: Path, image_size: int) -> None:
+def _create_shared_image(image_path: Path, image_width: int, image_height: int) -> None:
     """Create a single image file reused by every sample."""
-    Image.new("RGB", (image_size, image_size), color=(120, 120, 120)).save(image_path)
+    Image.new("RGB", (image_width, image_height), color=(120, 120, 120)).save(image_path)
 
 
 def _initialize_database(db_path: Path) -> None:
@@ -290,12 +309,23 @@ def _build_batch_data(  # noqa: PLR0913
         image_id_strs=image_id_strs,
         collection_id_str=str(image_collection_id),
     )
-    image_widths = rng.integers(500, 801, size=batch_count, dtype=np.int32)
-    image_heights = rng.integers(500, 801, size=batch_count, dtype=np.int32)
+    image_widths = rng.integers(
+        int(config.image_width * 0.8),
+        int(config.image_width * 1.2) + 1,
+        size=batch_count,
+        dtype=np.int32,
+    )
+    image_heights = rng.integers(
+        int(config.image_height * 0.8),
+        int(config.image_height * 1.2) + 1,
+        size=batch_count,
+        dtype=np.int32,
+    )
     images = _build_images_table(
         batch_start=batch_start,
         image_id_strs=image_id_strs,
         shared_image_path=shared_image_path,
+        image_format=config.image_format,
         widths=image_widths,
         heights=image_heights,
     )
@@ -354,17 +384,18 @@ def _build_image_samples_table(
     )
 
 
-def _build_images_table(
+def _build_images_table(  # noqa: PLR0913
     batch_start: int,
     image_id_strs: list[str],
     shared_image_path: Path,
+    image_format: str,
     widths: NDArray[np.int32],
     heights: NDArray[np.int32],
 ) -> pa.Table:
     """Build the images Arrow table."""
     n = len(image_id_strs)
     file_path_str = str(shared_image_path)
-    file_names = [f"benchmark_{batch_start + i:06d}.jpg" for i in range(n)]
+    file_names = [f"benchmark_{batch_start + i:06d}.{image_format}" for i in range(n)]
     return pa.table(
         {
             "sample_id": pa.array(image_id_strs, type=pa.string()),
