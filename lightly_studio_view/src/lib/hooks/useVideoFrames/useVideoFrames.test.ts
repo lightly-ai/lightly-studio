@@ -96,7 +96,6 @@ describe('useVideoFrames', () => {
         vi.mocked(api.getAllFrames).mockResolvedValue({
             data: {
                 data: mockFrames,
-                nextCursor: 50,
                 total_count: mockFrames.length
             },
             error: undefined
@@ -116,10 +115,6 @@ describe('useVideoFrames', () => {
             path: {
                 video_frame_collection_id: 'frame-collection-1'
             },
-            query: {
-                cursor: 0,
-                limit: 50
-            },
             body: {
                 filter: {
                     video_id: 'video-1'
@@ -138,7 +133,6 @@ describe('useVideoFrames', () => {
         vi.mocked(api.getAllFrames).mockResolvedValue({
             data: {
                 data: mockFrames,
-                nextCursor: 50,
                 total_count: mockFrames.length
             },
             error: undefined
@@ -156,7 +150,6 @@ describe('useVideoFrames', () => {
         vi.mocked(api.getAllFrames).mockResolvedValue({
             data: {
                 data: mockFrames,
-                nextCursor: 50,
                 total_count: mockFrames.length
             },
             error: undefined
@@ -176,7 +169,6 @@ describe('useVideoFrames', () => {
         vi.mocked(api.getAllFrames).mockResolvedValue({
             data: {
                 data: mockFrames,
-                nextCursor: 50,
                 total_count: mockFrames.length
             },
             error: undefined
@@ -197,7 +189,6 @@ describe('useVideoFrames', () => {
         vi.mocked(api.getAllFrames).mockResolvedValue({
             data: {
                 data: mockFrames,
-                nextCursor: 50,
                 total_count: mockFrames.length
             },
             error: undefined
@@ -211,11 +202,10 @@ describe('useVideoFrames', () => {
     });
 
     describe('error handling', () => {
-        it('should throw error when frame is not found for playback time', async () => {
+        it('should return last frame when seeking beyond loaded frames', async () => {
             vi.mocked(api.getAllFrames).mockResolvedValue({
                 data: {
                     data: mockFrames,
-                    nextCursor: 50,
                     total_count: mockFrames.length
                 },
                 error: undefined
@@ -223,10 +213,12 @@ describe('useVideoFrames', () => {
 
             const hook = useVideoFrames({ video: mockVideoData });
 
-            // Request frame 100, which doesn't exist in mockFrames
-            await expect(hook.loadFrameByPlaybackTime(100 / 30, 30)).rejects.toThrow(
-                'Frame not found for the given playback time'
-            );
+            // Request frame 100 (beyond the loaded frames)
+            // Should return the last available frame instead of throwing
+            await hook.loadFrameByPlaybackTime(100 / 30, 30);
+
+            const currentFrame = get(hook.currentFrame);
+            expect(currentFrame?.frame_number).toBe(1); // Should be the last frame
         });
 
         it('should throw error when video data is not available', async () => {
@@ -244,7 +236,6 @@ describe('useVideoFrames', () => {
             vi.mocked(api.getAllFrames).mockResolvedValue({
                 data: {
                     data: mockFrames,
-                    nextCursor: 50,
                     total_count: mockFrames.length
                 },
                 error: undefined
@@ -279,8 +270,8 @@ describe('useVideoFrames', () => {
                 },
                 {
                     sample_id: 'frame-2',
-                    frame_number: 1,
-                    frame_timestamp_s: 0.4,
+                    frame_number: 29,
+                    frame_timestamp_s: 0.9667,
                     sample: mockFrameSample2,
                     video: mockVideoData
                 }
@@ -289,7 +280,6 @@ describe('useVideoFrames', () => {
             vi.mocked(api.getAllFrames).mockResolvedValue({
                 data: {
                     data: finalFrames,
-                    nextCursor: null,
                     total_count: finalFrames.length
                 },
                 error: undefined
@@ -300,10 +290,10 @@ describe('useVideoFrames', () => {
 
             vi.mocked(api.getAllFrames).mockClear();
 
+            // Request frame 30+ (at 1 second), should get frame 29 (the last one)
             await hook.loadFrameByPlaybackTime(1, 30);
 
-            expect(api.getAllFrames).not.toHaveBeenCalled();
-            expect(get(hook.currentFrame)?.frame_number).toBe(1);
+            expect(get(hook.currentFrame)?.frame_number).toBe(29);
         });
     });
 });
