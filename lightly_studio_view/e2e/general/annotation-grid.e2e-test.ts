@@ -91,9 +91,7 @@ test('We can see clicked element when navigating back from details', async ({
         await isInViewport({ element: annotationsPage.getAnnotationByIndex(30), viewport })
     ).toBeFalsy();
 
-    await viewport.evaluate((element) => {
-        element.scrollBy({ top: 300, behavior: 'instant' });
-    });
+    await annotationsPage.getAnnotationByIndex(30).scrollIntoViewIfNeeded();
 
     expect(
         await isInViewport({ element: annotationsPage.getAnnotationByIndex(0), viewport })

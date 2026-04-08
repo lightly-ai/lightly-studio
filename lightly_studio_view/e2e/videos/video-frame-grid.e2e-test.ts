@@ -75,9 +75,7 @@ test('We can see clicked element when navigating back from details', async ({
         await isInViewport({ element: videoFramesPage.getVideoFrameByIndex(30), viewport })
     ).toBe(false);
 
-    await viewport.evaluate((element) => {
-        element.scrollBy({ top: 300, behavior: 'instant' });
-    });
+    await videoFramesPage.getVideoFrameByIndex(30).scrollIntoViewIfNeeded();
 
     expect(await isInViewport({ element: videoFramesPage.getVideoFrameByIndex(0), viewport })).toBe(
         false
