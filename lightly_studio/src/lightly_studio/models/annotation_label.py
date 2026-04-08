@@ -15,7 +15,7 @@ class AnnotationLabelBase(SQLModel):
     """Base class for the AnnotationLabel model."""
 
     # The dataset the label belongs to.
-    dataset_id: UUID = Field(foreign_key="dataset.dataset_id")
+    dataset_id: UUID = Field(foreign_key="dataset.dataset_id", index=True)
 
     annotation_label_name: str
 
