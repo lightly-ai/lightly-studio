@@ -20,10 +20,6 @@ vi.mock('$lib/api/lightly_studio_local', async () => {
 });
 
 describe('useVideoFrames', () => {
-    const mockVideoEl = {
-        currentTime: 0
-    } as HTMLVideoElement;
-
     const mockSample: SampleView = {
         collection_id: 'video-collection-1',
         sample_id: 'video-1',
@@ -80,7 +76,6 @@ describe('useVideoFrames', () => {
 
     beforeEach(() => {
         vi.clearAllMocks();
-        mockVideoEl.currentTime = 0;
     });
 
     it('should initialize with default values', () => {
@@ -129,23 +124,6 @@ describe('useVideoFrames', () => {
         unsubscribe();
     });
 
-    it('should throw error when frame number is not found', async () => {
-        vi.mocked(api.getAllFrames).mockResolvedValue({
-            data: {
-                data: mockFrames,
-                total_count: mockFrames.length
-            },
-            error: undefined
-        } as unknown as MockGetAllFramesResponse);
-
-        const hook = useVideoFrames({ video: mockVideoData });
-
-        // Request frame 100, which doesn't exist in mockFrames
-        await expect(hook.loadFramesFromFrameNumber(100)).rejects.toThrow(
-            'Frame not found for the given frame number'
-        );
-    });
-
     it('should load frame by playback time and update store', async () => {
         vi.mocked(api.getAllFrames).mockResolvedValue({
             data: {
@@ -165,7 +143,7 @@ describe('useVideoFrames', () => {
         expect(currentFrame?.sample_id).toBe('frame-2');
     });
 
-    it('should not fetch again when playback stays inside the loaded frame window', async () => {
+    it('should not fetch again when frames are already loaded', async () => {
         vi.mocked(api.getAllFrames).mockResolvedValue({
             data: {
                 data: mockFrames,
@@ -185,7 +163,7 @@ describe('useVideoFrames', () => {
         expect(get(hook.currentFrame)?.frame_number).toBe(1);
     });
 
-    it('should set currentFrame from frame number', async () => {
+    it('should load all frames when loadFrames is called directly', async () => {
         vi.mocked(api.getAllFrames).mockResolvedValue({
             data: {
                 data: mockFrames,
@@ -195,40 +173,84 @@ describe('useVideoFrames', () => {
         } as unknown as MockGetAllFramesResponse);
 
         const hook = useVideoFrames({ video: mockVideoData });
-        await hook.loadFramesFromFrameNumber(1);
 
-        // Verify frame was loaded
-        expect(get(hook.currentFrame)?.frame_number).toBe(1);
+        expect(hook.loading).toBe(false);
+        expect(hook.reachedEnd).toBe(false);
+
+        await hook.loadFrames();
+
+        expect(api.getAllFrames).toHaveBeenCalledWith({
+            path: {
+                video_frame_collection_id: 'frame-collection-1'
+            },
+            body: {
+                filter: {
+                    video_id: 'video-1'
+                }
+            }
+        });
+
+        expect(hook.loading).toBe(false);
+        expect(hook.reachedEnd).toBe(true);
     });
 
-    describe('error handling', () => {
-        it('should return last frame when seeking beyond loaded frames', async () => {
-            vi.mocked(api.getAllFrames).mockResolvedValue({
-                data: {
-                    data: mockFrames,
-                    total_count: mockFrames.length
-                },
-                error: undefined
-            } as unknown as MockGetAllFramesResponse);
-
-            const hook = useVideoFrames({ video: mockVideoData });
-
-            // Request frame 100 (beyond the loaded frames)
-            // Should return the last available frame instead of throwing
-            await hook.loadFrameByPlaybackTime(100 / 30, 30);
-
-            const currentFrame = get(hook.currentFrame);
-            expect(currentFrame?.frame_number).toBe(1); // Should be the last frame
+    it('should not load frames multiple times if already loading', async () => {
+        let resolvePromise: (value: MockGetAllFramesResponse) => void;
+        const apiPromise = new Promise<MockGetAllFramesResponse>((resolve) => {
+            resolvePromise = resolve;
         });
 
-        it('should throw error when video data is not available', async () => {
-            // Create hook with null videoData
-            const hook = useVideoFrames({ video: null as unknown as VideoView });
+        vi.mocked(api.getAllFrames).mockReturnValue(
+            apiPromise as ReturnType<typeof api.getAllFrames>
+        );
 
-            await expect(hook.loadFrameByPlaybackTime(0, 30)).rejects.toThrow(
-                'No video data available'
-            );
-        });
+        const hook = useVideoFrames({ video: mockVideoData });
+
+        // Start loading frames
+        const firstLoad = hook.loadFrames();
+        expect(hook.loading).toBe(true);
+
+        // Try to load again while first load is in progress
+        const secondLoad = hook.loadFrames();
+
+        // Resolve the API call
+        resolvePromise!({
+            data: {
+                data: mockFrames,
+                total_count: mockFrames.length
+            },
+            error: undefined
+        } as unknown as MockGetAllFramesResponse);
+
+        // Wait for both to complete
+        await Promise.all([firstLoad, secondLoad]);
+
+        // Should only have called the API once
+        expect(api.getAllFrames).toHaveBeenCalledTimes(1);
+    });
+
+    it('should throw error when frame number is not found', async () => {
+        vi.mocked(api.getAllFrames).mockResolvedValue({
+            data: {
+                data: mockFrames,
+                total_count: mockFrames.length
+            },
+            error: undefined
+        } as unknown as MockGetAllFramesResponse);
+
+        const hook = useVideoFrames({ video: mockVideoData });
+
+        await expect(hook.loadFramesFromFrameNumber(100)).rejects.toThrow(
+            'Frame not found for the given frame number'
+        );
+    });
+
+    it('should throw error when video data is not available', async () => {
+        const hook = useVideoFrames({ video: null as unknown as VideoView });
+
+        await expect(hook.loadFrameByPlaybackTime(0, 30)).rejects.toThrow(
+            'No video data available'
+        );
     });
 
     describe('reactivity', () => {
