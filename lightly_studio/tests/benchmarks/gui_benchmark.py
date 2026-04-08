@@ -197,23 +197,26 @@ def _populate_database(config: BenchmarkConfig, image_path: Path) -> None:
     raw_connection = db_manager.get_engine()._engine.raw_connection()
     try:
         connection = raw_connection.driver_connection
-        for batch_start in tqdm(
-            range(0, config.num_images, config.batch_size),
+        with tqdm(
+            total=config.num_images,
             desc="Populating database",
-        ):
-            batch_count = min(config.batch_size, config.num_images - batch_start)
-            batch_data = _build_batch_data(
-                config=config,
-                batch_start=batch_start,
-                batch_count=batch_count,
-                rng=rng,
-                image_collection_id=root_collection_id,
-                annotation_collection_id=annotation_collection_id,
-                embedding_model_id=embedding_model_id,
-                annotation_label_id=annotation_label_id,
-                shared_image_path=image_path,
-            )
-            _insert_batch(connection=connection, batch_data=batch_data)
+            unit="img",
+        ) as progress:
+            for batch_start in range(0, config.num_images, config.batch_size):
+                batch_count = min(config.batch_size, config.num_images - batch_start)
+                batch_data = _build_batch_data(
+                    config=config,
+                    batch_start=batch_start,
+                    batch_count=batch_count,
+                    rng=rng,
+                    image_collection_id=root_collection_id,
+                    annotation_collection_id=annotation_collection_id,
+                    embedding_model_id=embedding_model_id,
+                    annotation_label_id=annotation_label_id,
+                    shared_image_path=image_path,
+                )
+                _insert_batch(connection=connection, batch_data=batch_data)
+                progress.update(batch_count)
         raw_connection.commit()
     finally:
         raw_connection.close()
