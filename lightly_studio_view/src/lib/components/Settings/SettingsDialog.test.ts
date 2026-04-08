@@ -15,6 +15,7 @@ vi.mock('$lib/hooks/useSettings', () => {
         grid_view_sample_rendering: 'contain',
         show_annotation_text_labels: false,
         show_sample_filenames: true,
+        show_bounding_boxes_for_segmentation: true,
         key_toolbar_selection: 's',
         key_toolbar_drag: 'd',
         key_toolbar_bounding_box: 'b',
@@ -99,6 +100,12 @@ describe('SettingsDialog', () => {
         const switchElement = switchLabel.closest('.grid')?.querySelector('[role="switch"]');
         expect(switchElement).toHaveAttribute('aria-checked', 'false');
         expect(screen.getByText('Show filenames in grid view')).toBeInTheDocument();
+        const boundingBoxesLabel = screen.getByText('Show Bounding Boxes for Segmentation');
+        expect(boundingBoxesLabel).toBeInTheDocument();
+        const boundingBoxesSwitch = boundingBoxesLabel
+            .closest('.grid')
+            ?.querySelector('[role="switch"]');
+        expect(boundingBoxesSwitch).toHaveAttribute('aria-checked', 'true');
     });
 
     it('should allow changing keyboard shortcuts', async () => {
@@ -201,6 +208,34 @@ describe('SettingsDialog', () => {
         expect(saveSettings).toHaveBeenCalledWith(
             expect.objectContaining({
                 show_sample_filenames: !initialValue
+            })
+        );
+    });
+
+    it('should toggle bounding boxes for segmentation visibility', async () => {
+        render(SettingsDialog);
+
+        // Open the dialog
+        await openDialog();
+
+        const toggleLabel = screen.getByText('Show Bounding Boxes for Segmentation');
+        const toggleElement = toggleLabel.closest('.grid')?.querySelector('[role="switch"]');
+        expect(toggleElement).not.toBeNull();
+
+        if (!toggleElement) {
+            throw new Error('Bounding boxes for segmentation toggle not found');
+        }
+
+        const initialValue = toggleElement.getAttribute('aria-checked') === 'true';
+        await fireEvent.click(toggleElement);
+
+        // Save the settings
+        await fireEvent.click(screen.getByText('Save Changes'));
+
+        const { saveSettings } = useSettings();
+        expect(saveSettings).toHaveBeenCalledWith(
+            expect.objectContaining({
+                show_bounding_boxes_for_segmentation: !initialValue
             })
         );
     });

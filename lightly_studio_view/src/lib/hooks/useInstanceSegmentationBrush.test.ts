@@ -260,6 +260,7 @@ describe('useInstanceSegmentationBrush', () => {
 
         const { finishBrush } = useInstanceSegmentationBrush({
             collectionId: 'c1',
+            datasetId: 'some-dataset-id',
             sampleId: 's1',
             sample,
             refetch
@@ -268,7 +269,7 @@ describe('useInstanceSegmentationBrush', () => {
         await finishBrush(mask, null, []);
 
         expect(createLabel).toHaveBeenCalledWith({
-            root_collection_id: 'c1',
+            dataset_id: 'some-dataset-id',
             annotation_label_name: 'DEFAULT'
         });
 

@@ -622,9 +622,9 @@ def _create_annotation_labels_for_classifier(
         collection_id: The collection ID to which the samples belong.
         classifier: The classifier object to update.
     """
-    root_collection_id = collection_resolver.get_root_collection(
-        session=session, collection_id=collection_id
-    ).collection_id
+    collection = collection_resolver.get_by_id(session=session, collection_id=collection_id)
+    if collection is None:
+        raise ValueError("Collection {collection_id} doesn't exist")
     # Check if the annotation label with the classifier name and class
     # names exists and if not create it.
     if classifier.annotation_label_ids is None:
@@ -633,7 +633,7 @@ def _create_annotation_labels_for_classifier(
             annotation_label = annotation_label_resolver.create(
                 session=session,
                 label=AnnotationLabelCreate(
-                    root_collection_id=root_collection_id,
+                    dataset_id=collection.dataset_id,
                     annotation_label_name=classifier.few_shot_classifier.name + "_" + class_name,
                 ),
             )

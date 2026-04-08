@@ -10,7 +10,8 @@ vi.mock('$lib/components/SampleAnnotation/utils', () => ({
 describe('addAnnotationUpdateToUndoStack', () => {
     const annotation = {
         sample_id: 'annotation-id',
-        annotation_type: 'semantic_segmentation',
+        parent_sample_id: 'parent-sample-id',
+        annotation_type: 'instance_segmentation',
         annotation_label: {
             annotation_label_name: 'car'
         },
@@ -20,7 +21,9 @@ describe('addAnnotationUpdateToUndoStack', () => {
             width: 3,
             height: 4,
             segmentation_mask: [1, 0, 2]
-        }
+        },
+        created_at: new Date(),
+        tags: []
     } as AnnotationView;
 
     it('adds undo action and reverts annotation update', async () => {

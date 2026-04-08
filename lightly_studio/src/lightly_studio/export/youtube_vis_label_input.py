@@ -87,9 +87,7 @@ class _LightlyStudioYouTubeVISTrackInputBase:
         uuid_to_videos, frame_to_video_id_and_index = _build_videos_and_frame_map(
             session=session, samples=samples
         )
-        label_uuid_to_category = _build_label_id_to_category(
-            session=session, root_collection_id=root_collection_id
-        )
+        label_uuid_to_category = _build_label_id_to_category(session=session, dataset_id=dataset_id)
         return _YouTubeVISExportContext(
             dataset_id=dataset_id,
             videos=list(uuid_to_videos.values()),
@@ -291,11 +289,11 @@ def _build_segmentation_track_entry_from_annotations(
     )
 
 
-def _build_label_id_to_category(session: Session, root_collection_id: UUID) -> dict[UUID, Category]:
+def _build_label_id_to_category(session: Session, dataset_id: UUID) -> dict[UUID, Category]:
     """Build a mapping from annotation label UUID to YouTube-VIS category."""
     labels = annotation_label_resolver.get_all_sorted_alphabetically(
         session=session,
-        root_collection_id=root_collection_id,
+        dataset_id=dataset_id,
     )
     return {
         label.annotation_label_id: Category(id=idx, name=label.annotation_label_name)

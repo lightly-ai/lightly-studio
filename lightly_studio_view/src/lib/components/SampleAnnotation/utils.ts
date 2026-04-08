@@ -1,7 +1,7 @@
 import type { AnnotationView } from '$lib/api/lightly_studio_local';
 import {
     isObjectDetectionAnnotation,
-    isSegmentationAnnotation,
+    isInstanceSegmentationAnnotation,
     type Annotation,
     type ObjectDetectionAnnotationView
 } from '$lib/services/types';
@@ -12,7 +12,7 @@ export function getBoundingBox(annotation: Annotation): BoundingBox {
 
     if (isObjectDetectionAnnotation(annotation)) {
         boundingBox = annotation.object_detection_details;
-    } else if (isSegmentationAnnotation(annotation)) {
+    } else if (isInstanceSegmentationAnnotation(annotation)) {
         boundingBox = annotation.segmentation_details;
     } else {
         throw new Error(

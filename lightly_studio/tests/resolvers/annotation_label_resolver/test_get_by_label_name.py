@@ -12,8 +12,11 @@ def test_get_by_label_name__returns_label(
     db_session: Session,
 ) -> None:
     """Test getting annotations by label name."""
-    collection_id_1 = create_collection(session=db_session).collection_id
-    collection_id_2 = create_collection(session=db_session, collection_name="col2").collection_id
+    collection1 = create_collection(session=db_session)
+    collection_id_1 = collection1.collection_id
+    dataset_id_1 = collection1.dataset_id
+    collection2 = create_collection(session=db_session, collection_name="col2")
+    collection_id_2 = collection2.collection_id
     label_1 = create_annotation_label(
         session=db_session,
         root_collection_id=collection_id_1,
@@ -32,7 +35,7 @@ def test_get_by_label_name__returns_label(
 
     annotation_label = annotation_label_resolver.get_by_label_name(
         session=db_session,
-        root_collection_id=collection_id_1,
+        dataset_id=dataset_id_1,
         label_name="cat",
     )
     assert annotation_label == label_1
@@ -42,8 +45,11 @@ def test_get_by_label_name__returns_none(
     db_session: Session,
 ) -> None:
     """Test returning None for a nonexistent label."""
-    collection_id_1 = create_collection(session=db_session).collection_id
-    collection_id_2 = create_collection(session=db_session, collection_name="col2").collection_id
+    collection1 = create_collection(session=db_session)
+    collection_id_1 = collection1.collection_id
+    dataset_id_1 = collection1.dataset_id
+    collection2 = create_collection(session=db_session, collection_name="col2")
+    dataset_id_2 = collection2.dataset_id
     create_annotation_label(
         session=db_session,
         root_collection_id=collection_id_1,
@@ -58,7 +64,7 @@ def test_get_by_label_name__returns_none(
     assert (
         annotation_label_resolver.get_by_label_name(
             session=db_session,
-            root_collection_id=collection_id_1,
+            dataset_id=dataset_id_1,
             label_name="nonexistent_label_name",
         )
         is None
@@ -66,7 +72,7 @@ def test_get_by_label_name__returns_none(
     assert (
         annotation_label_resolver.get_by_label_name(
             session=db_session,
-            root_collection_id=collection_id_2,
+            dataset_id=dataset_id_2,
             label_name="cat",
         )
         is None

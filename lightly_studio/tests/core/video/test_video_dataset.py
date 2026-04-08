@@ -396,5 +396,5 @@ class TestDataset:
             dataset.add_videos_from_youtube_vis(
                 annotations_json=annotations_path,
                 videos_path=tmp_path,
-                annotation_type=AnnotationType.SEMANTIC_SEGMENTATION,
+                annotation_type=AnnotationType.CLASSIFICATION,
             )
