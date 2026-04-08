@@ -229,6 +229,16 @@
     });
     const annotationSize = $derived(Math.max(size - gridGap, 0));
     const viewportHeight = $derived(clientHeight);
+
+    let grid: ReturnType<typeof Grid> | undefined = $state();
+
+    $effect(() => {
+        if (grid && initialScrollPosition && size > 0) {
+            requestAnimationFrame(() => {
+                grid?.scrollToPosition(initialScrollPosition);
+            });
+        }
+    });
 </script>
 
 {#if $infiniteAnnotations.isFetched && annotations.length === 0}
@@ -239,23 +249,18 @@
         </div>
     </div>
 {:else}
-    <div
-        class="flex h-full flex-1"
-        data-testid="annotations-grid"
-        bind:this={viewport}
-        bind:clientWidth
-        bind:clientHeight
-    >
+    <div class="flex h-full flex-1" bind:this={viewport} bind:clientWidth bind:clientHeight>
         <div class="viewport flex-1">
             {#key infiniteLoaderIdentifier}
                 <Grid
+                    bind:this={grid}
                     itemCount={annotations?.length}
                     itemHeight={size}
                     itemWidth={size}
                     height={viewportHeight}
                     columnCount={itemWidth}
-                    scrollPosition={annotations.length > 0 ? initialScrollPosition : 0}
                     onscroll={handleScroll}
+                    data-testid="annotations-grid"
                     class="annotations-grid-scroll overflow-y-auto dark:[color-scheme:dark]"
                     style="--sample-width: {annotationSize}px; --sample-height: {annotationSize}px;"
                 >
@@ -267,6 +272,7 @@
                                     {style}
                                     data-testid="annotation-grid-item"
                                     data-annotation-id={annotations[index].annotation.sample_id}
+                                    data-annotation-index={index}
                                     data-sample-id={annotations[index].annotation.parent_sample_id}
                                     data-index={index}
                                     onclick={handleOnClick}

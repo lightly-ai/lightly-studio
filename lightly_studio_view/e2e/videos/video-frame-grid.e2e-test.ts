@@ -1,4 +1,4 @@
-import { test, expect } from '../utils';
+import { test, expect, isInViewport } from '../utils';
 import { youtubeVisVideosDataset } from './fixtures/youtubeVisVideosDataset';
 
 test.describe('video-frames-page-flow', () => {
@@ -57,4 +57,45 @@ test.describe('video-frames-page-flow', () => {
                 youtubeVisVideosDataset.labels.elephant.frameCount
         );
     });
+});
+
+test('We can see clicked element when navigating back from details', async ({
+    page,
+    videoFramesPage
+}) => {
+    await page.setViewportSize({ width: 800, height: 400 });
+
+    const viewport = page.getByTestId('video-frames-grid');
+    await expect(viewport).toBeVisible();
+
+    expect(await isInViewport({ element: videoFramesPage.getVideoFrameByIndex(0), viewport })).toBe(
+        true
+    );
+    expect(
+        await isInViewport({ element: videoFramesPage.getVideoFrameByIndex(30), viewport })
+    ).toBe(false);
+
+    await videoFramesPage.getVideoFrameByIndex(30).scrollIntoViewIfNeeded();
+
+    expect(await isInViewport({ element: videoFramesPage.getVideoFrameByIndex(0), viewport })).toBe(
+        false
+    );
+    expect(
+        await isInViewport({ element: videoFramesPage.getVideoFrameByIndex(30), viewport })
+    ).toBe(true);
+
+    await videoFramesPage.getVideoFrameByIndex(30).dblclick();
+
+    await expect(page.getByText('Video frame details')).toBeVisible();
+
+    await page.goBack();
+
+    await expect(viewport).toBeVisible();
+
+    expect(
+        await isInViewport({ element: videoFramesPage.getVideoFrameByIndex(30), viewport })
+    ).toBe(true);
+    expect(await isInViewport({ element: videoFramesPage.getVideoFrameByIndex(0), viewport })).toBe(
+        false
+    );
 });
