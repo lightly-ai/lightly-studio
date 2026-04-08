@@ -299,9 +299,7 @@ def _build_batch_data(  # noqa: PLR0913
 
     annotation_count = batch_count * config.boxes_per_image
     annotation_id_base = config.num_images + batch_start * config.boxes_per_image
-    annotation_id_strs = [
-        _make_uuid_str(annotation_id_base + i) for i in range(annotation_count)
-    ]
+    annotation_id_strs = [_make_uuid_str(annotation_id_base + i) for i in range(annotation_count)]
 
     annotation_samples = _build_annotation_samples_table(
         annotation_id_strs=annotation_id_strs,
@@ -555,8 +553,7 @@ def _insert_arrow_table(
     connection.register(temp_name, table)  # type: ignore[attr-defined]
     try:
         connection.cursor().execute(  # type: ignore[attr-defined]
-            f"INSERT INTO {spec.table_name} ({column_list}) "
-            f"SELECT {select_sql} FROM {temp_name}"
+            f"INSERT INTO {spec.table_name} ({column_list}) SELECT {select_sql} FROM {temp_name}"
         )
     finally:
         connection.unregister(temp_name)  # type: ignore[attr-defined]
