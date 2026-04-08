@@ -40,17 +40,18 @@ from lightly_studio.resolvers import (
     annotation_label_resolver,
     collection_resolver,
     embedding_model_resolver,
+    image_resolver,
 )
 
 DEFAULT_NUM_IMAGES = 100_000
 DEFAULT_BOXES_PER_IMAGE = 10
 DEFAULT_EMBEDDING_DIM = 512
 DEFAULT_IMAGE_SIZE = 640
-DEFAULT_BATCH_SIZE = 10_000
+DEFAULT_BATCH_SIZE = 5_000
 DEFAULT_SEED = 0
 DEFAULT_DATASET_NAME = "gui_benchmark"
 DEFAULT_ANNOTATION_COLLECTION_NAME = "benchmark_annotations"
-DEFAULT_ANNOTATION_LABEL_NAME = "object"
+DEFAULT_ANNOTATION_LABEL_NAMES = ["car", "person", "bicycle", "truck", "bus"]
 DEFAULT_EMBEDDING_MODEL_NAME = "benchmark_embeddings"
 
 
@@ -97,7 +98,8 @@ def main() -> None:
         setup_started = time.perf_counter()
         _create_shared_image(image_path=image_path, image_size=config.image_size)
         _initialize_database(db_path=db_path)
-        _populate_database(config=config, image_path=image_path)
+        root_collection_id = _populate_database(config=config, image_path=image_path)
+        _verify_annotation_counts(collection_id=root_collection_id)
 
         preview_server = Server(host=config.host, port=config.port)
         setup_elapsed = time.perf_counter() - setup_started
@@ -154,7 +156,7 @@ def _initialize_database(db_path: Path) -> None:
     db_manager.connect(db_file=str(db_path), cleanup_existing=True)
 
 
-def _populate_database(config: BenchmarkConfig, image_path: Path) -> None:
+def _populate_database(config: BenchmarkConfig, image_path: Path) -> UUID:
     """Populate the benchmark dataset with images, embeddings, and annotations."""
     rng = np.random.default_rng(config.seed)
     with db_manager.session() as session:
@@ -179,15 +181,17 @@ def _populate_database(config: BenchmarkConfig, image_path: Path) -> None:
                 embedding_dimension=config.embedding_dim,
             ),
         )
-        annotation_label = annotation_label_resolver.create(
-            session=session,
-            label=AnnotationLabelCreate(
-                root_collection_id=root_collection.collection_id,
-                annotation_label_name=DEFAULT_ANNOTATION_LABEL_NAME,
-            ),
-        )
+        annotation_label_ids = [
+            annotation_label_resolver.create(
+                session=session,
+                label=AnnotationLabelCreate(
+                    root_collection_id=root_collection.collection_id,
+                    annotation_label_name=name,
+                ),
+            ).annotation_label_id
+            for name in DEFAULT_ANNOTATION_LABEL_NAMES
+        ]
         root_collection_id = root_collection.collection_id
-        annotation_label_id = annotation_label.annotation_label_id
         embedding_model_id = embedding_model.embedding_model_id
 
     _set_default_embedding_model(
@@ -212,7 +216,7 @@ def _populate_database(config: BenchmarkConfig, image_path: Path) -> None:
                     image_collection_id=root_collection_id,
                     annotation_collection_id=annotation_collection_id,
                     embedding_model_id=embedding_model_id,
-                    annotation_label_id=annotation_label_id,
+                    annotation_label_ids=annotation_label_ids,
                     shared_image_path=image_path,
                 )
                 _insert_batch(connection=connection, batch_data=batch_data)
@@ -220,6 +224,19 @@ def _populate_database(config: BenchmarkConfig, image_path: Path) -> None:
         raw_connection.commit()
     finally:
         raw_connection.close()
+    return root_collection_id
+
+
+def _verify_annotation_counts(collection_id: UUID) -> None:
+    """Assert that every annotation label has at least one annotation."""
+    with db_manager.session() as session:
+        counts = image_resolver.count_image_annotations_by_collection(
+            session=session,
+            collection_id=collection_id,
+        )
+    for label, current, total in counts:
+        assert current > 0, f"Expected count > 0 for label '{label}', got {current}"
+        assert total > 0, f"Expected total > 0 for label '{label}', got {total}"
 
 
 def _set_default_embedding_model(collection_id: UUID, embedding_model_id: UUID) -> None:
@@ -257,7 +274,7 @@ def _build_batch_data(  # noqa: PLR0913
     image_collection_id: UUID,
     annotation_collection_id: UUID,
     embedding_model_id: UUID,
-    annotation_label_id: UUID,
+    annotation_label_ids: list[UUID],
     shared_image_path: Path,
 ) -> BatchData:
     """Build all Arrow tables for a batch."""
@@ -291,10 +308,11 @@ def _build_batch_data(  # noqa: PLR0913
         collection_id_str=str(annotation_collection_id),
     )
     annotations = _build_annotations_table(
+        rng=rng,
         annotation_id_strs=annotation_id_strs,
         image_id_strs=image_id_strs,
         boxes_per_image=config.boxes_per_image,
-        annotation_label_id_str=str(annotation_label_id),
+        annotation_label_id_strs=[str(label_id) for label_id in annotation_label_ids],
     )
     object_detections = _build_object_detections_table(
         rng=rng,
@@ -385,20 +403,24 @@ def _build_annotation_samples_table(
 
 
 def _build_annotations_table(
+    rng: np.random.Generator,
     annotation_id_strs: list[str],
     image_id_strs: list[str],
     boxes_per_image: int,
-    annotation_label_id_str: str,
+    annotation_label_id_strs: list[str],
 ) -> pa.Table:
-    """Build the annotations Arrow table."""
+    """Build the annotations Arrow table with randomly assigned labels."""
     n = len(annotation_id_strs)
-    annotation_type_str = AnnotationType.OBJECT_DETECTION.name
     repeated_parent_ids = np.repeat(np.array(image_id_strs), boxes_per_image)
+    label_choices = np.array(annotation_label_id_strs)
+    chosen_labels = label_choices[rng.integers(0, len(label_choices), size=n)]
     return pa.table(
         {
             "sample_id": pa.array(annotation_id_strs, type=pa.string()),
-            "annotation_type": pa.array([annotation_type_str] * n, type=pa.string()),
-            "annotation_label_id": pa.array([annotation_label_id_str] * n, type=pa.string()),
+            "annotation_type": pa.array(
+                [AnnotationType.OBJECT_DETECTION.value.upper()] * n, type=pa.string()
+            ),
+            "annotation_label_id": pa.array(chosen_labels, type=pa.string()),
             "parent_sample_id": pa.array(repeated_parent_ids, type=pa.string()),
         }
     )
