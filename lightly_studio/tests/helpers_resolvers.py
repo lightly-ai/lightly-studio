@@ -227,7 +227,7 @@ class AnnotationDetails:
         y: Y coordinate of the annotation.
         width: Width of the annotation.
         height: Height of the annotation.
-        segmentation_mask: Segmentation mask for instance and semantic segmentation annotations.
+        segmentation_mask: Segmentation mask for segmentation annotations.
         object_track_id: Optional object track id.
     """
 
