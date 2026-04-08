@@ -1,4 +1,4 @@
-import { test, expect } from '../utils';
+import { test, expect, isInViewport } from '../utils';
 import { cocoDataset } from './fixtures';
 
 test.beforeEach(async ({ annotationsPage }) => {
@@ -73,4 +73,45 @@ test('user can change label of an annotation grid page', async ({ annotationsPag
     await expect(annotationsPage.getAnnotations()).toHaveCount(
         cocoDataset.labels.airplane.annotationCount
     );
+});
+
+test('We can see clicked element when navigating back from details', async ({
+    page,
+    annotationsPage
+}) => {
+    await page.setViewportSize({ width: 800, height: 400 });
+
+    const viewport = page.getByTestId('annotations-grid');
+    await expect(viewport).toBeVisible();
+
+    expect(
+        await isInViewport({ element: annotationsPage.getAnnotationByIndex(0), viewport })
+    ).toBeTruthy();
+    expect(
+        await isInViewport({ element: annotationsPage.getAnnotationByIndex(20), viewport })
+    ).toBeFalsy();
+
+    annotationsPage.getAnnotationByIndex(20).scrollIntoViewIfNeeded();
+
+    expect(
+        await isInViewport({ element: annotationsPage.getAnnotationByIndex(0), viewport })
+    ).toBeFalsy();
+    expect(
+        await isInViewport({ element: annotationsPage.getAnnotationByIndex(20), viewport })
+    ).toBeTruthy();
+
+    await annotationsPage.getAnnotationByIndex(20).dblclick();
+
+    await expect(page.getByText('Annotation Details')).toBeVisible();
+
+    await page.goBack();
+
+    await expect(viewport).toBeVisible();
+
+    expect(
+        await isInViewport({ element: annotationsPage.getAnnotationByIndex(0), viewport })
+    ).toBeFalsy();
+    expect(
+        await isInViewport({ element: annotationsPage.getAnnotationByIndex(20), viewport })
+    ).toBeTruthy();
 });
