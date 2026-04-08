@@ -56,23 +56,17 @@
     import { useVideoFrameAnnotationCounts } from '$lib/hooks/useVideoFrameAnnotationsCount/useVideoFrameAnnotationsCount.js';
     import { useVideoFramesBounds } from '$lib/hooks/useVideoFramesBounds/useVideoFramesBounds.js';
     import { useVideoBounds } from '$lib/hooks/useVideosBounds/useVideosBounds.js';
-<<<<<<< horatiu-lig-9136-embedding-plot-increase-visibility-and-reusability-of
     import { isNormalModeParams, type ImagesInfiniteParams } from '$lib/hooks/useImagesInfinite/useImagesInfinite';
     import { useImageFilters } from '$lib/hooks/useImageFilters/useImageFilters';
     import { useVideoFilters } from '$lib/hooks/useVideoFilters/useVideoFilters';
-    import { Checkbox } from '$lib/components/ui/checkbox';
     import { SampleType, type ImageFilter } from '$lib/api/lightly_studio_local/types.gen.js';
-=======
-    import { SampleType } from '$lib/api/lightly_studio_local/types.gen.js';
->>>>>>> main
     import { buildImageFilter } from '$lib/utils/buildImageFilter';
-    import { useImageFilters } from '$lib/hooks/useImageFilters/useImageFilters';
-    import { useVideoFilters } from '$lib/hooks/useVideoFilters/useVideoFilters';
     import {
         buildVideoAnnotationCountsFilter,
         buildVideoFrameAnnotationCountsFilter
     } from '$lib/utils/buildAnnotationCountsFilters';
     import { GridHeader } from '$lib/components';
+    import EmbeddingSelectionFilterChip from '$lib/components/Filters/EmbeddingSelectionFilterChip.svelte';
     const { data, children } = $props();
     const {
         collection,
@@ -520,13 +514,15 @@
         return [];
     });
 
-    let pausedPlotSelectionByCollection = $state<Record<string, string[]>>({});
-    const pausedPlotSelectionSampleIds = $derived(pausedPlotSelectionByCollection[collectionId] ?? []);
+    let hiddenEmbeddingSelectionsByCollection = $state<Record<string, string[]>>({});
+    const hiddenEmbeddingSelectionSampleIds = $derived(
+        hiddenEmbeddingSelectionsByCollection[collectionId] ?? []
+    );
     const isPlotSelectionApplied = $derived(activePlotSelectionSampleIds.length > 0);
     const effectiveEmbeddingSelectionIds = $derived.by(() =>
         activePlotSelectionSampleIds.length > 0
             ? activePlotSelectionSampleIds
-            : pausedPlotSelectionSampleIds
+            : hiddenEmbeddingSelectionSampleIds
     );
     const plotSelectionCount = $derived(effectiveEmbeddingSelectionIds.length);
     const hasPlotSelectionContext = $derived(
@@ -545,8 +541,8 @@
     }
 
     function setHiddenEmbeddingSelections(sampleIds: string[]) {
-        pausedPlotSelectionByCollection = {
-            ...pausedPlotSelectionByCollection,
+        hiddenEmbeddingSelectionsByCollection = {
+            ...hiddenEmbeddingSelectionsByCollection,
             [collectionId]: sampleIds
         };
     }
@@ -556,11 +552,11 @@
     }
 
     function showEmbeddingSelections() {
-        if (pausedPlotSelectionSampleIds.length === 0) {
+        if (hiddenEmbeddingSelectionSampleIds.length === 0) {
             return;
         }
 
-        updateEmbeddingSelectionSampleIds(pausedPlotSelectionSampleIds);
+        updateEmbeddingSelectionSampleIds(hiddenEmbeddingSelectionSampleIds);
         clearHiddenEmbeddingSelections();
     }
 
@@ -574,7 +570,10 @@
 
     function setEmbeddingSelectionVisibility(shouldShow: boolean) {
         if (shouldShow) {
-            if (activePlotSelectionSampleIds.length > 0 || pausedPlotSelectionSampleIds.length === 0) {
+            if (
+                activePlotSelectionSampleIds.length > 0 ||
+                hiddenEmbeddingSelectionSampleIds.length === 0
+            ) {
                 return;
             }
             showEmbeddingSelections();
@@ -584,7 +583,10 @@
     }
 
     function showPlotWithSelection() {
-        if (pausedPlotSelectionSampleIds.length > 0 && activePlotSelectionSampleIds.length === 0) {
+        if (
+            hiddenEmbeddingSelectionSampleIds.length > 0 &&
+            activePlotSelectionSampleIds.length === 0
+        ) {
             showEmbeddingSelections();
         }
         setShowPlot(true);
@@ -624,41 +626,13 @@
                             <Segment title="Filters" icon={SlidersHorizontal}>
                                 <div class="space-y-2">
                                     {#if hasPlotSelectionContext}
-                                        <div
-                                            class="rounded-md border border-amber-500/35 bg-amber-500/10 px-2 py-1.5"
-                                            data-testid="embedding-selection-filter-chip"
-                                        >
-                                            <div class="flex items-center gap-2">
-                                                <Checkbox
-                                                    checked={isPlotSelectionApplied}
-                                                    onCheckedChange={(checked) =>
-                                                        setEmbeddingSelectionVisibility(
-                                                            checked === true
-                                                        )}
-                                                    data-testid="embedding-selection-filter-chip-checkbox"
-                                                />
-                                                <div class="min-w-0 flex-1">
-                                                    <div class="truncate text-sm font-medium">
-                                                        Embedding Selection
-                                                    </div>
-                                                    <div class="text-xs text-muted-foreground">
-                                                        {plotSelectionCount}{' '}
-                                                        {plotSelectionCount === 1
-                                                            ? plotSelectionItemLabel
-                                                            : `${plotSelectionItemLabel}s`}
-                                                    </div>
-                                                </div>
-                                                <button
-                                                    class="text-muted-foreground hover:text-foreground"
-                                                    onclick={clearPlotSelection}
-                                                    title="Clear embedding selection"
-                                                    aria-label="Clear embedding selection"
-                                                    data-testid="embedding-selection-filter-chip-clear"
-                                                >
-                                                    <X class="size-4" />
-                                                </button>
-                                            </div>
-                                        </div>
+                                        <EmbeddingSelectionFilterChip
+                                            checked={isPlotSelectionApplied}
+                                            selectionCount={plotSelectionCount}
+                                            itemLabel={plotSelectionItemLabel}
+                                            onVisibilityChange={setEmbeddingSelectionVisibility}
+                                            onClear={clearPlotSelection}
+                                        />
                                     {/if}
                                     <LabelsMenu
                                         {annotationFilterRows}
