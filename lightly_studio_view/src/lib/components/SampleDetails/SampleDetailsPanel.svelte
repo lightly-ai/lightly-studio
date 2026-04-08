@@ -202,8 +202,7 @@
     let annotationType = $derived<string | null | undefined>(annotationLabelContext.annotationType);
     let isEraser = $derived(
         sampleDetailsToolbarContext.brush.mode === 'eraser' &&
-            (annotationType === AnnotationType.INSTANCE_SEGMENTATION ||
-                annotationType === AnnotationType.SEMANTIC_SEGMENTATION)
+            annotationType === AnnotationType.INSTANCE_SEGMENTATION
     );
     let brushRadius = $derived(
         $lastAnnotationBrushSize[collectionId] ?? sampleDetailsToolbarContext.brush.size
@@ -226,10 +225,7 @@
 
         // If user navigates from mask editing to a non-segmentation annotation,
         // force toolbar state back to a safe default.
-        if (
-            currentAnnotationType !== AnnotationType.INSTANCE_SEGMENTATION &&
-            currentAnnotationType !== AnnotationType.SEMANTIC_SEGMENTATION
-        ) {
+        if (currentAnnotationType !== AnnotationType.INSTANCE_SEGMENTATION) {
             sampleDetailsToolbarContext.status = 'cursor';
             sampleDetailsToolbarContext.brush.mode = 'brush';
         }

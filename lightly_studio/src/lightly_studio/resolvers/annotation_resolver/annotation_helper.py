@@ -53,9 +53,7 @@ def update_annotation_object(
             width=seg_details.width,
             height=seg_details.height,
         )
-        if annotation_type
-        in (AnnotationType.INSTANCE_SEGMENTATION, AnnotationType.SEMANTIC_SEGMENTATION)
-        and seg_details
+        if annotation_type == AnnotationType.INSTANCE_SEGMENTATION and seg_details
         else None
     )
 

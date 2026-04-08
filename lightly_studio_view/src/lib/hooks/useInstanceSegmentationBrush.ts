@@ -78,7 +78,6 @@ export function useInstanceSegmentationBrush({
             skipId: selectedAnnotation?.sample_id,
             lockedAnnotationIds,
             annotations,
-            segmentationMode: 'instance',
             sample,
             collectionId,
             updateAnnotations
