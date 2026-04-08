@@ -56,10 +56,10 @@
     import { useVideoFrameAnnotationCounts } from '$lib/hooks/useVideoFrameAnnotationsCount/useVideoFrameAnnotationsCount.js';
     import { useVideoFramesBounds } from '$lib/hooks/useVideoFramesBounds/useVideoFramesBounds.js';
     import { useVideoBounds } from '$lib/hooks/useVideosBounds/useVideosBounds.js';
-    import { isNormalModeParams, type ImagesInfiniteParams } from '$lib/hooks/useImagesInfinite/useImagesInfinite';
     import { useImageFilters } from '$lib/hooks/useImageFilters/useImageFilters';
     import { useVideoFilters } from '$lib/hooks/useVideoFilters/useVideoFilters';
-    import { SampleType, type ImageFilter } from '$lib/api/lightly_studio_local/types.gen.js';
+    import { useEmbeddingSelection } from '$lib/hooks/useEmbeddingSelection/useEmbeddingSelection';
+    import { SampleType } from '$lib/api/lightly_studio_local/types.gen';
     import { buildImageFilter } from '$lib/utils/buildImageFilter';
     import {
         buildVideoAnnotationCountsFilter,
@@ -86,7 +86,15 @@
     // Use hideAnnotations hook
     const { handleKeyEvent } = useHideAnnotations();
 
-    const { retrieveParentCollection, collections } = useGlobalStorage();
+    const {
+        retrieveParentCollection,
+        collections,
+        showPlot,
+        setShowPlot,
+        filteredSampleCount,
+        filteredAnnotationCount,
+        setRangeSelectionForcollection
+    } = useGlobalStorage();
 
     const parentCollection = $derived.by(() =>
         retrieveParentCollection($collections, collectionId)
@@ -203,13 +211,6 @@
         useAnnotationLabels({ collectionId: collectionId ?? '' })
     );
     const annotationLabelsData = $derived($annotationLabelsQuery?.data);
-    const {
-        showPlot,
-        setShowPlot,
-        filteredSampleCount,
-        filteredAnnotationCount,
-        setRangeSelectionForcollection
-    } = useGlobalStorage();
     const { filterParams: imageFilterParams, updateSampleIds: updateImageSampleIds } =
         useImageFilters();
     const { filterParams: videoFilterParams, updateSampleIds: updateVideoSampleIds } =
@@ -248,8 +249,9 @@
             (isAnnotations && parentCollection?.sampleType == SampleType.VIDEO_FRAME)
         ) {
             let videoFrameCollectionId = collectionId;
-            if (isAnnotations && parentCollection?.sampleType == SampleType.VIDEO_FRAME)
-                videoFrameCollectionId = parentCollection.collectionId;
+            if (isAnnotations && parentCollection?.sampleType == SampleType.VIDEO_FRAME) {
+                videoFrameCollectionId = parentCollection?.collectionId ?? collectionId;
+            }
             return useVideoFrameAnnotationCounts({
                 collectionId: videoFrameCollectionId,
                 filter: buildVideoFrameAnnotationCountsFilter({
@@ -492,111 +494,24 @@
         isSamples || isAnnotations || isVideos || isVideoFrames || isGroups
     );
 
-    const activePlotSelectionSampleIds = $derived.by(() => {
-        if (isVideos) {
-            if ($videoFilterParams?.collection_id !== collectionId) {
-                return [];
-            }
-            return $videoFilterParams.filters?.sample_ids ?? [];
-        }
-
-        if (isSamples) {
-            const params = $imageFilterParams as ImagesInfiniteParams;
-            if (!params?.collection_id || params.collection_id !== collectionId) {
-                return [];
-            }
-            if (!isNormalModeParams(params)) {
-                return [];
-            }
-            return params.filters?.sample_ids ?? [];
-        }
-
-        return [];
+    const embeddingSelection = useEmbeddingSelection({
+        collectionId: collectionIdStore,
+        isVideos: toStore(() => isVideos),
+        isSamples: toStore(() => isSamples),
+        imageFilterParams,
+        videoFilterParams,
+        updateImageSampleIds,
+        updateVideoSampleIds,
+        setRangeSelectionForcollection
     });
-
-    let hiddenEmbeddingSelectionsByCollection = $state<Record<string, string[]>>({});
-    const hiddenEmbeddingSelectionSampleIds = $derived(
-        hiddenEmbeddingSelectionsByCollection[collectionId] ?? []
-    );
-    const isPlotSelectionApplied = $derived(activePlotSelectionSampleIds.length > 0);
-    const effectiveEmbeddingSelectionIds = $derived.by(() =>
-        activePlotSelectionSampleIds.length > 0
-            ? activePlotSelectionSampleIds
-            : hiddenEmbeddingSelectionSampleIds
-    );
-    const plotSelectionCount = $derived(effectiveEmbeddingSelectionIds.length);
-    const hasPlotSelectionContext = $derived(
-        (isSamples || isVideos) && effectiveEmbeddingSelectionIds.length > 0
-    );
-    const plotSelectionItemLabel = $derived(isVideos ? 'video' : 'sample');
-
-    function updateEmbeddingSelectionSampleIds(sampleIds: string[]) {
-        if (isVideos) {
-            updateVideoSampleIds(sampleIds);
-            return;
-        }
-        if (isSamples) {
-            updateImageSampleIds(sampleIds);
-        }
-    }
-
-    function setHiddenEmbeddingSelections(sampleIds: string[]) {
-        hiddenEmbeddingSelectionsByCollection = {
-            ...hiddenEmbeddingSelectionsByCollection,
-            [collectionId]: sampleIds
-        };
-    }
-
-    function clearHiddenEmbeddingSelections() {
-        setHiddenEmbeddingSelections([]);
-    }
-
-    function showEmbeddingSelections() {
-        if (hiddenEmbeddingSelectionSampleIds.length === 0) {
-            return;
-        }
-
-        updateEmbeddingSelectionSampleIds(hiddenEmbeddingSelectionSampleIds);
-        clearHiddenEmbeddingSelections();
-    }
-
-    function hideEmbeddingSelections() {
-        if (activePlotSelectionSampleIds.length === 0) {
-            return;
-        }
-        setHiddenEmbeddingSelections(activePlotSelectionSampleIds);
-        updateEmbeddingSelectionSampleIds([]);
-    }
-
-    function setEmbeddingSelectionVisibility(shouldShow: boolean) {
-        if (shouldShow) {
-            if (
-                activePlotSelectionSampleIds.length > 0 ||
-                hiddenEmbeddingSelectionSampleIds.length === 0
-            ) {
-                return;
-            }
-            showEmbeddingSelections();
-            return;
-        }
-        hideEmbeddingSelections();
-    }
-
-    function showPlotWithSelection() {
-        if (
-            hiddenEmbeddingSelectionSampleIds.length > 0 &&
-            activePlotSelectionSampleIds.length === 0
-        ) {
-            showEmbeddingSelections();
-        }
-        setShowPlot(true);
-    }
-
-    function clearPlotSelection() {
-        setRangeSelectionForcollection(collectionId, null);
-        clearHiddenEmbeddingSelections();
-        updateEmbeddingSelectionSampleIds([]);
-    }
+    const hasPlotSelectionContextStore = embeddingSelection.hasPlotSelectionContext;
+    const isPlotSelectionAppliedStore = embeddingSelection.isPlotSelectionApplied;
+    const plotSelectionCountStore = embeddingSelection.plotSelectionCount;
+    const plotSelectionItemLabelStore = embeddingSelection.plotSelectionItemLabel;
+    const hasPlotSelectionContext = $derived($hasPlotSelectionContextStore);
+    const isPlotSelectionApplied = $derived($isPlotSelectionAppliedStore);
+    const plotSelectionCount = $derived($plotSelectionCountStore);
+    const plotSelectionItemLabel = $derived($plotSelectionItemLabelStore);
 </script>
 
 <div class="flex-none">
@@ -630,8 +545,8 @@
                                             checked={isPlotSelectionApplied}
                                             selectionCount={plotSelectionCount}
                                             itemLabel={plotSelectionItemLabel}
-                                            onVisibilityChange={setEmbeddingSelectionVisibility}
-                                            onClear={clearPlotSelection}
+                                            onVisibilityChange={embeddingSelection.setEmbeddingSelectionVisibility}
+                                            onClear={embeddingSelection.clearPlotSelection}
                                         />
                                     {/if}
                                     <LabelsMenu
@@ -780,7 +695,9 @@
                                         data-testid="toggle-plot-button"
                                         variant={$showPlot ? 'default' : 'ghost'}
                                         onclick={() =>
-                                            $showPlot ? setShowPlot(false) : showPlotWithSelection()}
+                                            $showPlot
+                                                ? setShowPlot(false)
+                                                : setShowPlot(true)}
                                     >
                                         <ChartNetwork class="size-4" />
                                         <span>Show Embeddings</span>
