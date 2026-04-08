@@ -169,6 +169,28 @@ describe('useGlobalStorage', () => {
         });
     });
 
+    describe('Annotation selection reactivity', () => {
+        it('should produce a new object reference on toggle so Svelte detects the change', () => {
+            storage.toggleSampleAnnotationCropSelection(testCollectionId, 'annotation1');
+            const refAfterFirstToggle = get(storage.selectedSampleAnnotationCropIds);
+
+            storage.toggleSampleAnnotationCropSelection(testCollectionId, 'annotation2');
+            const refAfterSecondToggle = get(storage.selectedSampleAnnotationCropIds);
+
+            expect(refAfterFirstToggle).not.toBe(refAfterSecondToggle);
+        });
+
+        it('should produce a new object reference on clear so Svelte detects the change', () => {
+            storage.toggleSampleAnnotationCropSelection(testCollectionId, 'annotation1');
+            const refBeforeClear = get(storage.selectedSampleAnnotationCropIds);
+
+            storage.clearSelectedSampleAnnotationCrops(testCollectionId);
+            const refAfterClear = get(storage.selectedSampleAnnotationCropIds);
+
+            expect(refBeforeClear).not.toBe(refAfterClear);
+        });
+    });
+
     describe('Text Embedding', () => {
         it('should store value', () => {
             storage.setTextEmbedding({
