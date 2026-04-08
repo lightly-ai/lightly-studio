@@ -219,13 +219,16 @@
                 toggleSampleSelection(selectedSampleId, collection_id)
         });
     }
+
+    const scrollResetKey = $derived(filterHash + ($textEmbedding?.queryText ?? ''));
 </script>
 
 <SampleGrid
     itemCount={samples.length}
     overScan={sampleGridOverscan}
     scrollPosition={initialScrollPosition}
-    scrollResetKey={$textEmbedding?.queryText ?? ''}
+    {scrollResetKey}
+    testId="images-grid"
     onScroll={handleScroll}
     message={{
         loading: 'Loading samples...',

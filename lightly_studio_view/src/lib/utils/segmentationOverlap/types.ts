@@ -9,7 +9,6 @@ export type CommonParams = {
 export type RemoveOverlapParams = CommonParams & {
     newMask: Uint8Array;
     skipId?: string;
-    segmentationMode: 'instance' | 'semantic';
     collectionId: string;
     updateAnnotations: (updates: AnnotationUpdateInput[]) => Promise<unknown>;
 };

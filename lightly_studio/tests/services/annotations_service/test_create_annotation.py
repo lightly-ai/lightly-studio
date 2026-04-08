@@ -88,40 +88,6 @@ def test_create_annotation_instance_segmentation(
     assert result.object_detection_details is None
 
 
-def test_create_annotation_semantic_segmentation(
-    db_session: Session,
-    collection: CollectionTable,
-    samples: list[ImageTable],
-    annotation_labels: list[AnnotationLabelTable],
-) -> None:
-    """Test to create semantic segmentation annotation."""
-    annotation = AnnotationCreateParams(
-        annotation_label_id=annotation_labels[0].annotation_label_id,
-        annotation_type=AnnotationType.SEMANTIC_SEGMENTATION,
-        collection_id=collection.collection_id,
-        parent_sample_id=samples[0].sample_id,
-        segmentation_mask=[1, 0, 0, 1, 1, 0],
-        x=10,
-        y=20,
-        width=30,
-        height=40,
-    )
-    result = create_annotation(session=db_session, annotation=annotation)
-
-    assert isinstance(result, AnnotationBaseTable)
-    assert result.annotation_label_id == annotation.annotation_label_id
-    assert result.annotation_type == annotation.annotation_type
-    assert result.sample.collection_id == collection.children[0].collection_id
-    assert result.parent_sample_id == annotation.parent_sample_id
-    assert result.segmentation_details is not None
-    assert result.segmentation_details.x == annotation.x
-    assert result.segmentation_details.y == annotation.y
-    assert result.segmentation_details.width == annotation.width
-    assert result.segmentation_details.height == annotation.height
-    assert result.segmentation_details.segmentation_mask == annotation.segmentation_mask
-    assert result.object_detection_details is None
-
-
 def test_create_annotation_classification(
     db_session: Session,
     collection: CollectionTable,

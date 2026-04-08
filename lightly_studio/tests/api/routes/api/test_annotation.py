@@ -44,11 +44,29 @@ def test_read_annotations_first_page(
 
     assert response.status_code == HTTP_STATUS_OK
     result = response.json()
-    assert len(result["data"]) == 8
-    assert result["total_count"] == 8
+    assert len(result["data"]) == 6
+    assert result["total_count"] == 6
 
 
 def test_read_annotations_middle_page(
+    test_client: TestClient,
+    annotation_collection_id: UUID,
+) -> None:
+    response = test_client.get(
+        f"/api/collections/{annotation_collection_id}/annotations",
+        params={
+            "cursor": 2,
+            "limit": 2,
+        },
+    )
+
+    assert response.status_code == HTTP_STATUS_OK
+    result = response.json()
+    assert result["total_count"] == 6
+    assert result["nextCursor"] == 4
+
+
+def test_read_annotations_last_page(
     test_client: TestClient,
     annotation_collection_id: UUID,
 ) -> None:
@@ -62,25 +80,7 @@ def test_read_annotations_middle_page(
 
     assert response.status_code == HTTP_STATUS_OK
     result = response.json()
-    assert result["total_count"] == 8
-    assert result["nextCursor"] == 6
-
-
-def test_read_annotations_last_page(
-    test_client: TestClient,
-    annotation_collection_id: UUID,
-) -> None:
-    response = test_client.get(
-        f"/api/collections/{annotation_collection_id}/annotations",
-        params={
-            "cursor": 6,
-            "limit": 2,
-        },
-    )
-
-    assert response.status_code == HTTP_STATUS_OK
-    result = response.json()
-    assert result["total_count"] == 8
+    assert result["total_count"] == 6
     assert result["nextCursor"] is None
 
 

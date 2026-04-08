@@ -1,4 +1,4 @@
-"""Tests for semantic segmentation resolver."""
+"""Tests for annotation deletion resolver."""
 
 from __future__ import annotations
 
@@ -26,7 +26,7 @@ def test_delete_annotations(
     filtered_annotations = annotation_resolver.get_all(
         session=db_session, filters=annotation_filter
     ).annotations
-    assert len(filtered_annotations) == 8
+    assert len(filtered_annotations) == 6
 
     annotation_resolver.delete_annotations(
         session=db_session,

@@ -29,6 +29,7 @@
     let gridViewRendering: RenderingMode = $state('contain');
     let showAnnotationTextLabels = $state<boolean>(false);
     let showSampleFilenames = $state<boolean>(false);
+    let showBoundingBoxesForSegmentation = $state<boolean>(true);
 
     let initialized = false;
 
@@ -49,6 +50,8 @@
             gridViewRendering = $settingsStore.grid_view_sample_rendering || 'contain';
             showAnnotationTextLabels = $settingsStore.show_annotation_text_labels ?? false;
             showSampleFilenames = $settingsStore.show_sample_filenames ?? false;
+            showBoundingBoxesForSegmentation =
+                $settingsStore.show_bounding_boxes_for_segmentation ?? true;
             initialized = true;
         }
     });
@@ -86,6 +89,7 @@
                 grid_view_sample_rendering: gridViewRendering,
                 show_annotation_text_labels: showAnnotationTextLabels,
                 show_sample_filenames: showSampleFilenames,
+                show_bounding_boxes_for_segmentation: showBoundingBoxesForSegmentation,
                 key_toolbar_selection: shortcutSettings.keyToolbarSelection,
                 key_toolbar_drag: shortcutSettings.keyToolbarDrag,
                 key_toolbar_bounding_box: shortcutSettings.keyToolbarBoundingBox,
@@ -392,6 +396,19 @@
                     <!-- Annotation Text Labels Setting -->
                     <div class="space-y-4">
                         <h3 class="text-lg font-medium text-foreground">Annotation Settings</h3>
+                        <div class="grid grid-cols-2 items-center gap-4">
+                            <Label
+                                for="show-bounding-boxes-for-segmentation"
+                                class="text-right text-foreground"
+                            >
+                                Show Bounding Boxes for Segmentation
+                            </Label>
+                            <Switch
+                                id="show-bounding-boxes-for-segmentation"
+                                bind:checked={showBoundingBoxesForSegmentation}
+                                disabled={isSaving}
+                            />
+                        </div>
                         <div class="grid grid-cols-2 items-center gap-4">
                             <Label
                                 for="show-annotation-text-labels"

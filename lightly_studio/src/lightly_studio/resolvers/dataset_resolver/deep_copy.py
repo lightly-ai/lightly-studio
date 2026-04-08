@@ -450,10 +450,7 @@ def _copy_annotation_details(
                 {"sample_id": new_sample_id},
             )
             session.add(new_obj_det)
-    elif annotation_type in (
-        AnnotationType.INSTANCE_SEGMENTATION,
-        AnnotationType.SEMANTIC_SEGMENTATION,
-    ):
+    elif annotation_type == AnnotationType.INSTANCE_SEGMENTATION:
         old_seg = session.get(SegmentationAnnotationTable, old_sample_id)
         if old_seg:
             new_seg = _copy_with_updates(

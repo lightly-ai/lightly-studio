@@ -353,7 +353,7 @@ export interface paths {
         };
         /**
          * Export Collection Youtube Vis
-         * @description Export collection video annotations in YouTube-VIS instance segmentation format.
+         * @description Export collection video annotations in the selected export format.
          */
         get: operations["export_collection_youtube_vis"];
         put?: never;
@@ -1931,7 +1931,7 @@ export interface components {
          * @description The type of annotation task.
          * @enum {string}
          */
-        AnnotationType: "classification" | "semantic_segmentation" | "instance_segmentation" | "object_detection";
+        AnnotationType: "classification" | "instance_segmentation" | "object_detection";
         /**
          * AnnotationUpdateInput
          * @description API input model for updating an annotation.
@@ -3226,6 +3226,12 @@ export interface components {
              * @default false
              */
             show_sample_filenames: boolean;
+            /**
+             * Show Bounding Boxes For Segmentation
+             * @description Controls whether to show annotation bounding boxes for segmentation
+             * @default true
+             */
+            show_bounding_boxes_for_segmentation: boolean;
             /**
              * Key Toolbar Selection
              * @description Key to activate the selection tool in the toolbar
