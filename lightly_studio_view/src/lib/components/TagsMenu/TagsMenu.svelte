@@ -2,7 +2,7 @@
     import { Checkbox } from '$lib/components';
     import type { GridType } from '$lib/types';
     import Segment from '$lib/components/Segment/Segment.svelte';
-    import { Tags as TagsIcon } from '@lucide/svelte';
+    import { Tags as Tagsicon } from '@lucide/svelte';
     import type { TagView } from '$lib/services/types';
     import { useTags } from '$lib/hooks/useTags/useTags.js';
     import { useGlobalStorage } from '$lib/hooks/useGlobalStorage';
@@ -76,7 +76,7 @@
     }
 </script>
 
-<Segment title="Tags" icon={TagsIcon}>
+<Segment title="Tags" icon={Tagsicon}>
     <div class="mb-3 w-full space-y-1">
         <div class="space-y-1">
             {#each $tags as tag (tag.tag_id)}
