@@ -124,10 +124,6 @@ export function useVideoFrames({ video }: { video: VideoView }) {
                     path: {
                         video_frame_collection_id: frameCollectionId
                     },
-                    query: {
-                        cursor: state.cursor,
-                        limit: BATCH_SIZE
-                    },
                     body: {
                         filter: {
                             video_id: video?.sample_id
