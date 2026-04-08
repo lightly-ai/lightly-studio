@@ -428,7 +428,7 @@ def _build_annotations_table(
         {
             "sample_id": pa.array(annotation_id_strs, type=pa.string()),
             "annotation_type": pa.array(
-                [AnnotationType.OBJECT_DETECTION.value] * n, type=pa.string()
+                [AnnotationType.OBJECT_DETECTION.value.upper()] * n, type=pa.string()
             ),
             "annotation_label_id": pa.array(chosen_labels, type=pa.string()),
             "parent_sample_id": pa.array(repeated_parent_ids, type=pa.string()),
