@@ -285,9 +285,9 @@ def _build_batch_data(  # noqa: PLR0913
         collection_id_str=str(image_collection_id),
     )
     images = _build_images_table(
+        rng=rng,
         batch_start=batch_start,
         image_id_strs=image_id_strs,
-        image_size=config.image_size,
         shared_image_path=shared_image_path,
     )
     embeddings = _build_embeddings_table(
@@ -346,22 +346,24 @@ def _build_image_samples_table(
 
 
 def _build_images_table(
+    rng: np.random.Generator,
     batch_start: int,
     image_id_strs: list[str],
-    image_size: int,
     shared_image_path: Path,
 ) -> pa.Table:
     """Build the images Arrow table."""
     n = len(image_id_strs)
     file_path_str = str(shared_image_path)
     file_names = [f"benchmark_{batch_start + i:06d}.jpg" for i in range(n)]
+    widths = rng.integers(500, 801, size=n, dtype=np.int32)
+    heights = rng.integers(500, 801, size=n, dtype=np.int32)
     return pa.table(
         {
             "sample_id": pa.array(image_id_strs, type=pa.string()),
             "file_name": pa.array(file_names, type=pa.string()),
             "file_path_abs": pa.array([file_path_str] * n, type=pa.string()),
-            "width": pa.array([image_size] * n, type=pa.int32()),
-            "height": pa.array([image_size] * n, type=pa.int32()),
+            "width": pa.array(widths, type=pa.int32()),
+            "height": pa.array(heights, type=pa.int32()),
         }
     )
 
