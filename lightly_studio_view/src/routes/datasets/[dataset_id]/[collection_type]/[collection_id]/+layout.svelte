@@ -509,85 +509,77 @@
     let pausedPlotSelectionByCollection = $state<Record<string, string[]>>({});
     const pausedPlotSelectionSampleIds = $derived(pausedPlotSelectionByCollection[collectionId] ?? []);
     const isPlotSelectionApplied = $derived(activePlotSelectionSampleIds.length > 0);
-    const plotSelectionCount = $derived.by(() =>
+    const effectiveEmbeddingSelectionIds = $derived.by(() =>
         activePlotSelectionSampleIds.length > 0
-            ? activePlotSelectionSampleIds.length
-            : pausedPlotSelectionSampleIds.length
+            ? activePlotSelectionSampleIds
+            : pausedPlotSelectionSampleIds
     );
+    const plotSelectionCount = $derived(effectiveEmbeddingSelectionIds.length);
     const hasPlotSelectionContext = $derived(
-        (isSamples || isVideos) &&
-            (activePlotSelectionSampleIds.length > 0 || pausedPlotSelectionSampleIds.length > 0)
+        (isSamples || isVideos) && effectiveEmbeddingSelectionIds.length > 0
     );
     const plotSelectionItemLabel = $derived(isVideos ? 'video' : 'sample');
 
-    function setPausedPlotSelection(sampleIds: string[]) {
+    function updateEmbeddingSelectionSampleIds(sampleIds: string[]) {
+        if (isVideos) {
+            updateVideoSampleIds(sampleIds);
+            return;
+        }
+        if (isSamples) {
+            updateImageSampleIds(sampleIds);
+        }
+    }
+
+    function setHiddenEmbeddingSelections(sampleIds: string[]) {
         pausedPlotSelectionByCollection = {
             ...pausedPlotSelectionByCollection,
             [collectionId]: sampleIds
         };
     }
 
-    function clearPausedPlotSelection() {
-        setPausedPlotSelection([]);
+    function clearHiddenEmbeddingSelections() {
+        setHiddenEmbeddingSelections([]);
     }
 
-    function applyPausedPlotSelection() {
+    function showEmbeddingSelections() {
         if (pausedPlotSelectionSampleIds.length === 0) {
             return;
         }
 
-        if (isVideos) {
-            updateVideoSampleIds(pausedPlotSelectionSampleIds);
-        } else if (isSamples) {
-            updateImageSampleIds(pausedPlotSelectionSampleIds);
-        }
-
-        clearPausedPlotSelection();
+        updateEmbeddingSelectionSampleIds(pausedPlotSelectionSampleIds);
+        clearHiddenEmbeddingSelections();
     }
 
-    function setPlotSelectionApplied(shouldApply: boolean) {
-        if (shouldApply) {
-            if (activePlotSelectionSampleIds.length > 0 || pausedPlotSelectionSampleIds.length === 0) {
-                return;
-            }
-            applyPausedPlotSelection();
-            return;
-        }
-
+    function hideEmbeddingSelections() {
         if (activePlotSelectionSampleIds.length === 0) {
             return;
         }
-        setPausedPlotSelection(activePlotSelectionSampleIds);
-        if (isVideos) {
-            updateVideoSampleIds([]);
-        } else if (isSamples) {
-            updateImageSampleIds([]);
-        }
+        setHiddenEmbeddingSelections(activePlotSelectionSampleIds);
+        updateEmbeddingSelectionSampleIds([]);
     }
 
-    function togglePlotSelectionApplied() {
-        setPlotSelectionApplied(!isPlotSelectionApplied);
+    function setEmbeddingSelectionVisibility(shouldShow: boolean) {
+        if (shouldShow) {
+            if (activePlotSelectionSampleIds.length > 0 || pausedPlotSelectionSampleIds.length === 0) {
+                return;
+            }
+            showEmbeddingSelections();
+            return;
+        }
+        hideEmbeddingSelections();
     }
 
     function showPlotWithSelection() {
         if (pausedPlotSelectionSampleIds.length > 0 && activePlotSelectionSampleIds.length === 0) {
-            applyPausedPlotSelection();
+            showEmbeddingSelections();
         }
         setShowPlot(true);
     }
 
     function clearPlotSelection() {
         setRangeSelectionForcollection(collectionId, null);
-        clearPausedPlotSelection();
-
-        if (isVideos) {
-            updateVideoSampleIds([]);
-            return;
-        }
-
-        if (isSamples) {
-            updateImageSampleIds([]);
-        }
+        clearHiddenEmbeddingSelections();
+        updateEmbeddingSelectionSampleIds([]);
     }
 </script>
 
@@ -626,7 +618,9 @@
                                                 <Checkbox
                                                     checked={isPlotSelectionApplied}
                                                     onCheckedChange={(checked) =>
-                                                        setPlotSelectionApplied(checked === true)}
+                                                        setEmbeddingSelectionVisibility(
+                                                            checked === true
+                                                        )}
                                                     data-testid="embedding-selection-filter-chip-checkbox"
                                                 />
                                                 <div class="min-w-0 flex-1">
