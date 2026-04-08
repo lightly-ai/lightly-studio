@@ -10,7 +10,7 @@
         SampleView,
         VideoFrameView
     } from '$lib/api/lightly_studio_local';
-    import { shouldShowBoundingBoxForAnnotation } from '$lib/services/types';
+    import { shouldShowBoundingBoxForAnnotation } from '$lib/utils/shouldShowBoundingBoxForAnnotation';
     import { SampleAnnotations } from '..';
 
     const {

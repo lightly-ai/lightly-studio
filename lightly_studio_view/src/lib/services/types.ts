@@ -82,15 +82,6 @@ export function isClassificationAnnotation(
     return annotation.annotation_type === 'classification';
 }
 
-export function shouldShowBoundingBoxForAnnotation(
-    annotation: Annotation | undefined,
-    showBoundingBoxesForSegmentation: boolean
-): boolean {
-    return (
-        annotation?.annotation_type !== 'instance_segmentation' || showBoundingBoxesForSegmentation
-    );
-}
-
 // define generic result for the hook
 export type SideEffectHookData<T> = {
     isLoading: boolean;

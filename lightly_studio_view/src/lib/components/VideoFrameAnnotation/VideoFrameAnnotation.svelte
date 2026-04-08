@@ -5,7 +5,7 @@
     import { useAnnotation } from '$lib/hooks/useAnnotation/useAnnotation';
     import { useGlobalStorage } from '$lib/hooks/useGlobalStorage';
     import { addAnnotationUpdateToUndoStack } from '$lib/services/addAnnotationUpdateToUndoStack';
-    import { shouldShowBoundingBoxForAnnotation } from '$lib/services/types';
+    import { shouldShowBoundingBoxForAnnotation } from '$lib/utils/shouldShowBoundingBoxForAnnotation';
     import { type VideoFrameView } from '$lib/api/lightly_studio_local';
     import { getBoundingBox } from '../SampleAnnotation/utils';
 
