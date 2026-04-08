@@ -88,19 +88,19 @@ test('We can see clicked element when navigating back from details', async ({
         await isInViewport({ element: annotationsPage.getAnnotationByIndex(0), viewport })
     ).toBeTruthy();
     expect(
-        await isInViewport({ element: annotationsPage.getAnnotationByIndex(30), viewport })
+        await isInViewport({ element: annotationsPage.getAnnotationByIndex(20), viewport })
     ).toBeFalsy();
 
-    await annotationsPage.getAnnotationByIndex(30).scrollIntoViewIfNeeded();
+    annotationsPage.getAnnotationByIndex(20).scrollIntoViewIfNeeded();
 
     expect(
         await isInViewport({ element: annotationsPage.getAnnotationByIndex(0), viewport })
     ).toBeFalsy();
     expect(
-        await isInViewport({ element: annotationsPage.getAnnotationByIndex(30), viewport })
+        await isInViewport({ element: annotationsPage.getAnnotationByIndex(20), viewport })
     ).toBeTruthy();
 
-    await annotationsPage.getAnnotationByIndex(30).dblclick();
+    await annotationsPage.getAnnotationByIndex(20).dblclick();
 
     await expect(page.getByText('Annotation Details')).toBeVisible();
 
@@ -112,6 +112,6 @@ test('We can see clicked element when navigating back from details', async ({
         await isInViewport({ element: annotationsPage.getAnnotationByIndex(0), viewport })
     ).toBeFalsy();
     expect(
-        await isInViewport({ element: annotationsPage.getAnnotationByIndex(30), viewport })
+        await isInViewport({ element: annotationsPage.getAnnotationByIndex(20), viewport })
     ).toBeTruthy();
 });
