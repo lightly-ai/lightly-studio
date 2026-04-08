@@ -46,7 +46,7 @@ DEFAULT_NUM_IMAGES = 100_000
 DEFAULT_BOXES_PER_IMAGE = 10
 DEFAULT_EMBEDDING_DIM = 512
 DEFAULT_IMAGE_SIZE = 640
-DEFAULT_BATCH_SIZE = 2_000
+DEFAULT_BATCH_SIZE = 10_000
 DEFAULT_SEED = 0
 DEFAULT_DATASET_NAME = "gui_benchmark"
 DEFAULT_ANNOTATION_COLLECTION_NAME = "benchmark_annotations"
@@ -356,7 +356,7 @@ def _build_embeddings_table(
 ) -> pa.Table:
     """Build the embeddings Arrow table using a FixedSizeListArray."""
     n = len(image_id_strs)
-    flat = rng.random(n * embedding_dim).astype(np.float32)
+    flat = rng.random(n * embedding_dim, dtype=np.float32)
     embedding_array = pa.FixedSizeListArray.from_arrays(
         pa.array(flat, type=pa.float32()),
         embedding_dim,
