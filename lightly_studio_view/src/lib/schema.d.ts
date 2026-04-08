@@ -4071,6 +4071,7 @@ export interface operations {
             header?: never;
             path: {
                 tag_id: string;
+                collection_id: string;
             };
             cookie?: never;
         };

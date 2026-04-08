@@ -5,9 +5,10 @@
         CombinedMetadataDimensionsFilters,
         Footer,
         LabelsMenu,
-        TagCreateDialog,
         TagsMenu
     } from '$lib/components';
+    import SelectionPanel from '$lib/components/SelectionPanel/SelectionPanel.svelte';
+    import { useTags } from '$lib/hooks/useTags/useTags.js';
     import Input from '$lib/components/ui/input/input.svelte';
     import Separator from '$lib/components/ui/separator/separator.svelte';
     import {
@@ -19,7 +20,7 @@
         GripVertical
     } from '@lucide/svelte';
     import { onDestroy, onMount } from 'svelte';
-    import { get, toStore } from 'svelte/store';
+    import { toStore } from 'svelte/store';
     import { toast } from 'svelte-sonner';
     import { Header } from '$lib/components';
     import MenuDialogHost from '$lib/components/Header/MenuDialogHost.svelte';
@@ -29,6 +30,7 @@
     import { useHideAnnotations } from '$lib/hooks/useHideAnnotations';
     import { useAnnotationLabels } from '$lib/hooks/useAnnotationLabels/useAnnotationLabels';
     import { useAnnotationsFilter } from '$lib/hooks/useAnnotationsFilter/useAnnotationsFilter';
+    import { useSelectedAnnotationsFilter } from '$lib/hooks/useAnnotationsFilter/useAnnotationsFilter';
     import { useDimensions } from '$lib/hooks/useDimensions/useDimensions';
     import {
         isAnnotationDetailsRoute,
@@ -57,12 +59,21 @@
     import { useVideoFramesBounds } from '$lib/hooks/useVideoFramesBounds/useVideoFramesBounds.js';
     import { useVideoBounds } from '$lib/hooks/useVideosBounds/useVideosBounds.js';
     import { SampleType, type ImageFilter } from '$lib/api/lightly_studio_local/types.gen.js';
+    import {
+        getAllFrames,
+        getVideoSampleIds,
+        readAnnotationsWithPayload,
+        readImages,
+        type ReadImagesRequest
+    } from '$lib/api/lightly_studio_local';
     import { buildImageFilter } from '$lib/utils/buildImageFilter';
     import {
         buildVideoAnnotationCountsFilter,
         buildVideoFrameAnnotationCountsFilter
     } from '$lib/utils/buildAnnotationCountsFilters';
     import { GridHeader } from '$lib/components';
+    import { buildVideoFilter, useVideoFilters } from '$lib/hooks/useVideoFilters/useVideoFilters';
+    import { getFrameFilter, useFramesFilter } from '$lib/hooks/useFramesFilter/useFramesFilter';
     const { data, children } = $props();
     const {
         collection,
@@ -71,7 +82,9 @@
             textEmbedding,
             setLastGridType,
             clearSelectedSamples,
-            clearSelectedSampleAnnotationCrops
+            clearSelectedSampleAnnotationCrops,
+            setSelectedSamples,
+            setSelectedSampleAnnotationCrops
         }
     } = $derived(data);
 
@@ -199,8 +212,31 @@
         useAnnotationLabels({ collectionId: collectionId ?? '' })
     );
     const annotationLabelsData = $derived($annotationLabelsQuery?.data);
-    const { showPlot, setShowPlot, filteredSampleCount, filteredAnnotationCount } =
-        useGlobalStorage();
+    const { selectedAnnotationFilterIdsArray: selectedAnnotationFilterIds } =
+        useSelectedAnnotationsFilter();
+    const {
+        showPlot,
+        setShowPlot,
+        filteredSampleCount,
+        filteredAnnotationCount,
+        getSelectedSampleIds,
+        selectedSampleAnnotationCropIds,
+        clearSelectedSamples: clearSelectedSamplesGlobal
+    } = useGlobalStorage();
+
+    const { tagsSelected } = $derived(useTags({ collection_id: collectionId, kind: ['annotation'] }));
+    // Use annotation crop IDs for annotation grids, sample IDs for everything else
+    const selectedSampleIdsForPanel = $derived(getSelectedSampleIds(collectionId));
+    const effectiveSelectedIds = $derived(
+        gridType === 'annotations'
+            ? ($selectedSampleAnnotationCropIds[collectionId] ?? new Set<string>())
+            : $selectedSampleIdsForPanel
+    );
+    const clearEffectiveSelection = $derived(
+        gridType === 'annotations'
+            ? () => clearSelectedSampleAnnotationCrops(collectionId)  // from data prop
+            : () => clearSelectedSamplesGlobal(collectionId)
+    );
 
     const annotationLabelsStore = toStore(() => annotationLabelsData);
 
@@ -226,6 +262,8 @@
     );
     const { videoFramesBoundsValues } = useVideoFramesBounds();
     const { videoBoundsValues } = useVideoBounds();
+    const { filterParams: videoFilterParams } = useVideoFilters();
+    const { filterParams: frameFilterParams } = useFramesFilter();
 
     const annotationCounts = $derived.by(() => {
         if (
@@ -280,6 +318,112 @@
         if (!countsData) return 0;
         return countsData.reduce((sum, item) => sum + Number(item.total_count), 0);
     });
+    const SELECT_ALL_PAGE_SIZE = 100;
+    let isSelectingAll = $state(false);
+
+    async function selectAllMatchingCurrentFilter() {
+        isSelectingAll = true;
+        try {
+            if (gridType === 'samples') {
+                const sampleIds: string[] = [];
+                let offset = 0;
+
+                while (true) {
+                    const response = await readImages({
+                        path: { collection_id: collectionId },
+                        body: {
+                            filters: imageFilter ?? undefined,
+                            text_embedding: $textEmbedding?.embedding,
+                            pagination: {
+                                offset,
+                                limit: SELECT_ALL_PAGE_SIZE
+                            }
+                        } satisfies ReadImagesRequest
+                    });
+                    if (response.error) throw new Error('select all samples failed');
+
+                    const pageData = response.data?.data ?? [];
+                    sampleIds.push(...pageData.map((item) => item.sample_id));
+
+                    if (!response.data?.nextCursor || pageData.length === 0) break;
+                    offset = response.data.nextCursor;
+                }
+
+                setSelectedSamples(collectionId, sampleIds);
+            } else if (gridType === 'videos') {
+                const response = await getVideoSampleIds({
+                    path: { collection_id: collectionId },
+                    body: {
+                        filter:
+                            $videoFilterParams?.collection_id === collectionId
+                                ? buildVideoFilter($videoFilterParams) ?? undefined
+                                : undefined
+                    }
+                });
+                if (response.error) throw new Error('select all videos failed');
+
+                setSelectedSamples(collectionId, response.data ?? []);
+            } else if (gridType === 'video_frames') {
+                const sampleIds: string[] = [];
+                let cursor = 0;
+
+                while (true) {
+                    const response = await getAllFrames({
+                        path: { video_frame_collection_id: collectionId },
+                        body: {
+                            filter:
+                                $frameFilterParams?.collection_id === collectionId
+                                    ? getFrameFilter($frameFilterParams) ?? undefined
+                                    : undefined
+                        },
+                        query: {
+                            cursor,
+                            limit: SELECT_ALL_PAGE_SIZE
+                        }
+                    });
+                    if (response.error) throw new Error('select all frames failed');
+
+                    const pageData = response.data?.data ?? [];
+                    sampleIds.push(...pageData.map((item) => item.sample_id));
+
+                    if (!response.data?.nextCursor || pageData.length === 0) break;
+                    cursor = response.data.nextCursor;
+                }
+
+                setSelectedSamples(collectionId, sampleIds);
+            } else if (gridType === 'annotations') {
+                const annotationIds: string[] = [];
+                let cursor = 0;
+
+                while (true) {
+                    const response = await readAnnotationsWithPayload({
+                        path: { collection_id: collectionId },
+                        query: {
+                            annotation_label_ids: $selectedAnnotationFilterIds.length
+                                ? $selectedAnnotationFilterIds
+                                : undefined,
+                            tag_ids: $tagsSelected.size > 0 ? Array.from($tagsSelected) : undefined,
+                            cursor,
+                            limit: SELECT_ALL_PAGE_SIZE
+                        }
+                    });
+                    if (response.error) throw new Error('select all annotations failed');
+
+                    const pageData = response.data?.data ?? [];
+                    annotationIds.push(...pageData.map((item) => item.annotation.sample_id));
+
+                    if (!response.data?.nextCursor || pageData.length === 0) break;
+                    cursor = response.data.nextCursor;
+                }
+
+                setSelectedSampleAnnotationCrops(collectionId, annotationIds);
+            }
+        } catch {
+            toast.error('Failed to select all matching items.');
+        } finally {
+            isSelectingAll = false;
+        }
+    }
 
     const MAX_IMAGE_SIZE_MB = 50;
     const MAX_IMAGE_SIZE_BYTES = MAX_IMAGE_SIZE_MB * 1024 * 1024;
@@ -489,12 +633,14 @@
                             class="min-h-0 flex-1 space-y-2 overflow-y-auto px-4 pb-2 dark:[color-scheme:dark]"
                         >
                             <div>
-                                <TagsMenu collection_id={collectionId} {gridType} />
-                                <TagCreateDialog
-                                    {collectionId}
+                                <SelectionPanel
+                                    selectedSampleIds={effectiveSelectedIds}
                                     {gridType}
-                                    textEmbedding={get(textEmbedding)}
+                                    onClear={clearEffectiveSelection}
+                                    onSelectAll={selectAllMatchingCurrentFilter}
+                                    {isSelectingAll}
                                 />
+                                <TagsMenu collection_id={collectionId} {gridType} />
                             </div>
                             <Segment title="Filters" icon={SlidersHorizontal}>
                                 <div class="space-y-2">

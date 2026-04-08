@@ -4,6 +4,7 @@
     import { useRemoveTagFromSample } from '$lib/hooks/useRemoveTagFromSample/useRemoveTagFromSample';
     import SegmentTags from '../../SegmentTags/SegmentTags.svelte';
     import { type AnnotationView } from '$lib/api/lightly_studio_local';
+    import { useTags } from '$lib/hooks/useTags/useTags.js';
     import type { Snippet } from 'svelte';
     import { page } from '$app/state';
     import { Button } from '$lib/components/ui';
@@ -26,6 +27,9 @@
     const { removeTagFromSample } = useRemoveTagFromSample({ collectionId });
 
     const tags = $derived(annotation.tags ?? []);
+    const { tags: allCollectionTags } = $derived(
+        useTags({ collection_id: collectionId, kind: ['annotation'] })
+    );
 
     const onRemoveTag = async (tagId: string) => {
         await removeTagFromSample(annotation.sample_id, tagId);
@@ -70,7 +74,15 @@
         <div
             class="flex h-full min-h-0 flex-col space-y-4 overflow-hidden dark:[color-scheme:dark]"
         >
-            <SegmentTags {tags} onClick={onRemoveTag} />
+            <SegmentTags
+                {tags}
+                allCollectionTags={$allCollectionTags}
+                tagKind="annotation"
+                {collectionId}
+                sampleId={annotation.sample_id}
+                onRemoveTag={onRemoveTag}
+                onRefetch={onUpdate}
+            />
             <AnnotationMetadata {annotation} {onUpdate} />
 
             {@render children()}
