@@ -56,8 +56,10 @@
     import { useVideoFrameAnnotationCounts } from '$lib/hooks/useVideoFrameAnnotationsCount/useVideoFrameAnnotationsCount.js';
     import { useVideoFramesBounds } from '$lib/hooks/useVideoFramesBounds/useVideoFramesBounds.js';
     import { useVideoBounds } from '$lib/hooks/useVideosBounds/useVideosBounds.js';
-    import { SampleType, type ImageFilter } from '$lib/api/lightly_studio_local/types.gen.js';
+    import { SampleType } from '$lib/api/lightly_studio_local/types.gen.js';
     import { buildImageFilter } from '$lib/utils/buildImageFilter';
+    import { useImageFilters } from '$lib/hooks/useImageFilters/useImageFilters';
+    import { useVideoFilters } from '$lib/hooks/useVideoFilters/useVideoFilters';
     import {
         buildVideoAnnotationCountsFilter,
         buildVideoFrameAnnotationCountsFilter
@@ -217,15 +219,17 @@
     const metadataFilters = $derived(
         metadataValues ? createMetadataFilters($metadataValues) : undefined
     );
-    const imageFilter = $derived.by<ImageFilter | undefined>(() =>
-        buildImageFilter({
-            dimensionsValues: $dimensionsValues ?? undefined,
-            annotationFilter: $annotationFilterStore,
-            metadataFilters
-        })
-    );
     const { videoFramesBoundsValues } = useVideoFramesBounds();
     const { videoBoundsValues } = useVideoBounds();
+
+    const { imageFilter: imageFilterFromHook } = useImageFilters();
+    const { videoFilter: videoFilterFromHook } = useVideoFilters();
+    const plotSelectionImageSampleIds = $derived(
+        $imageFilterFromHook?.sample_filter?.sample_ids ?? []
+    );
+    const plotSelectionVideoSampleIds = $derived(
+        $videoFilterFromHook?.sample_filter?.sample_ids ?? []
+    );
 
     const annotationCounts = $derived.by(() => {
         if (
@@ -249,13 +253,19 @@
                 filter: buildVideoAnnotationCountsFilter({
                     metadataFilters,
                     annotationFilter: $annotationFilterStore,
-                    videoBoundsValues: $videoBoundsValues
+                    videoBoundsValues: $videoBoundsValues,
+                    sampleIds: plotSelectionVideoSampleIds
                 })
             });
         }
         return useImageAnnotationCounts({
             collectionId: datasetId,
-            filter: imageFilter
+            filter: buildImageFilter({
+                dimensionsValues: $dimensionsValues,
+                annotationFilter: $annotationFilterStore,
+                metadataFilters,
+                sampleIds: isAnnotations ? [] : plotSelectionImageSampleIds
+            })
         });
     });
 

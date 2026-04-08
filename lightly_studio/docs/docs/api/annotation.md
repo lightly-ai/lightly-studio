@@ -41,17 +41,3 @@
 ::: lightly_studio.core.annotation
     options:
         members: [CreateObjectDetection]
-
-## Semantic Segmentation
-
-### SemanticSegmentationAnnotation
-
-::: lightly_studio.core.annotation
-    options:
-        members: [SemanticSegmentationAnnotation]
-
-### CreateSemanticSegmentation
-
-::: lightly_studio.core.annotation
-    options:
-        members: [CreateSemanticSegmentation]

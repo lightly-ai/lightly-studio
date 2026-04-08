@@ -5,7 +5,6 @@ import pytest
 
 from lightly_studio.core.annotation.annotation_create import (
     CreateInstanceSegmentation,
-    CreateSemanticSegmentation,
 )
 
 
@@ -62,13 +61,13 @@ def test_create_instance_segmentation_from_rle_mask() -> None:
     assert result.segmentation_mask == rle_mask
 
 
-def test_create_semantic_segmentation_from_binary_mask() -> None:
+def test_create_instance_segmentation_from_binary_mask_square() -> None:
     # Create a simple binary mask (10x10) with a 2x2 square of ones.
     # The square is at rows 2 and 3 and columns 3 and 4 (numbered from 0).
     mask = np.zeros((10, 10), dtype=np.int_)
     mask[2:4, 3:5] = 1
 
-    result = CreateSemanticSegmentation.from_binary_mask(
+    result = CreateInstanceSegmentation.from_binary_mask(
         label="cat",
         binary_mask=mask,
         confidence=0.9,
@@ -89,9 +88,9 @@ def test_create_semantic_segmentation_from_binary_mask() -> None:
     assert result.segmentation_mask == [23, 2, 8, 2, 65]
 
 
-def test_create_semantic_segmentation_from_binary_mask_empty() -> None:
+def test_create_instance_segmentation_from_binary_mask_empty() -> None:
     mask = np.zeros((10, 10), dtype=np.int_)
-    result = CreateSemanticSegmentation.from_binary_mask(
+    result = CreateInstanceSegmentation.from_binary_mask(
         label="empty",
         binary_mask=mask,
     )
@@ -104,11 +103,11 @@ def test_create_semantic_segmentation_from_binary_mask_empty() -> None:
     assert result.segmentation_mask == [100]
 
 
-def test_create_semantic_segmentation_from_rle_mask() -> None:
+def test_create_instance_segmentation_from_rle_mask_square() -> None:
     rle_mask = [23, 2, 8, 2, 65]  # Corresponds to a 2x2 square at (3,2)
     image_sample = MockImageSample(width=10, height=10)
 
-    result = CreateSemanticSegmentation.from_rle_mask(
+    result = CreateInstanceSegmentation.from_rle_mask(
         label="cat",
         segmentation_mask=rle_mask,
         sample_2d=image_sample,

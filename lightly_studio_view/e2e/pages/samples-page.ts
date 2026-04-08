@@ -30,7 +30,7 @@ export class SamplesPage {
     }
 
     getSampleByIndex(index: number) {
-        return this.getSamples().nth(index);
+        return this.page.locator(`[data-index="${index}"]`);
     }
 
     getSampleByName(name: string) {

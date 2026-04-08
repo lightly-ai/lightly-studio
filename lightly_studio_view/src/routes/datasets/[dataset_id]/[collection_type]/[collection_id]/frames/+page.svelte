@@ -20,6 +20,8 @@
         SampleGridItem,
         VideoFrameItem
     } from '$lib/components';
+    import { useScrollRestoration } from '$lib/hooks/useScrollRestoration/useScrollRestoration';
+    import { onMount } from 'svelte';
 
     const collectionId = $derived(page.params.collection_id);
 
@@ -118,6 +120,19 @@
                 toggleSampleSelection(selectedSampleId, collectionId)
         });
     }
+    const filterHash = $derived(JSON.stringify($filterParams));
+    const { initialize, savePosition, getRestoredPosition } = useScrollRestoration('frames_scroll');
+    onMount(async () => {
+        initialize();
+    });
+
+    const initialScrollPosition = $derived(getRestoredPosition(filterHash));
+
+    function handleScroll(event: Event) {
+        const scrollTop = (event.target as HTMLElement).scrollTop;
+        savePosition(scrollTop, filterHash);
+    }
+    const scrollResetKey = $derived(filterHash);
 </script>
 
 <div class="flex flex-1 flex-col space-y-4">
@@ -128,6 +143,9 @@
         itemCount={items.length}
         overScan={30}
         testId="video-frames-grid"
+        onScroll={handleScroll}
+        scrollPosition={initialScrollPosition}
+        {scrollResetKey}
         message={{
             loading: 'Loading video frames...',
             error: 'Error loading video frames',

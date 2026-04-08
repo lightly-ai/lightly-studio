@@ -9,7 +9,6 @@ from collections import defaultdict
 from collections.abc import Iterable, Mapping
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Literal, cast
 from uuid import UUID
 
 import fsspec
@@ -471,16 +470,11 @@ def _process_segmentation_annotations(
 ) -> list[AnnotationCreate]:
     """Process instance segmentation annotations for a single image."""
     if not (
-        anno_data.annotation_type
-        in (AnnotationType.INSTANCE_SEGMENTATION, AnnotationType.SEMANTIC_SEGMENTATION)
+        anno_data.annotation_type == AnnotationType.INSTANCE_SEGMENTATION
         and isinstance(anno_data.data, ImageInstanceSegmentation)
     ):
         raise ValueError("Invalid annotation data for segmentation processing.")
 
-    annotation_type = cast(
-        Literal[AnnotationType.INSTANCE_SEGMENTATION, AnnotationType.SEMANTIC_SEGMENTATION],
-        anno_data.annotation_type,
-    )
     new_annotations = []
     for obj in anno_data.data.objects:
         new_annotations.append(
@@ -488,7 +482,6 @@ def _process_segmentation_annotations(
                 parent_sample_id=context.sample_id,
                 annotation_label_id=context.label_map[obj.category.id],
                 segmentation=obj.segmentation,
-                annotation_type=annotation_type,
             )
         )
     return new_annotations
@@ -516,10 +509,7 @@ def _process_batch_annotations(
             label_map=label_map,
         )
 
-        if anno_data.annotation_type in (
-            AnnotationType.INSTANCE_SEGMENTATION,
-            AnnotationType.SEMANTIC_SEGMENTATION,
-        ):
+        if anno_data.annotation_type == AnnotationType.INSTANCE_SEGMENTATION:
             new_annotations = _process_segmentation_annotations(
                 context=context, anno_data=anno_data
             )

@@ -4,13 +4,6 @@
     import { getColorByLabel } from '$lib/utils';
     import type { BoundingBox } from '$lib/types';
 
-    type SegmentationAnnotation = {
-        annotation_type: 'semantic_segmentation';
-        annotation_label_name: string;
-        segmentation_mask?: number[] | null;
-        object_detection_details?: undefined;
-    };
-
     type InstanceAnnotation = {
         annotation_type: 'instance_segmentation';
         annotation_label_name: string;
@@ -25,10 +18,7 @@
         segmentation_mask?: undefined;
     };
 
-    type AnnotationCanvasAnnotation =
-        | SegmentationAnnotation
-        | InstanceAnnotation
-        | ObjectDetectionAnnotation;
+    type AnnotationCanvasAnnotation = InstanceAnnotation | ObjectDetectionAnnotation;
 
     const {
         width,
