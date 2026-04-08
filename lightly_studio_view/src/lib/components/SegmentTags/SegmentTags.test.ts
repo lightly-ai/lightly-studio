@@ -1,13 +1,18 @@
-import { describe, it, expect, vi } from 'vitest';
-import { fireEvent, render, screen } from '@testing-library/svelte';
+import { describe, it, expect } from 'vitest';
+import { render, screen } from '@testing-library/svelte';
 import SegmentTags from './SegmentTags.svelte';
+
+const defaultProps = {
+    collectionId: 'collection-1',
+    sampleId: 'sample-1'
+};
 
 describe('SegmentTags', () => {
     it('renders nothing when tags array is empty', () => {
         const { container } = render(SegmentTags, {
             props: {
-                tags: [],
-                onClick: vi.fn()
+                ...defaultProps,
+                tags: []
             }
         });
 
@@ -22,10 +27,7 @@ describe('SegmentTags', () => {
         ];
 
         render(SegmentTags, {
-            props: {
-                tags,
-                onClick: vi.fn()
-            }
+            props: { ...defaultProps, tags }
         });
 
         const tagElements = screen.getAllByTestId('segment-tag-name');
@@ -42,67 +44,25 @@ describe('SegmentTags', () => {
         ];
 
         render(SegmentTags, {
-            props: {
-                tags,
-                onClick: vi.fn()
-            }
+            props: { ...defaultProps, tags }
         });
 
         expect(screen.getByTestId('remove-tag-Tag 1')).toBeInTheDocument();
         expect(screen.getByTestId('remove-tag-Tag 2')).toBeInTheDocument();
     });
 
-    it('calls onClick with tag_id when remove button is clicked', async () => {
-        const onClick = vi.fn().mockResolvedValue(undefined);
-        const tags = [{ tag_id: '123', name: 'Test Tag' }];
-
-        render(SegmentTags, {
-            props: {
-                tags,
-                onClick
-            }
-        });
-
-        const removeButton = screen.getByTestId('remove-tag-Test Tag');
-        await fireEvent.click(removeButton);
-
-        expect(onClick).toHaveBeenCalledWith('123');
-        expect(onClick).toHaveBeenCalledTimes(1);
-    });
-
-    it('does not call onClick when tag has no tag_id', async () => {
-        const onClick = vi.fn().mockResolvedValue(undefined);
-        const tags = [{ name: 'Tag Without ID' }];
-
-        render(SegmentTags, {
-            props: {
-                tags,
-                onClick
-            }
-        });
-
-        const removeButton = screen.getByTestId('remove-tag-Tag Without ID');
-        await fireEvent.click(removeButton);
-
-        expect(onClick).not.toHaveBeenCalled();
-    });
-
     it('has correct aria-label on remove button', () => {
         const tags = [{ tag_id: '1', name: 'My Tag' }];
 
         render(SegmentTags, {
-            props: {
-                tags,
-                onClick: vi.fn()
-            }
+            props: { ...defaultProps, tags }
         });
 
         const removeButton = screen.getByTestId('remove-tag-My Tag');
         expect(removeButton).toHaveAttribute('aria-label', 'Remove tag My Tag');
     });
 
-    it('handles multiple tags correctly', async () => {
-        const onClick = vi.fn().mockResolvedValue(undefined);
+    it('renders multiple tags correctly', () => {
         const tags = [
             { tag_id: '1', name: 'Tag 1' },
             { tag_id: '2', name: 'Tag 2' },
@@ -110,16 +70,11 @@ describe('SegmentTags', () => {
         ];
 
         render(SegmentTags, {
-            props: {
-                tags,
-                onClick
-            }
+            props: { ...defaultProps, tags }
         });
 
-        const removeButton2 = screen.getByTestId('remove-tag-Tag 2');
-        await fireEvent.click(removeButton2);
-
-        expect(onClick).toHaveBeenCalledWith('2');
-        expect(onClick).toHaveBeenCalledTimes(1);
+        expect(screen.getByTestId('remove-tag-Tag 1')).toBeInTheDocument();
+        expect(screen.getByTestId('remove-tag-Tag 2')).toBeInTheDocument();
+        expect(screen.getByTestId('remove-tag-Tag 3')).toBeInTheDocument();
     });
 });

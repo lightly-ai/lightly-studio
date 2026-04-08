@@ -7,7 +7,7 @@
     import { useTags } from '$lib/hooks/useTags/useTags.js';
     import { useGlobalStorage } from '$lib/hooks/useGlobalStorage';
     import { createTag, addSampleIdsToTagId } from '$lib/api/lightly_studio_local';
-    import TagAssignPopover from './TagAssignPopover.svelte';
+    import TagAssignInput from './TagAssignInput.svelte';
     import { toast } from 'svelte-sonner';
 
     let { collection_id, gridType }: { collection_id: string; gridType: GridType } = $props();
@@ -42,9 +42,7 @@
 
     async function handleAssign(name: string) {
         assignBusy = true;
-        const existingTag = $tags.find(
-            (t: TagView) => t.name.toLowerCase() === name.toLowerCase()
-        );
+        const existingTag = $tags.find((t: TagView) => t.name.toLowerCase() === name.toLowerCase());
         if (existingTag) {
             const response = await addSampleIdsToTagId({
                 path: { collection_id, tag_id: existingTag.tag_id },
@@ -96,6 +94,10 @@
             {/each}
         </div>
 
-        <TagAssignPopover options={$tags} busy={assignBusy || !hasSelection} onSelect={handleAssign} />
+        <TagAssignInput
+            options={$tags}
+            busy={assignBusy || !hasSelection}
+            onSelect={handleAssign}
+        />
     </div>
 </Segment>
