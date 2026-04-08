@@ -5,9 +5,10 @@ from __future__ import annotations
 from typing import Annotated
 from uuid import UUID
 
-from fastapi import APIRouter, HTTPException, Path
+from fastapi import APIRouter, Depends, HTTPException, Path
 from pydantic import BaseModel
 
+from lightly_studio.api.routes.api.collection import get_and_validate_collection_id
 from lightly_studio.api.routes.api.status import (
     HTTP_STATUS_CREATED,
     HTTP_STATUS_NOT_FOUND,
@@ -17,7 +18,8 @@ from lightly_studio.models.annotation_label import (
     AnnotationLabelCreate,
     AnnotationLabelTable,
 )
-from lightly_studio.resolvers import annotation_label_resolver, collection_resolver
+from lightly_studio.models.collection import CollectionTable
+from lightly_studio.resolvers import annotation_label_resolver
 
 annotations_label_router = APIRouter()
 
@@ -35,24 +37,18 @@ class AnnotationLabelCreateRequest(BaseModel):
 def create_annotation_label(
     input_label: AnnotationLabelCreateRequest,
     session: SessionDep,
-    # TODO(Michal, 12/2025): Pass the root collection directly.
-    collection_id: Annotated[
-        UUID,
-        Path(
-            title="collection Id",
-            description="Register the label with the root collection of this collection",
-        ),
+    collection: Annotated[
+        CollectionTable,
+        Path(title="collection Id"),
+        Depends(get_and_validate_collection_id),
     ],
 ) -> AnnotationLabelTable:
     """Create a new annotation label in the database."""
     # TODO(Michal, 12/2025): Use a different model for label creation from the frontend.
-    root_collection_id = collection_resolver.get_root_collection(
-        session=session, collection_id=collection_id
-    ).collection_id
     return annotation_label_resolver.create(
         session=session,
         label=AnnotationLabelCreate(
-            root_collection_id=root_collection_id,
+            dataset_id=collection.dataset_id,
             annotation_label_name=input_label.annotation_label_name,
         ),
     )
@@ -61,20 +57,14 @@ def create_annotation_label(
 @annotations_label_router.get("/collections/{collection_id}/annotation_labels")
 def read_annotation_labels(
     session: SessionDep,
-    # TODO(Michal, 12/2025): Pass the root collection directly.
-    collection_id: Annotated[
-        UUID,
-        Path(
-            title="collection Id",
-            description="Fetch labels registered with the root collection of this collection",
-        ),
+    collection: Annotated[
+        CollectionTable,
+        Path(title="collection Id"),
+        Depends(get_and_validate_collection_id),
     ],
 ) -> list[AnnotationLabelTable]:
     """Retrieve a list of annotation labels from the database."""
-    root_collection_id = collection_resolver.get_root_collection(
-        session=session, collection_id=collection_id
-    ).collection_id
-    return annotation_label_resolver.get_all(session=session, root_collection_id=root_collection_id)
+    return annotation_label_resolver.get_all(session=session, dataset_id=collection.dataset_id)
 
 
 @annotations_label_router.get("/annotation_labels/{label_id}")

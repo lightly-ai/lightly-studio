@@ -24,7 +24,10 @@ from sqlmodel import Session
 
 from lightly_studio.core.image.image_sample import ImageSample
 from lightly_studio.models.annotation.annotation_base import AnnotationBaseTable, AnnotationType
-from lightly_studio.resolvers import annotation_label_resolver
+from lightly_studio.resolvers import (
+    annotation_label_resolver,
+    collection_resolver,
+)
 
 
 class LightlyStudioInputBase:
@@ -32,6 +35,7 @@ class LightlyStudioInputBase:
 
     CATEGORY_ID_START = 0
 
+    # TODO(lukas 04/2026): change root_collection_id to dataset_id
     def __init__(
         self, session: Session, root_collection_id: UUID, samples: Iterable[ImageSample]
     ) -> None:
@@ -44,9 +48,17 @@ class LightlyStudioInputBase:
             samples: Dataset samples.
         """
         self._samples = list(samples)
+        # Resolve dataset_id from the provided collection_id.
+        collection = collection_resolver.get_by_id(
+            session=session, collection_id=root_collection_id
+        )
+        if collection is None:
+            raise ValueError(f"Collection {root_collection_id} doesn't exist")
+        dataset_id = collection.dataset_id
+
         self._label_id_to_category = _build_label_id_to_category(
             session=session,
-            root_collection_id=root_collection_id,
+            dataset_id=dataset_id,
             category_id_start=self.CATEGORY_ID_START,
         )
 
@@ -179,12 +191,12 @@ class LightlyStudioPascalVOCInstanceSegmentationInput(
 
 def _build_label_id_to_category(
     session: Session,
-    root_collection_id: UUID,
+    dataset_id: UUID,
     category_id_start: int = 0,
 ) -> dict[UUID, Category]:
     labels = annotation_label_resolver.get_all_sorted_alphabetically(
         session=session,
-        root_collection_id=root_collection_id,
+        dataset_id=dataset_id,
     )
     # TODO(Horatiu, 09/2025): We should get only labels that are attached to Object Detection
     # annotations.

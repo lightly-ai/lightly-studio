@@ -92,6 +92,7 @@ class DatasetExport:
         )
 
 
+# TODO(lukas 04/2026): change root_collection_id to dataset_id
 def to_coco_object_detections(
     session: Session,
     root_collection_id: UUID,
@@ -117,6 +118,7 @@ def to_coco_object_detections(
     COCOObjectDetectionOutput(output_file=output_json).save(label_input=export_input)
 
 
+# TODO(lukas 04/2026): change root_collection_id to dataset_id
 def to_coco_instance_segmentations(
     session: Session,
     root_collection_id: UUID,
@@ -142,6 +144,7 @@ def to_coco_instance_segmentations(
     COCOInstanceSegmentationOutput(output_file=output_json).save(label_input=export_input)
 
 
+# TODO(lukas 04/2026): change root_collection_id to dataset_id
 def to_pascalvoc_instance_segmentation(
     session: Session,
     root_collection_id: UUID,
