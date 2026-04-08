@@ -22,12 +22,12 @@ uv run tests/benchmarks/gui_benchmark.py
 Or from the repository root:
 
 ```bash
-uv run lightly_studio/tests/benchmarks/gui_benchmark.py
+uv run --project lightly_studio lightly_studio/tests/benchmarks/gui_benchmark.py
 ```
 
 When the dataset is ready, the script prints a line like:
 
-```
+```text
 Benchmark ready: setup_time=12.345s db=/tmp/lightly_studio_gui_benchmark_abc123/benchmark.db url=http://localhost:8001
 ```
 

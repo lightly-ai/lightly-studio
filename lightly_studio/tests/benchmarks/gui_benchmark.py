@@ -16,6 +16,7 @@ from uuid import UUID
 
 import numpy as np
 import pyarrow as pa
+from numpy.typing import NDArray
 from PIL import Image
 from tqdm import tqdm
 
@@ -99,7 +100,10 @@ def main() -> None:
         _create_shared_image(image_path=image_path, image_size=config.image_size)
         _initialize_database(db_path=db_path)
         root_collection_id = _populate_database(config=config, image_path=image_path)
-        _verify_annotation_counts(collection_id=root_collection_id)
+        _verify_annotation_counts(
+            collection_id=root_collection_id,
+            boxes_per_image=config.boxes_per_image,
+        )
 
         preview_server = Server(host=config.host, port=config.port)
         setup_elapsed = time.perf_counter() - setup_started
@@ -112,7 +116,7 @@ def main() -> None:
         )
 
         try:
-            start_gui_module.start_gui(host=config.host, port=config.port)
+            start_gui_module.start_gui(host=preview_server.host, port=preview_server.port)
         finally:
             db_manager.close()
 
@@ -227,8 +231,10 @@ def _populate_database(config: BenchmarkConfig, image_path: Path) -> UUID:
     return root_collection_id
 
 
-def _verify_annotation_counts(collection_id: UUID) -> None:
+def _verify_annotation_counts(collection_id: UUID, boxes_per_image: int) -> None:
     """Assert that every annotation label has at least one annotation."""
+    if boxes_per_image == 0:
+        return
     with db_manager.session() as session:
         counts = image_resolver.count_image_annotations_by_collection(
             session=session,
@@ -284,11 +290,14 @@ def _build_batch_data(  # noqa: PLR0913
         image_id_strs=image_id_strs,
         collection_id_str=str(image_collection_id),
     )
+    image_widths = rng.integers(500, 801, size=batch_count, dtype=np.int32)
+    image_heights = rng.integers(500, 801, size=batch_count, dtype=np.int32)
     images = _build_images_table(
-        rng=rng,
         batch_start=batch_start,
         image_id_strs=image_id_strs,
         shared_image_path=shared_image_path,
+        widths=image_widths,
+        heights=image_heights,
     )
     embeddings = _build_embeddings_table(
         rng=rng,
@@ -316,7 +325,9 @@ def _build_batch_data(  # noqa: PLR0913
         rng=rng,
         annotation_id_strs=annotation_id_strs,
         annotation_count=annotation_count,
-        image_size=config.image_size,
+        image_widths=image_widths,
+        image_heights=image_heights,
+        boxes_per_image=config.boxes_per_image,
     )
 
     return BatchData(
@@ -344,17 +355,16 @@ def _build_image_samples_table(
 
 
 def _build_images_table(
-    rng: np.random.Generator,
     batch_start: int,
     image_id_strs: list[str],
     shared_image_path: Path,
+    widths: NDArray[np.int32],
+    heights: NDArray[np.int32],
 ) -> pa.Table:
     """Build the images Arrow table."""
     n = len(image_id_strs)
     file_path_str = str(shared_image_path)
     file_names = [f"benchmark_{batch_start + i:06d}.jpg" for i in range(n)]
-    widths = rng.integers(500, 801, size=n, dtype=np.int32)
-    heights = rng.integers(500, 801, size=n, dtype=np.int32)
     return pa.table(
         {
             "sample_id": pa.array(image_id_strs, type=pa.string()),
@@ -418,7 +428,7 @@ def _build_annotations_table(
         {
             "sample_id": pa.array(annotation_id_strs, type=pa.string()),
             "annotation_type": pa.array(
-                [AnnotationType.OBJECT_DETECTION.value.upper()] * n, type=pa.string()
+                [AnnotationType.OBJECT_DETECTION.value] * n, type=pa.string()
             ),
             "annotation_label_id": pa.array(chosen_labels, type=pa.string()),
             "parent_sample_id": pa.array(repeated_parent_ids, type=pa.string()),
@@ -426,11 +436,13 @@ def _build_annotations_table(
     )
 
 
-def _build_object_detections_table(
+def _build_object_detections_table(  # noqa: PLR0913
     rng: np.random.Generator,
     annotation_id_strs: list[str],
     annotation_count: int,
-    image_size: int,
+    image_widths: NDArray[np.int32],
+    image_heights: NDArray[np.int32],
+    boxes_per_image: int,
 ) -> pa.Table:
     """Build the object detections Arrow table."""
     if annotation_count == 0:
@@ -443,11 +455,20 @@ def _build_object_detections_table(
                 "height": pa.array([], type=pa.int32()),
             }
         )
-    max_box_size = max(2, image_size // 4)
-    widths = rng.integers(1, max_box_size + 1, size=annotation_count, dtype=np.int32)
-    heights = rng.integers(1, max_box_size + 1, size=annotation_count, dtype=np.int32)
-    x_values = rng.integers(0, image_size - widths + 1, size=annotation_count, dtype=np.int32)
-    y_values = rng.integers(0, image_size - heights + 1, size=annotation_count, dtype=np.int32)
+    parent_widths = np.repeat(image_widths, boxes_per_image).astype(np.int32)
+    parent_heights = np.repeat(image_heights, boxes_per_image).astype(np.int32)
+    max_w = np.maximum(2, parent_widths // 4)
+    max_h = np.maximum(2, parent_heights // 4)
+    widths = np.minimum(
+        rng.integers(1, int(max_w.max()) + 1, size=annotation_count, dtype=np.int32),
+        parent_widths,
+    )
+    heights = np.minimum(
+        rng.integers(1, int(max_h.max()) + 1, size=annotation_count, dtype=np.int32),
+        parent_heights,
+    )
+    x_values = (rng.random(annotation_count) * (parent_widths - widths + 1)).astype(np.int32)
+    y_values = (rng.random(annotation_count) * (parent_heights - heights + 1)).astype(np.int32)
     return pa.table(
         {
             "sample_id": pa.array(annotation_id_strs, type=pa.string()),
