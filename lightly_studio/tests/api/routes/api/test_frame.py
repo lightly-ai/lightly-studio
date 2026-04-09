@@ -28,6 +28,10 @@ def test_get_all_frames(
 
     response = test_client.post(
         f"/api/collections/{video_frame_collection_id}/frame/",
+        params={
+            "offset": 0,
+            "limit": 4,
+        },
         json={},
     )
 
