@@ -13,6 +13,13 @@
     import { shouldShowBoundingBoxForAnnotation } from '$lib/utils/shouldShowBoundingBoxForAnnotation';
     import { SampleAnnotations } from '..';
 
+    export interface PrerenderedAnnotation {
+        dataUrl: string;
+        width: number;
+        height: number;
+        opacity?: number;
+    }
+
     const {
         sample,
         width,
@@ -20,7 +27,8 @@
         sampleImageObjectFit = 'contain',
         showLabel,
         sampleWidth,
-        sampleHeight
+        sampleHeight,
+        prerenderedAnnotations
     }: {
         sample: VideoFrameView | FrameView;
         width: number;
@@ -29,6 +37,7 @@
         sampleHeight: number;
         sampleImageObjectFit?: SampleImageObjectFit;
         showLabel?: ComponentProps<typeof SampleAnnotation>['showLabel'];
+        prerenderedAnnotations?: PrerenderedAnnotation[];
     } = $props();
 
     const { isHidden } = useHideAnnotations();
@@ -36,6 +45,15 @@
     const annotations: AnnotationView[] = $derived((sample.sample as SampleView).annotations ?? []);
     const annotationsWithVisuals = $derived(
         annotations.filter((annotation) => annotation.annotation_type !== 'classification')
+    );
+
+    // Filter out segmentation annotations if we have prerendered versions
+    const annotationsToRender = $derived(
+        prerenderedAnnotations && prerenderedAnnotations.length > 0
+            ? annotationsWithVisuals.filter(
+                  (annotation) => annotation.annotation_type !== 'instance_segmentation'
+              )
+            : annotationsWithVisuals
     );
 </script>
 
@@ -59,7 +77,23 @@
         {height}
     >
         <g class="sample-annotation" class:invisible={$isHidden}>
-            {#each annotationsWithVisuals as annotation (annotation.sample_id)}
+            <!-- Render prerendered segmentation masks first -->
+            {#if prerenderedAnnotations}
+                {#each prerenderedAnnotations as prerendered, index (index)}
+                    <image
+                        href={prerendered.dataUrl}
+                        x="0"
+                        y="0"
+                        width={prerendered.width}
+                        height={prerendered.height}
+                        opacity={prerendered.opacity ?? 0.65}
+                        pointer-events="none"
+                    />
+                {/each}
+            {/if}
+
+            <!-- Render other annotations (bounding boxes, labels, etc.) -->
+            {#each annotationsToRender as annotation (annotation.sample_id)}
                 <SampleAnnotation
                     {annotation}
                     {showLabel}
