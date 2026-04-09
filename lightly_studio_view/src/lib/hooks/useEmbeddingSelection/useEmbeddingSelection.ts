@@ -1,11 +1,7 @@
 import { derived, get, writable, type Readable } from 'svelte/store';
-import {
-    isNormalModeParams
-} from '$lib/hooks/useImagesInfinite/useImagesInfinite';
+import { isNormalModeParams } from '$lib/hooks/useImagesInfinite/useImagesInfinite';
 import { useImageFilters } from '$lib/hooks/useImageFilters/useImageFilters';
-import {
-    useVideoFilters
-} from '$lib/hooks/useVideoFilters/useVideoFilters';
+import { useVideoFilters } from '$lib/hooks/useVideoFilters/useVideoFilters';
 
 type UseEmbeddingSelectionParams = {
     collectionId: Readable<string>;
