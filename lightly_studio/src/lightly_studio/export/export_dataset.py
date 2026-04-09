@@ -33,16 +33,16 @@ class DatasetExport:
     It allows exporting data in various formats.
     """
 
-    def __init__(self, session: Session, root_collection_id: UUID, samples: Iterable[ImageSample]):
+    def __init__(self, session: Session, dataset_id: UUID, samples: Iterable[ImageSample]):
         """Initializes the DatasetExport object.
 
         Args:
             session: The database session.
-            root_collection_id: The root collection ID for label retrieval.
+            dataset_id: The dataset ID for label retrieval.
             samples: Samples to export.
         """
         self.session = session
-        self._root_collection_id = root_collection_id
+        self._dataset_id = dataset_id
         self.samples = samples
 
     def to_coco_object_detections(self, output_json: PathLike | None = None) -> None:
@@ -59,7 +59,7 @@ class DatasetExport:
             output_json = DEFAULT_EXPORT_FILENAME
         to_coco_object_detections(
             session=self.session,
-            root_collection_id=self._root_collection_id,
+            dataset_id=self._dataset_id,
             samples=self.samples,
             output_json=Path(output_json),
         )
@@ -86,16 +86,15 @@ class DatasetExport:
             output_json = DEFAULT_EXPORT_FILENAME
         to_coco_instance_segmentations(
             session=self.session,
-            root_collection_id=self._root_collection_id,
+            dataset_id=self._dataset_id,
             samples=self.samples,
             output_json=Path(output_json),
         )
 
 
-# TODO(lukas 04/2026): change root_collection_id to dataset_id
 def to_coco_object_detections(
     session: Session,
-    root_collection_id: UUID,
+    dataset_id: UUID,
     samples: Iterable[ImageSample],
     output_json: Path,
 ) -> None:
@@ -106,22 +105,21 @@ def to_coco_object_detections(
 
     Args:
         session: The database session.
-        root_collection_id: The root collection ID for label retrieval.
+        dataset_id: The dataset ID for label retrieval.
         samples: The samples to export.
         output_json: The path to save the output JSON file.
     """
     export_input = LightlyStudioObjectDetectionInput(
         session=session,
-        root_collection_id=root_collection_id,
+        dataset_id=dataset_id,
         samples=samples,
     )
     COCOObjectDetectionOutput(output_file=output_json).save(label_input=export_input)
 
 
-# TODO(lukas 04/2026): change root_collection_id to dataset_id
 def to_coco_instance_segmentations(
     session: Session,
-    root_collection_id: UUID,
+    dataset_id: UUID,
     samples: Iterable[ImageSample],
     output_json: Path,
 ) -> None:
@@ -132,22 +130,21 @@ def to_coco_instance_segmentations(
 
     Args:
         session: The database session.
-        root_collection_id: The root collection ID for label retrieval.
+        dataset_id: The dataset ID for label retrieval.
         samples: The samples to export.
         output_json: The path to save the output JSON file.
     """
     export_input = LightlyStudioInstanceSegmentationInput(
         session=session,
-        root_collection_id=root_collection_id,
+        dataset_id=dataset_id,
         samples=samples,
     )
     COCOInstanceSegmentationOutput(output_file=output_json).save(label_input=export_input)
 
 
-# TODO(lukas 04/2026): change root_collection_id to dataset_id
 def to_pascalvoc_instance_segmentation(
     session: Session,
-    root_collection_id: UUID,
+    dataset_id: UUID,
     samples: Iterable[ImageSample],
     output_folder: Path,
 ) -> None:
@@ -157,13 +154,13 @@ def to_pascalvoc_instance_segmentation(
 
     Args:
         session: The database session.
-        root_collection_id: The root collection ID for label retrieval.
+        dataset_id: The dataset ID for label retrieval.
         samples: The samples to export.
         output_folder: The folder where Pascal VOC segmentation files are written.
     """
     export_input = LightlyStudioPascalVOCInstanceSegmentationInput(
         session=session,
-        root_collection_id=root_collection_id,
+        dataset_id=dataset_id,
         samples=samples,
     )
 
