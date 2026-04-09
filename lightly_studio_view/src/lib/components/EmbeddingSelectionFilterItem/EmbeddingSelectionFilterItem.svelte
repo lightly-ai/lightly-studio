@@ -21,10 +21,9 @@
         <Checkbox
             {checked}
             onCheckedChange={(nextChecked) => onVisibilityChange(nextChecked === true)}
-            data-testid="embedding-selection-filter-chip-checkbox"
         />
         <div class="min-w-0 flex-1">
-            <div class="truncate text-sm font-medium">Embedding Selection</div>
+            <div class="truncate text-sm font-medium">Embedding Plot Filter</div>
             <div class="text-xs text-muted-foreground">
                 {selectionCount}
                 {selectionCount === 1 ? itemLabel : `${itemLabel}s`}
@@ -33,9 +32,8 @@
         <button
             class="text-muted-foreground hover:text-foreground"
             onclick={onClear}
-            title="Clear embedding selection"
-            aria-label="Clear embedding selection"
-            data-testid="embedding-selection-filter-chip-clear"
+            title="Clear embedding plot filter"
+            aria-label="Clear embedding plot filter"
         >
             <X class="size-4" />
         </button>

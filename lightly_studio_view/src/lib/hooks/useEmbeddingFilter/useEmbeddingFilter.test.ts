@@ -1,6 +1,6 @@
 import { describe, it, expect, vi } from 'vitest';
 import { get, writable } from 'svelte/store';
-import { useEmbeddingSelection } from './useEmbeddingSelection';
+import { useEmbeddingFilter } from './useEmbeddingFilter';
 import { useImageFilters } from '$lib/hooks/useImageFilters/useImageFilters';
 import { useVideoFilters } from '$lib/hooks/useVideoFilters/useVideoFilters';
 import { isNormalModeParams } from '$lib/hooks/useImagesInfinite/useImagesInfinite';
@@ -13,8 +13,8 @@ function getImageSampleIds() {
     return params.filters?.sample_ids;
 }
 
-describe('useEmbeddingSelection', () => {
-    it('hides and restores the active samples selection', () => {
+describe('useEmbeddingFilter', () => {
+    it('hides and restores the active samples filter', () => {
         const collectionId = writable('col-1');
         const isVideos = writable(false);
         const isSamples = writable(true);
@@ -31,27 +31,27 @@ describe('useEmbeddingSelection', () => {
             filters: {}
         });
 
-        const embeddingSelection = useEmbeddingSelection({
+        const embeddingFilter = useEmbeddingFilter({
             collectionId,
             isVideos,
             isSamples,
             setRangeSelectionForcollection
         });
 
-        embeddingSelection.setEmbeddingSelectionVisibility(false);
+        embeddingFilter.setEmbeddingFilterVisibility(false);
 
         expect(getImageSampleIds()).toBeUndefined();
-        expect(get(embeddingSelection.hiddenEmbeddingSelectionSampleIds)).toEqual(['a', 'b']);
-        expect(get(embeddingSelection.activePlotSelectionSampleIds)).toEqual([]);
+        expect(get(embeddingFilter.hiddenEmbeddingFilterSampleIds)).toEqual(['a', 'b']);
+        expect(get(embeddingFilter.activePlotFilterSampleIds)).toEqual([]);
 
-        embeddingSelection.setEmbeddingSelectionVisibility(true);
+        embeddingFilter.setEmbeddingFilterVisibility(true);
 
         expect(getImageSampleIds()).toEqual(['a', 'b']);
-        expect(get(embeddingSelection.hiddenEmbeddingSelectionSampleIds)).toEqual([]);
-        expect(get(embeddingSelection.activePlotSelectionSampleIds)).toEqual(['a', 'b']);
+        expect(get(embeddingFilter.hiddenEmbeddingFilterSampleIds)).toEqual([]);
+        expect(get(embeddingFilter.activePlotFilterSampleIds)).toEqual(['a', 'b']);
     });
 
-    it('clears plot selection and current range selection', () => {
+    it('clears plot filter and current range selection', () => {
         const collectionId = writable('col-1');
         const isVideos = writable(false);
         const isSamples = writable(true);
@@ -68,14 +68,14 @@ describe('useEmbeddingSelection', () => {
             filters: {}
         });
 
-        const embeddingSelection = useEmbeddingSelection({
+        const embeddingFilter = useEmbeddingFilter({
             collectionId,
             isVideos,
             isSamples,
             setRangeSelectionForcollection
         });
 
-        embeddingSelection.clearPlotSelection();
+        embeddingFilter.clearPlotFilter();
 
         expect(setRangeSelectionForcollection).toHaveBeenCalledWith('col-1', null);
         expect(getImageSampleIds()).toBeUndefined();

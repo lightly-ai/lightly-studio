@@ -58,7 +58,7 @@
     import { useVideoBounds } from '$lib/hooks/useVideosBounds/useVideosBounds.js';
     import { useImageFilters } from '$lib/hooks/useImageFilters/useImageFilters';
     import { useVideoFilters } from '$lib/hooks/useVideoFilters/useVideoFilters';
-    import { useEmbeddingSelection } from '$lib/hooks/useEmbeddingSelection/useEmbeddingSelection';
+    import { useEmbeddingFilter } from '$lib/hooks/useEmbeddingFilter/useEmbeddingFilter';
     import { SampleType } from '$lib/api/lightly_studio_local/types.gen';
     import { buildImageFilter } from '$lib/utils/buildImageFilter';
     import {
@@ -231,10 +231,10 @@
 
     const { imageFilter: imageFilterFromHook } = useImageFilters();
     const { videoFilter: videoFilterFromHook } = useVideoFilters();
-    const plotSelectionImageSampleIds = $derived(
+    const plotFilterImageSampleIds = $derived(
         $imageFilterFromHook?.sample_filter?.sample_ids ?? []
     );
-    const plotSelectionVideoSampleIds = $derived(
+    const plotFilterVideoSampleIds = $derived(
         $videoFilterFromHook?.sample_filter?.sample_ids ?? []
     );
 
@@ -262,7 +262,7 @@
                     metadataFilters,
                     annotationFilter: $annotationFilterStore,
                     videoBoundsValues: $videoBoundsValues,
-                    sampleIds: plotSelectionVideoSampleIds
+                    sampleIds: plotFilterVideoSampleIds
                 })
             });
         }
@@ -272,7 +272,7 @@
                 dimensionsValues: $dimensionsValues,
                 annotationFilter: $annotationFilterStore,
                 metadataFilters,
-                sampleIds: isAnnotations ? [] : plotSelectionImageSampleIds
+                sampleIds: isAnnotations ? [] : plotFilterImageSampleIds
             })
         });
     });
@@ -489,20 +489,20 @@
         isSamples || isAnnotations || isVideos || isVideoFrames || isGroups
     );
 
-    const embeddingSelection = useEmbeddingSelection({
+    const embeddingFilter = useEmbeddingFilter({
         collectionId: collectionIdStore,
         isVideos: toStore(() => isVideos),
         isSamples: toStore(() => isSamples),
         setRangeSelectionForcollection
     });
-    const hasPlotSelectionContextStore = embeddingSelection.hasPlotSelectionContext;
-    const isPlotSelectionAppliedStore = embeddingSelection.isPlotSelectionApplied;
-    const plotSelectionCountStore = embeddingSelection.plotSelectionCount;
-    const plotSelectionItemLabelStore = embeddingSelection.plotSelectionItemLabel;
-    const hasPlotSelectionContext = $derived($hasPlotSelectionContextStore);
-    const isPlotSelectionApplied = $derived($isPlotSelectionAppliedStore);
-    const plotSelectionCount = $derived($plotSelectionCountStore);
-    const plotSelectionItemLabel = $derived($plotSelectionItemLabelStore);
+    const hasPlotFilterContextStore = embeddingFilter.hasPlotFilterContext;
+    const isPlotFilterAppliedStore = embeddingFilter.isPlotFilterApplied;
+    const plotFilterCountStore = embeddingFilter.plotFilterCount;
+    const plotFilterItemLabelStore = embeddingFilter.plotFilterItemLabel;
+    const hasPlotFilterContext = $derived($hasPlotFilterContextStore);
+    const isPlotFilterApplied = $derived($isPlotFilterAppliedStore);
+    const plotFilterCount = $derived($plotFilterCountStore);
+    const plotFilterItemLabel = $derived($plotFilterItemLabelStore);
 </script>
 
 <div class="flex-none">
@@ -531,13 +531,13 @@
                             </div>
                             <Segment title="Filters" icon={SlidersHorizontal}>
                                 <div class="space-y-2">
-                                    {#if hasPlotSelectionContext}
+                                    {#if hasPlotFilterContext}
                                         <EmbeddingSelectionFilterItem
-                                            checked={isPlotSelectionApplied}
-                                            selectionCount={plotSelectionCount}
-                                            itemLabel={plotSelectionItemLabel}
-                                            onVisibilityChange={embeddingSelection.setEmbeddingSelectionVisibility}
-                                            onClear={embeddingSelection.clearPlotSelection}
+                                            checked={isPlotFilterApplied}
+                                            selectionCount={plotFilterCount}
+                                            itemLabel={plotFilterItemLabel}
+                                            onVisibilityChange={embeddingFilter.setEmbeddingFilterVisibility}
+                                            onClear={embeddingFilter.clearPlotFilter}
                                         />
                                     {/if}
                                     <LabelsMenu
