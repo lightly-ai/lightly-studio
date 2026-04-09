@@ -4,7 +4,9 @@
     import {
         CombinedMetadataDimensionsFilters,
         Footer,
+        GridHeader,
         LabelsMenu,
+        SelectionPill,
         TagCreateDialog,
         TagsMenu
     } from '$lib/components';
@@ -64,9 +66,7 @@
         buildVideoAnnotationCountsFilter,
         buildVideoFrameAnnotationCountsFilter
     } from '$lib/utils/buildAnnotationCountsFilters';
-    import { GridHeader } from '$lib/components';
-    import SelectionPill from '$lib/components/SelectionPill/SelectionPill.svelte';
-    import { useSelectionSummary } from '$lib/hooks/useSelectionSummary/useSelectionSummary';
+    import { useSelectionSummary } from '$lib/hooks';
     const { data, children } = $props();
     const {
         collection,

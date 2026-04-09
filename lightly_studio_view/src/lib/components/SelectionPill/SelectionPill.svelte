@@ -23,6 +23,7 @@
 			</span>
 			<button
 				class="flex h-6.5 w-6.5 items-center justify-center rounded-full text-primary-foreground opacity-80 transition-[background-color,opacity,transform] duration-150 hover:scale-105 hover:bg-primary-foreground/10 hover:opacity-100"
+				aria-label="Clear selection"
 				onclick={onClear}
 				data-testid="clear-selection-button"
 			>
