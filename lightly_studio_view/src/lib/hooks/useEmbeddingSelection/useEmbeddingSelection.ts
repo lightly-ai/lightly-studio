@@ -22,8 +22,10 @@ export function useEmbeddingSelection({
     isSamples,
     setRangeSelectionForcollection
 }: UseEmbeddingSelectionParams) {
-    const { filterParams: imageFilterParams, updateSampleIds: updateImageSampleIds } = useImageFilters();
-    const { filterParams: videoFilterParams, updateSampleIds: updateVideoSampleIds } = useVideoFilters();
+    const { filterParams: imageFilterParams, updateSampleIds: updateImageSampleIds } =
+        useImageFilters();
+    const { filterParams: videoFilterParams, updateSampleIds: updateVideoSampleIds } =
+        useVideoFilters();
     const hiddenEmbeddingSelectionsByCollection = writable<Record<string, string[]>>({});
 
     const activePlotSelectionSampleIds = derived(
