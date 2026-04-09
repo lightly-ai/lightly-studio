@@ -7,7 +7,6 @@
         type VideoFrameView,
         type VideoView
     } from '$lib/api/lightly_studio_local';
-    import { useSettings } from '$lib/hooks/useSettings';
     import { routeHelpers } from '$lib/routes';
     import { getSimilarityColor } from '$lib/utils';
     import VideoFrameAnnotationItem from '../VideoFrameAnnotationItem/VideoFrameAnnotationItem.svelte';
@@ -143,7 +142,6 @@
     const caption = $derived(
         showCaption && video.sample.captions?.length ? video.sample.captions[0] : null
     );
-    const { gridViewThumbnailQualityStore } = useSettings();
 </script>
 
 <div
@@ -163,7 +161,6 @@
         {handleMouseEnter}
         {handleMouseLeave}
         posterSize={size}
-        thumbnailQuality={$gridViewThumbnailQualityStore}
         className="h-full w-full cursor-pointer rounded-lg shadow-md"
     />
     {#if currentFrame}

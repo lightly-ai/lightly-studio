@@ -2,7 +2,6 @@
     import { PUBLIC_VIDEOS_FRAMES_MEDIA_URL, PUBLIC_VIDEOS_MEDIA_URL } from '$env/static/public';
     import type { FrameView, VideoFrameView, VideoView } from '$lib/api/lightly_studio_local';
     import { getGridFrameURL, getGridThumbnailRequestSize } from '$lib/utils';
-    import type { GridThumbnailQuality } from '$lib/utils/getGridThumbnailURL/getGridThumbnailURL';
     import { findFrame } from '$lib/utils/frame';
 
     interface VideoProps {
@@ -16,7 +15,6 @@
         preload?: 'auto' | 'metadata' | 'none';
         className?: string;
         posterSize?: number;
-        thumbnailQuality?: GridThumbnailQuality;
         handleMouseEnter?: (event: MouseEvent) => void;
         handleMouseLeave?: (event: MouseEvent) => void;
         onplay?: () => void;
@@ -34,7 +32,6 @@
         preload = 'metadata',
         className = '',
         posterSize,
-        thumbnailQuality = 'raw',
         handleMouseEnter = () => {},
         handleMouseLeave = () => {},
         onplay = () => {},
@@ -58,7 +55,7 @@
             return null;
         }
 
-        if (!posterSize || thumbnailQuality === 'raw') {
+        if (!posterSize) {
             return `${PUBLIC_VIDEOS_FRAMES_MEDIA_URL}/${frames[0].sample_id}`;
         }
 
@@ -66,9 +63,10 @@
             posterSize,
             globalThis.window?.devicePixelRatio || 1
         );
+        // Always use high quality (JPEG) for grid posters to maintain performance.
         return getGridFrameURL({
             sampleId: frames[0].sample_id,
-            quality: thumbnailQuality,
+            quality: 'high',
             renderedWidth: requestedSize,
             renderedHeight: requestedSize
         });

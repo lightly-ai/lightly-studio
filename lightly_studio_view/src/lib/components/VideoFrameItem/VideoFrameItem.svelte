@@ -1,14 +1,12 @@
 <script lang="ts">
     import { goto } from '$app/navigation';
     import type { SampleView, VideoFrameView } from '$lib/api/lightly_studio_local';
-    import { useSettings } from '$lib/hooks/useSettings';
     import { routeHelpers } from '$lib/routes';
     import { getGridFrameURL, getGridThumbnailRequestSize } from '$lib/utils';
     import VideoFrameAnnotationItem from '../VideoFrameAnnotationItem/VideoFrameAnnotationItem.svelte';
     import { page } from '$app/state';
 
     let { videoFrame, size }: { videoFrame: VideoFrameView; size: number } = $props();
-    const { gridViewThumbnailQualityStore } = useSettings();
 
     const datasetId = $derived(page.params.dataset_id!);
     const collectionType = $derived(page.params.collection_type!);
@@ -28,14 +26,13 @@
     }
 
     const frameUrl = $derived.by(() => {
-        const quality = $gridViewThumbnailQualityStore;
         const requestedSize = getGridThumbnailRequestSize(
             size,
             globalThis.window?.devicePixelRatio || 1
         );
         return getGridFrameURL({
             sampleId: videoFrame.sample_id,
-            quality,
+            quality: 'high',
             renderedWidth: requestedSize,
             renderedHeight: requestedSize
         });
