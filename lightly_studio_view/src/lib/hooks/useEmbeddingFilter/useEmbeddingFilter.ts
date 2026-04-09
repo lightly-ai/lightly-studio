@@ -72,9 +72,7 @@ export function useEmbeddingFilter({
         ([$isSamples, $isVideos, $effectiveEmbeddingFilterIds]) =>
             ($isSamples || $isVideos) && $effectiveEmbeddingFilterIds.length > 0
     );
-    const plotFilterItemLabel = derived(isVideos, ($isVideos) =>
-        $isVideos ? 'video' : 'sample'
-    );
+    const plotFilterItemLabel = derived(isVideos, ($isVideos) => ($isVideos ? 'video' : 'sample'));
 
     function updateEmbeddingFilterSampleIds(sampleIds: string[]) {
         if (get(isVideos)) {
