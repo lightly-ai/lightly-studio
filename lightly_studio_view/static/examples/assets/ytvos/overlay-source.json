@@ -2,9 +2,9 @@
   "dataset_root": "lightly_studio/dataset_examples/youtube_vis_50_videos/train",
   "instances_json": "lightly_studio/dataset_examples/youtube_vis_50_videos/train/instances_50.json",
   "videos_dir": "lightly_studio/dataset_examples/youtube_vis_50_videos/train/videos",
-  "video_name": "0d97fba242",
-  "video_id": 101,
-  "tracks": 2,
+  "video_name": "0a23765d15",
+  "video_id": 81,
+  "tracks": 4,
   "annotation_size": {
     "width": 1280,
     "height": 720
@@ -15,5 +15,10 @@
   },
   "fps": 10.0,
   "frames": 19,
-  "type": "youtube_vis_bbox_overlay"
+  "render_mode": "mask",
+  "outputs": {
+    "base": "lightly_studio_view/static/examples/assets/ytvos/base.mp4",
+    "segmentation_mask_overlay": "lightly_studio_view/static/examples/assets/ytvos/overlay-mask.mp4"
+  },
+  "type": "youtube_vis_overlay"
 }

@@ -2,17 +2,20 @@
 """Generate overlay video for a selected YouTube-VIS sample.
 
 This script reads YouTube-VIS annotations (`instances_50.json`) and renders
-an overlay video with per-frame bounding boxes for one selected video.
+an overlay video for one selected video.
 
 Usage examples:
     python3 scripts/generate_youtube_vis_overlay.py --list-videos
     python3 scripts/generate_youtube_vis_overlay.py --video-name 0a23765d15
     python3 scripts/generate_youtube_vis_overlay.py --video-id 81
     python3 scripts/generate_youtube_vis_overlay.py --video-name 0a23765d15 --alpha 0.5
+    python3 scripts/generate_youtube_vis_overlay.py --video-name 0a23765d15 --render-mode mask
+    python3 scripts/generate_youtube_vis_overlay.py --video-name 0a23765d15 --render-mode both
 
 Outputs:
 - base.mp4: copy of the selected source video
-- overlay-mask.mp4: synthetic overlay with annotation boxes
+- overlay-mask.mp4: selected overlay output (bbox or mask depending on mode)
+- overlay-segmentation-mask.mp4: additional mask output when `--render-mode both`
 - overlay-source.json: metadata about generation
 """
 
@@ -25,6 +28,8 @@ import subprocess
 from collections import defaultdict
 from pathlib import Path
 from typing import Any
+
+import numpy as np
 
 
 DEFAULT_DATASET_ROOT = Path("lightly_studio/dataset_examples/youtube_vis_50_videos/train")
@@ -81,7 +86,20 @@ def parse_args() -> argparse.Namespace:
         "--overlay-output-name",
         type=str,
         default="overlay-mask.mp4",
-        help="Filename for rendered overlay video (default: overlay-mask.mp4)",
+        help="Filename for primary overlay output (default: overlay-mask.mp4)",
+    )
+    parser.add_argument(
+        "--mask-output-name",
+        type=str,
+        default="overlay-segmentation-mask.mp4",
+        help="Filename for segmentation-mask overlay (default: overlay-segmentation-mask.mp4)",
+    )
+    parser.add_argument(
+        "--render-mode",
+        type=str,
+        choices=["bbox", "mask", "both"],
+        default="bbox",
+        help="Overlay rendering mode: bbox, mask, or both (default: bbox)",
     )
     parser.add_argument(
         "--metadata-output-name",
@@ -187,6 +205,164 @@ def build_filter_graph(
     return ",".join(filters) if filters else "null"
 
 
+def decode_uncompressed_rle(
+    counts: list[int],
+    height: int,
+    width: int,
+) -> np.ndarray:
+    total = height * width
+    flat = np.zeros(total, dtype=np.uint8)
+    index = 0
+    value = 0
+    for count in counts:
+        run = int(count)
+        if run <= 0:
+            value = 1 - value
+            continue
+        if value == 1:
+            end = min(index + run, total)
+            flat[index:end] = 1
+        index += run
+        if index >= total:
+            break
+        value = 1 - value
+    return flat.reshape((height, width), order="F")
+
+
+def decode_segmentation_mask(segmentation: Any) -> np.ndarray | None:
+    if not segmentation:
+        return None
+    if not isinstance(segmentation, dict):
+        return None
+    counts = segmentation.get("counts")
+    size = segmentation.get("size")
+    if not isinstance(size, list) or len(size) != 2:
+        return None
+    if not isinstance(counts, list):
+        # Compressed-RLE string is not expected in this dataset subset.
+        return None
+    height = int(size[0])
+    width = int(size[1])
+    return decode_uncompressed_rle(counts=counts, height=height, width=width)
+
+
+def render_bbox_overlay_video(
+    overlay_output: Path,
+    width: int,
+    height: int,
+    fps: float,
+    duration_s: float,
+    tracks: list[dict[str, Any]],
+    ann_width: int,
+    ann_height: int,
+    alpha: float,
+) -> None:
+    filter_graph = build_filter_graph(
+        tracks=tracks,
+        width=width,
+        height=height,
+        ann_width=ann_width,
+        ann_height=ann_height,
+        alpha=alpha,
+    )
+
+    ffmpeg_cmd = [
+        "ffmpeg",
+        "-y",
+        "-f",
+        "lavfi",
+        "-i",
+        f"color=c=black:s={width}x{height}:r={fps}:d={duration_s:.6f}",
+        "-vf",
+        filter_graph,
+        "-c:v",
+        "libx264",
+        "-pix_fmt",
+        "yuv420p",
+        "-preset",
+        "veryfast",
+        "-crf",
+        "20",
+        str(overlay_output),
+    ]
+    subprocess.run(ffmpeg_cmd, check=True)
+
+
+def render_segmentation_overlay_video(
+    mask_output: Path,
+    output_width: int,
+    output_height: int,
+    ann_width: int,
+    ann_height: int,
+    fps: float,
+    frame_count: int,
+    tracks: list[dict[str, Any]],
+) -> None:
+    palette = np.array(
+        [
+            [255, 80, 80],
+            [80, 255, 80],
+            [80, 220, 255],
+            [255, 255, 80],
+            [255, 80, 255],
+            [255, 160, 80],
+            [180, 120, 255],
+        ],
+        dtype=np.uint8,
+    )
+
+    frames = np.zeros((frame_count, ann_height, ann_width, 3), dtype=np.uint8)
+    for track_index, track in enumerate(tracks):
+        color = palette[track_index % len(palette)]
+        segmentations = track.get("segmentations", [])
+        max_frames = min(frame_count, len(segmentations))
+        for frame_index in range(max_frames):
+            mask = decode_segmentation_mask(segmentations[frame_index])
+            if mask is None:
+                continue
+            if mask.shape != (ann_height, ann_width):
+                continue
+            frame = frames[frame_index]
+            frame[mask > 0] = np.maximum(frame[mask > 0], color)
+
+    ffmpeg_cmd = [
+        "ffmpeg",
+        "-y",
+        "-f",
+        "rawvideo",
+        "-pixel_format",
+        "rgb24",
+        "-video_size",
+        f"{ann_width}x{ann_height}",
+        "-framerate",
+        f"{fps}",
+        "-i",
+        "-",
+        "-vf",
+        f"scale={output_width}:{output_height}:flags=neighbor",
+        "-c:v",
+        "libx264",
+        "-pix_fmt",
+        "yuv420p",
+        "-preset",
+        "veryfast",
+        "-crf",
+        "20",
+        str(mask_output),
+    ]
+    process = subprocess.Popen(ffmpeg_cmd, stdin=subprocess.PIPE)
+    try:
+        assert process.stdin is not None
+        for frame in frames:
+            process.stdin.write(frame.tobytes())
+    finally:
+        if process.stdin is not None:
+            process.stdin.close()
+        return_code = process.wait()
+        if return_code != 0:
+            raise subprocess.CalledProcessError(return_code, ffmpeg_cmd)
+
+
 def list_available_videos(
     videos: list[dict[str, Any]],
     annotations: list[dict[str, Any]],
@@ -272,6 +448,7 @@ def main() -> None:
     output_dir.mkdir(parents=True, exist_ok=True)
     base_output = output_dir / args.base_output_name
     overlay_output = output_dir / args.overlay_output_name
+    mask_output = output_dir / args.mask_output_name
     metadata_output = output_dir / args.metadata_output_name
 
     shutil.copy2(source_video, base_output)
@@ -287,35 +464,46 @@ def main() -> None:
 
     ann_width = int(selected_video["width"])
     ann_height = int(selected_video["height"])
-    filter_graph = build_filter_graph(
-        tracks=tracks,
-        width=width,
-        height=height,
-        ann_width=ann_width,
-        ann_height=ann_height,
-        alpha=args.alpha,
-    )
+    created_outputs: dict[str, str] = {"base": str(base_output)}
+    if args.render_mode in {"bbox", "both"}:
+        render_bbox_overlay_video(
+            overlay_output=overlay_output,
+            width=width,
+            height=height,
+            fps=fps,
+            duration_s=duration_s,
+            tracks=tracks,
+            ann_width=ann_width,
+            ann_height=ann_height,
+            alpha=args.alpha,
+        )
+        created_outputs["bbox_overlay"] = str(overlay_output)
 
-    ffmpeg_cmd = [
-        "ffmpeg",
-        "-y",
-        "-f",
-        "lavfi",
-        "-i",
-        f"color=c=black:s={width}x{height}:r={fps}:d={duration_s:.6f}",
-        "-vf",
-        filter_graph,
-        "-c:v",
-        "libx264",
-        "-pix_fmt",
-        "yuv420p",
-        "-preset",
-        "veryfast",
-        "-crf",
-        "20",
-        str(overlay_output),
-    ]
-    subprocess.run(ffmpeg_cmd, check=True)
+    if args.render_mode == "mask":
+        render_segmentation_overlay_video(
+            mask_output=overlay_output,
+            output_width=width,
+            output_height=height,
+            ann_width=ann_width,
+            ann_height=ann_height,
+            fps=fps,
+            frame_count=frame_count,
+            tracks=tracks,
+        )
+        created_outputs["segmentation_mask_overlay"] = str(overlay_output)
+
+    if args.render_mode == "both":
+        render_segmentation_overlay_video(
+            mask_output=mask_output,
+            output_width=width,
+            output_height=height,
+            ann_width=ann_width,
+            ann_height=ann_height,
+            fps=fps,
+            frame_count=frame_count,
+            tracks=tracks,
+        )
+        created_outputs["segmentation_mask_overlay"] = str(mask_output)
 
     metadata_output.write_text(
         json.dumps(
@@ -330,14 +518,23 @@ def main() -> None:
                 "output_size": {"width": width, "height": height},
                 "fps": fps,
                 "frames": frame_count,
-                "type": "youtube_vis_bbox_overlay",
+                "render_mode": args.render_mode,
+                "outputs": created_outputs,
+                "type": "youtube_vis_overlay",
             },
             indent=2,
         )
     )
 
     print(f"Generated base video: {base_output}")
-    print(f"Generated overlay video: {overlay_output}")
+    if args.render_mode == "bbox":
+        print(f"Generated bbox overlay video: {overlay_output}")
+    elif args.render_mode == "mask":
+        print(f"Generated segmentation-mask video: {overlay_output}")
+    elif "bbox_overlay" in created_outputs:
+        print(f"Generated bbox overlay video: {overlay_output}")
+    if args.render_mode == "both" and "segmentation_mask_overlay" in created_outputs:
+        print(f"Generated segmentation-mask video: {mask_output}")
     print(f"Generated metadata: {metadata_output}")
 
 
