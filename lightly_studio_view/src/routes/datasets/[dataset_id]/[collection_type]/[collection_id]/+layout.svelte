@@ -761,7 +761,9 @@
                     <div class="flex min-h-0 flex-1">
                         {@render children()}
                     </div>
-                    <SelectionPill selectedCount={$selectedCount} onClear={clearSelection} />
+                    {#if showLeftSidebar}
+                        <SelectionPill selectedCount={$selectedCount} onClear={clearSelection} />
+                    {/if}
                 </div>
             {/if}
             {#if hasEmbeddings}
