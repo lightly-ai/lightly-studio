@@ -1891,10 +1891,10 @@ export interface components {
          */
         AnnotationLabelCreate: {
             /**
-             * Root Collection Id
+             * Dataset Id
              * Format: uuid
              */
-            root_collection_id: string;
+            dataset_id: string;
             /** Annotation Label Name */
             annotation_label_name: string;
         };
@@ -1912,10 +1912,10 @@ export interface components {
          */
         AnnotationLabelTable: {
             /**
-             * Root Collection Id
+             * Dataset Id
              * Format: uuid
              */
-            root_collection_id: string;
+            dataset_id: string;
             /** Annotation Label Name */
             annotation_label_name: string;
             /**
@@ -1931,7 +1931,7 @@ export interface components {
          * @description The type of annotation task.
          * @enum {string}
          */
-        AnnotationType: "classification" | "semantic_segmentation" | "instance_segmentation" | "object_detection";
+        AnnotationType: "classification" | "instance_segmentation" | "object_detection";
         /**
          * AnnotationUpdateInput
          * @description API input model for updating an annotation.
@@ -3226,6 +3226,12 @@ export interface components {
              * @default false
              */
             show_sample_filenames: boolean;
+            /**
+             * Show Bounding Boxes For Segmentation
+             * @description Controls whether to show annotation bounding boxes for segmentation
+             * @default true
+             */
+            show_bounding_boxes_for_segmentation: boolean;
             /**
              * Key Toolbar Selection
              * @description Key to activate the selection tool in the toolbar
@@ -4623,7 +4629,6 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                /** @description Fetch labels registered with the root collection of this collection */
                 collection_id: string;
             };
             cookie?: never;
@@ -4655,7 +4660,6 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                /** @description Register the label with the root collection of this collection */
                 collection_id: string;
             };
             cookie?: never;

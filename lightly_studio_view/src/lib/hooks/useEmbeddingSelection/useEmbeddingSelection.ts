@@ -3,16 +3,16 @@ import {
     isNormalModeParams,
     type ImagesInfiniteParams
 } from '$lib/hooks/useImagesInfinite/useImagesInfinite';
-import type { VideoFilterParams } from '$lib/hooks/useVideoFilters/useVideoFilters';
+import { useImageFilters } from '$lib/hooks/useImageFilters/useImageFilters';
+import {
+    useVideoFilters,
+    type VideoFilterParams
+} from '$lib/hooks/useVideoFilters/useVideoFilters';
 
 type UseEmbeddingSelectionParams = {
     collectionId: Readable<string>;
     isVideos: Readable<boolean>;
     isSamples: Readable<boolean>;
-    imageFilterParams: Readable<ImagesInfiniteParams>;
-    videoFilterParams: Readable<VideoFilterParams | null>;
-    updateImageSampleIds: (sampleIds: string[]) => void;
-    updateVideoSampleIds: (sampleIds: string[]) => void;
     setRangeSelectionForcollection: (collectionId: string, selection: null) => void;
 };
 
@@ -20,12 +20,10 @@ export function useEmbeddingSelection({
     collectionId,
     isVideos,
     isSamples,
-    imageFilterParams,
-    videoFilterParams,
-    updateImageSampleIds,
-    updateVideoSampleIds,
     setRangeSelectionForcollection
 }: UseEmbeddingSelectionParams) {
+    const { filterParams: imageFilterParams, updateSampleIds: updateImageSampleIds } = useImageFilters();
+    const { filterParams: videoFilterParams, updateSampleIds: updateVideoSampleIds } = useVideoFilters();
     const hiddenEmbeddingSelectionsByCollection = writable<Record<string, string[]>>({});
 
     const activePlotSelectionSampleIds = derived(

@@ -211,11 +211,6 @@
         useAnnotationLabels({ collectionId: collectionId ?? '' })
     );
     const annotationLabelsData = $derived($annotationLabelsQuery?.data);
-    const { filterParams: imageFilterParams, updateSampleIds: updateImageSampleIds } =
-        useImageFilters();
-    const { filterParams: videoFilterParams, updateSampleIds: updateVideoSampleIds } =
-        useVideoFilters();
-
     const annotationLabelsStore = toStore(() => annotationLabelsData);
 
     // Initialize annotation filter hook (must be before annotationCounts to avoid init-order crash)
@@ -498,10 +493,6 @@
         collectionId: collectionIdStore,
         isVideos: toStore(() => isVideos),
         isSamples: toStore(() => isSamples),
-        imageFilterParams,
-        videoFilterParams,
-        updateImageSampleIds,
-        updateVideoSampleIds,
         setRangeSelectionForcollection
     });
     const hasPlotSelectionContextStore = embeddingSelection.hasPlotSelectionContext;
