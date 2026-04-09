@@ -1,0 +1,19 @@
+{
+  "dataset_root": "lightly_studio/dataset_examples/youtube_vis_50_videos/train",
+  "instances_json": "lightly_studio/dataset_examples/youtube_vis_50_videos/train/instances_50.json",
+  "videos_dir": "lightly_studio/dataset_examples/youtube_vis_50_videos/train/videos",
+  "video_name": "0d97fba242",
+  "video_id": 101,
+  "tracks": 2,
+  "annotation_size": {
+    "width": 1280,
+    "height": 720
+  },
+  "output_size": {
+    "width": 1280,
+    "height": 720
+  },
+  "fps": 10.0,
+  "frames": 19,
+  "type": "youtube_vis_bbox_overlay"
+}

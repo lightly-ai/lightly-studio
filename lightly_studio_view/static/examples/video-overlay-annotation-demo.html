@@ -1,0 +1,250 @@
+<!doctype html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>YouTube-VOS Overlay Demo</title>
+        <style>
+            :root {
+                --text: #e2e8f0;
+                --border: #334155;
+                --accent: #0ea5e9;
+            }
+
+            * {
+                box-sizing: border-box;
+            }
+
+            body {
+                margin: 0;
+                font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+                background: radial-gradient(circle at top, #1e293b, #0b1220 55%);
+                color: var(--text);
+                min-height: 100vh;
+                display: grid;
+                place-items: center;
+                padding: 24px;
+            }
+
+            .demo {
+                width: min(980px, 100%);
+                border: 1px solid var(--border);
+                border-radius: 14px;
+                background: linear-gradient(180deg, #0f172a, #0b1220);
+                padding: 16px;
+                box-shadow: 0 20px 50px rgba(0, 0, 0, 0.35);
+            }
+
+            .video-stack {
+                position: relative;
+                width: 100%;
+                aspect-ratio: 16 / 9;
+                overflow: hidden;
+                border-radius: 10px;
+                background: #000;
+                border: 1px solid #1f2937;
+            }
+
+            .video-stack video {
+                position: absolute;
+                inset: 0;
+                width: 100%;
+                height: 100%;
+                object-fit: contain;
+            }
+
+            #overlayVideo {
+                pointer-events: none;
+                mix-blend-mode: screen;
+            }
+
+            .badge {
+                position: absolute;
+                top: 8px;
+                left: 8px;
+                background: rgba(15, 23, 42, 0.82);
+                border: 1px solid var(--border);
+                border-radius: 8px;
+                font-size: 12px;
+                padding: 6px 8px;
+            }
+
+            .controls {
+                margin-top: 14px;
+                display: grid;
+                gap: 10px;
+                background: rgba(17, 24, 39, 0.75);
+                border: 1px solid var(--border);
+                border-radius: 10px;
+                padding: 12px;
+            }
+
+            .controls-row {
+                display: flex;
+                align-items: center;
+                gap: 10px;
+                flex-wrap: wrap;
+            }
+
+            label {
+                font-size: 14px;
+            }
+
+            input[type='range'] {
+                width: 220px;
+                accent-color: var(--accent);
+            }
+
+            button {
+                border: 1px solid #0284c7;
+                background: #0369a1;
+                color: #e0f2fe;
+                border-radius: 8px;
+                padding: 6px 10px;
+                cursor: pointer;
+            }
+
+            code,
+            pre {
+                background: rgba(148, 163, 184, 0.2);
+                border-radius: 6px;
+            }
+
+            code {
+                padding: 1px 5px;
+            }
+
+            pre {
+                margin: 0;
+                padding: 8px;
+                overflow: auto;
+                font-size: 12px;
+            }
+
+            .status {
+                font-size: 13px;
+                color: #fda4af;
+            }
+        </style>
+    </head>
+    <body>
+        <main class="demo">
+            <h2>YouTube-VIS Annotation Overlay (2-video approach)</h2>
+            <p>
+                This demo expects two local videos from one YouTube-VIS sequence: the original RGB
+                video and a rendered annotation-overlay video.
+            </p>
+
+            <section class="video-stack">
+                <video
+                    id="baseVideo"
+                    src="./assets/ytvos/base.mp4"
+                    preload="metadata"
+                    controls
+                    crossorigin="anonymous"
+                ></video>
+                <video
+                    id="overlayVideo"
+                    src="./assets/ytvos/overlay-mask.mp4"
+                    preload="metadata"
+                    muted
+                    crossorigin="anonymous"
+                ></video>
+                <div class="badge">Overlay: YouTube-VIS annotation video</div>
+            </section>
+
+            <section class="controls">
+                <div class="controls-row">
+                    <button id="toggleOverlay" type="button">Hide overlay</button>
+                    <label>
+                        Overlay opacity:
+                        <input id="opacity" type="range" min="0" max="1" step="0.05" value="0.6" />
+                    </label>
+                </div>
+                <div class="controls-row">
+                    <label>
+                        Playback rate:
+                        <input id="rate" type="range" min="0.25" max="2" step="0.25" value="1" />
+                        <span id="rateValue">1.00x</span>
+                    </label>
+                </div>
+                <div class="status" id="status"></div>
+                <div>
+                    Put files here:
+                    <code>/static/examples/assets/ytvos/base.mp4</code> and
+                    <code>/static/examples/assets/ytvos/overlay-mask.mp4</code>
+                </div>
+                <div>
+                    Example ffmpeg from YouTube-VOS frames:
+                    <pre>ffmpeg -framerate 30 -i JPEGImages/&lt;seq&gt;/%05d.jpg -c:v libx264 -pix_fmt yuv420p base.mp4
+ffmpeg -framerate 30 -i Annotations/&lt;seq&gt;/%05d.png -vf colorkey=black:0.15:0.05 -c:v libx264 -pix_fmt yuv420p overlay-mask.mp4</pre>
+                </div>
+            </section>
+        </main>
+
+        <script>
+            const baseVideo = document.getElementById('baseVideo');
+            const overlayVideo = document.getElementById('overlayVideo');
+            const toggleOverlayBtn = document.getElementById('toggleOverlay');
+            const opacityInput = document.getElementById('opacity');
+            const rateInput = document.getElementById('rate');
+            const rateValue = document.getElementById('rateValue');
+            const status = document.getElementById('status');
+
+            function syncToBase() {
+                if (Math.abs(overlayVideo.currentTime - baseVideo.currentTime) > 0.03) {
+                    overlayVideo.currentTime = baseVideo.currentTime;
+                }
+            }
+
+            function syncPlayState() {
+                overlayVideo.playbackRate = baseVideo.playbackRate;
+                if (baseVideo.paused) {
+                    overlayVideo.pause();
+                    return;
+                }
+                overlayVideo.play().catch(() => {
+                    // Ignore autoplay sync failures.
+                });
+            }
+
+            baseVideo.addEventListener('play', syncPlayState);
+            baseVideo.addEventListener('pause', syncPlayState);
+            baseVideo.addEventListener('seeked', () => {
+                syncToBase();
+                syncPlayState();
+            });
+            baseVideo.addEventListener('timeupdate', syncToBase);
+            baseVideo.addEventListener('ratechange', () => {
+                overlayVideo.playbackRate = baseVideo.playbackRate;
+            });
+
+            overlayVideo.style.opacity = opacityInput.value;
+            opacityInput.addEventListener('input', () => {
+                overlayVideo.style.opacity = opacityInput.value;
+            });
+
+            toggleOverlayBtn.addEventListener('click', () => {
+                const hidden = overlayVideo.style.display === 'none';
+                overlayVideo.style.display = hidden ? 'block' : 'none';
+                toggleOverlayBtn.textContent = hidden ? 'Hide overlay' : 'Show overlay';
+            });
+
+            rateInput.addEventListener('input', () => {
+                const rate = Number(rateInput.value);
+                baseVideo.playbackRate = rate;
+                overlayVideo.playbackRate = rate;
+                rateValue.textContent = `${rate.toFixed(2)}x`;
+            });
+
+            baseVideo.addEventListener('error', () => {
+                status.textContent = 'Base video not found. Add base.mp4 from YouTube-VOS sequence.';
+            });
+
+            overlayVideo.addEventListener('error', () => {
+                status.textContent =
+                    'Overlay video not found. Add overlay-mask.mp4 rendered from YouTube-VIS annotations.';
+            });
+        </script>
+    </body>
+</html>
