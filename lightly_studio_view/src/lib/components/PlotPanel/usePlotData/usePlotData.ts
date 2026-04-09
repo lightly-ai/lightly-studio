@@ -55,7 +55,7 @@ export function usePlotData({
         // Points inside the polygon keep their prevValue; points outside are demoted to REMAINING_CATEGORY.
         category = category.map(getCategoryBySelection(rangeSelection, data));
 
-        // Collect selected sample ids: in-polygon filtered points now have FILTERED_CATEGORY.
+        // Collect selected sample ids: in-polygon filtered points have FILTERED_CATEGORY.
         const _ids = category.reduce<string[]>((acc, pointCategory, index) => {
             if (pointCategory === FILTERED_CATEGORY) {
                 acc.push(sampleIds[index]);
@@ -69,7 +69,9 @@ export function usePlotData({
             if (pointCategory !== FILTERED_CATEGORY) {
                 return pointCategory;
             }
-            return highlightedSampleIdSet.has(sampleIds[index]) ? FILTERED_CATEGORY : REMAINING_CATEGORY;
+            return highlightedSampleIdSet.has(sampleIds[index])
+                ? FILTERED_CATEGORY
+                : REMAINING_CATEGORY;
         });
     }
 
