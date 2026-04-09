@@ -272,9 +272,12 @@ async def stream_frame(
     """
     video_frame = video_frame_resolver.get_by_id(session=session, sample_id=sample_id)
     video_path = video_frame.video.file_path_abs
-    if transform_query.quality == GridViewThumbnailQualityType.HIGH:
-        if transform_query.max_width is None and transform_query.max_height is None:
-            raise HTTPException(400, "max_width or max_height is required when quality=high")
+    if (
+        transform_query.quality == GridViewThumbnailQualityType.HIGH
+        and transform_query.max_width is None
+        and transform_query.max_height is None
+    ):
+        raise HTTPException(400, "max_width or max_height is required when quality=high")
     transform = FrameTransformOptions(
         quality=transform_query.quality,
         max_width=transform_query.max_width,

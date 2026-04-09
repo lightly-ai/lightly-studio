@@ -65,7 +65,6 @@ def test_stream_frame_png_format(
     assert image_data.startswith(b"\x89PNG\r\n\x1a\n")
 
 
-
 def test_stream_frame_high_returns_resized_jpeg(
     test_client: TestClient,
     db_session: Session,

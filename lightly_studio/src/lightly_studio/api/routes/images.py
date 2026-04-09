@@ -34,6 +34,9 @@ async def serve_image_by_sample_id(
     Args:
         sample_id: The ID of the sample.
         session: Database session.
+        quality: Thumbnail quality mode. Use 'high' for compressed JPEG output.
+        max_width: Maximum width in pixels for high quality mode.
+        max_height: Maximum height in pixels for high quality mode.
 
     Returns:
         StreamingResponse with the image data.
