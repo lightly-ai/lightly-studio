@@ -33,10 +33,12 @@ describe('useSelectionSummary', () => {
         expect(get(selectedCount)).toBe(1);
     });
 
-    it('sums samples and annotation crops', () => {
+    it('prefers selected annotation crops when both samples and crops are selected', () => {
         storage.toggleSampleSelection('s1', collectionId);
+        storage.toggleSampleSelection('s2', collectionId);
         storage.toggleSampleAnnotationCropSelection(collectionId, 'a1');
         storage.toggleSampleAnnotationCropSelection(collectionId, 'a2');
+        storage.toggleSampleAnnotationCropSelection(collectionId, 'a3');
 
         const { selectedCount } = useSelectionSummary(collectionId);
         expect(get(selectedCount)).toBe(3);
@@ -47,7 +49,7 @@ describe('useSelectionSummary', () => {
         storage.toggleSampleAnnotationCropSelection(collectionId, 'a1');
 
         const { selectedCount, clearSelection } = useSelectionSummary(collectionId);
-        expect(get(selectedCount)).toBe(2);
+        expect(get(selectedCount)).toBe(1);
 
         clearSelection();
         expect(get(selectedCount)).toBe(0);

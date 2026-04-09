@@ -20,7 +20,14 @@ export function useSelectionSummary(collectionId: string): SelectionSummary {
         [selectedSampleIds, selectedSampleAnnotationCropIds],
         ([$selectedSampleIds, $selectedSampleAnnotationCropIds]) => {
             const cropIds = $selectedSampleAnnotationCropIds[collectionId] ?? new Set<string>();
-            return $selectedSampleIds.size + cropIds.size;
+            if (cropIds.size !== 0) {
+                // If there are selected annotation crops, we display their count.
+                // This is a special case we have to handle because sample and annotation
+                // selection is stored separately in the global storage.
+                return cropIds.size;
+            } else {
+                return $selectedSampleIds.size;
+            }
         }
     );
 
