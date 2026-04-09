@@ -14,10 +14,7 @@ from sqlmodel import Session
 
 from lightly_studio.models.annotation.annotation_base import AnnotationCreate, AnnotationType
 from lightly_studio.models.annotation_label import AnnotationLabelCreate
-from lightly_studio.resolvers import (
-    annotation_label_resolver,
-    collection_resolver,
-)
+from lightly_studio.resolvers import annotation_label_resolver
 
 
 class Sample2D(Protocol):
@@ -40,9 +37,8 @@ class Sample2D(Protocol):
 class CreateAnnotation(Protocol):
     """Protocol from converting to AnnotationCreate."""
 
-    # TODO(lukas 04/2026): change `root_collection_id` to `dataset_id`
     def to_annotation_create(
-        self, session: Session, root_collection_id: UUID, parent_sample_id: UUID
+        self, session: Session, dataset_id: UUID, parent_sample_id: UUID
     ) -> AnnotationCreate:
         """Convert to AnnotationCreate."""
         ...
@@ -56,15 +52,7 @@ class CreateAnnotationBase(BaseModel):
     confidence: float | None = None
     """Confidence expressed as probability between 0.0 and 1.0 (inclusive)."""
 
-    # TODO(lukas 04/2026): change `root_collection_id` to `dataset_id`
-    def _get_label_id(self, session: Session, root_collection_id: UUID) -> UUID:
-        collection = collection_resolver.get_by_id(
-            session=session, collection_id=root_collection_id
-        )
-        if collection is None:
-            raise ValueError("Collection {root_collection_id} doesn't exist")
-        dataset_id = collection.dataset_id
-
+    def _get_label_id(self, session: Session, dataset_id: UUID) -> UUID:
         label = annotation_label_resolver.get_by_label_name(
             session=session, dataset_id=dataset_id, label_name=self.label
         )
@@ -82,13 +70,11 @@ class CreateClassification(CreateAnnotationBase):
     """Input model for creating classification annotations."""
 
     def to_annotation_create(
-        self, session: Session, root_collection_id: UUID, parent_sample_id: UUID
+        self, session: Session, dataset_id: UUID, parent_sample_id: UUID
     ) -> AnnotationCreate:
         """Convert to AnnotationCreate."""
         return AnnotationCreate(
-            annotation_label_id=self._get_label_id(
-                session=session, root_collection_id=root_collection_id
-            ),
+            annotation_label_id=self._get_label_id(session=session, dataset_id=dataset_id),
             annotation_type=AnnotationType.CLASSIFICATION,
             confidence=self.confidence,
             parent_sample_id=parent_sample_id,
@@ -108,13 +94,11 @@ class CreateObjectDetection(CreateAnnotationBase):
     """Height (px) of the object detection bounding box."""
 
     def to_annotation_create(
-        self, session: Session, root_collection_id: UUID, parent_sample_id: UUID
+        self, session: Session, dataset_id: UUID, parent_sample_id: UUID
     ) -> AnnotationCreate:
         """Convert to AnnotationCreate."""
         return AnnotationCreate(
-            annotation_label_id=self._get_label_id(
-                session=session, root_collection_id=root_collection_id
-            ),
+            annotation_label_id=self._get_label_id(session=session, dataset_id=dataset_id),
             annotation_type=AnnotationType.OBJECT_DETECTION,
             confidence=self.confidence,
             parent_sample_id=parent_sample_id,
@@ -140,13 +124,11 @@ class CreateInstanceSegmentation(CreateAnnotationBase):
     """Segmentation mask given as a run-length encoding."""
 
     def to_annotation_create(
-        self, session: Session, root_collection_id: UUID, parent_sample_id: UUID
+        self, session: Session, dataset_id: UUID, parent_sample_id: UUID
     ) -> AnnotationCreate:
         """Convert to AnnotationCreate."""
         return AnnotationCreate(
-            annotation_label_id=self._get_label_id(
-                session=session, root_collection_id=root_collection_id
-            ),
+            annotation_label_id=self._get_label_id(session=session, dataset_id=dataset_id),
             annotation_type=AnnotationType.INSTANCE_SEGMENTATION,
             confidence=self.confidence,
             parent_sample_id=parent_sample_id,
