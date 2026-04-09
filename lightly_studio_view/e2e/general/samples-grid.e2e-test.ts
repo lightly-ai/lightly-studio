@@ -39,7 +39,7 @@ test('Label filtering shows distinct samples only', async ({ samplesPage }) => {
     expect(sampleCount).toBe(cocoDataset.labels.book.sampleCount);
 });
 
-test('Tag filtering shows distinct samples only', async ({ page, samplesPage }) => {
+test('Tag filtering shows distinct samples only', async ({ samplesPage }) => {
     // samplesPage fixture automatically navigates and loads samples
 
     // Generate unique tag names to avoid conflicts on subsequent test runs.
