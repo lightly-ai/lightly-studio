@@ -1,13 +1,21 @@
 import { describe, it, expect, vi } from 'vitest';
 import { fireEvent, render, screen } from '@testing-library/svelte';
 import SegmentTags from './SegmentTags.svelte';
+import * as hooks from '$lib/hooks';
+
+const removeTagFromSampleMock = vi.fn();
+
+vi.spyOn(hooks, 'useRemoveTagFromSample').mockReturnValue({
+    removeTagFromSample: removeTagFromSampleMock
+} as ReturnType<typeof hooks.useRemoveTagFromSample>);
 
 describe('SegmentTags', () => {
     it('renders nothing when tags array is empty', () => {
         const { container } = render(SegmentTags, {
             props: {
                 tags: [],
-                onClick: vi.fn()
+                collectionId: 'collection-1',
+                sampleId: 'sample-1'
             }
         });
 
@@ -24,7 +32,8 @@ describe('SegmentTags', () => {
         render(SegmentTags, {
             props: {
                 tags,
-                onClick: vi.fn()
+                collectionId: 'collection-1',
+                sampleId: 'sample-1'
             }
         });
 
@@ -44,7 +53,8 @@ describe('SegmentTags', () => {
         render(SegmentTags, {
             props: {
                 tags,
-                onClick: vi.fn()
+                collectionId: 'collection-1',
+                sampleId: 'sample-1'
             }
         });
 
@@ -52,39 +62,45 @@ describe('SegmentTags', () => {
         expect(screen.getByTestId('remove-tag-Tag 2')).toBeInTheDocument();
     });
 
-    it('calls onClick with tag_id when remove button is clicked', async () => {
-        const onClick = vi.fn().mockResolvedValue(undefined);
+    it('calls removeTagFromSample and onRefetch when remove button is clicked', async () => {
+        const onRefetch = vi.fn();
         const tags = [{ tag_id: '123', name: 'Test Tag' }];
+
+        removeTagFromSampleMock.mockClear();
+        removeTagFromSampleMock.mockResolvedValue(undefined);
 
         render(SegmentTags, {
             props: {
                 tags,
-                onClick
+                collectionId: 'collection-1',
+                sampleId: 'sample-1',
+                onRefetch
             }
         });
 
         const removeButton = screen.getByTestId('remove-tag-Test Tag');
         await fireEvent.click(removeButton);
 
-        expect(onClick).toHaveBeenCalledWith('123');
-        expect(onClick).toHaveBeenCalledTimes(1);
+        expect(removeTagFromSampleMock).toHaveBeenCalledWith('sample-1', '123');
+        expect(removeTagFromSampleMock).toHaveBeenCalledTimes(1);
+        expect(onRefetch).toHaveBeenCalledTimes(1);
     });
 
-    it('does not call onClick when tag has no tag_id', async () => {
-        const onClick = vi.fn().mockResolvedValue(undefined);
+    it('does not render remove button when tag has no tag_id', () => {
         const tags = [{ name: 'Tag Without ID' }];
+
+        removeTagFromSampleMock.mockClear();
 
         render(SegmentTags, {
             props: {
                 tags,
-                onClick
+                collectionId: 'collection-1',
+                sampleId: 'sample-1'
             }
         });
 
-        const removeButton = screen.getByTestId('remove-tag-Tag Without ID');
-        await fireEvent.click(removeButton);
-
-        expect(onClick).not.toHaveBeenCalled();
+        expect(screen.queryByTestId('remove-tag-Tag Without ID')).not.toBeInTheDocument();
+        expect(removeTagFromSampleMock).not.toHaveBeenCalled();
     });
 
     it('has correct aria-label on remove button', () => {
@@ -93,7 +109,8 @@ describe('SegmentTags', () => {
         render(SegmentTags, {
             props: {
                 tags,
-                onClick: vi.fn()
+                collectionId: 'collection-1',
+                sampleId: 'sample-1'
             }
         });
 
@@ -102,24 +119,27 @@ describe('SegmentTags', () => {
     });
 
     it('handles multiple tags correctly', async () => {
-        const onClick = vi.fn().mockResolvedValue(undefined);
         const tags = [
             { tag_id: '1', name: 'Tag 1' },
             { tag_id: '2', name: 'Tag 2' },
             { tag_id: '3', name: 'Tag 3' }
         ];
 
+        removeTagFromSampleMock.mockClear();
+        removeTagFromSampleMock.mockResolvedValue(undefined);
+
         render(SegmentTags, {
             props: {
                 tags,
-                onClick
+                collectionId: 'collection-1',
+                sampleId: 'sample-1'
             }
         });
 
         const removeButton2 = screen.getByTestId('remove-tag-Tag 2');
         await fireEvent.click(removeButton2);
 
-        expect(onClick).toHaveBeenCalledWith('2');
-        expect(onClick).toHaveBeenCalledTimes(1);
+        expect(removeTagFromSampleMock).toHaveBeenCalledWith('sample-1', '2');
+        expect(removeTagFromSampleMock).toHaveBeenCalledTimes(1);
     });
 });
