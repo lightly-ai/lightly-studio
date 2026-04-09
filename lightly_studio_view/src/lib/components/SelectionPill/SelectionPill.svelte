@@ -7,7 +7,7 @@
 		onClear: () => void;
 	}
 
-	const { selectedCount, onClear }: Props = $props();
+	let { selectedCount, onClear }: Props = $props();
 </script>
 
 {#if selectedCount > 0}
