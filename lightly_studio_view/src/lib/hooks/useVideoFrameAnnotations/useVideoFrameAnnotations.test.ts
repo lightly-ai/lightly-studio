@@ -126,12 +126,15 @@ describe('useVideoFrameAnnotations', () => {
         expect(result.has('frame-2')).toBe(true);
 
         const frame1Data = result.get('frame-1');
-        expect(frame1Data).toEqual({
-            frameId: 'frame-1',
-            dataUrl: 'data:image/png;base64,mockDataUrl',
-            width: 1920,
-            height: 100
-        });
+        expect(frame1Data).toEqual([
+            {
+                frameId: 'frame-1',
+                annotationId: 'annotation-1',
+                dataUrl: 'data:image/png;base64,mockDataUrl',
+                width: 1920,
+                height: 100
+            }
+        ]);
 
         expect(calculateBinaryMaskModule.default).toHaveBeenCalledTimes(2);
     });
@@ -148,7 +151,7 @@ describe('useVideoFrameAnnotations', () => {
         );
     });
 
-    it('should handle frames with multiple annotations and use first segmentation', () => {
+    it('should handle frames with multiple annotations and process all segmentations', () => {
         const secondSegmentationAnnotation: AnnotationView = {
             sample_id: 'annotation-3',
             parent_sample_id: 'frame-1',
@@ -164,6 +167,15 @@ describe('useVideoFrameAnnotations', () => {
             created_at: new Date(0)
         };
 
+        vi.mocked(utils.getColorByLabel).mockReturnValueOnce({
+            color: 'rgba(255, 0, 0, 0.4)',
+            contrastColor: '#FFFFFF'
+        });
+        vi.mocked(utils.getColorByLabel).mockReturnValueOnce({
+            color: 'rgba(0, 255, 0, 0.4)',
+            contrastColor: '#FFFFFF'
+        });
+
         const frames = [
             createMockFrame('frame-1', 0, [
                 mockClassificationAnnotation,
@@ -172,11 +184,15 @@ describe('useVideoFrameAnnotations', () => {
             ])
         ];
 
-        useVideoFrameAnnotations({ frames, imageWidth: 1920 });
+        const result = useVideoFrameAnnotations({ frames, imageWidth: 1920 });
 
-        // Should only call once with the first segmentation annotation
-        expect(calculateBinaryMaskModule.default).toHaveBeenCalledTimes(1);
+        // Should process both segmentation annotations
+        expect(calculateBinaryMaskModule.default).toHaveBeenCalledTimes(2);
         expect(utils.getColorByLabel).toHaveBeenCalledWith('person', 0.4);
+        expect(utils.getColorByLabel).toHaveBeenCalledWith('car', 0.4);
+
+        const frame1Data = result.get('frame-1');
+        expect(frame1Data).toHaveLength(2);
     });
 
     it('should skip frames with segmentation annotation but no mask', () => {
@@ -218,6 +234,9 @@ describe('useVideoFrameAnnotations', () => {
         expect(result.has('frame-2')).toBe(false);
         expect(result.has('frame-3')).toBe(true);
 
+        expect(result.get('frame-1')).toHaveLength(1);
+        expect(result.get('frame-3')).toHaveLength(1);
+
         expect(consoleErrorSpy).toHaveBeenCalledWith(
             'Failed to render annotation for frame frame-2:',
             expect.any(Error)
@@ -242,7 +261,7 @@ describe('useVideoFrameAnnotations', () => {
         );
 
         const frame1Data = result.get('frame-1');
-        expect(frame1Data?.width).toBe(3840);
+        expect(frame1Data?.[0]?.width).toBe(3840);
     });
 
     it('should return Map for efficient O(1) lookup', () => {
@@ -252,6 +271,7 @@ describe('useVideoFrameAnnotations', () => {
 
         expect(result).toBeInstanceOf(Map);
         expect(result.get('frame-1')).toBeDefined();
+        expect(result.get('frame-1')).toHaveLength(1);
         expect(result.get('non-existent')).toBeUndefined();
     });
 

@@ -14,6 +14,8 @@
     import { SampleAnnotations } from '..';
 
     export interface PrerenderedAnnotation {
+        frameId: string;
+        annotationId: string;
         dataUrl: string;
         width: number;
         height: number;
@@ -47,14 +49,13 @@
         annotations.filter((annotation) => annotation.annotation_type !== 'classification')
     );
 
-    // Filter out segmentation annotations if we have prerendered versions
-    const annotationsToRender = $derived(
-        prerenderedAnnotations && prerenderedAnnotations.length > 0
-            ? annotationsWithVisuals.filter(
-                  (annotation) => annotation.annotation_type !== 'instance_segmentation'
-              )
-            : annotationsWithVisuals
-    );
+    // Create a map of annotationId to prerendered data for quick lookup
+    const prerenderedMap = $derived.by(() => {
+        if (!prerenderedAnnotations) return new Map();
+        return new Map(
+            prerenderedAnnotations.map((prerendered) => [prerendered.annotationId, prerendered])
+        );
+    });
 </script>
 
 {#if !showLabel}
@@ -77,23 +78,9 @@
         {height}
     >
         <g class="sample-annotation" class:invisible={$isHidden}>
-            <!-- Render prerendered segmentation masks first -->
-            {#if prerenderedAnnotations}
-                {#each prerenderedAnnotations as prerendered, index (index)}
-                    <image
-                        href={prerendered.dataUrl}
-                        x="0"
-                        y="0"
-                        width={prerendered.width}
-                        height={prerendered.height}
-                        opacity={prerendered.opacity ?? 0.65}
-                        pointer-events="none"
-                    />
-                {/each}
-            {/if}
-
-            <!-- Render other annotations (bounding boxes, labels, etc.) -->
-            {#each annotationsToRender as annotation (annotation.sample_id)}
+            <!-- Render all annotations with prerendered data when available -->
+            {#each annotationsWithVisuals as annotation (annotation.sample_id)}
+                {@const prerendered = prerenderedMap.get(annotation.sample_id)}
                 <SampleAnnotation
                     {annotation}
                     {showLabel}
@@ -102,6 +89,8 @@
                         $showBoundingBoxesForSegmentationStore
                     )}
                     imageWidth={sampleWidth}
+                    prerenderedDataUrl={prerendered?.dataUrl}
+                    prerenderedHeight={prerendered?.height}
                 />
             {/each}
         </g>

@@ -40,13 +40,10 @@
         video
     });
 
-    $inspect($videoFrames, 'frames in VideoDetails');
     // Pre-render all frame annotations as dataURLs for efficient playback
     const frameAnnotationMap = $derived(
         useVideoFrameAnnotations({ frames: $videoFrames, imageWidth: video.width })
     );
-
-    $inspect(frameAnnotationMap, 'frameAnnotationMap in VideoDetails');
 
     // Get prerendered annotations for current frame
     const prerenderedAnnotations = $derived.by((): PrerenderedAnnotation[] | undefined => {
@@ -145,8 +142,6 @@
             jumpToCurrentFrame = false;
         }
     });
-
-    $inspect(prerenderedAnnotations, 'prerenderedAnnotations in VideoDetails');
 </script>
 
 <div class="flex h-full w-full flex-col space-y-4">

@@ -4,6 +4,7 @@ import calculateBinaryMaskFromRLE from '$lib/components/SampleAnnotation/SampleA
 
 interface FrameAnnotationDataURL {
     frameId: string;
+    annotationId: string;
     dataUrl: string;
     width: number;
     height: number;
@@ -70,6 +71,7 @@ export function useVideoFrameAnnotations({
 
                     frameAnnotations.push({
                         frameId: frame.sample_id,
+                        annotationId: segmentationAnnotation.sample_id,
                         dataUrl,
                         width: imageWidth,
                         height
