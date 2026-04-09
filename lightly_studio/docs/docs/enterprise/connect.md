@@ -13,7 +13,8 @@ admin account.
 ## Prerequisites
 
 - Admin access to a running LightlyStudio Enterprise instance
-- `lightly_studio` installed (`pip install lightly-studio`). Use exactly the same version as the server for best compatibility. You can check the server version in the GUI footer.
+- `lightly_studio` installed (`pip install lightly-studio`). Use exactly the same version as the
+  server for best compatibility. You can check the server version in the GUI footer.
 
 ## Step 1: Get Your Connection Credentials
 
@@ -33,7 +34,8 @@ The dialog looks like this:
 
 === ".env File (Recommended)"
 
-    Create a `.env` file in your working directory. LightlyStudio reads it automatically. Just paste the values you copied from the GUI:
+    Create a `.env` file in your working directory. LightlyStudio reads it automatically.
+    Just paste the values you copied from the GUI:
 
     ```shell title=".env"
     LIGHTLY_STUDIO_API_URL="http://your-server:8100"
