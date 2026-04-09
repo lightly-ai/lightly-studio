@@ -21,13 +21,18 @@
     });
 
     function handleSelect(name: string) {
+        if (busy) return;
         onSelect(name);
         open = false;
     }
 
+    const normalizedAttachedTagNames = $derived(
+        new Set(Array.from(attachedTagNames, (name) => name.toLowerCase()))
+    );
+
     const showCreate = $derived(
         inputValue.trim() !== '' &&
-            !attachedTagNames.has(inputValue.trim().toLowerCase()) &&
+            !normalizedAttachedTagNames.has(inputValue.trim().toLowerCase()) &&
             !options.some((t) => t.name.toLowerCase() === inputValue.trim().toLowerCase())
     );
 </script>
@@ -56,7 +61,7 @@
                     <div class="border-t">
                         <Command.Item
                             value="__create__"
-                            onSelect={() => handleSelect(inputValue)}
+                            onSelect={() => handleSelect(inputValue.trim())}
                             forceMount
                             keywords={[]}
                         >
