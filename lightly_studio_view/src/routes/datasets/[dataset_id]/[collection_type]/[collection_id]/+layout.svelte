@@ -536,7 +536,9 @@
                 <!-- When plot is shown, use PaneGroup for the main content + plot -->
                 <PaneGroup direction="horizontal" class="flex-1">
                     <Pane defaultSize={50} minSize={30} class="flex">
-                        <div class="relative flex flex-1 flex-col space-y-4 rounded-[1vw] bg-card p-4">
+                        <div
+                            class="relative flex flex-1 flex-col space-y-4 rounded-[1vw] bg-card p-4"
+                        >
                             <GridHeader>
                                 <div class="flex-1">
                                     {#if hasEmbeddings}
@@ -629,7 +631,10 @@
                             <div class="flex min-h-0 flex-1 overflow-hidden">
                                 {@render children()}
                             </div>
-                            <SelectionPill selectedCount={$selectedCount} onClear={clearSelection} />
+                            <SelectionPill
+                                selectedCount={$selectedCount}
+                                onClear={clearSelection}
+                            />
                         </div>
                     </Pane>
 
