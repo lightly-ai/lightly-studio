@@ -25,6 +25,10 @@ admin account.
     - `LIGHTLY_STUDIO_TOKEN` — a JWT token for authentication
 4. Take note of both values. You will need them to connect from Python.
 
+The dialog looks like this:
+
+![Connect from Python dialog](../_static/connect_from_python_dialog.jpg){ width="100%" }
+
 ## Step 2: Configure Your Environment
 
 === ".env File (Recommended)"
@@ -77,34 +81,6 @@ for sample in list(dataset)[:3]:
     After `ls.connect()`, all dataset operations use the enterprise database instead of
     a local DuckDB file. You do **not** need to call `ls.start_gui()` — the GUI is already
     running on the enterprise server.
-
-## Example: Loading a Dataset from S3
-
-If your admin has configured cloud credentials, `ls.connect()` applies them automatically. No
-extra setup is needed on your side.
-
-```python title="enterprise_s3_example.py"
-import lightly_studio as ls
-
-ls.connect()
-
-# Define data paths on S3
-annotations_json = "s3://my-bucket/coco_subset/instances_train2017.json"
-images_path = "s3://my-bucket/coco_subset/images"
-
-# Create a dataset and load COCO annotations
-dataset = ls.ImageDataset.load_or_create("AWS_S3_dataset_with_images")
-dataset.add_samples_from_coco(
-    annotations_json=annotations_json,
-    images_path=images_path,
-    annotation_type=ls.AnnotationType.INSTANCE_SEGMENTATION,
-)
-```
-
-!!! tip
-    If you use S3 or GCS paths from Python, install the cloud storage extra:
-    `pip install "lightly-studio[cloud-storage]"`.
-    See [Using Cloud Storage](../api/index.md#using-cloud-storage) for details.
 
 ## API Reference for ls.connect()
 
