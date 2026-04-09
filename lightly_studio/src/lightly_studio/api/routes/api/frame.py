@@ -5,10 +5,10 @@ from __future__ import annotations
 from typing import Annotated
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, Path
+from fastapi import APIRouter, Depends, Path, Query
 from pydantic import BaseModel, Field
 
-from lightly_studio.api.routes.api.validators import Paginated, PaginatedWithCursor
+from lightly_studio.api.routes.api.validators import Paginated
 from lightly_studio.db_manager import SessionDep
 from lightly_studio.models.annotation.annotation_base import AnnotationView
 from lightly_studio.models.caption import CaptionView
@@ -34,6 +34,16 @@ from lightly_studio.resolvers.video_resolver.count_video_frame_annotations_by_co
 frame_router = APIRouter(prefix="/collections/{video_frame_collection_id}/frame", tags=["frame"])
 
 
+def optional_pagination(
+    cursor: int | None = Query(None, ge=0, description="Offset for pagination"),
+    limit: int | None = Query(None, gt=0, le=100, description="Limit for pagination"),
+) -> Paginated | None:
+    """Optional pagination dependency."""
+    if cursor is None and limit is None:
+        return None
+    return Paginated(offset=cursor or 0, limit=limit or 100)
+
+
 class ReadVideoFramesRequest(BaseModel):
     """Request body for reading videos."""
 
@@ -52,23 +62,24 @@ class ReadCountVideoFramesAnnotationsRequest(BaseModel):
 def get_all_frames(
     video_frame_collection_id: Annotated[UUID, Path(title="Video collection Id")],
     session: SessionDep,
-    pagination: Annotated[PaginatedWithCursor, Depends()],
     body: ReadVideoFramesRequest,
+    pagination: Annotated[Paginated | None, Depends(optional_pagination)] = None,
 ) -> VideoFrameViewsWithCount:
-    """Retrieve a list of all frames for a given collection ID with pagination.
+    """Retrieve a list of all frames for a given collection ID with optional pagination.
 
     Args:
         session: The database session.
         video_frame_collection_id: The ID of the collection to retrieve frames for.
-        pagination: Pagination parameters including offset and limit.
         body: The body containing the filters
+        pagination: Optional pagination parameters including offset and limit.
+
     Returns:
         A list of frames along with the total count.
     """
     result = video_frame_resolver.get_all_by_collection_id(
         session=session,
         collection_id=video_frame_collection_id,
-        pagination=Paginated(offset=pagination.offset, limit=pagination.limit),
+        pagination=pagination,
         video_frame_filter=body.filter,
     )
 
