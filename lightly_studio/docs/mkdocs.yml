@@ -54,12 +54,12 @@ nav:
       - Export: concepts_and_tools/export.md
       - Sampling: concepts_and_tools/sampling.md
       - Plugins: concepts_and_tools/plugins.md
-  - Enterprise:
-    - enterprise/index.md
-    - How to Connect: enterprise/connect.md
   - Advanced:
     - Run LightlyStudio from a Notebook: advanced/notebooks.md
   - About Us: about-us.md
+  - 🏢 Enterprise:
+    - enterprise/index.md
+    - How to Connect: enterprise/connect.md
 
 extra_css:
   - _static/custom.css
