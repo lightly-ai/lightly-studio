@@ -51,7 +51,7 @@ def export_collection_annotations(
         try:
             export_dataset.to_coco_object_detections(
                 session=session,
-                root_collection_id=collection.collection_id,
+                dataset_id=collection.dataset_id,
                 samples=dataset_query,
                 output_json=output_path,
             )
@@ -65,7 +65,7 @@ def export_collection_annotations(
         try:
             export_dataset.to_coco_instance_segmentations(
                 session=session,
-                root_collection_id=collection.collection_id,
+                dataset_id=collection.dataset_id,
                 samples=dataset_query,
                 output_json=output_path,
             )
@@ -79,7 +79,7 @@ def export_collection_annotations(
         try:
             export_dataset.to_pascalvoc_instance_segmentation(
                 session=session,
-                root_collection_id=collection.collection_id,
+                dataset_id=collection.dataset_id,
                 samples=dataset_query,
                 output_folder=output_path,
             )
