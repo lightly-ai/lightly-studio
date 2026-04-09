@@ -57,7 +57,6 @@
 
 <div
     class="relative select-none"
-    class:sample-selected={$selectedSampleIds.has(sampleId)}
     {style}
     data-testid={dataTestId}
     data-sample-id={sampleId}
@@ -81,17 +80,9 @@
 
     <div
         class="relative overflow-hidden rounded-lg"
+        class:grid-item-selected={$selectedSampleIds.has(sampleId)}
         style="width: var(--sample-width); height: var(--sample-height);"
     >
         {@render item()}
     </div>
 </div>
-
-<style>
-    .sample-selected {
-        outline: drop-shadow(1px 1px 1px hsl(var(--primary)))
-            drop-shadow(1px -1px 1px hsl(var(--primary)))
-            drop-shadow(-1px -1px 1px hsl(var(--primary)))
-            drop-shadow(-1px 1px 1px hsl(var(--primary)));
-    }
-</style>

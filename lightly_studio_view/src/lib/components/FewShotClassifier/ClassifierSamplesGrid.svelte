@@ -117,9 +117,6 @@
                         {#if displayedSamples[index]}
                             <div
                                 class="relative cursor-pointer"
-                                class:sample-selected={$classifierSelectedSampleIds.has(
-                                    displayedSamples[index].sample_id
-                                )}
                                 {style}
                                 data-testid="classifier-sample-grid-item"
                                 data-sample-id={displayedSamples[index].sample_id}
@@ -141,7 +138,14 @@
                                     />
                                 </div>
 
-                                <SampleImage sample={displayedSamples[index]} {objectFit} />
+                                <div
+                                    class="overflow-hidden rounded-lg"
+                                    class:grid-item-selected={$classifierSelectedSampleIds.has(
+                                        displayedSamples[index].sample_id
+                                    )}
+                                >
+                                    <SampleImage sample={displayedSamples[index]} {objectFit} />
+                                </div>
                             </div>
                         {/if}
                     {/key}
@@ -158,12 +162,5 @@
 <style>
     .viewport {
         overflow-y: hidden;
-    }
-
-    .sample-selected {
-        outline: drop-shadow(1px 1px 1px hsl(var(--primary)))
-            drop-shadow(1px -1px 1px hsl(var(--primary)))
-            drop-shadow(-1px -1px 1px hsl(var(--primary)))
-            drop-shadow(-1px 1px 1px hsl(var(--primary)));
     }
 </style>
