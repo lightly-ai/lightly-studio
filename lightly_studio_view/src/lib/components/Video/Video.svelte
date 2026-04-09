@@ -1,6 +1,8 @@
 <script lang="ts">
     import { PUBLIC_VIDEOS_FRAMES_MEDIA_URL, PUBLIC_VIDEOS_MEDIA_URL } from '$env/static/public';
     import type { FrameView, VideoFrameView, VideoView } from '$lib/api/lightly_studio_local';
+    import { getGridFrameURL, getGridThumbnailRequestSize } from '$lib/utils';
+    import type { GridThumbnailQuality } from '$lib/utils/getGridThumbnailURL/getGridThumbnailURL';
     import { findFrame } from '$lib/utils/frame';
 
     interface VideoProps {
@@ -13,6 +15,8 @@
         playsinline?: boolean;
         preload?: 'auto' | 'metadata' | 'none';
         className?: string;
+        posterSize?: number;
+        thumbnailQuality?: GridThumbnailQuality;
         handleMouseEnter?: (event: MouseEvent) => void;
         handleMouseLeave?: (event: MouseEvent) => void;
         onplay?: () => void;
@@ -29,6 +33,8 @@
         controls = false,
         preload = 'metadata',
         className = '',
+        posterSize,
+        thumbnailQuality = 'raw',
         handleMouseEnter = () => {},
         handleMouseLeave = () => {},
         onplay = () => {},
@@ -47,6 +53,26 @@
         3: 'Video decoding failed.',
         4: 'Video source is unavailable or unsupported.'
     };
+    const posterUrl = $derived.by(() => {
+        if (frames.length === 0) {
+            return null;
+        }
+
+        if (!posterSize || thumbnailQuality === 'raw') {
+            return `${PUBLIC_VIDEOS_FRAMES_MEDIA_URL}/${frames[0].sample_id}`;
+        }
+
+        const requestedSize = getGridThumbnailRequestSize(
+            posterSize,
+            globalThis.window?.devicePixelRatio || 1
+        );
+        return getGridFrameURL({
+            sampleId: frames[0].sample_id,
+            quality: thumbnailQuality,
+            renderedWidth: requestedSize,
+            renderedHeight: requestedSize
+        });
+    });
 
     function startFrameLoop() {
         clearFrameLoop();
@@ -126,9 +152,7 @@
         {onseeked}
         onerror={handleVideoError}
         onloadeddata={handleVideoLoadedData}
-        poster={frames.length > 0
-            ? `${PUBLIC_VIDEOS_FRAMES_MEDIA_URL}/${frames[0].sample_id}?compressed=true`
-            : null}
+        poster={posterUrl}
     ></video>
     {#if sourceLoadError}
         <div

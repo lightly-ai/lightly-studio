@@ -1,7 +1,8 @@
 <script lang="ts">
-    import { PUBLIC_SAMPLES_URL } from '$env/static/public';
     import type { AnnotationView, ImageAnnotationView } from '$lib/api/lightly_studio_local';
     import { useGlobalStorage } from '$lib/hooks/useGlobalStorage';
+    import { useSettings } from '$lib/hooks/useSettings';
+    import { getGridImageURL, getGridThumbnailRequestSize } from '$lib/utils';
     import AnnotationItem from '../AnnotationItem/AnnotationItem.svelte';
 
     type Props = {
@@ -25,6 +26,7 @@
     }: Props = $props();
 
     const { getCollectionVersion } = useGlobalStorage();
+    const { gridViewThumbnailQualityStore } = useSettings();
 
     // Store collection version for cache busting
     let collectionVersion = $state(cachedCollectionVersion);
@@ -51,7 +53,19 @@
     // This is a more aggressive approach to force the browser to reload the image
     const uniqueImageUrl = $derived(
         image
-            ? `${PUBLIC_SAMPLES_URL}/sample/${image.sample_id}${collectionVersion ? `?v=${collectionVersion}` : ''}`
+            ? getGridImageURL({
+                  sampleId: image.sample_id,
+                  quality: $gridViewThumbnailQualityStore,
+                  renderedWidth: getGridThumbnailRequestSize(
+                      containerWidth,
+                      globalThis.window?.devicePixelRatio || 1
+                  ),
+                  renderedHeight: getGridThumbnailRequestSize(
+                      containerHeight,
+                      globalThis.window?.devicePixelRatio || 1
+                  ),
+                  cacheBuster: collectionVersion
+              })
             : ''
     );
 

@@ -5,6 +5,7 @@ from __future__ import annotations
 from pathlib import Path
 
 import cv2
+import numpy as np
 from fastapi.testclient import TestClient
 from sqlmodel import Session
 
@@ -153,6 +154,48 @@ def test_stream_frame_default_compressed_false(
 
     assert response.status_code == 200
     assert response.headers["content-type"] == "image/png"
+
+
+def test_stream_frame_high_returns_resized_jpeg(
+    test_client: TestClient,
+    db_session: Session,
+    tmp_path: Path,
+) -> None:
+    """Test that high quality frame requests resize and encode as JPEG."""
+    collection = create_collection(session=db_session, sample_type=SampleType.VIDEO)
+
+    video_path = create_video_file(
+        output_path=tmp_path / "test_video.mp4",
+        width=320,
+        height=240,
+        num_frames=5,
+        fps=1,
+    )
+
+    video_with_frames = create_video_with_frames(
+        session=db_session,
+        collection_id=collection.collection_id,
+        video=VideoStub(
+            path=str(video_path),
+            width=320,
+            height=240,
+            duration_s=5.0,
+            fps=1.0,
+        ),
+    )
+
+    response = test_client.get(
+        f"/frames/media/{video_with_frames.frame_sample_ids[0]}",
+        params={"quality": "high", "max_width": 80, "max_height": 80},
+    )
+
+    assert response.status_code == 200
+    assert response.headers["content-type"] == "image/jpeg"
+
+    decoded = cv2.imdecode(np.frombuffer(response.content, dtype=np.uint8), cv2.IMREAD_COLOR)
+    assert decoded is not None
+    assert decoded.shape[1] == 80
+    assert decoded.shape[0] == 60
 
 
 def test_get_cached_capture_creates_new(

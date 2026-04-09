@@ -26,7 +26,9 @@
         keyToolbarEraser: $settingsStore.key_toolbar_eraser || 'x'
     });
     type RenderingMode = 'contain' | 'cover';
+    type ThumbnailQualityMode = 'raw' | 'high';
     let gridViewRendering: RenderingMode = $state('contain');
+    let gridViewThumbnailQuality: ThumbnailQualityMode = $state('raw');
     let showAnnotationTextLabels = $state<boolean>(false);
     let showSampleFilenames = $state<boolean>(false);
     let showBoundingBoxesForSegmentation = $state<boolean>(true);
@@ -48,6 +50,7 @@
                 keyToolbarEraser: $settingsStore.key_toolbar_eraser || 'x'
             };
             gridViewRendering = $settingsStore.grid_view_sample_rendering || 'contain';
+            gridViewThumbnailQuality = $settingsStore.grid_view_thumbnail_quality || 'raw';
             showAnnotationTextLabels = $settingsStore.show_annotation_text_labels ?? false;
             showSampleFilenames = $settingsStore.show_sample_filenames ?? false;
             showBoundingBoxesForSegmentation =
@@ -71,6 +74,10 @@
         gridViewRendering = value as RenderingMode;
     }
 
+    function handleGridViewThumbnailQualityChange(value: string) {
+        gridViewThumbnailQuality = value as ThumbnailQualityMode;
+    }
+
     // Submit handler
     function handleFormSubmit(event: Event) {
         event.preventDefault();
@@ -87,6 +94,7 @@
                 key_go_back: shortcutSettings.goBack,
                 key_toggle_edit_mode: shortcutSettings.toggleEditMode,
                 grid_view_sample_rendering: gridViewRendering,
+                grid_view_thumbnail_quality: gridViewThumbnailQuality,
                 show_annotation_text_labels: showAnnotationTextLabels,
                 show_sample_filenames: showSampleFilenames,
                 show_bounding_boxes_for_segmentation: showBoundingBoxesForSegmentation,
@@ -390,6 +398,29 @@
                                 bind:checked={showSampleFilenames}
                                 disabled={isSaving}
                             />
+                        </div>
+                        <div class="grid grid-cols-2 items-center gap-4">
+                            <Label
+                                for="grid-view-thumbnail-quality"
+                                class="text-right text-foreground"
+                            >
+                                Thumbnail Quality in Grid View
+                            </Label>
+                            <div class="relative">
+                                <Select
+                                    type="single"
+                                    value={gridViewThumbnailQuality}
+                                    onValueChange={handleGridViewThumbnailQualityChange}
+                                >
+                                    <SelectTrigger id="grid-view-thumbnail-quality">
+                                        {gridViewThumbnailQuality === 'high' ? 'High' : 'Original'}
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value="raw">Original</SelectItem>
+                                        <SelectItem value="high">High</SelectItem>
+                                    </SelectContent>
+                                </Select>
+                            </div>
                         </div>
                     </div>
 

@@ -1690,6 +1690,9 @@ export interface paths {
          *     Args:
          *         sample_id: The ID of the sample.
          *         session: Database session.
+         *         quality: Whether to return the original image or a resized grid thumbnail.
+         *         max_width: Maximum thumbnail width in pixels.
+         *         max_height: Maximum thumbnail height in pixels.
          *
          *     Returns:
          *         StreamingResponse with the image data.
@@ -1720,7 +1723,7 @@ export interface paths {
          *     Args:
          *         sample_id: The UUID of the video frame sample.
          *         session: Database session dependency.
-         *         compressed: If True, encode as JPEG with lower quality (keeps original resolution).
+         *         transform_query: Transport-level query parameters for frame encoding.
          */
         get: operations["stream_frame"];
         put?: never;
@@ -2576,6 +2579,12 @@ export interface components {
          */
         GridViewSampleRenderingType: "cover" | "contain";
         /**
+         * GridViewThumbnailQualityType
+         * @description Defines how thumbnails are fetched for grid-like views.
+         * @enum {string}
+         */
+        GridViewThumbnailQualityType: "raw" | "high";
+        /**
          * GroupComponentView
          * @description GroupComponentView representation.
          *
@@ -3196,6 +3205,11 @@ export interface components {
              * @default contain
              */
             grid_view_sample_rendering: components["schemas"]["GridViewSampleRenderingType"];
+            /**
+             * @description Controls thumbnail quality for grid-like preview views
+             * @default raw
+             */
+            grid_view_thumbnail_quality: components["schemas"]["GridViewThumbnailQualityType"];
             /**
              * Key Hide Annotations
              * @description Key to temporarily hide annotations while pressed
@@ -4629,7 +4643,6 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                /** @description Fetch labels registered with the root collection of this collection */
                 collection_id: string;
             };
             cookie?: never;
@@ -4661,7 +4674,6 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                /** @description Register the label with the root collection of this collection */
                 collection_id: string;
             };
             cookie?: never;
@@ -6372,7 +6384,11 @@ export interface operations {
     };
     serve_image_by_sample_id: {
         parameters: {
-            query?: never;
+            query?: {
+                quality?: components["schemas"]["GridViewThumbnailQualityType"];
+                max_width?: number | null;
+                max_height?: number | null;
+            };
             header?: never;
             path: {
                 sample_id: string;
@@ -6405,6 +6421,9 @@ export interface operations {
         parameters: {
             query?: {
                 compressed?: boolean;
+                quality?: components["schemas"]["GridViewThumbnailQualityType"] | null;
+                max_width?: number | null;
+                max_height?: number | null;
             };
             header?: never;
             path: {
