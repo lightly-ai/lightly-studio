@@ -282,28 +282,27 @@
                                     role="button"
                                     tabindex="0"
                                 >
-                                    <!-- Hide the SelectableBox for viewers or when in editing mode -->
-                                    {#if hasMinimumRole(user?.role, 'labeler')}
-                                        <div class="absolute right-7 top-1 z-10">
-                                            <SelectableBox
-                                                onSelect={() => undefined}
-                                                isSelected={$pickedAnnotationIds[
-                                                    collection_id
-                                                ]?.has(annotations[index].annotation.sample_id)}
-                                            />
-                                        </div>
-                                    {/if}
+                                    <div class="relative" style="width: {annotationSize}px; height: {annotationSize}px;">
+                                        {#if hasMinimumRole(user?.role, 'labeler') && $pickedAnnotationIds[collection_id]?.has(annotations[index].annotation.sample_id)}
+                                            <div class="absolute right-2 top-1.5 z-10">
+                                                <SelectableBox
+                                                    onSelect={() => undefined}
+                                                    isSelected={true}
+                                                />
+                                            </div>
+                                        {/if}
 
-                                    <AnnotationsGridItem
-                                        annotation={annotations[index]}
-                                        width={annotationSize}
-                                        height={annotationSize}
-                                        cachedCollectionVersion={collectionVersion}
-                                        showLabel={showLabels}
-                                        selected={$pickedAnnotationIds[collection_id]?.has(
-                                            annotations[index].annotation.sample_id
-                                        )}
-                                    />
+                                        <AnnotationsGridItem
+                                            annotation={annotations[index]}
+                                            width={annotationSize}
+                                            height={annotationSize}
+                                            cachedCollectionVersion={collectionVersion}
+                                            showLabel={showLabels}
+                                            selected={$pickedAnnotationIds[collection_id]?.has(
+                                                annotations[index].annotation.sample_id
+                                            )}
+                                        />
+                                    </div>
                                 </div>
                             {/if}
                         {/key}

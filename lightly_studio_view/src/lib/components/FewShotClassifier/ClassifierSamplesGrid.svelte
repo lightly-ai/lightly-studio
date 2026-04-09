@@ -129,14 +129,14 @@
                                 role="button"
                                 tabindex="0"
                             >
-                                <div class="absolute inset-0 z-10">
-                                    <SelectableBox
-                                        onSelect={() => undefined}
-                                        isSelected={$classifierSelectedSampleIds.has(
-                                            displayedSamples[index].sample_id
-                                        )}
-                                    />
-                                </div>
+                                {#if $classifierSelectedSampleIds.has(displayedSamples[index].sample_id)}
+                                    <div class="absolute inset-0 z-10">
+                                        <SelectableBox
+                                            onSelect={() => undefined}
+                                            isSelected={true}
+                                        />
+                                    </div>
+                                {/if}
 
                                 <div
                                     class="overflow-hidden rounded-lg"
