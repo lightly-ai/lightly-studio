@@ -215,7 +215,7 @@ export const useGlobalStorage = () => {
         // Individual sample annotation crop selection methods
         toggleSampleAnnotationCropSelection: (collectionId: string, annotationId: string) => {
             selectedSampleAnnotationCropIds.update((state) => {
-                const annotations = state[collectionId] ?? new Set();
+                const annotations = new Set(state[collectionId] ?? []);
 
                 if (annotations.has(annotationId)) {
                     annotations.delete(annotationId);
@@ -223,19 +223,18 @@ export const useGlobalStorage = () => {
                     annotations.add(annotationId);
                 }
 
-                state[collectionId] = annotations;
-                return state;
+                return {
+                    ...state,
+                    [collectionId]: annotations
+                };
             });
         },
         clearSelectedSampleAnnotationCrops: (collectionId: string) => {
             selectedSampleAnnotationCropIds.update((state) => {
-                const annotations = state[collectionId];
-                if (annotations) {
-                    annotations.clear();
-                    state[collectionId] = annotations;
-                }
-
-                return state;
+                return {
+                    ...state,
+                    [collectionId]: new Set<string>()
+                };
             });
         },
 
