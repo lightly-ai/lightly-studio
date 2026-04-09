@@ -63,9 +63,9 @@ ls.connect()
 
 # From here on, the API works exactly as in the open-source version,
 # but data is stored in the shared enterprise database.
-dataset = ls.ImageDataset.load_or_create("my_dataset")
+dataset = ls.ImageDataset.load("my_dataset")
 for sample in list(dataset)[:3]:
-    print(sample)
+    print(f"{sample.file_name} has {len(sample.annotations)} annotations")
 ```
 
 !!! note
@@ -98,7 +98,7 @@ dataset.add_samples_from_coco(
 
 !!! tip
     For S3 or GCS support, install the cloud storage extra:
-    `pip install "lightly_studio[cloud-storage]"`.
+    `pip install "lightly-studio[cloud-storage]"`.
     See [Using Cloud Storage](../api/index.md#using-cloud-storage) for details.
 
 ## API Reference for ls.connect()
