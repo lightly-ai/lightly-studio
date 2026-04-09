@@ -83,6 +83,7 @@
         position: absolute;
         inset: 0;
         border: 1.5px solid hsl(var(--color-lightly-primary));
+        background: hsl(var(--color-lightly-primary) / 0.1);
         border-radius: inherit;
         pointer-events: none;
         z-index: 5;
