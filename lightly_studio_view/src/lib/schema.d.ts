@@ -4653,7 +4653,6 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                /** @description Fetch labels registered with the root collection of this collection */
                 collection_id: string;
             };
             cookie?: never;
@@ -4685,7 +4684,6 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                /** @description Register the label with the root collection of this collection */
                 collection_id: string;
             };
             cookie?: never;

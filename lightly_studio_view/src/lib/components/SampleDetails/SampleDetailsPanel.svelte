@@ -18,7 +18,6 @@
         type CollectionViewWithCount,
         type TagTable
     } from '$lib/api/lightly_studio_local';
-    import { useRemoveTagFromSample } from '$lib/hooks/useRemoveTagFromSample/useRemoveTagFromSample';
     import { useCollection } from '$lib/hooks/useCollection/useCollection';
     import { page } from '$app/state';
     import SampleDetailsSelectableBox from './SampleDetailsSelectableBox/SampleDetailsSelectableBox.svelte';
@@ -79,9 +78,6 @@
 
     const { handleKeyEvent } = useHideAnnotations();
     const { settingsStore } = useSettings();
-    const { removeTagFromSample } = useRemoveTagFromSample({
-        collectionId
-    });
     const { isEditingMode, lastAnnotationLabel } = useGlobalStorage();
 
     // Annotation details must use the first annotation from sample.annotations
@@ -184,11 +180,6 @@
     };
 
     let annotationsToShow = $derived(sample?.annotations ? getAnnotations(sample.annotations) : []);
-
-    const handleRemoveTag = async (tagId: string) => {
-        await removeTagFromSample(sampleId, tagId);
-        refetch();
-    };
 
     const datasetId = $derived(page.params.dataset_id!);
     const { collection: datasetCollection } = $derived.by(() =>
@@ -296,7 +287,6 @@
                     <SampleDetailsSidePanel
                         bind:annotationsIdsToHide
                         {sample}
-                        onRemoveTag={handleRemoveTag}
                         onUpdate={refetch}
                         {collectionId}
                         {isPanModeEnabled}
