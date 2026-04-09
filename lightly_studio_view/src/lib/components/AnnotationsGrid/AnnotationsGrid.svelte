@@ -282,7 +282,10 @@
                                     role="button"
                                     tabindex="0"
                                 >
-                                    <div class="relative" style="width: {annotationSize}px; height: {annotationSize}px;">
+                                    <div
+                                        class="relative"
+                                        style="width: {annotationSize}px; height: {annotationSize}px;"
+                                    >
                                         {#if hasMinimumRole(user?.role, 'labeler') && $pickedAnnotationIds[collection_id]?.has(annotations[index].annotation.sample_id)}
                                             <div class="absolute right-2 top-1.5 z-10">
                                                 <SelectableBox
