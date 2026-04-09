@@ -1891,10 +1891,10 @@ export interface components {
          */
         AnnotationLabelCreate: {
             /**
-             * Dataset Id
+             * Root Collection Id
              * Format: uuid
              */
-            dataset_id: string;
+            root_collection_id: string;
             /** Annotation Label Name */
             annotation_label_name: string;
         };
@@ -1912,10 +1912,10 @@ export interface components {
          */
         AnnotationLabelTable: {
             /**
-             * Dataset Id
+             * Root Collection Id
              * Format: uuid
              */
-            dataset_id: string;
+            root_collection_id: string;
             /** Annotation Label Name */
             annotation_label_name: string;
             /**
@@ -1931,7 +1931,7 @@ export interface components {
          * @description The type of annotation task.
          * @enum {string}
          */
-        AnnotationType: "classification" | "instance_segmentation" | "object_detection";
+        AnnotationType: "classification" | "semantic_segmentation" | "instance_segmentation" | "object_detection";
         /**
          * AnnotationUpdateInput
          * @description API input model for updating an annotation.

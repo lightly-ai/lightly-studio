@@ -289,15 +289,6 @@
             >
                 Reset zoom
             </Button>
-            <Button
-                variant="outline"
-                size="sm"
-                onclick={clearSelection}
-                disabled={!hasActiveSelection}
-                data-testid="plot-reset-selection-button"
-                class="px-2.5"
-                title="Clear selection">Clear selection</Button
-            >
         </div>
     {/if}
 </div>
