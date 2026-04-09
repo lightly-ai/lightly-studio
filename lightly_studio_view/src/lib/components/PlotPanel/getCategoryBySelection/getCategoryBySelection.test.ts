@@ -49,25 +49,25 @@ describe('getCategoryBySelection', () => {
         expect(isPointInPolygon).not.toHaveBeenCalled();
     });
 
-    it('should return 2 when prevValue is 1 and point is in selection', () => {
+    it('should return prevValue when point is in selection', () => {
         const mockData = createMockArrowData();
         vi.mocked(isPointInPolygon).mockReturnValue(true);
 
         const reducer = getCategoryBySelection(mockSelection, mockData);
         const result = reducer(1, 0);
 
-        expect(result).toBe(2);
+        expect(result).toBe(1);
         expect(isPointInPolygon).toHaveBeenCalledWith(1.0, 5.0, mockSelection);
     });
 
-    it('should return prevValue when prevValue is 1 but point is not in selection', () => {
+    it('should return REMAINING_CATEGORY when point is not in selection', () => {
         const mockData = createMockArrowData();
         vi.mocked(isPointInPolygon).mockReturnValue(false);
 
         const reducer = getCategoryBySelection(mockSelection, mockData);
         const result = reducer(1, 0);
 
-        expect(result).toBe(1);
+        expect(result).toBe(0);
         expect(isPointInPolygon).toHaveBeenCalledWith(1.0, 5.0, mockSelection);
     });
 
@@ -106,7 +106,7 @@ describe('getCategoryBySelection', () => {
         const categories = [1, 1, 1, 1];
         const result = categories.map(reducer);
 
-        expect(result).toEqual([2, 2, 1, 1]);
+        expect(result).toEqual([1, 1, 0, 0]);
         expect(isPointInPolygon).toHaveBeenCalledTimes(4);
     });
 
@@ -118,8 +118,8 @@ describe('getCategoryBySelection', () => {
         const categories = [0, 1, 2, 1];
         const result = categories.map(reducer);
 
-        // Only prevValue=1 should change to 2
-        expect(result).toEqual([0, 2, 2, 2]);
+        // In-polygon points keep their prevValue
+        expect(result).toEqual([0, 1, 2, 1]);
     });
 
     it('should use correct x and y coordinates from ArrowData', () => {
@@ -148,7 +148,7 @@ describe('getCategoryBySelection', () => {
         const reducer = getCategoryBySelection([], mockData);
         const result = reducer(1, 0);
 
-        expect(result).toBe(1);
+        expect(result).toBe(0);
         expect(isPointInPolygon).toHaveBeenCalledWith(1.0, 5.0, []);
     });
 });

@@ -10,11 +10,9 @@ vi.mock('embedding-atlas/svelte', () => ({
 
 vi.mock('../getCategoryBySelection/getCategoryBySelection', () => ({
     getCategoryBySelection: vi.fn((selection) => (prevValue: number, index: number) => {
-        // Mock implementation: if point is in first half of array, mark as selected (2)
-        if (selection && prevValue === 1 && index < 2) {
-            return 2;
-        }
-        return prevValue;
+        // Mock implementation: first two points are inside the polygon (keep prevValue), rest are outside (0)
+        if (!selection) return prevValue;
+        return index < 2 ? prevValue : 0;
     })
 }));
 
@@ -74,12 +72,12 @@ describe('usePlotData', () => {
         const data = get(result.data);
         expect(data?.category).toBeInstanceOf(Uint8Array);
 
-        // Based on our mock, first two points with category 1 should become 2
+        // First two points are in polygon (keep prevValue=1), last two are outside (demoted to 0)
         const categoryArray = Array.from(data?.category as Uint8Array);
-        expect(categoryArray[0]).toBe(2); // was 1, is selected
-        expect(categoryArray[1]).toBe(2); // was 1, is selected
-        expect(categoryArray[2]).toBe(0); // stays 0
-        expect(categoryArray[3]).toBe(1); // stays 1 (not in selection range per mock)
+        expect(categoryArray[0]).toBe(1); // in polygon, keeps FILTERED_CATEGORY
+        expect(categoryArray[1]).toBe(1); // in polygon, keeps FILTERED_CATEGORY
+        expect(categoryArray[2]).toBe(0); // outside polygon, demoted to REMAINING_CATEGORY
+        expect(categoryArray[3]).toBe(0); // outside polygon, demoted to REMAINING_CATEGORY
     });
 
     it('should collect selected sample ids when range selection is applied', () => {
@@ -113,6 +111,21 @@ describe('usePlotData', () => {
         expect(data?.category).toBeInstanceOf(Uint8Array);
         // Empty array still triggers selection logic with our mock
         expect(get(result.selectedSampleIds)).toEqual(['sample1', 'sample2']);
+    });
+
+    it('should set all categories to 0 when hasActiveFilter is false', () => {
+        const mockData = createMockArrowData();
+
+        const result = usePlotData({
+            arrowData: mockData,
+            rangeSelection: null,
+            hasActiveFilter: false
+        });
+
+        const data = get(result.data);
+        const categoryArray = Array.from(data?.category as Uint8Array);
+        expect(categoryArray).toEqual([0, 0, 0, 0]);
+        expect(get(result.selectedSampleIds)).toEqual([]);
     });
 
     it('should return error store', () => {
