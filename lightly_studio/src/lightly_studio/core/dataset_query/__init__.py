@@ -1,3 +1,4 @@
+from .annotation_expression import ObjectDetectionField, ObjectDetectionQuery
 from .boolean_expression import AND, NOT, OR
 from .dataset_query import DatasetQuery
 from .image_sample_field import ImageSampleField
@@ -12,5 +13,7 @@ __all__ = [
     "ImageSampleField",
     "OrderByExpression",
     "OrderByField",
+    "ObjectDetectionField",
+    "ObjectDetectionQuery",
     "VideoSampleField",
 ]
