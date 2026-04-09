@@ -66,7 +66,7 @@
         buildVideoFrameAnnotationCountsFilter
     } from '$lib/utils/buildAnnotationCountsFilters';
     import { GridHeader } from '$lib/components';
-    import EmbeddingSelectionFilterChip from '$lib/components/Filters/EmbeddingSelectionFilterChip.svelte';
+    import EmbeddingSelectionFilterItem from '$lib/components/EmbeddingSelectionFilterItem/EmbeddingSelectionFilterItem.svelte';
     const { data, children } = $props();
     const {
         collection,
@@ -541,7 +541,7 @@
                             <Segment title="Filters" icon={SlidersHorizontal}>
                                 <div class="space-y-2">
                                     {#if hasPlotSelectionContext}
-                                        <EmbeddingSelectionFilterChip
+                                        <EmbeddingSelectionFilterItem
                                             checked={isPlotSelectionApplied}
                                             selectionCount={plotSelectionCount}
                                             itemLabel={plotSelectionItemLabel}
