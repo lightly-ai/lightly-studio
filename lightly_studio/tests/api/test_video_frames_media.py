@@ -25,7 +25,7 @@ def test_stream_frame_png_format(
     db_session: Session,
     tmp_path: Path,
 ) -> None:
-    """Test that stream_frame returns PNG format when compressed=False."""
+    """Test that stream_frame returns PNG format by default (quality=raw)."""
     collection = create_collection(session=db_session, sample_type=SampleType.VIDEO)
     collection_id = collection.collection_id
 
@@ -53,11 +53,7 @@ def test_stream_frame_png_format(
 
     frame_sample_id = video_with_frames.frame_sample_ids[0]
 
-    # Request frame without compression (default)
-    response = test_client.get(
-        f"/frames/media/{frame_sample_id}",
-        params={"compressed": False},
-    )
+    response = test_client.get(f"/frames/media/{frame_sample_id}")
 
     assert response.status_code == 200
     assert response.headers["content-type"] == "image/png"
@@ -68,92 +64,6 @@ def test_stream_frame_png_format(
     image_data = response.content
     assert image_data.startswith(b"\x89PNG\r\n\x1a\n")
 
-
-def test_stream_frame_jpeg_format(
-    test_client: TestClient,
-    db_session: Session,
-    tmp_path: Path,
-) -> None:
-    """Test that stream_frame returns JPEG format when compressed=True."""
-    collection = create_collection(session=db_session, sample_type=SampleType.VIDEO)
-    collection_id = collection.collection_id
-
-    # Create a temporary video file
-    video_path = create_video_file(
-        output_path=tmp_path / "test_video.mp4",
-        width=320,
-        height=240,
-        num_frames=5,
-        fps=1,
-    )
-
-    # Create video with frames in database
-    video_with_frames = create_video_with_frames(
-        session=db_session,
-        collection_id=collection_id,
-        video=VideoStub(
-            path=str(video_path),
-            width=320,
-            height=240,
-            duration_s=5.0,
-            fps=1.0,
-        ),
-    )
-
-    frame_sample_id = video_with_frames.frame_sample_ids[0]
-
-    # Request frame with compression
-    response = test_client.get(
-        f"/frames/media/{frame_sample_id}",
-        params={"compressed": True},
-    )
-
-    assert response.status_code == 200
-    assert response.headers["content-type"] == "image/jpeg"
-    assert "Cache-Control" in response.headers
-    assert "Content-Length" in response.headers
-
-    # Verify it's a valid JPEG (starts with JPEG signature)
-    image_data = response.content
-    assert image_data.startswith(b"\xff\xd8\xff")
-
-
-def test_stream_frame_default_compressed_false(
-    test_client: TestClient,
-    db_session: Session,
-    tmp_path: Path,
-) -> None:
-    """Test that stream_frame defaults to PNG when compressed parameter is not provided."""
-    collection = create_collection(session=db_session, sample_type=SampleType.VIDEO)
-    collection_id = collection.collection_id
-
-    video_path = create_video_file(
-        output_path=tmp_path / "test_video.mp4",
-        width=320,
-        height=240,
-        num_frames=5,
-        fps=1,
-    )
-
-    video_with_frames = create_video_with_frames(
-        session=db_session,
-        collection_id=collection_id,
-        video=VideoStub(
-            path=str(video_path),
-            width=320,
-            height=240,
-            duration_s=5.0,
-            fps=1.0,
-        ),
-    )
-
-    frame_sample_id = video_with_frames.frame_sample_ids[0]
-
-    # Request frame without compressed parameter (should default to False)
-    response = test_client.get(f"/frames/media/{frame_sample_id}")
-
-    assert response.status_code == 200
-    assert response.headers["content-type"] == "image/png"
 
 
 def test_stream_frame_high_returns_resized_jpeg(
@@ -196,6 +106,42 @@ def test_stream_frame_high_returns_resized_jpeg(
     assert decoded is not None
     assert decoded.shape[1] == 80
     assert decoded.shape[0] == 60
+
+
+def test_stream_frame_high_requires_bounds(
+    test_client: TestClient,
+    db_session: Session,
+    tmp_path: Path,
+) -> None:
+    """Test that quality=high without bounds returns 400."""
+    collection = create_collection(session=db_session, sample_type=SampleType.VIDEO)
+
+    video_path = create_video_file(
+        output_path=tmp_path / "test_video.mp4",
+        width=320,
+        height=240,
+        num_frames=5,
+        fps=1,
+    )
+
+    video_with_frames = create_video_with_frames(
+        session=db_session,
+        collection_id=collection.collection_id,
+        video=VideoStub(
+            path=str(video_path),
+            width=320,
+            height=240,
+            duration_s=5.0,
+            fps=1.0,
+        ),
+    )
+
+    response = test_client.get(
+        f"/frames/media/{video_with_frames.frame_sample_ids[0]}",
+        params={"quality": "high"},
+    )
+
+    assert response.status_code == 400
 
 
 def test_get_cached_capture_creates_new(
@@ -356,7 +302,7 @@ def test_stream_frame_multiple_frames_same_video(
     for frame_id in frame_ids:
         response = test_client.get(
             f"/frames/media/{frame_id}",
-            params={"compressed": True},
+            params={"quality": "high", "max_width": 80, "max_height": 80},
         )
         assert response.status_code == 200
         assert response.headers["content-type"] == "image/jpeg"

@@ -27,6 +27,8 @@ from lightly_studio.resolvers import video_frame_resolver
 
 frames_router = APIRouter(prefix="/frames/media", tags=["frames streaming"])
 
+JPEG_QUALITY = 75
+
 # Thread pool for CPU-intensive video processing
 _thread_pool_executor: ThreadPoolExecutor | None = None
 
@@ -47,10 +49,9 @@ class FrameTransformOptions:
 class FrameTransformQuery(BaseModel):
     """Query parameters for frame transport quality."""
 
-    compressed: bool = False
-    quality: GridViewThumbnailQualityType | None = None
-    max_width: int | None = Query(default=None, ge=1)
-    max_height: int | None = Query(default=None, ge=1)
+    quality: GridViewThumbnailQualityType = GridViewThumbnailQualityType.RAW
+    max_width: int | None = Query(default=None, ge=1, le=4096)
+    max_height: int | None = Query(default=None, ge=1, le=4096)
 
 
 def get_thread_pool_executor() -> ThreadPoolExecutor:
@@ -222,7 +223,7 @@ def _process_video_frame(
                 max_width=transform.max_width,
                 max_height=transform.max_height,
             )
-        encode_params = [cv2.IMWRITE_JPEG_QUALITY, 60]
+        encode_params = [cv2.IMWRITE_JPEG_QUALITY, JPEG_QUALITY]
         success, buffer = cv2.imencode(".jpg", frame, encode_params)
         media_type = "image/jpeg"
     else:
@@ -271,15 +272,11 @@ async def stream_frame(
     """
     video_frame = video_frame_resolver.get_by_id(session=session, sample_id=sample_id)
     video_path = video_frame.video.file_path_abs
-    resolved_quality = transform_query.quality
-    if resolved_quality is None:
-        resolved_quality = (
-            GridViewThumbnailQualityType.HIGH
-            if transform_query.compressed
-            else GridViewThumbnailQualityType.RAW
-        )
+    if transform_query.quality == GridViewThumbnailQualityType.HIGH:
+        if transform_query.max_width is None and transform_query.max_height is None:
+            raise HTTPException(400, "max_width or max_height is required when quality=high")
     transform = FrameTransformOptions(
-        quality=resolved_quality,
+        quality=transform_query.quality,
         max_width=transform_query.max_width,
         max_height=transform_query.max_height,
     )

@@ -26,8 +26,8 @@ async def serve_image_by_sample_id(
     sample_id: str,
     session: SessionDep,
     quality: GridViewThumbnailQualityType = GridViewThumbnailQualityType.RAW,
-    max_width: int | None = Query(default=None, ge=1),
-    max_height: int | None = Query(default=None, ge=1),
+    max_width: int | None = Query(default=None, ge=1, le=4096),
+    max_height: int | None = Query(default=None, ge=1, le=4096),
 ) -> StreamingResponse:
     """Serve an image by sample ID.
 

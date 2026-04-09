@@ -1690,9 +1690,6 @@ export interface paths {
          *     Args:
          *         sample_id: The ID of the sample.
          *         session: Database session.
-         *         quality: Whether to return the original image or a resized grid thumbnail.
-         *         max_width: Maximum thumbnail width in pixels.
-         *         max_height: Maximum thumbnail height in pixels.
          *
          *     Returns:
          *         StreamingResponse with the image data.
@@ -6420,8 +6417,7 @@ export interface operations {
     stream_frame: {
         parameters: {
             query?: {
-                compressed?: boolean;
-                quality?: components["schemas"]["GridViewThumbnailQualityType"] | null;
+                quality?: components["schemas"]["GridViewThumbnailQualityType"];
                 max_width?: number | null;
                 max_height?: number | null;
             };
