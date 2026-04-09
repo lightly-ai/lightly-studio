@@ -4,17 +4,20 @@ This guide shows how to connect to your LightlyStudio Enterprise instance from a
 environment. Once connected, the Python API works identically to the open-source version. The
 only difference is that data is stored in a shared database accessible to your entire team.
 
-This guide assumes you are already logged in to your LightlyStudio Enterprise instance.
+This guide assumes you are already logged in to your LightlyStudio Enterprise instance with an
+admin account.
 
 ## Prerequisites
 
 - `lightly_studio` installed (`pip install lightly-studio`)
 - Access to a running LightlyStudio Enterprise instance
+- Admin access to the enterprise instance to copy the connection credentials
 
 ## Step 1: Get Your Connection Credentials
 
 1. Open your LightlyStudio Enterprise instance in the browser.
-2. Go to the `Datasets` page and click the **"Connect from Python"** button.
+2. Go to the `Datasets` page and click the **"Connect from Python"** button. This button is only
+   available to admins.
 3. A dialog displays two values:
     - `LIGHTLY_STUDIO_API_URL` — the base URL of your enterprise instance
     - `LIGHTLY_STUDIO_TOKEN` — a JWT token for authentication
@@ -37,7 +40,7 @@ This guide assumes you are already logged in to your LightlyStudio Enterprise in
     ```shell title="export_env_vars.sh"
     export LIGHTLY_STUDIO_API_URL="http://your-server:8100"
     export LIGHTLY_STUDIO_TOKEN="eyJhbGciOiJIUzI1NiIs..."
-    ``` 
+    ```
 
 === "Pass Parameters Directly"
 
