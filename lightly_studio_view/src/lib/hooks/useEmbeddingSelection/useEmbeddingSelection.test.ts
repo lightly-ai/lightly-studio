@@ -3,6 +3,15 @@ import { get, writable } from 'svelte/store';
 import { useEmbeddingSelection } from './useEmbeddingSelection';
 import { useImageFilters } from '$lib/hooks/useImageFilters/useImageFilters';
 import { useVideoFilters } from '$lib/hooks/useVideoFilters/useVideoFilters';
+import { isNormalModeParams } from '$lib/hooks/useImagesInfinite/useImagesInfinite';
+
+function getImageSampleIds() {
+    const params = get(useImageFilters().filterParams);
+    if (!isNormalModeParams(params)) {
+        return undefined;
+    }
+    return params.filters?.sample_ids;
+}
 
 describe('useEmbeddingSelection', () => {
     it('hides and restores the active samples selection', () => {
@@ -31,13 +40,13 @@ describe('useEmbeddingSelection', () => {
 
         embeddingSelection.setEmbeddingSelectionVisibility(false);
 
-        expect(get(imageFilters.filterParams).filters?.sample_ids).toBeUndefined();
+        expect(getImageSampleIds()).toBeUndefined();
         expect(get(embeddingSelection.hiddenEmbeddingSelectionSampleIds)).toEqual(['a', 'b']);
         expect(get(embeddingSelection.activePlotSelectionSampleIds)).toEqual([]);
 
         embeddingSelection.setEmbeddingSelectionVisibility(true);
 
-        expect(get(imageFilters.filterParams).filters?.sample_ids).toEqual(['a', 'b']);
+        expect(getImageSampleIds()).toEqual(['a', 'b']);
         expect(get(embeddingSelection.hiddenEmbeddingSelectionSampleIds)).toEqual([]);
         expect(get(embeddingSelection.activePlotSelectionSampleIds)).toEqual(['a', 'b']);
     });
@@ -69,6 +78,6 @@ describe('useEmbeddingSelection', () => {
         embeddingSelection.clearPlotSelection();
 
         expect(setRangeSelectionForcollection).toHaveBeenCalledWith('col-1', null);
-        expect(get(imageFilters.filterParams).filters?.sample_ids).toBeUndefined();
+        expect(getImageSampleIds()).toBeUndefined();
     });
 });
