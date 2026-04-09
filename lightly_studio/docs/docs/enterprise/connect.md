@@ -1,17 +1,19 @@
 # How to Connect from Python
 
 This guide shows how to connect to your LightlyStudio Enterprise instance from a Python
-environment. Once connected, the Python API works identically to the open-source version. The
-only difference is that data is stored in a shared database accessible to your entire team.
+environment. It is intended for admins who populate or update datasets from Python. Regular users
+can use the web app without connecting from Python.
+
+Once connected, the Python API works identically to the open-source version. The only difference
+is that data is stored in a shared database accessible to your entire team.
 
 This guide assumes you are already logged in to your LightlyStudio Enterprise instance with an
 admin account.
 
 ## Prerequisites
 
-- `lightly_studio` installed (`pip install lightly-studio`)
-- Access to a running LightlyStudio Enterprise instance
-- Admin access to the enterprise instance to copy the connection credentials
+- Admin access to a running LightlyStudio Enterprise instance
+- `lightly_studio` installed (`pip install lightly-studio`). Use exactly the same version as the server for best compatibility. You can check the server version in the GUI footer.
 
 ## Step 1: Get Your Connection Credentials
 
@@ -21,7 +23,7 @@ admin account.
 3. A dialog displays two values:
     - `LIGHTLY_STUDIO_API_URL` — the base URL of your enterprise instance
     - `LIGHTLY_STUDIO_TOKEN` — a JWT token for authentication
-4. Copy both values. You will need them to connect from Python.
+4. Take note of both values. You will need them to connect from Python.
 
 ## Step 2: Configure Your Environment
 
@@ -72,14 +74,14 @@ for sample in list(dataset)[:3]:
 ```
 
 !!! note
-    After `ls.connect()`, all dataset operations use the shared enterprise database instead of
+    After `ls.connect()`, all dataset operations use the enterprise database instead of
     a local DuckDB file. You do **not** need to call `ls.start_gui()` — the GUI is already
     running on the enterprise server.
 
 ## Example: Loading a Dataset from S3
 
-If your admin has configured cloud credentials on the enterprise instance, they are
-automatically applied when you call `ls.connect()`. No extra setup is needed on your side.
+If your admin has configured cloud credentials, `ls.connect()` applies them automatically. No
+extra setup is needed on your side.
 
 ```python title="enterprise_s3_example.py"
 import lightly_studio as ls
@@ -100,7 +102,7 @@ dataset.add_samples_from_coco(
 ```
 
 !!! tip
-    For S3 or GCS support, install the cloud storage extra:
+    If you use S3 or GCS paths from Python, install the cloud storage extra:
     `pip install "lightly-studio[cloud-storage]"`.
     See [Using Cloud Storage](../api/index.md#using-cloud-storage) for details.
 

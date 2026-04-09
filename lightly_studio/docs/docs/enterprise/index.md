@@ -1,7 +1,6 @@
 # LightlyStudio Enterprise
 
-**LightlyStudio Enterprise** is the multi-user, multi-dataset centrally hosted version of LightlyStudio. It is
-available as an on-premise deployment or as a Lightly-hosted instance.
+**LightlyStudio Enterprise** is the multi-user, multi-dataset version of LightlyStudio.
 
 All features of the open-source Python API work the same way once you are connected to an
 enterprise instance.
@@ -20,4 +19,4 @@ Contact [sales@lightly.ai](mailto:sales@lightly.ai) to learn more about LightlyS
 
 ## Getting Started
 
-See **[how to connect from Python](connect.md)**
+See [How to Connect from Python](connect.md).
