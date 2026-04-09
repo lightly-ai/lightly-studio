@@ -161,7 +161,7 @@ class TestLightlyStudioLabelInput:
         # Test for task_no_ann
         label_input = LightlyStudioObjectDetectionInput(
             session=db_session,
-            dataset_id=collection.collection_id,
+            dataset_id=collection.dataset_id,
             samples=DatasetQuery(dataset=collection, session=db_session),
         )
         labels = list(label_input.get_labels())
@@ -209,7 +209,7 @@ class TestLightlyStudioLabelInput:
         )
         label_input = LightlyStudioObjectDetectionInput(
             session=db_session,
-            dataset_id=collection.collection_id,
+            dataset_id=collection.dataset_id,
             samples=DatasetQuery(dataset=collection, session=db_session),
         )
         labels = list(label_input.get_labels())
