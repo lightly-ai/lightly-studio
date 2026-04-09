@@ -169,6 +169,39 @@ describe('useGlobalStorage', () => {
         });
     });
 
+    describe('Annotation selection notifications', () => {
+        it('should notify annotation subscribers with the updated selection on toggle', () => {
+            const annotationSubscriber = vi.fn();
+            storage.selectedSampleAnnotationCropIds.subscribe(annotationSubscriber);
+
+            annotationSubscriber.mockClear();
+
+            storage.toggleSampleAnnotationCropSelection(testCollectionId, 'annotation1');
+
+            expect(annotationSubscriber).toHaveBeenCalledTimes(1);
+            expect(annotationSubscriber).toHaveBeenLastCalledWith({
+                [testCollectionId]: new Set(['annotation1']),
+                [testCollectionId2]: new Set()
+            });
+        });
+
+        it('should notify annotation subscribers with an empty selection on clear', () => {
+            storage.toggleSampleAnnotationCropSelection(testCollectionId, 'annotation1');
+            const annotationSubscriber = vi.fn();
+            storage.selectedSampleAnnotationCropIds.subscribe(annotationSubscriber);
+
+            annotationSubscriber.mockClear();
+
+            storage.clearSelectedSampleAnnotationCrops(testCollectionId);
+
+            expect(annotationSubscriber).toHaveBeenCalledTimes(1);
+            expect(annotationSubscriber).toHaveBeenLastCalledWith({
+                [testCollectionId]: new Set(),
+                [testCollectionId2]: new Set()
+            });
+        });
+    });
+
     describe('Text Embedding', () => {
         it('should store value', () => {
             storage.setTextEmbedding({
