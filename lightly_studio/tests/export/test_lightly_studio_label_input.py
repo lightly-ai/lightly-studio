@@ -37,7 +37,7 @@ class TestLightlyStudioLabelInput:
 
         label_input = LightlyStudioObjectDetectionInput(
             session=db_session,
-            root_collection_id=collection.collection_id,
+            dataset_id=collection.dataset_id,
             samples=DatasetQuery(dataset=collection, session=db_session),
         )
         assert list(label_input.get_categories()) == [
@@ -55,7 +55,7 @@ class TestLightlyStudioLabelInput:
 
         label_input = LightlyStudioPascalVOCInstanceSegmentationInput(
             session=db_session,
-            root_collection_id=collection.collection_id,
+            dataset_id=collection.dataset_id,
             samples=DatasetQuery(dataset=collection, session=db_session),
         )
         assert list(label_input.get_categories()) == [
@@ -76,7 +76,7 @@ class TestLightlyStudioLabelInput:
         create_images(db_session=db_session, collection_id=collection.collection_id, images=images)
         label_input = LightlyStudioObjectDetectionInput(
             session=db_session,
-            root_collection_id=collection.collection_id,
+            dataset_id=collection.dataset_id,
             samples=DatasetQuery(dataset=collection, session=db_session),
         )
         assert list(label_input.get_categories()) == []
@@ -88,7 +88,7 @@ class TestLightlyStudioLabelInput:
 
         label_input = LightlyStudioObjectDetectionInput(
             session=db_session,
-            root_collection_id=collection.collection_id,
+            dataset_id=collection.dataset_id,
             samples=DatasetQuery(dataset=collection, session=db_session),
         )
         assert list(label_input.get_images()) == [
@@ -101,7 +101,7 @@ class TestLightlyStudioLabelInput:
         collection = create_collection(session=db_session)
         label_input = LightlyStudioObjectDetectionInput(
             session=db_session,
-            root_collection_id=collection.collection_id,
+            dataset_id=collection.dataset_id,
             samples=DatasetQuery(dataset=collection, session=db_session),
         )
         assert list(label_input.get_images()) == []
@@ -113,7 +113,7 @@ class TestLightlyStudioLabelInput:
 
         label_input = LightlyStudioObjectDetectionInput(
             session=db_session,
-            root_collection_id=collection.collection_id,
+            dataset_id=collection.dataset_id,
             samples=DatasetQuery(dataset=collection, session=db_session),
         )
         labels = list(label_input.get_labels())
@@ -161,7 +161,7 @@ class TestLightlyStudioLabelInput:
         # Test for task_no_ann
         label_input = LightlyStudioObjectDetectionInput(
             session=db_session,
-            root_collection_id=collection.collection_id,
+            dataset_id=collection.dataset_id,
             samples=DatasetQuery(dataset=collection, session=db_session),
         )
         labels = list(label_input.get_labels())
@@ -209,7 +209,7 @@ class TestLightlyStudioLabelInput:
         )
         label_input = LightlyStudioObjectDetectionInput(
             session=db_session,
-            root_collection_id=collection.collection_id,
+            dataset_id=collection.dataset_id,
             samples=DatasetQuery(dataset=collection, session=db_session),
         )
         labels = list(label_input.get_labels())
