@@ -4,11 +4,7 @@ import {
     type SampleView,
     type VideoView
 } from '$lib/api/lightly_studio_local';
-import { getFrameBatchCursor } from '$lib/utils/frame';
 import { writable } from 'svelte/store';
-
-/** Number of frames to fetch in each batch from the API */
-const BATCH_SIZE = 50;
 
 /**
  * Internal state for the useVideoFrames hook.
@@ -18,8 +14,6 @@ interface UseVideoFramesState {
     frames: FrameView[];
     /** The currently selected/active frame */
     currentFrame: FrameView | null | undefined;
-    /** Current position in the API pagination */
-    cursor: number;
     /** Whether a frame fetch is in progress */
     loading: boolean;
     /** Whether all frames have been fetched */
@@ -49,12 +43,14 @@ interface UseVideoFramesState {
  * @param params.video - The video metadata including sample_id and frame collection info
  *
  * @returns An object containing:
+ * - `frames`: Svelte store with array of all loaded frames
  * - `currentFrame`: Svelte store with the currently active frame
  * - `loading`: Boolean indicating if a fetch is in progress
  * - `reachedEnd`: Boolean indicating if all frames have been loaded
  * - `playbackTime`: Current playback time in seconds
  * - `loadFramesFromFrameNumber`: Function to load and seek to a specific frame number
  * - `loadFrameByPlaybackTime`: Function to load the frame at a specific playback time
+ * - `loadFrames`: Function to load all the frames
  *
  * @example
  * ```ts
@@ -63,6 +59,7 @@ interface UseVideoFramesState {
  * ```
  */
 export function useVideoFrames({ video }: { video: VideoView }) {
+    const frames = writable<FrameView[]>([]);
     const currentFrame = writable<FrameView | undefined>(undefined);
     const playbackTime = writable<number>(0);
     const playbackStep = 0.002;
@@ -70,7 +67,6 @@ export function useVideoFrames({ video }: { video: VideoView }) {
     const state: UseVideoFramesState = {
         frames: [],
         currentFrame: undefined,
-        cursor: 0,
         loading: false,
         reachedEnd: false,
         hasStarted: false,
@@ -110,7 +106,6 @@ export function useVideoFrames({ video }: { video: VideoView }) {
             await state.pendingLoad;
             return;
         }
-        if (state.reachedEnd) return;
 
         const frameCollectionId = (video?.frame?.sample as SampleView)?.collection_id;
         if (!frameCollectionId) {
@@ -124,10 +119,6 @@ export function useVideoFrames({ video }: { video: VideoView }) {
                     path: {
                         video_frame_collection_id: frameCollectionId
                     },
-                    query: {
-                        cursor: state.cursor,
-                        limit: BATCH_SIZE
-                    },
                     body: {
                         filter: {
                             video_id: video?.sample_id
@@ -135,19 +126,12 @@ export function useVideoFrames({ video }: { video: VideoView }) {
                     }
                 });
 
-                const newFrames = res?.data?.data ?? [];
+                const fetchedFrames = res?.data?.data ?? [];
 
-                if (newFrames.length === 0) {
-                    state.reachedEnd = true;
-                    return;
-                }
-
-                state.frames = mergeFrames(state.frames, newFrames);
-                // Update cursor for next batch: use server-provided nextCursor if available,
-                // otherwise increment by BATCH_SIZE for client-side pagination
-                const nextCursor = res?.data?.nextCursor;
-                state.cursor = nextCursor ?? state.cursor + BATCH_SIZE;
-                state.reachedEnd = nextCursor == null;
+                state.frames = fetchedFrames;
+                frames.set(fetchedFrames);
+                // All frames are loaded at once, so we've reached the end
+                state.reachedEnd = true;
             } finally {
                 state.loading = false;
                 state.pendingLoad = null;
@@ -159,7 +143,6 @@ export function useVideoFrames({ video }: { video: VideoView }) {
 
     /**
      * Loads and seeks to a specific frame by its frame number.
-     * Calculates the appropriate cursor position and fetches the batch containing the target frame.
      * Updates the current frame and playback time to match the requested frame.
      *
      * @param frameNumber - The zero-indexed frame number to load and display
@@ -177,10 +160,6 @@ export function useVideoFrames({ video }: { video: VideoView }) {
                 setCurrentFrame(existingFrame);
                 playbackTime.set(existingFrame.frame_timestamp_s + playbackStep);
             } else {
-                // Frame not loaded yet, fetch it
-                state.cursor = getFrameBatchCursor(frameNumber, BATCH_SIZE);
-                state.reachedEnd = false; // Reset since we're seeking to a new position
-
                 await loadFrames();
 
                 const frame = getFrameByNumber(frameNumber);
@@ -232,7 +211,6 @@ export function useVideoFrames({ video }: { video: VideoView }) {
                 return;
             }
 
-            state.cursor = getFrameBatchCursor(frameIndex, BATCH_SIZE);
             state.reachedEnd = false; // Reset since we're seeking to a new position
 
             await loadFrames();
@@ -248,30 +226,8 @@ export function useVideoFrames({ video }: { video: VideoView }) {
         }
     }
 
-    /**
-     * Merges existing frames with newly fetched frames, avoiding duplicates.
-     * Optimizes for sequential batch loading by checking if the last existing frame
-     * matches the first new frame. Otherwise, uses a Map to deduplicate by sample_id.
-     *
-     * @param existingFrames - Previously loaded frames
-     * @param newFrames - Newly fetched frames to merge
-     * @returns Combined array of frames, sorted by frame_number
-     */
-    function mergeFrames(existingFrames: FrameView[], newFrames: FrameView[]): FrameView[] {
-        if (existingFrames.at(-1)?.frame_number === newFrames[0]?.frame_number) {
-            // Skip the duplicate first frame when concatenating
-            return [...existingFrames, ...newFrames.slice(1)];
-        }
-
-        const frameMap = new Map<string, FrameView>();
-
-        existingFrames.forEach((frame) => frameMap.set(frame.sample_id, frame));
-        newFrames.forEach((frame) => frameMap.set(frame.sample_id, frame));
-
-        return Array.from(frameMap.values()).sort((a, b) => a.frame_number - b.frame_number);
-    }
-
     return {
+        frames,
         currentFrame,
         playbackTime,
         get loading() {
@@ -281,6 +237,7 @@ export function useVideoFrames({ video }: { video: VideoView }) {
             return state.reachedEnd;
         },
         loadFramesFromFrameNumber,
-        loadFrameByPlaybackTime
+        loadFrameByPlaybackTime,
+        loadFrames
     };
 }

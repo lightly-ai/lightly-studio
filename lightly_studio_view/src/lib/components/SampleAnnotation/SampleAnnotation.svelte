@@ -21,7 +21,9 @@
         scale = 1,
         constraintBox,
         onBoundingBoxChanged,
-        highlight = 'auto'
+        highlight = 'auto',
+        prerenderedDataUrl,
+        prerenderedHeight
     }: {
         annotation: Annotation;
         showLabel?: boolean;
@@ -32,6 +34,8 @@
         constraintBox?: BoundingBox;
         onBoundingBoxChanged?: (newBbox: BoundingBox) => void;
         highlight?: 'active' | 'disabled' | 'auto';
+        prerenderedDataUrl?: string;
+        prerenderedHeight?: number;
     } = $props();
 
     const { customLabelColorsStore } = useCustomLabelColors();
@@ -122,6 +126,8 @@
             width={imageWidth}
             {colorFill}
             opacity={segmentationMaskOpacity}
+            {prerenderedDataUrl}
+            {prerenderedHeight}
         />
     {/if}
 
