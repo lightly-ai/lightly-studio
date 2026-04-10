@@ -115,35 +115,33 @@
                 {#snippet item({ index, style }: { index: number; style: string })}
                     {#key $infiniteSamples.dataUpdatedAt}
                         {#if displayedSamples[index]}
-                            <div
-                                class="relative cursor-pointer"
-                                {style}
-                                data-testid="classifier-sample-grid-item"
-                                data-sample-id={displayedSamples[index].sample_id}
-                                data-sample-name={displayedSamples[index].file_name}
-                                data-index={index}
-                                onclick={handleOnClick}
-                                ondblclick={handleOnDoubleClick}
-                                onkeydown={handleKeyDown}
-                                aria-label={`Select sample: ${displayedSamples[index].file_name}`}
-                                role="button"
-                                tabindex="0"
-                            >
-                                {#if $classifierSelectedSampleIds.has(displayedSamples[index].sample_id)}
-                                    <div class="absolute inset-0 z-10">
-                                        <SelectableBox
-                                            onSelect={() => undefined}
-                                            isSelected={true}
-                                        />
-                                    </div>
-                                {/if}
-
+                            <div {style}>
                                 <div
-                                    class="overflow-hidden rounded-lg"
+                                    class="relative cursor-pointer overflow-hidden rounded-lg"
                                     class:grid-item-selected={$classifierSelectedSampleIds.has(
                                         displayedSamples[index].sample_id
                                     )}
+                                    style="width: {sampleWidth}px; height: {sampleHeight}px;"
+                                    data-testid="classifier-sample-grid-item"
+                                    data-sample-id={displayedSamples[index].sample_id}
+                                    data-sample-name={displayedSamples[index].file_name}
+                                    data-index={index}
+                                    onclick={handleOnClick}
+                                    ondblclick={handleOnDoubleClick}
+                                    onkeydown={handleKeyDown}
+                                    aria-label={`Select sample: ${displayedSamples[index].file_name}`}
+                                    role="button"
+                                    tabindex="0"
                                 >
+                                    {#if $classifierSelectedSampleIds.has(displayedSamples[index].sample_id)}
+                                        <div class="absolute right-2 top-1.5 z-10">
+                                            <SelectableBox
+                                                onSelect={() => undefined}
+                                                isSelected={true}
+                                            />
+                                        </div>
+                                    {/if}
+
                                     <SampleImage sample={displayedSamples[index]} {objectFit} />
                                 </div>
                             </div>
