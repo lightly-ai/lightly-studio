@@ -15,7 +15,7 @@
 
     const filteredOptions = $derived<TagView[]>(
         searchQuery.trim()
-            ? options.filter((t) => t.name.toLowerCase().includes(searchQuery.toLowerCase()))
+            ? options.filter((t) => t.name.toLowerCase().includes(searchQuery.trim().toLowerCase()))
             : options
     );
 
@@ -24,6 +24,9 @@
     );
 
     function handleSelect(name: string) {
+        if (busy) {
+            return;
+        }
         onSelect(name);
         searchQuery = '';
         showDropdown = false;
@@ -66,7 +69,8 @@
             {#each filteredOptions as tag (tag.tag_id)}
                 <button
                     type="button"
-                    class="flex w-full items-center px-2 py-1.5 text-xs hover:bg-accent"
+                    class="flex w-full items-center px-2 py-1.5 text-xs hover:bg-accent disabled:pointer-events-none disabled:opacity-60"
+                    disabled={busy}
                     onclick={() => handleSelect(tag.name)}
                 >
                     {tag.name}
@@ -75,7 +79,8 @@
             {#if searchQuery.trim() && !hasExactMatch}
                 <button
                     type="button"
-                    class="flex w-full items-center gap-1 px-2 py-1.5 text-xs text-muted-foreground hover:bg-accent"
+                    class="flex w-full items-center gap-1 px-2 py-1.5 text-xs text-muted-foreground hover:bg-accent disabled:pointer-events-none disabled:opacity-60"
+                    disabled={busy}
                     onclick={() => handleSelect(searchQuery.trim())}
                 >
                     Create "{searchQuery.trim()}"
