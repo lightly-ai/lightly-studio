@@ -134,7 +134,9 @@
                                     tabindex="0"
                                 >
                                     {#if $classifierSelectedSampleIds.has(displayedSamples[index].sample_id)}
-                                        <div class="pointer-events-none absolute right-2 top-1.5 z-10">
+                                        <div
+                                            class="pointer-events-none absolute right-2 top-1.5 z-10"
+                                        >
                                             <SelectableBox
                                                 onSelect={() => undefined}
                                                 isSelected={true}
