@@ -43,6 +43,7 @@ interface UseVideoFramesState {
  * @param params.video - The video metadata including sample_id and frame collection info
  *
  * @returns An object containing:
+ * - `frames`: Svelte store with array of all loaded frames
  * - `currentFrame`: Svelte store with the currently active frame
  * - `loading`: Boolean indicating if a fetch is in progress
  * - `reachedEnd`: Boolean indicating if all frames have been loaded
@@ -58,6 +59,7 @@ interface UseVideoFramesState {
  * ```
  */
 export function useVideoFrames({ video }: { video: VideoView }) {
+    const frames = writable<FrameView[]>([]);
     const currentFrame = writable<FrameView | undefined>(undefined);
     const playbackTime = writable<number>(0);
     const playbackStep = 0.002;
@@ -124,9 +126,10 @@ export function useVideoFrames({ video }: { video: VideoView }) {
                     }
                 });
 
-                const frames = res?.data?.data ?? [];
+                const fetchedFrames = res?.data?.data ?? [];
 
-                state.frames = frames;
+                state.frames = fetchedFrames;
+                frames.set(fetchedFrames);
                 // All frames are loaded at once, so we've reached the end
                 state.reachedEnd = true;
             } finally {
@@ -224,6 +227,7 @@ export function useVideoFrames({ video }: { video: VideoView }) {
     }
 
     return {
+        frames,
         currentFrame,
         playbackTime,
         get loading() {

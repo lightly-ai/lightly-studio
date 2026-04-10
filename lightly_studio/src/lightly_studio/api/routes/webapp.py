@@ -58,7 +58,12 @@ async def serve_static_webapp_files_or_default_index_file(
                 headers=no_cache_headers,
             )
 
-        return FileResponse(file_path)
+        # Cache static assets (JS, CSS, fonts, images) for 1 week
+        # These files have content hashes in their names, so they're immutable
+        cache_headers = {
+            "Cache-Control": "public, max-age=604800, immutable",
+        }
+        return FileResponse(file_path, headers=cache_headers)
 
     # if file has no extension, return the index.html file regardless of path
     # Special handling for index.html (root path "/"): never cache it
