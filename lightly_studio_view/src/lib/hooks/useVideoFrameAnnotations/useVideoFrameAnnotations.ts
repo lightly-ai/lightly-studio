@@ -52,8 +52,10 @@ export function useVideoFrameAnnotations({
         const frameAnnotations: FrameAnnotationDataURL[] = [];
 
         for (const segmentationAnnotation of segmentationAnnotations) {
-            if (segmentationAnnotation?.segmentation_details?.segmentation_mask) {
-                const label = segmentationAnnotation.annotation_label.annotation_label_name;
+            const segmentationMask = segmentationAnnotation.segmentation_details?.segmentation_mask;
+            const label = segmentationAnnotation.annotation_label?.annotation_label_name;
+
+            if (segmentationMask && label) {
                 const colorFill = getColorByLabel(label, 0.4).color;
 
                 // Convert to opaque color (same logic as SampleAnnotationSegmentationRLE)
@@ -64,7 +66,7 @@ export function useVideoFrameAnnotations({
 
                 try {
                     const { dataUrl, height } = calculateBinaryMaskFromRLE(
-                        segmentationAnnotation.segmentation_details.segmentation_mask,
+                        segmentationMask,
                         imageWidth,
                         opaqueColor
                     );
