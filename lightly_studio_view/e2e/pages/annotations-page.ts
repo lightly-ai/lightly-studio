@@ -98,7 +98,7 @@ export class AnnotationsPage {
     }
 
     async selectAnnotationByIndex(index: number) {
-        await this.getAnnotations().nth(index).getByRole('checkbox').click();
+        await this.getAnnotations().nth(index).click();
     }
 
     async selectTag(tag: string) {
