@@ -336,14 +336,6 @@
 {/if}
 
 <style>
-    .annotation-grid-item:focus {
-        outline: none;
-    }
-
-    .annotation-grid-item:focus-visible {
-        outline: none;
-    }
-
     .viewport :global(.annotations-grid-scroll) {
         overflow-x: hidden !important;
     }
