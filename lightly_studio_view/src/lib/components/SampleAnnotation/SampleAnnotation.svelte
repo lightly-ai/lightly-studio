@@ -16,20 +16,26 @@
         annotation,
         imageWidth,
         showLabel = false,
+        showBoundingBox = true,
         isResizable = false,
         scale = 1,
         constraintBox,
         onBoundingBoxChanged,
-        highlight = 'auto'
+        highlight = 'auto',
+        prerenderedDataUrl,
+        prerenderedHeight
     }: {
         annotation: Annotation;
         showLabel?: boolean;
+        showBoundingBox?: boolean;
         imageWidth: number;
         isResizable?: boolean;
         scale?: number;
         constraintBox?: BoundingBox;
         onBoundingBoxChanged?: (newBbox: BoundingBox) => void;
         highlight?: 'active' | 'disabled' | 'auto';
+        prerenderedDataUrl?: string;
+        prerenderedHeight?: number;
     } = $props();
 
     const { customLabelColorsStore } = useCustomLabelColors();
@@ -100,7 +106,7 @@
     const showAnnotationLabel = $derived(
         showLabel &&
             (highlight === 'auto' || highlight === 'active') &&
-            annotation.annotation_type !== 'semantic_segmentation'
+            (annotation.annotation_type !== 'instance_segmentation' || showBoundingBox)
     );
 </script>
 
@@ -120,29 +126,33 @@
             width={imageWidth}
             {colorFill}
             opacity={segmentationMaskOpacity}
+            {prerenderedDataUrl}
+            {prerenderedHeight}
         />
     {/if}
 
-    <!--Disable resizable rectangle for segmentation masks since we don’t support it yet.-->
-    {#if isResizable && constraintBox && !segmentationMask}
-        <ResizableRectangle
-            bind:bbox={boundingBox}
-            {colorStroke}
-            {colorFill}
-            opacity={boundingBoxOpacity}
-            {scale}
-            {onResize}
-            {onMove}
-            {onDragEnd}
-        />
-    {:else if annotation.annotation_type !== 'semantic_segmentation'}
-        <SampleAnnotationBox
-            {bbox}
-            {annotationId}
-            {label}
-            {colorStroke}
-            {colorFill}
-            opacity={boundingBoxOpacity}
-        />
+    {#if showBoundingBox}
+        <!--Disable resizable rectangle for segmentation masks since we don’t support it yet.-->
+        {#if isResizable && constraintBox && !segmentationMask}
+            <ResizableRectangle
+                bind:bbox={boundingBox}
+                {colorStroke}
+                {colorFill}
+                opacity={boundingBoxOpacity}
+                {scale}
+                {onResize}
+                {onMove}
+                {onDragEnd}
+            />
+        {:else}
+            <SampleAnnotationBox
+                {bbox}
+                {annotationId}
+                {label}
+                {colorStroke}
+                {colorFill}
+                opacity={boundingBoxOpacity}
+            />
+        {/if}
     {/if}
 </g>

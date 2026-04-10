@@ -14,7 +14,8 @@ from tests.helpers_resolvers import (
 def test_get_all(
     db_session: Session,
 ) -> None:
-    collection_id_1 = create_collection(session=db_session).collection_id
+    collection1 = create_collection(session=db_session)
+    collection_id_1 = collection1.collection_id
     create_annotation_label(
         session=db_session, root_collection_id=collection_id_1, label_name="dog"
     )
@@ -30,7 +31,7 @@ def test_get_all(
     )
     labels = annotation_label_resolver.get_all(
         session=db_session,
-        root_collection_id=collection_id_1,
+        dataset_id=collection1.dataset_id,
     )
     # Annotation Labels should be sorted by creation time
     assert [label.annotation_label_name for label in labels] == [
@@ -43,7 +44,8 @@ def test_get_all(
 def test_get_all_sorted_alphabetically(
     db_session: Session,
 ) -> None:
-    collection_id_1 = create_collection(session=db_session).collection_id
+    collection1 = create_collection(session=db_session)
+    collection_id_1 = collection1.collection_id
     create_annotation_label(
         session=db_session, root_collection_id=collection_id_1, label_name="dog"
     )
@@ -59,7 +61,7 @@ def test_get_all_sorted_alphabetically(
     )
     labels = annotation_label_resolver.get_all_sorted_alphabetically(
         session=db_session,
-        root_collection_id=collection_id_1,
+        dataset_id=collection1.dataset_id,
     )
     # Annotation Labels should be sorted alphabetically
     assert [label.annotation_label_name for label in labels] == [

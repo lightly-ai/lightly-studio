@@ -1,5 +1,6 @@
 <script lang="ts">
     import { useHideAnnotations } from '$lib/hooks/useHideAnnotations';
+    import { useSettings } from '$lib/hooks/useSettings';
     import { type ComponentProps } from 'svelte';
     import SampleAnnotation from '../SampleAnnotation/SampleAnnotation.svelte';
     import type { SampleImageObjectFit } from '../SampleImage/types';
@@ -9,7 +10,17 @@
         SampleView,
         VideoFrameView
     } from '$lib/api/lightly_studio_local';
+    import { shouldShowBoundingBoxForAnnotation } from '$lib/utils/shouldShowBoundingBoxForAnnotation';
     import { SampleAnnotations } from '..';
+
+    export interface PrerenderedAnnotation {
+        frameId: string;
+        annotationId: string;
+        dataUrl: string;
+        width: number;
+        height: number;
+        opacity?: number;
+    }
 
     const {
         sample,
@@ -18,7 +29,8 @@
         sampleImageObjectFit = 'contain',
         showLabel,
         sampleWidth,
-        sampleHeight
+        sampleHeight,
+        prerenderedAnnotations
     }: {
         sample: VideoFrameView | FrameView;
         width: number;
@@ -27,13 +39,23 @@
         sampleHeight: number;
         sampleImageObjectFit?: SampleImageObjectFit;
         showLabel?: ComponentProps<typeof SampleAnnotation>['showLabel'];
+        prerenderedAnnotations?: PrerenderedAnnotation[];
     } = $props();
 
     const { isHidden } = useHideAnnotations();
+    const { showBoundingBoxesForSegmentationStore } = useSettings();
     const annotations: AnnotationView[] = $derived((sample.sample as SampleView).annotations ?? []);
     const annotationsWithVisuals = $derived(
         annotations.filter((annotation) => annotation.annotation_type !== 'classification')
     );
+
+    // Create a map of annotationId to prerendered data for quick lookup
+    const prerenderedMap = $derived.by(() => {
+        if (!prerenderedAnnotations) return new Map();
+        return new Map(
+            prerenderedAnnotations.map((prerendered) => [prerendered.annotationId, prerendered])
+        );
+    });
 </script>
 
 {#if !showLabel}
@@ -56,8 +78,20 @@
         {height}
     >
         <g class="sample-annotation" class:invisible={$isHidden}>
+            <!-- Render all annotations with prerendered data when available -->
             {#each annotationsWithVisuals as annotation (annotation.sample_id)}
-                <SampleAnnotation {annotation} {showLabel} imageWidth={sampleWidth} />
+                {@const prerendered = prerenderedMap.get(annotation.sample_id)}
+                <SampleAnnotation
+                    {annotation}
+                    {showLabel}
+                    showBoundingBox={shouldShowBoundingBoxForAnnotation(
+                        annotation,
+                        $showBoundingBoxesForSegmentationStore
+                    )}
+                    imageWidth={sampleWidth}
+                    prerenderedDataUrl={prerendered?.dataUrl}
+                    prerenderedHeight={prerendered?.height}
+                />
             {/each}
         </g>
     </svg>

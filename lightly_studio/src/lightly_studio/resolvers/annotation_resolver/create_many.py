@@ -31,8 +31,7 @@ def create_many(
     """Create multiple annotations in bulk with their respective type-specific details.
 
     Creates base annotations and their associated type-specific details (object detection,
-    instance segmentation, or semantic segmentation) in the annotation collection child of
-    the provided parent collection.
+    or segmentation) in the annotation collection child of the provided parent collection.
 
     It is responsibility of the caller to ensure that all parent samples belong to the same
     collection with ID `parent_collection_id`. This function does not perform this check for
@@ -101,10 +100,7 @@ def create_many(
             object_detection_annotations.append(db_object_detection)
 
         # Create instance segmentation details
-        elif annotation_type in (
-            AnnotationType.INSTANCE_SEGMENTATION,
-            AnnotationType.SEMANTIC_SEGMENTATION,
-        ):
+        elif annotation_type == AnnotationType.INSTANCE_SEGMENTATION:
             x, y, width, height = _validate_bbox(annotation=annotation_create, kind=annotation_type)
             db_instance_segmentation = SegmentationAnnotationTable(
                 sample_id=base_annotations[i].sample_id,

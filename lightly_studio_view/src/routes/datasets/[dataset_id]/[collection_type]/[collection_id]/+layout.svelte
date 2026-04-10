@@ -4,7 +4,10 @@
     import {
         CombinedMetadataDimensionsFilters,
         Footer,
+        GridHeader,
         LabelsMenu,
+        SelectionPill,
+        TagCreateDialog,
         TagsMenu
     } from '$lib/components';
     import Input from '$lib/components/ui/input/input.svelte';
@@ -55,13 +58,15 @@
     import { useVideoFrameAnnotationCounts } from '$lib/hooks/useVideoFrameAnnotationsCount/useVideoFrameAnnotationsCount.js';
     import { useVideoFramesBounds } from '$lib/hooks/useVideoFramesBounds/useVideoFramesBounds.js';
     import { useVideoBounds } from '$lib/hooks/useVideosBounds/useVideosBounds.js';
-    import { SampleType, type ImageFilter } from '$lib/api/lightly_studio_local/types.gen.js';
+    import { SampleType } from '$lib/api/lightly_studio_local/types.gen.js';
     import { buildImageFilter } from '$lib/utils/buildImageFilter';
+    import { useImageFilters } from '$lib/hooks/useImageFilters/useImageFilters';
+    import { useVideoFilters } from '$lib/hooks/useVideoFilters/useVideoFilters';
     import {
         buildVideoAnnotationCountsFilter,
         buildVideoFrameAnnotationCountsFilter
     } from '$lib/utils/buildAnnotationCountsFilters';
-    import { GridHeader } from '$lib/components';
+    import { useSelectionSummary } from '$lib/hooks';
     const { data, children } = $props();
     const {
         collection,
@@ -77,6 +82,8 @@
     const datasetId = $derived(page.params.dataset_id!);
     const collectionId = $derived(page.params.collection_id!);
     const collectionIdStore = toStore(() => collectionId);
+
+    const { selectedCount, clearSelection } = $derived(useSelectionSummary(collectionId));
 
     // Use hideAnnotations hook
     const { handleKeyEvent } = useHideAnnotations();
@@ -216,15 +223,17 @@
     const metadataFilters = $derived(
         metadataValues ? createMetadataFilters($metadataValues) : undefined
     );
-    const imageFilter = $derived.by<ImageFilter | undefined>(() =>
-        buildImageFilter({
-            dimensionsValues: $dimensionsValues ?? undefined,
-            annotationFilter: $annotationFilterStore,
-            metadataFilters
-        })
-    );
     const { videoFramesBoundsValues } = useVideoFramesBounds();
     const { videoBoundsValues } = useVideoBounds();
+
+    const { imageFilter: imageFilterFromHook } = useImageFilters();
+    const { videoFilter: videoFilterFromHook } = useVideoFilters();
+    const plotSelectionImageSampleIds = $derived(
+        $imageFilterFromHook?.sample_filter?.sample_ids ?? []
+    );
+    const plotSelectionVideoSampleIds = $derived(
+        $videoFilterFromHook?.sample_filter?.sample_ids ?? []
+    );
 
     const annotationCounts = $derived.by(() => {
         if (
@@ -248,13 +257,19 @@
                 filter: buildVideoAnnotationCountsFilter({
                     metadataFilters,
                     annotationFilter: $annotationFilterStore,
-                    videoBoundsValues: $videoBoundsValues
+                    videoBoundsValues: $videoBoundsValues,
+                    sampleIds: plotSelectionVideoSampleIds
                 })
             });
         }
         return useImageAnnotationCounts({
             collectionId: datasetId,
-            filter: imageFilter
+            filter: buildImageFilter({
+                dimensionsValues: $dimensionsValues,
+                annotationFilter: $annotationFilterStore,
+                metadataFilters,
+                sampleIds: isAnnotations ? [] : plotSelectionImageSampleIds
+            })
         });
     });
 
@@ -516,7 +531,9 @@
                 <!-- When plot is shown, use PaneGroup for the main content + plot -->
                 <PaneGroup direction="horizontal" class="flex-1">
                     <Pane defaultSize={50} minSize={30} class="flex">
-                        <div class="flex flex-1 flex-col space-y-4 rounded-[1vw] bg-card p-4">
+                        <div
+                            class="relative flex flex-1 flex-col space-y-4 rounded-[1vw] bg-card p-4"
+                        >
                             <GridHeader>
                                 <div class="flex-1">
                                     {#if hasEmbeddings}
@@ -609,6 +626,10 @@
                             <div class="flex min-h-0 flex-1 overflow-hidden">
                                 {@render children()}
                             </div>
+                            <SelectionPill
+                                selectedCount={$selectedCount}
+                                onClear={clearSelection}
+                            />
                         </div>
                     </Pane>
 
@@ -628,7 +649,7 @@
                 </PaneGroup>
             {:else}
                 <!-- When plot is hidden or not samples view, show normal layout -->
-                <div class="flex flex-1 flex-col space-y-4 rounded-[1vw] bg-card p-4 pb-2">
+                <div class="relative flex flex-1 flex-col space-y-4 rounded-[1vw] bg-card p-4 pb-2">
                     {#if isSamples || isAnnotations || isVideos || isGroups}
                         <GridHeader>
                             {#snippet auxControls()}
@@ -735,6 +756,9 @@
                     <div class="flex min-h-0 flex-1">
                         {@render children()}
                     </div>
+                    {#if showLeftSidebar}
+                        <SelectionPill selectedCount={$selectedCount} onClear={clearSelection} />
+                    {/if}
                 </div>
             {/if}
             {#if hasEmbeddings}

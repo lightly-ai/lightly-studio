@@ -17,6 +17,7 @@ from lightly_studio.models.sample import SampleTable
 from lightly_studio.resolvers import (
     annotation_resolver,
     caption_resolver,
+    collection_resolver,
     metadata_resolver,
     tag_resolver,
 )
@@ -25,7 +26,6 @@ from .annotation import Annotation
 from .annotation.classification import ClassificationAnnotation
 from .annotation.instance_segmentation import InstanceSegmentationAnnotation
 from .annotation.object_detection import ObjectDetectionAnnotation
-from .annotation.semantic_segmentation import SemanticSegmentationAnnotation
 
 
 class Sample(ABC):
@@ -252,11 +252,6 @@ class Sample(ABC):
                 annotations.append(
                     InstanceSegmentationAnnotation(inner=annotation.segmentation_details)
                 )
-            elif annotation.annotation_type == AnnotationType.SEMANTIC_SEGMENTATION:
-                assert annotation.segmentation_details is not None, "Invalid sample annotation data"
-                annotations.append(
-                    SemanticSegmentationAnnotation(inner=annotation.segmentation_details)
-                )
             elif annotation.annotation_type == AnnotationType.CLASSIFICATION:
                 annotations.append(ClassificationAnnotation(annotation_base=annotation))
             else:
@@ -279,10 +274,17 @@ class Sample(ABC):
             annotations: The annotations to add.
         """
         session = self.get_object_session()
+        collection = collection_resolver.get_by_id(
+            session=session, collection_id=self.collection_id
+        )
+        if collection is None:
+            raise RuntimeError("Collection linked to sample not present")
+        dataset_id = collection.dataset_id
+
         annotation_creates = [
             annotation.to_annotation_create(
                 session=session,
-                root_collection_id=self.collection_id,
+                dataset_id=dataset_id,
                 parent_sample_id=self.sample_id,
             )
             for annotation in annotations

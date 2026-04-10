@@ -16,7 +16,7 @@
         onRefetch?: () => void;
     }
 
-    let { tags, collectionId, sampleId, onRefetch = () => {} }: Props = $props();
+    let { tags, collectionId, sampleId, onRefetch }: Props = $props();
 
     const { removeTagFromSample } = useRemoveTagFromSample({ collectionId });
 
@@ -27,7 +27,7 @@
             toast.error('Failed to remove tag. Please try again.');
             return;
         }
-        onRefetch();
+        onRefetch?.();
     }
 </script>
 

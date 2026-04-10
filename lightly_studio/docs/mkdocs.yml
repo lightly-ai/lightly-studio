@@ -57,6 +57,9 @@ nav:
   - Advanced:
     - Run LightlyStudio from a Notebook: advanced/notebooks.md
   - About Us: about-us.md
+  - 🏢 Enterprise:
+    - enterprise/index.md
+    - How to Connect: enterprise/connect.md
 
 extra_css:
   - _static/custom.css
