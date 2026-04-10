@@ -20,10 +20,6 @@ vi.mock('$lib/api/lightly_studio_local', async () => {
 });
 
 describe('useVideoFrames', () => {
-    const mockVideoEl = {
-        currentTime: 0
-    } as HTMLVideoElement;
-
     const mockSample: SampleView = {
         collection_id: 'video-collection-1',
         sample_id: 'video-1',
@@ -80,12 +76,12 @@ describe('useVideoFrames', () => {
 
     beforeEach(() => {
         vi.clearAllMocks();
-        mockVideoEl.currentTime = 0;
     });
 
     it('should initialize with default values', () => {
         const hook = useVideoFrames({ video: mockVideoData });
 
+        expect(get(hook.frames)).toEqual([]);
         expect(get(hook.currentFrame)).toBeUndefined();
         expect(hook.loading).toBe(false);
         expect(hook.reachedEnd).toBe(false);
@@ -96,7 +92,6 @@ describe('useVideoFrames', () => {
         vi.mocked(api.getAllFrames).mockResolvedValue({
             data: {
                 data: mockFrames,
-                nextCursor: 50,
                 total_count: mockFrames.length
             },
             error: undefined
@@ -105,9 +100,15 @@ describe('useVideoFrames', () => {
         const hook = useVideoFrames({ video: mockVideoData });
 
         // Subscribe to currentFrame store to verify reactivity
-        const values: (FrameView | undefined)[] = [];
-        const unsubscribe = hook.currentFrame.subscribe((value) => {
-            values.push(value);
+        const currentFrameValues: (FrameView | undefined)[] = [];
+        const unsubscribeCurrentFrame = hook.currentFrame.subscribe((value) => {
+            currentFrameValues.push(value);
+        });
+
+        // Subscribe to frames store to verify reactivity
+        const framesValues: FrameView[][] = [];
+        const unsubscribeFrames = hook.frames.subscribe((value) => {
+            framesValues.push(value);
         });
 
         await hook.loadFramesFromFrameNumber(1);
@@ -115,10 +116,6 @@ describe('useVideoFrames', () => {
         expect(api.getAllFrames).toHaveBeenCalledWith({
             path: {
                 video_frame_collection_id: 'frame-collection-1'
-            },
-            query: {
-                cursor: 0,
-                limit: 50
             },
             body: {
                 filter: {
@@ -129,34 +126,18 @@ describe('useVideoFrames', () => {
 
         expect(hook.loading).toBe(false);
         expect(get(hook.currentFrame)?.frame_number).toBe(1);
-        expect(values).toHaveLength(2); // Initial undefined + update
+        expect(currentFrameValues).toHaveLength(2); // Initial undefined + update
+        expect(get(hook.frames)).toEqual(mockFrames);
+        expect(framesValues).toHaveLength(2); // Initial [] + update
 
-        unsubscribe();
-    });
-
-    it('should throw error when frame number is not found', async () => {
-        vi.mocked(api.getAllFrames).mockResolvedValue({
-            data: {
-                data: mockFrames,
-                nextCursor: 50,
-                total_count: mockFrames.length
-            },
-            error: undefined
-        } as unknown as MockGetAllFramesResponse);
-
-        const hook = useVideoFrames({ video: mockVideoData });
-
-        // Request frame 100, which doesn't exist in mockFrames
-        await expect(hook.loadFramesFromFrameNumber(100)).rejects.toThrow(
-            'Frame not found for the given frame number'
-        );
+        unsubscribeCurrentFrame();
+        unsubscribeFrames();
     });
 
     it('should load frame by playback time and update store', async () => {
         vi.mocked(api.getAllFrames).mockResolvedValue({
             data: {
                 data: mockFrames,
-                nextCursor: 50,
                 total_count: mockFrames.length
             },
             error: undefined
@@ -172,11 +153,10 @@ describe('useVideoFrames', () => {
         expect(currentFrame?.sample_id).toBe('frame-2');
     });
 
-    it('should not fetch again when playback stays inside the loaded frame window', async () => {
+    it('should not fetch again when frames are already loaded', async () => {
         vi.mocked(api.getAllFrames).mockResolvedValue({
             data: {
                 data: mockFrames,
-                nextCursor: 50,
                 total_count: mockFrames.length
             },
             error: undefined
@@ -193,58 +173,102 @@ describe('useVideoFrames', () => {
         expect(get(hook.currentFrame)?.frame_number).toBe(1);
     });
 
-    it('should set currentFrame from frame number', async () => {
+    it('should load all frames when loadFrames is called directly', async () => {
         vi.mocked(api.getAllFrames).mockResolvedValue({
             data: {
                 data: mockFrames,
-                nextCursor: 50,
                 total_count: mockFrames.length
             },
             error: undefined
         } as unknown as MockGetAllFramesResponse);
 
         const hook = useVideoFrames({ video: mockVideoData });
-        await hook.loadFramesFromFrameNumber(1);
 
-        // Verify frame was loaded
-        expect(get(hook.currentFrame)?.frame_number).toBe(1);
+        expect(hook.loading).toBe(false);
+        expect(hook.reachedEnd).toBe(false);
+
+        await hook.loadFrames();
+
+        expect(api.getAllFrames).toHaveBeenCalledWith({
+            path: {
+                video_frame_collection_id: 'frame-collection-1'
+            },
+            body: {
+                filter: {
+                    video_id: 'video-1'
+                }
+            }
+        });
+
+        expect(hook.loading).toBe(false);
+        expect(hook.reachedEnd).toBe(true);
+        expect(get(hook.frames)).toEqual(mockFrames);
     });
 
-    describe('error handling', () => {
-        it('should throw error when frame is not found for playback time', async () => {
-            vi.mocked(api.getAllFrames).mockResolvedValue({
-                data: {
-                    data: mockFrames,
-                    nextCursor: 50,
-                    total_count: mockFrames.length
-                },
-                error: undefined
-            } as unknown as MockGetAllFramesResponse);
-
-            const hook = useVideoFrames({ video: mockVideoData });
-
-            // Request frame 100, which doesn't exist in mockFrames
-            await expect(hook.loadFrameByPlaybackTime(100 / 30, 30)).rejects.toThrow(
-                'Frame not found for the given playback time'
-            );
+    it('should not load frames multiple times if already loading', async () => {
+        let resolvePromise: (value: MockGetAllFramesResponse) => void;
+        const apiPromise = new Promise<MockGetAllFramesResponse>((resolve) => {
+            resolvePromise = resolve;
         });
 
-        it('should throw error when video data is not available', async () => {
-            // Create hook with null videoData
-            const hook = useVideoFrames({ video: null as unknown as VideoView });
+        vi.mocked(api.getAllFrames).mockReturnValue(
+            apiPromise as ReturnType<typeof api.getAllFrames>
+        );
 
-            await expect(hook.loadFrameByPlaybackTime(0, 30)).rejects.toThrow(
-                'No video data available'
-            );
-        });
+        const hook = useVideoFrames({ video: mockVideoData });
+
+        // Start loading frames
+        const firstLoad = hook.loadFrames();
+        expect(hook.loading).toBe(true);
+
+        // Try to load again while first load is in progress
+        const secondLoad = hook.loadFrames();
+
+        // Resolve the API call
+        resolvePromise!({
+            data: {
+                data: mockFrames,
+                total_count: mockFrames.length
+            },
+            error: undefined
+        } as unknown as MockGetAllFramesResponse);
+
+        // Wait for both to complete
+        await Promise.all([firstLoad, secondLoad]);
+
+        // Should only have called the API once
+        expect(api.getAllFrames).toHaveBeenCalledTimes(1);
+    });
+
+    it('should throw error when frame number is not found', async () => {
+        vi.mocked(api.getAllFrames).mockResolvedValue({
+            data: {
+                data: mockFrames,
+                total_count: mockFrames.length
+            },
+            error: undefined
+        } as unknown as MockGetAllFramesResponse);
+
+        const hook = useVideoFrames({ video: mockVideoData });
+
+        await expect(hook.loadFramesFromFrameNumber(100)).rejects.toThrow(
+            'Frame not found for the given frame number'
+        );
+    });
+
+    it('should throw error when video data is not available', async () => {
+        const hook = useVideoFrames({ video: null as unknown as VideoView });
+
+        await expect(hook.loadFrameByPlaybackTime(0, 30)).rejects.toThrow(
+            'No video data available'
+        );
     });
 
     describe('reactivity', () => {
-        it('should notify subscribers when currentFrame changes', async () => {
+        it('should notify subscribers when currentFrame and frames change', async () => {
             vi.mocked(api.getAllFrames).mockResolvedValue({
                 data: {
                     data: mockFrames,
-                    nextCursor: 50,
                     total_count: mockFrames.length
                 },
                 error: undefined
@@ -252,20 +276,30 @@ describe('useVideoFrames', () => {
 
             const hook = useVideoFrames({ video: mockVideoData });
 
-            const values: (FrameView | undefined)[] = [];
-            const unsubscribe = hook.currentFrame.subscribe((value) => {
-                values.push(value);
+            const currentFrameValues: (FrameView | undefined)[] = [];
+            const unsubscribeCurrentFrame = hook.currentFrame.subscribe((value) => {
+                currentFrameValues.push(value);
+            });
+
+            const framesValues: FrameView[][] = [];
+            const unsubscribeFrames = hook.frames.subscribe((value) => {
+                framesValues.push(value);
             });
 
             await hook.loadFramesFromFrameNumber(0);
             await hook.loadFrameByPlaybackTime(0.05, 30);
 
-            expect(values).toHaveLength(3); // Initial undefined + 2 updates
-            expect(values[0]).toBeUndefined();
-            expect(values[1]?.frame_number).toBe(0);
-            expect(values[2]?.frame_number).toBe(1);
+            expect(currentFrameValues).toHaveLength(3); // Initial undefined + 2 updates
+            expect(currentFrameValues[0]).toBeUndefined();
+            expect(currentFrameValues[1]?.frame_number).toBe(0);
+            expect(currentFrameValues[2]?.frame_number).toBe(1);
 
-            unsubscribe();
+            expect(framesValues).toHaveLength(2); // Initial [] + loaded frames
+            expect(framesValues[0]).toEqual([]);
+            expect(framesValues[1]).toEqual(mockFrames);
+
+            unsubscribeCurrentFrame();
+            unsubscribeFrames();
         });
 
         it('should keep the last frame selected at the end of the video', async () => {
@@ -279,8 +313,8 @@ describe('useVideoFrames', () => {
                 },
                 {
                     sample_id: 'frame-2',
-                    frame_number: 1,
-                    frame_timestamp_s: 0.4,
+                    frame_number: 29,
+                    frame_timestamp_s: 0.9667,
                     sample: mockFrameSample2,
                     video: mockVideoData
                 }
@@ -289,7 +323,6 @@ describe('useVideoFrames', () => {
             vi.mocked(api.getAllFrames).mockResolvedValue({
                 data: {
                     data: finalFrames,
-                    nextCursor: null,
                     total_count: finalFrames.length
                 },
                 error: undefined
@@ -300,10 +333,10 @@ describe('useVideoFrames', () => {
 
             vi.mocked(api.getAllFrames).mockClear();
 
+            // Request frame 30+ (at 1 second), should get frame 29 (the last one)
             await hook.loadFrameByPlaybackTime(1, 30);
 
-            expect(api.getAllFrames).not.toHaveBeenCalled();
-            expect(get(hook.currentFrame)?.frame_number).toBe(1);
+            expect(get(hook.currentFrame)?.frame_number).toBe(29);
         });
     });
 });
