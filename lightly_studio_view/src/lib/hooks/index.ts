@@ -1,4 +1,5 @@
 export { useVideoFrames } from '$lib/hooks/useVideoFrames/useVideoFrames';
+export { useVideoFrameAnnotations } from '$lib/hooks/useVideoFrameAnnotations/useVideoFrameAnnotations';
 export { useSamplesInfinite } from '$lib/hooks/useSamplesInfinite/useSamplesInfinite';
 export { useGlobalStorage } from '$lib/hooks/useGlobalStorage';
 export { useGroupsInfinite } from '$lib/hooks/useGroupsInfinite/useGroupsInfinite';
