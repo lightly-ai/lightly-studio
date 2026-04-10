@@ -19,6 +19,7 @@ from lightly_studio.plugins.parameter import BaseParameter, FloatParameter, Stri
 from lightly_studio.resolvers import (
     annotation_label_resolver,
     annotation_resolver,
+    collection_resolver,
     image_resolver,
 )
 from lightly_studio.resolvers.image_filter import ImageFilter
@@ -156,18 +157,23 @@ def _get_or_create_label_map(
     class_map: dict[int, str],
 ) -> dict[int, UUID]:
     """Ensure labels exist for all class names and return {category_id: label_id}."""
+    collection = collection_resolver.get_by_id(session=session, collection_id=root_collection_id)
+    if collection is None:
+        raise ValueError(f"Collection {root_collection_id} doesn't exist")
+    dataset_id = collection.dataset_id
+
     label_map: dict[int, UUID] = {}
     for category_id, label_name in class_map.items():
         label = annotation_label_resolver.get_by_label_name(
             session=session,
-            root_collection_id=root_collection_id,
+            dataset_id=dataset_id,
             label_name=label_name,
         )
         if label is None:
             label = annotation_label_resolver.create(
                 session=session,
                 label=AnnotationLabelCreate(
-                    root_collection_id=root_collection_id,
+                    dataset_id=dataset_id,
                     annotation_label_name=label_name,
                 ),
             )

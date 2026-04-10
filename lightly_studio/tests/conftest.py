@@ -205,12 +205,12 @@ def annotation_labels(
     db_session: Session, collections: list[CollectionTable]
 ) -> list[AnnotationLabelTable]:
     """Create multiple test annotation labels."""
-    collection_id = collections[0].collection_id
+    dataset_id = collections[0].dataset_id
     labels = []
     for i in range(5):
         label_input = AnnotationLabelCreate(
             annotation_label_name=f"test_label_{i}",
-            root_collection_id=collection_id,
+            dataset_id=dataset_id,
         )
         label = annotation_label_resolver.create(db_session, label_input)
         labels.append(label)
@@ -355,14 +355,13 @@ def annotations_test_data(
         AnnotationType.CLASSIFICATION,
         AnnotationType.OBJECT_DETECTION,
         AnnotationType.INSTANCE_SEGMENTATION,
-        AnnotationType.SEMANTIC_SEGMENTATION,
     ]
 
     annotations_to_create_first_collection: list[AnnotationCreate] = []
     annotations_to_create_second_collection: list[AnnotationCreate] = []
 
-    # create annotation for every annotation type
-    for _, annotation_type in enumerate(annotation_types):
+    # Create annotation for every annotation type.
+    for annotation_type in annotation_types:
         # Create 3 annotations for each type
         for i in range(3):
             # We distribute annotation labels across the annotations
@@ -388,12 +387,6 @@ def annotations_test_data(
                 annotation.width = 150
                 annotation.height = 250
                 annotation.segmentation_mask = [1, 2, 3, 4]
-            elif annotation_type == AnnotationType.SEMANTIC_SEGMENTATION:
-                annotation.x = 17
-                annotation.y = 27
-                annotation.width = 170
-                annotation.height = 270
-                annotation.segmentation_mask = [5, 6, 7, 8]
             if i % 2 == 0:
                 annotations_to_create_first_collection.append(annotation)
             else:

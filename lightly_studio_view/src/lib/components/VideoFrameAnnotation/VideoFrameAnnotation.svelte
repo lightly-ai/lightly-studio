@@ -5,6 +5,7 @@
     import { useAnnotation } from '$lib/hooks/useAnnotation/useAnnotation';
     import { useGlobalStorage } from '$lib/hooks/useGlobalStorage';
     import { addAnnotationUpdateToUndoStack } from '$lib/services/addAnnotationUpdateToUndoStack';
+    import { shouldShowBoundingBoxForAnnotation } from '$lib/utils/shouldShowBoundingBoxForAnnotation';
     import { type VideoFrameView } from '$lib/api/lightly_studio_local';
     import { getBoundingBox } from '../SampleAnnotation/utils';
 
@@ -24,7 +25,7 @@
         toggleAnnotationSelection: (annotationId: string) => void;
     } = $props();
     const { addReversibleAction } = useGlobalStorage();
-    const { showAnnotationTextLabelsStore } = useSettings();
+    const { showAnnotationTextLabelsStore, showBoundingBoxesForSegmentationStore } = useSettings();
 
     const { annotation: annotationResp, updateAnnotation } = $derived(
         useAnnotation({
@@ -36,6 +37,9 @@
     let annotation = $derived($annotationResp.data);
 
     let selectionBox = $derived(annotation ? getBoundingBox(annotation!) : undefined);
+    const showBoundingBox = $derived(
+        shouldShowBoundingBoxForAnnotation(annotation, $showBoundingBoxesForSegmentationStore)
+    );
 
     const onBoundingBoxChanged = (bbox: BoundingBox) => {
         const _update = async () => {
@@ -71,6 +75,7 @@
             <SampleAnnotation
                 {annotation}
                 showLabel={$showAnnotationTextLabelsStore}
+                {showBoundingBox}
                 imageWidth={sample.video.width}
                 constraintBox={{
                     x: 0,

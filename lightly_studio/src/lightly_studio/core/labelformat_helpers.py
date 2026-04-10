@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from collections.abc import Iterable
-from typing import Literal, Protocol
+from typing import Protocol
 from uuid import UUID
 
 from labelformat.model.binary_mask_segmentation import BinaryMaskSegmentation
@@ -17,7 +17,10 @@ from lightly_studio.models.annotation.annotation_base import (
     AnnotationType,
 )
 from lightly_studio.models.annotation_label import AnnotationLabelCreate
-from lightly_studio.resolvers import annotation_label_resolver
+from lightly_studio.resolvers import (
+    annotation_label_resolver,
+    collection_resolver,
+)
 
 
 class _LabelsWithCategories(Protocol):
@@ -32,9 +35,6 @@ def get_segmentation_annotation_create(
     parent_sample_id: UUID,
     annotation_label_id: UUID,
     segmentation: MultiPolygon | BinaryMaskSegmentation,
-    annotation_type: Literal[
-        AnnotationType.INSTANCE_SEGMENTATION, AnnotationType.SEMANTIC_SEGMENTATION
-    ] = AnnotationType.INSTANCE_SEGMENTATION,
     object_track_id: UUID | None = None,
 ) -> AnnotationCreate:
     """Get a AnnotationCreate instance for the provided labelformat instance segmentation.
@@ -43,7 +43,6 @@ def get_segmentation_annotation_create(
         parent_sample_id: ID of the parent sample of the annotation.
         annotation_label_id: ID of the label for the annotation.
         segmentation: Instance segmentation in labelformat.
-        annotation_type: Instance or Semantic segmentation type.
         object_track_id: The track ID of the object (indicating that it is part of a track).
 
     Returns:
@@ -62,7 +61,7 @@ def get_segmentation_annotation_create(
     return AnnotationCreate(
         parent_sample_id=parent_sample_id,
         annotation_label_id=annotation_label_id,
-        annotation_type=annotation_type,
+        annotation_type=AnnotationType.INSTANCE_SEGMENTATION,
         x=int(x),
         y=int(y),
         width=int(width),
@@ -105,6 +104,7 @@ def get_object_detection_annotation_create(
     )
 
 
+# TODO(lukas 04/2026): change `root_collection_id` to `dataset_id`
 def create_label_map(
     session: Session,
     root_collection_id: UUID,
@@ -117,16 +117,21 @@ def create_label_map(
         root_collection_id: The ID of the root collection the labels belong to.
         input_labels: The labelformat input containing the categories.
     """
+    collection = collection_resolver.get_by_id(session=session, collection_id=root_collection_id)
+    if collection is None:
+        raise ValueError(f"Collection {root_collection_id} doesn't exist")
+    dataset_id = collection.dataset_id
+
     label_map = {}
     for category in input_labels.get_categories():
         # Use label if already exists
         label = annotation_label_resolver.get_by_label_name(
-            session=session, root_collection_id=root_collection_id, label_name=category.name
+            session=session, dataset_id=dataset_id, label_name=category.name
         )
         if label is None:
             # Create new label
             label_create = AnnotationLabelCreate(
-                root_collection_id=root_collection_id,
+                dataset_id=dataset_id,
                 annotation_label_name=category.name,
             )
             label = annotation_label_resolver.create(session=session, label=label_create)

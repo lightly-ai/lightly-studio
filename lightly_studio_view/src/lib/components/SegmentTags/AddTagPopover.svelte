@@ -4,11 +4,6 @@
     import * as Popover from '$lib/components/ui/popover/index.js';
     import type { TagView } from '$lib/services/types';
 
-    interface TagItem {
-        tag_id?: string;
-        name: string;
-    }
-
     interface Props {
         options: TagView[];
         attachedTagNames: Set<string>;
@@ -21,23 +16,29 @@
     let open = $state(false);
     let inputValue = $state('');
 
-    $effect(() => {
-        if (!open) inputValue = '';
-    });
+    function handleOpenChange(isOpen: boolean) {
+        open = isOpen;
+        if (!isOpen) inputValue = '';
+    }
 
     function handleSelect(name: string) {
+        if (busy) return;
         onSelect(name);
         open = false;
     }
 
+    const normalizedAttachedTagNames = $derived(
+        new Set(Array.from(attachedTagNames, (name) => name.toLowerCase()))
+    );
+
     const showCreate = $derived(
         inputValue.trim() !== '' &&
-            !attachedTagNames.has(inputValue.trim().toLowerCase()) &&
+            !normalizedAttachedTagNames.has(inputValue.trim().toLowerCase()) &&
             !options.some((t) => t.name.toLowerCase() === inputValue.trim().toLowerCase())
     );
 </script>
 
-<Popover.Root bind:open>
+<Popover.Root {open} onOpenChange={handleOpenChange}>
     <Popover.Trigger
         class="mt-2 flex items-center gap-1 rounded px-1 py-0.5 text-xs text-muted-foreground transition hover:text-foreground"
         disabled={busy}
@@ -61,7 +62,7 @@
                     <div class="border-t">
                         <Command.Item
                             value="__create__"
-                            onSelect={() => handleSelect(inputValue)}
+                            onSelect={() => handleSelect(inputValue.trim())}
                             forceMount
                             keywords={[]}
                         >

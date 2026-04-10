@@ -1395,13 +1395,14 @@ export interface paths {
         put?: never;
         /**
          * Get All Frames
-         * @description Retrieve a list of all frames for a given collection ID with pagination.
+         * @description Retrieve a list of all frames for a given collection ID with optional pagination.
          *
          *     Args:
          *         session: The database session.
          *         video_frame_collection_id: The ID of the collection to retrieve frames for.
-         *         pagination: Pagination parameters including offset and limit.
          *         body: The body containing the filters
+         *         pagination: Optional pagination parameters including offset and limit.
+         *
          *     Returns:
          *         A list of frames along with the total count.
          */
@@ -1676,6 +1677,35 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/cloud-credentials": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * Refresh Cloud Credentials
+         * @description Receive cloud storage credentials.
+         *
+         *     Sets the credentials as environment variables and clears the S3 fsspec
+         *     instance cache so that subsequent file operations pick up the new
+         *     credentials.
+         *
+         *     TODO Mihnea (04/2026) Security:
+         *      This endpoint has no authentication and accepts arbitrary env var
+         *      keys. This is acceptable for air-gapped on-prem (behind Docker isolation with no internet).
+         *      For the hosted version, this endpoint must be secured with authentication and input validation.
+         */
+        put: operations["refresh_cloud_credentials"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/images/sample/{sample_id}": {
         parameters: {
             query?: never;
@@ -1891,10 +1921,10 @@ export interface components {
          */
         AnnotationLabelCreate: {
             /**
-             * Root Collection Id
+             * Dataset Id
              * Format: uuid
              */
-            root_collection_id: string;
+            dataset_id: string;
             /** Annotation Label Name */
             annotation_label_name: string;
         };
@@ -1912,10 +1942,10 @@ export interface components {
          */
         AnnotationLabelTable: {
             /**
-             * Root Collection Id
+             * Dataset Id
              * Format: uuid
              */
-            root_collection_id: string;
+            dataset_id: string;
             /** Annotation Label Name */
             annotation_label_name: string;
             /**
@@ -1931,7 +1961,7 @@ export interface components {
          * @description The type of annotation task.
          * @enum {string}
          */
-        AnnotationType: "classification" | "semantic_segmentation" | "instance_segmentation" | "object_detection";
+        AnnotationType: "classification" | "instance_segmentation" | "object_detection";
         /**
          * AnnotationUpdateInput
          * @description API input model for updating an annotation.
@@ -3226,6 +3256,12 @@ export interface components {
              * @default false
              */
             show_sample_filenames: boolean;
+            /**
+             * Show Bounding Boxes For Segmentation
+             * @description Controls whether to show annotation bounding boxes for segmentation
+             * @default true
+             */
+            show_bounding_boxes_for_segmentation: boolean;
             /**
              * Key Toolbar Selection
              * @description Key to activate the selection tool in the toolbar
@@ -4623,7 +4659,6 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                /** @description Fetch labels registered with the root collection of this collection */
                 collection_id: string;
             };
             cookie?: never;
@@ -4655,7 +4690,6 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                /** @description Register the label with the root collection of this collection */
                 collection_id: string;
             };
             cookie?: never;
@@ -5989,8 +6023,10 @@ export interface operations {
     get_all_frames: {
         parameters: {
             query?: {
-                cursor?: number;
-                limit?: number;
+                /** @description Offset for pagination */
+                cursor?: number | null;
+                /** @description Limit for pagination */
+                limit?: number | null;
             };
             header?: never;
             path: {
@@ -6352,6 +6388,39 @@ export interface operations {
                 content: {
                     "application/json": components["schemas"]["GroupComponentView"][];
                 };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    refresh_cloud_credentials: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    [key: string]: string;
+                };
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
             /** @description Validation Error */
             422: {

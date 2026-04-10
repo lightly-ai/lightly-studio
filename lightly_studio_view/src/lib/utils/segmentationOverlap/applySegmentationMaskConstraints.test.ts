@@ -38,7 +38,6 @@ describe('applySegmentationMaskConstraints', () => {
             workingMask,
             lockedAnnotationIds: locked,
             annotations,
-            segmentationMode: 'instance',
             sample,
             skipId: 'new',
             collectionId: 'c',

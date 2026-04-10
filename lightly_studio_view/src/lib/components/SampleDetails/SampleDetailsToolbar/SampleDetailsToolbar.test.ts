@@ -235,9 +235,9 @@ describe('SampleDetailsToolbar', () => {
         );
     });
 
-    it('normalizes semantic segmentation to instance segmentation when remounting in brush mode', () => {
+    it('normalizes non-instance annotation type to instance segmentation when remounting in brush mode', () => {
         mockSampleDetailsToolbarContext.status = 'brush';
-        mockAnnotationLabelContext.annotationType = AnnotationType.SEMANTIC_SEGMENTATION;
+        mockAnnotationLabelContext.annotationType = AnnotationType.OBJECT_DETECTION;
 
         render(SampleDetailsToolbar);
 

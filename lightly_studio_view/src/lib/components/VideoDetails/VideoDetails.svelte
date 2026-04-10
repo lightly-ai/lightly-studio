@@ -13,9 +13,12 @@
     import VideoSampleMetadata from '../VideoSampleMetadata/VideoSampleMetadata.svelte';
     import SampleDetailsCaptionSegment from '../SampleDetails/SampleDetailsCaptionsSegment/SampleDetailsCaptionSegment.svelte';
     import { useVideoFrames } from '$lib/hooks/useVideoFrames/useVideoFrames';
+    import { useVideoFrameAnnotations } from '$lib/hooks/useVideoFrameAnnotations/useVideoFrameAnnotations';
     import { onMount } from 'svelte';
     import { routeHelpers } from '$lib/routes';
-    import VideoFrameAnnotationItem from '../VideoFrameAnnotationItem/VideoFrameAnnotationItem.svelte';
+    import VideoFrameAnnotationItem, {
+        type PrerenderedAnnotation
+    } from '../VideoFrameAnnotationItem/VideoFrameAnnotationItem.svelte';
 
     type VideoDetailsProps = {
         video: VideoView;
@@ -28,8 +31,24 @@
     let videoEl: HTMLVideoElement | null = $state(null);
     let frameRequestId: number | null = $state(null);
 
-    const { currentFrame, loadFrameByPlaybackTime, loadFramesFromFrameNumber } = useVideoFrames({
+    const {
+        currentFrame,
+        frames: videoFrames,
+        loadFrameByPlaybackTime,
+        loadFramesFromFrameNumber
+    } = useVideoFrames({
         video
+    });
+
+    // Pre-render all frame annotations as dataURLs for efficient playback
+    const frameAnnotationMap = $derived(
+        useVideoFrameAnnotations({ frames: $videoFrames, imageWidth: video.width })
+    );
+
+    // Get prerendered annotations for current frame
+    const prerenderedAnnotations = $derived.by((): PrerenderedAnnotation[] | undefined => {
+        if (!$currentFrame) return undefined;
+        return frameAnnotationMap.get($currentFrame.sample_id);
     });
 
     function stopFrameSyncLoop() {
@@ -153,6 +172,7 @@
                             showLabel={true}
                             sampleWidth={video.width}
                             sampleHeight={video.height}
+                            {prerenderedAnnotations}
                         />
                     {/if}
                 </div>
@@ -161,12 +181,14 @@
 
         <Card className="flex flex-1 flex-col overflow-hidden">
             <CardContent className="h-full overflow-y-auto">
-                <SegmentTags
-                    tags={video?.sample?.tags ?? []}
-                    collectionId={datasetId}
-                    sampleId={video?.sample?.sample_id}
-                    onRefetch={onVideoUpdate}
-                />
+                {#if video?.sample?.sample_id}
+                    <SegmentTags
+                        tags={video.sample.tags ?? []}
+                        collectionId={datasetId}
+                        sampleId={video.sample.sample_id}
+                        onRefetch={onVideoUpdate}
+                    />
+                {/if}
                 <VideoSampleMetadata {video} />
                 <MetadataSegment metadata_dict={(video?.sample as SampleView).metadata_dict} />
                 {#if video?.sample?.sample_id}

@@ -38,7 +38,7 @@ class CreateAnnotation(Protocol):
     """Protocol from converting to AnnotationCreate."""
 
     def to_annotation_create(
-        self, session: Session, root_collection_id: UUID, parent_sample_id: UUID
+        self, session: Session, dataset_id: UUID, parent_sample_id: UUID
     ) -> AnnotationCreate:
         """Convert to AnnotationCreate."""
         ...
@@ -52,15 +52,15 @@ class CreateAnnotationBase(BaseModel):
     confidence: float | None = None
     """Confidence expressed as probability between 0.0 and 1.0 (inclusive)."""
 
-    def _get_label_id(self, session: Session, root_collection_id: UUID) -> UUID:
+    def _get_label_id(self, session: Session, dataset_id: UUID) -> UUID:
         label = annotation_label_resolver.get_by_label_name(
-            session=session, root_collection_id=root_collection_id, label_name=self.label
+            session=session, dataset_id=dataset_id, label_name=self.label
         )
         if label is None:
             label = annotation_label_resolver.create(
                 session=session,
                 label=AnnotationLabelCreate(
-                    root_collection_id=root_collection_id, annotation_label_name=self.label
+                    dataset_id=dataset_id, annotation_label_name=self.label
                 ),
             )
         return label.annotation_label_id
@@ -70,13 +70,11 @@ class CreateClassification(CreateAnnotationBase):
     """Input model for creating classification annotations."""
 
     def to_annotation_create(
-        self, session: Session, root_collection_id: UUID, parent_sample_id: UUID
+        self, session: Session, dataset_id: UUID, parent_sample_id: UUID
     ) -> AnnotationCreate:
         """Convert to AnnotationCreate."""
         return AnnotationCreate(
-            annotation_label_id=self._get_label_id(
-                session=session, root_collection_id=root_collection_id
-            ),
+            annotation_label_id=self._get_label_id(session=session, dataset_id=dataset_id),
             annotation_type=AnnotationType.CLASSIFICATION,
             confidence=self.confidence,
             parent_sample_id=parent_sample_id,
@@ -96,13 +94,11 @@ class CreateObjectDetection(CreateAnnotationBase):
     """Height (px) of the object detection bounding box."""
 
     def to_annotation_create(
-        self, session: Session, root_collection_id: UUID, parent_sample_id: UUID
+        self, session: Session, dataset_id: UUID, parent_sample_id: UUID
     ) -> AnnotationCreate:
         """Convert to AnnotationCreate."""
         return AnnotationCreate(
-            annotation_label_id=self._get_label_id(
-                session=session, root_collection_id=root_collection_id
-            ),
+            annotation_label_id=self._get_label_id(session=session, dataset_id=dataset_id),
             annotation_type=AnnotationType.OBJECT_DETECTION,
             confidence=self.confidence,
             parent_sample_id=parent_sample_id,
@@ -128,13 +124,11 @@ class CreateInstanceSegmentation(CreateAnnotationBase):
     """Segmentation mask given as a run-length encoding."""
 
     def to_annotation_create(
-        self, session: Session, root_collection_id: UUID, parent_sample_id: UUID
+        self, session: Session, dataset_id: UUID, parent_sample_id: UUID
     ) -> AnnotationCreate:
         """Convert to AnnotationCreate."""
         return AnnotationCreate(
-            annotation_label_id=self._get_label_id(
-                session=session, root_collection_id=root_collection_id
-            ),
+            annotation_label_id=self._get_label_id(session=session, dataset_id=dataset_id),
             annotation_type=AnnotationType.INSTANCE_SEGMENTATION,
             confidence=self.confidence,
             parent_sample_id=parent_sample_id,
@@ -197,100 +191,6 @@ class CreateInstanceSegmentation(CreateAnnotationBase):
             segmentation_mask=segmentation_mask, sample_2d=sample_2d
         )
         return CreateInstanceSegmentation(
-            label=label,
-            x=x,
-            y=y,
-            width=width,
-            height=height,
-            segmentation_mask=segmentation_mask,
-            confidence=confidence,
-        )
-
-
-class CreateSemanticSegmentation(CreateAnnotationBase):
-    """Input model for creating semantic segmentation annotations."""
-
-    x: int
-    """Left X coordinate (px) of the object detection bounding box."""
-    y: int
-    """Top Y coordinate (px) of the object detection bounding box."""
-    width: int
-    """Width (px) of the segmentation bounding box."""
-    height: int
-    """Height (px) of the segmentation bounding box."""
-    segmentation_mask: list[int]
-    """Segmentation mask given as a run-length encoding."""
-
-    def to_annotation_create(
-        self, session: Session, root_collection_id: UUID, parent_sample_id: UUID
-    ) -> AnnotationCreate:
-        """Convert to AnnotationCreate."""
-        return AnnotationCreate(
-            annotation_label_id=self._get_label_id(
-                session=session, root_collection_id=root_collection_id
-            ),
-            annotation_type=AnnotationType.SEMANTIC_SEGMENTATION,
-            confidence=self.confidence,
-            parent_sample_id=parent_sample_id,
-            x=self.x,
-            y=self.y,
-            width=self.width,
-            height=self.height,
-            segmentation_mask=self.segmentation_mask,
-        )
-
-    @staticmethod
-    def from_binary_mask(
-        label: str,
-        binary_mask: NDArray[np.int_],
-        confidence: float | None = None,
-    ) -> CreateSemanticSegmentation:
-        """Create a semantic segmentation annotation from a binary mask.
-
-        Args:
-            label: Annotation label
-            binary_mask: Binary mask of the segmentation given as a 2D array. The dimensions of the
-                array must match the image.
-            confidence: Optional annotation confidence, between 0.0 and 1.0 (inclusive).
-
-        Returns:
-            The CreateSemanticSegmentation instance for the provided details.
-        """
-        (segmentation_mask, bbox) = _segmentation_mask_and_bounding_box(binary_mask=binary_mask)
-        x, y, width, height = bbox
-
-        return CreateSemanticSegmentation(
-            x=x,
-            y=y,
-            width=width,
-            height=height,
-            segmentation_mask=segmentation_mask,
-            label=label,
-            confidence=confidence,
-        )
-
-    @staticmethod
-    def from_rle_mask(
-        label: str,
-        segmentation_mask: list[int],
-        sample_2d: Sample2D,
-        confidence: float | None = None,
-    ) -> CreateSemanticSegmentation:
-        """Create a semantic segmentation annotation from a RLE segmentation mask.
-
-        Args:
-            label: Annotation label
-            segmentation_mask: A run-length encoded (RLE) segmentation mask.
-            sample_2d: A sample having width and height in pixels (image, video frame, etc.).
-            confidence: Optional annotation confidence, between 0.0 and 1.0 (inclusive).
-
-        Returns:
-            The CreateSemanticSegmentation instance for the provided details.
-        """
-        x, y, width, height = _bounding_box_from_rle(
-            segmentation_mask=segmentation_mask, sample_2d=sample_2d
-        )
-        return CreateSemanticSegmentation(
             label=label,
             x=x,
             y=y,

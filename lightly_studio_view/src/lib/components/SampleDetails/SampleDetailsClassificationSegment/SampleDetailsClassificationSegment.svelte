@@ -89,7 +89,7 @@
 
         if (!label) {
             label = await createLabel({
-                root_collection_id: collectionId,
+                dataset_id: datasetId,
                 annotation_label_name: labelName
             });
         }

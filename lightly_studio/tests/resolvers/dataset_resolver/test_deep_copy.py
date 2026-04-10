@@ -368,20 +368,6 @@ def test_deep_copy__can_delete_original_after_copy(db_session: Session) -> None:
         collection_id=original.collection_id,
         sample_id=img.sample_id,
         annotation_label_id=label.annotation_label_id,
-        annotation_type=AnnotationType.SEMANTIC_SEGMENTATION,
-        annotation_data={
-            "x": 5,
-            "y": 15,
-            "width": 25,
-            "height": 35,
-            "segmentation_mask": [0, 1, 1, 0],
-        },
-    )
-    create_annotation(
-        session=db_session,
-        collection_id=original.collection_id,
-        sample_id=img.sample_id,
-        annotation_label_id=label.annotation_label_id,
         annotation_type=AnnotationType.INSTANCE_SEGMENTATION,
         annotation_data={
             "x": 2,
@@ -444,7 +430,7 @@ def test_deep_copy__can_delete_original_after_copy(db_session: Session) -> None:
         session=db_session,
         filters=AnnotationsFilter(collection_ids=[copied.children[0].collection_id]),
     )
-    assert copied_annotations.total_count == 4
+    assert copied_annotations.total_count == 3
 
 
 def test_deep_copy__raises_for_nonexistent_dataset(db_session: Session) -> None:
@@ -495,20 +481,6 @@ def test_deep_copy__with_annotations(db_session: Session) -> None:
             "object_track_id": original_track_id,
         },
     )
-    semantic_seg = create_annotation(
-        session=db_session,
-        collection_id=original.collection_id,
-        sample_id=img.sample_id,
-        annotation_label_id=label.annotation_label_id,
-        annotation_type=AnnotationType.SEMANTIC_SEGMENTATION,
-        annotation_data={
-            "x": 5,
-            "y": 15,
-            "width": 25,
-            "height": 35,
-            "segmentation_mask": [0, 1, 1, 0],
-        },
-    )
     instance_seg = create_annotation(
         session=db_session,
         collection_id=original.collection_id,
@@ -527,7 +499,6 @@ def test_deep_copy__with_annotations(db_session: Session) -> None:
     original_sample_ids = {
         classification.sample_id,
         obj_detection.sample_id,
-        semantic_seg.sample_id,
         instance_seg.sample_id,
     }
 
@@ -538,12 +509,12 @@ def test_deep_copy__with_annotations(db_session: Session) -> None:
         copy_name="copied",
     )
 
-    # Assert - 4 annotations exist in the copied collection
+    # Assert - 3 annotations exist in the copied collection
     result = annotation_resolver.get_all(
         session=db_session,
         filters=AnnotationsFilter(collection_ids=[copied.children[0].collection_id]),
     )
-    assert result.total_count == 4
+    assert result.total_count == 3
 
     # Assert - all annotation sample_ids differ from originals
     copied_sample_ids = {a.sample_id for a in result.annotations}
@@ -574,16 +545,6 @@ def test_deep_copy__with_annotations(db_session: Session) -> None:
     assert copied_track is not None
     assert copied_track.object_track_number == 7
     assert copied_track.dataset_id == copied.dataset_id
-
-    # Assert - semantic segmentation detail table copied
-    copied_ss = copied_by_type[AnnotationType.SEMANTIC_SEGMENTATION]
-    ss_detail = db_session.get(SegmentationAnnotationTable, copied_ss.sample_id)
-    assert ss_detail is not None
-    assert ss_detail.x == 5
-    assert ss_detail.y == 15
-    assert ss_detail.width == 25
-    assert ss_detail.height == 35
-    assert ss_detail.segmentation_mask == [0, 1, 1, 0]
 
     # Assert - instance segmentation detail table copied
     copied_is = copied_by_type[AnnotationType.INSTANCE_SEGMENTATION]
