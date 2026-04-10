@@ -38,9 +38,9 @@
 
     const tags = $derived(
         sample.tags
-            ? sample.tags.reduce((accumulator: { tagId: string; name: string }[], tag) => {
+            ? sample.tags.reduce((accumulator: { tag_id: string; name: string }[], tag) => {
                   if (tag.tag_id) {
-                      accumulator.push({ tagId: tag.tag_id, name: tag.name });
+                      accumulator.push({ tag_id: tag.tag_id, name: tag.name });
                   }
                   return accumulator;
               }, [])

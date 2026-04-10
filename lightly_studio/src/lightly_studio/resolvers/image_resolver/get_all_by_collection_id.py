@@ -12,6 +12,7 @@ from sqlalchemy.orm.interfaces import LoaderOption
 from sqlmodel import Session, col, func, select
 
 from lightly_studio.api.routes.api.validators import Paginated
+from lightly_studio.core.dataset_query.wire import WireExpression, deserialize
 from lightly_studio.models.annotation.annotation_base import AnnotationBaseTable
 from lightly_studio.models.image import ImageTable
 from lightly_studio.models.sample import SampleTable
@@ -63,6 +64,7 @@ def get_all_by_collection_id(  # noqa: PLR0913
     collection_id: UUID,
     pagination: Paginated | None = None,
     filters: ImageFilter | None = None,
+    query_filter: WireExpression | None = None,
     text_embedding: list[float] | None = None,
     sample_ids: list[UUID] | None = None,
 ) -> GetAllSamplesByCollectionIdResult:
@@ -81,6 +83,7 @@ def get_all_by_collection_id(  # noqa: PLR0913
             distance_expr=distance_expr,
             pagination=pagination,
             filters=filters,
+            query_filter=query_filter,
             sample_ids=sample_ids,
         )
     return _get_all_without_similarity(
@@ -88,6 +91,7 @@ def get_all_by_collection_id(  # noqa: PLR0913
         collection_id=collection_id,
         pagination=pagination,
         filters=filters,
+        query_filter=query_filter,
         sample_ids=sample_ids,
     )
 
@@ -99,6 +103,7 @@ def _get_all_with_similarity(  # noqa: PLR0913
     distance_expr: ColumnElement[float],
     pagination: Paginated | None,
     filters: ImageFilter | None,
+    query_filter: WireExpression | None,
     sample_ids: list[UUID] | None,
 ) -> GetAllSamplesByCollectionIdResult:
     """Get samples with similarity search - returns (ImageTable, float) tuples."""
@@ -132,6 +137,11 @@ def _get_all_with_similarity(  # noqa: PLR0913
         samples_query = filters.apply(samples_query)
         total_count_query = filters.apply(total_count_query)
 
+    if query_filter is not None:
+        condition = deserialize(query_filter)
+        samples_query = samples_query.where(condition)
+        total_count_query = total_count_query.where(condition)
+
     # TODO(Michal, 06/2025): Consider adding sample_ids to the filters.
     if sample_ids:
         samples_query = samples_query.where(col(ImageTable.sample_id).in_(sample_ids))
@@ -156,11 +166,12 @@ def _get_all_with_similarity(  # noqa: PLR0913
     )
 
 
-def _get_all_without_similarity(
+def _get_all_without_similarity(  # noqa: PLR0913
     session: Session,
     collection_id: UUID,
     pagination: Paginated | None,
     filters: ImageFilter | None,
+    query_filter: WireExpression | None,
     sample_ids: list[UUID] | None,
 ) -> GetAllSamplesByCollectionIdResult:
     """Get samples without similarity search - returns ImageTable directly."""
@@ -183,6 +194,11 @@ def _get_all_without_similarity(
     if filters:
         samples_query = filters.apply(samples_query)
         total_count_query = filters.apply(total_count_query)
+
+    if query_filter is not None:
+        condition = deserialize(query_filter)
+        samples_query = samples_query.where(condition)
+        total_count_query = total_count_query.where(condition)
 
     # TODO(Michal, 06/2025): Consider adding sample_ids to the filters.
     if sample_ids:

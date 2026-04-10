@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from datetime import datetime
-from typing import TYPE_CHECKING, Callable, Generic, Literal, TypeVar, Union
+from typing import TYPE_CHECKING, Any, Callable, Generic, Literal, TypeVar, Union
 
 from sqlalchemy import ColumnElement
 from sqlalchemy.orm import Mapped
@@ -56,6 +56,15 @@ class OrdinalFieldExpression(MatchExpression, Generic[T]):
         }
         return operations[self.operator](table_property, self.value)
 
+    def to_wire(self) -> dict[str, Any]:
+        """Serialise to wire format."""
+        return {
+            "type": "field",
+            "field": self.field.wire_name,
+            "op": self.operator,
+            "value": self.value,
+        }
+
 
 NumericalFieldExpression = OrdinalFieldExpression[Union[float, int]]
 DatetimeFieldExpression = OrdinalFieldExpression[datetime]
@@ -77,3 +86,12 @@ class ComparableFieldExpression(MatchExpression, Generic[T]):
             "!=": lambda tp, v: tp != v,
         }
         return operations[self.operator](table_property, self.value)
+
+    def to_wire(self) -> dict[str, Any]:
+        """Serialise to wire format."""
+        return {
+            "type": "field",
+            "field": self.field.wire_name,
+            "op": self.operator,
+            "value": self.value,
+        }

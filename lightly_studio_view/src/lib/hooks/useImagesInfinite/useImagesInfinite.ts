@@ -6,6 +6,12 @@ import type { DimensionBounds } from '$lib/services/loadDimensionBounds';
 import { createMetadataFilters } from '$lib/hooks/useMetadataFilters/useMetadataFilters';
 import type { MetadataValues } from '$lib/services/types';
 import { GRID_PAGE_SIZE } from '$lib/constants';
+import type { WireExpression } from '$lib/types/queryFilter';
+
+/** Extends the generated request type until query_filter lands in the OpenAPI schema. */
+type ReadImagesRequestWithQueryFilter = ReadImagesRequest & {
+    query_filter?: WireExpression;
+};
 
 // Define mode-aware parameter types.
 interface ClassifierSamples {
@@ -23,6 +29,7 @@ interface NormalModeFilters {
 interface CommonFilters {
     metadata_values?: MetadataValues;
     text_embedding?: number[];
+    query_filter?: WireExpression;
 }
 
 interface NormalModeParams {
@@ -54,6 +61,7 @@ type SamplesQueryKey = readonly [
     {
         metadata_values?: MetadataValues;
         text_embedding?: number[];
+        query_filter?: WireExpression;
     }
 ];
 
@@ -67,7 +75,8 @@ const createImagesInfiniteOptions = (params: ImagesInfiniteParams) => {
         params.mode === 'normal' ? params.filters : params.classifierSamples,
         {
             metadata_values: params.metadata_values,
-            text_embedding: params.text_embedding
+            text_embedding: params.text_embedding,
+            query_filter: params.query_filter
         }
     ];
 
@@ -84,7 +93,7 @@ const createImagesInfiniteOptions = (params: ImagesInfiniteParams) => {
 
             const { data } = await readImages({
                 path: { collection_id: params.collection_id },
-                body: requestBody,
+                body: requestBody as ReadImagesRequest,
                 signal,
                 throwOnError: true
             });
@@ -96,13 +105,17 @@ const createImagesInfiniteOptions = (params: ImagesInfiniteParams) => {
     });
 };
 
-const buildRequestBody = (params: ImagesInfiniteParams, pageParam: number): ReadImagesRequest => {
-    const baseBody: ReadImagesRequest = {
+const buildRequestBody = (
+    params: ImagesInfiniteParams,
+    pageParam: number
+): ReadImagesRequestWithQueryFilter => {
+    const baseBody: ReadImagesRequestWithQueryFilter = {
         pagination: {
             offset: pageParam,
             limit: GRID_PAGE_SIZE
         },
         text_embedding: params.text_embedding,
+        query_filter: params.query_filter,
         filters: {
             sample_filter: {
                 metadata_filters: params.metadata_values

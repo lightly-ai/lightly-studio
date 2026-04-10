@@ -25,6 +25,10 @@
     import MenuDialogHost from '$lib/components/Header/MenuDialogHost.svelte';
 
     import Segment from '$lib/components/Segment/Segment.svelte';
+    import QueryBuilderPanel from '$lib/components/QueryBuilderPanel/QueryBuilderPanel.svelte';
+    import { Tabs, TabsList, TabsTrigger, TabsContent } from '$lib/components/ui/tabs';
+    import { useQueryBuilderFilter } from '$lib/hooks/useQueryBuilderFilter';
+    import { useTags } from '$lib/hooks/useTags/useTags';
     import { useHasEmbeddings } from '$lib/hooks/useHasEmbeddings/useHasEmbeddings';
     import { useHideAnnotations } from '$lib/hooks/useHideAnnotations';
     import { useAnnotationLabels } from '$lib/hooks/useAnnotationLabels/useAnnotationLabels';
@@ -477,6 +481,16 @@
         }
     });
 
+    import type { TagView } from '$lib/services/types';
+    let tagsForQueryBuilder = $state<TagView[]>([]);
+    $effect(() => {
+        const { tags } = useTags({ collection_id: collectionId, kind: ['sample'] });
+        return tags.subscribe((v) => {
+            tagsForQueryBuilder = v;
+        });
+    });
+    const { updateFilterSet } = useQueryBuilderFilter();
+
     const showLeftSidebar = $derived(
         isSamples || isAnnotations || isVideos || isVideoFrames || isGroups
     );
@@ -496,33 +510,78 @@
                 <div class="flex h-full min-h-0 w-80 flex-col">
                     <div class="flex min-h-0 flex-1 flex-col rounded-[1vw] bg-card py-4">
                         <div
-                            class="min-h-0 flex-1 space-y-2 overflow-y-auto px-4 pb-2 dark:[color-scheme:dark]"
+                            class="min-h-0 flex-1 overflow-y-auto px-4 pb-2 dark:[color-scheme:dark]"
                         >
-                            <div>
-                                <TagsMenu collection_id={collectionId} {gridType} />
-                                <TagCreateDialog
-                                    {collectionId}
-                                    {gridType}
-                                    textEmbedding={get(textEmbedding)}
-                                />
-                            </div>
-                            <Segment title="Filters" icon={SlidersHorizontal}>
+                            {#if isSamples}
+                                <Tabs value="filters" class="w-full">
+                                    <TabsList class="mb-2 w-full">
+                                        <TabsTrigger value="filters" class="flex-1"
+                                            >Filters</TabsTrigger
+                                        >
+                                        <TabsTrigger value="query" class="flex-1">Query</TabsTrigger
+                                        >
+                                    </TabsList>
+                                    <TabsContent value="filters">
+                                        <div class="space-y-2">
+                                            <div>
+                                                <TagsMenu collection_id={collectionId} {gridType} />
+                                                <TagCreateDialog
+                                                    {collectionId}
+                                                    {gridType}
+                                                    textEmbedding={get(textEmbedding)}
+                                                />
+                                            </div>
+                                            <Segment title="Filters" icon={SlidersHorizontal}>
+                                                <div class="space-y-2">
+                                                    <LabelsMenu
+                                                        {annotationFilterRows}
+                                                        onToggleAnnotationFilter={toggleAnnotationFilterSelection}
+                                                    />
+                                                    {#key collectionId}
+                                                        <CombinedMetadataDimensionsFilters
+                                                            isVideos={false}
+                                                            isVideoFrames={false}
+                                                        />
+                                                    {/key}
+                                                </div>
+                                            </Segment>
+                                        </div>
+                                    </TabsContent>
+                                    <TabsContent value="query" class="pt-1">
+                                        <QueryBuilderPanel
+                                            tags={tagsForQueryBuilder}
+                                            onFilterChange={(fs) => updateFilterSet(fs)}
+                                        />
+                                    </TabsContent>
+                                </Tabs>
+                            {:else}
                                 <div class="space-y-2">
-                                    <LabelsMenu
-                                        {annotationFilterRows}
-                                        onToggleAnnotationFilter={toggleAnnotationFilterSelection}
-                                    />
-
-                                    {#if isSamples || isVideos || isVideoFrames}
-                                        {#key collectionId}
-                                            <CombinedMetadataDimensionsFilters
-                                                {isVideos}
-                                                {isVideoFrames}
+                                    <div>
+                                        <TagsMenu collection_id={collectionId} {gridType} />
+                                        <TagCreateDialog
+                                            {collectionId}
+                                            {gridType}
+                                            textEmbedding={get(textEmbedding)}
+                                        />
+                                    </div>
+                                    <Segment title="Filters" icon={SlidersHorizontal}>
+                                        <div class="space-y-2">
+                                            <LabelsMenu
+                                                {annotationFilterRows}
+                                                onToggleAnnotationFilter={toggleAnnotationFilterSelection}
                                             />
-                                        {/key}
-                                    {/if}
+                                            {#if isVideos || isVideoFrames}
+                                                {#key collectionId}
+                                                    <CombinedMetadataDimensionsFilters
+                                                        {isVideos}
+                                                        {isVideoFrames}
+                                                    />
+                                                {/key}
+                                            {/if}
+                                        </div>
+                                    </Segment>
                                 </div>
-                            </Segment>
+                            {/if}
                         </div>
                     </div>
                 </div>

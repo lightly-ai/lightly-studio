@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from typing import Any
+
 from sqlalchemy import ColumnElement, and_, false, not_, or_, true
 
 from lightly_studio.core.dataset_query.match_expression import MatchExpression
@@ -26,6 +28,10 @@ class AND(MatchExpression):
         """
         return and_(true(), *(term.get() for term in self.terms))
 
+    def to_wire(self) -> dict[str, Any]:
+        """Serialise to wire format."""
+        return {"type": "and", "terms": [t.to_wire() for t in self.terms]}
+
 
 class OR(MatchExpression):
     """Logical OR operation between other MatchExpression objects."""
@@ -46,6 +52,10 @@ class OR(MatchExpression):
         """
         return or_(false(), *(term.get() for term in self.terms))
 
+    def to_wire(self) -> dict[str, Any]:
+        """Serialise to wire format."""
+        return {"type": "or", "terms": [t.to_wire() for t in self.terms]}
+
 
 class NOT(MatchExpression):
     """Logical NOT operation for a MatchExpression object."""
@@ -65,3 +75,7 @@ class NOT(MatchExpression):
             The combined SQLAlchemy expression.
         """
         return not_(self.term.get())
+
+    def to_wire(self) -> dict[str, Any]:
+        """Serialise to wire format."""
+        return {"type": "not", "term": self.term.to_wire()}

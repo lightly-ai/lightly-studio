@@ -75,6 +75,7 @@
     "vitest-svelte-kit": "^0.0.7"
   },
   "dependencies": {
+    "@svar-ui/svelte-filter": "^2.5.0",
     "@tailwindcss/aspect-ratio": "^0.4.2",
     "@tailwindcss/container-queries": "^0.1.1",
     "@tailwindcss/forms": "^0.5.9",

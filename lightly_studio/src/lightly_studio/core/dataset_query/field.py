@@ -27,6 +27,11 @@ class Field(ABC):
             The database column or property for queries.
         """
 
+    @property
+    @abstractmethod
+    def wire_name(self) -> str:
+        """The canonical wire-format name for this field (e.g. ``"image.width"``)."""
+
 
 # Ignore PLW1641 because `==` and `!=` create query conditions here, so these
 # classes do not need normal hash behavior.
@@ -37,13 +42,20 @@ class OrdinalField(Field, Generic[T]):  # noqa: PLW1641
     >, <, >=, <=, ==, !=
     """
 
-    def __init__(self, column: Mapped[T]) -> None:
+    def __init__(self, column: Mapped[T], *, wire_name: str) -> None:
         """Initialize the ordinal field with a database column.
 
         Args:
             column: The database column this field represents.
+            wire_name: The canonical wire-format name (e.g. ``"image.width"``).
         """
         self._column = column
+        self._wire_name = wire_name
+
+    @property
+    def wire_name(self) -> str:
+        """The canonical wire-format name for this field."""
+        return self._wire_name
 
     def get_sqlmodel_field(self) -> Mapped[T]:
         """Get the ordinal database column or property.
@@ -92,13 +104,20 @@ class ComparableField(Field, Generic[T]):  # noqa: PLW1641
     - ComparableColumnField(StringField) for the __init__ and get_sqlmodel_field implementation.
     """
 
-    def __init__(self, column: Mapped[T]) -> None:
+    def __init__(self, column: Mapped[T], *, wire_name: str) -> None:
         """Initialize the string field with a database column.
 
         Args:
             column: The database column this field represents.
+            wire_name: The canonical wire-format name (e.g. ``"image.file_name"``).
         """
         self._column = column
+        self._wire_name = wire_name
+
+    @property
+    def wire_name(self) -> str:
+        """The canonical wire-format name for this field."""
+        return self._wire_name
 
     def get_sqlmodel_field(self) -> Mapped[T]:
         """Get the string database column or property.

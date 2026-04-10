@@ -6,7 +6,7 @@
     import { useMetadataFilters } from '$lib/hooks/useMetadataFilters/useMetadataFilters';
     import type { MetadataValues } from '$lib/services/types';
     import { formatInteger } from '$lib/utils';
-    import type { SliderMultipleRootProps } from 'bits-ui/dist/types';
+    import type { SliderMultipleRootProps } from 'bits-ui';
     import MetadataFilterItem from './MetadataFilterItem/MetadataFilterItem.svelte';
     import VideoFrameBoundsFilter from '../VideoFrameBoundsFilter/VideoFrameBoundsFilter.svelte';
     import VideoFieldBoundsFilters from '../VideoFieldBoundsFilters/VideoFieldBoundsFilters.svelte';

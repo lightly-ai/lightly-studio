@@ -3,7 +3,7 @@
     import { useVideoBounds } from '$lib/hooks/useVideosBounds/useVideosBounds';
     import { formatInteger } from '$lib/utils';
     import { Slider } from '$lib/components/ui/slider/index.js';
-    import type { SliderMultipleRootProps } from 'bits-ui/dist/types';
+    import type { SliderMultipleRootProps } from 'bits-ui';
     const { videoBounds, videoBoundsValues, updateVideoBoundsValues } = useVideoBounds(
         page.params.collection_id
     );

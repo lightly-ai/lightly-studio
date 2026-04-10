@@ -2945,6 +2945,11 @@ export interface components {
             /** @description Filter parameters for samples */
             filters?: components["schemas"]["ImageFilter"] | null;
             /**
+             * Query Filter
+             * @description Query filter tree built from the Python DatasetQuery API or the frontend query builder. Supported nodes: field, tags_contains, and, or, not.
+             */
+            query_filter?: (components["schemas"]["WireField"] | components["schemas"]["WireTagsContains"] | components["schemas"]["WireAnd"] | components["schemas"]["WireOr"] | components["schemas"]["WireNot"]) | null;
+            /**
              * Text Embedding
              * @description Text embedding to search for
              */
@@ -3606,6 +3611,78 @@ export interface components {
             total_count: number;
             /** Nextcursor */
             nextCursor?: number | null;
+        };
+        /**
+         * WireAnd
+         * @description Logical AND of a list of expressions.
+         */
+        WireAnd: {
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            type: "and";
+            /** Terms */
+            terms: (components["schemas"]["WireField"] | components["schemas"]["WireTagsContains"] | components["schemas"]["WireAnd"] | components["schemas"]["WireOr"] | components["schemas"]["WireNot"])[];
+        };
+        /**
+         * WireField
+         * @description A scalar field comparison.
+         */
+        WireField: {
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            type: "field";
+            /** Field */
+            field: string;
+            /**
+             * Op
+             * @enum {string}
+             */
+            op: ">" | ">=" | "<" | "<=" | "==" | "!=";
+            /** Value */
+            value: number | string;
+        };
+        /**
+         * WireNot
+         * @description Logical NOT of a single expression.
+         */
+        WireNot: {
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            type: "not";
+            /** Term */
+            term: components["schemas"]["WireField"] | components["schemas"]["WireTagsContains"] | components["schemas"]["WireAnd"] | components["schemas"]["WireOr"] | components["schemas"]["WireNot"];
+        };
+        /**
+         * WireOr
+         * @description Logical OR of a list of expressions.
+         */
+        WireOr: {
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            type: "or";
+            /** Terms */
+            terms: (components["schemas"]["WireField"] | components["schemas"]["WireTagsContains"] | components["schemas"]["WireAnd"] | components["schemas"]["WireOr"] | components["schemas"]["WireNot"])[];
+        };
+        /**
+         * WireTagsContains
+         * @description A tag membership check.
+         */
+        WireTagsContains: {
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            type: "tags_contains";
+            /** Tag */
+            tag: string;
         };
     };
     responses: never;
