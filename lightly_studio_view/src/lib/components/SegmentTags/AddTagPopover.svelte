@@ -16,9 +16,10 @@
     let open = $state(false);
     let inputValue = $state('');
 
-    $effect(() => {
-        if (!open) inputValue = '';
-    });
+    function handleOpenChange(isOpen: boolean) {
+        open = isOpen;
+        if (!isOpen) inputValue = '';
+    }
 
     function handleSelect(name: string) {
         if (busy) return;
@@ -37,7 +38,7 @@
     );
 </script>
 
-<Popover.Root bind:open>
+<Popover.Root {open} onOpenChange={handleOpenChange}>
     <Popover.Trigger
         class="mt-2 flex items-center gap-1 rounded px-1 py-0.5 text-xs text-muted-foreground transition hover:text-foreground"
         disabled={busy}
