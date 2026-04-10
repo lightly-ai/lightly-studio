@@ -7,10 +7,11 @@
 
     interface Props {
         tags: Tag[];
+        type?: 'list' | 'line' | 'simple';
         onFilterChange: (filterSet: IFilterSet) => void;
     }
 
-    const { tags, onFilterChange }: Props = $props();
+    const { tags, type = 'list', onFilterChange }: Props = $props();
 
     const fields: IField[] = [
         { id: 'tag', label: 'Tag', type: 'text' },
@@ -31,7 +32,7 @@
 
 <div class="query-builder-panel">
     <WillowDark fonts={false}>
-        <FilterBuilder {fields} {options} onchange={handleChange} />
+        <FilterBuilder {type} {fields} {options} onchange={handleChange} />
     </WillowDark>
 </div>
 
@@ -57,5 +58,11 @@
         --wx-filter-value-color: hsl(var(--primary));
         --wx-popup-background: hsl(var(--card));
         --wx-popup-border: 1px solid hsl(var(--border));
+    }
+
+    /* In line mode the SVAR wrapper has height:100% inline — override so it  */
+    /* sizes to content and doesn't stretch the flex row in the header.        */
+    :global(.query-builder-panel .wx-willow-dark-theme) {
+        height: auto !important;
     }
 </style>
