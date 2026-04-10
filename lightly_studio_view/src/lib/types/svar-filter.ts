@@ -39,3 +39,23 @@ export interface IField {
     label: string;
     type: TType;
 }
+
+export interface ValidationError {
+    code: string;
+    field?: string;
+    value?: string;
+    message?: string;
+}
+
+export interface ParseResult {
+    config: IFilterSet | IFilter | null;
+    isInvalid: boolean | ValidationError;
+}
+
+export interface FilterQueryEvent {
+    text: string;
+    parsed?: ParseResult;
+    error?: ValidationError | null;
+    startProgress: () => void;
+    endProgress: () => void;
+}

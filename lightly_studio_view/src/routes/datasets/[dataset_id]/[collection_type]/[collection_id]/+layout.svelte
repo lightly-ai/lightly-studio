@@ -552,7 +552,7 @@
             {/if}
 
             {#snippet searchOrQueryBar()}
-                <div class="flex items-center gap-2">
+                <div class="flex min-w-0 items-center gap-2">
                     <!-- Mode toggle: only when samples has embeddings -->
                     {#if isSamples && hasEmbeddings}
                         <div class="flex shrink-0 overflow-hidden rounded-md border border-input">
@@ -663,7 +663,7 @@
 
                     <!-- Inline query builder -->
                     {#if isSamples && (!hasEmbeddings || searchMode === 'query')}
-                        <div class="flex-1">
+                        <div class="min-w-0 flex-1 overflow-hidden">
                             <QueryBuilderPanel
                                 type="line"
                                 tags={tagsForQueryBuilder}
