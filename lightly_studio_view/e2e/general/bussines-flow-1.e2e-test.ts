@@ -127,9 +127,9 @@ test.describe('bussines-flow1', () => {
         expect(await samplesPage.getSamples().count()).toBe(cocoDataset.labels.dog.sampleCount);
 
         // Select all dog samples.
-        const selectBoxes = page.getByTestId('sample-selected-box');
+        const samples = samplesPage.getSamples();
         for (let i = 0; i < cocoDataset.labels.dog.sampleCount; i++) {
-            await selectBoxes.nth(i).click();
+            await samples.nth(i).click();
             await page.waitForTimeout(10);
         }
         expect(await samplesPage.getNumSelectedSamples()).toBe(cocoDataset.labels.dog.sampleCount);
