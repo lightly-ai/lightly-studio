@@ -89,6 +89,42 @@ export class SampleDetailsPage {
         await this.setLabel(label);
     }
 
+    getAddTagButton() {
+        return this.page.getByRole('button', { name: 'Add tag' });
+    }
+
+    getAddTagInput() {
+        return this.page.getByPlaceholder('Tag name…');
+    }
+
+    getTagByName(name: string) {
+        return this.page.getByTestId('segment-tag-name').filter({ hasText: name });
+    }
+
+    async addNewTag(tagName: string) {
+        const createTagResponse = this.page.waitForResponse(
+            (response) =>
+                response.request().method() === 'POST' &&
+                response.url().includes('/tags') &&
+                response.status() === 201
+        );
+        const addToSampleResponse = this.page.waitForResponse(
+            (response) =>
+                response.request().method() === 'POST' &&
+                response.url().includes('/add/samples') &&
+                response.status() >= 200 &&
+                response.status() < 300
+        );
+
+        await this.getAddTagButton().click();
+        await this.getAddTagInput().fill(tagName);
+        await this.page.getByText(tagName, { exact: true }).click();
+
+        await createTagResponse;
+        await addToSampleResponse;
+        await expect(this.getTagByName(tagName)).toBeVisible();
+    }
+
     // Captions
 
     getCaptionCount() {
