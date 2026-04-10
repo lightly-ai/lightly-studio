@@ -113,7 +113,7 @@
         cancelScheduledPreviewUpdate();
         previewRenderFrameId = requestAnimationFrame(() => {
             previewRenderFrameId = null;
-            if (!workingMask) return;
+            if (!workingMask || !annotationLabelContext.isDrawing) return;
 
             previewDataUrl = maskToDataUrl(workingMask, sample.width, sample.height, parsedColor);
         });
@@ -224,6 +224,7 @@
     onpointerup={(e) => {
         lastBrushPoint = null;
         e.currentTarget?.releasePointerCapture?.(e.pointerId);
+        cancelScheduledPreviewUpdate();
 
         const targetAnnotation = resolveSelectedAnnotation();
         if (
