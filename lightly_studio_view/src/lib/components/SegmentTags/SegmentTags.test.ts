@@ -9,11 +9,6 @@ vi.spyOn(hooks, 'useRemoveTagFromSample').mockReturnValue({
     removeTagFromSample: removeTagFromSampleMock
 } as ReturnType<typeof hooks.useRemoveTagFromSample>);
 
-const defaultProps = {
-    collectionId: 'collection-1',
-    sampleId: 'sample-1'
-};
-
 describe('SegmentTags', () => {
     it('renders nothing when tags array is empty', () => {
         const { container } = render(SegmentTags, {

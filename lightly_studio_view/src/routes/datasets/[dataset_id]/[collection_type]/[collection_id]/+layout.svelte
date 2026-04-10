@@ -7,7 +7,6 @@
         GridHeader,
         LabelsMenu,
         SelectionPill,
-        TagCreateDialog,
         TagsMenu
     } from '$lib/components';
     import Input from '$lib/components/ui/input/input.svelte';
