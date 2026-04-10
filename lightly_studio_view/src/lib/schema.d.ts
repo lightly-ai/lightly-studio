@@ -1692,6 +1692,11 @@ export interface paths {
          *     Sets the credentials as environment variables and clears the S3 fsspec
          *     instance cache so that subsequent file operations pick up the new
          *     credentials.
+         *
+         *     TODO Mihnea (04/2026) Security:
+         *      This endpoint has no authentication and accepts arbitrary env var
+         *      keys. This is acceptable for air-gapped on-prem (behind Docker isolation with no internet).
+         *      For the hosted version, this endpoint must be secured with authentication and input validation.
          */
         put: operations["refresh_cloud_credentials"];
         post?: never;

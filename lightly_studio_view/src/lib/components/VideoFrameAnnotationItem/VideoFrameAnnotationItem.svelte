@@ -13,6 +13,15 @@
     import { shouldShowBoundingBoxForAnnotation } from '$lib/utils/shouldShowBoundingBoxForAnnotation';
     import { SampleAnnotations } from '..';
 
+    export interface PrerenderedAnnotation {
+        frameId: string;
+        annotationId: string;
+        dataUrl: string;
+        width: number;
+        height: number;
+        opacity?: number;
+    }
+
     const {
         sample,
         width,
@@ -20,7 +29,8 @@
         sampleImageObjectFit = 'contain',
         showLabel,
         sampleWidth,
-        sampleHeight
+        sampleHeight,
+        prerenderedAnnotations
     }: {
         sample: VideoFrameView | FrameView;
         width: number;
@@ -29,6 +39,7 @@
         sampleHeight: number;
         sampleImageObjectFit?: SampleImageObjectFit;
         showLabel?: ComponentProps<typeof SampleAnnotation>['showLabel'];
+        prerenderedAnnotations?: PrerenderedAnnotation[];
     } = $props();
 
     const { isHidden } = useHideAnnotations();
@@ -37,6 +48,14 @@
     const annotationsWithVisuals = $derived(
         annotations.filter((annotation) => annotation.annotation_type !== 'classification')
     );
+
+    // Create a map of annotationId to prerendered data for quick lookup
+    const prerenderedMap = $derived.by(() => {
+        if (!prerenderedAnnotations) return new Map();
+        return new Map(
+            prerenderedAnnotations.map((prerendered) => [prerendered.annotationId, prerendered])
+        );
+    });
 </script>
 
 {#if !showLabel}
@@ -59,7 +78,9 @@
         {height}
     >
         <g class="sample-annotation" class:invisible={$isHidden}>
+            <!-- Render all annotations with prerendered data when available -->
             {#each annotationsWithVisuals as annotation (annotation.sample_id)}
+                {@const prerendered = prerenderedMap.get(annotation.sample_id)}
                 <SampleAnnotation
                     {annotation}
                     {showLabel}
@@ -68,6 +89,8 @@
                         $showBoundingBoxesForSegmentationStore
                     )}
                     imageWidth={sampleWidth}
+                    prerenderedDataUrl={prerendered?.dataUrl}
+                    prerenderedHeight={prerendered?.height}
                 />
             {/each}
         </g>
