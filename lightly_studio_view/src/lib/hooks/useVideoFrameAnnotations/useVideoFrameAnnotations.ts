@@ -77,7 +77,10 @@ export function useVideoFrameAnnotations({
                         height
                     });
                 } catch (error) {
-                    console.error(`Failed to render annotation for frame ${frame.sample_id}:`, error);
+                    console.error(
+                        `Failed to render annotation for frame ${frame.sample_id}:`,
+                        error
+                    );
                 }
             }
         }
