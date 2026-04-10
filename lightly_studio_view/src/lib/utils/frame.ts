@@ -2,12 +2,6 @@ import type { FrameView, VideoFrameView } from '$lib/api/lightly_studio_local';
 
 const EPS = 0.002;
 
-export function getFrameBatchCursor(frameIndex: number, batchSize: number): number {
-    if (batchSize <= 0) throw new Error('batchSize must be greater than zero');
-
-    return Math.floor(frameIndex / batchSize) * batchSize;
-}
-
 export function findFrame({
     frames,
     currentTime
