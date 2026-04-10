@@ -285,7 +285,7 @@
                                         tabindex="0"
                                     >
                                         {#if hasMinimumRole(user?.role, 'labeler') && $pickedAnnotationIds[collection_id]?.has(annotations[index].annotation.sample_id)}
-                                            <div class="absolute right-2 top-1.5 z-10">
+                                            <div class="pointer-events-none absolute right-2 top-1.5 z-10">
                                                 <SelectableBox
                                                     onSelect={() => undefined}
                                                     isSelected={true}
