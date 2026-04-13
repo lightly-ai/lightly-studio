@@ -7,7 +7,7 @@ Currently supported: **AWS S3**. Support for GCS and Azure is planned.
 
 ## How It Works
 
-1. **Admin creates cloud provider credentials** with read/write access to the storage bucket.
+1. **Admin creates cloud provider credentials** with read access to the storage bucket.
    See [AWS S3 Setup](aws.md) for a step-by-step guide.
 2. **Admin saves the credentials** in the LightlyStudio Enterprise GUI.
 3. **Python clients call `ls.connect()`** and receive the credentials automatically.

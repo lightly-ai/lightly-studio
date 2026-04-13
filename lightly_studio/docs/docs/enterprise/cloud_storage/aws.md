@@ -48,10 +48,6 @@ LightlyStudio needs the following S3 permissions on your bucket:
 
     ![Permission policy JSON](../../_static/aws_iam_policy_json.png){ width="100%" }
 
-    !!! tip
-        To restrict access to a specific folder, change the second resource to
-        `arn:aws:s3:::my-bucket/my-folder/*`.
-
 4. Click **Next**, add tags as you see fit, give your policy a name (e.g.
    `LightlyStudio-S3-Access`), and create it.
 
