@@ -72,7 +72,7 @@
         tabindex="0"
     >
         {#if hasMinimumRole(user?.role, 'labeler') && $selectedSampleIds.has(sampleId)}
-            <div class="pointer-events-none absolute right-2 top-1.5 z-10">
+            <div class="pointer-events-none absolute right-2 top-1.5 z-10" inert>
                 <SelectableBox onSelect={() => undefined} isSelected={true} />
             </div>
         {/if}
