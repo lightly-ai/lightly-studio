@@ -12,6 +12,7 @@
     import Separator from '$lib/components/ui/separator/separator.svelte';
     import {
         Search,
+        Filter,
         SlidersHorizontal,
         Image as ImageIcon,
         X,
@@ -481,6 +482,7 @@
     });
 
     import type { TagView } from '$lib/services/types';
+    import type { IFilterSet } from '$lib/types/svar-filter';
     let tagsForQueryBuilder = $state<TagView[]>([]);
     $effect(() => {
         const { tags } = useTags({ collection_id: collectionId, kind: ['sample'] });
@@ -488,7 +490,9 @@
             tagsForQueryBuilder = v;
         });
     });
-    const { updateFilterSet, clearFilter } = useQueryBuilderFilter();
+    const { filterSet, updateFilterSet, clearFilter } = useQueryBuilderFilter();
+    const queryFilterRuleCount = $derived($filterSet?.rules?.length ?? 0);
+    let pendingQueryFilter = $state<IFilterSet | null>(null);
 
     let searchMode = $state<'embed' | 'query'>('embed');
 
@@ -522,6 +526,26 @@
                         <div
                             class="min-h-0 flex-1 space-y-2 overflow-y-auto px-4 pb-2 dark:[color-scheme:dark]"
                         >
+                            {#if queryFilterRuleCount > 0}
+                                <div
+                                    class="flex items-center justify-between rounded-md border border-amber-700/40 bg-amber-900/40 px-3 py-2 text-sm"
+                                >
+                                    <div>
+                                        <div class="font-medium text-foreground">Query Filter</div>
+                                        <div class="text-xs text-muted-foreground">
+                                            {queryFilterRuleCount}
+                                            {queryFilterRuleCount === 1 ? 'condition' : 'conditions'}
+                                        </div>
+                                    </div>
+                                    <button
+                                        class="text-muted-foreground hover:text-foreground"
+                                        onclick={clearFilter}
+                                        title="Clear query filter"
+                                    >
+                                        <X class="h-4 w-4" />
+                                    </button>
+                                </div>
+                            {/if}
                             <div>
                                 <TagsMenu collection_id={collectionId} {gridType} />
                                 <TagCreateDialog
@@ -572,7 +596,7 @@
                                 onclick={() => setSearchMode('query')}
                                 title="Filter builder"
                             >
-                                <SlidersHorizontal class="h-4 w-4" />
+                                <Filter class="h-4 w-4" />
                             </Button>
                         </div>
                     {/if}
@@ -667,9 +691,21 @@
                             <QueryBuilderPanel
                                 type="line"
                                 tags={tagsForQueryBuilder}
-                                onFilterChange={(fs) => updateFilterSet(fs)}
+                                onFilterChange={(fs) => {
+                                    pendingQueryFilter = fs;
+                                }}
                             />
                         </div>
+                        <Button
+                            size="sm"
+                            variant="secondary"
+                            class="shrink-0"
+                            onclick={() => {
+                                if (pendingQueryFilter) updateFilterSet(pendingQueryFilter);
+                            }}
+                        >
+                            Apply
+                        </Button>
                     {/if}
                 </div>
             {/snippet}

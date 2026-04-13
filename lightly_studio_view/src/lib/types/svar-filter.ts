@@ -50,6 +50,7 @@ export interface ValidationError {
 export interface ParseResult {
     config: IFilterSet | IFilter | null;
     isInvalid: boolean | ValidationError;
+    naturalText: string | null;
 }
 
 export interface FilterQueryEvent {

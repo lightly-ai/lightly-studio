@@ -1676,6 +1676,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/translate_query": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Translate Query
+         * @description Translate a natural language string into a SVAR filter DSL expression.
+         */
+        post: operations["translate_query"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/images/sample/{sample_id}": {
         parameters: {
             query?: never;
@@ -3399,6 +3419,16 @@ export interface components {
              * Format: date-time
              */
             updated_at: string;
+        };
+        /** TranslateQueryRequest */
+        TranslateQueryRequest: {
+            /** Text */
+            text: string;
+        };
+        /** TranslateQueryResponse */
+        TranslateQueryResponse: {
+            /** Query */
+            query: string;
         };
         /**
          * UpdateAnnotationsRequest
@@ -6434,6 +6464,39 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["GroupComponentView"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    translate_query: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["TranslateQueryRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TranslateQueryResponse"];
                 };
             };
             /** @description Validation Error */

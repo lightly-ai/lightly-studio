@@ -47,11 +47,41 @@
         viewMode = 'builder';
     }
 
-    function handleDslChange(ev: FilterQueryEvent) {
-        if (ev.error || !ev.parsed?.config) return;
-        const parsed = ev.parsed.config as IFilterSet;
-        currentFilterSet = parsed;
-        onFilterChange(parsed);
+    async function handleDslChange(ev: FilterQueryEvent) {
+        // naturalText is set for mixed input (DSL + free text).
+        // For pure free text, SVAR sets ev.error and puts the raw text in ev.text.
+        // Both cases should trigger AI translation.
+        const naturalInput = ev.parsed?.naturalText || (ev.error && ev.text ? ev.text : null);
+
+        if (naturalInput) {
+            ev.startProgress();
+            try {
+                const res = await fetch('/api/translate_query', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ text: naturalInput })
+                });
+                if (res.ok) {
+                    const { query } = (await res.json()) as { query: string };
+                    // Updating dslText causes FilterQuery to re-parse and fire onchange
+                    // again with the valid DSL — that second call updates currentFilterSet.
+                    if (query) dslText = query;
+                } else {
+                    const { detail } = (await res.json()) as { detail: string };
+                    console.error('translate_query failed:', detail);
+                }
+            } finally {
+                ev.endProgress();
+            }
+            return;
+        }
+
+        // Valid DSL: update the shared filter set
+        if (!ev.error && ev.parsed?.config) {
+            const parsed = ev.parsed.config as IFilterSet;
+            currentFilterSet = parsed;
+            onFilterChange(parsed);
+        }
     }
 </script>
 
@@ -77,7 +107,7 @@
         </button>
     </div>
 
-    <div class="min-w-0 flex-1 overflow-hidden">
+    <div class="min-w-0 flex-1">
         <WillowDark fonts={false}>
             {#if viewMode === 'builder'}
                 <FilterBuilder
@@ -92,7 +122,7 @@
                     value={dslText}
                     {fields}
                     {options}
-                    parse="strict"
+                    parse="allowFreeText"
                     onchange={handleDslChange}
                 />
             {/if}
@@ -127,5 +157,41 @@
     :global(.query-builder-panel .wx-willow-dark-theme) {
         height: auto !important;
         max-width: 100%;
+    }
+
+    /* Fill the container width so the toolbar has a fixed reference width */
+    :global(.query-builder-panel .wx-willow-dark-theme),
+    :global(.query-builder-panel .wx-filter-builder.wx-line),
+    :global(.query-builder-panel .wx-toolbar.wx-line) {
+        width: 100%;
+    }
+
+    /* Override SVAR's hardcoded 67px toolbar height in line mode */
+    :global(.query-builder-panel .wx-toolbar.wx-line) {
+        height: 40px !important;
+        gap: 8px;
+    }
+
+    /* Give .wx-filters a constrained width so overflow-x:auto (already set by SVAR) kicks in.
+       overflow-y:hidden prevents the horizontal scrollbar from triggering overflow-y:auto,
+       which would eat into the 40px toolbar height and clip the filter chips.
+       The scrollbar is hidden visually; users scroll horizontally via touch-pad or shift+wheel. */
+    :global(.query-builder-panel .wx-toolbar.wx-line .wx-filters) {
+        flex: 1;
+        min-width: 0;
+        overflow-y: hidden;
+        scrollbar-width: none;
+    }
+    :global(.query-builder-panel .wx-toolbar.wx-line .wx-filters::-webkit-scrollbar) {
+        display: none;
+    }
+
+    /* Force the group to be at least as wide as all its chips laid out in one row.
+       min-width:max-content prevents flex-shrink from compressing the group to fit
+       inside .wx-filters — without this the group shrinks instead of overflowing,
+       so the overflow-x:auto scroll on .wx-filters never triggers. */
+    :global(.query-builder-panel .wx-group.wx-line) {
+        flex-wrap: nowrap;
+        min-width: max-content;
     }
 </style>
