@@ -160,6 +160,7 @@
         preload="none"
         {handleMouseEnter}
         {handleMouseLeave}
+        posterSize={size}
         className="h-full w-full cursor-pointer rounded-lg shadow-md"
     />
     {#if currentFrame}

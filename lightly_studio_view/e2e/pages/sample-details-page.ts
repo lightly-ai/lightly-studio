@@ -1,5 +1,6 @@
 import { expect, type Page } from '@playwright/test';
 import { CaptionUtils } from '../caption-utils';
+import { waitForRequestsToSettle } from '../utils';
 
 export class SampleDetailsPage {
     private captionUtils: CaptionUtils;
@@ -87,6 +88,92 @@ export class SampleDetailsPage {
     async setFirstAnnotationLabel(label: string) {
         await this.getLabelSelects().first().click();
         await this.setLabel(label);
+    }
+
+    getAddTagButton() {
+        return this.page.getByRole('button', { name: 'Add tag' });
+    }
+
+    getAddTagInput() {
+        return this.page.getByPlaceholder('Tag name…');
+    }
+
+    getTagByName(name: string) {
+        return this.page.getByTestId('segment-tag-name').filter({ hasText: name });
+    }
+
+    getRemoveTagButton(tagName: string) {
+        return this.page.getByTestId(`remove-tag-${tagName}`);
+    }
+
+    getCreateTagOption(tagName: string) {
+        return this.page.getByText(tagName, { exact: true });
+    }
+
+    getExistingTagOption(tagName: string) {
+        return this.page.getByRole('option', { name: tagName, exact: true });
+    }
+
+    async openAddTagPopover() {
+        await this.getAddTagButton().click();
+        await expect(this.getAddTagInput()).toBeVisible();
+    }
+
+    async addNewTag(tagName: string) {
+        const createTagResponse = this.page.waitForResponse(
+            (response) =>
+                response.request().method() === 'POST' &&
+                response.url().includes('/tags') &&
+                response.status() === 201
+        );
+        const addToSampleResponse = this.page.waitForResponse(
+            (response) =>
+                response.request().method() === 'POST' &&
+                response.url().includes('/add/samples') &&
+                response.status() >= 200 &&
+                response.status() < 300
+        );
+
+        await this.openAddTagPopover();
+        await this.getAddTagInput().fill(tagName);
+        await this.getCreateTagOption(tagName).click();
+
+        await createTagResponse;
+        await addToSampleResponse;
+        await waitForRequestsToSettle(this.page, '/tags');
+        await expect(this.getTagByName(tagName)).toBeVisible();
+    }
+
+    async addExistingTag(tagName: string) {
+        const addToSampleResponse = this.page.waitForResponse(
+            (response) =>
+                response.request().method() === 'POST' &&
+                response.url().includes('/add/samples') &&
+                response.status() >= 200 &&
+                response.status() < 300
+        );
+
+        await this.openAddTagPopover();
+        await this.getAddTagInput().fill(tagName);
+        await this.getExistingTagOption(tagName).click();
+
+        await addToSampleResponse;
+        await waitForRequestsToSettle(this.page, '/tags');
+        await expect(this.getTagByName(tagName)).toBeVisible();
+    }
+
+    async removeTag(tagName: string) {
+        const responsePromise = this.page.waitForResponse(
+            (response) =>
+                response.request().method() === 'DELETE' &&
+                response.url().includes('/tag/') &&
+                response.status() === 200
+        );
+
+        await this.getRemoveTagButton(tagName).click();
+
+        await responsePromise;
+        await expect(this.getTagByName(tagName)).toHaveCount(0);
     }
 
     // Captions

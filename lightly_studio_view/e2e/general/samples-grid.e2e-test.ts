@@ -39,7 +39,7 @@ test('Label filtering shows distinct samples only', async ({ samplesPage }) => {
     expect(sampleCount).toBe(cocoDataset.labels.book.sampleCount);
 });
 
-test('Tag filtering shows distinct samples only', async ({ page, samplesPage }) => {
+test('Tag filtering shows distinct samples only', async ({ samplesPage }) => {
     // samplesPage fixture automatically navigates and loads samples
 
     // Generate unique tag names to avoid conflicts on subsequent test runs.
@@ -48,9 +48,9 @@ test('Tag filtering shows distinct samples only', async ({ page, samplesPage }) 
     const tag2Name = `tag_3_4_5_${timestamp}`;
 
     // Select first 3 samples.
-    const selectBoxes = page.getByTestId('sample-selected-box');
+    const samples = samplesPage.getSamples();
     for (let i = 0; i < 3; i++) {
-        await selectBoxes.nth(i).click();
+        await samples.nth(i).click();
     }
     expect(await samplesPage.getNumSelectedSamples()).toBe(3);
 
@@ -59,7 +59,7 @@ test('Tag filtering shows distinct samples only', async ({ page, samplesPage }) 
 
     // Select next samples.
     for (let i = 2; i < 5; i++) {
-        await selectBoxes.nth(i).click();
+        await samples.nth(i).click();
     }
     expect(await samplesPage.getNumSelectedSamples()).toBe(3);
 
