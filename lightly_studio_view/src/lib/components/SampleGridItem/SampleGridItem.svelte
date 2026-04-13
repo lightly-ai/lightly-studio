@@ -55,27 +55,24 @@
     }
 </script>
 
-<div
-    class="relative select-none"
-    {style}
-    data-testid={dataTestId}
-    data-sample-id={sampleId}
-    data-sample-name={dataSampleName}
-    data-index={index}
-    {ondblclick}
-    onclick={handleOnClick}
-    onkeydown={handleKeyDown}
-    aria-label={`View sample: ${dataSampleName}`}
-    role="button"
-    tabindex="0"
->
+<div class="select-none" {style}>
     <div
         class="relative overflow-hidden rounded-lg"
         class:grid-item-selected={$selectedSampleIds.has(sampleId)}
         style="width: var(--sample-width); height: var(--sample-height);"
+        data-testid={dataTestId}
+        data-sample-id={sampleId}
+        data-sample-name={dataSampleName}
+        data-index={index}
+        {ondblclick}
+        onclick={handleOnClick}
+        onkeydown={handleKeyDown}
+        aria-label={`View sample: ${dataSampleName}`}
+        role="button"
+        tabindex="0"
     >
         {#if hasMinimumRole(user?.role, 'labeler') && $selectedSampleIds.has(sampleId)}
-            <div class="absolute right-2 top-1.5 z-10">
+            <div class="pointer-events-none absolute right-2 top-1.5 z-10" inert>
                 <SelectableBox onSelect={() => undefined} isSelected={true} />
             </div>
         {/if}
