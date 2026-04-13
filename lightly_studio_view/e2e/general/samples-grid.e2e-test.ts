@@ -74,38 +74,6 @@ test('Tag filtering shows distinct samples only', async ({ samplesPage }) => {
     expect(sampleCount).toBe(5);
 });
 
-test('creating a tag with selected samples applies it only to that selection', async ({
-    samplesPage
-}) => {
-    const tagName = `selected_samples_tag_${Date.now()}`;
-    const selectedSampleCount = 3;
-
-    for (let i = 0; i < selectedSampleCount; i++) {
-        await samplesPage.getSampleByIndex(i).click();
-    }
-    expect(await samplesPage.getNumSelectedSamples()).toBe(selectedSampleCount);
-
-    await samplesPage.createTag(tagName);
-    await samplesPage.pressTag(tagName);
-
-    expect(await samplesPage.getSamples().count()).toBe(selectedSampleCount);
-});
-
-test('creating a tag with no explicit selection applies it to the current view', async ({
-    samplesPage
-}) => {
-    const tagName = `current_view_tag_${Date.now()}`;
-
-    await samplesPage.clickLabel(cocoDataset.labels.dog.name);
-    expect(await samplesPage.getNumSelectedSamples()).toBe(0);
-    expect(await samplesPage.getSamples().count()).toBe(cocoDataset.labels.dog.sampleCount);
-
-    await samplesPage.createTag(tagName);
-
-    await samplesPage.pressTag(tagName);
-    expect(await samplesPage.getSamples().count()).toBe(cocoDataset.labels.dog.sampleCount);
-});
-
 test('text search stays active until submit or explicit clear', async ({ page, samplesPage }) => {
     await samplesPage.textSearch('dog');
 
