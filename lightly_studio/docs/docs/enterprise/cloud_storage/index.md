@@ -1,7 +1,9 @@
 # Cloud Storage
 
-LightlyStudio Enterprise lets admins configure cloud storage credentials centrally. Once set
-up, every Python client that calls `ls.connect()` receives the credentials automatically, no per-user setup is needed.
+LightlyStudio Enterprise lets admins configure cloud storage credentials centrally.
+Once set up, every Python client that calls `ls.connect()` receives the credentials
+automatically, no per-user setup is needed. Cloud storage is read-only, LightlyStudio
+will not write any data to your buckets or need write permissions.
 
 Currently supported: **AWS S3**. Support for GCS and Azure is planned.
 
