@@ -58,25 +58,21 @@
     };
 
     const { context } = useAnnotationLabelContext();
-    const hasNext = $derived(!!$sampleAdjacentQuery.data?.next_sample_id);
-    const hasPrevious = $derived(!!$sampleAdjacentQuery.data?.previous_sample_id);
 
     $effect(() => {
         if (nextURL) {
-            console.log('Preloading next sample:', nextURL);
             preloadData(nextURL);
         }
         if (prevURL) {
             preloadData(prevURL);
-            console.log('Preloading previous sample:', prevURL);
         }
     });
 </script>
 
 {#if $sampleAdjacentQuery.data}
     <SteppingNavigation
-        {hasPrevious}
-        {hasNext}
+        hasNext={nextURL !== null}
+        hasPrevious={prevURL !== null}
         onPrevious={gotoPreviousSample}
         onNext={gotoNextSample}
         isDrawing={context?.isDrawing}
