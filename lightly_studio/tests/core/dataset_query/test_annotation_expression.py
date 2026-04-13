@@ -67,6 +67,17 @@ class TestAnnotationExpressions:
         results = db_session.exec(query).all()
         assert [image.sample_id for image in results] == [image1.sample_id]
 
+        query = (
+            select(ImageTable)
+            .join(ImageTable.sample)
+            .where(SampleTable.collection_id == collection_id)
+            .where((AnnotationAccessor().object_detections().width > 100).get())
+            .where((AnnotationAccessor().object_detections().width < 100).get())
+        )
+        results = db_session.exec(query).all()
+        # Contradictory query leads to an empty result
+        assert len(results) == 0
+
     def test_annotation_object_detections__with_other_annotations(
         self, db_session: Session
     ) -> None:
