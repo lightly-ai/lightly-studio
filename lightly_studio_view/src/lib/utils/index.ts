@@ -10,5 +10,10 @@ export * from './shouldShowBoundingBoxForAnnotation';
 export { isImageView } from './isImageView/isImageView';
 export { isVideoView } from './isVideoView/isVideoView';
 export { getImageURL as getImageURLById } from './getImageURL';
+export {
+    getGridFrameURL,
+    getGridImageURL,
+    getGridThumbnailRequestSize
+} from './getGridThumbnailURL/getGridThumbnailURL';
 export { getVideoURLById } from './getVideoURLById/getVideoURLById';
 export { getURL } from './getURL/getURL';

@@ -13,6 +13,7 @@ vi.mock('$lib/hooks/useSettings', () => {
         key_go_back: 'Escape',
         key_toggle_edit_mode: 'e',
         grid_view_sample_rendering: 'contain',
+        grid_view_thumbnail_quality: 'raw',
         show_annotation_text_labels: false,
         show_sample_filenames: true,
         show_bounding_boxes_for_segmentation: true,
@@ -94,6 +95,7 @@ describe('SettingsDialog', () => {
 
         // Check grid view rendering - use getByRole for the trigger
         expect(screen.getByLabelText('Grid View Rendering')).toBeInTheDocument();
+        expect(screen.getByLabelText('Thumbnail Quality in Grid View')).toBeInTheDocument();
         // For the switch, check for the element's presence instead of its checked state
         const switchLabel = screen.getByText('Show Annotation Text Labels');
         expect(switchLabel).toBeInTheDocument();
@@ -154,6 +156,20 @@ describe('SettingsDialog', () => {
 
         // Verify saveSettings was called with the expected values
         expect(saveSettings).toHaveBeenCalled();
+    });
+
+    it('should include thumbnail quality in saved settings', async () => {
+        render(SettingsDialog);
+
+        await openDialog();
+        await fireEvent.click(screen.getByText('Save Changes'));
+
+        const { saveSettings } = useSettings();
+        expect(saveSettings).toHaveBeenCalledWith(
+            expect.objectContaining({
+                grid_view_thumbnail_quality: 'raw'
+            })
+        );
     });
 
     it('should toggle annotation text labels', async () => {
