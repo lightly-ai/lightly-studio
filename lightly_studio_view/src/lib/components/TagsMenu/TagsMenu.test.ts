@@ -3,16 +3,17 @@ import { readable, writable } from 'svelte/store';
 import { describe, expect, it, vi, beforeEach } from 'vitest';
 import TagsMenu from './TagsMenu.svelte';
 
-const { mockReadImages, mockAddSampleIdsToTagId } = vi.hoisted(() => ({
+const { mockReadImages, mockAddSampleIdsToTagId, mockCreateTag } = vi.hoisted(() => ({
     mockReadImages: vi.fn(),
-    mockAddSampleIdsToTagId: vi.fn()
+    mockAddSampleIdsToTagId: vi.fn(),
+    mockCreateTag: vi.fn()
 }));
 
 vi.mock('$lib/api/lightly_studio_local', async () => {
     const actual = await vi.importActual('$lib/api/lightly_studio_local');
     return {
         ...actual,
-        createTag: vi.fn(),
+        createTag: mockCreateTag,
         addSampleIdsToTagId: mockAddSampleIdsToTagId,
         readImages: mockReadImages,
         getAllFrames: vi.fn(),
@@ -108,6 +109,15 @@ describe('TagsMenu', () => {
             data: true,
             error: undefined
         });
+        mockCreateTag.mockResolvedValue({
+            data: {
+                tag_id: 'new-tag-id',
+                name: 'Fresh Tag',
+                kind: 'sample',
+                description: 'Fresh Tag description'
+            },
+            error: undefined
+        });
     });
 
     it('assigns tags to the current view when no samples are explicitly selected', async () => {
@@ -145,6 +155,44 @@ describe('TagsMenu', () => {
                 path: {
                     collection_id: 'collection-1',
                     tag_id: 'tag-1'
+                },
+                body: {
+                    sample_ids: ['sample-a', 'sample-b']
+                }
+            });
+        });
+    });
+
+    it('creates a new tag and assigns it to the current view when no samples are explicitly selected', async () => {
+        render(TagsMenu, {
+            props: {
+                collection_id: 'collection-1',
+                gridType: 'samples'
+            }
+        });
+
+        const input = screen.getByPlaceholderText('Assign tag to selection');
+
+        await fireEvent.focus(input);
+        await fireEvent.input(input, { target: { value: 'Fresh Tag' } });
+        await fireEvent.keyDown(input, { key: 'Enter' });
+
+        await waitFor(() => {
+            expect(mockCreateTag).toHaveBeenCalledWith({
+                path: { collection_id: 'collection-1' },
+                body: {
+                    name: 'Fresh Tag',
+                    description: 'Fresh Tag description',
+                    kind: 'sample'
+                }
+            });
+        });
+
+        await waitFor(() => {
+            expect(mockAddSampleIdsToTagId).toHaveBeenCalledWith({
+                path: {
+                    collection_id: 'collection-1',
+                    tag_id: 'new-tag-id'
                 },
                 body: {
                     sample_ids: ['sample-a', 'sample-b']

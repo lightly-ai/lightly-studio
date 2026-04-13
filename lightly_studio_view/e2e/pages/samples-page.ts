@@ -180,24 +180,29 @@ export class SamplesPage {
     }
 
     async createTag(tagName: string): Promise<void> {
-        const responsePromise = this.page.waitForResponse(
+        const createTagResponsePromise = this.page.waitForResponse(
             (response) =>
                 response.request().method() === 'POST' &&
                 response.url().includes('/tags') &&
                 response.status() === 201
         );
+        const assignTagResponsePromise = this.page.waitForResponse(
+            (response) =>
+                response.request().method() === 'POST' &&
+                response.url().includes('/add/samples') &&
+                response.status() >= 200 &&
+                response.status() < 300
+        );
 
-        await pressButton(this.page, 'tag-create-dialog-button');
-        const tagTextInput = this.page.getByTestId('tag-create-dialog-input');
+        const tagTextInput = this.page.getByPlaceholder('Assign tag to selection');
+        await expect(tagTextInput).toBeVisible();
         await tagTextInput.click();
+        await tagTextInput.fill(tagName);
+        await this.page.getByRole('button', { name: `Create "${tagName}"` }).click();
 
-        await this.page.waitForTimeout(10);
-        await this.page.keyboard.type(tagName);
-        await this.page.waitForTimeout(100);
-        await pressButton(this.page, 'tag-create-dialog-create');
-        await pressButton(this.page, 'tag-create-dialog-save');
-
-        await responsePromise;
+        await createTagResponsePromise;
+        await assignTagResponsePromise;
+        await expect(this.getTagsMenuItem(tagName)).toBeVisible({ timeout: 10000 });
     }
 
     async getTagNames(): Promise<string[]> {
