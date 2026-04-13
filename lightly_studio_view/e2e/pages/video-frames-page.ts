@@ -38,7 +38,7 @@ export class VideoFramesPage {
     }
 
     getVideoFrameByIndex(index: number) {
-        return this.getVideoFrames().nth(index);
+        return this.page.locator(`[data-index="${index}"]`);
     }
 
     async getNumSelectedSamples(): Promise<number> {

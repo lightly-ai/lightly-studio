@@ -21,7 +21,7 @@ export class VideosPage {
     }
 
     getVideoByIndex(index: number) {
-        return this.getVideos().nth(index);
+        return this.page.locator(`[data-index="${index}"]`);
     }
 
     getVideoByName(name: string) {

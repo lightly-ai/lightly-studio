@@ -92,7 +92,7 @@
             height={sample.height}
             annotations={annotationsWithVisuals}
             alpha={0.8}
-            className={`pointer-events-none absolute inset-0 z-10 h-full w-full ${objectFitClass}`}
+            className={`pointer-events-none absolute inset-0 z-[1] h-full w-full ${objectFitClass}`}
         />
     </div>
 {/if}

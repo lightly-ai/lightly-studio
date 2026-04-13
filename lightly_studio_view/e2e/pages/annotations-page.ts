@@ -25,6 +25,10 @@ export class AnnotationsPage {
         return this.page.getByTestId('annotation-grid-item');
     }
 
+    getAnnotationByIndex(index: number) {
+        return this.page.locator(`[data-annotation-index="${index}"]`);
+    }
+
     getSelectedItemsCount() {
         return this.page
             .locator('[data-testid="annotation-grid-item"] [data-state="checked"]')
@@ -94,7 +98,7 @@ export class AnnotationsPage {
     }
 
     async selectAnnotationByIndex(index: number) {
-        await this.getAnnotations().nth(index).getByRole('checkbox').click();
+        await this.getAnnotations().nth(index).click();
     }
 
     async selectTag(tag: string) {

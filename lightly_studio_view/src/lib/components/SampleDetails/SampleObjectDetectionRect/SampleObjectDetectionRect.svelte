@@ -159,7 +159,7 @@
         // Create an default label if it does not exist yet
         if (!label) {
             label = await createLabel({
-                root_collection_id: collectionId,
+                dataset_id: datasetId,
                 annotation_label_name: 'DEFAULT'
             });
         }
