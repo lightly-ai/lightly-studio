@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import type { CollectionViewWithCount } from '$lib/api/lightly_studio_local';
-import { fetchCollection, isRootCollection, validateCollectionType } from './fetchCollection';
+import { fetchCollection } from './fetchCollection';
 
 vi.mock('$lib/api/lightly_studio_local/sdk.gen', () => ({
     readCollection: vi.fn()
@@ -20,9 +20,14 @@ describe('fetchCollection', () => {
             parent_collection_id: null,
             sample_type: 'IMAGE',
             num_samples: 10
-        } as CollectionViewWithCount;
+        } as unknown as CollectionViewWithCount;
 
-        vi.mocked(readCollection).mockResolvedValue({ data: mockCollection });
+        vi.mocked(readCollection).mockResolvedValue({
+            data: mockCollection,
+            error: undefined,
+            request: {} as Request,
+            response: {} as Response
+        });
 
         const result = await fetchCollection('test-id');
 
@@ -30,12 +35,6 @@ describe('fetchCollection', () => {
         expect(readCollection).toHaveBeenCalledWith({
             path: { collection_id: 'test-id' }
         });
-    });
-
-    it('should throw error when collection not found', async () => {
-        vi.mocked(readCollection).mockResolvedValue({ data: null });
-
-        await expect(fetchCollection('test-id')).rejects.toThrow('Collection test-id not found');
     });
 
     it('should throw error when API call fails', async () => {

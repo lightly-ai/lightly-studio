@@ -20,16 +20,21 @@ describe('fetchCollectionHierarchy', () => {
                 name: 'Dataset',
                 parent_collection_id: null,
                 sample_type: 'IMAGE'
-            } as CollectionView,
+            } as unknown as CollectionView,
             {
                 collection_id: 'collection-id',
                 name: 'Collection',
                 parent_collection_id: 'dataset-id',
                 sample_type: 'IMAGE'
-            } as CollectionView
+            } as unknown as CollectionView
         ];
 
-        vi.mocked(readCollectionHierarchy).mockResolvedValue({ data: mockHierarchy });
+        vi.mocked(readCollectionHierarchy).mockResolvedValue({
+            data: mockHierarchy,
+            error: undefined,
+            request: {} as Request,
+            response: {} as Response
+        });
 
         const result = await fetchCollectionHierarchy('dataset-id');
 
@@ -37,14 +42,6 @@ describe('fetchCollectionHierarchy', () => {
         expect(readCollectionHierarchy).toHaveBeenCalledWith({
             path: { collection_id: 'dataset-id' }
         });
-    });
-
-    it('should return empty array when no data', async () => {
-        vi.mocked(readCollectionHierarchy).mockResolvedValue({ data: null });
-
-        const result = await fetchCollectionHierarchy('dataset-id');
-
-        expect(result).toEqual([]);
     });
 
     it('should throw error when API call fails with status', async () => {

@@ -21,6 +21,7 @@ export const load: LayoutLoad = async ({
     // If we have some invalid params, we should just redirect to the home page
     if (!validateUUID(dataset_id) || !validateUUID(collection_id)) {
         goto(routeHelpers.toHome());
+        return new Promise(() => {}); // Return a never-resolving promise to prevent further execution
     }
 
     const collectionData = await fetchCollection(collection_id);
@@ -34,6 +35,7 @@ export const load: LayoutLoad = async ({
                 collection_id
             )
         );
+        return new Promise(() => {}); // Return a never-resolving promise to prevent further execution
     }
 
     let collectionHierarchy: CollectionView[] = [];
