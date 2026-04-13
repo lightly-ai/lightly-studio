@@ -91,7 +91,7 @@
 {#if sample}
     <div
         class="crop rounded-lg bg-black"
-        class:annotation-selected={selected}
+        class:grid-item-selected={selected}
         style={`
         width: ${containerWidth}px;
         height: ${containerHeight}px;
@@ -170,12 +170,5 @@
         white-space: nowrap;
         cursor: pointer;
         user-select: none;
-    }
-
-    .annotation-selected {
-        outline: drop-shadow(1px 1px 1px hsl(var(--primary)))
-            drop-shadow(1px -1px 1px hsl(var(--primary)))
-            drop-shadow(-1px -1px 1px hsl(var(--primary)))
-            drop-shadow(-1px 1px 1px hsl(var(--primary)));
     }
 </style>

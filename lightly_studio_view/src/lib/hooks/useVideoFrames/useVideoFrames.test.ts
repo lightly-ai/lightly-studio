@@ -81,6 +81,7 @@ describe('useVideoFrames', () => {
     it('should initialize with default values', () => {
         const hook = useVideoFrames({ video: mockVideoData });
 
+        expect(get(hook.frames)).toEqual([]);
         expect(get(hook.currentFrame)).toBeUndefined();
         expect(hook.loading).toBe(false);
         expect(hook.reachedEnd).toBe(false);
@@ -99,9 +100,15 @@ describe('useVideoFrames', () => {
         const hook = useVideoFrames({ video: mockVideoData });
 
         // Subscribe to currentFrame store to verify reactivity
-        const values: (FrameView | undefined)[] = [];
-        const unsubscribe = hook.currentFrame.subscribe((value) => {
-            values.push(value);
+        const currentFrameValues: (FrameView | undefined)[] = [];
+        const unsubscribeCurrentFrame = hook.currentFrame.subscribe((value) => {
+            currentFrameValues.push(value);
+        });
+
+        // Subscribe to frames store to verify reactivity
+        const framesValues: FrameView[][] = [];
+        const unsubscribeFrames = hook.frames.subscribe((value) => {
+            framesValues.push(value);
         });
 
         await hook.loadFramesFromFrameNumber(1);
@@ -119,9 +126,12 @@ describe('useVideoFrames', () => {
 
         expect(hook.loading).toBe(false);
         expect(get(hook.currentFrame)?.frame_number).toBe(1);
-        expect(values).toHaveLength(2); // Initial undefined + update
+        expect(currentFrameValues).toHaveLength(2); // Initial undefined + update
+        expect(get(hook.frames)).toEqual(mockFrames);
+        expect(framesValues).toHaveLength(2); // Initial [] + update
 
-        unsubscribe();
+        unsubscribeCurrentFrame();
+        unsubscribeFrames();
     });
 
     it('should load frame by playback time and update store', async () => {
@@ -192,6 +202,7 @@ describe('useVideoFrames', () => {
 
         expect(hook.loading).toBe(false);
         expect(hook.reachedEnd).toBe(true);
+        expect(get(hook.frames)).toEqual(mockFrames);
     });
 
     it('should not load frames multiple times if already loading', async () => {
@@ -254,7 +265,7 @@ describe('useVideoFrames', () => {
     });
 
     describe('reactivity', () => {
-        it('should notify subscribers when currentFrame changes', async () => {
+        it('should notify subscribers when currentFrame and frames change', async () => {
             vi.mocked(api.getAllFrames).mockResolvedValue({
                 data: {
                     data: mockFrames,
@@ -265,20 +276,30 @@ describe('useVideoFrames', () => {
 
             const hook = useVideoFrames({ video: mockVideoData });
 
-            const values: (FrameView | undefined)[] = [];
-            const unsubscribe = hook.currentFrame.subscribe((value) => {
-                values.push(value);
+            const currentFrameValues: (FrameView | undefined)[] = [];
+            const unsubscribeCurrentFrame = hook.currentFrame.subscribe((value) => {
+                currentFrameValues.push(value);
+            });
+
+            const framesValues: FrameView[][] = [];
+            const unsubscribeFrames = hook.frames.subscribe((value) => {
+                framesValues.push(value);
             });
 
             await hook.loadFramesFromFrameNumber(0);
             await hook.loadFrameByPlaybackTime(0.05, 30);
 
-            expect(values).toHaveLength(3); // Initial undefined + 2 updates
-            expect(values[0]).toBeUndefined();
-            expect(values[1]?.frame_number).toBe(0);
-            expect(values[2]?.frame_number).toBe(1);
+            expect(currentFrameValues).toHaveLength(3); // Initial undefined + 2 updates
+            expect(currentFrameValues[0]).toBeUndefined();
+            expect(currentFrameValues[1]?.frame_number).toBe(0);
+            expect(currentFrameValues[2]?.frame_number).toBe(1);
 
-            unsubscribe();
+            expect(framesValues).toHaveLength(2); // Initial [] + loaded frames
+            expect(framesValues[0]).toEqual([]);
+            expect(framesValues[1]).toEqual(mockFrames);
+
+            unsubscribeCurrentFrame();
+            unsubscribeFrames();
         });
 
         it('should keep the last frame selected at the end of the video', async () => {
