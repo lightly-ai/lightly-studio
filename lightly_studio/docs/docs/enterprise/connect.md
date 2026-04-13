@@ -1,4 +1,4 @@
-# How to Connect from Python
+# Connect from Python
 
 This guide shows how to connect to your LightlyStudio Enterprise instance from a Python
 environment. It is intended for admins who populate or update datasets from Python. Regular users

@@ -1,8 +1,7 @@
 # Cloud Storage
 
 LightlyStudio Enterprise lets admins configure cloud storage credentials centrally. Once set
-up, every Python client that calls `ls.connect()` receives the credentials automatically — no
-per-user configuration needed.
+up, every Python client that calls `ls.connect()` receives the credentials automatically, no per-user setup is needed.
 
 Currently supported: **AWS S3**. Support for GCS and Azure is planned.
 
@@ -32,8 +31,10 @@ The credentials are now stored on the server and shared with all Python client c
 
 ## Step 3: Use Cloud Storage from Python
 
-After calling `ls.connect()`, cloud credentials are injected into your local environment
-automatically. You can use remote paths directly — no extra setup needed on the client side.
+If you have not set up Python access yet, start with
+[Connect from Python](../connect.md). After calling `ls.connect()`, cloud credentials are
+injected into your local environment automatically, so you can use remote paths directly
+without any extra client-side setup.
 
 ```python title="enterprise_cloud_storage.py"
 import lightly_studio as ls

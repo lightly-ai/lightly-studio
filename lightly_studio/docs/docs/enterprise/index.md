@@ -19,5 +19,5 @@ Contact [sales@lightly.ai](mailto:sales@lightly.ai) to learn more about LightlyS
 
 ## Getting Started
 
-- [How to Connect from Python](connect.md)
+- [Connect from Python](connect.md)
 - [Cloud Storage](cloud_storage/index.md)
