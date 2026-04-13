@@ -54,8 +54,7 @@ describe('SampleDetailsNavigation', () => {
 
         expect(gotoMock).toHaveBeenCalledTimes(1);
         expect(gotoMock).toHaveBeenCalledWith(
-            '/datasets/dataset-1/images/collection-1/samples/sample-4',
-            { invalidateAll: true }
+            '/datasets/dataset-1/images/collection-1/samples/sample-4'
         );
     });
 });

@@ -31,9 +31,7 @@
 
     const gotoNextSample = () => {
         if (nextURL) {
-            goto(nextURL, {
-                invalidateAll: true
-            });
+            goto(nextURL);
         }
     };
 
@@ -51,9 +49,7 @@
 
     const gotoPreviousSample = () => {
         if (prevURL) {
-            goto(prevURL, {
-                invalidateAll: true
-            });
+            goto(prevURL);
         }
     };
 
