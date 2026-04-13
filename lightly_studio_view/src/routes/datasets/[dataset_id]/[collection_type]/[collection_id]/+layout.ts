@@ -25,11 +25,6 @@ export const load: LayoutLoad = async ({
 
     const collectionData = await fetchCollection(collection_id);
 
-    // If it is not a root collection
-    if (collectionData.parent_collection_id !== null) {
-        goto(routeHelpers.toHome());
-    }
-
     // If collection type does not match the sample type
     if (collectionData.sample_type.toLowerCase() !== collection_type.toLowerCase()) {
         goto(
