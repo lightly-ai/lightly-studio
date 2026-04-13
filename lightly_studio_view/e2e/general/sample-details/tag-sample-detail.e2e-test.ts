@@ -73,7 +73,8 @@ test.describe('sample-details-tag-flow', () => {
 
         const createTagRequests: string[] = [];
         const trackCreateTagRequests = (request: Request) => {
-            if (request.method() === 'POST' && request.url().includes('/tags')) {
+            const url = request.url();
+            if (request.method() === 'POST' && /\/tags(?:\?.*)?$/.test(url)) {
                 createTagRequests.push(request.url());
             }
         };

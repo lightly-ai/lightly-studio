@@ -1,5 +1,6 @@
 import { expect, type Page } from '@playwright/test';
 import { CaptionUtils } from '../caption-utils';
+import { waitForRequestsToSettle } from '../utils';
 
 export class SampleDetailsPage {
     private captionUtils: CaptionUtils;
@@ -139,6 +140,7 @@ export class SampleDetailsPage {
 
         await createTagResponse;
         await addToSampleResponse;
+        await waitForRequestsToSettle(this.page, '/tags');
         await expect(this.getTagByName(tagName)).toBeVisible();
     }
 
@@ -156,6 +158,7 @@ export class SampleDetailsPage {
         await this.getExistingTagOption(tagName).click();
 
         await addToSampleResponse;
+        await waitForRequestsToSettle(this.page, '/tags');
         await expect(this.getTagByName(tagName)).toBeVisible();
     }
 
