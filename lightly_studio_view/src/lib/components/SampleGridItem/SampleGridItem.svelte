@@ -57,7 +57,6 @@
 
 <div
     class="relative select-none"
-    class:sample-selected={$selectedSampleIds.has(sampleId)}
     {style}
     data-testid={dataTestId}
     data-sample-id={sampleId}
@@ -70,28 +69,16 @@
     role="button"
     tabindex="0"
 >
-    {#if hasMinimumRole(user?.role, 'labeler')}
-        <div class="absolute right-7 top-1 z-10">
-            <SelectableBox
-                onSelect={() => undefined}
-                isSelected={$selectedSampleIds.has(sampleId)}
-            />
-        </div>
-    {/if}
-
     <div
         class="relative overflow-hidden rounded-lg"
+        class:grid-item-selected={$selectedSampleIds.has(sampleId)}
         style="width: var(--sample-width); height: var(--sample-height);"
     >
+        {#if hasMinimumRole(user?.role, 'labeler') && $selectedSampleIds.has(sampleId)}
+            <div class="absolute right-2 top-1.5 z-10">
+                <SelectableBox onSelect={() => undefined} isSelected={true} />
+            </div>
+        {/if}
         {@render item()}
     </div>
 </div>
-
-<style>
-    .sample-selected {
-        outline: drop-shadow(1px 1px 1px hsl(var(--primary)))
-            drop-shadow(1px -1px 1px hsl(var(--primary)))
-            drop-shadow(-1px -1px 1px hsl(var(--primary)))
-            drop-shadow(-1px 1px 1px hsl(var(--primary)));
-    }
-</style>

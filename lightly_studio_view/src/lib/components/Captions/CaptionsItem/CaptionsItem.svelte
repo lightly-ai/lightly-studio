@@ -17,7 +17,7 @@
         getVideoByIdOptions,
         readCollectionOptions
     } from '$lib/api/lightly_studio_local/@tanstack/svelte-query.gen';
-    import { PUBLIC_VIDEOS_FRAMES_MEDIA_URL } from '$env/static/public';
+    import { getGridFrameURL, getGridThumbnailRequestSize } from '$lib/utils';
     import VideoItem from '$lib/components/VideoItem/VideoItem.svelte';
 
     const {
@@ -36,8 +36,9 @@
         canStartDraft?: boolean;
     } = $props();
 
-    const { gridViewSampleRenderingStore } = useSettings();
+    const { gridViewSampleRenderingStore, gridViewThumbnailQualityStore } = useSettings();
     const { isEditingMode, addReversibleAction } = useGlobalStorage();
+    const CAPTION_PREVIEW_SIZE = 320;
 
     let objectFit = $derived($gridViewSampleRenderingStore); // Use store value directly
 
@@ -134,10 +135,27 @@
                     </div>
                 {/if}
             {:else if isImageView(item)}
-                <SampleImage sample={item} {objectFit} />
+                <SampleImage
+                    sample={item}
+                    {objectFit}
+                    thumbnailQuality={$gridViewThumbnailQualityStore}
+                    thumbnailWidth={CAPTION_PREVIEW_SIZE}
+                    thumbnailHeight={CAPTION_PREVIEW_SIZE}
+                />
             {:else if isFrameView()}
                 <img
-                    src={`${PUBLIC_VIDEOS_FRAMES_MEDIA_URL}/${item.sample_id}?compressed=true`}
+                    src={getGridFrameURL({
+                        sampleId: item.sample_id,
+                        quality: $gridViewThumbnailQualityStore,
+                        renderedWidth: getGridThumbnailRequestSize(
+                            CAPTION_PREVIEW_SIZE,
+                            globalThis.window?.devicePixelRatio || 1
+                        ),
+                        renderedHeight: getGridThumbnailRequestSize(
+                            CAPTION_PREVIEW_SIZE,
+                            globalThis.window?.devicePixelRatio || 1
+                        )
+                    })}
                     alt={item.sample_id}
                     class="sample-image rounded-lg bg-black"
                     style="--object-fit: {objectFit}"

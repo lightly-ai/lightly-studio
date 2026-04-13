@@ -8,8 +8,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+
 - Added `Dataset.update_metadata` method to update metadata of multiple samples at once.
 - Added cloud storage support for Pascal VOC semantic segmentation annotations.
+- Added thumbnail quality setting in the Settings dialog. Enable "High Quality Thumbnails" to load compressed JPEG thumbnails in grid views, reducing bandwidth for large datasets.
+- Added a floating selection panel to grid pages.
+- Added ability to add and create tags directly from the sample and annotation detail view.
 
 ### Changed
 

@@ -9,20 +9,25 @@ import threading
 from collections import OrderedDict
 from collections.abc import Generator
 from concurrent.futures import ThreadPoolExecutor
-from typing import Any, cast
+from dataclasses import dataclass
+from typing import Annotated, Any, cast
 from uuid import UUID
 
 import cv2
 import fsspec
 import numpy as np
 import numpy.typing as npt
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Query
 from fastapi.responses import StreamingResponse
+from pydantic import BaseModel
 
 from lightly_studio.db_manager import SessionDep
+from lightly_studio.models.settings import GridViewThumbnailQualityType
 from lightly_studio.resolvers import video_frame_resolver
 
 frames_router = APIRouter(prefix="/frames/media", tags=["frames streaming"])
+
+JPEG_QUALITY = 75
 
 # Thread pool for CPU-intensive video processing
 _thread_pool_executor: ThreadPoolExecutor | None = None
@@ -30,6 +35,23 @@ _thread_pool_executor: ThreadPoolExecutor | None = None
 # Thread-local cache for VideoCapture + stream (per thread, not shared)
 _thread_local = threading.local()
 _CAP_CACHE_SIZE = 4
+
+
+@dataclass(frozen=True)
+class FrameTransformOptions:
+    """Controls transport-level frame resizing and encoding."""
+
+    quality: GridViewThumbnailQualityType
+    max_width: int | None
+    max_height: int | None
+
+
+class FrameTransformQuery(BaseModel):
+    """Query parameters for frame transport quality."""
+
+    quality: GridViewThumbnailQualityType = GridViewThumbnailQualityType.RAW
+    max_width: int | None = Query(default=None, ge=1, le=4096)
+    max_height: int | None = Query(default=None, ge=1, le=4096)
 
 
 def get_thread_pool_executor() -> ThreadPoolExecutor:
@@ -158,7 +180,7 @@ def _process_video_frame(
     video_path: str,
     frame_number: int,
     rotation_deg: int,
-    compressed: bool,
+    transform: FrameTransformOptions,
 ) -> tuple[npt.NDArray[np.uint8], str]:
     """Process a video frame (CPU-intensive work, runs in thread pool).
 
@@ -171,7 +193,7 @@ def _process_video_frame(
         video_path: Path to the video file.
         frame_number: Frame number to extract.
         rotation_deg: Rotation in degrees.
-        compressed: Whether to encode as JPEG with lower quality.
+        transform: Transport-level resize and encoding options.
 
     Returns:
         Tuple of (encoded_buffer, media_type).
@@ -194,9 +216,14 @@ def _process_video_frame(
     if rotate_code is not None:
         frame = cv2.rotate(src=frame, rotateCode=rotate_code)
 
-    # Encode frame - use JPEG with lower quality when compressed, PNG otherwise
-    if compressed:
-        encode_params = [cv2.IMWRITE_JPEG_QUALITY, 60]
+    if transform.quality == GridViewThumbnailQualityType.HIGH:
+        if transform.max_width is not None or transform.max_height is not None:
+            frame = _resize_frame(
+                frame=frame,
+                max_width=transform.max_width,
+                max_height=transform.max_height,
+            )
+        encode_params = [cv2.IMWRITE_JPEG_QUALITY, JPEG_QUALITY]
         success, buffer = cv2.imencode(".jpg", frame, encode_params)
         media_type = "image/jpeg"
     else:
@@ -209,19 +236,53 @@ def _process_video_frame(
     return buffer, media_type
 
 
+def _resize_frame(
+    frame: npt.NDArray[np.uint8],
+    max_width: int | None,
+    max_height: int | None,
+) -> npt.NDArray[np.uint8]:
+    """Resize a frame while preserving aspect ratio and avoiding upscaling."""
+    frame_height, frame_width = frame.shape[:2]
+    max_width = max_width or frame_width
+    max_height = max_height or frame_height
+    scale = min(max_width / frame_width, max_height / frame_height, 1)
+
+    if scale == 1:
+        return frame
+
+    target_size = (
+        max(1, round(frame_width * scale)),
+        max(1, round(frame_height * scale)),
+    )
+    return cv2.resize(frame, target_size, interpolation=cv2.INTER_AREA)
+
+
 @frames_router.get("/{sample_id}")
 async def stream_frame(
-    sample_id: UUID, session: SessionDep, compressed: bool = False
+    sample_id: UUID,
+    session: SessionDep,
+    transform_query: Annotated[FrameTransformQuery, Depends(FrameTransformQuery)],
 ) -> StreamingResponse:
     """Serve a single video frame as PNG/JPEG using StreamingResponse.
 
     Args:
         sample_id: The UUID of the video frame sample.
         session: Database session dependency.
-        compressed: If True, encode as JPEG with lower quality (keeps original resolution).
+        transform_query: Transport-level query parameters for frame encoding.
     """
     video_frame = video_frame_resolver.get_by_id(session=session, sample_id=sample_id)
     video_path = video_frame.video.file_path_abs
+    if (
+        transform_query.quality == GridViewThumbnailQualityType.HIGH
+        and transform_query.max_width is None
+        and transform_query.max_height is None
+    ):
+        raise HTTPException(400, "max_width or max_height is required when quality=high")
+    transform = FrameTransformOptions(
+        quality=transform_query.quality,
+        max_width=transform_query.max_width,
+        max_height=transform_query.max_height,
+    )
 
     # Run CPU-intensive video processing in thread pool to avoid blocking event loop
     try:
@@ -231,7 +292,7 @@ async def stream_frame(
             video_path,
             video_frame.frame_number,
             video_frame.rotation_deg,
-            compressed,
+            transform,
         )
     except ValueError as exc:
         raise HTTPException(400, str(exc)) from exc

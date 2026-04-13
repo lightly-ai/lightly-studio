@@ -1,8 +1,8 @@
 <script lang="ts">
     import { goto } from '$app/navigation';
-    import { PUBLIC_VIDEOS_FRAMES_MEDIA_URL } from '$env/static/public';
     import type { SampleView, VideoFrameView } from '$lib/api/lightly_studio_local';
     import { routeHelpers } from '$lib/routes';
+    import { getGridFrameURL, getGridThumbnailRequestSize } from '$lib/utils';
     import VideoFrameAnnotationItem from '../VideoFrameAnnotationItem/VideoFrameAnnotationItem.svelte';
     import { page } from '$app/state';
 
@@ -24,6 +24,19 @@
             );
         }
     }
+
+    const frameUrl = $derived.by(() => {
+        const requestedSize = getGridThumbnailRequestSize(
+            size,
+            globalThis.window?.devicePixelRatio || 1
+        );
+        return getGridFrameURL({
+            sampleId: videoFrame.sample_id,
+            quality: 'high',
+            renderedWidth: requestedSize,
+            renderedHeight: requestedSize
+        });
+    });
 </script>
 
 <div
@@ -32,10 +45,7 @@
     role="img"
     style={`width: var(${videoFrame.video.width}); height: var(${videoFrame.video.height});`}
 >
-    <img
-        src={`${PUBLIC_VIDEOS_FRAMES_MEDIA_URL}/${videoFrame.sample_id}?compressed=true`}
-        alt={`${videoFrame.sample_id}-${videoFrame.frame_number}`}
-    />
+    <img src={frameUrl} alt={`${videoFrame.sample_id}-${videoFrame.frame_number}`} />
     <VideoFrameAnnotationItem
         width={size}
         height={size}
