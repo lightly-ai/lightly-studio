@@ -12,18 +12,23 @@
 
     let searchQuery = $state('');
     let showDropdown = $state(false);
+    const trimmedSearchQuery = $derived(searchQuery.trim());
+    const normalizedSearchQuery = $derived(trimmedSearchQuery.toLowerCase());
 
     const filteredOptions = $derived<TagView[]>(
-        searchQuery.trim()
-            ? options.filter((t) => t.name.toLowerCase().includes(searchQuery.toLowerCase()))
+        trimmedSearchQuery
+            ? options.filter((t) => t.name.toLowerCase().includes(normalizedSearchQuery))
             : options
     );
 
     const hasExactMatch = $derived(
-        options.some((t) => t.name.toLowerCase() === searchQuery.trim().toLowerCase())
+        options.some((t) => t.name.toLowerCase() === normalizedSearchQuery)
     );
 
     function handleSelect(name: string) {
+        if (busy) {
+            return;
+        }
         onSelect(name);
         searchQuery = '';
         showDropdown = false;
@@ -31,19 +36,38 @@
 
     function handleKeydown(event: KeyboardEvent) {
         if (event.key === 'Enter') {
-            const exactMatch = options.find(
-                (t) => t.name.toLowerCase() === searchQuery.trim().toLowerCase()
-            );
+            const exactMatch = options.find((t) => t.name.toLowerCase() === normalizedSearchQuery);
             if (exactMatch) {
                 handleSelect(exactMatch.name);
-            } else if (searchQuery.trim()) {
-                handleSelect(searchQuery.trim());
+            } else if (trimmedSearchQuery) {
+                handleSelect(trimmedSearchQuery);
             }
         }
         if (event.key === 'Escape') {
             searchQuery = '';
             showDropdown = false;
         }
+    }
+
+    function handleInput() {
+        showDropdown = true;
+    }
+
+    function handleFocus() {
+        showDropdown = true;
+    }
+
+    function handleBlur() {
+        setTimeout(() => (showDropdown = false), 100);
+    }
+
+    function handleOptionClick(event: MouseEvent) {
+        const tagName = (event.currentTarget as HTMLButtonElement).value;
+        handleSelect(tagName);
+    }
+
+    function handleCreateClick() {
+        handleSelect(trimmedSearchQuery);
     }
 </script>
 
@@ -53,32 +77,35 @@
         placeholder="Assign tag to selection"
         bind:value={searchQuery}
         onkeydown={handleKeydown}
-        oninput={() => (showDropdown = true)}
-        onfocus={() => (showDropdown = true)}
-        onblur={() => setTimeout(() => (showDropdown = false), 100)}
+        oninput={handleInput}
+        onfocus={handleFocus}
+        onblur={handleBlur}
         class="h-8 text-xs disabled:opacity-60"
         disabled={busy}
     />
-    {#if showDropdown && (filteredOptions.length > 0 || (searchQuery.trim() && !hasExactMatch))}
+    {#if showDropdown && (filteredOptions.length > 0 || (trimmedSearchQuery && !hasExactMatch))}
         <div
             class="absolute left-0 top-full z-50 mt-1 max-h-44 w-full overflow-auto rounded-md border bg-popover shadow-md"
         >
             {#each filteredOptions as tag (tag.tag_id)}
                 <button
                     type="button"
-                    class="flex w-full items-center px-2 py-1.5 text-xs hover:bg-accent"
-                    onclick={() => handleSelect(tag.name)}
+                    class="flex w-full items-center px-2 py-1.5 text-xs hover:bg-accent disabled:pointer-events-none disabled:opacity-60"
+                    disabled={busy}
+                    value={tag.name}
+                    onclick={handleOptionClick}
                 >
                     {tag.name}
                 </button>
             {/each}
-            {#if searchQuery.trim() && !hasExactMatch}
+            {#if trimmedSearchQuery && !hasExactMatch}
                 <button
                     type="button"
-                    class="flex w-full items-center gap-1 px-2 py-1.5 text-xs text-muted-foreground hover:bg-accent"
-                    onclick={() => handleSelect(searchQuery.trim())}
+                    class="flex w-full items-center gap-1 px-2 py-1.5 text-xs text-muted-foreground hover:bg-accent disabled:pointer-events-none disabled:opacity-60"
+                    disabled={busy}
+                    onclick={handleCreateClick}
                 >
-                    Create "{searchQuery.trim()}"
+                    Create "{trimmedSearchQuery}"
                 </button>
             {/if}
         </div>

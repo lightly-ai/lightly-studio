@@ -1,15 +1,75 @@
-import { describe, it, expect, vi } from 'vitest';
+import { beforeEach, describe, it, expect, vi } from 'vitest';
 import { fireEvent, render, screen } from '@testing-library/svelte';
+import { writable } from 'svelte/store';
 import SegmentTags from './SegmentTags.svelte';
 import * as hooks from '$lib/hooks';
+import type { TagView } from '$lib/services/types';
+
+vi.mock('./AddTagPopover.svelte', async () => {
+    const module = await import('./AddTagPopover.mock.svelte');
+    return { default: module.default };
+});
 
 const removeTagFromSampleMock = vi.fn();
+const addExistingMock = vi.fn();
+const createAndAddMock = vi.fn();
+const loadTagsMock = vi.fn();
 
 vi.spyOn(hooks, 'useRemoveTagFromSample').mockReturnValue({
     removeTagFromSample: removeTagFromSampleMock
 } as ReturnType<typeof hooks.useRemoveTagFromSample>);
 
+vi.spyOn(hooks, 'useGlobalStorage').mockReturnValue({
+    collections: writable({
+        'collection-1': {
+            sampleType: 'video',
+            parentCollectionId: null,
+            collectionId: 'collection-1'
+        }
+    })
+} as unknown as ReturnType<typeof hooks.useGlobalStorage>);
+
+vi.spyOn(hooks, 'useTags').mockImplementation(() => ({
+    tags: writable<TagView[]>([
+        {
+            tag_id: 'existing-tag',
+            name: 'Existing Tag',
+            kind: 'sample',
+            description: '',
+            created_at: new Date(),
+            updated_at: new Date()
+        },
+        {
+            tag_id: 'other-tag',
+            name: 'Other Tag',
+            kind: 'sample',
+            description: '',
+            created_at: new Date(),
+            updated_at: new Date()
+        }
+    ]),
+    loadTags: loadTagsMock,
+    tagsSelected: writable(new Set<string>()),
+    clearTagsSelected: vi.fn(),
+    tagSelectionToggle: vi.fn(),
+    isLoading: writable(false),
+    error: writable(null)
+}));
+
+vi.spyOn(hooks, 'useAddTagToSample').mockReturnValue({
+    busy: writable(false),
+    addExisting: addExistingMock,
+    createAndAdd: createAndAddMock
+} as ReturnType<typeof hooks.useAddTagToSample>);
+
 describe('SegmentTags', () => {
+    beforeEach(() => {
+        removeTagFromSampleMock.mockReset();
+        addExistingMock.mockReset();
+        createAndAddMock.mockReset();
+        loadTagsMock.mockReset();
+    });
+
     it('renders nothing when tags array is empty', () => {
         const { container } = render(SegmentTags, {
             props: {
@@ -141,5 +201,44 @@ describe('SegmentTags', () => {
 
         expect(removeTagFromSampleMock).toHaveBeenCalledWith('sample-1', '2');
         expect(removeTagFromSampleMock).toHaveBeenCalledTimes(1);
+    });
+
+    it('calls addExisting when selecting a tag that already exists in the collection', async () => {
+        render(SegmentTags, {
+            props: {
+                tags: [],
+                collectionId: 'collection-1',
+                sampleId: 'sample-1'
+            }
+        });
+
+        await fireEvent.click(screen.getByTestId('mock-add-existing'));
+
+        expect(addExistingMock).toHaveBeenCalledWith({
+            tag_id: 'existing-tag',
+            name: 'Existing Tag',
+            kind: 'sample',
+            description: '',
+            created_at: expect.any(Date),
+            updated_at: expect.any(Date)
+        });
+        expect(addExistingMock).toHaveBeenCalledTimes(1);
+        expect(createAndAddMock).not.toHaveBeenCalled();
+    });
+
+    it('calls createAndAdd when selecting a new tag name', async () => {
+        render(SegmentTags, {
+            props: {
+                tags: [],
+                collectionId: 'collection-1',
+                sampleId: 'sample-1'
+            }
+        });
+
+        await fireEvent.click(screen.getByTestId('mock-add-new'));
+
+        expect(createAndAddMock).toHaveBeenCalledWith('Fresh Tag');
+        expect(createAndAddMock).toHaveBeenCalledTimes(1);
+        expect(addExistingMock).not.toHaveBeenCalled();
     });
 });

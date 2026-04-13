@@ -1,5 +1,6 @@
 <script lang="ts">
     import type { GroupView, ImageView, VideoView } from '$lib/api/lightly_studio_local/types.gen';
+    import { useSettings } from '$lib/hooks/useSettings';
     import type { HTMLAttributes } from 'svelte/elements';
     import SampleImage from '../SampleImage/index.svelte';
     import VideoItem from '../VideoItem/VideoItem.svelte';
@@ -23,6 +24,7 @@
     const isImage = (sample: GroupView['group_preview']): sample is ImageView => {
         return Boolean(sample && sample.type === 'image');
     };
+    const { gridViewThumbnailQualityStore } = useSettings();
 </script>
 
 <div
@@ -34,7 +36,14 @@
     {#if isVideo(sample)}
         <VideoItem video={sample} size={width} showCaption={true} />
     {:else if isImage(sample)}
-        <SampleImage {sample} {width} {height} />
+        <SampleImage
+            {sample}
+            {width}
+            {height}
+            thumbnailQuality={$gridViewThumbnailQualityStore}
+            thumbnailWidth={width}
+            thumbnailHeight={height}
+        />
     {/if}
     {#if sample_count > 1}
         <div
