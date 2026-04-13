@@ -13,3 +13,4 @@ export { useRemoveTagFromSample } from '$lib/hooks/useRemoveTagFromSample/useRem
 export { useCollectionWithChildren } from '$lib/hooks/useCollection/useCollection';
 export { useSelectionSummary } from '$lib/hooks/useSelectionSummary/useSelectionSummary';
 export { useVideo } from '$lib/hooks/useVideo/useVideo';
+export { useAddTagToSample } from '$lib/hooks/useAddTagToSample/useAddTagToSample';
