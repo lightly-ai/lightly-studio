@@ -7,7 +7,6 @@ import {
 } from '../utils';
 import * as fs from 'fs';
 import * as path from 'path';
-import { aw } from 'vitest/dist/chunks/reporters.nr4dxCkA.js';
 
 const MAX_RENDER_TIME_MS = 5000;
 const MEASUREMENT_ITERATIONS = 5;
