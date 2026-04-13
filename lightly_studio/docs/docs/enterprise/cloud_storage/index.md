@@ -21,8 +21,9 @@ Follow the guide for your cloud provider to create credentials with the required
 ## Step 2: Add Credentials in the GUI
 
 1. Open your LightlyStudio Enterprise instance in the browser.
-2. Open the **Cloud Storage Credentials** dialog.
-3. Enter the credentials you created in the previous step.
+2. Go to the **Datasets** page and click the **Cloud Storage Credentials** button.
+   This button is only visible to admins.
+3. Enter the **Access Key ID** and **Secret Access Key** you created in the previous step.
 4. Click **Save Credentials**.
 
 ![Cloud Storage Credentials dialog](../../_static/cloud_storage_credentials_dialog.jpg){ width="100%" }

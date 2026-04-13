@@ -84,6 +84,11 @@ for sample in list(dataset)[:3]:
     a local DuckDB file. You do **not** need to call `ls.start_gui()` — the GUI is already
     running on the enterprise server.
 
+## Next Steps
+
+- [Cloud Storage](cloud_storage/index.md) — configure cloud storage credentials so
+  Python clients can access S3 buckets without local credential setup.
+
 ## API Reference for ls.connect()
 
 ::: lightly_studio.enterprise.connect
