@@ -1,5 +1,6 @@
 <script lang="ts">
     import type { ImageView } from '$lib/api/lightly_studio_local';
+    import { useSettings } from '$lib/hooks/useSettings';
     import { getSimilarityColor } from '$lib/utils';
     import { SampleAnnotations, SampleImage } from '..';
     import type { SampleImageObjectFit } from '../SampleImage/types';
@@ -7,6 +8,7 @@
     const {
         sample,
         objectFit,
+        sampleSize,
         displayTextOnImage
     }: {
         sample: ImageView;
@@ -14,9 +16,17 @@
         sampleSize: number;
         displayTextOnImage?: string;
     } = $props();
+
+    const { gridViewThumbnailQualityStore } = useSettings();
 </script>
 
-<SampleImage {sample} {objectFit} />
+<SampleImage
+    {sample}
+    {objectFit}
+    thumbnailQuality={$gridViewThumbnailQualityStore}
+    thumbnailWidth={sampleSize}
+    thumbnailHeight={sampleSize}
+/>
 <SampleAnnotations {sample} {objectFit} />
 
 {#if sample.similarity_score !== undefined && sample.similarity_score !== null}

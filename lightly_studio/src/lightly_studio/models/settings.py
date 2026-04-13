@@ -16,12 +16,23 @@ class GridViewSampleRenderingType(str, Enum):
     CONTAIN = "contain"
 
 
+class GridViewThumbnailQualityType(str, Enum):
+    """Defines how thumbnails are fetched for grid-like views."""
+
+    RAW = "raw"
+    HIGH = "high"
+
+
 class SettingBase(SQLModel):
     """Base class for Settings model."""
 
     grid_view_sample_rendering: GridViewSampleRenderingType = Field(
         default=GridViewSampleRenderingType.CONTAIN,
         description="Controls how samples are rendered in the grid view",
+    )
+    grid_view_thumbnail_quality: GridViewThumbnailQualityType = Field(
+        default=GridViewThumbnailQualityType.RAW,
+        description="Controls thumbnail quality for grid-like preview views",
     )
 
     # Keyboard shortcuts.
