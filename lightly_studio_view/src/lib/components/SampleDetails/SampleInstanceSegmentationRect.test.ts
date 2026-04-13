@@ -10,8 +10,11 @@ const {
     setIsDrawing,
     committedSampleIds,
     useInstanceSegmentationBrushMock,
+    applyBrushToMaskMock,
     decodeRLEToBinaryMaskMock,
     getImageCoordsFromMouseMock,
+    interpolateLineBetweenPointsMock,
+    maskToDataUrlMock,
     withAlphaMock
 } = vi.hoisted(() => {
     const context = {
@@ -34,8 +37,11 @@ const {
         })
     }));
 
+    const applyBrushToMask = vi.fn();
     const decodeRLEToBinaryMask = vi.fn();
     const getImageCoordsFromMouse = vi.fn(() => ({ x: 10, y: 12 }));
+    const interpolateLineBetweenPoints = vi.fn(() => []);
+    const maskToDataUrl = vi.fn(() => 'data:image/png;base64,preview');
     const withAlpha = vi.fn(() => 'rgba(0, 0, 255, 0.25)');
 
     return {
@@ -44,8 +50,11 @@ const {
         setIsDrawing: setIsDrawingMock,
         committedSampleIds: sampleIds,
         useInstanceSegmentationBrushMock: brushHookMock,
+        applyBrushToMaskMock: applyBrushToMask,
         decodeRLEToBinaryMaskMock: decodeRLEToBinaryMask,
         getImageCoordsFromMouseMock: getImageCoordsFromMouse,
+        interpolateLineBetweenPointsMock: interpolateLineBetweenPoints,
+        maskToDataUrlMock: maskToDataUrl,
         withAlphaMock: withAlpha
     };
 });
@@ -59,15 +68,18 @@ vi.mock('$app/state', () => ({
 }));
 
 vi.mock('$lib/components/SampleAnnotation/utils', () => ({
+    applyBrushToMask: applyBrushToMaskMock,
     decodeRLEToBinaryMask: decodeRLEToBinaryMaskMock,
     getImageCoordsFromMouse: getImageCoordsFromMouseMock,
+    interpolateLineBetweenPoints: interpolateLineBetweenPointsMock,
+    maskToDataUrl: maskToDataUrlMock,
     withAlpha: withAlphaMock
 }));
 
 vi.mock(
     '$lib/components/SampleAnnotation/SampleAnnotationSegmentationRLE/calculateBinaryMaskFromRLE/parseColor',
     () => ({
-        default: vi.fn(() => ({ r: 0, g: 0, b: 255, a: 255 }))
+        default: vi.fn(() => [0, 0, 255, 255])
     })
 );
 
@@ -115,30 +127,8 @@ type ScheduledFrame = {
     callback: FrameRequestCallback;
 };
 
-type Mock2dContext = {
-    clearRect: ReturnType<typeof vi.fn>;
-    createImageData: ReturnType<typeof vi.fn>;
-    putImageData: ReturnType<typeof vi.fn>;
-    drawImage: ReturnType<typeof vi.fn>;
-    fillRect: ReturnType<typeof vi.fn>;
-    getImageData: ReturnType<typeof vi.fn>;
-    beginPath: ReturnType<typeof vi.fn>;
-    arc: ReturnType<typeof vi.fn>;
-    fill: ReturnType<typeof vi.fn>;
-    moveTo: ReturnType<typeof vi.fn>;
-    lineTo: ReturnType<typeof vi.fn>;
-    stroke: ReturnType<typeof vi.fn>;
-    globalCompositeOperation: string;
-    fillStyle: string;
-    strokeStyle: string;
-    lineWidth: number;
-    lineCap: CanvasLineCap;
-    lineJoin: CanvasLineJoin;
-};
-
 let nextFrameId = 1;
 let scheduledFrames: ScheduledFrame[] = [];
-let mockCanvasContext: Mock2dContext;
 
 const runNextFrame = async () => {
     const next = scheduledFrames.shift();
@@ -153,12 +143,6 @@ const getDrawingRect = (container: HTMLElement): SVGRectElement => {
     return drawingRect as SVGRectElement;
 };
 
-const getPreviewLayer = (container: HTMLElement): SVGForeignObjectElement => {
-    const previewLayer = container.querySelector('foreignObject');
-    expect(previewLayer).not.toBeNull();
-    return previewLayer as SVGForeignObjectElement;
-};
-
 describe('SampleInstanceSegmentationRect', () => {
     beforeEach(() => {
         vi.clearAllMocks();
@@ -169,42 +153,6 @@ describe('SampleInstanceSegmentationRect', () => {
         nextFrameId = 1;
         scheduledFrames = [];
         baseProps.refetch.mockReset();
-
-        mockCanvasContext = {
-            clearRect: vi.fn(),
-            createImageData: vi.fn((width: number, height: number) => ({
-                data: new Uint8ClampedArray(width * height * 4),
-                width,
-                height
-            })),
-            putImageData: vi.fn(),
-            drawImage: vi.fn(),
-            fillRect: vi.fn(),
-            getImageData: vi.fn((x: number, y: number, width: number, height: number) => ({
-                data: new Uint8ClampedArray(width * height * 4),
-                width,
-                height
-            })),
-            beginPath: vi.fn(),
-            arc: vi.fn(),
-            fill: vi.fn(),
-            moveTo: vi.fn(),
-            lineTo: vi.fn(),
-            stroke: vi.fn(),
-            globalCompositeOperation: 'source-over',
-            fillStyle: 'black',
-            strokeStyle: 'black',
-            lineWidth: 1,
-            lineCap: 'round',
-            lineJoin: 'round'
-        };
-
-        vi.spyOn(HTMLCanvasElement.prototype, 'getContext').mockImplementation(
-            (contextId: string) => {
-                if (contextId !== '2d') return null;
-                return mockCanvasContext as unknown as CanvasRenderingContext2D;
-            }
-        );
 
         vi.stubGlobal(
             'requestAnimationFrame',
@@ -226,7 +174,6 @@ describe('SampleInstanceSegmentationRect', () => {
     });
 
     afterEach(() => {
-        vi.restoreAllMocks();
         vi.unstubAllGlobals();
     });
 
@@ -274,16 +221,16 @@ describe('SampleInstanceSegmentationRect', () => {
         });
 
         expect(requestAnimationFrame).toHaveBeenCalledTimes(1);
-        expect(mockCanvasContext.drawImage).not.toHaveBeenCalled();
-        expect(getPreviewLayer(container).classList.contains('previewHidden')).toBe(true);
+        expect(maskToDataUrlMock).not.toHaveBeenCalled();
+        expect(container.querySelector('image')).toBeNull();
 
         await runNextFrame();
 
-        expect(mockCanvasContext.drawImage).toHaveBeenCalledTimes(1);
-        expect(getPreviewLayer(container).classList.contains('previewHidden')).toBe(false);
+        expect(maskToDataUrlMock).toHaveBeenCalledTimes(1);
+        expect(container.querySelector('image')).not.toBeNull();
     });
 
-    it('batches preview updates into the already scheduled animation frame', async () => {
+    it('cancels the previous scheduled frame before scheduling a new preview update', async () => {
         const { container } = render(SampleInstanceSegmentationRect, {
             props: {
                 ...baseProps,
@@ -304,10 +251,11 @@ describe('SampleInstanceSegmentationRect', () => {
             clientY: 21
         });
 
-        expect(requestAnimationFrame).toHaveBeenCalledTimes(1);
-        expect(cancelAnimationFrame).not.toHaveBeenCalled();
+        expect(requestAnimationFrame).toHaveBeenCalledTimes(2);
+        expect(cancelAnimationFrame).toHaveBeenCalledTimes(1);
+        expect(cancelAnimationFrame).toHaveBeenCalledWith(1);
         expect(scheduledFrames).toHaveLength(1);
-        expect(scheduledFrames[0]?.id).toBe(1);
+        expect(scheduledFrames[0]?.id).toBe(2);
     });
 
     it('cancels scheduled preview updates when the component unmounts', async () => {

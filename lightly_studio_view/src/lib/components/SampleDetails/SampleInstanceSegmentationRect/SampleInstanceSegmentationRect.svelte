@@ -2,8 +2,11 @@
     import { onDestroy } from 'svelte';
     import type { AnnotationUpdateInput, AnnotationView } from '$lib/api/lightly_studio_local';
     import {
+        applyBrushToMask,
         decodeRLEToBinaryMask,
         getImageCoordsFromMouse,
+        interpolateLineBetweenPoints,
+        maskToDataUrl,
         withAlpha
     } from '$lib/components/SampleAnnotation/utils';
     import parseColor from '$lib/components/SampleAnnotation/SampleAnnotationSegmentationRLE/calculateBinaryMaskFromRLE/parseColor';
@@ -11,7 +14,6 @@
     import { useAnnotation } from '$lib/hooks/useAnnotation/useAnnotation';
     import { useAnnotationLabels } from '$lib/hooks/useAnnotationLabels/useAnnotationLabels';
     import { useInstanceSegmentationBrush } from '$lib/hooks/useInstanceSegmentationBrush';
-    import { useInstanceSegmentationPreview } from '$lib/hooks/useInstanceSegmentationPreview';
     import { useCollectionWithChildren } from '$lib/hooks/useCollection/useCollection';
     import { page } from '$app/state';
     import SampleAnnotationRect from '../SampleAnnotationRect/SampleAnnotationRect.svelte';
@@ -89,38 +91,45 @@
         setAnnotationId
     } = useAnnotationLabelContext();
 
-    let baseMask = $state<Uint8Array | null>(null);
+    let brushPath = $state<{ x: number; y: number }[]>([]);
+    let workingMask = $state<Uint8Array | null>(null);
     let selectedAnnotation = $state<AnnotationView | null>(null);
     let lastBrushPoint = $state<{ x: number; y: number } | null>(null);
-    let previewCanvas = $state<HTMLCanvasElement | null>(null);
-    let isPreviewVisible = $state(false);
+    let previewDataUrl = $state<string>('');
+    let previewRenderFrameId: number | null = null;
 
     // Parse the color once and cache it for direct mask rendering.
     const parsedColor = $derived(parseColor(drawerStrokeColor));
 
-    // Hook owns mask drawing + preview composition.
-    const previewApi = useInstanceSegmentationPreview({
-        onPreviewVisibilityChange: (visible) => {
-            isPreviewVisible = visible;
-        }
-    });
+    const cancelScheduledPreviewUpdate = () => {
+        if (previewRenderFrameId === null) return;
+        cancelAnimationFrame(previewRenderFrameId);
+        previewRenderFrameId = null;
+    };
 
-    $effect(() => {
-        previewApi.setPreviewCanvas(previewCanvas);
-    });
+    const updatePreview = () => {
+        if (!workingMask) return;
+
+        cancelScheduledPreviewUpdate();
+        previewRenderFrameId = requestAnimationFrame(() => {
+            previewRenderFrameId = null;
+            if (!workingMask) return;
+
+            previewDataUrl = maskToDataUrl(workingMask, sample.width, sample.height, parsedColor);
+        });
+    };
 
     onDestroy(() => {
-        previewApi.destroy();
+        cancelScheduledPreviewUpdate();
     });
 
     $effect(() => {
         if (!activeAnnotationId) {
-            previewApi.cancelScheduledPreviewCompose();
-            previewApi.clearPreview();
-            isPreviewVisible = false;
+            cancelScheduledPreviewUpdate();
             selectedAnnotation = null;
-            baseMask = null;
-            lastBrushPoint = null;
+            workingMask = null;
+            brushPath = [];
+            previewDataUrl = '';
             return;
         }
 
@@ -132,35 +141,25 @@
 
         const rle = ann?.segmentation_details?.segmentation_mask;
         if (!ann) {
-            previewApi.cancelScheduledPreviewCompose();
-            previewApi.clearPreview();
-            isPreviewVisible = false;
-            const emptyMask = new Uint8Array(sample.width * sample.height);
-            baseMask = emptyMask;
+            cancelScheduledPreviewUpdate();
+            workingMask = new Uint8Array(sample.width * sample.height);
+            previewDataUrl = '';
             selectedAnnotation = null;
-            lastBrushPoint = null;
             return;
         }
 
         if (!rle) {
-            previewApi.cancelScheduledPreviewCompose();
-            previewApi.clearPreview();
-            isPreviewVisible = false;
-            const emptyMask = new Uint8Array(sample.width * sample.height);
-            baseMask = emptyMask;
+            cancelScheduledPreviewUpdate();
+            workingMask = new Uint8Array(sample.width * sample.height);
+            previewDataUrl = '';
             selectedAnnotation = ann;
-            lastBrushPoint = null;
             return;
         }
 
-        previewApi.cancelScheduledPreviewCompose();
-        const decodedMask = decodeRLEToBinaryMask(rle, sample.width, sample.height);
-        // Base mask is copied into the source canvas on pointer down.
-        baseMask = decodedMask;
+        cancelScheduledPreviewUpdate();
+        workingMask = decodeRLEToBinaryMask(rle, sample.width, sample.height);
         selectedAnnotation = ann;
-        previewApi.clearPreview();
-        isPreviewVisible = false;
-        lastBrushPoint = null;
+        previewDataUrl = '';
     });
 
     const updateAnnotation = async (input: AnnotationUpdateInput) => {
@@ -184,26 +183,15 @@
         fill={withAlpha(drawerStrokeColor, 0.25)}
     />
 {/if}
-<foreignObject
-    x="0"
-    y="0"
-    width={sample.width}
-    height={sample.height}
-    class:previewHidden={!isPreviewVisible}
->
-    <canvas
-        bind:this={previewCanvas}
-        width={sample.width}
-        height={sample.height}
-        style="width: 100%; height: 100%; pointer-events: none; opacity: 0.85;"
-    ></canvas>
-</foreignObject>
+{#if previewDataUrl && annotationLabelContext.isDrawing}
+    <image href={previewDataUrl} width={sample.width} height={sample.height} opacity={0.85} />
+{/if}
 <SampleAnnotationRect
     bind:interactionRect
     {sample}
     cursor={'crosshair'}
     onpointermove={(e) => {
-        if (!annotationLabelContext.isDrawing) return;
+        if (!annotationLabelContext.isDrawing || !workingMask) return;
         const currentAnnotation = resolveSelectedAnnotation();
         if (
             currentAnnotation &&
@@ -215,43 +203,27 @@
         if (!point) return;
 
         if (lastBrushPoint) {
-            // Connect sampled points; dot-only strokes leave gaps on fast movement.
-            previewApi.drawBrushLine({
-                from: lastBrushPoint,
-                to: point,
+            const interpolatedPoints = interpolateLineBetweenPoints(lastBrushPoint, point);
+            applyBrushToMask(
+                workingMask,
+                sample.width,
+                sample.height,
+                interpolatedPoints,
                 brushRadius,
-                width: sample.width,
-                height: sample.height
-            });
-            previewApi.drawBrushDot({
-                point,
-                brushRadius,
-                width: sample.width,
-                height: sample.height
-            });
+                1
+            );
+            brushPath = [...brushPath, ...interpolatedPoints];
         } else {
-            previewApi.drawBrushDot({
-                point,
-                brushRadius,
-                width: sample.width,
-                height: sample.height
-            });
+            applyBrushToMask(workingMask, sample.width, sample.height, [point], brushRadius, 1);
+            brushPath = [...brushPath, point];
         }
 
         lastBrushPoint = point;
-        previewApi.schedulePreviewCompose({
-            width: sample.width,
-            height: sample.height,
-            color: parsedColor,
-            isDrawing: Boolean(annotationLabelContext.isDrawing)
-        });
+        updatePreview();
     }}
     onpointerup={(e) => {
         lastBrushPoint = null;
         e.currentTarget?.releasePointerCapture?.(e.pointerId);
-        previewApi.cancelScheduledPreviewCompose();
-        previewApi.clearPreview();
-        isPreviewVisible = false;
 
         const targetAnnotation = resolveSelectedAnnotation();
         if (
@@ -261,13 +233,8 @@
             return;
         }
 
-        const updatedMask = previewApi.toBinaryMaskFromSourceCanvas(sample.width, sample.height);
-        if (!updatedMask) return;
-        // Keep local base in sync after committing stroke.
-        baseMask = updatedMask;
-
         brushApi.finishBrush(
-            updatedMask,
+            workingMask,
             targetAnnotation,
             $labels.data ?? [],
             updateAnnotation,
@@ -295,26 +262,13 @@
 
         setIsDrawing(true);
         lastBrushPoint = point;
-        isPreviewVisible = false;
-        previewApi.cancelScheduledPreviewCompose();
-        previewApi.drawMaskToSourceCanvas(baseMask, sample.width, sample.height);
-        previewApi.drawBrushDot({
-            point,
-            brushRadius,
-            width: sample.width,
-            height: sample.height
-        });
-        previewApi.schedulePreviewCompose({
-            width: sample.width,
-            height: sample.height,
-            color: parsedColor,
-            isDrawing: Boolean(annotationLabelContext.isDrawing)
-        });
+        brushPath = [point];
+
+        if (!workingMask) {
+            workingMask = new Uint8Array(sample.width * sample.height);
+        }
+
+        applyBrushToMask(workingMask, sample.width, sample.height, [point], brushRadius, 1);
+        updatePreview();
     }}
 />
-
-<style>
-    .previewHidden {
-        visibility: hidden;
-    }
-</style>
