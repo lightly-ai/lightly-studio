@@ -7,6 +7,7 @@ import {
 } from '../utils';
 import * as fs from 'fs';
 import * as path from 'path';
+import { aw } from 'vitest/dist/chunks/reporters.nr4dxCkA.js';
 
 const MAX_RENDER_TIME_MS = 5000;
 const MEASUREMENT_ITERATIONS = 5;
@@ -54,11 +55,7 @@ test('samples grid renders within 5 seconds', async ({ page, samplesPage }) => {
     expect(result.median).toBeLessThan(MAX_RENDER_TIME_MS);
 });
 
-test('sample details renders within 5 seconds', async ({
-    page,
-    samplesPage,
-    sampleDetailsPage
-}) => {
+test('sample details renders within 5 seconds', async ({ page, samplesPage }) => {
     await samplesPage.goto();
 
     await setNetworkThrottling(page, 'Fast4G');
@@ -66,7 +63,7 @@ test('sample details renders within 5 seconds', async ({
     const result = await measureWithMedian(async () => {
         await samplesPage.goto();
         await samplesPage.doubleClickFirstSample();
-        const time = await measureElementRendering(page, sampleDetailsPage.getSampleDetails());
+        const time = await measureElementRendering(page, page.getByText('Sample 1 of 128'));
         await page.goBack();
         return time;
     }, MEASUREMENT_ITERATIONS);
@@ -100,9 +97,10 @@ test('sample details renders next image within 5 seconds', async ({
     const result = await measureWithMedian(async () => {
         await samplesPage.goto();
         await samplesPage.doubleClickFirstSample();
-        await sampleDetailsPage.getSampleDetails().waitFor({ state: 'visible' });
+
+        await page.getByText('Sample 1 of 128').waitFor();
         await sampleDetailsPage.getNextButton().click();
-        const time = await measureElementRendering(page, sampleDetailsPage.getSampleDetails());
+        const time = await measureElementRendering(page, page.getByText('Sample 2 of 128'));
         return time;
     }, MEASUREMENT_ITERATIONS);
 
@@ -135,9 +133,9 @@ test('sample details renders prev image within 5 seconds', async ({
     const result = await measureWithMedian(async () => {
         await samplesPage.goto();
         await samplesPage.getSampleByIndex(1).dblclick();
-        await sampleDetailsPage.getSampleDetails().waitFor({ state: 'visible' });
+        await page.getByText('Sample 2 of 128').waitFor({ state: 'visible' });
         await sampleDetailsPage.getPrevButton().click();
-        const time = await measureElementRendering(page, sampleDetailsPage.getSampleDetails());
+        const time = await measureElementRendering(page, page.getByText('Sample 1 of 128'));
         return time;
     }, MEASUREMENT_ITERATIONS);
 
