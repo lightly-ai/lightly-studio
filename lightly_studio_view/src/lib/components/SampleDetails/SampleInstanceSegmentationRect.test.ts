@@ -230,6 +230,29 @@ describe('SampleInstanceSegmentationRect', () => {
         expect(container.querySelector('image')).not.toBeNull();
     });
 
+    it('cancels a queued preview frame when drawing ends before it executes', async () => {
+        const { container } = render(SampleInstanceSegmentationRect, {
+            props: {
+                ...baseProps,
+                sampleId: 'sample-1',
+                sample: { width: 100, height: 100, annotations: [] }
+            }
+        });
+
+        const drawingRect = getDrawingRect(container);
+        await fireEvent.pointerDown(drawingRect, {
+            pointerId: 1,
+            clientX: 20,
+            clientY: 20
+        });
+        await fireEvent.pointerUp(drawingRect, { pointerId: 1 });
+
+        expect(cancelAnimationFrame).toHaveBeenCalledTimes(1);
+        expect(cancelAnimationFrame).toHaveBeenCalledWith(1);
+        expect(scheduledFrames).toHaveLength(0);
+        expect(maskToDataUrlMock).not.toHaveBeenCalled();
+    });
+
     it('cancels the previous scheduled frame before scheduling a new preview update', async () => {
         const { container } = render(SampleInstanceSegmentationRect, {
             props: {
