@@ -63,12 +63,12 @@ def test_request_timing__has_only_error_logs_for_slow_requests(
     app = FastAPI()
     app.add_middleware(
         RequestTimingMiddleware,
-        error_threshold_ms=200,
+        error_threshold_ms=50,
     )
 
     @app.get("/slow")
     async def slow_endpoint() -> dict[str, str]:
-        await asyncio.sleep(0.25)  # 250ms - exceeds error threshold
+        await asyncio.sleep(0.08)  # 80ms - exceeds error threshold
         return {"status": "ok"}
 
     client = TestClient(app)
