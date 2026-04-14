@@ -115,3 +115,40 @@ def test_request_timing_middleware_custom_thresholds() -> None:
     # Should log at warning level (75ms > 50ms but < 100ms)
     mock_logger.warning.assert_called_once()
     mock_logger.error.assert_not_called()
+
+
+def test_request_timing_middleware_fail_on_error_disabled(
+    app_with_timing_middleware: FastAPI, caplog: pytest.LogCaptureFixture
+) -> None:
+    """Test that requests exceeding error threshold succeed when fail_on_error is False."""
+    client = TestClient(app_with_timing_middleware)
+
+    with caplog.at_level(logging.ERROR):
+        response = client.get("/very_slow")
+
+    assert response.status_code == 200
+    assert response.json() == {"status": "ok"}
+
+
+def test_request_timing_middleware_fail_on_error_enabled() -> None:
+    """Test that requests exceeding error threshold fail when fail_on_error is True."""
+    app = FastAPI()
+    app.add_middleware(
+        RequestTimingMiddleware,
+        warning_threshold_ms=100,
+        error_threshold_ms=200,
+        fail_on_error=True,
+    )
+
+    @app.get("/very_slow")
+    async def very_slow_endpoint() -> dict[str, str]:
+        await asyncio.sleep(0.25)  # 250ms - exceeds error threshold
+        return {"status": "ok"}
+
+    client = TestClient(app)
+    response = client.get("/very_slow")
+
+    assert response.status_code == 503
+    assert "detail" in response.json()
+    assert "exceeded" in response.json()["detail"]
+    assert "200ms threshold" in response.json()["detail"]

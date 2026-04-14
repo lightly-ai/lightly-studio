@@ -51,6 +51,7 @@ from lightly_studio.dataset.env import (
     LIGHTLY_STUDIO_DEBUG,
     LIGHTLY_STUDIO_REQUEST_TIMING_ENABLED,
     LIGHTLY_STUDIO_REQUEST_TIMING_ERROR_MS,
+    LIGHTLY_STUDIO_REQUEST_TIMING_FAIL_ON_ERROR,
     LIGHTLY_STUDIO_REQUEST_TIMING_WARNING_MS,
 )
 from lightly_studio.plugins.operator_registry import operator_registry
@@ -115,6 +116,7 @@ if LIGHTLY_STUDIO_REQUEST_TIMING_ENABLED:
         RequestTimingMiddleware,
         warning_threshold_ms=LIGHTLY_STUDIO_REQUEST_TIMING_WARNING_MS,
         error_threshold_ms=LIGHTLY_STUDIO_REQUEST_TIMING_ERROR_MS,
+        fail_on_error=LIGHTLY_STUDIO_REQUEST_TIMING_FAIL_ON_ERROR,
     )
 
 
