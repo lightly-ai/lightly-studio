@@ -57,6 +57,12 @@ test('Tag filtering shows distinct samples only', async ({ samplesPage }) => {
     // Create first tag.
     await samplesPage.createTag(tag1Name);
 
+    // Clear the first selection before selecting the overlapping second range.
+    for (let i = 0; i < 3; i++) {
+        await samples.nth(i).click();
+    }
+    expect(await samplesPage.getNumSelectedSamples()).toBe(0);
+
     // Select next samples.
     for (let i = 2; i < 5; i++) {
         await samples.nth(i).click();
