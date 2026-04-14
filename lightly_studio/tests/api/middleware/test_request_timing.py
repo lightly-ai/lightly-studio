@@ -20,7 +20,7 @@ def app_with_timing_middleware() -> FastAPI:
 
     @test_app.get("/fast")
     async def fast_endpoint() -> dict[str, str]:
-        """Fast endpoint that completes in < 100ms."""
+        """Fast endpoint that completes in < 50ms."""
         return {"status": "ok"}
 
     @test_app.get("/slow")
