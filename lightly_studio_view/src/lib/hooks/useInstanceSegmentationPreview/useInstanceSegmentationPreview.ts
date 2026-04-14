@@ -1,15 +1,15 @@
-import { createBrushDrawer } from './BrushDrawer';
-import { createPreviewRenderer } from './PreviewRenderer';
-import { createSourceMaskManager } from './SourceMaskManager';
+import { createBrushDrawer } from './brushDrawer';
+import { createPreviewRenderer } from './previewRenderer';
+import { createCanvasMaskManager } from './canvasMaskManager';
 import type { SchedulePreviewComposeParams, UseInstanceSegmentationPreviewParams } from './types';
 
 export function useInstanceSegmentationPreview({
     onPreviewVisibilityChange
 }: UseInstanceSegmentationPreviewParams = {}) {
-    const sourceMaskManager = createSourceMaskManager();
+    const canvasMaskManager = createCanvasMaskManager();
     const previewRenderer = createPreviewRenderer({ onPreviewVisibilityChange });
     const brushDrawer = createBrushDrawer({
-        ensureSourceMaskContext: sourceMaskManager.ensureSourceMaskContext
+        ensureSourceMaskContext: canvasMaskManager.ensureCanvasMaskContext
     });
 
     let previewRenderFrameId: number | null = null;
@@ -34,9 +34,9 @@ export function useInstanceSegmentationPreview({
             previewRenderFrameId = null;
             if (!isDrawing) return;
 
-            sourceMaskManager.ensureSourceMaskContext(width, height);
+            canvasMaskManager.ensureCanvasMaskContext(width, height);
             previewRenderer.composePreviewFromSourceMask(
-                sourceMaskManager.getSourceMaskCanvas(),
+                canvasMaskManager.getCanvasMaskCanvas(),
                 color
             );
         });
@@ -45,16 +45,16 @@ export function useInstanceSegmentationPreview({
     const destroy = () => {
         cancelScheduledPreviewCompose();
         previewRenderer.destroy();
-        sourceMaskManager.destroy();
+        canvasMaskManager.destroy();
     };
 
     return {
         setPreviewCanvas: previewRenderer.setPreviewCanvas,
         clearPreview: previewRenderer.clearPreview,
-        drawMaskToSourceCanvas: sourceMaskManager.drawMaskToSourceCanvas,
+        drawMaskToCanvas: canvasMaskManager.drawMaskToCanvas,
         drawBrushDot: brushDrawer.drawBrushDot,
         drawBrushLine: brushDrawer.drawBrushLine,
-        toBinaryMaskFromSourceCanvas: sourceMaskManager.toBinaryMaskFromSourceCanvas,
+        toBinaryMaskFromCanvas: canvasMaskManager.toBinaryMaskFromCanvas,
         schedulePreviewCompose,
         cancelScheduledPreviewCompose,
         destroy

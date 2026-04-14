@@ -145,7 +145,7 @@ describe('useInstanceSegmentationPreview', () => {
     it('draws a binary mask into the source canvas alpha channel', () => {
         const hook = useInstanceSegmentationPreview();
 
-        hook.drawMaskToSourceCanvas(new Uint8Array([0, 1, 0, 1]), 2, 2);
+        hook.drawMaskToCanvas(new Uint8Array([0, 1, 0, 1]), 2, 2);
 
         expect(sourceContext.createImageData).toHaveBeenCalledWith(2, 2);
         expect(sourceContext.putImageData).toHaveBeenCalledTimes(1);
@@ -161,7 +161,7 @@ describe('useInstanceSegmentationPreview', () => {
         const onPreviewVisibilityChange = vi.fn();
         const hook = useInstanceSegmentationPreview({ onPreviewVisibilityChange });
         hook.setPreviewCanvas(previewCanvas);
-        hook.drawMaskToSourceCanvas(new Uint8Array([1, 0, 0, 0]), 2, 2);
+        hook.drawMaskToCanvas(new Uint8Array([1, 0, 0, 0]), 2, 2);
 
         hook.schedulePreviewCompose({
             width: 2,
@@ -190,7 +190,7 @@ describe('useInstanceSegmentationPreview', () => {
         const onPreviewVisibilityChange = vi.fn();
         const hook = useInstanceSegmentationPreview({ onPreviewVisibilityChange });
         hook.setPreviewCanvas(previewCanvas);
-        hook.drawMaskToSourceCanvas(new Uint8Array([1, 0, 0, 0]), 2, 2);
+        hook.drawMaskToCanvas(new Uint8Array([1, 0, 0, 0]), 2, 2);
 
         hook.schedulePreviewCompose({
             width: 2,
@@ -213,9 +213,9 @@ describe('useInstanceSegmentationPreview', () => {
         });
 
         const hook = useInstanceSegmentationPreview();
-        hook.drawMaskToSourceCanvas(null, 2, 2);
+        hook.drawMaskToCanvas(null, 2, 2);
 
-        const mask = hook.toBinaryMaskFromSourceCanvas(2, 2);
+        const mask = hook.toBinaryMaskFromCanvas(2, 2);
 
         expect(mask).not.toBeNull();
         expect(Array.from(mask ?? [])).toEqual([0, 1, 0, 1]);
@@ -224,7 +224,7 @@ describe('useInstanceSegmentationPreview', () => {
     it('cancels scheduled preview compose', () => {
         const hook = useInstanceSegmentationPreview();
         hook.setPreviewCanvas(previewCanvas);
-        hook.drawMaskToSourceCanvas(new Uint8Array([1, 0, 0, 0]), 2, 2);
+        hook.drawMaskToCanvas(new Uint8Array([1, 0, 0, 0]), 2, 2);
 
         hook.schedulePreviewCompose({
             width: 2,
