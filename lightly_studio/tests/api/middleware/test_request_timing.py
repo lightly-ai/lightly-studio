@@ -26,7 +26,7 @@ def app_with_timing_middleware() -> FastAPI:
     @test_app.get("/slow")
     async def slow_endpoint() -> dict[str, str]:
         """Slow endpoint that takes ~150ms (warning threshold)."""
-        await asyncio.sleep(0.25)
+        await asyncio.sleep(0.08)
         return {"status": "ok"}
 
     return test_app
