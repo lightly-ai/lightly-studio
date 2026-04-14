@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { createSourceMaskManager } from './SourceMaskManager';
+import { createSourceMaskManager } from './sourceMaskManager';
 
 type Mock2dContext = {
     clearRect: ReturnType<typeof vi.fn>;
