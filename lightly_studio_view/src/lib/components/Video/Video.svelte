@@ -1,13 +1,11 @@
 <script lang="ts">
     import { PUBLIC_VIDEOS_FRAMES_MEDIA_URL, PUBLIC_VIDEOS_MEDIA_URL } from '$env/static/public';
-    import type { FrameView, VideoFrameView, VideoView } from '$lib/api/lightly_studio_local';
+    import type { FrameView, VideoView } from '$lib/api/lightly_studio_local';
     import { getGridFrameURL, getGridThumbnailRequestSize } from '$lib/utils';
-    import { findFrame } from '$lib/utils/frame';
 
     interface VideoProps {
         video: VideoView;
         frames: FrameView[];
-        update: (frame: FrameView | VideoFrameView | null, index: number | null) => void;
         videoEl: HTMLVideoElement | null;
         controls?: boolean;
         muted?: boolean;
@@ -23,7 +21,6 @@
 
     let {
         video,
-        update,
         videoEl = $bindable(),
         frames = [],
         muted = true,
@@ -38,8 +35,6 @@
         onseeked = () => {}
     }: VideoProps = $props();
 
-    let previousIndex: number | null = null;
-    let frameRequestId: number | null = null;
     let previousVideoSampleId: string | null = null;
     let sourceLoadError = $state<string | null>(null);
 
@@ -72,37 +67,7 @@
         });
     });
 
-    function startFrameLoop() {
-        clearFrameLoop();
-
-        function tick() {
-            if (!videoEl) {
-                frameRequestId = null;
-                return;
-            }
-            const { frame, index } = findFrame({ frames, currentTime: videoEl.currentTime });
-
-            if (index !== null && previousIndex !== index) {
-                update(frame, index);
-                previousIndex = index;
-            }
-
-            frameRequestId = requestAnimationFrame(tick);
-        }
-
-        frameRequestId = requestAnimationFrame(tick);
-    }
-
-    function clearFrameLoop() {
-        if (frameRequestId !== null) {
-            cancelAnimationFrame(frameRequestId);
-            frameRequestId = null;
-        }
-    }
-
     function handleVideoError() {
-        clearFrameLoop();
-        previousIndex = null;
         const errorCode = videoEl?.error?.code;
         sourceLoadError =
             (errorCode != null ? MEDIA_ERROR_MESSAGES[errorCode] : null) ??
@@ -119,7 +84,6 @@
         const currentVideoSampleId = video.sample_id;
 
         if (previousVideoSampleId !== null && previousVideoSampleId !== currentVideoSampleId) {
-            previousIndex = null;
             videoEl.pause();
             videoEl.removeAttribute('src');
             videoEl.load();
@@ -128,11 +92,6 @@
         sourceLoadError = null;
         videoEl.src = `${PUBLIC_VIDEOS_MEDIA_URL}/${currentVideoSampleId}`;
         previousVideoSampleId = currentVideoSampleId;
-        startFrameLoop();
-
-        return () => {
-            clearFrameLoop();
-        };
     });
 </script>
 

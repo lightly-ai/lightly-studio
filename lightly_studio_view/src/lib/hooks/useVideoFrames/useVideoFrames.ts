@@ -4,6 +4,7 @@ import {
     type SampleView,
     type VideoView
 } from '$lib/api/lightly_studio_local';
+import { selectPlaybackFrame } from '$lib/utils/frame';
 import { writable } from 'svelte/store';
 
 /**
@@ -62,7 +63,6 @@ export function useVideoFrames({ video }: { video: VideoView }) {
     const frames = writable<FrameView[]>([]);
     const currentFrame = writable<FrameView | undefined>(undefined);
     const playbackTime = writable<number>(0);
-    const playbackStep = 0.002;
 
     const state: UseVideoFramesState = {
         frames: [],
@@ -88,10 +88,6 @@ export function useVideoFrames({ video }: { video: VideoView }) {
 
     function getFrameByNumber(frameNumber: number): FrameView | null {
         return state.frames.find((frame) => frame.frame_number === frameNumber) ?? null;
-    }
-
-    function getLastLoadedFrame(): FrameView | null {
-        return state.frames.at(-1) ?? null;
     }
 
     /**
@@ -158,7 +154,7 @@ export function useVideoFrames({ video }: { video: VideoView }) {
             if (existingFrame) {
                 // Frame already loaded, just set it as current
                 setCurrentFrame(existingFrame);
-                playbackTime.set(existingFrame.frame_timestamp_s + playbackStep);
+                playbackTime.set(existingFrame.frame_timestamp_s);
             } else {
                 await loadFrames();
 
@@ -170,7 +166,7 @@ export function useVideoFrames({ video }: { video: VideoView }) {
                 setCurrentFrame(frame);
 
                 if (frame) {
-                    playbackTime.set(frame.frame_timestamp_s + playbackStep);
+                    playbackTime.set(frame.frame_timestamp_s);
                 }
             }
         }
@@ -185,45 +181,43 @@ export function useVideoFrames({ video }: { video: VideoView }) {
 
     /**
      * Loads the frame corresponding to a specific playback time.
-     * Calculates the frame index from the current time and FPS, then fetches the appropriate batch.
+     * Resolves the frame from the current playback timestamp, then updates the current frame.
      * Updates the current frame to match the playback position.
      *
      * @param currentTime - Current playback time in seconds
-     * @param fps - Frames per second of the video
      * @throws Error if no video data is available or if the frame is not found
      */
-    async function loadFrameByPlaybackTime(currentTime: number, fps: number): Promise<void> {
+    async function loadFrameByPlaybackTime(currentTime: number): Promise<void> {
         if (state.seekFrameNumber) {
             state.seekFrameNumber = false;
         }
 
         if (!video) throw new Error('No video data available');
 
-        const frameIndex = Math.floor(currentTime * fps);
-        const existingFrame = getFrameByNumber(frameIndex);
+        const existingSelection = selectPlaybackFrame({
+            frames: state.frames,
+            sourceTime: currentTime
+        });
 
-        if (existingFrame) {
-            setCurrentFrame(existingFrame);
+        if (existingSelection.frame) {
+            setCurrentFrame(existingSelection.frame);
         } else {
-            const lastLoadedFrame = getLastLoadedFrame();
-            if (state.reachedEnd && lastLoadedFrame && frameIndex > lastLoadedFrame.frame_number) {
-                setCurrentFrame(lastLoadedFrame);
-                return;
-            }
-
-            state.reachedEnd = false; // Reset since we're seeking to a new position
-
             await loadFrames();
 
-            const frame =
-                getFrameByNumber(frameIndex) ?? (state.reachedEnd ? getLastLoadedFrame() : null);
+            const selection = selectPlaybackFrame({
+                frames: state.frames,
+                sourceTime: currentTime
+            });
 
-            if (!frame) {
+            if (!selection.frame) {
                 throw new Error('Frame not found for the given playback time');
             }
 
-            setCurrentFrame(frame);
+            setCurrentFrame(selection.frame);
         }
+
+        state.playbackTime = currentTime;
+        playbackTime.set(currentTime);
     }
 
     return {

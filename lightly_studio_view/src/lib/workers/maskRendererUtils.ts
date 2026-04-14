@@ -45,7 +45,7 @@ export const computeStroke = (scaleX = 1, scaleY = 1) => {
 };
 
 export const drawBoxesOnContext = (
-    ctx: OffscreenCanvasRenderingContext2D,
+    ctx: OffscreenCanvasRenderingContext2D | CanvasRenderingContext2D,
     boxes: BoundingBoxInput[],
     width: number,
     height: number,

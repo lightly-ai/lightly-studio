@@ -145,8 +145,7 @@ describe('useVideoFrames', () => {
 
         const hook = useVideoFrames({ video: mockVideoData });
 
-        // 0.05 * 30 = 1.5, which floors to 1
-        await hook.loadFrameByPlaybackTime(0.05, 30);
+        await hook.loadFrameByPlaybackTime(0.05);
 
         const currentFrame = get(hook.currentFrame);
         expect(currentFrame?.frame_number).toBe(1);
@@ -167,7 +166,7 @@ describe('useVideoFrames', () => {
 
         vi.mocked(api.getAllFrames).mockClear();
 
-        await hook.loadFrameByPlaybackTime(0.05, 30);
+        await hook.loadFrameByPlaybackTime(0.05);
 
         expect(api.getAllFrames).not.toHaveBeenCalled();
         expect(get(hook.currentFrame)?.frame_number).toBe(1);
@@ -259,9 +258,7 @@ describe('useVideoFrames', () => {
     it('should throw error when video data is not available', async () => {
         const hook = useVideoFrames({ video: null as unknown as VideoView });
 
-        await expect(hook.loadFrameByPlaybackTime(0, 30)).rejects.toThrow(
-            'No video data available'
-        );
+        await expect(hook.loadFrameByPlaybackTime(0)).rejects.toThrow('No video data available');
     });
 
     describe('reactivity', () => {
@@ -287,7 +284,7 @@ describe('useVideoFrames', () => {
             });
 
             await hook.loadFramesFromFrameNumber(0);
-            await hook.loadFrameByPlaybackTime(0.05, 30);
+            await hook.loadFrameByPlaybackTime(0.05);
 
             expect(currentFrameValues).toHaveLength(3); // Initial undefined + 2 updates
             expect(currentFrameValues[0]).toBeUndefined();
@@ -334,9 +331,42 @@ describe('useVideoFrames', () => {
             vi.mocked(api.getAllFrames).mockClear();
 
             // Request frame 30+ (at 1 second), should get frame 29 (the last one)
-            await hook.loadFrameByPlaybackTime(1, 30);
+            await hook.loadFrameByPlaybackTime(1);
 
             expect(get(hook.currentFrame)?.frame_number).toBe(29);
+        });
+
+        it('uses frame timestamps instead of fps arithmetic for sparse frames', async () => {
+            const sparseFrames = [
+                {
+                    sample_id: 'frame-1',
+                    frame_number: 0,
+                    frame_timestamp_s: 0,
+                    sample: mockFrameSample1,
+                    video: mockVideoData
+                },
+                {
+                    sample_id: 'frame-2',
+                    frame_number: 10,
+                    frame_timestamp_s: 0.4,
+                    sample: mockFrameSample2,
+                    video: mockVideoData
+                }
+            ] as VideoFrameView[];
+
+            vi.mocked(api.getAllFrames).mockResolvedValue({
+                data: {
+                    data: sparseFrames,
+                    total_count: sparseFrames.length
+                },
+                error: undefined
+            } as unknown as MockGetAllFramesResponse);
+
+            const hook = useVideoFrames({ video: mockVideoData });
+            await hook.loadFrames();
+            await hook.loadFrameByPlaybackTime(0.45);
+
+            expect(get(hook.currentFrame)?.frame_number).toBe(10);
         });
     });
 });
