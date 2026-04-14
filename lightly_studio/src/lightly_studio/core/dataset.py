@@ -218,8 +218,9 @@ class Dataset(Generic[T], ABC):
         dataset.
 
         Args:
-            sample_metadata: List of (sample ID, metadata_map) tuples. `metadata_map` is a
-            mapping from string to any type, e.g. `{"weather": "cloudy", "temperature": 25}`.
+            sample_metadata: List of `(sample ID, metadata_map)` tuples, where
+                `metadata_map` is a mapping from string to any type, for example
+                `{"weather": "cloudy", "temperature": 25}`.
 
         Example:
             ```python
