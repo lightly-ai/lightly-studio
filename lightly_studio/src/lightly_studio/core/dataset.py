@@ -222,10 +222,12 @@ class Dataset(Generic[T], ABC):
             mapping from string to any type, e.g. `{"weather": "cloudy", "temperature": 25}`.
 
         Example:
-            >>> dataset.update_metadata([
-            ...     (UUID("..."), {"weather": "sunny"}),
-            ...     (UUID("..."), {"weather": "cloudy", "temperature": 25}),
-            ... ])
+            ```python
+            dataset.update_metadata([
+                (UUID("..."), {"weather": "sunny"}),
+                (UUID("..."), {"weather": "cloudy", "temperature": 25}),
+            ])
+            ```
         """
         metadata_resolver.bulk_update_metadata(
             session=self.session,
