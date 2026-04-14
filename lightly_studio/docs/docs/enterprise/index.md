@@ -19,5 +19,6 @@ Contact [sales@lightly.ai](mailto:sales@lightly.ai) to learn more about LightlyS
 
 ## Getting Started
 
+- [Security Considerations](security.md)
 - [Connect from Python](connect.md)
 - [Cloud Storage](cloud_storage/index.md)

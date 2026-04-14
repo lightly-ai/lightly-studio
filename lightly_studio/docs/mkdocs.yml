@@ -63,6 +63,7 @@ nav:
     - Cloud Storage:
       - enterprise/cloud_storage/index.md
       - AWS S3: enterprise/cloud_storage/aws.md
+    - Security Considerations: enterprise/security.md
 
 extra_css:
   - _static/custom.css
