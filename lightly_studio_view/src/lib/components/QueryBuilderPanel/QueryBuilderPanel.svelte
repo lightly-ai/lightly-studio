@@ -7,23 +7,33 @@
     import { serialize } from '@svar-ui/filter-store';
     import type { IFilterSet, IField, FilterQueryEvent } from '$lib/types/svar-filter';
     import type { TagView as Tag } from '$lib/services/types';
+    import type { components } from '$lib/schema';
+    type QueryFieldSchema = components['schemas']['QueryFieldSchema'];
+    type QueryFieldsResponse = components['schemas']['QueryFieldsResponse'];
     import { LayoutList, Braces } from '@lucide/svelte';
+    import { onMount } from 'svelte';
 
     interface Props {
         tags: Tag[];
         type?: 'list' | 'line' | 'simple';
-        onFilterChange: (filterSet: IFilterSet) => void;
+        onFilterChange: (filterSet: IFilterSet, schemas: QueryFieldSchema[]) => void;
     }
 
     const { tags, type = 'list', onFilterChange }: Props = $props();
 
-    const fields: IField[] = [
-        { id: 'tag', label: 'Tag', type: 'text' },
-        { id: 'file_name', label: 'File Name', type: 'text' },
-        { id: 'created_at', label: 'Created At', type: 'date' },
-        { id: 'width', label: 'Width (px)', type: 'number' },
-        { id: 'height', label: 'Height (px)', type: 'number' }
-    ];
+    let fieldSchemas = $state<QueryFieldSchema[]>([]);
+
+    onMount(async () => {
+        const res = await fetch('/api/query_fields');
+        if (res.ok) {
+            const data = (await res.json()) as QueryFieldsResponse;
+            fieldSchemas = data.fields;
+        }
+    });
+
+    const fields = $derived<IField[]>(
+        fieldSchemas.map((f) => ({ id: f.id, label: f.label, type: f.type }))
+    );
 
     const options = $derived({
         tag: tags.map((t) => t.name)
@@ -35,7 +45,7 @@
 
     function handleBuilderChange(ev: { value: IFilterSet }) {
         currentFilterSet = ev.value;
-        onFilterChange(ev.value);
+        onFilterChange(ev.value, fieldSchemas);
     }
 
     function switchToDsl() {
@@ -80,7 +90,7 @@
         if (!ev.error && ev.parsed?.config) {
             const parsed = ev.parsed.config as IFilterSet;
             currentFilterSet = parsed;
-            onFilterChange(parsed);
+            onFilterChange(parsed, fieldSchemas);
         }
     }
 </script>

@@ -91,7 +91,15 @@ class OrdinalField(Field, Generic[T]):  # noqa: PLW1641
 
 
 NumericalField = OrdinalField[Union[float, int]]
-DatetimeField = OrdinalField[datetime]
+
+
+class DatetimeField(OrdinalField[datetime]):
+    """Field for datetime values, supporting ordinal comparisons.
+
+    Subclasses ``OrdinalField`` so that ``isinstance(field, DatetimeField)``
+    can distinguish date fields from numeric ones when deriving the query
+    field schema exposed via ``GET /api/query_fields``.
+    """
 
 
 # Ignore PLW1641 because `==` and `!=` create query conditions here, so these

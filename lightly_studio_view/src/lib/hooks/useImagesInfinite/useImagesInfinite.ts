@@ -6,12 +6,7 @@ import type { DimensionBounds } from '$lib/services/loadDimensionBounds';
 import { createMetadataFilters } from '$lib/hooks/useMetadataFilters/useMetadataFilters';
 import type { MetadataValues } from '$lib/services/types';
 import { GRID_PAGE_SIZE } from '$lib/constants';
-import type { WireExpression } from '$lib/types/queryFilter';
-
-/** Extends the generated request type until query_filter lands in the OpenAPI schema. */
-type ReadImagesRequestWithQueryFilter = ReadImagesRequest & {
-    query_filter?: WireExpression;
-};
+type WireExpression = NonNullable<ReadImagesRequest['query_filter']>;
 
 // Define mode-aware parameter types.
 interface ClassifierSamples {
@@ -93,7 +88,7 @@ const createImagesInfiniteOptions = (params: ImagesInfiniteParams) => {
 
             const { data } = await readImages({
                 path: { collection_id: params.collection_id },
-                body: requestBody as ReadImagesRequest,
+                body: requestBody,
                 signal,
                 throwOnError: true
             });
@@ -108,8 +103,8 @@ const createImagesInfiniteOptions = (params: ImagesInfiniteParams) => {
 const buildRequestBody = (
     params: ImagesInfiniteParams,
     pageParam: number
-): ReadImagesRequestWithQueryFilter => {
-    const baseBody: ReadImagesRequestWithQueryFilter = {
+): ReadImagesRequest => {
+    const baseBody: ReadImagesRequest = {
         pagination: {
             offset: pageParam,
             limit: GRID_PAGE_SIZE

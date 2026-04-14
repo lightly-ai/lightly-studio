@@ -494,7 +494,7 @@
             tagsForQueryBuilder = v;
         });
     });
-    const { filterSet, updateFilterSet, clearFilter } = useQueryBuilderFilter();
+    const { filterSet, updateFilterSet, updateFieldSchemas, clearFilter } = useQueryBuilderFilter();
     const queryFilterRuleCount = $derived($filterSet?.rules?.length ?? 0);
     let pendingQueryFilter = $state<IFilterSet | null>(null);
 
@@ -695,8 +695,9 @@
                             <QueryBuilderPanel
                                 type="line"
                                 tags={tagsForQueryBuilder}
-                                onFilterChange={(fs) => {
+                                onFilterChange={(fs, schemas) => {
                                     pendingQueryFilter = fs;
+                                    updateFieldSchemas(schemas);
                                 }}
                             />
                         </div>
