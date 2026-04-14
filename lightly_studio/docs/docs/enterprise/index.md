@@ -21,4 +21,3 @@ Contact [sales@lightly.ai](mailto:sales@lightly.ai) to learn more about LightlyS
 
 - [Connect from Python](connect.md)
 - [Cloud Storage](cloud_storage/index.md)
-- [Security Considerations](security.md)
