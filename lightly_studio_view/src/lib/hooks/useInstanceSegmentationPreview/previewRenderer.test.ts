@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { createPreviewRenderer } from './PreviewRenderer';
+import { createPreviewRenderer } from './previewRenderer';
 
 type Mock2dContext = {
     clearRect: ReturnType<typeof vi.fn>;
