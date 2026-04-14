@@ -6,6 +6,7 @@ import {
 } from '$lib/utils/frame';
 
 export type PlaybackSource = 'rvfc' | 'raf' | 'event';
+export type PlaybackClockMode = 'auto' | 'rvfc' | 'raf';
 
 type VideoFrameRequestCallback = (
     now: DOMHighResTimeStamp,
@@ -29,7 +30,7 @@ interface CreateVideoPlaybackControllerOptions<TFrame extends FrameView | VideoF
     videoEl: HTMLVideoElement;
     frames: TFrame[];
     emitDuplicateFrames?: boolean;
-    clockMode?: 'auto' | 'rvfc' | 'raf';
+    clockMode?: PlaybackClockMode;
     selectionStrategy?:
         | PlaybackSelectionStrategy
         | ((params: {

@@ -1,7 +1,10 @@
 <script lang="ts">
     import CanvasVideoPlayer from '$lib/components/CanvasVideoPlayer/CanvasVideoPlayer.svelte';
+    import FrameSequenceVideoPlayer from '$lib/components/FrameSequenceVideoPlayer/FrameSequenceVideoPlayer.svelte';
     import {
+        buildVideoSyncFixtureFrameImageURL,
         buildVideoSyncFixtureFrames,
+        VIDEO_SYNC_FIXTURE_DURATION_S,
         VIDEO_SYNC_FIXTURE_HEIGHT,
         VIDEO_SYNC_FIXTURE_VIDEO_SRC,
         VIDEO_SYNC_FIXTURE_WIDTH
@@ -22,13 +25,13 @@
     <section class="flex flex-col gap-3">
         <h1 class="text-xl font-semibold">Detail Playback Fixture</h1>
         <div class="h-[360px] max-w-[720px]">
-            <CanvasVideoPlayer
-                src={VIDEO_SYNC_FIXTURE_VIDEO_SRC}
+            <FrameSequenceVideoPlayer
                 {frames}
                 sampleWidth={VIDEO_SYNC_FIXTURE_WIDTH}
                 sampleHeight={VIDEO_SYNC_FIXTURE_HEIGHT}
-                selectionModeOverride="mid"
+                durationSeconds={VIDEO_SYNC_FIXTURE_DURATION_S}
                 testDiagnosticsId="detail-player"
+                resolveFrameImageUrl={(_frame, index) => buildVideoSyncFixtureFrameImageURL(index)}
                 className="h-full w-full"
             />
         </div>

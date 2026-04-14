@@ -68,14 +68,14 @@ describe('renderCanvasPlaybackFrame', () => {
             clearRect: vi.fn(),
             putImageData: vi.fn()
         } as unknown as CanvasRenderingContext2D;
-        const videoEl = {} as HTMLVideoElement;
+        const mediaSource = {} as HTMLImageElement;
         const maskCanvas = {} as HTMLCanvasElement;
 
         renderCanvasPlaybackFrame({
             canvasCtx: mainCtx,
             maskCtx,
             maskCanvas,
-            videoEl,
+            mediaSource,
             sampleWidth: 2,
             sampleHeight: 2,
             payload: {
@@ -87,7 +87,9 @@ describe('renderCanvasPlaybackFrame', () => {
         expect(
             (mainCtx.clearRect as ReturnType<typeof vi.fn>).mock.invocationCallOrder[0]
         ).toBeLessThan((mainCtx.drawImage as ReturnType<typeof vi.fn>).mock.invocationCallOrder[0]);
-        expect((mainCtx.drawImage as ReturnType<typeof vi.fn>).mock.calls[0]?.[0]).toBe(videoEl);
+        expect((mainCtx.drawImage as ReturnType<typeof vi.fn>).mock.calls[0]?.[0]).toBe(
+            mediaSource
+        );
         expect((mainCtx.drawImage as ReturnType<typeof vi.fn>).mock.calls[1]?.[0]).toBe(maskCanvas);
         expect(maskCtx.putImageData).toHaveBeenCalledTimes(1);
         expect(drawBoxesSpy).toHaveBeenCalledTimes(1);

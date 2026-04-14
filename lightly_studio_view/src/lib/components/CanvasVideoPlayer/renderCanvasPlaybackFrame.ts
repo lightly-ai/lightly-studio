@@ -145,7 +145,7 @@ export function renderCanvasPlaybackFrame({
     canvasCtx,
     maskCtx,
     maskCanvas,
-    videoEl,
+    mediaSource,
     sampleWidth,
     sampleHeight,
     payload,
@@ -155,7 +155,7 @@ export function renderCanvasPlaybackFrame({
     canvasCtx: CanvasRenderingContext2D;
     maskCtx: CanvasRenderingContext2D;
     maskCanvas: HTMLCanvasElement;
-    videoEl: HTMLVideoElement;
+    mediaSource: CanvasImageSource;
     sampleWidth: number;
     sampleHeight: number;
     payload: PlaybackAnnotationPayload;
@@ -163,7 +163,7 @@ export function renderCanvasPlaybackFrame({
     scaleY?: number;
 }) {
     canvasCtx.clearRect(0, 0, sampleWidth, sampleHeight);
-    canvasCtx.drawImage(videoEl, 0, 0, sampleWidth, sampleHeight);
+    canvasCtx.drawImage(mediaSource, 0, 0, sampleWidth, sampleHeight);
 
     maskCtx.clearRect(0, 0, sampleWidth, sampleHeight);
     if (payload.masks.length) {

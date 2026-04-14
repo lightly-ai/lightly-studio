@@ -15,6 +15,7 @@
     import VideoPlaybackDebugBadge from '$lib/components/VideoPlaybackDebugBadge/VideoPlaybackDebugBadge.svelte';
     import {
         createVideoPlaybackController,
+        type PlaybackClockMode,
         type PlaybackSample,
         type PlaybackSource
     } from '$lib/utils/videoPlaybackController';
@@ -38,6 +39,7 @@
         showDebug?: boolean;
         showSelectionModeDebugControls?: boolean;
         selectionModeOverride?: SelectionModeOverride;
+        clockMode?: PlaybackClockMode;
         showAnnotations?: boolean;
         autoplay?: boolean;
         loop?: boolean;
@@ -59,6 +61,7 @@
         showDebug = false,
         showSelectionModeDebugControls = false,
         selectionModeOverride = 'auto',
+        clockMode = 'auto',
         showAnnotations = true,
         autoplay = false,
         loop = false,
@@ -262,7 +265,7 @@
             canvasCtx,
             maskCtx,
             maskCanvas: maskCanvasEl,
-            videoEl,
+            mediaSource: videoEl,
             sampleWidth,
             sampleHeight,
             payload,
@@ -466,6 +469,7 @@
             videoEl,
             frames,
             emitDuplicateFrames: true,
+            clockMode,
             selectionStrategy: ({ source }) => resolveSelectionStrategy(source),
             onSample: handlePlaybackSample
         });

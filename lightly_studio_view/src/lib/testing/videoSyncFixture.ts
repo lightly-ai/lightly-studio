@@ -33,6 +33,18 @@ export const VIDEO_SYNC_FIXTURE_COLORS: Array<[number, number, number]> = [
     [128, 128, 128]
 ];
 
+export const buildVideoSyncFixtureFrameImageURL = (frameIndex: number): string => {
+    const [r, g, b] = VIDEO_SYNC_FIXTURE_COLORS[frameIndex] ?? VIDEO_SYNC_FIXTURE_COLORS[0];
+    const svg = `
+        <svg xmlns="http://www.w3.org/2000/svg" width="${VIDEO_SYNC_FIXTURE_WIDTH}" height="${VIDEO_SYNC_FIXTURE_HEIGHT}" viewBox="0 0 ${VIDEO_SYNC_FIXTURE_WIDTH} ${VIDEO_SYNC_FIXTURE_HEIGHT}">
+            <rect width="100%" height="100%" fill="rgb(${r},${g},${b})" />
+            <text x="50%" y="50%" dominant-baseline="middle" text-anchor="middle" font-family="monospace" font-size="24" fill="white">${frameIndex}</text>
+        </svg>
+    `.trim();
+
+    return `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg)}`;
+};
+
 const createRectMask = ({
     width,
     height,

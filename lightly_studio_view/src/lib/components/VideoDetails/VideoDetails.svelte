@@ -8,15 +8,12 @@
         VideoDetailsNavigation
     } from '$lib/components';
     import { type SampleView, type VideoView } from '$lib/api/lightly_studio_local';
-    import { getVideoURLById } from '$lib/utils';
     import VideoSampleMetadata from '../VideoSampleMetadata/VideoSampleMetadata.svelte';
     import SampleDetailsCaptionSegment from '../SampleDetails/SampleDetailsCaptionsSegment/SampleDetailsCaptionSegment.svelte';
     import { useVideoFrames } from '$lib/hooks/useVideoFrames/useVideoFrames';
     import { get } from 'svelte/store';
     import { onMount } from 'svelte';
-    import CanvasVideoPlayer, {
-        type SelectionModeOverride
-    } from '$lib/components/CanvasVideoPlayer/CanvasVideoPlayer.svelte';
+    import FrameSequenceVideoPlayer from '$lib/components/FrameSequenceVideoPlayer/FrameSequenceVideoPlayer.svelte';
 
     type VideoDetailsProps = {
         video: VideoView;
@@ -28,7 +25,6 @@
 
     let playerReady = $state(false);
     let initialFrameIndex = $state(0);
-    let selectionModeOverride = $state<SelectionModeOverride>('hybrid');
     const { frames: videoFrames, loadFrames } = useVideoFrames({ video });
 
     onMount(() => {
@@ -54,16 +50,13 @@
             <CardContent className="flex h-full flex-col gap-4 overflow-hidden">
                 <VideoDetailsNavigation />
                 {#if playerReady}
-                    <CanvasVideoPlayer
-                        src={getVideoURLById(video.sample_id)}
+                    <FrameSequenceVideoPlayer
                         frames={$videoFrames}
                         sampleWidth={video.width}
                         sampleHeight={video.height}
+                        durationSeconds={video.duration_s}
                         {initialFrameIndex}
                         className="min-h-0 flex-1"
-                        {selectionModeOverride}
-                        showDebug={true}
-                        showSelectionModeDebugControls={true}
                     />
                 {:else}
                     <div
