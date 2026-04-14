@@ -13,6 +13,7 @@ from fastapi.routing import APIRoute
 from sqlmodel import Session
 
 from lightly_studio import db_manager
+from lightly_studio.api.middleware import RequestTimingMiddleware
 from lightly_studio.api.routes import (
     healthz,
     images,
@@ -46,7 +47,12 @@ from lightly_studio.api.routes.api import (
 from lightly_studio.api.routes.api.exceptions import (
     register_exception_handlers,
 )
-from lightly_studio.dataset.env import LIGHTLY_STUDIO_DEBUG
+from lightly_studio.dataset.env import (
+    LIGHTLY_STUDIO_DEBUG,
+    LIGHTLY_STUDIO_REQUEST_TIMING_ENABLED,
+    LIGHTLY_STUDIO_REQUEST_TIMING_ERROR_MS,
+    LIGHTLY_STUDIO_REQUEST_TIMING_WARNING_MS,
+)
 from lightly_studio.plugins.operator_registry import operator_registry
 
 SessionDep = Annotated[Session, Depends(db_manager.session)]
@@ -103,6 +109,13 @@ app.add_middleware(
         r"/frames/media/",
     ],
 )
+
+if LIGHTLY_STUDIO_REQUEST_TIMING_ENABLED:
+    app.add_middleware(
+        RequestTimingMiddleware,
+        warning_threshold_ms=LIGHTLY_STUDIO_REQUEST_TIMING_WARNING_MS,
+        error_threshold_ms=LIGHTLY_STUDIO_REQUEST_TIMING_ERROR_MS,
+    )
 
 
 def use_route_names_as_operation_ids(app: FastAPI) -> None:
