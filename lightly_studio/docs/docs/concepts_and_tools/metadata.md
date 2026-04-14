@@ -44,8 +44,7 @@ for sample in dataset:
 ```
 
 Supported value types are `string`, `integer`, `float`, `boolean`, `list`, and `dict`.
-Once a key is set with a given type, values for other samples for that key must use the same
-type.
+Once a key is set with a given type, it is expected that values for other samples for that key use the same type.
 
 ### Bulk metadata updates
 
