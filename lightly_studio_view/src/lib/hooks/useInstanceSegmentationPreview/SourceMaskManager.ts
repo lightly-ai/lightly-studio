@@ -1,4 +1,4 @@
-export interface SourceMaskManager {
+interface SourceMaskManager {
     ensureSourceMaskContext: (width: number, height: number) => CanvasRenderingContext2D | null;
     drawMaskToSourceCanvas: (mask: Uint8Array | null, width: number, height: number) => void;
     toBinaryMaskFromSourceCanvas: (width: number, height: number) => Uint8Array | null;
