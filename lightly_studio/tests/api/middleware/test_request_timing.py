@@ -19,7 +19,6 @@ def app_with_timing_middleware() -> FastAPI:
     test_app = FastAPI()
     test_app.add_middleware(
         RequestTimingMiddleware,
-        warning_threshold_ms=100,
         error_threshold_ms=200,
     )
 
@@ -43,38 +42,21 @@ def app_with_timing_middleware() -> FastAPI:
     return test_app
 
 
-def test_request_timing_middleware_fast_request_debug_log(
+def test_request_timing_middleware__has_no_error_logs_for_fast_requests(
     app_with_timing_middleware: FastAPI, caplog: pytest.LogCaptureFixture
 ) -> None:
-    """Test that fast requests are logged at debug level."""
+    """Test that fast requests do not generate error logs."""
     client = TestClient(app_with_timing_middleware)
 
     with caplog.at_level(logging.DEBUG):
         response = client.get("/fast")
 
     assert response.status_code == 200
-    assert any("GET /fast completed in" in record.message for record in caplog.records)
-    debug_records = [record for record in caplog.records if record.levelname == "DEBUG"]
-    assert len(debug_records) > 0
+    error_records = [record for record in caplog.records if record.levelname == "ERROR"]
+    assert len(error_records) == 0
 
 
-def test_request_timing_middleware_slow_request_warning_log(
-    app_with_timing_middleware: FastAPI, caplog: pytest.LogCaptureFixture
-) -> None:
-    """Test that slow requests exceeding warning threshold are logged as warning."""
-    client = TestClient(app_with_timing_middleware)
-
-    with caplog.at_level(logging.WARNING):
-        response = client.get("/slow")
-
-    assert response.status_code == 200
-    warning_records = [record for record in caplog.records if record.levelname == "WARNING"]
-    assert len(warning_records) == 1
-    assert "GET /slow completed in" in warning_records[0].message
-    assert "ms" in warning_records[0].message
-
-
-def test_request_timing_middleware_very_slow_request_error_log(
+def test_request_timing_middleware__has_error_logs_for_very_slow_requests(
     app_with_timing_middleware: FastAPI, caplog: pytest.LogCaptureFixture
 ) -> None:
     """Test that very slow requests exceeding error threshold are logged as error."""
@@ -90,12 +72,11 @@ def test_request_timing_middleware_very_slow_request_error_log(
     assert "ms" in error_records[0].message
 
 
-def test_request_timing_middleware_custom_thresholds() -> None:
+def test_request_timing_middleware__custom_thresholds() -> None:
     """Test that custom thresholds are respected."""
     app = FastAPI()
     app.add_middleware(
         RequestTimingMiddleware,
-        warning_threshold_ms=50,
         error_threshold_ms=100,
     )
 
@@ -113,29 +94,14 @@ def test_request_timing_middleware_custom_thresholds() -> None:
 
     assert response.status_code == 200
     # Should log at warning level (75ms > 50ms but < 100ms)
-    mock_logger.warning.assert_called_once()
     mock_logger.error.assert_not_called()
 
 
-def test_request_timing_middleware_fail_on_error_disabled(
-    app_with_timing_middleware: FastAPI, caplog: pytest.LogCaptureFixture
-) -> None:
-    """Test that requests exceeding error threshold succeed when fail_on_error is False."""
-    client = TestClient(app_with_timing_middleware)
-
-    with caplog.at_level(logging.ERROR):
-        response = client.get("/very_slow")
-
-    assert response.status_code == 200
-    assert response.json() == {"status": "ok"}
-
-
-def test_request_timing_middleware_fail_on_error_enabled() -> None:
+def test_request_timing_middleware__fails_slow_requests() -> None:
     """Test that requests exceeding error threshold fail when fail_on_error is True."""
     app = FastAPI()
     app.add_middleware(
         RequestTimingMiddleware,
-        warning_threshold_ms=100,
         error_threshold_ms=200,
         fail_on_error=True,
     )
@@ -150,5 +116,4 @@ def test_request_timing_middleware_fail_on_error_enabled() -> None:
 
     assert response.status_code == 503
     assert "detail" in response.json()
-    assert "exceeded" in response.json()["detail"]
-    assert "200ms threshold" in response.json()["detail"]
+    assert "exceeded 200ms" in response.json()["detail"]

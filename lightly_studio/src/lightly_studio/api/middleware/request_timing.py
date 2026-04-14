@@ -15,15 +15,13 @@ logger = logging.getLogger(__name__)
 class RequestTimingMiddleware(BaseHTTPMiddleware):
     """Middleware to log request execution time with configurable thresholds.
 
-    Logs warnings for requests exceeding warning_threshold_ms and errors for
-    requests exceeding error_threshold_ms. Optionally fails requests that exceed
+    Logs errors for requests exceeding error_threshold_ms. Optionally fails requests that exceed
     the error threshold.
     """
 
     def __init__(
         self,
         app: ASGIApp,
-        warning_threshold_ms: int = 100,
         error_threshold_ms: int = 200,
         fail_on_error: bool = False,
     ) -> None:
@@ -31,12 +29,10 @@ class RequestTimingMiddleware(BaseHTTPMiddleware):
 
         Args:
             app: The ASGI application.
-            warning_threshold_ms: Threshold in milliseconds for warning logs.
             error_threshold_ms: Threshold in milliseconds for error logs.
             fail_on_error: If True, fail requests exceeding error_threshold_ms.
         """
         super().__init__(app)
-        self.warning_threshold_ms = warning_threshold_ms
         self.error_threshold_ms = error_threshold_ms
         self.fail_on_error = fail_on_error
 
@@ -67,12 +63,8 @@ class RequestTimingMiddleware(BaseHTTPMiddleware):
                 return JSONResponse(
                     status_code=503,
                     content={
-                        "detail": f"Request timeout: exceeded {self.error_threshold_ms}ms threshold ({duration_ms:.2f}ms)"
+                        "detail": f"exceeded {self.error_threshold_ms}ms ({duration_ms:.2f}ms)"
                     },
                 )
-        elif duration_ms >= self.warning_threshold_ms:
-            logger.warning(log_message)
-        else:
-            logger.debug(log_message)
 
         return response
