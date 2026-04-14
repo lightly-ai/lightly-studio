@@ -57,6 +57,10 @@ export class AnnotationsPage {
         await this.page.getByTestId('tag-menu-item').getByText(tag, { exact: true }).click();
     }
 
+    getTagsMenuItem(tagName: string) {
+        return this.page.getByTestId('tags-menu-label').getByText(tagName, { exact: true });
+    }
+
     async clickAnnotation(index: number) {
         // annotation-grid-item
         await this.getAnnotations().nth(index).dblclick();
@@ -106,12 +110,28 @@ export class AnnotationsPage {
     }
 
     async createTag(tagName: string) {
-        await this.page.getByTestId('tag-create-dialog-button').click();
+        const createTagResponsePromise = this.page.waitForResponse(
+            (response) =>
+                response.request().method() === 'POST' &&
+                /\/tags(?:\?|$)/.test(response.request().url()) &&
+                response.status() === 201
+        );
+        const assignTagResponsePromise = this.page.waitForResponse(
+            (response) =>
+                response.request().method() === 'POST' &&
+                response.url().includes('/add/samples') &&
+                response.status() >= 200 &&
+                response.status() < 300
+        );
 
-        await this.page.getByTestId('tag-create-dialog-input').fill(tagName);
+        const tagInput = this.page.getByPlaceholder('Assign tag to selection');
+        await expect(tagInput).toBeEnabled();
+        await tagInput.fill(tagName);
+        await this.page.getByRole('button', { name: `Create "${tagName}"` }).click();
 
-        await this.page.getByTestId('tag-create-dialog-create').click();
-
-        await this.page.getByTestId('tag-create-dialog-save').click();
+        await createTagResponsePromise;
+        await assignTagResponsePromise;
+        await waitForRequestsToSettle(this.page, '/tags');
+        await expect(this.getTagsMenuItem(tagName)).toBeVisible();
     }
 }
