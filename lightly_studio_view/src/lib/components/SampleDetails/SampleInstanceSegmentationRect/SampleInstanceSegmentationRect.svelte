@@ -1,4 +1,5 @@
 <script lang="ts">
+    import { onDestroy } from 'svelte';
     import type { AnnotationUpdateInput, AnnotationView } from '$lib/api/lightly_studio_local';
     import {
         applyBrushToMask,
@@ -95,17 +96,36 @@
     let selectedAnnotation = $state<AnnotationView | null>(null);
     let lastBrushPoint = $state<{ x: number; y: number } | null>(null);
     let previewDataUrl = $state<string>('');
+    let previewRenderFrameId: number | null = null;
 
     // Parse the color once and cache it for direct mask rendering.
     const parsedColor = $derived(parseColor(drawerStrokeColor));
 
+    const cancelScheduledPreviewUpdate = () => {
+        if (previewRenderFrameId === null) return;
+        cancelAnimationFrame(previewRenderFrameId);
+        previewRenderFrameId = null;
+    };
+
     const updatePreview = () => {
         if (!workingMask) return;
-        previewDataUrl = maskToDataUrl(workingMask, sample.width, sample.height, parsedColor);
+
+        cancelScheduledPreviewUpdate();
+        previewRenderFrameId = requestAnimationFrame(() => {
+            previewRenderFrameId = null;
+            if (!workingMask || !annotationLabelContext.isDrawing) return;
+
+            previewDataUrl = maskToDataUrl(workingMask, sample.width, sample.height, parsedColor);
+        });
     };
+
+    onDestroy(() => {
+        cancelScheduledPreviewUpdate();
+    });
 
     $effect(() => {
         if (!activeAnnotationId) {
+            cancelScheduledPreviewUpdate();
             selectedAnnotation = null;
             workingMask = null;
             brushPath = [];
@@ -121,6 +141,7 @@
 
         const rle = ann?.segmentation_details?.segmentation_mask;
         if (!ann) {
+            cancelScheduledPreviewUpdate();
             workingMask = new Uint8Array(sample.width * sample.height);
             previewDataUrl = '';
             selectedAnnotation = null;
@@ -128,12 +149,14 @@
         }
 
         if (!rle) {
+            cancelScheduledPreviewUpdate();
             workingMask = new Uint8Array(sample.width * sample.height);
             previewDataUrl = '';
             selectedAnnotation = ann;
             return;
         }
 
+        cancelScheduledPreviewUpdate();
         workingMask = decodeRLEToBinaryMask(rle, sample.width, sample.height);
         selectedAnnotation = ann;
         previewDataUrl = '';
@@ -201,6 +224,7 @@
     onpointerup={(e) => {
         lastBrushPoint = null;
         e.currentTarget?.releasePointerCapture?.(e.pointerId);
+        cancelScheduledPreviewUpdate();
 
         const targetAnnotation = resolveSelectedAnnotation();
         if (
