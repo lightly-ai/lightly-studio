@@ -11,9 +11,9 @@ __all__ = [
     "OR",
     "DatasetQuery",
     "ImageSampleField",
-    "OrderByExpression",
-    "OrderByField",
     "ObjectDetectionField",
     "ObjectDetectionQuery",
+    "OrderByExpression",
+    "OrderByField",
     "VideoSampleField",
 ]

@@ -1,4 +1,4 @@
-"""Annotation queries."""
+"""Classes and functions for building complex queries against dataset annotations."""
 
 from __future__ import annotations
 
