@@ -1,8 +1,9 @@
 # Security Considerations
 
+Lightly is designed for secure enterprise-grade machine learning workflows. Across all deployment
+models, raw images and videos are never stored on Lightly servers.
 
-Lightly is committed to data security and maintains high security standards for enterprise-grade
-machine learning operations.
+## Certifications
 
 - ISO 27001: Lightly is ISO 27001 certified, ensuring the confidentiality, integrity, and
   availability of your data through robust information security management.
@@ -11,17 +12,12 @@ machine learning operations.
 
 ## Data Sent to or Stored by Lightly
 
-For all deployments, images and videos are never stored on Lightly servers. For some deployments, certain other data is sent to Lightly.
+What Lightly stores depends on the deployment model:
 
-### OSS version
+- OSS: Only analytics data is sent to Lightly. The OSS version can also be run fully offline.
 
-Only analytics data is sent to Lightly. However, you can run the solution offline.
+- Lightly-Hosted: To operate the service, Lightly stores analytics, user account information, and dataset metadata,
+including annotations. Raw images and videos are streamed from your storage to the browser when
+needed, but are never stored on Lightly servers.
 
-### Lightly-Hosted version
-
-Analytics, user account information, and dataset metadata including annotations are stored by Lightly. Raw images and videos are streamed from cloud storage via a Lightly server to the browser
-for display. However, they are never stored on Lightly servers.
-
-### On-Premise version
-
-Nothing is sent to Lightly. The deployment can be fully offline or air-gapped.
+- On-Premise: Nothing is sent to Lightly. The deployment can be fully offline and air-gapped.
