@@ -1,4 +1,4 @@
-# How to Connect from Python
+# Connect from Python
 
 This guide shows how to connect to your LightlyStudio Enterprise instance from a Python
 environment. It is intended for admins who populate or update datasets from Python. Regular users
@@ -83,6 +83,11 @@ for sample in list(dataset)[:3]:
     After `ls.connect()`, all dataset operations use the enterprise database instead of
     a local DuckDB file. You do **not** need to call `ls.start_gui()` — the GUI is already
     running on the enterprise server.
+
+## Next Steps
+
+- [Cloud Storage](cloud_storage/index.md) — configure cloud storage credentials so
+  Python clients can access S3 buckets without local credential setup.
 
 ## API Reference for ls.connect()
 
