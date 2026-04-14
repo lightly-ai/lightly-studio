@@ -54,7 +54,12 @@ export function createCanvasMaskManager(): CanvasMaskManager {
         const context = ensureCanvasMaskContext(width, height);
         if (!context || !canvasMaskCanvas) return null;
 
-        const imageData = context.getImageData(0, 0, canvasMaskCanvas.width, canvasMaskCanvas.height);
+        const imageData = context.getImageData(
+            0,
+            0,
+            canvasMaskCanvas.width,
+            canvasMaskCanvas.height
+        );
         const binaryMask = new Uint8Array(canvasMaskCanvas.width * canvasMaskCanvas.height);
         const pixels = imageData.data;
 
