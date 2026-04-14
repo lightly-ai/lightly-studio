@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
-import { createBrushDrawer } from './BrushDrawer';
+import { createBrushDrawer } from './brushDrawer';
 
 type Mock2dContext = {
     beginPath: ReturnType<typeof vi.fn>;
