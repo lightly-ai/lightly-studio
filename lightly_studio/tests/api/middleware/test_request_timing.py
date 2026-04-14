@@ -42,7 +42,7 @@ def app_with_timing_middleware() -> FastAPI:
     return test_app
 
 
-def test_request_timing_middleware__has_no_error_logs_for_fast_requests(
+def test_request_timing__has_no_error_logs_for_fast_requests(
     app_with_timing_middleware: FastAPI, caplog: pytest.LogCaptureFixture
 ) -> None:
     """Test that fast requests do not generate error logs."""
@@ -56,7 +56,7 @@ def test_request_timing_middleware__has_no_error_logs_for_fast_requests(
     assert len(error_records) == 0
 
 
-def test_request_timing_middleware__has_error_logs_for_very_slow_requests(
+def test_request_timing__has_error_logs_for_very_slow_requests(
     app_with_timing_middleware: FastAPI, caplog: pytest.LogCaptureFixture
 ) -> None:
     """Test that very slow requests exceeding error threshold are logged as error."""
@@ -72,7 +72,7 @@ def test_request_timing_middleware__has_error_logs_for_very_slow_requests(
     assert "ms" in error_records[0].message
 
 
-def test_request_timing_middleware__custom_thresholds() -> None:
+def test_request_timing__custom_thresholds() -> None:
     """Test that custom thresholds are respected."""
     app = FastAPI()
     app.add_middleware(
@@ -97,7 +97,7 @@ def test_request_timing_middleware__custom_thresholds() -> None:
     mock_logger.error.assert_not_called()
 
 
-def test_request_timing_middleware__fails_slow_requests() -> None:
+def test_request_timing__fails_slow_requests() -> None:
     """Test that requests exceeding error threshold fail when fail_on_error is True."""
     app = FastAPI()
     app.add_middleware(
