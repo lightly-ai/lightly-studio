@@ -10,9 +10,11 @@ from pydantic import BaseModel, Field
 
 from lightly_studio.api.routes.api.collection import get_and_validate_collection_id
 from lightly_studio.api.routes.api.status import (
+    HTTP_STATUS_BAD_REQUEST,
     HTTP_STATUS_NOT_FOUND,
 )
 from lightly_studio.api.routes.api.validators import Paginated
+from lightly_studio.core.dataset_query.wire import WireExpression
 from lightly_studio.db_manager import SessionDep
 from lightly_studio.models.collection import CollectionTable
 from lightly_studio.models.image import (
@@ -33,6 +35,17 @@ class ReadImagesRequest(BaseModel):
     """Request body for reading samples with text embedding."""
 
     filters: ImageFilter | None = Field(None, description="Filter parameters for samples")
+    query_filter: WireExpression | None = Field(
+        None,
+        description=(
+            "Query filter tree built from the Python DatasetQuery API or the frontend "
+            "query builder. Supported nodes: field, tags_contains, and, or, not."
+        ),
+    )
+    python_query: str | None = Field(
+        None,
+        description="Python DatasetQuery expression evaluated server-side.",
+    )
     text_embedding: list[float] | None = Field(None, description="Text embedding to search for")
     sample_ids: list[UUID] | None = Field(None, description="The list of requested sample IDs")
     pagination: Paginated | None = Field(
@@ -56,14 +69,19 @@ def read_images(
     Returns:
         A list of filtered samples.
     """
-    result = image_resolver.get_all_by_collection_id(
-        session=session,
-        collection_id=collection_id,
-        pagination=body.pagination,
-        filters=body.filters,
-        text_embedding=body.text_embedding,
-        sample_ids=body.sample_ids,
-    )
+    try:
+        result = image_resolver.get_all_by_collection_id(
+            session=session,
+            collection_id=collection_id,
+            pagination=body.pagination,
+            filters=body.filters,
+            query_filter=body.query_filter,
+            python_query=body.python_query,
+            text_embedding=body.text_embedding,
+            sample_ids=body.sample_ids,
+        )
+    except ValueError as exc:
+        raise HTTPException(status_code=HTTP_STATUS_BAD_REQUEST, detail=str(exc)) from exc
     # TODO(Michal, 10/2025): Add SampleView to ImageView and then use a response model
     # instead of manual conversion.
     scores: list[float | None] = (

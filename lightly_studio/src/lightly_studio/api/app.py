@@ -37,10 +37,13 @@ from lightly_studio.api.routes.api import (
     image_embedding,
     metadata,
     operator,
+    query_completions,
+    query_fields,
     sample,
     selection,
     settings,
     text_embedding,
+    translate_query,
     video,
 )
 from lightly_studio.api.routes.api.exceptions import (
@@ -140,6 +143,9 @@ api_router.include_router(operator.operator_router)
 api_router.include_router(frame.frame_router)
 api_router.include_router(video.video_router)
 api_router.include_router(group.group_router)
+api_router.include_router(query_completions.query_completions_router)
+api_router.include_router(query_fields.query_fields_router)
+api_router.include_router(translate_query.translate_query_router)
 api_router.include_router(enterprise.enterprise_router)
 
 app.include_router(api_router)

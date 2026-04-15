@@ -23,8 +23,8 @@
     import { selectRangeByAnchor } from '$lib/utils/selectRangeByAnchor';
     import { page } from '$app/state';
     import SampleImageGridItem from '../SampleImageGridItem/SampleImageGridItem.svelte';
+    import { useQueryBuilderFilter } from '$lib/hooks/useQueryBuilderFilter';
 
-    // Import the settings hook
     const { gridViewSampleRenderingStore, showSampleFilenamesStore } = useSettings();
 
     type SamplesProps = {
@@ -52,6 +52,8 @@
         toggleSampleSelection
     } = useGlobalStorage();
 
+    const { queryFilter, pythonQuery } = useQueryBuilderFilter();
+
     const samplesParams = $derived({
         collection_id,
         mode: 'normal' as const,
@@ -63,7 +65,9 @@
             dimensions: $dimensions ?? undefined
         },
         metadata_values: $metadataValues,
-        text_embedding: $textEmbedding?.embedding
+        text_embedding: $textEmbedding?.embedding,
+        query_filter: $queryFilter,
+        python_query: $pythonQuery ?? undefined
     });
 
     const paramsWithoutSampleIds = (params: ImagesInfiniteParams) => {
@@ -76,11 +80,9 @@
     const { filterParams, updateFilterParams } = useImageFilters();
 
     $effect(() => {
-        // Synchronize the global filter parameters with the local samples parameters
         const baseParams = samplesParams as ImagesInfiniteParams;
         const currentParams = $filterParams;
 
-        // Compare parameters excluding sample_ids to detect if other filters have changed
         if (
             currentParams &&
             isEqual(paramsWithoutSampleIds(baseParams), paramsWithoutSampleIds(currentParams))
@@ -88,7 +90,6 @@
             return;
         }
 
-        // Start with the base parameters from the component
         let nextParams = baseParams;
 
         let currentSampleIds: string[] = [];
@@ -96,7 +97,6 @@
             currentSampleIds = currentParams.filters.sample_ids;
         }
 
-        // Merge the existing sample selection into the new parameters
         if (currentSampleIds && currentSampleIds.length > 0 && isNormalModeParams(nextParams)) {
             nextParams = {
                 ...nextParams,
@@ -107,14 +107,12 @@
             };
         }
 
-        // Update the global filter parameters
         updateFilterParams(nextParams);
     });
 
     const { samples: infiniteSamples } = $derived(
         useImagesInfinite({ ...$filterParams, collection_id: collection_id })
     );
-    // Derived list of samples from TanStack infinite query
     const samples: ImageView[] = $derived(
         $infiniteSamples && $infiniteSamples.data
             ? $infiniteSamples.data.pages.flatMap((page: { data?: ImageView[] }) => page.data ?? [])
@@ -126,19 +124,14 @@
     let isReady = $state(false);
     const sampleGridOverscan = 30;
 
-    // Initialize objectFit with default and update when settings are loaded
-    let objectFit = $state($gridViewSampleRenderingStore); // Use store value directly
+    let objectFit = $state($gridViewSampleRenderingStore);
 
     const { initialize, savePosition, getRestoredPosition } =
         useScrollRestoration('samples_scroll');
 
     onMount(async () => {
         initialize();
-        // Load collection version for caching
         await getCollectionVersion(collection_id);
-
-        // Get the grid view rendering mode from settings
-
         isReady = true;
     });
 
@@ -162,13 +155,10 @@
         savePosition(scrollTop, filterHash);
     }
 
-    // Add reactive effect to update objectFit when settings change
     $effect(() => {
-        // Update objectFit whenever the grid view rendering setting changes
         objectFit = $gridViewSampleRenderingStore;
     });
 
-    // Set total count when data is available
     $effect(() => {
         if ($infiniteSamples.isSuccess && $infiniteSamples.data?.pages.length > 0) {
             setfilteredSampleCount($infiniteSamples.data.pages[0].total_count);

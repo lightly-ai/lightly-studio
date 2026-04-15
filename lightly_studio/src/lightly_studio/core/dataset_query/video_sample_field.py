@@ -28,14 +28,14 @@ class VideoSampleField:
     ```
     """
 
-    file_name = ComparableField(col(VideoTable.file_name))
-    width = NumericalField(col(VideoTable.width))
-    height = NumericalField(col(VideoTable.height))
-    file_path_abs = ComparableField(col(VideoTable.file_path_abs))
+    file_name = ComparableField(col(VideoTable.file_name), wire_name="video.file_name")
+    width = NumericalField(col(VideoTable.width), wire_name="video.width")
+    height = NumericalField(col(VideoTable.height), wire_name="video.height")
+    file_path_abs = ComparableField(col(VideoTable.file_path_abs), wire_name="video.file_path_abs")
 
     # TODO(lukas 1/2026): make duration_s more similar to NumericalField, so that we can also use
     # `<` at least on durations that are not None.
-    duration_s = ComparableField(col(VideoTable.duration_s))
-    fps = NumericalField(col(VideoTable.fps))
+    duration_s = ComparableField(col(VideoTable.duration_s), wire_name="video.duration_s")
+    fps = NumericalField(col(VideoTable.fps), wire_name="video.fps")
 
     tags = TagsAccessor()

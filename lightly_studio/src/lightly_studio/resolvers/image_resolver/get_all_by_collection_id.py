@@ -12,6 +12,10 @@ from sqlalchemy.orm.interfaces import LoaderOption
 from sqlmodel import Session, col, func, select
 
 from lightly_studio.api.routes.api.validators import Paginated
+from lightly_studio.core.dataset_query.boolean_expression import AND, NOT, OR
+from lightly_studio.core.dataset_query.image_sample_field import ImageSampleField
+from lightly_studio.core.dataset_query.match_expression import MatchExpression
+from lightly_studio.core.dataset_query.wire import WireExpression, deserialize
 from lightly_studio.models.annotation.annotation_base import AnnotationBaseTable
 from lightly_studio.models.image import ImageTable
 from lightly_studio.models.sample import SampleTable
@@ -21,6 +25,40 @@ from lightly_studio.resolvers.similarity_utils import (
     distance_to_similarity,
     get_distance_expression,
 )
+
+# Restricted globals for eval()-based python_query execution.
+# __builtins__ is explicitly cleared so no built-in functions are reachable.
+_PYTHON_QUERY_GLOBALS: dict[str, object] = {
+    "__builtins__": {},
+    "ImageSampleField": ImageSampleField,
+    "AND": AND,
+    "OR": OR,
+    "NOT": NOT,
+}
+
+
+def _eval_python_query(python_query: str) -> MatchExpression:
+    """Evaluate a python_query string in a restricted sandbox.
+
+    Args:
+        python_query: A Python expression returning a MatchExpression, e.g.
+            ``ImageSampleField.width > 1920``.
+
+    Returns:
+        The resulting MatchExpression.
+
+    Raises:
+        ValueError: If eval fails or the result is not a MatchExpression.
+    """
+    try:
+        result = eval(python_query, _PYTHON_QUERY_GLOBALS)  # noqa: S307
+    except Exception as exc:
+        raise ValueError(f"Invalid python_query: {exc}") from exc
+    if not isinstance(result, MatchExpression):
+        raise ValueError(
+            f"python_query must return a MatchExpression, got {type(result).__name__}"
+        )
+    return result
 
 
 class GetAllSamplesByCollectionIdResult(BaseModel):
@@ -63,10 +101,16 @@ def get_all_by_collection_id(  # noqa: PLR0913
     collection_id: UUID,
     pagination: Paginated | None = None,
     filters: ImageFilter | None = None,
+    query_filter: WireExpression | None = None,
+    python_query: str | None = None,
     text_embedding: list[float] | None = None,
     sample_ids: list[UUID] | None = None,
 ) -> GetAllSamplesByCollectionIdResult:
     """Retrieve samples for a specific collection with optional filtering."""
+    python_match: MatchExpression | None = (
+        _eval_python_query(python_query) if python_query is not None else None
+    )
+
     embedding_model_id, distance_expr = get_distance_expression(
         session=session,
         collection_id=collection_id,
@@ -81,6 +125,8 @@ def get_all_by_collection_id(  # noqa: PLR0913
             distance_expr=distance_expr,
             pagination=pagination,
             filters=filters,
+            query_filter=query_filter,
+            python_match=python_match,
             sample_ids=sample_ids,
         )
     return _get_all_without_similarity(
@@ -88,6 +134,8 @@ def get_all_by_collection_id(  # noqa: PLR0913
         collection_id=collection_id,
         pagination=pagination,
         filters=filters,
+        query_filter=query_filter,
+        python_match=python_match,
         sample_ids=sample_ids,
     )
 
@@ -99,6 +147,8 @@ def _get_all_with_similarity(  # noqa: PLR0913
     distance_expr: ColumnElement[float],
     pagination: Paginated | None,
     filters: ImageFilter | None,
+    query_filter: WireExpression | None,
+    python_match: MatchExpression | None,
     sample_ids: list[UUID] | None,
 ) -> GetAllSamplesByCollectionIdResult:
     """Get samples with similarity search - returns (ImageTable, float) tuples."""
@@ -132,6 +182,16 @@ def _get_all_with_similarity(  # noqa: PLR0913
         samples_query = filters.apply(samples_query)
         total_count_query = filters.apply(total_count_query)
 
+    if query_filter is not None:
+        condition = deserialize(query_filter)
+        samples_query = samples_query.where(condition)
+        total_count_query = total_count_query.where(condition)
+
+    if python_match is not None:
+        condition = python_match.get()
+        samples_query = samples_query.where(condition)
+        total_count_query = total_count_query.where(condition)
+
     # TODO(Michal, 06/2025): Consider adding sample_ids to the filters.
     if sample_ids:
         samples_query = samples_query.where(col(ImageTable.sample_id).in_(sample_ids))
@@ -156,11 +216,13 @@ def _get_all_with_similarity(  # noqa: PLR0913
     )
 
 
-def _get_all_without_similarity(
+def _get_all_without_similarity(  # noqa: PLR0913
     session: Session,
     collection_id: UUID,
     pagination: Paginated | None,
     filters: ImageFilter | None,
+    query_filter: WireExpression | None,
+    python_match: MatchExpression | None,
     sample_ids: list[UUID] | None,
 ) -> GetAllSamplesByCollectionIdResult:
     """Get samples without similarity search - returns ImageTable directly."""
@@ -183,6 +245,16 @@ def _get_all_without_similarity(
     if filters:
         samples_query = filters.apply(samples_query)
         total_count_query = filters.apply(total_count_query)
+
+    if query_filter is not None:
+        condition = deserialize(query_filter)
+        samples_query = samples_query.where(condition)
+        total_count_query = total_count_query.where(condition)
+
+    if python_match is not None:
+        condition = python_match.get()
+        samples_query = samples_query.where(condition)
+        total_count_query = total_count_query.where(condition)
 
     # TODO(Michal, 06/2025): Consider adding sample_ids to the filters.
     if sample_ids:
