@@ -18,9 +18,7 @@ The following export formats are supported:
 ## Export in the GUI
 
 Open the export dialog from the `Menu` button in the top-right corner of any grid view
-and select `Export`.
-
-The dialog shows a dropdown with all available formats for the current dataset.
+and select `Export`. The dialog shows a dropdown with all available formats for the current dataset.
 
 ![Export format dropdown](https://storage.googleapis.com/lightly-public/studio/export_dialog_dropdown.png){width=80%}
 
@@ -35,14 +33,10 @@ The export includes all samples in the dataset.
 
 ### Exporting sample filenames by tag
 
-The `Image Filenames` format supports tag-based filtering. After selecting it:
+The `Image Filenames` option supports tag-based filtering. Tick `Inverse selection` to export
+samples that do not have the selected tag.
 
 ![Export filenames by tag](https://storage.googleapis.com/lightly-public/studio/export_dialog_filenames.png){width=60%}
-
-1. Pick a tag from the list of available tags.
-2. Optionally check `Inverse selection` to export all samples that do **not** have the tag.
-3. The dialog shows a live count of matching samples.
-4. Click `Download` to save the file.
 
 ## Export in Python
 
