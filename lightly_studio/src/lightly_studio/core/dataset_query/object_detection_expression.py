@@ -111,6 +111,7 @@ class ObjectDetectionField:
     x = ObjectDetectionNumericalField(col(ObjectDetectionAnnotationTable.x))
     y = ObjectDetectionNumericalField(col(ObjectDetectionAnnotationTable.y))
     label = ObjectDetectionComparableField(col(AnnotationLabelTable.annotation_label_name))
+    # TODO(lukas, 4/2026): add confidence
 
 
 class ObjectDetectionQuery:
@@ -118,13 +119,13 @@ class ObjectDetectionQuery:
 
     @staticmethod
     def match(*criteria: MatchExpression) -> ObjectDetectionMatchExpression:
-        """Combine multiple object detection criteria into a single subquery.
+        """Combine multiple object detection criteria into a single subquery using logical AND.
 
         Args:
             criteria: The criteria to combine.
 
         Returns:
-            A single match expression for the combined criteria.
+            A single match expression for satisfying all criteria.
         """
         return ObjectDetectionMatchExpression(criterion=AND(*criteria))
 
