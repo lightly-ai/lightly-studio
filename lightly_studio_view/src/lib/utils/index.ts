@@ -17,3 +17,5 @@ export {
 } from './getGridThumbnailURL/getGridThumbnailURL';
 export { getVideoURLById } from './getVideoURLById/getVideoURLById';
 export { getURL } from './getURL/getURL';
+export { fetchCollection } from './fetchCollection';
+export { fetchCollectionHierarchy } from './fetchCollectionHierarchy';
