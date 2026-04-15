@@ -27,8 +27,8 @@ export function useInstanceSegmentationPreview({
         color,
         isDrawing
     }: SchedulePreviewComposeParams) => {
-        // Coalesce multiple pointer moves into one frame.
-        if (previewRenderFrameId !== null) return;
+        // Keep only the latest compose request.
+        cancelScheduledPreviewCompose();
 
         previewRenderFrameId = requestAnimationFrame(() => {
             previewRenderFrameId = null;
@@ -42,6 +42,11 @@ export function useInstanceSegmentationPreview({
         });
     };
 
+    const clearPreview = () => {
+        cancelScheduledPreviewCompose();
+        previewRenderer.clearPreview();
+    };
+
     const destroy = () => {
         cancelScheduledPreviewCompose();
         previewRenderer.destroy();
@@ -50,7 +55,7 @@ export function useInstanceSegmentationPreview({
 
     return {
         setPreviewCanvas: previewRenderer.setPreviewCanvas,
-        clearPreview: previewRenderer.clearPreview,
+        clearPreview,
         drawMaskToCanvas: canvasMaskManager.drawMaskToCanvas,
         drawBrushDot: brushDrawer.drawBrushDot,
         drawBrushLine: brushDrawer.drawBrushLine,
