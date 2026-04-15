@@ -71,7 +71,7 @@
         useCollectionWithChildren({ collectionId: datasetId })
     );
     const brushApi = $derived.by(() =>
-        useInstanceSegmentationBrush({
+        useSegmentationMaskBrush({
             collectionId,
             datasetId,
             sampleId,
@@ -103,7 +103,7 @@
     const parsedColor = $derived(parseColor(drawerStrokeColor));
 
     // Hook owns mask drawing + preview composition.
-    const previewApi = useInstanceSegmentationPreview({
+    const previewApi = useSegmentationMaskPreview({
         onPreviewVisibilityChange: (visible) => {
             isPreviewVisible = visible;
         }

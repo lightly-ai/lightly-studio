@@ -306,7 +306,7 @@ class TestImageSample:
         assert annotations[0].width == 400
         assert annotations[0].height == 300
 
-    def test_annotations_instance_segmentation(
+    def test_annotations_segmentation_mask(
         self,
         db_session: Session,
     ) -> None:
@@ -486,7 +486,7 @@ class TestImageSample:
         assert annotations[0].width == 30
         assert annotations[0].height == 40
 
-    def test_add_annotation_instance_segmentation(
+    def test_add_annotation_segmentation_mask(
         self,
         db_session: Session,
     ) -> None:

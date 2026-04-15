@@ -190,7 +190,7 @@ class TestImageDatasetExport:
             output_json=Path("coco_export.json"),
         )
 
-    def test_to_coco_instance_segmentations(
+    def test_to_coco_segmentation_masks(
         self,
         tmp_path: Path,
         patch_collection: None,  # noqa: ARG002
@@ -212,7 +212,7 @@ class TestImageDatasetExport:
         )
 
         output_json = tmp_path / "task_inst_seg_1.json"
-        dataset.export().to_coco_instance_segmentations(output_json=output_json)
+        dataset.export().to_coco_segmentation_masks(output_json=output_json)
 
         # Load the generated JSON and verify its content
         with open(output_json) as f:
@@ -233,7 +233,7 @@ class TestImageDatasetExport:
             ],
         }
 
-    def test_to_coco_instance_segmentations__skips_missing_mask(
+    def test_to_coco_segmentation_masks__skips_missing_mask(
         self,
         tmp_path: Path,
         patch_collection: None,  # noqa: ARG002
@@ -267,7 +267,7 @@ class TestImageDatasetExport:
         )
 
         output_json = tmp_path / "task_inst_seg_skip.json"
-        dataset.export().to_coco_instance_segmentations(output_json=output_json)
+        dataset.export().to_coco_segmentation_masks(output_json=output_json)
 
         # Load the generated JSON and verify its content
         with open(output_json) as f:
@@ -358,7 +358,7 @@ class TestImageDatasetExport:
             mask_values = list(mask.getdata())
         assert mask_values == [0, 1, 0, 0, 0, 0]
 
-    def test_to_pascalvoc_instance_segmentation__background_and_dog_labels_partial_image(
+    def test_to_pascalvoc_segmentation_mask__background_and_dog_labels_partial_image(
         self,
         tmp_path: Path,
         patch_collection: None,  # noqa: ARG002
@@ -416,7 +416,7 @@ class TestImageDatasetExport:
             mask_values = list(mask.getdata())
         assert mask_values == [0, 2, 0, 0, 1, 0]
 
-    def test_to_pascalvoc_instance_segmentation__two_foreground_classes_on_one_image(
+    def test_to_pascalvoc_segmentation_mask__two_foreground_classes_on_one_image(
         self,
         tmp_path: Path,
         patch_collection: None,  # noqa: ARG002
@@ -463,7 +463,7 @@ class TestImageDatasetExport:
 
         assert mask_values == [0, 1, 0, 0, 2, 0]
 
-    def test_to_pascalvoc_instance_segmentation__two_parts_with_same_class_on_one_image(
+    def test_to_pascalvoc_segmentation_mask__two_parts_with_same_class_on_one_image(
         self,
         tmp_path: Path,
         patch_collection: None,  # noqa: ARG002
@@ -509,7 +509,7 @@ class TestImageDatasetExport:
             mask_values = list(mask.getdata())
         assert mask_values == [0, 1, 0, 0, 1, 0]
 
-    def test_to_pascalvoc_instance_segmentation__two_images_with_parts_of_same_class(
+    def test_to_pascalvoc_segmentation_mask__two_images_with_parts_of_same_class(
         self,
         tmp_path: Path,
         patch_collection: None,  # noqa: ARG002

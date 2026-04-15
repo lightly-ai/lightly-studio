@@ -78,7 +78,7 @@ def test_export_collection_annotations(
     assert response.headers["Content-Disposition"] == "attachment; filename=coco_export.json"
 
 
-def test_export_collection_instance_segmentations(
+def test_export_collection_segmentation_masks(
     db_session: Session,
     test_client: TestClient,
 ) -> None:
@@ -138,7 +138,7 @@ def test_export_collection_instance_segmentations(
     )
 
 
-def test_export_collection_pascalvoc_from_instance_segmentations(
+def test_export_collection_pascalvoc_from_segmentation_masks(
     db_session: Session,
     test_client: TestClient,
 ) -> None:

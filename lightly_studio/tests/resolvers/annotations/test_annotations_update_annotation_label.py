@@ -127,7 +127,7 @@ def test_update_annotation_label_object_detection(
     )
 
 
-def test_update_annotation_label_instance_segmentation(
+def test_update_annotation_label_segmentation_mask(
     db_session: Session,
     annotations_test_data: AnnotationsTestData,
 ) -> None:

@@ -99,7 +99,7 @@ vi.mock('$lib/hooks/useCollection/useCollection', () => ({
 }));
 
 vi.mock('$lib/hooks/useInstanceSegmentationBrush', () => ({
-    useInstanceSegmentationBrush: useInstanceSegmentationBrushMock
+    useSegmentationMaskBrush: useInstanceSegmentationBrushMock
 }));
 
 const baseProps = {
