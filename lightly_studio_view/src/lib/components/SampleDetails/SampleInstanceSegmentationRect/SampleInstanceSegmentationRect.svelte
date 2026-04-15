@@ -110,17 +110,26 @@
     });
 
     onDestroy(() => {
+        setIsDrawing(false);
         previewApi.destroy();
     });
 
+    const resetPreviewState = ({ clearDrawing = true }: { clearDrawing?: boolean } = {}) => {
+        if (clearDrawing) {
+            setIsDrawing(false);
+        }
+
+        lastBrushPoint = null;
+        previewApi.cancelScheduledPreviewCompose();
+        previewApi.clearPreview();
+        isPreviewVisible = false;
+    };
+
     $effect(() => {
         if (!activeAnnotationId) {
-            previewApi.cancelScheduledPreviewCompose();
-            previewApi.clearPreview();
-            isPreviewVisible = false;
+            resetPreviewState();
             selectedAnnotation = null;
             baseMask = null;
-            lastBrushPoint = null;
             return;
         }
 
@@ -132,35 +141,26 @@
 
         const rle = ann?.segmentation_details?.segmentation_mask;
         if (!ann) {
-            previewApi.cancelScheduledPreviewCompose();
-            previewApi.clearPreview();
-            isPreviewVisible = false;
+            resetPreviewState();
             const emptyMask = new Uint8Array(sample.width * sample.height);
             baseMask = emptyMask;
             selectedAnnotation = null;
-            lastBrushPoint = null;
             return;
         }
 
         if (!rle) {
-            previewApi.cancelScheduledPreviewCompose();
-            previewApi.clearPreview();
-            isPreviewVisible = false;
+            resetPreviewState();
             const emptyMask = new Uint8Array(sample.width * sample.height);
             baseMask = emptyMask;
             selectedAnnotation = ann;
-            lastBrushPoint = null;
             return;
         }
 
-        previewApi.cancelScheduledPreviewCompose();
         const decodedMask = decodeRLEToBinaryMask(rle, sample.width, sample.height);
         // Base mask is copied into the source canvas on pointer down.
         baseMask = decodedMask;
         selectedAnnotation = ann;
-        previewApi.clearPreview();
-        isPreviewVisible = false;
-        lastBrushPoint = null;
+        resetPreviewState();
     });
 
     const updateAnnotation = async (input: AnnotationUpdateInput) => {
@@ -173,6 +173,47 @@
         if (!activeAnnotationId) return null;
 
         return sample.annotations.find((a) => a.sample_id === activeAnnotationId) ?? null;
+    };
+
+    const releasePointerCapture = (e: PointerEvent) => {
+        const pointerTarget = e.currentTarget as Element | null;
+        pointerTarget?.releasePointerCapture?.(e.pointerId);
+    };
+
+    const handleStrokeComplete = (e: PointerEvent) => {
+        releasePointerCapture(e);
+        resetPreviewState({ clearDrawing: false });
+
+        const targetAnnotation = resolveSelectedAnnotation();
+        if (
+            targetAnnotation &&
+            annotationLabelContext.isAnnotationLocked?.(targetAnnotation.sample_id)
+        ) {
+            setIsDrawing(false);
+            return;
+        }
+
+        const updatedMask = previewApi.toBinaryMaskFromCanvas(sample.width, sample.height);
+        if (!updatedMask) {
+            setIsDrawing(false);
+            return;
+        }
+        // Keep local base in sync after committing stroke.
+        baseMask = updatedMask;
+
+        brushApi.finishBrush(
+            updatedMask,
+            targetAnnotation,
+            $labels.data ?? [],
+            updateAnnotation,
+            annotationLabelContext.lockedAnnotationIds
+        );
+        setIsDrawing(false);
+    };
+
+    const handleStrokeCancel = (e: PointerEvent) => {
+        releasePointerCapture(e);
+        resetPreviewState();
     };
 </script>
 
@@ -246,34 +287,8 @@
             isDrawing: Boolean(annotationLabelContext.isDrawing)
         });
     }}
-    onpointerup={(e) => {
-        lastBrushPoint = null;
-        e.currentTarget?.releasePointerCapture?.(e.pointerId);
-        previewApi.cancelScheduledPreviewCompose();
-        previewApi.clearPreview();
-        isPreviewVisible = false;
-
-        const targetAnnotation = resolveSelectedAnnotation();
-        if (
-            targetAnnotation &&
-            annotationLabelContext.isAnnotationLocked?.(targetAnnotation.sample_id)
-        ) {
-            return;
-        }
-
-        const updatedMask = previewApi.toBinaryMaskFromCanvas(sample.width, sample.height);
-        if (!updatedMask) return;
-        // Keep local base in sync after committing stroke.
-        baseMask = updatedMask;
-
-        brushApi.finishBrush(
-            updatedMask,
-            targetAnnotation,
-            $labels.data ?? [],
-            updateAnnotation,
-            annotationLabelContext.lockedAnnotationIds
-        );
-    }}
+    onpointerup={handleStrokeComplete}
+    onpointercancel={handleStrokeCancel}
     onpointerdown={(e) => {
         e.currentTarget?.setPointerCapture?.(e.pointerId);
 
