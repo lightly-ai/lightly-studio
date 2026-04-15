@@ -29,6 +29,7 @@
 
     import Segment from '$lib/components/Segment/Segment.svelte';
     import QueryCodeEditor from '$lib/components/QueryCodeEditor/QueryCodeEditor.svelte';
+    import * as Dialog from '$lib/components/ui/dialog';
     import { useQueryBuilderFilter } from '$lib/hooks/useQueryBuilderFilter';
     import { useHasEmbeddings } from '$lib/hooks/useHasEmbeddings/useHasEmbeddings';
     import { useHideAnnotations } from '$lib/hooks/useHideAnnotations';
@@ -486,14 +487,11 @@
 
     const { pythonQuery, updatePythonQuery, clearFilter } = useQueryBuilderFilter();
 
-    let searchMode = $state<'embed' | 'query'>('embed');
+    let searchMode = $state<'embed'>('embed');
+    let queryEditorDialogOpen = $state(false);
 
-    function setSearchMode(mode: 'embed' | 'query') {
-        if (mode === 'embed') {
-            clearFilter();
-        } else {
-            clearSearch();
-        }
+    function setSearchMode(mode: 'embed') {
+        clearFilter();
         searchMode = mode;
     }
 
@@ -563,23 +561,25 @@
 
             {#snippet searchOrQueryBar()}
                 <div class="flex min-w-0 items-center gap-2">
-                    <!-- Mode toggle: only when samples has embeddings -->
-                    {#if isSamples && hasEmbeddings}
+                    <!-- Search/filter buttons -->
+                    {#if isSamples}
                         <div class="flex shrink-0 overflow-hidden rounded-md border border-input">
+                            {#if hasEmbeddings}
+                                <Button
+                                    size="icon"
+                                    variant={searchMode === 'embed' ? 'secondary' : 'ghost'}
+                                    class="h-8 w-8 rounded-none"
+                                    onclick={() => setSearchMode('embed')}
+                                    title="Embedding search"
+                                >
+                                    <Search class="h-4 w-4" />
+                                </Button>
+                            {/if}
                             <Button
                                 size="icon"
-                                variant={searchMode === 'embed' ? 'secondary' : 'ghost'}
+                                variant={$pythonQuery ? 'secondary' : 'ghost'}
                                 class="h-8 w-8 rounded-none"
-                                onclick={() => setSearchMode('embed')}
-                                title="Embedding search"
-                            >
-                                <Search class="h-4 w-4" />
-                            </Button>
-                            <Button
-                                size="icon"
-                                variant={searchMode === 'query' ? 'secondary' : 'ghost'}
-                                class="h-8 w-8 rounded-none"
-                                onclick={() => setSearchMode('query')}
+                                onclick={() => (queryEditorDialogOpen = true)}
                                 title="Filter builder"
                             >
                                 <Filter class="h-4 w-4" />
@@ -671,12 +671,6 @@
                         </div>
                     {/if}
 
-                    <!-- Inline query editor -->
-                    {#if isSamples && (!hasEmbeddings || searchMode === 'query')}
-                        <div class="min-w-0 flex-1 overflow-hidden">
-                            <QueryCodeEditor onrun={(q) => updatePythonQuery(q)} />
-                        </div>
-                    {/if}
                 </div>
             {/snippet}
 
@@ -747,6 +741,36 @@
                         <SelectionPill selectedCount={$selectedCount} onClear={clearSelection} />
                     {/if}
                 </div>
+            {/if}
+            {#if isSamples}
+                <Dialog.Root bind:open={queryEditorDialogOpen}>
+                    <Dialog.Portal>
+                        <Dialog.Overlay />
+                        <Dialog.Content
+                            class="flex h-[70vh] max-h-[600px] flex-col border-border bg-background dark:[color-scheme:dark] sm:max-w-[700px]"
+                        >
+                            <Dialog.Header>
+                                <Dialog.Title class="text-foreground">Filter Builder</Dialog.Title>
+                                <Dialog.Description class="text-foreground">
+                                    Filter samples using the DatasetQuery API.
+                                </Dialog.Description>
+                            </Dialog.Header>
+                            <div class="min-h-0 flex-1 py-4">
+                                <QueryCodeEditor onrun={(q) => updatePythonQuery(q)} />
+                            </div>
+                            <Dialog.Footer>
+                                {#if $pythonQuery}
+                                    <Button variant="outline" onclick={() => clearFilter()}>
+                                        Clear filter
+                                    </Button>
+                                {/if}
+                                <Button onclick={() => (queryEditorDialogOpen = false)}>
+                                    Close
+                                </Button>
+                            </Dialog.Footer>
+                        </Dialog.Content>
+                    </Dialog.Portal>
+                </Dialog.Root>
             {/if}
             {#if hasEmbeddings}
                 {#await import('$lib/components/FewShotClassifier/CreateClassifierDialog.svelte') then { default: CreateClassifierDialog }}
