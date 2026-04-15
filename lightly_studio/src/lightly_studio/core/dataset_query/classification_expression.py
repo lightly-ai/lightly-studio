@@ -23,8 +23,8 @@ from lightly_studio.models.sample import SampleTable
 class ClassificationField:
     """Providing access to predefined classification fields for queries."""
 
-    # TODO(lukas, 4/2026): Rename ObjectDetectionComparableField to a different name, but only do it
-    # once we also have InstanceSegmentationField class and requirements are more clear.
+    # TODO(lukas, 04/2026): Rename ObjectDetectionComparableField to a different name, but only do
+    # it once we also have InstanceSegmentationField class and requirements are more clear.
     label = ObjectDetectionComparableField(col(AnnotationLabelTable.annotation_label_name))
 
 

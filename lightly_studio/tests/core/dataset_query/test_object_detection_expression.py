@@ -150,8 +150,20 @@ class TestObjectDetectionExpressions:
             select(ImageTable)
             .join(ImageTable.sample)
             .where(SampleTable.collection_id == collection_id)
-            .where(ObjectDetectionQuery.match().get())
+            .where(ObjectDetectionQuery.match(ObjectDetectionField.label == "label1").get())
         )
         results = db_session.exec(query).all()
         # There are two annotations with this label but only one of the right type.
+        assert [image.sample_id for image in results] == [image1.sample_id]
+
+        # Repeat almost the same query but now without label filtering. Just an empty
+        # ObjectDetectionQuery.match().
+        query = (
+            select(ImageTable)
+            .join(ImageTable.sample)
+            .where(SampleTable.collection_id == collection_id)
+            .where(ObjectDetectionQuery.match().get())
+        )
+        results = db_session.exec(query).all()
+        # There are two annotations but only one of the right type.
         assert [image.sample_id for image in results] == [image1.sample_id]
