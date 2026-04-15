@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import ast
 from collections.abc import Sequence
 from uuid import UUID
 
@@ -25,8 +26,35 @@ from lightly_studio.resolvers.similarity_utils import (
     get_distance_expression,
 )
 
-# Restricted globals for eval()-based python_query execution.
-# __builtins__ is explicitly cleared so no built-in functions are reachable.
+# Allowed names in query expressions.
+_ALLOWED_NAMES = frozenset({"ImageSampleField", "AND", "OR", "NOT"})
+
+# Whitelist of AST node types that may appear in a query expression.
+_ALLOWED_NODE_TYPES = frozenset(
+    {
+        ast.Expression,
+        ast.Call,
+        ast.Compare,
+        ast.Attribute,
+        ast.Name,
+        ast.Constant,
+        ast.Load,
+        # Comparison operators
+        ast.Gt,
+        ast.GtE,
+        ast.Lt,
+        ast.LtE,
+        ast.Eq,
+        ast.NotEq,
+        # Unary minus/plus (for negative numeric literals)
+        ast.UnaryOp,
+        ast.USub,
+        ast.UAdd,
+    }
+)
+
+# Restricted globals used as a secondary defence after AST validation.
+# __builtins__ is cleared so no built-in functions are reachable via eval.
 _PYTHON_QUERY_GLOBALS: dict[str, object] = {
     "__builtins__": {},
     "ImageSampleField": ImageSampleField,
@@ -36,8 +64,45 @@ _PYTHON_QUERY_GLOBALS: dict[str, object] = {
 }
 
 
+def _validate_query_ast(node: ast.AST) -> None:
+    """Recursively validate that a query AST contains only safe constructs.
+
+    Raises:
+        ValueError: If any disallowed node type or identifier is found.
+    """
+    if type(node) not in _ALLOWED_NODE_TYPES:
+        raise ValueError(f"Disallowed expression: {type(node).__name__}")
+
+    if isinstance(node, ast.Name) and node.id not in _ALLOWED_NAMES:
+        raise ValueError(
+            f"Unknown name: {node.id!r}. Allowed names: {sorted(_ALLOWED_NAMES)}"
+        )
+
+    if isinstance(node, ast.Attribute) and node.attr.startswith("_"):
+        raise ValueError(f"Attribute access not allowed: {node.attr!r}")
+
+    if isinstance(node, ast.Compare) and len(node.ops) != 1:
+        raise ValueError("Chained comparisons are not supported")
+
+    if isinstance(node, ast.Call) and node.keywords:
+        raise ValueError("Keyword arguments are not supported in queries")
+
+    if isinstance(node, ast.Constant) and not isinstance(
+        node.value, (str, int, float, bool)
+    ):
+        raise ValueError(f"Unsupported constant type: {type(node.value).__name__}")
+
+    for child in ast.iter_child_nodes(node):
+        _validate_query_ast(child)
+
+
 def _eval_python_query(python_query: str) -> MatchExpression:
-    """Evaluate a python_query string in a restricted sandbox.
+    """Parse and evaluate a python_query string safely.
+
+    The query is first parsed into an AST and validated against a whitelist of
+    allowed node types and names.  Only after passing that check is the
+    compiled AST evaluated — and then only against a restricted globals dict
+    with ``__builtins__`` cleared (secondary defence).
 
     Args:
         python_query: A Python expression returning a MatchExpression, e.g.
@@ -47,12 +112,21 @@ def _eval_python_query(python_query: str) -> MatchExpression:
         The resulting MatchExpression.
 
     Raises:
-        ValueError: If eval fails or the result is not a MatchExpression.
+        ValueError: If the query is syntactically invalid, contains disallowed
+            constructs, or does not produce a MatchExpression.
     """
     try:
-        result = eval(python_query, _PYTHON_QUERY_GLOBALS)  # noqa: S307
+        tree = ast.parse(python_query, mode="eval")
+    except SyntaxError as exc:
+        raise ValueError(f"Invalid python_query syntax: {exc}") from exc
+
+    _validate_query_ast(tree)
+
+    try:
+        result = eval(compile(tree, "<query>", "eval"), _PYTHON_QUERY_GLOBALS)  # noqa: S307
     except Exception as exc:
         raise ValueError(f"Invalid python_query: {exc}") from exc
+
     if not isinstance(result, MatchExpression):
         raise ValueError(
             f"python_query must return a MatchExpression, got {type(result).__name__}"

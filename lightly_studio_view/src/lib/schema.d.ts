@@ -2542,9 +2542,11 @@ export interface components {
              * Kind
              * @enum {string}
              */
-            kind: "NumericalField" | "DatetimeField" | "ComparableField" | "TagsAccessor";
+            kind: "NumericalField" | "ComparableField" | "TagsAccessor";
             /** Operators */
             operators: string[];
+            /** Methods */
+            methods: components["schemas"]["MethodMeta"][];
             /** Doc */
             doc: string;
         };
@@ -2943,6 +2945,20 @@ export interface components {
             strategy_name: "weights";
             /** Metadata Key */
             metadata_key: string;
+        };
+        /**
+         * MethodMeta
+         * @description Metadata for a method callable on a field (e.g. TagsAccessor.contains).
+         */
+        MethodMeta: {
+            /** Name */
+            name: string;
+            /** Detail */
+            detail: string;
+            /** Insert Text */
+            insert_text: string;
+            /** Doc */
+            doc: string;
         };
         /**
          * NamespaceMeta
