@@ -283,7 +283,7 @@ describe('SampleInstanceSegmentationRect', () => {
         expect(getPreviewLayer(container).classList.contains('previewHidden')).toBe(false);
     });
 
-    it('batches preview updates into the already scheduled animation frame', async () => {
+    it('replaces a queued preview animation frame with the latest update', async () => {
         const { container } = render(SampleInstanceSegmentationRect, {
             props: {
                 ...baseProps,
@@ -304,10 +304,11 @@ describe('SampleInstanceSegmentationRect', () => {
             clientY: 21
         });
 
-        expect(requestAnimationFrame).toHaveBeenCalledTimes(1);
-        expect(cancelAnimationFrame).not.toHaveBeenCalled();
+        expect(requestAnimationFrame).toHaveBeenCalledTimes(2);
+        expect(cancelAnimationFrame).toHaveBeenCalledTimes(1);
+        expect(cancelAnimationFrame).toHaveBeenCalledWith(1);
         expect(scheduledFrames).toHaveLength(1);
-        expect(scheduledFrames[0]?.id).toBe(1);
+        expect(scheduledFrames[0]?.id).toBe(2);
     });
 
     it('cancels scheduled preview updates when the component unmounts', async () => {
