@@ -157,6 +157,31 @@ describe('useInstanceSegmentationPreview', () => {
         expect(imageData.data[15]).toBe(255);
     });
 
+    it('supports destination-out compositing for eraser strokes', () => {
+        const hook = useInstanceSegmentationPreview();
+
+        hook.drawBrushDot({
+            point: { x: 1, y: 1 },
+            brushRadius: 4,
+            width: 2,
+            height: 2,
+            compositeOperation: 'destination-out'
+        });
+
+        hook.drawBrushLine({
+            from: { x: 0, y: 0 },
+            to: { x: 1, y: 1 },
+            brushRadius: 4,
+            width: 2,
+            height: 2,
+            compositeOperation: 'destination-out'
+        });
+
+        expect(sourceContext.globalCompositeOperation).toBe('destination-out');
+        expect(sourceContext.arc).toHaveBeenCalledTimes(1);
+        expect(sourceContext.stroke).toHaveBeenCalledTimes(1);
+    });
+
     it('keeps only the latest scheduled preview composition and updates visibility', () => {
         const onPreviewVisibilityChange = vi.fn();
         const hook = useInstanceSegmentationPreview({ onPreviewVisibilityChange });
