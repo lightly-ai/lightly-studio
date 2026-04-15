@@ -5,13 +5,16 @@ attach context such as capture conditions, GPS coordinates, model confidence sco
 attribute you want to track. Metadata can be viewed and filtered in the GUI or managed through the
 Python API.
 
-## View and Filter by Metadata in the GUI
+## View and Filter Metadata in the GUI
 
 In the main grid view, numeric metadata fields appear as range sliders in the left sidebar,
 alongside the built-in dimension filters. To filter by metadata values, drag the slider handles
 to narrow the visible samples to the desired range.
 
 In the sample detail view, all metadata key-value pairs are listed in the side panel.
+
+!!! note
+    Metadata in the GUI is read only. To edit metadata, use the Python API described below.
 
 <video autoplay loop muted playsinline controls style="width: 100%;">
   <source src="https://storage.googleapis.com/lightly-public/studio/metadata.mp4" type="video/mp4">
