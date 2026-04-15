@@ -2,9 +2,8 @@ import { goto } from '$app/navigation';
 import type { CollectionView, CollectionViewWithCount } from '$lib/api/lightly_studio_local';
 import { useGlobalStorage } from '$lib/hooks/useGlobalStorage';
 import { routeHelpers } from '$lib/routes';
-import { fetchCollection } from '$lib/utils/fetchCollection';
+import { fetchCollection, fetchCollectionHierarchy } from '$lib/utils';
 import { validate as validateUUID } from 'uuid';
-import { fetchCollectionHierarchy } from '$lib/utils/fetchCollectionHierarchy';
 
 import type { LayoutLoad, LayoutLoadEvent } from './$types';
 

@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import type { CollectionViewWithCount } from '$lib/api/lightly_studio_local';
-import { fetchCollection } from './fetchCollection';
+import { fetchCollection } from '$lib/utils';
 
 vi.mock('$lib/api/lightly_studio_local/sdk.gen', () => ({
     readCollection: vi.fn()

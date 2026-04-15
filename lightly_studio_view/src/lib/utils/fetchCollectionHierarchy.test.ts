@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import type { CollectionView } from '$lib/api/lightly_studio_local';
-import { fetchCollectionHierarchy } from './fetchCollectionHierarchy';
+import { fetchCollectionHierarchy } from '$lib/utils';
 
 vi.mock('$lib/api/lightly_studio_local/sdk.gen', () => ({
     readCollectionHierarchy: vi.fn()

@@ -8,11 +8,14 @@ export async function fetchCollection(collection_id: string): Promise<Collection
         });
 
         if (!data) {
-            throw new Error(`Collection ${collection_id} not found`);
+            throw new Error(`Collection data is undefined for collection_id: ${collection_id}`);
         }
 
         return data;
-    } catch {
-        throw new Error(`Collection ${collection_id} not found`);
+    } catch (error) {
+        throw new Error(
+            `Collection ${collection_id} not found` +
+                (error instanceof Error ? `: ${error.message}` : '')
+        );
     }
 }
