@@ -88,6 +88,8 @@ class ObjectDetectionComparableField:  # noqa: PLW1641
             column: The database column this field represents.
         """
         self.field = ComparableField(column)
+        # TODO(lukas, 4/2026): right now only annotation_label is supported. Either make
+        # `relationship` configurable or rename the class.
         self.relationship = AnnotationBaseTable.annotation_label
 
     def __eq__(self, other: Any) -> MatchExpression:  # type: ignore[override]
