@@ -14,7 +14,7 @@ to narrow the visible samples to the desired range.
 In the sample detail view, all metadata key-value pairs are listed in the side panel.
 
 !!! note
-    Metadata in the GUI is read only. To edit metadata, use the Python API described below.
+    Metadata in the GUI is read-only. To edit metadata, use the Python API described below.
 
 <video autoplay loop muted playsinline controls style="width: 100%;">
   <source src="https://storage.googleapis.com/lightly-public/studio/metadata.mp4" type="video/mp4">
