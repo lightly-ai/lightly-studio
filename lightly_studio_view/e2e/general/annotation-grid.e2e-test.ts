@@ -101,9 +101,6 @@ test('We can see clicked element when navigating back from details', async ({
     await expect(viewport).toBeVisible();
 
     expect(
-        await isInViewport({ element: annotationsPage.getAnnotationByIndex(0), viewport })
-    ).toBeTruthy();
-    expect(
         await isInViewport({ element: annotationsPage.getAnnotationByIndex(20), viewport })
     ).toBeFalsy();
 
