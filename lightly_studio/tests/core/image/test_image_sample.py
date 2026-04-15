@@ -326,7 +326,7 @@ class TestImageSample:
             collection_id=collection.collection_id,
             sample_id=image.sample_id,
             annotation_label_id=cat_label.annotation_label_id,
-            annotation_type=AnnotationType.INSTANCE_SEGMENTATION,
+            annotation_type=AnnotationType.SEGMENTATION_MASK,
             annotation_data={
                 "x": 10,
                 "y": 20,
@@ -405,7 +405,7 @@ class TestImageSample:
             collection_id=collection.collection_id,
             sample_id=image.sample_id,
             annotation_label_id=cat_label.annotation_label_id,
-            annotation_type=AnnotationType.INSTANCE_SEGMENTATION,
+            annotation_type=AnnotationType.SEGMENTATION_MASK,
             annotation_data={
                 "x": 10,
                 "y": 20,

@@ -45,12 +45,12 @@
         }
 
         if (
-            annotation.annotation_type === 'instance_segmentation' &&
+            annotation.annotation_type === 'segmentation_mask' &&
             annotation.segmentation_details
         ) {
             const { x, y, width, height, segmentation_mask } = annotation.segmentation_details;
             return {
-                annotation_type: 'instance_segmentation',
+                annotation_type: 'segmentation_mask',
                 annotation_label_name,
                 segmentation_mask: segmentation_mask ?? [],
                 object_detection_details: showInstanceSegmentationBoundingBoxes

@@ -64,7 +64,7 @@ describe('useAnnotationSelection', () => {
         const annotations = [
             {
                 sample_id: 'a1',
-                annotation_type: AnnotationType.INSTANCE_SEGMENTATION,
+                annotation_type: AnnotationType.SEGMENTATION_MASK,
                 annotation_label: {
                     annotation_label_name: 'Car'
                 }
@@ -82,7 +82,7 @@ describe('useAnnotationSelection', () => {
         expect(mockSampleDetailsToolbarContext.status).toBe('brush');
 
         expect(mockAnnotationLabelContext.annotationType).toBe(
-            AnnotationType.INSTANCE_SEGMENTATION
+            AnnotationType.SEGMENTATION_MASK
         );
         expect(mockAnnotationLabelContext.annotationLabel).toBe('Car');
         expect(mockAnnotationLabelContext.annotationId).toBe('a1');
