@@ -1395,14 +1395,13 @@ export interface paths {
         put?: never;
         /**
          * Get All Frames
-         * @description Retrieve a list of all frames for a given collection ID with optional pagination.
+         * @description Retrieve a list of all frames for a given collection ID with pagination.
          *
          *     Args:
          *         session: The database session.
          *         video_frame_collection_id: The ID of the collection to retrieve frames for.
+         *         pagination: Pagination parameters including offset and limit.
          *         body: The body containing the filters
-         *         pagination: Optional pagination parameters including offset and limit.
-         *
          *     Returns:
          *         A list of frames along with the total count.
          */
@@ -1670,30 +1669,6 @@ export interface paths {
          */
         get: operations["get_group_components_by_group_id"];
         put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/cloud-credentials": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        /**
-         * Refresh Cloud Credentials
-         * @description Receive cloud storage credentials.
-         *
-         *     Sets the credentials as environment variables and clears the S3 fsspec
-         *     instance cache so that subsequent file operations pick up the new
-         *     credentials.
-         */
-        put: operations["refresh_cloud_credentials"];
         post?: never;
         delete?: never;
         options?: never;
@@ -6018,10 +5993,8 @@ export interface operations {
     get_all_frames: {
         parameters: {
             query?: {
-                /** @description Offset for pagination */
-                cursor?: number | null;
-                /** @description Limit for pagination */
-                limit?: number | null;
+                cursor?: number;
+                limit?: number;
             };
             header?: never;
             path: {
@@ -6383,39 +6356,6 @@ export interface operations {
                 content: {
                     "application/json": components["schemas"]["GroupComponentView"][];
                 };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    refresh_cloud_credentials: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": {
-                    [key: string]: string;
-                };
-            };
-        };
-        responses: {
-            /** @description Successful Response */
-            204: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
             };
             /** @description Validation Error */
             422: {

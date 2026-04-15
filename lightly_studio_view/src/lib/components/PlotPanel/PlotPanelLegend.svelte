@@ -1,5 +1,18 @@
 <script lang="ts">
-    let { categoryColors }: { categoryColors: string[] } = $props();
+    const CATEGORIES = [
+        { label: 'Remaining', index: 0 },
+        { label: 'Filtered', index: 1 }
+    ];
+
+    let {
+        categoryColors,
+        hiddenCategories,
+        onToggleCategory
+    }: {
+        categoryColors: string[];
+        hiddenCategories: Set<number>;
+        onToggleCategory: (category: number) => void;
+    } = $props();
 </script>
 
 <div
@@ -7,14 +20,18 @@
     data-testid="plot-legend"
 >
     <div class="flex flex-col items-start gap-1">
-        <span class="flex items-center gap-1.5">
-            <span class="legend-dot" style={`background-color: ${categoryColors[0]}`}></span>
-            Remaining
-        </span>
-        <span class="flex items-center gap-1.5">
-            <span class="legend-dot" style={`background-color: ${categoryColors[1]}`}></span>
-            Filtered
-        </span>
+        {#each CATEGORIES as { label, index }}
+            <button
+                class="legend-item flex items-center gap-1.5 transition-opacity"
+                class:opacity-40={hiddenCategories.has(index)}
+                onclick={() => onToggleCategory(index)}
+                title={hiddenCategories.has(index) ? `Show ${label}` : `Hide ${label}`}
+            >
+                <span class="legend-dot" style={`background-color: ${categoryColors[index]}`}
+                ></span>
+                {label}
+            </button>
+        {/each}
     </div>
 </div>
 
@@ -24,5 +41,14 @@
         height: 0.75rem;
         width: 0.75rem;
         border-radius: 9999px;
+    }
+
+    .legend-item {
+        background: none;
+        border: none;
+        padding: 0;
+        cursor: pointer;
+        color: inherit;
+        font: inherit;
     }
 </style>
