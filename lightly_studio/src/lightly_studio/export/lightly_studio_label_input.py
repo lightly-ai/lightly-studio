@@ -24,10 +24,7 @@ from sqlmodel import Session
 
 from lightly_studio.core.image.image_sample import ImageSample
 from lightly_studio.models.annotation.annotation_base import AnnotationBaseTable, AnnotationType
-from lightly_studio.resolvers import (
-    annotation_label_resolver,
-    collection_resolver,
-)
+from lightly_studio.resolvers import annotation_label_resolver
 
 
 class LightlyStudioInputBase:
@@ -35,27 +32,16 @@ class LightlyStudioInputBase:
 
     CATEGORY_ID_START = 0
 
-    # TODO(lukas 04/2026): change root_collection_id to dataset_id
-    def __init__(
-        self, session: Session, root_collection_id: UUID, samples: Iterable[ImageSample]
-    ) -> None:
+    def __init__(self, session: Session, dataset_id: UUID, samples: Iterable[ImageSample]) -> None:
         """Initializes the adapter.
 
         Args:
             session: The SQLModel session to use for database access. Used only in the
                 constructor to fetch the labels for the given annotation task.
-            root_collection_id: The root collection ID for label retrieval.
+            dataset_id: The dataset ID for label retrieval.
             samples: Dataset samples.
         """
         self._samples = list(samples)
-        # Resolve dataset_id from the provided collection_id.
-        collection = collection_resolver.get_by_id(
-            session=session, collection_id=root_collection_id
-        )
-        if collection is None:
-            raise ValueError(f"Collection {root_collection_id} doesn't exist")
-        dataset_id = collection.dataset_id
-
         self._label_id_to_category = _build_label_id_to_category(
             session=session,
             dataset_id=dataset_id,

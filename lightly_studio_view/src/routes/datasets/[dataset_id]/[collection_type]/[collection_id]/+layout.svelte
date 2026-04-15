@@ -4,7 +4,9 @@
     import {
         CombinedMetadataDimensionsFilters,
         Footer,
+        GridHeader,
         LabelsMenu,
+        SelectionPill,
         TagCreateDialog,
         TagsMenu
     } from '$lib/components';
@@ -67,6 +69,7 @@
     } from '$lib/utils/buildAnnotationCountsFilters';
     import { GridHeader } from '$lib/components';
     import EmbeddingSelectionFilterItem from '$lib/components/EmbeddingSelectionFilterItem/EmbeddingSelectionFilterItem.svelte';
+    import { useSelectionSummary } from '$lib/hooks';
     const { data, children } = $props();
     const {
         collection,
@@ -82,6 +85,8 @@
     const datasetId = $derived(page.params.dataset_id!);
     const collectionId = $derived(page.params.collection_id!);
     const collectionIdStore = toStore(() => collectionId);
+
+    const { selectedCount, clearSelection } = $derived(useSelectionSummary(collectionId));
 
     // Use hideAnnotations hook
     const { handleKeyEvent } = useHideAnnotations();
@@ -564,7 +569,9 @@
                 <!-- When plot is shown, use PaneGroup for the main content + plot -->
                 <PaneGroup direction="horizontal" class="flex-1">
                     <Pane defaultSize={50} minSize={30} class="flex">
-                        <div class="flex flex-1 flex-col space-y-4 rounded-[1vw] bg-card p-4">
+                        <div
+                            class="relative flex flex-1 flex-col space-y-4 rounded-[1vw] bg-card p-4"
+                        >
                             <GridHeader>
                                 <div class="flex-1">
                                     {#if hasEmbeddings}
@@ -657,6 +664,10 @@
                             <div class="flex min-h-0 flex-1 overflow-hidden">
                                 {@render children()}
                             </div>
+                            <SelectionPill
+                                selectedCount={$selectedCount}
+                                onClear={clearSelection}
+                            />
                         </div>
                     </Pane>
 
@@ -676,7 +687,7 @@
                 </PaneGroup>
             {:else}
                 <!-- When plot is hidden or not samples view, show normal layout -->
-                <div class="flex flex-1 flex-col space-y-4 rounded-[1vw] bg-card p-4 pb-2">
+                <div class="relative flex flex-1 flex-col space-y-4 rounded-[1vw] bg-card p-4 pb-2">
                     {#if isSamples || isAnnotations || isVideos || isGroups}
                         <GridHeader>
                             {#snippet auxControls()}
@@ -784,6 +795,9 @@
                     <div class="flex min-h-0 flex-1">
                         {@render children()}
                     </div>
+                    {#if showLeftSidebar}
+                        <SelectionPill selectedCount={$selectedCount} onClear={clearSelection} />
+                    {/if}
                 </div>
             {/if}
             {#if hasEmbeddings}

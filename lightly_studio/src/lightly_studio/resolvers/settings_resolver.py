@@ -44,6 +44,7 @@ def set_settings(session: Session, settings: SettingView) -> SettingView:
 
     # Update grid view sample rendering
     current_settings.grid_view_sample_rendering = settings.grid_view_sample_rendering
+    current_settings.grid_view_thumbnail_quality = settings.grid_view_thumbnail_quality
 
     # Update keyboard shortcut mapping
     current_settings.key_hide_annotations = settings.key_hide_annotations

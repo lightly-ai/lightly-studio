@@ -10,6 +10,7 @@ type UpdateSettingsResult = { success: boolean; error?: string };
 const DEFAULT_SETTINGS: SettingView = {
     setting_id: '00000000-0000-0000-0000-000000000000',
     grid_view_sample_rendering: 'contain',
+    grid_view_thumbnail_quality: 'raw',
     key_hide_annotations: 'v',
     key_go_back: 'Escape',
     key_toggle_edit_mode: 'e',
@@ -53,6 +54,11 @@ const showBoundingBoxesForSegmentationStore = derived(
     ($settings) => $settings.show_bounding_boxes_for_segmentation ?? true
 );
 
+const gridViewThumbnailQualityStore = derived(
+    settingsStore,
+    ($settings) => $settings.grid_view_thumbnail_quality || 'raw'
+);
+
 // Initialize settings by loading from API
 const initSettings = async () => {
     // Always set default settings first
@@ -93,6 +99,10 @@ const saveSettings = async (
                 updatedSettings.grid_view_sample_rendering ||
                 currentSettings.grid_view_sample_rendering ||
                 'contain',
+            grid_view_thumbnail_quality:
+                updatedSettings.grid_view_thumbnail_quality ||
+                currentSettings.grid_view_thumbnail_quality ||
+                'raw',
             key_hide_annotations:
                 updatedSettings.key_hide_annotations || currentSettings.key_hide_annotations || 'v',
             key_go_back: updatedSettings.key_go_back || currentSettings.key_go_back || 'Escape',
@@ -233,6 +243,7 @@ export function useSettings() {
         showAnnotationTextLabelsStore,
         showSampleFilenamesStore,
         showBoundingBoxesForSegmentationStore,
+        gridViewThumbnailQualityStore,
 
         // Functions
         initSettings,
