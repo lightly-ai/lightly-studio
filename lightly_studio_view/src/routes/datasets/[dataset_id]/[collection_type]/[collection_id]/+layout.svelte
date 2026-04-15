@@ -67,7 +67,6 @@
         buildVideoAnnotationCountsFilter,
         buildVideoFrameAnnotationCountsFilter
     } from '$lib/utils/buildAnnotationCountsFilters';
-    import { GridHeader } from '$lib/components';
     import EmbeddingSelectionFilterItem from '$lib/components/EmbeddingSelectionFilterItem/EmbeddingSelectionFilterItem.svelte';
     import { useSelectionSummary } from '$lib/hooks';
     const { data, children } = $props();
