@@ -267,43 +267,46 @@
                     {#snippet item({ index, style }: { index: number; style: string })}
                         {#key $infiniteAnnotations.dataUpdatedAt}
                             {#if annotations[index]}
-                                <div
-                                    class="annotation-grid-item relative select-none"
-                                    {style}
-                                    data-testid="annotation-grid-item"
-                                    data-annotation-id={annotations[index].annotation.sample_id}
-                                    data-annotation-index={index}
-                                    data-sample-id={annotations[index].annotation.parent_sample_id}
-                                    data-index={index}
-                                    onclick={handleOnClick}
-                                    ondblclick={handleOnDoubleClick}
-                                    onkeydown={handleKeyDown}
-                                    aria-label={`Edit annotation: ${annotations[index].annotation.sample_id}`}
-                                    role="button"
-                                    tabindex="0"
-                                >
-                                    <!-- Hide the SelectableBox for viewers or when in editing mode -->
-                                    {#if hasMinimumRole(user?.role, 'labeler')}
-                                        <div class="absolute right-7 top-1 z-10">
-                                            <SelectableBox
-                                                onSelect={() => undefined}
-                                                isSelected={$pickedAnnotationIds[
-                                                    collection_id
-                                                ]?.has(annotations[index].annotation.sample_id)}
-                                            />
-                                        </div>
-                                    {/if}
+                                <div {style}>
+                                    <div
+                                        class="annotation-grid-item relative select-none overflow-hidden rounded-lg"
+                                        style="width: {annotationSize}px; height: {annotationSize}px;"
+                                        data-testid="annotation-grid-item"
+                                        data-annotation-id={annotations[index].annotation.sample_id}
+                                        data-annotation-index={index}
+                                        data-sample-id={annotations[index].annotation
+                                            .parent_sample_id}
+                                        data-index={index}
+                                        onclick={handleOnClick}
+                                        ondblclick={handleOnDoubleClick}
+                                        onkeydown={handleKeyDown}
+                                        aria-label={`Edit annotation: ${annotations[index].annotation.sample_id}`}
+                                        role="button"
+                                        tabindex="0"
+                                    >
+                                        {#if hasMinimumRole(user?.role, 'labeler') && $pickedAnnotationIds[collection_id]?.has(annotations[index].annotation.sample_id)}
+                                            <div
+                                                class="pointer-events-none absolute right-2 top-1.5 z-10"
+                                                inert
+                                            >
+                                                <SelectableBox
+                                                    onSelect={() => undefined}
+                                                    isSelected={true}
+                                                />
+                                            </div>
+                                        {/if}
 
-                                    <AnnotationsGridItem
-                                        annotation={annotations[index]}
-                                        width={annotationSize}
-                                        height={annotationSize}
-                                        cachedCollectionVersion={collectionVersion}
-                                        showLabel={showLabels}
-                                        selected={$pickedAnnotationIds[collection_id]?.has(
-                                            annotations[index].annotation.sample_id
-                                        )}
-                                    />
+                                        <AnnotationsGridItem
+                                            annotation={annotations[index]}
+                                            width={annotationSize}
+                                            height={annotationSize}
+                                            cachedCollectionVersion={collectionVersion}
+                                            showLabel={showLabels}
+                                            selected={$pickedAnnotationIds[collection_id]?.has(
+                                                annotations[index].annotation.sample_id
+                                            )}
+                                        />
+                                    </div>
                                 </div>
                             {/if}
                         {/key}
@@ -336,14 +339,6 @@
 {/if}
 
 <style>
-    .annotation-grid-item:focus {
-        outline: none;
-    }
-
-    .annotation-grid-item:focus-visible {
-        outline: none;
-    }
-
     .viewport :global(.annotations-grid-scroll) {
         overflow-x: hidden !important;
     }

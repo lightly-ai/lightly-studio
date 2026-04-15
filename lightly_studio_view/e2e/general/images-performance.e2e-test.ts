@@ -54,7 +54,37 @@ test('samples grid renders within 5 seconds', async ({ page, samplesPage }) => {
     expect(result.median).toBeLessThan(MAX_RENDER_TIME_MS);
 });
 
-test('sample details renders within 5 seconds', async ({
+test('sample details renders within 5 seconds', async ({ page, samplesPage }) => {
+    await samplesPage.goto();
+
+    await setNetworkThrottling(page, 'Fast4G');
+
+    const result = await measureWithMedian(async () => {
+        await samplesPage.goto();
+        await samplesPage.doubleClickFirstSample();
+        const time = await measureElementRendering(page, page.getByText('Sample 1 of 128'));
+        await page.goBack();
+        return time;
+    }, MEASUREMENT_ITERATIONS);
+
+    const passed = result.median < MAX_RENDER_TIME_MS;
+    console.log('sample-details measurements:', result);
+
+    metrics.push({
+        test: 'sample-details',
+        measurements: result.measurements,
+        median: result.median,
+        min: result.min,
+        max: result.max,
+        average: result.average,
+        passed
+    });
+    saveMetrics();
+
+    expect(result.median).toBeLessThan(MAX_RENDER_TIME_MS);
+});
+
+test('sample details renders next image within 5 seconds', async ({
     page,
     samplesPage,
     sampleDetailsPage
@@ -66,16 +96,53 @@ test('sample details renders within 5 seconds', async ({
     const result = await measureWithMedian(async () => {
         await samplesPage.goto();
         await samplesPage.doubleClickFirstSample();
-        const time = await measureElementRendering(page, sampleDetailsPage.getSampleDetails());
-        await page.goBack();
+
+        await page.getByText('Sample 1 of 128').waitFor();
+        await sampleDetailsPage.getNextButton().click();
+        const time = await measureElementRendering(page, page.getByText('Sample 2 of 128'));
         return time;
     }, MEASUREMENT_ITERATIONS);
 
     const passed = result.median < MAX_RENDER_TIME_MS;
-    console.log('sample-details measurements:', result);
+    console.log('sample-details-next-image measurements:', result);
 
     metrics.push({
-        test: 'sample-details',
+        test: 'sample-details-next-image',
+        measurements: result.measurements,
+        median: result.median,
+        min: result.min,
+        max: result.max,
+        average: result.average,
+        passed
+    });
+    saveMetrics();
+
+    expect(result.median).toBeLessThan(MAX_RENDER_TIME_MS);
+});
+
+test('sample details renders prev image within 5 seconds', async ({
+    page,
+    samplesPage,
+    sampleDetailsPage
+}) => {
+    await samplesPage.goto();
+
+    await setNetworkThrottling(page, 'Fast4G');
+
+    const result = await measureWithMedian(async () => {
+        await samplesPage.goto();
+        await samplesPage.getSampleByIndex(1).dblclick();
+        await page.getByText('Sample 2 of 128').waitFor({ state: 'visible' });
+        await sampleDetailsPage.getPrevButton().click();
+        const time = await measureElementRendering(page, page.getByText('Sample 1 of 128'));
+        return time;
+    }, MEASUREMENT_ITERATIONS);
+
+    const passed = result.median < MAX_RENDER_TIME_MS;
+    console.log('sample-details-prev-image measurements:', result);
+
+    metrics.push({
+        test: 'sample-details-prev-image',
         measurements: result.measurements,
         median: result.median,
         min: result.min,
