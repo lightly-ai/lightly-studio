@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from abc import ABC, abstractmethod
 from datetime import datetime
-from typing import Generic, TypeVar, Union
+from typing import Any, Generic, TypeVar, Union
 
 from sqlalchemy.orm import Mapped
 
@@ -20,7 +20,7 @@ class Field(ABC):
     """Abstract base class for all field types in dataset queries."""
 
     @abstractmethod
-    def get_sqlmodel_field(self) -> Mapped:
+    def get_sqlmodel_field(self) -> Mapped[Any]:
         """Get the database column or property that this field represents.
 
         Returns:

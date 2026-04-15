@@ -1,7 +1,7 @@
 <script lang="ts">
     import { formatInteger } from '$lib/utils';
     import { Slider } from '$lib/components/ui/slider/index.js';
-    import type { SliderMultipleRootProps } from 'bits-ui';
+    import type { SliderMultipleRootProps } from 'bits-ui/dist/types';
     import Segment from '$lib/components/Segment/Segment.svelte';
     import { useDimensions } from '$lib/hooks/useDimensions/useDimensions';
 

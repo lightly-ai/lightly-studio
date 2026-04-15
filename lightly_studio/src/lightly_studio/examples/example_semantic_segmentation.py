@@ -35,4 +35,3 @@ dataset.add_samples_from_pascal_voc_segmentations(
     masks_path=masks_path,
     class_id_to_name=class_id_to_name,
 )
-ls.start_gui()
