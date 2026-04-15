@@ -6,8 +6,6 @@ import type { DimensionBounds } from '$lib/services/loadDimensionBounds';
 import { createMetadataFilters } from '$lib/hooks/useMetadataFilters/useMetadataFilters';
 import type { MetadataValues } from '$lib/services/types';
 import { GRID_PAGE_SIZE } from '$lib/constants';
-type WireExpression = NonNullable<ReadImagesRequest['query_filter']>;
-
 // Define mode-aware parameter types.
 interface ClassifierSamples {
     positiveSampleIds: string[];
@@ -24,7 +22,6 @@ interface NormalModeFilters {
 interface CommonFilters {
     metadata_values?: MetadataValues;
     text_embedding?: number[];
-    query_filter?: WireExpression;
     python_query?: string;
 }
 
@@ -57,7 +54,6 @@ type SamplesQueryKey = readonly [
     {
         metadata_values?: MetadataValues;
         text_embedding?: number[];
-        query_filter?: WireExpression;
         python_query?: string;
     }
 ];
@@ -73,7 +69,6 @@ const createImagesInfiniteOptions = (params: ImagesInfiniteParams) => {
         {
             metadata_values: params.metadata_values,
             text_embedding: params.text_embedding,
-            query_filter: params.query_filter,
             python_query: params.python_query
         }
     ];
@@ -113,7 +108,6 @@ const buildRequestBody = (
             limit: GRID_PAGE_SIZE
         },
         text_embedding: params.text_embedding,
-        query_filter: params.query_filter,
         python_query: params.python_query,
         filters: {
             sample_filter: {

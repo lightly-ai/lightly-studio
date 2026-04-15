@@ -15,7 +15,6 @@ from lightly_studio.api.routes.api.validators import Paginated
 from lightly_studio.core.dataset_query.boolean_expression import AND, NOT, OR
 from lightly_studio.core.dataset_query.image_sample_field import ImageSampleField
 from lightly_studio.core.dataset_query.match_expression import MatchExpression
-from lightly_studio.core.dataset_query.wire import WireExpression, deserialize
 from lightly_studio.models.annotation.annotation_base import AnnotationBaseTable
 from lightly_studio.models.image import ImageTable
 from lightly_studio.models.sample import SampleTable
@@ -101,7 +100,6 @@ def get_all_by_collection_id(  # noqa: PLR0913
     collection_id: UUID,
     pagination: Paginated | None = None,
     filters: ImageFilter | None = None,
-    query_filter: WireExpression | None = None,
     python_query: str | None = None,
     text_embedding: list[float] | None = None,
     sample_ids: list[UUID] | None = None,
@@ -125,7 +123,6 @@ def get_all_by_collection_id(  # noqa: PLR0913
             distance_expr=distance_expr,
             pagination=pagination,
             filters=filters,
-            query_filter=query_filter,
             python_match=python_match,
             sample_ids=sample_ids,
         )
@@ -134,7 +131,6 @@ def get_all_by_collection_id(  # noqa: PLR0913
         collection_id=collection_id,
         pagination=pagination,
         filters=filters,
-        query_filter=query_filter,
         python_match=python_match,
         sample_ids=sample_ids,
     )
@@ -147,7 +143,6 @@ def _get_all_with_similarity(  # noqa: PLR0913
     distance_expr: ColumnElement[float],
     pagination: Paginated | None,
     filters: ImageFilter | None,
-    query_filter: WireExpression | None,
     python_match: MatchExpression | None,
     sample_ids: list[UUID] | None,
 ) -> GetAllSamplesByCollectionIdResult:
@@ -181,11 +176,6 @@ def _get_all_with_similarity(  # noqa: PLR0913
     if filters:
         samples_query = filters.apply(samples_query)
         total_count_query = filters.apply(total_count_query)
-
-    if query_filter is not None:
-        condition = deserialize(query_filter)
-        samples_query = samples_query.where(condition)
-        total_count_query = total_count_query.where(condition)
 
     if python_match is not None:
         condition = python_match.get()
@@ -221,7 +211,6 @@ def _get_all_without_similarity(  # noqa: PLR0913
     collection_id: UUID,
     pagination: Paginated | None,
     filters: ImageFilter | None,
-    query_filter: WireExpression | None,
     python_match: MatchExpression | None,
     sample_ids: list[UUID] | None,
 ) -> GetAllSamplesByCollectionIdResult:
@@ -245,11 +234,6 @@ def _get_all_without_similarity(  # noqa: PLR0913
     if filters:
         samples_query = filters.apply(samples_query)
         total_count_query = filters.apply(total_count_query)
-
-    if query_filter is not None:
-        condition = deserialize(query_filter)
-        samples_query = samples_query.where(condition)
-        total_count_query = total_count_query.where(condition)
 
     if python_match is not None:
         condition = python_match.get()

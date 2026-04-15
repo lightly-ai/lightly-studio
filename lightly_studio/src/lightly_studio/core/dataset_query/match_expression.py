@@ -25,9 +25,4 @@ class MatchExpression(ABC):
 
     @abstractmethod
     def to_wire(self) -> dict[str, Any]:
-        """Serialise this expression to the canonical wire-format dict.
-
-        The returned dict is JSON-serialisable and matches the schema consumed
-        by the frontend and the ``WireExpression`` Pydantic model in
-        ``core.dataset_query.wire``.
-        """
+        """Serialise this expression to a JSON-serialisable dict."""

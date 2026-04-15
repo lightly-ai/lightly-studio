@@ -97,8 +97,8 @@ class DatetimeField(OrdinalField[datetime]):
     """Field for datetime values, supporting ordinal comparisons.
 
     Subclasses ``OrdinalField`` so that ``isinstance(field, DatetimeField)``
-    can distinguish date fields from numeric ones when deriving the query
-    field schema exposed via ``GET /api/query_fields``.
+    can distinguish date fields from numeric ones when deserialising query
+    expressions.
     """
 
 

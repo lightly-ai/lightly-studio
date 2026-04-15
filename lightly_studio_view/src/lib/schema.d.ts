@@ -1700,50 +1700,6 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/query_fields": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /**
-         * Get Query Fields
-         * @description Return the fields and operators available for the query builder.
-         *
-         *     The response is derived directly from ``_FIELD_REGISTRY`` and the field
-         *     type hierarchy, so operator constraints are always in sync with what the
-         *     backend actually accepts.
-         */
-        get: operations["get_query_fields"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/translate_query": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /**
-         * Translate Query
-         * @description Translate a natural language string into a SVAR filter DSL expression.
-         */
-        post: operations["translate_query"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
     "/api/cloud-credentials": {
         parameters: {
             query?: never;
@@ -3072,33 +3028,6 @@ export interface components {
             functions: components["schemas"]["FunctionMeta"][];
         };
         /**
-         * QueryFieldSchema
-         * @description Schema for a single queryable field exposed to the frontend.
-         */
-        QueryFieldSchema: {
-            /** Id */
-            id: string;
-            /** Wire Name */
-            wire_name: string | null;
-            /** Label */
-            label: string;
-            /**
-             * Type
-             * @enum {string}
-             */
-            type: "number" | "text" | "date";
-            /** Operators */
-            operators: (">" | ">=" | "<" | "<=" | "==" | "!=")[];
-        };
-        /**
-         * QueryFieldsResponse
-         * @description Response containing all fields available for filtering.
-         */
-        QueryFieldsResponse: {
-            /** Fields */
-            fields: components["schemas"]["QueryFieldSchema"][];
-        };
-        /**
          * ReadCountImageAnnotationsRequest
          * @description Request body for reading image annotation counts.
          */
@@ -3128,11 +3057,6 @@ export interface components {
         ReadImagesRequest: {
             /** @description Filter parameters for samples */
             filters?: components["schemas"]["ImageFilter"] | null;
-            /**
-             * Query Filter
-             * @description Query filter tree built from the Python DatasetQuery API or the frontend query builder. Supported nodes: field, tags_contains, and, or, not.
-             */
-            query_filter?: (components["schemas"]["WireField"] | components["schemas"]["WireTagsContains"] | components["schemas"]["WireAnd"] | components["schemas"]["WireOr"] | components["schemas"]["WireNot"]) | null;
             /**
              * Python Query
              * @description Python DatasetQuery expression evaluated server-side.
@@ -3594,16 +3518,6 @@ export interface components {
              */
             updated_at: string;
         };
-        /** TranslateQueryRequest */
-        TranslateQueryRequest: {
-            /** Text */
-            text: string;
-        };
-        /** TranslateQueryResponse */
-        TranslateQueryResponse: {
-            /** Query */
-            query: string;
-        };
         /**
          * UpdateAnnotationsRequest
          * @description Request for updating classifier annotations.
@@ -3815,78 +3729,6 @@ export interface components {
             total_count: number;
             /** Nextcursor */
             nextCursor?: number | null;
-        };
-        /**
-         * WireAnd
-         * @description Logical AND of a list of expressions.
-         */
-        WireAnd: {
-            /**
-             * @description discriminator enum property added by openapi-typescript
-             * @enum {string}
-             */
-            type: "and";
-            /** Terms */
-            terms: (components["schemas"]["WireField"] | components["schemas"]["WireTagsContains"] | components["schemas"]["WireAnd"] | components["schemas"]["WireOr"] | components["schemas"]["WireNot"])[];
-        };
-        /**
-         * WireField
-         * @description A scalar field comparison.
-         */
-        WireField: {
-            /**
-             * @description discriminator enum property added by openapi-typescript
-             * @enum {string}
-             */
-            type: "field";
-            /** Field */
-            field: string;
-            /**
-             * Op
-             * @enum {string}
-             */
-            op: ">" | ">=" | "<" | "<=" | "==" | "!=";
-            /** Value */
-            value: number | string;
-        };
-        /**
-         * WireNot
-         * @description Logical NOT of a single expression.
-         */
-        WireNot: {
-            /**
-             * @description discriminator enum property added by openapi-typescript
-             * @enum {string}
-             */
-            type: "not";
-            /** Term */
-            term: components["schemas"]["WireField"] | components["schemas"]["WireTagsContains"] | components["schemas"]["WireAnd"] | components["schemas"]["WireOr"] | components["schemas"]["WireNot"];
-        };
-        /**
-         * WireOr
-         * @description Logical OR of a list of expressions.
-         */
-        WireOr: {
-            /**
-             * @description discriminator enum property added by openapi-typescript
-             * @enum {string}
-             */
-            type: "or";
-            /** Terms */
-            terms: (components["schemas"]["WireField"] | components["schemas"]["WireTagsContains"] | components["schemas"]["WireAnd"] | components["schemas"]["WireOr"] | components["schemas"]["WireNot"])[];
-        };
-        /**
-         * WireTagsContains
-         * @description A tag membership check.
-         */
-        WireTagsContains: {
-            /**
-             * @description discriminator enum property added by openapi-typescript
-             * @enum {string}
-             */
-            type: "tags_contains";
-            /** Tag */
-            tag: string;
         };
     };
     responses: never;
@@ -6667,59 +6509,6 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["QueryCompletionsResponse"];
-                };
-            };
-        };
-    };
-    get_query_fields: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["QueryFieldsResponse"];
-                };
-            };
-        };
-    };
-    translate_query: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["TranslateQueryRequest"];
-            };
-        };
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["TranslateQueryResponse"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
                 };
             };
         };

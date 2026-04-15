@@ -14,7 +14,6 @@ from lightly_studio.api.routes.api.status import (
     HTTP_STATUS_NOT_FOUND,
 )
 from lightly_studio.api.routes.api.validators import Paginated
-from lightly_studio.core.dataset_query.wire import WireExpression
 from lightly_studio.db_manager import SessionDep
 from lightly_studio.models.collection import CollectionTable
 from lightly_studio.models.image import (
@@ -35,13 +34,6 @@ class ReadImagesRequest(BaseModel):
     """Request body for reading samples with text embedding."""
 
     filters: ImageFilter | None = Field(None, description="Filter parameters for samples")
-    query_filter: WireExpression | None = Field(
-        None,
-        description=(
-            "Query filter tree built from the Python DatasetQuery API or the frontend "
-            "query builder. Supported nodes: field, tags_contains, and, or, not."
-        ),
-    )
     python_query: str | None = Field(
         None,
         description="Python DatasetQuery expression evaluated server-side.",
@@ -75,7 +67,6 @@ def read_images(
             collection_id=collection_id,
             pagination=body.pagination,
             filters=body.filters,
-            query_filter=body.query_filter,
             python_query=body.python_query,
             text_embedding=body.text_embedding,
             sample_ids=body.sample_ids,

@@ -52,7 +52,7 @@
         toggleSampleSelection
     } = useGlobalStorage();
 
-    const { queryFilter, pythonQuery } = useQueryBuilderFilter();
+    const { pythonQuery } = useQueryBuilderFilter();
 
     const samplesParams = $derived({
         collection_id,
@@ -66,7 +66,6 @@
         },
         metadata_values: $metadataValues,
         text_embedding: $textEmbedding?.embedding,
-        query_filter: $queryFilter,
         python_query: $pythonQuery ?? undefined
     });
 

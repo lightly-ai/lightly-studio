@@ -28,9 +28,8 @@
     import MenuDialogHost from '$lib/components/Header/MenuDialogHost.svelte';
 
     import Segment from '$lib/components/Segment/Segment.svelte';
-    import QueryBuilderPanel from '$lib/components/QueryBuilderPanel/QueryBuilderPanel.svelte';
+    import QueryCodeEditor from '$lib/components/QueryCodeEditor/QueryCodeEditor.svelte';
     import { useQueryBuilderFilter } from '$lib/hooks/useQueryBuilderFilter';
-    import { useTags } from '$lib/hooks/useTags/useTags';
     import { useHasEmbeddings } from '$lib/hooks/useHasEmbeddings/useHasEmbeddings';
     import { useHideAnnotations } from '$lib/hooks/useHideAnnotations';
     import { useAnnotationLabels } from '$lib/hooks/useAnnotationLabels/useAnnotationLabels';
@@ -485,18 +484,7 @@
         }
     });
 
-    import type { TagView } from '$lib/services/types';
-    import type { IFilterSet } from '$lib/types/svar-filter';
-    let tagsForQueryBuilder = $state<TagView[]>([]);
-    $effect(() => {
-        const { tags } = useTags({ collection_id: collectionId, kind: ['sample'] });
-        return tags.subscribe((v) => {
-            tagsForQueryBuilder = v;
-        });
-    });
-    const { filterSet, updateFilterSet, updateFieldSchemas, updatePythonQuery, clearFilter } = useQueryBuilderFilter();
-    const queryFilterRuleCount = $derived($filterSet?.rules?.length ?? 0);
-    let pendingQueryFilter = $state<IFilterSet | null>(null);
+    const { pythonQuery, updatePythonQuery, clearFilter } = useQueryBuilderFilter();
 
     let searchMode = $state<'embed' | 'query'>('embed');
 
@@ -530,17 +518,11 @@
                         <div
                             class="min-h-0 flex-1 space-y-2 overflow-y-auto px-4 pb-2 dark:[color-scheme:dark]"
                         >
-                            {#if queryFilterRuleCount > 0}
+                            {#if $pythonQuery}
                                 <div
                                     class="flex items-center justify-between rounded-md border border-amber-700/40 bg-amber-900/40 px-3 py-2 text-sm"
                                 >
-                                    <div>
-                                        <div class="font-medium text-foreground">Query Filter</div>
-                                        <div class="text-xs text-muted-foreground">
-                                            {queryFilterRuleCount}
-                                            {queryFilterRuleCount === 1 ? 'condition' : 'conditions'}
-                                        </div>
-                                    </div>
+                                    <div class="font-medium text-foreground">Python Query Active</div>
                                     <button
                                         class="text-muted-foreground hover:text-foreground"
                                         onclick={clearFilter}
@@ -689,29 +671,11 @@
                         </div>
                     {/if}
 
-                    <!-- Inline query builder -->
+                    <!-- Inline query editor -->
                     {#if isSamples && (!hasEmbeddings || searchMode === 'query')}
                         <div class="min-w-0 flex-1 overflow-hidden">
-                            <QueryBuilderPanel
-                                type="line"
-                                tags={tagsForQueryBuilder}
-                                onFilterChange={(fs, schemas) => {
-                                    pendingQueryFilter = fs;
-                                    updateFieldSchemas(schemas);
-                                }}
-                                onPythonQueryRun={(q) => updatePythonQuery(q)}
-                            />
+                            <QueryCodeEditor onrun={(q) => updatePythonQuery(q)} />
                         </div>
-                        <Button
-                            size="sm"
-                            variant="secondary"
-                            class="shrink-0"
-                            onclick={() => {
-                                if (pendingQueryFilter) updateFilterSet(pendingQueryFilter);
-                            }}
-                        >
-                            Apply
-                        </Button>
                     {/if}
                 </div>
             {/snippet}
