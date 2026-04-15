@@ -38,38 +38,44 @@
 
     async function handleAssign(name: string) {
         assignBusy = true;
-        const existingTag = $tags.find((t: TagView) => t.name.toLowerCase() === name.toLowerCase());
-        if (existingTag) {
-            const response = await addSampleIdsToTagId({
-                path: { collection_id, tag_id: existingTag.tag_id },
-                body: { sample_ids: [...selectedIds] }
-            });
+        try {
+            const existingTag = $tags.find(
+                (t: TagView) => t.name.toLowerCase() === name.toLowerCase()
+            );
+            if (existingTag) {
+                const response = await addSampleIdsToTagId({
+                    path: { collection_id, tag_id: existingTag.tag_id },
+                    body: { sample_ids: [...selectedIds] }
+                });
+                if (response.error) {
+                    toast.error('Failed to assign tag. Please try again.');
+                    return;
+                }
+            } else {
+                const createResponse = await createTag({
+                    path: { collection_id },
+                    body: { name, description: `${name} description`, kind: tagKind }
+                });
+                if (createResponse.error || !createResponse.data?.tag_id) {
+                    toast.error('Failed to create tag. Please try again.');
+                    return;
+                }
+                const assignResponse = await addSampleIdsToTagId({
+                    path: { collection_id, tag_id: createResponse.data.tag_id },
+                    body: { sample_ids: [...selectedIds] }
+                });
+                if (assignResponse.error) {
+                    toast.error('Failed to assign tag. Please try again.');
+                    return;
+                }
+            }
+            loadTags();
+        } catch (error) {
+            console.error('Failed to assign tag', error);
+            toast.error('Failed to assign tag. Please try again.');
+        } finally {
             assignBusy = false;
-            if (response.error) {
-                toast.error('Failed to assign tag. Please try again.');
-                return;
-            }
-        } else {
-            const createResponse = await createTag({
-                path: { collection_id },
-                body: { name, description: `${name} description`, kind: tagKind }
-            });
-            if (createResponse.error || !createResponse.data?.tag_id) {
-                assignBusy = false;
-                toast.error('Failed to create tag. Please try again.');
-                return;
-            }
-            const assignResponse = await addSampleIdsToTagId({
-                path: { collection_id, tag_id: createResponse.data.tag_id },
-                body: { sample_ids: [...selectedIds] }
-            });
-            assignBusy = false;
-            if (assignResponse.error) {
-                toast.error('Failed to assign tag. Please try again.');
-                return;
-            }
         }
-        loadTags();
     }
 </script>
 
