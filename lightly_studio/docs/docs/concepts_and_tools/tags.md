@@ -6,28 +6,18 @@ for export. Tags can be created manually in the GUI or programmatically through 
 
 ## Tags in the GUI
 
+The left sidebar lists all tags in the current view. Select one or more to show samples matching
+any of them.
+
+To assign tags, first select samples in the grid view. Then, in the left sidebar, create a new tag
+or assign an existing one. Tags can be removed in sample details view.
+
+!!! tip "Bulk selection"
+    Hold down the `Shift` key to select a range of samples.
+
 <video autoplay loop muted playsinline controls style="width: 100%;">
   <source src="https://storage.googleapis.com/lightly-public/studio/tag_workflow.mp4" type="video/mp4">
 </video>
-
-### Filter by tag
-
-The left sidebar lists all tags for the current view. Click one or more tags to show samples
-that have at least one of those tags.
-
-### Tag multiple samples at once
-
-Select one or more samples in the grid, then open the `Tag selected items` dialog.
-There you can create new tags. Select tags to apply to all selected samples
-and confirm with `Save changes`.
-
-### Removing tags on individual samples
-
-Open the details panel for a sample to see and edit its tags:
-
-- Tags appear as pills at the top of the details panel.
-- Click the `x` on a tag pill to remove that tag from the sample.
-
 
 ## Tags in Python
 
