@@ -3,7 +3,7 @@ from __future__ import annotations
 from sqlmodel import Session, select
 
 from lightly_studio.core.dataset_query import AND
-from lightly_studio.core.dataset_query.annotation_expression import (
+from lightly_studio.core.dataset_query.object_detection_expression import (
     ObjectDetectionField,
     ObjectDetectionQuery,
 )
@@ -18,7 +18,7 @@ from tests.helpers_resolvers import (
 )
 
 
-class TestAnnotationExpressions:
+class TestObjectDetectionExpressions:
     def test_annotation_object_detections_width__sql(self) -> None:
         query = select(ImageTable).where(
             ObjectDetectionQuery.match(ObjectDetectionField.width <= 100).get()
