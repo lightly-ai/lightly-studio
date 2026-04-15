@@ -5,6 +5,12 @@
             "id": "lightly-query",
             "grammar": "src/lib/components/QueryEditor/language/lightly-query.langium",
             "fileExtensions": [".lql"]
+        },
+        {
+            "id": "studio-query",
+            "grammar": "src/lib/components/QueryEditor/language/studio-query.langium",
+            "fileExtensions": [".lq"],
+            "caseInsensitive": true
         }
     ],
     "out": "src/lib/components/QueryEditor/language/generated"
