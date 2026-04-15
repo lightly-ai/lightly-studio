@@ -113,7 +113,7 @@ export class AnnotationsPage {
         const createTagResponsePromise = this.page.waitForResponse(
             (response) =>
                 response.request().method() === 'POST' &&
-                /\/tags(?:\?|$)/.test(response.request().url()) &&
+                response.request().url().includes('/tags') &&
                 response.status() === 201
         );
         const assignTagResponsePromise = this.page.waitForResponse(
