@@ -7,11 +7,9 @@ from dataclasses import dataclass
 from sqlalchemy import ColumnElement, and_
 from sqlmodel import col
 
+from lightly_studio.core.dataset_query.annotation_expression import AnnotationComparableField
 from lightly_studio.core.dataset_query.boolean_expression import AND
 from lightly_studio.core.dataset_query.match_expression import MatchExpression
-from lightly_studio.core.dataset_query.object_detection_expression import (
-    ObjectDetectionComparableField,
-)
 from lightly_studio.models.annotation.annotation_base import (
     AnnotationBaseTable,
     AnnotationType,
@@ -23,9 +21,10 @@ from lightly_studio.models.sample import SampleTable
 class ClassificationField:
     """Providing access to predefined classification fields for queries."""
 
-    # TODO(lukas, 04/2026): Rename ObjectDetectionComparableField to a different name, but only do
-    # it once we also have InstanceSegmentationField class and requirements are more clear.
-    label = ObjectDetectionComparableField(col(AnnotationLabelTable.annotation_label_name))
+    label = AnnotationComparableField(
+        col(AnnotationLabelTable.annotation_label_name),
+        AnnotationBaseTable.annotation_label,
+    )
 
 
 class ClassificationQuery:
