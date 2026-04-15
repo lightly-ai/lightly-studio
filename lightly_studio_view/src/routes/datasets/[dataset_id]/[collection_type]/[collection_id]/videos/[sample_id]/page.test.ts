@@ -88,6 +88,7 @@ describe('Video Detail Page', () => {
         frameNumber: undefined,
         groupId: undefined,
         collection: mockCollection as unknown as LayoutLoadResult['collection'],
+        collectionHierarchy: [],
         globalStorage: mockGlobalStorage,
         sampleSize: writable({ width: 256, height: 256 })
     };
