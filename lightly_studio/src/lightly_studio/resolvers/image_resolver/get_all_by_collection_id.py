@@ -13,8 +13,7 @@ from sqlalchemy.orm.interfaces import LoaderOption
 from sqlmodel import Session, col, func, select
 
 from lightly_studio.api.routes.api.validators import Paginated
-from lightly_studio.core.dataset_query.boolean_expression import AND, NOT, OR
-from lightly_studio.core.dataset_query.image_sample_field import ImageSampleField
+from lightly_studio.core.dataset_query import QUERY_NAMESPACE
 from lightly_studio.core.dataset_query.match_expression import MatchExpression
 from lightly_studio.models.annotation.annotation_base import AnnotationBaseTable
 from lightly_studio.models.image import ImageTable
@@ -27,12 +26,7 @@ from lightly_studio.resolvers.similarity_utils import (
 )
 
 # Objects that the query interpreter can reference by name.
-_NAMESPACE: dict[str, object] = {
-    "ImageSampleField": ImageSampleField,
-    "AND": AND,
-    "OR": OR,
-    "NOT": NOT,
-}
+_NAMESPACE: dict[str, object] = QUERY_NAMESPACE
 
 
 def _apply_compare_op(op: ast.cmpop, left: object, right: object) -> object:

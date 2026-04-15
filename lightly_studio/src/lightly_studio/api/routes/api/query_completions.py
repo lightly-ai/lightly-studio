@@ -6,14 +6,15 @@ never drifts from the actual API surface.
 
 from __future__ import annotations
 
+import inspect
 from typing import Literal
 
 from fastapi import APIRouter
 from pydantic import BaseModel
 
-from lightly_studio.core.dataset_query.boolean_expression import AND, NOT, OR
+from lightly_studio.core.dataset_query import QUERY_NAMESPACE
 from lightly_studio.core.dataset_query.field import ComparableField, OrdinalField
-from lightly_studio.core.dataset_query.image_sample_field import ImageSampleField
+from lightly_studio.core.dataset_query.match_expression import MatchExpression
 from lightly_studio.core.dataset_query.tags_expression import TagsAccessor
 
 query_completions_router = APIRouter()
@@ -151,26 +152,21 @@ def get_query_completions() -> QueryCompletionsResponse:
     The response is derived by introspecting the live Python objects so the
     frontend autocomplete always reflects the real API.
     """
-    namespaces = [
-        _introspect_namespace(ImageSampleField, "ImageSampleField"),
-    ]
-
-    functions = [
-        FunctionMeta(
-            name="AND",
-            signature="AND(*terms: MatchExpression) -> MatchExpression",
-            doc=AND.__doc__ or "",
-        ),
-        FunctionMeta(
-            name="OR",
-            signature="OR(*terms: MatchExpression) -> MatchExpression",
-            doc=OR.__doc__ or "",
-        ),
-        FunctionMeta(
-            name="NOT",
-            signature="NOT(term: MatchExpression) -> MatchExpression",
-            doc=NOT.__doc__ or "",
-        ),
-    ]
+    namespaces = []
+    functions = []
+    for name, obj in QUERY_NAMESPACE.items():
+        if not isinstance(obj, type):
+            continue
+        if issubclass(obj, MatchExpression):
+            sig = inspect.signature(obj)
+            functions.append(
+                FunctionMeta(
+                    name=name,
+                    signature=f"{name}{sig} -> MatchExpression",
+                    doc=obj.__doc__ or "",
+                )
+            )
+        else:
+            namespaces.append(_introspect_namespace(obj, name))
 
     return QueryCompletionsResponse(namespaces=namespaces, functions=functions)
