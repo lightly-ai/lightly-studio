@@ -26,6 +26,7 @@ export interface DrawBrushDotParams {
     brushRadius: number;
     width: number;
     height: number;
+    compositeOperation?: GlobalCompositeOperation;
 }
 
 export interface DrawBrushLineParams {
@@ -34,6 +35,7 @@ export interface DrawBrushLineParams {
     brushRadius: number;
     width: number;
     height: number;
+    compositeOperation?: GlobalCompositeOperation;
 }
 
 export type EnsureSourceMaskContext = (
