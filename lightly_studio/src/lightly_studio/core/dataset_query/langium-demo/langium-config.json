@@ -1,0 +1,12 @@
+{
+  "projectName": "LightlyQuery",
+  "languages": [
+    {
+      "id": "lightly-query",
+      "grammar": "../lightly-query.langium",
+      "fileExtensions": [".lq"],
+      "caseInsensitive": true
+    }
+  ],
+  "out": "generated"
+}
