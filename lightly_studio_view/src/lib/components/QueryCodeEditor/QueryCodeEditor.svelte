@@ -7,10 +7,17 @@
     loader.config({ monaco });
     import { Play } from '@lucide/svelte';
 
+    interface MethodMeta {
+        name: string;
+        detail: string;
+        insert_text: string;
+        doc: string;
+    }
     interface FieldMeta {
         name: string;
         kind: string;
         operators: string[];
+        methods: MethodMeta[];
         doc: string;
     }
     interface NamespaceMeta {
@@ -75,7 +82,8 @@ ImageSampleField.width > 1920`;
                         endColumn: position.column
                     }) as string;
 
-                    const items: object[] = [];
+                    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                    const items: any[] = [];
                     const range = {
                         startLineNumber: position.lineNumber,
                         endLineNumber: position.lineNumber,
@@ -93,8 +101,8 @@ ImageSampleField.width > 1920`;
                                     detail: field.kind,
                                     documentation: field.doc,
                                     insertText:
-                                        field.kind === 'TagsAccessor'
-                                            ? `${field.name}.contains("$1")`
+                                        field.methods.length > 0
+                                            ? `${field.name}.${field.methods[0].insert_text}`
                                             : `${field.name} `,
                                     insertTextRules:
                                         monaco.languages.CompletionItemInsertTextRule
@@ -105,22 +113,25 @@ ImageSampleField.width > 1920`;
                             return { suggestions: items };
                         }
 
-                        // After "FieldName.contains(" or tags accessor sub-member.
+                        // After "Namespace.field." → suggest methods declared by the backend.
                         for (const field of ns.fields) {
                             if (
-                                field.kind === 'TagsAccessor' &&
+                                field.methods.length > 0 &&
                                 lineText.endsWith(`${ns.name}.${field.name}.`)
                             ) {
-                                items.push({
-                                    label: 'contains',
-                                    kind: monaco.languages.CompletionItemKind.Method,
-                                    detail: 'contains(tag_name: str) -> MatchExpression',
-                                    insertText: 'contains("$1")',
-                                    insertTextRules:
-                                        monaco.languages.CompletionItemInsertTextRule
-                                            .InsertAsSnippet,
-                                    range
-                                });
+                                for (const method of field.methods) {
+                                    items.push({
+                                        label: method.name,
+                                        kind: monaco.languages.CompletionItemKind.Method,
+                                        detail: method.detail,
+                                        documentation: method.doc,
+                                        insertText: method.insert_text,
+                                        insertTextRules:
+                                            monaco.languages.CompletionItemInsertTextRule
+                                                .InsertAsSnippet,
+                                        range
+                                    });
+                                }
                                 return { suggestions: items };
                             }
                         }

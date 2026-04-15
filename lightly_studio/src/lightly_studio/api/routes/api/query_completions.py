@@ -12,7 +12,7 @@ from fastapi import APIRouter
 from pydantic import BaseModel
 
 from lightly_studio.core.dataset_query.boolean_expression import AND, NOT, OR
-from lightly_studio.core.dataset_query.field import ComparableField, DatetimeField, OrdinalField
+from lightly_studio.core.dataset_query.field import ComparableField, OrdinalField
 from lightly_studio.core.dataset_query.image_sample_field import ImageSampleField
 from lightly_studio.core.dataset_query.tags_expression import TagsAccessor
 
@@ -22,7 +22,16 @@ query_completions_router = APIRouter()
 # Response models
 # ---------------------------------------------------------------------------
 
-FieldKind = Literal["NumericalField", "DatetimeField", "ComparableField", "TagsAccessor"]
+FieldKind = Literal["NumericalField", "ComparableField", "TagsAccessor"]
+
+
+class MethodMeta(BaseModel):
+    """Metadata for a method callable on a field (e.g. TagsAccessor.contains)."""
+
+    name: str
+    detail: str
+    insert_text: str
+    doc: str
 
 
 class FieldMeta(BaseModel):
@@ -31,6 +40,7 @@ class FieldMeta(BaseModel):
     name: str
     kind: FieldKind
     operators: list[str]
+    methods: list[MethodMeta]
     doc: str
 
 
@@ -64,11 +74,17 @@ class QueryCompletionsResponse(BaseModel):
 _ORDINAL_OPS = [">", ">=", "<", "<=", "==", "!="]
 _COMPARABLE_OPS = ["==", "!="]
 _TAGS_OPS: list[str] = []  # TagsAccessor exposes .contains(), not operators
+_TAGS_METHODS = [
+    MethodMeta(
+        name="contains",
+        detail="contains(tag_name: str) -> MatchExpression",
+        insert_text='contains("$1")',
+        doc="Match samples that have this tag.",
+    )
+]
 
 
 def _field_kind(field: object) -> FieldKind:
-    if isinstance(field, DatetimeField):
-        return "DatetimeField"
     if isinstance(field, OrdinalField):
         return "NumericalField"
     if isinstance(field, ComparableField):
@@ -91,10 +107,8 @@ def _field_ops(field: object) -> list[str]:
 def _field_doc(name: str, field: object) -> str:
     if isinstance(field, TagsAccessor):
         return f"Tag filter — use {name}.contains(tag_name: str)"
-    if isinstance(field, DatetimeField):
-        return f"Datetime field; supports {', '.join(_ORDINAL_OPS)}"
     if isinstance(field, OrdinalField):
-        return f"Numeric field; supports {', '.join(_ORDINAL_OPS)}"
+        return f"Ordinal field; supports {', '.join(_ORDINAL_OPS)}"
     if isinstance(field, ComparableField):
         return f"String field; supports {', '.join(_COMPARABLE_OPS)}"
     return ""
@@ -114,6 +128,7 @@ def _introspect_namespace(cls: type, cls_name: str) -> NamespaceMeta:
                 name=attr_name,
                 kind=_field_kind(field),
                 operators=_field_ops(field),
+                methods=_TAGS_METHODS if isinstance(field, TagsAccessor) else [],
                 doc=_field_doc(attr_name, field),
             )
         )
