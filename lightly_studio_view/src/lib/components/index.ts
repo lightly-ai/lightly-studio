@@ -41,6 +41,7 @@ export { default as GroupComponent } from '$lib/components/GroupComponent/GroupC
 export { default as Image } from '$lib/components/Image/Image.svelte';
 export { default as VideoPreview } from '$lib/components/VideoPreview/VideoPreview.svelte';
 export { default as VideoPlayer } from '$lib/components/VideoPlayer/VideoPlayer.svelte';
+export { default as CanvasVideoPlayer } from '$lib/components/CanvasVideoPlayer/CanvasVideoPlayer.svelte';
 export { default as VideoSampleMetadata } from '$lib/components/VideoSampleMetadata/VideoSampleMetadata.svelte';
 export { default as GridHeader } from '$lib/components/GridHeader/GridHeader.svelte';
 export { default as CaptionsItem } from '$lib/components/Captions/CaptionsItem/CaptionsItem.svelte';
