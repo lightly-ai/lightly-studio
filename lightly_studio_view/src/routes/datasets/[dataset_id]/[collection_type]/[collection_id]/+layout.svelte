@@ -489,6 +489,7 @@
 
     let searchMode = $state<'embed'>('embed');
     let queryEditorDialogOpen = $state(false);
+    let queryEditorText = $state('');
 
     function setSearchMode(mode: 'embed') {
         clearFilter();
@@ -756,7 +757,11 @@
                                 </Dialog.Description>
                             </Dialog.Header>
                             <div class="min-h-0 flex-1 py-4">
-                                <QueryCodeEditor onrun={(q) => updatePythonQuery(q)} />
+                                <QueryCodeEditor
+                                    initialValue={queryEditorText || undefined}
+                                    onchange={(t) => (queryEditorText = t)}
+                                    onrun={(q) => updatePythonQuery(q)}
+                                />
                             </div>
                             <Dialog.Footer>
                                 {#if $pythonQuery}

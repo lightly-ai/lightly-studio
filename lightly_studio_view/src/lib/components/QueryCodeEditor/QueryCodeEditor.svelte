@@ -37,9 +37,11 @@
 
     interface Props {
         onrun: (query: string) => void;
+        initialValue?: string;
+        onchange?: (value: string) => void;
     }
 
-    const { onrun }: Props = $props();
+    const { onrun, initialValue, onchange }: Props = $props();
 
     let container: HTMLDivElement | undefined = $state();
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -169,7 +171,7 @@ ImageSampleField.width > 1920`;
         }
 
         editor = monaco.editor.create(container!, {
-            value: PLACEHOLDER,
+            value: initialValue ?? PLACEHOLDER,
             language: 'python',
             theme: 'vs-dark',
             minimap: { enabled: false },
@@ -181,6 +183,11 @@ ImageSampleField.width > 1920`;
             automaticLayout: true,
             suggest: { showSnippets: true }
         });
+        if (onchange) {
+            editor.onDidChangeModelContent(() => {
+                onchange(editor.getValue() as string);
+            });
+        }
     });
 
     onDestroy(() => {
