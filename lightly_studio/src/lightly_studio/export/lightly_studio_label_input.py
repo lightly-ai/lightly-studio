@@ -128,7 +128,7 @@ class LightlyStudioPascalVOCInstanceSegmentationInput(
     CATEGORY_ID_START = 1
 
     @staticmethod
-    def _sample_to_image_pascalvoc_instance_segmentation(
+    def _sample_to_image_pascalvoc_segmentation_mask(
         sample: ImageSample,
         image_id: int,
         label_id_to_category: dict[UUID, Category],
@@ -168,7 +168,7 @@ class LightlyStudioPascalVOCInstanceSegmentationInput(
     def get_labels(self) -> Iterable[ImageInstanceSegmentation]:
         """Returns the labels for Pascal VOC export."""
         for idx, sample in enumerate(self._samples):
-            yield self._sample_to_image_pascalvoc_instance_segmentation(
+            yield self._sample_to_image_pascalvoc_segmentation_mask(
                 sample=sample,
                 image_id=idx,
                 label_id_to_category=self._label_id_to_category,

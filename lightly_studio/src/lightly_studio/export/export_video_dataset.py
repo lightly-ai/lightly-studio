@@ -23,7 +23,7 @@ class VideoDatasetExport:
         self.session = session
         self.samples = samples
 
-    def to_youtube_vis_instance_segmentation(
+    def to_youtube_vis_segmentation_mask(
         self, output_json: PathLike = DEFAULT_EXPORT_FILENAME
     ) -> None:
         """Export video instance segmentation tracks to YouTube-VIS format JSON file.
@@ -32,14 +32,14 @@ class VideoDatasetExport:
             output_json: Optional path to the output JSON file. If not provided,
                 defaults to "youtube_vis_export.json".
         """
-        to_youtube_vis_instance_segmentation(
+        to_youtube_vis_segmentation_mask(
             session=self.session,
             samples=self.samples,
             output_json=Path(output_json),
         )
 
 
-def to_youtube_vis_instance_segmentation(
+def to_youtube_vis_segmentation_mask(
     session: Session,
     samples: Iterable[VideoSample],
     output_json: Path,
