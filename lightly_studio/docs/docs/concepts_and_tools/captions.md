@@ -20,6 +20,10 @@ to enable caption editing.
 Use the navigation menu at the top to switch to the `Captions` view, which displays captions
 for all samples that have captions. Toggle `Edit Annotations` button to enable caption editing.
 
+!!! note "Captions tab visibility"
+    The `Captions` tab in the navigation menu is only visible if there is at least one caption
+    in the dataset. The tab might appear in a dropdown if there are also annotations in the dataset.
+
 <video autoplay loop muted playsinline controls style="width: 100%;">
   <source src="https://storage.googleapis.com/lightly-public/studio/captions_view.mp4" type="video/mp4">
 </video>
