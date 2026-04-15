@@ -3,8 +3,9 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { readable } from 'svelte/store';
 import SampleDetailsNavigation from './SampleDetailsNavigation.svelte';
 
-const { gotoMock, mockPage } = vi.hoisted(() => ({
+const { gotoMock, preloadDataMock, mockPage } = vi.hoisted(() => ({
     gotoMock: vi.fn(),
+    preloadDataMock: vi.fn(),
     mockPage: {
         params: {
             dataset_id: 'dataset-1',
@@ -16,7 +17,8 @@ const { gotoMock, mockPage } = vi.hoisted(() => ({
 }));
 
 vi.mock('$app/navigation', () => ({
-    goto: gotoMock
+    goto: gotoMock,
+    preloadData: preloadDataMock
 }));
 
 vi.mock('$app/state', () => ({
@@ -52,8 +54,7 @@ describe('SampleDetailsNavigation', () => {
 
         expect(gotoMock).toHaveBeenCalledTimes(1);
         expect(gotoMock).toHaveBeenCalledWith(
-            '/datasets/dataset-1/images/collection-1/samples/sample-4',
-            { invalidateAll: true }
+            '/datasets/dataset-1/images/collection-1/samples/sample-4'
         );
     });
 });
