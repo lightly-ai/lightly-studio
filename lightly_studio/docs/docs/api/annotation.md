@@ -14,13 +14,13 @@
     options:
         members: [CreateClassification]
 
-## Instance Segmentation
+## Segmentation Mask
 
-### InstanceSegmentationAnnotation
+### SegmentationMaskAnnotation
 
 ::: lightly_studio.core.annotation
     options:
-        members: [InstanceSegmentationAnnotation]
+        members: [SegmentationMaskAnnotation]
 
 ### CreateInstanceSegmentation
 
