@@ -74,7 +74,7 @@ dataset.add_images_from_path(path="/data/images", tag_depth=1)
 
 Given this layout, each sample receives a tag matching its folder:
 
-```
+```text
 /data/images/
 ├── cats/
 │   ├── cat1.jpg   → tagged "cats"
