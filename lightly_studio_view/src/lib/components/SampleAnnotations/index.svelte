@@ -44,7 +44,10 @@
             } satisfies AnnotationCanvasAnnotation;
         }
 
-        if (annotation.annotation_type === 'segmentation_mask' && annotation.segmentation_details) {
+        if (
+            annotation.annotation_type === 'segmentation_mask' &&
+            annotation.segmentation_details
+        ) {
             const { x, y, width, height, segmentation_mask } = annotation.segmentation_details;
             return {
                 annotation_type: 'segmentation_mask',

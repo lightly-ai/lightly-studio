@@ -81,7 +81,9 @@ describe('useAnnotationSelection', () => {
 
         expect(mockSampleDetailsToolbarContext.status).toBe('brush');
 
-        expect(mockAnnotationLabelContext.annotationType).toBe(AnnotationType.SEGMENTATION_MASK);
+        expect(mockAnnotationLabelContext.annotationType).toBe(
+            AnnotationType.SEGMENTATION_MASK
+        );
         expect(mockAnnotationLabelContext.annotationLabel).toBe('Car');
         expect(mockAnnotationLabelContext.annotationId).toBe('a1');
         expect(mockAnnotationLabelContext.lastCreatedAnnotationId).toBeNull();
