@@ -26,37 +26,8 @@ from lightly_studio.resolvers.similarity_utils import (
     get_distance_expression,
 )
 
-# Allowed names in query expressions.
-_ALLOWED_NAMES = frozenset({"ImageSampleField", "AND", "OR", "NOT"})
-
-# Whitelist of AST node types that may appear in a query expression.
-_ALLOWED_NODE_TYPES = frozenset(
-    {
-        ast.Expression,
-        ast.Call,
-        ast.Compare,
-        ast.Attribute,
-        ast.Name,
-        ast.Constant,
-        ast.Load,
-        # Comparison operators
-        ast.Gt,
-        ast.GtE,
-        ast.Lt,
-        ast.LtE,
-        ast.Eq,
-        ast.NotEq,
-        # Unary minus/plus (for negative numeric literals)
-        ast.UnaryOp,
-        ast.USub,
-        ast.UAdd,
-    }
-)
-
-# Restricted globals used as a secondary defence after AST validation.
-# __builtins__ is cleared so no built-in functions are reachable via eval.
-_PYTHON_QUERY_GLOBALS: dict[str, object] = {
-    "__builtins__": {},
+# Objects that the query interpreter can reference by name.
+_NAMESPACE: dict[str, object] = {
     "ImageSampleField": ImageSampleField,
     "AND": AND,
     "OR": OR,
@@ -64,45 +35,66 @@ _PYTHON_QUERY_GLOBALS: dict[str, object] = {
 }
 
 
-def _validate_query_ast(node: ast.AST) -> None:
-    """Recursively validate that a query AST contains only safe constructs.
+def _apply_compare_op(op: ast.cmpop, left: object, right: object) -> object:
+    """Dispatch a single comparison operator node to the corresponding Python op."""
+    _ops: dict[type, object] = {
+        ast.Gt: left.__gt__,  # type: ignore[union-attr]
+        ast.GtE: left.__ge__,  # type: ignore[union-attr]
+        ast.Lt: left.__lt__,  # type: ignore[union-attr]
+        ast.LtE: left.__le__,  # type: ignore[union-attr]
+        ast.Eq: left.__eq__,  # type: ignore[union-attr]
+        ast.NotEq: left.__ne__,  # type: ignore[union-attr]
+    }
+    handler = _ops.get(type(op))
+    if handler is None:
+        raise ValueError(f"Unsupported operator: {type(op).__name__}")
+    return handler(right)  # type: ignore[operator]
+
+
+def _interpret_query_ast(node: ast.AST) -> object:  # noqa: PLR0911, C901
+    """Walk a validated query AST and build the corresponding MatchExpression.
+
+    No eval() is used — the AST is walked directly and objects are constructed
+    by calling the query API.
 
     Raises:
-        ValueError: If any disallowed node type or identifier is found.
+        ValueError: If an unhandled node type is encountered.
     """
-    if type(node) not in _ALLOWED_NODE_TYPES:
-        raise ValueError(f"Disallowed expression: {type(node).__name__}")
-
-    if isinstance(node, ast.Name) and node.id not in _ALLOWED_NAMES:
-        raise ValueError(
-            f"Unknown name: {node.id!r}. Allowed names: {sorted(_ALLOWED_NAMES)}"
-        )
-
-    if isinstance(node, ast.Attribute) and node.attr.startswith("_"):
-        raise ValueError(f"Attribute access not allowed: {node.attr!r}")
-
-    if isinstance(node, ast.Compare) and len(node.ops) != 1:
-        raise ValueError("Chained comparisons are not supported")
-
-    if isinstance(node, ast.Call) and node.keywords:
-        raise ValueError("Keyword arguments are not supported in queries")
-
-    if isinstance(node, ast.Constant) and not isinstance(
-        node.value, (str, int, float, bool)
-    ):
-        raise ValueError(f"Unsupported constant type: {type(node.value).__name__}")
-
-    for child in ast.iter_child_nodes(node):
-        _validate_query_ast(child)
+    if isinstance(node, ast.Expression):
+        return _interpret_query_ast(node.body)
+    if isinstance(node, ast.Name):
+        if node.id not in _NAMESPACE:
+            raise ValueError(f"Unknown name: {node.id!r}")
+        return _NAMESPACE[node.id]
+    if isinstance(node, ast.Attribute):
+        return getattr(_interpret_query_ast(node.value), node.attr)
+    if isinstance(node, ast.Constant):
+        if not isinstance(node.value, (str, int, float, bool)):
+            raise ValueError(f"Unsupported constant type: {type(node.value).__name__}")
+        return node.value
+    if isinstance(node, ast.UnaryOp):
+        operand = _interpret_query_ast(node.operand)
+        return -operand if isinstance(node.op, ast.USub) else operand  # type: ignore[operator]
+    if isinstance(node, ast.Compare):
+        if len(node.ops) != 1:
+            raise ValueError("Chained comparisons are not supported")
+        left = _interpret_query_ast(node.left)
+        right = _interpret_query_ast(node.comparators[0])
+        return _apply_compare_op(node.ops[0], left, right)
+    if isinstance(node, ast.Call):
+        if node.keywords:
+            raise ValueError("Keyword arguments are not supported in queries")
+        func = _interpret_query_ast(node.func)
+        args = [_interpret_query_ast(arg) for arg in node.args]
+        return func(*args)  # type: ignore[operator]
+    raise ValueError(f"Unhandled node type: {type(node).__name__}")
 
 
 def _eval_python_query(python_query: str) -> MatchExpression:
     """Parse and evaluate a python_query string safely.
 
-    The query is first parsed into an AST and validated against a whitelist of
-    allowed node types and names.  Only after passing that check is the
-    compiled AST evaluated — and then only against a restricted globals dict
-    with ``__builtins__`` cleared (secondary defence).
+    The query is parsed into an AST and walked directly by
+    ``_interpret_query_ast`` — no ``eval`` is used.
 
     Args:
         python_query: A Python expression returning a MatchExpression, e.g.
@@ -120,10 +112,10 @@ def _eval_python_query(python_query: str) -> MatchExpression:
     except SyntaxError as exc:
         raise ValueError(f"Invalid python_query syntax: {exc}") from exc
 
-    _validate_query_ast(tree)
-
     try:
-        result = eval(compile(tree, "<query>", "eval"), _PYTHON_QUERY_GLOBALS)  # noqa: S307
+        result = _interpret_query_ast(tree)
+    except ValueError:
+        raise
     except Exception as exc:
         raise ValueError(f"Invalid python_query: {exc}") from exc
 
