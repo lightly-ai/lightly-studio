@@ -256,7 +256,7 @@ class TestDatasetExport:
                 AnnotationCreate(
                     parent_sample_id=images[0].sample_id,
                     annotation_label_id=label.annotation_label_id,
-                    annotation_type=AnnotationType.INSTANCE_SEGMENTATION,
+                    annotation_type=AnnotationType.SEGMENTATION_MASK,
                     x=2,
                     y=0,
                     width=3,

@@ -156,7 +156,7 @@
             : undefined
     );
     const isSegmentationType = (type: string | null | undefined) =>
-        type === AnnotationType.INSTANCE_SEGMENTATION;
+        type === AnnotationType.SEGMENTATION_MASK;
 
     const shouldShowBrushToolPopup = $derived.by(() => {
         if (!$isEditingMode) return false;

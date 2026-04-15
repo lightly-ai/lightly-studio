@@ -147,7 +147,7 @@
 
                     if (
                         annotationLabelContext.annotationType ===
-                        AnnotationType.INSTANCE_SEGMENTATION
+                        AnnotationType.SEGMENTATION_MASK
                     ) {
                         setAnnotationId(annotation.sample_id);
                     }

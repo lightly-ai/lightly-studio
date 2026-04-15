@@ -164,7 +164,7 @@ class VideoDataset(BaseSampleDataset[VideoSample]):
         input_labels: YouTubeVISObjectDetectionTrackInput | YouTubeVISInstanceSegmentationTrackInput
         if annotation_type == AnnotationType.OBJECT_DETECTION:
             input_labels = YouTubeVISObjectDetectionTrackInput(input_file=annotations_json)
-        elif annotation_type == AnnotationType.INSTANCE_SEGMENTATION:
+        elif annotation_type == AnnotationType.SEGMENTATION_MASK:
             input_labels = YouTubeVISInstanceSegmentationTrackInput(input_file=annotations_json)
         else:
             raise ValueError(f"Invalid annotation type: {annotation_type}")

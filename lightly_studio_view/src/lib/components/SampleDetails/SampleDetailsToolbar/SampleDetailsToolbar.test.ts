@@ -119,7 +119,7 @@ describe('SampleDetailsToolbar', () => {
 
         expect(mockSampleDetailsToolbarContext.status).toBe('brush');
         expect(mockAnnotationLabelContext.annotationType).toBe(
-            AnnotationType.INSTANCE_SEGMENTATION
+            AnnotationType.SEGMENTATION_MASK
         );
         expect(mockAnnotationLabelContext.annotationLabel).toBe('car');
         expect(mockAnnotationLabelContext.annotationId).toBeNull();
@@ -195,7 +195,7 @@ describe('SampleDetailsToolbar', () => {
 
         expect(mockSampleDetailsToolbarContext.status).toBe('brush');
         expect(mockAnnotationLabelContext.annotationType).toBe(
-            AnnotationType.INSTANCE_SEGMENTATION
+            AnnotationType.SEGMENTATION_MASK
         );
         expect(mockAnnotationLabelContext.annotationLabel).toBe('car');
         expect(mockAnnotationLabelContext.annotationId).toBe('ann-1');
@@ -225,13 +225,13 @@ describe('SampleDetailsToolbar', () => {
 
     it('keeps brush tool active when toolbar remounts', () => {
         mockSampleDetailsToolbarContext.status = 'brush';
-        mockAnnotationLabelContext.annotationType = AnnotationType.INSTANCE_SEGMENTATION;
+        mockAnnotationLabelContext.annotationType = AnnotationType.SEGMENTATION_MASK;
 
         render(SampleDetailsToolbar);
 
         expect(mockSampleDetailsToolbarContext.status).toBe('brush');
         expect(mockAnnotationLabelContext.annotationType).toBe(
-            AnnotationType.INSTANCE_SEGMENTATION
+            AnnotationType.SEGMENTATION_MASK
         );
     });
 
@@ -242,7 +242,7 @@ describe('SampleDetailsToolbar', () => {
         render(SampleDetailsToolbar);
 
         expect(mockAnnotationLabelContext.annotationType).toBe(
-            AnnotationType.INSTANCE_SEGMENTATION
+            AnnotationType.SEGMENTATION_MASK
         );
     });
 
@@ -253,7 +253,7 @@ describe('SampleDetailsToolbar', () => {
         render(SampleDetailsToolbar);
 
         expect(mockAnnotationLabelContext.annotationType).toBe(
-            AnnotationType.INSTANCE_SEGMENTATION
+            AnnotationType.SEGMENTATION_MASK
         );
     });
 

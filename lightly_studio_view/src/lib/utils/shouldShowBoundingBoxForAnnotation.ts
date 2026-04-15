@@ -5,6 +5,6 @@ export function shouldShowBoundingBoxForAnnotation(
     showBoundingBoxesForSegmentation: boolean
 ): boolean {
     return (
-        annotation?.annotation_type !== 'instance_segmentation' || showBoundingBoxesForSegmentation
+        annotation?.annotation_type !== 'segmentation_mask' || showBoundingBoxesForSegmentation
     );
 }

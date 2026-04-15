@@ -5,7 +5,7 @@
     import type { BoundingBox } from '$lib/types';
 
     type InstanceAnnotation = {
-        annotation_type: 'instance_segmentation';
+        annotation_type: 'segmentation_mask';
         annotation_label_name: string;
         segmentation_mask?: number[] | null;
         object_detection_details?: BoundingBox;
