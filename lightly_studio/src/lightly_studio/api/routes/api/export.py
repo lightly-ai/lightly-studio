@@ -60,7 +60,7 @@ def export_collection_annotations(
             # Reraise.
             raise
     elif export_format == ExportFormat.SEGMENTATION_MASK_COCO:
-        output_path = PathlibPath(temp_dir.name) / "coco_instance_segmentation_export.json"
+        output_path = PathlibPath(temp_dir.name) / "coco_segmentation_mask_export.json"
 
         try:
             export_dataset.to_coco_segmentation_masks(
@@ -266,7 +266,7 @@ def export_collection_youtube_vis(
     dataset_query = DatasetQuery(dataset=collection, session=session, sample_class=VideoSample)
 
     temp_dir = TemporaryDirectory()
-    output_path = PathlibPath(temp_dir.name) / "youtube_vis_instance_segmentation_export.json"
+    output_path = PathlibPath(temp_dir.name) / "youtube_vis_segmentation_mask_export.json"
 
     try:
         export_video_dataset.to_youtube_vis_segmentation_mask(

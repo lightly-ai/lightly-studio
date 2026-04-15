@@ -20,7 +20,7 @@
 
     $effect(() => {
         if ($isExportDialogOpen) {
-            exportType = isVideoCollection ? 'youtube_vis_instance_segmentations' : 'samples';
+            exportType = isVideoCollection ? 'youtube_vis_segmentation' : 'samples';
         }
     });
 
@@ -32,18 +32,18 @@
     let exportType = $state<
         | 'samples'
         | 'object_detections'
-        | 'instance_segmentations'
+        | 'segmentation'
         | 'captions'
-        | 'youtube_vis_instance_segmentations'
+        | 'youtube_vis_segmentation'
         | 'semantic_segmentations'
     >('samples');
     const exportTypeLabels: Record<typeof exportType, string> = {
         samples: 'Image Filenames',
         object_detections: 'Image Object Detections',
-        instance_segmentations: 'Image Instance Segmentations',
+        segmentation: 'Image Instance Segmentations',
         semantic_segmentations: 'Image Semantic Segmentations',
         captions: 'Image Captions',
-        youtube_vis_instance_segmentations: 'YouTube-VIS Video Instance Segmentations'
+        youtube_vis_segmentation: 'YouTube-VIS Video Instance Segmentations'
     };
     const exportTypeTriggerContent = $derived(exportTypeLabels[exportType]);
     let collectionId = page.params.collection_id;
@@ -164,7 +164,7 @@
                             <Select.Content>
                                 {#if isVideoCollection}
                                     <Select.Item
-                                        value="youtube_vis_instance_segmentations"
+                                        value="youtube_vis_segmentation"
                                         label="YouTube-VIS Video Instance Segmentations"
                                         >YouTube-VIS Video Instance Segmentations</Select.Item
                                     >
@@ -178,7 +178,7 @@
                                         >Image Object Detections</Select.Item
                                     >
                                     <Select.Item
-                                        value="instance_segmentations"
+                                        value="segmentation"
                                         label="Image Instance Segmentations"
                                         >Image Instance Segmentations</Select.Item
                                     >
@@ -315,7 +315,7 @@
                         </Button>
                     </Tabs.Content>
 
-                    <Tabs.Content value="instance_segmentations" class="pt-2">
+                    <Tabs.Content value="segmentation" class="pt-2">
                         <p class="text-sm text-muted-foreground">
                             The instance segmentations will be exported in COCO format.
                         </p>
@@ -331,7 +331,7 @@
                     </Tabs.Content>
 
                     {#if isVideoCollection}
-                        <Tabs.Content value="youtube_vis_instance_segmentations" class="pt-2">
+                        <Tabs.Content value="youtube_vis_segmentation" class="pt-2">
                             <p class="text-sm text-muted-foreground">
                                 The video instance segmentations will be exported in YouTube-VIS
                                 format.
