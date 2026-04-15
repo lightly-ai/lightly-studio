@@ -1,13 +1,15 @@
+import { goto } from '$app/navigation';
+import type { CollectionView, CollectionViewWithCount } from '$lib/api/lightly_studio_local';
 import { useGlobalStorage } from '$lib/hooks/useGlobalStorage';
-import type { LayoutLoad, LayoutLoadEvent } from './$types';
-import { readCollection, readCollectionHierarchy } from '$lib/api/lightly_studio_local/sdk.gen';
 import { routeHelpers } from '$lib/routes';
-import { redirect, error } from '@sveltejs/kit';
+import { fetchCollection, fetchCollectionHierarchy } from '$lib/utils';
 import { validate as validateUUID } from 'uuid';
-import type { CollectionViewWithCount, CollectionView } from '$lib/api/lightly_studio_local';
+
+import type { LayoutLoad, LayoutLoadEvent } from './$types';
 
 export type LayoutLoadResult = {
     collection: CollectionViewWithCount;
+    collectionHierarchy: CollectionView[];
     globalStorage: ReturnType<typeof useGlobalStorage>;
     sampleSize: ReturnType<typeof useGlobalStorage>['sampleSize'];
 };
@@ -15,102 +17,42 @@ export type LayoutLoadResult = {
 export const load: LayoutLoad = async ({
     params: { dataset_id, collection_type, collection_id }
 }: LayoutLoadEvent): Promise<LayoutLoadResult> => {
-    // Validate UUID format for dataset_id
-    if (!validateUUID(dataset_id)) {
-        throw redirect(307, routeHelpers.toHome());
+    // If we have some invalid params, we should just redirect to the home page
+    if (!validateUUID(dataset_id) || !validateUUID(collection_id)) {
+        goto(routeHelpers.toHome());
+        return new Promise(() => {}); // Return a never-resolving promise to prevent further execution
     }
 
-    // Validate UUID format for collection_id
-    if (!validateUUID(collection_id)) {
-        throw redirect(307, routeHelpers.toHome());
-    }
+    const collectionData = await fetchCollection(collection_id);
 
-    // ensure the collection actually exists
-    let collectionData;
-    try {
-        const { data } = await readCollection({
-            path: { collection_id }
-        });
-        collectionData = data;
-    } catch {
-        throw redirect(307, routeHelpers.toHome());
-    }
-
-    if (!collectionData) {
-        throw redirect(307, routeHelpers.toHome());
-    }
-
-    // Validate collection_type matches the collection's sample_type
-    // Convert both to lowercase for comparison (URL uses lowercase, enum uses uppercase)
+    // If collection type does not match the sample type
     if (collectionData.sample_type.toLowerCase() !== collection_type.toLowerCase()) {
-        // Redirect to correct route with proper collection_type (use lowercase from URL format)
-        throw redirect(
-            307,
+        goto(
             routeHelpers.toCollectionHome(
                 dataset_id,
                 collectionData.sample_type.toLowerCase(),
                 collection_id
             )
         );
+        return new Promise(() => {}); // Return a never-resolving promise to prevent further execution
     }
 
-    // Validate dataset_id exists as a root collection
-    let datasetCollection;
-    try {
-        const { data: datasetData } = await readCollection({
-            path: { collection_id: dataset_id }
-        });
-        datasetCollection = datasetData;
-    } catch {
-        // dataset_id doesn't exist, redirect to home
-        throw redirect(307, routeHelpers.toHome());
-    }
+    let collectionHierarchy: CollectionView[] = [];
 
-    if (!datasetCollection) {
-        throw redirect(307, routeHelpers.toHome());
-    }
-    // Check if dataset_id is actually a root collection (has no parent)
-    if (datasetCollection.parent_collection_id !== null) {
-        throw redirect(307, routeHelpers.toHome());
-    }
-
-    // Validate that collection_id belongs to this dataset by checking the hierarchy
-    // If collection_id is the dataset_id itself, it's valid
     if (collection_id !== dataset_id) {
-        // Fetch the full hierarchy starting from the dataset
-        // readCollectionHierarchy returns a flat list of all collections in the hierarchy
-        let hierarchy: CollectionView[];
-        try {
-            const { data: hierarchyData } = await readCollectionHierarchy({
-                path: { collection_id: dataset_id }
-            });
-            hierarchy = hierarchyData || [];
-        } catch (err) {
-            if (err && typeof err === 'object' && 'status' in err) {
-                // Already an error response, re-throw it
-                throw err;
-            }
-            const errorMessage = err instanceof Error ? err.message : String(err);
-            throw error(500, `Error loading collection hierarchy: ${errorMessage}`);
-        }
+        const hierarchy = await fetchCollectionHierarchy(dataset_id);
 
-        // Check if collection_id exists in the flat hierarchy list
-        const collectionExists = hierarchy.some(
-            (collection) => collection.collection_id === collection_id
-        );
-
-        if (!collectionExists) {
-            throw error(
-                500,
-                `Collection ${collection_id} does not belong to dataset ${dataset_id}`
-            );
+        if (!hierarchy.some((collection) => collection.collection_id === collection_id)) {
+            throw new Error(`Collection ${collection_id} does not belong to dataset ${dataset_id}`);
         }
+        collectionHierarchy = hierarchy;
     }
 
     const globalStorage = useGlobalStorage();
 
     return {
         collection: collectionData,
+        collectionHierarchy,
         globalStorage,
         sampleSize: globalStorage.sampleSize
     };

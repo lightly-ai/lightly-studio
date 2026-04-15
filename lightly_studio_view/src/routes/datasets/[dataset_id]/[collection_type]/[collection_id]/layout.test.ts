@@ -5,23 +5,15 @@ import { load } from './+layout';
 import { routeHelpers } from '$lib/routes';
 import { SampleType } from '$lib/api/lightly_studio_local';
 
-// Mock the service imports
-vi.mock('$lib/api/lightly_studio_local/sdk.gen');
-vi.mock('@sveltejs/kit', () => ({
-    redirect: vi.fn((status, location) => {
-        const error = new Error('Redirect') as Error & { status: number; location: string };
-        error.status = status;
-        error.location = location;
-        throw error;
-    }),
-    error: vi.fn((status, message) => {
-        const err = new Error(message) as Error & { status: number };
-        err.status = status;
-        throw err;
-    })
+const { gotoMock } = vi.hoisted(() => ({
+    gotoMock: vi.fn()
 }));
 
-type RedirectError = Error & { status: number; location: string };
+// Mock the service imports
+vi.mock('$lib/api/lightly_studio_local/sdk.gen');
+vi.mock('$app/navigation', () => ({
+    goto: gotoMock
+}));
 
 describe('+layout.ts', () => {
     const mockDatasetId = '123e4567-e89b-12d3-a456-426614174000';
@@ -44,6 +36,10 @@ describe('+layout.ts', () => {
 
     beforeEach(() => {
         vi.clearAllMocks();
+        gotoMock.mockClear();
+        // Reset all mocks to ensure no state leaks between tests
+        vi.mocked(readCollection).mockReset();
+        vi.mocked(readCollectionHierarchy).mockReset();
     });
 
     it('should load collection and return data with valid params', async () => {
@@ -81,56 +77,47 @@ describe('+layout.ts', () => {
     });
 
     it('should redirect when dataset_id is invalid UUID', async () => {
-        try {
-            await load({
-                params: {
-                    dataset_id: 'invalid-uuid',
-                    collection_type: mockCollectionType,
-                    collection_id: mockCollectionId
-                }
-            } as LayoutLoadEvent);
-            expect.fail('Should have thrown redirect');
-        } catch (error: unknown) {
-            const redirectError = error as RedirectError;
-            expect(redirectError.status).toBe(307);
-            expect(redirectError.location).toBe(routeHelpers.toHome());
-        }
+        load({
+            params: {
+                dataset_id: 'invalid-uuid',
+                collection_type: mockCollectionType,
+                collection_id: mockCollectionId
+            }
+        } as LayoutLoadEvent);
+
+        // Give it a moment to call goto
+        await new Promise((resolve) => setTimeout(resolve, 0));
+
+        expect(gotoMock).toHaveBeenCalledWith(routeHelpers.toHome());
     });
 
     it('should redirect when collection_id is invalid UUID', async () => {
-        try {
-            await load({
-                params: {
-                    dataset_id: mockDatasetId,
-                    collection_type: mockCollectionType,
-                    collection_id: 'invalid-uuid'
-                }
-            } as LayoutLoadEvent);
-            expect.fail('Should have thrown redirect');
-        } catch (error: unknown) {
-            const redirectError = error as RedirectError;
-            expect(redirectError.status).toBe(307);
-            expect(redirectError.location).toBe(routeHelpers.toHome());
-        }
+        load({
+            params: {
+                dataset_id: mockDatasetId,
+                collection_type: mockCollectionType,
+                collection_id: 'invalid-uuid'
+            }
+        } as LayoutLoadEvent);
+
+        // Give it a moment to call goto
+        await new Promise((resolve) => setTimeout(resolve, 0));
+
+        expect(gotoMock).toHaveBeenCalledWith(routeHelpers.toHome());
     });
 
-    it('should redirect when collection not found', async () => {
-        vi.mocked(readCollection).mockRejectedValue(new Error('Not found'));
+    it('should throw error when collection not found', async () => {
+        vi.mocked(readCollection).mockRejectedValueOnce(new Error('Not found'));
 
-        try {
-            await load({
+        await expect(
+            load({
                 params: {
                     dataset_id: mockDatasetId,
                     collection_type: mockCollectionType,
                     collection_id: mockCollectionId
                 }
-            } as LayoutLoadEvent);
-            expect.fail('Should have thrown redirect');
-        } catch (error: unknown) {
-            const redirectError = error as RedirectError;
-            expect(redirectError.status).toBe(307);
-            expect(redirectError.location).toBe(routeHelpers.toHome());
-        }
+            } as LayoutLoadEvent)
+        ).rejects.toThrow('Collection');
     });
 
     it('should redirect when collection_type does not match sample_type', async () => {
@@ -145,95 +132,28 @@ describe('+layout.ts', () => {
             response: undefined
         });
 
-        try {
-            await load({
-                params: {
-                    dataset_id: mockDatasetId,
-                    collection_type: 'image', // Wrong type
-                    collection_id: mockCollectionId
-                }
-            } as LayoutLoadEvent);
-            expect.fail('Should have thrown redirect');
-        } catch (error: unknown) {
-            const redirectError = error as RedirectError;
-            expect(redirectError.status).toBe(307);
-            expect(redirectError.location).toBe(
-                routeHelpers.toCollectionHome(mockDatasetId, 'video', mockCollectionId)
-            );
-        }
-    });
+        load({
+            params: {
+                dataset_id: mockDatasetId,
+                collection_type: 'image', // Wrong type
+                collection_id: mockCollectionId
+            }
+        } as LayoutLoadEvent);
 
-    it('should redirect when dataset_id does not exist', async () => {
-        vi.mocked(readCollection)
-            .mockResolvedValueOnce({
-                data: mockCollection,
-                request: undefined,
-                response: undefined
-            })
-            .mockRejectedValueOnce(new Error('Dataset not found'));
+        // Give it a moment to call goto
+        await new Promise((resolve) => setTimeout(resolve, 0));
 
-        try {
-            await load({
-                params: {
-                    dataset_id: mockDatasetId,
-                    collection_type: mockCollectionType,
-                    collection_id: mockCollectionId
-                }
-            } as LayoutLoadEvent);
-            expect.fail('Should have thrown redirect');
-        } catch (error: unknown) {
-            const redirectError = error as RedirectError;
-            expect(redirectError.status).toBe(307);
-            expect(redirectError.location).toBe(routeHelpers.toHome());
-        }
-    });
-
-    it('should redirect when dataset_id is not a root collection', async () => {
-        const nonRootDataset = {
-            ...mockDataset,
-            parent_collection_id: 'some-parent-id'
-        };
-
-        vi.mocked(readCollection)
-            .mockResolvedValueOnce({
-                data: mockCollection,
-                request: undefined,
-                response: undefined
-            })
-            .mockResolvedValueOnce({
-                data: nonRootDataset,
-                request: undefined,
-                response: undefined
-            });
-
-        try {
-            await load({
-                params: {
-                    dataset_id: mockDatasetId,
-                    collection_type: mockCollectionType,
-                    collection_id: mockCollectionId
-                }
-            } as LayoutLoadEvent);
-            expect.fail('Should have thrown redirect');
-        } catch (error: unknown) {
-            const redirectError = error as RedirectError;
-            expect(redirectError.status).toBe(307);
-            expect(redirectError.location).toBe(routeHelpers.toHome());
-        }
+        expect(gotoMock).toHaveBeenCalledWith(
+            routeHelpers.toCollectionHome(mockDatasetId, 'video', mockCollectionId)
+        );
     });
 
     it('should throw error when collection does not belong to dataset', async () => {
-        vi.mocked(readCollection)
-            .mockResolvedValueOnce({
-                data: mockCollection,
-                request: undefined,
-                response: undefined
-            })
-            .mockResolvedValueOnce({
-                data: mockDataset,
-                request: undefined,
-                response: undefined
-            });
+        vi.mocked(readCollection).mockResolvedValueOnce({
+            data: mockCollection,
+            request: undefined,
+            response: undefined
+        });
 
         // Mock readCollectionHierarchy to return only the dataset, not the collection
         vi.mocked(readCollectionHierarchy).mockResolvedValue({
@@ -242,80 +162,35 @@ describe('+layout.ts', () => {
             response: undefined
         });
 
-        try {
-            await load({
+        await expect(
+            load({
                 params: {
                     dataset_id: mockDatasetId,
                     collection_type: mockCollectionType,
                     collection_id: mockCollectionId
                 }
-            } as LayoutLoadEvent);
-            expect.fail('Should have thrown error');
-        } catch (err: unknown) {
-            const errorObj = err as Error & { status: number };
-            expect(errorObj.status).toBe(500);
-            expect(errorObj.message).toContain('does not belong to dataset');
-        }
-    });
-
-    it('should redirect when dataset collection is null', async () => {
-        vi.mocked(readCollection)
-            .mockResolvedValueOnce({
-                data: mockCollection,
-                request: undefined,
-                response: undefined
-            })
-            .mockResolvedValueOnce({
-                data: null, // Dataset collection is null
-                request: undefined,
-                response: undefined
-            });
-
-        try {
-            await load({
-                params: {
-                    dataset_id: mockDatasetId,
-                    collection_type: mockCollectionType,
-                    collection_id: mockCollectionId
-                }
-            } as LayoutLoadEvent);
-            expect.fail('Should have thrown redirect');
-        } catch (error: unknown) {
-            const redirectError = error as RedirectError;
-            expect(redirectError.status).toBe(307);
-            expect(redirectError.location).toBe(routeHelpers.toHome());
-        }
+            } as LayoutLoadEvent)
+        ).rejects.toThrow('does not belong to dataset');
     });
 
     it('should throw error when hierarchy fetch fails', async () => {
-        vi.mocked(readCollection)
-            .mockResolvedValueOnce({
-                data: mockCollection,
-                request: undefined,
-                response: undefined
-            })
-            .mockResolvedValueOnce({
-                data: mockDataset,
-                request: undefined,
-                response: undefined
-            });
+        vi.mocked(readCollection).mockResolvedValueOnce({
+            data: mockCollection,
+            request: undefined,
+            response: undefined
+        });
 
         // Mock readCollectionHierarchy to throw an error
         vi.mocked(readCollectionHierarchy).mockRejectedValue(new Error('Hierarchy fetch failed'));
 
-        try {
-            await load({
+        await expect(
+            load({
                 params: {
                     dataset_id: mockDatasetId,
                     collection_type: mockCollectionType,
                     collection_id: mockCollectionId
                 }
-            } as LayoutLoadEvent);
-            expect.fail('Should have thrown error');
-        } catch (err: unknown) {
-            const errorObj = err as Error & { status: number };
-            expect(errorObj.status).toBe(500);
-            expect(errorObj.message).toContain('Error loading collection hierarchy');
-        }
+            } as LayoutLoadEvent)
+        ).rejects.toThrow('Error loading collection hierarchy');
     });
 });
