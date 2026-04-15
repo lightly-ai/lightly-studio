@@ -29,9 +29,9 @@ class ImageSampleField:
     ```
     """
 
-    file_name = ComparableField(col(ImageTable.file_name), wire_name="image.file_name")
-    width = NumericalField(col(ImageTable.width), wire_name="image.width")
-    height = NumericalField(col(ImageTable.height), wire_name="image.height")
-    file_path_abs = ComparableField(col(ImageTable.file_path_abs), wire_name="image.file_path_abs")
-    created_at = DatetimeField(col(ImageTable.created_at), wire_name="image.created_at")
+    file_name = ComparableField(col(ImageTable.file_name))
+    width = NumericalField(col(ImageTable.width))
+    height = NumericalField(col(ImageTable.height))
+    file_path_abs = ComparableField(col(ImageTable.file_path_abs))
+    created_at = DatetimeField(col(ImageTable.created_at))
     tags = TagsAccessor()

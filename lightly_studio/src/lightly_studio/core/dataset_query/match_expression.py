@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
-from typing import Any
 
 from sqlalchemy import ColumnElement
 
@@ -22,7 +21,3 @@ class MatchExpression(ABC):
         Returns:
             The combined SQLAlchemy expression.
         """
-
-    @abstractmethod
-    def to_wire(self) -> dict[str, Any]:
-        """Serialise this expression to a JSON-serialisable dict."""

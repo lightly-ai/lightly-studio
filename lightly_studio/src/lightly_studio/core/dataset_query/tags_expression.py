@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Any
 
 from sqlalchemy import ColumnElement
 from sqlmodel import col
@@ -45,7 +44,3 @@ class TagsContainsExpression(MatchExpression):
             The SQLAlchemy expression for this field expression.
         """
         return SampleTable.tags.any(col(TagTable.name) == self.tag_name)
-
-    def to_wire(self) -> dict[str, Any]:
-        """Serialise to wire format."""
-        return {"type": "tags_contains", "tag": self.tag_name}
