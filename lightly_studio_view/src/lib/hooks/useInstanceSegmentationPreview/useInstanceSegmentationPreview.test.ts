@@ -157,7 +157,32 @@ describe('useInstanceSegmentationPreview', () => {
         expect(imageData.data[15]).toBe(255);
     });
 
-    it('batches preview composition to one animation frame and updates visibility', () => {
+    it('supports destination-out compositing for eraser strokes', () => {
+        const hook = useInstanceSegmentationPreview();
+
+        hook.drawBrushDot({
+            point: { x: 1, y: 1 },
+            brushRadius: 4,
+            width: 2,
+            height: 2,
+            compositeOperation: 'destination-out'
+        });
+
+        hook.drawBrushLine({
+            from: { x: 0, y: 0 },
+            to: { x: 1, y: 1 },
+            brushRadius: 4,
+            width: 2,
+            height: 2,
+            compositeOperation: 'destination-out'
+        });
+
+        expect(sourceContext.globalCompositeOperation).toBe('destination-out');
+        expect(sourceContext.arc).toHaveBeenCalledTimes(1);
+        expect(sourceContext.stroke).toHaveBeenCalledTimes(1);
+    });
+
+    it('keeps only the latest scheduled preview composition and updates visibility', () => {
         const onPreviewVisibilityChange = vi.fn();
         const hook = useInstanceSegmentationPreview({ onPreviewVisibilityChange });
         hook.setPreviewCanvas(previewCanvas);
@@ -176,7 +201,9 @@ describe('useInstanceSegmentationPreview', () => {
             isDrawing: true
         });
 
-        expect(requestAnimationFrame).toHaveBeenCalledTimes(1);
+        expect(requestAnimationFrame).toHaveBeenCalledTimes(2);
+        expect(cancelAnimationFrame).toHaveBeenCalledTimes(1);
+        expect(cancelAnimationFrame).toHaveBeenCalledWith(1);
         expect(previewContext.drawImage).not.toHaveBeenCalled();
 
         runNextFrame();
@@ -184,6 +211,31 @@ describe('useInstanceSegmentationPreview', () => {
         expect(previewContext.drawImage).toHaveBeenCalledTimes(1);
         expect(previewContext.fillRect).toHaveBeenCalledTimes(1);
         expect(onPreviewVisibilityChange).toHaveBeenCalledWith(true);
+    });
+
+    it('uses the latest scheduled draw state when replacing a queued frame', () => {
+        const onPreviewVisibilityChange = vi.fn();
+        const hook = useInstanceSegmentationPreview({ onPreviewVisibilityChange });
+        hook.setPreviewCanvas(previewCanvas);
+        hook.drawMaskToCanvas(new Uint8Array([1, 0, 0, 0]), 2, 2);
+
+        hook.schedulePreviewCompose({
+            width: 2,
+            height: 2,
+            color: { r: 0, g: 0, b: 255, a: 255 },
+            isDrawing: true
+        });
+        hook.schedulePreviewCompose({
+            width: 2,
+            height: 2,
+            color: { r: 0, g: 0, b: 255, a: 255 },
+            isDrawing: false
+        });
+
+        runNextFrame();
+
+        expect(previewContext.drawImage).not.toHaveBeenCalled();
+        expect(onPreviewVisibilityChange).not.toHaveBeenCalledWith(true);
     });
 
     it('does not compose preview when drawing is disabled', () => {
@@ -238,5 +290,24 @@ describe('useInstanceSegmentationPreview', () => {
         expect(cancelAnimationFrame).toHaveBeenCalledTimes(1);
         expect(cancelAnimationFrame).toHaveBeenCalledWith(1);
         expect(scheduledFrames).toHaveLength(0);
+    });
+
+    it('cancels scheduled preview compose when clearing preview', () => {
+        const hook = useInstanceSegmentationPreview();
+        hook.setPreviewCanvas(previewCanvas);
+        hook.drawMaskToCanvas(new Uint8Array([1, 0, 0, 0]), 2, 2);
+
+        hook.schedulePreviewCompose({
+            width: 2,
+            height: 2,
+            color: { r: 0, g: 0, b: 255, a: 255 },
+            isDrawing: true
+        });
+        hook.clearPreview();
+
+        expect(cancelAnimationFrame).toHaveBeenCalledTimes(1);
+        expect(cancelAnimationFrame).toHaveBeenCalledWith(1);
+        expect(scheduledFrames).toHaveLength(0);
+        expect(previewContext.clearRect).toHaveBeenCalledWith(0, 0, 2, 2);
     });
 });
