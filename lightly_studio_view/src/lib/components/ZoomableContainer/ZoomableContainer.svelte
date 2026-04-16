@@ -22,7 +22,8 @@
         zoomEnabled = true,
         toolbarContent,
         registerResetFn,
-        zoomPanelContent
+        zoomPanelContent,
+        zoomPanelRightContent
     }: {
         width: number;
         height: number;
@@ -37,6 +38,7 @@
         zoomEnabled?: boolean;
         toolbarContent?: Snippet;
         zoomPanelContent?: Snippet;
+        zoomPanelRightContent?: Snippet;
     } = $props();
 
     let svgElementWidth = $state(800);
@@ -259,6 +261,11 @@
         {#snippet content()}
             {#if zoomPanelContent}
                 {@render zoomPanelContent()}
+            {/if}
+        {/snippet}
+        {#snippet rightContent()}
+            {#if zoomPanelRightContent}
+                {@render zoomPanelRightContent()}
             {/if}
         {/snippet}
     </ZoomPanel>

@@ -32,6 +32,7 @@
         drawerStrokeColor: string;
         refetch: () => void;
         hoverbbox?: boolean;
+        onCreateBoundingBoxPendingChange?: (isPending: boolean) => void;
     };
 
     let {
@@ -41,7 +42,8 @@
         refetch,
         sampleId,
         drawerStrokeColor,
-        hoverbbox = $bindable(false)
+        hoverbbox = $bindable(false),
+        onCreateBoundingBoxPendingChange
     }: SampleObjectDetectionRectProps = $props();
 
     let temporaryBbox = $state<BoundingBox | null>(null);
@@ -55,6 +57,10 @@
         collectionId
     });
     const { addReversibleAction } = useGlobalStorage();
+
+    const setCreateBoundingBoxPending = (isPending: boolean) => {
+        onCreateBoundingBoxPendingChange?.(isPending);
+    };
 
     const cancelDrag = () => {
         setIsDrawing(false);
@@ -151,20 +157,23 @@
         width: number;
         height: number;
     }) => {
-        let label =
-            $labels.data?.find(
-                (label) => label.annotation_label_name === annotationLabelContext.annotationLabel
-            ) ?? $labels.data?.find((label) => label.annotation_label_name === 'DEFAULT');
-
-        // Create an default label if it does not exist yet
-        if (!label) {
-            label = await createLabel({
-                dataset_id: datasetId,
-                annotation_label_name: 'DEFAULT'
-            });
-        }
+        setCreateBoundingBoxPending(true);
 
         try {
+            let label =
+                $labels.data?.find(
+                    (label) =>
+                        label.annotation_label_name === annotationLabelContext.annotationLabel
+                ) ?? $labels.data?.find((label) => label.annotation_label_name === 'DEFAULT');
+
+            // Create an default label if it does not exist yet
+            if (!label) {
+                label = await createLabel({
+                    dataset_id: datasetId,
+                    annotation_label_name: 'DEFAULT'
+                });
+            }
+
             const newAnnotation = await createAnnotation({
                 parent_sample_id: sampleId,
                 annotation_type: 'object_detection',
@@ -202,6 +211,8 @@
             toast.error('Failed to create annotation. Please try again.');
             console.error('Error creating annotation:', error);
             return;
+        } finally {
+            setCreateBoundingBoxPending(false);
         }
     };
     const {
@@ -288,6 +299,7 @@
     });
 
     onDestroy(() => {
+        setCreateBoundingBoxPending(false);
         detachSvgListeners?.();
     });
 

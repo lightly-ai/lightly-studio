@@ -381,4 +381,40 @@ describe('SampleInstanceSegmentationRect', () => {
         expect(cancelAnimationFrame).toHaveBeenCalledWith(1);
         expect(scheduledFrames).toHaveLength(0);
     });
+
+    it('notifies pending state while finishBrush is in flight', async () => {
+        let resolveFinishBrush: (() => void) | undefined;
+        const finishBrush = vi.fn(
+            () =>
+                new Promise<void>((resolve) => {
+                    resolveFinishBrush = resolve;
+                })
+        );
+        useInstanceSegmentationBrushMock.mockReturnValueOnce({ finishBrush });
+        const onFinishBrushPendingChange = vi.fn();
+
+        const { container } = render(SampleInstanceSegmentationRect, {
+            props: {
+                ...baseProps,
+                sampleId: 'sample-1',
+                sample: { width: 100, height: 100, annotations: [] },
+                onFinishBrushPendingChange
+            }
+        });
+
+        const drawingRect = getDrawingRect(container);
+        await fireEvent.pointerDown(drawingRect, {
+            pointerId: 1,
+            clientX: 20,
+            clientY: 20
+        });
+        await fireEvent.pointerUp(drawingRect, { pointerId: 1 });
+
+        expect(onFinishBrushPendingChange).toHaveBeenCalledWith(true);
+
+        resolveFinishBrush?.();
+        await tick();
+
+        expect(onFinishBrushPendingChange).toHaveBeenLastCalledWith(false);
+    });
 });

@@ -31,6 +31,7 @@
         annotationLabel?: string | null | undefined;
         annotationType?: string | null | undefined;
         refetch: () => void;
+        onFinishBrushPendingChange?: (isPending: boolean) => void;
     };
 
     let {
@@ -41,7 +42,8 @@
         brushRadius,
         drawerStrokeColor,
         mousePosition,
-        refetch
+        refetch,
+        onFinishBrushPendingChange
     }: SampleInstanceSegmentationRectProps = $props();
 
     const labels = useAnnotationLabels({ collectionId });
@@ -109,7 +111,12 @@
         previewApi.setPreviewCanvas(previewCanvas);
     });
 
+    const setFinishBrushPending = (isPending: boolean) => {
+        onFinishBrushPendingChange?.(isPending);
+    };
+
     onDestroy(() => {
+        setFinishBrushPending(false);
         setIsDrawing(false);
         previewApi.destroy();
     });
@@ -201,14 +208,22 @@
         // Keep local base in sync after committing stroke.
         baseMask = updatedMask;
 
-        brushApi.finishBrush(
-            updatedMask,
-            targetAnnotation,
-            $labels.data ?? [],
-            updateAnnotation,
-            annotationLabelContext.lockedAnnotationIds
-        );
-        setIsDrawing(false);
+        setFinishBrushPending(true);
+        void (async () => {
+            try {
+                await brushApi.finishBrush(
+                    updatedMask,
+                    targetAnnotation,
+                    $labels.data ?? [],
+                    updateAnnotation,
+                    annotationLabelContext.lockedAnnotationIds
+                );
+            } catch (error) {
+                console.error('Failed to finish brush stroke:', error);
+            } finally {
+                setFinishBrushPending(false);
+            }
+        })();
     };
 
     const handleStrokeCancel = (e: PointerEvent) => {

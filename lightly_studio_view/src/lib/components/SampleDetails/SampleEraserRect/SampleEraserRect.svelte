@@ -32,6 +32,7 @@
         brushRadius: number;
         drawerStrokeColor: string;
         refetch: () => void;
+        onFinishErasePendingChange?: (isPending: boolean) => void;
     };
 
     let {
@@ -41,7 +42,8 @@
         collectionId,
         brushRadius,
         drawerStrokeColor,
-        refetch
+        refetch,
+        onFinishErasePendingChange
     }: Props = $props();
 
     const {
@@ -94,7 +96,12 @@
         previewApi.setPreviewCanvas(previewCanvas);
     });
 
+    const setFinishErasePending = (isPending: boolean) => {
+        onFinishErasePendingChange?.(isPending);
+    };
+
     onDestroy(() => {
+        setFinishErasePending(false);
         setIsDrawing(false);
         previewApi.destroy();
     });
@@ -207,8 +214,16 @@
         }
 
         baseMask = updatedMask;
-        eraserApi.finishErase(updatedMask, selectedAnnotation, updateAnnotation, deleteAnn);
+        setFinishErasePending(true);
         setIsDrawing(false);
+        void eraserApi
+            .finishErase(updatedMask, selectedAnnotation, updateAnnotation, deleteAnn)
+            .catch((error) => {
+                console.error('Failed to finish erase stroke:', error);
+            })
+            .finally(() => {
+                setFinishErasePending(false);
+            });
     };
 
     const handleStrokeCancel = (e: PointerEvent) => {
