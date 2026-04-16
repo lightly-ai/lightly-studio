@@ -1,0 +1,19 @@
+?query: or_expr
+?or_expr: and_expr ("or"i and_expr)*   -> or_expr
+?and_expr: not_expr ("and"i not_expr)* -> and_expr
+?not_expr: "not"i not_expr            -> not_expr
+         | atom
+?atom: "(" query ")" | subquery | comparison
+comparison: field_ref CMP_OP value
+subquery: "has_tag"i "(" STRING ")"           -> has_tag
+        | "has_annotation"i "(" query ")"     -> has_annotation
+field_ref: FIELD_NAME ("." FIELD_NAME)*
+FIELD_NAME: /[a-zA-Z_][a-zA-Z0-9_]*/
+CMP_OP: ">=" | "<=" | "!=" | "==" | ">" | "<" | "contains"i | "in"i
+?value: STRING | SIGNED_NUMBER | BOOL | list_value
+BOOL: "true"i | "false"i
+list_value: "[" value ("," value)* "]"
+%import common.ESCAPED_STRING -> STRING
+%import common.SIGNED_NUMBER
+%import common.WS
+%ignore WS
