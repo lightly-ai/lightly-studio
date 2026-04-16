@@ -7,7 +7,6 @@
         GridHeader,
         LabelsMenu,
         SelectionPill,
-        TagCreateDialog,
         TagsMenu
     } from '$lib/components';
     import Input from '$lib/components/ui/input/input.svelte';
@@ -21,7 +20,7 @@
         GripVertical
     } from '@lucide/svelte';
     import { onDestroy, onMount } from 'svelte';
-    import { get, toStore } from 'svelte/store';
+    import { toStore } from 'svelte/store';
     import { toast } from 'svelte-sonner';
     import { Header } from '$lib/components';
     import MenuDialogHost from '$lib/components/Header/MenuDialogHost.svelte';
@@ -546,11 +545,6 @@
                         >
                             <div>
                                 <TagsMenu collection_id={collectionId} {gridType} />
-                                <TagCreateDialog
-                                    {collectionId}
-                                    {gridType}
-                                    textEmbedding={get(textEmbedding)}
-                                />
                             </div>
                             <Segment title="Filters" icon={SlidersHorizontal}>
                                 <div class="space-y-2">

@@ -12,22 +12,35 @@ export interface BrushDrawer {
 export function createBrushDrawer({
     ensureSourceMaskContext
 }: CreateBrushDrawerParams): BrushDrawer {
-    const drawBrushDot = ({ point, brushRadius, width, height }: DrawBrushDotParams) => {
+    const drawBrushDot = ({
+        point,
+        brushRadius,
+        width,
+        height,
+        compositeOperation = 'source-over'
+    }: DrawBrushDotParams) => {
         const context = ensureSourceMaskContext(width, height);
         if (!context) return;
 
-        context.globalCompositeOperation = 'source-over';
+        context.globalCompositeOperation = compositeOperation;
         context.fillStyle = 'black';
         context.beginPath();
         context.arc(point.x, point.y, brushRadius, 0, Math.PI * 2);
         context.fill();
     };
 
-    const drawBrushLine = ({ from, to, brushRadius, width, height }: DrawBrushLineParams) => {
+    const drawBrushLine = ({
+        from,
+        to,
+        brushRadius,
+        width,
+        height,
+        compositeOperation = 'source-over'
+    }: DrawBrushLineParams) => {
         const context = ensureSourceMaskContext(width, height);
         if (!context) return;
 
-        context.globalCompositeOperation = 'source-over';
+        context.globalCompositeOperation = compositeOperation;
         context.strokeStyle = 'black';
         context.lineWidth = brushRadius * 2;
         context.lineCap = 'round';

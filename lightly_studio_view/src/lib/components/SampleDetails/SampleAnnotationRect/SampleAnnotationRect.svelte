@@ -22,6 +22,7 @@
         onpointerleave,
         onpointerdown,
         onpointerup,
+        onpointercancel,
         onkeydown
     }: SampleAnnotationRectProps = $props();
 </script>
@@ -40,5 +41,6 @@
     {onpointerleave}
     {onpointerdown}
     {onpointerup}
+    {onpointercancel}
     {onkeydown}
 />
