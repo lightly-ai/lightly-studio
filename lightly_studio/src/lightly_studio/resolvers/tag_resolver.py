@@ -90,6 +90,8 @@ def delete(session: Session, tag_id: UUID) -> bool:
     session.exec(
         sqlmodel.delete(SampleTagLinkTable).where(col(SampleTagLinkTable.tag_id) == tag_id)
     )
+    session.commit()
+
     session.delete(tag)
     session.commit()
     return True
