@@ -11,7 +11,7 @@ from lightly_studio.core.annotation import CreateInstanceSegmentation
 from lightly_studio.core.dataset_query import ImageSampleField
 from lightly_studio.core.dataset_query.dataset_query import DatasetQuery
 from lightly_studio.core.image.image_dataset import ImageDataset
-from lightly_studio.export import export_dataset
+from lightly_studio.export import image_dataset_export
 from lightly_studio.models.annotation.annotation_base import (
     AnnotationCreate,
     AnnotationType,
@@ -27,13 +27,13 @@ from tests.helpers_resolvers import (
 )
 
 
-class TestDatasetExport:
+class TestImageDatasetExport:
     def test_to_coco_object_detections(
         self,
         tmp_path: Path,
         patch_collection: None,  # noqa: ARG002
     ) -> None:
-        """Tests DatasetExport exporting to COCO format."""
+        """Tests ImageDatasetExport exporting to COCO format."""
         dataset = ImageDataset.create(name="test_dataset")
         images_to_create = [
             ImageStub(path="image0.jpg", width=100, height=100),
@@ -88,7 +88,7 @@ class TestDatasetExport:
         tmp_path: Path,
         patch_collection: None,  # noqa: ARG002
     ) -> None:
-        """Tests DatasetExport exporting to COCO format."""
+        """Tests ImageDatasetExport exporting to COCO format."""
         dataset = ImageDataset.create(name="test_dataset")
         images = [ImageStub(path="image0.jpg", width=100, height=100)]
         create_images(
@@ -111,7 +111,7 @@ class TestDatasetExport:
 
         # Mock the actual export function to avoid creating a file
         mock_to_coco_object_detections = mocker.patch.object(
-            export_dataset, "to_coco_object_detections"
+            image_dataset_export, "to_coco_object_detections"
         )
 
         # Don't provide the export path
@@ -177,7 +177,7 @@ class TestDatasetExport:
         mocker: MockerFixture,
         patch_collection: None,  # noqa: ARG002
     ) -> None:
-        mock_to_coco_captions = mocker.patch.object(export_dataset, "to_coco_captions")
+        mock_to_coco_captions = mocker.patch.object(image_dataset_export, "to_coco_captions")
 
         dataset = ImageDataset.create(name="test_dataset")
 
@@ -281,6 +281,44 @@ class TestDatasetExport:
             "annotations": [],
         }
 
+    def test_to_pascalvoc_instance_segmentation__via_class(
+        self,
+        tmp_path: Path,
+        patch_collection: None,  # noqa: ARG002
+    ) -> None:
+        dataset = ImageDataset.create(name="test_dataset")
+        create_images(
+            db_session=dataset.session,
+            collection_id=dataset.collection_id,
+            images=[ImageStub(path="image0.jpg", width=3, height=2)],
+        )
+
+        samples = list(dataset)
+        samples[0].add_annotation(
+            CreateInstanceSegmentation.from_rle_mask(
+                label="dog",
+                sample_2d=samples[0],
+                segmentation_mask=[1, 1, 4],
+            )
+        )
+
+        output_folder = tmp_path / "pascalvoc"
+        dataset.export().to_pascalvoc_instance_segmentation(
+            output_folder=output_folder,
+        )
+
+        class_map_path = output_folder / "class_id_to_name.json"
+        with class_map_path.open() as f:
+            class_map = json.load(f)
+        assert class_map == {"0": "background", "1": "dog"}
+
+        mask_path = output_folder / "SegmentationClass" / "image0.png"
+        with PILImage.open(mask_path) as mask:
+            mask_values = list(mask.getdata())
+        assert mask_values == [0, 1, 0, 0, 0, 0]
+
+    # TODO(Michal, 04/2026): The tests below test the module method, not the ImageDatasetExport
+    # class method. They should move outside of this tests class and not use patch_collection.
     def test_to_pascalvoc_instance_segmentation(
         self,
         tmp_path: Path,
@@ -303,7 +341,7 @@ class TestDatasetExport:
         )
 
         output_folder = tmp_path / "pascalvoc"
-        export_dataset.to_pascalvoc_instance_segmentation(
+        image_dataset_export.to_pascalvoc_instance_segmentation(
             session=dataset.session,
             dataset_id=dataset.dataset_id,
             samples=dataset.query(),
@@ -359,7 +397,7 @@ class TestDatasetExport:
         )
 
         output_folder = tmp_path / "pascalvoc"
-        export_dataset.to_pascalvoc_instance_segmentation(
+        image_dataset_export.to_pascalvoc_instance_segmentation(
             session=dataset.session,
             dataset_id=dataset.dataset_id,
             samples=dataset.query(),
@@ -407,7 +445,7 @@ class TestDatasetExport:
         )
 
         output_folder = tmp_path / "pascalvoc"
-        export_dataset.to_pascalvoc_instance_segmentation(
+        image_dataset_export.to_pascalvoc_instance_segmentation(
             session=dataset.session,
             dataset_id=dataset.dataset_id,
             samples=dataset.query(),
@@ -454,7 +492,7 @@ class TestDatasetExport:
         )
 
         output_folder = tmp_path / "pascalvoc"
-        export_dataset.to_pascalvoc_instance_segmentation(
+        image_dataset_export.to_pascalvoc_instance_segmentation(
             session=dataset.session,
             dataset_id=dataset.dataset_id,
             samples=dataset.query(),
@@ -505,7 +543,7 @@ class TestDatasetExport:
         )
 
         output_folder = tmp_path / "pascalvoc"
-        export_dataset.to_pascalvoc_instance_segmentation(
+        image_dataset_export.to_pascalvoc_instance_segmentation(
             session=dataset.session,
             dataset_id=dataset.dataset_id,
             samples=dataset.query(),
@@ -538,7 +576,7 @@ def test_to_coco_object_detections(
 
     # Test for task_obj_det_1
     output_json = tmp_path / "task_obj_det_1.json"
-    export_dataset.to_coco_object_detections(
+    image_dataset_export.to_coco_object_detections(
         session=db_session,
         dataset_id=dataset.dataset_id,
         samples=DatasetQuery(dataset=dataset, session=db_session),
@@ -580,7 +618,7 @@ def test_to_coco_object_detections__no_annotations(
     create_images(db_session=db_session, collection_id=dataset.collection_id, images=images)
 
     output_json = tmp_path / "task_no_ann.json"
-    export_dataset.to_coco_object_detections(
+    image_dataset_export.to_coco_object_detections(
         session=db_session,
         dataset_id=dataset.dataset_id,
         samples=DatasetQuery(dataset=dataset, session=db_session),
@@ -619,7 +657,7 @@ def test_to_coco_captions(
 
     # Call the function under test
     output_json = tmp_path / "coco_annotations.json"
-    export_dataset.to_coco_captions(
+    image_dataset_export.to_coco_captions(
         samples=DatasetQuery(dataset=dataset, session=db_session),
         output_json=output_json,
     )
