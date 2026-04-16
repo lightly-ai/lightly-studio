@@ -41,10 +41,6 @@ class InstanceSegmentationField:
         column=col(SegmentationAnnotationTable.y),
         relationship=AnnotationBaseTable.segmentation_details,
     )
-    segmentation_mask = ForeignComparableField(
-        column=col(SegmentationAnnotationTable.segmentation_mask),
-        relationship=AnnotationBaseTable.segmentation_details,
-    )
     label = ForeignComparableField(
         column=col(AnnotationLabelTable.annotation_label_name),
         relationship=AnnotationBaseTable.annotation_label,
