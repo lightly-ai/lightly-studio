@@ -1,4 +1,4 @@
-import { addSampleIdsToTagId, createTag } from '$lib/api/lightly_studio_local';
+import { addSampleIdsToTagId, createTag, deleteTag } from '$lib/api/lightly_studio_local';
 import { fireEvent, render, screen, waitFor } from '@testing-library/svelte';
 import { readable } from 'svelte/store';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
@@ -12,7 +12,8 @@ const mocks = vi.hoisted(() => ({
     selectedSampleIdsByCollection: {} as Record<string, Set<string>>,
     selectedSampleAnnotationCropIds: {} as Record<string, Set<string>>,
     loadTags: vi.fn(),
-    tagSelectionToggle: vi.fn()
+    tagSelectionToggle: vi.fn(),
+    clearTagSelected: vi.fn()
 }));
 
 vi.mock('$lib/api/lightly_studio_local', async () => {
@@ -20,7 +21,8 @@ vi.mock('$lib/api/lightly_studio_local', async () => {
     return {
         ...actual,
         createTag: vi.fn(),
-        addSampleIdsToTagId: vi.fn()
+        addSampleIdsToTagId: vi.fn(),
+        deleteTag: vi.fn()
     };
 });
 
@@ -29,7 +31,8 @@ vi.mock('$lib/hooks/useTags/useTags.js', () => ({
         tags: readable(mocks.tags),
         tagsSelected: readable(mocks.tagsSelected),
         tagSelectionToggle: mocks.tagSelectionToggle,
-        loadTags: mocks.loadTags
+        loadTags: mocks.loadTags,
+        clearTagSelected: mocks.clearTagSelected
     }))
 }));
 
@@ -43,7 +46,8 @@ vi.mock('$lib/hooks/useGlobalStorage', () => ({
 
 vi.mock('svelte-sonner', () => ({
     toast: {
-        error: vi.fn()
+        error: vi.fn(),
+        success: vi.fn()
     }
 }));
 
@@ -80,6 +84,14 @@ describe('TagsMenu', () => {
                 description: 'Created Tag description',
                 created_at: new Date('2024-01-03T00:00:00.000Z'),
                 updated_at: new Date('2024-01-03T00:00:00.000Z')
+            },
+            error: undefined,
+            request: mockRequest,
+            response: mockResponse
+        });
+        vi.mocked(deleteTag).mockResolvedValue({
+            data: {
+                status: 'deleted'
             },
             error: undefined,
             request: mockRequest,
@@ -199,5 +211,66 @@ describe('TagsMenu', () => {
 
         expect(mocks.loadTags).not.toHaveBeenCalled();
         consoleErrorSpy.mockRestore();
+    });
+
+    it('deletes a tag from the sidebar actions menu', async () => {
+        render(TagsMenu, {
+            props: {
+                collection_id: 'collection-1',
+                gridType: 'samples'
+            }
+        });
+
+        await fireEvent.click(screen.getByTestId('tag-actions-trigger-tag-1'));
+        await fireEvent.click(await screen.findByTestId('delete-tag-tag-1'));
+
+        await waitFor(() => {
+            expect(deleteTag).toHaveBeenCalledWith({
+                path: {
+                    collection_id: 'collection-1',
+                    tag_id: 'tag-1'
+                }
+            });
+        });
+
+        expect(mocks.clearTagSelected).toHaveBeenCalledWith('tag-1');
+        expect(mocks.loadTags).toHaveBeenCalled();
+        expect(toast.success).toHaveBeenCalledWith('Tag deleted successfully');
+    });
+
+    it('shows a toast when deleting a tag fails', async () => {
+        vi.mocked(deleteTag).mockRejectedValue(new Error('network error'));
+        const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => undefined);
+
+        render(TagsMenu, {
+            props: {
+                collection_id: 'collection-1',
+                gridType: 'samples'
+            }
+        });
+
+        await fireEvent.click(screen.getByTestId('tag-actions-trigger-tag-1'));
+        await fireEvent.click(await screen.findByTestId('delete-tag-tag-1'));
+
+        await waitFor(() => {
+            expect(toast.error).toHaveBeenCalledWith('Failed to delete tag. Please try again.');
+        });
+
+        expect(mocks.clearTagSelected).not.toHaveBeenCalled();
+        expect(mocks.loadTags).not.toHaveBeenCalled();
+        consoleErrorSpy.mockRestore();
+    });
+
+    it('does not toggle the checkbox when opening the tag actions menu', async () => {
+        render(TagsMenu, {
+            props: {
+                collection_id: 'collection-1',
+                gridType: 'samples'
+            }
+        });
+
+        await fireEvent.click(screen.getByTestId('tag-actions-trigger-tag-1'));
+
+        expect(mocks.tagSelectionToggle).not.toHaveBeenCalled();
     });
 });
