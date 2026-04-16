@@ -14,6 +14,7 @@
     import { useInstanceSegmentationPreview } from '$lib/hooks/useInstanceSegmentationPreview';
     import { useCollectionWithChildren } from '$lib/hooks/useCollection/useCollection';
     import { page } from '$app/state';
+    import type { SavePendingChange } from '../savePendingChange';
     import SampleAnnotationRect from '../SampleAnnotationRect/SampleAnnotationRect.svelte';
 
     type SampleInstanceSegmentationRectProps = {
@@ -31,7 +32,7 @@
         annotationLabel?: string | null | undefined;
         annotationType?: string | null | undefined;
         refetch: () => void;
-        onFinishBrushPendingChange?: (isPending: boolean) => void;
+        onFinishBrushPendingChange?: (pendingChange: SavePendingChange) => void;
     };
 
     let {
@@ -96,6 +97,8 @@
     let lastBrushPoint = $state<{ x: number; y: number } | null>(null);
     let previewCanvas = $state<HTMLCanvasElement | null>(null);
     let isPreviewVisible = $state(false);
+    const pendingSaveTokens = new Set<string>();
+    let pendingSaveTokenCounter = 0;
 
     // Parse the color once and cache it for direct mask rendering.
     const parsedColor = $derived(parseColor(drawerStrokeColor));
@@ -111,12 +114,35 @@
         previewApi.setPreviewCanvas(previewCanvas);
     });
 
-    const setFinishBrushPending = (isPending: boolean) => {
-        onFinishBrushPendingChange?.(isPending);
+    const setFinishBrushPending = (pendingChange: SavePendingChange) => {
+        onFinishBrushPendingChange?.(pendingChange);
+    };
+
+    const startFinishBrushPending = () => {
+        pendingSaveTokenCounter += 1;
+        const token = `brush-${pendingSaveTokenCounter}`;
+        pendingSaveTokens.add(token);
+        setFinishBrushPending({ token, isPending: true });
+        return token;
+    };
+
+    const endFinishBrushPending = (token: string) => {
+        if (!pendingSaveTokens.has(token)) return;
+
+        pendingSaveTokens.delete(token);
+        setFinishBrushPending({ token, isPending: false });
+    };
+
+    const resetFinishBrushPending = () => {
+        for (const token of pendingSaveTokens) {
+            setFinishBrushPending({ token, isPending: false });
+        }
+
+        pendingSaveTokens.clear();
     };
 
     onDestroy(() => {
-        setFinishBrushPending(false);
+        resetFinishBrushPending();
         setIsDrawing(false);
         previewApi.destroy();
     });
@@ -208,7 +234,7 @@
         // Keep local base in sync after committing stroke.
         baseMask = updatedMask;
 
-        setFinishBrushPending(true);
+        const pendingToken = startFinishBrushPending();
         void (async () => {
             try {
                 await brushApi.finishBrush(
@@ -221,7 +247,7 @@
             } catch (error) {
                 console.error('Failed to finish brush stroke:', error);
             } finally {
-                setFinishBrushPending(false);
+                endFinishBrushPending(pendingToken);
             }
         })();
     };

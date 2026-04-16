@@ -18,6 +18,7 @@
     import { useSampleDetailsToolbarContext } from '$lib/contexts/SampleDetailsToolbar.svelte';
     import { getBoundingBox } from '$lib/components/SampleAnnotation/utils';
     import { onDestroy, onMount } from 'svelte';
+    import type { SavePendingChange } from '../savePendingChange';
 
     type SampleDetailsImageContainerProps = {
         sample: {
@@ -61,7 +62,9 @@
     let mousePosition = $state<{ x: number; y: number } | null>(null);
     let isHoveringBoundingBox = $state(false);
     let interactionRect: SVGRectElement | null = $state(null);
-    let isSavePending = $state(false);
+    let savePendingCount = $state(0);
+    let pendingSaveTokens = $state<string[]>([]);
+    const isSavePending = $derived(savePendingCount > 0 || pendingSaveTokens.length > 0);
 
     let sampleId = $derived(sample.sampleId);
     const actualAnnotationsToShow = $derived.by(() => {
@@ -183,8 +186,25 @@
         return true;
     });
 
-    const handleSavePendingChange = (isPending: boolean) => {
-        isSavePending = isPending;
+    const handleSavePendingChange = (pendingChange: SavePendingChange) => {
+        if (typeof pendingChange === 'boolean') {
+            if (pendingChange) {
+                savePendingCount += 1;
+                return;
+            }
+
+            savePendingCount = Math.max(0, savePendingCount - 1);
+            return;
+        }
+
+        if (pendingChange.isPending) {
+            if (!pendingSaveTokens.includes(pendingChange.token)) {
+                pendingSaveTokens = [...pendingSaveTokens, pendingChange.token];
+            }
+            return;
+        }
+
+        pendingSaveTokens = pendingSaveTokens.filter((token) => token !== pendingChange.token);
     };
 </script>
 

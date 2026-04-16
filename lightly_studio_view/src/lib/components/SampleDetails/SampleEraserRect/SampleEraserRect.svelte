@@ -17,6 +17,7 @@
     import { useInstanceSegmentationPreview } from '$lib/hooks/useInstanceSegmentationPreview';
     import { useSegmentationMaskEraser } from '$lib/hooks/useSegmentationMaskEraser';
     import { addAnnotationDeleteToUndoStack } from '$lib/services/addAnnotationDeleteToUndoStack';
+    import type { SavePendingChange } from '../savePendingChange';
     import SampleAnnotationRect from '../SampleAnnotationRect/SampleAnnotationRect.svelte';
     import { toast } from 'svelte-sonner';
 
@@ -32,7 +33,7 @@
         brushRadius: number;
         drawerStrokeColor: string;
         refetch: () => void;
-        onFinishErasePendingChange?: (isPending: boolean) => void;
+        onFinishErasePendingChange?: (pendingChange: SavePendingChange) => void;
     };
 
     let {
@@ -81,6 +82,8 @@
     let lastBrushPoint = $state<{ x: number; y: number } | null>(null);
     let previewCanvas = $state<HTMLCanvasElement | null>(null);
     let isPreviewVisible = $state(false);
+    const pendingSaveTokens = new Set<string>();
+    let pendingSaveTokenCounter = 0;
 
     // Parse the color once and cache it for direct mask rendering.
     const parsedColor = $derived(parseColor(drawerStrokeColor));
@@ -96,12 +99,35 @@
         previewApi.setPreviewCanvas(previewCanvas);
     });
 
-    const setFinishErasePending = (isPending: boolean) => {
-        onFinishErasePendingChange?.(isPending);
+    const setFinishErasePending = (pendingChange: SavePendingChange) => {
+        onFinishErasePendingChange?.(pendingChange);
+    };
+
+    const startFinishErasePending = () => {
+        pendingSaveTokenCounter += 1;
+        const token = `eraser-${pendingSaveTokenCounter}`;
+        pendingSaveTokens.add(token);
+        setFinishErasePending({ token, isPending: true });
+        return token;
+    };
+
+    const endFinishErasePending = (token: string) => {
+        if (!pendingSaveTokens.has(token)) return;
+
+        pendingSaveTokens.delete(token);
+        setFinishErasePending({ token, isPending: false });
+    };
+
+    const resetFinishErasePending = () => {
+        for (const token of pendingSaveTokens) {
+            setFinishErasePending({ token, isPending: false });
+        }
+
+        pendingSaveTokens.clear();
     };
 
     onDestroy(() => {
-        setFinishErasePending(false);
+        resetFinishErasePending();
         setIsDrawing(false);
         previewApi.destroy();
     });
@@ -214,7 +240,7 @@
         }
 
         baseMask = updatedMask;
-        setFinishErasePending(true);
+        const pendingToken = startFinishErasePending();
         setIsDrawing(false);
         void eraserApi
             .finishErase(updatedMask, selectedAnnotation, updateAnnotation, deleteAnn)
@@ -222,7 +248,7 @@
                 console.error('Failed to finish erase stroke:', error);
             })
             .finally(() => {
-                setFinishErasePending(false);
+                endFinishErasePending(pendingToken);
             });
     };
 

@@ -17,6 +17,7 @@
     import ResizableRectangle from '$lib/components/ResizableRectangle/ResizableRectangle.svelte';
     import { useAnnotationLabelContext } from '$lib/contexts/SampleDetailsAnnotation.svelte';
     import { getBoundingBox } from '$lib/components/SampleAnnotation/utils';
+    import type { SavePendingChange } from '../savePendingChange';
 
     type D3Event = D3DragEvent<SVGRectElement, unknown, unknown>;
 
@@ -32,7 +33,7 @@
         drawerStrokeColor: string;
         refetch: () => void;
         hoverbbox?: boolean;
-        onCreateBoundingBoxPendingChange?: (isPending: boolean) => void;
+        onCreateBoundingBoxPendingChange?: (pendingChange: SavePendingChange) => void;
     };
 
     let {
@@ -48,6 +49,8 @@
 
     let temporaryBbox = $state<BoundingBox | null>(null);
     let shouldDisableInteraction = $state(false);
+    const pendingSaveTokens = new Set<string>();
+    let pendingSaveTokenCounter = 0;
     const labels = useAnnotationLabels({ collectionId });
     const { createLabel } = useCreateLabel({ collectionId });
     const { createAnnotation } = useCreateAnnotation({
@@ -58,8 +61,31 @@
     });
     const { addReversibleAction } = useGlobalStorage();
 
-    const setCreateBoundingBoxPending = (isPending: boolean) => {
-        onCreateBoundingBoxPendingChange?.(isPending);
+    const setCreateBoundingBoxPending = (pendingChange: SavePendingChange) => {
+        onCreateBoundingBoxPendingChange?.(pendingChange);
+    };
+
+    const startCreateBoundingBoxPending = () => {
+        pendingSaveTokenCounter += 1;
+        const token = `bbox-${pendingSaveTokenCounter}`;
+        pendingSaveTokens.add(token);
+        setCreateBoundingBoxPending({ token, isPending: true });
+        return token;
+    };
+
+    const endCreateBoundingBoxPending = (token: string) => {
+        if (!pendingSaveTokens.has(token)) return;
+
+        pendingSaveTokens.delete(token);
+        setCreateBoundingBoxPending({ token, isPending: false });
+    };
+
+    const resetCreateBoundingBoxPending = () => {
+        for (const token of pendingSaveTokens) {
+            setCreateBoundingBoxPending({ token, isPending: false });
+        }
+
+        pendingSaveTokens.clear();
     };
 
     const cancelDrag = () => {
@@ -157,7 +183,7 @@
         width: number;
         height: number;
     }) => {
-        setCreateBoundingBoxPending(true);
+        const pendingToken = startCreateBoundingBoxPending();
 
         try {
             let label =
@@ -212,7 +238,7 @@
             console.error('Error creating annotation:', error);
             return;
         } finally {
-            setCreateBoundingBoxPending(false);
+            endCreateBoundingBoxPending(pendingToken);
         }
     };
     const {
@@ -299,7 +325,7 @@
     });
 
     onDestroy(() => {
-        setCreateBoundingBoxPending(false);
+        resetCreateBoundingBoxPending();
         detachSvgListeners?.();
     });
 
