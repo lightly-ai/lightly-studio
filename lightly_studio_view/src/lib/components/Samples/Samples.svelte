@@ -76,7 +76,7 @@
     };
 
     const { filterParams, updateFilterParams } = useImageFilters();
-    const { activeQueryText } = useQueryLanguage();
+    const { activeQueryText } = useQueryLanguage(collection_id);
 
     $effect(() => {
         // Synchronize the global filter parameters with the local samples parameters
@@ -118,7 +118,11 @@
         useImagesInfinite({ ...$filterParams, collection_id: collection_id })
     );
     const { samples: querySamples } = $derived(
-        useQueryImages({ collectionId: collection_id, queryText: $activeQueryText })
+        useQueryImages({
+            ...$filterParams,
+            collection_id: collection_id,
+            queryText: $activeQueryText
+        })
     );
 
     const isQueryMode = $derived($activeQueryText.trim().length > 0);

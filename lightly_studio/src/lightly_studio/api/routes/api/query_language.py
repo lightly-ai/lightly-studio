@@ -19,9 +19,15 @@ from lightly_studio.models.collection import CollectionTable
 from lightly_studio.models.image import ImageTable, ImageView, ImageViewsWithCount
 from lightly_studio.models.sample import SampleTable
 from lightly_studio.models.tag import TagTable
+from lightly_studio.resolvers.image_filter import ImageFilter
 from lightly_studio.resolvers.image_resolver.get_all_by_collection_id import (
     _compute_next_cursor,
     _get_load_options,
+)
+from lightly_studio.resolvers.similarity_utils import (
+    apply_similarity_join,
+    distance_to_similarity,
+    get_distance_expression,
 )
 
 query_language_router = APIRouter(tags=["query_language"])
@@ -34,6 +40,9 @@ class QueryRequest(BaseModel):
     """Request body for the query endpoint."""
 
     text: str
+    filters: ImageFilter | None = Field(None, description="Filter parameters for samples")
+    text_embedding: list[float] | None = Field(None, description="Text embedding to search for")
+    sample_ids: list[UUID] | None = Field(None, description="The list of requested sample IDs")
     pagination: Paginated | None = Field(None)
 
 
@@ -101,7 +110,11 @@ def _lark_error_to_diagnostic(text: str, exc: LarkError) -> Diagnostic:
 @query_language_router.post("/collections/{collection_id}/images/query")
 def query_images(
     session: SessionDep,
-    collection_id: Annotated[UUID, Path(title="Collection ID")],
+    collection: Annotated[
+        CollectionTable,
+        Path(title="Collection ID"),
+        Depends(get_and_validate_collection_id),
+    ],
     body: QueryRequest,
 ) -> ImageViewsWithCount:
     """Filter images in a collection using the query language DSL.
@@ -114,40 +127,91 @@ def query_images(
     Returns:
         Filtered images in the same shape as ``/images/list``.
     """
-    # TODO(Michal): Validate `collection_id` via `get_and_validate_collection_id`
-    # like other collection-scoped endpoints so missing collections return 404
-    # instead of an empty result.
     registry = FieldRegistry()
     ast = parse_to_ast(body.text)
     condition = compile_ast(ast, registry).get()
+    embedding_model_id, distance_expr = get_distance_expression(
+        session=session,
+        collection_id=collection.collection_id,
+        text_embedding=body.text_embedding,
+    )
 
     load_options = _get_load_options()
 
-    samples_query = (
-        select(ImageTable)
-        .options(load_options)
-        .join(ImageTable.sample)
-        .where(SampleTable.collection_id == collection_id)
-        .where(condition)
-        .order_by(col(ImageTable.file_path_abs).asc())
-    )
-    count_query = (
-        select(func.count())
-        .select_from(ImageTable)
-        .join(ImageTable.sample)
-        .where(SampleTable.collection_id == collection_id)
-        .where(condition)
-    )
+    if distance_expr is not None and embedding_model_id is not None:
+        samples_query = (
+            select(ImageTable, distance_expr)
+            .options(load_options)
+            .join(ImageTable.sample)
+            .where(SampleTable.collection_id == collection.collection_id)
+            .where(condition)
+        )
+        samples_query = apply_similarity_join(
+            query=samples_query,
+            sample_id_column=col(ImageTable.sample_id),
+            embedding_model_id=embedding_model_id,
+        )
+
+        count_query = (
+            select(func.count())
+            .select_from(ImageTable)
+            .join(ImageTable.sample)
+            .where(SampleTable.collection_id == collection.collection_id)
+            .where(condition)
+        )
+        count_query = apply_similarity_join(
+            query=count_query,
+            sample_id_column=col(ImageTable.sample_id),
+            embedding_model_id=embedding_model_id,
+        )
+    else:
+        samples_query = (
+            select(ImageTable)
+            .options(load_options)
+            .join(ImageTable.sample)
+            .where(SampleTable.collection_id == collection.collection_id)
+            .where(condition)
+        )
+        count_query = (
+            select(func.count())
+            .select_from(ImageTable)
+            .join(ImageTable.sample)
+            .where(SampleTable.collection_id == collection.collection_id)
+            .where(condition)
+        )
+
+    if body.filters:
+        samples_query = body.filters.apply(samples_query)
+        count_query = body.filters.apply(count_query)
+
+    if body.sample_ids:
+        samples_query = samples_query.where(col(ImageTable.sample_id).in_(body.sample_ids))
+        count_query = count_query.where(col(ImageTable.sample_id).in_(body.sample_ids))
+
+    if distance_expr is not None:
+        samples_query = samples_query.order_by(distance_expr)
+    else:
+        samples_query = samples_query.order_by(col(ImageTable.file_path_abs).asc())
 
     if body.pagination is not None:
         samples_query = samples_query.offset(body.pagination.offset).limit(body.pagination.limit)
 
     total_count = session.exec(count_query).one()
-    samples = list(session.exec(samples_query).all())
+    scores: list[float | None]
+    if distance_expr is not None:
+        results = session.exec(samples_query).all()
+        samples = [result[0] for result in results]
+        scores = [distance_to_similarity(result[1]) for result in results]
+    else:
+        samples = list(session.exec(samples_query).all())
+        scores = [None] * len(samples)
     next_cursor = _compute_next_cursor(body.pagination, total_count)
 
     return ImageViewsWithCount(
-        samples=[ImageView.from_image_table(image=image) for image in samples],
+        samples=[
+            ImageView.from_image_table(image=image, similarity_score=score)
+            for image, score in zip(samples, scores)
+        ],
         total_count=total_count,
         next_cursor=next_cursor,
     )

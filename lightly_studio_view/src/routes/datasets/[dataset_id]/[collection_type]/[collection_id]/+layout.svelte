@@ -85,7 +85,7 @@
 
     const { selectedCount, clearSelection } = $derived(useSelectionSummary(collectionId));
 
-    const { setQueryText } = useQueryLanguage();
+    const { activeQueryText, setQueryText } = $derived(useQueryLanguage(collectionId));
 
     // Use hideAnnotations hook
     const { handleKeyEvent } = useHideAnnotations();
@@ -628,6 +628,7 @@
                             {#if isSamples}
                                 <QueryEditor
                                     {collectionId}
+                                    initialValue={$activeQueryText}
                                     onExecute={(text) => setQueryText(text)}
                                 />
                             {/if}
@@ -760,7 +761,11 @@
                         </GridHeader>
                         <Separator class="bg-border-hard" />
                         {#if isSamples}
-                            <QueryEditor {collectionId} onExecute={(text) => setQueryText(text)} />
+                            <QueryEditor
+                                {collectionId}
+                                initialValue={$activeQueryText}
+                                onExecute={(text) => setQueryText(text)}
+                            />
                         {/if}
                     {/if}
 

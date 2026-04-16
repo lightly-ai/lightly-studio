@@ -2,17 +2,37 @@ import type { InfiniteData } from '@tanstack/svelte-query';
 import { createInfiniteQuery, infiniteQueryOptions } from '@tanstack/svelte-query';
 import { queryImages } from '$lib/api/lightly_studio_local';
 import type { QueryImagesError, QueryImagesResponse } from '$lib/api/lightly_studio_local';
-import { GRID_PAGE_SIZE } from '$lib/constants';
+import type { ImagesInfiniteParams } from '$lib/hooks/useImagesInfinite/useImagesInfinite';
+import { buildRequestBody } from '$lib/hooks/useImagesInfinite/useImagesInfinite';
 
-interface UseQueryImagesParams {
-    collectionId: string;
+type UseQueryImagesParams = ImagesInfiniteParams & {
     queryText: string;
-}
+};
 
-type QueryImagesQueryKey = readonly [string, string, string];
+type QueryImagesQueryKey = readonly [
+    string,
+    string,
+    string,
+    'normal' | 'classifier',
+    object | undefined,
+    {
+        metadata_values?: ImagesInfiniteParams['metadata_values'];
+        text_embedding?: ImagesInfiniteParams['text_embedding'];
+    }
+];
 
 const createQueryImagesOptions = (params: UseQueryImagesParams) => {
-    const queryKey: QueryImagesQueryKey = ['queryImages', params.collectionId, params.queryText];
+    const queryKey: QueryImagesQueryKey = [
+        'queryImages',
+        params.collection_id,
+        params.queryText,
+        params.mode,
+        params.mode === 'normal' ? params.filters : params.classifierSamples,
+        {
+            metadata_values: params.metadata_values,
+            text_embedding: params.text_embedding
+        }
+    ];
 
     return infiniteQueryOptions<
         QueryImagesResponse,
@@ -23,11 +43,13 @@ const createQueryImagesOptions = (params: UseQueryImagesParams) => {
     >({
         queryKey,
         queryFn: async ({ pageParam = 0, signal }) => {
+            const requestBody = buildRequestBody(params, pageParam);
+
             const { data } = await queryImages({
-                path: { collection_id: params.collectionId },
+                path: { collection_id: params.collection_id },
                 body: {
-                    text: params.queryText,
-                    pagination: { offset: pageParam, limit: GRID_PAGE_SIZE }
+                    ...requestBody,
+                    text: params.queryText
                 },
                 signal,
                 throwOnError: true

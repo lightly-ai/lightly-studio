@@ -92,6 +92,17 @@
         editorView?.destroy();
     });
 
+    $effect(() => {
+        if (!editorView) return;
+
+        const currentValue = editorView.state.doc.toString();
+        if (currentValue === initialValue) return;
+
+        editorView.dispatch({
+            changes: { from: 0, to: editorView.state.doc.length, insert: initialValue }
+        });
+    });
+
     export function clear() {
         if (!editorView) return;
         editorView.dispatch({

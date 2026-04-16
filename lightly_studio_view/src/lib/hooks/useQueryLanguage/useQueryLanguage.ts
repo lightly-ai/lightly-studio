@@ -1,15 +1,24 @@
-import { writable } from 'svelte/store';
+import { derived, writable } from 'svelte/store';
 
-// Module-level store: shared across all components using this hook
-const activeQueryText = writable<string>('');
+const activeQueryTextByCollection = writable<Record<string, string>>({});
 
-export function useQueryLanguage() {
+export function useQueryLanguage(collectionId: string) {
+    const activeQueryText = derived(activeQueryTextByCollection, ($activeQueryTextByCollection) => {
+        return $activeQueryTextByCollection[collectionId] ?? '';
+    });
+
     const setQueryText = (text: string) => {
-        activeQueryText.set(text);
+        activeQueryTextByCollection.update((state) => ({
+            ...state,
+            [collectionId]: text
+        }));
     };
 
     const clearQueryText = () => {
-        activeQueryText.set('');
+        activeQueryTextByCollection.update((state) => ({
+            ...state,
+            [collectionId]: ''
+        }));
     };
 
     return { activeQueryText, setQueryText, clearQueryText };
