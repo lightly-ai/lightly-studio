@@ -44,7 +44,7 @@ samples that do not have the selected tag.
 
 Call `dataset.export()` to get an export object, then call a format-specific method on it.
 The export methods depend on the dataset type, see
-[Dataset export reference](../api/dataset.md#datasetexport)
+[Dataset export reference](../api/dataset.md#imagedatasetexport)
 for details.
 
 ```python
