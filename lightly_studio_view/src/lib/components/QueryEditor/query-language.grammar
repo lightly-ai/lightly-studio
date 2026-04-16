@@ -1,0 +1,32 @@
+@top Query { Expr }
+
+@skip { spaces }
+
+Expr { Or }
+Or { And (kw<"or"> And)* }
+And { Not (kw<"and"> Not)* }
+Not { kw<"not"> Not | Atom }
+Atom { "(" Expr ")" | HasTag | HasAnnotation | Comparison }
+
+Comparison { FieldRef CompOp Value }
+HasTag { kw<"has_tag"> "(" String ")" }
+HasAnnotation { kw<"has_annotation"> "(" Expr ")" }
+FieldRef { Identifier ("." Identifier)* }
+Value { String | Number | BoolTrue | BoolFalse | List }
+List { "[" Value ("," Value)* "]" }
+CompOp { CmpOpToken | kw<"contains"> | kw<"in"> }
+
+kw<term> { @specialize[@name={term}]<Identifier, term> }
+BoolTrue { @specialize[@name="BoolTrue"]<Identifier, "true"> }
+BoolFalse { @specialize[@name="BoolFalse"]<Identifier, "false"> }
+
+@tokens {
+  spaces { @whitespace+ }
+  Identifier { (@asciiLetter | "_") (@asciiLetter | @digit | "_")* }
+  String { '"' (!["\\] | "\\" _)* '"' }
+  Number { '-'? @digit+ ("." @digit+)? }
+  CmpOpToken { ">=" | "<=" | "!=" | "==" | ">" | "<" }
+  @precedence { CmpOpToken, Number, Identifier }
+}
+
+@detectDelim

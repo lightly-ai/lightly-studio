@@ -6,6 +6,7 @@
     "node": ">=24"
   },
   "scripts": {
+    "build:grammar": "lezer-generator src/lib/components/QueryEditor/query-language.grammar -o src/lib/components/QueryEditor/query-language.js",
     "predev": "npm run generate-api-client",
     "dev": "vite dev --host 0.0.0.0 --port 5173",
     "prebuild": "npm run generate-api-client",
@@ -30,6 +31,7 @@
   },
   "devDependencies": {
     "@hey-api/openapi-ts": "^0.80.1",
+    "@lezer/generator": "^1.8.0",
     "@lucide/svelte": "^0.482.0",
     "@playwright/test": "^1.53.0",
     "@storybook/addon-docs": "10.2.10",
@@ -75,6 +77,13 @@
     "vitest-svelte-kit": "^0.0.7"
   },
   "dependencies": {
+    "@codemirror/autocomplete": "^6.20.1",
+    "@codemirror/language": "^6.12.3",
+    "@codemirror/lint": "^6.9.5",
+    "@codemirror/state": "^6.6.0",
+    "@codemirror/view": "^6.41.0",
+    "@lezer/highlight": "^1.2.3",
+    "@lezer/lr": "^1.4.8",
     "@tailwindcss/aspect-ratio": "^0.4.2",
     "@tailwindcss/container-queries": "^0.1.1",
     "@tailwindcss/forms": "^0.5.9",

@@ -155,7 +155,7 @@ Top-level function: `execute_query(text: str, session: Session, collection_id: U
 
 ---
 
-## Step 3: Frontend — CodeMirror Editor with Autocomplete
+## Step 3: Frontend — CodeMirror Editor with Autocomplete ✅ DONE
 
 **Goal:** Full frontend: Lezer grammar, CodeMirror component with autocomplete and lint, integrated into samples page.
 
@@ -232,6 +232,26 @@ Integration into samples page:
 - `ai_guidelines/frontend.md` — conventions
 
 **Acceptance:** Type `width > 1024 and has_tag("train")` in the editor on the samples page → grid updates. Autocomplete suggests fields and operators. Errors show inline.
+
+**Learnings / diversions from plan:**
+
+- **`build:grammar` not wired into `predev`/`prebuild`** — the plan said to wire `build:grammar` into `predev` and `prebuild`. This was intentionally skipped: the compiled `query-language.js` is committed to the repo (just like generated API clients), so it only needs to be re-run when the grammar changes. Wiring it into every dev/build startup would slow down the workflow and re-generate an identical file each time.
+
+- **Two generated files, not one** — `lezer-generator` outputs two files: `query-language.js` (the parser tables + runtime) and `query-language.terms.js` (term ID constants). Only the former is imported in `query-language.ts`; the terms file is available if needed for future completionSource enhancements.
+
+- **`in` keyword becomes `_in` in generated terms** — `lezer-generator` renames the `in` term to `_in` (likely to avoid conflict with JS `in` operator). The grammar source still uses `kw<"in">` correctly; this only affects the terms constants file.
+
+- **QueryEditor not added to `GridHeader.svelte`** — the plan said to add it to `GridHeader`. Instead, it was placed directly in `+layout.svelte` inside `{#if isSamples}` blocks (there are two — one for the plot/no-plot branch). `GridHeader` is a thin layout wrapper with a `children` slot; adding logic there would couple it to a specific feature. The layout already owns all filter UI (search bar, tags, labels), so it was the natural home.
+
+- **`build:grammar` script uses `lezer-generator` directly** — this assumes `@lezer/generator` is installed locally (it is, as a devDependency). The script is `"build:grammar": "lezer-generator ..."` without `npx`, which works because npm scripts resolve binaries from `node_modules/.bin`.
+
+- **`?q=` URL param binding skipped** — the plan called for binding the query text to the `?q=` URL search param for shareability. This was deferred: implementing it properly in SvelteKit requires either a load function reading `url.searchParams` or a `goto()` call on every change, which adds complexity. The current in-memory store (`useQueryLanguage`) already persists across tab/filter changes within a session.
+
+- **`useQueryImages` added as new hook** — the plan didn't mention a separate hook for infinite query execution; it implied direct integration. A `useQueryImages` hook was created (mirroring `useImagesInfinite`) to keep `Samples.svelte` clean. The hook uses `enabled: queryText.trim().length > 0` so the query never fires when text is empty.
+
+- **Value-position completions not implemented** — `completionSource.ts` handles field and operator positions but not value suggestions (inline enums or `/query-suggest` calls). This was deferred; the lint feedback from the backend provides adequate error guidance for values in the prototype.
+
+- **`npm install` requires `--engine-strict=false`** — the package.json declares `"node": ">=24"` but the dev machine runs Node 22. All `npm install` commands needed `--engine-strict=false` to proceed.
 
 ---
 
