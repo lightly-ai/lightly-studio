@@ -105,7 +105,7 @@ Top-level function: `execute_query(text: str, session: Session, collection_id: U
 
 ---
 
-## Step 2: Backend — API Endpoints
+## Step 2: Backend — API Endpoints ✅ DONE
 
 **Goal:** Expose the query language over HTTP.
 
@@ -144,6 +144,14 @@ Top-level function: `execute_query(text: str, session: Session, collection_id: U
 - `lightly_studio/resolvers/image_resolver/` — query execution pattern
 
 **Acceptance:** `curl -X POST .../images/query -d '{"text":"width > 500"}'` returns filtered images. `make export-schema` succeeds.
+
+**Learnings / diversions from plan:**
+
+- **`_get_load_options` and `_compute_next_cursor` imported from internal module** — rather than restructuring the resolver, the route handler directly imports these private helpers from `get_all_by_collection_id.py`. Works fine for a prototype.
+
+- **`suggest_values` uses `Depends(get_and_validate_collection_id)` without a separate `Path`** — FastAPI resolves the `collection_id` path param automatically through the dependency; no need to declare it separately in the function signature.
+
+- **Lark's LALR parser emits `UnexpectedToken` for most errors** — the diagnostic converter handles `UnexpectedToken` (including `$END` for EOF), `UnexpectedCharacters`, and `UnexpectedEOF`. Position is taken from `token.start_pos` (0-based char offset in the input string).
 
 ---
 

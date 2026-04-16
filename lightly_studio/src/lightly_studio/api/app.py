@@ -38,6 +38,7 @@ from lightly_studio.api.routes.api import (
     image_embedding,
     metadata,
     operator,
+    query_language,
     sample,
     selection,
     settings,
@@ -135,6 +136,7 @@ api_router = APIRouter(prefix="/api", tags=["api"])
 
 api_router.include_router(collection.collection_router)
 api_router.include_router(collection_tag.tag_router)
+api_router.include_router(query_language.query_language_router)
 api_router.include_router(export.export_router)
 api_router.include_router(image.image_router)
 api_router.include_router(sample.sample_router)
