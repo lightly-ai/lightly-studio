@@ -40,10 +40,10 @@
     const exportTypeLabels: Record<typeof exportType, string> = {
         samples: 'Image Filenames',
         object_detections: 'Image Object Detections',
-        segmentation: 'Image Instance Segmentations',
+        segmentation: 'Image Segmentation masks',
         semantic_segmentations: 'Image Semantic Segmentations',
         captions: 'Image Captions',
-        youtube_vis_segmentation: 'YouTube-VIS Video Instance Segmentations'
+        youtube_vis_segmentation: 'YouTube-VIS Video Segmentation masks'
     };
     const exportTypeTriggerContent = $derived(exportTypeLabels[exportType]);
     let collectionId = page.params.collection_id;
@@ -119,14 +119,14 @@
     const exportAnnotationsURL = `${PUBLIC_LIGHTLY_STUDIO_API_URL}api/collections/${collectionId}/export/annotations?ts=${Date.now()}&export_format=object_detection_coco`;
 
     //
-    // Instance segmentation export
+    // Segmentation mask export
     //
-    const exportInstanceSegmentationsURL = `${PUBLIC_LIGHTLY_STUDIO_API_URL}api/collections/${collectionId}/export/annotations?ts=${Date.now()}&export_format=segmentation_mask_coco`;
+    const exportSegmentationMaskURL = `${PUBLIC_LIGHTLY_STUDIO_API_URL}api/collections/${collectionId}/export/annotations?ts=${Date.now()}&export_format=segmentation_mask_coco`;
 
     //
-    // YouTube-VIS video instance segmentation export
+    // YouTube-VIS video Segmentation mask export
     //
-    const exportYoutubeVisInstanceSegmentationsURL = `${PUBLIC_LIGHTLY_STUDIO_API_URL}api/collections/${collectionId}/export/youtube-vis?ts=${Date.now()}&export_format=youtube_vis_segmentation`;
+    const exportYoutubeVisSegmentationMaskURL = `${PUBLIC_LIGHTLY_STUDIO_API_URL}api/collections/${collectionId}/export/youtube-vis?ts=${Date.now()}&export_format=youtube_vis_segmentation`;
     // Semantic segmentation export
     //
     const exportSemanticSegmentationsURL = `${PUBLIC_LIGHTLY_STUDIO_API_URL}api/collections/${collectionId}/export/annotations?ts=${Date.now()}&export_format=pascal_voc`;
@@ -165,8 +165,8 @@
                                 {#if isVideoCollection}
                                     <Select.Item
                                         value="youtube_vis_segmentation"
-                                        label="YouTube-VIS Video Instance Segmentations"
-                                        >YouTube-VIS Video Instance Segmentations</Select.Item
+                                        label="YouTube-VIS Video Segmentation masks"
+                                        >YouTube-VIS Video Segmentation masks</Select.Item
                                     >
                                 {:else}
                                     <Select.Item value="samples" label="Image Filenames"
@@ -179,8 +179,8 @@
                                     >
                                     <Select.Item
                                         value="segmentation"
-                                        label="Image Instance Segmentations"
-                                        >Image Instance Segmentations</Select.Item
+                                        label="Image Segmentation masks"
+                                        >Image Segmentation masks</Select.Item
                                     >
                                     <Select.Item
                                         value="semantic_segmentations"
@@ -317,12 +317,12 @@
 
                     <Tabs.Content value="segmentation" class="pt-2">
                         <p class="text-sm text-muted-foreground">
-                            The instance segmentations will be exported in COCO format.
+                            The Segmentation masks will be exported in COCO format.
                         </p>
 
                         <Button
                             class="relative my-4 w-full"
-                            href={exportInstanceSegmentationsURL}
+                            href={exportSegmentationMaskURL}
                             target="_blank"
                             data-testid="submit-button-instance-segmentations"
                         >
@@ -333,13 +333,13 @@
                     {#if isVideoCollection}
                         <Tabs.Content value="youtube_vis_segmentation" class="pt-2">
                             <p class="text-sm text-muted-foreground">
-                                The video instance segmentations will be exported in YouTube-VIS
+                                The video Segmentation masks will be exported in YouTube-VIS
                                 format.
                             </p>
 
                             <Button
                                 class="relative my-4 w-full"
-                                href={exportYoutubeVisInstanceSegmentationsURL}
+                                href={exportYoutubeVisSegmentationMaskURL}
                                 target="_blank"
                                 data-testid="submit-button-youtube-vis-instance-segmentations"
                             >
