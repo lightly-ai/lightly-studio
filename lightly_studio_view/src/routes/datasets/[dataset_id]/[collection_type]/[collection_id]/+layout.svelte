@@ -515,9 +515,6 @@
                         <div
                             class="min-h-0 flex-1 space-y-2 overflow-y-auto px-4 pb-2 dark:[color-scheme:dark]"
                         >
-                            <div>
-                                <TagsMenu collection_id={collectionId} {gridType} />
-                            </div>
                             {#if isSamples}
                                 <Segment title="Query" icon={Filter}>
                                     <div class="flex items-center gap-2">
@@ -555,6 +552,9 @@
                                     </div>
                                 </Segment>
                             {/if}
+                            <div>
+                                <TagsMenu collection_id={collectionId} {gridType} />
+                            </div>
                             <Segment title="Filters" icon={SlidersHorizontal}>
                                 <div class="space-y-2">
                                     <LabelsMenu
