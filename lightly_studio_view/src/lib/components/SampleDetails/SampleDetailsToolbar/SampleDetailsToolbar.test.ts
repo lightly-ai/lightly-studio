@@ -111,7 +111,7 @@ describe('SampleDetailsToolbar', () => {
         expect(mockAnnotationLabelContext.annotationId).toBeNull();
     });
 
-    it('activates brush tool and defaults to instance segmentation', async () => {
+    it('activates brush tool and defaults to segmentation mask', async () => {
         mockAnnotationLabelContext.annotationLabel = 'car';
         const { getByLabelText } = render(SampleDetailsToolbar);
 
@@ -183,7 +183,7 @@ describe('SampleDetailsToolbar', () => {
         expect(mockAnnotationLabelContext.annotationId).toBe('ann-1');
     });
 
-    it('activates brush tool, sets instance segmentation and keep the annotation id when is annotation details', async () => {
+    it('activates brush tool, sets segmentation mask and keep the annotation id when is annotation details', async () => {
         mockAnnotationLabelContext.annotationLabel = 'car';
         mockAnnotationLabelContext.annotationId = 'ann-1';
         mockAnnotationLabelContext.isOnAnnotationDetailsView = true;
@@ -229,7 +229,7 @@ describe('SampleDetailsToolbar', () => {
         expect(mockAnnotationLabelContext.annotationType).toBe(AnnotationType.SEGMENTATION_MASK);
     });
 
-    it('normalizes non-instance annotation type to instance segmentation when remounting in brush mode', () => {
+    it('normalizes non-instance annotation type to segmentation mask when remounting in brush mode', () => {
         mockSampleDetailsToolbarContext.status = 'brush';
         mockAnnotationLabelContext.annotationType = AnnotationType.OBJECT_DETECTION;
 
@@ -238,7 +238,7 @@ describe('SampleDetailsToolbar', () => {
         expect(mockAnnotationLabelContext.annotationType).toBe(AnnotationType.SEGMENTATION_MASK);
     });
 
-    it('syncs annotation type to instance segmentation when mounted in brush mode', () => {
+    it('syncs annotation type to segmentation mask when mounted in brush mode', () => {
         mockSampleDetailsToolbarContext.status = 'brush';
         mockAnnotationLabelContext.annotationType = null;
 

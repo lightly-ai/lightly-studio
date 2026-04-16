@@ -337,7 +337,7 @@ class ImageDataset(BaseSampleDataset[ImageSample]):
 
         Pascal VOC masks encode class IDs per pixel (semantic segmentation).
         Imported masks are persisted as `AnnotationType.SEGMENTATION_MASK`.
-        Query and export workflows should use instance segmentation type filters.
+        Query and export workflows should use segmentation mask type filters.
 
         Args:
             images_path: Path to the folder containing the images.

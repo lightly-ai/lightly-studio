@@ -1,4 +1,4 @@
-"""Tests for updating segmentation mask of annotation instance segmentation."""
+"""Tests for updating segmentation mask of annotation segmentation mask."""
 
 import pytest
 from sqlmodel import Session

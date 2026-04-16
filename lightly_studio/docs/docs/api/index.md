@@ -100,7 +100,7 @@ Files remain in the remote storage and are streamed to the UI on demand. Make su
 **Current Limitations:**
 
 !!! warning "Cloud Storage Limitation"
-    Cloud storage is supported for raw media folders via `add_images_from_path()` and `add_videos_from_path()`, and for COCO object detection and instance segmentation imports via `add_samples_from_coco()`. Other dataset importers still expect local files.
+    Cloud storage is supported for raw media folders via `add_images_from_path()` and `add_videos_from_path()`, and for COCO object detection and segmentation mask imports via `add_samples_from_coco()`. Other dataset importers still expect local files.
 
 
 ## Sample
@@ -142,7 +142,7 @@ for sample in dataset:
 
 ### Accessing annotations
 
-You can access annotations of each sample. They can be created in the GUI or imported, e.g. from the COCO format, see the [COCO Instance Segmentation](../#quickstart) example. In the next section [Indexing with Predictions](#indexing-with-predictions) an example of creating annotations from Python is provided.
+You can access annotations of each sample. They can be created in the GUI or imported, e.g. from the COCO format, see the [COCO Segmentation Mask](../#quickstart) example. In the next section [Indexing with Predictions](#indexing-with-predictions) an example of creating annotations from Python is provided.
 
 ```py
 from lightly_studio.core.annotation import ObjectDetectionAnnotation

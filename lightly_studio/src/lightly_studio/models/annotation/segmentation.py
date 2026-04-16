@@ -20,7 +20,7 @@ else:
 
 
 class SegmentationAnnotationTable(SQLModel, table=True):
-    """Database table model for instance segmentation annotations."""
+    """Database table model for segmentation mask annotations."""
 
     __tablename__ = "segmentation_annotation"
 
@@ -47,7 +47,7 @@ class SegmentationAnnotationTable(SQLModel, table=True):
 
 
 class SegmentationAnnotationView(SQLModel):
-    """API response model for instance segmentation annotations."""
+    """API response model for segmentation mask annotations."""
 
     x: int
     y: int

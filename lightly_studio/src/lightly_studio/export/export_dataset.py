@@ -76,7 +76,7 @@ class DatasetExport:
         to_coco_captions(samples=self.samples, output_json=Path(output_json))
 
     def to_coco_segmentation_masks(self, output_json: PathLike | None = None) -> None:
-        """Exports instance segmentations to a COCO format JSON file.
+        """Exports segmentation masks to a COCO format JSON file.
 
         Args:
             output_json: The path to the output COCO JSON file. If not provided,
@@ -123,7 +123,7 @@ def to_coco_segmentation_masks(
     samples: Iterable[ImageSample],
     output_json: Path,
 ) -> None:
-    """Exports instance segmentation annotations to a COCO format JSON file.
+    """Exports segmentation mask annotations to a COCO format JSON file.
 
     This function is for internal use. Use `Dataset.export().to_coco_segmentation_masks()`
     instead.
@@ -148,7 +148,7 @@ def to_pascalvoc_segmentation_mask(
     samples: Iterable[ImageSample],
     output_folder: Path,
 ) -> None:
-    """Exports instance segmentation annotations to a Pascal VOC segmentation folder.
+    """Exports segmentation mask annotations to a Pascal VOC segmentation folder.
 
     This function is for internal use.
 
