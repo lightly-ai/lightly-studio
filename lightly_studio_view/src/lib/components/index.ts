@@ -24,7 +24,6 @@ export { default as SampleImage } from '$lib/components/SampleImage/index.svelte
 export { default as Samples } from '$lib/components/Samples/Samples.svelte';
 export { default as SelectableBox } from '$lib/components/SelectableBox/SelectableBox.svelte';
 export { SettingsDialog } from '$lib/components/Settings/';
-export { default as TagCreateDialog } from '$lib/components/TagCreateDialog/TagCreateDialog.svelte';
 export { default as TagsMenu } from '$lib/components/TagsMenu/TagsMenu.svelte';
 export { default as UserInfo } from '$lib/components/UserInfo/index.svelte';
 export { default as CreateSelectionDialog } from '$lib/components/Selection/CreateSelectionDialog.svelte';
