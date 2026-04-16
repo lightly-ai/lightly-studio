@@ -6,6 +6,7 @@ from datetime import datetime, timezone
 from uuid import UUID
 
 import sqlmodel
+from sqlalchemy.exc import IntegrityError
 from sqlmodel import Session, col, select
 
 from lightly_studio.models.sample import SampleTable, SampleTagLinkTable
@@ -60,6 +61,19 @@ def update(session: Session, tag_id: UUID, tag_data: TagUpdate) -> TagTable | No
     if not tag:
         return None
 
+    conflicting_tag = get_by_name(
+        session=session, tag_name=tag_data.name, collection_id=tag.collection_id
+    )
+    if conflicting_tag and conflicting_tag.tag_id != tag_id and conflicting_tag.kind == tag.kind:
+        raise IntegrityError(statement=None, params=None, orig=Exception("Tag already exists"))
+
+    sample_ids = [sample.sample_id for sample in tag.samples]
+
+    session.exec(
+        sqlmodel.delete(SampleTagLinkTable).where(col(SampleTagLinkTable.tag_id) == tag_id)
+    )
+    session.commit()
+
     # due to duckdb/OLAP optimisations, update operations effecting unique
     # constraints (e.g colums) will lead to a unique constraint violation.
     # This is due to a update is implemented as delete+insert. The error
@@ -69,13 +83,22 @@ def update(session: Session, tag_id: UUID, tag_data: TagUpdate) -> TagTable | No
     session.delete(tag)
     session.commit()
 
-    # create clone of tag with updated values
-    tag_updated = TagTable.model_validate(tag)
-    tag_updated.name = tag_data.name
-    tag_updated.description = tag_data.description
-    tag_updated.updated_at = datetime.now(timezone.utc)
+    tag_updated = TagTable(
+        tag_id=tag.tag_id,
+        collection_id=tag.collection_id,
+        name=tag_data.name,
+        description=tag_data.description,
+        kind=tag.kind,
+        created_at=tag.created_at,
+        updated_at=datetime.now(timezone.utc),
+    )
 
     session.add(tag_updated)
+    session.commit()
+
+    for sample_id in sample_ids:
+        session.merge(SampleTagLinkTable(sample_id=sample_id, tag_id=tag_id))
+
     session.commit()
     session.refresh(tag_updated)
     return tag_updated
