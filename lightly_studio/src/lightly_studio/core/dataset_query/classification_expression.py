@@ -22,8 +22,8 @@ class ClassificationField:
     """Providing access to predefined classification fields for queries."""
 
     label = AnnotationComparableField(
-        col(AnnotationLabelTable.annotation_label_name),
-        AnnotationBaseTable.annotation_label,
+        column=col(AnnotationLabelTable.annotation_label_name),
+        relationship=AnnotationBaseTable.annotation_label,
     )
 
 

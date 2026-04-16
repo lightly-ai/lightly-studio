@@ -30,24 +30,24 @@ class ObjectDetectionField:
     """Providing access to predefined object detection fields for queries."""
 
     width = AnnotationNumericalField(
-        col(ObjectDetectionAnnotationTable.width),
-        AnnotationBaseTable.object_detection_details,
+        column=col(ObjectDetectionAnnotationTable.width),
+        relationship=AnnotationBaseTable.object_detection_details,
     )
     height = AnnotationNumericalField(
-        col(ObjectDetectionAnnotationTable.height),
-        AnnotationBaseTable.object_detection_details,
+        column=col(ObjectDetectionAnnotationTable.height),
+        relationship=AnnotationBaseTable.object_detection_details,
     )
     x = AnnotationNumericalField(
-        col(ObjectDetectionAnnotationTable.x),
-        AnnotationBaseTable.object_detection_details,
+        column=col(ObjectDetectionAnnotationTable.x),
+        relationship=AnnotationBaseTable.object_detection_details,
     )
     y = AnnotationNumericalField(
-        col(ObjectDetectionAnnotationTable.y),
-        AnnotationBaseTable.object_detection_details,
+        column=col(ObjectDetectionAnnotationTable.y),
+        relationship=AnnotationBaseTable.object_detection_details,
     )
     label = AnnotationComparableField(
-        col(AnnotationLabelTable.annotation_label_name),
-        AnnotationBaseTable.annotation_label,
+        column=col(AnnotationLabelTable.annotation_label_name),
+        relationship=AnnotationBaseTable.annotation_label,
     )
     # TODO(lukas, 4/2026): add confidence
 

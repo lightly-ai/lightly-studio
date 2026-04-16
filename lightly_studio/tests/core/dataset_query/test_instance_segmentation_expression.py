@@ -2,7 +2,6 @@ from __future__ import annotations
 
 from sqlmodel import Session, select
 
-from lightly_studio.core.dataset_query import AND
 from lightly_studio.core.dataset_query.instance_segmentation_expression import (
     InstanceSegmentationField,
     InstanceSegmentationQuery,
@@ -67,10 +66,8 @@ class TestInstanceSegmentationExpressions:
             .where(SampleTable.collection_id == collection_id)
             .where(
                 InstanceSegmentationQuery.match(
-                    AND(
-                        InstanceSegmentationField.width > 100,
-                        InstanceSegmentationField.height == 100,
-                    )
+                    InstanceSegmentationField.width > 100,
+                    InstanceSegmentationField.height == 100,
                 ).get()
             )
         )

@@ -26,28 +26,28 @@ class InstanceSegmentationField:
     """Providing access to predefined instance segmentation fields for queries."""
 
     width = AnnotationNumericalField(
-        col(SegmentationAnnotationTable.width),
-        AnnotationBaseTable.segmentation_details,
+        column=col(SegmentationAnnotationTable.width),
+        relationship=AnnotationBaseTable.segmentation_details,
     )
     height = AnnotationNumericalField(
-        col(SegmentationAnnotationTable.height),
-        AnnotationBaseTable.segmentation_details,
+        column=col(SegmentationAnnotationTable.height),
+        relationship=AnnotationBaseTable.segmentation_details,
     )
     x = AnnotationNumericalField(
-        col(SegmentationAnnotationTable.x),
-        AnnotationBaseTable.segmentation_details,
+        column=col(SegmentationAnnotationTable.x),
+        relationship=AnnotationBaseTable.segmentation_details,
     )
     y = AnnotationNumericalField(
-        col(SegmentationAnnotationTable.y),
-        AnnotationBaseTable.segmentation_details,
+        column=col(SegmentationAnnotationTable.y),
+        relationship=AnnotationBaseTable.segmentation_details,
     )
     segmentation_mask = AnnotationComparableField(
-        col(SegmentationAnnotationTable.segmentation_mask),
-        AnnotationBaseTable.segmentation_details,
+        column=col(SegmentationAnnotationTable.segmentation_mask),
+        relationship=AnnotationBaseTable.segmentation_details,
     )
     label = AnnotationComparableField(
-        col(AnnotationLabelTable.annotation_label_name),
-        AnnotationBaseTable.annotation_label,
+        column=col(AnnotationLabelTable.annotation_label_name),
+        relationship=AnnotationBaseTable.annotation_label,
     )
 
 
