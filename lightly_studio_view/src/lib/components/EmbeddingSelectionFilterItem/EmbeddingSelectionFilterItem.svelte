@@ -46,7 +46,8 @@
             <Checkbox
                 checked={isPlotFilterApplied}
                 aria-label="Embedding plot filter"
-                onCheckedChange={(nextChecked) => setEmbeddingFilterVisibility(nextChecked === true)}
+                onCheckedChange={(nextChecked) =>
+                    setEmbeddingFilterVisibility(nextChecked === true)}
             />
             <div class="min-w-0 flex-1">
                 <div class="truncate text-sm font-medium">Embedding Plot Filter</div>

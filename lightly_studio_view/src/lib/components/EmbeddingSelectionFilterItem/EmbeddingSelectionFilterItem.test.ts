@@ -1,60 +1,130 @@
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { fireEvent, render, screen } from '@testing-library/svelte';
+import '@testing-library/jest-dom';
+import { writable } from 'svelte/store';
 import EmbeddingSelectionFilterItem from './EmbeddingSelectionFilterItem.svelte';
 
-const defaultProps = {
-    checked: false,
-    selectionCount: 1,
-    itemLabel: 'sample',
-    onVisibilityChange: vi.fn(),
-    onClear: vi.fn()
-};
+const mocks = vi.hoisted(() => ({
+    setRangeSelectionForCollection: vi.fn(),
+    useEmbeddingFilterForImages: vi.fn(),
+    useEmbeddingFilterForVideos: vi.fn()
+}));
+
+vi.mock('$lib/hooks/useGlobalStorage', () => ({
+    useGlobalStorage: () => ({
+        setRangeSelectionForCollection: mocks.setRangeSelectionForCollection
+    })
+}));
+
+vi.mock('$lib/hooks/useEmbeddingFilter/useEmbeddingFilterForImages', () => ({
+    useEmbeddingFilterForImages: mocks.useEmbeddingFilterForImages
+}));
+
+vi.mock('$lib/hooks/useEmbeddingFilter/useEmbeddingFilterForVideos', () => ({
+    useEmbeddingFilterForVideos: mocks.useEmbeddingFilterForVideos
+}));
+
+const imageEffectiveCount = writable(1);
+const imageIsVisible = writable(false);
+const imageSetVisibility = vi.fn();
+const imageClearFilter = vi.fn();
+
+const videoEffectiveCount = writable(3);
+const videoIsVisible = writable(false);
+const videoSetVisibility = vi.fn();
+const videoClearFilter = vi.fn();
 
 describe('EmbeddingSelectionFilterItem', () => {
-    it('renders filter item with title and singular count', () => {
-        render(EmbeddingSelectionFilterItem, {
-            props: { ...defaultProps }
+    beforeEach(() => {
+        vi.clearAllMocks();
+
+        imageEffectiveCount.set(1);
+        imageIsVisible.set(false);
+        videoEffectiveCount.set(3);
+        videoIsVisible.set(false);
+
+        mocks.useEmbeddingFilterForImages.mockReturnValue({
+            effectiveCount: imageEffectiveCount,
+            isVisible: imageIsVisible,
+            setVisibility: imageSetVisibility,
+            clearFilter: imageClearFilter
         });
 
+        mocks.useEmbeddingFilterForVideos.mockReturnValue({
+            effectiveCount: videoEffectiveCount,
+            isVisible: videoIsVisible,
+            setVisibility: videoSetVisibility,
+            clearFilter: videoClearFilter
+        });
+    });
+
+    it('uses image hook only and renders sample label in samples view', () => {
+        render(EmbeddingSelectionFilterItem, {
+            props: {
+                collectionIdStore: writable('collection-id'),
+                isVideos: false,
+                isSamples: true
+            }
+        });
+
+        expect(mocks.useEmbeddingFilterForImages).toHaveBeenCalledOnce();
+        expect(mocks.useEmbeddingFilterForVideos).not.toHaveBeenCalled();
         expect(screen.getByTestId('embedding-selection-filter-chip')).toBeInTheDocument();
         expect(screen.getByText('Embedding Plot Filter')).toBeInTheDocument();
         expect(screen.getByText(/1\s*sample/i)).toBeInTheDocument();
     });
 
-    it('renders pluralized count for multiple selected items', () => {
+    it('uses video hook only and renders video label in videos view', () => {
         render(EmbeddingSelectionFilterItem, {
             props: {
-                ...defaultProps,
-                selectionCount: 2
+                collectionIdStore: writable('collection-id'),
+                isVideos: true,
+                isSamples: false
             }
         });
 
-        expect(screen.getByText(/2\s*samples/i)).toBeInTheDocument();
+        expect(mocks.useEmbeddingFilterForVideos).toHaveBeenCalledOnce();
+        expect(mocks.useEmbeddingFilterForImages).not.toHaveBeenCalled();
+        expect(screen.getByText(/3\s*videos/i)).toBeInTheDocument();
     });
 
-    it('calls onVisibilityChange when checkbox is toggled', async () => {
-        const onVisibilityChange = vi.fn();
+    it('calls active hook setVisibility when checkbox is toggled', async () => {
         render(EmbeddingSelectionFilterItem, {
             props: {
-                ...defaultProps,
-                onVisibilityChange
+                collectionIdStore: writable('collection-id'),
+                isVideos: true,
+                isSamples: false
             }
         });
 
         await fireEvent.click(screen.getByLabelText('Embedding plot filter'));
-        expect(onVisibilityChange).toHaveBeenCalledWith(true);
+        expect(videoSetVisibility).toHaveBeenCalledWith(true);
+        expect(imageSetVisibility).not.toHaveBeenCalled();
     });
 
-    it('calls onClear when clear button is clicked', async () => {
-        const onClear = vi.fn();
+    it('calls active hook clearFilter when clear button is clicked', async () => {
         render(EmbeddingSelectionFilterItem, {
             props: {
-                ...defaultProps,
-                onClear
+                collectionIdStore: writable('collection-id'),
+                isVideos: false,
+                isSamples: true
             }
         });
 
         await fireEvent.click(screen.getByLabelText('Clear embedding plot filter'));
-        expect(onClear).toHaveBeenCalledOnce();
+        expect(imageClearFilter).toHaveBeenCalledOnce();
+        expect(videoClearFilter).not.toHaveBeenCalled();
+    });
+
+    it('does not render when there is no plot filter context', () => {
+        render(EmbeddingSelectionFilterItem, {
+            props: {
+                collectionIdStore: writable('collection-id'),
+                isVideos: false,
+                isSamples: false
+            }
+        });
+
+        expect(screen.queryByTestId('embedding-selection-filter-chip')).not.toBeInTheDocument();
     });
 });
