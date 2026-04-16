@@ -57,3 +57,30 @@ def test_delete_tag__deletes_tag_with_sample_links(
     assert response.status_code == HTTP_STATUS_OK
     assert response.json() == {"status": "deleted"}
     assert tag_resolver.get_by_id(session=db_session, tag_id=tag.tag_id) is None
+
+
+def test_update_tag__renames_tag_with_sample_links(
+    db_session: Session, test_client: TestClient
+) -> None:
+    collection = create_collection(session=db_session)
+    tag = create_tag(session=db_session, collection_id=collection.collection_id)
+    image = create_image(session=db_session, collection_id=collection.collection_id)
+
+    tag_resolver.add_tag_to_sample(session=db_session, tag_id=tag.tag_id, sample=image.sample)
+
+    response = test_client.put(
+        f"/api/collections/{collection.collection_id}/tags/{tag.tag_id}",
+        json={
+            "name": "renamed_tag",
+            "description": tag.description,
+            "kind": tag.kind,
+        },
+    )
+
+    assert response.status_code == HTTP_STATUS_OK
+    assert response.json()["name"] == "renamed_tag"
+
+    updated_tag = tag_resolver.get_by_id(session=db_session, tag_id=tag.tag_id)
+    assert updated_tag is not None
+    assert updated_tag.name == "renamed_tag"
+    assert [sample.sample_id for sample in updated_tag.samples] == [image.sample.sample_id]
