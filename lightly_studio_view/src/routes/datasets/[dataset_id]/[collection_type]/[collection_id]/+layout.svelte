@@ -4,25 +4,16 @@
     import {
         CombinedMetadataDimensionsFilters,
         Footer,
-        GridHeader,
+        Header,
         LabelsMenu,
-        SelectionPill,
-        TagsMenu
+        TagsMenu,
+        CollectionLayout,
+        CollectionSearchBar
     } from '$lib/components';
-    import Input from '$lib/components/ui/input/input.svelte';
-    import Separator from '$lib/components/ui/separator/separator.svelte';
-    import {
-        Search,
-        SlidersHorizontal,
-        Image as ImageIcon,
-        X,
-        ChartNetwork,
-        GripVertical
-    } from '@lucide/svelte';
+    import { SlidersHorizontal, ChartNetwork } from '@lucide/svelte';
     import { onDestroy, onMount } from 'svelte';
     import { toStore } from 'svelte/store';
     import { toast } from 'svelte-sonner';
-    import { Header } from '$lib/components';
     import MenuDialogHost from '$lib/components/Header/MenuDialogHost.svelte';
 
     import Segment from '$lib/components/Segment/Segment.svelte';
@@ -48,7 +39,6 @@
     import { useImageAnnotationCounts } from '$lib/hooks/useImageAnnotationCounts/useImageAnnotationCounts';
     import { useGlobalStorage } from '$lib/hooks/useGlobalStorage.js';
     import { Button } from '$lib/components/ui/index.js';
-    import { PaneGroup, Pane, PaneResizer } from 'paneforge';
     import { useVideoAnnotationCounts } from '$lib/hooks/useVideoAnnotationsCount/useVideoAnnotationsCount.js';
     import {
         createMetadataFilters,
@@ -485,295 +475,101 @@
     );
 </script>
 
-<div class="flex-none">
-    <Header {collection} />
-    <MenuDialogHost {isSamples} {isVideos} {hasEmbeddings} {collection} />
-</div>
+<CollectionLayout
+    showDetails={isSampleDetails || isAnnotationDetails || isGroupDetails || isVideoDetails}
+    {showLeftSidebar}
+    showWithPlot={(isSamples || isVideos) && $showPlot}
+    showGridHeader={isSamples || isAnnotations || isVideos || isGroups}
+    showSelectionPill={showLeftSidebar}
+    selectedCount={$selectedCount}
+    onClearSelection={clearSelection}
+>
+    {#snippet header()}
+        <Header {collection} />
+        <MenuDialogHost {isSamples} {isVideos} {hasEmbeddings} {collection} />
+    {/snippet}
 
-<div class="relative flex min-h-0 flex-1 flex-col">
-    {#if isSampleDetails || isAnnotationDetails || isGroupDetails || isVideoDetails}
-        {@render children()}
-    {:else}
-        <div class="flex min-h-0 flex-1 space-x-4 px-4">
-            {#if showLeftSidebar}
-                <div class="flex h-full min-h-0 w-80 flex-col">
-                    <div class="flex min-h-0 flex-1 flex-col rounded-[1vw] bg-card py-4">
-                        <div
-                            class="min-h-0 flex-1 space-y-2 overflow-y-auto px-4 pb-2 dark:[color-scheme:dark]"
-                        >
-                            <div>
-                                <TagsMenu collection_id={collectionId} {gridType} />
-                            </div>
-                            <Segment title="Filters" icon={SlidersHorizontal}>
-                                <div class="space-y-2">
-                                    <LabelsMenu
-                                        {annotationFilterRows}
-                                        onToggleAnnotationFilter={toggleAnnotationFilterSelection}
-                                    />
-
-                                    {#if isSamples || isVideos || isVideoFrames}
-                                        {#key collectionId}
-                                            <CombinedMetadataDimensionsFilters
-                                                {isVideos}
-                                                {isVideoFrames}
-                                            />
-                                        {/key}
-                                    {/if}
-                                </div>
-                            </Segment>
-                        </div>
-                    </div>
-                </div>
-            {/if}
-
-            {#if (isSamples || isVideos) && $showPlot}
-                <!-- When plot is shown, use PaneGroup for the main content + plot -->
-                <PaneGroup direction="horizontal" class="flex-1">
-                    <Pane defaultSize={50} minSize={30} class="flex">
-                        <div
-                            class="relative flex flex-1 flex-col space-y-4 rounded-[1vw] bg-card p-4"
-                        >
-                            <GridHeader>
-                                <div class="flex-1">
-                                    {#if hasEmbeddings}
-                                        <div
-                                            class="relative"
-                                            role="region"
-                                            aria-label="Search by image or text"
-                                            ondragover={handleDragOver}
-                                            ondragleave={handleDragLeave}
-                                            ondrop={handleDrop}
-                                        >
-                                            <Search
-                                                class="absolute left-2 top-[50%] h-4 w-4 translate-y-[-50%] text-muted-foreground"
-                                            />
-                                            {#if activeImage}
-                                                <div
-                                                    class="flex h-10 w-full items-center rounded-md border border-input bg-background px-3 py-2 pl-8 text-sm {dragOver
-                                                        ? 'ring-2 ring-primary'
-                                                        : ''}"
-                                                >
-                                                    <span
-                                                        class="mr-2 flex items-center gap-2 truncate text-muted-foreground"
-                                                    >
-                                                        {#if previewUrl}
-                                                            <img
-                                                                src={previewUrl}
-                                                                alt="Search preview"
-                                                                class="h-6 w-6 rounded object-cover"
-                                                            />
-                                                        {:else}
-                                                            <ImageIcon class="h-4 w-4" />
-                                                        {/if}
-                                                        {activeImage}
-                                                    </span>
-                                                    <button
-                                                        class="ml-auto hover:text-foreground"
-                                                        onclick={clearSearch}
-                                                        title="Clear search"
-                                                        data-testid="search-clear-button"
-                                                    >
-                                                        <X class="h-4 w-4" />
-                                                    </button>
-                                                </div>
-                                            {:else}
-                                                <Input
-                                                    placeholder={isUploading
-                                                        ? 'Uploading...'
-                                                        : 'Search samples by description or image'}
-                                                    class="pl-8 pr-8 {dragOver
-                                                        ? 'ring-2 ring-primary'
-                                                        : ''}"
-                                                    bind:value={query_text}
-                                                    onkeydown={onKeyDown}
-                                                    onpaste={handlePaste}
-                                                    disabled={isUploading}
-                                                    data-testid="text-embedding-search-input"
-                                                />
-                                                {#if submittedQueryText}
-                                                    <button
-                                                        class="absolute right-8 top-[50%] translate-y-[-50%] text-muted-foreground hover:text-foreground"
-                                                        onclick={clearSearch}
-                                                        title="Clear search"
-                                                        data-testid="search-clear-button"
-                                                    >
-                                                        <X class="h-4 w-4" />
-                                                    </button>
-                                                {/if}
-                                                <button
-                                                    class="absolute right-2 top-[50%] translate-y-[-50%] text-muted-foreground hover:text-foreground disabled:opacity-50"
-                                                    onclick={triggerFileInput}
-                                                    title="Upload image for search"
-                                                    disabled={isUploading}
-                                                >
-                                                    <ImageIcon class="h-4 w-4" />
-                                                </button>
-                                            {/if}
-                                            <input
-                                                type="file"
-                                                accept="image/*"
-                                                class="hidden"
-                                                bind:this={fileInput}
-                                                onchange={handleFileSelect}
-                                                disabled={isUploading}
-                                            />
-                                        </div>
-                                    {/if}
-                                </div>
-                            </GridHeader>
-                            <Separator class="mb-4 bg-border-hard" />
-                            <div class="flex min-h-0 flex-1 overflow-hidden">
-                                {@render children()}
-                            </div>
-                            <SelectionPill
-                                selectedCount={$selectedCount}
-                                onClear={clearSelection}
-                            />
-                        </div>
-                    </Pane>
-
-                    <PaneResizer
-                        class="relative mx-2 flex w-1 cursor-col-resize items-center justify-center"
-                    >
-                        <div class="bg-brand z-10 flex h-7 min-w-5 items-center justify-center">
-                            <GripVertical class="text-diffuse-foreground" />
-                        </div>
-                    </PaneResizer>
-
-                    <Pane defaultSize={50} minSize={30} class="flex min-h-0 flex-col">
-                        {#await import('$lib/components/PlotPanel/PlotPanel.svelte') then { default: PlotPanel }}
-                            <PlotPanel />
-                        {/await}
-                    </Pane>
-                </PaneGroup>
-            {:else}
-                <!-- When plot is hidden or not samples view, show normal layout -->
-                <div class="relative flex flex-1 flex-col space-y-4 rounded-[1vw] bg-card p-4 pb-2">
-                    {#if isSamples || isAnnotations || isVideos || isGroups}
-                        <GridHeader>
-                            {#snippet auxControls()}
-                                {#if (isSamples || isVideos) && hasEmbeddings}
-                                    <Button
-                                        class="flex items-center space-x-1"
-                                        data-testid="toggle-plot-button"
-                                        variant={$showPlot ? 'default' : 'ghost'}
-                                        onclick={() => setShowPlot(!$showPlot)}
-                                    >
-                                        <ChartNetwork class="size-4" />
-                                        <span>Show Embeddings</span>
-                                    </Button>
-                                {/if}
-                            {/snippet}
-                            {#if (isSamples || isVideos) && hasEmbeddings}
-                                <div
-                                    class="relative"
-                                    role="region"
-                                    aria-label="Search by image or text"
-                                    ondragover={handleDragOver}
-                                    ondragleave={handleDragLeave}
-                                    ondrop={handleDrop}
-                                >
-                                    <Search
-                                        class="absolute left-2 top-[50%] h-4 w-4 translate-y-[-50%] text-muted-foreground"
-                                    />
-                                    {#if activeImage}
-                                        <div
-                                            class="flex h-10 w-full items-center rounded-md border border-input bg-background px-3 py-2 pl-8 text-sm {dragOver
-                                                ? 'ring-2 ring-primary'
-                                                : ''}"
-                                        >
-                                            <span
-                                                class="mr-2 flex items-center gap-2 truncate text-muted-foreground"
-                                            >
-                                                {#if previewUrl}
-                                                    <img
-                                                        src={previewUrl}
-                                                        alt="Search preview"
-                                                        class="h-6 w-6 rounded object-cover"
-                                                    />
-                                                {:else}
-                                                    <ImageIcon class="h-4 w-4" />
-                                                {/if}
-                                                {activeImage}
-                                            </span>
-                                            <button
-                                                class="ml-auto hover:text-foreground"
-                                                onclick={clearSearch}
-                                                title="Clear search"
-                                                data-testid="search-clear-button"
-                                            >
-                                                <X class="h-4 w-4" />
-                                            </button>
-                                        </div>
-                                    {:else}
-                                        <Input
-                                            placeholder={isUploading
-                                                ? 'Uploading...'
-                                                : 'Search samples by description or image'}
-                                            class="pl-8 pr-8 {dragOver
-                                                ? 'ring-2 ring-primary'
-                                                : ''}"
-                                            bind:value={query_text}
-                                            onkeydown={onKeyDown}
-                                            onpaste={handlePaste}
-                                            disabled={isUploading}
-                                            data-testid="text-embedding-search-input"
-                                        />
-                                        {#if submittedQueryText}
-                                            <button
-                                                class="absolute right-8 top-[50%] translate-y-[-50%] text-muted-foreground hover:text-foreground"
-                                                onclick={clearSearch}
-                                                title="Clear search"
-                                                data-testid="search-clear-button"
-                                            >
-                                                <X class="h-4 w-4" />
-                                            </button>
-                                        {/if}
-                                        <button
-                                            class="absolute right-2 top-[50%] translate-y-[-50%] text-muted-foreground hover:text-foreground disabled:opacity-50"
-                                            onclick={triggerFileInput}
-                                            title="Upload image for search"
-                                            disabled={isUploading}
-                                        >
-                                            <ImageIcon class="h-4 w-4" />
-                                        </button>
-                                    {/if}
-                                    <input
-                                        type="file"
-                                        accept="image/*"
-                                        class="hidden"
-                                        bind:this={fileInput}
-                                        onchange={handleFileSelect}
-                                        disabled={isUploading}
-                                    />
-                                </div>
-                            {/if}
-                        </GridHeader>
-                        <Separator class="mb-4 bg-border-hard" />
-                    {/if}
-
-                    <div class="flex min-h-0 flex-1">
-                        {@render children()}
-                    </div>
-                    {#if showLeftSidebar}
-                        <SelectionPill selectedCount={$selectedCount} onClear={clearSelection} />
-                    {/if}
-                </div>
-            {/if}
-            {#if hasEmbeddings}
-                {#await import('$lib/components/FewShotClassifier/CreateClassifierDialog.svelte') then { default: CreateClassifierDialog }}
-                    <CreateClassifierDialog />
-                {/await}
-                {#await import('$lib/components/FewShotClassifier/RefineClassifierDialog.svelte') then { default: RefineClassifierDialog }}
-                    <RefineClassifierDialog />
-                {/await}
-            {/if}
+    {#snippet sidebar()}
+        <div>
+            <TagsMenu collection_id={collectionId} {gridType} />
         </div>
+        <Segment title="Filters" icon={SlidersHorizontal}>
+            <div class="space-y-2">
+                <LabelsMenu
+                    {annotationFilterRows}
+                    onToggleAnnotationFilter={toggleAnnotationFilterSelection}
+                />
+                {#if isSamples || isVideos || isVideoFrames}
+                    {#key collectionId}
+                        <CombinedMetadataDimensionsFilters {isVideos} {isVideoFrames} />
+                    {/key}
+                {/if}
+            </div>
+        </Segment>
+    {/snippet}
+
+    {#snippet searchBar()}
+        {#if (isSamples || isVideos) && hasEmbeddings}
+            <CollectionSearchBar
+                queryText={query_text}
+                {submittedQueryText}
+                {activeImage}
+                {previewUrl}
+                {isUploading}
+                isDragOver={dragOver}
+                onQueryTextInput={(value) => {
+                    query_text = value;
+                }}
+                {onKeyDown}
+                onPaste={handlePaste}
+                onDragOver={handleDragOver}
+                onDragLeave={handleDragLeave}
+                onDrop={handleDrop}
+                onClearSearch={clearSearch}
+                onFileSelect={handleFileSelect}
+            />
+        {/if}
+    {/snippet}
+
+    {#snippet auxControls()}
+        {#if (isSamples || isVideos) && hasEmbeddings}
+            <Button
+                class="flex items-center space-x-1"
+                data-testid="toggle-plot-button"
+                variant={$showPlot ? 'default' : 'ghost'}
+                onclick={() => setShowPlot(!$showPlot)}
+            >
+                <ChartNetwork class="size-4" />
+                <span>Show Embeddings</span>
+            </Button>
+        {/if}
+    {/snippet}
+
+    {#snippet plotPanel()}
+        {#await import('$lib/components/PlotPanel/PlotPanel.svelte') then { default: PlotPanel }}
+            <PlotPanel />
+        {/await}
+    {/snippet}
+
+    {#snippet fewShotDialogs()}
+        {#if hasEmbeddings}
+            {#await import('$lib/components/FewShotClassifier/CreateClassifierDialog.svelte') then { default: CreateClassifierDialog }}
+                <CreateClassifierDialog />
+            {/await}
+            {#await import('$lib/components/FewShotClassifier/RefineClassifierDialog.svelte') then { default: RefineClassifierDialog }}
+                <RefineClassifierDialog />
+            {/await}
+        {/if}
+    {/snippet}
+
+    {#snippet footer()}
         <Footer
             totalSamples={collection?.total_sample_count}
             filteredSamples={$filteredSampleCount}
             {totalAnnotations}
             filteredAnnotations={$filteredAnnotationCount}
         />
-    {/if}
-</div>
+    {/snippet}
+
+    {@render children()}
+</CollectionLayout>
