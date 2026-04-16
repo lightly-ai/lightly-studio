@@ -291,7 +291,6 @@
     let activeImage = $state<string | null>(null);
     let previewUrl = $state<string | null>(null);
     let isUploading = $state(false);
-    let fileInput = $state<HTMLInputElement | null>(null);
 
     function handleDragOver(e: DragEvent) {
         e.preventDefault();
@@ -439,10 +438,6 @@
         submittedQueryText = committedQuery;
         query_text = committedQuery;
     });
-
-    function triggerFileInput() {
-        fileInput?.click();
-    }
 
     // Update effect to respect activeImage
     $effect(() => {
