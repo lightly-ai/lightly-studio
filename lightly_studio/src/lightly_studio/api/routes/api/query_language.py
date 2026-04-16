@@ -81,6 +81,9 @@ def _lark_error_to_diagnostic(text: str, exc: LarkError) -> Diagnostic:
         token = exc.token
         start: int = getattr(token, "start_pos", None) or 0
         end = start + len(str(token))
+        # TODO(Michal): Lark reports common EOF cases as UnexpectedToken with a
+        # `$END` token for this grammar, so detect that explicitly and surface
+        # "Unexpected end of input" instead of a generic token error.
         return Diagnostic(start=start, end=end, message=f"Unexpected token: {token!r}")
     if isinstance(exc, UnexpectedCharacters):
         # column is 1-based; for single-line input this equals the char offset
@@ -111,6 +114,9 @@ def query_images(
     Returns:
         Filtered images in the same shape as ``/images/list``.
     """
+    # TODO(Michal): Validate `collection_id` via `get_and_validate_collection_id`
+    # like other collection-scoped endpoints so missing collections return 404
+    # instead of an empty result.
     registry = FieldRegistry()
     ast = parse_to_ast(body.text)
     condition = compile_ast(ast, registry).get()
@@ -164,6 +170,8 @@ def validate_query(
     try:
         registry = FieldRegistry()
         ast = parse_to_ast(body.text)
+        # TODO(Michal): Also exercise `.get()` here so validation covers runtime
+        # compiler failures that currently appear only in `/images/query`.
         compile_ast(ast, registry)
         return ValidateResponse(diagnostics=[])
     except LarkError as exc:
