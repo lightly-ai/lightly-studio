@@ -7,7 +7,7 @@ from PIL import Image as PILImage
 from pytest_mock import MockerFixture
 from sqlmodel import Session
 
-from lightly_studio.core.annotation import CreateInstanceSegmentation
+from lightly_studio.core.annotation import CreateSegmentationMask
 from lightly_studio.core.dataset_query import ImageSampleField
 from lightly_studio.core.dataset_query.dataset_query import DatasetQuery
 from lightly_studio.core.image.image_dataset import ImageDataset
@@ -204,7 +204,7 @@ class TestDatasetExport:
 
         samples = list(dataset)
         samples[0].add_annotation(
-            CreateInstanceSegmentation.from_rle_mask(
+            CreateSegmentationMask.from_rle_mask(
                 label="dog",
                 sample_2d=samples[0],
                 segmentation_mask=[2, 3, 7, 2, 86],
@@ -295,7 +295,7 @@ class TestDatasetExport:
 
         samples = list(dataset)
         samples[0].add_annotation(
-            CreateInstanceSegmentation.from_rle_mask(
+            CreateSegmentationMask.from_rle_mask(
                 label="dog",
                 sample_2d=samples[0],
                 segmentation_mask=[1, 1, 4],
@@ -344,14 +344,14 @@ class TestDatasetExport:
 
         samples = list(dataset)
         samples[0].add_annotation(
-            CreateInstanceSegmentation.from_rle_mask(
+            CreateSegmentationMask.from_rle_mask(
                 label="dog",
                 sample_2d=samples[0],
                 segmentation_mask=[1, 1, 4],
             )
         )
         samples[0].add_annotation(
-            CreateInstanceSegmentation.from_rle_mask(
+            CreateSegmentationMask.from_rle_mask(
                 label="background",
                 sample_2d=samples[0],
                 segmentation_mask=[4, 1, 1],
@@ -392,14 +392,14 @@ class TestDatasetExport:
 
         samples = list(dataset)
         samples[0].add_annotation(
-            CreateInstanceSegmentation.from_rle_mask(
+            CreateSegmentationMask.from_rle_mask(
                 label="cat",
                 sample_2d=samples[0],
                 segmentation_mask=[1, 1, 4],
             )
         )
         samples[0].add_annotation(
-            CreateInstanceSegmentation.from_rle_mask(
+            CreateSegmentationMask.from_rle_mask(
                 label="dog",
                 sample_2d=samples[0],
                 segmentation_mask=[4, 1, 1],
@@ -439,14 +439,14 @@ class TestDatasetExport:
 
         samples = list(dataset)
         samples[0].add_annotation(
-            CreateInstanceSegmentation.from_rle_mask(
+            CreateSegmentationMask.from_rle_mask(
                 label="dog",
                 sample_2d=samples[0],
                 segmentation_mask=[1, 1, 4],
             )
         )
         samples[0].add_annotation(
-            CreateInstanceSegmentation.from_rle_mask(
+            CreateSegmentationMask.from_rle_mask(
                 label="dog",
                 sample_2d=samples[0],
                 segmentation_mask=[4, 1, 1],
@@ -490,14 +490,14 @@ class TestDatasetExport:
         sample_by_name = {sample.file_name: sample for sample in samples}
 
         sample_by_name["image0.jpg"].add_annotation(
-            CreateInstanceSegmentation.from_rle_mask(
+            CreateSegmentationMask.from_rle_mask(
                 label="dog",
                 sample_2d=sample_by_name["image0.jpg"],
                 segmentation_mask=[1, 1, 4],
             )
         )
         sample_by_name["image1.jpg"].add_annotation(
-            CreateInstanceSegmentation.from_rle_mask(
+            CreateSegmentationMask.from_rle_mask(
                 label="dog",
                 sample_2d=sample_by_name["image1.jpg"],
                 segmentation_mask=[4, 1, 1],

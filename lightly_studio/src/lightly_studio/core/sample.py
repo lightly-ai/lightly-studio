@@ -249,7 +249,9 @@ class Sample(ABC):
                 )
             elif annotation.annotation_type == AnnotationType.SEGMENTATION_MASK:
                 assert annotation.segmentation_details is not None, "Invalid sample annotation data"
-                annotations.append(SegmentationMaskAnnotation(inner=annotation.segmentation_details))
+                annotations.append(
+                    SegmentationMaskAnnotation(inner=annotation.segmentation_details)
+                )
             elif annotation.annotation_type == AnnotationType.CLASSIFICATION:
                 annotations.append(ClassificationAnnotation(annotation_base=annotation))
             else:
