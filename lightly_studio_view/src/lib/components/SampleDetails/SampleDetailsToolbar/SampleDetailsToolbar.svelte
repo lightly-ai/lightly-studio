@@ -184,8 +184,7 @@
                 <BrushToolbarButton
                     onclick={onClickBrush}
                     isActive={sampleDetailsToolbarContext.status === 'brush' &&
-                        annotationLabelContext.annotationType ===
-                            AnnotationType.SEGMENTATION_MASK}
+                        annotationLabelContext.annotationType === AnnotationType.SEGMENTATION_MASK}
                 />
             </SampleDetailsToolbarTooltip>
         {/if}
