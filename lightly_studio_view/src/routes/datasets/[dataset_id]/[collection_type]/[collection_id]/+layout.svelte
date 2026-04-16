@@ -60,7 +60,8 @@
     import { useVideoBounds } from '$lib/hooks/useVideosBounds/useVideosBounds.js';
     import { useImageFilters } from '$lib/hooks/useImageFilters/useImageFilters';
     import { useVideoFilters } from '$lib/hooks/useVideoFilters/useVideoFilters';
-    import { useEmbeddingFilter } from '$lib/hooks/useEmbeddingFilter/useEmbeddingFilter';
+    import { useEmbeddingFilterForImages, type EmbeddingFilterResult } from '$lib/hooks/useEmbeddingFilter/useEmbeddingFilterForImages';
+    import { useEmbeddingFilterForVideos } from '$lib/hooks/useEmbeddingFilter/useEmbeddingFilterForVideos';
     import { SampleType } from '$lib/api/lightly_studio_local/types.gen';
     import { buildImageFilter } from '$lib/utils/buildImageFilter';
     import {
@@ -493,20 +494,19 @@
         isSamples || isAnnotations || isVideos || isVideoFrames || isGroups
     );
 
-    const embeddingFilter = useEmbeddingFilter({
-        collectionId: collectionIdStore,
-        isVideos: toStore(() => isVideos),
-        isSamples: toStore(() => isSamples),
-        setRangeSelectionForcollection
-    });
-    const hasPlotFilterContextStore = embeddingFilter.hasPlotFilterContext;
-    const isPlotFilterAppliedStore = embeddingFilter.isPlotFilterApplied;
-    const plotFilterCountStore = embeddingFilter.plotFilterCount;
-    const plotFilterItemLabelStore = embeddingFilter.plotFilterItemLabel;
-    const hasPlotFilterContext = $derived($hasPlotFilterContextStore);
+    const activeEmbeddingFilter: EmbeddingFilterResult = isVideos
+        ? useEmbeddingFilterForVideos(collectionIdStore, setRangeSelectionForcollection)
+        : useEmbeddingFilterForImages(collectionIdStore, setRangeSelectionForcollection);
+    const {
+        effectiveCount: plotFilterCountStore,
+        isVisible: isPlotFilterAppliedStore,
+        setVisibility: setEmbeddingFilterVisibility,
+        clearFilter: clearPlotFilter
+    } = activeEmbeddingFilter;
+    const plotFilterItemLabel = isVideos ? 'video' : 'sample';
+    const hasPlotFilterContext = $derived((isSamples || isVideos) && $plotFilterCountStore > 0);
     const isPlotFilterApplied = $derived($isPlotFilterAppliedStore);
     const plotFilterCount = $derived($plotFilterCountStore);
-    const plotFilterItemLabel = $derived($plotFilterItemLabelStore);
 </script>
 
 <div class="flex-none">
@@ -540,8 +540,8 @@
                                             checked={isPlotFilterApplied}
                                             selectionCount={plotFilterCount}
                                             itemLabel={plotFilterItemLabel}
-                                            onVisibilityChange={embeddingFilter.setEmbeddingFilterVisibility}
-                                            onClear={embeddingFilter.clearPlotFilter}
+                                            onVisibilityChange={setEmbeddingFilterVisibility}
+                                            onClear={clearPlotFilter}
                                         />
                                     {/if}
                                     <LabelsMenu
