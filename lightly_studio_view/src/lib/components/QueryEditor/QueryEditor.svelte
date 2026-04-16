@@ -86,6 +86,7 @@
                                 minHeight: '40px',
                                 color: 'hsl(var(--foreground))',
                                 fontSize: '14px',
+                                lineHeight: '24px',
                                 fontFamily: 'ui-monospace, SFMono-Regular, Menlo, monospace'
                             },
                             '&.cm-focused': { outline: 'none' },
@@ -97,8 +98,9 @@
                             },
                             '.cm-content': {
                                 caretColor: 'hsl(var(--foreground))',
-                                padding: '6px 8px',
-                                minHeight: '36px'
+                                padding: '10px 8px 6px',
+                                minHeight: '40px',
+                                boxSizing: 'border-box'
                             },
                             '.cm-cursor, .cm-dropCursor': {
                                 borderLeftColor: 'hsl(var(--foreground))',
@@ -150,7 +152,10 @@
                             '.cm-diagnostic': {
                                 fontFamily: 'inherit'
                             },
-                            '.cm-line': { padding: '0' }
+                            '.cm-line': {
+                                padding: '0',
+                                lineHeight: '19.6px'
+                            }
                         }),
                         EditorView.lineWrapping,
                         EditorView.updateListener.of((update) => {
