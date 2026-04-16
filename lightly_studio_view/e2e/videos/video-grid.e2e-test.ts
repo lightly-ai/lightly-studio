@@ -176,7 +176,7 @@ test.describe('videos-page-flow', () => {
         ).toBeVisible();
     });
 
-    test('add new tag', async ({ videosPage }) => {
+    test('Tags can be created from the side panel for selected videos', async ({ videosPage }) => {
         const tagName = `tag_${Date.now()}`;
         expect(await videosPage.getVideos().count()).toBe(youtubeVisVideosDataset.defaultPageSize);
         // Select 2 samples

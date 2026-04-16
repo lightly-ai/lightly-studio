@@ -26,7 +26,7 @@ from lightly_studio.type_definitions import PathLike
 DEFAULT_EXPORT_FILENAME = "coco_export.json"
 
 
-class DatasetExport:
+class ImageDatasetExport:
     """Provides methods to export a dataset or a subset of it.
 
     This class is typically not instantiated directly but returned by `Dataset.export()`.
@@ -34,7 +34,7 @@ class DatasetExport:
     """
 
     def __init__(self, session: Session, dataset_id: UUID, samples: Iterable[ImageSample]):
-        """Initializes the DatasetExport object.
+        """Initializes the ImageDatasetExport object.
 
         Args:
             session: The database session.
