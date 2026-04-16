@@ -49,6 +49,9 @@ class FieldRegistry:
                 "direct",
                 ImageSampleField.file_path_abs,
             ),
+            # TODO(Michal): The parser currently only produces strings/numbers/
+            # bools, so `created_at` comparisons bind string literals rather
+            # than parsed datetimes.
             "created_at": FieldInfo(
                 "created_at", "datetime", _ORDINAL_OPS, "direct", ImageSampleField.created_at
             ),

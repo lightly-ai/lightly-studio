@@ -69,6 +69,9 @@ def compile_ast(
     if isinstance(node, NotNode):
         return NOT(compile_ast(node.child, registry, context))
     if isinstance(node, HasTagNode):
+        # TODO(Michal): In annotation context, this compiles against the base
+        # SampleTable tags relationship rather than the annotation sample alias,
+        # so `has_annotation(has_tag(...))` becomes an uncorrelated predicate.
         return TagsAccessor().contains(node.tag_name)
     if isinstance(node, HasAnnotationNode):
         return _compile_has_annotation(node, registry)
@@ -83,6 +86,8 @@ def _compile_comparison(
     field = field_info.field
     op = node.operator
     value = node.value
+    # TODO(Michal): Validate `op` against `field_info.operators` so unsupported
+    # operator/field combinations fail here instead of raising KeyError later.
 
     if isinstance(field, OrdinalField):
         if op == "in":
