@@ -13,6 +13,8 @@ from lightly_studio.core.dataset_query.match_expression import MatchExpression
 T = TypeVar("T")
 
 
+# Ignore PLW1641 because `==` and `!=` create query conditions here, so these
+# classes do not need normal hash behavior.
 @dataclass
 class RelationshipMatchExpression(MatchExpression, Generic[T]):
     """Evaluates a match expression against a related table using the SQLAlchemy `.has()` operator.
