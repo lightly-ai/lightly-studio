@@ -5,13 +5,12 @@ export function useFilterVisibility(
     collectionId: Readable<string>,
     activeSampleIds: Readable<string[]>,
     updateSampleIds: (ids: string[]) => void,
-    setRangeSelectionForcollection: (collectionId: string, selection: null) => void
+    setRangeSelectionForCollection: (collectionId: string, selection: null) => void
 ) {
     const { hiddenSampleIds, setHidden, clearHidden } = useHiddenFilters(collectionId);
 
-    const effectiveCount = derived(
-        [activeSampleIds, hiddenSampleIds],
-        ([$active, $hidden]) => ($active.length > 0 ? $active.length : $hidden.length)
+    const effectiveCount = derived([activeSampleIds, hiddenSampleIds], ([$active, $hidden]) =>
+        $active.length > 0 ? $active.length : $hidden.length
     );
 
     const isVisible = derived(activeSampleIds, ($active) => $active.length > 0);
@@ -27,12 +26,14 @@ export function useFilterVisibility(
         const hiddenIds = get(hiddenSampleIds);
         if (get(activeSampleIds).length === 0 && hiddenIds.length > 0) {
             updateSampleIds(hiddenIds);
-            clearHidden();
+            if (get(activeSampleIds).length > 0) {
+                clearHidden();
+            }
         }
     }
 
     function clearFilter() {
-        setRangeSelectionForcollection(get(collectionId), null);
+        setRangeSelectionForCollection(get(collectionId), null);
         clearHidden();
         updateSampleIds([]);
     }

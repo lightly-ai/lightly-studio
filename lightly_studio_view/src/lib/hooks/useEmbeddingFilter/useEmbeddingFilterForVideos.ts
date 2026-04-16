@@ -4,7 +4,7 @@ import { useFilterVisibility } from './useFilterVisibility';
 
 export function useEmbeddingFilterForVideos(
     collectionId: Readable<string>,
-    setRangeSelectionForcollection: (collectionId: string, selection: null) => void
+    setRangeSelectionForCollection: (collectionId: string, selection: null) => void
 ) {
     const { filterParams, updateSampleIds } = useVideoFilters();
 
@@ -22,6 +22,6 @@ export function useEmbeddingFilterForVideos(
         collectionId,
         activeSampleIds,
         updateSampleIds,
-        setRangeSelectionForcollection
+        setRangeSelectionForCollection
     );
 }

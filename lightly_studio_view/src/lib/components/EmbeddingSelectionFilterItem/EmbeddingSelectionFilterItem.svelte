@@ -20,6 +20,7 @@
     <div class="flex items-center gap-2">
         <Checkbox
             {checked}
+            aria-label="Embedding plot filter"
             onCheckedChange={(nextChecked) => onVisibilityChange(nextChecked === true)}
         />
         <div class="min-w-0 flex-1">

@@ -60,7 +60,10 @@
     import { useVideoBounds } from '$lib/hooks/useVideosBounds/useVideosBounds.js';
     import { useImageFilters } from '$lib/hooks/useImageFilters/useImageFilters';
     import { useVideoFilters } from '$lib/hooks/useVideoFilters/useVideoFilters';
-    import { useEmbeddingFilterForImages, type EmbeddingFilterResult } from '$lib/hooks/useEmbeddingFilter/useEmbeddingFilterForImages';
+    import {
+        useEmbeddingFilterForImages,
+        type EmbeddingFilterResult
+    } from '$lib/hooks/useEmbeddingFilter/useEmbeddingFilterForImages';
     import { useEmbeddingFilterForVideos } from '$lib/hooks/useEmbeddingFilter/useEmbeddingFilterForVideos';
     import { SampleType } from '$lib/api/lightly_studio_local/types.gen';
     import { buildImageFilter } from '$lib/utils/buildImageFilter';
@@ -98,7 +101,7 @@
         setShowPlot,
         filteredSampleCount,
         filteredAnnotationCount,
-        setRangeSelectionForcollection
+        setRangeSelectionForCollection
     } = useGlobalStorage();
 
     const parentCollection = $derived.by(() =>
@@ -495,15 +498,15 @@
     );
 
     const activeEmbeddingFilter: EmbeddingFilterResult = isVideos
-        ? useEmbeddingFilterForVideos(collectionIdStore, setRangeSelectionForcollection)
-        : useEmbeddingFilterForImages(collectionIdStore, setRangeSelectionForcollection);
+        ? useEmbeddingFilterForVideos(collectionIdStore, setRangeSelectionForCollection)
+        : useEmbeddingFilterForImages(collectionIdStore, setRangeSelectionForCollection);
     const {
         effectiveCount: plotFilterCountStore,
         isVisible: isPlotFilterAppliedStore,
         setVisibility: setEmbeddingFilterVisibility,
         clearFilter: clearPlotFilter
     } = activeEmbeddingFilter;
-    const plotFilterItemLabel = isVideos ? 'video' : 'sample';
+    const plotFilterItemLabel = isVideos ? 'video' : 'image';
     const hasPlotFilterContext = $derived((isSamples || isVideos) && $plotFilterCountStore > 0);
     const isPlotFilterApplied = $derived($isPlotFilterAppliedStore);
     const plotFilterCount = $derived($plotFilterCountStore);

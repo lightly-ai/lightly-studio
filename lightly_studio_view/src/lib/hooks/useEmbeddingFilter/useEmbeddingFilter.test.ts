@@ -162,6 +162,30 @@ describe('useEmbeddingFilterForImages', () => {
         expect(get(effectiveCount)).toBe(2);
     });
 
+    it('setVisibility(true) keeps hidden IDs when restore cannot be applied', () => {
+        const { updateFilterParams } = useImageFilters();
+        updateFilterParams({
+            collection_id: 'coll-1',
+            mode: 'normal',
+            filters: { sample_ids: ['id-1'] }
+        });
+
+        const { isVisible, effectiveCount, setVisibility } = useEmbeddingFilterForImages(
+            collectionId,
+            setRangeSelection
+        );
+        setVisibility(false);
+
+        updateFilterParams({
+            collection_id: 'coll-1',
+            mode: 'classifier'
+        });
+        setVisibility(true);
+
+        expect(get(isVisible)).toBe(false);
+        expect(get(effectiveCount)).toBe(1);
+    });
+
     it('setVisibility(false) does nothing when there are no active IDs', () => {
         const { effectiveCount, setVisibility } = useEmbeddingFilterForImages(
             collectionId,

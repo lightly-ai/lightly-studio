@@ -5,17 +5,14 @@ import { useFilterVisibility } from './useFilterVisibility';
 
 export function useEmbeddingFilterForImages(
     collectionId: Readable<string>,
-    setRangeSelectionForcollection: (collectionId: string, selection: null) => void
+    setRangeSelectionForCollection: (collectionId: string, selection: null) => void
 ) {
     const { filterParams, updateSampleIds } = useImageFilters();
 
     const activeSampleIds = derived(
         [filterParams, collectionId],
         ([$filterParams, $collectionId]) => {
-            if (
-                !$filterParams?.collection_id ||
-                $filterParams.collection_id !== $collectionId
-            ) {
+            if (!$filterParams?.collection_id || $filterParams.collection_id !== $collectionId) {
                 return [];
             }
             if (!isNormalModeParams($filterParams)) {
@@ -29,7 +26,7 @@ export function useEmbeddingFilterForImages(
         collectionId,
         activeSampleIds,
         updateSampleIds,
-        setRangeSelectionForcollection
+        setRangeSelectionForCollection
     );
 }
 
