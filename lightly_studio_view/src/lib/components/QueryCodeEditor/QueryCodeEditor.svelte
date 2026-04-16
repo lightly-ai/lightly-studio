@@ -51,6 +51,11 @@
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     let completionDisposable: any = null;
     let error = $state<string | null>(null);
+    let hasPendingChanges = $state(false);
+
+    $effect(() => {
+        if (!isQueryActive) hasPendingChanges = false;
+    });
 
     // Display aliases: map backend namespace names to shorter editor-facing names.
     const NAMESPACE_ALIASES: Record<string, string> = {
@@ -202,11 +207,11 @@
             // always fully visible even when the editor sits inside overflow:hidden.
             fixedOverflowWidgets: true
         });
-        if (onchange) {
-            editor.onDidChangeModelContent(() => {
-                onchange(editor.getValue() as string);
-            });
-        }
+        editor.onDidChangeModelContent(() => {
+            const value = editor.getValue() as string;
+            onchange?.(value);
+            hasPendingChanges = true;
+        });
 
     });
 
@@ -229,6 +234,7 @@
         }
         if (!raw) return;
         error = null;
+        hasPendingChanges = false;
         onrun(raw);
     }
 </script>
@@ -237,14 +243,12 @@
     <div class="rounded-md bg-muted px-3 py-2 text-xs text-muted-foreground">
         <p>Filter images using the DatasetQuery API.</p>
         <p class="mt-1">
-            Available: <code class="font-mono">Image</code>, <code class="font-mono">AND</code>,
-            <code class="font-mono">OR</code>, <code class="font-mono">NOT</code>
+            Available: <code class="text-xs font-mono">Image</code>, <code class="text-xs font-mono">AND</code>,
+            <code class="text-xs font-mono">OR</code>, <code class="text-xs font-mono">NOT</code>
         </p>
-        <p class="mt-1">
-            Examples:<br />
-            <code class="font-mono">Image.width &gt; 1920</code><br />
-            <code class="font-mono">AND(Image.width &gt; 1920, Image.tags.contains("cat"))</code>
-        </p>
+        <p class="mt-1">Examples:</p>
+        <code class="mt-0.5 block text-xs font-mono">Image.width &gt; 1920</code>
+        <code class="mt-1 block text-xs font-mono">AND(Image.width &gt; 1920, Image.tags.contains("cat"))</code>
     </div>
 
     <div
@@ -257,7 +261,7 @@
     {/if}
 
     <div class="flex justify-end">
-        {#if isQueryActive}
+        {#if isQueryActive && !hasPendingChanges}
             <button
                 class="flex h-8 items-center gap-1.5 rounded-md border border-input bg-background px-3 text-sm font-medium hover:bg-muted disabled:opacity-50"
                 onclick={onclear}

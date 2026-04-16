@@ -14,12 +14,12 @@
     import Separator from '$lib/components/ui/separator/separator.svelte';
     import {
         Search,
-        Pencil,
         SlidersHorizontal,
         Image as ImageIcon,
         X,
         ChartNetwork,
-        GripVertical
+        GripVertical,
+        Filter
     } from '@lucide/svelte';
     import { onDestroy, onMount } from 'svelte';
     import { get, toStore } from 'svelte/store';
@@ -489,7 +489,11 @@
 
     let showQueryEditor = $state(false);
     let queryEditorText = $state('');
-    let lastAppliedProcessedQuery = $state<string | null>(null);
+    let lastQueryPreview = $state<string | null>(null);
+
+    $effect(() => {
+        if ($pythonQuery) lastQueryPreview = $pythonQuery;
+    });
 
     const showLeftSidebar = $derived(
         isSamples || isAnnotations || isVideos || isVideoFrames || isGroups
@@ -512,42 +516,6 @@
                         <div
                             class="min-h-0 flex-1 space-y-2 overflow-y-auto px-4 pb-2 dark:[color-scheme:dark]"
                         >
-                            {#if isSamples}
-                                <div class="flex items-center gap-2 py-1">
-                                    <Checkbox
-                                        id="query-toggle"
-                                        checked={!!$pythonQuery}
-                                        onCheckedChange={(v: boolean | 'indeterminate') => {
-                                            if (v === true) {
-                                                if (lastAppliedProcessedQuery) {
-                                                    updatePythonQuery(lastAppliedProcessedQuery);
-                                                } else {
-                                                    showQueryEditor = true;
-                                                    setShowPlot(false);
-                                                }
-                                            } else {
-                                                clearFilter();
-                                            }
-                                        }}
-                                    />
-                                    <label
-                                        for="query-toggle"
-                                        class="flex-1 cursor-pointer text-sm font-medium"
-                                    >
-                                        Query
-                                    </label>
-                                    <button
-                                        class="text-muted-foreground hover:text-foreground"
-                                        onclick={() => {
-                                            showQueryEditor = !showQueryEditor;
-                                            if (showQueryEditor) setShowPlot(false);
-                                        }}
-                                        title="Open query editor"
-                                    >
-                                        <Pencil class="h-4 w-4" />
-                                    </button>
-                                </div>
-                            {/if}
                             <div>
                                 <TagsMenu collection_id={collectionId} {gridType} />
                                 <TagCreateDialog
@@ -556,6 +524,43 @@
                                     textEmbedding={get(textEmbedding)}
                                 />
                             </div>
+                            {#if isSamples}
+                                <Segment title="Query" icon={Filter}>
+                                    <div class="flex items-center gap-2">
+                                        <Checkbox
+                                            checked={!!$pythonQuery}
+                                            disabled={!lastQueryPreview}
+                                            onCheckedChange={(v: boolean | 'indeterminate') => {
+                                                if (v) {
+                                                    updatePythonQuery(lastQueryPreview!);
+                                                } else {
+                                                    clearFilter();
+                                                }
+                                            }}
+                                        />
+                                        <button
+                                            class="min-w-0 flex-1 cursor-pointer truncate rounded bg-muted px-2 py-1 text-left font-mono text-xs hover:bg-muted/80"
+                                            onclick={() => {
+                                                showQueryEditor = true;
+                                                setShowPlot(false);
+                                            }}
+                                        >
+                                            {#if lastQueryPreview}
+                                                <span
+                                                    class={$pythonQuery
+                                                        ? 'text-muted-foreground'
+                                                        : 'text-muted-foreground/40'}
+                                                    >{lastQueryPreview}</span
+                                                >
+                                            {:else}
+                                                <span class="text-muted-foreground/50"
+                                                    >Edit Query</span
+                                                >
+                                            {/if}
+                                        </button>
+                                    </div>
+                                </Segment>
+                            {/if}
                             <Segment title="Filters" icon={SlidersHorizontal}>
                                 <div class="space-y-2">
                                     <LabelsMenu
@@ -833,7 +838,6 @@
                                     isQueryActive={!!$pythonQuery}
                                     onclear={() => clearFilter()}
                                     onrun={(q) => {
-                                        lastAppliedProcessedQuery = q;
                                         updatePythonQuery(q);
                                     }}
                                 />
