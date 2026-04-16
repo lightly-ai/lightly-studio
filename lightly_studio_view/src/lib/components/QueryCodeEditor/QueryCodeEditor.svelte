@@ -5,7 +5,7 @@
     // Serve Monaco from the Vite bundle (Machine A) instead of cdn.jsdelivr.net.
     // Without this, Machine B's browser would need direct internet access to load the editor.
     loader.config({ monaco });
-    import { Play } from '@lucide/svelte';
+    import { Play, X } from '@lucide/svelte';
 
     interface MethodMeta {
         name: string;
@@ -37,11 +37,13 @@
 
     interface Props {
         onrun: (query: string) => void;
+        onclear?: () => void;
         initialValue?: string;
         onchange?: (value: string) => void;
+        isQueryActive?: boolean;
     }
 
-    const { onrun, initialValue, onchange }: Props = $props();
+    const { onrun, onclear, initialValue, onchange, isQueryActive = false }: Props = $props();
 
     let container: HTMLDivElement | undefined = $state();
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -50,13 +52,12 @@
     let completionDisposable: any = null;
     let error = $state<string | null>(null);
 
-    const PLACEHOLDER = `# Filter images using the DatasetQuery API.
-# Available: ImageSampleField, AND, OR, NOT
-# Examples:
-#   ImageSampleField.width > 1920
-#   AND(ImageSampleField.width > 1920, ImageSampleField.tags.contains("cat"))
+    // Display aliases: map backend namespace names to shorter editor-facing names.
+    const NAMESPACE_ALIASES: Record<string, string> = {
+        ImageSampleField: 'Image'
+    };
 
-ImageSampleField.width > 1920`;
+    const PLACEHOLDER = `Image.width > 1920`;
 
     onMount(async () => {
         const monaco = await loader.init();
@@ -86,40 +87,30 @@ ImageSampleField.width > 1920`;
 
                     // eslint-disable-next-line @typescript-eslint/no-explicit-any
                     const items: any[] = [];
+
+                    // Compute the replacement range: cover the word currently being typed so
+                    // accepting a suggestion replaces it rather than appending to it.
+                    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                    const wordAtPosition: any = model.getWordAtPosition(position);
                     const range = {
                         startLineNumber: position.lineNumber,
                         endLineNumber: position.lineNumber,
-                        startColumn: position.column,
-                        endColumn: position.column
+                        startColumn: wordAtPosition?.startColumn ?? position.column,
+                        endColumn: wordAtPosition?.endColumn ?? position.column
                     };
 
-                    // After "SomeNamespace." → suggest fields.
-                    for (const ns of completions!.namespaces) {
-                        if (lineText.endsWith(`${ns.name}.`)) {
-                            for (const field of ns.fields) {
-                                items.push({
-                                    label: field.name,
-                                    kind: monaco.languages.CompletionItemKind.Field,
-                                    detail: field.kind,
-                                    documentation: field.doc,
-                                    insertText:
-                                        field.methods.length > 0
-                                            ? `${field.name}.${field.methods[0].insert_text}`
-                                            : `${field.name} `,
-                                    insertTextRules:
-                                        monaco.languages.CompletionItemInsertTextRule
-                                            .InsertAsSnippet,
-                                    range
-                                });
-                            }
-                            return { suggestions: items };
-                        }
+                    // Text before the word being typed — used to detect the namespace/field context.
+                    const textBeforeWord = wordAtPosition
+                        ? lineText.slice(0, wordAtPosition.startColumn - 1)
+                        : lineText;
 
-                        // After "Namespace.field." → suggest methods declared by the backend.
+                    // After "Namespace.field." → suggest methods declared by the backend.
+                    for (const ns of completions!.namespaces) {
+                        const displayName = NAMESPACE_ALIASES[ns.name] ?? ns.name;
                         for (const field of ns.fields) {
                             if (
                                 field.methods.length > 0 &&
-                                lineText.endsWith(`${ns.name}.${field.name}.`)
+                                textBeforeWord.endsWith(`${displayName}.${field.name}.`)
                             ) {
                                 for (const method of field.methods) {
                                     items.push({
@@ -139,15 +130,40 @@ ImageSampleField.width > 1920`;
                         }
                     }
 
-                    // Top-level completions: namespaces + functions.
+                    // After "SomeNamespace." → suggest fields.
+                    for (const ns of completions!.namespaces) {
+                        const displayName = NAMESPACE_ALIASES[ns.name] ?? ns.name;
+                        if (textBeforeWord.endsWith(`${displayName}.`)) {
+                            for (const field of ns.fields) {
+                                items.push({
+                                    label: field.name,
+                                    kind: monaco.languages.CompletionItemKind.Field,
+                                    detail: field.kind,
+                                    documentation: field.doc,
+                                    insertText:
+                                        field.methods.length > 0
+                                            ? `${field.name}.${field.methods[0].insert_text}`
+                                            : `${field.name} `,
+                                    insertTextRules:
+                                        monaco.languages.CompletionItemInsertTextRule
+                                            .InsertAsSnippet,
+                                    range
+                                });
+                            }
+                            return { suggestions: items };
+                        }
+                    }
+
+                    // Top-level completions: namespaces + functions (no dot in line).
                     if (!lineText.includes('.')) {
                         for (const ns of completions!.namespaces) {
+                            const displayName = NAMESPACE_ALIASES[ns.name] ?? ns.name;
                             items.push({
-                                label: ns.name,
+                                label: displayName,
                                 kind: monaco.languages.CompletionItemKind.Class,
                                 detail: 'Namespace',
                                 documentation: ns.doc,
-                                insertText: ns.name,
+                                insertText: displayName,
                                 range
                             });
                         }
@@ -181,13 +197,17 @@ ImageSampleField.width > 1920`;
             fontSize: 13,
             padding: { top: 8, bottom: 8 },
             automaticLayout: true,
-            suggest: { showSnippets: true }
+            suggest: { showSnippets: true },
+            // Render suggestion/hover widgets outside the clipped container so they are
+            // always fully visible even when the editor sits inside overflow:hidden.
+            fixedOverflowWidgets: true
         });
         if (onchange) {
             editor.onDidChangeModelContent(() => {
                 onchange(editor.getValue() as string);
             });
         }
+
     });
 
     onDestroy(() => {
@@ -198,11 +218,15 @@ ImageSampleField.width > 1920`;
     function runQuery() {
         if (!editor) return;
         // Strip comment lines before sending.
-        const raw = (editor.getValue() as string)
+        let raw = (editor.getValue() as string)
             .split('\n')
             .filter((l: string) => !l.trimStart().startsWith('#'))
             .join('\n')
             .trim();
+        // Map display aliases back to the backend namespace names.
+        for (const [backendName, displayName] of Object.entries(NAMESPACE_ALIASES)) {
+            raw = raw.replaceAll(`${displayName}.`, `${backendName}.`);
+        }
         if (!raw) return;
         error = null;
         onrun(raw);
@@ -210,6 +234,19 @@ ImageSampleField.width > 1920`;
 </script>
 
 <div class="flex h-full flex-col gap-2">
+    <div class="rounded-md bg-muted px-3 py-2 text-xs text-muted-foreground">
+        <p>Filter images using the DatasetQuery API.</p>
+        <p class="mt-1">
+            Available: <code class="font-mono">Image</code>, <code class="font-mono">AND</code>,
+            <code class="font-mono">OR</code>, <code class="font-mono">NOT</code>
+        </p>
+        <p class="mt-1">
+            Examples:<br />
+            <code class="font-mono">Image.width &gt; 1920</code><br />
+            <code class="font-mono">AND(Image.width &gt; 1920, Image.tags.contains("cat"))</code>
+        </p>
+    </div>
+
     <div
         bind:this={container}
         class="min-h-[120px] flex-1 overflow-hidden rounded-md border border-input"
@@ -220,13 +257,24 @@ ImageSampleField.width > 1920`;
     {/if}
 
     <div class="flex justify-end">
-        <button
-            class="flex h-8 items-center gap-1.5 rounded-md bg-primary px-3 text-sm font-medium text-primary-foreground hover:bg-primary/90 disabled:opacity-50"
-            onclick={runQuery}
-            disabled={!editor}
-        >
-            <Play class="h-3.5 w-3.5" />
-            Run
-        </button>
+        {#if isQueryActive}
+            <button
+                class="flex h-8 items-center gap-1.5 rounded-md border border-input bg-background px-3 text-sm font-medium hover:bg-muted disabled:opacity-50"
+                onclick={onclear}
+                disabled={!editor}
+            >
+                <X class="h-3.5 w-3.5" />
+                Clear filter
+            </button>
+        {:else}
+            <button
+                class="flex h-8 items-center gap-1.5 rounded-md bg-primary px-3 text-sm font-medium text-primary-foreground hover:bg-primary/90 disabled:opacity-50"
+                onclick={runQuery}
+                disabled={!editor}
+            >
+                <Play class="h-3.5 w-3.5" />
+                Apply
+            </button>
+        {/if}
     </div>
 </div>
