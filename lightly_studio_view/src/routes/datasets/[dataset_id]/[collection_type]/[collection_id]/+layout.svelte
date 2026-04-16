@@ -60,10 +60,7 @@
     import { useVideoBounds } from '$lib/hooks/useVideosBounds/useVideosBounds.js';
     import { useImageFilters } from '$lib/hooks/useImageFilters/useImageFilters';
     import { useVideoFilters } from '$lib/hooks/useVideoFilters/useVideoFilters';
-    import {
-        useEmbeddingFilterForImages,
-        type EmbeddingFilterResult
-    } from '$lib/hooks/useEmbeddingFilter/useEmbeddingFilterForImages';
+    import { useEmbeddingFilterForImages } from '$lib/hooks/useEmbeddingFilter/useEmbeddingFilterForImages';
     import { useEmbeddingFilterForVideos } from '$lib/hooks/useEmbeddingFilter/useEmbeddingFilterForVideos';
     import { SampleType } from '$lib/api/lightly_studio_local/types.gen';
     import { buildImageFilter } from '$lib/utils/buildImageFilter';
@@ -497,16 +494,35 @@
         isSamples || isAnnotations || isVideos || isVideoFrames || isGroups
     );
 
-    const activeEmbeddingFilter: EmbeddingFilterResult = isVideos
-        ? useEmbeddingFilterForVideos(collectionIdStore, setRangeSelectionForCollection)
-        : useEmbeddingFilterForImages(collectionIdStore, setRangeSelectionForCollection);
-    const {
-        effectiveCount: plotFilterCountStore,
-        isVisible: isPlotFilterAppliedStore,
-        setVisibility: setEmbeddingFilterVisibility,
-        clearFilter: clearPlotFilter
-    } = activeEmbeddingFilter;
-    const plotFilterItemLabel = isVideos ? 'video' : 'image';
+    const embeddingFilterForImages = useEmbeddingFilterForImages(
+        collectionIdStore,
+        setRangeSelectionForCollection
+    );
+    const embeddingFilterForVideos = useEmbeddingFilterForVideos(
+        collectionIdStore,
+        setRangeSelectionForCollection
+    );
+    const plotFilterCountStore = $derived(
+        isVideos ? embeddingFilterForVideos.effectiveCount : embeddingFilterForImages.effectiveCount
+    );
+    const isPlotFilterAppliedStore = $derived(
+        isVideos ? embeddingFilterForVideos.isVisible : embeddingFilterForImages.isVisible
+    );
+    const setEmbeddingFilterVisibility = (shouldShow: boolean) => {
+        if (isVideos) {
+            embeddingFilterForVideos.setVisibility(shouldShow);
+            return;
+        }
+        embeddingFilterForImages.setVisibility(shouldShow);
+    };
+    const clearPlotFilter = () => {
+        if (isVideos) {
+            embeddingFilterForVideos.clearFilter();
+            return;
+        }
+        embeddingFilterForImages.clearFilter();
+    };
+    const plotFilterItemLabel = $derived(isVideos ? 'video' : 'image');
     const hasPlotFilterContext = $derived((isSamples || isVideos) && $plotFilterCountStore > 0);
     const isPlotFilterApplied = $derived($isPlotFilterAppliedStore);
     const plotFilterCount = $derived($plotFilterCountStore);
