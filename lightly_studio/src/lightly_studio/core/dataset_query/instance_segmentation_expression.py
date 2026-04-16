@@ -7,11 +7,11 @@ from dataclasses import dataclass
 from sqlalchemy import ColumnElement, and_
 from sqlmodel import col
 
-from lightly_studio.core.dataset_query.annotation_expression import (
-    AnnotationComparableField,
-    AnnotationNumericalField,
-)
 from lightly_studio.core.dataset_query.boolean_expression import AND
+from lightly_studio.core.dataset_query.foreign_field import (
+    ForeignComparableField,
+    ForeignNumericalField,
+)
 from lightly_studio.core.dataset_query.match_expression import MatchExpression
 from lightly_studio.models.annotation.annotation_base import (
     AnnotationBaseTable,
@@ -25,27 +25,27 @@ from lightly_studio.models.sample import SampleTable
 class InstanceSegmentationField:
     """Providing access to predefined instance segmentation fields for queries."""
 
-    width = AnnotationNumericalField(
+    width = ForeignNumericalField(
         column=col(SegmentationAnnotationTable.width),
         relationship=AnnotationBaseTable.segmentation_details,
     )
-    height = AnnotationNumericalField(
+    height = ForeignNumericalField(
         column=col(SegmentationAnnotationTable.height),
         relationship=AnnotationBaseTable.segmentation_details,
     )
-    x = AnnotationNumericalField(
+    x = ForeignNumericalField(
         column=col(SegmentationAnnotationTable.x),
         relationship=AnnotationBaseTable.segmentation_details,
     )
-    y = AnnotationNumericalField(
+    y = ForeignNumericalField(
         column=col(SegmentationAnnotationTable.y),
         relationship=AnnotationBaseTable.segmentation_details,
     )
-    segmentation_mask = AnnotationComparableField(
+    segmentation_mask = ForeignComparableField(
         column=col(SegmentationAnnotationTable.segmentation_mask),
         relationship=AnnotationBaseTable.segmentation_details,
     )
-    label = AnnotationComparableField(
+    label = ForeignComparableField(
         column=col(AnnotationLabelTable.annotation_label_name),
         relationship=AnnotationBaseTable.annotation_label,
     )

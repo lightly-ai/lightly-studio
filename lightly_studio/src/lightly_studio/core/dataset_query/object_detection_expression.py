@@ -9,11 +9,11 @@ from sqlalchemy import ColumnElement, and_
 from sqlmodel import col
 from typing_extensions import TypeVar
 
-from lightly_studio.core.dataset_query.annotation_expression import (
-    AnnotationComparableField,
-    AnnotationNumericalField,
-)
 from lightly_studio.core.dataset_query.boolean_expression import AND
+from lightly_studio.core.dataset_query.foreign_field import (
+    ForeignComparableField,
+    ForeignNumericalField,
+)
 from lightly_studio.core.dataset_query.match_expression import MatchExpression
 from lightly_studio.models.annotation.annotation_base import (
     AnnotationBaseTable,
@@ -29,23 +29,23 @@ T = TypeVar("T", default=Optional["ObjectDetectionAnnotationTable"])
 class ObjectDetectionField:
     """Providing access to predefined object detection fields for queries."""
 
-    width = AnnotationNumericalField(
+    width = ForeignNumericalField(
         column=col(ObjectDetectionAnnotationTable.width),
         relationship=AnnotationBaseTable.object_detection_details,
     )
-    height = AnnotationNumericalField(
+    height = ForeignNumericalField(
         column=col(ObjectDetectionAnnotationTable.height),
         relationship=AnnotationBaseTable.object_detection_details,
     )
-    x = AnnotationNumericalField(
+    x = ForeignNumericalField(
         column=col(ObjectDetectionAnnotationTable.x),
         relationship=AnnotationBaseTable.object_detection_details,
     )
-    y = AnnotationNumericalField(
+    y = ForeignNumericalField(
         column=col(ObjectDetectionAnnotationTable.y),
         relationship=AnnotationBaseTable.object_detection_details,
     )
-    label = AnnotationComparableField(
+    label = ForeignComparableField(
         column=col(AnnotationLabelTable.annotation_label_name),
         relationship=AnnotationBaseTable.annotation_label,
     )
