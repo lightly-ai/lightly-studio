@@ -3088,9 +3088,15 @@ export interface components {
             text: string;
             /** @description Filter parameters for samples */
             filters?: components["schemas"]["ImageFilter"] | null;
-            /** @description Text embedding to search for */
+            /**
+             * Text Embedding
+             * @description Text embedding to search for
+             */
             text_embedding?: number[] | null;
-            /** @description The list of requested sample IDs */
+            /**
+             * Sample Ids
+             * @description The list of requested sample IDs
+             */
             sample_ids?: string[] | null;
             pagination?: components["schemas"]["Paginated"] | null;
         };
