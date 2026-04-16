@@ -1677,6 +1677,50 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/query_fields": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Query Fields
+         * @description Return the fields and operators available for the query builder.
+         *
+         *     The response is derived directly from ``_FIELD_REGISTRY`` and the field
+         *     type hierarchy, so operator constraints are always in sync with what the
+         *     backend actually accepts.
+         */
+        get: operations["get_query_fields"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/translate_query": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Translate Query
+         * @description Translate a natural language string into a SVAR filter DSL expression.
+         */
+        post: operations["translate_query"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/cloud-credentials": {
         parameters: {
             query?: never;
@@ -1720,9 +1764,6 @@ export interface paths {
          *     Args:
          *         sample_id: The ID of the sample.
          *         session: Database session.
-         *         quality: Thumbnail quality mode. Use 'high' for compressed JPEG output.
-         *         max_width: Maximum width in pixels for high quality mode.
-         *         max_height: Maximum height in pixels for high quality mode.
          *
          *     Returns:
          *         StreamingResponse with the image data.
@@ -1753,7 +1794,7 @@ export interface paths {
          *     Args:
          *         sample_id: The UUID of the video frame sample.
          *         session: Database session dependency.
-         *         transform_query: Transport-level query parameters for frame encoding.
+         *         compressed: If True, encode as JPEG with lower quality (keeps original resolution).
          */
         get: operations["stream_frame"];
         put?: never;
@@ -2609,12 +2650,6 @@ export interface components {
          */
         GridViewSampleRenderingType: "cover" | "contain";
         /**
-         * GridViewThumbnailQualityType
-         * @description Defines how thumbnails are fetched for grid-like views.
-         * @enum {string}
-         */
-        GridViewThumbnailQualityType: "raw" | "high";
-        /**
          * GroupComponentView
          * @description GroupComponentView representation.
          *
@@ -2954,6 +2989,33 @@ export interface components {
             limit: number;
         };
         /**
+         * QueryFieldSchema
+         * @description Schema for a single queryable field exposed to the frontend.
+         */
+        QueryFieldSchema: {
+            /** Id */
+            id: string;
+            /** Wire Name */
+            wire_name: string | null;
+            /** Label */
+            label: string;
+            /**
+             * Type
+             * @enum {string}
+             */
+            type: "number" | "text" | "date";
+            /** Operators */
+            operators: (">" | ">=" | "<" | "<=" | "==" | "!=")[];
+        };
+        /**
+         * QueryFieldsResponse
+         * @description Response containing all fields available for filtering.
+         */
+        QueryFieldsResponse: {
+            /** Fields */
+            fields: components["schemas"]["QueryFieldSchema"][];
+        };
+        /**
          * ReadCountImageAnnotationsRequest
          * @description Request body for reading image annotation counts.
          */
@@ -2983,6 +3045,11 @@ export interface components {
         ReadImagesRequest: {
             /** @description Filter parameters for samples */
             filters?: components["schemas"]["ImageFilter"] | null;
+            /**
+             * Query Filter
+             * @description Query filter tree built from the Python DatasetQuery API or the frontend query builder. Supported nodes: field, tags_contains, and, or, not.
+             */
+            query_filter?: (components["schemas"]["WireField"] | components["schemas"]["WireTagsContains"] | components["schemas"]["WireAnd"] | components["schemas"]["WireOr"] | components["schemas"]["WireNot"]) | null;
             /**
              * Text Embedding
              * @description Text embedding to search for
@@ -3236,11 +3303,6 @@ export interface components {
              */
             grid_view_sample_rendering: components["schemas"]["GridViewSampleRenderingType"];
             /**
-             * @description Controls thumbnail quality for grid-like preview views
-             * @default raw
-             */
-            grid_view_thumbnail_quality: components["schemas"]["GridViewThumbnailQualityType"];
-            /**
              * Key Hide Annotations
              * @description Key to temporarily hide annotations while pressed
              * @default v
@@ -3438,6 +3500,16 @@ export interface components {
              * Format: date-time
              */
             updated_at: string;
+        };
+        /** TranslateQueryRequest */
+        TranslateQueryRequest: {
+            /** Text */
+            text: string;
+        };
+        /** TranslateQueryResponse */
+        TranslateQueryResponse: {
+            /** Query */
+            query: string;
         };
         /**
          * UpdateAnnotationsRequest
@@ -3650,6 +3722,78 @@ export interface components {
             total_count: number;
             /** Nextcursor */
             nextCursor?: number | null;
+        };
+        /**
+         * WireAnd
+         * @description Logical AND of a list of expressions.
+         */
+        WireAnd: {
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            type: "and";
+            /** Terms */
+            terms: (components["schemas"]["WireField"] | components["schemas"]["WireTagsContains"] | components["schemas"]["WireAnd"] | components["schemas"]["WireOr"] | components["schemas"]["WireNot"])[];
+        };
+        /**
+         * WireField
+         * @description A scalar field comparison.
+         */
+        WireField: {
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            type: "field";
+            /** Field */
+            field: string;
+            /**
+             * Op
+             * @enum {string}
+             */
+            op: ">" | ">=" | "<" | "<=" | "==" | "!=";
+            /** Value */
+            value: number | string;
+        };
+        /**
+         * WireNot
+         * @description Logical NOT of a single expression.
+         */
+        WireNot: {
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            type: "not";
+            /** Term */
+            term: components["schemas"]["WireField"] | components["schemas"]["WireTagsContains"] | components["schemas"]["WireAnd"] | components["schemas"]["WireOr"] | components["schemas"]["WireNot"];
+        };
+        /**
+         * WireOr
+         * @description Logical OR of a list of expressions.
+         */
+        WireOr: {
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            type: "or";
+            /** Terms */
+            terms: (components["schemas"]["WireField"] | components["schemas"]["WireTagsContains"] | components["schemas"]["WireAnd"] | components["schemas"]["WireOr"] | components["schemas"]["WireNot"])[];
+        };
+        /**
+         * WireTagsContains
+         * @description A tag membership check.
+         */
+        WireTagsContains: {
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            type: "tags_contains";
+            /** Tag */
+            tag: string;
         };
     };
     responses: never;
@@ -6414,6 +6558,59 @@ export interface operations {
             };
         };
     };
+    get_query_fields: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["QueryFieldsResponse"];
+                };
+            };
+        };
+    };
+    translate_query: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["TranslateQueryRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TranslateQueryResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     refresh_cloud_credentials: {
         parameters: {
             query?: never;
@@ -6449,11 +6646,7 @@ export interface operations {
     };
     serve_image_by_sample_id: {
         parameters: {
-            query?: {
-                quality?: components["schemas"]["GridViewThumbnailQualityType"];
-                max_width?: number | null;
-                max_height?: number | null;
-            };
+            query?: never;
             header?: never;
             path: {
                 sample_id: string;
@@ -6485,9 +6678,7 @@ export interface operations {
     stream_frame: {
         parameters: {
             query?: {
-                quality?: components["schemas"]["GridViewThumbnailQualityType"];
-                max_width?: number | null;
-                max_height?: number | null;
+                compressed?: boolean;
             };
             header?: never;
             path: {
