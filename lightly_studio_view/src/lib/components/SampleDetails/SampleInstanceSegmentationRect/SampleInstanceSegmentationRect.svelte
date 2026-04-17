@@ -12,6 +12,7 @@
     import { useAnnotationLabels } from '$lib/hooks/useAnnotationLabels/useAnnotationLabels';
     import { useInstanceSegmentationBrush } from '$lib/hooks/useInstanceSegmentationBrush';
     import { useInstanceSegmentationPreview } from '$lib/hooks/useInstanceSegmentationPreview';
+    import { usePendingSaveTokens } from '$lib/hooks/usePendingSaveTokens/usePendingSaveTokens';
     import { useCollectionWithChildren } from '$lib/hooks/useCollection/useCollection';
     import { page } from '$app/state';
     import type { SavePendingChange } from '../savePendingChange';
@@ -97,8 +98,6 @@
     let lastBrushPoint = $state<{ x: number; y: number } | null>(null);
     let previewCanvas = $state<HTMLCanvasElement | null>(null);
     let isPreviewVisible = $state(false);
-    const pendingSaveTokens = new Set<string>();
-    let pendingSaveTokenCounter = 0;
 
     // Parse the color once and cache it for direct mask rendering.
     const parsedColor = $derived(parseColor(drawerStrokeColor));
@@ -114,32 +113,16 @@
         previewApi.setPreviewCanvas(previewCanvas);
     });
 
-    const setFinishBrushPending = (pendingChange: SavePendingChange) => {
-        onFinishBrushPendingChange?.(pendingChange);
-    };
-
-    const startFinishBrushPending = () => {
-        pendingSaveTokenCounter += 1;
-        const token = `brush-${pendingSaveTokenCounter}`;
-        pendingSaveTokens.add(token);
-        setFinishBrushPending({ token, isPending: true });
-        return token;
-    };
-
-    const endFinishBrushPending = (token: string) => {
-        if (!pendingSaveTokens.has(token)) return;
-
-        pendingSaveTokens.delete(token);
-        setFinishBrushPending({ token, isPending: false });
-    };
-
-    const resetFinishBrushPending = () => {
-        for (const token of pendingSaveTokens) {
-            setFinishBrushPending({ token, isPending: false });
+    const {
+        startPending: startFinishBrushPending,
+        endPending: endFinishBrushPending,
+        resetPending: resetFinishBrushPending
+    } = usePendingSaveTokens({
+        tokenPrefix: 'brush',
+        onPendingChange: (pendingChange: SavePendingChange) => {
+            onFinishBrushPendingChange?.(pendingChange);
         }
-
-        pendingSaveTokens.clear();
-    };
+    });
 
     onDestroy(() => {
         resetFinishBrushPending();

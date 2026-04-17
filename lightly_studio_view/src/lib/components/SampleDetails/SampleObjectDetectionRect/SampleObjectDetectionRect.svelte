@@ -14,6 +14,7 @@
     import { addAnnotationCreateToUndoStack } from '$lib/services/addAnnotationCreateToUndoStack';
     import { useGlobalStorage } from '$lib/hooks/useGlobalStorage';
     import { useDeleteAnnotation } from '$lib/hooks/useDeleteAnnotation/useDeleteAnnotation';
+    import { usePendingSaveTokens } from '$lib/hooks/usePendingSaveTokens/usePendingSaveTokens';
     import ResizableRectangle from '$lib/components/ResizableRectangle/ResizableRectangle.svelte';
     import { useAnnotationLabelContext } from '$lib/contexts/SampleDetailsAnnotation.svelte';
     import { getBoundingBox } from '$lib/components/SampleAnnotation/utils';
@@ -49,8 +50,6 @@
 
     let temporaryBbox = $state<BoundingBox | null>(null);
     let shouldDisableInteraction = $state(false);
-    const pendingSaveTokens = new Set<string>();
-    let pendingSaveTokenCounter = 0;
     const labels = useAnnotationLabels({ collectionId });
     const { createLabel } = useCreateLabel({ collectionId });
     const { createAnnotation } = useCreateAnnotation({
@@ -61,32 +60,16 @@
     });
     const { addReversibleAction } = useGlobalStorage();
 
-    const setCreateBoundingBoxPending = (pendingChange: SavePendingChange) => {
-        onCreateBoundingBoxPendingChange?.(pendingChange);
-    };
-
-    const startCreateBoundingBoxPending = () => {
-        pendingSaveTokenCounter += 1;
-        const token = `bbox-${pendingSaveTokenCounter}`;
-        pendingSaveTokens.add(token);
-        setCreateBoundingBoxPending({ token, isPending: true });
-        return token;
-    };
-
-    const endCreateBoundingBoxPending = (token: string) => {
-        if (!pendingSaveTokens.has(token)) return;
-
-        pendingSaveTokens.delete(token);
-        setCreateBoundingBoxPending({ token, isPending: false });
-    };
-
-    const resetCreateBoundingBoxPending = () => {
-        for (const token of pendingSaveTokens) {
-            setCreateBoundingBoxPending({ token, isPending: false });
+    const {
+        startPending: startCreateBoundingBoxPending,
+        endPending: endCreateBoundingBoxPending,
+        resetPending: resetCreateBoundingBoxPending
+    } = usePendingSaveTokens({
+        tokenPrefix: 'bbox',
+        onPendingChange: (pendingChange: SavePendingChange) => {
+            onCreateBoundingBoxPendingChange?.(pendingChange);
         }
-
-        pendingSaveTokens.clear();
-    };
+    });
 
     const cancelDrag = () => {
         setIsDrawing(false);

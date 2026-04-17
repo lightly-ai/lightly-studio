@@ -18,7 +18,7 @@
     import { useSampleDetailsToolbarContext } from '$lib/contexts/SampleDetailsToolbar.svelte';
     import { getBoundingBox } from '$lib/components/SampleAnnotation/utils';
     import { onDestroy, onMount } from 'svelte';
-    import type { SavePendingChange } from '../savePendingChange';
+    import { usePendingSaveState } from '../usePendingSaveState';
 
     type SampleDetailsImageContainerProps = {
         sample: {
@@ -62,8 +62,7 @@
     let mousePosition = $state<{ x: number; y: number } | null>(null);
     let isHoveringBoundingBox = $state(false);
     let interactionRect: SVGRectElement | null = $state(null);
-    let pendingSaveTokens = $state<string[]>([]);
-    const isSavePending = $derived(pendingSaveTokens.length > 0);
+    const { isSavePending, handleSavePendingChange } = usePendingSaveState();
 
     let sampleId = $derived(sample.sampleId);
     const actualAnnotationsToShow = $derived.by(() => {
@@ -184,17 +183,6 @@
 
         return true;
     });
-
-    const handleSavePendingChange = (pendingChange: SavePendingChange) => {
-        if (pendingChange.isPending) {
-            if (!pendingSaveTokens.includes(pendingChange.token)) {
-                pendingSaveTokens = [...pendingSaveTokens, pendingChange.token];
-            }
-            return;
-        }
-
-        pendingSaveTokens = pendingSaveTokens.filter((token) => token !== pendingChange.token);
-    };
 </script>
 
 <ZoomableContainer
@@ -219,7 +207,7 @@
         {/if}
     {/snippet}
     {#snippet zoomPanelRightContent()}
-        {#if isSavePending}
+        {#if $isSavePending}
             <div
                 class="pointer-events-auto inline-flex h-9 items-center justify-center gap-1.5 rounded-lg bg-muted/80 px-2.5 text-sm text-muted-foreground shadow-md backdrop-blur-sm"
                 data-testid="finish-brush-loading-indicator"

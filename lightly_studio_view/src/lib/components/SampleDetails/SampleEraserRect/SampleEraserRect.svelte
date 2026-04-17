@@ -15,6 +15,7 @@
     import { useDeleteAnnotation } from '$lib/hooks/useDeleteAnnotation/useDeleteAnnotation';
     import { useGlobalStorage } from '$lib/hooks/useGlobalStorage';
     import { useInstanceSegmentationPreview } from '$lib/hooks/useInstanceSegmentationPreview';
+    import { usePendingSaveTokens } from '$lib/hooks/usePendingSaveTokens/usePendingSaveTokens';
     import { useSegmentationMaskEraser } from '$lib/hooks/useSegmentationMaskEraser';
     import { addAnnotationDeleteToUndoStack } from '$lib/services/addAnnotationDeleteToUndoStack';
     import type { SavePendingChange } from '../savePendingChange';
@@ -82,8 +83,6 @@
     let lastBrushPoint = $state<{ x: number; y: number } | null>(null);
     let previewCanvas = $state<HTMLCanvasElement | null>(null);
     let isPreviewVisible = $state(false);
-    const pendingSaveTokens = new Set<string>();
-    let pendingSaveTokenCounter = 0;
 
     // Parse the color once and cache it for direct mask rendering.
     const parsedColor = $derived(parseColor(drawerStrokeColor));
@@ -99,32 +98,16 @@
         previewApi.setPreviewCanvas(previewCanvas);
     });
 
-    const setFinishErasePending = (pendingChange: SavePendingChange) => {
-        onFinishErasePendingChange?.(pendingChange);
-    };
-
-    const startFinishErasePending = () => {
-        pendingSaveTokenCounter += 1;
-        const token = `eraser-${pendingSaveTokenCounter}`;
-        pendingSaveTokens.add(token);
-        setFinishErasePending({ token, isPending: true });
-        return token;
-    };
-
-    const endFinishErasePending = (token: string) => {
-        if (!pendingSaveTokens.has(token)) return;
-
-        pendingSaveTokens.delete(token);
-        setFinishErasePending({ token, isPending: false });
-    };
-
-    const resetFinishErasePending = () => {
-        for (const token of pendingSaveTokens) {
-            setFinishErasePending({ token, isPending: false });
+    const {
+        startPending: startFinishErasePending,
+        endPending: endFinishErasePending,
+        resetPending: resetFinishErasePending
+    } = usePendingSaveTokens({
+        tokenPrefix: 'eraser',
+        onPendingChange: (pendingChange: SavePendingChange) => {
+            onFinishErasePendingChange?.(pendingChange);
         }
-
-        pendingSaveTokens.clear();
-    };
+    });
 
     onDestroy(() => {
         resetFinishErasePending();
