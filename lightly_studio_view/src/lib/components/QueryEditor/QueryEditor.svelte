@@ -73,7 +73,7 @@
                                 }
                             }
                         ]),
-                        placeholder('Filter: width > 1024 and has_tag("train")'),
+                        placeholder('width > 1024 and has_tag("train")'),
                         EditorView.contentAttributes.of({
                             'aria-label': 'Query editor',
                             autocapitalize: 'off',

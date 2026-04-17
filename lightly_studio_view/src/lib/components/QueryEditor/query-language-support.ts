@@ -21,12 +21,12 @@ export const queryLanguage = LRLanguage.define({
 });
 
 const queryHighlightStyle = HighlightStyle.define([
-    { tag: [t.keyword, t.operatorKeyword], color: 'hsl(332 79% 72%)', fontWeight: '600' },
-    { tag: t.operator, color: 'hsl(18 94% 71%)', fontWeight: '700' },
-    { tag: t.name, color: 'hsl(195 88% 74%)' },
-    { tag: t.string, color: 'hsl(152 70% 68%)' },
-    { tag: t.number, color: 'hsl(44 95% 70%)' },
-    { tag: t.bool, color: 'hsl(262 85% 78%)', fontWeight: '600' },
+    { tag: [t.keyword, t.operatorKeyword], color: 'hsl(262 50% 70%)' },
+    { tag: t.operator, color: 'hsl(var(--foreground))' },
+    { tag: t.name, color: 'hsl(var(--foreground))' },
+    { tag: t.string, color: 'hsl(142 35% 60%)' },
+    { tag: t.number, color: 'hsl(35 45% 65%)' },
+    { tag: t.bool, color: 'hsl(262 50% 70%)' },
     { tag: [t.paren, t.squareBracket], color: 'hsl(var(--muted-foreground))' }
 ]);
 
