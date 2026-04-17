@@ -65,7 +65,8 @@
         buildVideoAnnotationCountsFilter,
         buildVideoFrameAnnotationCountsFilter
     } from '$lib/utils/buildAnnotationCountsFilters';
-    import { useSelectionSummary } from '$lib/hooks';
+    import { useSelectionSummary, useQueryLanguage } from '$lib/hooks';
+    import QueryEditor from '$lib/components/QueryEditor/QueryEditor.svelte';
     const { data, children } = $props();
     const {
         collection,
@@ -83,6 +84,8 @@
     const collectionIdStore = toStore(() => collectionId);
 
     const { selectedCount, clearSelection } = $derived(useSelectionSummary(collectionId));
+
+    const { activeQueryText, setQueryText } = $derived(useQueryLanguage(collectionId));
 
     // Use hideAnnotations hook
     const { handleKeyEvent } = useHideAnnotations();
@@ -621,7 +624,14 @@
                                     {/if}
                                 </div>
                             </GridHeader>
-                            <Separator class="mb-4 bg-border-hard" />
+                            <Separator class="bg-border-hard" />
+                            {#if isSamples}
+                                <QueryEditor
+                                    {collectionId}
+                                    initialValue={$activeQueryText}
+                                    onExecute={(text) => setQueryText(text)}
+                                />
+                            {/if}
                             <div class="flex min-h-0 flex-1 overflow-hidden">
                                 {@render children()}
                             </div>
@@ -749,7 +759,14 @@
                                 </div>
                             {/if}
                         </GridHeader>
-                        <Separator class="mb-4 bg-border-hard" />
+                        <Separator class="bg-border-hard" />
+                        {#if isSamples}
+                            <QueryEditor
+                                {collectionId}
+                                initialValue={$activeQueryText}
+                                onExecute={(text) => setQueryText(text)}
+                            />
+                        {/if}
                     {/if}
 
                     <div class="flex min-h-0 flex-1">

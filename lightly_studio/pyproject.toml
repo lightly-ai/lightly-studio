@@ -62,6 +62,7 @@ dependencies = [
     "opencv-python-headless>=4.11.0.86",
     "click>=8.0.0",
     "brotli-asgi>=1.4.0",
+    "lark>=1.2.0,<2.0",
 ]
 
 [project.scripts]
@@ -132,6 +133,10 @@ ignore_missing_imports = true
 
 [[tool.mypy.overrides]]
 module = "sqlalchemy_utils.*"
+ignore_missing_imports = true
+
+[[tool.mypy.overrides]]
+module = "lark.*"
 ignore_missing_imports = true
 
 

@@ -15,6 +15,8 @@
     } from '$lib/hooks/useImagesInfinite/useImagesInfinite';
     import { useScrollRestoration } from '$lib/hooks/useScrollRestoration/useScrollRestoration';
     import { useImageFilters } from '$lib/hooks/useImageFilters/useImageFilters';
+    import { useQueryImages } from '$lib/hooks/useQueryImages/useQueryImages';
+    import { useQueryLanguage } from '$lib/hooks/useQueryLanguage/useQueryLanguage';
     import type { ImageView } from '$lib/api/lightly_studio_local';
     import { goto } from '$app/navigation';
     import { omit, isEqual } from 'lodash-es';
@@ -74,6 +76,7 @@
     };
 
     const { filterParams, updateFilterParams } = useImageFilters();
+    const { activeQueryText } = useQueryLanguage(collection_id);
 
     $effect(() => {
         // Synchronize the global filter parameters with the local samples parameters
@@ -114,10 +117,21 @@
     const { samples: infiniteSamples } = $derived(
         useImagesInfinite({ ...$filterParams, collection_id: collection_id })
     );
+    const { samples: querySamples } = $derived(
+        useQueryImages({
+            ...$filterParams,
+            collection_id: collection_id,
+            queryText: $activeQueryText
+        })
+    );
+
+    const isQueryMode = $derived($activeQueryText.trim().length > 0);
+    const activeSamples = $derived(isQueryMode ? querySamples : infiniteSamples);
+
     // Derived list of samples from TanStack infinite query
     const samples: ImageView[] = $derived(
-        $infiniteSamples && $infiniteSamples.data
-            ? $infiniteSamples.data.pages.flatMap((page: { data?: ImageView[] }) => page.data ?? [])
+        $activeSamples && $activeSamples.data
+            ? $activeSamples.data.pages.flatMap((page: { data?: ImageView[] }) => page.data ?? [])
             : []
     );
     const selectedSampleIds = getSelectedSampleIds(collection_id);
@@ -149,7 +163,8 @@
             `${$dimensions?.min_width}-${$dimensions?.max_width}`,
             `${$dimensions?.min_height}-${$dimensions?.max_height}`,
             JSON.stringify($metadataValues),
-            $textEmbedding?.queryText || ''
+            $textEmbedding?.queryText || '',
+            $activeQueryText
         ];
 
         return parts.filter(Boolean).join('|');
@@ -170,14 +185,14 @@
 
     // Set total count when data is available
     $effect(() => {
-        if ($infiniteSamples.isSuccess && $infiniteSamples.data?.pages.length > 0) {
-            setfilteredSampleCount($infiniteSamples.data.pages[0].total_count);
+        if ($activeSamples.isSuccess && $activeSamples.data?.pages.length > 0) {
+            setfilteredSampleCount($activeSamples.data.pages[0].total_count);
         }
     });
 
     function handleLoadMore() {
-        if ($infiniteSamples.hasNextPage && !$infiniteSamples.isFetchingNextPage) {
-            $infiniteSamples.fetchNextPage();
+        if ($activeSamples.hasNextPage && !$activeSamples.isFetchingNextPage) {
+            $activeSamples.fetchNextPage();
         }
     }
 
@@ -239,15 +254,15 @@
         }
     }}
     status={{
-        loading: $infiniteSamples.isPending,
-        error: $infiniteSamples.isError,
-        empty: $infiniteSamples.isSuccess && samples.length === 0,
+        loading: $activeSamples.isPending,
+        error: $activeSamples.isError,
+        empty: $activeSamples.isSuccess && samples.length === 0,
         success: isReady
     }}
     loader={{
         loadMore: handleLoadMore,
-        disabled: !$infiniteSamples.hasNextPage || $infiniteSamples.isFetchingNextPage,
-        loading: $infiniteSamples.isFetchingNextPage
+        disabled: !$activeSamples.hasNextPage || $activeSamples.isFetchingNextPage,
+        loading: $activeSamples.isFetchingNextPage
     }}
 >
     {#snippet gridItem({ index, style, sampleSize })}

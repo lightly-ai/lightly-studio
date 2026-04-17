@@ -264,6 +264,115 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/collections/{collection_id}/images/query": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Query Images
+         * @description Filter images in a collection using the query language DSL.
+         *
+         *     Args:
+         *         session: Database session.
+         *         collection_id: The collection to query.
+         *         body: Query text and optional pagination.
+         *
+         *     Returns:
+         *         Filtered images in the same shape as ``/images/list``.
+         */
+        post: operations["query_images"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/collections/{collection_id}/query/validate": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Validate Query
+         * @description Validate query syntax and return diagnostics.
+         *
+         *     Args:
+         *         collection_id: The collection ID (unused; kept for consistent URL namespace).
+         *         body: The query text to validate.
+         *
+         *     Returns:
+         *         A list of diagnostics (empty if valid).
+         */
+        post: operations["validate_query"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/collections/{collection_id}/query-schema": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Query Schema
+         * @description Return the field schema for the query language editor.
+         *
+         *     Args:
+         *         collection_id: The collection ID (unused; kept for consistent URL namespace).
+         *
+         *     Returns:
+         *         ``{"fields": [...], "subcontexts": {"annotation": [...]}}``
+         */
+        get: operations["get_query_schema"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/collections/{collection_id}/query-suggest": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Suggest Values
+         * @description Suggest field values for autocomplete.
+         *
+         *     Args:
+         *         session: Database session.
+         *         collection: The validated collection (resolved via dependency).
+         *         body: The field name, optional prefix, and result limit.
+         *
+         *     Returns:
+         *         Up to ``limit`` matching values.
+         */
+        post: operations["suggest_values"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/collections/{collection_id}/export/annotations": {
         parameters: {
             query?: never;
@@ -2428,6 +2537,23 @@ export interface components {
             copy_name: string;
         };
         /**
+         * Diagnostic
+         * @description A single parse/validation diagnostic.
+         */
+        Diagnostic: {
+            /** Start */
+            start: number;
+            /** End */
+            end: number;
+            /** Message */
+            message: string;
+            /**
+             * Severity
+             * @default error
+             */
+            severity: string;
+        };
+        /**
          * EmbeddingClassifier
          * @description Base class for the Classifier model.
          */
@@ -2954,6 +3080,27 @@ export interface components {
             limit: number;
         };
         /**
+         * QueryRequest
+         * @description Request body for the query endpoint.
+         */
+        QueryRequest: {
+            /** Text */
+            text: string;
+            /** @description Filter parameters for samples */
+            filters?: components["schemas"]["ImageFilter"] | null;
+            /**
+             * Text Embedding
+             * @description Text embedding to search for
+             */
+            text_embedding?: number[] | null;
+            /**
+             * Sample Ids
+             * @description The list of requested sample IDs
+             */
+            sample_ids?: string[] | null;
+            pagination?: components["schemas"]["Paginated"] | null;
+        };
+        /**
          * ReadCountImageAnnotationsRequest
          * @description Request body for reading image annotation counts.
          */
@@ -3329,6 +3476,32 @@ export interface components {
             updated_at: string;
         };
         /**
+         * SuggestRequest
+         * @description Request body for the suggest endpoint.
+         */
+        SuggestRequest: {
+            /** Field */
+            field: string;
+            /**
+             * Prefix
+             * @default
+             */
+            prefix: string;
+            /**
+             * Limit
+             * @default 20
+             */
+            limit: number;
+        };
+        /**
+         * SuggestResponse
+         * @description Response from the suggest endpoint.
+         */
+        SuggestResponse: {
+            /** Values */
+            values: string[];
+        };
+        /**
          * TagCreateBody
          * @description Tag model when creating.
          */
@@ -3448,6 +3621,22 @@ export interface components {
             annotations: {
                 [key: string]: string[];
             };
+        };
+        /**
+         * ValidateRequest
+         * @description Request body for the validate endpoint.
+         */
+        ValidateRequest: {
+            /** Text */
+            text: string;
+        };
+        /**
+         * ValidateResponse
+         * @description Response from the validate endpoint.
+         */
+        ValidateResponse: {
+            /** Diagnostics */
+            diagnostics: components["schemas"]["Diagnostic"][];
         };
         /** ValidationError */
         ValidationError: {
@@ -4207,6 +4396,144 @@ export interface operations {
                 };
                 content: {
                     "application/json": boolean;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    query_images: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                collection_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["QueryRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ImageViewsWithCount"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    validate_query: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                collection_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ValidateRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ValidateResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_query_schema: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                collection_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    suggest_values: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                collection_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SuggestRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SuggestResponse"];
                 };
             };
             /** @description Validation Error */

@@ -56,3 +56,4 @@ export { default as GroupsComponentsMenu } from '$lib/components/GroupsComponent
 export { default as LayoutCard } from '$lib/components/LayoutCard/LayoutCard.svelte';
 export { default as SelectionPill } from '$lib/components/SelectionPill/SelectionPill.svelte';
 export { default as Separator } from '$lib/components/ui/separator/separator.svelte';
+export { default as QueryEditor } from '$lib/components/QueryEditor/QueryEditor.svelte';

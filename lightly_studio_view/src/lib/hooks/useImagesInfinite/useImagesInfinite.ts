@@ -96,7 +96,10 @@ const createImagesInfiniteOptions = (params: ImagesInfiniteParams) => {
     });
 };
 
-const buildRequestBody = (params: ImagesInfiniteParams, pageParam: number): ReadImagesRequest => {
+export const buildRequestBody = (
+    params: ImagesInfiniteParams,
+    pageParam: number
+): ReadImagesRequest => {
     const baseBody: ReadImagesRequest = {
         pagination: {
             offset: pageParam,
