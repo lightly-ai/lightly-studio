@@ -60,10 +60,11 @@ nav:
   - 🏢 Enterprise:
     - enterprise/index.md
     - Connect from Python: enterprise/connect.md
+    - Security Considerations: enterprise/security.md
+    - On-Premise Deployment: enterprise/on-premise.md
     - Cloud Storage:
       - enterprise/cloud_storage/index.md
       - AWS S3: enterprise/cloud_storage/aws.md
-    - Security Considerations: enterprise/security.md
 
 extra_css:
   - _static/custom.css
