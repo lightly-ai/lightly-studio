@@ -12,7 +12,7 @@
         isZoomoutDisabled,
         isResetDisabled,
         content,
-        rightContent
+        contentRight
     }: {
         onZoomIn: () => void;
         onZoomOut: () => void;
@@ -22,7 +22,7 @@
         isZoomoutDisabled?: boolean;
         isResetDisabled?: boolean;
         content?: Snippet;
-        rightContent?: Snippet;
+        contentRight?: Snippet;
     } = $props();
 </script>
 
@@ -81,10 +81,10 @@
             <ZoomIn class="h-4 w-4" />
         </Button>
     </div>
-    {#if rightContent}
+    {#if contentRight}
         <div class="pointer-events-none absolute bottom-0 left-[calc(100%+0.5rem)]">
             <div class="pointer-events-auto">
-                {@render rightContent()}
+                {@render contentRight()}
             </div>
         </div>
     {/if}

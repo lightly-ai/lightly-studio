@@ -263,7 +263,7 @@
                 {@render zoomPanelContent()}
             {/if}
         {/snippet}
-        {#snippet rightContent()}
+        {#snippet contentRight()}
             {#if zoomPanelRightContent}
                 {@render zoomPanelRightContent()}
             {/if}
