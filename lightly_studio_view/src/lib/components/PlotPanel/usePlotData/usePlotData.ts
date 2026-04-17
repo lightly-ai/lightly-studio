@@ -48,7 +48,9 @@ export function usePlotData({
 
     let category = hasActiveFilter
         ? (data.fulfils_filter as Uint8Array)
-        : new Uint8Array((data.x as Float32Array).length);
+        : rangeSelection
+          ? new Uint8Array((data.x as Float32Array).length).fill(FILTERED_CATEGORY)
+          : new Uint8Array((data.x as Float32Array).length);
     const sampleIds = data.sample_id as string[];
 
     if (rangeSelection) {

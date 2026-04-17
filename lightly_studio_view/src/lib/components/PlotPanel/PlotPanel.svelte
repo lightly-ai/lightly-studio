@@ -66,6 +66,44 @@
     const embeddingsData = $derived(useEmbeddings(collectionId, filter));
 
     const categoryColors = ['#9CA3AF', '#2563EB'];
+    let hiddenCategories = $state(new Set<number>());
+    const toggleCategory = (category: number) => {
+        const next = new Set(hiddenCategories);
+        if (next.has(category)) {
+            next.delete(category);
+        } else {
+            next.add(category);
+        }
+        hiddenCategories = next;
+    };
+    const filteredPlotData = $derived.by(() => {
+        const data = $plotData;
+        if (!data || hiddenCategories.size === 0) return data;
+
+        const x = data.x as Float32Array;
+        const y = data.y as Float32Array;
+        const category = data.category as Uint8Array;
+
+        let count = 0;
+        for (let i = 0; i < category.length; i++) {
+            if (!hiddenCategories.has(category[i])) count++;
+        }
+
+        const newX = new Float32Array(count);
+        const newY = new Float32Array(count);
+        const newCategory = new Uint8Array(count);
+        let j = 0;
+        for (let i = 0; i < category.length; i++) {
+            if (!hiddenCategories.has(category[i])) {
+                newX[j] = x[i];
+                newY[j] = y[i];
+                newCategory[j] = category[i];
+                j++;
+            }
+        }
+
+        return { x: newX, y: newY, category: newCategory };
+    });
     const { data: arrowData, error: arrowError } = $derived(
         useArrowData({
             blobData: $embeddingsData.data as Blob
@@ -259,7 +297,7 @@
                         config={embeddingConfig}
                         {width}
                         {height}
-                        data={$plotData}
+                        data={filteredPlotData}
                         {categoryColors}
                         tooltip={null}
                         theme={embeddingTheme}
@@ -268,7 +306,11 @@
                         {viewportState}
                         rangeSelection={$rangeSelection}
                     />
-                    <PlotPanelLegend {categoryColors} />
+                    <PlotPanelLegend
+                        {categoryColors}
+                        {hiddenCategories}
+                        onToggleCategory={toggleCategory}
+                    />
                 {/if}
             </div>
         {:else}
