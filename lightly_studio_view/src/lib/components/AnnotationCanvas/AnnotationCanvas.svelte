@@ -3,6 +3,10 @@
     import { useCustomLabelColors, type CustomColor } from '$lib/hooks/useCustomLabelColors';
     import { getColorByLabel } from '$lib/utils';
     import type { BoundingBox } from '$lib/types';
+    import {
+        acquireMaskRendererWorker,
+        releaseMaskRendererWorker
+    } from '$lib/workers/maskRendererPool';
 
     type InstanceAnnotation = {
         annotation_type: 'segmentation_mask';
@@ -21,12 +25,14 @@
     type AnnotationCanvasAnnotation = InstanceAnnotation | ObjectDetectionAnnotation;
 
     const {
+        sampleId,
         width,
         height,
         annotations = [],
         alpha = 0.4,
         className = ''
     }: {
+        sampleId: string;
         width: number;
         height: number;
         annotations?: AnnotationCanvasAnnotation[];
@@ -41,6 +47,8 @@
     let workerReady = false;
     let hasOffscreen = false;
     let resizeObserver: ResizeObserver | null = null;
+    // Shared workers multiplex multiple canvases
+    const canvasId = sampleId;
 
     type ColorParser = (color: string) => [number, number, number, number];
 
@@ -97,12 +105,16 @@
         return [r, g, b, alphaValue];
     };
 
-    const normalizeRLE = (mask?: ArrayLike<number> | null): number[] => {
+    const toCloneableRLE = (mask?: ArrayLike<number> | null): number[] => {
         if (!mask?.length) {
             return [];
         }
 
-        // Convert to a plain number array so Worker.postMessage can structured-clone it.
+        // Ensure worker postMessage receives a plain cloneable array (no reactive proxies).
+        if (Array.isArray(mask)) {
+            return mask.slice();
+        }
+
         return Array.from(mask, (value) => Number(value) || 0);
     };
 
@@ -116,7 +128,7 @@
         for (const annotation of annotations) {
             const labelName = annotation.annotation_label_name || 'label';
 
-            const rle = normalizeRLE(annotation.segmentation_mask);
+            const rle = toCloneableRLE(annotation.segmentation_mask);
             if (rle.length) {
                 masks.push({
                     rle,
@@ -124,6 +136,7 @@
                 });
             }
 
+            // We also include boxes for instance masks when bbox details are present.
             const bbox = annotation.object_detection_details;
             if (bbox) {
                 boxes.push({
@@ -216,6 +229,7 @@
         // Include current CSS scale so the worker can keep stroke widths consistent.
         worker.postMessage({
             type: 'render',
+            canvasId,
             width,
             height,
             scaleX,
@@ -224,54 +238,79 @@
         });
     };
 
+    const handleWorkerMessage = (event: MessageEvent) => {
+        // Ignore frames produced for other canvases that share the same worker instance.
+        if (event.data?.type !== 'image' || event.data?.canvasId !== canvasId || !canvasEl) {
+            return;
+        }
+
+        const {
+            width: w,
+            height: h,
+            data,
+            boxes = [],
+            stroke = 2
+        } = event.data as {
+            canvasId: string;
+            width: number;
+            height: number;
+            data: Uint8ClampedArray;
+            boxes?: BoxPayload[];
+            stroke?: number;
+        };
+
+        const ctx = canvasEl.getContext('2d', { willReadFrequently: true });
+        if (!ctx) {
+            return;
+        }
+
+        // Worker transfers pixel buffer ownership; clone into a fresh Uint8ClampedArray for ImageData.
+        const imageData = new ImageData(new Uint8ClampedArray(data), w, h);
+        ctx.putImageData(imageData, 0, 0);
+
+        if (!boxes.length) {
+            return;
+        }
+
+        ctx.save();
+        ctx.lineWidth = stroke;
+        const clamp = (value: number, min: number, max: number) =>
+            Math.min(Math.max(value, min), max);
+
+        for (const box of boxes) {
+            ctx.strokeStyle = `rgba(${box.color[0]}, ${box.color[1]}, ${box.color[2]}, ${
+                box.color[3] / 255
+            })`;
+            const x = clamp(box.x, 0, w);
+            const y = clamp(box.y, 0, h);
+            const wBox = clamp(box.width, 0, w - x);
+            const hBox = clamp(box.height, 0, h - y);
+
+            if (wBox === 0 || hBox === 0) {
+                continue;
+            }
+
+            ctx.strokeRect(x, y, wBox, hBox);
+        }
+
+        ctx.restore();
+    };
+
     const setupWorker = () => {
         if (!canvasEl || worker) {
             return;
         }
 
-        worker = new Worker(new URL('../../workers/maskRenderer.worker.ts', import.meta.url), {
-            type: 'module'
-        });
-
-        worker.onmessage = (event: MessageEvent) => {
-            if (event.data?.type !== 'image' || !canvasEl) {
-                return;
-            }
-
-            const {
-                width: w,
-                height: h,
-                data,
-                boxes = [],
-                stroke = 2
-            } = event.data as {
-                width: number;
-                height: number;
-                data: Uint8ClampedArray;
-                boxes?: BoxPayload[];
-                stroke?: number;
-            };
-
-            const ctx = canvasEl.getContext('2d', { willReadFrequently: true });
-            if (!ctx) {
-                return;
-            }
-
-            const imageData = new ImageData(new Uint8ClampedArray(data), w, h);
-            ctx.putImageData(imageData, 0, 0);
-            drawBoxes(ctx, boxes, w, h, stroke);
-        };
+        worker = acquireMaskRendererWorker();
+        worker.addEventListener('message', handleWorkerMessage);
 
         if (canvasEl.transferControlToOffscreen) {
-            try {
-                const offscreen = canvasEl.transferControlToOffscreen();
-                worker.postMessage({ type: 'init', canvas: offscreen }, [offscreen]);
-                hasOffscreen = true;
-            } catch {
-                // The canvas may already have a 2D context; keep worker in image-data fallback mode.
-                hasOffscreen = false;
-            }
+            // Preferred path: worker draws directly into the canvas through OffscreenCanvas.
+            const offscreen = canvasEl.transferControlToOffscreen();
+            worker.postMessage({ type: 'init', canvasId, canvas: offscreen }, [offscreen]);
+            hasOffscreen = true;
         } else {
+            // Fallback path: worker sends pixel buffers back and main thread paints them.
             hasOffscreen = false;
         }
 
@@ -288,7 +327,12 @@
     });
 
     onDestroy(() => {
-        worker?.terminate();
+        if (worker) {
+            worker.postMessage({ type: 'dispose', canvasId });
+            worker.removeEventListener('message', handleWorkerMessage);
+            releaseMaskRendererWorker(worker);
+            worker = null;
+        }
         resizeObserver?.disconnect();
     });
 

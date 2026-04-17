@@ -27,6 +27,8 @@ class MockWorker {
     static instances: MockWorker[] = [];
     onmessage: ((event: MessageEvent) => void) | null = null;
     postMessage = vi.fn();
+    addEventListener = vi.fn();
+    removeEventListener = vi.fn();
     terminate = vi.fn();
 
     constructor() {
@@ -80,6 +82,7 @@ describe('AnnotationCanvas', () => {
     it('draws object-detection boxes on fallback canvas when there are no masks', async () => {
         render(AnnotationCanvas, {
             props: {
+                sampleId: 'sample-object-detection',
                 width: 100,
                 height: 100,
                 annotations: [
@@ -102,6 +105,7 @@ describe('AnnotationCanvas', () => {
     it('posts a worker render message when masks are present', async () => {
         render(AnnotationCanvas, {
             props: {
+                sampleId: 'sample-masks',
                 width: 16,
                 height: 8,
                 annotations: [
@@ -116,8 +120,12 @@ describe('AnnotationCanvas', () => {
 
         await tick();
 
-        expect(MockWorker.instances).toHaveLength(1);
-        const worker = MockWorker.instances[0];
+        expect(MockWorker.instances.length).toBeGreaterThan(0);
+        const workersWithRender = MockWorker.instances.filter((instance) =>
+            instance.postMessage.mock.calls.some(([message]) => message?.type === 'render')
+        );
+        expect(workersWithRender).toHaveLength(1);
+        const worker = workersWithRender[0];
         expect(mockContext.clearRect).toHaveBeenCalledWith(0, 0, 16, 8);
         expect(worker.postMessage).toHaveBeenCalledTimes(1);
         expect(worker.postMessage).toHaveBeenCalledWith(
@@ -134,7 +142,9 @@ describe('AnnotationCanvas', () => {
     });
 
     it('clears and exits early when there are no drawable annotations', async () => {
-        render(AnnotationCanvas, { props: { width: 64, height: 32, annotations: [] } });
+        render(AnnotationCanvas, {
+            props: { sampleId: 'sample-empty', width: 64, height: 32, annotations: [] }
+        });
 
         await tick();
 
