@@ -13,6 +13,7 @@ from lightly_studio.api.routes.api.status import (
     HTTP_STATUS_NOT_FOUND,
 )
 from lightly_studio.api.routes.api.validators import Paginated
+from lightly_studio.core.query_language import FieldRegistry, parse_query
 from lightly_studio.db_manager import SessionDep
 from lightly_studio.models.collection import CollectionTable
 from lightly_studio.models.image import (
@@ -38,6 +39,7 @@ class ReadImagesRequest(BaseModel):
     pagination: Paginated | None = Field(
         None, description="Pagination parameters for offset and limit"
     )
+    query_text: str | None = Field(None, description="Query language DSL filter")
 
 
 @image_router.post("/collections/{collection_id}/images/list")
@@ -56,6 +58,11 @@ def read_images(
     Returns:
         A list of filtered samples.
     """
+    query_condition = None
+    if body.query_text:
+        registry = FieldRegistry()
+        query_condition = parse_query(body.query_text, registry).get()
+
     result = image_resolver.get_all_by_collection_id(
         session=session,
         collection_id=collection_id,
@@ -63,6 +70,7 @@ def read_images(
         filters=body.filters,
         text_embedding=body.text_embedding,
         sample_ids=body.sample_ids,
+        query_condition=query_condition,
     )
     # TODO(Michal, 10/2025): Add SampleView to ImageView and then use a response model
     # instead of manual conversion.

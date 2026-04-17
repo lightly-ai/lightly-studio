@@ -43,6 +43,7 @@ interface ClassifierModeParams {
 
 export type ImagesInfiniteParams = {
     collection_id: string;
+    queryText?: string;
 } & (NormalModeParams | ClassifierModeParams) &
     CommonFilters;
 
@@ -54,7 +55,8 @@ type SamplesQueryKey = readonly [
     {
         metadata_values?: MetadataValues;
         text_embedding?: number[];
-    }
+    },
+    string | undefined
 ];
 
 // Create infinite query options for samples with mode-aware logic.
@@ -68,7 +70,8 @@ const createImagesInfiniteOptions = (params: ImagesInfiniteParams) => {
         {
             metadata_values: params.metadata_values,
             text_embedding: params.text_embedding
-        }
+        },
+        params.queryText
     ];
 
     return infiniteQueryOptions<
@@ -106,6 +109,7 @@ export const buildRequestBody = (
             limit: GRID_PAGE_SIZE
         },
         text_embedding: params.text_embedding,
+        query_text: params.queryText || undefined,
         filters: {
             sample_filter: {
                 metadata_filters: params.metadata_values

@@ -15,5 +15,4 @@ export { useSelectionSummary } from '$lib/hooks/useSelectionSummary/useSelection
 export { useVideo } from '$lib/hooks/useVideo/useVideo';
 export { useAddTagToSample } from '$lib/hooks/useAddTagToSample/useAddTagToSample';
 export { useQueryLanguage } from '$lib/hooks/useQueryLanguage/useQueryLanguage';
-export { useQueryImages } from '$lib/hooks/useQueryImages/useQueryImages';
 export { useQuerySchema } from '$lib/hooks/useQuerySchema/useQuerySchema';

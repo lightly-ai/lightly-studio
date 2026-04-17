@@ -264,34 +264,6 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/collections/{collection_id}/images/query": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /**
-         * Query Images
-         * @description Filter images in a collection using the query language DSL.
-         *
-         *     Args:
-         *         session: Database session.
-         *         collection_id: The collection to query.
-         *         body: Query text and optional pagination.
-         *
-         *     Returns:
-         *         Filtered images in the same shape as ``/images/list``.
-         */
-        post: operations["query_images"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
     "/api/collections/{collection_id}/query/validate": {
         parameters: {
             query?: never;
@@ -3080,27 +3052,6 @@ export interface components {
             limit: number;
         };
         /**
-         * QueryRequest
-         * @description Request body for the query endpoint.
-         */
-        QueryRequest: {
-            /** Text */
-            text: string;
-            /** @description Filter parameters for samples */
-            filters?: components["schemas"]["ImageFilter"] | null;
-            /**
-             * Text Embedding
-             * @description Text embedding to search for
-             */
-            text_embedding?: number[] | null;
-            /**
-             * Sample Ids
-             * @description The list of requested sample IDs
-             */
-            sample_ids?: string[] | null;
-            pagination?: components["schemas"]["Paginated"] | null;
-        };
-        /**
          * ReadCountImageAnnotationsRequest
          * @description Request body for reading image annotation counts.
          */
@@ -3142,6 +3093,11 @@ export interface components {
             sample_ids?: string[] | null;
             /** @description Pagination parameters for offset and limit */
             pagination?: components["schemas"]["Paginated"] | null;
+            /**
+             * Query Text
+             * @description Query language DSL filter
+             */
+            query_text?: string | null;
         };
         /**
          * ReadSamplesRequest
@@ -4396,41 +4352,6 @@ export interface operations {
                 };
                 content: {
                     "application/json": boolean;
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    query_images: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                collection_id: string;
-            };
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["QueryRequest"];
-            };
-        };
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ImageViewsWithCount"];
                 };
             };
             /** @description Validation Error */

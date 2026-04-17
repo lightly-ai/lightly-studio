@@ -15,7 +15,6 @@
     } from '$lib/hooks/useImagesInfinite/useImagesInfinite';
     import { useScrollRestoration } from '$lib/hooks/useScrollRestoration/useScrollRestoration';
     import { useImageFilters } from '$lib/hooks/useImageFilters/useImageFilters';
-    import { useQueryImages } from '$lib/hooks/useQueryImages/useQueryImages';
     import { useQueryLanguage } from '$lib/hooks/useQueryLanguage/useQueryLanguage';
     import type { ImageView } from '$lib/api/lightly_studio_local';
     import { goto } from '$app/navigation';
@@ -114,19 +113,13 @@
         updateFilterParams(nextParams);
     });
 
-    const { samples: infiniteSamples } = $derived(
-        useImagesInfinite({ ...$filterParams, collection_id: collection_id })
-    );
-    const { samples: querySamples } = $derived(
-        useQueryImages({
+    const { samples: activeSamples } = $derived(
+        useImagesInfinite({
             ...$filterParams,
             collection_id: collection_id,
-            queryText: $activeQueryText
+            queryText: $activeQueryText || undefined
         })
     );
-
-    const isQueryMode = $derived($activeQueryText.trim().length > 0);
-    const activeSamples = $derived(isQueryMode ? querySamples : infiniteSamples);
 
     // Derived list of samples from TanStack infinite query
     const samples: ImageView[] = $derived(

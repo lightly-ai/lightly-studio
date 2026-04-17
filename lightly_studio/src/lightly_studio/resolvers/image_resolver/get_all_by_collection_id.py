@@ -65,6 +65,7 @@ def get_all_by_collection_id(  # noqa: PLR0913
     filters: ImageFilter | None = None,
     text_embedding: list[float] | None = None,
     sample_ids: list[UUID] | None = None,
+    query_condition: ColumnElement[bool] | None = None,
 ) -> GetAllSamplesByCollectionIdResult:
     """Retrieve samples for a specific collection with optional filtering."""
     embedding_model_id, distance_expr = get_distance_expression(
@@ -82,6 +83,7 @@ def get_all_by_collection_id(  # noqa: PLR0913
             pagination=pagination,
             filters=filters,
             sample_ids=sample_ids,
+            query_condition=query_condition,
         )
     return _get_all_without_similarity(
         session=session,
@@ -89,6 +91,7 @@ def get_all_by_collection_id(  # noqa: PLR0913
         pagination=pagination,
         filters=filters,
         sample_ids=sample_ids,
+        query_condition=query_condition,
     )
 
 
@@ -100,6 +103,7 @@ def _get_all_with_similarity(  # noqa: PLR0913
     pagination: Paginated | None,
     filters: ImageFilter | None,
     sample_ids: list[UUID] | None,
+    query_condition: ColumnElement[bool] | None = None,
 ) -> GetAllSamplesByCollectionIdResult:
     """Get samples with similarity search - returns (ImageTable, float) tuples."""
     load_options = _get_load_options()
@@ -127,6 +131,10 @@ def _get_all_with_similarity(  # noqa: PLR0913
         sample_id_column=col(ImageTable.sample_id),
         embedding_model_id=embedding_model_id,
     )
+
+    if query_condition is not None:
+        samples_query = samples_query.where(query_condition)
+        total_count_query = total_count_query.where(query_condition)
 
     if filters:
         samples_query = filters.apply(samples_query)
@@ -156,12 +164,13 @@ def _get_all_with_similarity(  # noqa: PLR0913
     )
 
 
-def _get_all_without_similarity(
+def _get_all_without_similarity(  # noqa: PLR0913
     session: Session,
     collection_id: UUID,
     pagination: Paginated | None,
     filters: ImageFilter | None,
     sample_ids: list[UUID] | None,
+    query_condition: ColumnElement[bool] | None = None,
 ) -> GetAllSamplesByCollectionIdResult:
     """Get samples without similarity search - returns ImageTable directly."""
     load_options = _get_load_options()
@@ -179,6 +188,10 @@ def _get_all_without_similarity(
         .join(ImageTable.sample)
         .where(SampleTable.collection_id == collection_id)
     )
+
+    if query_condition is not None:
+        samples_query = samples_query.where(query_condition)
+        total_count_query = total_count_query.where(query_condition)
 
     if filters:
         samples_query = filters.apply(samples_query)
