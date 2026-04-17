@@ -32,13 +32,8 @@ describe('maskRendererPool', () => {
         vi.stubGlobal('Worker', MockWorker as unknown as typeof Worker);
         vi.stubGlobal('navigator', { hardwareConcurrency: 8 } as Navigator);
 
-        const {
-            acquireMaskRendererWorker,
-            releaseMaskRendererWorker,
-            shutdownMaskRendererPool
-        } = await import(
-            './maskRendererPool'
-        );
+        const { acquireMaskRendererWorker, releaseMaskRendererWorker, shutdownMaskRendererPool } =
+            await import('./maskRendererPool');
 
         const acquiredWorkers = Array.from({ length: 5 }, () => acquireMaskRendererWorker());
 
@@ -66,13 +61,8 @@ describe('maskRendererPool', () => {
         vi.stubGlobal('Worker', MockWorker as unknown as typeof Worker);
         vi.stubGlobal('navigator', {} as Navigator);
 
-        const {
-            acquireMaskRendererWorker,
-            releaseMaskRendererWorker,
-            shutdownMaskRendererPool
-        } = await import(
-            './maskRendererPool'
-        );
+        const { acquireMaskRendererWorker, releaseMaskRendererWorker, shutdownMaskRendererPool } =
+            await import('./maskRendererPool');
 
         const first = acquireMaskRendererWorker();
         const second = acquireMaskRendererWorker();
@@ -95,13 +85,8 @@ describe('maskRendererPool', () => {
         vi.stubGlobal('Worker', MockWorker as unknown as typeof Worker);
         vi.stubGlobal('navigator', { hardwareConcurrency: 2 } as Navigator);
 
-        const {
-            acquireMaskRendererWorker,
-            releaseMaskRendererWorker,
-            shutdownMaskRendererPool
-        } = await import(
-            './maskRendererPool'
-        );
+        const { acquireMaskRendererWorker, releaseMaskRendererWorker, shutdownMaskRendererPool } =
+            await import('./maskRendererPool');
 
         const worker = acquireMaskRendererWorker();
         const unknownWorker = { terminate: vi.fn() } as unknown as Worker;
