@@ -12,7 +12,7 @@ from sqlmodel import col, func, select
 
 from lightly_studio.api.routes.api.collection import get_and_validate_collection_id
 from lightly_studio.api.routes.api.validators import Paginated
-from lightly_studio.core.query_language import FieldRegistry, compile_ast, parse_to_ast
+from lightly_studio.core.query_language import FieldRegistry, parse_query
 from lightly_studio.db_manager import SessionDep
 from lightly_studio.models.annotation_label import AnnotationLabelTable
 from lightly_studio.models.collection import CollectionTable
@@ -128,8 +128,7 @@ def query_images(
         Filtered images in the same shape as ``/images/list``.
     """
     registry = FieldRegistry()
-    ast = parse_to_ast(body.text)
-    condition = compile_ast(ast, registry).get()
+    condition = parse_query(body.text, registry).get()
     embedding_model_id, distance_expr = get_distance_expression(
         session=session,
         collection_id=collection.collection_id,
@@ -233,10 +232,7 @@ def validate_query(
     """
     try:
         registry = FieldRegistry()
-        ast = parse_to_ast(body.text)
-        # TODO(Michal): Also exercise `.get()` here so validation covers runtime
-        # compiler failures that currently appear only in `/images/query`.
-        compile_ast(ast, registry)
+        parse_query(body.text, registry)
         return ValidateResponse(diagnostics=[])
     except LarkError as exc:
         return ValidateResponse(diagnostics=[_lark_error_to_diagnostic(body.text, exc)])

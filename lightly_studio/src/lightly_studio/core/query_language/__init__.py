@@ -1,16 +1,13 @@
-"""Query language: text → Lark parse tree → AST → MatchExpression → SQLAlchemy.
+"""Query language: text → Lark parse tree → MatchExpression → SQLAlchemy.
 
 Public API::
 
-    from lightly_studio.core.query_language import parse_to_ast, compile_ast, execute_query
-
-    # Parse only
-    ast = parse_to_ast('width > 100 and has_tag("train")')
+    from lightly_studio.core.query_language import parse_query, execute_query
 
     # Parse + compile to MatchExpression
     from lightly_studio.core.query_language import FieldRegistry
     registry = FieldRegistry()
-    match_expr = compile_ast(ast, registry)
+    match_expr = parse_query('width > 100 and has_tag("train")', registry)
     sql_condition = match_expr.get()  # ColumnElement[bool]
 
     # End-to-end execution
@@ -30,14 +27,13 @@ from uuid import UUID
 from sqlmodel import Session, col, func, select
 
 from lightly_studio.api.routes.api.validators import Paginated
-from lightly_studio.core.query_language.compiler import compile_ast
 from lightly_studio.core.query_language.field_registry import FieldRegistry
-from lightly_studio.core.query_language.parser import parse_to_ast
+from lightly_studio.core.query_language.parser import parse_query
 from lightly_studio.models.collection import SampleType
 from lightly_studio.models.image import ImageTable
 from lightly_studio.models.sample import SampleTable
 
-__all__ = ["FieldRegistry", "compile_ast", "execute_query", "parse_to_ast"]
+__all__ = ["FieldRegistry", "execute_query", "parse_query"]
 
 
 def execute_query(
@@ -65,8 +61,7 @@ def execute_query(
         ValueError: On unknown fields or operators.
     """
     registry = FieldRegistry()
-    ast = parse_to_ast(text)
-    condition = compile_ast(ast, registry).get()
+    condition = parse_query(text, registry).get()
 
     samples_query = (
         select(ImageTable)
