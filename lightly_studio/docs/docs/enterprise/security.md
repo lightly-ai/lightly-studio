@@ -34,7 +34,7 @@ This shows the shared architecture of OSS and Enterprise.
 
 ![Enterprise Deployment Topology](../_static/lightly_studio_enterprise_topology.svg){ width="100%" }
 
-This is the simplified enterprise view for users and admins.
+This is the enterprise view for users and admins.
 
 - Regular users use the web app in the browser.
 - Admin Python workflows run separately and connect with `ls.connect()`.
@@ -42,7 +42,7 @@ This is the simplified enterprise view for users and admins.
 - The datasets database stores metadata, annotations, tags, captions, and embeddings. Raw images
   and videos are not copied into that database.
 
-If you operate your own deployment, see [On-Premise Deployment](on-premise.md) for and in-depth architecture overview.
+If you operate your own deployment, see [On-Premise Deployment](on-premise.md) for an in-depth architecture overview.
 
 ## Where Computation Happens
 
@@ -50,18 +50,12 @@ If you operate your own deployment, see [On-Premise Deployment](on-premise.md) f
 - In OSS, this is usually the same script that later starts the UI with `ls.start_gui()`.
 - In Enterprise, admin Python scripts call `ls.connect()` and then use the same Python API against the enterprise datasets database.
 
-## Data Storage and External Connections
 
-- Raw media: LightlyStudio does not store raw images or videos on Lightly servers. Media stays in local folders or cloud buckets controlled by the customer and is streamed in the browser when needed.
-- Datasets metadata: OSS stores metadata locally in DuckDB. Enterprise stores metadata in a central datasets database.
-- Authentication: Enterprise adds centralized authentication and access control.
-- Cloud credentials: Enterprise can centrally manage cloud storage credentials.
-
-### Deployment-Specific Data Sent to or Stored by Lightly
+## Deployment-Specific Data Sent to or Stored by Lightly
 
 - OSS: Only analytics data is sent to Lightly. The OSS version can also be run fully offline.
 - Lightly-Hosted: To operate the service, Lightly stores analytics, user account information, and
   dataset metadata, including annotations. Raw images and videos are streamed from your storage to
   the browser when needed, but are never stored on Lightly servers.
-- Self-Hosted / On-Premise: Nothing is sent to Lightly. The deployment can be fully offline and
+- On-Premise / Self-Hosted: Nothing is sent to Lightly. The deployment can be fully offline and
   air-gapped.
