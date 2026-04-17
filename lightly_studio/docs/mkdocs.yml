@@ -60,7 +60,7 @@ nav:
   - 🏢 Enterprise:
     - enterprise/index.md
     - Connect from Python: enterprise/connect.md
-    - Security Considerations: enterprise/security.md
+    - Security and Architecture: enterprise/security.md
     - On-Premise Deployment: enterprise/on-premise.md
     - Cloud Storage:
       - enterprise/cloud_storage/index.md

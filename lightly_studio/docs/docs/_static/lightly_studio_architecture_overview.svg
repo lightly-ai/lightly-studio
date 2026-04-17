@@ -15,30 +15,30 @@
     </style>
   </defs>
 
-  <rect class="panel" x="30" y="20" width="350" height="580"/>
+  <rect class="panel" x="30" y="20" width="350" height="580" rx="18" ry="18"/>
   <text class="panel-title" x="56" y="56">Customer Environment</text>
 
-  <rect class="node-blue" x="75" y="105" width="260" height="82"/>
+  <rect class="node-blue" x="75" y="105" width="260" height="82" rx="14" ry="14"/>
   <text class="label" x="205" y="154" text-anchor="middle">User in Browser</text>
 
-  <rect class="node-gold" x="75" y="265" width="260" height="100"/>
+  <rect class="node-gold" x="75" y="265" width="260" height="100" rx="14" ry="14"/>
   <text class="label" x="205" y="313" text-anchor="middle">Customer Storage</text>
   <text class="small" x="205" y="342" text-anchor="middle">local files or cloud bucket</text>
 
-  <rect class="node-green" x="75" y="435" width="260" height="100"/>
+  <rect class="node-green" x="75" y="435" width="260" height="100" rx="14" ry="14"/>
   <text class="label" x="205" y="483" text-anchor="middle">Python API / Scripts</text>
   <text class="small" x="205" y="512" text-anchor="middle">read, index, and update data</text>
 
-  <rect class="panel" x="430" y="20" width="470" height="580"/>
+  <rect class="panel" x="430" y="20" width="470" height="580" rx="18" ry="18"/>
   <text class="panel-title" x="456" y="56">LightlyStudio Core</text>
 
-  <rect class="node-blue" x="525" y="105" width="280" height="82"/>
+  <rect class="node-blue" x="525" y="105" width="280" height="82" rx="14" ry="14"/>
   <text class="label" x="665" y="154" text-anchor="middle">Frontend</text>
 
-  <rect class="node-green" x="525" y="265" width="280" height="100"/>
+  <rect class="node-green" x="525" y="265" width="280" height="100" rx="14" ry="14"/>
   <text class="label" x="665" y="313" text-anchor="middle">Backend API</text>
 
-  <rect class="node-slate" x="525" y="435" width="280" height="100"/>
+  <rect class="node-slate" x="525" y="435" width="280" height="100" rx="14" ry="14"/>
   <text class="label" x="665" y="483" text-anchor="middle">Datasets DB</text>
 
   <line x1="335" y1="146" x2="525" y2="146" stroke="#475569" stroke-width="4" stroke-linecap="round"/>

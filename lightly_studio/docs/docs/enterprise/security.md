@@ -1,4 +1,4 @@
-# Security Considerations
+# Security and Architecture
 
 Lightly is designed for secure enterprise-grade machine learning workflows. Across all deployment
 models, raw images and videos are never stored on Lightly servers.
@@ -23,24 +23,14 @@ The diagrams below show the shared architecture and the enterprise topology.
 
 This shows the shared architecture of OSS and Enterprise.
 
-- In OSS, a local Python script indexes data, computes embeddings, stores metadata in a local
-  DuckDB file, and can start the UI with `ls.start_gui()`.
-- In Enterprise, the web app runs on a central server and the datasets database is used by
-  multiple users.
-- In both cases, raw images and videos stay in customer-controlled storage and are streamed when
-  needed.
+- A python script indexes data and writes to the datasets database.
+- The LightlyStudio Core App provides the API and serves the frontend. It accesses the datasets database to read and write dataset metadata, annotations, tags, captions, and embeddings. It also streams the raw images and videos from your storage to the browser when needed, but never stores them on Lightly servers.
 
 ### Enterprise Deployment Topology
 
 ![Enterprise Deployment Topology](../_static/lightly_studio_enterprise_topology.svg){ width="100%" }
 
-This is the enterprise view for users and admins.
-
-- Regular users use the web app in the browser.
-- Admin Python workflows run separately and connect with `ls.connect()`.
-- The `Auth Service` handles multi-user authentication.
-- The datasets database stores metadata, annotations, tags, captions, and embeddings. Raw images
-  and videos are not copied into that database.
+In the enterprise version, there additionally is a authentication proxy in front of the Core App. The proxy handles authentication and access control for multiple users and datasets.
 
 If you operate your own deployment, see [On-Premise Deployment](on-premise.md) for an in-depth architecture overview.
 
@@ -48,7 +38,7 @@ If you operate your own deployment, see [On-Premise Deployment](on-premise.md) f
 
 - Data ingestion, indexing, and embedding generation run in the Python process that adds data.
 - In OSS, this is usually the same script that later starts the UI with `ls.start_gui()`.
-- In Enterprise, admin Python scripts call `ls.connect()` and then use the same Python API against the enterprise datasets database.
+- In Enterprise, admin Python scripts call `ls.connect()` and then use the same Python API against the enterprise datasets database. See [Connect from Python](connect.md) for details.
 
 
 ## Deployment-Specific Data Sent to or Stored by Lightly
