@@ -11,7 +11,7 @@ let imageFilterStore: Writable<Record<string, unknown>>;
 let arrowDataStore: Writable<Record<string, unknown> | undefined>;
 
 const mockSetShowPlot = vi.fn();
-const mockSetRangeSelectionForcollection = vi.fn();
+const mockSetRangeSelectionForCollection = vi.fn();
 const mockUpdateSampleIds = vi.fn();
 
 vi.mock('$app/state', () => ({
@@ -61,7 +61,7 @@ vi.mock('$lib/hooks/useGlobalStorage', () => {
         useGlobalStorage: () => ({
             setShowPlot: mockSetShowPlot,
             getRangeSelection: vi.fn(() => rangeSelectionStore),
-            setRangeSelectionForcollection: mockSetRangeSelectionForcollection
+            setRangeSelectionForCollection: mockSetRangeSelectionForCollection
         })
     };
 });
@@ -112,7 +112,7 @@ describe('PlotPanel.svelte', () => {
         render(PlotPanel);
         await fireEvent.keyDown(window, { key: 'Escape' });
 
-        expect(mockSetRangeSelectionForcollection).toHaveBeenCalledWith('test-collection-id', null);
+        expect(mockSetRangeSelectionForCollection).toHaveBeenCalledWith('test-collection-id', null);
         expect(mockUpdateSampleIds).toHaveBeenCalledWith([]);
     });
 
@@ -137,7 +137,7 @@ describe('PlotPanel.svelte', () => {
         await fireEvent.mouseUp(window);
 
         expect(mockUpdateSampleIds).toHaveBeenCalledWith(['sample-1']);
-        expect(mockSetRangeSelectionForcollection).toHaveBeenCalledWith('test-collection-id', null);
+        expect(mockSetRangeSelectionForCollection).toHaveBeenCalledWith('test-collection-id', null);
     });
 
     it('should not clear embedding selection when base filters change', async () => {
@@ -168,7 +168,7 @@ describe('PlotPanel.svelte', () => {
         });
 
         await tick();
-        expect(mockSetRangeSelectionForcollection).not.toHaveBeenCalled();
+        expect(mockSetRangeSelectionForCollection).not.toHaveBeenCalled();
         expect(mockUpdateSampleIds).not.toHaveBeenCalled();
     });
 
@@ -201,6 +201,6 @@ describe('PlotPanel.svelte', () => {
 
         expect(mockUpdateSampleIds).toHaveBeenCalledWith([]);
         expect(mockUpdateSampleIds).not.toHaveBeenCalledWith(['sample-1', 'sample-2']);
-        expect(mockSetRangeSelectionForcollection).toHaveBeenCalledWith('test-collection-id', null);
+        expect(mockSetRangeSelectionForCollection).toHaveBeenCalledWith('test-collection-id', null);
     });
 });
