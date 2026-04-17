@@ -32,7 +32,11 @@ describe('maskRendererPool', () => {
         vi.stubGlobal('Worker', MockWorker as unknown as typeof Worker);
         vi.stubGlobal('navigator', { hardwareConcurrency: 8 } as Navigator);
 
-        const { acquireMaskRendererWorker, releaseMaskRendererWorker } = await import(
+        const {
+            acquireMaskRendererWorker,
+            releaseMaskRendererWorker,
+            shutdownMaskRendererPool
+        } = await import(
             './maskRendererPool'
         );
 
@@ -47,6 +51,12 @@ describe('maskRendererPool', () => {
         }
 
         for (const instance of MockWorker.instances) {
+            expect(instance.terminate).not.toHaveBeenCalled();
+        }
+
+        shutdownMaskRendererPool();
+
+        for (const instance of MockWorker.instances) {
             expect(instance.terminate).toHaveBeenCalledTimes(1);
         }
     });
@@ -56,7 +66,11 @@ describe('maskRendererPool', () => {
         vi.stubGlobal('Worker', MockWorker as unknown as typeof Worker);
         vi.stubGlobal('navigator', {} as Navigator);
 
-        const { acquireMaskRendererWorker, releaseMaskRendererWorker } = await import(
+        const {
+            acquireMaskRendererWorker,
+            releaseMaskRendererWorker,
+            shutdownMaskRendererPool
+        } = await import(
             './maskRendererPool'
         );
 
@@ -70,6 +84,9 @@ describe('maskRendererPool', () => {
         expect(MockWorker.instances[0].terminate).not.toHaveBeenCalled();
 
         releaseMaskRendererWorker(second);
+        expect(MockWorker.instances[0].terminate).not.toHaveBeenCalled();
+
+        shutdownMaskRendererPool();
         expect(MockWorker.instances[0].terminate).toHaveBeenCalledTimes(1);
     });
 
@@ -78,7 +95,11 @@ describe('maskRendererPool', () => {
         vi.stubGlobal('Worker', MockWorker as unknown as typeof Worker);
         vi.stubGlobal('navigator', { hardwareConcurrency: 2 } as Navigator);
 
-        const { acquireMaskRendererWorker, releaseMaskRendererWorker } = await import(
+        const {
+            acquireMaskRendererWorker,
+            releaseMaskRendererWorker,
+            shutdownMaskRendererPool
+        } = await import(
             './maskRendererPool'
         );
 
@@ -89,6 +110,9 @@ describe('maskRendererPool', () => {
         expect(MockWorker.instances[0].terminate).not.toHaveBeenCalled();
 
         releaseMaskRendererWorker(worker);
+        expect(MockWorker.instances[0].terminate).not.toHaveBeenCalled();
+
+        shutdownMaskRendererPool();
         expect(MockWorker.instances[0].terminate).toHaveBeenCalledTimes(1);
     });
 });

@@ -87,12 +87,13 @@ export const releaseMaskRendererWorker = (worker: Worker): void => {
     }
 
     entry.refCount = Math.max(0, entry.refCount - 1);
+};
 
-    if (!workerPool.every((poolEntry) => poolEntry.refCount === 0)) {
+export const shutdownMaskRendererPool = (): void => {
+    if (workerPool.length === 0) {
         return;
     }
 
-    // Shutdown the pool once everyone released their worker reference.
     for (const poolEntry of workerPool) {
         poolEntry.worker.terminate();
     }
