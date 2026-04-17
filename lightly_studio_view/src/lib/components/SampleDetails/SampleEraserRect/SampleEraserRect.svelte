@@ -15,10 +15,10 @@
     import { useDeleteAnnotation } from '$lib/hooks/useDeleteAnnotation/useDeleteAnnotation';
     import { useGlobalStorage } from '$lib/hooks/useGlobalStorage';
     import { useInstanceSegmentationPreview } from '$lib/hooks/useInstanceSegmentationPreview';
-    import { usePendingSaveTokens } from '$lib/hooks/usePendingSaveTokens/usePendingSaveTokens';
+    import { usePendingOperations } from '$lib/hooks/usePendingOperations/usePendingOperations';
     import { useSegmentationMaskEraser } from '$lib/hooks/useSegmentationMaskEraser';
     import { addAnnotationDeleteToUndoStack } from '$lib/services/addAnnotationDeleteToUndoStack';
-    import type { SavePendingChange } from '../savePendingChange';
+    import type { PendingChange } from '../pendingChange';
     import SampleAnnotationRect from '../SampleAnnotationRect/SampleAnnotationRect.svelte';
     import { toast } from 'svelte-sonner';
 
@@ -34,7 +34,7 @@
         brushRadius: number;
         drawerStrokeColor: string;
         refetch: () => void;
-        onFinishErasePendingChange?: (pendingChange: SavePendingChange) => void;
+        onFinishErasePendingChange?: (pendingChange: PendingChange) => void;
     };
 
     let {
@@ -102,9 +102,9 @@
         startPending: startFinishErasePending,
         endPending: endFinishErasePending,
         resetPending: resetFinishErasePending
-    } = usePendingSaveTokens({
-        tokenPrefix: 'eraser',
-        onPendingChange: (pendingChange: SavePendingChange) => {
+    } = usePendingOperations({
+        operationPrefix: 'eraser',
+        onPendingChange: (pendingChange: PendingChange) => {
             onFinishErasePendingChange?.(pendingChange);
         }
     });
@@ -223,7 +223,7 @@
         }
 
         baseMask = updatedMask;
-        const pendingToken = startFinishErasePending();
+        const pendingOperation = startFinishErasePending();
         setIsDrawing(false);
         void eraserApi
             .finishErase(updatedMask, selectedAnnotation, updateAnnotation, deleteAnn)
@@ -231,7 +231,7 @@
                 console.error('Failed to finish erase stroke:', error);
             })
             .finally(() => {
-                endFinishErasePending(pendingToken);
+                endFinishErasePending(pendingOperation);
             });
     };
 

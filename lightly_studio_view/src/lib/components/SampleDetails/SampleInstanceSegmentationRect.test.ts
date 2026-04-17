@@ -411,7 +411,7 @@ describe('SampleInstanceSegmentationRect', () => {
         await fireEvent.pointerUp(drawingRect, { pointerId: 1 });
 
         expect(onFinishBrushPendingChange).toHaveBeenCalledWith({
-            token: 'brush-1',
+            operation: 'brush-1',
             isPending: true
         });
 
@@ -419,7 +419,7 @@ describe('SampleInstanceSegmentationRect', () => {
         await tick();
 
         expect(onFinishBrushPendingChange).toHaveBeenLastCalledWith({
-            token: 'brush-1',
+            operation: 'brush-1',
             isPending: false
         });
     });

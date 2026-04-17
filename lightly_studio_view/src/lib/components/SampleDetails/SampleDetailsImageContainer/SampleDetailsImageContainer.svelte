@@ -18,7 +18,7 @@
     import { useSampleDetailsToolbarContext } from '$lib/contexts/SampleDetailsToolbar.svelte';
     import { getBoundingBox } from '$lib/components/SampleAnnotation/utils';
     import { onDestroy, onMount } from 'svelte';
-    import { usePendingSaveState } from '../usePendingSaveState';
+    import { usePendingState } from '../usePendingState';
 
     type SampleDetailsImageContainerProps = {
         sample: {
@@ -62,7 +62,7 @@
     let mousePosition = $state<{ x: number; y: number } | null>(null);
     let isHoveringBoundingBox = $state(false);
     let interactionRect: SVGRectElement | null = $state(null);
-    const { isSavePending, handleSavePendingChange } = usePendingSaveState();
+    const { isPending, handlePendingChange } = usePendingState();
 
     let sampleId = $derived(sample.sampleId);
     const actualAnnotationsToShow = $derived.by(() => {
@@ -207,7 +207,7 @@
         {/if}
     {/snippet}
     {#snippet zoomPanelRightContent()}
-        {#if $isSavePending}
+        {#if $isPending}
             <div
                 class="pointer-events-auto inline-flex h-9 items-center justify-center gap-1.5 rounded-lg bg-muted/80 px-2.5 text-sm text-muted-foreground shadow-md backdrop-blur-sm"
                 data-testid="finish-brush-loading-indicator"
@@ -286,7 +286,7 @@
                     {sample}
                     {mousePosition}
                     {drawerStrokeColor}
-                    onFinishErasePendingChange={handleSavePendingChange}
+                    onFinishErasePendingChange={handlePendingChange}
                 />
             {:else if sampleDetailsToolbarContext.status === 'brush' && isSegmentationType(annotationTypeInCurrentView)}
                 <SampleInstanceSegmentationRect
@@ -299,7 +299,7 @@
                     {drawerStrokeColor}
                     {sample}
                     annotationType={annotationTypeInCurrentView}
-                    onFinishBrushPendingChange={handleSavePendingChange}
+                    onFinishBrushPendingChange={handlePendingChange}
                 />
             {:else if sampleDetailsToolbarContext.status === 'bounding-box' && !annotationLabelContext.isOnAnnotationDetailsView && annotationTypeInCurrentView == AnnotationType.OBJECT_DETECTION}
                 <SampleObjectDetectionRect
@@ -310,7 +310,7 @@
                     {collectionId}
                     {drawerStrokeColor}
                     {refetch}
-                    onCreateBoundingBoxPendingChange={handleSavePendingChange}
+                    onCreateBoundingBoxPendingChange={handlePendingChange}
                 />
             {/if}
         {/if}

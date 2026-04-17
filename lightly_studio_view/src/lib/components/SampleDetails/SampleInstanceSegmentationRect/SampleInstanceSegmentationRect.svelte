@@ -12,10 +12,10 @@
     import { useAnnotationLabels } from '$lib/hooks/useAnnotationLabels/useAnnotationLabels';
     import { useInstanceSegmentationBrush } from '$lib/hooks/useInstanceSegmentationBrush';
     import { useInstanceSegmentationPreview } from '$lib/hooks/useInstanceSegmentationPreview';
-    import { usePendingSaveTokens } from '$lib/hooks/usePendingSaveTokens/usePendingSaveTokens';
+    import { usePendingOperations } from '$lib/hooks/usePendingOperations/usePendingOperations';
     import { useCollectionWithChildren } from '$lib/hooks/useCollection/useCollection';
     import { page } from '$app/state';
-    import type { SavePendingChange } from '../savePendingChange';
+    import type { PendingChange } from '../pendingChange';
     import SampleAnnotationRect from '../SampleAnnotationRect/SampleAnnotationRect.svelte';
 
     type SampleInstanceSegmentationRectProps = {
@@ -33,7 +33,7 @@
         annotationLabel?: string | null | undefined;
         annotationType?: string | null | undefined;
         refetch: () => void;
-        onFinishBrushPendingChange?: (pendingChange: SavePendingChange) => void;
+        onFinishBrushPendingChange?: (pendingChange: PendingChange) => void;
     };
 
     let {
@@ -117,9 +117,9 @@
         startPending: startFinishBrushPending,
         endPending: endFinishBrushPending,
         resetPending: resetFinishBrushPending
-    } = usePendingSaveTokens({
-        tokenPrefix: 'brush',
-        onPendingChange: (pendingChange: SavePendingChange) => {
+    } = usePendingOperations({
+        operationPrefix: 'brush',
+        onPendingChange: (pendingChange: PendingChange) => {
             onFinishBrushPendingChange?.(pendingChange);
         }
     });
@@ -217,7 +217,7 @@
         // Keep local base in sync after committing stroke.
         baseMask = updatedMask;
 
-        const pendingToken = startFinishBrushPending();
+        const pendingOperation = startFinishBrushPending();
         void (async () => {
             try {
                 await brushApi.finishBrush(
@@ -230,7 +230,7 @@
             } catch (error) {
                 console.error('Failed to finish brush stroke:', error);
             } finally {
-                endFinishBrushPending(pendingToken);
+                endFinishBrushPending(pendingOperation);
             }
         })();
     };

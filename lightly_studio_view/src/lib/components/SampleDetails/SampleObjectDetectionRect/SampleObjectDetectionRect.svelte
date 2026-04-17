@@ -14,11 +14,11 @@
     import { addAnnotationCreateToUndoStack } from '$lib/services/addAnnotationCreateToUndoStack';
     import { useGlobalStorage } from '$lib/hooks/useGlobalStorage';
     import { useDeleteAnnotation } from '$lib/hooks/useDeleteAnnotation/useDeleteAnnotation';
-    import { usePendingSaveTokens } from '$lib/hooks/usePendingSaveTokens/usePendingSaveTokens';
+    import { usePendingOperations } from '$lib/hooks/usePendingOperations/usePendingOperations';
     import ResizableRectangle from '$lib/components/ResizableRectangle/ResizableRectangle.svelte';
     import { useAnnotationLabelContext } from '$lib/contexts/SampleDetailsAnnotation.svelte';
     import { getBoundingBox } from '$lib/components/SampleAnnotation/utils';
-    import type { SavePendingChange } from '../savePendingChange';
+    import type { PendingChange } from '../pendingChange';
 
     type D3Event = D3DragEvent<SVGRectElement, unknown, unknown>;
 
@@ -34,7 +34,7 @@
         drawerStrokeColor: string;
         refetch: () => void;
         hoverbbox?: boolean;
-        onCreateBoundingBoxPendingChange?: (pendingChange: SavePendingChange) => void;
+        onCreateBoundingBoxPendingChange?: (pendingChange: PendingChange) => void;
     };
 
     let {
@@ -64,9 +64,9 @@
         startPending: startCreateBoundingBoxPending,
         endPending: endCreateBoundingBoxPending,
         resetPending: resetCreateBoundingBoxPending
-    } = usePendingSaveTokens({
-        tokenPrefix: 'bbox',
-        onPendingChange: (pendingChange: SavePendingChange) => {
+    } = usePendingOperations({
+        operationPrefix: 'bbox',
+        onPendingChange: (pendingChange: PendingChange) => {
             onCreateBoundingBoxPendingChange?.(pendingChange);
         }
     });
@@ -166,7 +166,7 @@
         width: number;
         height: number;
     }) => {
-        const pendingToken = startCreateBoundingBoxPending();
+        const pendingOperation = startCreateBoundingBoxPending();
 
         try {
             let label =
@@ -221,7 +221,7 @@
             console.error('Error creating annotation:', error);
             return;
         } finally {
-            endCreateBoundingBoxPending(pendingToken);
+            endCreateBoundingBoxPending(pendingOperation);
         }
     };
     const {
