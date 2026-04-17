@@ -67,18 +67,22 @@ def update(session: Session, tag_id: UUID, tag_data: TagUpdate) -> TagTable | No
     if conflicting_tag and conflicting_tag.tag_id != tag_id and conflicting_tag.kind == tag.kind:
         raise IntegrityError(statement=None, params=None, orig=Exception("Tag already exists"))
 
-    sample_ids = [sample.sample_id for sample in tag.samples]
+    sample_ids = [
+        sample_id
+        for sample_id in session.exec(
+            select(SampleTagLinkTable.sample_id).where(col(SampleTagLinkTable.tag_id) == tag_id)
+        ).all()
+        if sample_id is not None
+    ]
 
     session.exec(
         sqlmodel.delete(SampleTagLinkTable).where(col(SampleTagLinkTable.tag_id) == tag_id)
     )
     session.commit()
 
-    # due to duckdb/OLAP optimisations, update operations effecting unique
-    # constraints (e.g colums) will lead to a unique constraint violation.
-    # This is due to a update is implemented as delete+insert. The error
-    # happens only within the same session.
-    # To fix it, we can delete, commit + insert a new tag.
+    # DuckDB checks unique constraints too eagerly on updates, so we recreate
+    # the tag row. We must temporarily delete the link rows first, otherwise
+    # DuckDB rejects deleting the tag row because of the foreign key.
     # https://duckdb.org/docs/sql/indexes#over-eager-unique-constraint-checking
     session.delete(tag)
     session.commit()
@@ -96,10 +100,12 @@ def update(session: Session, tag_id: UUID, tag_data: TagUpdate) -> TagTable | No
     session.add(tag_updated)
     session.commit()
 
-    for sample_id in sample_ids:
-        session.merge(SampleTagLinkTable(sample_id=sample_id, tag_id=tag_id))
+    if sample_ids:
+        session.bulk_save_objects(
+            [SampleTagLinkTable(sample_id=sample_id, tag_id=tag_id) for sample_id in sample_ids]
+        )
+        session.commit()
 
-    session.commit()
     session.refresh(tag_updated)
     return tag_updated
 

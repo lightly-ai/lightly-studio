@@ -6,7 +6,7 @@ from fastapi.testclient import TestClient
 from pytest_mock import MockerFixture
 from sqlmodel import Session
 
-from lightly_studio.api.routes.api.status import HTTP_STATUS_OK
+from lightly_studio.api.routes.api.status import HTTP_STATUS_CONFLICT, HTTP_STATUS_OK
 from lightly_studio.models.collection import CollectionTable, SampleType
 from lightly_studio.resolvers import collection_resolver, tag_resolver
 from tests.helpers_resolvers import create_collection, create_image, create_tag
@@ -83,4 +83,24 @@ def test_update_tag__renames_tag_with_sample_links(
     updated_tag = tag_resolver.get_by_id(session=db_session, tag_id=tag.tag_id)
     assert updated_tag is not None
     assert updated_tag.name == "renamed_tag"
-    assert [sample.sample_id for sample in updated_tag.samples] == [image.sample.sample_id]
+    assert len(updated_tag.samples) == 1
+    assert updated_tag.samples[0].sample_id == image.sample.sample_id
+
+
+def test_update_tag__returns_conflict_if_name_is_already_used_by_another_tag(
+    db_session: Session, test_client: TestClient
+) -> None:
+    collection = create_collection(session=db_session)
+    tag = create_tag(session=db_session, collection_id=collection.collection_id, tag_name="tag_1")
+    create_tag(session=db_session, collection_id=collection.collection_id, tag_name="tag_2")
+
+    response = test_client.put(
+        f"/api/collections/{collection.collection_id}/tags/{tag.tag_id}",
+        json={
+            "name": "tag_2",
+            "description": tag.description,
+            "kind": tag.kind,
+        },
+    )
+
+    assert response.status_code == HTTP_STATUS_CONFLICT
