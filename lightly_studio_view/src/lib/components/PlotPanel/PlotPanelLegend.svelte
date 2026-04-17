@@ -17,7 +17,7 @@
         </span>
         <span class="flex items-center gap-1.5">
             <span class="legend-dot" style={`background-color: ${categoryColors[2]}`}></span>
-            Selected
+            Embeddings selection
         </span>
     </div>
 </div>

@@ -57,14 +57,15 @@
     import { useVideoFrameAnnotationCounts } from '$lib/hooks/useVideoFrameAnnotationsCount/useVideoFrameAnnotationsCount.js';
     import { useVideoFramesBounds } from '$lib/hooks/useVideoFramesBounds/useVideoFramesBounds.js';
     import { useVideoBounds } from '$lib/hooks/useVideosBounds/useVideosBounds.js';
-    import { SampleType } from '$lib/api/lightly_studio_local/types.gen.js';
-    import { buildImageFilter } from '$lib/utils/buildImageFilter';
     import { useImageFilters } from '$lib/hooks/useImageFilters/useImageFilters';
     import { useVideoFilters } from '$lib/hooks/useVideoFilters/useVideoFilters';
+    import { SampleType } from '$lib/api/lightly_studio_local/types.gen';
+    import { buildImageFilter } from '$lib/utils/buildImageFilter';
     import {
         buildVideoAnnotationCountsFilter,
         buildVideoFrameAnnotationCountsFilter
     } from '$lib/utils/buildAnnotationCountsFilters';
+    import EmbeddingSelectionFilterItem from '$lib/components/EmbeddingSelectionFilterItem/EmbeddingSelectionFilterItem.svelte';
     import { useSelectionSummary } from '$lib/hooks';
     const { data, children } = $props();
     const {
@@ -87,7 +88,14 @@
     // Use hideAnnotations hook
     const { handleKeyEvent } = useHideAnnotations();
 
-    const { retrieveParentCollection, collections } = useGlobalStorage();
+    const {
+        retrieveParentCollection,
+        collections,
+        showPlot,
+        setShowPlot,
+        filteredSampleCount,
+        filteredAnnotationCount
+    } = useGlobalStorage();
 
     const parentCollection = $derived.by(() =>
         retrieveParentCollection($collections, collectionId)
@@ -204,9 +212,6 @@
         useAnnotationLabels({ collectionId: collectionId ?? '' })
     );
     const annotationLabelsData = $derived($annotationLabelsQuery?.data);
-    const { showPlot, setShowPlot, filteredSampleCount, filteredAnnotationCount } =
-        useGlobalStorage();
-
     const annotationLabelsStore = toStore(() => annotationLabelsData);
 
     // Initialize annotation filter hook (must be before annotationCounts to avoid init-order crash)
@@ -227,10 +232,10 @@
 
     const { imageFilter: imageFilterFromHook } = useImageFilters();
     const { videoFilter: videoFilterFromHook } = useVideoFilters();
-    const plotSelectionImageSampleIds = $derived(
+    const plotFilterImageSampleIds = $derived(
         $imageFilterFromHook?.sample_filter?.sample_ids ?? []
     );
-    const plotSelectionVideoSampleIds = $derived(
+    const plotFilterVideoSampleIds = $derived(
         $videoFilterFromHook?.sample_filter?.sample_ids ?? []
     );
 
@@ -240,8 +245,9 @@
             (isAnnotations && parentCollection?.sampleType == SampleType.VIDEO_FRAME)
         ) {
             let videoFrameCollectionId = collectionId;
-            if (isAnnotations && parentCollection?.sampleType == SampleType.VIDEO_FRAME)
-                videoFrameCollectionId = parentCollection.collectionId;
+            if (isAnnotations && parentCollection?.sampleType == SampleType.VIDEO_FRAME) {
+                videoFrameCollectionId = parentCollection?.collectionId ?? collectionId;
+            }
             return useVideoFrameAnnotationCounts({
                 collectionId: videoFrameCollectionId,
                 filter: buildVideoFrameAnnotationCountsFilter({
@@ -257,7 +263,7 @@
                     metadataFilters,
                     annotationFilter: $annotationFilterStore,
                     videoBoundsValues: $videoBoundsValues,
-                    sampleIds: plotSelectionVideoSampleIds
+                    sampleIds: plotFilterVideoSampleIds
                 })
             });
         }
@@ -267,7 +273,7 @@
                 dimensionsValues: $dimensionsValues,
                 annotationFilter: $annotationFilterStore,
                 metadataFilters,
-                sampleIds: isAnnotations ? [] : plotSelectionImageSampleIds
+                sampleIds: isAnnotations ? [] : plotFilterImageSampleIds
             })
         });
     });
@@ -506,6 +512,11 @@
                             </div>
                             <Segment title="Filters" icon={SlidersHorizontal}>
                                 <div class="space-y-2">
+                                    <EmbeddingSelectionFilterItem
+                                        {collectionIdStore}
+                                        {isVideos}
+                                        {isSamples}
+                                    />
                                     <LabelsMenu
                                         {annotationFilterRows}
                                         onToggleAnnotationFilter={toggleAnnotationFilterSelection}
@@ -657,7 +668,8 @@
                                         class="flex items-center space-x-1"
                                         data-testid="toggle-plot-button"
                                         variant={$showPlot ? 'default' : 'ghost'}
-                                        onclick={() => setShowPlot(!$showPlot)}
+                                        onclick={() =>
+                                            $showPlot ? setShowPlot(false) : setShowPlot(true)}
                                     >
                                         <ChartNetwork class="size-4" />
                                         <span>Show Embeddings</span>
