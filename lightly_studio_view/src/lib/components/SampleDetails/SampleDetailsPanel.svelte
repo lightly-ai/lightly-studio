@@ -1,5 +1,6 @@
 <script lang="ts">
     import { afterNavigate } from '$app/navigation';
+    import { page } from '$app/state';
     import { Card, CardContent, SampleDetailsSidePanel } from '$lib/components';
     import { ImageAdjustments } from '$lib/components/ImageAdjustments';
     import Separator from '$lib/components/ui/separator/separator.svelte';
@@ -18,8 +19,6 @@
         type CollectionViewWithCount,
         type TagTable
     } from '$lib/api/lightly_studio_local';
-    import { useCollection } from '$lib/hooks/useCollection/useCollection';
-    import { page } from '$app/state';
     import SampleDetailsSelectableBox from './SampleDetailsSelectableBox/SampleDetailsSelectableBox.svelte';
     import SampleDetailsImageContainer from './SampleDetailsImageContainer/SampleDetailsImageContainer.svelte';
     import { createAnnotationLabelContext } from '$lib/contexts/SampleDetailsAnnotation.svelte';
@@ -181,10 +180,7 @@
 
     let annotationsToShow = $derived(sample?.annotations ? getAnnotations(sample.annotations) : []);
 
-    const datasetId = $derived(page.params.dataset_id!);
-    const { collection: datasetCollection } = $derived.by(() =>
-        useCollection({ collectionId: datasetId })
-    );
+    const datasetCollection = $derived(page.data.collection);
 
     const isResizable = $derived(
         $isEditingMode && !isPanModeEnabled && sampleDetailsToolbarContext.status !== 'drag'
@@ -230,8 +226,8 @@
 {#if sample}
     <div class="flex h-full w-full flex-col space-y-4" data-testid={dataTestId}>
         <div class="flex w-full items-center justify-between">
-            {#if $datasetCollection.data}
-                {@render breadcrumb({ collection: $datasetCollection.data })}
+            {#if datasetCollection}
+                {@render breadcrumb({ collection: datasetCollection })}
             {/if}
             {#if $isEditingMode}
                 <ImageAdjustments

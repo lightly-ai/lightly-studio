@@ -57,6 +57,12 @@ test('Tag filtering shows distinct samples only', async ({ samplesPage }) => {
     // Create first tag.
     await samplesPage.createTag(tag1Name);
 
+    // Clear the first selection before selecting the overlapping second range.
+    for (let i = 0; i < 3; i++) {
+        await samples.nth(i).click();
+    }
+    expect(await samplesPage.getNumSelectedSamples()).toBe(0);
+
     // Select next samples.
     for (let i = 2; i < 5; i++) {
         await samples.nth(i).click();
@@ -72,6 +78,23 @@ test('Tag filtering shows distinct samples only', async ({ samplesPage }) => {
 
     const sampleCount = await samplesPage.getSamples().count();
     expect(sampleCount).toBe(5);
+});
+
+test('Tags can be created from the side panel for selected samples', async ({ samplesPage }) => {
+    const timestamp = Date.now();
+    const tagName = `side_panel_tag_${timestamp}`;
+
+    await samplesPage.getSampleByIndex(0).click();
+    await samplesPage.getSampleByIndex(1).click();
+    expect(await samplesPage.getNumSelectedSamples()).toBe(2);
+
+    await samplesPage.createTag(tagName);
+
+    const tagNames = await samplesPage.getTagNames();
+    expect(tagNames).toContain(tagName);
+
+    await samplesPage.pressTag(tagName);
+    expect(await samplesPage.getSamples().count()).toBe(2);
 });
 
 test('text search stays active until submit or explicit clear', async ({ page, samplesPage }) => {
