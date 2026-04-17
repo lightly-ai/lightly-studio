@@ -44,7 +44,7 @@ samples that do not have the selected tag.
 
 Call `dataset.export()` to get an export object, then call a format-specific method on it.
 The export methods depend on the dataset type, see
-[Dataset export reference](../api/dataset.md#datasetexport)
+[Dataset export reference](../api/dataset.md#imagedatasetexport)
 for details.
 
 ```python
@@ -55,6 +55,7 @@ dataset = ls.ImageDataset.load()
 dataset.export().to_coco_object_detections("detections.json")
 dataset.export().to_coco_instance_segmentations("segmentations.json")
 dataset.export().to_coco_captions("captions.json")
+dataset.export().to_pascalvoc_instance_segmentation("pascalvoc_output_dir/")
 
 # Video dataset export
 dataset = ls.VideoDataset.load()

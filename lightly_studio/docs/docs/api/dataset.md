@@ -18,14 +18,14 @@
     options:
         members: [VideoDataset]
 
-## DatasetExport
+## ImageDatasetExport
 
-::: lightly_studio.export.export_dataset
+::: lightly_studio.export.image_dataset_export
     options:
-        members: [DatasetExport]
+        members: [ImageDatasetExport]
 
 ## VideoDatasetExport
 
-::: lightly_studio.export.export_video_dataset
+::: lightly_studio.export.video_dataset_export
     options:
         members: [VideoDatasetExport]
