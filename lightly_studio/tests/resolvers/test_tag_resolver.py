@@ -109,6 +109,33 @@ def test_update_tag(db_session: Session) -> None:
     assert tag_updated.name == data_update.name
 
 
+def test_update_tag__preserves_sample_links(db_session: Session) -> None:
+    collection = create_collection(session=db_session)
+    collection_id = collection.collection_id
+
+    tag = create_tag(session=db_session, collection_id=collection_id)
+    image_1 = create_image(
+        session=db_session, collection_id=collection_id, file_path_abs="sample1.png"
+    )
+    image_2 = create_image(
+        session=db_session, collection_id=collection_id, file_path_abs="sample2.png"
+    )
+
+    tag_resolver.add_tag_to_sample(session=db_session, tag_id=tag.tag_id, sample=image_1.sample)
+    tag_resolver.add_tag_to_sample(session=db_session, tag_id=tag.tag_id, sample=image_2.sample)
+
+    tag_updated = tag_resolver.update(
+        session=db_session, tag_id=tag.tag_id, tag_data=TagUpdate(name="updated_tag")
+    )
+
+    assert tag_updated is not None
+    assert tag_updated.name == "updated_tag"
+    assert tag_updated.tag_id == tag.tag_id
+    assert sorted(sample.sample_id for sample in tag_updated.samples) == sorted(
+        [image_1.sample.sample_id, image_2.sample.sample_id]
+    )
+
+
 def test_update_tag__unique_tag_name(db_session: Session) -> None:
     collection = create_collection(session=db_session)
     collection_id = collection.collection_id
@@ -125,6 +152,40 @@ def test_update_tag__unique_tag_name(db_session: Session) -> None:
             tag_data=TagUpdate(name=tag_2.name),
         )
     db_session.rollback()
+
+
+def test_update_tag__unique_tag_name__preserves_original_tag_and_links(
+    db_session: Session,
+) -> None:
+    collection = create_collection(session=db_session)
+    collection_id = collection.collection_id
+
+    tag_1 = create_tag(session=db_session, collection_id=collection_id, tag_name="example_tag_1")
+    tag_2 = create_tag(session=db_session, collection_id=collection_id, tag_name="some_other_tag")
+    image_1 = create_image(
+        session=db_session, collection_id=collection_id, file_path_abs="sample1.png"
+    )
+    image_2 = create_image(
+        session=db_session, collection_id=collection_id, file_path_abs="sample2.png"
+    )
+
+    tag_resolver.add_tag_to_sample(session=db_session, tag_id=tag_1.tag_id, sample=image_1.sample)
+    tag_resolver.add_tag_to_sample(session=db_session, tag_id=tag_1.tag_id, sample=image_2.sample)
+
+    with pytest.raises(IntegrityError):
+        tag_resolver.update(
+            session=db_session,
+            tag_id=tag_1.tag_id,
+            tag_data=TagUpdate(name=tag_2.name),
+        )
+    db_session.rollback()
+
+    original_tag = tag_resolver.get_by_id(session=db_session, tag_id=tag_1.tag_id)
+    assert original_tag is not None
+    assert original_tag.name == "example_tag_1"
+    assert sorted(sample.sample_id for sample in original_tag.samples) == sorted(
+        [image_1.sample.sample_id, image_2.sample.sample_id]
+    )
 
 
 def test_update_tag__unique_tag_name__different_kind(
