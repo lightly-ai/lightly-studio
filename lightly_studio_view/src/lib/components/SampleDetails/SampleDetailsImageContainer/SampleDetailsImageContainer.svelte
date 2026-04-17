@@ -62,9 +62,8 @@
     let mousePosition = $state<{ x: number; y: number } | null>(null);
     let isHoveringBoundingBox = $state(false);
     let interactionRect: SVGRectElement | null = $state(null);
-    let savePendingCount = $state(0);
     let pendingSaveTokens = $state<string[]>([]);
-    const isSavePending = $derived(savePendingCount > 0 || pendingSaveTokens.length > 0);
+    const isSavePending = $derived(pendingSaveTokens.length > 0);
 
     let sampleId = $derived(sample.sampleId);
     const actualAnnotationsToShow = $derived.by(() => {
@@ -187,16 +186,6 @@
     });
 
     const handleSavePendingChange = (pendingChange: SavePendingChange) => {
-        if (typeof pendingChange === 'boolean') {
-            if (pendingChange) {
-                savePendingCount += 1;
-                return;
-            }
-
-            savePendingCount = Math.max(0, savePendingCount - 1);
-            return;
-        }
-
         if (pendingChange.isPending) {
             if (!pendingSaveTokens.includes(pendingChange.token)) {
                 pendingSaveTokens = [...pendingSaveTokens, pendingChange.token];

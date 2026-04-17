@@ -1,6 +1,4 @@
-export type SavePendingChange =
-    | boolean
-    | {
-          token: string;
-          isPending: boolean;
-      };
+export type SavePendingChange = {
+    token: string;
+    isPending: boolean;
+};
