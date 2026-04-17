@@ -7,7 +7,6 @@
         GridHeader,
         LabelsMenu,
         SelectionPill,
-        TagCreateDialog,
         TagsMenu
     } from '$lib/components';
     import Input from '$lib/components/ui/input/input.svelte';
@@ -21,7 +20,7 @@
         GripVertical
     } from '@lucide/svelte';
     import { onDestroy, onMount } from 'svelte';
-    import { get, toStore } from 'svelte/store';
+    import { toStore } from 'svelte/store';
     import { toast } from 'svelte-sonner';
     import { Header } from '$lib/components';
     import MenuDialogHost from '$lib/components/Header/MenuDialogHost.svelte';
@@ -60,14 +59,12 @@
     import { useVideoBounds } from '$lib/hooks/useVideosBounds/useVideosBounds.js';
     import { useImageFilters } from '$lib/hooks/useImageFilters/useImageFilters';
     import { useVideoFilters } from '$lib/hooks/useVideoFilters/useVideoFilters';
-    import { useEmbeddingFilter } from '$lib/hooks/useEmbeddingFilter/useEmbeddingFilter';
     import { SampleType } from '$lib/api/lightly_studio_local/types.gen';
     import { buildImageFilter } from '$lib/utils/buildImageFilter';
     import {
         buildVideoAnnotationCountsFilter,
         buildVideoFrameAnnotationCountsFilter
     } from '$lib/utils/buildAnnotationCountsFilters';
-    import { GridHeader } from '$lib/components';
     import EmbeddingSelectionFilterItem from '$lib/components/EmbeddingSelectionFilterItem/EmbeddingSelectionFilterItem.svelte';
     import { useSelectionSummary } from '$lib/hooks';
     const { data, children } = $props();
@@ -97,8 +94,7 @@
         showPlot,
         setShowPlot,
         filteredSampleCount,
-        filteredAnnotationCount,
-        setRangeSelectionForcollection
+        filteredAnnotationCount
     } = useGlobalStorage();
 
     const parentCollection = $derived.by(() =>
@@ -493,21 +489,6 @@
     const showLeftSidebar = $derived(
         isSamples || isAnnotations || isVideos || isVideoFrames || isGroups
     );
-
-    const embeddingFilter = useEmbeddingFilter({
-        collectionId: collectionIdStore,
-        isVideos: toStore(() => isVideos),
-        isSamples: toStore(() => isSamples),
-        setRangeSelectionForcollection
-    });
-    const hasPlotFilterContextStore = embeddingFilter.hasPlotFilterContext;
-    const isPlotFilterAppliedStore = embeddingFilter.isPlotFilterApplied;
-    const plotFilterCountStore = embeddingFilter.plotFilterCount;
-    const plotFilterItemLabelStore = embeddingFilter.plotFilterItemLabel;
-    const hasPlotFilterContext = $derived($hasPlotFilterContextStore);
-    const isPlotFilterApplied = $derived($isPlotFilterAppliedStore);
-    const plotFilterCount = $derived($plotFilterCountStore);
-    const plotFilterItemLabel = $derived($plotFilterItemLabelStore);
 </script>
 
 <div class="flex-none">
@@ -528,23 +509,14 @@
                         >
                             <div>
                                 <TagsMenu collection_id={collectionId} {gridType} />
-                                <TagCreateDialog
-                                    {collectionId}
-                                    {gridType}
-                                    textEmbedding={get(textEmbedding)}
-                                />
                             </div>
                             <Segment title="Filters" icon={SlidersHorizontal}>
                                 <div class="space-y-2">
-                                    {#if hasPlotFilterContext}
-                                        <EmbeddingSelectionFilterItem
-                                            checked={isPlotFilterApplied}
-                                            selectionCount={plotFilterCount}
-                                            itemLabel={plotFilterItemLabel}
-                                            onVisibilityChange={embeddingFilter.setEmbeddingFilterVisibility}
-                                            onClear={embeddingFilter.clearPlotFilter}
-                                        />
-                                    {/if}
+                                    <EmbeddingSelectionFilterItem
+                                        {collectionIdStore}
+                                        {isVideos}
+                                        {isSamples}
+                                    />
                                     <LabelsMenu
                                         {annotationFilterRows}
                                         onToggleAnnotationFilter={toggleAnnotationFilterSelection}

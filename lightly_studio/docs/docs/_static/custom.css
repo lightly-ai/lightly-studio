@@ -194,7 +194,8 @@ code.doc-symbol-module {
   color: #0d8abf;
 }
 
-/* Rounded corners for images in the main docs content */
-.md-content .md-typeset img {
+/* Rounded corners for images and videos in the main docs content */
+.md-content .md-typeset img,
+.md-content .md-typeset video {
   border-radius: 8px;
 }

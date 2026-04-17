@@ -290,7 +290,7 @@ export const useGlobalStorage = () => {
             showPlot.set(show);
         },
         getRangeSelection,
-        setRangeSelectionForcollection: (collectionId: string, selection: Point[] | null) => {
+        setRangeSelectionForCollection: (collectionId: string, selection: Point[] | null) => {
             rangeSelectionBycollection.update((state) => ({
                 ...state,
                 [collectionId]: selection
