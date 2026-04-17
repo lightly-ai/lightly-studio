@@ -9,7 +9,7 @@
     <div class="flex flex-col items-start gap-1">
         <span class="flex items-center gap-1.5">
             <span class="legend-dot" style={`background-color: ${categoryColors[0]}`}></span>
-            Remaining
+            Not Filtered
         </span>
         <span class="flex items-center gap-1.5">
             <span class="legend-dot" style={`background-color: ${categoryColors[1]}`}></span>

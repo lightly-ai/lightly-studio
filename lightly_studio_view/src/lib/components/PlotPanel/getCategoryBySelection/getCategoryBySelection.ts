@@ -1,7 +1,7 @@
 import type { Point } from 'embedding-atlas/svelte';
 import { isPointInPolygon } from '../isPointInPolygon/isPointInPolygon';
 import type { ArrowData } from '../useArrowData/useArrowData';
-import { REMAINING_CATEGORY } from '../plotCategories';
+import { NOT_FILTERED_CATEGORY } from '../plotCategories';
 
 type Selection = Point[] | null;
 
@@ -12,7 +12,7 @@ type Selection = Point[] | null;
  * @param data - Arrow data containing x and y coordinates as Float32Arrays
  * @returns A reducer function that takes (prevValue: number, index: number) and returns:
  *          - `prevValue` if the point intersects the selection polygon
- *          - `REMAINING_CATEGORY` if the point does not intersect the selection polygon
+ *          - `NOT_FILTERED_CATEGORY` if the point does not intersect the selection polygon
  *          - `prevValue` if no selection is given
  */
 export const getCategoryBySelection =
@@ -23,5 +23,5 @@ export const getCategoryBySelection =
         const x = (data.x as Float32Array)[index];
         const y = (data.y as Float32Array)[index];
         const isIntersected = isPointInPolygon(x, y, selection);
-        return isIntersected ? prevValue : REMAINING_CATEGORY;
+        return isIntersected ? prevValue : NOT_FILTERED_CATEGORY;
     };

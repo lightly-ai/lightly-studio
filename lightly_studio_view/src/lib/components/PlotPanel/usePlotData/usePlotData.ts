@@ -3,7 +3,7 @@ import { EmbeddingView, type Point } from 'embedding-atlas/svelte';
 import type { ComponentProps } from 'svelte';
 import type { ArrowData } from '../useArrowData/useArrowData';
 import { getCategoryBySelection } from '../getCategoryBySelection/getCategoryBySelection';
-import { FILTERED_CATEGORY, REMAINING_CATEGORY } from '../plotCategories';
+import { FILTERED_CATEGORY, NOT_FILTERED_CATEGORY } from '../plotCategories';
 
 type PlotColumn = 'x' | 'y' | 'category';
 
@@ -22,7 +22,7 @@ type Selection = Point[] | null;
  *
  * @param arrowData - Parsed Arrow data containing x/y coordinates, filter status, and sample IDs
  * @param rangeSelection - Optional polygon selection to further categorize points within the range
- * @param hasActiveFilter - When false, all points start as REMAINING_CATEGORY regardless of fulfils_filter (used when no GUI filter or sample selection is active)
+ * @param hasActiveFilter - When false, all points start as FILTERED_CATEGORY so range selection still works without a pre-existing filter
  * @returns Object with formatted plot data, error store, and selected sample IDs store
  */
 export function usePlotData({
@@ -48,11 +48,11 @@ export function usePlotData({
 
     let category = hasActiveFilter
         ? (data.fulfils_filter as Uint8Array)
-        : new Uint8Array((data.x as Float32Array).length);
+        : new Uint8Array((data.x as Float32Array).length).fill(FILTERED_CATEGORY);
     const sampleIds = data.sample_id as string[];
 
     if (rangeSelection) {
-        // Points inside the polygon keep their prevValue; points outside are demoted to REMAINING_CATEGORY.
+        // Points inside the polygon keep their prevValue; points outside are demoted to NOT_FILTERED_CATEGORY.
         category = category.map(getCategoryBySelection(rangeSelection, data));
 
         // Collect selected sample ids: in-polygon filtered points have FILTERED_CATEGORY.
@@ -71,7 +71,7 @@ export function usePlotData({
             }
             return highlightedSampleIdSet.has(sampleIds[index])
                 ? FILTERED_CATEGORY
-                : REMAINING_CATEGORY;
+                : NOT_FILTERED_CATEGORY;
         });
     }
 

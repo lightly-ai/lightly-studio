@@ -76,8 +76,8 @@ describe('usePlotData', () => {
         const categoryArray = Array.from(data?.category as Uint8Array);
         expect(categoryArray[0]).toBe(1); // in polygon, keeps FILTERED_CATEGORY
         expect(categoryArray[1]).toBe(1); // in polygon, keeps FILTERED_CATEGORY
-        expect(categoryArray[2]).toBe(0); // outside polygon, demoted to REMAINING_CATEGORY
-        expect(categoryArray[3]).toBe(0); // outside polygon, demoted to REMAINING_CATEGORY
+        expect(categoryArray[2]).toBe(0); // outside polygon, demoted to NOT_FILTERED_CATEGORY
+        expect(categoryArray[3]).toBe(0); // outside polygon, demoted to NOT_FILTERED_CATEGORY
     });
 
     it('should collect selected sample ids when range selection is applied', () => {
@@ -113,7 +113,7 @@ describe('usePlotData', () => {
         expect(get(result.selectedSampleIds)).toEqual(['sample1', 'sample2']);
     });
 
-    it('should set all categories to 0 when hasActiveFilter is false', () => {
+    it('should set all categories to 1 when hasActiveFilter is false', () => {
         const mockData = createMockArrowData();
 
         const result = usePlotData({
@@ -124,8 +124,29 @@ describe('usePlotData', () => {
 
         const data = get(result.data);
         const categoryArray = Array.from(data?.category as Uint8Array);
-        expect(categoryArray).toEqual([0, 0, 0, 0]);
+        expect(categoryArray).toEqual([1, 1, 1, 1]);
         expect(get(result.selectedSampleIds)).toEqual([]);
+    });
+
+    it('should collect selected ids from range selection when hasActiveFilter is false', () => {
+        const mockData = createMockArrowData();
+        const mockSelection: Point[] = [
+            { x: 0, y: 0 },
+            { x: 2, y: 0 },
+            { x: 2, y: 6 },
+            { x: 0, y: 6 }
+        ];
+
+        const result = usePlotData({
+            arrowData: mockData,
+            rangeSelection: mockSelection,
+            hasActiveFilter: false
+        });
+
+        const data = get(result.data) as { category: Uint8Array };
+        const categoryArray = Array.from(data.category);
+        expect(categoryArray).toEqual([1, 1, 0, 0]);
+        expect(get(result.selectedSampleIds)).toEqual(['sample1', 'sample2']);
     });
 
     it('should return error store', () => {

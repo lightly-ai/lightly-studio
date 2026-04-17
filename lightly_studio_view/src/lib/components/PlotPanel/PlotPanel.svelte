@@ -65,7 +65,7 @@
 
     const embeddingsData = $derived(useEmbeddings(collectionId, filter));
 
-    const categoryColors = ['#9CA3AF', '#2563EB'];
+    const categoryColors = ['#9CA3AF', '#F59E0B'];
     const { data: arrowData, error: arrowError } = $derived(
         useArrowData({
             blobData: $embeddingsData.data as Blob
