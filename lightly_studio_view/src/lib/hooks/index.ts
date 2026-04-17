@@ -14,3 +14,12 @@ export { useCollectionWithChildren } from '$lib/hooks/useCollection/useCollectio
 export { useSelectionSummary } from '$lib/hooks/useSelectionSummary/useSelectionSummary';
 export { useVideo } from '$lib/hooks/useVideo/useVideo';
 export { useAddTagToSample } from '$lib/hooks/useAddTagToSample/useAddTagToSample';
+export { useRouteType } from '$lib/hooks/useRouteType/useRouteType';
+export { useGridTypeManagement } from '$lib/hooks/useGridTypeManagement/useGridTypeManagement';
+export { useImageSearch } from '$lib/hooks/useImageSearch/useImageSearch';
+export { useTextEmbeddingSearch } from '$lib/hooks/useTextEmbeddingSearch/useTextEmbeddingSearch';
+export { useEmbeddingSearch } from '$lib/hooks/useEmbeddingSearch/useEmbeddingSearch';
+export { useCollectionFilters } from '$lib/hooks/useCollectionFilters/useCollectionFilters';
+export { useCollectionLayoutProps } from '$lib/hooks/useCollectionLayoutProps/useCollectionLayoutProps';
+export { useCollectionLayoutState } from '$lib/hooks/useCollectionLayoutState/useCollectionLayoutState';
+export { useAnnotationCountsAggregation } from '$lib/hooks/useAnnotationCountsAggregation/useAnnotationCountsAggregation';

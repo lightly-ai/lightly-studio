@@ -5,6 +5,11 @@ export type Annotation = {
     selected: boolean;
 };
 
+export type TextEmbedding = {
+    embedding: number[];
+    queryText: string;
+};
+
 export type GridType =
     | 'samples'
     | 'annotations'

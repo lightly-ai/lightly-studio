@@ -56,5 +56,11 @@ export { default as GroupsComponentsMenu } from '$lib/components/GroupsComponent
 export { default as LayoutCard } from '$lib/components/LayoutCard/LayoutCard.svelte';
 export { default as SelectionPill } from '$lib/components/SelectionPill/SelectionPill.svelte';
 export { default as Separator } from '$lib/components/ui/separator/separator.svelte';
+export { default as PlotPanel } from '$lib/components/PlotPanel/PlotPanel.svelte';
 export { default as CollectionLayout } from '$lib/components/CollectionLayout/CollectionLayout.svelte';
 export { default as CollectionSearchBar } from '$lib/components/CollectionLayout/CollectionSearchBar/CollectionSearchBar.svelte';
+export { default as CollectionLayoutHeader } from '$lib/components/CollectionLayoutHeader/CollectionLayoutHeader.svelte';
+export { default as CollectionLayoutSidebar } from '$lib/components/CollectionLayoutSidebar/CollectionLayoutSidebar.svelte';
+export { default as CollectionLayoutSearchBar } from '$lib/components/CollectionLayoutSearchBar/CollectionLayoutSearchBar.svelte';
+export { default as CollectionLayoutAuxControls } from '$lib/components/CollectionLayoutAuxControls/CollectionLayoutAuxControls.svelte';
+export { default as CollectionLayoutFooter } from '$lib/components/CollectionLayoutFooter/CollectionLayoutFooter.svelte';
