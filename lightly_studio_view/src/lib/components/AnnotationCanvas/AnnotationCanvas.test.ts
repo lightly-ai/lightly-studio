@@ -79,6 +79,11 @@ describe('AnnotationCanvas', () => {
         vi.unstubAllGlobals();
     });
 
+    afterEach(async () => {
+        const { shutdownMaskRendererPool } = await import('$lib/workers/maskRendererPool');
+        shutdownMaskRendererPool();
+    });
+
     it('draws object-detection boxes on fallback canvas when there are no masks', async () => {
         render(AnnotationCanvas, {
             props: {

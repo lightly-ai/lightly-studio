@@ -67,6 +67,7 @@
     } from '$lib/utils/buildAnnotationCountsFilters';
     import EmbeddingSelectionFilterItem from '$lib/components/EmbeddingSelectionFilterItem/EmbeddingSelectionFilterItem.svelte';
     import { useSelectionSummary } from '$lib/hooks';
+    import { shutdownMaskRendererPool } from '$lib/workers/maskRendererPool';
     const { data, children } = $props();
     const {
         collection,
@@ -113,6 +114,7 @@
         if (browser) {
             window.removeEventListener('keydown', handleKeyEvent);
             window.removeEventListener('keyup', handleKeyEvent);
+            shutdownMaskRendererPool();
         }
     });
 
