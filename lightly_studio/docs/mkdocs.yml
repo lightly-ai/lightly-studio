@@ -57,6 +57,12 @@ nav:
   - Advanced:
     - Run LightlyStudio from a Notebook: advanced/notebooks.md
   - About Us: about-us.md
+  - 🏢 Enterprise:
+    - enterprise/index.md
+    - Connect from Python: enterprise/connect.md
+    - Cloud Storage:
+      - enterprise/cloud_storage/index.md
+      - AWS S3: enterprise/cloud_storage/aws.md
 
 extra_css:
   - _static/custom.css

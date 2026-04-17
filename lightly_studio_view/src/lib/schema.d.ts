@@ -1692,6 +1692,11 @@ export interface paths {
          *     Sets the credentials as environment variables and clears the S3 fsspec
          *     instance cache so that subsequent file operations pick up the new
          *     credentials.
+         *
+         *     TODO Mihnea (04/2026) Security:
+         *      This endpoint has no authentication and accepts arbitrary env var
+         *      keys. This is acceptable for air-gapped on-prem (behind Docker isolation with no internet).
+         *      For the hosted version, this endpoint must be secured with authentication and input validation.
          */
         put: operations["refresh_cloud_credentials"];
         post?: never;
@@ -1715,6 +1720,9 @@ export interface paths {
          *     Args:
          *         sample_id: The ID of the sample.
          *         session: Database session.
+         *         quality: Thumbnail quality mode. Use 'high' for compressed JPEG output.
+         *         max_width: Maximum width in pixels for high quality mode.
+         *         max_height: Maximum height in pixels for high quality mode.
          *
          *     Returns:
          *         StreamingResponse with the image data.
@@ -1745,7 +1753,7 @@ export interface paths {
          *     Args:
          *         sample_id: The UUID of the video frame sample.
          *         session: Database session dependency.
-         *         compressed: If True, encode as JPEG with lower quality (keeps original resolution).
+         *         transform_query: Transport-level query parameters for frame encoding.
          */
         get: operations["stream_frame"];
         put?: never;
@@ -2601,6 +2609,12 @@ export interface components {
          */
         GridViewSampleRenderingType: "cover" | "contain";
         /**
+         * GridViewThumbnailQualityType
+         * @description Defines how thumbnails are fetched for grid-like views.
+         * @enum {string}
+         */
+        GridViewThumbnailQualityType: "raw" | "high";
+        /**
          * GroupComponentView
          * @description GroupComponentView representation.
          *
@@ -3221,6 +3235,11 @@ export interface components {
              * @default contain
              */
             grid_view_sample_rendering: components["schemas"]["GridViewSampleRenderingType"];
+            /**
+             * @description Controls thumbnail quality for grid-like preview views
+             * @default raw
+             */
+            grid_view_thumbnail_quality: components["schemas"]["GridViewThumbnailQualityType"];
             /**
              * Key Hide Annotations
              * @description Key to temporarily hide annotations while pressed
@@ -6430,7 +6449,11 @@ export interface operations {
     };
     serve_image_by_sample_id: {
         parameters: {
-            query?: never;
+            query?: {
+                quality?: components["schemas"]["GridViewThumbnailQualityType"];
+                max_width?: number | null;
+                max_height?: number | null;
+            };
             header?: never;
             path: {
                 sample_id: string;
@@ -6462,7 +6485,9 @@ export interface operations {
     stream_frame: {
         parameters: {
             query?: {
-                compressed?: boolean;
+                quality?: components["schemas"]["GridViewThumbnailQualityType"];
+                max_width?: number | null;
+                max_height?: number | null;
             };
             header?: never;
             path: {

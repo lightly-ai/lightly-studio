@@ -8,9 +8,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+
 - Added `Dataset.update_metadata` method to update metadata of multiple samples at once.
 - Added cloud storage support for Pascal VOC semantic segmentation annotations.
 - Show Embedding Plot selection as a filter item in the left panel.
+- Added thumbnail quality setting in the Settings dialog. Enable "High Quality Thumbnails" to load compressed JPEG thumbnails in grid views, reducing bandwidth for large datasets.
+- Added a floating selection panel to grid pages.
+- Tags can be created and assigned directly from the sample and annotation detail view.
+- Tags can be created and assigned directly from the side panel in the grid view.
+- Exposed Pascal VOC segmentation export from the Python interface.
 
 ### Changed
 

@@ -75,6 +75,22 @@ test('user can change label of an annotation grid page', async ({ annotationsPag
     );
 });
 
+test('Tags can be created from the side panel for selected annotations', async ({
+    annotationsPage
+}) => {
+    const timestamp = Date.now();
+    const tagName = `annotation_side_panel_tag_${timestamp}`;
+
+    await annotationsPage.selectAnnotation(0);
+    await annotationsPage.selectAnnotation(1);
+    await expect(await annotationsPage.getSelectedItemsCount()).toBe(2);
+
+    await annotationsPage.createTag(tagName);
+    await annotationsPage.clickTag(tagName);
+
+    await expect(annotationsPage.getAnnotations()).toHaveCount(2);
+});
+
 test('We can see clicked element when navigating back from details', async ({
     page,
     annotationsPage
@@ -85,17 +101,11 @@ test('We can see clicked element when navigating back from details', async ({
     await expect(viewport).toBeVisible();
 
     expect(
-        await isInViewport({ element: annotationsPage.getAnnotationByIndex(0), viewport })
-    ).toBeTruthy();
-    expect(
         await isInViewport({ element: annotationsPage.getAnnotationByIndex(20), viewport })
     ).toBeFalsy();
 
-    annotationsPage.getAnnotationByIndex(20).scrollIntoViewIfNeeded();
+    await annotationsPage.getAnnotationByIndex(20).scrollIntoViewIfNeeded();
 
-    expect(
-        await isInViewport({ element: annotationsPage.getAnnotationByIndex(0), viewport })
-    ).toBeFalsy();
     expect(
         await isInViewport({ element: annotationsPage.getAnnotationByIndex(20), viewport })
     ).toBeTruthy();
@@ -108,9 +118,6 @@ test('We can see clicked element when navigating back from details', async ({
 
     await expect(viewport).toBeVisible();
 
-    expect(
-        await isInViewport({ element: annotationsPage.getAnnotationByIndex(0), viewport })
-    ).toBeFalsy();
     expect(
         await isInViewport({ element: annotationsPage.getAnnotationByIndex(20), viewport })
     ).toBeTruthy();

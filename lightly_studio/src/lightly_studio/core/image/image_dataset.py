@@ -31,7 +31,7 @@ from lightly_studio.core.image import add_images
 from lightly_studio.core.image.image_sample import ImageSample
 from lightly_studio.dataset import fsspec_lister
 from lightly_studio.dataset.embedding_manager import EmbeddingManagerProvider
-from lightly_studio.export.export_dataset import DatasetExport
+from lightly_studio.export.image_dataset_export import ImageDatasetExport
 from lightly_studio.models.annotation.annotation_base import AnnotationType
 from lightly_studio.models.collection import SampleType
 from lightly_studio.resolvers import (
@@ -94,8 +94,8 @@ class ImageDataset(BaseSampleDataset[ImageSample]):
         """Returns the sample class."""
         return ImageSample
 
-    def export(self, query: DatasetQuery | None = None) -> DatasetExport:
-        """Return a DatasetExport instance which can export the dataset in various formats.
+    def export(self, query: DatasetQuery | None = None) -> ImageDatasetExport:
+        """Return an ImageDatasetExport instance which can export the dataset in various formats.
 
         Args:
             query:
@@ -103,9 +103,7 @@ class ImageDataset(BaseSampleDataset[ImageSample]):
         """
         if query is None:
             query = self.query()
-        return DatasetExport(
-            session=self.session, root_collection_id=self.collection_id, samples=query
-        )
+        return ImageDatasetExport(session=self.session, dataset_id=self.dataset_id, samples=query)
 
     def get_sample(self, sample_id: UUID) -> ImageSample:
         """Get a single sample from the dataset by its ID.

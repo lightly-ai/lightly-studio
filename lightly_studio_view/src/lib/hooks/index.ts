@@ -1,4 +1,5 @@
 export { useVideoFrames } from '$lib/hooks/useVideoFrames/useVideoFrames';
+export { useVideoFrameAnnotations } from '$lib/hooks/useVideoFrameAnnotations/useVideoFrameAnnotations';
 export { useSamplesInfinite } from '$lib/hooks/useSamplesInfinite/useSamplesInfinite';
 export { useGlobalStorage } from '$lib/hooks/useGlobalStorage';
 export { useGroupsInfinite } from '$lib/hooks/useGroupsInfinite/useGroupsInfinite';
@@ -10,4 +11,6 @@ export { useFramesFilter } from '$lib/hooks/useFramesFilter/useFramesFilter';
 export { useCaptions } from '$lib/hooks/useCaptions/useCaptions';
 export { useRemoveTagFromSample } from '$lib/hooks/useRemoveTagFromSample/useRemoveTagFromSample';
 export { useCollectionWithChildren } from '$lib/hooks/useCollection/useCollection';
+export { useSelectionSummary } from '$lib/hooks/useSelectionSummary/useSelectionSummary';
 export { useVideo } from '$lib/hooks/useVideo/useVideo';
+export { useAddTagToSample } from '$lib/hooks/useAddTagToSample/useAddTagToSample';
