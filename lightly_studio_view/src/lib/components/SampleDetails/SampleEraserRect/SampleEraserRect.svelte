@@ -15,8 +15,10 @@
     import { useDeleteAnnotation } from '$lib/hooks/useDeleteAnnotation/useDeleteAnnotation';
     import { useGlobalStorage } from '$lib/hooks/useGlobalStorage';
     import { useInstanceSegmentationPreview } from '$lib/hooks/useInstanceSegmentationPreview';
+    import { usePendingOperations } from '$lib/hooks/usePendingOperations/usePendingOperations';
     import { useSegmentationMaskEraser } from '$lib/hooks/useSegmentationMaskEraser';
     import { addAnnotationDeleteToUndoStack } from '$lib/services/addAnnotationDeleteToUndoStack';
+    import type { PendingChange } from '../pendingChange';
     import SampleAnnotationRect from '../SampleAnnotationRect/SampleAnnotationRect.svelte';
     import { toast } from 'svelte-sonner';
 
@@ -32,6 +34,7 @@
         brushRadius: number;
         drawerStrokeColor: string;
         refetch: () => void;
+        onFinishErasePendingChange?: (pendingChange: PendingChange) => void;
     };
 
     let {
@@ -41,7 +44,8 @@
         collectionId,
         brushRadius,
         drawerStrokeColor,
-        refetch
+        refetch,
+        onFinishErasePendingChange
     }: Props = $props();
 
     const {
@@ -94,7 +98,19 @@
         previewApi.setPreviewCanvas(previewCanvas);
     });
 
+    const {
+        startPending: startFinishErasePending,
+        endPending: endFinishErasePending,
+        resetPending: resetFinishErasePending
+    } = usePendingOperations({
+        operationPrefix: 'eraser',
+        onPendingChange: (pendingChange: PendingChange) => {
+            onFinishErasePendingChange?.(pendingChange);
+        }
+    });
+
     onDestroy(() => {
+        resetFinishErasePending();
         setIsDrawing(false);
         previewApi.destroy();
     });
@@ -207,8 +223,16 @@
         }
 
         baseMask = updatedMask;
-        eraserApi.finishErase(updatedMask, selectedAnnotation, updateAnnotation, deleteAnn);
+        const pendingOperation = startFinishErasePending();
         setIsDrawing(false);
+        void eraserApi
+            .finishErase(updatedMask, selectedAnnotation, updateAnnotation, deleteAnn)
+            .catch((error) => {
+                console.error('Failed to finish erase stroke:', error);
+            })
+            .finally(() => {
+                endFinishErasePending(pendingOperation);
+            });
     };
 
     const handleStrokeCancel = (e: PointerEvent) => {
