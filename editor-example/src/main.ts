@@ -30,6 +30,67 @@ monaco.languages.register({
     mimetypes: ['text/x-python']
 });
 
+monaco.languages.setMonarchTokensProvider('dataset-query', {
+    keywords: [
+        'dataset',
+        'query',
+        'match',
+        'order_by',
+        'AND',
+        'OR',
+        'NOT',
+        'ObjectDetectionQuery',
+        'ClassificationQuery',
+        'InstanceSegmentationQuery',
+        'ObjectDetectionField',
+        'ClassificationField',
+        'ImageSampleField',
+        'OrderByField',
+        'desc',
+        'asc',
+        'text_similarity'
+    ],
+    operators: ['==', '!=', '>=', '<=', '>', '<'],
+    tokenizer: {
+        root: [
+            [/#.*$/, 'comment'],
+            [/"/, { token: 'string.quote', bracket: '@open', next: '@string' }],
+            [/\b\d+\b/, 'number'],
+            [/[()]/, '@brackets'],
+            [/[.,]/, 'delimiter'],
+            [/@operators/, 'operator'],
+            [/[a-zA-Z_][a-zA-Z0-9_]*/, {
+                cases: {
+                    '@keywords': 'keyword',
+                    '@default': 'identifier'
+                }
+            }]
+        ],
+        string: [
+            [/[^\\"]+/, 'string'],
+            [/\\./, 'string.escape'],
+            [/"/, { token: 'string.quote', bracket: '@close', next: '@pop' }]
+        ]
+    }
+});
+
+monaco.editor.defineTheme('dataset-query-theme', {
+    base: 'vs-dark',
+    inherit: true,
+    rules: [
+        { token: 'comment', foreground: '6A9955' },
+        { token: 'keyword', foreground: '569CD6' },
+        { token: 'identifier', foreground: 'D4D4D4' },
+        { token: 'string', foreground: 'CE9178' },
+        { token: 'number', foreground: 'B5CEA8' },
+        { token: 'operator', foreground: 'D4D4D4' },
+        { token: 'delimiter', foreground: 'D4D4D4' }
+    ],
+    colors: {
+        'editor.background': '#1E1E1E'
+    }
+});
+
 // Create the editor
 const editor = monaco.editor.create(document.getElementById('editor')!, {
     value: `# Welcome to Dataset Query Language!
@@ -69,7 +130,7 @@ dataset.query().match(
 )
 `,
     language: 'dataset-query',
-    theme: 'vs-dark',
+    theme: 'dataset-query-theme',
     automaticLayout: true,
     minimap: { enabled: false },
     lineNumbers: 'on',

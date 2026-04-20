@@ -6,14 +6,12 @@ import type { DatasetQueryExpression, QueryFunction, FieldAccess } from './gener
  * Provides hover information when user hovers over code elements.
  */
 export class DatasetQueryHoverProvider extends AstNodeHoverProvider {
-    
+
     protected getAstNodeHoverContent(node: AstNode): Hover | undefined {
-        // Hover over dataset.query()
         if (node.$type === 'DatasetQueryExpression') {
-            const query = node as DatasetQueryExpression;
             return this.createHover(
                 'Dataset Query',
-                'Query a dataset to filter images based on annotations, metadata, and other criteria.\n\n' +
+                'Build a query for the current dataset and combine annotation filters, metadata constraints, and sorting.\n\n' +
                 '**Syntax:** `dataset.query().match(...).order_by(...)`\n\n' +
                 '**Example:**\n```python\n' +
                 'dataset.query().match(\n' +
@@ -88,6 +86,121 @@ export class DatasetQueryHoverProvider extends AstNodeHoverProvider {
         }
 
         return undefined;
+    }
+
+    protected override getKeywordHoverContent(node: AstNode): Hover | undefined {
+        if (node.$type !== 'Keyword') {
+            return undefined;
+        }
+
+        return this.getKeywordHover(node as AstNode & { value: string });
+    }
+
+    private getKeywordHover(node: AstNode & { value: string }): Hover | undefined {
+        const docs: Record<string, { title: string; content: string }> = {
+            dataset: {
+                title: 'dataset',
+                content:
+                    'Dataset object used to start a query for the current dataset.\n\n' +
+                    '**Example:**\n```python\n' +
+                    'dataset.query()\n' +
+                    '```'
+            },
+            query: {
+                title: 'query()',
+                content:
+                    'Create a query builder from the dataset object.\n\n' +
+                    '**Next step:** call `.match(...)` to add filter conditions.'
+            },
+            match: {
+                title: 'match(...)',
+                content:
+                    'Apply the main filter expression. Only samples matching this expression are returned.\n\n' +
+                    '**Example:**\n```python\n' +
+                    'dataset.query().match(ImageSampleField.width > 500)\n' +
+                    '```'
+            },
+            order_by: {
+                title: 'order_by(...)',
+                content:
+                    'Sort the matched samples by a field, a query-derived value, or a text-similarity score.'
+            },
+            AND: {
+                title: 'AND(...)',
+                content:
+                    'Logical conjunction. All nested expressions must be true.'
+            },
+            OR: {
+                title: 'OR(...)',
+                content:
+                    'Logical disjunction. At least one nested expression must be true.'
+            },
+            NOT: {
+                title: 'NOT(...)',
+                content:
+                    'Logical negation. Inverts the nested expression.'
+            },
+            ObjectDetectionQuery: {
+                title: 'ObjectDetectionQuery',
+                content:
+                    'Query helper for object-detection annotations.\n\n' +
+                    '**Methods:** `match(...)`, `count(...)`'
+            },
+            ClassificationQuery: {
+                title: 'ClassificationQuery',
+                content:
+                    'Query helper for classification annotations.\n\n' +
+                    '**Methods:** `match(...)`, `count(...)`'
+            },
+            InstanceSegmentationQuery: {
+                title: 'InstanceSegmentationQuery',
+                content:
+                    'Query helper for instance-segmentation annotations.\n\n' +
+                    '**Methods:** `match(...)`, `count(...)`'
+            },
+            ObjectDetectionField: {
+                title: 'ObjectDetectionField',
+                content:
+                    'Field namespace for object-detection properties such as `label` and `confidence`.'
+            },
+            ClassificationField: {
+                title: 'ClassificationField',
+                content:
+                    'Field namespace for classification properties.'
+            },
+            ImageSampleField: {
+                title: 'ImageSampleField',
+                content:
+                    'Field namespace for sample metadata and sample-level helper functions such as `width`, `height`, and `text_similarity(...)`.'
+            },
+            OrderByField: {
+                title: 'OrderByField(...)',
+                content:
+                    'Wrap a sortable field or query expression so it can be passed to `.order_by(...)`.'
+            },
+            desc: {
+                title: 'desc()',
+                content:
+                    'Sort in descending order, from larger values to smaller values.'
+            },
+            asc: {
+                title: 'asc()',
+                content:
+                    'Sort in ascending order, from smaller values to larger values.'
+            },
+            text_similarity: {
+                title: 'text_similarity(...)',
+                content:
+                    'Compute a text-similarity score for each sample using the provided text query. This is typically used for ranking in `order_by(...)`.'
+            }
+        };
+
+        const doc = docs[node.value];
+        if (!doc) {
+            return undefined;
+        }
+
+        return this.createHover(doc.title, doc.content);
     }
 
     private createHover(title: string, content: string): Hover {

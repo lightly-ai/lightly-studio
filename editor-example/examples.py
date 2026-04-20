@@ -28,6 +28,13 @@ dataset.query().match(
 
 # USER STORY 4: Query with metadata
 # Find images with cats where width > 500 pixels
+# Hover guide:
+# - `dataset` -> dataset object used to start a query for the current dataset
+# - `query` -> creates a query builder
+# - `match` -> applies the filter expression
+# - `AND` -> all nested conditions must be true
+# - `ObjectDetectionQuery` -> query helper for object-detection annotations
+# - `ImageSampleField.width` -> image width in pixels
 dataset.query().match(
     AND(
         ObjectDetectionQuery.match(ObjectDetectionField.label == "cat"),
