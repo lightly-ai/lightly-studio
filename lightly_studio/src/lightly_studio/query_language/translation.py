@@ -6,6 +6,8 @@ from datetime import datetime
 from functools import singledispatch
 from typing import Protocol, TypeVar, Union
 
+from typing_extensions import assert_never
+
 from lightly_studio.core.dataset_query import (
     AND,
     NOT,
@@ -59,7 +61,7 @@ def to_match_expression(expr: models.MatchExpr) -> MatchExpression:
 def _string_expr(expr: models.StringExpr) -> MatchExpression:
     return _apply_equality_operator(
         field=_get_string_field(expr.field),
-        operator=expr.operator.value,
+        operator=expr.operator,
         value=expr.value,
     )
 
@@ -68,7 +70,7 @@ def _string_expr(expr: models.StringExpr) -> MatchExpression:
 def _integer_expr(expr: models.IntegerExpr) -> MatchExpression:
     return _apply_ordinal_operator(
         field=_get_integer_field(expr.field),
-        operator=expr.operator.value,
+        operator=expr.operator,
         value=expr.value,
     )
 
@@ -77,7 +79,7 @@ def _integer_expr(expr: models.IntegerExpr) -> MatchExpression:
 def _datetime_expr(expr: models.DatetimeExpr) -> MatchExpression:
     return _apply_ordinal_operator(
         field=_get_datetime_field(expr.field),
-        operator=expr.operator.value,
+        operator=expr.operator,
         value=expr.value,
     )
 
@@ -86,7 +88,7 @@ def _datetime_expr(expr: models.DatetimeExpr) -> MatchExpression:
 def _ordinal_float_expr(expr: models.OrdinalFloatExpr) -> MatchExpression:
     return _apply_ordinal_operator(
         field=_get_ordinal_float_field(expr.field),
-        operator=expr.operator.value,
+        operator=expr.operator,
         value=expr.value,
     )
 
@@ -95,7 +97,7 @@ def _ordinal_float_expr(expr: models.OrdinalFloatExpr) -> MatchExpression:
 def _equality_float_expr(expr: models.EqualityFloatExpr) -> MatchExpression:
     return _apply_equality_operator(
         field=_get_equality_float_field(expr.field),
-        operator=expr.operator.value,
+        operator=expr.operator,
         value=expr.value,
     )
 
@@ -145,7 +147,7 @@ def _translate_classification_criterion(expr: models.AnnotationLabelExpr) -> Mat
         raise ValueError(f"Classification criteria require classification fields, got {expr.field}")
     return _apply_equality_operator(
         field=ClassificationField.label,
-        operator=expr.operator.value,
+        operator=expr.operator,
         value=expr.value,
     )
 
@@ -159,7 +161,7 @@ def _translate_object_detection_criterion(expr: models.ObjectDetectionExpr) -> M
             )
         return _apply_equality_operator(
             field=ObjectDetectionField.label,
-            operator=expr.operator.value,
+            operator=expr.operator,
             value=expr.value,
         )
     if expr.field.table != "object_detection":
@@ -169,7 +171,7 @@ def _translate_object_detection_criterion(expr: models.ObjectDetectionExpr) -> M
         )
     return _apply_ordinal_operator(
         field=_get_object_detection_geometry_field(expr.field.name),
-        operator=expr.operator.value,
+        operator=expr.operator,
         value=expr.value,
     )
 
@@ -185,7 +187,7 @@ def _translate_instance_segmentation_criterion(
             )
         return _apply_equality_operator(
             field=InstanceSegmentationField.label,
-            operator=expr.operator.value,
+            operator=expr.operator,
             value=expr.value,
         )
     if expr.field.table != "instance_segmentation":
@@ -195,106 +197,170 @@ def _translate_instance_segmentation_criterion(
         )
     return _apply_ordinal_operator(
         field=_get_instance_segmentation_geometry_field(expr.field.name),
-        operator=expr.operator.value,
+        operator=expr.operator,
         value=expr.value,
     )
 
 
+@singledispatch
 def _get_string_field(field: models.StringFieldRef) -> EqualityField[str]:
-    if field.table == "image":
-        return {
-            models.ImageStringFieldName.FILE_NAME: ImageSampleField.file_name,
-            models.ImageStringFieldName.FILE_PATH_ABS: ImageSampleField.file_path_abs,
-        }[field.name]
-    return {
-        models.VideoStringFieldName.FILE_NAME: VideoSampleField.file_name,
-        models.VideoStringFieldName.FILE_PATH_ABS: VideoSampleField.file_path_abs,
-    }[field.name]
+    raise ValueError(f"Unsupported string field ref type: {type(field).__name__}")
 
 
+@_get_string_field.register
+def _get_image_string_field(field: models.ImageStringFieldRef) -> EqualityField[str]:
+    name = field.name
+    if name is models.ImageStringFieldName.FILE_NAME:
+        return ImageSampleField.file_name
+    if name is models.ImageStringFieldName.FILE_PATH_ABS:
+        return ImageSampleField.file_path_abs
+    assert_never(name)
+
+
+@_get_string_field.register
+def _get_video_string_field(field: models.VideoStringFieldRef) -> EqualityField[str]:
+    name = field.name
+    if name is models.VideoStringFieldName.FILE_NAME:
+        return VideoSampleField.file_name
+    if name is models.VideoStringFieldName.FILE_PATH_ABS:
+        return VideoSampleField.file_path_abs
+    assert_never(name)
+
+
+@singledispatch
 def _get_integer_field(field: models.IntegerFieldRef) -> OrdinalField[int]:
-    if field.table == "image":
-        return {
-            models.ImageIntegerFieldName.WIDTH: ImageSampleField.width,
-            models.ImageIntegerFieldName.HEIGHT: ImageSampleField.height,
-        }[field.name]
-    return {
-        models.VideoIntegerFieldName.WIDTH: VideoSampleField.width,
-        models.VideoIntegerFieldName.HEIGHT: VideoSampleField.height,
-    }[field.name]
+    raise ValueError(f"Unsupported integer field ref type: {type(field).__name__}")
 
 
+@_get_integer_field.register
+def _get_image_integer_field(field: models.ImageIntegerFieldRef) -> OrdinalField[int]:
+    name = field.name
+    if name is models.ImageIntegerFieldName.WIDTH:
+        return ImageSampleField.width
+    if name is models.ImageIntegerFieldName.HEIGHT:
+        return ImageSampleField.height
+    assert_never(name)
+
+
+@_get_integer_field.register
+def _get_video_integer_field(field: models.VideoIntegerFieldRef) -> OrdinalField[int]:
+    name = field.name
+    if name is models.VideoIntegerFieldName.WIDTH:
+        return VideoSampleField.width
+    if name is models.VideoIntegerFieldName.HEIGHT:
+        return VideoSampleField.height
+    assert_never(name)
+
+
+@singledispatch
 def _get_datetime_field(field: models.DatetimeFieldRef) -> OrdinalField[datetime]:
-    return {
-        models.ImageDatetimeFieldName.CREATED_AT: ImageSampleField.created_at,
-    }[field.name]
+    raise ValueError(f"Unsupported datetime field ref type: {type(field).__name__}")
 
 
+@_get_datetime_field.register
+def _get_image_datetime_field(field: models.ImageDatetimeFieldRef) -> OrdinalField[datetime]:
+    name = field.name
+    if name is models.ImageDatetimeFieldName.CREATED_AT:
+        return ImageSampleField.created_at
+    assert_never(name)
+
+
+@singledispatch
 def _get_ordinal_float_field(field: models.OrdinalFloatFieldRef) -> OrdinalField[Number]:
-    return {
-        models.VideoFloatFieldName.FPS: VideoSampleField.fps,
-    }[field.name]
+    raise ValueError(f"Unsupported ordinal float field ref type: {type(field).__name__}")
 
 
+@_get_ordinal_float_field.register
+def _get_video_ordinal_float_field(
+    field: models.VideoOrdinalFloatFieldRef,
+) -> OrdinalField[Number]:
+    name = field.name
+    if name is models.VideoFloatFieldName.FPS:
+        return VideoSampleField.fps
+    assert_never(name)
+
+
+@singledispatch
 def _get_equality_float_field(field: models.EqualityFloatFieldRef) -> EqualityField[Number]:
-    return {
-        models.VideoEqualityFloatFieldName.DURATION_S: VideoSampleField.duration_s,
-    }[field.name]
+    raise ValueError(f"Unsupported equality float field ref type: {type(field).__name__}")
 
 
+@_get_equality_float_field.register
+def _get_video_equality_float_field(
+    field: models.VideoEqualityFloatFieldRef,
+) -> EqualityField[Number]:
+    name = field.name
+    if name is models.VideoEqualityFloatFieldName.DURATION_S:
+        return VideoSampleField.duration_s
+    assert_never(name)
+
+
+@singledispatch
 def _get_tags_accessor(field: models.TagsFieldRef) -> TagsAccessor:
-    if field.table == "image":
-        return ImageSampleField.tags
+    raise ValueError(f"Unsupported tags field ref type: {type(field).__name__}")
+
+
+@_get_tags_accessor.register
+def _get_image_tags_accessor(field: models.ImageTagsFieldRef) -> TagsAccessor:
+    return ImageSampleField.tags
+
+
+@_get_tags_accessor.register
+def _get_video_tags_accessor(field: models.VideoTagsFieldRef) -> TagsAccessor:
     return VideoSampleField.tags
 
 
 def _get_object_detection_geometry_field(
     name: models.AnnotationGeometryFieldName,
 ) -> OrdinalField[Number]:
-    return {
-        models.AnnotationGeometryFieldName.X: ObjectDetectionField.x,
-        models.AnnotationGeometryFieldName.Y: ObjectDetectionField.y,
-        models.AnnotationGeometryFieldName.WIDTH: ObjectDetectionField.width,
-        models.AnnotationGeometryFieldName.HEIGHT: ObjectDetectionField.height,
-    }[name]
+    if name is models.AnnotationGeometryFieldName.X:
+        return ObjectDetectionField.x
+    if name is models.AnnotationGeometryFieldName.Y:
+        return ObjectDetectionField.y
+    if name is models.AnnotationGeometryFieldName.WIDTH:
+        return ObjectDetectionField.width
+    if name is models.AnnotationGeometryFieldName.HEIGHT:
+        return ObjectDetectionField.height
+    assert_never(name)
 
 
 def _get_instance_segmentation_geometry_field(
     name: models.AnnotationGeometryFieldName,
 ) -> OrdinalField[Number]:
-    return {
-        models.AnnotationGeometryFieldName.X: InstanceSegmentationField.x,
-        models.AnnotationGeometryFieldName.Y: InstanceSegmentationField.y,
-        models.AnnotationGeometryFieldName.WIDTH: InstanceSegmentationField.width,
-        models.AnnotationGeometryFieldName.HEIGHT: InstanceSegmentationField.height,
-    }[name]
+    if name is models.AnnotationGeometryFieldName.X:
+        return InstanceSegmentationField.x
+    if name is models.AnnotationGeometryFieldName.Y:
+        return InstanceSegmentationField.y
+    if name is models.AnnotationGeometryFieldName.WIDTH:
+        return InstanceSegmentationField.width
+    if name is models.AnnotationGeometryFieldName.HEIGHT:
+        return InstanceSegmentationField.height
+    assert_never(name)
 
 
 def _apply_equality_operator(
-    *, field: EqualityField[T], operator: str, value: T
+    *, field: EqualityField[T], operator: models.EqualityComparisonOperator, value: T
 ) -> MatchExpression:
-    operations = {
-        "==": lambda: field == value,
-        "!=": lambda: field != value,
-    }
-    try:
-        return operations[operator]()
-    except KeyError as exc:
-        raise ValueError(f"Unsupported equality operator: {operator}") from exc
+    if operator is models.EqualityComparisonOperator.EQ:
+        return field == value
+    if operator is models.EqualityComparisonOperator.NEQ:
+        return field != value
+    assert_never(operator)
 
 
 def _apply_ordinal_operator(
-    *, field: OrdinalField[T], operator: str, value: T
+    *, field: OrdinalField[T], operator: models.OrdinalComparisonOperator, value: T
 ) -> MatchExpression:
-    operations = {
-        "<": lambda: field < value,
-        "<=": lambda: field <= value,
-        ">": lambda: field > value,
-        ">=": lambda: field >= value,
-        "==": lambda: field == value,
-        "!=": lambda: field != value,
-    }
-    try:
-        return operations[operator]()
-    except KeyError as exc:
-        raise ValueError(f"Unsupported ordinal operator: {operator}") from exc
+    if operator is models.OrdinalComparisonOperator.LT:
+        return field < value
+    if operator is models.OrdinalComparisonOperator.LTE:
+        return field <= value
+    if operator is models.OrdinalComparisonOperator.GT:
+        return field > value
+    if operator is models.OrdinalComparisonOperator.GTE:
+        return field >= value
+    if operator is models.OrdinalComparisonOperator.EQ:
+        return field == value
+    if operator is models.OrdinalComparisonOperator.NEQ:
+        return field != value
+    assert_never(operator)
