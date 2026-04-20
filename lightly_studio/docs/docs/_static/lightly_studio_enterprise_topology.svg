@@ -1,0 +1,109 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1180 620" role="img" aria-labelledby="title desc">
+  <title id="title">Enterprise Deployment Topology</title>
+  <desc id="desc">Enterprise deployment topology showing the same Frontend, Backend API, and Datasets Database core components as OSS, with an Authentication Service added around them.</desc>
+  <defs>
+    <style>
+      .panel-customer { fill: #f1f5f9; stroke: #94a3b8; stroke-width: 2; stroke-dasharray: 6 4; }
+      .panel-enterprise { fill: #f8fafc; stroke: #94a3b8; stroke-width: 2; }
+      .panel-lightly { fill: #eef2ff; stroke: #94a3b8; stroke-width: 2; stroke-dasharray: 6 4; }
+      .node-ui { fill: #e0f2fe; stroke: #0284c7; stroke-width: 2; }
+      .node-service { fill: #dcfce7; stroke: #16a34a; stroke-width: 2; }
+      .node-security { fill: #f3e8ff; stroke: #7c3aed; stroke-width: 2; }
+      .node-data { fill: #e2e8f0; stroke: #475569; stroke-width: 2; }
+      .node-external { fill: #fef3c7; stroke: #b45309; stroke-width: 2; }
+      .panel-title { fill: #334155; font-family: -apple-system, "Segoe UI", Inter, Arial, sans-serif; font-size: 20px; font-weight: 700; }
+      .label { fill: #0f172a; font-family: -apple-system, "Segoe UI", Inter, Arial, sans-serif; font-size: 17px; font-weight: 700; }
+      .small { fill: #475569; font-family: -apple-system, "Segoe UI", Inter, Arial, sans-serif; font-size: 14px; }
+      .legend-text { fill: #334155; font-family: -apple-system, "Segoe UI", Inter, Arial, sans-serif; font-size: 13px; }
+      .legend-title { fill: #64748b; font-family: -apple-system, "Segoe UI", Inter, Arial, sans-serif; font-size: 13px; font-style: italic; }
+      .edge { stroke: #475569; stroke-width: 3; stroke-linecap: round; fill: none; }
+    </style>
+  </defs>
+
+  <!-- Customer panel -->
+  <rect class="panel-customer" x="20" y="10" width="300" height="510" rx="16" ry="16"/>
+  <text class="panel-title" x="40" y="42">Customer Network</text>
+
+  <g>
+    <title>User in Browser</title>
+    <rect class="node-ui" x="50" y="115" width="240" height="76" rx="12" ry="12"/>
+    <text class="label" x="170" y="160" text-anchor="middle">User in Browser</text>
+  </g>
+
+  <g>
+    <title>Media Storage</title>
+    <rect class="node-external" x="50" y="248" width="240" height="92" rx="12" ry="12"/>
+    <text class="label" x="170" y="284" text-anchor="middle">Media Storage</text>
+    <text class="small" x="170" y="309" text-anchor="middle">local files or cloud bucket</text>
+  </g>
+
+  <g>
+    <title>Python Scripts</title>
+    <rect class="node-service" x="50" y="395" width="240" height="92" rx="12" ry="12"/>
+    <text class="label" x="170" y="431" text-anchor="middle">Python Scripts</text>
+    <text class="small" x="170" y="456" text-anchor="middle">admin workflows via ls.connect()</text>
+  </g>
+
+  <!-- Enterprise outer panel -->
+  <rect class="panel-enterprise" x="350" y="10" width="810" height="510" rx="16" ry="16"/>
+  <text class="panel-title" x="370" y="42">Enterprise Deployment</text>
+
+  <g>
+    <title>Authentication Service</title>
+    <rect class="node-security" x="430" y="115" width="220" height="76" rx="12" ry="12"/>
+    <text class="label" x="540" y="160" text-anchor="middle">Authentication Service</text>
+  </g>
+
+  <!-- LightlyStudio Core nested panel -->
+  <rect class="panel-lightly" x="720" y="60" width="420" height="440" rx="16" ry="16"/>
+  <text class="panel-title" x="740" y="92">LightlyStudio Core</text>
+
+  <g>
+    <title>Frontend</title>
+    <rect class="node-ui" x="780" y="115" width="320" height="76" rx="12" ry="12"/>
+    <text class="label" x="940" y="160" text-anchor="middle">Frontend</text>
+  </g>
+
+  <g>
+    <title>Backend API</title>
+    <rect class="node-service" x="780" y="248" width="320" height="92" rx="12" ry="12"/>
+    <text class="label" x="940" y="300" text-anchor="middle">Backend API</text>
+  </g>
+
+  <g>
+    <title>Datasets database</title>
+    <rect class="node-data" x="780" y="395" width="320" height="92" rx="12" ry="12"/>
+    <text class="label" x="940" y="447" text-anchor="middle">Datasets Database</text>
+  </g>
+
+  <!-- Edges (rows aligned at y=153, y=294, y=441) -->
+  <line class="edge" x1="290" y1="153" x2="430" y2="153"/>
+  <line class="edge" x1="650" y1="153" x2="780" y2="153"/>
+  <line class="edge" x1="940" y1="191" x2="940" y2="248"/>
+  <line class="edge" x1="940" y1="340" x2="940" y2="395"/>
+  <line class="edge" x1="780" y1="294" x2="290" y2="294"/>
+  <line class="edge" x1="170" y1="395" x2="170" y2="340"/>
+  <line class="edge" x1="290" y1="441" x2="780" y2="441"/>
+
+  <!-- Legend -->
+  <g>
+    <title>Legend</title>
+    <rect x="20" y="540" width="1140" height="56" rx="12" ry="12" fill="#ffffff" stroke="#cbd5e1" stroke-width="1"/>
+    <text class="legend-title" x="36" y="560">Legend</text>
+
+    <rect class="node-ui" x="36" y="568" width="20" height="20" rx="6" ry="6"/>
+    <text class="legend-text" x="64" y="583">User-facing UI</text>
+
+    <rect class="node-service" x="200" y="568" width="20" height="20" rx="6" ry="6"/>
+    <text class="legend-text" x="228" y="583">Application service</text>
+
+    <rect class="node-security" x="400" y="568" width="20" height="20" rx="6" ry="6"/>
+    <text class="legend-text" x="428" y="583">Security / identity</text>
+
+    <rect class="node-data" x="600" y="568" width="20" height="20" rx="6" ry="6"/>
+    <text class="legend-text" x="628" y="583">Database</text>
+
+    <rect class="node-external" x="760" y="568" width="20" height="20" rx="6" ry="6"/>
+    <text class="legend-text" x="788" y="583">Customer-managed asset</text>
+  </g>
+</svg>
