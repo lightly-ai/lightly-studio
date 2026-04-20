@@ -27,6 +27,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- Fixed annotation editing UX in sample details by showing a Saving indicator while changes are persisted.
+
 ### Security
 
 ## \[0.4.12\] - 2026-04-01
