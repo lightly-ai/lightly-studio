@@ -1,0 +1,11 @@
+{
+  "projectName": "HelloLang",
+  "languages": [
+    {
+      "id": "hello-lang",
+      "grammar": "src/language/hello-lang.langium",
+      "fileExtensions": [".hello"]
+    }
+  ],
+  "out": "src/language/generated"
+}
