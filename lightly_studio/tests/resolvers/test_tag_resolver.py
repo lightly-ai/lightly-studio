@@ -136,6 +136,28 @@ def test_update_tag__preserves_sample_links(db_session: Session) -> None:
     )
 
 
+def test_update_tag__rename_only_preserves_description(db_session: Session) -> None:
+    collection = create_collection(session=db_session)
+    collection_id = collection.collection_id
+
+    tag = create_tag(
+        session=db_session,
+        collection_id=collection_id,
+        tag_name="example_tag",
+        description="existing description",
+    )
+
+    tag_updated = tag_resolver.update(
+        session=db_session,
+        tag_id=tag.tag_id,
+        tag_data=TagUpdate(name="updated_tag"),
+    )
+
+    assert tag_updated is not None
+    assert tag_updated.name == "updated_tag"
+    assert tag_updated.description == "existing description"
+
+
 def test_update_tag__unique_tag_name(db_session: Session) -> None:
     collection = create_collection(session=db_session)
     collection_id = collection.collection_id

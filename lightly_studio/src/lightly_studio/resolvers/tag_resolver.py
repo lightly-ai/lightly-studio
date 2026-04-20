@@ -61,6 +61,8 @@ def update(session: Session, tag_id: UUID, tag_data: TagUpdate) -> TagTable | No
     if not tag:
         return None
 
+    update_fields = tag_data.model_dump(exclude_unset=True)
+
     conflicting_tag = get_by_name(
         session=session, tag_name=tag_data.name, collection_id=tag.collection_id
     )
@@ -78,33 +80,33 @@ def update(session: Session, tag_id: UUID, tag_data: TagUpdate) -> TagTable | No
     session.exec(
         sqlmodel.delete(SampleTagLinkTable).where(col(SampleTagLinkTable.tag_id) == tag_id)
     )
-    session.commit()
 
     # DuckDB checks unique constraints too eagerly on updates, so we recreate
     # the tag row. We must temporarily delete the link rows first, otherwise
     # DuckDB rejects deleting the tag row because of the foreign key.
     # https://duckdb.org/docs/sql/indexes#over-eager-unique-constraint-checking
     session.delete(tag)
-    session.commit()
+    session.flush()
+    session.expunge(tag)
 
     tag_updated = TagTable(
         tag_id=tag.tag_id,
         collection_id=tag.collection_id,
-        name=tag_data.name,
-        description=tag_data.description,
+        name=update_fields.get("name", tag.name),
+        description=update_fields.get("description", tag.description),
         kind=tag.kind,
         created_at=tag.created_at,
         updated_at=datetime.now(timezone.utc),
     )
 
     session.add(tag_updated)
-    session.commit()
 
     if sample_ids:
-        session.bulk_save_objects(
+        session.add_all(
             [SampleTagLinkTable(sample_id=sample_id, tag_id=tag_id) for sample_id in sample_ids]
         )
-        session.commit()
+
+    session.commit()
 
     session.refresh(tag_updated)
     return tag_updated

@@ -143,6 +143,11 @@ def update_tag(
 @tag_router.delete("/collections/{collection_id}/tags/{tag_id}")
 def delete_tag(
     session: SessionDep,
+    # collection_id is needed for the generator
+    collection_id: Annotated[  # noqa: ARG001
+        UUID,
+        Path(title="collection Id", description="The ID of the collection"),
+    ],
     tag_id: Annotated[UUID, Path(title="Tag Id")],
 ) -> dict[str, str]:
     """Delete a tag from the database."""
