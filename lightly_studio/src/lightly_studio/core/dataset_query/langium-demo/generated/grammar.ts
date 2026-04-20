@@ -214,11 +214,8 @@ export const LightlyQueryGrammar = (): Grammar => loadedLightlyQueryGrammar ?? (
           "$type": "TypeAttribute",
           "name": "member",
           "type": {
-            "$type": "ArrayType",
-            "elementType": {
-              "$type": "SimpleType",
-              "primitiveType": "string"
-            }
+            "$type": "SimpleType",
+            "primitiveType": "string"
           },
           "isOptional": false
         },
@@ -232,6 +229,57 @@ export const LightlyQueryGrammar = (): Grammar => loadedLightlyQueryGrammar ?? (
               "typeRef": {
                 "$ref": "#/interfaces@0"
               }
+            }
+          },
+          "isOptional": false
+        }
+      ]
+    },
+    {
+      "$type": "Interface",
+      "name": "QualifiedFieldReference",
+      "superTypes": [
+        {
+          "$ref": "#/interfaces@0"
+        }
+      ],
+      "attributes": [
+        {
+          "$type": "TypeAttribute",
+          "name": "receiver",
+          "type": {
+            "$type": "SimpleType",
+            "primitiveType": "string"
+          },
+          "isOptional": false
+        },
+        {
+          "$type": "TypeAttribute",
+          "name": "member",
+          "type": {
+            "$type": "SimpleType",
+            "primitiveType": "string"
+          },
+          "isOptional": false
+        }
+      ]
+    },
+    {
+      "$type": "Interface",
+      "name": "TagInExpression",
+      "superTypes": [
+        {
+          "$ref": "#/interfaces@0"
+        }
+      ],
+      "attributes": [
+        {
+          "$type": "TypeAttribute",
+          "name": "tag_name",
+          "type": {
+            "$type": "SimpleType",
+            "typeRef": {
+              "$ref": "#/interfaces@0"
             }
           },
           "isOptional": false
@@ -350,24 +398,7 @@ export const LightlyQueryGrammar = (): Grammar => loadedLightlyQueryGrammar ?? (
     },
     {
       "$type": "ParserRule",
-      "name": "Expression",
-      "returnType": {
-        "$ref": "#/interfaces@0"
-      },
-      "definition": {
-        "$type": "RuleCall",
-        "rule": {
-          "$ref": "#/rules@2"
-        },
-        "arguments": []
-      },
-      "entry": false,
-      "fragment": false,
-      "parameters": []
-    },
-    {
-      "$type": "ParserRule",
-      "name": "OrExpression",
+      "name": "SampleExpression",
       "returnType": {
         "$ref": "#/interfaces@0"
       },
@@ -377,7 +408,7 @@ export const LightlyQueryGrammar = (): Grammar => loadedLightlyQueryGrammar ?? (
           {
             "$type": "RuleCall",
             "rule": {
-              "$ref": "#/rules@3"
+              "$ref": "#/rules@2"
             },
             "arguments": []
           },
@@ -408,7 +439,7 @@ export const LightlyQueryGrammar = (): Grammar => loadedLightlyQueryGrammar ?? (
                 "terminal": {
                   "$type": "RuleCall",
                   "rule": {
-                    "$ref": "#/rules@3"
+                    "$ref": "#/rules@2"
                   },
                   "arguments": []
                 }
@@ -424,7 +455,7 @@ export const LightlyQueryGrammar = (): Grammar => loadedLightlyQueryGrammar ?? (
     },
     {
       "$type": "ParserRule",
-      "name": "AndExpression",
+      "name": "SampleAndExpression",
       "returnType": {
         "$ref": "#/interfaces@0"
       },
@@ -434,7 +465,7 @@ export const LightlyQueryGrammar = (): Grammar => loadedLightlyQueryGrammar ?? (
           {
             "$type": "RuleCall",
             "rule": {
-              "$ref": "#/rules@4"
+              "$ref": "#/rules@3"
             },
             "arguments": []
           },
@@ -465,7 +496,7 @@ export const LightlyQueryGrammar = (): Grammar => loadedLightlyQueryGrammar ?? (
                 "terminal": {
                   "$type": "RuleCall",
                   "rule": {
-                    "$ref": "#/rules@4"
+                    "$ref": "#/rules@3"
                   },
                   "arguments": []
                 }
@@ -481,7 +512,7 @@ export const LightlyQueryGrammar = (): Grammar => loadedLightlyQueryGrammar ?? (
     },
     {
       "$type": "ParserRule",
-      "name": "NotExpression",
+      "name": "SampleComparisonExpression",
       "returnType": {
         "$ref": "#/interfaces@0"
       },
@@ -508,7 +539,7 @@ export const LightlyQueryGrammar = (): Grammar => loadedLightlyQueryGrammar ?? (
                 "terminal": {
                   "$type": "RuleCall",
                   "rule": {
-                    "$ref": "#/rules@5"
+                    "$ref": "#/rules@3"
                   },
                   "arguments": []
                 }
@@ -516,93 +547,76 @@ export const LightlyQueryGrammar = (): Grammar => loadedLightlyQueryGrammar ?? (
             ]
           },
           {
-            "$type": "RuleCall",
-            "rule": {
-              "$ref": "#/rules@5"
-            },
-            "arguments": []
-          }
-        ]
-      },
-      "entry": false,
-      "fragment": false,
-      "parameters": []
-    },
-    {
-      "$type": "ParserRule",
-      "name": "ComparisonExpression",
-      "returnType": {
-        "$ref": "#/interfaces@0"
-      },
-      "definition": {
-        "$type": "Group",
-        "elements": [
-          {
-            "$type": "RuleCall",
-            "rule": {
-              "$ref": "#/rules@6"
-            },
-            "arguments": []
-          },
-          {
             "$type": "Group",
             "elements": [
               {
-                "$type": "Action",
-                "type": {
-                  "$ref": "#/interfaces@3"
+                "$type": "RuleCall",
+                "rule": {
+                  "$ref": "#/rules@4"
                 },
-                "feature": "left",
-                "operator": "="
+                "arguments": []
               },
               {
-                "$type": "Assignment",
-                "feature": "operator",
-                "operator": "=",
-                "terminal": {
-                  "$type": "Alternatives",
-                  "elements": [
-                    {
-                      "$type": "Keyword",
-                      "value": "=="
+                "$type": "Group",
+                "elements": [
+                  {
+                    "$type": "Action",
+                    "type": {
+                      "$ref": "#/interfaces@3"
                     },
-                    {
-                      "$type": "Keyword",
-                      "value": "!="
-                    },
-                    {
-                      "$type": "Keyword",
-                      "value": "<"
-                    },
-                    {
-                      "$type": "Keyword",
-                      "value": ">"
-                    },
-                    {
-                      "$type": "Keyword",
-                      "value": "<="
-                    },
-                    {
-                      "$type": "Keyword",
-                      "value": ">="
-                    }
-                  ]
-                }
-              },
-              {
-                "$type": "Assignment",
-                "feature": "right",
-                "operator": "=",
-                "terminal": {
-                  "$type": "RuleCall",
-                  "rule": {
-                    "$ref": "#/rules@6"
+                    "feature": "left",
+                    "operator": "="
                   },
-                  "arguments": []
-                }
+                  {
+                    "$type": "Assignment",
+                    "feature": "operator",
+                    "operator": "=",
+                    "terminal": {
+                      "$type": "Alternatives",
+                      "elements": [
+                        {
+                          "$type": "Keyword",
+                          "value": "=="
+                        },
+                        {
+                          "$type": "Keyword",
+                          "value": "!="
+                        },
+                        {
+                          "$type": "Keyword",
+                          "value": "<"
+                        },
+                        {
+                          "$type": "Keyword",
+                          "value": ">"
+                        },
+                        {
+                          "$type": "Keyword",
+                          "value": "<="
+                        },
+                        {
+                          "$type": "Keyword",
+                          "value": ">="
+                        }
+                      ]
+                    }
+                  },
+                  {
+                    "$type": "Assignment",
+                    "feature": "right",
+                    "operator": "=",
+                    "terminal": {
+                      "$type": "RuleCall",
+                      "rule": {
+                        "$ref": "#/rules@4"
+                      },
+                      "arguments": []
+                    }
+                  }
+                ],
+                "cardinality": "?"
               }
-            ],
-            "cardinality": "?"
+            ]
           }
         ]
       },
@@ -612,7 +626,7 @@ export const LightlyQueryGrammar = (): Grammar => loadedLightlyQueryGrammar ?? (
     },
     {
       "$type": "ParserRule",
-      "name": "PrimaryExpression",
+      "name": "SamplePrimaryExpression",
       "returnType": {
         "$ref": "#/interfaces@0"
       },
@@ -642,28 +656,28 @@ export const LightlyQueryGrammar = (): Grammar => loadedLightlyQueryGrammar ?? (
           {
             "$type": "RuleCall",
             "rule": {
-              "$ref": "#/rules@7"
+              "$ref": "#/rules@11"
             },
             "arguments": []
           },
           {
             "$type": "RuleCall",
             "rule": {
-              "$ref": "#/rules@8"
+              "$ref": "#/rules@12"
             },
             "arguments": []
           },
           {
             "$type": "RuleCall",
             "rule": {
-              "$ref": "#/rules@9"
+              "$ref": "#/rules@13"
             },
             "arguments": []
           },
           {
             "$type": "RuleCall",
             "rule": {
-              "$ref": "#/rules@10"
+              "$ref": "#/rules@20"
             },
             "arguments": []
           }
@@ -675,7 +689,382 @@ export const LightlyQueryGrammar = (): Grammar => loadedLightlyQueryGrammar ?? (
     },
     {
       "$type": "ParserRule",
-      "name": "FunctionCall",
+      "name": "ObjectDetectionExpression",
+      "returnType": {
+        "$ref": "#/interfaces@0"
+      },
+      "definition": {
+        "$type": "Group",
+        "elements": [
+          {
+            "$type": "RuleCall",
+            "rule": {
+              "$ref": "#/rules@6"
+            },
+            "arguments": []
+          },
+          {
+            "$type": "Group",
+            "elements": [
+              {
+                "$type": "Action",
+                "type": {
+                  "$ref": "#/interfaces@1"
+                },
+                "feature": "left",
+                "operator": "="
+              },
+              {
+                "$type": "Assignment",
+                "feature": "operator",
+                "operator": "=",
+                "terminal": {
+                  "$type": "Keyword",
+                  "value": "or"
+                }
+              },
+              {
+                "$type": "Assignment",
+                "feature": "right",
+                "operator": "=",
+                "terminal": {
+                  "$type": "RuleCall",
+                  "rule": {
+                    "$ref": "#/rules@6"
+                  },
+                  "arguments": []
+                }
+              }
+            ],
+            "cardinality": "*"
+          }
+        ]
+      },
+      "entry": false,
+      "fragment": false,
+      "parameters": []
+    },
+    {
+      "$type": "ParserRule",
+      "name": "ObjectDetectionAndExpression",
+      "returnType": {
+        "$ref": "#/interfaces@0"
+      },
+      "definition": {
+        "$type": "Group",
+        "elements": [
+          {
+            "$type": "RuleCall",
+            "rule": {
+              "$ref": "#/rules@7"
+            },
+            "arguments": []
+          },
+          {
+            "$type": "Group",
+            "elements": [
+              {
+                "$type": "Action",
+                "type": {
+                  "$ref": "#/interfaces@1"
+                },
+                "feature": "left",
+                "operator": "="
+              },
+              {
+                "$type": "Assignment",
+                "feature": "operator",
+                "operator": "=",
+                "terminal": {
+                  "$type": "Keyword",
+                  "value": "and"
+                }
+              },
+              {
+                "$type": "Assignment",
+                "feature": "right",
+                "operator": "=",
+                "terminal": {
+                  "$type": "RuleCall",
+                  "rule": {
+                    "$ref": "#/rules@7"
+                  },
+                  "arguments": []
+                }
+              }
+            ],
+            "cardinality": "*"
+          }
+        ]
+      },
+      "entry": false,
+      "fragment": false,
+      "parameters": []
+    },
+    {
+      "$type": "ParserRule",
+      "name": "ObjectDetectionComparisonExpression",
+      "returnType": {
+        "$ref": "#/interfaces@0"
+      },
+      "definition": {
+        "$type": "Alternatives",
+        "elements": [
+          {
+            "$type": "Group",
+            "elements": [
+              {
+                "$type": "Action",
+                "type": {
+                  "$ref": "#/interfaces@2"
+                }
+              },
+              {
+                "$type": "Keyword",
+                "value": "not"
+              },
+              {
+                "$type": "Assignment",
+                "feature": "expression",
+                "operator": "=",
+                "terminal": {
+                  "$type": "RuleCall",
+                  "rule": {
+                    "$ref": "#/rules@7"
+                  },
+                  "arguments": []
+                }
+              }
+            ]
+          },
+          {
+            "$type": "Group",
+            "elements": [
+              {
+                "$type": "RuleCall",
+                "rule": {
+                  "$ref": "#/rules@8"
+                },
+                "arguments": []
+              },
+              {
+                "$type": "Group",
+                "elements": [
+                  {
+                    "$type": "Action",
+                    "type": {
+                      "$ref": "#/interfaces@3"
+                    },
+                    "feature": "left",
+                    "operator": "="
+                  },
+                  {
+                    "$type": "Assignment",
+                    "feature": "operator",
+                    "operator": "=",
+                    "terminal": {
+                      "$type": "Alternatives",
+                      "elements": [
+                        {
+                          "$type": "Keyword",
+                          "value": "=="
+                        },
+                        {
+                          "$type": "Keyword",
+                          "value": "!="
+                        },
+                        {
+                          "$type": "Keyword",
+                          "value": "<"
+                        },
+                        {
+                          "$type": "Keyword",
+                          "value": ">"
+                        },
+                        {
+                          "$type": "Keyword",
+                          "value": "<="
+                        },
+                        {
+                          "$type": "Keyword",
+                          "value": ">="
+                        }
+                      ]
+                    }
+                  },
+                  {
+                    "$type": "Assignment",
+                    "feature": "right",
+                    "operator": "=",
+                    "terminal": {
+                      "$type": "RuleCall",
+                      "rule": {
+                        "$ref": "#/rules@8"
+                      },
+                      "arguments": []
+                    }
+                  }
+                ],
+                "cardinality": "?"
+              }
+            ]
+          }
+        ]
+      },
+      "entry": false,
+      "fragment": false,
+      "parameters": []
+    },
+    {
+      "$type": "ParserRule",
+      "name": "ObjectDetectionPrimaryExpression",
+      "returnType": {
+        "$ref": "#/interfaces@0"
+      },
+      "definition": {
+        "$type": "Alternatives",
+        "elements": [
+          {
+            "$type": "Group",
+            "elements": [
+              {
+                "$type": "Keyword",
+                "value": "("
+              },
+              {
+                "$type": "RuleCall",
+                "rule": {
+                  "$ref": "#/rules@5"
+                },
+                "arguments": []
+              },
+              {
+                "$type": "Keyword",
+                "value": ")"
+              }
+            ]
+          },
+          {
+            "$type": "RuleCall",
+            "rule": {
+              "$ref": "#/rules@10"
+            },
+            "arguments": []
+          },
+          {
+            "$type": "RuleCall",
+            "rule": {
+              "$ref": "#/rules@20"
+            },
+            "arguments": []
+          }
+        ]
+      },
+      "entry": false,
+      "fragment": false,
+      "parameters": []
+    },
+    {
+      "$type": "ParserRule",
+      "name": "ObjectDetectionFieldReceiver",
+      "dataType": "string",
+      "definition": {
+        "$type": "Alternatives",
+        "elements": [
+          {
+            "$type": "Keyword",
+            "value": "ObjectDetection"
+          },
+          {
+            "$type": "Keyword",
+            "value": "ObjectDetectionField"
+          }
+        ]
+      },
+      "entry": false,
+      "fragment": false,
+      "parameters": []
+    },
+    {
+      "$type": "ParserRule",
+      "name": "ObjectDetectionFieldReference",
+      "returnType": {
+        "$ref": "#/interfaces@0"
+      },
+      "definition": {
+        "$type": "Alternatives",
+        "elements": [
+          {
+            "$type": "Group",
+            "elements": [
+              {
+                "$type": "Action",
+                "type": {
+                  "$ref": "#/interfaces@8"
+                }
+              },
+              {
+                "$type": "Assignment",
+                "feature": "name",
+                "operator": "=",
+                "terminal": {
+                  "$type": "RuleCall",
+                  "rule": {
+                    "$ref": "#/rules@19"
+                  },
+                  "arguments": []
+                }
+              }
+            ]
+          },
+          {
+            "$type": "Group",
+            "elements": [
+              {
+                "$type": "Action",
+                "type": {
+                  "$ref": "#/interfaces@5"
+                }
+              },
+              {
+                "$type": "Assignment",
+                "feature": "receiver",
+                "operator": "=",
+                "terminal": {
+                  "$type": "RuleCall",
+                  "rule": {
+                    "$ref": "#/rules@9"
+                  },
+                  "arguments": []
+                }
+              },
+              {
+                "$type": "Keyword",
+                "value": "."
+              },
+              {
+                "$type": "Assignment",
+                "feature": "member",
+                "operator": "=",
+                "terminal": {
+                  "$type": "RuleCall",
+                  "rule": {
+                    "$ref": "#/rules@19"
+                  },
+                  "arguments": []
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "entry": false,
+      "fragment": false,
+      "parameters": []
+    },
+    {
+      "$type": "ParserRule",
+      "name": "AnnotationQuery",
       "returnType": {
         "$ref": "#/interfaces@0"
       },
@@ -693,11 +1082,8 @@ export const LightlyQueryGrammar = (): Grammar => loadedLightlyQueryGrammar ?? (
             "feature": "name",
             "operator": "=",
             "terminal": {
-              "$type": "RuleCall",
-              "rule": {
-                "$ref": "#/rules@14"
-              },
-              "arguments": []
+              "$type": "Keyword",
+              "value": "object_detection"
             }
           },
           {
@@ -705,44 +1091,16 @@ export const LightlyQueryGrammar = (): Grammar => loadedLightlyQueryGrammar ?? (
             "value": "("
           },
           {
-            "$type": "Group",
-            "elements": [
-              {
-                "$type": "Assignment",
-                "feature": "args",
-                "operator": "+=",
-                "terminal": {
-                  "$type": "RuleCall",
-                  "rule": {
-                    "$ref": "#/rules@1"
-                  },
-                  "arguments": []
-                }
+            "$type": "Assignment",
+            "feature": "args",
+            "operator": "+=",
+            "terminal": {
+              "$type": "RuleCall",
+              "rule": {
+                "$ref": "#/rules@5"
               },
-              {
-                "$type": "Group",
-                "elements": [
-                  {
-                    "$type": "Keyword",
-                    "value": ","
-                  },
-                  {
-                    "$type": "Assignment",
-                    "feature": "args",
-                    "operator": "+=",
-                    "terminal": {
-                      "$type": "RuleCall",
-                      "rule": {
-                        "$ref": "#/rules@1"
-                      },
-                      "arguments": []
-                    }
-                  }
-                ],
-                "cardinality": "*"
-              }
-            ],
-            "cardinality": "?"
+              "arguments": []
+            }
           },
           {
             "$type": "Keyword",
@@ -756,106 +1114,74 @@ export const LightlyQueryGrammar = (): Grammar => loadedLightlyQueryGrammar ?? (
     },
     {
       "$type": "ParserRule",
-      "name": "MemberCall",
+      "name": "TagInExpression",
       "returnType": {
         "$ref": "#/interfaces@0"
       },
       "definition": {
-        "$type": "Group",
+        "$type": "Alternatives",
         "elements": [
-          {
-            "$type": "Action",
-            "type": {
-              "$ref": "#/interfaces@5"
-            }
-          },
-          {
-            "$type": "Assignment",
-            "feature": "receiver",
-            "operator": "=",
-            "terminal": {
-              "$type": "RuleCall",
-              "rule": {
-                "$ref": "#/rules@14"
-              },
-              "arguments": []
-            }
-          },
           {
             "$type": "Group",
             "elements": [
               {
+                "$type": "Action",
+                "type": {
+                  "$ref": "#/interfaces@7"
+                }
+              },
+              {
                 "$type": "Keyword",
-                "value": "."
+                "value": "tags.contains("
               },
               {
                 "$type": "Assignment",
-                "feature": "member",
-                "operator": "+=",
+                "feature": "tag_name",
+                "operator": "=",
                 "terminal": {
                   "$type": "RuleCall",
                   "rule": {
-                    "$ref": "#/rules@14"
+                    "$ref": "#/rules@22"
                   },
                   "arguments": []
                 }
-              }
-            ],
-            "cardinality": "+"
-          },
-          {
-            "$type": "Group",
-            "elements": [
-              {
-                "$type": "Keyword",
-                "value": "("
-              },
-              {
-                "$type": "Group",
-                "elements": [
-                  {
-                    "$type": "Assignment",
-                    "feature": "args",
-                    "operator": "+=",
-                    "terminal": {
-                      "$type": "RuleCall",
-                      "rule": {
-                        "$ref": "#/rules@1"
-                      },
-                      "arguments": []
-                    }
-                  },
-                  {
-                    "$type": "Group",
-                    "elements": [
-                      {
-                        "$type": "Keyword",
-                        "value": ","
-                      },
-                      {
-                        "$type": "Assignment",
-                        "feature": "args",
-                        "operator": "+=",
-                        "terminal": {
-                          "$type": "RuleCall",
-                          "rule": {
-                            "$ref": "#/rules@1"
-                          },
-                          "arguments": []
-                        }
-                      }
-                    ],
-                    "cardinality": "*"
-                  }
-                ],
-                "cardinality": "?"
               },
               {
                 "$type": "Keyword",
                 "value": ")"
               }
-            ],
-            "cardinality": "?"
+            ]
+          },
+          {
+            "$type": "Group",
+            "elements": [
+              {
+                "$type": "Action",
+                "type": {
+                  "$ref": "#/interfaces@7"
+                }
+              },
+              {
+                "$type": "Assignment",
+                "feature": "tag_name",
+                "operator": "=",
+                "terminal": {
+                  "$type": "RuleCall",
+                  "rule": {
+                    "$ref": "#/rules@22"
+                  },
+                  "arguments": []
+                }
+              },
+              {
+                "$type": "Keyword",
+                "value": "in"
+              },
+              {
+                "$type": "Keyword",
+                "value": "tags"
+              }
+            ]
           }
         ]
       },
@@ -865,30 +1191,280 @@ export const LightlyQueryGrammar = (): Grammar => loadedLightlyQueryGrammar ?? (
     },
     {
       "$type": "ParserRule",
-      "name": "FieldReference",
+      "name": "SampleFieldReference",
       "returnType": {
         "$ref": "#/interfaces@0"
       },
       "definition": {
-        "$type": "Group",
+        "$type": "Alternatives",
         "elements": [
           {
-            "$type": "Action",
-            "type": {
-              "$ref": "#/interfaces@6"
-            }
+            "$type": "Group",
+            "elements": [
+              {
+                "$type": "Action",
+                "type": {
+                  "$ref": "#/interfaces@8"
+                }
+              },
+              {
+                "$type": "Assignment",
+                "feature": "name",
+                "operator": "=",
+                "terminal": {
+                  "$type": "RuleCall",
+                  "rule": {
+                    "$ref": "#/rules@16"
+                  },
+                  "arguments": []
+                }
+              }
+            ]
           },
           {
-            "$type": "Assignment",
-            "feature": "name",
-            "operator": "=",
-            "terminal": {
-              "$type": "RuleCall",
-              "rule": {
-                "$ref": "#/rules@14"
+            "$type": "Group",
+            "elements": [
+              {
+                "$type": "Action",
+                "type": {
+                  "$ref": "#/interfaces@6"
+                }
               },
-              "arguments": []
-            }
+              {
+                "$type": "Assignment",
+                "feature": "receiver",
+                "operator": "=",
+                "terminal": {
+                  "$type": "RuleCall",
+                  "rule": {
+                    "$ref": "#/rules@14"
+                  },
+                  "arguments": []
+                }
+              },
+              {
+                "$type": "Keyword",
+                "value": "."
+              },
+              {
+                "$type": "Assignment",
+                "feature": "member",
+                "operator": "=",
+                "terminal": {
+                  "$type": "RuleCall",
+                  "rule": {
+                    "$ref": "#/rules@17"
+                  },
+                  "arguments": []
+                }
+              }
+            ]
+          },
+          {
+            "$type": "Group",
+            "elements": [
+              {
+                "$type": "Action",
+                "type": {
+                  "$ref": "#/interfaces@6"
+                }
+              },
+              {
+                "$type": "Assignment",
+                "feature": "receiver",
+                "operator": "=",
+                "terminal": {
+                  "$type": "RuleCall",
+                  "rule": {
+                    "$ref": "#/rules@15"
+                  },
+                  "arguments": []
+                }
+              },
+              {
+                "$type": "Keyword",
+                "value": "."
+              },
+              {
+                "$type": "Assignment",
+                "feature": "member",
+                "operator": "=",
+                "terminal": {
+                  "$type": "RuleCall",
+                  "rule": {
+                    "$ref": "#/rules@18"
+                  },
+                  "arguments": []
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "entry": false,
+      "fragment": false,
+      "parameters": []
+    },
+    {
+      "$type": "ParserRule",
+      "name": "ImageSampleFieldReceiver",
+      "dataType": "string",
+      "definition": {
+        "$type": "Alternatives",
+        "elements": [
+          {
+            "$type": "Keyword",
+            "value": "Image"
+          },
+          {
+            "$type": "Keyword",
+            "value": "ImageSampleField"
+          }
+        ]
+      },
+      "entry": false,
+      "fragment": false,
+      "parameters": []
+    },
+    {
+      "$type": "ParserRule",
+      "name": "VideoSampleFieldReceiver",
+      "dataType": "string",
+      "definition": {
+        "$type": "Alternatives",
+        "elements": [
+          {
+            "$type": "Keyword",
+            "value": "Video"
+          },
+          {
+            "$type": "Keyword",
+            "value": "VideoSampleField"
+          }
+        ]
+      },
+      "entry": false,
+      "fragment": false,
+      "parameters": []
+    },
+    {
+      "$type": "ParserRule",
+      "name": "CommonSampleFieldName",
+      "dataType": "string",
+      "definition": {
+        "$type": "Keyword",
+        "value": "created_at"
+      },
+      "entry": false,
+      "fragment": false,
+      "parameters": []
+    },
+    {
+      "$type": "ParserRule",
+      "name": "ImageSampleFieldName",
+      "dataType": "string",
+      "definition": {
+        "$type": "Alternatives",
+        "elements": [
+          {
+            "$type": "Keyword",
+            "value": "file_name"
+          },
+          {
+            "$type": "Keyword",
+            "value": "file_path_abs"
+          },
+          {
+            "$type": "Keyword",
+            "value": "height"
+          },
+          {
+            "$type": "Keyword",
+            "value": "width"
+          },
+          {
+            "$type": "RuleCall",
+            "rule": {
+              "$ref": "#/rules@16"
+            },
+            "arguments": []
+          }
+        ]
+      },
+      "entry": false,
+      "fragment": false,
+      "parameters": []
+    },
+    {
+      "$type": "ParserRule",
+      "name": "VideoSampleFieldName",
+      "dataType": "string",
+      "definition": {
+        "$type": "Alternatives",
+        "elements": [
+          {
+            "$type": "Keyword",
+            "value": "file_name"
+          },
+          {
+            "$type": "Keyword",
+            "value": "file_path_abs"
+          },
+          {
+            "$type": "Keyword",
+            "value": "height"
+          },
+          {
+            "$type": "Keyword",
+            "value": "width"
+          },
+          {
+            "$type": "Keyword",
+            "value": "duration_s"
+          },
+          {
+            "$type": "Keyword",
+            "value": "fps"
+          },
+          {
+            "$type": "RuleCall",
+            "rule": {
+              "$ref": "#/rules@16"
+            },
+            "arguments": []
+          }
+        ]
+      },
+      "entry": false,
+      "fragment": false,
+      "parameters": []
+    },
+    {
+      "$type": "ParserRule",
+      "name": "ObjectDetectionFieldName",
+      "dataType": "string",
+      "definition": {
+        "$type": "Alternatives",
+        "elements": [
+          {
+            "$type": "Keyword",
+            "value": "height"
+          },
+          {
+            "$type": "Keyword",
+            "value": "label"
+          },
+          {
+            "$type": "Keyword",
+            "value": "width"
+          },
+          {
+            "$type": "Keyword",
+            "value": "x"
+          },
+          {
+            "$type": "Keyword",
+            "value": "y"
           }
         ]
       },
@@ -908,21 +1484,21 @@ export const LightlyQueryGrammar = (): Grammar => loadedLightlyQueryGrammar ?? (
           {
             "$type": "RuleCall",
             "rule": {
-              "$ref": "#/rules@11"
+              "$ref": "#/rules@21"
             },
             "arguments": []
           },
           {
             "$type": "RuleCall",
             "rule": {
-              "$ref": "#/rules@12"
+              "$ref": "#/rules@22"
             },
             "arguments": []
           },
           {
             "$type": "RuleCall",
             "rule": {
-              "$ref": "#/rules@13"
+              "$ref": "#/rules@23"
             },
             "arguments": []
           }
@@ -944,7 +1520,7 @@ export const LightlyQueryGrammar = (): Grammar => loadedLightlyQueryGrammar ?? (
           {
             "$type": "Action",
             "type": {
-              "$ref": "#/interfaces@7"
+              "$ref": "#/interfaces@9"
             }
           },
           {
@@ -954,7 +1530,7 @@ export const LightlyQueryGrammar = (): Grammar => loadedLightlyQueryGrammar ?? (
             "terminal": {
               "$type": "RuleCall",
               "rule": {
-                "$ref": "#/rules@15"
+                "$ref": "#/rules@24"
               },
               "arguments": []
             }
@@ -977,7 +1553,7 @@ export const LightlyQueryGrammar = (): Grammar => loadedLightlyQueryGrammar ?? (
           {
             "$type": "Action",
             "type": {
-              "$ref": "#/interfaces@8"
+              "$ref": "#/interfaces@10"
             }
           },
           {
@@ -987,7 +1563,7 @@ export const LightlyQueryGrammar = (): Grammar => loadedLightlyQueryGrammar ?? (
             "terminal": {
               "$type": "RuleCall",
               "rule": {
-                "$ref": "#/rules@16"
+                "$ref": "#/rules@25"
               },
               "arguments": []
             }
@@ -1010,7 +1586,7 @@ export const LightlyQueryGrammar = (): Grammar => loadedLightlyQueryGrammar ?? (
           {
             "$type": "Action",
             "type": {
-              "$ref": "#/interfaces@9"
+              "$ref": "#/interfaces@11"
             }
           },
           {
@@ -1036,17 +1612,6 @@ export const LightlyQueryGrammar = (): Grammar => loadedLightlyQueryGrammar ?? (
       "entry": false,
       "fragment": false,
       "parameters": []
-    },
-    {
-      "$type": "TerminalRule",
-      "name": "ID",
-      "definition": {
-        "$type": "RegexToken",
-        "regex": "/[_a-zA-Z][\\\\w]*/",
-        "parenthesized": false
-      },
-      "fragment": false,
-      "hidden": false
     },
     {
       "$type": "TerminalRule",

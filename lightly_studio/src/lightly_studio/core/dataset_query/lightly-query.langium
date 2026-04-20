@@ -25,8 +25,17 @@ interface FunctionCall extends Expression {
 
 interface MemberCall extends Expression {
     receiver: string;
-    member: string[];
+    member: string;
     args: Expression[];
+}
+
+interface QualifiedFieldReference extends Expression {
+    receiver: string;
+    member: string;
+}
+
+interface TagInExpression extends Expression {
+    tag_name: Expression;
 }
 
 interface FieldReference extends Expression {
@@ -46,44 +55,79 @@ interface BooleanLiteral extends Expression {
 }
 
 entry Query:
-    expression=Expression;
+    expression=SampleExpression;
 
-Expression returns Expression:
-    OrExpression;
+SampleExpression returns Expression:
+    SampleAndExpression ({BinaryExpression.left=current} operator='or' right=SampleAndExpression)*;
 
-OrExpression returns Expression:
-    AndExpression ({BinaryExpression.left=current} operator='or' right=AndExpression)*;
+SampleAndExpression returns Expression:
+    SampleComparisonExpression ({BinaryExpression.left=current} operator='and' right=SampleComparisonExpression)*;
 
-AndExpression returns Expression:
-    NotExpression ({BinaryExpression.left=current} operator='and' right=NotExpression)*;
+SampleComparisonExpression returns Expression:
+    {NotExpression} 'not' expression=SampleComparisonExpression
+    | SamplePrimaryExpression ({ComparisonExpression.left=current} operator=('==' | '!=' | '<' | '>' | '<=' | '>=') right=SamplePrimaryExpression)?;
 
-NotExpression returns Expression:
-    {NotExpression} 'not' expression=ComparisonExpression
-    | ComparisonExpression;
-
-ComparisonExpression returns Expression:
-    PrimaryExpression ({ComparisonExpression.left=current} operator=('==' | '!=' | '<' | '>' | '<=' | '>=') right=PrimaryExpression)?;
-
-PrimaryExpression returns Expression:
-    '(' Expression ')'
-    | FunctionCall
-    | MemberCall
-    | FieldReference
+SamplePrimaryExpression returns Expression:
+    '(' SampleExpression ')'
+    | AnnotationQuery
+    | TagInExpression
+    | SampleFieldReference
     | Literal;
 
-FunctionCall returns Expression:
-    {FunctionCall} name=ID '(' (args+=Expression (',' args+=Expression)*)? ')';
+ObjectDetectionExpression returns Expression:
+    ObjectDetectionAndExpression ({BinaryExpression.left=current} operator='or' right=ObjectDetectionAndExpression)*;
 
-MemberCall returns Expression:
-    {MemberCall} receiver=ID ('.' member+=ID)+ ('(' (args+=Expression (',' args+=Expression)*)? ')')?;
+ObjectDetectionAndExpression returns Expression:
+    ObjectDetectionComparisonExpression ({BinaryExpression.left=current} operator='and' right=ObjectDetectionComparisonExpression)*;
 
-FieldReference returns Expression:
-    {FieldReference} name=ID;
+ObjectDetectionComparisonExpression returns Expression:
+    {NotExpression} 'not' expression=ObjectDetectionComparisonExpression
+    | ObjectDetectionPrimaryExpression ({ComparisonExpression.left=current} operator=('==' | '!=' | '<' | '>' | '<=' | '>=') right=ObjectDetectionPrimaryExpression)?;
+
+ObjectDetectionPrimaryExpression returns Expression:
+    '(' ObjectDetectionExpression ')'
+    | ObjectDetectionFieldReference
+    | Literal;
+
+ObjectDetectionFieldReceiver returns string:
+    'ObjectDetection' | 'ObjectDetectionField';
+
+ObjectDetectionFieldReference returns Expression:
+    {FieldReference} name=ObjectDetectionFieldName
+    | {MemberCall} receiver=ObjectDetectionFieldReceiver '.' member=ObjectDetectionFieldName;
+
+AnnotationQuery returns Expression:
+    {FunctionCall} name='object_detection' '(' args+=ObjectDetectionExpression ')';
+
+TagInExpression returns Expression:
+    {TagInExpression} 'tags.contains(' tag_name=StringLiteral ')' |
+    {TagInExpression} tag_name=StringLiteral 'in' 'tags';
+
+SampleFieldReference returns Expression:
+    {FieldReference} name=CommonSampleFieldName
+    | {QualifiedFieldReference} receiver=ImageSampleFieldReceiver '.' member=ImageSampleFieldName
+    | {QualifiedFieldReference} receiver=VideoSampleFieldReceiver '.' member=VideoSampleFieldName;
+
+ImageSampleFieldReceiver returns string:
+    'Image' | 'ImageSampleField';
+
+VideoSampleFieldReceiver returns string:
+    'Video' | 'VideoSampleField';
+
+CommonSampleFieldName returns string:
+    'created_at';
+
+ImageSampleFieldName returns string:
+    'file_name' | 'file_path_abs' | 'height' | 'width' | CommonSampleFieldName;
+
+VideoSampleFieldName returns string:
+    'file_name' | 'file_path_abs' | 'height' | 'width' | 'duration_s' | 'fps' | CommonSampleFieldName;
+
+ObjectDetectionFieldName returns string:
+    'height' | 'label' | 'width' | 'x' | 'y';
 
 Literal returns Expression:
-    NumberLiteral
-    | StringLiteral
-    | BooleanLiteral;
+    NumberLiteral | StringLiteral | BooleanLiteral;
 
 NumberLiteral returns Expression:
     {NumberLiteral} value=NUMBER;
@@ -94,7 +138,6 @@ StringLiteral returns Expression:
 BooleanLiteral returns Expression:
     {BooleanLiteral} value=('true' | 'false');
 
-terminal ID: /[_a-zA-Z][\w]*/;
 terminal NUMBER returns number: /[0-9]+(\.[0-9]*)?/;
 terminal STRING: /"([^"\\\n\r]|\\.)*"|'([^'\\\n\r]|\\.)*'/;
 

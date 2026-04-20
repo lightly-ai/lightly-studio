@@ -19,6 +19,8 @@ import {
   isComparisonExpression,
   isFunctionCall,
   isMemberCall,
+  isQualifiedFieldReference,
+  isTagInExpression,
   isNumberLiteral,
   isStringLiteral,
   isBooleanLiteral,
@@ -59,14 +61,14 @@ function transformToDSLJson(node: any): any {
   if (isComparisonExpression(node)) {
     const left = node.left;
     let field = "";
-    if (isMemberCall(left)) {
-      if (left.receiver === "ImageSampleField" && left.member.length === 1) {
-        field = left.member[0];
-      } else if (
-        left.receiver === "ObjectDetectionField" &&
-        left.member.length === 1
+    if (isQualifiedFieldReference(left)) {
+      field = left.member;
+    } else if (isMemberCall(left)) {
+      if (
+        left.receiver === "ObjectDetection" ||
+        left.receiver === "ObjectDetectionField"
       ) {
-        field = left.member[0];
+        field = left.member;
       } else {
         field = left.receiver || (left as any).name || "unknown_field";
       }
@@ -88,16 +90,11 @@ function transformToDSLJson(node: any): any {
       criterion: node.args.length > 0 ? transformToDSLJson(node.args[0]) : null,
     };
   }
-  if (isMemberCall(node)) {
-    if (node.receiver === "tags" && node.member.includes("contains")) {
-      const containsArg = node.args?.[0];
-      if (containsArg) {
-        return {
-          kind: "TAGS_CONTAINS",
-          tag_name: transformToDSLJson(containsArg),
-        };
-      }
-    }
+  if (isTagInExpression(node)) {
+    return {
+      kind: "TAGS_CONTAINS",
+      tag_name: transformToDSLJson(node.tag_name),
+    };
   }
   if (isNumberLiteral(node)) return node.value;
   if (isStringLiteral(node)) return node.value;
@@ -137,9 +134,9 @@ const services = createLightlyQueryServices(mockContext).LightlyQuery;
 const parser = services.parser.LangiumParser;
 
 const queries = [
-  "(width > 100 OR height > 100) AND object_detection(label == 'car')",
-  "tags.contains('dog') or tags.contains('cat')",
-  "NOT (width < 50 AND NOT tags.contains('low_res'))",
+  "(Image.width > 100 OR Image.height > 100) AND object_detection(label == 'car')",
+  "tags.contains('dog') OR 'cat' IN tags",
+  "NOT (Video.width < 50 AND NOT tags.contains('low_res'))",
 ];
 
 console.log("=== Langium-Powered LightlyQuery DSL Showcase ===");

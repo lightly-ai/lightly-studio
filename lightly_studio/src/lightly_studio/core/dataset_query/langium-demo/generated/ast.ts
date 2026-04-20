@@ -7,7 +7,6 @@
 import * as langium from 'langium';
 
 export const LightlyQueryTerminals = {
-    ID: /[_a-zA-Z][\w]*/,
     NUMBER: /[0-9]+(\.[0-9]*)?/,
     STRING: /"([^"\\\n\r]|\\.)*"|'([^'\\\n\r]|\\.)*'/,
     WS: /\s+/,
@@ -19,18 +18,37 @@ export type LightlyQueryKeywordNames =
     | "!="
     | "("
     | ")"
-    | ","
     | "."
     | "<"
     | "<="
     | "=="
     | ">"
     | ">="
+    | "Image"
+    | "ImageSampleField"
+    | "ObjectDetection"
+    | "ObjectDetectionField"
+    | "Video"
+    | "VideoSampleField"
     | "and"
+    | "created_at"
+    | "duration_s"
     | "false"
+    | "file_name"
+    | "file_path_abs"
+    | "fps"
+    | "height"
+    | "in"
+    | "label"
     | "not"
+    | "object_detection"
     | "or"
-    | "true";
+    | "tags"
+    | "tags.contains("
+    | "true"
+    | "width"
+    | "x"
+    | "y";
 
 export type LightlyQueryTokenNames = LightlyQueryTerminalNames | LightlyQueryKeywordNames;
 
@@ -66,6 +84,12 @@ export function isBooleanLiteral(item: unknown): item is BooleanLiteral {
     return reflection.isInstance(item, BooleanLiteral.$type);
 }
 
+export type CommonSampleFieldName = 'created_at';
+
+export function isCommonSampleFieldName(item: unknown): item is CommonSampleFieldName {
+    return item === 'created_at';
+}
+
 export interface ComparisonExpression extends Expression {
     readonly $type: 'ComparisonExpression';
     left: Expression;
@@ -85,7 +109,7 @@ export function isComparisonExpression(item: unknown): item is ComparisonExpress
 }
 
 export interface Expression extends langium.AstNode {
-    readonly $type: 'BinaryExpression' | 'BooleanLiteral' | 'ComparisonExpression' | 'Expression' | 'FieldReference' | 'FunctionCall' | 'MemberCall' | 'NotExpression' | 'NumberLiteral' | 'StringLiteral';
+    readonly $type: 'BinaryExpression' | 'BooleanLiteral' | 'ComparisonExpression' | 'Expression' | 'FieldReference' | 'FunctionCall' | 'MemberCall' | 'NotExpression' | 'NumberLiteral' | 'QualifiedFieldReference' | 'StringLiteral' | 'TagInExpression';
 }
 
 export const Expression = {
@@ -126,10 +150,22 @@ export function isFunctionCall(item: unknown): item is FunctionCall {
     return reflection.isInstance(item, FunctionCall.$type);
 }
 
+export type ImageSampleFieldName = 'file_name' | 'file_path_abs' | 'height' | 'width' | CommonSampleFieldName;
+
+export function isImageSampleFieldName(item: unknown): item is ImageSampleFieldName {
+    return isCommonSampleFieldName(item) || item === 'file_name' || item === 'file_path_abs' || item === 'height' || item === 'width';
+}
+
+export type ImageSampleFieldReceiver = 'Image' | 'ImageSampleField';
+
+export function isImageSampleFieldReceiver(item: unknown): item is ImageSampleFieldReceiver {
+    return item === 'Image' || item === 'ImageSampleField';
+}
+
 export interface MemberCall extends Expression {
     readonly $type: 'MemberCall';
     args: Array<Expression>;
-    member: Array<string>;
+    member: string;
     receiver: string;
 }
 
@@ -172,6 +208,34 @@ export function isNumberLiteral(item: unknown): item is NumberLiteral {
     return reflection.isInstance(item, NumberLiteral.$type);
 }
 
+export type ObjectDetectionFieldName = 'height' | 'label' | 'width' | 'x' | 'y';
+
+export function isObjectDetectionFieldName(item: unknown): item is ObjectDetectionFieldName {
+    return item === 'height' || item === 'label' || item === 'width' || item === 'x' || item === 'y';
+}
+
+export type ObjectDetectionFieldReceiver = 'ObjectDetection' | 'ObjectDetectionField';
+
+export function isObjectDetectionFieldReceiver(item: unknown): item is ObjectDetectionFieldReceiver {
+    return item === 'ObjectDetection' || item === 'ObjectDetectionField';
+}
+
+export interface QualifiedFieldReference extends Expression {
+    readonly $type: 'QualifiedFieldReference';
+    member: string;
+    receiver: string;
+}
+
+export const QualifiedFieldReference = {
+    $type: 'QualifiedFieldReference',
+    member: 'member',
+    receiver: 'receiver'
+} as const;
+
+export function isQualifiedFieldReference(item: unknown): item is QualifiedFieldReference {
+    return reflection.isInstance(item, QualifiedFieldReference.$type);
+}
+
 export interface Query extends langium.AstNode {
     readonly $type: 'Query';
     expression: Expression;
@@ -200,6 +264,32 @@ export function isStringLiteral(item: unknown): item is StringLiteral {
     return reflection.isInstance(item, StringLiteral.$type);
 }
 
+export interface TagInExpression extends Expression {
+    readonly $type: 'TagInExpression';
+    tag_name: Expression;
+}
+
+export const TagInExpression = {
+    $type: 'TagInExpression',
+    tag_name: 'tag_name'
+} as const;
+
+export function isTagInExpression(item: unknown): item is TagInExpression {
+    return reflection.isInstance(item, TagInExpression.$type);
+}
+
+export type VideoSampleFieldName = 'duration_s' | 'file_name' | 'file_path_abs' | 'fps' | 'height' | 'width' | CommonSampleFieldName;
+
+export function isVideoSampleFieldName(item: unknown): item is VideoSampleFieldName {
+    return isCommonSampleFieldName(item) || item === 'file_name' || item === 'file_path_abs' || item === 'height' || item === 'width' || item === 'duration_s' || item === 'fps';
+}
+
+export type VideoSampleFieldReceiver = 'Video' | 'VideoSampleField';
+
+export function isVideoSampleFieldReceiver(item: unknown): item is VideoSampleFieldReceiver {
+    return item === 'Video' || item === 'VideoSampleField';
+}
+
 export type LightlyQueryAstType = {
     BinaryExpression: BinaryExpression
     BooleanLiteral: BooleanLiteral
@@ -210,8 +300,10 @@ export type LightlyQueryAstType = {
     MemberCall: MemberCall
     NotExpression: NotExpression
     NumberLiteral: NumberLiteral
+    QualifiedFieldReference: QualifiedFieldReference
     Query: Query
     StringLiteral: StringLiteral
+    TagInExpression: TagInExpression
 }
 
 export class LightlyQueryAstReflection extends langium.AbstractAstReflection {
@@ -291,8 +383,7 @@ export class LightlyQueryAstReflection extends langium.AbstractAstReflection {
                     defaultValue: []
                 },
                 member: {
-                    name: MemberCall.member,
-                    defaultValue: []
+                    name: MemberCall.member
                 },
                 receiver: {
                     name: MemberCall.receiver
@@ -318,6 +409,18 @@ export class LightlyQueryAstReflection extends langium.AbstractAstReflection {
             },
             superTypes: [Expression.$type]
         },
+        QualifiedFieldReference: {
+            name: QualifiedFieldReference.$type,
+            properties: {
+                member: {
+                    name: QualifiedFieldReference.member
+                },
+                receiver: {
+                    name: QualifiedFieldReference.receiver
+                }
+            },
+            superTypes: [Expression.$type]
+        },
         Query: {
             name: Query.$type,
             properties: {
@@ -332,6 +435,15 @@ export class LightlyQueryAstReflection extends langium.AbstractAstReflection {
             properties: {
                 value: {
                     name: StringLiteral.value
+                }
+            },
+            superTypes: [Expression.$type]
+        },
+        TagInExpression: {
+            name: TagInExpression.$type,
+            properties: {
+                tag_name: {
+                    name: TagInExpression.tag_name
                 }
             },
             superTypes: [Expression.$type]
