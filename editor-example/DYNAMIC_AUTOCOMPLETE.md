@@ -398,7 +398,21 @@ Expected JSON response from `/api/datasets/tags`:
 }
 ```
 
-Or for multiple fields:
+Expected JSON response from `/api/models/classes` or `/api/datasets/labels`:
+
+```json
+{
+    "classes": [
+        "cat",
+        "dog",
+        "person",
+        "car",
+        "bicycle"
+    ]
+}
+```
+
+Or for multiple fields (combined endpoint):
 
 ```json
 {

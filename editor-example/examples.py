@@ -167,6 +167,41 @@ AND(
 )
 
 # ========================================
+# OPERATOR AUTOCOMPLETE DEMO
+# ========================================
+# TRY THIS: Type a property followed by a space to see operator suggestions!
+
+# Example 1: Type "ImageSampleField.width " (with space) and see operators
+# You'll see: ==, !=, >, <, >=, <= with explanations
+# Hover tip: Each operator shows its meaning and use case
+ImageSampleField.width > 1920
+
+# Example 2: Type "ImageSampleField.metadata.confidence " to see suggestions
+# Try typing the space and selecting an operator from the list
+ImageSampleField.metadata.confidence >= 0.95
+
+# Example 3: Interactive operator selection
+# Type this yourself and press space after "height":
+# ImageSampleField.height 
+# Select an operator and it will insert with a placeholder for the value!
+
+# Example 4: Works with predictions too
+# Type "ImageSampleField.predictions[0].confidence " and see operators
+ImageSampleField.predictions[0].confidence > 0.9
+
+# Example 5: Nested properties also work
+# Type "ImageSampleField.metadata.quality.score " for operators
+ImageSampleField.metadata.quality.score <= 10
+
+# Available operators:
+# == : Equal to (exact match)
+# != : Not equal to (differs from)
+# >  : Greater than (numeric only)
+# <  : Less than (numeric only)
+# >= : Greater than or equal to (inclusive)
+# <= : Less than or equal to (inclusive)
+
+# ========================================
 # TAG AUTOCOMPLETE DEMO
 # ========================================
 # TRY THIS: Type the following line and press " after contains(

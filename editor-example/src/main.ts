@@ -908,6 +908,110 @@ monaco.languages.registerCompletionItemProvider('lightly-query', {
     }
 });
 
+/**
+ * Comparison Operator Completion Provider
+ * 
+ * Provides autocomplete for comparison operators when user types space after a property:
+ * - ImageSampleField.width [space] -> suggests >, <, >=, <=, ==, !=
+ * - ImageSampleField.metadata.confidence [space] -> suggests comparison operators
+ * - predictions[0].label [space] -> suggests ==, !=
+ */
+
+interface OperatorSuggestion {
+    label: string;
+    detail: string;
+    documentation: string;
+    insertText: string;
+    sortText?: string;
+}
+
+const comparisonOperators: OperatorSuggestion[] = [
+    {
+        label: '==',
+        detail: 'Equal to',
+        documentation: 'Check if the field value equals the specified value. Returns true when values are exactly the same.',
+        insertText: '== ${1:value}',
+        sortText: '1'
+    },
+    {
+        label: '!=',
+        detail: 'Not equal to',
+        documentation: 'Check if the field value does not equal the specified value. Returns true when values differ.',
+        insertText: '!= ${1:value}',
+        sortText: '2'
+    },
+    {
+        label: '>',
+        detail: 'Greater than',
+        documentation: 'Check if the field value is greater than the specified value. Use for numeric comparisons.',
+        insertText: '> ${1:number}',
+        sortText: '3'
+    },
+    {
+        label: '<',
+        detail: 'Less than',
+        documentation: 'Check if the field value is less than the specified value. Use for numeric comparisons.',
+        insertText: '< ${1:number}',
+        sortText: '4'
+    },
+    {
+        label: '>=',
+        detail: 'Greater than or equal to',
+        documentation: 'Check if the field value is greater than or equal to the specified value. Inclusive comparison for numeric fields.',
+        insertText: '>= ${1:number}',
+        sortText: '5'
+    },
+    {
+        label: '<=',
+        detail: 'Less than or equal to',
+        documentation: 'Check if the field value is less than or equal to the specified value. Inclusive comparison for numeric fields.',
+        insertText: '<= ${1:number}',
+        sortText: '6'
+    }
+];
+
+monaco.languages.registerCompletionItemProvider('lightly-query', {
+    triggerCharacters: [' '],
+    
+    provideCompletionItems(model, position) {
+        const lineContent = model.getLineContent(position.lineNumber);
+        const textUntilPosition = lineContent.substring(0, position.column - 1);
+        
+        // Check if we just typed a space after a property or nested field
+        // Matches patterns like:
+        // - ImageSampleField.width 
+        // - ImageSampleField.metadata.confidence 
+        // - predictions[0].confidence 
+        // - SampleField.created_at 
+        const propertyMatch = textUntilPosition.match(/\b(ImageSampleField|VideoSampleField|SampleField|predictions\[\d+\])\.[\w.]+\s$/);
+        
+        if (!propertyMatch) {
+            return { suggestions: [] };
+        }
+        
+        const wordInfo = model.getWordUntilPosition(position);
+        const range = {
+            startLineNumber: position.lineNumber,
+            endLineNumber: position.lineNumber,
+            startColumn: wordInfo.startColumn,
+            endColumn: wordInfo.endColumn
+        };
+        
+        const suggestions: monaco.languages.CompletionItem[] = comparisonOperators.map(op => ({
+            label: op.label,
+            kind: monaco.languages.CompletionItemKind.Operator,
+            detail: op.detail,
+            documentation: op.documentation,
+            insertText: op.insertText,
+            insertTextRules: monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet,
+            sortText: op.sortText,
+            range: range
+        }));
+        
+        return { suggestions };
+    }
+});
+
 // Create the editor with Lightly Query Language examples
 const editor = monaco.editor.create(document.getElementById('editor')!, {
     value: `# Lightly Query Language Examples

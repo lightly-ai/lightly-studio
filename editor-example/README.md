@@ -21,6 +21,9 @@ A minimal example that wires Monaco Editor to a Langium language server for the 
 - **Hover documentation**: Hover over keywords, operators, and methods to see documentation
 - **Field property autocomplete**: Type `ImageSampleField.` to see available properties (width, height, tags, etc.)
 - **Method autocomplete**: Type `ImageSampleField.tags.` to see available methods (contains, etc.)
+- **Operator autocomplete**: Type a property followed by a space to see comparison operators (==, !=, >, <, >=, <=)
+  - Example: `ImageSampleField.width ` → see all operators with explanations
+  - Includes snippets with placeholders for values
 - **Nested property access**: Access predictions and metadata with array indexing and dot notation
   - `ImageSampleField.predictions[0].label == "cat"`
   - `ImageSampleField.metadata.confidence > 0.95`
