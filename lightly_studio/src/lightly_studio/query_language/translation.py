@@ -168,64 +168,57 @@ def _translate_instance_segmentation_criterion(
 
 def _get_string_field(field: models.StringFieldRef) -> EqualityField[str]:
     if isinstance(field, models.ImageStringFieldRef):
-        name = field.name
-        if name is models.ImageStringFieldName.FILE_NAME:
+        if field.name is models.ImageStringFieldName.FILE_NAME:
             return ImageSampleField.file_name
-        if name is models.ImageStringFieldName.FILE_PATH_ABS:
+        if field.name is models.ImageStringFieldName.FILE_PATH_ABS:
             return ImageSampleField.file_path_abs
-        assert_never(name)
+        assert_never(field.name)
     if isinstance(field, models.VideoStringFieldRef):
-        name = field.name
-        if name is models.VideoStringFieldName.FILE_NAME:
+        if field.name is models.VideoStringFieldName.FILE_NAME:
             return VideoSampleField.file_name
-        if name is models.VideoStringFieldName.FILE_PATH_ABS:
+        if field.name is models.VideoStringFieldName.FILE_PATH_ABS:
             return VideoSampleField.file_path_abs
-        assert_never(name)
+        assert_never(field.name)
     assert_never(field)
 
 
 def _get_integer_field(field: models.IntegerFieldRef) -> OrdinalField[int]:
     if isinstance(field, models.ImageIntegerFieldRef):
-        name = field.name
-        if name is models.ImageIntegerFieldName.WIDTH:
+        if field.name is models.ImageIntegerFieldName.WIDTH:
             return ImageSampleField.width
-        if name is models.ImageIntegerFieldName.HEIGHT:
+        if field.name is models.ImageIntegerFieldName.HEIGHT:
             return ImageSampleField.height
-        assert_never(name)
+        assert_never(field.name)
     if isinstance(field, models.VideoIntegerFieldRef):
-        name = field.name
-        if name is models.VideoIntegerFieldName.WIDTH:
+        if field.name is models.VideoIntegerFieldName.WIDTH:
             return VideoSampleField.width
-        if name is models.VideoIntegerFieldName.HEIGHT:
+        if field.name is models.VideoIntegerFieldName.HEIGHT:
             return VideoSampleField.height
-        assert_never(name)
+        assert_never(field.name)
     assert_never(field)
 
 
 def _get_datetime_field(field: models.DatetimeFieldRef) -> OrdinalField[datetime]:
     if isinstance(field, models.ImageDatetimeFieldRef):
-        name = field.name
-        if name is models.ImageDatetimeFieldName.CREATED_AT:
+        if field.name is models.ImageDatetimeFieldName.CREATED_AT:
             return ImageSampleField.created_at
-        assert_never(name)
+        assert_never(field.name)
     assert_never(field)
 
 
 def _get_ordinal_float_field(field: models.OrdinalFloatFieldRef) -> OrdinalField[Number]:
     if isinstance(field, models.VideoOrdinalFloatFieldRef):
-        name = field.name
-        if name is models.VideoFloatFieldName.FPS:
+        if field.name is models.VideoFloatFieldName.FPS:
             return VideoSampleField.fps
-        assert_never(name)
+        assert_never(field.name)
     assert_never(field)
 
 
 def _get_equality_float_field(field: models.EqualityFloatFieldRef) -> EqualityField[Number]:
     if isinstance(field, models.VideoEqualityFloatFieldRef):
-        name = field.name
-        if name is models.VideoEqualityFloatFieldName.DURATION_S:
+        if field.name is models.VideoEqualityFloatFieldName.DURATION_S:
             return VideoSampleField.duration_s
-        assert_never(name)
+        assert_never(field.name)
     assert_never(field)
 
 
