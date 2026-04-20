@@ -20,7 +20,6 @@
   <!-- Outer panel -->
   <rect class="panel-enterprise" x="10" y="10" width="940" height="388" rx="16" ry="16"/>
   <text class="panel-title" x="36" y="42">On-Premise Deployment</text>
-  <text class="panel-subtitle" x="36" y="62">deployed on customer infrastructure</text>
 
   <!-- Lightly Proxy: full-width bar -->
   <g>
@@ -98,8 +97,5 @@
 
     <rect class="node-data" x="580" y="452" width="22" height="22" rx="6" ry="6"/>
     <text class="legend-text" x="610" y="469">Data store</text>
-
-    <line class="edge" x1="760" y1="463" x2="800" y2="463"/>
-    <text class="legend-text" x="806" y="467">service link</text>
   </g>
 </svg>
