@@ -6,36 +6,160 @@
 /* eslint-disable */
 import * as langium from 'langium';
 
-export const HelloLangTerminals = {
-    ID: /[_a-zA-Z][\w_]*/,
+export const DatasetQueryTerminals = {
+    ID: /[a-zA-Z_][a-zA-Z0-9_]*/,
+    NUMBER: /[0-9]+/,
+    STRING: /"[^"]*"/,
+    WS: /\s+/,
     ML_COMMENT: /\/\*[\s\S]*?\*\//,
     SL_COMMENT: /\/\/[^\n\r]*/,
 };
 
-export type HelloLangTerminalNames = keyof typeof HelloLangTerminals;
+export type DatasetQueryTerminalNames = keyof typeof DatasetQueryTerminals;
 
-export type HelloLangKeywordNames =
-    | "!"
+export type DatasetQueryKeywordNames =
+    | "!="
+    | "("
+    | ")"
+    | ","
     | "."
-    | "hello";
+    | "<"
+    | "<="
+    | "=="
+    | ">"
+    | ">="
+    | "AND"
+    | "ClassificationField"
+    | "ClassificationQuery"
+    | "ImageSampleField"
+    | "InstanceSegmentationQuery"
+    | "NOT"
+    | "OR"
+    | "ObjectDetectionField"
+    | "ObjectDetectionQuery"
+    | "OrderByField"
+    | "asc"
+    | "count"
+    | "dataset"
+    | "desc"
+    | "match"
+    | "order_by"
+    | "query"
+    | "text_similarity";
 
-export type HelloLangTokenNames = HelloLangTerminalNames | HelloLangKeywordNames;
+export type DatasetQueryTokenNames = DatasetQueryTerminalNames | DatasetQueryKeywordNames;
 
-export interface Greeting extends langium.AstNode {
-    readonly $container: Model;
-    readonly $type: 'Greeting';
-    person: Person;
+export type ComparisonOperator = '!=' | '<' | '<=' | '==' | '>' | '>=';
+
+export function isComparisonOperator(item: unknown): item is ComparisonOperator {
+    return item === '==' || item === '!=' || item === '>' || item === '<' || item === '>=' || item === '<=';
 }
 
-export const Greeting = 'Greeting';
+export type Expression = Comparison | LogicalFunction | QueryFunction;
 
-export function isGreeting(item: unknown): item is Greeting {
-    return reflection.isInstance(item, Greeting);
+export const Expression = 'Expression';
+
+export function isExpression(item: unknown): item is Expression {
+    return reflection.isInstance(item, Expression);
+}
+
+export type FieldType = 'ClassificationField' | 'ImageSampleField' | 'ObjectDetectionField';
+
+export function isFieldType(item: unknown): item is FieldType {
+    return item === 'ObjectDetectionField' || item === 'ClassificationField' || item === 'ImageSampleField';
+}
+
+export type OrderByField = FieldAccess | QueryFunction | TextSimilarity;
+
+export const OrderByField = 'OrderByField';
+
+export function isOrderByField(item: unknown): item is OrderByField {
+    return reflection.isInstance(item, OrderByField);
+}
+
+export type QueryArgument = Comparison;
+
+export const QueryArgument = 'QueryArgument';
+
+export function isQueryArgument(item: unknown): item is QueryArgument {
+    return reflection.isInstance(item, QueryArgument);
+}
+
+export type QueryMethod = 'count' | 'match';
+
+export function isQueryMethod(item: unknown): item is QueryMethod {
+    return item === 'match' || item === 'count';
+}
+
+export type QueryType = 'ClassificationQuery' | 'InstanceSegmentationQuery' | 'ObjectDetectionQuery';
+
+export function isQueryType(item: unknown): item is QueryType {
+    return item === 'ObjectDetectionQuery' || item === 'ClassificationQuery' || item === 'InstanceSegmentationQuery';
+}
+
+export type SortDirection = 'asc' | 'desc';
+
+export function isSortDirection(item: unknown): item is SortDirection {
+    return item === 'desc' || item === 'asc';
+}
+
+export type Value = number | string;
+
+
+export interface Comparison extends langium.AstNode {
+    readonly $container: DatasetQueryExpression | LogicalFunction | QueryFunction;
+    readonly $type: 'Comparison';
+    left: FieldAccess;
+    operator: ComparisonOperator;
+    right: Value;
+}
+
+export const Comparison = 'Comparison';
+
+export function isComparison(item: unknown): item is Comparison {
+    return reflection.isInstance(item, Comparison);
+}
+
+export interface DatasetQueryExpression extends langium.AstNode {
+    readonly $container: Model;
+    readonly $type: 'DatasetQueryExpression';
+    expression: Expression;
+    orderBy?: OrderByExpression;
+}
+
+export const DatasetQueryExpression = 'DatasetQueryExpression';
+
+export function isDatasetQueryExpression(item: unknown): item is DatasetQueryExpression {
+    return reflection.isInstance(item, DatasetQueryExpression);
+}
+
+export interface FieldAccess extends langium.AstNode {
+    readonly $container: Comparison | OrderByExpression;
+    readonly $type: 'FieldAccess';
+    field: string;
+    type: FieldType;
+}
+
+export const FieldAccess = 'FieldAccess';
+
+export function isFieldAccess(item: unknown): item is FieldAccess {
+    return reflection.isInstance(item, FieldAccess);
+}
+
+export interface LogicalFunction extends langium.AstNode {
+    readonly $type: 'AndExpression' | 'LogicalFunction' | 'NotExpression' | 'OrExpression';
+    args: Array<Expression>;
+}
+
+export const LogicalFunction = 'LogicalFunction';
+
+export function isLogicalFunction(item: unknown): item is LogicalFunction {
+    return reflection.isInstance(item, LogicalFunction);
 }
 
 export interface Model extends langium.AstNode {
     readonly $type: 'Model';
-    greetings: Array<Greeting>;
+    query?: DatasetQueryExpression;
 }
 
 export const Model = 'Model';
@@ -44,32 +168,121 @@ export function isModel(item: unknown): item is Model {
     return reflection.isInstance(item, Model);
 }
 
-export interface Person extends langium.AstNode {
-    readonly $container: Greeting;
-    readonly $type: 'Person';
-    name: string;
+export interface OrderByExpression extends langium.AstNode {
+    readonly $container: DatasetQueryExpression;
+    readonly $type: 'OrderByExpression';
+    direction?: SortDirection;
+    field: OrderByField;
 }
 
-export const Person = 'Person';
+export const OrderByExpression = 'OrderByExpression';
 
-export function isPerson(item: unknown): item is Person {
-    return reflection.isInstance(item, Person);
+export function isOrderByExpression(item: unknown): item is OrderByExpression {
+    return reflection.isInstance(item, OrderByExpression);
 }
 
-export type HelloLangAstType = {
-    Greeting: Greeting
+export interface QueryFunction extends langium.AstNode {
+    readonly $container: DatasetQueryExpression | LogicalFunction | OrderByExpression;
+    readonly $type: 'QueryFunction';
+    arg: QueryArgument;
+    method: QueryMethod;
+    operator?: ComparisonOperator;
+    type: QueryType;
+    value?: number;
+}
+
+export const QueryFunction = 'QueryFunction';
+
+export function isQueryFunction(item: unknown): item is QueryFunction {
+    return reflection.isInstance(item, QueryFunction);
+}
+
+export interface TextSimilarity extends langium.AstNode {
+    readonly $container: OrderByExpression;
+    readonly $type: 'TextSimilarity';
+    query: string;
+    type: FieldType;
+}
+
+export const TextSimilarity = 'TextSimilarity';
+
+export function isTextSimilarity(item: unknown): item is TextSimilarity {
+    return reflection.isInstance(item, TextSimilarity);
+}
+
+export interface AndExpression extends LogicalFunction {
+    readonly $type: 'AndExpression';
+}
+
+export const AndExpression = 'AndExpression';
+
+export function isAndExpression(item: unknown): item is AndExpression {
+    return reflection.isInstance(item, AndExpression);
+}
+
+export interface NotExpression extends LogicalFunction {
+    readonly $type: 'NotExpression';
+}
+
+export const NotExpression = 'NotExpression';
+
+export function isNotExpression(item: unknown): item is NotExpression {
+    return reflection.isInstance(item, NotExpression);
+}
+
+export interface OrExpression extends LogicalFunction {
+    readonly $type: 'OrExpression';
+}
+
+export const OrExpression = 'OrExpression';
+
+export function isOrExpression(item: unknown): item is OrExpression {
+    return reflection.isInstance(item, OrExpression);
+}
+
+export type DatasetQueryAstType = {
+    AndExpression: AndExpression
+    Comparison: Comparison
+    DatasetQueryExpression: DatasetQueryExpression
+    Expression: Expression
+    FieldAccess: FieldAccess
+    LogicalFunction: LogicalFunction
     Model: Model
-    Person: Person
+    NotExpression: NotExpression
+    OrExpression: OrExpression
+    OrderByExpression: OrderByExpression
+    OrderByField: OrderByField
+    QueryArgument: QueryArgument
+    QueryFunction: QueryFunction
+    TextSimilarity: TextSimilarity
 }
 
-export class HelloLangAstReflection extends langium.AbstractAstReflection {
+export class DatasetQueryAstReflection extends langium.AbstractAstReflection {
 
     getAllTypes(): string[] {
-        return [Greeting, Model, Person];
+        return [AndExpression, Comparison, DatasetQueryExpression, Expression, FieldAccess, LogicalFunction, Model, NotExpression, OrExpression, OrderByExpression, OrderByField, QueryArgument, QueryFunction, TextSimilarity];
     }
 
     protected override computeIsSubtype(subtype: string, supertype: string): boolean {
         switch (subtype) {
+            case AndExpression:
+            case NotExpression:
+            case OrExpression: {
+                return this.isSubtype(LogicalFunction, supertype);
+            }
+            case Comparison: {
+                return this.isSubtype(Expression, supertype) || this.isSubtype(QueryArgument, supertype);
+            }
+            case FieldAccess:
+            case TextSimilarity: {
+                return this.isSubtype(OrderByField, supertype);
+            }
+            case LogicalFunction: {
+                return this.isSubtype(Expression, supertype);
+            }
+            case QueryFunction: {
+                return this.isSubtype(Expression, supertype) || this.isSubtype(OrderByField, supertype);
+            }
             default: {
                 return false;
             }
@@ -87,11 +300,39 @@ export class HelloLangAstReflection extends langium.AbstractAstReflection {
 
     getTypeMetaData(type: string): langium.TypeMetaData {
         switch (type) {
-            case Greeting: {
+            case Comparison: {
                 return {
-                    name: Greeting,
+                    name: Comparison,
                     properties: [
-                        { name: 'person' }
+                        { name: 'left' },
+                        { name: 'operator' },
+                        { name: 'right' }
+                    ]
+                };
+            }
+            case DatasetQueryExpression: {
+                return {
+                    name: DatasetQueryExpression,
+                    properties: [
+                        { name: 'expression' },
+                        { name: 'orderBy' }
+                    ]
+                };
+            }
+            case FieldAccess: {
+                return {
+                    name: FieldAccess,
+                    properties: [
+                        { name: 'field' },
+                        { name: 'type' }
+                    ]
+                };
+            }
+            case LogicalFunction: {
+                return {
+                    name: LogicalFunction,
+                    properties: [
+                        { name: 'args', defaultValue: [] }
                     ]
                 };
             }
@@ -99,15 +340,61 @@ export class HelloLangAstReflection extends langium.AbstractAstReflection {
                 return {
                     name: Model,
                     properties: [
-                        { name: 'greetings', defaultValue: [] }
+                        { name: 'query' }
                     ]
                 };
             }
-            case Person: {
+            case OrderByExpression: {
                 return {
-                    name: Person,
+                    name: OrderByExpression,
                     properties: [
-                        { name: 'name' }
+                        { name: 'direction' },
+                        { name: 'field' }
+                    ]
+                };
+            }
+            case QueryFunction: {
+                return {
+                    name: QueryFunction,
+                    properties: [
+                        { name: 'arg' },
+                        { name: 'method' },
+                        { name: 'operator' },
+                        { name: 'type' },
+                        { name: 'value' }
+                    ]
+                };
+            }
+            case TextSimilarity: {
+                return {
+                    name: TextSimilarity,
+                    properties: [
+                        { name: 'query' },
+                        { name: 'type' }
+                    ]
+                };
+            }
+            case AndExpression: {
+                return {
+                    name: AndExpression,
+                    properties: [
+                        { name: 'args', defaultValue: [] }
+                    ]
+                };
+            }
+            case NotExpression: {
+                return {
+                    name: NotExpression,
+                    properties: [
+                        { name: 'args', defaultValue: [] }
+                    ]
+                };
+            }
+            case OrExpression: {
+                return {
+                    name: OrExpression,
+                    properties: [
+                        { name: 'args', defaultValue: [] }
                     ]
                 };
             }
@@ -121,4 +408,4 @@ export class HelloLangAstReflection extends langium.AbstractAstReflection {
     }
 }
 
-export const reflection = new HelloLangAstReflection();
+export const reflection = new DatasetQueryAstReflection();

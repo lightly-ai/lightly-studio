@@ -1,10 +1,10 @@
 {
-  "projectName": "HelloLang",
+  "projectName": "DatasetQuery",
   "languages": [
     {
-      "id": "hello-lang",
+      "id": "dataset-query",
       "grammar": "src/language/hello-lang.langium",
-      "fileExtensions": [".hello"]
+      "fileExtensions": [".py"]
     }
   ],
   "out": "src/language/generated"

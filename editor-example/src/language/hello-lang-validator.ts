@@ -1,5 +1,5 @@
 import type { ValidationAcceptor, ValidationChecks } from 'langium';
-import type { HelloLangAstType, Greeting, Person } from './generated/ast.js';
+import type { HelloLangAstType, Comparison, QueryFunction } from './generated/ast.js';
 import type { HelloLangServices } from './hello-lang-module.js';
 import { ValidationRegistry } from 'langium';
 
@@ -11,8 +11,8 @@ export class HelloLangValidationRegistry extends ValidationRegistry {
         super(services);
         const validator = services.validation.HelloLangValidator;
         const checks: ValidationChecks<HelloLangAstType> = {
-            Greeting: validator.checkGreeting,
-            Person: validator.checkPersonCapitalized
+            Comparison: validator.checkComparisonOperator,
+            QueryFunction: validator.checkQueryFunction
         };
         this.register(checks, validator);
     }
@@ -24,29 +24,28 @@ export class HelloLangValidationRegistry extends ValidationRegistry {
 export class HelloLangValidator {
 
     /**
-     * Validate that greetings use exclamation marks for enthusiasm!
+     * Validate comparison operators match field types.
      */
-    checkGreeting(greeting: Greeting, accept: ValidationAcceptor): void {
-        if (greeting.punctuation === '.') {
-            accept('warning', 'Greetings should be enthusiastic! Use "!" instead of "."', {
-                node: greeting,
-                property: 'punctuation'
+    checkComparisonOperator(comparison: Comparison, accept: ValidationAcceptor): void {
+        // Suggest using == for string comparisons instead of =
+        if (comparison.operator === '=' && comparison.right.$type === 'STRING') {
+            accept('hint', 'Use "==" for equality comparison in Python syntax', {
+                node: comparison,
+                property: 'operator'
             });
         }
     }
 
     /**
-     * Validate that person names start with a capital letter.
+     * Validate query function usage.
      */
-    checkPersonCapitalized(person: Person, accept: ValidationAcceptor): void {
-        if (person.name) {
-            const firstChar = person.name.charAt(0);
-            if (firstChar.toUpperCase() !== firstChar) {
-                accept('warning', 'Person name should start with a capital letter.', {
-                    node: person,
-                    property: 'name'
-                });
-            }
+    checkQueryFunction(query: QueryFunction, accept: ValidationAcceptor): void {
+        // Check if count queries have comparison operators
+        if (query.method === 'count' && !query.operator) {
+            accept('warning', 'Count queries should include a comparison (e.g., == 1, >= 2)', {
+                node: query,
+                property: 'method'
+            });
         }
     }
 }

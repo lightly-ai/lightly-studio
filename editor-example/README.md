@@ -1,31 +1,198 @@
-# Monaco Editor + Langium LSP Example
+# Monaco Editor +
 
-A minimal example demonstrating **Monaco Editor** integrated with a **Langium-based Language Server Protocol (LSP)** running in a **Web Worker**.
+ Langium LSP - Dataset Query Example
+
+A complete example demonstrating **Monaco Editor** with **Langium LSP** for validating Python `dataset.query()` syntax in the browser.
 
 ## What is this?
 
 This project showcases:
-- 🎯 **Monaco Editor** - The code editor that powers VS Code, running in the browser
-- 🔧 **Langium** - A framework for building languages with LSP support
-- ⚡ **Web Worker** - The language server runs in a background thread for better performance
-- 🎨 **HelloLang** - A simple custom language with syntax validation
+- 🎯 **Monaco Editor** - VSCode's editor running in the browser
+- 🔧 **Langium** - Builds a custom LSP for Python dataset queries
+- ⚡ **Web Worker** - LSP runs in background thread (non-blocking)
+- 🐍 **Python Syntax** - Native `dataset.query()` API with validation
 
-## HelloLang Syntax
+## Supported Syntax
 
-```hello
-hello World!
-hello Alice.
-hello bob!
+The editor validates Python `dataset.query()` expressions:
+
+### Basic Queries
+
+```python
+# Find images with at least one cat
+dataset.query().match(
+    ObjectDetectionQuery.match(ObjectDetectionField.label == "cat")
+)
+
+# Logical AND - exactly 1 cat and 1 dog
+dataset.query().match(
+    AND(
+        ObjectDetectionQuery.count(ObjectDetectionField.label == "cat") == 1,
+        ObjectDetectionQuery.count(ObjectDetectionField.label == "dog") == 1
+    )
+)
+
+# Logical OR - exactly 1 cat or 1 dog
+dataset.query().match(
+    OR(
+        ObjectDetectionQuery.count(ObjectDetectionField.label == "cat") == 1,
+        ObjectDetectionQuery.count(ObjectDetectionField.label == "dog") == 1
+    )
+)
+
+# Negation - images without cats
+dataset.query().match(
+    NOT(ObjectDetectionQuery.match(ObjectDetectionField.label == "cat"))
+)
 ```
 
-**Grammar Rules:**
-- Start with `hello` keyword
-- Followed by a person's name (identifier)
-- End with `!` or `.` (optional)
+### Metadata Queries
 
-**Validation:**
-- ⚠️ Names should start with a capital letter
-- ⚠️ Greetings should use `!` instead of `.` for enthusiasm
+```python
+# Cats in large images
+dataset.query().match(
+    AND(
+        ObjectDetectionQuery.match(ObjectDetectionField.label == "cat"),
+        ImageSampleField.width > 500
+    )
+)
+
+# Multiple metadata conditions
+dataset.query().match(
+    AND(
+        ImageSampleField.width > 500,
+        ImageSampleField.height > 300,
+        ImageSampleField.created_at > "2024-01-01"
+    )
+)
+```
+
+### Annotation Counting
+
+```python
+# At least 3 people
+dataset.query().match(
+    ObjectDetectionQuery.count(ObjectDetectionField.label == "person") >= 3
+)
+
+# At most 5 cars
+dataset.query().match(
+    ObjectDetectionQuery.count(ObjectDetectionField.label == "car") <= 5
+)
+
+# No bicycles
+dataset.query().match(
+    ObjectDetectionQuery.count(ObjectDetectionField.label == "bicycle") == 0
+)
+```
+
+### Sorting
+
+```python
+# Sort by width (descending)
+dataset.query().match(
+    ObjectDetectionQuery.match(ObjectDetectionField.label == "cat")
+).order_by(
+    OrderByField(ImageSampleField.width).desc()
+)
+
+# Sort by annotation count
+dataset.query().match(
+    AND(
+        ObjectDetectionQuery.match(ObjectDetectionField.label == "cat"),
+        ImageSampleField.width > 500
+    )
+).order_by(
+    OrderByField(
+        ObjectDetectionQuery.count(ObjectDetectionField.label == "cat")
+    ).desc()
+)
+
+# Sort by text similarity
+dataset.query().match(
+    ObjectDetectionQuery.match(ObjectDetectionField.label == "cat")
+).order_by(
+    OrderByField(ImageSampleField.text_similarity("outdoor scene"))
+)
+```
+
+## Supported Features
+
+| Feature | Supported | Example |
+|---------|-----------|---------|
+| Object detection queries | ✅ | `ObjectDetectionQuery.match(...)` |
+| Annotation counting | ✅ | `ObjectDetectionQuery.count(...) >= 2` |
+| Metadata filtering | ✅ | `ImageSampleField.width > 500` |
+| Logical operators | ✅ | `AND(...)`, `OR(...)`, `NOT(...)` |
+| Nested expressions | ✅ | `AND(OR(...), ...)` |
+| Sorting | ✅ | `.order_by(OrderByField(...).desc())` |
+| Text similarity | ✅ | `ImageSampleField.text_similarity("text")` |
+| Comparison operators | ✅ | `==`, `!=`, `>`, `<`, `>=`, `<=` |
+
+## Validation Features
+
+- ✅ **Syntax validation** - Real-time Python syntax checking
+- ⚠️ **Comparison operator hints** - Suggests `==` instead of `=` for equality
+- 💡 **Count query warnings** - Warns if count queries lack comparisons
+- 🚀 **LSP in Web Worker** - Non-blocking, runs in background thread
+- 🎯 **Hover information** - Hover over keywords to see documentation
+- ⚡ **Autocomplete** - Press `.` after `dataset`, field types, or query types for suggestions
+
+## LSP Features
+
+### Hover Documentation
+
+Hover over any element to see documentation:
+- **`dataset`** - Shows dataset query API documentation
+- **`ObjectDetectionQuery.match`** - Explains match method
+- **`ObjectDetectionQuery.count`** - Explains count method  
+- **`ImageSampleField.width`** - Shows field documentation
+- **`ObjectDetectionField.label`** - Shows annotation field docs
+
+### Autocomplete (IntelliSense)
+
+Press `.` (dot) after these to get autocomplete suggestions:
+
+1. **After `dataset.`** → Suggests `query()` method
+2. **After `ObjectDetectionQuery.`** → Suggests `match()` and `count()` methods
+3. **After `ObjectDetectionField.`** → Suggests fields: `label`, `confidence`, `bbox_x`, etc.
+4. **After `ImageSampleField.`** → Suggests fields: `width`, `height`, `created_at`, `text_similarity()`, etc.
+5. **After `ClassificationField.`** → Suggests `label`, `confidence`
+6. **After `OrderByField(...).`** → Suggests `desc()`, `asc()`
+7. **After `)` (closing match)**  → Suggests `.order_by()`
+
+**Trigger autocomplete manually:** Press `Ctrl+Space` (Windows/Linux) or `Cmd+Space` (Mac)
+
+## Setup
+
+```bash
+# Install dependencies
+npm install
+
+# Generate TypeScript from Langium grammar
+npm run langium:generate
+
+# Start dev server
+npm run dev
+```
+
+Open [http://localhost:5173](http://localhost:5173)
+
+**Try the LSP features:**
+1. Open [try-lsp-features.py](try-lsp-features.py) in the editor
+2. **Hover** over `dataset`, `ObjectDetectionQuery`, or any field to see documentation
+3. **Type `.`** after `dataset`, `ObjectDetectionField`, or `ImageSampleField` to see autocomplete suggestions
+4. **Press `Ctrl+Space`** (or `Cmd+Space` on Mac) anywhere to manually trigger autocomplete
+
+See [examples.py](examples.py) for more query patterns!
+
+## Build for Production
+
+```bash
+npm run build
+```
+
+The built files will be in the `dist/` directory.
 
 ## Project Structure
 
@@ -34,114 +201,135 @@ editor-example/
 ├── src/
 │   ├── language/
 │   │   ├── hello-lang.langium          # Grammar definition
-│   │   ├── hello-lang-module.ts        # Langium service creation
-│   │   ├── hello-lang-validator.ts     # Custom validation rules
-│   │   └── generated/                  # Auto-generated by Langium CLI
-│   ├── language-server-worker.ts       # LSP worker entry point
+│   │   ├── hello-lang-module.ts        # Langium services
+│   │   ├── hello-lang-validator.ts     # Custom validation
+│   │   └── generated/                  # Auto-generated from grammar
+│   ├── language-server-worker.ts       # LSP worker (runs in Web Worker)
 │   └── main.ts                         # Monaco editor setup
 ├── index.html                          # Entry point
+├── examples.py                         # Example queries
 ├── package.json
 ├── tsconfig.json
 ├── vite.config.ts
 └── langium-config.json
 ```
 
-## Setup
-
-### Prerequisites
-- Node.js 18+ and npm
-
-### Installation
-
-```bash
-# Navigate to the example directory
-cd editor-example
-
-# Install dependencies
-npm install
-
-# Generate TypeScript from Langium grammar
-npm run langium:generate
-```
-
-## Running
-
-```bash
-# Start the dev server
-npm run dev
-```
-
-Open [http://localhost:5173](http://localhost:5173) in your browser.
-
-### Build for Production
-
-```bash
-npm run build
-```
-
-The built files will be in the `dist/` directory.
-
 ## How It Works
 
 ### 1. Grammar Definition (`hello-lang.langium`)
-Defines the syntax rules for HelloLang using Langium's EBNF-like grammar syntax.
+Defines Python `dataset.query()` syntax using Langium:
+- `dataset.query().match(...)`
+- `AND(...)`, `OR(...)`, `NOT(...)`
+- `ObjectDetectionQuery.match/count(...)`
+- `ImageSampleField.field > value`
+- `.order_by(OrderByField(...).desc())`
 
 ### 2. Code Generation
-The `langium:generate` script processes the grammar and generates TypeScript code:
-- AST types (`generated/ast.ts`)
-- Grammar structure (`generated/grammar.ts`)
-- Service module (`generated/module.ts`)
+Run `npm run langium:generate` to generate:
+- **AST types** (`generated/ast.ts`) - TypeScript types for the syntax tree
+- **Grammar structure** (`generated/grammar.ts`) - Parser configuration
+- **Service module** (`generated/module.ts`) - Langium services
 
-### 3. Language Services (`hello-lang-module.ts`)
-Creates Langium services including:
-- Parser
-- Validator (with custom validation rules)
-- Document builder
-- Workspace manager
+### 3. Language Server Worker (`language-server-worker.ts`)
+Runs Langium LSP in a Web Worker:
+- Creates browser-compatible LSP connection
+- Initializes Langium services
+- Provides validation, parsing, and (future) autocomplete
 
-### 4. Web Worker (`language-server-worker.ts`)
-Runs the Langium language server in a background thread:
-- Creates LSP connection using `BrowserMessageReader/Writer`
-- Initializes Langium services with empty file system
-- Starts the language server
-
-### 5. Monaco Editor (`main.ts`)
-Sets up the editor and connects it to the language server:
-- Registers the `hello-lang` language
+### 4. Monaco Editor (`main.ts`)
+Sets up Monaco and connects to LSP:
+- Registers `dataset-query` language
 - Creates Monaco editor instance
-- Creates `MonacoLanguageClient` that communicates with the worker
-- Starts the language client
+- Creates `MonacoLanguageClient` for LSP communication
+- Starts language client
 
-### 6. Communication Flow
+### 5. Communication Flow
 ```
 Monaco Editor (main thread)
-    ↕ MessageReader/Writer
+    ↕ BrowserMessageReader/Writer
 Web Worker (language-server-worker.ts)
     ↕ Langium LSP
-HelloLang Services (parser, validator, etc.)
+Dataset Query Parser & Validator
 ```
 
-## Extending HelloLang
+## Extending the Language
 
-### Add New Syntax
-1. Edit `src/language/hello-lang.langium`
-2. Run `npm run langium:generate`
-3. Restart dev server
+### Add New Query Types
+
+Edit `src/language/hello-lang.langium`:
+
+```langium
+QueryType:
+    'ObjectDetectionQuery' |
+    'ClassificationQuery' |
+    'InstanceSegmentationQuery' |
+    'VideoQuery';  // Add new type
+```
+
+Then run:
+```bash
+npm run langium:generate
+```
 
 ### Add Custom Validation
-1. Add validation methods to `HelloLangValidator` class
-2. Register checks in `HelloLangValidationRegistry`
 
-### Example: Add Goodbye Statement
+Edit `src/language/hello-lang-validator.ts`:
 
-In `hello-lang.langium`:
-```langium
-Greeting:
-    'hello' person=Person ('!' | '.')?
-  | 'goodbye' person=Person ('!' | '.')?;
+```typescript
+export class HelloLangValidator {
+    checkCustomRule(node: ASTNode, accept: ValidationAcceptor): void {
+        // Your validation logic
+    }
+}
 ```
 
-Then run `npm run langium:generate` and restart.
+Register in `HelloLangValidationRegistry`:
+
+```typescript
+const checks: ValidationChecks<HelloLangAstType> = {
+    ASTNodeType: validator.checkCustomRule
+};
+```
+
+### Add Custom Hover Documentation
+
+Edit `src/language/dataset-query-hover.ts`:
+
+```typescript
+protected getAstNodeHoverContent(node: AstNode): Hover | undefined {
+    if (node.$type === 'YourCustomType') {
+        return this.createHover(
+            'Title',
+            'Your documentation here'
+        );
+    }
+}
+```
+
+### Add Custom Autocomplete
+
+Edit `src/language/dataset-query-completion.ts`:
+
+```typescript
+protected override completionFor(
+    context: CompletionContext,
+    next: NextFeature,
+    acceptor: CompletionAcceptor
+): void {
+    const text = context.textDocument.getText();
+    const textBeforeCursor = text.substring(0, context.offset);
+    
+    if (textBeforeCursor.endsWith('YourType.')) {
+        acceptor({
+            label: 'method',
+            kind: CompletionItemKind.Method,
+            detail: 'Method description',
+            insertText: 'method(${1:arg})',
+            insertTextFormat: 2  // Snippet format
+        });
+    }
+}
+```
 
 ## Technologies
 

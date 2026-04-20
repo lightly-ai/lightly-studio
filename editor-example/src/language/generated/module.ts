@@ -4,22 +4,22 @@
  ******************************************************************************/
 
 import type { LangiumSharedCoreServices, LangiumCoreServices, LangiumGeneratedCoreServices, LangiumGeneratedSharedCoreServices, LanguageMetaData, Module } from 'langium';
-import { HelloLangAstReflection } from './ast.js';
-import { HelloLangGrammar } from './grammar.js';
+import { DatasetQueryAstReflection } from './ast.js';
+import { DatasetQueryGrammar } from './grammar.js';
 
-export const HelloLangLanguageMetaData = {
-    languageId: 'hello-lang',
-    fileExtensions: ['.hello'],
+export const DatasetQueryLanguageMetaData = {
+    languageId: 'dataset-query',
+    fileExtensions: ['.py'],
     caseInsensitive: false,
     mode: 'development'
 } as const satisfies LanguageMetaData;
 
-export const HelloLangGeneratedSharedModule: Module<LangiumSharedCoreServices, LangiumGeneratedSharedCoreServices> = {
-    AstReflection: () => new HelloLangAstReflection()
+export const DatasetQueryGeneratedSharedModule: Module<LangiumSharedCoreServices, LangiumGeneratedSharedCoreServices> = {
+    AstReflection: () => new DatasetQueryAstReflection()
 };
 
-export const HelloLangGeneratedModule: Module<LangiumCoreServices, LangiumGeneratedCoreServices> = {
-    Grammar: () => HelloLangGrammar(),
-    LanguageMetaData: () => HelloLangLanguageMetaData,
+export const DatasetQueryGeneratedModule: Module<LangiumCoreServices, LangiumGeneratedCoreServices> = {
+    Grammar: () => DatasetQueryGrammar(),
+    LanguageMetaData: () => DatasetQueryLanguageMetaData,
     parser: {}
 };

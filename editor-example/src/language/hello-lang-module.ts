@@ -8,8 +8,10 @@ import {
     LangiumSharedServices,
     PartialLangiumServices
 } from 'langium';
-import { HelloLangGeneratedModule, HelloLangGeneratedSharedModule } from './generated/module.js';
+import { DatasetQueryGeneratedModule, DatasetQueryGeneratedSharedModule } from './generated/module.js';
 import { HelloLangValidator, HelloLangValidationRegistry } from './hello-lang-validator.js';
+import { DatasetQueryHoverProvider } from './dataset-query-hover.js';
+import { DatasetQueryCompletionProvider } from './dataset-query-completion.js';
 
 /**
  * Declaration of custom services - add your own service classes here.
@@ -35,6 +37,10 @@ export const HelloLangModule: Module<HelloLangServices, PartialLangiumServices &
     validation: {
         ValidationRegistry: (services) => new HelloLangValidationRegistry(services),
         HelloLangValidator: () => new HelloLangValidator()
+    },
+    lsp: {
+        HoverProvider: (services) => new DatasetQueryHoverProvider(services),
+        CompletionProvider: (services) => new DatasetQueryCompletionProvider(services)
     }
 };
 
@@ -56,11 +62,11 @@ export function createHelloLangServices(context: DefaultSharedModuleContext): {
 } {
     const shared = inject(
         createDefaultSharedModule(context),
-        HelloLangGeneratedSharedModule
+        DatasetQueryGeneratedSharedModule
     );
     const HelloLang = inject(
         createDefaultModule({ shared }),
-        HelloLangGeneratedModule,
+        DatasetQueryGeneratedModule,
         HelloLangModule
     );
     shared.ServiceRegistry.register(HelloLang);

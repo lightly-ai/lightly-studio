@@ -15,33 +15,86 @@ import { BrowserMessageReader, BrowserMessageWriter } from 'vscode-languageserve
 // Configure Monaco environment
 self.MonacoEnvironment = {
     getWorker(_: string, label: string) {
-        if (label === 'hello-lang') {
+        if (label === 'dataset-query') {
             return new Worker(new URL('./language-server-worker.ts', import.meta.url), { type: 'module' });
         }
         return new Worker(new URL('monaco-editor/esm/vs/editor/editor.worker.js', import.meta.url), { type: 'module' });
     }
 };
 
-// Register HelloLang language
+// Register DatasetQuery language
 monaco.languages.register({
-    id: 'hello-lang',
-    extensions: ['.hello'],
-    aliases: ['HelloLang', 'hello-lang'],
-    mimetypes: ['text/hello-lang']
+    id: 'dataset-query',
+    extensions: ['.py'],
+    aliases: ['DatasetQuery', 'dataset-query', 'Python'],
+    mimetypes: ['text/x-python']
 });
 
 // Create the editor
 const editor = monaco.editor.create(document.getElementById('editor')!, {
-    value: `// Welcome to HelloLang!
-// Type "hello" followed by a name.
-// Try:
-hello World!
-hello Alice.
-hello bob!
+    value: `# Welcome to Dataset Query Language!
+# Write Python dataset queries with LSP support
+
+# Basic annotation query - find images with cats
+dataset.query().match(
+    ObjectDetectionQuery.match(ObjectDetectionField.label == "cat")
+)
+
+# Logical AND - find images with exactly 1 cat and 1 dog
+dataset.query().match(
+    AND(
+        ObjectDetectionQuery.count(ObjectDetectionField.label == "cat") == 1,
+        ObjectDetectionQuery.count(ObjectDetectionField.label == "dog") == 1
+    )
+)
+
+# Query with metadata - cats in large images
+dataset.query().match(
+    AND(
+        ObjectDetectionQuery.match(ObjectDetectionField.label == "cat"),
+        ImageSampleField.width > 500
+    )
+)
+
+# With sorting - sort by cat count descending
+dataset.query().match(
+    AND(
+        ObjectDetectionQuery.match(ObjectDetectionField.label == "cat"),
+        ImageSampleField.width > 500
+    )
+).order_by(
+    OrderByField(
+        ObjectDetectionQuery.count(ObjectDetectionField.label == "cat")
+    ).desc()
+)
 `,
-    language: 'hello-lang',
+    language: 'dataset-query',
     theme: 'vs-dark',
-    automaticLayout: true
+    automaticLayout: true,
+    minimap: { enabled: false },
+    lineNumbers: 'on',
+    fontSize: 13,
+    // Enable autocomplete and hover features
+    suggestOnTriggerCharacters: true,
+    quickSuggestions: {
+        other: true,
+        comments: false,
+        strings: false
+    },
+    suggest: {
+        showMethods: true,
+        showFunctions: true,
+        showKeywords: true,
+        showProperties: true,
+        snippetsPreventQuickSuggestions: false
+    },
+    parameterHints: {
+        enabled: true
+    },
+    hover: {
+        enabled: true,
+        delay: 300
+    }
 });
 
 // Create language client
@@ -50,9 +103,9 @@ function createLanguageClient(worker: Worker): MonacoLanguageClient {
     const writer = new BrowserMessageWriter(worker);
     
     return new MonacoLanguageClient({
-        name: 'HelloLang Language Client',
+        name: 'DatasetQuery Language Client',
         clientOptions: {
-            documentSelector: [{ language: 'hello-lang' }],
+            documentSelector: [{ language: 'dataset-query' }],
             errorHandler: {
                 error: () => ({ action: ErrorAction.Continue }),
                 closed: () => ({ action: CloseAction.DoNotRestart })
@@ -71,4 +124,4 @@ const worker = new Worker(new URL('./language-server-worker.ts', import.meta.url
 const client = createLanguageClient(worker);
 client.start();
 
-console.log('HelloLang Monaco Editor with Langium LSP is ready!');
+console.log('DatasetQuery Monaco Editor with Langium LSP is ready!');
