@@ -36,7 +36,7 @@ If you operate your own deployment, see [On-Premise Deployment](on-premise.md) f
 
 ## Where Computation Happens
 
-- Data ingestion, indexing, and embedding generation run in the Python process that adds data.
+- Data ingestion, indexing, and embedding generation always run locally on the machine where the Python script runs, never on a Lightly server.
 - In OSS, this is usually the same script that later starts the UI with `ls.start_gui()`.
 - In Enterprise, admin Python scripts call `ls.connect()` and then use the same Python API against the enterprise datasets database. See [Connect from Python](connect.md) for details.
 
@@ -47,5 +47,5 @@ If you operate your own deployment, see [On-Premise Deployment](on-premise.md) f
 - Lightly-Hosted: To operate the service, Lightly stores analytics, user account information, and
   dataset metadata, including annotations. Raw images and videos are streamed from your storage to
   the browser when needed, but are never stored on Lightly servers.
-- On-Premise / Self-Hosted: Nothing is sent to Lightly. The deployment can be fully offline and
+- On-Premise: Nothing is sent to Lightly. The deployment can be fully offline and
   air-gapped.
