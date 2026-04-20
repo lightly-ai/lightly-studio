@@ -15,7 +15,7 @@ def test_query_tree_accepts_valid_image_and_annotation_nodes() -> None:
                 "type": "and",
                 "children": [
                     {
-                        "type": "image_integer_field_comparison",
+                        "type": "integer_field_comparison",
                         "field": "width",
                         "operator": ">=",
                         "value": 128,
@@ -44,7 +44,7 @@ def test_query_tree_rejects_wrong_value_type_for_image_width() -> None:
         QueryTree.model_validate(
             {
                 "root": {
-                    "type": "image_integer_field_comparison",
+                    "type": "integer_field_comparison",
                     "field": "width",
                     "operator": "==",
                     "value": "123",
@@ -58,7 +58,7 @@ def test_query_tree_rejects_wrong_operator_for_video_duration() -> None:
         QueryTree.model_validate(
             {
                 "root": {
-                    "type": "video_equality_float_field_comparison",
+                    "type": "equality_float_field_comparison",
                     "field": "duration_s",
                     "operator": ">=",
                     "value": 3.5,
@@ -90,7 +90,7 @@ def test_query_tree_parses_image_datetime_values() -> None:
     tree = QueryTree.model_validate(
         {
             "root": {
-                "type": "image_datetime_field_comparison",
+                "type": "datetime_field_comparison",
                 "field": "created_at",
                 "operator": ">=",
                 "value": "2026-01-01T00:00:00Z",

@@ -88,66 +88,46 @@ class AnnotationGeometryField(str, Enum):
     HEIGHT = "height"
 
 
-class ImageStringFieldComparison(BaseModel):
-    """Leaf node comparing an image string field to a string value."""
+class StringFieldComparison(BaseModel):
+    """Leaf node comparing a string sample field to a string value."""
 
-    type: Literal["image_string_field_comparison"] = "image_string_field_comparison"
-    field: ImageStringField
+    type: Literal["string_field_comparison"] = "string_field_comparison"
+    field: ImageStringField | VideoStringField
     operator: EqualityComparisonOperator
     value: StrictStr
 
 
-class ImageIntegerFieldComparison(BaseModel):
-    """Leaf node comparing an image integer field to an integer value."""
+class IntegerFieldComparison(BaseModel):
+    """Leaf node comparing an integer sample field to an integer value."""
 
-    type: Literal["image_integer_field_comparison"] = "image_integer_field_comparison"
-    field: ImageIntegerField
+    type: Literal["integer_field_comparison"] = "integer_field_comparison"
+    field: ImageIntegerField | VideoIntegerField
     operator: OrdinalComparisonOperator
     value: StrictInt
 
 
-class ImageDatetimeFieldComparison(BaseModel):
-    """Leaf node comparing an image datetime field to a datetime value."""
+class DatetimeFieldComparison(BaseModel):
+    """Leaf node comparing a datetime sample field to a datetime value."""
 
-    type: Literal["image_datetime_field_comparison"] = "image_datetime_field_comparison"
+    type: Literal["datetime_field_comparison"] = "datetime_field_comparison"
     field: ImageDatetimeField
     operator: OrdinalComparisonOperator
     value: datetime
 
 
-class VideoStringFieldComparison(BaseModel):
-    """Leaf node comparing a video string field to a string value."""
+class FloatFieldComparison(BaseModel):
+    """Leaf node comparing a float sample field to a numeric value."""
 
-    type: Literal["video_string_field_comparison"] = "video_string_field_comparison"
-    field: VideoStringField
-    operator: EqualityComparisonOperator
-    value: StrictStr
-
-
-class VideoIntegerFieldComparison(BaseModel):
-    """Leaf node comparing a video integer field to an integer value."""
-
-    type: Literal["video_integer_field_comparison"] = "video_integer_field_comparison"
-    field: VideoIntegerField
-    operator: OrdinalComparisonOperator
-    value: StrictInt
-
-
-class VideoFloatFieldComparison(BaseModel):
-    """Leaf node comparing a video float field to a float value."""
-
-    type: Literal["video_float_field_comparison"] = "video_float_field_comparison"
+    type: Literal["float_field_comparison"] = "float_field_comparison"
     field: VideoFloatField
     operator: OrdinalComparisonOperator
     value: StrictInt | StrictFloat
 
 
-class VideoEqualityFloatFieldComparison(BaseModel):
-    """Leaf node comparing a video equality-only float field to a float value."""
+class EqualityFloatFieldComparison(BaseModel):
+    """Leaf node comparing an equality-only float field to a numeric value."""
 
-    type: Literal["video_equality_float_field_comparison"] = (
-        "video_equality_float_field_comparison"
-    )
+    type: Literal["equality_float_field_comparison"] = "equality_float_field_comparison"
     field: VideoEqualityFloatField
     operator: EqualityComparisonOperator
     value: StrictInt | StrictFloat
@@ -234,13 +214,11 @@ class NotNode(BaseModel):
 
 QueryNode = Annotated[
     Union[
-        ImageStringFieldComparison,
-        ImageIntegerFieldComparison,
-        ImageDatetimeFieldComparison,
-        VideoStringFieldComparison,
-        VideoIntegerFieldComparison,
-        VideoFloatFieldComparison,
-        VideoEqualityFloatFieldComparison,
+        StringFieldComparison,
+        IntegerFieldComparison,
+        DatetimeFieldComparison,
+        FloatFieldComparison,
+        EqualityFloatFieldComparison,
         TagContains,
         ClassificationAnnotationQuery,
         ObjectDetectionAnnotationQuery,
