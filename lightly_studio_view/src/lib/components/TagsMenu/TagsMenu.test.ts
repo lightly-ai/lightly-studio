@@ -311,12 +311,11 @@ describe('TagsMenu', () => {
                     kind: 'sample'
                 }
             });
+            expect(mocks.loadTags).toHaveBeenCalled();
+            expect(mocks.clearTagSelected).not.toHaveBeenCalled();
+            expect(screen.queryByTestId('rename-tag-form-tag-1')).not.toBeInTheDocument();
+            expect(toast.success).not.toHaveBeenCalled();
         });
-
-        expect(mocks.loadTags).toHaveBeenCalled();
-        expect(mocks.clearTagSelected).not.toHaveBeenCalled();
-        expect(screen.queryByTestId('rename-tag-form-tag-1')).not.toBeInTheDocument();
-        expect(toast.success).not.toHaveBeenCalled();
     });
 
     it('shows a toast when renaming a tag fails', async () => {
