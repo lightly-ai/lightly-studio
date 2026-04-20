@@ -1,10 +1,10 @@
 {
-  "projectName": "HelloLang",
+  "projectName": "LightlyQuery",
   "languages": [
     {
-      "id": "hello-lang",
-      "grammar": "src/language/hello-lang.langium",
-      "fileExtensions": [".hello"]
+      "id": "lightly-query",
+      "grammar": "src/language/lightly-query.langium",
+      "fileExtensions": [".lql", ".lightlyql"]
     }
   ],
   "out": "src/language/generated"

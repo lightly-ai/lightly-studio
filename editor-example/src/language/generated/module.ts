@@ -3,23 +3,23 @@
  * DO NOT EDIT MANUALLY!
  ******************************************************************************/
 
-import type { LangiumSharedCoreServices, LangiumCoreServices, LangiumGeneratedCoreServices, LangiumGeneratedSharedCoreServices, LanguageMetaData, Module } from 'langium';
-import { HelloLangAstReflection } from './ast.js';
-import { HelloLangGrammar } from './grammar.js';
+import type { LangiumCoreServices, LangiumGeneratedCoreServices, LanguageMetaData, Module } from 'langium';
+import {  LightlyQueryGrammar } from './grammar.js';
 
-export const HelloLangLanguageMetaData = {
-    languageId: 'hello-lang',
-    fileExtensions: ['.hello'],
+
+
+export const LightlyQueryLanguageMetaData = {
+    languageId: 'lightly-query',
+    fileExtensions: ['.lql', '.lightlyql'],
     caseInsensitive: false,
     mode: 'development'
 } as const satisfies LanguageMetaData;
 
-export const HelloLangGeneratedSharedModule: Module<LangiumSharedCoreServices, LangiumGeneratedSharedCoreServices> = {
-    AstReflection: () => new HelloLangAstReflection()
-};
 
-export const HelloLangGeneratedModule: Module<LangiumCoreServices, LangiumGeneratedCoreServices> = {
-    Grammar: () => HelloLangGrammar(),
-    LanguageMetaData: () => HelloLangLanguageMetaData,
+
+
+export const LightlyQueryGeneratedModule: Module<LangiumCoreServices, LangiumGeneratedCoreServices> = {
+    Grammar: () => LightlyQueryGrammar(),
+    LanguageMetaData: () => LightlyQueryLanguageMetaData,
     parser: {}
 };

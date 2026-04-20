@@ -15,31 +15,42 @@ import { BrowserMessageReader, BrowserMessageWriter } from 'vscode-languageserve
 // Configure Monaco environment
 self.MonacoEnvironment = {
     getWorker(_: string, label: string) {
-        if (label === 'hello-lang') {
+        if (label === 'lightly-query') {
             return new Worker(new URL('./language-server-worker.ts', import.meta.url), { type: 'module' });
         }
         return new Worker(new URL('monaco-editor/esm/vs/editor/editor.worker.js', import.meta.url), { type: 'module' });
     }
 };
 
-// Register HelloLang language
+// Register Lightly Query Language
 monaco.languages.register({
-    id: 'hello-lang',
-    extensions: ['.hello'],
-    aliases: ['HelloLang', 'hello-lang'],
-    mimetypes: ['text/hello-lang']
+    id: 'lightly-query',
+    extensions: ['.lql', '.lightlyql'],
+    aliases: ['LightlyQuery', 'lightly-query', 'LQL'],
+    mimetypes: ['text/lightly-query']
 });
 
-// Create the editor
+// Create the editor with Lightly Query Language examples
 const editor = monaco.editor.create(document.getElementById('editor')!, {
-    value: `// Welcome to HelloLang!
-// Type "hello" followed by a name.
-// Try:
-hello World!
-hello Alice.
-hello bob!
+    value: `# Lightly Query Language Examples
+# Query syntax for dataset.match() function
+
+# Simple field comparisons
+ImageSampleField.width > 1920
+ImageSampleField.height <= 1080
+ImageSampleField.tags.contains("reviewed")
+
+# Complex boolean queries
+(ImageSampleField.width < 500 AND NOT (ImageSampleField.tags.contains("reviewed"))) OR ImageSampleField.tags.contains("needs-labeling")
+
+# Metadata queries
+ImageSampleField.metadata.confidence > 0.95
+ImageSampleField.predictions[0].label == "cat"
+
+# Video queries
+VideoSampleField.duration > 60 AND VideoSampleField.fps == 30
 `,
-    language: 'hello-lang',
+    language: 'lightly-query',
     theme: 'vs-dark',
     automaticLayout: true
 });
@@ -50,9 +61,11 @@ function createLanguageClient(worker: Worker): MonacoLanguageClient {
     const writer = new BrowserMessageWriter(worker);
     
     return new MonacoLanguageClient({
-        name: 'HelloLang Language Client',
+        name: 'Langium Language Client',
         clientOptions: {
-            documentSelector: [{ language: 'hello-lang' }],
+            documentSelector: [
+                { language: 'lightly-query' }
+            ],
             errorHandler: {
                 error: () => ({ action: ErrorAction.Continue }),
                 closed: () => ({ action: CloseAction.DoNotRestart })
@@ -71,4 +84,4 @@ const worker = new Worker(new URL('./language-server-worker.ts', import.meta.url
 const client = createLanguageClient(worker);
 client.start();
 
-console.log('HelloLang Monaco Editor with Langium LSP is ready!');
+console.log('Monaco Editor with Langium LSP is ready for LightlyQuery.');

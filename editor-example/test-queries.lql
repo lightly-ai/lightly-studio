@@ -1,0 +1,70 @@
+# Lightly Query Language Examples
+# These are examples of queries that can be used with dataset.match()
+
+# Simple comparison queries
+ImageSampleField.width > 1920
+ImageSampleField.height <= 1080
+ImageSampleField.size < 1000000
+
+# String field queries
+ImageSampleField.filename == "test.jpg"
+ImageSampleField.format != "png"
+ImageSampleField.path.startswith("/data/images/")
+
+# Tag queries
+ImageSampleField.tags.contains("reviewed")
+NOT (ImageSampleField.tags.contains("needs-labeling"))
+
+# Complex boolean queries
+ImageSampleField.width > 500 AND ImageSampleField.height > 500
+ImageSampleField.tags.contains("important") OR ImageSampleField.size > 5000000
+
+# Combined conditions with AND/OR
+(ImageSampleField.width < 500 AND NOT (ImageSampleField.tags.contains("reviewed"))) OR ImageSampleField.tags.contains("needs-labeling")
+
+# Metadata queries
+ImageSampleField.metadata.confidence > 0.95
+ImageSampleField.metadata.label == "cat"
+
+# Date queries
+ImageSampleField.created_at > date("2024-01-01")
+ImageSampleField.updated_at <= datetime("2024-12-31T23:59:59")
+
+# Array/List queries
+ImageSampleField.predictions[0].confidence > 0.8
+ImageSampleField.predictions[0].label.contains("person")
+
+# Video specific queries
+VideoSampleField.duration > 60
+VideoSampleField.fps == 30
+VideoSampleField.frame_count > 1800
+VideoSampleField.codec == "h264"
+
+# Sample field queries (generic)
+SampleField.reviewed == true
+SampleField.validated != false
+SampleField.dataset_id == "dataset_123"
+
+# Method calls
+ImageSampleField.filename.endswith(".jpg")
+ImageSampleField.path.matches(".*train.*")
+ImageSampleField.tags.exists()
+ImageSampleField.metadata.is_not_null()
+
+# List membership
+ImageSampleField.format in ["jpg", "jpeg", "png"]
+ImageSampleField.label not in ["unknown", "undefined"]
+
+# Complex nested query example
+(
+    (
+        ImageSampleField.width > 1920 AND
+        ImageSampleField.height > 1080 AND
+        ImageSampleField.format in ["jpg", "png"]
+    ) OR (
+        VideoSampleField.duration > 120 AND
+        VideoSampleField.fps >= 24
+    )
+) AND NOT (
+    ImageSampleField.tags.contains("excluded")
+)
