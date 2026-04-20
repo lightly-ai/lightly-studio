@@ -130,6 +130,7 @@ def update_tag(
                 detail=f"Tag with id {tag_id} not found.",
             )
     except IntegrityError as e:
+        session.rollback()
         raise HTTPException(
             status_code=HTTP_STATUS_CONFLICT,
             detail=f"""

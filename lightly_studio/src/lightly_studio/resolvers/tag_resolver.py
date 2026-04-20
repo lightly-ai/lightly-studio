@@ -62,12 +62,22 @@ def update(session: Session, tag_id: UUID, tag_data: TagUpdate) -> TagTable | No
         return None
 
     update_fields = tag_data.model_dump(exclude_unset=True)
+    target_name = update_fields.get("name", tag.name)
+    target_description = update_fields.get("description", tag.description)
 
     conflicting_tag = get_by_name(
-        session=session, tag_name=tag_data.name, collection_id=tag.collection_id
+        session=session, tag_name=target_name, collection_id=tag.collection_id
     )
     if conflicting_tag and conflicting_tag.tag_id != tag_id and conflicting_tag.kind == tag.kind:
         raise IntegrityError(statement=None, params=None, orig=Exception("Tag already exists"))
+
+    if target_name == tag.name:
+        tag.description = target_description
+        tag.updated_at = datetime.now(timezone.utc)
+        session.add(tag)
+        session.commit()
+        session.refresh(tag)
+        return tag
 
     sample_ids = [
         sample_id
@@ -77,36 +87,37 @@ def update(session: Session, tag_id: UUID, tag_data: TagUpdate) -> TagTable | No
         if sample_id is not None
     ]
 
+    # DuckDB rejects updates and deletes of referenced rows in the same transaction.
+    # Commit each step so renaming a tag preserves existing sample links.
     session.exec(
         sqlmodel.delete(SampleTagLinkTable).where(col(SampleTagLinkTable.tag_id) == tag_id)
     )
+    session.commit()
 
-    # DuckDB checks unique constraints too eagerly on updates, so we recreate
-    # the tag row. We must temporarily delete the link rows first, otherwise
-    # DuckDB rejects deleting the tag row because of the foreign key.
-    # https://duckdb.org/docs/sql/indexes#over-eager-unique-constraint-checking
+    tag = get_by_id(session=session, tag_id=tag_id)
+    if not tag:
+        return None
+
     session.delete(tag)
-    session.flush()
-    session.expunge(tag)
+    session.commit()
 
     tag_updated = TagTable(
-        tag_id=tag.tag_id,
+        tag_id=tag_id,
         collection_id=tag.collection_id,
-        name=update_fields.get("name", tag.name),
-        description=update_fields.get("description", tag.description),
+        name=target_name,
+        description=target_description,
         kind=tag.kind,
         created_at=tag.created_at,
         updated_at=datetime.now(timezone.utc),
     )
-
     session.add(tag_updated)
+    session.commit()
 
     if sample_ids:
         session.add_all(
             [SampleTagLinkTable(sample_id=sample_id, tag_id=tag_id) for sample_id in sample_ids]
         )
-
-    session.commit()
+        session.commit()
 
     session.refresh(tag_updated)
     return tag_updated

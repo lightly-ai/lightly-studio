@@ -8,6 +8,7 @@ from sqlmodel import Session
 
 from lightly_studio.api.routes.api.status import HTTP_STATUS_CONFLICT, HTTP_STATUS_OK
 from lightly_studio.models.collection import CollectionTable, SampleType
+from lightly_studio.models.tag import TagCreate
 from lightly_studio.resolvers import collection_resolver, tag_resolver
 from tests.helpers_resolvers import create_collection, create_image, create_tag
 
@@ -91,10 +92,14 @@ def test_update_tag__rename_only_preserves_description(
     db_session: Session, test_client: TestClient
 ) -> None:
     collection = create_collection(session=db_session)
-    tag = create_tag(
+    tag = tag_resolver.create(
         session=db_session,
-        collection_id=collection.collection_id,
-        description="existing description",
+        tag=TagCreate(
+            collection_id=collection.collection_id,
+            name="example_tag",
+            description="existing description",
+            kind="sample",
+        ),
     )
 
     response = test_client.put(

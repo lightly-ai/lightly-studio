@@ -140,11 +140,14 @@ def test_update_tag__rename_only_preserves_description(db_session: Session) -> N
     collection = create_collection(session=db_session)
     collection_id = collection.collection_id
 
-    tag = create_tag(
+    tag = tag_resolver.create(
         session=db_session,
-        collection_id=collection_id,
-        tag_name="example_tag",
-        description="existing description",
+        tag=TagCreate(
+            collection_id=collection_id,
+            name="example_tag",
+            description="existing description",
+            kind="sample",
+        ),
     )
 
     tag_updated = tag_resolver.update(
