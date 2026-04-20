@@ -1,6 +1,6 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 940 472" role="img" aria-labelledby="title desc">
   <title id="title">On-Premise Deployment Layout</title>
-  <desc id="desc">On-premise LightlyStudio deployment layout showing the Lightly Proxy in front of the Auth Service, Workspace GUI, Studio App, and a separate PostgreSQL datasets database.</desc>
+  <desc id="desc">On-premise LightlyStudio deployment layout showing the Lightly Proxy in front of the Authentication Service, Workspace UI, Studio App, and a separate PostgreSQL datasets database.</desc>
   <defs>
     <style>
       .panel-enterprise { fill: #f8fafc; stroke: #94a3b8; stroke-width: 2; }
@@ -30,53 +30,53 @@
   </g>
 
   <!-- Lines: proxy → services -->
-  <line class="edge" x1="135" y1="124" x2="135" y2="148"/>
-  <line class="edge" x1="430" y1="124" x2="430" y2="148"/>
-  <line class="edge" x1="765" y1="124" x2="765" y2="148"/>
+  <line class="edge" x1="160" y1="124" x2="160" y2="148"/>
+  <line class="edge" x1="470" y1="124" x2="470" y2="148"/>
+  <line class="edge" x1="780" y1="124" x2="780" y2="148"/>
 
-  <!-- Auth Service -->
+  <!-- Authentication Service -->
   <g>
-    <title>Auth Service</title>
-    <rect class="node-security" x="40" y="148" width="190" height="100" rx="12" ry="12"/>
-    <text class="label" x="135" y="194" text-anchor="middle">Auth Service</text>
-    <text class="small" x="135" y="217" text-anchor="middle">compose service: auth</text>
+    <title>Authentication Service</title>
+    <rect class="node-security" x="40" y="148" width="240" height="100" rx="12" ry="12"/>
+    <text class="label" x="160" y="194" text-anchor="middle">Authentication Service</text>
+    <text class="small" x="160" y="217" text-anchor="middle">compose service: auth</text>
   </g>
 
-  <!-- Workspace GUI -->
+  <!-- Workspace UI -->
   <g>
-    <title>Workspace GUI</title>
-    <rect class="node-ui" x="260" y="148" width="340" height="100" rx="12" ry="12"/>
-    <text class="label" x="430" y="186" text-anchor="middle">Workspace GUI</text>
-    <text class="small" x="430" y="208" text-anchor="middle">login, datasets page, admin page</text>
-    <text class="small" x="430" y="230" text-anchor="middle">compose service: lightly-studio-workspace</text>
+    <title>Workspace UI</title>
+    <rect class="node-ui" x="310" y="148" width="320" height="100" rx="12" ry="12"/>
+    <text class="label" x="470" y="186" text-anchor="middle">Workspace UI</text>
+    <text class="small" x="470" y="208" text-anchor="middle">login, datasets page, admin page</text>
+    <text class="small" x="470" y="230" text-anchor="middle">compose service: lightly-studio-workspace</text>
   </g>
 
   <!-- Studio App -->
   <g>
     <title>Studio App</title>
-    <rect class="node-service" x="630" y="148" width="270" height="100" rx="12" ry="12"/>
-    <text class="label" x="765" y="194" text-anchor="middle">Studio App</text>
-    <text class="small" x="765" y="217" text-anchor="middle">compose service: studio</text>
+    <rect class="node-service" x="660" y="148" width="240" height="100" rx="12" ry="12"/>
+    <text class="label" x="780" y="194" text-anchor="middle">Studio App</text>
+    <text class="small" x="780" y="217" text-anchor="middle">compose service: studio</text>
   </g>
 
   <!-- Lines: services → DBs -->
-  <line class="edge" x1="765" y1="248" x2="765" y2="272"/>
-  <line class="edge" x1="135" y1="248" x2="135" y2="272"/>
+  <line class="edge" x1="780" y1="248" x2="780" y2="272"/>
+  <line class="edge" x1="160" y1="248" x2="160" y2="272"/>
 
   <!-- Datasets DB -->
   <g>
     <title>Datasets database (PostgreSQL)</title>
-    <rect class="node-data" x="630" y="272" width="270" height="100" rx="12" ry="12"/>
-    <text class="label" x="765" y="310" text-anchor="middle">Datasets DB</text>
-    <text class="small" x="765" y="333" text-anchor="middle">compose service: db (PostgreSQL)</text>
+    <rect class="node-data" x="660" y="272" width="240" height="100" rx="12" ry="12"/>
+    <text class="label" x="780" y="310" text-anchor="middle">Datasets Database</text>
+    <text class="small" x="780" y="333" text-anchor="middle">compose service: db (PostgreSQL)</text>
   </g>
 
   <!-- Users DB (SQLite on auth_data volume) -->
   <g>
     <title>Users database (SQLite)</title>
-    <rect class="node-data" x="40" y="272" width="190" height="100" rx="12" ry="12"/>
-    <text class="label" x="135" y="310" text-anchor="middle">Users DB</text>
-    <text class="small" x="135" y="333" text-anchor="middle">sqlite on auth_data volume</text>
+    <rect class="node-data" x="40" y="272" width="240" height="100" rx="12" ry="12"/>
+    <text class="label" x="160" y="310" text-anchor="middle">Users Database</text>
+    <text class="small" x="160" y="333" text-anchor="middle">sqlite on auth_data volume</text>
   </g>
 
   <!-- Legend -->
@@ -95,6 +95,6 @@
     <text class="legend-text" x="408" y="447">Security / identity</text>
 
     <rect class="node-data" x="560" y="432" width="20" height="20" rx="6" ry="6"/>
-    <text class="legend-text" x="588" y="447">Data store</text>
+    <text class="legend-text" x="588" y="447">Database</text>
   </g>
 </svg>

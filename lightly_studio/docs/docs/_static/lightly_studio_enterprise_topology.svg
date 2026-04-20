@@ -1,6 +1,6 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1180 620" role="img" aria-labelledby="title desc">
   <title id="title">Enterprise Deployment Topology</title>
-  <desc id="desc">Enterprise deployment topology showing the same Frontend, Backend API, and Datasets DB core components as OSS, with an Auth Service added around them.</desc>
+  <desc id="desc">Enterprise deployment topology showing the same Frontend, Backend API, and Datasets Database core components as OSS, with an Authentication Service added around them.</desc>
   <defs>
     <style>
       .panel-customer { fill: #f1f5f9; stroke: #94a3b8; stroke-width: 2; stroke-dasharray: 6 4; }
@@ -22,7 +22,7 @@
 
   <!-- Customer panel -->
   <rect class="panel-customer" x="20" y="10" width="300" height="510" rx="16" ry="16"/>
-  <text class="panel-title" x="40" y="42">Customer Environment</text>
+  <text class="panel-title" x="40" y="42">Customer Network</text>
 
   <g>
     <title>User in Browser</title>
@@ -38,20 +38,20 @@
   </g>
 
   <g>
-    <title>Python API and scripts</title>
+    <title>Python Scripts</title>
     <rect class="node-service" x="50" y="395" width="240" height="92" rx="12" ry="12"/>
-    <text class="label" x="170" y="431" text-anchor="middle">Python API / Scripts</text>
+    <text class="label" x="170" y="431" text-anchor="middle">Python Scripts</text>
     <text class="small" x="170" y="456" text-anchor="middle">admin workflows via ls.connect()</text>
   </g>
 
   <!-- Enterprise outer panel -->
   <rect class="panel-enterprise" x="350" y="10" width="810" height="510" rx="16" ry="16"/>
-  <text class="panel-title" x="370" y="42">Enterprise Application Environment</text>
+  <text class="panel-title" x="370" y="42">Enterprise Deployment</text>
 
   <g>
-    <title>Auth Service</title>
+    <title>Authentication Service</title>
     <rect class="node-security" x="430" y="115" width="220" height="76" rx="12" ry="12"/>
-    <text class="label" x="540" y="160" text-anchor="middle">Auth Service</text>
+    <text class="label" x="540" y="160" text-anchor="middle">Authentication Service</text>
   </g>
 
   <!-- LightlyStudio Core nested panel -->
@@ -73,7 +73,7 @@
   <g>
     <title>Datasets database</title>
     <rect class="node-data" x="780" y="395" width="320" height="92" rx="12" ry="12"/>
-    <text class="label" x="940" y="447" text-anchor="middle">Datasets DB</text>
+    <text class="label" x="940" y="447" text-anchor="middle">Datasets Database</text>
   </g>
 
   <!-- Edges (rows aligned at y=153, y=294, y=441) -->
@@ -101,7 +101,7 @@
     <text class="legend-text" x="428" y="583">Security / identity</text>
 
     <rect class="node-data" x="600" y="568" width="20" height="20" rx="6" ry="6"/>
-    <text class="legend-text" x="628" y="583">Data store</text>
+    <text class="legend-text" x="628" y="583">Database</text>
 
     <rect class="node-external" x="760" y="568" width="20" height="20" rx="6" ry="6"/>
     <text class="legend-text" x="788" y="583">Customer-managed asset</text>

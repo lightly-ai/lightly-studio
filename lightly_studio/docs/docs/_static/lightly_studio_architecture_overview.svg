@@ -1,6 +1,6 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 840 590" role="img" aria-labelledby="title desc">
   <title id="title">Core LightlyStudio Architecture</title>
-  <desc id="desc">Core LightlyStudio architecture showing the shared Frontend, Backend API, and Datasets DB components used across deployment models.</desc>
+  <desc id="desc">Core LightlyStudio architecture showing the shared Frontend, Backend API, and Datasets Database components used across deployment models.</desc>
   <defs>
     <style>
       .panel-customer { fill: #f1f5f9; stroke: #94a3b8; stroke-width: 2; stroke-dasharray: 6 4; }
@@ -20,7 +20,7 @@
 
   <!-- Customer panel -->
   <rect class="panel-customer" x="20" y="10" width="320" height="490" rx="16" ry="16"/>
-  <text class="panel-title" x="40" y="42">Customer Environment</text>
+  <text class="panel-title" x="40" y="42">Customer Network</text>
 
   <g>
     <title>User in Browser</title>
@@ -36,9 +36,9 @@
   </g>
 
   <g>
-    <title>Python API and scripts</title>
+    <title>Python Scripts</title>
     <rect class="node-service" x="55" y="370" width="250" height="92" rx="12" ry="12"/>
-    <text class="label" x="180" y="406" text-anchor="middle">Python API / Scripts</text>
+    <text class="label" x="180" y="406" text-anchor="middle">Python Scripts</text>
     <text class="small" x="180" y="431" text-anchor="middle">read, index, and update data</text>
   </g>
 
@@ -61,7 +61,7 @@
   <g>
     <title>Datasets database</title>
     <rect class="node-data" x="455" y="370" width="290" height="92" rx="12" ry="12"/>
-    <text class="label" x="600" y="422" text-anchor="middle">Datasets DB</text>
+    <text class="label" x="600" y="422" text-anchor="middle">Datasets Database</text>
   </g>
 
   <!-- Edges -->
@@ -85,7 +85,7 @@
     <text class="legend-text" x="208" y="563">Application service</text>
 
     <rect class="node-data" x="360" y="548" width="20" height="20" rx="6" ry="6"/>
-    <text class="legend-text" x="388" y="563">Data store</text>
+    <text class="legend-text" x="388" y="563">Database</text>
 
     <rect class="node-external" x="500" y="548" width="20" height="20" rx="6" ry="6"/>
     <text class="legend-text" x="528" y="563">Customer-managed asset</text>
