@@ -29,7 +29,7 @@ Set the `LIGHTLY_STUDIO_LICENSE_KEY` environment variable before using sampling 
 
 ## Sampling in Python
 
-Each strategy is configured directly from a `DatasetQuery` via `selection()`. The sampled items are stored under the tag passed as `selection_result_tag_name`, so you can filter or export them later.
+Each strategy is configured directly from a [`DatasetQuery`](../api/dataset_query.md#lightly_studio.core.dataset_query.dataset_query.DatasetQuery) via [`selection()`](../api/dataset_query.md#lightly_studio.core.dataset_query.dataset_query.DatasetQuery.selection). The sampled items are stored under the tag passed as `selection_result_tag_name`, so you can filter or export them later.
 
 !!! note "Tag names must be unique"
     `selection_result_tag_name` must be a tag name that does not yet exist in the dataset.
@@ -53,7 +53,7 @@ dataset.match(ImageSampleField.width >= 1920).selection().diverse(
 
 See [Search and Filter](search_and_filter.md#query-in-python) for more filtering options.
 
-### Strategies
+### Sampling Strategies
 
 #### Diverse
 
@@ -75,17 +75,7 @@ dataset.query().selection().diverse(
 ls.start_gui()
 ```
 
-If your dataset has multiple embedding models, pass `embedding_model_name` to specify which one to use. If omitted and only one model exists, it is used automatically; if multiple models exist and no name is given, an error is raised.
-
-```py
-dataset.query().selection().diverse(
-    n_samples_to_select=10,
-    selection_result_tag_name="diverse_selection",
-    embedding_model_name="my_model",
-)
-```
-
-See [`Selection.diverse`](../api/selection.md#lightly_studio.selection.select.Selection.diverse) for the full API reference.
+If your dataset has multiple embedding models, pass `embedding_model_name` to specify which one to use. See [`Selection.diverse`](../api/selection.md#lightly_studio.selection.select.Selection.diverse) for the full API reference.
 
 #### Metadata Weighting
 
@@ -128,16 +118,7 @@ dataset.query().selection().metadata_weighting(
 )
 ```
 
-If your dataset has multiple embedding models, pass `embedding_model_name` to select which one to use:
-
-```py
-dataset.compute_typicality_metadata(
-    metadata_name="typicality",
-    embedding_model_name="my_model",
-)
-```
-
-See [`Dataset.compute_typicality_metadata`](../api/dataset.md#lightly_studio.core.dataset.Dataset.compute_typicality_metadata) for the full API reference.
+If your dataset has multiple embedding models, pass `embedding_model_name` to select which one to use. See [`Dataset.compute_typicality_metadata`](../api/dataset.md#lightly_studio.core.dataset.Dataset.compute_typicality_metadata) for the full API reference.
 
 #### Similarity
 
@@ -168,25 +149,11 @@ dataset.query().selection().metadata_weighting(
 )
 ```
 
-`metadata_name` is optional. When omitted, a unique name is generated automatically and returned — use the return value as the `metadata_key`:
-
-```py
-metadata_name = dataset.compute_similarity_metadata(
-    query_tag_name="my_query_samples",
-)
-
-dataset.query().selection().metadata_weighting(
-    n_samples_to_select=10,
-    selection_result_tag_name="similar_to_query_selection",
-    metadata_key=metadata_name,
-)
-```
-
-See [`Dataset.compute_similarity_metadata`](../api/dataset.md#lightly_studio.core.dataset.Dataset.compute_similarity_metadata) for the full API reference.
+`metadata_name` is optional. When omitted, a unique name is generated automatically and returned. See [`Dataset.compute_similarity_metadata`](../api/dataset.md#lightly_studio.core.dataset.Dataset.compute_similarity_metadata) for the full API reference.
 
 #### Class Balancing
 
-Class balancing selects samples based on the distribution of annotation classes. This is useful for fixing class imbalance — for example, ensuring you have enough "pedestrians" in a driving dataset.
+Class balancing selects samples based on the distribution of annotation classes. This is useful for fixing class imbalance. For example, ensuring you have enough "pedestrians" in a driving dataset.
 
 !!! note "Annotations required"
     This strategy requires the dataset to have annotations, e.g., loaded via `add_samples_from_coco` or `add_samples_from_yolo`.
