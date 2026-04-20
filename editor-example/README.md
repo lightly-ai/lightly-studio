@@ -9,6 +9,25 @@ A minimal example that wires Monaco Editor to a Langium language server for the 
 - A browser language server worker
 - Example Lightly Query snippets with diagnostics
 
+## Features
+
+### Syntax Highlighting & Validation
+- Custom syntax highlighting for Lightly Query Language
+- Real-time validation with error/warning messages
+- Support for logical operators (AND, OR, NOT)
+- Field-aware syntax (ImageSampleField, VideoSampleField)
+
+### IntelliSense & Autocomplete
+- **Hover documentation**: Hover over keywords, operators, and methods to see documentation
+- **Dynamic tag autocomplete**: Type `tags.contains("` to see available tags
+  - Currently uses hardcoded tags
+  - See [DYNAMIC_AUTOCOMPLETE.md](./DYNAMIC_AUTOCOMPLETE.md) for API integration guide
+- Context-aware completion suggestions
+
+### Performance
+- Language Server runs in Web Worker (non-blocking UI)
+- Real-time parsing and validation
+
 ## Project structure
 
 ```text

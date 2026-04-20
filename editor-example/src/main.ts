@@ -341,6 +341,84 @@ monaco.languages.registerHoverProvider('lightly-query', {
     }
 });
 
+// Hardcoded tags for autocomplete (in production, fetch from API)
+const availableTags = [
+    'reviewed',
+    'needs-labeling',
+    'approved',
+    'rejected',
+    'high-quality',
+    'low-quality',
+    'duplicate',
+    'archived',
+    'test',
+    'validation',
+    'training'
+];
+
+/**
+ * Tag Completion Provider
+ * 
+ * Provides autocomplete suggestions for tags when user types: tags.contains("
+ * 
+ * To fetch tags dynamically from your API:
+ * 1. Replace hardcoded `availableTags` array with an async fetch call
+ * 2. Example API integration:
+ * 
+ *    let cachedTags: string[] = [];
+ *    
+ *    async function fetchAvailableTags(): Promise<string[]> {
+ *        try {
+ *            const response = await fetch('/api/datasets/tags');
+ *            const data = await response.json();
+ *            cachedTags = data.tags;
+ *            return cachedTags;
+ *        } catch (error) {
+ *            console.error('Failed to fetch tags:', error);
+ *            return cachedTags; // fallback to cache
+ *        }
+ *    }
+ *    
+ *    // Refresh tags periodically
+ *    setInterval(() => fetchAvailableTags(), 60000); // every 60s
+ *    
+ * 3. In provideCompletionItems, use the fetched tags instead
+ */
+monaco.languages.registerCompletionItemProvider('lightly-query', {
+    triggerCharacters: ['"', "'"],
+    
+    provideCompletionItems(model, position) {
+        const lineContent = model.getLineContent(position.lineNumber);
+        const textUntilPosition = lineContent.substring(0, position.column - 1);
+        
+        // Check if we're inside tags.contains(" or tags.contains('
+        const tagsContainsMatch = textUntilPosition.match(/tags\.contains\(["']$/);
+        
+        if (tagsContainsMatch) {
+            const wordInfo = model.getWordUntilPosition(position);
+            const range = {
+                startLineNumber: position.lineNumber,
+                endLineNumber: position.lineNumber,
+                startColumn: wordInfo.startColumn,
+                endColumn: wordInfo.endColumn
+            };
+            
+            const suggestions: monaco.languages.CompletionItem[] = availableTags.map(tag => ({
+                label: tag,
+                kind: monaco.languages.CompletionItemKind.Value,
+                detail: 'Available tag',
+                documentation: `Filter samples with tag: "${tag}"`,
+                insertText: tag,
+                range: range
+            }));
+            
+            return { suggestions };
+        }
+        
+        return { suggestions: [] };
+    }
+});
+
 // Create the editor with Lightly Query Language examples
 const editor = monaco.editor.create(document.getElementById('editor')!, {
     value: `# Lightly Query Language Examples
