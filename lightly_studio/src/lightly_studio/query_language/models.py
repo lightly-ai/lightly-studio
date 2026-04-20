@@ -88,52 +88,59 @@ class AnnotationGeometryField(str, Enum):
     HEIGHT = "height"
 
 
+StringField = Union[ImageStringField, VideoStringField]
+IntegerField = Union[ImageIntegerField, VideoIntegerField]
+DatetimeField = ImageDatetimeField
+FloatField = VideoFloatField
+EqualityFloatField = VideoEqualityFloatField
+
+
 class StringFieldComparison(BaseModel):
-    """Leaf node comparing a string sample field to a string value."""
+    """Leaf node for equality comparisons on string sample fields."""
 
     type: Literal["string_field_comparison"] = "string_field_comparison"
-    field: ImageStringField | VideoStringField
+    field: StringField
     operator: EqualityComparisonOperator
     value: StrictStr
 
 
 class IntegerFieldComparison(BaseModel):
-    """Leaf node comparing an integer sample field to an integer value."""
+    """Leaf node for ordinal comparisons on integer sample fields."""
 
     type: Literal["integer_field_comparison"] = "integer_field_comparison"
-    field: ImageIntegerField | VideoIntegerField
+    field: IntegerField
     operator: OrdinalComparisonOperator
     value: StrictInt
 
 
 class DatetimeFieldComparison(BaseModel):
-    """Leaf node comparing a datetime sample field to a datetime value."""
+    """Leaf node for ordinal comparisons on datetime sample fields."""
 
     type: Literal["datetime_field_comparison"] = "datetime_field_comparison"
-    field: ImageDatetimeField
+    field: DatetimeField
     operator: OrdinalComparisonOperator
     value: datetime
 
 
-class FloatFieldComparison(BaseModel):
-    """Leaf node comparing a float sample field to a numeric value."""
+class OrdinalFloatFieldComparison(BaseModel):
+    """Leaf node for ordinal comparisons on float sample fields."""
 
     type: Literal["float_field_comparison"] = "float_field_comparison"
-    field: VideoFloatField
+    field: FloatField
     operator: OrdinalComparisonOperator
     value: StrictInt | StrictFloat
 
 
 class EqualityFloatFieldComparison(BaseModel):
-    """Leaf node comparing an equality-only float field to a numeric value."""
+    """Leaf node for equality comparisons on equality-only float sample fields."""
 
     type: Literal["equality_float_field_comparison"] = "equality_float_field_comparison"
-    field: VideoEqualityFloatField
+    field: EqualityFloatField
     operator: EqualityComparisonOperator
     value: StrictInt | StrictFloat
 
 
-class TagContains(BaseModel):
+class TagsContainsExpression(BaseModel):
     """Leaf node checking if a sample has a specific tag."""
 
     type: Literal["tag_contains"] = "tag_contains"
@@ -141,7 +148,7 @@ class TagContains(BaseModel):
 
 
 class AnnotationLabelComparison(BaseModel):
-    """Criterion comparing an annotation label to a string value."""
+    """Criterion for equality comparisons on annotation labels."""
 
     type: Literal["annotation_label_comparison"] = "annotation_label_comparison"
     field: AnnotationLabelField
@@ -150,7 +157,7 @@ class AnnotationLabelComparison(BaseModel):
 
 
 class AnnotationGeometryComparison(BaseModel):
-    """Criterion comparing annotation geometry to a numeric value."""
+    """Criterion for ordinal comparisons on annotation geometry."""
 
     type: Literal["annotation_geometry_comparison"] = "annotation_geometry_comparison"
     field: AnnotationGeometryField
@@ -168,21 +175,21 @@ InstanceSegmentationCriterion = Annotated[
 ]
 
 
-class ClassificationAnnotationQuery(BaseModel):
+class ClassificationMatchExpression(BaseModel):
     """Leaf node checking if a sample has a matching classification annotation."""
 
     type: Literal["classification_annotation_query"] = "classification_annotation_query"
     criteria: list[AnnotationLabelComparison] = Field(min_length=1)
 
 
-class ObjectDetectionAnnotationQuery(BaseModel):
+class ObjectDetectionMatchExpression(BaseModel):
     """Leaf node checking if a sample has a matching object detection annotation."""
 
     type: Literal["object_detection_annotation_query"] = "object_detection_annotation_query"
     criteria: list[ObjectDetectionCriterion] = Field(min_length=1)
 
 
-class InstanceSegmentationAnnotationQuery(BaseModel):
+class InstanceSegmentationMatchExpression(BaseModel):
     """Leaf node checking if a sample has a matching instance segmentation annotation."""
 
     type: Literal["instance_segmentation_annotation_query"] = (
@@ -191,21 +198,21 @@ class InstanceSegmentationAnnotationQuery(BaseModel):
     criteria: list[InstanceSegmentationCriterion] = Field(min_length=1)
 
 
-class AndNode(BaseModel):
+class AndExpression(BaseModel):
     """Boolean AND of multiple query nodes."""
 
     type: Literal["and"] = "and"
     children: list[QueryNode] = Field(min_length=1)
 
 
-class OrNode(BaseModel):
+class OrExpression(BaseModel):
     """Boolean OR of multiple query nodes."""
 
     type: Literal["or"] = "or"
     children: list[QueryNode] = Field(min_length=1)
 
 
-class NotNode(BaseModel):
+class NotExpression(BaseModel):
     """Boolean NOT of a single query node."""
 
     type: Literal["not"] = "not"
@@ -217,22 +224,22 @@ QueryNode = Annotated[
         StringFieldComparison,
         IntegerFieldComparison,
         DatetimeFieldComparison,
-        FloatFieldComparison,
+        OrdinalFloatFieldComparison,
         EqualityFloatFieldComparison,
-        TagContains,
-        ClassificationAnnotationQuery,
-        ObjectDetectionAnnotationQuery,
-        InstanceSegmentationAnnotationQuery,
-        AndNode,
-        OrNode,
-        NotNode,
+        TagsContainsExpression,
+        ClassificationMatchExpression,
+        ObjectDetectionMatchExpression,
+        InstanceSegmentationMatchExpression,
+        AndExpression,
+        OrExpression,
+        NotExpression,
     ],
     Field(discriminator="type"),
 ]
 
-AndNode.model_rebuild()
-OrNode.model_rebuild()
-NotNode.model_rebuild()
+AndExpression.model_rebuild()
+OrExpression.model_rebuild()
+NotExpression.model_rebuild()
 
 
 class QueryTree(BaseModel):
