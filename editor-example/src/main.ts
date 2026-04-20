@@ -176,6 +176,16 @@ const hoverDocs = new Map<string, HoverDoc>([
         description: 'Generic sample field namespace when the query is not image- or video-specific.',
         example: 'SampleField.created_at >= date("2024-01-01")'
     }],
+    ['width', {
+        label: 'Property: width',
+        description: 'Image width in pixels. Use with comparison operators to filter by image dimensions.',
+        example: 'ImageSampleField.width > 1920'
+    }],
+    ['height', {
+        label: 'Property: height',
+        description: 'Image height in pixels. Use with comparison operators to filter by image dimensions.',
+        example: 'ImageSampleField.height <= 1080'
+    }],
     ['contains', {
         label: 'Method: contains(...)',
         description: 'Checks whether the field contains the provided substring or value.',
