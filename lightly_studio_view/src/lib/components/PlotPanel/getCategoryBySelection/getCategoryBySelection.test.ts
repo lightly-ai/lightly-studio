@@ -35,7 +35,7 @@ describe('getCategoryBySelection', () => {
         const reducer = getCategoryBySelection(null, mockData);
 
         expect(reducer(1, 0)).toBe(1);
-        expect(reducer(2, 1)).toBe(2);
+        expect(reducer(1, 1)).toBe(1);
         expect(reducer(0, 2)).toBe(0);
         expect(isPointInPolygon).not.toHaveBeenCalled();
     });
@@ -45,7 +45,7 @@ describe('getCategoryBySelection', () => {
         const reducer = getCategoryBySelection(undefined as unknown as Point[] | null, mockData);
 
         expect(reducer(1, 0)).toBe(1);
-        expect(reducer(2, 1)).toBe(2);
+        expect(reducer(1, 1)).toBe(1);
         expect(isPointInPolygon).not.toHaveBeenCalled();
     });
 
@@ -82,17 +82,6 @@ describe('getCategoryBySelection', () => {
         expect(isPointInPolygon).toHaveBeenCalledWith(3.0, 7.0, mockSelection);
     });
 
-    it('should return prevValue when prevValue is 2 even if point is in selection', () => {
-        const mockData = createMockArrowData();
-        vi.mocked(isPointInPolygon).mockReturnValue(true);
-
-        const reducer = getCategoryBySelection(mockSelection, mockData);
-        const result = reducer(2, 1);
-
-        expect(result).toBe(2);
-        expect(isPointInPolygon).toHaveBeenCalledWith(2.0, 6.0, mockSelection);
-    });
-
     it('should work correctly with array reduce for multiple points', () => {
         const mockData = createMockArrowData();
         // Mock: first two points are in selection, last two are not
@@ -115,11 +104,11 @@ describe('getCategoryBySelection', () => {
         vi.mocked(isPointInPolygon).mockReturnValue(true);
 
         const reducer = getCategoryBySelection(mockSelection, mockData);
-        const categories = [0, 1, 2, 1];
+        const categories = [0, 1, 0, 1];
         const result = categories.map(reducer);
 
         // In-polygon points keep their prevValue
-        expect(result).toEqual([0, 1, 2, 1]);
+        expect(result).toEqual([0, 1, 0, 1]);
     });
 
     it('should use correct x and y coordinates from ArrowData', () => {
