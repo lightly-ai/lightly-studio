@@ -3,10 +3,9 @@
  * DO NOT EDIT MANUALLY!
  ******************************************************************************/
 
-import type { LangiumCoreServices, LangiumGeneratedCoreServices, LanguageMetaData, Module } from 'langium';
-import {  LightlyQueryGrammar } from './grammar.js';
-
-
+import type { LangiumSharedCoreServices, LangiumCoreServices, LangiumGeneratedCoreServices, LangiumGeneratedSharedCoreServices, LanguageMetaData, Module } from 'langium';
+import { LightlyQueryAstReflection } from './ast.js';
+import { LightlyQueryGrammar } from './grammar.js';
 
 export const LightlyQueryLanguageMetaData = {
     languageId: 'lightly-query',
@@ -15,8 +14,9 @@ export const LightlyQueryLanguageMetaData = {
     mode: 'development'
 } as const satisfies LanguageMetaData;
 
-
-
+export const LightlyQueryGeneratedSharedModule: Module<LangiumSharedCoreServices, LangiumGeneratedSharedCoreServices> = {
+    AstReflection: () => new LightlyQueryAstReflection()
+};
 
 export const LightlyQueryGeneratedModule: Module<LangiumCoreServices, LangiumGeneratedCoreServices> = {
     Grammar: () => LightlyQueryGrammar(),

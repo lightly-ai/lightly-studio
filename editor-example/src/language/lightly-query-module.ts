@@ -8,7 +8,7 @@ import {
     LangiumSharedServices,
     PartialLangiumServices
 } from 'langium';
-import { LightlyQueryGeneratedModule, LightlyQueryGeneratedSharedModule } from './generated/module.js';
+import { LightlyQueryGeneratedModule } from './generated/module.js';
 import { LightlyQueryValidator, LightlyQueryValidationRegistry } from './lightly-query-validator.js';
 
 /**
@@ -54,10 +54,7 @@ export function createLightlyQueryServices(context: DefaultSharedModuleContext):
     shared: LangiumSharedServices,
     LightlyQuery: LightlyQueryServices
 } {
-    const shared = inject(
-        createDefaultSharedModule(context),
-        LightlyQueryGeneratedSharedModule
-    );
+    const shared = createDefaultSharedModule(context);
     const LightlyQuery = inject(
         createDefaultModule({ shared }),
         LightlyQueryGeneratedModule,
