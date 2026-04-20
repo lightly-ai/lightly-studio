@@ -1,141 +1,257 @@
 import * as monaco from 'monaco-editor';
-import { MonacoLanguageClient } from 'monaco-languageclient';
-import {
-    CloseAction,
-    ErrorAction,
-    MessageTransports
-} from 'vscode-languageclient';
-import {
-    toSocket,
-    WebSocketMessageReader,
-    WebSocketMessageWriter
-} from 'vscode-languageclient';
-import { BrowserMessageReader, BrowserMessageWriter } from 'vscode-languageserver-protocol/browser.js';
+
+const sqlKeywords = [
+    'SELECT',
+    'FROM',
+    'WHERE',
+    'JOIN',
+    'LEFT',
+    'RIGHT',
+    'INNER',
+    'ON',
+    'GROUP',
+    'BY',
+    'ORDER',
+    'LIMIT',
+    'AS',
+    'AND',
+    'OR',
+    'NOT',
+    'NULL',
+    'LIKE',
+    'IN',
+    'DISTINCT',
+    'ASC',
+    'DESC'
+];
+
+const sqlFunctions = ['COUNT', 'SUM', 'AVG', 'MIN', 'MAX'];
+const sqlTables = ['users', 'orders', 'products'];
+const sqlColumns = ['id', 'name', 'email', 'status', 'created_at', 'total_amount', 'user_id'];
+
+const hoverDocs: Record<string, string> = {
+    SELECT:
+        '**SELECT**\n\nChoose which columns or expressions to return from a query.\n\n' +
+        '```sql\nSELECT id, name\nFROM users;\n```',
+    FROM:
+        '**FROM**\n\nSpecify the source table or subquery.\n\n' +
+        '```sql\nSELECT id\nFROM users;\n```',
+    WHERE:
+        '**WHERE**\n\nFilter rows before grouping or ordering.\n\n' +
+        '```sql\nSELECT *\nFROM orders\nWHERE total_amount > 100;\n```',
+    JOIN:
+        '**JOIN**\n\nCombine rows from two tables using a matching condition.\n\n' +
+        '```sql\nSELECT users.name, orders.total_amount\nFROM users\nJOIN orders ON users.id = orders.user_id;\n```',
+    ORDER:
+        '**ORDER BY**\n\nSort the result set by one or more columns.\n\n' +
+        '```sql\nSELECT name\nFROM users\nORDER BY created_at DESC;\n```',
+    GROUP:
+        '**GROUP BY**\n\nGroup rows before applying aggregate functions like `COUNT` or `SUM`.\n\n' +
+        '```sql\nSELECT status, COUNT(*)\nFROM users\nGROUP BY status;\n```',
+    LIMIT:
+        '**LIMIT**\n\nRestrict how many rows are returned.\n\n' +
+        '```sql\nSELECT *\nFROM users\nLIMIT 10;\n```',
+    COUNT:
+        '**COUNT(...)**\n\nAggregate function that returns the number of rows or non-null values.\n\n' +
+        '```sql\nSELECT COUNT(*)\nFROM users;\n```',
+    users:
+        '**users**\n\nExample table containing user records.\n\nColumns: `id`, `name`, `email`, `status`, `created_at`.',
+    orders:
+        '**orders**\n\nExample table containing purchase records.\n\nColumns: `id`, `user_id`, `total_amount`, `created_at`.',
+    products:
+        '**products**\n\nExample table containing catalog items.\n\nColumns: `id`, `name`, `status`.'
+};
 
 // Configure Monaco environment
 self.MonacoEnvironment = {
     getWorker(_: string, label: string) {
-        if (label === 'dataset-query') {
-            return new Worker(new URL('./language-server-worker.ts', import.meta.url), { type: 'module' });
+        if (label === 'sql-demo') {
+            return new Worker(new URL('monaco-editor/esm/vs/editor/editor.worker.js', import.meta.url), {
+                type: 'module'
+            });
         }
-        return new Worker(new URL('monaco-editor/esm/vs/editor/editor.worker.js', import.meta.url), { type: 'module' });
+
+        return new Worker(new URL('monaco-editor/esm/vs/editor/editor.worker.js', import.meta.url), {
+            type: 'module'
+        });
     }
 };
 
-// Register DatasetQuery language
 monaco.languages.register({
-    id: 'dataset-query',
-    extensions: ['.py'],
-    aliases: ['DatasetQuery', 'dataset-query', 'Python'],
-    mimetypes: ['text/x-python']
+    id: 'sql-demo',
+    extensions: ['.sql'],
+    aliases: ['SQL Demo', 'sql-demo']
 });
 
-monaco.languages.setMonarchTokensProvider('dataset-query', {
-    keywords: [
-        'dataset',
-        'query',
-        'match',
-        'order_by',
-        'AND',
-        'OR',
-        'NOT',
-        'ObjectDetectionQuery',
-        'ClassificationQuery',
-        'InstanceSegmentationQuery',
-        'ObjectDetectionField',
-        'ClassificationField',
-        'ImageSampleField',
-        'OrderByField',
-        'desc',
-        'asc',
-        'text_similarity'
-    ],
-    operators: ['==', '!=', '>=', '<=', '>', '<'],
+monaco.languages.setMonarchTokensProvider('sql-demo', {
     tokenizer: {
         root: [
-            [/#.*$/, 'comment'],
-            [/"/, { token: 'string.quote', bracket: '@open', next: '@string' }],
-            [/\b\d+\b/, 'number'],
+            [/--.*$/, 'comment'],
+            [/'/, { token: 'string.quote', bracket: '@open', next: '@string' }],
+            [/\b\d+(\.\d+)?\b/, 'number'],
+            [/[;,.]/, 'delimiter'],
             [/[()]/, '@brackets'],
-            [/[.,]/, 'delimiter'],
-            [/@operators/, 'operator'],
-            [/[a-zA-Z_][a-zA-Z0-9_]*/, {
+            [/(<=|>=|<>|!=|=|<|>)/, 'operator'],
+            [/[a-zA-Z_][\w$]*/, {
                 cases: {
-                    '@keywords': 'keyword',
+                    '@sqlFunctions': 'predefined',
+                    '@sqlKeywords': 'keyword',
                     '@default': 'identifier'
                 }
             }]
         ],
         string: [
-            [/[^\\"]+/, 'string'],
-            [/\\./, 'string.escape'],
-            [/"/, { token: 'string.quote', bracket: '@close', next: '@pop' }]
+            [/[^']+/, 'string'],
+            [/''/, 'string.escape'],
+            [/'/, { token: 'string.quote', bracket: '@close', next: '@pop' }]
         ]
-    }
+    },
+    sqlKeywords,
+    sqlFunctions
 });
 
-monaco.editor.defineTheme('dataset-query-theme', {
+monaco.editor.defineTheme('sql-demo-theme', {
     base: 'vs-dark',
     inherit: true,
     rules: [
-        { token: 'comment', foreground: '6A9955' },
-        { token: 'keyword', foreground: '569CD6' },
+        { token: 'comment', foreground: '6A9955', fontStyle: 'italic' },
+        { token: 'keyword', foreground: '4FC1FF', fontStyle: 'bold' },
+        { token: 'predefined', foreground: 'DCDCAA' },
         { token: 'identifier', foreground: 'D4D4D4' },
         { token: 'string', foreground: 'CE9178' },
         { token: 'number', foreground: 'B5CEA8' },
-        { token: 'operator', foreground: 'D4D4D4' },
+        { token: 'operator', foreground: 'C586C0' },
         { token: 'delimiter', foreground: 'D4D4D4' }
     ],
     colors: {
-        'editor.background': '#1E1E1E'
+        'editor.background': '#111827',
+        'editorLineNumber.foreground': '#4B5563',
+        'editorLineNumber.activeForeground': '#9CA3AF',
+        'editor.selectionBackground': '#264F78',
+        'editor.inactiveSelectionBackground': '#1F2937'
     }
 });
 
-// Create the editor
+monaco.languages.registerHoverProvider('sql-demo', {
+    provideHover(model, position) {
+        const word = model.getWordAtPosition(position);
+        if (!word) {
+            return null;
+        }
+
+        const key = word.word.toUpperCase();
+        const original = word.word;
+        const content = hoverDocs[key] ?? hoverDocs[original];
+        if (!content) {
+            return null;
+        }
+
+        return {
+            range: new monaco.Range(position.lineNumber, word.startColumn, position.lineNumber, word.endColumn),
+            contents: [{ value: content }]
+        };
+    }
+});
+
+monaco.languages.registerCompletionItemProvider('sql-demo', {
+    triggerCharacters: [' ', '.'],
+    provideCompletionItems(model, position) {
+        const word = model.getWordUntilPosition(position);
+        const range = {
+            startLineNumber: position.lineNumber,
+            endLineNumber: position.lineNumber,
+            startColumn: word.startColumn,
+            endColumn: word.endColumn
+        };
+
+        const keywordSuggestions = sqlKeywords.map((keyword) => ({
+            label: keyword,
+            kind: monaco.languages.CompletionItemKind.Keyword,
+            insertText: keyword,
+            range
+        }));
+
+        const functionSuggestions = sqlFunctions.map((name) => ({
+            label: name,
+            kind: monaco.languages.CompletionItemKind.Function,
+            insertText: `${name}($1)`,
+            insertTextRules: monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet,
+            range
+        }));
+
+        const tableSuggestions = sqlTables.map((table) => ({
+            label: table,
+            kind: monaco.languages.CompletionItemKind.Class,
+            insertText: table,
+            detail: 'Example table',
+            range
+        }));
+
+        const columnSuggestions = sqlColumns.map((column) => ({
+            label: column,
+            kind: monaco.languages.CompletionItemKind.Field,
+            insertText: column,
+            detail: 'Example column',
+            range
+        }));
+
+        const snippetSuggestions = [
+            {
+                label: 'SELECT statement',
+                kind: monaco.languages.CompletionItemKind.Snippet,
+                insertText:
+                    'SELECT ${1:id}, ${2:name}\nFROM ${3:users}\nWHERE ${4:status} = ${5:\'active\'}\nORDER BY ${6:created_at} DESC\nLIMIT ${7:10};',
+                insertTextRules: monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet,
+                documentation: 'Basic SQL query template',
+                range
+            },
+            {
+                label: 'JOIN query',
+                kind: monaco.languages.CompletionItemKind.Snippet,
+                insertText:
+                    'SELECT ${1:users.name}, ${2:orders.total_amount}\nFROM users\nJOIN orders ON users.id = orders.user_id\nWHERE ${3:orders.total_amount} > ${4:100};',
+                insertTextRules: monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet,
+                documentation: 'Join users and orders',
+                range
+            }
+        ];
+
+        return {
+            suggestions: [
+                ...snippetSuggestions,
+                ...keywordSuggestions,
+                ...functionSuggestions,
+                ...tableSuggestions,
+                ...columnSuggestions
+            ]
+        };
+    }
+});
+
 const editor = monaco.editor.create(document.getElementById('editor')!, {
-    value: `# Welcome to Dataset Query Language!
-# Write Python dataset queries with LSP support
+    value: `-- SQL editor demo
+-- Hover SELECT, FROM, WHERE, JOIN, COUNT, or a table name
+-- Press Ctrl+Space for autocomplete
 
-# Basic annotation query - find images with cats
-dataset.query().match(
-    ObjectDetectionQuery.match(ObjectDetectionField.label == "cat")
-)
-
-# Logical AND - find images with exactly 1 cat and 1 dog
-dataset.query().match(
-    AND(
-        ObjectDetectionQuery.count(ObjectDetectionField.label == "cat") == 1,
-        ObjectDetectionQuery.count(ObjectDetectionField.label == "dog") == 1
-    )
-)
-
-# Query with metadata - cats in large images
-dataset.query().match(
-    AND(
-        ObjectDetectionQuery.match(ObjectDetectionField.label == "cat"),
-        ImageSampleField.width > 500
-    )
-)
-
-# With sorting - sort by cat count descending
-dataset.query().match(
-    AND(
-        ObjectDetectionQuery.match(ObjectDetectionField.label == "cat"),
-        ImageSampleField.width > 500
-    )
-).order_by(
-    OrderByField(
-        ObjectDetectionQuery.count(ObjectDetectionField.label == "cat")
-    ).desc()
-)
+SELECT
+    users.id,
+    users.name,
+    orders.total_amount,
+    COUNT(orders.id) AS order_count
+FROM users
+JOIN orders ON users.id = orders.user_id
+WHERE orders.total_amount > 100
+ORDER BY orders.created_at DESC
+LIMIT 25;
 `,
-    language: 'dataset-query',
-    theme: 'dataset-query-theme',
+    language: 'sql-demo',
+    theme: 'sql-demo-theme',
     automaticLayout: true,
     minimap: { enabled: false },
     lineNumbers: 'on',
-    fontSize: 13,
-    // Enable autocomplete and hover features
+    fontSize: 14,
+    padding: { top: 16, bottom: 16 },
+    smoothScrolling: true,
     suggestOnTriggerCharacters: true,
     quickSuggestions: {
         other: true,
@@ -143,46 +259,18 @@ dataset.query().match(
         strings: false
     },
     suggest: {
-        showMethods: true,
-        showFunctions: true,
         showKeywords: true,
-        showProperties: true,
+        showFunctions: true,
+        showFields: true,
+        showSnippets: true,
         snippetsPreventQuickSuggestions: false
-    },
-    parameterHints: {
-        enabled: true
     },
     hover: {
         enabled: true,
-        delay: 300
+        delay: 250
     }
 });
 
-// Create language client
-function createLanguageClient(worker: Worker): MonacoLanguageClient {
-    const reader = new BrowserMessageReader(worker);
-    const writer = new BrowserMessageWriter(worker);
-    
-    return new MonacoLanguageClient({
-        name: 'DatasetQuery Language Client',
-        clientOptions: {
-            documentSelector: [{ language: 'dataset-query' }],
-            errorHandler: {
-                error: () => ({ action: ErrorAction.Continue }),
-                closed: () => ({ action: CloseAction.DoNotRestart })
-            }
-        },
-        connectionProvider: {
-            get: () => {
-                return Promise.resolve({ reader, writer });
-            }
-        }
-    });
-}
+editor.focus();
 
-// Start the language client
-const worker = new Worker(new URL('./language-server-worker.ts', import.meta.url), { type: 'module' });
-const client = createLanguageClient(worker);
-client.start();
-
-console.log('DatasetQuery Monaco Editor with Langium LSP is ready!');
+console.log('Monaco SQL demo is ready!');
