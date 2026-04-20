@@ -186,6 +186,61 @@ const hoverDocs = new Map<string, HoverDoc>([
         description: 'Image height in pixels. Use with comparison operators to filter by image dimensions.',
         example: 'ImageSampleField.height <= 1080'
     }],
+    ['tags', {
+        label: 'Property: tags',
+        description: 'List of tags associated with the sample. Use with contains() method to filter by tags.',
+        example: 'ImageSampleField.tags.contains("reviewed")'
+    }],
+    ['metadata', {
+        label: 'Property: metadata',
+        description: 'Custom metadata fields stored with the sample. Access nested properties using dot notation.',
+        example: 'ImageSampleField.metadata.confidence > 0.95'
+    }],
+    ['created_at', {
+        label: 'Property: created_at',
+        description: 'Timestamp when the sample was created. Use with date() constructor for comparisons.',
+        example: 'SampleField.created_at >= date("2024-01-01")'
+    }],
+    ['file_name', {
+        label: 'Property: file_name',
+        description: 'Name of the file. Use with string methods like startswith() or endswith().',
+        example: 'ImageSampleField.file_name.endswith(".png")'
+    }],
+    ['format', {
+        label: 'Property: format',
+        description: 'File format (e.g., "png", "jpeg", "webp").',
+        example: 'ImageSampleField.format == "png"'
+    }],
+    ['predictions', {
+        label: 'Property: predictions',
+        description: 'Array of model predictions for this sample. Access individual predictions using array indexing (e.g., predictions[0]). Each prediction typically has label, confidence, and bbox properties.',
+        example: 'ImageSampleField.predictions[0].label == "cat"'
+    }],
+    ['duration', {
+        label: 'Property: duration',
+        description: 'Video duration in seconds.',
+        example: 'VideoSampleField.duration > 60'
+    }],
+    ['fps', {
+        label: 'Property: fps',
+        description: 'Video frames per second.',
+        example: 'VideoSampleField.fps == 30'
+    }],
+    ['label', {
+        label: 'Property: label',
+        description: 'Classification or detection label/class name. For predictions, use predictions[N].label to access the label of the Nth prediction.',
+        example: 'ImageSampleField.predictions[0].label == "cat"'
+    }],
+    ['confidence', {
+        label: 'Property: confidence',
+        description: 'Prediction confidence score (0.0 to 1.0). Higher values indicate higher model confidence.',
+        example: 'ImageSampleField.predictions[0].confidence > 0.95'
+    }],
+    ['bbox', {
+        label: 'Property: bbox',
+        description: 'Bounding box coordinates for object detections. Typically has x, y, width, height properties.',
+        example: 'ImageSampleField.predictions[0].bbox.width > 100'
+    }],
     ['contains', {
         label: 'Method: contains(...)',
         description: 'Checks whether the field contains the provided substring or value.',
@@ -356,6 +411,28 @@ const availableTags = [
     'training'
 ];
 
+// Hardcoded labels for autocomplete (in production, fetch from API)
+const availableLabels = [
+    'cat',
+    'dog',
+    'person',
+    'car',
+    'bicycle',
+    'motorcycle',
+    'airplane',
+    'bus',
+    'train',
+    'truck',
+    'bird',
+    'horse',
+    'sheep',
+    'cow',
+    'elephant',
+    'bear',
+    'zebra',
+    'giraffe'
+];
+
 /**
  * Tag Completion Provider
  * 
@@ -416,6 +493,418 @@ monaco.languages.registerCompletionItemProvider('lightly-query', {
         }
         
         return { suggestions: [] };
+    }
+});
+
+/**
+ * Prediction Label Completion Provider
+ * 
+ * Provides autocomplete suggestions for prediction labels when user types:
+ * - ImageSampleField.predictions[0].label == "
+ * - predictions[1].label == "
+ * 
+ * To fetch labels dynamically from your API (similar to tags):
+ * 1. Replace hardcoded `availableLabels` array with an async fetch call
+ * 2. Example: fetch('/api/datasets/labels') or fetch('/api/models/classes')
+ * 3. Can be model-specific or dataset-specific
+ */
+monaco.languages.registerCompletionItemProvider('lightly-query', {
+    triggerCharacters: ['"', "'"],
+    
+    provideCompletionItems(model, position) {
+        const lineContent = model.getLineContent(position.lineNumber);
+        const textUntilPosition = lineContent.substring(0, position.column - 1);
+        
+        // Check if we're inside predictions[N].label == " or predictions[N].label == '
+        // Supports: predictions[0].label, predictions[1].label, etc.
+        const labelMatch = textUntilPosition.match(/predictions\[\d+\]\.label\s*(==|!=)\s*["']$/);
+        
+        if (labelMatch) {
+            const wordInfo = model.getWordUntilPosition(position);
+            const range = {
+                startLineNumber: position.lineNumber,
+                endLineNumber: position.lineNumber,
+                startColumn: wordInfo.startColumn,
+                endColumn: wordInfo.endColumn
+            };
+            
+            const suggestions: monaco.languages.CompletionItem[] = availableLabels.map(label => ({
+                label: label,
+                kind: monaco.languages.CompletionItemKind.EnumMember,
+                detail: 'Object class',
+                documentation: `Filter predictions with label: "${label}"`,
+                insertText: label,
+                range: range
+            }));
+            
+            return { suggestions };
+        }
+        
+        return { suggestions: [] };
+    }
+});
+
+/**
+ * Field Property Completion Provider
+ * 
+ * Provides autocomplete for properties after typing:
+ * - ImageSampleField. -> width, height, tags, metadata, etc.
+ * - VideoSampleField. -> duration, fps, width, height, etc.
+ * - SampleField. -> created_at, etc.
+ */
+
+interface FieldPropertyInfo {
+    label: string;
+    detail: string;
+    documentation: string;
+    insertText?: string;
+}
+
+const imageSampleFieldProperties: FieldPropertyInfo[] = [
+    {
+        label: 'width',
+        detail: 'number',
+        documentation: 'Image width in pixels',
+        insertText: 'width'
+    },
+    {
+        label: 'height',
+        detail: 'number',
+        documentation: 'Image height in pixels',
+        insertText: 'height'
+    },
+    {
+        label: 'tags',
+        detail: 'list',
+        documentation: 'Tags associated with the image sample',
+        insertText: 'tags'
+    },
+    {
+        label: 'metadata',
+        detail: 'object',
+        documentation: 'Custom metadata fields',
+        insertText: 'metadata'
+    },
+    {
+        label: 'created_at',
+        detail: 'datetime',
+        documentation: 'Timestamp when the sample was created',
+        insertText: 'created_at'
+    },
+    {
+        label: 'file_name',
+        detail: 'string',
+        documentation: 'Name of the image file',
+        insertText: 'file_name'
+    },
+    {
+        label: 'file_size',
+        detail: 'number',
+        documentation: 'Size of the file in bytes',
+        insertText: 'file_size'
+    },
+    {
+        label: 'format',
+        detail: 'string',
+        documentation: 'Image format (e.g., "png", "jpeg")',
+        insertText: 'format'
+    },
+    {
+        label: 'predictions',
+        detail: 'list',
+        documentation: 'Array of model predictions. Each prediction has properties like label, confidence, and bbox. Access using array indexing: predictions[0].label',
+        insertText: 'predictions'
+    },
+    {
+        label: 'text_similarity',
+        detail: 'method',
+        documentation: 'Calculate text similarity score',
+        insertText: 'text_similarity("${1:query}")'
+    }
+];
+
+const videoSampleFieldProperties: FieldPropertyInfo[] = [
+    {
+        label: 'duration',
+        detail: 'number',
+        documentation: 'Video duration in seconds',
+        insertText: 'duration'
+    },
+    {
+        label: 'fps',
+        detail: 'number',
+        documentation: 'Frames per second',
+        insertText: 'fps'
+    },
+    {
+        label: 'width',
+        detail: 'number',
+        documentation: 'Video width in pixels',
+        insertText: 'width'
+    },
+    {
+        label: 'height',
+        detail: 'number',
+        documentation: 'Video height in pixels',
+        insertText: 'height'
+    },
+    {
+        label: 'frame_count',
+        detail: 'number',
+        documentation: 'Total number of frames',
+        insertText: 'frame_count'
+    },
+    {
+        label: 'created_at',
+        detail: 'datetime',
+        documentation: 'Timestamp when the sample was created',
+        insertText: 'created_at'
+    },
+    {
+        label: 'tags',
+        detail: 'list',
+        documentation: 'Tags associated with the video sample',
+        insertText: 'tags'
+    }
+];
+
+const sampleFieldProperties: FieldPropertyInfo[] = [
+    {
+        label: 'created_at',
+        detail: 'datetime',
+        documentation: 'Timestamp when the sample was created',
+        insertText: 'created_at'
+    },
+    {
+        label: 'updated_at',
+        detail: 'datetime',
+        documentation: 'Timestamp when the sample was last updated',
+        insertText: 'updated_at'
+    },
+    {
+        label: 'tags',
+        detail: 'list',
+        documentation: 'Tags associated with the sample',
+        insertText: 'tags'
+    }
+];
+
+monaco.languages.registerCompletionItemProvider('lightly-query', {
+    triggerCharacters: ['.'],
+    
+    provideCompletionItems(model, position) {
+        const lineContent = model.getLineContent(position.lineNumber);
+        const textUntilPosition = lineContent.substring(0, position.column - 1);
+        
+        let properties: FieldPropertyInfo[] = [];
+        
+        // Check which field type was typed
+        if (textUntilPosition.match(/ImageSampleField\.$/)) {
+            properties = imageSampleFieldProperties;
+        } else if (textUntilPosition.match(/VideoSampleField\.$/)) {
+            properties = videoSampleFieldProperties;
+        } else if (textUntilPosition.match(/SampleField\.$/)) {
+            properties = sampleFieldProperties;
+        } else {
+            return { suggestions: [] };
+        }
+        
+        const wordInfo = model.getWordUntilPosition(position);
+        const range = {
+            startLineNumber: position.lineNumber,
+            endLineNumber: position.lineNumber,
+            startColumn: wordInfo.startColumn,
+            endColumn: wordInfo.endColumn
+        };
+        
+        const suggestions: monaco.languages.CompletionItem[] = properties.map(prop => ({
+            label: prop.label,
+            kind: prop.detail === 'method' 
+                ? monaco.languages.CompletionItemKind.Method 
+                : monaco.languages.CompletionItemKind.Property,
+            detail: prop.detail,
+            documentation: prop.documentation,
+            insertText: prop.insertText || prop.label,
+            insertTextRules: prop.insertText?.includes('${') 
+                ? monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet 
+                : undefined,
+            range: range
+        }));
+        
+        return { suggestions };
+    }
+});
+
+/**
+ * Tag Methods Completion Provider
+ * 
+ * Provides autocomplete for methods when typing after tags property:
+ * - ImageSampleField.tags. -> contains()
+ * - VideoSampleField.tags. -> contains()
+ * - SampleField.tags. -> contains()
+ */
+
+const tagMethods: FieldPropertyInfo[] = [
+    {
+        label: 'contains',
+        detail: 'method',
+        documentation: 'Check if the tag list contains a specific value. Returns true if the tag exists.',
+        insertText: 'contains("${1:tag-name}")'
+    },
+    {
+        label: 'startswith',
+        detail: 'method',
+        documentation: 'Check if any tag starts with the given prefix.',
+        insertText: 'startswith("${1:prefix}")'
+    },
+    {
+        label: 'endswith',
+        detail: 'method',
+        documentation: 'Check if any tag ends with the given suffix.',
+        insertText: 'endswith("${1:suffix}")'
+    },
+    {
+        label: 'exists',
+        detail: 'method',
+        documentation: 'Check if the tags field exists and is not empty.',
+        insertText: 'exists()'
+    },
+    {
+        label: 'is_null',
+        detail: 'method',
+        documentation: 'Check if the tags field is null or undefined.',
+        insertText: 'is_null()'
+    },
+    {
+        label: 'is_not_null',
+        detail: 'method',
+        documentation: 'Check if the tags field exists and is not null.',
+        insertText: 'is_not_null()'
+    }
+];
+
+monaco.languages.registerCompletionItemProvider('lightly-query', {
+    triggerCharacters: ['.'],
+    
+    provideCompletionItems(model, position) {
+        const lineContent = model.getLineContent(position.lineNumber);
+        const textUntilPosition = lineContent.substring(0, position.column - 1);
+        
+        // Check if we're after .tags.
+        const tagsMethodMatch = textUntilPosition.match(/\b(ImageSampleField|VideoSampleField|SampleField)\.tags\.$/);
+        
+        if (!tagsMethodMatch) {
+            return { suggestions: [] };
+        }
+        
+        const wordInfo = model.getWordUntilPosition(position);
+        const range = {
+            startLineNumber: position.lineNumber,
+            endLineNumber: position.lineNumber,
+            startColumn: wordInfo.startColumn,
+            endColumn: wordInfo.endColumn
+        };
+        
+        const suggestions: monaco.languages.CompletionItem[] = tagMethods.map(method => ({
+            label: method.label,
+            kind: monaco.languages.CompletionItemKind.Method,
+            detail: method.detail,
+            documentation: method.documentation,
+            insertText: method.insertText || method.label,
+            insertTextRules: monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet,
+            range: range
+        }));
+        
+        return { suggestions };
+    }
+});
+
+/**
+ * String Field Methods Completion Provider
+ * 
+ * Provides autocomplete for string methods on fields like:
+ * - ImageSampleField.file_name. -> startswith(), endswith(), contains(), matches()
+ * - ImageSampleField.format. -> string comparison methods
+ */
+
+const stringMethods: FieldPropertyInfo[] = [
+    {
+        label: 'startswith',
+        detail: 'method',
+        documentation: 'Check if the string starts with the given prefix.',
+        insertText: 'startswith("${1:prefix}")'
+    },
+    {
+        label: 'endswith',
+        detail: 'method',
+        documentation: 'Check if the string ends with the given suffix.',
+        insertText: 'endswith("${1:suffix}")'
+    },
+    {
+        label: 'contains',
+        detail: 'method',
+        documentation: 'Check if the string contains the given substring.',
+        insertText: 'contains("${1:substring}")'
+    },
+    {
+        label: 'icontains',
+        detail: 'method',
+        documentation: 'Case-insensitive version of contains().',
+        insertText: 'icontains("${1:substring}")'
+    },
+    {
+        label: 'matches',
+        detail: 'method',
+        documentation: 'Check if the string matches a regular expression pattern.',
+        insertText: 'matches("${1:pattern}")'
+    },
+    {
+        label: 'is_null',
+        detail: 'method',
+        documentation: 'Check if the field is null or undefined.',
+        insertText: 'is_null()'
+    },
+    {
+        label: 'is_not_null',
+        detail: 'method',
+        documentation: 'Check if the field exists and is not null.',
+        insertText: 'is_not_null()'
+    }
+];
+
+monaco.languages.registerCompletionItemProvider('lightly-query', {
+    triggerCharacters: ['.'],
+    
+    provideCompletionItems(model, position) {
+        const lineContent = model.getLineContent(position.lineNumber);
+        const textUntilPosition = lineContent.substring(0, position.column - 1);
+        
+        // Check if we're after a string field property
+        const stringFieldMatch = textUntilPosition.match(/\b(ImageSampleField|VideoSampleField|SampleField)\.(file_name|format)\.$/);
+        
+        if (!stringFieldMatch) {
+            return { suggestions: [] };
+        }
+        
+        const wordInfo = model.getWordUntilPosition(position);
+        const range = {
+            startLineNumber: position.lineNumber,
+            endLineNumber: position.lineNumber,
+            startColumn: wordInfo.startColumn,
+            endColumn: wordInfo.endColumn
+        };
+        
+        const suggestions: monaco.languages.CompletionItem[] = stringMethods.map(method => ({
+            label: method.label,
+            kind: monaco.languages.CompletionItemKind.Method,
+            detail: method.detail,
+            documentation: method.documentation,
+            insertText: method.insertText || method.label,
+            insertTextRules: monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet,
+            range: range
+        }));
+        
+        return { suggestions };
     }
 });
 

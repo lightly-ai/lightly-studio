@@ -19,6 +19,14 @@ A minimal example that wires Monaco Editor to a Langium language server for the 
 
 ### IntelliSense & Autocomplete
 - **Hover documentation**: Hover over keywords, operators, and methods to see documentation
+- **Field property autocomplete**: Type `ImageSampleField.` to see available properties (width, height, tags, etc.)
+- **Method autocomplete**: Type `ImageSampleField.tags.` to see available methods (contains, etc.)
+- **Nested property access**: Access predictions and metadata with array indexing and dot notation
+  - `ImageSampleField.predictions[0].label == "cat"`
+  - `ImageSampleField.metadata.confidence > 0.95`
+- **Prediction label autocomplete**: Type `predictions[0].label == "` to see available object classes/labels
+  - Currently uses hardcoded labels (cat, dog, person, car, etc.)
+  - See [DYNAMIC_AUTOCOMPLETE.md](./DYNAMIC_AUTOCOMPLETE.md) for API integration
 - **Dynamic tag autocomplete**: Type `tags.contains("` to see available tags
   - Currently uses hardcoded tags
   - See [DYNAMIC_AUTOCOMPLETE.md](./DYNAMIC_AUTOCOMPLETE.md) for API integration guide
