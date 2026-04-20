@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from datetime import datetime
+from functools import singledispatch
 from typing import Protocol, TypeVar, Union
 
 from lightly_studio.core.dataset_query import (
@@ -48,58 +49,95 @@ class TagsAccessor(Protocol):
     def contains(self, tag_name: str) -> MatchExpression: ...
 
 
+@singledispatch
 def to_match_expression(expr: models.MatchExpr) -> MatchExpression:
     """Translate a validated query-language expression to a dataset-query expression."""
-    if isinstance(expr, models.StringExpr):
-        return _apply_equality_operator(
-            field=_get_string_field(expr.field),
-            operator=expr.operator.value,
-            value=expr.value,
-        )
-    if isinstance(expr, models.IntegerExpr):
-        return _apply_ordinal_operator(
-            field=_get_integer_field(expr.field),
-            operator=expr.operator.value,
-            value=expr.value,
-        )
-    if isinstance(expr, models.DatetimeExpr):
-        return _apply_ordinal_operator(
-            field=_get_datetime_field(expr.field),
-            operator=expr.operator.value,
-            value=expr.value,
-        )
-    if isinstance(expr, models.OrdinalFloatExpr):
-        return _apply_ordinal_operator(
-            field=_get_ordinal_float_field(expr.field),
-            operator=expr.operator.value,
-            value=expr.value,
-        )
-    if isinstance(expr, models.EqualityFloatExpr):
-        return _apply_equality_operator(
-            field=_get_equality_float_field(expr.field),
-            operator=expr.operator.value,
-            value=expr.value,
-        )
-    if isinstance(expr, models.TagsContainsExpr):
-        return _get_tags_accessor(expr.field).contains(expr.tag_name)
-    if isinstance(expr, models.ClassificationMatchExpr):
-        criteria = [_translate_classification_criterion(criterion) for criterion in expr.criteria]
-        return ClassificationQuery.match(*criteria)
-    if isinstance(expr, models.ObjectDetectionMatchExpr):
-        criteria = [_translate_object_detection_criterion(criterion) for criterion in expr.criteria]
-        return ObjectDetectionQuery.match(*criteria)
-    if isinstance(expr, models.InstanceSegmentationMatchExpr):
-        criteria = [
-            _translate_instance_segmentation_criterion(criterion) for criterion in expr.criteria
-        ]
-        return InstanceSegmentationQuery.match(*criteria)
-    if isinstance(expr, models.AndExpr):
-        return AND(*(to_match_expression(child) for child in expr.children))
-    if isinstance(expr, models.OrExpr):
-        return OR(*(to_match_expression(child) for child in expr.children))
-    if isinstance(expr, models.NotExpr):
-        return NOT(to_match_expression(expr.child))
     raise ValueError(f"Unsupported query expression type: {type(expr).__name__}")
+
+
+@to_match_expression.register
+def _string_expr(expr: models.StringExpr) -> MatchExpression:
+    return _apply_equality_operator(
+        field=_get_string_field(expr.field),
+        operator=expr.operator.value,
+        value=expr.value,
+    )
+
+
+@to_match_expression.register
+def _integer_expr(expr: models.IntegerExpr) -> MatchExpression:
+    return _apply_ordinal_operator(
+        field=_get_integer_field(expr.field),
+        operator=expr.operator.value,
+        value=expr.value,
+    )
+
+
+@to_match_expression.register
+def _datetime_expr(expr: models.DatetimeExpr) -> MatchExpression:
+    return _apply_ordinal_operator(
+        field=_get_datetime_field(expr.field),
+        operator=expr.operator.value,
+        value=expr.value,
+    )
+
+
+@to_match_expression.register
+def _ordinal_float_expr(expr: models.OrdinalFloatExpr) -> MatchExpression:
+    return _apply_ordinal_operator(
+        field=_get_ordinal_float_field(expr.field),
+        operator=expr.operator.value,
+        value=expr.value,
+    )
+
+
+@to_match_expression.register
+def _equality_float_expr(expr: models.EqualityFloatExpr) -> MatchExpression:
+    return _apply_equality_operator(
+        field=_get_equality_float_field(expr.field),
+        operator=expr.operator.value,
+        value=expr.value,
+    )
+
+
+@to_match_expression.register
+def _tags_contains_expr(expr: models.TagsContainsExpr) -> MatchExpression:
+    return _get_tags_accessor(expr.field).contains(expr.tag_name)
+
+
+@to_match_expression.register
+def _classification_match_expr(expr: models.ClassificationMatchExpr) -> MatchExpression:
+    criteria = [_translate_classification_criterion(c) for c in expr.criteria]
+    return ClassificationQuery.match(*criteria)
+
+
+@to_match_expression.register
+def _object_detection_match_expr(expr: models.ObjectDetectionMatchExpr) -> MatchExpression:
+    criteria = [_translate_object_detection_criterion(c) for c in expr.criteria]
+    return ObjectDetectionQuery.match(*criteria)
+
+
+@to_match_expression.register
+def _instance_segmentation_match_expr(
+    expr: models.InstanceSegmentationMatchExpr,
+) -> MatchExpression:
+    criteria = [_translate_instance_segmentation_criterion(c) for c in expr.criteria]
+    return InstanceSegmentationQuery.match(*criteria)
+
+
+@to_match_expression.register
+def _and_expr(expr: models.AndExpr) -> MatchExpression:
+    return AND(*(to_match_expression(child) for child in expr.children))
+
+
+@to_match_expression.register
+def _or_expr(expr: models.OrExpr) -> MatchExpression:
+    return OR(*(to_match_expression(child) for child in expr.children))
+
+
+@to_match_expression.register
+def _not_expr(expr: models.NotExpr) -> MatchExpression:
+    return NOT(to_match_expression(expr.child))
 
 
 def _translate_classification_criterion(expr: models.AnnotationLabelExpr) -> MatchExpression:
