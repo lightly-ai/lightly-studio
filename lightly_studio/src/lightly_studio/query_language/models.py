@@ -4,9 +4,13 @@ from __future__ import annotations
 
 from datetime import datetime
 from enum import Enum
-from typing import Annotated, Literal, Union
+from typing import TYPE_CHECKING, Annotated, Union
 
 from pydantic import BaseModel, Field, StrictFloat, StrictInt, StrictStr
+from typing_extensions import Literal, TypeAlias
+
+if TYPE_CHECKING:
+    from lightly_studio.core.dataset_query.match_expression import MatchExpression
 
 
 class EqualityComparisonOperator(str, Enum):
@@ -27,59 +31,59 @@ class OrdinalComparisonOperator(str, Enum):
     GTE = ">="
 
 
-class ImageStringField(str, Enum):
+class ImageStringFieldName(str, Enum):
     """String image fields supported by the current query engine."""
 
     FILE_NAME = "file_name"
     FILE_PATH_ABS = "file_path_abs"
 
 
-class ImageIntegerField(str, Enum):
+class ImageIntegerFieldName(str, Enum):
     """Integer image fields supported by the current query engine."""
 
     WIDTH = "width"
     HEIGHT = "height"
 
 
-class ImageDatetimeField(str, Enum):
+class ImageDatetimeFieldName(str, Enum):
     """Datetime image fields supported by the current query engine."""
 
     CREATED_AT = "created_at"
 
 
-class VideoStringField(str, Enum):
+class VideoStringFieldName(str, Enum):
     """String video fields supported by the current query engine."""
 
     FILE_NAME = "file_name"
     FILE_PATH_ABS = "file_path_abs"
 
 
-class VideoIntegerField(str, Enum):
+class VideoIntegerFieldName(str, Enum):
     """Integer video fields supported by the current query engine."""
 
     WIDTH = "width"
     HEIGHT = "height"
 
 
-class VideoFloatField(str, Enum):
+class VideoFloatFieldName(str, Enum):
     """Float video fields with full ordinal comparisons."""
 
     FPS = "fps"
 
 
-class VideoEqualityFloatField(str, Enum):
+class VideoEqualityFloatFieldName(str, Enum):
     """Float video fields limited by the current query engine to equality checks."""
 
     DURATION_S = "duration_s"
 
 
-class AnnotationLabelField(str, Enum):
+class AnnotationLabelFieldName(str, Enum):
     """Annotation string fields supported by the current query engine."""
 
     LABEL = "label"
 
 
-class AnnotationGeometryField(str, Enum):
+class AnnotationGeometryFieldName(str, Enum):
     """Annotation numeric fields supported by the current query engine."""
 
     X = "x"
@@ -88,18 +92,159 @@ class AnnotationGeometryField(str, Enum):
     HEIGHT = "height"
 
 
-StringField = Union[ImageStringField, VideoStringField]
-IntegerField = Union[ImageIntegerField, VideoIntegerField]
-DatetimeField = ImageDatetimeField
-FloatField = VideoFloatField
-EqualityFloatField = VideoEqualityFloatField
+class ImageStringFieldRef(BaseModel):
+    """Reference to a string field on the image table."""
+
+    table: Literal["image"] = "image"
+    name: ImageStringFieldName
+
+
+class ImageIntegerFieldRef(BaseModel):
+    """Reference to an integer field on the image table."""
+
+    table: Literal["image"] = "image"
+    name: ImageIntegerFieldName
+
+
+class ImageDatetimeFieldRef(BaseModel):
+    """Reference to a datetime field on the image table."""
+
+    table: Literal["image"] = "image"
+    name: ImageDatetimeFieldName
+
+
+class VideoStringFieldRef(BaseModel):
+    """Reference to a string field on the video table."""
+
+    table: Literal["video"] = "video"
+    name: VideoStringFieldName
+
+
+class VideoIntegerFieldRef(BaseModel):
+    """Reference to an integer field on the video table."""
+
+    table: Literal["video"] = "video"
+    name: VideoIntegerFieldName
+
+
+class VideoOrdinalFloatFieldRef(BaseModel):
+    """Reference to an ordinal float field on the video table."""
+
+    table: Literal["video"] = "video"
+    name: VideoFloatFieldName
+
+
+class VideoEqualityFloatFieldRef(BaseModel):
+    """Reference to an equality-only float field on the video table."""
+
+    table: Literal["video"] = "video"
+    name: VideoEqualityFloatFieldName
+
+
+class ImageTagsFieldRef(BaseModel):
+    """Reference to the tags relationship on the image table."""
+
+    table: Literal["image"] = "image"
+    name: Literal["tags"] = "tags"
+
+
+class VideoTagsFieldRef(BaseModel):
+    """Reference to the tags relationship on the video table."""
+
+    table: Literal["video"] = "video"
+    name: Literal["tags"] = "tags"
+
+
+class ClassificationLabelFieldRef(BaseModel):
+    """Reference to a label field on classification annotations."""
+
+    table: Literal["classification"] = "classification"
+    name: AnnotationLabelFieldName
+
+
+class ObjectDetectionLabelFieldRef(BaseModel):
+    """Reference to a label field on object detection annotations."""
+
+    table: Literal["object_detection"] = "object_detection"
+    name: AnnotationLabelFieldName
+
+
+class ObjectDetectionGeometryFieldRef(BaseModel):
+    """Reference to a geometry field on object detection annotations."""
+
+    table: Literal["object_detection"] = "object_detection"
+    name: AnnotationGeometryFieldName
+
+
+class InstanceSegmentationLabelFieldRef(BaseModel):
+    """Reference to a label field on instance segmentation annotations."""
+
+    table: Literal["instance_segmentation"] = "instance_segmentation"
+    name: AnnotationLabelFieldName
+
+
+class InstanceSegmentationGeometryFieldRef(BaseModel):
+    """Reference to a geometry field on instance segmentation annotations."""
+
+    table: Literal["instance_segmentation"] = "instance_segmentation"
+    name: AnnotationGeometryFieldName
+
+
+StringFieldRef: TypeAlias = Annotated[
+    Union[ImageStringFieldRef, VideoStringFieldRef],
+    Field(discriminator="table"),
+]
+IntegerFieldRef: TypeAlias = Annotated[
+    Union[ImageIntegerFieldRef, VideoIntegerFieldRef],
+    Field(discriminator="table"),
+]
+DatetimeFieldRef: TypeAlias = Annotated[
+    ImageDatetimeFieldRef,
+    Field(discriminator="table"),
+]
+OrdinalFloatFieldRef: TypeAlias = Annotated[
+    VideoOrdinalFloatFieldRef,
+    Field(discriminator="table"),
+]
+EqualityFloatFieldRef: TypeAlias = Annotated[
+    VideoEqualityFloatFieldRef,
+    Field(discriminator="table"),
+]
+TagsFieldRef: TypeAlias = Annotated[
+    Union[ImageTagsFieldRef, VideoTagsFieldRef],
+    Field(discriminator="table"),
+]
+ClassificationLabelFieldRefType: TypeAlias = Annotated[
+    ClassificationLabelFieldRef,
+    Field(discriminator="table"),
+]
+AnnotationLabelFieldRef: TypeAlias = Annotated[
+    Union[
+        ClassificationLabelFieldRef,
+        ObjectDetectionLabelFieldRef,
+        InstanceSegmentationLabelFieldRef,
+    ],
+    Field(discriminator="table"),
+]
+ObjectDetectionExprField: TypeAlias = Annotated[
+    Union[ObjectDetectionLabelFieldRef, ObjectDetectionGeometryFieldRef],
+    Field(discriminator="table"),
+]
+InstanceSegmentationExprField: TypeAlias = Annotated[
+    Union[InstanceSegmentationLabelFieldRef, InstanceSegmentationGeometryFieldRef],
+    Field(discriminator="table"),
+]
+AnnotationGeometryFieldRef: TypeAlias = Annotated[
+    Union[ObjectDetectionGeometryFieldRef, InstanceSegmentationGeometryFieldRef],
+    Field(discriminator="table"),
+]
 
 
 class StringExpr(BaseModel):
     """Leaf node for equality comparisons on string sample fields."""
 
     type: Literal["string_expr"] = "string_expr"
-    field: StringField
+    field: StringFieldRef
     operator: EqualityComparisonOperator
     value: StrictStr
 
@@ -108,7 +253,7 @@ class IntegerExpr(BaseModel):
     """Leaf node for ordinal comparisons on integer sample fields."""
 
     type: Literal["integer_expr"] = "integer_expr"
-    field: IntegerField
+    field: IntegerFieldRef
     operator: OrdinalComparisonOperator
     value: StrictInt
 
@@ -117,7 +262,7 @@ class DatetimeExpr(BaseModel):
     """Leaf node for ordinal comparisons on datetime sample fields."""
 
     type: Literal["datetime_expr"] = "datetime_expr"
-    field: DatetimeField
+    field: DatetimeFieldRef
     operator: OrdinalComparisonOperator
     value: datetime
 
@@ -126,7 +271,7 @@ class OrdinalFloatExpr(BaseModel):
     """Leaf node for ordinal comparisons on float sample fields."""
 
     type: Literal["ordinal_float_expr"] = "ordinal_float_expr"
-    field: FloatField
+    field: OrdinalFloatFieldRef
     operator: OrdinalComparisonOperator
     value: StrictInt | StrictFloat
 
@@ -135,7 +280,7 @@ class EqualityFloatExpr(BaseModel):
     """Leaf node for equality comparisons on equality-only float sample fields."""
 
     type: Literal["equality_float_expr"] = "equality_float_expr"
-    field: EqualityFloatField
+    field: EqualityFloatFieldRef
     operator: EqualityComparisonOperator
     value: StrictInt | StrictFloat
 
@@ -144,6 +289,7 @@ class TagsContainsExpr(BaseModel):
     """Leaf node checking if a sample has a specific tag."""
 
     type: Literal["tags_contains_expr"] = "tags_contains_expr"
+    field: TagsFieldRef
     tag_name: str
 
 
@@ -151,7 +297,7 @@ class AnnotationLabelExpr(BaseModel):
     """Criterion for equality comparisons on annotation labels."""
 
     type: Literal["annotation_label_expr"] = "annotation_label_expr"
-    field: AnnotationLabelField
+    field: AnnotationLabelFieldRef
     operator: EqualityComparisonOperator
     value: StrictStr
 
@@ -160,16 +306,16 @@ class AnnotationGeometryExpr(BaseModel):
     """Criterion for ordinal comparisons on annotation geometry."""
 
     type: Literal["annotation_geometry_expr"] = "annotation_geometry_expr"
-    field: AnnotationGeometryField
+    field: AnnotationGeometryFieldRef
     operator: OrdinalComparisonOperator
     value: StrictInt | StrictFloat
 
 
-ObjectDetectionExpr = Annotated[
+ObjectDetectionExpr: TypeAlias = Annotated[
     Union[AnnotationLabelExpr, AnnotationGeometryExpr],
     Field(discriminator="type"),
 ]
-InstanceSegmentationExpr = Annotated[
+InstanceSegmentationExpr: TypeAlias = Annotated[
     Union[AnnotationLabelExpr, AnnotationGeometryExpr],
     Field(discriminator="type"),
 ]
@@ -217,7 +363,7 @@ class NotExpr(BaseModel):
     child: MatchExpr
 
 
-MatchExpr = Annotated[
+MatchExpr: TypeAlias = Annotated[
     Union[
         StringExpr,
         IntegerExpr,
@@ -244,3 +390,9 @@ class QueryTree(BaseModel):
     """Top-level model representing a complete query tree."""
 
     root: MatchExpr
+
+    def to_match_expression(self) -> MatchExpression:
+        """Translate the validated query tree to a dataset-query expression."""
+        from lightly_studio.query_language.translation import to_match_expression
+
+        return to_match_expression(self.root)
