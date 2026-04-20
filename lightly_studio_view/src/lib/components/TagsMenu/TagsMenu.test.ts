@@ -240,7 +240,6 @@ describe('TagsMenu', () => {
 
     it('shows a toast when deleting a tag fails', async () => {
         vi.mocked(deleteTag).mockRejectedValue(new Error('network error'));
-        const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => undefined);
 
         render(TagsMenu, {
             props: {
@@ -258,7 +257,6 @@ describe('TagsMenu', () => {
 
         expect(mocks.clearTagSelected).not.toHaveBeenCalled();
         expect(mocks.loadTags).not.toHaveBeenCalled();
-        consoleErrorSpy.mockRestore();
     });
 
     it('does not toggle the checkbox when opening the tag actions menu', async () => {

@@ -43,7 +43,7 @@ export function useTags(options: UseTagsOptions): UseTagsReturn {
                     throw new Error(JSON.stringify(response.error));
                 }
                 if (response.data) {
-                    const validTagIds = new Set(response.data.map((tag) => tag.tag_id));
+                    const validTagIds = response.data.map((tag) => tag.tag_id);
 
                     // Store tags by collection_id to prevent preloading from overwriting other collections' tags
                     tagsData.update((tagsByCollection) => ({
@@ -54,7 +54,7 @@ export function useTags(options: UseTagsOptions): UseTagsReturn {
                     tagsSelectedByCollection.update((selectedByCollection) => {
                         const selected = selectedByCollection[collection_id] ?? new Set<string>();
                         const prunedSelected = new Set(
-                            Array.from(selected).filter((tagId) => validTagIds.has(tagId))
+                            Array.from(selected).filter((tagId) => validTagIds.includes(tagId))
                         );
 
                         return {

@@ -94,19 +94,17 @@
                 path: {
                     collection_id,
                     tag_id: tag.tag_id
-                } as never
+                }
             });
 
             if (response.error) {
-                toast.error('Failed to delete tag. Please try again.');
-                return;
+                throw new Error('Failed to delete tag.');
             }
 
             clearTagSelected(tag.tag_id);
             loadTags();
             toast.success('Tag deleted successfully');
-        } catch (error) {
-            console.error('Failed to delete tag', error);
+        } catch {
             toast.error('Failed to delete tag. Please try again.');
         } finally {
             deletingTagId = null;
