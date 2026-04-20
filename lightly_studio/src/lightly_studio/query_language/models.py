@@ -95,154 +95,152 @@ FloatField = VideoFloatField
 EqualityFloatField = VideoEqualityFloatField
 
 
-class StringExpression(BaseModel):
+class StringExpr(BaseModel):
     """Leaf node for equality comparisons on string sample fields."""
 
-    type: Literal["string_field_comparison"] = "string_field_comparison"
+    type: Literal["string_expr"] = "string_expr"
     field: StringField
     operator: EqualityComparisonOperator
     value: StrictStr
 
 
-class IntegerExpression(BaseModel):
+class IntegerExpr(BaseModel):
     """Leaf node for ordinal comparisons on integer sample fields."""
 
-    type: Literal["integer_field_comparison"] = "integer_field_comparison"
+    type: Literal["integer_expr"] = "integer_expr"
     field: IntegerField
     operator: OrdinalComparisonOperator
     value: StrictInt
 
 
-class DatetimeExpression(BaseModel):
+class DatetimeExpr(BaseModel):
     """Leaf node for ordinal comparisons on datetime sample fields."""
 
-    type: Literal["datetime_field_comparison"] = "datetime_field_comparison"
+    type: Literal["datetime_expr"] = "datetime_expr"
     field: DatetimeField
     operator: OrdinalComparisonOperator
     value: datetime
 
 
-class OrdinalFloatExpression(BaseModel):
+class OrdinalFloatExpr(BaseModel):
     """Leaf node for ordinal comparisons on float sample fields."""
 
-    type: Literal["float_field_comparison"] = "float_field_comparison"
+    type: Literal["ordinal_float_expr"] = "ordinal_float_expr"
     field: FloatField
     operator: OrdinalComparisonOperator
     value: StrictInt | StrictFloat
 
 
-class EqualityFloatExpression(BaseModel):
+class EqualityFloatExpr(BaseModel):
     """Leaf node for equality comparisons on equality-only float sample fields."""
 
-    type: Literal["equality_float_field_comparison"] = "equality_float_field_comparison"
+    type: Literal["equality_float_expr"] = "equality_float_expr"
     field: EqualityFloatField
     operator: EqualityComparisonOperator
     value: StrictInt | StrictFloat
 
 
-class TagsContainsExpression(BaseModel):
+class TagsContainsExpr(BaseModel):
     """Leaf node checking if a sample has a specific tag."""
 
-    type: Literal["tag_contains"] = "tag_contains"
+    type: Literal["tags_contains_expr"] = "tags_contains_expr"
     tag_name: str
 
 
-class AnnotationLabelExpression(BaseModel):
+class AnnotationLabelExpr(BaseModel):
     """Criterion for equality comparisons on annotation labels."""
 
-    type: Literal["annotation_label_comparison"] = "annotation_label_comparison"
+    type: Literal["annotation_label_expr"] = "annotation_label_expr"
     field: AnnotationLabelField
     operator: EqualityComparisonOperator
     value: StrictStr
 
 
-class AnnotationGeometryExpression(BaseModel):
+class AnnotationGeometryExpr(BaseModel):
     """Criterion for ordinal comparisons on annotation geometry."""
 
-    type: Literal["annotation_geometry_comparison"] = "annotation_geometry_comparison"
+    type: Literal["annotation_geometry_expr"] = "annotation_geometry_expr"
     field: AnnotationGeometryField
     operator: OrdinalComparisonOperator
     value: StrictInt | StrictFloat
 
 
-ObjectDetectionCriterion = Annotated[
-    Union[AnnotationLabelExpression, AnnotationGeometryExpression],
+ObjectDetectionExpr = Annotated[
+    Union[AnnotationLabelExpr, AnnotationGeometryExpr],
     Field(discriminator="type"),
 ]
-InstanceSegmentationCriterion = Annotated[
-    Union[AnnotationLabelExpression, AnnotationGeometryExpression],
+InstanceSegmentationExpr = Annotated[
+    Union[AnnotationLabelExpr, AnnotationGeometryExpr],
     Field(discriminator="type"),
 ]
 
 
-class ClassificationMatchExpression(BaseModel):
+class ClassificationMatchExpr(BaseModel):
     """Leaf node checking if a sample has a matching classification annotation."""
 
-    type: Literal["classification_annotation_query"] = "classification_annotation_query"
-    criteria: list[AnnotationLabelExpression] = Field(min_length=1)
+    type: Literal["classification_match_expr"] = "classification_match_expr"
+    criteria: list[AnnotationLabelExpr] = Field(min_length=1)
 
 
-class ObjectDetectionMatchExpression(BaseModel):
+class ObjectDetectionMatchExpr(BaseModel):
     """Leaf node checking if a sample has a matching object detection annotation."""
 
-    type: Literal["object_detection_annotation_query"] = "object_detection_annotation_query"
-    criteria: list[ObjectDetectionCriterion] = Field(min_length=1)
+    type: Literal["object_detection_match_expr"] = "object_detection_match_expr"
+    criteria: list[ObjectDetectionExpr] = Field(min_length=1)
 
 
-class InstanceSegmentationMatchExpression(BaseModel):
+class InstanceSegmentationMatchExpr(BaseModel):
     """Leaf node checking if a sample has a matching instance segmentation annotation."""
 
-    type: Literal["instance_segmentation_annotation_query"] = (
-        "instance_segmentation_annotation_query"
-    )
-    criteria: list[InstanceSegmentationCriterion] = Field(min_length=1)
+    type: Literal["instance_segmentation_match_expr"] = "instance_segmentation_match_expr"
+    criteria: list[InstanceSegmentationExpr] = Field(min_length=1)
 
 
-class AndExpression(BaseModel):
+class AndExpr(BaseModel):
     """Boolean AND of multiple query nodes."""
 
     type: Literal["and"] = "and"
-    children: list[QueryNode] = Field(min_length=1)
+    children: list[MatchExpr] = Field(min_length=1)
 
 
-class OrExpression(BaseModel):
+class OrExpr(BaseModel):
     """Boolean OR of multiple query nodes."""
 
     type: Literal["or"] = "or"
-    children: list[QueryNode] = Field(min_length=1)
+    children: list[MatchExpr] = Field(min_length=1)
 
 
-class NotExpression(BaseModel):
+class NotExpr(BaseModel):
     """Boolean NOT of a single query node."""
 
     type: Literal["not"] = "not"
-    child: QueryNode
+    child: MatchExpr
 
 
-QueryNode = Annotated[
+MatchExpr = Annotated[
     Union[
-        StringExpression,
-        IntegerExpression,
-        DatetimeExpression,
-        OrdinalFloatExpression,
-        EqualityFloatExpression,
-        TagsContainsExpression,
-        ClassificationMatchExpression,
-        ObjectDetectionMatchExpression,
-        InstanceSegmentationMatchExpression,
-        AndExpression,
-        OrExpression,
-        NotExpression,
+        StringExpr,
+        IntegerExpr,
+        DatetimeExpr,
+        OrdinalFloatExpr,
+        EqualityFloatExpr,
+        TagsContainsExpr,
+        ClassificationMatchExpr,
+        ObjectDetectionMatchExpr,
+        InstanceSegmentationMatchExpr,
+        AndExpr,
+        OrExpr,
+        NotExpr,
     ],
     Field(discriminator="type"),
 ]
 
-AndExpression.model_rebuild()
-OrExpression.model_rebuild()
-NotExpression.model_rebuild()
+AndExpr.model_rebuild()
+OrExpr.model_rebuild()
+NotExpr.model_rebuild()
 
 
 class QueryTree(BaseModel):
     """Top-level model representing a complete query tree."""
 
-    root: QueryNode
+    root: MatchExpr

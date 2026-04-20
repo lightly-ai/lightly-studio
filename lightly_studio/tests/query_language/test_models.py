@@ -15,16 +15,16 @@ def test_query_tree_accepts_valid_image_and_annotation_nodes() -> None:
                 "type": "and",
                 "children": [
                     {
-                        "type": "integer_field_comparison",
+                        "type": "integer_expr",
                         "field": "width",
                         "operator": ">=",
                         "value": 128,
                     },
                     {
-                        "type": "classification_annotation_query",
+                        "type": "classification_match_expr",
                         "criteria": [
                             {
-                                "type": "annotation_label_comparison",
+                                "type": "annotation_label_expr",
                                 "field": "label",
                                 "operator": "==",
                                 "value": "cat",
@@ -44,7 +44,7 @@ def test_query_tree_rejects_wrong_value_type_for_image_width() -> None:
         QueryTree.model_validate(
             {
                 "root": {
-                    "type": "integer_field_comparison",
+                    "type": "integer_expr",
                     "field": "width",
                     "operator": "==",
                     "value": "123",
@@ -58,7 +58,7 @@ def test_query_tree_rejects_wrong_operator_for_video_duration() -> None:
         QueryTree.model_validate(
             {
                 "root": {
-                    "type": "equality_float_field_comparison",
+                    "type": "equality_float_expr",
                     "field": "duration_s",
                     "operator": ">=",
                     "value": 3.5,
@@ -72,10 +72,10 @@ def test_query_tree_rejects_numeric_classification_criteria() -> None:
         QueryTree.model_validate(
             {
                 "root": {
-                    "type": "classification_annotation_query",
+                    "type": "classification_match_expr",
                     "criteria": [
                         {
-                            "type": "annotation_geometry_comparison",
+                            "type": "annotation_geometry_expr",
                             "field": "width",
                             "operator": ">=",
                             "value": 0.5,
@@ -90,7 +90,7 @@ def test_query_tree_parses_image_datetime_values() -> None:
     tree = QueryTree.model_validate(
         {
             "root": {
-                "type": "datetime_field_comparison",
+                "type": "datetime_expr",
                 "field": "created_at",
                 "operator": ">=",
                 "value": "2026-01-01T00:00:00Z",
