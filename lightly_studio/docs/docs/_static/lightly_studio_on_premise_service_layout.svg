@@ -1,0 +1,100 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 940 472" role="img" aria-labelledby="title desc">
+  <title id="title">On-Premise Deployment Layout</title>
+  <desc id="desc">On-premise LightlyStudio deployment layout showing the Lightly Proxy in front of the Authentication Service, Workspace UI, Studio App, and a separate PostgreSQL datasets database.</desc>
+  <defs>
+    <style>
+      .panel-enterprise { fill: #f8fafc; stroke: #94a3b8; stroke-width: 2; }
+      .node-ui { fill: #e0f2fe; stroke: #0284c7; stroke-width: 2; }
+      .node-service { fill: #dcfce7; stroke: #16a34a; stroke-width: 2; }
+      .node-security { fill: #f3e8ff; stroke: #7c3aed; stroke-width: 2; }
+      .node-data { fill: #e2e8f0; stroke: #475569; stroke-width: 2; }
+      .panel-title { fill: #334155; font-family: -apple-system, "Segoe UI", Inter, Arial, sans-serif; font-size: 20px; font-weight: 700; }
+      .label { fill: #0f172a; font-family: -apple-system, "Segoe UI", Inter, Arial, sans-serif; font-size: 17px; font-weight: 700; }
+      .small { fill: #475569; font-family: -apple-system, "Segoe UI", Inter, Arial, sans-serif; font-size: 14px; }
+      .legend-text { fill: #334155; font-family: -apple-system, "Segoe UI", Inter, Arial, sans-serif; font-size: 13px; }
+      .legend-title { fill: #64748b; font-family: -apple-system, "Segoe UI", Inter, Arial, sans-serif; font-size: 13px; font-style: italic; }
+      .edge { stroke: #475569; stroke-width: 3; stroke-linecap: round; fill: none; }
+    </style>
+  </defs>
+
+  <!-- Outer panel -->
+  <rect class="panel-enterprise" x="10" y="10" width="920" height="380" rx="16" ry="16"/>
+  <text class="panel-title" x="32" y="42">On-Premise Deployment</text>
+
+  <!-- Lightly Proxy: full-width bar -->
+  <g>
+    <title>Lightly Proxy</title>
+    <rect class="node-security" x="40" y="60" width="860" height="64" rx="12" ry="12"/>
+    <text class="label" x="470" y="87" text-anchor="middle">Lightly Proxy</text>
+    <text class="small" x="470" y="109" text-anchor="middle">compose service: lightly-studio-proxy</text>
+  </g>
+
+  <!-- Lines: proxy → services -->
+  <line class="edge" x1="160" y1="124" x2="160" y2="148"/>
+  <line class="edge" x1="470" y1="124" x2="470" y2="148"/>
+  <line class="edge" x1="780" y1="124" x2="780" y2="148"/>
+
+  <!-- Authentication Service -->
+  <g>
+    <title>Authentication Service</title>
+    <rect class="node-security" x="40" y="148" width="240" height="100" rx="12" ry="12"/>
+    <text class="label" x="160" y="194" text-anchor="middle">Authentication Service</text>
+    <text class="small" x="160" y="217" text-anchor="middle">compose service: auth</text>
+  </g>
+
+  <!-- Workspace UI -->
+  <g>
+    <title>Workspace UI</title>
+    <rect class="node-ui" x="310" y="148" width="320" height="100" rx="12" ry="12"/>
+    <text class="label" x="470" y="186" text-anchor="middle">Workspace UI</text>
+    <text class="small" x="470" y="208" text-anchor="middle">login, datasets page, admin page</text>
+    <text class="small" x="470" y="230" text-anchor="middle">compose service: lightly-studio-workspace</text>
+  </g>
+
+  <!-- Studio App -->
+  <g>
+    <title>Studio App</title>
+    <rect class="node-service" x="660" y="148" width="240" height="100" rx="12" ry="12"/>
+    <text class="label" x="780" y="194" text-anchor="middle">Studio App</text>
+    <text class="small" x="780" y="217" text-anchor="middle">compose service: studio</text>
+  </g>
+
+  <!-- Lines: services → DBs -->
+  <line class="edge" x1="780" y1="248" x2="780" y2="272"/>
+  <line class="edge" x1="160" y1="248" x2="160" y2="272"/>
+
+  <!-- Datasets DB -->
+  <g>
+    <title>Datasets database (PostgreSQL)</title>
+    <rect class="node-data" x="660" y="272" width="240" height="100" rx="12" ry="12"/>
+    <text class="label" x="780" y="310" text-anchor="middle">Datasets Database</text>
+    <text class="small" x="780" y="333" text-anchor="middle">compose service: db (PostgreSQL)</text>
+  </g>
+
+  <!-- Users DB (SQLite on auth_data volume) -->
+  <g>
+    <title>Users database (SQLite)</title>
+    <rect class="node-data" x="40" y="272" width="240" height="100" rx="12" ry="12"/>
+    <text class="label" x="160" y="310" text-anchor="middle">Users Database</text>
+    <text class="small" x="160" y="333" text-anchor="middle">sqlite on auth_data volume</text>
+  </g>
+
+  <!-- Legend -->
+  <g>
+    <title>Legend</title>
+    <rect x="10" y="404" width="920" height="56" rx="12" ry="12" fill="#ffffff" stroke="#cbd5e1" stroke-width="1"/>
+    <text class="legend-title" x="26" y="424">Legend</text>
+
+    <rect class="node-ui" x="26" y="432" width="20" height="20" rx="6" ry="6"/>
+    <text class="legend-text" x="54" y="447">User-facing UI</text>
+
+    <rect class="node-service" x="190" y="432" width="20" height="20" rx="6" ry="6"/>
+    <text class="legend-text" x="218" y="447">Application service</text>
+
+    <rect class="node-security" x="380" y="432" width="20" height="20" rx="6" ry="6"/>
+    <text class="legend-text" x="408" y="447">Security / identity</text>
+
+    <rect class="node-data" x="560" y="432" width="20" height="20" rx="6" ry="6"/>
+    <text class="legend-text" x="588" y="447">Database</text>
+  </g>
+</svg>
