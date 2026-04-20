@@ -2,11 +2,12 @@
     import { Checkbox } from '$lib/components';
     import type { GridType } from '$lib/types';
     import Segment from '$lib/components/Segment/Segment.svelte';
-    import { Tags as Tagsicon } from '@lucide/svelte';
+    import * as Popover from '$lib/components/ui/popover';
+    import { MoreHorizontal, Tags as Tagsicon, Trash2 } from '@lucide/svelte';
     import type { TagView } from '$lib/services/types';
     import { useTags } from '$lib/hooks/useTags/useTags.js';
     import { useGlobalStorage } from '$lib/hooks/useGlobalStorage';
-    import { createTag, addSampleIdsToTagId } from '$lib/api/lightly_studio_local';
+    import { createTag, addSampleIdsToTagId, deleteTag } from '$lib/api/lightly_studio_local';
     import TagAssignInput from './TagAssignInput.svelte';
     import { toast } from 'svelte-sonner';
 
@@ -15,7 +16,7 @@
 
     const tagKind = $derived(gridType === 'annotations' ? 'annotation' : 'sample');
 
-    const { tags, tagsSelected, tagSelectionToggle, loadTags } = $derived(
+    const { tags, tagsSelected, tagSelectionToggle, loadTags, clearTagSelected } = $derived(
         useTags({ collection_id, kind: [tagKind] })
     );
 
@@ -35,6 +36,7 @@
 
     // ── Selection assignment ─────────────────────────────────────────────────────
     let assignBusy = $state(false);
+    let deletingTagId = $state<string | null>(null);
 
     async function handleAssign(name: string) {
         assignBusy = true;
@@ -77,19 +79,85 @@
             assignBusy = false;
         }
     }
+
+    async function handleDeleteTag(tag: TagView, event: MouseEvent) {
+        event.stopPropagation();
+
+        if (deletingTagId) {
+            return;
+        }
+
+        deletingTagId = tag.tag_id;
+
+        try {
+            const response = await deleteTag({
+                path: {
+                    collection_id,
+                    tag_id: tag.tag_id
+                }
+            });
+
+            if (response.error) {
+                throw new Error('Failed to delete tag.');
+            }
+
+            clearTagSelected(tag.tag_id);
+            loadTags();
+            toast.success('Tag deleted successfully');
+        } catch {
+            toast.error('Failed to delete tag. Please try again.');
+        } finally {
+            deletingTagId = null;
+        }
+    }
 </script>
 
 <Segment title="Tags" icon={Tagsicon}>
     <div class="mb-3 w-full space-y-1">
         <div class="space-y-1">
             {#each $tags as tag (tag.tag_id)}
-                <div class="flex items-center py-0.5" data-testid="tag-menu-item">
-                    <Checkbox
-                        name={tag.tag_id}
-                        isChecked={$tagsSelected.has(tag.tag_id)}
-                        label={tag.name}
-                        onCheckedChange={() => tagSelectionToggle(tag.tag_id)}
-                    />
+                <div class="flex items-center gap-2 py-0.5" data-testid="tag-menu-item">
+                    <div class="min-w-0 flex-1">
+                        <Checkbox
+                            name={tag.tag_id}
+                            isChecked={$tagsSelected.has(tag.tag_id)}
+                            label={tag.name}
+                            onCheckedChange={() => tagSelectionToggle(tag.tag_id)}
+                        />
+                    </div>
+                    <Popover.Root>
+                        <Popover.Trigger
+                            class="inline-flex size-7 shrink-0 items-center justify-center rounded-md hover:bg-accent hover:text-accent-foreground disabled:pointer-events-none disabled:opacity-50"
+                            aria-label={`Open actions for tag ${tag.name}`}
+                            data-testid={`tag-actions-trigger-${tag.tag_id}`}
+                            disabled={deletingTagId === tag.tag_id}
+                            onclick={(event: MouseEvent) => {
+                                event.stopPropagation();
+                            }}
+                        >
+                            <MoreHorizontal />
+                        </Popover.Trigger>
+                        <Popover.Content
+                            class="w-40 p-1"
+                            align="end"
+                            onclick={(event: MouseEvent) => {
+                                event.stopPropagation();
+                            }}
+                        >
+                            <button
+                                type="button"
+                                class="flex w-full items-center gap-2 rounded-sm px-2 py-1.5 text-sm text-foreground transition-colors hover:bg-destructive hover:text-destructive-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
+                                data-testid={`delete-tag-${tag.tag_id}`}
+                                disabled={deletingTagId !== null}
+                                onclick={(event: MouseEvent) => {
+                                    void handleDeleteTag(tag, event);
+                                }}
+                            >
+                                <Trash2 class="size-4" />
+                                {deletingTagId === tag.tag_id ? 'Deleting...' : 'Delete tag'}
+                            </button>
+                        </Popover.Content>
+                    </Popover.Root>
                 </div>
             {:else}
                 <p>No tags yet</p>
