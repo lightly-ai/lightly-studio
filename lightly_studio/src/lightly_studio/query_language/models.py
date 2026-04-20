@@ -95,7 +95,7 @@ FloatField = VideoFloatField
 EqualityFloatField = VideoEqualityFloatField
 
 
-class StringFieldComparison(BaseModel):
+class StringExpression(BaseModel):
     """Leaf node for equality comparisons on string sample fields."""
 
     type: Literal["string_field_comparison"] = "string_field_comparison"
@@ -104,7 +104,7 @@ class StringFieldComparison(BaseModel):
     value: StrictStr
 
 
-class IntegerFieldComparison(BaseModel):
+class IntegerExpression(BaseModel):
     """Leaf node for ordinal comparisons on integer sample fields."""
 
     type: Literal["integer_field_comparison"] = "integer_field_comparison"
@@ -113,7 +113,7 @@ class IntegerFieldComparison(BaseModel):
     value: StrictInt
 
 
-class DatetimeFieldComparison(BaseModel):
+class DatetimeExpression(BaseModel):
     """Leaf node for ordinal comparisons on datetime sample fields."""
 
     type: Literal["datetime_field_comparison"] = "datetime_field_comparison"
@@ -122,7 +122,7 @@ class DatetimeFieldComparison(BaseModel):
     value: datetime
 
 
-class OrdinalFloatFieldComparison(BaseModel):
+class OrdinalFloatExpression(BaseModel):
     """Leaf node for ordinal comparisons on float sample fields."""
 
     type: Literal["float_field_comparison"] = "float_field_comparison"
@@ -131,7 +131,7 @@ class OrdinalFloatFieldComparison(BaseModel):
     value: StrictInt | StrictFloat
 
 
-class EqualityFloatFieldComparison(BaseModel):
+class EqualityFloatExpression(BaseModel):
     """Leaf node for equality comparisons on equality-only float sample fields."""
 
     type: Literal["equality_float_field_comparison"] = "equality_float_field_comparison"
@@ -147,7 +147,7 @@ class TagsContainsExpression(BaseModel):
     tag_name: str
 
 
-class AnnotationLabelComparison(BaseModel):
+class AnnotationLabelExpression(BaseModel):
     """Criterion for equality comparisons on annotation labels."""
 
     type: Literal["annotation_label_comparison"] = "annotation_label_comparison"
@@ -156,7 +156,7 @@ class AnnotationLabelComparison(BaseModel):
     value: StrictStr
 
 
-class AnnotationGeometryComparison(BaseModel):
+class AnnotationGeometryExpression(BaseModel):
     """Criterion for ordinal comparisons on annotation geometry."""
 
     type: Literal["annotation_geometry_comparison"] = "annotation_geometry_comparison"
@@ -166,11 +166,11 @@ class AnnotationGeometryComparison(BaseModel):
 
 
 ObjectDetectionCriterion = Annotated[
-    Union[AnnotationLabelComparison, AnnotationGeometryComparison],
+    Union[AnnotationLabelExpression, AnnotationGeometryExpression],
     Field(discriminator="type"),
 ]
 InstanceSegmentationCriterion = Annotated[
-    Union[AnnotationLabelComparison, AnnotationGeometryComparison],
+    Union[AnnotationLabelExpression, AnnotationGeometryExpression],
     Field(discriminator="type"),
 ]
 
@@ -179,7 +179,7 @@ class ClassificationMatchExpression(BaseModel):
     """Leaf node checking if a sample has a matching classification annotation."""
 
     type: Literal["classification_annotation_query"] = "classification_annotation_query"
-    criteria: list[AnnotationLabelComparison] = Field(min_length=1)
+    criteria: list[AnnotationLabelExpression] = Field(min_length=1)
 
 
 class ObjectDetectionMatchExpression(BaseModel):
@@ -221,11 +221,11 @@ class NotExpression(BaseModel):
 
 QueryNode = Annotated[
     Union[
-        StringFieldComparison,
-        IntegerFieldComparison,
-        DatetimeFieldComparison,
-        OrdinalFloatFieldComparison,
-        EqualityFloatFieldComparison,
+        StringExpression,
+        IntegerExpression,
+        DatetimeExpression,
+        OrdinalFloatExpression,
+        EqualityFloatExpression,
         TagsContainsExpression,
         ClassificationMatchExpression,
         ObjectDetectionMatchExpression,
