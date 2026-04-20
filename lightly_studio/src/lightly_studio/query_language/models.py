@@ -6,11 +6,18 @@ from datetime import datetime
 from enum import Enum
 from typing import Annotated, Literal, Union
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, StrictFloat, StrictInt, StrictStr
 
 
-class ComparisonOperator(str, Enum):
-    """Comparison operators for field comparisons."""
+class EqualityComparisonOperator(str, Enum):
+    """Operators supported by equality-only fields."""
+
+    EQ = "=="
+    NEQ = "!="
+
+
+class OrdinalComparisonOperator(str, Enum):
+    """Operators supported by ordinal fields."""
 
     EQ = "=="
     NEQ = "!="
@@ -20,54 +27,130 @@ class ComparisonOperator(str, Enum):
     GTE = ">="
 
 
-class SampleField(str, Enum):
-    """Fields available for querying sample properties.
-
-    Union of image and video fields. The translation layer validates
-    field/sample-type compatibility.
-    """
+class ImageStringField(str, Enum):
+    """String image fields supported by the current query engine."""
 
     FILE_NAME = "file_name"
+    FILE_PATH_ABS = "file_path_abs"
+
+
+class ImageIntegerField(str, Enum):
+    """Integer image fields supported by the current query engine."""
+
     WIDTH = "width"
     HEIGHT = "height"
-    FILE_PATH_ABS = "file_path_abs"
+
+
+class ImageDatetimeField(str, Enum):
+    """Datetime image fields supported by the current query engine."""
+
     CREATED_AT = "created_at"
-    DURATION_S = "duration_s"
+
+
+class VideoStringField(str, Enum):
+    """String video fields supported by the current query engine."""
+
+    FILE_NAME = "file_name"
+    FILE_PATH_ABS = "file_path_abs"
+
+
+class VideoIntegerField(str, Enum):
+    """Integer video fields supported by the current query engine."""
+
+    WIDTH = "width"
+    HEIGHT = "height"
+
+
+class VideoFloatField(str, Enum):
+    """Float video fields with full ordinal comparisons."""
+
     FPS = "fps"
 
 
-class AnnotationField(str, Enum):
-    """Fields available for querying annotation properties.
+class VideoEqualityFloatField(str, Enum):
+    """Float video fields limited by the current query engine to equality checks."""
 
-    Union of all annotation type fields. The translation layer validates
-    field/annotation-type compatibility.
-    """
+    DURATION_S = "duration_s"
+
+
+class AnnotationLabelField(str, Enum):
+    """Annotation string fields supported by the current query engine."""
 
     LABEL = "label"
+
+
+class AnnotationGeometryField(str, Enum):
+    """Annotation numeric fields supported by the current query engine."""
+
     X = "x"
     Y = "y"
     WIDTH = "width"
     HEIGHT = "height"
 
 
-class AnnotationQueryType(str, Enum):
-    """Annotation types for annotation queries.
+class ImageStringFieldComparison(BaseModel):
+    """Leaf node comparing an image string field to a string value."""
 
-    Redefined (not imported from models/annotation/) to keep query models DB-independent.
-    """
-
-    CLASSIFICATION = "classification"
-    OBJECT_DETECTION = "object_detection"
-    INSTANCE_SEGMENTATION = "instance_segmentation"
+    type: Literal["image_string_field_comparison"] = "image_string_field_comparison"
+    field: ImageStringField
+    operator: EqualityComparisonOperator
+    value: StrictStr
 
 
-class FieldComparison(BaseModel):
-    """Leaf node comparing a sample field to a value."""
+class ImageIntegerFieldComparison(BaseModel):
+    """Leaf node comparing an image integer field to an integer value."""
 
-    type: Literal["field_comparison"] = "field_comparison"
-    field: SampleField
-    operator: ComparisonOperator
-    value: str | int | float | datetime
+    type: Literal["image_integer_field_comparison"] = "image_integer_field_comparison"
+    field: ImageIntegerField
+    operator: OrdinalComparisonOperator
+    value: StrictInt
+
+
+class ImageDatetimeFieldComparison(BaseModel):
+    """Leaf node comparing an image datetime field to a datetime value."""
+
+    type: Literal["image_datetime_field_comparison"] = "image_datetime_field_comparison"
+    field: ImageDatetimeField
+    operator: OrdinalComparisonOperator
+    value: datetime
+
+
+class VideoStringFieldComparison(BaseModel):
+    """Leaf node comparing a video string field to a string value."""
+
+    type: Literal["video_string_field_comparison"] = "video_string_field_comparison"
+    field: VideoStringField
+    operator: EqualityComparisonOperator
+    value: StrictStr
+
+
+class VideoIntegerFieldComparison(BaseModel):
+    """Leaf node comparing a video integer field to an integer value."""
+
+    type: Literal["video_integer_field_comparison"] = "video_integer_field_comparison"
+    field: VideoIntegerField
+    operator: OrdinalComparisonOperator
+    value: StrictInt
+
+
+class VideoFloatFieldComparison(BaseModel):
+    """Leaf node comparing a video float field to a float value."""
+
+    type: Literal["video_float_field_comparison"] = "video_float_field_comparison"
+    field: VideoFloatField
+    operator: OrdinalComparisonOperator
+    value: StrictInt | StrictFloat
+
+
+class VideoEqualityFloatFieldComparison(BaseModel):
+    """Leaf node comparing a video equality-only float field to a float value."""
+
+    type: Literal["video_equality_float_field_comparison"] = (
+        "video_equality_float_field_comparison"
+    )
+    field: VideoEqualityFloatField
+    operator: EqualityComparisonOperator
+    value: StrictInt | StrictFloat
 
 
 class TagContains(BaseModel):
@@ -77,23 +160,55 @@ class TagContains(BaseModel):
     tag_name: str
 
 
-class AnnotationFieldComparison(BaseModel):
-    """Comparison of an annotation field to a value.
+class AnnotationLabelComparison(BaseModel):
+    """Criterion comparing an annotation label to a string value."""
 
-    Not part of the QueryNode union — used only inside AnnotationQuery.criteria.
-    """
-
-    field: AnnotationField
-    operator: ComparisonOperator
-    value: str | int | float
+    type: Literal["annotation_label_comparison"] = "annotation_label_comparison"
+    field: AnnotationLabelField
+    operator: EqualityComparisonOperator
+    value: StrictStr
 
 
-class AnnotationQuery(BaseModel):
-    """Leaf node checking if a sample has an annotation matching criteria."""
+class AnnotationGeometryComparison(BaseModel):
+    """Criterion comparing annotation geometry to a numeric value."""
 
-    type: Literal["annotation_query"] = "annotation_query"
-    annotation_type: AnnotationQueryType
-    criteria: list[AnnotationFieldComparison] = Field(min_length=1)
+    type: Literal["annotation_geometry_comparison"] = "annotation_geometry_comparison"
+    field: AnnotationGeometryField
+    operator: OrdinalComparisonOperator
+    value: StrictInt | StrictFloat
+
+
+ObjectDetectionCriterion = Annotated[
+    Union[AnnotationLabelComparison, AnnotationGeometryComparison],
+    Field(discriminator="type"),
+]
+InstanceSegmentationCriterion = Annotated[
+    Union[AnnotationLabelComparison, AnnotationGeometryComparison],
+    Field(discriminator="type"),
+]
+
+
+class ClassificationAnnotationQuery(BaseModel):
+    """Leaf node checking if a sample has a matching classification annotation."""
+
+    type: Literal["classification_annotation_query"] = "classification_annotation_query"
+    criteria: list[AnnotationLabelComparison] = Field(min_length=1)
+
+
+class ObjectDetectionAnnotationQuery(BaseModel):
+    """Leaf node checking if a sample has a matching object detection annotation."""
+
+    type: Literal["object_detection_annotation_query"] = "object_detection_annotation_query"
+    criteria: list[ObjectDetectionCriterion] = Field(min_length=1)
+
+
+class InstanceSegmentationAnnotationQuery(BaseModel):
+    """Leaf node checking if a sample has a matching instance segmentation annotation."""
+
+    type: Literal["instance_segmentation_annotation_query"] = (
+        "instance_segmentation_annotation_query"
+    )
+    criteria: list[InstanceSegmentationCriterion] = Field(min_length=1)
 
 
 class AndNode(BaseModel):
@@ -118,7 +233,22 @@ class NotNode(BaseModel):
 
 
 QueryNode = Annotated[
-    Union[FieldComparison, TagContains, AnnotationQuery, AndNode, OrNode, NotNode],
+    Union[
+        ImageStringFieldComparison,
+        ImageIntegerFieldComparison,
+        ImageDatetimeFieldComparison,
+        VideoStringFieldComparison,
+        VideoIntegerFieldComparison,
+        VideoFloatFieldComparison,
+        VideoEqualityFloatFieldComparison,
+        TagContains,
+        ClassificationAnnotationQuery,
+        ObjectDetectionAnnotationQuery,
+        InstanceSegmentationAnnotationQuery,
+        AndNode,
+        OrNode,
+        NotNode,
+    ],
     Field(discriminator="type"),
 ]
 
