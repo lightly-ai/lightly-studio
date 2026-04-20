@@ -29,9 +29,9 @@
   </g>
 
   <g>
-    <title>Customer Storage</title>
+    <title>Media Storage</title>
     <rect class="node-external" x="55" y="210" width="250" height="92" rx="12" ry="12"/>
-    <text class="label" x="180" y="246" text-anchor="middle">Customer Storage</text>
+    <text class="label" x="180" y="246" text-anchor="middle">Media Storage</text>
     <text class="small" x="180" y="271" text-anchor="middle">local files or cloud bucket</text>
   </g>
 
