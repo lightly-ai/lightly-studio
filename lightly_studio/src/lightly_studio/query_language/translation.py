@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 from datetime import datetime
-from functools import singledispatch
 from typing import Protocol, TypeVar, Union
 
 from typing_extensions import assert_never
@@ -51,95 +50,56 @@ class TagsAccessor(Protocol):
     def contains(self, tag_name: str) -> MatchExpression: ...
 
 
-@singledispatch
 def to_match_expression(expr: models.MatchExpr) -> MatchExpression:
     """Translate a validated query-language expression to a dataset-query expression."""
-    raise ValueError(f"Unsupported query expression type: {type(expr).__name__}")
-
-
-@to_match_expression.register
-def _string_expr(expr: models.StringExpr) -> MatchExpression:
-    return _apply_equality_operator(
-        field=_get_string_field(expr.field),
-        operator=expr.operator,
-        value=expr.value,
-    )
-
-
-@to_match_expression.register
-def _integer_expr(expr: models.IntegerExpr) -> MatchExpression:
-    return _apply_ordinal_operator(
-        field=_get_integer_field(expr.field),
-        operator=expr.operator,
-        value=expr.value,
-    )
-
-
-@to_match_expression.register
-def _datetime_expr(expr: models.DatetimeExpr) -> MatchExpression:
-    return _apply_ordinal_operator(
-        field=_get_datetime_field(expr.field),
-        operator=expr.operator,
-        value=expr.value,
-    )
-
-
-@to_match_expression.register
-def _ordinal_float_expr(expr: models.OrdinalFloatExpr) -> MatchExpression:
-    return _apply_ordinal_operator(
-        field=_get_ordinal_float_field(expr.field),
-        operator=expr.operator,
-        value=expr.value,
-    )
-
-
-@to_match_expression.register
-def _equality_float_expr(expr: models.EqualityFloatExpr) -> MatchExpression:
-    return _apply_equality_operator(
-        field=_get_equality_float_field(expr.field),
-        operator=expr.operator,
-        value=expr.value,
-    )
-
-
-@to_match_expression.register
-def _tags_contains_expr(expr: models.TagsContainsExpr) -> MatchExpression:
-    return _get_tags_accessor(expr.field).contains(expr.tag_name)
-
-
-@to_match_expression.register
-def _classification_match_expr(expr: models.ClassificationMatchExpr) -> MatchExpression:
-    criteria = [_translate_classification_criterion(c) for c in expr.criteria]
-    return ClassificationQuery.match(*criteria)
-
-
-@to_match_expression.register
-def _object_detection_match_expr(expr: models.ObjectDetectionMatchExpr) -> MatchExpression:
-    criteria = [_translate_object_detection_criterion(c) for c in expr.criteria]
-    return ObjectDetectionQuery.match(*criteria)
-
-
-@to_match_expression.register
-def _instance_segmentation_match_expr(
-    expr: models.InstanceSegmentationMatchExpr,
-) -> MatchExpression:
-    criteria = [_translate_instance_segmentation_criterion(c) for c in expr.criteria]
-    return InstanceSegmentationQuery.match(*criteria)
-
-
-@to_match_expression.register
-def _and_expr(expr: models.AndExpr) -> MatchExpression:
-    return AND(*(to_match_expression(child) for child in expr.children))
-
-
-@to_match_expression.register
-def _or_expr(expr: models.OrExpr) -> MatchExpression:
-    return OR(*(to_match_expression(child) for child in expr.children))
-
-
-@to_match_expression.register
-def _not_expr(expr: models.NotExpr) -> MatchExpression:
-    return NOT(to_match_expression(expr.child))
+    if isinstance(expr, models.StringExpr):
+        return _apply_equality_operator(
+            field=_get_string_field(expr.field),
+            operator=expr.operator,
+            value=expr.value,
+        )
+    if isinstance(expr, models.IntegerExpr):
+        return _apply_ordinal_operator(
+            field=_get_integer_field(expr.field),
+            operator=expr.operator,
+            value=expr.value,
+        )
+    if isinstance(expr, models.DatetimeExpr):
+        return _apply_ordinal_operator(
+            field=_get_datetime_field(expr.field),
+            operator=expr.operator,
+            value=expr.value,
+        )
+    if isinstance(expr, models.OrdinalFloatExpr):
+        return _apply_ordinal_operator(
+            field=_get_ordinal_float_field(expr.field),
+            operator=expr.operator,
+            value=expr.value,
+        )
+    if isinstance(expr, models.EqualityFloatExpr):
+        return _apply_equality_operator(
+            field=_get_equality_float_field(expr.field),
+            operator=expr.operator,
+            value=expr.value,
+        )
+    if isinstance(expr, models.TagsContainsExpr):
+        return _get_tags_accessor(expr.field).contains(expr.tag_name)
+    if isinstance(expr, models.ClassificationMatchExpr):
+        criteria = [_translate_classification_criterion(c) for c in expr.criteria]
+        return ClassificationQuery.match(*criteria)
+    if isinstance(expr, models.ObjectDetectionMatchExpr):
+        criteria = [_translate_object_detection_criterion(c) for c in expr.criteria]
+        return ObjectDetectionQuery.match(*criteria)
+    if isinstance(expr, models.InstanceSegmentationMatchExpr):
+        criteria = [_translate_instance_segmentation_criterion(c) for c in expr.criteria]
+        return InstanceSegmentationQuery.match(*criteria)
+    if isinstance(expr, models.AndExpr):
+        return AND(*(to_match_expression(child) for child in expr.children))
+    if isinstance(expr, models.OrExpr):
+        return OR(*(to_match_expression(child) for child in expr.children))
+    if isinstance(expr, models.NotExpr):
+        return NOT(to_match_expression(expr.child))
+    assert_never(expr)
 
 
 def _translate_classification_criterion(expr: models.AnnotationLabelExpr) -> MatchExpression:
@@ -164,16 +124,18 @@ def _translate_object_detection_criterion(expr: models.ObjectDetectionExpr) -> M
             operator=expr.operator,
             value=expr.value,
         )
-    if expr.field.table != "object_detection":
-        raise ValueError(
-            "Object detection geometry criteria require object_detection fields, "
-            f"got {expr.field}"
+    if isinstance(expr, models.AnnotationGeometryExpr):
+        if expr.field.table != "object_detection":
+            raise ValueError(
+                "Object detection geometry criteria require object_detection fields, "
+                f"got {expr.field}"
+            )
+        return _apply_ordinal_operator(
+            field=_get_object_detection_geometry_field(expr.field.name),
+            operator=expr.operator,
+            value=expr.value,
         )
-    return _apply_ordinal_operator(
-        field=_get_object_detection_geometry_field(expr.field.name),
-        operator=expr.operator,
-        value=expr.value,
-    )
+    assert_never(expr)
 
 
 def _translate_instance_segmentation_criterion(
@@ -190,124 +152,89 @@ def _translate_instance_segmentation_criterion(
             operator=expr.operator,
             value=expr.value,
         )
-    if expr.field.table != "instance_segmentation":
-        raise ValueError(
-            "Instance segmentation geometry criteria require instance_segmentation fields, "
-            f"got {expr.field}"
+    if isinstance(expr, models.AnnotationGeometryExpr):
+        if expr.field.table != "instance_segmentation":
+            raise ValueError(
+                "Instance segmentation geometry criteria require instance_segmentation fields, "
+                f"got {expr.field}"
+            )
+        return _apply_ordinal_operator(
+            field=_get_instance_segmentation_geometry_field(expr.field.name),
+            operator=expr.operator,
+            value=expr.value,
         )
-    return _apply_ordinal_operator(
-        field=_get_instance_segmentation_geometry_field(expr.field.name),
-        operator=expr.operator,
-        value=expr.value,
-    )
+    assert_never(expr)
 
 
-@singledispatch
 def _get_string_field(field: models.StringFieldRef) -> EqualityField[str]:
-    raise ValueError(f"Unsupported string field ref type: {type(field).__name__}")
+    if isinstance(field, models.ImageStringFieldRef):
+        name = field.name
+        if name is models.ImageStringFieldName.FILE_NAME:
+            return ImageSampleField.file_name
+        if name is models.ImageStringFieldName.FILE_PATH_ABS:
+            return ImageSampleField.file_path_abs
+        assert_never(name)
+    if isinstance(field, models.VideoStringFieldRef):
+        name = field.name
+        if name is models.VideoStringFieldName.FILE_NAME:
+            return VideoSampleField.file_name
+        if name is models.VideoStringFieldName.FILE_PATH_ABS:
+            return VideoSampleField.file_path_abs
+        assert_never(name)
+    assert_never(field)
 
 
-@_get_string_field.register
-def _get_image_string_field(field: models.ImageStringFieldRef) -> EqualityField[str]:
-    name = field.name
-    if name is models.ImageStringFieldName.FILE_NAME:
-        return ImageSampleField.file_name
-    if name is models.ImageStringFieldName.FILE_PATH_ABS:
-        return ImageSampleField.file_path_abs
-    assert_never(name)
-
-
-@_get_string_field.register
-def _get_video_string_field(field: models.VideoStringFieldRef) -> EqualityField[str]:
-    name = field.name
-    if name is models.VideoStringFieldName.FILE_NAME:
-        return VideoSampleField.file_name
-    if name is models.VideoStringFieldName.FILE_PATH_ABS:
-        return VideoSampleField.file_path_abs
-    assert_never(name)
-
-
-@singledispatch
 def _get_integer_field(field: models.IntegerFieldRef) -> OrdinalField[int]:
-    raise ValueError(f"Unsupported integer field ref type: {type(field).__name__}")
+    if isinstance(field, models.ImageIntegerFieldRef):
+        name = field.name
+        if name is models.ImageIntegerFieldName.WIDTH:
+            return ImageSampleField.width
+        if name is models.ImageIntegerFieldName.HEIGHT:
+            return ImageSampleField.height
+        assert_never(name)
+    if isinstance(field, models.VideoIntegerFieldRef):
+        name = field.name
+        if name is models.VideoIntegerFieldName.WIDTH:
+            return VideoSampleField.width
+        if name is models.VideoIntegerFieldName.HEIGHT:
+            return VideoSampleField.height
+        assert_never(name)
+    assert_never(field)
 
 
-@_get_integer_field.register
-def _get_image_integer_field(field: models.ImageIntegerFieldRef) -> OrdinalField[int]:
-    name = field.name
-    if name is models.ImageIntegerFieldName.WIDTH:
-        return ImageSampleField.width
-    if name is models.ImageIntegerFieldName.HEIGHT:
-        return ImageSampleField.height
-    assert_never(name)
-
-
-@_get_integer_field.register
-def _get_video_integer_field(field: models.VideoIntegerFieldRef) -> OrdinalField[int]:
-    name = field.name
-    if name is models.VideoIntegerFieldName.WIDTH:
-        return VideoSampleField.width
-    if name is models.VideoIntegerFieldName.HEIGHT:
-        return VideoSampleField.height
-    assert_never(name)
-
-
-@singledispatch
 def _get_datetime_field(field: models.DatetimeFieldRef) -> OrdinalField[datetime]:
-    raise ValueError(f"Unsupported datetime field ref type: {type(field).__name__}")
+    if isinstance(field, models.ImageDatetimeFieldRef):
+        name = field.name
+        if name is models.ImageDatetimeFieldName.CREATED_AT:
+            return ImageSampleField.created_at
+        assert_never(name)
+    assert_never(field)
 
 
-@_get_datetime_field.register
-def _get_image_datetime_field(field: models.ImageDatetimeFieldRef) -> OrdinalField[datetime]:
-    name = field.name
-    if name is models.ImageDatetimeFieldName.CREATED_AT:
-        return ImageSampleField.created_at
-    assert_never(name)
-
-
-@singledispatch
 def _get_ordinal_float_field(field: models.OrdinalFloatFieldRef) -> OrdinalField[Number]:
-    raise ValueError(f"Unsupported ordinal float field ref type: {type(field).__name__}")
+    if isinstance(field, models.VideoOrdinalFloatFieldRef):
+        name = field.name
+        if name is models.VideoFloatFieldName.FPS:
+            return VideoSampleField.fps
+        assert_never(name)
+    assert_never(field)
 
 
-@_get_ordinal_float_field.register
-def _get_video_ordinal_float_field(
-    field: models.VideoOrdinalFloatFieldRef,
-) -> OrdinalField[Number]:
-    name = field.name
-    if name is models.VideoFloatFieldName.FPS:
-        return VideoSampleField.fps
-    assert_never(name)
-
-
-@singledispatch
 def _get_equality_float_field(field: models.EqualityFloatFieldRef) -> EqualityField[Number]:
-    raise ValueError(f"Unsupported equality float field ref type: {type(field).__name__}")
+    if isinstance(field, models.VideoEqualityFloatFieldRef):
+        name = field.name
+        if name is models.VideoEqualityFloatFieldName.DURATION_S:
+            return VideoSampleField.duration_s
+        assert_never(name)
+    assert_never(field)
 
 
-@_get_equality_float_field.register
-def _get_video_equality_float_field(
-    field: models.VideoEqualityFloatFieldRef,
-) -> EqualityField[Number]:
-    name = field.name
-    if name is models.VideoEqualityFloatFieldName.DURATION_S:
-        return VideoSampleField.duration_s
-    assert_never(name)
-
-
-@singledispatch
 def _get_tags_accessor(field: models.TagsFieldRef) -> TagsAccessor:
-    raise ValueError(f"Unsupported tags field ref type: {type(field).__name__}")
-
-
-@_get_tags_accessor.register
-def _get_image_tags_accessor(field: models.ImageTagsFieldRef) -> TagsAccessor:
-    return ImageSampleField.tags
-
-
-@_get_tags_accessor.register
-def _get_video_tags_accessor(field: models.VideoTagsFieldRef) -> TagsAccessor:
-    return VideoSampleField.tags
+    if isinstance(field, models.ImageTagsFieldRef):
+        return ImageSampleField.tags
+    if isinstance(field, models.VideoTagsFieldRef):
+        return VideoSampleField.tags
+    assert_never(field)
 
 
 def _get_object_detection_geometry_field(
