@@ -103,7 +103,7 @@ def read_tag(
     return tag
 
 
-@tag_router.patch("/collections/{collection_id}/tags/{tag_id}")
+@tag_router.patch("/collections/{collection_id}/tags/{tag_id}", response_model=TagView)
 def rename_tag(
     session: SessionDep,
     collection: Annotated[

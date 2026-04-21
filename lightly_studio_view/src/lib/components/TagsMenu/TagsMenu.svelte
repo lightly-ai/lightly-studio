@@ -178,23 +178,25 @@
                             />
                         {/if}
                     </div>
-                    <TagActionMenu
-                        {tag}
-                        open={openActionsTagId === tag.tag_id}
-                        {deletingTagId}
-                        {renamingTagId}
-                        onOpenChange={(open) => {
-                            openActionsTagId = open ? tag.tag_id : null;
-                        }}
-                        onCloseAutoFocus={(event) => {
-                            if (suppressCloseAutoFocusTagId === tag.tag_id) {
-                                event.preventDefault();
-                                suppressCloseAutoFocusTagId = null;
-                            }
-                        }}
-                        onRename={openRename}
-                        onDelete={handleDeleteTag}
-                    />
+                    {#if editingTagId !== tag.tag_id}
+                        <TagActionMenu
+                            {tag}
+                            open={openActionsTagId === tag.tag_id}
+                            {deletingTagId}
+                            {renamingTagId}
+                            onOpenChange={(open) => {
+                                openActionsTagId = open ? tag.tag_id : null;
+                            }}
+                            onCloseAutoFocus={(event) => {
+                                if (suppressCloseAutoFocusTagId === tag.tag_id) {
+                                    event.preventDefault();
+                                    suppressCloseAutoFocusTagId = null;
+                                }
+                            }}
+                            onRename={openRename}
+                            onDelete={handleDeleteTag}
+                        />
+                    {/if}
                 </div>
             {:else}
                 <p>No tags yet</p>

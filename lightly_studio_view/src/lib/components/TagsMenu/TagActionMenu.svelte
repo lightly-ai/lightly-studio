@@ -3,6 +3,11 @@
     import { MoreHorizontal, Pencil, Trash2 } from '@lucide/svelte';
     import type { TagView } from '$lib/services/types';
 
+    const actionButtonClass =
+        'flex w-full items-center gap-2 rounded-sm px-2 py-1.5 text-sm text-foreground transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50';
+    const defaultActionButtonClass = `${actionButtonClass} hover:bg-accent`;
+    const destructiveActionButtonClass = `${actionButtonClass} hover:bg-destructive hover:text-destructive-foreground`;
+
     let {
         tag,
         open,
@@ -46,7 +51,7 @@
     >
         <button
             type="button"
-            class="flex w-full items-center gap-2 rounded-sm px-2 py-1.5 text-sm text-foreground transition-colors hover:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
+            class={defaultActionButtonClass}
             data-testid={`rename-tag-${tag.tag_id}`}
             disabled={deletingTagId !== null || renamingTagId !== null}
             onclick={(event: MouseEvent) => {
@@ -58,7 +63,7 @@
         </button>
         <button
             type="button"
-            class="flex w-full items-center gap-2 rounded-sm px-2 py-1.5 text-sm text-foreground transition-colors hover:bg-destructive hover:text-destructive-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
+            class={destructiveActionButtonClass}
             data-testid={`delete-tag-${tag.tag_id}`}
             disabled={deletingTagId !== null || renamingTagId !== null}
             onclick={(event: MouseEvent) => {
