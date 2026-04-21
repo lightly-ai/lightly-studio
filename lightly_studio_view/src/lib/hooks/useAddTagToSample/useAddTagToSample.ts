@@ -46,7 +46,7 @@ export function useAddTagToSample({
         try {
             const response = await createTag({
                 path: { collection_id: collectionId },
-                body: { name: trimmed, description: `${trimmed} description`, kind: getTagKind() }
+                body: { name: trimmed, kind: getTagKind() }
             });
             if (response.error) throw new Error('create tag failed');
             if (response.data?.tag_id) {
