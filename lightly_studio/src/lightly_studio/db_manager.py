@@ -113,12 +113,7 @@ class DatabaseEngine:
             SQLModel.metadata.drop_all(bind=self._engine)
             logging.info("Dropped all tables in PostgreSQL database.")
 
-        existing_managed_tables = _get_existing_managed_tables(engine=self._engine)
-        SQLModel.metadata.create_all(self._engine)
-        _validate_or_initialize_database_version(
-            engine=self._engine,
-            existing_managed_tables=existing_managed_tables,
-        )
+        _validate_or_initialize_database_version(engine=self._engine)
 
     @contextmanager
     def session(self) -> Generator[Session, None, None]:
@@ -354,18 +349,7 @@ def _session_dependency() -> Generator[Session, None, None]:
 SessionDep = Annotated[Session, Depends(_session_dependency)]
 
 
-def _get_existing_managed_tables(engine: Engine) -> set[str]:
-    """Get existing tables managed by SQLModel before create_all."""
-    inspector = inspect(engine)
-    existing_tables = set(inspector.get_table_names())
-    managed_tables = set(SQLModel.metadata.tables)
-    return existing_tables.intersection(managed_tables)
-
-
-def _validate_or_initialize_database_version(
-    engine: Engine,
-    existing_managed_tables: set[str],
-) -> None:
+def _validate_or_initialize_database_version(engine: Engine) -> None:
     """Validate database schema version or initialize it for fresh databases.
 
     The database schema version is tied to the full lightly-studio package version.
@@ -373,6 +357,10 @@ def _validate_or_initialize_database_version(
     missing or mismatched version are warned about but never auto-updated, so
     the warning persists until the user takes action.
     """
+    existing_managed_tables = set(inspect(engine).get_table_names()).intersection(
+        SQLModel.metadata.tables
+    )
+    SQLModel.metadata.create_all(engine)
     expected_version = metadata.version("lightly-studio")
 
     with Session(engine) as version_session:

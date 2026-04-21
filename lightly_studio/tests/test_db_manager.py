@@ -339,7 +339,7 @@ def test_get_backend(
     db_manager.close()
 
 
-def _create_database(db_url: str, version: str | None = PACKAGE_VERSION) -> None:
+def _create_database(db_url: str, version: str | None) -> None:
     db_manager.connect(db_url=db_url)
     with db_manager.session() as session:
         db_version = session.exec(select(DatabaseVersionTable)).first()
@@ -351,48 +351,20 @@ def _create_database(db_url: str, version: str | None = PACKAGE_VERSION) -> None
     db_manager.close()
 
 
-def _assert_database_version_after_connect(
-    db_url: str,
-    *,
-    caplog: pytest.LogCaptureFixture,
-    must_exist: bool,
-    expected_version: str | None,
-    expected_warning: str | None = None,
-) -> None:
-    caplog.clear()
-    with caplog.at_level("WARNING"):
-        db_manager.connect(db_url=db_url, must_exist=must_exist)
-    with db_manager.session() as session:
-        db_version = session.exec(select(DatabaseVersionTable)).first()
-        if expected_version is None:
-            assert db_version is None
-        else:
-            assert db_version is not None
-            assert db_version.version == expected_version
-    db_manager.close()
-    schema_warnings = [
-        record.getMessage()
-        for record in caplog.records
-        if "database schema version" in record.getMessage().lower()
-    ]
-    if expected_warning is None:
-        assert not schema_warnings
-    else:
-        assert any(expected_warning in message for message in schema_warnings)
-
-
 def test_connect__initializes_database_version_for_new_database(
     tmp_path: Path,
     caplog: pytest.LogCaptureFixture,
     patch_engine_singleton: None,  # noqa: ARG001
 ) -> None:
     db_url = f"duckdb:///{tmp_path / 'no_db.db'}"
-    _assert_database_version_after_connect(
-        db_url=db_url,
-        caplog=caplog,
-        must_exist=False,
-        expected_version=PACKAGE_VERSION,
-    )
+    caplog.clear()
+    with caplog.at_level("WARNING"):
+        db_manager.connect(db_url=db_url, must_exist=False)
+    assert caplog.messages == []
+    with db_manager.session() as session:
+        db_version = session.exec(select(DatabaseVersionTable.version)).first()
+    db_manager.close()
+    assert db_version == PACKAGE_VERSION
 
 
 def test_connect__warns_for_database_without_version_metadata(
@@ -402,13 +374,18 @@ def test_connect__warns_for_database_without_version_metadata(
 ) -> None:
     db_url = f"duckdb:///{tmp_path / 'db_without_version.db'}"
     _create_database(db_url=db_url, version=None)
-    _assert_database_version_after_connect(
-        db_url=db_url,
-        caplog=caplog,
-        must_exist=True,
-        expected_version=None,
-        expected_warning="missing version metadata",
+    expected_warning = (
+        f"Incompatible database schema version. Expected version "
+        f"'{PACKAGE_VERSION}', but found missing version metadata."
     )
+    caplog.clear()
+    with caplog.at_level("WARNING"):
+        db_manager.connect(db_url=db_url, must_exist=True)
+    assert caplog.messages == [expected_warning]
+    with db_manager.session() as session:
+        db_version = session.exec(select(DatabaseVersionTable.version)).first()
+    db_manager.close()
+    assert db_version is None
 
 
 def test_connect__does_not_warn_for_same_database_version(
@@ -417,13 +394,15 @@ def test_connect__does_not_warn_for_same_database_version(
     patch_engine_singleton: None,  # noqa: ARG001
 ) -> None:
     db_url = f"duckdb:///{tmp_path / 'db_with_same_version.db'}"
-    _create_database(db_url=db_url)
-    _assert_database_version_after_connect(
-        db_url=db_url,
-        caplog=caplog,
-        must_exist=True,
-        expected_version=PACKAGE_VERSION,
-    )
+    _create_database(db_url=db_url, version=PACKAGE_VERSION)
+    caplog.clear()
+    with caplog.at_level("WARNING"):
+        db_manager.connect(db_url=db_url, must_exist=True)
+    assert caplog.messages == []
+    with db_manager.session() as session:
+        db_version = session.exec(select(DatabaseVersionTable.version)).first()
+    db_manager.close()
+    assert db_version == PACKAGE_VERSION
 
 
 def test_connect__warns_for_other_database_version(
@@ -433,13 +412,17 @@ def test_connect__warns_for_other_database_version(
 ) -> None:
     db_url = f"duckdb:///{tmp_path / 'db_with_other_version.db'}"
     _create_database(db_url=db_url, version="0.0.0")
-    _assert_database_version_after_connect(
-        db_url=db_url,
-        caplog=caplog,
-        must_exist=True,
-        expected_version="0.0.0",
-        expected_warning="got '0.0.0'",
+    expected_warning = (
+        f"Incompatible database schema version. Expected version '{PACKAGE_VERSION}', got '0.0.0'."
     )
+    caplog.clear()
+    with caplog.at_level("WARNING"):
+        db_manager.connect(db_url=db_url, must_exist=True)
+    assert caplog.messages == [expected_warning]
+    with db_manager.session() as session:
+        db_version = session.exec(select(DatabaseVersionTable.version)).first()
+    db_manager.close()
+    assert db_version == "0.0.0"
 
 
 def test_connect__raises_for_multiple_database_versions(
