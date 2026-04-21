@@ -2637,8 +2637,8 @@ wheels = [
 
 [[package]]
 name = "labelformat"
-version = "0.1.13"
-source = { git = "https://github.com/lightly-ai/labelformat.git?rev=f9cf7d51dd2b058d27d91d733a87475a404c1f18#f9cf7d51dd2b058d27d91d733a87475a404c1f18" }
+version = "0.1.14"
+source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "fsspec", version = "2025.10.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.10'" },
     { name = "fsspec", version = "2026.2.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.10'" },
@@ -2651,6 +2651,10 @@ dependencies = [
     { name = "pydantic-xml" },
     { name = "pyyaml" },
     { name = "tqdm" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/af/a1/7d7c617ec5eaf00dd57b8d8164accd488db398a7045dfed5a2ac412e1669/labelformat-0.1.14.tar.gz", hash = "sha256:af45538ef71925c91adc4322068e8693cc573d96ed90f308175578c505579bf2", size = 39804, upload-time = "2026-04-21T06:28:36.594Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/9c/90/4736e3b4157354792e2eacd1786e0236d6391bcef96d5362063259ecbf65/labelformat-0.1.14-py3-none-any.whl", hash = "sha256:fa574e403bb6d13ac6a5d8308ee9ca78a7bd732537de260109666bbc54b833ed", size = 57133, upload-time = "2026-04-21T06:28:37.852Z" },
 ]
 
 [[package]]
@@ -2940,7 +2944,7 @@ requires-dist = [
     { name = "fastapi", specifier = ">=0.115.5" },
     { name = "fsspec", specifier = ">=2023.1.0" },
     { name = "gcsfs", marker = "extra == 'cloud-storage'", specifier = ">=2023.1.0" },
-    { name = "labelformat", git = "https://github.com/lightly-ai/labelformat.git?rev=f9cf7d51dd2b058d27d91d733a87475a404c1f18" },
+    { name = "labelformat", specifier = ">=0.1.14" },
     { name = "lightly-edge-sdk", marker = "extra == 'lightly-edge'", specifier = ">=1.0.3.post1", index = "https://europe-west3-python.pkg.dev/boris-250909/lightly-pypi/simple/" },
     { name = "lightly-mundig", specifier = "==0.1.10" },
     { name = "open-clip-torch", specifier = ">=2.20.0" },
