@@ -86,11 +86,17 @@ export function useFileDrop({ onFileAccepted, onError }: UseFileDropParams): Use
         const target = event.target as HTMLInputElement;
         const file = target.files?.[0];
 
-        if (file) {
-            await onFileAccepted(file);
+        try {
+            if (file) {
+                if (!file.type.startsWith('image/')) {
+                    onError('Please drop an image file.');
+                } else {
+                    await onFileAccepted(file);
+                }
+            }
+        } finally {
+            target.value = '';
         }
-
-        target.value = '';
     };
 
     return {

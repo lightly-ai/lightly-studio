@@ -79,4 +79,36 @@ describe('useFileDrop', () => {
         expect(onFileAccepted).toHaveBeenCalledWith(file);
         expect(target.value).toBe('');
     });
+
+    it('rejects non-image file selection and resets file input value', async () => {
+        const drop = useFileDrop({ onFileAccepted, onError });
+        const file = new File(['text'], 'upload.txt', { type: 'text/plain' });
+        const target = {
+            files: [file],
+            value: 'non-empty'
+        };
+
+        await drop.handleFileSelect({ target } as unknown as Event);
+
+        expect(onError).toHaveBeenCalledWith('Please drop an image file.');
+        expect(onFileAccepted).not.toHaveBeenCalled();
+        expect(target.value).toBe('');
+    });
+
+    it('resets file input value even when file handling fails', async () => {
+        const drop = useFileDrop({ onFileAccepted, onError });
+        const file = new File(['image'], 'upload.png', { type: 'image/png' });
+        const target = {
+            files: [file],
+            value: 'non-empty'
+        };
+
+        onFileAccepted.mockRejectedValueOnce(new Error('Upload failed'));
+
+        await expect(drop.handleFileSelect({ target } as unknown as Event)).rejects.toThrow(
+            'Upload failed'
+        );
+        expect(onFileAccepted).toHaveBeenCalledWith(file);
+        expect(target.value).toBe('');
+    });
 });
