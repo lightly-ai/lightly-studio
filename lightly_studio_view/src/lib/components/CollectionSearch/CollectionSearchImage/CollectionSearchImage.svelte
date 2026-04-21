@@ -7,12 +7,12 @@
     import { Image as ImageIcon, X } from '@lucide/svelte';
     import { cn } from '$lib/utils';
 
-    type Props = {
+    interface Props {
         name: string;
         onClear: () => void;
         showOutline?: boolean;
         src?: string;
-    };
+    }
 
     let { name, src, showOutline = false, onClear }: Props = $props();
 </script>
@@ -35,6 +35,7 @@
         class="ml-auto hover:text-foreground"
         onclick={onClear}
         title="Clear search"
+        type="button"
         data-testid="search-clear-button"
     >
         <X class="h-4 w-4" />
