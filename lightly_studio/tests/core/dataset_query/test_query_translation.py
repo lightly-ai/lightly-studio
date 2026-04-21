@@ -167,7 +167,8 @@ class TestTagsContainsExpr:
         )
         result = query_translation.to_match_expression(expr)
         sql = _to_sql(result)
-        assert "reviewed" in sql
+        assert "exists" in sql
+        assert "tag.name = 'reviewed'" in sql
 
     def test_unknown_field(self) -> None:
         expr = TagsContainsExpr(
@@ -188,7 +189,9 @@ class TestClassificationMatchExpr:
         expr = ClassificationMatchExpr(subexpr=subexpr)
         result = query_translation.to_match_expression(expr)
         sql = _to_sql(result)
-        assert "cat" in sql
+        assert "exists" in sql
+        assert "annotation_type = 'classification'" in sql
+        assert "annotation_label_name = 'cat'" in sql
 
 
 class TestObjectDetectionMatchExpr:
@@ -201,7 +204,9 @@ class TestObjectDetectionMatchExpr:
         expr = ObjectDetectionMatchExpr(subexpr=subexpr)
         result = query_translation.to_match_expression(expr)
         sql = _to_sql(result)
-        assert "50" in sql
+        assert "exists" in sql
+        assert "annotation_type = 'object_detection'" in sql
+        assert "object_detection_annotation.width > 50" in sql
 
 
 class TestInstanceSegmentationMatchExpr:
@@ -214,7 +219,9 @@ class TestInstanceSegmentationMatchExpr:
         expr = InstanceSegmentationMatchExpr(subexpr=subexpr)
         result = query_translation.to_match_expression(expr)
         sql = _to_sql(result)
-        assert "person" in sql
+        assert "exists" in sql
+        assert "annotation_type = 'instance_segmentation'" in sql
+        assert "annotation_label_name = 'person'" in sql
 
 
 class TestAndExpr:
@@ -250,8 +257,8 @@ class TestOrExpr:
         )
         expr = OrExpr(children=[child_a, child_b])
         sql = _to_sql(query_translation.to_match_expression(expr))
-        assert "a.jpg" in sql
-        assert "b.jpg" in sql
+        assert "file_name = 'a.jpg'" in sql
+        assert "file_name = 'b.jpg'" in sql
         assert " or " in sql
 
 
@@ -296,6 +303,8 @@ def test_nested_and_or() -> None:
     )
     sql = _to_sql(query_translation.to_match_expression(and_expr))
     assert "image.height > 50" in sql
+    assert "image.width = 100" in sql
+    assert "image.width = 200" in sql
     assert " and " in sql
     assert " or " in sql
 
