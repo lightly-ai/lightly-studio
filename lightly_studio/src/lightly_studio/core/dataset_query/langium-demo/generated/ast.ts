@@ -38,6 +38,7 @@ export type LightlyQueryKeywordNames =
     | "file_path_abs"
     | "fps"
     | "height"
+    | "image:"
     | "in"
     | "label"
     | "not"
@@ -46,6 +47,7 @@ export type LightlyQueryKeywordNames =
     | "tags"
     | "tags.contains("
     | "true"
+    | "video:"
     | "width"
     | "x"
     | "y";

@@ -134,9 +134,9 @@ const services = createLightlyQueryServices(mockContext).LightlyQuery;
 const parser = services.parser.LangiumParser;
 
 const queries = [
-  "(Image.width > 100 OR Image.height > 100) AND object_detection(label == 'car')",
-  "tags.contains('dog') OR 'cat' IN tags",
-  "NOT (Video.width < 50 AND NOT tags.contains('low_res'))",
+  "image: (Image.width > 100 OR Image.height > 100) AND object_detection(label == 'car')",
+  "image: tags.contains('dog') OR 'cat' IN tags",
+  "video: NOT (Video.width < 50 AND NOT tags.contains('low_res'))",
 ];
 
 console.log("=== Langium-Powered LightlyQuery DSL Showcase ===");

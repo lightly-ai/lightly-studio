@@ -55,24 +55,30 @@ interface BooleanLiteral extends Expression {
 }
 
 entry Query:
-    expression=SampleExpression;
+    ('image:' expression=SampleExpression<true>) |
+    ('video:' expression=SampleExpression<false>);
 
-SampleExpression returns Expression:
-    SampleAndExpression ({BinaryExpression.left=current} operator='or' right=SampleAndExpression)*;
+SampleExpression<isImage> returns Expression:
+    SampleAndExpression<isImage> ({BinaryExpression.left=current} operator='or' right=SampleAndExpression<isImage>)*;
 
-SampleAndExpression returns Expression:
-    SampleComparisonExpression ({BinaryExpression.left=current} operator='and' right=SampleComparisonExpression)*;
+SampleAndExpression<isImage> returns Expression:
+    SampleComparisonExpression<isImage> ({BinaryExpression.left=current} operator='and' right=SampleComparisonExpression<isImage>)*;
 
-SampleComparisonExpression returns Expression:
-    {NotExpression} 'not' expression=SampleComparisonExpression
-    | SamplePrimaryExpression ({ComparisonExpression.left=current} operator=('==' | '!=' | '<' | '>' | '<=' | '>=') right=SamplePrimaryExpression)?;
+SampleComparisonExpression<isImage> returns Expression:
+    {NotExpression} 'not' expression=SampleComparisonExpression<isImage>
+    | SamplePrimaryExpression<isImage> ({ComparisonExpression.left=current} operator=('==' | '!=' | '<' | '>' | '<=' | '>=') right=SamplePrimaryExpression<isImage>)?;
 
-SamplePrimaryExpression returns Expression:
-    '(' SampleExpression ')'
+SamplePrimaryExpression<isImage> returns Expression:
+    '(' SampleExpression<isImage> ')'
     | AnnotationQuery
     | TagInExpression
-    | SampleFieldReference
+    | SampleFieldReference<isImage>
     | Literal;
+
+SampleFieldReference<isImage> returns Expression:
+    {FieldReference} name=CommonSampleFieldName
+    | (<isImage> {QualifiedFieldReference} receiver=ImageSampleFieldReceiver '.' member=ImageSampleFieldName)
+    | (<!isImage> {QualifiedFieldReference} receiver=VideoSampleFieldReceiver '.' member=VideoSampleFieldName);
 
 ObjectDetectionExpression returns Expression:
     ObjectDetectionAndExpression ({BinaryExpression.left=current} operator='or' right=ObjectDetectionAndExpression)*;
@@ -102,11 +108,6 @@ AnnotationQuery returns Expression:
 TagInExpression returns Expression:
     {TagInExpression} 'tags.contains(' tag_name=StringLiteral ')' |
     {TagInExpression} tag_name=StringLiteral 'in' 'tags';
-
-SampleFieldReference returns Expression:
-    {FieldReference} name=CommonSampleFieldName
-    | {QualifiedFieldReference} receiver=ImageSampleFieldReceiver '.' member=ImageSampleFieldName
-    | {QualifiedFieldReference} receiver=VideoSampleFieldReceiver '.' member=VideoSampleFieldName;
 
 ImageSampleFieldReceiver returns string:
     'Image' | 'ImageSampleField';
