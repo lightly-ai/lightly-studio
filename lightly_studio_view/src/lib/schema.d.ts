@@ -4120,6 +4120,8 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
+                /** @description The ID of the collection */
+                collection_id: string;
                 tag_id: string;
             };
             cookie?: never;
