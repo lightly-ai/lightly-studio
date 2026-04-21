@@ -6,34 +6,7 @@
     // Without this, Machine B's browser would need direct internet access to load the editor.
     loader.config({ monaco });
     import { Play, X } from '@lucide/svelte';
-
-    interface MethodMeta {
-        name: string;
-        detail: string;
-        insert_text: string;
-        doc: string;
-    }
-    interface FieldMeta {
-        name: string;
-        kind: string;
-        operators: string[];
-        methods: MethodMeta[];
-        doc: string;
-    }
-    interface NamespaceMeta {
-        name: string;
-        doc: string;
-        fields: FieldMeta[];
-    }
-    interface FunctionMeta {
-        name: string;
-        signature: string;
-        doc: string;
-    }
-    interface QueryCompletionsResponse {
-        namespaces: NamespaceMeta[];
-        functions: FunctionMeta[];
-    }
+    import type { QueryCompletionsResponse } from '$lib/api/lightly_studio_local/types.gen';
 
     interface Props {
         onrun: (query: string) => void;
