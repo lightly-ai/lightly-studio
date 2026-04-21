@@ -1,39 +1,31 @@
-import { writable } from 'svelte/store';
+import { writable, type Writable } from 'svelte/store';
 
-type UseFileDropParams = {
+interface UseFileDropParams {
+    /** Called when an image file is accepted from drop, paste, or file input. */
     onFile: (file: File) => Promise<void> | void;
+    /** Called when user input is invalid (for example non-image drop). */
     onError: (message: string) => void;
-};
+}
+
+interface UseFileDropReturn {
+    /** `true` while an item is dragged over the drop zone. */
+    dragOver: Writable<boolean>;
+    /** Enables dropping and marks the drop zone as active. */
+    handleDragOver: (event: DragEvent) => void;
+    /** Clears drop-zone active state when the dragged item leaves. */
+    handleDragLeave: (event: DragEvent) => void;
+    /** Accepts a dropped image file and forwards it to `onFile`. */
+    handleDrop: (event: DragEvent) => Promise<void>;
+    /** Accepts pasted image data from clipboard and forwards it to `onFile`. */
+    handlePaste: (event: ClipboardEvent) => Promise<void>;
+    /** Accepts a selected file from input and resets input value afterward. */
+    handleFileSelect: (event: Event) => Promise<void>;
+}
 
 /**
  * Centralizes image intake interactions for search UI components.
- *
- * Handles drag-and-drop, clipboard paste, and file input selection, while
- * exposing reactive drag-over state for UI feedback and delegating accepted
- * files to the provided upload callback.
- *
- * @param params - Hook configuration.
- * @param params.onFile - Called when an image file is accepted from any input source.
- * @param params.onError - Called when user input is invalid (for example non-image drop).
- * @returns Handlers and state used by the search component:
- * `dragOver`, `handleDragOver`, `handleDragLeave`, `handleDrop`, `handlePaste`, `handleFileSelect`.
- *
- * @example
- * ```ts
- * const {
- *   dragOver,
- *   handleDragOver,
- *   handleDragLeave,
- *   handleDrop,
- *   handlePaste,
- *   handleFileSelect
- * } = useFileDrop({
- *   onFile: uploadImage,
- *   onError: (message) => toast.error('Error', { description: message })
- * });
- * ```
  */
-export function useFileDrop({ onFile, onError }: UseFileDropParams) {
+export function useFileDrop({ onFile, onError }: UseFileDropParams): UseFileDropReturn {
     const dragOver = writable(false);
 
     const handleDragOver = (event: DragEvent) => {

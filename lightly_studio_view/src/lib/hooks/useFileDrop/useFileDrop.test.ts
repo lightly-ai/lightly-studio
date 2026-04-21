@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { get } from 'svelte/store';
-import { useFileDrop } from './useFileDrop';
+import { useFileDrop } from '$lib/hooks';
 
 describe('useFileDrop', () => {
     const onFile = vi.fn();

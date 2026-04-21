@@ -14,5 +14,4 @@ export { useCollectionWithChildren } from '$lib/hooks/useCollection/useCollectio
 export { useSelectionSummary } from '$lib/hooks/useSelectionSummary/useSelectionSummary';
 export { useVideo } from '$lib/hooks/useVideo/useVideo';
 export { useAddTagToSample } from '$lib/hooks/useAddTagToSample/useAddTagToSample';
-export { useFileDrop } from '$lib/hooks/useFileDrop';
-export { useImageUpload } from '$lib/hooks/useImageUpload';
+export { useFileDrop } from '$lib/hooks/useFileDrop/useFileDrop';
