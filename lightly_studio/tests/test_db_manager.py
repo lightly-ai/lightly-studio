@@ -344,12 +344,10 @@ def _create_database(db_url: str, version: str | None = PACKAGE_VERSION) -> None
     with db_manager.session() as session:
         db_version = session.exec(select(DatabaseVersionTable)).first()
         assert db_version is not None
-        if version == db_version.version:
-            db_manager.close()
-            return
-        session.delete(db_version)
-        if version is not None:
-            session.add(DatabaseVersionTable(version=version))
+        if version != db_version.version:
+            session.delete(db_version)
+            if version is not None:
+                session.add(DatabaseVersionTable(version=version))
     db_manager.close()
 
 
@@ -442,11 +440,20 @@ def test_connect__warns_for_other_database_version(
         expected_version="0.0.0",
         expected_warning="got '0.0.0'",
     )
-    # Connecting again must warn again: the version row is never auto-rewritten.
-    _assert_database_version_after_connect(
-        db_url=db_url,
-        caplog=caplog,
-        must_exist=True,
-        expected_version="0.0.0",
-        expected_warning="got '0.0.0'",
-    )
+
+
+def test_connect__raises_for_multiple_database_versions(
+    tmp_path: Path,
+    patch_engine_singleton: None,  # noqa: ARG001
+) -> None:
+    db_url = f"duckdb:///{tmp_path / 'db_with_multiple_versions.db'}"
+    _create_database(db_url=db_url, version=None)
+
+    db_manager.connect(db_url=db_url)
+    with db_manager.session() as session:
+        session.add(DatabaseVersionTable(version="0.0.0"))
+        session.add(DatabaseVersionTable(version="0.0.1"))
+    db_manager.close()
+
+    with pytest.raises(RuntimeError, match=r"Expected at most one row in 'database_version'"):
+        db_manager.connect(db_url=db_url, must_exist=True)

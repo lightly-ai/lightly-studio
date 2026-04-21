@@ -376,13 +376,18 @@ def _validate_or_initialize_database_version(
     expected_version = metadata.version("lightly-studio")
 
     with Session(engine) as version_session:
-        db_version = version_session.exec(select(DatabaseVersionTable)).first()
+        db_versions = version_session.exec(select(DatabaseVersionTable)).all()
+        if len(db_versions) > 1:
+            raise RuntimeError(
+                f"Expected at most one row in 'database_version', got {len(db_versions)}."
+            )
+
+        db_version = db_versions[0] if db_versions else None
         if db_version is None:
             if existing_managed_tables:
                 logging.warning(
-                    "Incompatible database schema version. "
-                    "Expected version '%s', but found missing version metadata.",
-                    expected_version,
+                    f"Incompatible database schema version. Expected version "
+                    f"'{expected_version}', but found missing version metadata."
                 )
                 return
             version_session.add(DatabaseVersionTable(version=expected_version))
@@ -391,7 +396,6 @@ def _validate_or_initialize_database_version(
 
         if db_version.version != expected_version:
             logging.warning(
-                "Incompatible database schema version. Expected version '%s', got '%s'.",
-                expected_version,
-                db_version.version,
+                f"Incompatible database schema version. Expected version "
+                f"'{expected_version}', got '{db_version.version}'."
             )
