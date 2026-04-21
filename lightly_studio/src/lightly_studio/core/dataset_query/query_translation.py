@@ -1,9 +1,13 @@
-"""Translate query-language models into dataset-query expressions."""
+"""Translate query expression models into dataset-query expressions.
+
+Uses `isinstance` checks with `assert_never` to statically check that all cases are covered.
+"""
 
 from __future__ import annotations
 
+from collections.abc import Mapping
 from datetime import datetime
-from typing import Any, Protocol, TypeVar, Union
+from typing import Protocol, TypeVar, Union
 
 from typing_extensions import assert_never
 
@@ -45,14 +49,14 @@ T_contra = TypeVar("T_contra", contravariant=True)
 Number = Union[int, float]
 
 
-class EqualityField(Protocol[T_contra]):
+class _EqualityField(Protocol[T_contra]):  # noqa: PLW1641
     """Field supporting equality comparisons that yield MatchExpression."""
 
     def __eq__(self, other: T_contra) -> MatchExpression: ...  # type: ignore[override]
     def __ne__(self, other: T_contra) -> MatchExpression: ...  # type: ignore[override]
 
 
-class OrdinalField(EqualityField[T_contra], Protocol[T_contra]):
+class _OrdinalField(_EqualityField[T_contra], Protocol[T_contra]):
     """Field supporting ordinal comparisons that yield MatchExpression."""
 
     def __lt__(self, other: T_contra) -> MatchExpression: ...
@@ -61,7 +65,7 @@ class OrdinalField(EqualityField[T_contra], Protocol[T_contra]):
     def __ge__(self, other: T_contra) -> MatchExpression: ...
 
 
-class TagsAccessor(Protocol):
+class _TagsAccessor(Protocol):
     """Tag accessor interface for dataset-query sample fields."""
 
     def contains(self, tag_name: str) -> MatchExpression: ...
@@ -71,7 +75,7 @@ class TagsAccessor(Protocol):
 # Field mappings: (table, name) → dataset-query field / accessor
 # ---------------------------------------------------------------------------
 
-_STRING_FIELDS: dict[tuple[str, str], EqualityField[str]] = {
+_STRING_FIELDS: dict[tuple[str, str], _EqualityField[str]] = {
     ("image", "file_name"): ImageSampleField.file_name,
     ("image", "file_path_abs"): ImageSampleField.file_path_abs,
     ("video", "file_name"): VideoSampleField.file_name,
@@ -81,7 +85,7 @@ _STRING_FIELDS: dict[tuple[str, str], EqualityField[str]] = {
     ("instance_segmentation", "label"): InstanceSegmentationField.label,
 }
 
-_INTEGER_FIELDS: dict[tuple[str, str], OrdinalField[int]] = {
+_INTEGER_FIELDS: dict[tuple[str, str], _OrdinalField[int]] = {
     ("image", "width"): ImageSampleField.width,
     ("image", "height"): ImageSampleField.height,
     ("video", "width"): VideoSampleField.width,
@@ -96,29 +100,30 @@ _INTEGER_FIELDS: dict[tuple[str, str], OrdinalField[int]] = {
     ("instance_segmentation", "height"): InstanceSegmentationField.height,
 }
 
-_DATETIME_FIELDS: dict[tuple[str, str], OrdinalField[datetime]] = {
+_DATETIME_FIELDS: dict[tuple[str, str], _OrdinalField[datetime]] = {
     ("image", "created_at"): ImageSampleField.created_at,
 }
 
-_ORDINAL_FLOAT_FIELDS: dict[tuple[str, str], OrdinalField[Number]] = {
+_ORDINAL_FLOAT_FIELDS: dict[tuple[str, str], _OrdinalField[Number]] = {
     ("video", "fps"): VideoSampleField.fps,
 }
 
-_EQUALITY_FLOAT_FIELDS: dict[tuple[str, str], EqualityField[Number]] = {
+_EQUALITY_FLOAT_FIELDS: dict[tuple[str, str], _EqualityField[Number]] = {
     ("video", "duration_s"): VideoSampleField.duration_s,
 }
 
-_TAGS_FIELDS: dict[tuple[str, str], TagsAccessor] = {
+_TAGS_FIELDS: dict[tuple[str, str], _TagsAccessor] = {
     ("image", "tags"): ImageSampleField.tags,
     ("video", "tags"): VideoSampleField.tags,
 }
 
 
 def _lookup(
-    mapping: dict[tuple[str, str], Any],
+    mapping: Mapping[tuple[str, str], T],
     field: FieldRef,
     kind: str,
-) -> Any:
+) -> T:
+    """Retrieve a dataset-query field / accessor with error handling."""
     key = (field.table, field.name)
     if key not in mapping:
         raise ValueError(f"Unknown {kind} field: {field.table}.{field.name}")
@@ -130,7 +135,7 @@ def _lookup(
 # ---------------------------------------------------------------------------
 
 
-def to_match_expression(expr: MatchExpr) -> MatchExpression:
+def to_match_expression(expr: MatchExpr) -> MatchExpression:  # noqa: PLR0911 C901
     """Translate a validated query-language expression to a dataset-query expression."""
     if isinstance(expr, StringExpr):
         return _apply_equality_operator(
@@ -152,24 +157,18 @@ def to_match_expression(expr: MatchExpr) -> MatchExpression:
         )
     if isinstance(expr, OrdinalFloatExpr):
         return _apply_ordinal_operator(
-            field=_lookup(
-                _ORDINAL_FLOAT_FIELDS, expr.field, "ordinal float"
-            ),
+            field=_lookup(_ORDINAL_FLOAT_FIELDS, expr.field, "ordinal float"),
             operator=expr.operator,
             value=expr.value,
         )
     if isinstance(expr, EqualityFloatExpr):
         return _apply_equality_operator(
-            field=_lookup(
-                _EQUALITY_FLOAT_FIELDS, expr.field, "equality float"
-            ),
+            field=_lookup(_EQUALITY_FLOAT_FIELDS, expr.field, "equality float"),
             operator=expr.operator,
             value=expr.value,
         )
     if isinstance(expr, TagsContainsExpr):
-        accessor: TagsAccessor = _lookup(
-            _TAGS_FIELDS, expr.field, "tags"
-        )
+        accessor: _TagsAccessor = _lookup(_TAGS_FIELDS, expr.field, "tags")
         return accessor.contains(expr.tag_name)
     if isinstance(expr, ClassificationMatchExpr):
         return ClassificationQuery.match(to_match_expression(expr.subexpr))
@@ -186,9 +185,8 @@ def to_match_expression(expr: MatchExpr) -> MatchExpression:
     assert_never(expr)
 
 
-
 def _apply_equality_operator(
-    *, field: EqualityField[T], operator: EqualityComparisonOperator, value: T
+    *, field: _EqualityField[T], operator: EqualityComparisonOperator, value: T
 ) -> MatchExpression:
     if operator is EqualityComparisonOperator.EQ:
         return field == value
@@ -198,7 +196,7 @@ def _apply_equality_operator(
 
 
 def _apply_ordinal_operator(
-    *, field: OrdinalField[T], operator: OrdinalComparisonOperator, value: T
+    *, field: _OrdinalField[T], operator: OrdinalComparisonOperator, value: T
 ) -> MatchExpression:
     if operator is OrdinalComparisonOperator.LT:
         return field < value
