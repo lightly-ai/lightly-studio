@@ -35,35 +35,11 @@ class FieldRef(BaseModel):
     name: str
 
 
-class StringFieldRef(FieldRef):
-    """Reference to a string field."""
-
-
-class IntegerFieldRef(FieldRef):
-    """Reference to an integer field."""
-
-
-class DatetimeFieldRef(FieldRef):
-    """Reference to a datetime field."""
-
-
-class OrdinalFloatFieldRef(FieldRef):
-    """Reference to a float field with ordinal comparisons."""
-
-
-class EqualityFloatFieldRef(FieldRef):
-    """Reference to a float field with equality-only comparisons."""
-
-
-class TagsFieldRef(FieldRef):
-    """Reference to the tags relationship."""
-
-
 class StringExpr(BaseModel):
     """Leaf node for equality comparisons on string sample fields."""
 
     type: Literal["string_expr"] = "string_expr"
-    field: StringFieldRef
+    field: FieldRef
     operator: EqualityComparisonOperator
     value: StrictStr
 
@@ -72,7 +48,7 @@ class IntegerExpr(BaseModel):
     """Leaf node for ordinal comparisons on integer sample fields."""
 
     type: Literal["integer_expr"] = "integer_expr"
-    field: IntegerFieldRef
+    field: FieldRef
     operator: OrdinalComparisonOperator
     value: StrictInt
 
@@ -81,7 +57,7 @@ class DatetimeExpr(BaseModel):
     """Leaf node for ordinal comparisons on datetime sample fields."""
 
     type: Literal["datetime_expr"] = "datetime_expr"
-    field: DatetimeFieldRef
+    field: FieldRef
     operator: OrdinalComparisonOperator
     value: datetime
 
@@ -90,7 +66,7 @@ class OrdinalFloatExpr(BaseModel):
     """Leaf node for ordinal comparisons on float sample fields."""
 
     type: Literal["ordinal_float_expr"] = "ordinal_float_expr"
-    field: OrdinalFloatFieldRef
+    field: FieldRef
     operator: OrdinalComparisonOperator
     value: StrictInt | StrictFloat
 
@@ -99,7 +75,7 @@ class EqualityFloatExpr(BaseModel):
     """Leaf node for equality comparisons on equality-only float sample fields."""
 
     type: Literal["equality_float_expr"] = "equality_float_expr"
-    field: EqualityFloatFieldRef
+    field: FieldRef
     operator: EqualityComparisonOperator
     value: StrictInt | StrictFloat
 
@@ -108,7 +84,7 @@ class TagsContainsExpr(BaseModel):
     """Leaf node checking if a sample has a specific tag."""
 
     type: Literal["tags_contains_expr"] = "tags_contains_expr"
-    field: TagsFieldRef
+    field: FieldRef
     tag_name: str
 
 
