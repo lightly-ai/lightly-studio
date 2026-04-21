@@ -11,6 +11,8 @@ from typing import Protocol, TypeVar, Union
 
 from typing_extensions import assert_never
 
+from lightly_studio.errors import QueryExprError
+
 from lightly_studio.core.dataset_query import (
     AND,
     NOT,
@@ -121,12 +123,18 @@ _TAGS_FIELDS: dict[tuple[str, str], _TagsAccessor] = {
 def _lookup(
     mapping: Mapping[tuple[str, str], T],
     field: FieldRef,
-    kind: str,
+    type: str,
 ) -> T:
-    """Retrieve a dataset-query field / accessor with error handling."""
+    """Retrieve a dataset-query field / accessor with error handling.
+
+    Args:
+        mapping: Mapping from (table, name) to dataset-query field / accessor.
+        field: Field reference from the query expression model.
+        type: String for error messages (e.g. "string", "ordinal float", etc.).
+    """
     key = (field.table, field.name)
     if key not in mapping:
-        raise ValueError(f"Unknown {kind} field: {field.table}.{field.name}")
+        raise QueryExprError(f"Unknown {type} field: {field.table}.{field.name}")
     return mapping[key]
 
 
