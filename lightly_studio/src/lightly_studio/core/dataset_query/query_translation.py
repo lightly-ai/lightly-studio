@@ -11,8 +11,6 @@ from typing import Protocol, TypeVar, Union
 
 from typing_extensions import assert_never
 
-from lightly_studio.errors import QueryExprError
-
 from lightly_studio.core.dataset_query import (
     AND,
     NOT,
@@ -27,6 +25,7 @@ from lightly_studio.core.dataset_query import (
     VideoSampleField,
 )
 from lightly_studio.core.dataset_query.match_expression import MatchExpression
+from lightly_studio.errors import QueryExprError
 from lightly_studio.models.query_expr import (
     AndExpr,
     ClassificationMatchExpr,
@@ -123,18 +122,18 @@ _TAGS_FIELDS: dict[tuple[str, str], _TagsAccessor] = {
 def _lookup(
     mapping: Mapping[tuple[str, str], T],
     field: FieldRef,
-    type: str,
+    type_: str,
 ) -> T:
     """Retrieve a dataset-query field / accessor with error handling.
 
     Args:
         mapping: Mapping from (table, name) to dataset-query field / accessor.
         field: Field reference from the query expression model.
-        type: String for error messages (e.g. "string", "ordinal float", etc.).
+        type_: String for error messages (e.g. "string", "ordinal float", etc.).
     """
     key = (field.table, field.name)
     if key not in mapping:
-        raise QueryExprError(f"Unknown {type} field: {field.table}.{field.name}")
+        raise QueryExprError(f"Unknown {type_} field: {field.table}.{field.name}")
     return mapping[key]
 
 
@@ -147,54 +146,54 @@ def to_match_expression(expr: MatchExpr) -> MatchExpression:  # noqa: PLR0911 C9
     """Translate a validated query-language expression to a dataset-query expression."""
     if isinstance(expr, StringExpr):
         return _apply_equality_operator(
-            field=_lookup(_STRING_FIELDS, expr.field, "string"),
+            field=_lookup(mapping=_STRING_FIELDS, field=expr.field, type_="string"),
             operator=expr.operator,
             value=expr.value,
         )
     if isinstance(expr, IntegerExpr):
         return _apply_ordinal_operator(
-            field=_lookup(_INTEGER_FIELDS, expr.field, "integer"),
+            field=_lookup(mapping=_INTEGER_FIELDS, field=expr.field, type_="integer"),
             operator=expr.operator,
             value=expr.value,
         )
     if isinstance(expr, DatetimeExpr):
         return _apply_ordinal_operator(
-            field=_lookup(_DATETIME_FIELDS, expr.field, "datetime"),
+            field=_lookup(mapping=_DATETIME_FIELDS, field=expr.field, type_="datetime"),
             operator=expr.operator,
             value=expr.value,
         )
     if isinstance(expr, OrdinalFloatExpr):
         return _apply_ordinal_operator(
-            field=_lookup(_ORDINAL_FLOAT_FIELDS, expr.field, "ordinal float"),
+            field=_lookup(mapping=_ORDINAL_FLOAT_FIELDS, field=expr.field, type_="ordinal float"),
             operator=expr.operator,
             value=expr.value,
         )
     if isinstance(expr, EqualityFloatExpr):
         return _apply_equality_operator(
-            field=_lookup(_EQUALITY_FLOAT_FIELDS, expr.field, "equality float"),
+            field=_lookup(mapping=_EQUALITY_FLOAT_FIELDS, field=expr.field, type_="equality float"),
             operator=expr.operator,
             value=expr.value,
         )
     if isinstance(expr, TagsContainsExpr):
-        accessor: _TagsAccessor = _lookup(_TAGS_FIELDS, expr.field, "tags")
+        accessor: _TagsAccessor = _lookup(mapping=_TAGS_FIELDS, field=expr.field, type_="tags")
         return accessor.contains(expr.tag_name)
     if isinstance(expr, ClassificationMatchExpr):
-        return ClassificationQuery.match(to_match_expression(expr.subexpr))
+        return ClassificationQuery.match(to_match_expression(expr=expr.subexpr))
     if isinstance(expr, ObjectDetectionMatchExpr):
-        return ObjectDetectionQuery.match(to_match_expression(expr.subexpr))
+        return ObjectDetectionQuery.match(to_match_expression(expr=expr.subexpr))
     if isinstance(expr, InstanceSegmentationMatchExpr):
-        return InstanceSegmentationQuery.match(to_match_expression(expr.subexpr))
+        return InstanceSegmentationQuery.match(to_match_expression(expr=expr.subexpr))
     if isinstance(expr, AndExpr):
-        return AND(*(to_match_expression(child) for child in expr.children))
+        return AND(*(to_match_expression(expr=child) for child in expr.children))
     if isinstance(expr, OrExpr):
-        return OR(*(to_match_expression(child) for child in expr.children))
+        return OR(*(to_match_expression(expr=child) for child in expr.children))
     if isinstance(expr, NotExpr):
-        return NOT(to_match_expression(expr.child))
+        return NOT(to_match_expression(expr=expr.child))
     assert_never(expr)
 
 
 def _apply_equality_operator(
-    *, field: _EqualityField[T], operator: EqualityComparisonOperator, value: T
+    field: _EqualityField[T], operator: EqualityComparisonOperator, value: T
 ) -> MatchExpression:
     if operator is EqualityComparisonOperator.EQ:
         return field == value
@@ -204,7 +203,7 @@ def _apply_equality_operator(
 
 
 def _apply_ordinal_operator(
-    *, field: _OrdinalField[T], operator: OrdinalComparisonOperator, value: T
+    field: _OrdinalField[T], operator: OrdinalComparisonOperator, value: T
 ) -> MatchExpression:
     if operator is OrdinalComparisonOperator.LT:
         return field < value

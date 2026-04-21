@@ -57,7 +57,6 @@ class TestStringExpr:
             query_translation.to_match_expression(expr)
 
 
-
 class TestIntegerExpr:
     @pytest.mark.parametrize(
         ("operator", "expected_op"),
@@ -70,9 +69,7 @@ class TestIntegerExpr:
             (OrdinalComparisonOperator.NEQ, "!="),
         ],
     )
-    def test_operators(
-        self, operator: OrdinalComparisonOperator, expected_op: str
-    ) -> None:
+    def test_operators(self, operator: OrdinalComparisonOperator, expected_op: str) -> None:
         expr = IntegerExpr(
             field=FieldRef(table="image", name="width"),
             operator=operator,
@@ -89,7 +86,6 @@ class TestIntegerExpr:
         )
         with pytest.raises(QueryExprError, match="Unknown integer field"):
             query_translation.to_match_expression(expr)
-
 
 
 class TestDatetimeExpr:
@@ -114,7 +110,6 @@ class TestDatetimeExpr:
             query_translation.to_match_expression(expr)
 
 
-
 class TestOrdinalFloatExpr:
     def test_lt(self) -> None:
         expr = OrdinalFloatExpr(
@@ -133,7 +128,6 @@ class TestOrdinalFloatExpr:
         )
         with pytest.raises(QueryExprError, match="Unknown ordinal float field"):
             query_translation.to_match_expression(expr)
-
 
 
 class TestEqualityFloatExpr:
@@ -165,7 +159,6 @@ class TestEqualityFloatExpr:
             query_translation.to_match_expression(expr)
 
 
-
 class TestTagsContainsExpr:
     def test_image_tags(self) -> None:
         expr = TagsContainsExpr(
@@ -183,7 +176,6 @@ class TestTagsContainsExpr:
         )
         with pytest.raises(QueryExprError, match="Unknown tags field"):
             query_translation.to_match_expression(expr)
-
 
 
 class TestClassificationMatchExpr:
@@ -223,7 +215,6 @@ class TestInstanceSegmentationMatchExpr:
         result = query_translation.to_match_expression(expr)
         sql = _to_sql(result)
         assert "person" in sql
-
 
 
 class TestAndExpr:
@@ -275,7 +266,6 @@ class TestNotExpr:
         sql = _to_sql(query_translation.to_match_expression(expr))
         # NOT(width < 100) is compiled as width >= 100 by SQLAlchemy.
         assert "image.width >= 100" in sql
-
 
 
 def test_nested_and_or() -> None:
