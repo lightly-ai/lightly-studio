@@ -5,29 +5,31 @@
 -->
 <script lang="ts">
     import { Image as ImageIcon, X } from '@lucide/svelte';
+    import { cn } from '$lib/utils';
 
     type Props = {
-        activeImage: string;
-        previewUrl: string | null;
-        dragOver: boolean;
+        name: string;
         onClear: () => void;
+        showOutline?: boolean;
+        src?: string;
     };
 
-    let { activeImage, previewUrl, dragOver, onClear }: Props = $props();
+    let { name, src, showOutline = false, onClear }: Props = $props();
 </script>
 
 <div
-    class="flex h-10 w-full items-center rounded-md border border-input bg-background px-3 py-2 pl-8 text-sm {dragOver
-        ? 'ring-2 ring-primary'
-        : ''}"
+    class={cn(
+        'flex h-10 w-full items-center rounded-md border border-input bg-background px-3 py-2 pl-8 text-sm',
+        showOutline && 'ring-2 ring-primary'
+    )}
 >
     <span class="mr-2 flex items-center gap-2 truncate text-muted-foreground">
-        {#if previewUrl}
-            <img src={previewUrl} alt="Search preview" class="h-6 w-6 rounded object-cover" />
+        {#if src}
+            <img {src} alt="Search preview" class="h-6 w-6 rounded object-cover" />
         {:else}
             <ImageIcon class="h-4 w-4" />
         {/if}
-        {activeImage}
+        {name}
     </span>
     <button
         class="ml-auto hover:text-foreground"

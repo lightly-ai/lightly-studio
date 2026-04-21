@@ -1,11 +1,11 @@
 <script module>
     import { defineMeta } from '@storybook/addon-svelte-csf';
-    import ImageSearchDisplay from './ImageSearchDisplay.svelte';
+    import CollectionSearchImage from './CollectionSearchImage.svelte';
     import { fn } from 'storybook/test';
 
     const { Story } = defineMeta({
-        title: 'Components/CollectionSearch/ImageSearchDisplay',
-        component: ImageSearchDisplay,
+        title: 'Components/CollectionSearch/CollectionSearchImage',
+        component: CollectionSearchImage,
         tags: ['autodocs']
     });
 </script>
@@ -17,18 +17,18 @@
     }}
 >
     {#snippet template(args)}
-        <ImageSearchDisplay {...args} />
+        <CollectionSearchImage {...args} />
     {/snippet}
 </Story>
 
 <Story
     name="With Preview"
     args={{
-        previewUrl: 'https://picsum.photos/150?random=1',
+        src: 'https://picsum.photos/150?random=1',
         onClear: fn()
     }}
 >
     {#snippet template(args)}
-        <ImageSearchDisplay {...args} />
+        <CollectionSearchImage {...args} />
     {/snippet}
 </Story>
