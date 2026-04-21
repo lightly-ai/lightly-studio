@@ -1,68 +1,69 @@
-import { get, writable } from 'svelte/store';
+import { embedImageFromFileMutation } from '$lib/api/lightly_studio_local/@tanstack/svelte-query.gen';
+import { createMutation } from '@tanstack/svelte-query';
+import { get, writable, type Writable } from 'svelte/store';
 
-type UseImageUploadParams = {
-    collectionId: string;
-    onError: (message: string) => void;
-    onUploadSuccess: (result: { fileName: string; embedding: number[] }) => void;
-    maxImageSizeMb?: number;
+type UploadSuccessResult = {
+    fileName: string;
+    embedding: number[];
 };
 
-/**
- * Handles image-embedding upload lifecycle for collection search.
- *
- * Validates file size, uploads the file to the collection embedding endpoint,
- * manages upload/preview state, and exposes helpers to clear image state with
- * proper object URL cleanup.
- *
- * @param params - Hook configuration.
- * @param params.collectionId - Target collection id used by the upload endpoint.
- * @param params.onError - Called with a user-facing error message when validation or upload fails.
- * @param params.onUploadSuccess - Called with uploaded file metadata and embedding vector.
- * @param params.maxImageSizeMb - Optional maximum allowed image size in MB. Defaults to `50`.
- * @returns Reactive upload state and actions:
- * `activeImage`, `previewUrl`, `isUploading`, `uploadImage`, `clearImage`.
- *
- * @example
- * ```ts
- * const { activeImage, previewUrl, isUploading, uploadImage, clearImage } = useImageUpload({
- *   collectionId,
- *   onError: (message) => toast.error('Error', { description: message }),
- *   onUploadSuccess: ({ fileName, embedding }) => {
- *     setTextEmbedding({ queryText: fileName, embedding });
- *   }
- * });
- * ```
- */
+type UseImageUploadParams = {
+    /** Target collection id used by the embedding endpoint path. */
+    collectionId: string;
+    /** Called with a user-facing error message on validation or upload failure. */
+    onError: (message: string) => void;
+    /** Called after successful upload with file name and embedding vector. */
+    onSuccess: (result: UploadSuccessResult) => void;
+    /** Maximum accepted upload size in MB. Defaults to `50`. */
+    maxSizeMb?: number;
+};
+
+type UseImageUploadReturn = {
+    /** Name of the latest successfully uploaded file, `undefined` when not set. */
+    imageName: Writable<string | undefined>;
+    /** Object URL used to render local preview of the selected image, `undefined` when not set. */
+    previewUrl: Writable<string | undefined>;
+    /** `true` while an upload request is in flight. */
+    isUploading: Writable<boolean>;
+    /** Validates and uploads an image file to retrieve its embedding. */
+    upload: (file: File) => Promise<void>;
+    /** Clears current image state and revokes preview object URL if present. */
+    clear: () => void;
+};
+
+/** Handles image upload state and embedding retrieval for collection search. */
 export function useImageUpload({
     collectionId,
     onError,
-    onUploadSuccess,
-    maxImageSizeMb = 50
-}: UseImageUploadParams) {
-    const activeImage = writable<string | null>(null);
-    const previewUrl = writable<string | null>(null);
+    onSuccess,
+    maxSizeMb = 50
+}: UseImageUploadParams): UseImageUploadReturn {
+    const mutation = createMutation(embedImageFromFileMutation());
+    // We need to have this subscription to get onSuccess/onError events
+    mutation.subscribe(() => undefined);
+
+    const imageName = writable<string | undefined>(undefined);
+    const previewUrl = writable<string | undefined>(undefined);
     const isUploading = writable(false);
 
-    const maxImageSizeBytes = maxImageSizeMb * 1024 * 1024;
+    const maxImageSizeBytes = maxSizeMb * 1024 * 1024;
 
-    const clearImage = () => {
-        activeImage.set(null);
+    const clear = () => {
+        imageName.set(undefined);
 
         const currentPreviewUrl = get(previewUrl);
         if (currentPreviewUrl) {
             URL.revokeObjectURL(currentPreviewUrl);
-            previewUrl.set(null);
         }
+        previewUrl.set(undefined);
     };
 
-    const uploadImage = async (file: File) => {
+    const upload = async (file: File) => {
         if (file.size > maxImageSizeBytes) {
-            onError(`Image is too large. Maximum size is ${maxImageSizeMb}MB.`);
+            clear();
+            onError(`Image is too large. Maximum size is ${maxSizeMb}MB.`);
             return;
         }
-
-        const formData = new FormData();
-        formData.append('file', file);
 
         isUploading.set(true);
         try {
@@ -70,21 +71,28 @@ export function useImageUpload({
                 throw new Error('Collection ID is not available');
             }
 
-            const response = await fetch(
-                `/api/image_embedding/from_file/for_collection/${collectionId}`,
-                {
-                    method: 'POST',
-                    body: formData
-                }
-            );
+            const embedding = await new Promise<number[]>((resolve, reject) => {
+                get(mutation).mutate(
+                    {
+                        path: {
+                            collection_id: collectionId
+                        },
+                        body: {
+                            file
+                        }
+                    },
+                    {
+                        onSuccess: (data) => {
+                            resolve(data);
+                        },
+                        onError: (error) => {
+                            reject(error);
+                        }
+                    }
+                );
+            });
 
-            if (!response.ok) {
-                throw new Error(`Error uploading image: ${response.statusText}`);
-            }
-
-            const embedding = (await response.json()) as number[];
-
-            activeImage.set(file.name);
+            imageName.set(file.name);
 
             const currentPreviewUrl = get(previewUrl);
             if (currentPreviewUrl) {
@@ -92,8 +100,9 @@ export function useImageUpload({
             }
 
             previewUrl.set(URL.createObjectURL(file));
-            onUploadSuccess({ fileName: file.name, embedding });
+            onSuccess({ fileName: file.name, embedding });
         } catch (error: unknown) {
+            clear();
             const message = error instanceof Error ? error.message : 'Failed to upload image';
             onError(message);
         } finally {
@@ -102,10 +111,10 @@ export function useImageUpload({
     };
 
     return {
-        activeImage,
+        imageName,
         previewUrl,
         isUploading,
-        uploadImage,
-        clearImage
+        upload,
+        clear
     };
 }
