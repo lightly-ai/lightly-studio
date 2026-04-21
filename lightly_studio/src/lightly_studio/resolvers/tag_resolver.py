@@ -10,7 +10,7 @@ from sqlalchemy.exc import IntegrityError
 from sqlmodel import Session, col, select
 
 from lightly_studio.models.sample import SampleTable, SampleTagLinkTable
-from lightly_studio.models.tag import TagCreate, TagTable, TagUpdate
+from lightly_studio.models.tag import TagCreate, TagTable
 
 
 def create(session: Session, tag: TagCreate) -> TagTable:
@@ -55,28 +55,19 @@ def get_by_name(session: Session, tag_name: str, collection_id: UUID | None) -> 
     return session.exec(select(TagTable).where(TagTable.name == tag_name)).one_or_none()
 
 
-def update(session: Session, tag_id: UUID, tag_data: TagUpdate) -> TagTable | None:
-    """Update an existing tag."""
+def rename(session: Session, tag_id: UUID, new_name: str) -> TagTable | None:
+    """Rename an existing tag."""
     tag = get_by_id(session=session, tag_id=tag_id)
     if not tag:
         return None
 
-    update_fields = tag_data.model_dump(exclude_unset=True)
-    target_name = update_fields.get("name", tag.name)
-    target_description = update_fields.get("description", tag.description)
-
     conflicting_tag = get_by_name(
-        session=session, tag_name=target_name, collection_id=tag.collection_id
+        session=session, tag_name=new_name, collection_id=tag.collection_id
     )
     if conflicting_tag and conflicting_tag.tag_id != tag_id and conflicting_tag.kind == tag.kind:
         raise IntegrityError(statement=None, params=None, orig=Exception("Tag already exists"))
 
-    if target_name == tag.name:
-        tag.description = target_description
-        tag.updated_at = datetime.now(timezone.utc)
-        session.add(tag)
-        session.commit()
-        session.refresh(tag)
+    if new_name == tag.name:
         return tag
 
     sample_ids = [
@@ -101,16 +92,15 @@ def update(session: Session, tag_id: UUID, tag_data: TagUpdate) -> TagTable | No
     session.delete(tag)
     session.commit()
 
-    tag_updated = TagTable(
+    tag_renamed = TagTable(
         tag_id=tag_id,
         collection_id=tag.collection_id,
-        name=target_name,
-        description=target_description,
+        name=new_name,
         kind=tag.kind,
         created_at=tag.created_at,
         updated_at=datetime.now(timezone.utc),
     )
-    session.add(tag_updated)
+    session.add(tag_renamed)
     session.commit()
 
     if sample_ids:
@@ -119,8 +109,8 @@ def update(session: Session, tag_id: UUID, tag_data: TagUpdate) -> TagTable | No
         )
         session.commit()
 
-    session.refresh(tag_updated)
-    return tag_updated
+    session.refresh(tag_renamed)
+    return tag_renamed
 
 
 def delete(session: Session, tag_id: UUID) -> bool:
