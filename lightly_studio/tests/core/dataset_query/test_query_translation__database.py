@@ -127,14 +127,10 @@ def test_to_match_expression__tags_contains(db_session: Session) -> None:
 def test_to_match_expression__classification_match(db_session: Session) -> None:
     dataset = create_collection(session=db_session)
     cid = dataset.collection_id
-    image1 = create_image(
-        session=db_session, collection_id=cid, file_path_abs="/path/to/cat.jpg"
-    )
+    image1 = create_image(session=db_session, collection_id=cid, file_path_abs="/path/to/cat.jpg")
     create_image(session=db_session, collection_id=cid, file_path_abs="/path/to/dog.jpg")
 
-    label = create_annotation_label(
-        session=db_session, root_collection_id=cid, label_name="cat"
-    )
+    label = create_annotation_label(session=db_session, root_collection_id=cid, label_name="cat")
     create_annotation(
         session=db_session,
         collection_id=cid,
@@ -162,9 +158,7 @@ def test_to_match_expression__object_detection_match(db_session: Session) -> Non
     image1 = create_image(session=db_session, collection_id=cid, file_path_abs="/path/to/1.jpg")
     image2 = create_image(session=db_session, collection_id=cid, file_path_abs="/path/to/2.jpg")
 
-    label = create_annotation_label(
-        session=db_session, root_collection_id=cid, label_name="person"
-    )
+    label = create_annotation_label(session=db_session, root_collection_id=cid, label_name="person")
     create_annotation(
         session=db_session,
         collection_id=cid,
@@ -201,9 +195,7 @@ def test_to_match_expression__instance_segmentation_match(db_session: Session) -
     image1 = create_image(session=db_session, collection_id=cid, file_path_abs="/path/to/1.jpg")
     create_image(session=db_session, collection_id=cid, file_path_abs="/path/to/2.jpg")
 
-    label = create_annotation_label(
-        session=db_session, root_collection_id=cid, label_name="person"
-    )
+    label = create_annotation_label(session=db_session, root_collection_id=cid, label_name="person")
     create_annotation(
         session=db_session,
         collection_id=cid,

@@ -47,14 +47,24 @@ def test_to_match_expression__image_field_inside_classification_matcher(
     """
     dataset = create_collection(session=db_session)
     cid = dataset.collection_id
-    image = create_image(
+    wide_image = create_image(
         session=db_session, collection_id=cid, file_path_abs="/path/to/wide.jpg", width=800
+    )
+    narrow_image = create_image(
+        session=db_session, collection_id=cid, file_path_abs="/path/to/narrow.jpg", width=200
     )
     label = create_annotation_label(session=db_session, root_collection_id=cid, label_name="cat")
     create_annotation(
         session=db_session,
         collection_id=cid,
-        sample_id=image.sample_id,
+        sample_id=wide_image.sample_id,
+        annotation_label_id=label.annotation_label_id,
+        annotation_type=AnnotationType.CLASSIFICATION,
+    )
+    create_annotation(
+        session=db_session,
+        collection_id=cid,
+        sample_id=narrow_image.sample_id,
         annotation_label_id=label.annotation_label_id,
         annotation_type=AnnotationType.CLASSIFICATION,
     )
@@ -69,10 +79,10 @@ def test_to_match_expression__image_field_inside_classification_matcher(
     match = query_translation.to_match_expression(expr)
     results = DatasetQuery(dataset=dataset, session=db_session).match(match).to_list()
 
-    # Wrong: image.width leaks into the EXISTS subquery and is resolved from
-    # the outer scope, so the row matches even though the classification
-    # annotation has no width concept.
-    assert len(results) == 1
+    # Wrong: both samples have the same classification annotation shape, but
+    # only the wide image matches because image.width is resolved from the
+    # outer image row inside the classification subquery.
+    assert [result.sample_id for result in results] == [wide_image.sample_id]
 
 
 def test_to_match_expression__classification_field_inside_object_detection_matcher(
@@ -81,22 +91,50 @@ def test_to_match_expression__classification_field_inside_object_detection_match
     """classification.label inside ObjectDetectionMatchExpr mixes annotation contexts.
 
     The label lookup goes through AnnotationBaseTable.annotation_label
-    regardless of annotation type, but ObjectDetectionMatchExpr adds
-    ``annotation_type = 'OBJECT_DETECTION'`` which correctly rejects the
-    classification annotation.
+    regardless of the field's declared context. Wrapped in
+    ObjectDetectionMatchExpr, the same label predicate is silently evaluated
+    against object-detection annotations instead of classification ones.
     """
     dataset = create_collection(session=db_session)
     cid = dataset.collection_id
-    image = create_image(session=db_session, collection_id=cid, file_path_abs="/path/to/img.jpg")
-    label = create_annotation_label(session=db_session, root_collection_id=cid, label_name="dog")
+    classification_image = create_image(
+        session=db_session, collection_id=cid, file_path_abs="/path/to/classification.jpg"
+    )
+    object_detection_image = create_image(
+        session=db_session, collection_id=cid, file_path_abs="/path/to/object_detection.jpg"
+    )
+    other_detection_image = create_image(
+        session=db_session, collection_id=cid, file_path_abs="/path/to/other_detection.jpg"
+    )
+    dog_label = create_annotation_label(
+        session=db_session, root_collection_id=cid, label_name="dog"
+    )
+    cat_label = create_annotation_label(
+        session=db_session, root_collection_id=cid, label_name="cat"
+    )
 
-    # Create a classification annotation — NOT object detection.
     create_annotation(
         session=db_session,
         collection_id=cid,
-        sample_id=image.sample_id,
-        annotation_label_id=label.annotation_label_id,
+        sample_id=classification_image.sample_id,
+        annotation_label_id=dog_label.annotation_label_id,
         annotation_type=AnnotationType.CLASSIFICATION,
+    )
+    create_annotation(
+        session=db_session,
+        collection_id=cid,
+        sample_id=object_detection_image.sample_id,
+        annotation_label_id=dog_label.annotation_label_id,
+        annotation_type=AnnotationType.OBJECT_DETECTION,
+        annotation_data={"x": 0, "y": 0, "width": 10, "height": 10},
+    )
+    create_annotation(
+        session=db_session,
+        collection_id=cid,
+        sample_id=other_detection_image.sample_id,
+        annotation_label_id=cat_label.annotation_label_id,
+        annotation_type=AnnotationType.OBJECT_DETECTION,
+        annotation_data={"x": 0, "y": 0, "width": 10, "height": 10},
     )
 
     expr = ObjectDetectionMatchExpr(
@@ -109,9 +147,11 @@ def test_to_match_expression__classification_field_inside_object_detection_match
     match = query_translation.to_match_expression(expr)
     results = DatasetQuery(dataset=dataset, session=db_session).match(match).to_list()
 
-    # The ObjectDetectionMatchExpr adds ``annotation_type = 'OBJECT_DETECTION'``
-    # but the actual annotation is CLASSIFICATION, so no rows match.
-    assert len(results) == 0
+    # Wrong: the field says "classification.label", but the matcher's
+    # annotation_type filter makes it behave like a generic label predicate on
+    # object detections. The object-detection sample matches, while the actual
+    # classification sample does not.
+    assert [result.sample_id for result in results] == [object_detection_image.sample_id]
 
 
 def test_to_match_expression__object_detection_field_at_top_level(
@@ -126,21 +166,31 @@ def test_to_match_expression__object_detection_field_at_top_level(
     """
     dataset = create_collection(session=db_session)
     cid = dataset.collection_id
-    image = create_image(
-        session=db_session, collection_id=cid, file_path_abs="/path/to/img.jpg", width=800
+    matching_image = create_image(
+        session=db_session, collection_id=cid, file_path_abs="/path/to/matching.jpg", width=800
     )
-    # Second sample has no annotations at all.
-    create_image(
+    nonmatching_image = create_image(
+        session=db_session, collection_id=cid, file_path_abs="/path/to/nonmatching.jpg", width=800
+    )
+    bare_image = create_image(
         session=db_session, collection_id=cid, file_path_abs="/path/to/bare.jpg", width=800
     )
     label = create_annotation_label(session=db_session, root_collection_id=cid, label_name="car")
     create_annotation(
         session=db_session,
         collection_id=cid,
-        sample_id=image.sample_id,
+        sample_id=matching_image.sample_id,
         annotation_label_id=label.annotation_label_id,
         annotation_type=AnnotationType.OBJECT_DETECTION,
         annotation_data={"x": 0, "y": 0, "width": 100, "height": 100},
+    )
+    create_annotation(
+        session=db_session,
+        collection_id=cid,
+        sample_id=nonmatching_image.sample_id,
+        annotation_label_id=label.annotation_label_id,
+        annotation_type=AnnotationType.OBJECT_DETECTION,
+        annotation_data={"x": 0, "y": 0, "width": 10, "height": 10},
     )
 
     expr = IntegerExpr(
@@ -151,10 +201,14 @@ def test_to_match_expression__object_detection_field_at_top_level(
     match = query_translation.to_match_expression(expr)
     results = DatasetQuery(dataset=dataset, session=db_session).match(match).to_list()
 
-    # Wrong: both samples match (2 instead of 1).  The bare sample without any
-    # annotation should not match, but the top-level EXISTS subquery is not
-    # correctly scoped to the sample, so both rows are returned.
-    assert len(results) == 2
+    # Wrong: once one object-detection annotation in the dataset satisfies the
+    # width filter, the top-level EXISTS subquery is not scoped to the current
+    # sample, so even the nonmatching and bare samples are returned.
+    assert [result.sample_id for result in results] == [
+        matching_image.sample_id,
+        nonmatching_image.sample_id,
+        bare_image.sample_id,
+    ]
 
 
 def test_to_match_expression__classification_label_at_top_level(
@@ -168,18 +222,35 @@ def test_to_match_expression__classification_label_at_top_level(
     """
     dataset = create_collection(session=db_session)
     cid = dataset.collection_id
-    image = create_image(session=db_session, collection_id=cid, file_path_abs="/path/to/img.jpg")
-    # Second sample has no annotations at all.
-    create_image(session=db_session, collection_id=cid, file_path_abs="/path/to/bare.jpg")
-    label = create_annotation_label(session=db_session, root_collection_id=cid, label_name="cat")
-    # Create an OBJECT_DETECTION annotation with label "cat".
+    object_detection_image = create_image(
+        session=db_session, collection_id=cid, file_path_abs="/path/to/object_detection.jpg"
+    )
+    classification_other_label_image = create_image(
+        session=db_session, collection_id=cid, file_path_abs="/path/to/classification_other.jpg"
+    )
+    bare_image = create_image(
+        session=db_session, collection_id=cid, file_path_abs="/path/to/bare.jpg"
+    )
+    cat_label = create_annotation_label(
+        session=db_session, root_collection_id=cid, label_name="cat"
+    )
+    dog_label = create_annotation_label(
+        session=db_session, root_collection_id=cid, label_name="dog"
+    )
     create_annotation(
         session=db_session,
         collection_id=cid,
-        sample_id=image.sample_id,
-        annotation_label_id=label.annotation_label_id,
+        sample_id=object_detection_image.sample_id,
+        annotation_label_id=cat_label.annotation_label_id,
         annotation_type=AnnotationType.OBJECT_DETECTION,
         annotation_data={"x": 0, "y": 0, "width": 10, "height": 10},
+    )
+    create_annotation(
+        session=db_session,
+        collection_id=cid,
+        sample_id=classification_other_label_image.sample_id,
+        annotation_label_id=dog_label.annotation_label_id,
+        annotation_type=AnnotationType.CLASSIFICATION,
     )
 
     # Ask for classification.label == "cat" at the top level.
@@ -191,8 +262,11 @@ def test_to_match_expression__classification_label_at_top_level(
     match = query_translation.to_match_expression(expr)
     results = DatasetQuery(dataset=dataset, session=db_session).match(match).to_list()
 
-    # Wrong: both samples match (2 instead of 0).  The bare sample has no
-    # annotations at all, yet it matches because the top-level EXISTS
-    # subquery is not scoped to the sample.  The annotated sample matches
-    # because the subquery ignores annotation_type.
-    assert len(results) == 2
+    # Wrong: the top-level EXISTS subquery is not scoped to the current sample,
+    # and the predicate ignores annotation_type. A single object-detection
+    # annotation labeled "cat" makes every sample match.
+    assert [result.sample_id for result in results] == [
+        object_detection_image.sample_id,
+        classification_other_label_image.sample_id,
+        bare_image.sample_id,
+    ]
