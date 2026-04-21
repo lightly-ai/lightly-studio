@@ -146,7 +146,7 @@ def test_to_match_expression_compiles_nested_boolean_tree_to_sql() -> None:
         }
     )
 
-    query = select(ImageTable).where(tree.to_match_expression().get())
+    query = select(ImageTable).where(to_match_expression(tree.root).get())
     sql = str(query.compile(compile_kwargs={"literal_binds": True}))
 
     assert "image.width >= 128" in sql
@@ -210,7 +210,7 @@ def test_to_match_expression_compiles_video_query_to_sql() -> None:
     )
 
     sql = str(
-        tree.to_match_expression().get().compile(compile_kwargs={"literal_binds": True})
+        to_match_expression(tree.root).get().compile(compile_kwargs={"literal_binds": True})
     )
 
     assert "video.file_name = 'clip.mp4'" in sql
@@ -279,7 +279,7 @@ def test_to_match_expression_filters_matching_samples(db_session: Session) -> No
         select(ImageTable)
         .join(ImageTable.sample)
         .where(SampleTable.collection_id == collection_id)
-        .where(tree.to_match_expression().get())
+        .where(to_match_expression(tree.root).get())
     )
     results = db_session.exec(query).all()
 
