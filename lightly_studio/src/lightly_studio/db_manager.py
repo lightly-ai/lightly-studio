@@ -26,7 +26,7 @@ import sqlalchemy_utils
 from fastapi import Depends
 from sqlalchemy import StaticPool, inspect, text
 from sqlalchemy.engine import Engine
-from sqlmodel import Session, SQLModel, create_engine
+from sqlmodel import Session, SQLModel, create_engine, select
 
 import lightly_studio.api.db_tables  # noqa: F401, required for SQLModel to work properly
 from lightly_studio.dataset.env import LIGHTLY_STUDIO_DATABASE_URL
@@ -369,31 +369,29 @@ def _validate_or_initialize_database_version(
     """Validate database schema version or initialize it for fresh databases.
 
     The database schema version is tied to the full lightly-studio package version.
+    Only fresh databases get a version row written; existing databases with a
+    missing or mismatched version are warned about but never auto-updated, so
+    the warning persists until the user takes action.
     """
     expected_version = metadata.version("lightly-studio")
 
-    with Session(engine, close_resets_only=False) as version_session:
-        db_version = version_session.get(DatabaseVersionTable, 1)
+    with Session(engine) as version_session:
+        db_version = version_session.exec(select(DatabaseVersionTable)).first()
         if db_version is None:
-            is_existing_db_without_version = bool(
-                existing_managed_tables.difference({"database_version"})
-            )
-            if is_existing_db_without_version:
+            if existing_managed_tables:
                 logging.warning(
-
-                        "Incompatible database schema version. "
-                        f"Expected version '{expected_version}', "
-                        "but found missing version metadata."
-
+                    "Incompatible database schema version. "
+                    "Expected version '%s', but found missing version metadata.",
+                    expected_version,
                 )
-            version_session.add(DatabaseVersionTable(id=1, version=expected_version))
+                return
+            version_session.add(DatabaseVersionTable(version=expected_version))
             version_session.commit()
             return
 
         if db_version.version != expected_version:
             logging.warning(
-
-                    "Incompatible database schema version. "
-                    f"Expected version '{expected_version}', got '{db_version.version}'."
-
+                "Incompatible database schema version. Expected version '%s', got '%s'.",
+                expected_version,
+                db_version.version,
             )

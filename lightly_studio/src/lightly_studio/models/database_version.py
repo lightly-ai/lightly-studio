@@ -2,8 +2,6 @@
 
 from __future__ import annotations
 
-from datetime import datetime, timezone
-
 from sqlmodel import Field, SQLModel
 
 
@@ -12,6 +10,4 @@ class DatabaseVersionTable(SQLModel, table=True):
 
     __tablename__ = "database_version"
 
-    id: int = Field(default=1, primary_key=True)
-    version: str = Field(index=True)
-    updated_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    version: str = Field(primary_key=True)
