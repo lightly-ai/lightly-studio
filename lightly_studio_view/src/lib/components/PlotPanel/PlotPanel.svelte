@@ -65,18 +65,21 @@
 
     const embeddingsData = $derived(useEmbeddings(collectionId, filter));
 
-    const categoryColors = ['#9CA3AF', '#2563EB', '#F59E0B'];
+    const categoryColors = ['#9CA3AF', '#F59E0B'];
     const { data: arrowData, error: arrowError } = $derived(
         useArrowData({
             blobData: $embeddingsData.data as Blob
         })
     );
 
+    const hasActiveFilter = $derived(filter !== null || activeSampleIds.length > 0);
+
     let { data: plotData, selectedSampleIds } = $derived(
         usePlotData({
             arrowData: $arrowData,
             rangeSelection: $rangeSelection,
-            highlightedSampleIds: activeSampleIds
+            highlightedSampleIds: activeSampleIds,
+            hasActiveFilter: hasActiveFilter
         })
     );
     const handleMouseUp = () => {
