@@ -57,7 +57,6 @@
     <Input
         bind:ref={renameInputRef}
         bind:value={renameValue}
-        autofocus
         class="h-8 text-xs"
         data-testid={`rename-tag-input-${tag.tag_id}`}
         placeholder="Tag name"
