@@ -17,7 +17,8 @@
         Image as ImageIcon,
         X,
         ChartNetwork,
-        GripVertical
+        GripVertical,
+        Filter
     } from '@lucide/svelte';
     import { onDestroy, onMount } from 'svelte';
     import { toStore } from 'svelte/store';
@@ -26,6 +27,8 @@
     import MenuDialogHost from '$lib/components/Header/MenuDialogHost.svelte';
 
     import Segment from '$lib/components/Segment/Segment.svelte';
+    import QueryCodeEditor from '$lib/components/QueryCodeEditor/QueryCodeEditor.svelte';
+    import { useQueryBuilderFilter } from '$lib/hooks/useQueryBuilderFilter';
     import { useHasEmbeddings } from '$lib/hooks/useHasEmbeddings/useHasEmbeddings';
     import { useHideAnnotations } from '$lib/hooks/useHideAnnotations';
     import { useAnnotationLabels } from '$lib/hooks/useAnnotationLabels/useAnnotationLabels';
@@ -48,6 +51,7 @@
     import { useImageAnnotationCounts } from '$lib/hooks/useImageAnnotationCounts/useImageAnnotationCounts';
     import { useGlobalStorage } from '$lib/hooks/useGlobalStorage.js';
     import { Button } from '$lib/components/ui/index.js';
+    import { Checkbox } from '$lib/components/ui/checkbox/index.js';
     import { PaneGroup, Pane, PaneResizer } from 'paneforge';
     import { useVideoAnnotationCounts } from '$lib/hooks/useVideoAnnotationsCount/useVideoAnnotationsCount.js';
     import {
@@ -486,6 +490,16 @@
         }
     });
 
+    const { pythonQuery, updatePythonQuery, clearFilter } = useQueryBuilderFilter();
+
+    let showQueryEditor = $state(false);
+    let queryEditorText = $state('');
+    let lastQueryPreview = $state<string | null>(null);
+
+    $effect(() => {
+        if ($pythonQuery) lastQueryPreview = $pythonQuery;
+    });
+
     const showLeftSidebar = $derived(
         isSamples || isAnnotations || isVideos || isVideoFrames || isGroups
     );
@@ -507,6 +521,43 @@
                         <div
                             class="min-h-0 flex-1 space-y-2 overflow-y-auto px-4 pb-2 dark:[color-scheme:dark]"
                         >
+                            {#if isSamples}
+                                <Segment title="Query" icon={Filter}>
+                                    <div class="flex items-center gap-2">
+                                        <Checkbox
+                                            checked={!!$pythonQuery}
+                                            disabled={!lastQueryPreview}
+                                            onCheckedChange={(v: boolean | 'indeterminate') => {
+                                                if (v) {
+                                                    updatePythonQuery(lastQueryPreview!);
+                                                } else {
+                                                    clearFilter();
+                                                }
+                                            }}
+                                        />
+                                        <button
+                                            class="min-w-0 flex-1 cursor-pointer truncate rounded bg-muted px-2 py-1 text-left font-mono text-xs hover:bg-muted/80"
+                                            onclick={() => {
+                                                showQueryEditor = true;
+                                                setShowPlot(false);
+                                            }}
+                                        >
+                                            {#if lastQueryPreview}
+                                                <span
+                                                    class={$pythonQuery
+                                                        ? 'text-muted-foreground'
+                                                        : 'text-muted-foreground/40'}
+                                                    >{lastQueryPreview}</span
+                                                >
+                                            {:else}
+                                                <span class="text-muted-foreground/50"
+                                                    >Edit Query</span
+                                                >
+                                            {/if}
+                                        </button>
+                                    </div>
+                                </Segment>
+                            {/if}
                             <div>
                                 <TagsMenu collection_id={collectionId} {gridType} />
                             </div>
@@ -521,7 +572,6 @@
                                         {annotationFilterRows}
                                         onToggleAnnotationFilter={toggleAnnotationFilterSelection}
                                     />
-
                                     {#if isSamples || isVideos || isVideoFrames}
                                         {#key collectionId}
                                             <CombinedMetadataDimensionsFilters
@@ -655,6 +705,149 @@
                         {#await import('$lib/components/PlotPanel/PlotPanel.svelte') then { default: PlotPanel }}
                             <PlotPanel />
                         {/await}
+                    </Pane>
+                </PaneGroup>
+            {:else if isSamples && showQueryEditor}
+                <!-- Query editor panel -->
+                <PaneGroup direction="horizontal" class="flex-1">
+                    <Pane defaultSize={60} minSize={30} class="flex">
+                        <div
+                            class="relative flex flex-1 flex-col space-y-4 rounded-[1vw] bg-card p-4"
+                        >
+                            <GridHeader>
+                                <div class="flex-1">
+                                    {#if hasEmbeddings}
+                                        <div
+                                            class="relative"
+                                            role="region"
+                                            aria-label="Search by image or text"
+                                            ondragover={handleDragOver}
+                                            ondragleave={handleDragLeave}
+                                            ondrop={handleDrop}
+                                        >
+                                            <Search
+                                                class="absolute left-2 top-[50%] h-4 w-4 translate-y-[-50%] text-muted-foreground"
+                                            />
+                                            {#if activeImage}
+                                                <div
+                                                    class="flex h-10 w-full items-center rounded-md border border-input bg-background px-3 py-2 pl-8 text-sm {dragOver
+                                                        ? 'ring-2 ring-primary'
+                                                        : ''}"
+                                                >
+                                                    <span
+                                                        class="mr-2 flex items-center gap-2 truncate text-muted-foreground"
+                                                    >
+                                                        {#if previewUrl}
+                                                            <img
+                                                                src={previewUrl}
+                                                                alt="Search preview"
+                                                                class="h-6 w-6 rounded object-cover"
+                                                            />
+                                                        {:else}
+                                                            <ImageIcon class="h-4 w-4" />
+                                                        {/if}
+                                                        {activeImage}
+                                                    </span>
+                                                    <button
+                                                        class="ml-auto hover:text-foreground"
+                                                        onclick={clearSearch}
+                                                        title="Clear search"
+                                                        data-testid="search-clear-button"
+                                                    >
+                                                        <X class="h-4 w-4" />
+                                                    </button>
+                                                </div>
+                                            {:else}
+                                                <Input
+                                                    placeholder={isUploading
+                                                        ? 'Uploading...'
+                                                        : 'Search samples by description or image'}
+                                                    class="pl-8 pr-8 {dragOver
+                                                        ? 'ring-2 ring-primary'
+                                                        : ''}"
+                                                    bind:value={query_text}
+                                                    onkeydown={onKeyDown}
+                                                    onpaste={handlePaste}
+                                                    disabled={isUploading}
+                                                    data-testid="text-embedding-search-input"
+                                                />
+                                                {#if submittedQueryText}
+                                                    <button
+                                                        class="absolute right-8 top-[50%] translate-y-[-50%] text-muted-foreground hover:text-foreground"
+                                                        onclick={clearSearch}
+                                                        title="Clear search"
+                                                        data-testid="search-clear-button"
+                                                    >
+                                                        <X class="h-4 w-4" />
+                                                    </button>
+                                                {/if}
+                                                <button
+                                                    class="absolute right-2 top-[50%] translate-y-[-50%] text-muted-foreground hover:text-foreground disabled:opacity-50"
+                                                    onclick={triggerFileInput}
+                                                    title="Upload image for search"
+                                                    disabled={isUploading}
+                                                >
+                                                    <ImageIcon class="h-4 w-4" />
+                                                </button>
+                                            {/if}
+                                            <input
+                                                type="file"
+                                                accept="image/*"
+                                                class="hidden"
+                                                bind:this={fileInput}
+                                                onchange={handleFileSelect}
+                                                disabled={isUploading}
+                                            />
+                                        </div>
+                                    {/if}
+                                </div>
+                            </GridHeader>
+                            <Separator class="mb-4 bg-border-hard" />
+                            <div class="flex min-h-0 flex-1 overflow-hidden">
+                                {@render children()}
+                            </div>
+                            <SelectionPill
+                                selectedCount={$selectedCount}
+                                onClear={clearSelection}
+                            />
+                        </div>
+                    </Pane>
+
+                    <PaneResizer
+                        class="relative mx-2 flex w-1 cursor-col-resize items-center justify-center"
+                    >
+                        <div class="bg-brand z-10 flex h-7 min-w-5 items-center justify-center">
+                            <GripVertical class="text-diffuse-foreground" />
+                        </div>
+                    </PaneResizer>
+
+                    <Pane defaultSize={40} minSize={25} class="flex min-h-0 flex-col">
+                        <div
+                            class="flex h-full flex-col gap-4 rounded-[1vw] bg-card p-4 dark:[color-scheme:dark]"
+                        >
+                            <div class="flex items-center justify-between">
+                                <h3 class="text-sm font-medium text-foreground">Query Editor</h3>
+                                <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    class="h-6 w-6"
+                                    onclick={() => (showQueryEditor = false)}
+                                >
+                                    <X class="h-4 w-4" />
+                                </Button>
+                            </div>
+                            <div class="min-h-0 flex-1">
+                                <QueryCodeEditor
+                                    initialValue={queryEditorText || undefined}
+                                    onchange={(t) => (queryEditorText = t)}
+                                    isQueryActive={!!$pythonQuery}
+                                    onclear={() => clearFilter()}
+                                    onrun={(q) => {
+                                        updatePythonQuery(q);
+                                    }}
+                                />
+                            </div>
+                        </div>
                     </Pane>
                 </PaneGroup>
             {:else}

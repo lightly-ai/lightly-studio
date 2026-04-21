@@ -38,6 +38,7 @@ from lightly_studio.api.routes.api import (
     image_embedding,
     metadata,
     operator,
+    query_completions,
     sample,
     selection,
     settings,
@@ -153,6 +154,7 @@ api_router.include_router(operator.operator_router)
 api_router.include_router(frame.frame_router)
 api_router.include_router(video.video_router)
 api_router.include_router(group.group_router)
+api_router.include_router(query_completions.query_completions_router)
 api_router.include_router(enterprise.enterprise_router)
 
 app.include_router(api_router)

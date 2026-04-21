@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import ast
 from collections.abc import Sequence
 from uuid import UUID
 
@@ -12,6 +13,8 @@ from sqlalchemy.orm.interfaces import LoaderOption
 from sqlmodel import Session, col, func, select
 
 from lightly_studio.api.routes.api.validators import Paginated
+from lightly_studio.core.dataset_query import QUERY_NAMESPACE
+from lightly_studio.core.dataset_query.match_expression import MatchExpression
 from lightly_studio.models.annotation.annotation_base import AnnotationBaseTable
 from lightly_studio.models.image import ImageTable
 from lightly_studio.models.sample import SampleTable
@@ -21,6 +24,100 @@ from lightly_studio.resolvers.similarity_utils import (
     distance_to_similarity,
     get_distance_expression,
 )
+
+# Objects that the query interpreter can reference by name.
+_NAMESPACE: dict[str, object] = QUERY_NAMESPACE
+
+
+def _apply_compare_op(op: ast.cmpop, left: object, right: object) -> object:
+    """Dispatch a single comparison operator node to the corresponding Python op."""
+    _ops: dict[type, object] = {
+        ast.Gt: left.__gt__,  # type: ignore[union-attr]
+        ast.GtE: left.__ge__,  # type: ignore[union-attr]
+        ast.Lt: left.__lt__,  # type: ignore[union-attr]
+        ast.LtE: left.__le__,  # type: ignore[union-attr]
+        ast.Eq: left.__eq__,  # type: ignore[union-attr]
+        ast.NotEq: left.__ne__,  # type: ignore[union-attr]
+    }
+    handler = _ops.get(type(op))
+    if handler is None:
+        raise ValueError(f"Unsupported operator: {type(op).__name__}")
+    return handler(right)  # type: ignore[operator]
+
+
+def _interpret_query_ast(node: ast.AST) -> object:  # noqa: PLR0911, C901
+    """Walk a validated query AST and build the corresponding MatchExpression.
+
+    No eval() is used — the AST is walked directly and objects are constructed
+    by calling the query API.
+
+    Raises:
+        ValueError: If an unhandled node type is encountered.
+    """
+    if isinstance(node, ast.Expression):
+        return _interpret_query_ast(node.body)
+    if isinstance(node, ast.Name):
+        if node.id not in _NAMESPACE:
+            raise ValueError(f"Unknown name: {node.id!r}")
+        return _NAMESPACE[node.id]
+    if isinstance(node, ast.Attribute):
+        return getattr(_interpret_query_ast(node.value), node.attr)
+    if isinstance(node, ast.Constant):
+        if not isinstance(node.value, (str, int, float, bool)):
+            raise ValueError(f"Unsupported constant type: {type(node.value).__name__}")
+        return node.value
+    if isinstance(node, ast.UnaryOp):
+        operand = _interpret_query_ast(node.operand)
+        return -operand if isinstance(node.op, ast.USub) else operand  # type: ignore[operator]
+    if isinstance(node, ast.Compare):
+        if len(node.ops) != 1:
+            raise ValueError("Chained comparisons are not supported")
+        left = _interpret_query_ast(node.left)
+        right = _interpret_query_ast(node.comparators[0])
+        return _apply_compare_op(node.ops[0], left, right)
+    if isinstance(node, ast.Call):
+        if node.keywords:
+            raise ValueError("Keyword arguments are not supported in queries")
+        func = _interpret_query_ast(node.func)
+        args = [_interpret_query_ast(arg) for arg in node.args]
+        return func(*args)  # type: ignore[operator]
+    raise ValueError(f"Unhandled node type: {type(node).__name__}")
+
+
+def _eval_python_query(python_query: str) -> MatchExpression:
+    """Parse and evaluate a python_query string safely.
+
+    The query is parsed into an AST and walked directly by
+    ``_interpret_query_ast`` — no ``eval`` is used.
+
+    Args:
+        python_query: A Python expression returning a MatchExpression, e.g.
+            ``ImageSampleField.width > 1920``.
+
+    Returns:
+        The resulting MatchExpression.
+
+    Raises:
+        ValueError: If the query is syntactically invalid, contains disallowed
+            constructs, or does not produce a MatchExpression.
+    """
+    try:
+        tree = ast.parse(python_query, mode="eval")
+    except SyntaxError as exc:
+        raise ValueError(f"Invalid python_query syntax: {exc}") from exc
+
+    try:
+        result = _interpret_query_ast(tree)
+    except ValueError:
+        raise
+    except Exception as exc:
+        raise ValueError(f"Invalid python_query: {exc}") from exc
+
+    if not isinstance(result, MatchExpression):
+        raise ValueError(
+            f"python_query must return a MatchExpression, got {type(result).__name__}"
+        )
+    return result
 
 
 class GetAllSamplesByCollectionIdResult(BaseModel):
@@ -63,10 +160,15 @@ def get_all_by_collection_id(  # noqa: PLR0913
     collection_id: UUID,
     pagination: Paginated | None = None,
     filters: ImageFilter | None = None,
+    python_query: str | None = None,
     text_embedding: list[float] | None = None,
     sample_ids: list[UUID] | None = None,
 ) -> GetAllSamplesByCollectionIdResult:
     """Retrieve samples for a specific collection with optional filtering."""
+    python_match: MatchExpression | None = (
+        _eval_python_query(python_query) if python_query is not None else None
+    )
+
     embedding_model_id, distance_expr = get_distance_expression(
         session=session,
         collection_id=collection_id,
@@ -81,6 +183,7 @@ def get_all_by_collection_id(  # noqa: PLR0913
             distance_expr=distance_expr,
             pagination=pagination,
             filters=filters,
+            python_match=python_match,
             sample_ids=sample_ids,
         )
     return _get_all_without_similarity(
@@ -88,6 +191,7 @@ def get_all_by_collection_id(  # noqa: PLR0913
         collection_id=collection_id,
         pagination=pagination,
         filters=filters,
+        python_match=python_match,
         sample_ids=sample_ids,
     )
 
@@ -99,6 +203,7 @@ def _get_all_with_similarity(  # noqa: PLR0913
     distance_expr: ColumnElement[float],
     pagination: Paginated | None,
     filters: ImageFilter | None,
+    python_match: MatchExpression | None,
     sample_ids: list[UUID] | None,
 ) -> GetAllSamplesByCollectionIdResult:
     """Get samples with similarity search - returns (ImageTable, float) tuples."""
@@ -132,6 +237,11 @@ def _get_all_with_similarity(  # noqa: PLR0913
         samples_query = filters.apply(samples_query)
         total_count_query = filters.apply(total_count_query)
 
+    if python_match is not None:
+        condition = python_match.get()
+        samples_query = samples_query.where(condition)
+        total_count_query = total_count_query.where(condition)
+
     # TODO(Michal, 06/2025): Consider adding sample_ids to the filters.
     if sample_ids:
         samples_query = samples_query.where(col(ImageTable.sample_id).in_(sample_ids))
@@ -156,11 +266,12 @@ def _get_all_with_similarity(  # noqa: PLR0913
     )
 
 
-def _get_all_without_similarity(
+def _get_all_without_similarity(  # noqa: PLR0913
     session: Session,
     collection_id: UUID,
     pagination: Paginated | None,
     filters: ImageFilter | None,
+    python_match: MatchExpression | None,
     sample_ids: list[UUID] | None,
 ) -> GetAllSamplesByCollectionIdResult:
     """Get samples without similarity search - returns ImageTable directly."""
@@ -183,6 +294,11 @@ def _get_all_without_similarity(
     if filters:
         samples_query = filters.apply(samples_query)
         total_count_query = filters.apply(total_count_query)
+
+    if python_match is not None:
+        condition = python_match.get()
+        samples_query = samples_query.where(condition)
+        total_count_query = total_count_query.where(condition)
 
     # TODO(Michal, 06/2025): Consider adding sample_ids to the filters.
     if sample_ids:

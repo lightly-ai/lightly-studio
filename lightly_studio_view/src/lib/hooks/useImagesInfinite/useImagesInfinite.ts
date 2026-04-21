@@ -6,7 +6,6 @@ import type { DimensionBounds } from '$lib/services/loadDimensionBounds';
 import { createMetadataFilters } from '$lib/hooks/useMetadataFilters/useMetadataFilters';
 import type { MetadataValues } from '$lib/services/types';
 import { GRID_PAGE_SIZE } from '$lib/constants';
-
 // Define mode-aware parameter types.
 interface ClassifierSamples {
     positiveSampleIds: string[];
@@ -23,6 +22,7 @@ interface NormalModeFilters {
 interface CommonFilters {
     metadata_values?: MetadataValues;
     text_embedding?: number[];
+    python_query?: string;
 }
 
 interface NormalModeParams {
@@ -54,6 +54,7 @@ type SamplesQueryKey = readonly [
     {
         metadata_values?: MetadataValues;
         text_embedding?: number[];
+        python_query?: string;
     }
 ];
 
@@ -67,7 +68,8 @@ const createImagesInfiniteOptions = (params: ImagesInfiniteParams) => {
         params.mode === 'normal' ? params.filters : params.classifierSamples,
         {
             metadata_values: params.metadata_values,
-            text_embedding: params.text_embedding
+            text_embedding: params.text_embedding,
+            python_query: params.python_query
         }
     ];
 
@@ -96,13 +98,17 @@ const createImagesInfiniteOptions = (params: ImagesInfiniteParams) => {
     });
 };
 
-const buildRequestBody = (params: ImagesInfiniteParams, pageParam: number): ReadImagesRequest => {
+const buildRequestBody = (
+    params: ImagesInfiniteParams,
+    pageParam: number
+): ReadImagesRequest => {
     const baseBody: ReadImagesRequest = {
         pagination: {
             offset: pageParam,
             limit: GRID_PAGE_SIZE
         },
         text_embedding: params.text_embedding,
+        python_query: params.python_query,
         filters: {
             sample_filter: {
                 metadata_filters: params.metadata_values

@@ -10,10 +10,22 @@ from .object_detection_expression import ObjectDetectionField, ObjectDetectionQu
 from .order_by import OrderByExpression, OrderByField
 from .video_sample_field import VideoSampleField
 
+# Single source of truth for the query interpreter and the completions endpoint.
+# Keys are the names available in query expressions; values are the Python objects
+# they resolve to.  Add new namespace classes or combinator functions here and
+# both the interpreter and the autocomplete will pick them up automatically.
+QUERY_NAMESPACE: dict[str, type] = {
+    "ImageSampleField": ImageSampleField,
+    "AND": AND,
+    "OR": OR,
+    "NOT": NOT,
+}
+
 __all__ = [
     "AND",
     "NOT",
     "OR",
+    "QUERY_NAMESPACE",
     "ClassificationField",
     "ClassificationQuery",
     "DatasetQuery",

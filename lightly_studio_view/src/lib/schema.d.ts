@@ -1677,6 +1677,29 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/query_completions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Query Completions
+         * @description Return completion metadata for the Monaco Python query editor.
+         *
+         *     The response is derived by introspecting the live Python objects so the
+         *     frontend autocomplete always reflects the real API.
+         */
+        get: operations["get_query_completions"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/cloud-credentials": {
         parameters: {
             query?: never;
@@ -2509,6 +2532,25 @@ export interface components {
          */
         ExportFormat: "object_detection_coco" | "segmentation_mask_coco" | "pascal_voc" | "youtube_vis_segmentation";
         /**
+         * FieldMeta
+         * @description Metadata for a single queryable field on a namespace class.
+         */
+        FieldMeta: {
+            /** Name */
+            name: string;
+            /**
+             * Kind
+             * @enum {string}
+             */
+            kind: "NumericalField" | "ComparableField" | "TagsAccessor";
+            /** Operators */
+            operators: string[];
+            /** Methods */
+            methods: components["schemas"]["MethodMeta"][];
+            /** Doc */
+            doc: string;
+        };
+        /**
          * FilterDimensions
          * @description Encapsulates dimension-based filter parameters for querying samples.
          */
@@ -2561,6 +2603,18 @@ export interface components {
              */
             sample_id: string;
             sample: components["schemas"]["SampleView"];
+        };
+        /**
+         * FunctionMeta
+         * @description Metadata for a top-level combinator function (AND, OR, NOT).
+         */
+        FunctionMeta: {
+            /** Name */
+            name: string;
+            /** Signature */
+            signature: string;
+            /** Doc */
+            doc: string;
         };
         /**
          * GetAllClassifiersResponse
@@ -2893,6 +2947,32 @@ export interface components {
             metadata_key: string;
         };
         /**
+         * MethodMeta
+         * @description Metadata for a method callable on a field (e.g. TagsAccessor.contains).
+         */
+        MethodMeta: {
+            /** Name */
+            name: string;
+            /** Detail */
+            detail: string;
+            /** Insert Text */
+            insert_text: string;
+            /** Doc */
+            doc: string;
+        };
+        /**
+         * NamespaceMeta
+         * @description Metadata for a top-level namespace (e.g. ImageSampleField).
+         */
+        NamespaceMeta: {
+            /** Name */
+            name: string;
+            /** Doc */
+            doc: string;
+            /** Fields */
+            fields: components["schemas"]["FieldMeta"][];
+        };
+        /**
          * ObjectDetectionAnnotationView
          * @description API response model for object detection annotations.
          */
@@ -2954,6 +3034,16 @@ export interface components {
             limit: number;
         };
         /**
+         * QueryCompletionsResponse
+         * @description All completion metadata needed to drive the Monaco provider.
+         */
+        QueryCompletionsResponse: {
+            /** Namespaces */
+            namespaces: components["schemas"]["NamespaceMeta"][];
+            /** Functions */
+            functions: components["schemas"]["FunctionMeta"][];
+        };
+        /**
          * ReadCountImageAnnotationsRequest
          * @description Request body for reading image annotation counts.
          */
@@ -2983,6 +3073,11 @@ export interface components {
         ReadImagesRequest: {
             /** @description Filter parameters for samples */
             filters?: components["schemas"]["ImageFilter"] | null;
+            /**
+             * Python Query
+             * @description Python DatasetQuery expression evaluated server-side.
+             */
+            python_query?: string | null;
             /**
              * Text Embedding
              * @description Text embedding to search for
@@ -6410,6 +6505,26 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_query_completions: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["QueryCompletionsResponse"];
                 };
             };
         };
