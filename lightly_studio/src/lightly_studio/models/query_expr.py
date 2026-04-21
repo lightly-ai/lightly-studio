@@ -85,7 +85,7 @@ class TagsContainsExpr(BaseModel):
 
     type: Literal["tags_contains_expr"] = "tags_contains_expr"
     field: FieldRef
-    tag_name: str
+    tag_name: StrictStr
 
 
 class ClassificationMatchExpr(BaseModel):
