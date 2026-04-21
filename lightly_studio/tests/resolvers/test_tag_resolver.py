@@ -4,7 +4,7 @@ import pytest
 from sqlalchemy.exc import IntegrityError
 from sqlmodel import Session
 
-from lightly_studio.models.tag import TagCreate, TagUpdate
+from lightly_studio.models.tag import TagCreate
 from lightly_studio.resolvers import tag_resolver
 from tests.helpers_resolvers import create_collection, create_image, create_tag
 
@@ -96,20 +96,18 @@ def test_read_tag(db_session: Session) -> None:
     assert tag_read.name == "example_tag"
 
 
-def test_update_tag(db_session: Session) -> None:
+def test_rename_tag(db_session: Session) -> None:
     collection = create_collection(session=db_session)
     collection_id = collection.collection_id
 
     tag = create_tag(session=db_session, collection_id=collection_id)
 
-    data_update = TagUpdate(name="updated_tag")
-    tag_updated = tag_resolver.update(session=db_session, tag_id=tag.tag_id, tag_data=data_update)
-    # assert tag name changed.
-    assert tag_updated is not None
-    assert tag_updated.name == data_update.name
+    tag_renamed = tag_resolver.rename(session=db_session, tag_id=tag.tag_id, new_name="updated_tag")
+    assert tag_renamed is not None
+    assert tag_renamed.name == "updated_tag"
 
 
-def test_update_tag__preserves_sample_links(db_session: Session) -> None:
+def test_rename_tag__preserves_sample_links(db_session: Session) -> None:
     collection = create_collection(session=db_session)
     collection_id = collection.collection_id
 
@@ -124,62 +122,34 @@ def test_update_tag__preserves_sample_links(db_session: Session) -> None:
     tag_resolver.add_tag_to_sample(session=db_session, tag_id=tag.tag_id, sample=image_1.sample)
     tag_resolver.add_tag_to_sample(session=db_session, tag_id=tag.tag_id, sample=image_2.sample)
 
-    tag_updated = tag_resolver.update(
-        session=db_session, tag_id=tag.tag_id, tag_data=TagUpdate(name="updated_tag")
-    )
+    tag_renamed = tag_resolver.rename(session=db_session, tag_id=tag.tag_id, new_name="updated_tag")
 
-    assert tag_updated is not None
-    assert tag_updated.name == "updated_tag"
-    assert tag_updated.tag_id == tag.tag_id
-    assert sorted(sample.sample_id for sample in tag_updated.samples) == sorted(
+    assert tag_renamed is not None
+    assert tag_renamed.name == "updated_tag"
+    assert tag_renamed.tag_id == tag.tag_id
+    assert sorted(sample.sample_id for sample in tag_renamed.samples) == sorted(
         [image_1.sample.sample_id, image_2.sample.sample_id]
     )
 
 
-def test_update_tag__rename_only_preserves_description(db_session: Session) -> None:
-    collection = create_collection(session=db_session)
-    collection_id = collection.collection_id
-
-    tag = tag_resolver.create(
-        session=db_session,
-        tag=TagCreate(
-            collection_id=collection_id,
-            name="example_tag",
-            description="existing description",
-            kind="sample",
-        ),
-    )
-
-    tag_updated = tag_resolver.update(
-        session=db_session,
-        tag_id=tag.tag_id,
-        tag_data=TagUpdate(name="updated_tag"),
-    )
-
-    assert tag_updated is not None
-    assert tag_updated.name == "updated_tag"
-    assert tag_updated.description == "existing description"
-
-
-def test_update_tag__unique_tag_name(db_session: Session) -> None:
+def test_rename_tag__unique_tag_name(db_session: Session) -> None:
     collection = create_collection(session=db_session)
     collection_id = collection.collection_id
 
     tag_1 = create_tag(session=db_session, collection_id=collection_id, tag_name="example_tag_1")
     tag_2 = create_tag(session=db_session, collection_id=collection_id, tag_name="some_other_tag")
 
-    # updating a tag with a name that already exists results in 409
-    # trying to create a tag with the same name results in an IntegrityError
+    # renaming a tag to an existing name results in an IntegrityError
     with pytest.raises(IntegrityError):
-        tag_resolver.update(
+        tag_resolver.rename(
             session=db_session,
             tag_id=tag_1.tag_id,
-            tag_data=TagUpdate(name=tag_2.name),
+            new_name=tag_2.name,
         )
     db_session.rollback()
 
 
-def test_update_tag__unique_tag_name__preserves_original_tag_and_links(
+def test_rename_tag__unique_tag_name__preserves_original_tag_and_links(
     db_session: Session,
 ) -> None:
     collection = create_collection(session=db_session)
@@ -198,10 +168,10 @@ def test_update_tag__unique_tag_name__preserves_original_tag_and_links(
     tag_resolver.add_tag_to_sample(session=db_session, tag_id=tag_1.tag_id, sample=image_2.sample)
 
     with pytest.raises(IntegrityError):
-        tag_resolver.update(
+        tag_resolver.rename(
             session=db_session,
             tag_id=tag_1.tag_id,
-            tag_data=TagUpdate(name=tag_2.name),
+            new_name=tag_2.name,
         )
     db_session.rollback()
 
@@ -213,7 +183,7 @@ def test_update_tag__unique_tag_name__preserves_original_tag_and_links(
     )
 
 
-def test_update_tag__unique_tag_name__different_kind(
+def test_rename_tag__unique_tag_name__different_kind(
     db_session: Session,
 ) -> None:
     collection = create_collection(session=db_session)
@@ -232,30 +202,28 @@ def test_update_tag__unique_tag_name__different_kind(
         tag_name="annotation_tag_1",
     )
 
-    # updating a tag with an existing name but for a different kind is allowed
-    tag_updated = tag_resolver.update(
+    # renaming a tag to an existing name but for a different kind is allowed
+    tag_renamed = tag_resolver.rename(
         session=db_session,
         tag_id=sample_tag.tag_id,
-        tag_data=TagUpdate(name=annotation_tag.name),
+        new_name=annotation_tag.name,
     )
-    # assert tag name changed.
-    assert tag_updated is not None
-    assert tag_updated.name == annotation_tag.name
+    assert tag_renamed is not None
+    assert tag_renamed.name == annotation_tag.name
 
 
-def test_update_tag__unknown_tag_404(db_session: Session) -> None:
+def test_rename_tag__unknown_tag_returns_none(db_session: Session) -> None:
     collection = create_collection(session=db_session)
     collection_id = collection.collection_id
 
     create_tag(session=db_session, collection_id=collection_id)
 
-    # updating a unknown tag results in 404
-    tag_updated = tag_resolver.update(
+    tag_renamed = tag_resolver.rename(
         session=db_session,
         tag_id=uuid4(),
-        tag_data=TagUpdate(name="unknown_tag"),
+        new_name="unknown_tag",
     )
-    assert tag_updated is None
+    assert tag_renamed is None
 
 
 def test_delete_tag(db_session: Session) -> None:
