@@ -191,7 +191,7 @@ OrExpr.model_rebuild()
 NotExpr.model_rebuild()
 
 
-class QueryTree(BaseModel):
+class QueryExpr(BaseModel):
     """Top-level model representing a complete query tree."""
 
     root: MatchExpr

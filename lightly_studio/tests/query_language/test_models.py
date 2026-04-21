@@ -7,7 +7,23 @@ from sqlmodel import Session, select
 from lightly_studio.models.annotation.annotation_base import AnnotationType
 from lightly_studio.models.image import ImageTable
 from lightly_studio.models.sample import SampleTable
-from lightly_studio.query_language import AndExpr, DatetimeExpr, QueryTree, to_match_expression
+from lightly_studio.query_language import (
+    AndExpr,
+    ClassificationMatchExpr,
+    DatetimeExpr,
+    EqualityComparisonOperator,
+    IntegerExpr,
+    IntegerFieldRef,
+    NotExpr,
+    OrdinalComparisonOperator,
+    OrExpr,
+    QueryExpr,
+    StringExpr,
+    StringFieldRef,
+    TagsContainsExpr,
+    TagsFieldRef,
+    to_match_expression,
+)
 from tests.helpers_resolvers import (
     create_annotation,
     create_annotation_label,
@@ -17,7 +33,7 @@ from tests.helpers_resolvers import (
 
 
 def test_query_tree_accepts_valid_image_and_annotation_nodes() -> None:
-    tree = QueryTree.model_validate(
+    tree = QueryExpr.model_validate(
         {
             "root": {
                 "type": "and",
@@ -47,7 +63,7 @@ def test_query_tree_accepts_valid_image_and_annotation_nodes() -> None:
 
 def test_query_tree_rejects_wrong_value_type_for_image_width() -> None:
     with pytest.raises(ValidationError):
-        QueryTree.model_validate(
+        QueryExpr.model_validate(
             {
                 "root": {
                     "type": "integer_expr",
@@ -61,7 +77,7 @@ def test_query_tree_rejects_wrong_value_type_for_image_width() -> None:
 
 def test_query_tree_rejects_wrong_operator_for_video_duration() -> None:
     with pytest.raises(ValidationError):
-        QueryTree.model_validate(
+        QueryExpr.model_validate(
             {
                 "root": {
                     "type": "equality_float_expr",
@@ -75,7 +91,7 @@ def test_query_tree_rejects_wrong_operator_for_video_duration() -> None:
 
 def test_query_tree_rejects_numeric_classification_criteria() -> None:
     with pytest.raises(ValidationError):
-        QueryTree.model_validate(
+        QueryExpr.model_validate(
             {
                 "root": {
                     "type": "classification_match_expr",
@@ -91,7 +107,7 @@ def test_query_tree_rejects_numeric_classification_criteria() -> None:
 
 
 def test_query_tree_parses_image_datetime_values() -> None:
-    tree = QueryTree.model_validate(
+    tree = QueryExpr.model_validate(
         {
             "root": {
                 "type": "datetime_expr",
@@ -106,8 +122,48 @@ def test_query_tree_parses_image_datetime_values() -> None:
     assert tree.root.value == datetime(2026, 1, 1, tzinfo=timezone.utc)
 
 
+def test_query_tree_constructed_from_pydantic_classes() -> None:
+    tree = QueryExpr(
+        root=AndExpr(
+            children=[
+                IntegerExpr(
+                    field=IntegerFieldRef(table="image", name="width"),
+                    operator=OrdinalComparisonOperator.GTE,
+                    value=128,
+                ),
+                OrExpr(
+                    children=[
+                        TagsContainsExpr(
+                            field=TagsFieldRef(table="image", name="tags"),
+                            tag_name="reviewed",
+                        ),
+                        NotExpr(
+                            child=StringExpr(
+                                field=StringFieldRef(table="image", name="file_name"),
+                                operator=EqualityComparisonOperator.EQ,
+                                value="skip.jpg",
+                            ),
+                        ),
+                    ],
+                ),
+                ClassificationMatchExpr(
+                    subexpr=StringExpr(
+                        field=StringFieldRef(table="classification", name="label"),
+                        operator=EqualityComparisonOperator.EQ,
+                        value="cat",
+                    ),
+                ),
+            ],
+        ),
+    )
+
+    assert isinstance(tree.root, AndExpr)
+    assert len(tree.root.children) == 3
+    assert tree.model_dump()["root"]["type"] == "and"
+
+
 def test_to_match_expression_compiles_nested_boolean_tree_to_sql() -> None:
-    tree = QueryTree.model_validate(
+    tree = QueryExpr.model_validate(
         {
             "root": {
                 "type": "and",
@@ -152,7 +208,7 @@ def test_to_match_expression_compiles_nested_boolean_tree_to_sql() -> None:
 
 
 def test_to_match_expression_compiles_object_detection_query_to_sql() -> None:
-    tree = QueryTree.model_validate(
+    tree = QueryExpr.model_validate(
         {
             "root": {
                 "type": "object_detection_match_expr",
@@ -186,7 +242,7 @@ def test_to_match_expression_compiles_object_detection_query_to_sql() -> None:
 
 
 def test_to_match_expression_compiles_video_query_to_sql() -> None:
-    tree = QueryTree.model_validate(
+    tree = QueryExpr.model_validate(
         {
             "root": {
                 "type": "and",
@@ -247,7 +303,7 @@ def test_to_match_expression_filters_matching_samples(db_session: Session) -> No
         annotation_type=AnnotationType.CLASSIFICATION,
     )
 
-    tree = QueryTree.model_validate(
+    tree = QueryExpr.model_validate(
         {
             "root": {
                 "type": "and",
