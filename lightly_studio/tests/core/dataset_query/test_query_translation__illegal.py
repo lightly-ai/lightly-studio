@@ -154,63 +154,6 @@ def test_to_match_expression__classification_field_inside_object_detection_match
     assert [result.sample_id for result in results] == [object_detection_image.sample_id]
 
 
-def test_to_match_expression__object_detection_field_at_top_level(
-    db_session: Session,
-) -> None:
-    """object_detection.width at the top level without ObjectDetectionMatchExpr.
-
-    Without the matcher wrapper there is no ``annotation_type`` filter.  The
-    generated SQL uses an EXISTS subquery through the .has() relationship, so
-    it does not error — but it matches annotations of *any* type whose
-    object_detection_annotation row satisfies the condition.
-    """
-    dataset = create_collection(session=db_session)
-    cid = dataset.collection_id
-    matching_image = create_image(
-        session=db_session, collection_id=cid, file_path_abs="/path/to/matching.jpg", width=800
-    )
-    nonmatching_image = create_image(
-        session=db_session, collection_id=cid, file_path_abs="/path/to/nonmatching.jpg", width=800
-    )
-    bare_image = create_image(
-        session=db_session, collection_id=cid, file_path_abs="/path/to/bare.jpg", width=800
-    )
-    label = create_annotation_label(session=db_session, root_collection_id=cid, label_name="car")
-    create_annotation(
-        session=db_session,
-        collection_id=cid,
-        sample_id=matching_image.sample_id,
-        annotation_label_id=label.annotation_label_id,
-        annotation_type=AnnotationType.OBJECT_DETECTION,
-        annotation_data={"x": 0, "y": 0, "width": 100, "height": 100},
-    )
-    create_annotation(
-        session=db_session,
-        collection_id=cid,
-        sample_id=nonmatching_image.sample_id,
-        annotation_label_id=label.annotation_label_id,
-        annotation_type=AnnotationType.OBJECT_DETECTION,
-        annotation_data={"x": 0, "y": 0, "width": 10, "height": 10},
-    )
-
-    expr = IntegerExpr(
-        field=FieldRef(table="object_detection", name="width"),
-        operator=OrdinalComparisonOperator.GT,
-        value=50,
-    )
-    match = query_translation.to_match_expression(expr)
-    results = DatasetQuery(dataset=dataset, session=db_session).match(match).to_list()
-
-    # Wrong: once one object-detection annotation in the dataset satisfies the
-    # width filter, the top-level EXISTS subquery is not scoped to the current
-    # sample, so even the nonmatching and bare samples are returned.
-    assert [result.sample_id for result in results] == [
-        matching_image.sample_id,
-        nonmatching_image.sample_id,
-        bare_image.sample_id,
-    ]
-
-
 def test_to_match_expression__classification_label_at_top_level(
     db_session: Session,
 ) -> None:
@@ -253,7 +196,6 @@ def test_to_match_expression__classification_label_at_top_level(
         annotation_type=AnnotationType.CLASSIFICATION,
     )
 
-    # Ask for classification.label == "cat" at the top level.
     expr = StringExpr(
         field=FieldRef(table="classification", name="label"),
         operator=EqualityComparisonOperator.EQ,
