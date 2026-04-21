@@ -23,13 +23,13 @@
         showOutline && 'ring-2 ring-primary'
     )}
 >
-    <span class="mr-2 flex items-center gap-2 truncate text-muted-foreground">
+    <span class="mr-2 flex min-w-0 flex-1 items-center gap-2 text-muted-foreground">
         {#if src}
-            <img {src} alt="Search preview" class="h-6 w-6 rounded object-cover" />
+            <img {src} alt="Search preview" class="h-6 w-6 shrink-0 rounded object-cover" />
         {:else}
-            <ImageIcon class="h-4 w-4" />
+            <ImageIcon class="h-4 w-4 shrink-0" />
         {/if}
-        {name}
+        <span class="min-w-0 truncate" title={name}>{name}</span>
     </span>
     <button
         class="ml-auto hover:text-foreground"

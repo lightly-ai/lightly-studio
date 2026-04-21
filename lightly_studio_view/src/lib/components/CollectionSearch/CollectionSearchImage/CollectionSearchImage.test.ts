@@ -13,7 +13,9 @@ describe('CollectionSearchImage', () => {
             props: baseProps
         });
 
-        expect(screen.getByText('query.png')).toBeInTheDocument();
+        const fileName = screen.getByText('query.png');
+        expect(fileName).toBeInTheDocument();
+        expect(fileName).toHaveAttribute('title', 'query.png');
         expect(screen.getByTestId('search-clear-button')).toBeInTheDocument();
     });
 
