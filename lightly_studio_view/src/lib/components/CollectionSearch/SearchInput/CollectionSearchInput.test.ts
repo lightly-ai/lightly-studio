@@ -54,4 +54,21 @@ describe('CollectionSearchInput', () => {
         expect(input.value).toBe('');
         expect(onUploadClick).toHaveBeenCalledOnce();
     });
+
+    it('applies disabled state consistently when provided via inputProps', () => {
+        render(CollectionSearchInput, {
+            props: {
+                value: '',
+                inputProps: { disabled: true, onkeydown: vi.fn(), onpaste: vi.fn() },
+                showOutline: false,
+                onUploadClick: vi.fn()
+            }
+        });
+
+        const input = screen.getByTestId('text-embedding-search-input') as HTMLInputElement;
+        const uploadButton = screen.getByTitle('Upload image for search');
+
+        expect(input).toBeDisabled();
+        expect(uploadButton).toBeDisabled();
+    });
 });

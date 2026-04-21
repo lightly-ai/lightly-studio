@@ -33,6 +33,8 @@
         showOutline = false,
         onUploadClick
     }: Props = $props();
+
+    const isDisabled = $derived(Boolean(disabled || inputProps?.disabled));
 </script>
 
 <div class="relative">
@@ -42,8 +44,8 @@
         class={cn('pl-8 pr-8', showOutline && 'ring-2 ring-primary')}
         bind:value
         data-testid="text-embedding-search-input"
-        {disabled}
         {...inputProps}
+        disabled={isDisabled}
     />
     {#if value}
         <button
@@ -59,7 +61,7 @@
         class="absolute right-2 top-[50%] translate-y-[-50%] text-muted-foreground hover:text-foreground disabled:opacity-50"
         onclick={onUploadClick}
         title="Upload image for search"
-        {disabled}
+        disabled={isDisabled}
     >
         <ImageIcon class="h-4 w-4" />
     </button>
