@@ -32,7 +32,7 @@ def test_query_tree_accepts_valid_image_and_annotation_nodes() -> None:
                         "type": "classification_match_expr",
                         "criteria": [
                             {
-                                "type": "annotation_label_expr",
+                                "type": "string_expr",
                                 "field": {"table": "classification", "name": "label"},
                                 "operator": "==",
                                 "value": "cat",
@@ -83,7 +83,7 @@ def test_query_tree_rejects_numeric_classification_criteria() -> None:
                     "type": "classification_match_expr",
                     "criteria": [
                         {
-                            "type": "annotation_geometry_expr",
+                            "type": "integer_expr",
                             "field": {"table": "object_detection", "name": "width"},
                             "operator": ">=",
                             "value": 0.5,
@@ -162,13 +162,13 @@ def test_to_match_expression_compiles_object_detection_query_to_sql() -> None:
                 "type": "object_detection_match_expr",
                 "criteria": [
                     {
-                        "type": "annotation_label_expr",
+                        "type": "string_expr",
                         "field": {"table": "object_detection", "name": "label"},
                         "operator": "==",
                         "value": "cat",
                     },
                     {
-                        "type": "annotation_geometry_expr",
+                        "type": "integer_expr",
                         "field": {"table": "object_detection", "name": "width"},
                         "operator": ">",
                         "value": 100,
@@ -263,7 +263,7 @@ def test_to_match_expression_filters_matching_samples(db_session: Session) -> No
                         "type": "classification_match_expr",
                         "criteria": [
                             {
-                                "type": "annotation_label_expr",
+                                "type": "string_expr",
                                 "field": {"table": "classification", "name": "label"},
                                 "operator": "==",
                                 "value": "cat",

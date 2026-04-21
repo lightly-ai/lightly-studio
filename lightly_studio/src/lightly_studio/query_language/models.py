@@ -28,60 +28,36 @@ class OrdinalComparisonOperator(str, Enum):
     GTE = ">="
 
 
-class StringFieldRef(BaseModel):
+class FieldRef(BaseModel):
+    """Reference to a field on a table."""
+
+    table: str
+    name: str
+
+
+class StringFieldRef(FieldRef):
     """Reference to a string field."""
 
-    table: str
-    name: str
 
-
-class IntegerFieldRef(BaseModel):
+class IntegerFieldRef(FieldRef):
     """Reference to an integer field."""
 
-    table: str
-    name: str
 
-
-class DatetimeFieldRef(BaseModel):
+class DatetimeFieldRef(FieldRef):
     """Reference to a datetime field."""
 
-    table: str
-    name: str
 
-
-class OrdinalFloatFieldRef(BaseModel):
+class OrdinalFloatFieldRef(FieldRef):
     """Reference to a float field with ordinal comparisons."""
 
-    table: str
-    name: str
 
-
-class EqualityFloatFieldRef(BaseModel):
+class EqualityFloatFieldRef(FieldRef):
     """Reference to a float field with equality-only comparisons."""
 
-    table: str
-    name: str
 
-
-class TagsFieldRef(BaseModel):
+class TagsFieldRef(FieldRef):
     """Reference to the tags relationship."""
 
-    table: str
-    name: str
-
-
-class AnnotationLabelFieldRef(BaseModel):
-    """Reference to a label field on an annotation table."""
-
-    table: str
-    name: str
-
-
-class AnnotationGeometryFieldRef(BaseModel):
-    """Reference to a geometry field on an annotation table."""
-
-    table: str
-    name: str
 
 
 class StringExpr(BaseModel):
@@ -137,53 +113,25 @@ class TagsContainsExpr(BaseModel):
     tag_name: str
 
 
-class AnnotationLabelExpr(BaseModel):
-    """Criterion for equality comparisons on annotation labels."""
-
-    type: Literal["annotation_label_expr"] = "annotation_label_expr"
-    field: AnnotationLabelFieldRef
-    operator: EqualityComparisonOperator
-    value: StrictStr
-
-
-class AnnotationGeometryExpr(BaseModel):
-    """Criterion for ordinal comparisons on annotation geometry."""
-
-    type: Literal["annotation_geometry_expr"] = "annotation_geometry_expr"
-    field: AnnotationGeometryFieldRef
-    operator: OrdinalComparisonOperator
-    value: StrictInt | StrictFloat
-
-
-ObjectDetectionExpr: TypeAlias = Annotated[
-    Union[AnnotationLabelExpr, AnnotationGeometryExpr],
-    Field(discriminator="type"),
-]
-InstanceSegmentationExpr: TypeAlias = Annotated[
-    Union[AnnotationLabelExpr, AnnotationGeometryExpr],
-    Field(discriminator="type"),
-]
-
-
 class ClassificationMatchExpr(BaseModel):
     """Leaf node checking if a sample has a matching classification annotation."""
 
     type: Literal["classification_match_expr"] = "classification_match_expr"
-    criteria: list[AnnotationLabelExpr] = Field(min_length=1)
+    criteria: list[MatchExpr] = Field(min_length=1)
 
 
 class ObjectDetectionMatchExpr(BaseModel):
     """Leaf node checking if a sample has a matching object detection annotation."""
 
     type: Literal["object_detection_match_expr"] = "object_detection_match_expr"
-    criteria: list[ObjectDetectionExpr] = Field(min_length=1)
+    criteria: list[MatchExpr] = Field(min_length=1)
 
 
 class InstanceSegmentationMatchExpr(BaseModel):
     """Leaf node checking if a sample has a matching instance segmentation annotation."""
 
     type: Literal["instance_segmentation_match_expr"] = "instance_segmentation_match_expr"
-    criteria: list[InstanceSegmentationExpr] = Field(min_length=1)
+    criteria: list[MatchExpr] = Field(min_length=1)
 
 
 class AndExpr(BaseModel):
@@ -225,6 +173,9 @@ MatchExpr: TypeAlias = Annotated[
     Field(discriminator="type"),
 ]
 
+ClassificationMatchExpr.model_rebuild()
+ObjectDetectionMatchExpr.model_rebuild()
+InstanceSegmentationMatchExpr.model_rebuild()
 AndExpr.model_rebuild()
 OrExpr.model_rebuild()
 NotExpr.model_rebuild()
