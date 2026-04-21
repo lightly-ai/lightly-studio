@@ -5,6 +5,7 @@
 
 from __future__ import annotations
 
+from importlib import metadata
 from pathlib import Path
 
 import pytest
@@ -20,11 +21,14 @@ from lightly_studio.db_manager import (
     _detect_backend_from_url,
 )
 from lightly_studio.models.collection import CollectionTable
+from lightly_studio.models.database_version import DatabaseVersionTable
 from lightly_studio.resolvers import image_resolver
 from tests.helpers_resolvers import (
     create_collection,
     create_image,
 )
+
+PACKAGE_VERSION = metadata.version("lightly-studio")
 
 
 @pytest.fixture
@@ -332,3 +336,99 @@ def test_get_backend(
 
     assert db_manager.get_backend() == DatabaseBackend.DUCKDB
     db_manager.close()
+
+
+def _create_database(db_url: str, version: str | None = PACKAGE_VERSION) -> None:
+    db_manager.connect(db_url=db_url)
+    with db_manager.session() as session:
+        db_version = session.get(DatabaseVersionTable, 1)
+        assert db_version is not None
+        if version is None:
+            session.delete(db_version)
+        else:
+            db_version.version = version
+            session.add(db_version)
+    db_manager.close()
+
+
+def _assert_database_version_after_connect(
+    db_url: str,
+    *,
+    caplog: pytest.LogCaptureFixture,
+    must_exist: bool,
+    expected_version: str,
+    expected_warning: str | None = None,
+) -> None:
+    caplog.clear()
+    with caplog.at_level("WARNING"):
+        db_manager.connect(db_url=db_url, must_exist=must_exist)
+    with db_manager.session() as session:
+        db_version = session.get(DatabaseVersionTable, 1)
+        assert db_version is not None
+        assert db_version.version == expected_version
+    db_manager.close()
+    if expected_warning is None:
+        assert not caplog.records
+    else:
+        assert expected_warning in caplog.text
+
+
+def test_connect__initializes_database_version_for_new_database(
+    tmp_path: Path,
+    caplog: pytest.LogCaptureFixture,
+    patch_engine_singleton: None,  # noqa: ARG001
+) -> None:
+    db_url = f"duckdb:///{tmp_path / 'no_db.db'}"
+    _assert_database_version_after_connect(
+        db_url=db_url,
+        caplog=caplog,
+        must_exist=False,
+        expected_version=PACKAGE_VERSION,
+    )
+
+
+def test_connect__warns_for_database_without_version_metadata(
+    tmp_path: Path,
+    caplog: pytest.LogCaptureFixture,
+    patch_engine_singleton: None,  # noqa: ARG001
+) -> None:
+    db_url = f"duckdb:///{tmp_path / 'db_without_version.db'}"
+    _create_database(db_url=db_url, version=None)
+    _assert_database_version_after_connect(
+        db_url=db_url,
+        caplog=caplog,
+        must_exist=True,
+        expected_version=PACKAGE_VERSION,
+        expected_warning="missing version metadata",
+    )
+
+
+def test_connect__does_not_warn_for_same_database_version(
+    tmp_path: Path,
+    caplog: pytest.LogCaptureFixture,
+    patch_engine_singleton: None,  # noqa: ARG001
+) -> None:
+    db_url = f"duckdb:///{tmp_path / 'db_with_same_version.db'}"
+    _create_database(db_url=db_url)
+    _assert_database_version_after_connect(
+        db_url=db_url,
+        caplog=caplog,
+        must_exist=True,
+        expected_version=PACKAGE_VERSION,
+    )
+
+
+def test_connect__warns_for_other_database_version(
+    tmp_path: Path,
+    caplog: pytest.LogCaptureFixture,
+    patch_engine_singleton: None,  # noqa: ARG001
+) -> None:
+    db_url = f"duckdb:///{tmp_path / 'db_with_other_version.db'}"
+    _create_database(db_url=db_url, version="0.0.0")
+    _assert_database_version_after_connect(
+        db_url=db_url,
+        caplog=caplog,
+        must_exist=True,
+        expected_version="0.0.0",
+        expected_warning="got '0.0.0'",
+    )

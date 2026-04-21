@@ -16,6 +16,9 @@ from lightly_studio.models.collection import (
 from lightly_studio.models.dataset import (
     DatasetTable,  # noqa: F401, required for SQLModel to work properly
 )
+from lightly_studio.models.database_version import (
+    DatabaseVersionTable,  # noqa: F401, required for SQLModel to work properly
+)
 from lightly_studio.models.embedding_model import (
     EmbeddingModelTable,  # noqa: F401, required for SQLModel to work properly
 )

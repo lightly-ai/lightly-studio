@@ -18,17 +18,19 @@ import re
 from collections.abc import Generator
 from contextlib import contextmanager
 from enum import Enum
+from importlib import metadata
 from pathlib import Path
 from typing import Annotated
 
 import sqlalchemy_utils
 from fastapi import Depends
-from sqlalchemy import StaticPool, text
+from sqlalchemy import StaticPool, inspect, text
 from sqlalchemy.engine import Engine
 from sqlmodel import Session, SQLModel, create_engine
 
 import lightly_studio.api.db_tables  # noqa: F401, required for SQLModel to work properly
 from lightly_studio.dataset.env import LIGHTLY_STUDIO_DATABASE_URL
+from lightly_studio.models.database_version import DatabaseVersionTable
 
 
 class DatabaseBackend(str, Enum):
@@ -111,7 +113,12 @@ class DatabaseEngine:
             SQLModel.metadata.drop_all(bind=self._engine)
             logging.info("Dropped all tables in PostgreSQL database.")
 
+        existing_managed_tables = _get_existing_managed_tables(engine=self._engine)
         SQLModel.metadata.create_all(self._engine)
+        _validate_or_initialize_database_version(
+            engine=self._engine,
+            existing_managed_tables=existing_managed_tables,
+        )
 
     @contextmanager
     def session(self) -> Generator[Session, None, None]:
@@ -345,3 +352,48 @@ def _session_dependency() -> Generator[Session, None, None]:
 
 
 SessionDep = Annotated[Session, Depends(_session_dependency)]
+
+
+def _get_existing_managed_tables(engine: Engine) -> set[str]:
+    """Get existing tables managed by SQLModel before create_all."""
+    inspector = inspect(engine)
+    existing_tables = set(inspector.get_table_names())
+    managed_tables = set(SQLModel.metadata.tables)
+    return existing_tables.intersection(managed_tables)
+
+
+def _validate_or_initialize_database_version(
+    engine: Engine,
+    existing_managed_tables: set[str],
+) -> None:
+    """Validate database schema version or initialize it for fresh databases.
+
+    The database schema version is tied to the full lightly-studio package version.
+    """
+    expected_version = metadata.version("lightly-studio")
+
+    with Session(engine, close_resets_only=False) as version_session:
+        db_version = version_session.get(DatabaseVersionTable, 1)
+        if db_version is None:
+            is_existing_db_without_version = bool(
+                existing_managed_tables.difference({"database_version"})
+            )
+            if is_existing_db_without_version:
+                logging.warning(
+
+                        "Incompatible database schema version. "
+                        f"Expected version '{expected_version}', "
+                        "but found missing version metadata."
+
+                )
+            version_session.add(DatabaseVersionTable(id=1, version=expected_version))
+            version_session.commit()
+            return
+
+        if db_version.version != expected_version:
+            logging.warning(
+
+                    "Incompatible database schema version. "
+                    f"Expected version '{expected_version}', got '{db_version.version}'."
+
+            )
