@@ -1,6 +1,7 @@
 <script module>
     import { defineMeta } from '@storybook/addon-svelte-csf';
     import ImageSearchDisplay from './ImageSearchDisplay.svelte';
+    import { fn } from 'storybook/test';
 
     const { Story } = defineMeta({
         title: 'Components/CollectionSearch/ImageSearchDisplay',
@@ -12,14 +13,10 @@
 <Story
     name="Default"
     args={{
-        activeImage: 'search.png',
-        previewUrl: null,
-        dragOver: false,
-        onClear: () => undefined
+        onClear: fn()
     }}
-    asChild
 >
-    {#snippet children(args)}
+    {#snippet template(args)}
         <ImageSearchDisplay {...args} />
     {/snippet}
 </Story>
@@ -27,14 +24,11 @@
 <Story
     name="With Preview"
     args={{
-        activeImage: 'search.png',
-        previewUrl: 'https://via.placeholder.com/40',
-        dragOver: false,
-        onClear: () => undefined
+        previewUrl: 'https://picsum.photos/150?random=1',
+        onClear: fn()
     }}
-    asChild
 >
-    {#snippet children(args)}
+    {#snippet template(args)}
         <ImageSearchDisplay {...args} />
     {/snippet}
 </Story>
