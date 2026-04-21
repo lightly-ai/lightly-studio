@@ -13,7 +13,7 @@ _HANDLED_TABLES_COUNT = 19
 # Tables not relevant for collection operations:
 # - setting (application-level, not collection-specific)
 # - two_dim_embeddings (cached projections, regenerated as needed)
-_EXCLUDED_TABLES_COUNT = 2
+_EXCLUDED_TABLES_COUNT = 3
 
 _TOTAL_TABLES_COUNT = _HANDLED_TABLES_COUNT + _EXCLUDED_TABLES_COUNT
 
