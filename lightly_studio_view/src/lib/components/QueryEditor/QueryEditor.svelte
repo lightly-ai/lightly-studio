@@ -78,17 +78,34 @@
 
         worker = createLightlyQueryLanguageServerWorker();
         languageClient = createLanguageClient(worker);
-        languageClient.start();
+
+        let cancelled = false;
+        const startupPromise = languageClient.start().catch((error) => {
+            if (!cancelled) {
+                console.error('Failed to start LightlyQuery language client:', error);
+            }
+        });
 
         return () => {
-            languageClient?.stop();
-            editor?.dispose();
-            model.dispose();
-            worker?.terminate();
+            cancelled = true;
+            const clientToStop = languageClient;
+            const editorToDispose = editor;
+            const workerToTerminate = worker;
 
             languageClient = null;
             editor = null;
             worker = null;
+
+            void startupPromise.finally(async () => {
+                try {
+                    await clientToStop?.stop();
+                } catch (error) {
+                    console.error('Failed to stop LightlyQuery language client:', error);
+                }
+                editorToDispose?.dispose();
+                model.dispose();
+                workerToTerminate?.terminate();
+            });
         };
     });
 
