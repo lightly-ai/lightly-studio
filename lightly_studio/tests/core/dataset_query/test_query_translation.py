@@ -118,7 +118,7 @@ class TestOrdinalFloatExpr:
             value=30.0,
         )
         sql = _to_sql(query_translation.to_match_expression(expr))
-        assert "video.fps <" in sql
+        assert "video.fps < 30.0" in sql
 
     def test_unknown_field(self) -> None:
         expr = OrdinalFloatExpr(
@@ -138,7 +138,7 @@ class TestEqualityFloatExpr:
             value=10.5,
         )
         sql = _to_sql(query_translation.to_match_expression(expr))
-        assert "video.duration_s =" in sql
+        assert "video.duration_s = 10.5" in sql
 
     def test_neq(self) -> None:
         expr = EqualityFloatExpr(
@@ -147,7 +147,7 @@ class TestEqualityFloatExpr:
             value=0,
         )
         sql = _to_sql(query_translation.to_match_expression(expr))
-        assert "video.duration_s !=" in sql
+        assert "video.duration_s != 0" in sql
 
     def test_unknown_field(self) -> None:
         expr = EqualityFloatExpr(
