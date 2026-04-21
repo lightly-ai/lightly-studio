@@ -1,15 +1,10 @@
 # Sampling
 
-Sampling helps you select representative subsets from your dataset. LightlyStudio provides sampling strategies that leverage embeddings to pick diverse, balanced, or otherwise optimized subsets for labeling, training, or review.
+Sampling helps you select representative subsets from your dataset. LightlyStudio provides sampling strategies that leverage embeddings to pick diverse, balanced, or otherwise optimized subsets for labeling, training, or review. Use the GUI for quick, one-off sampling. Use the Python API when you need reusable, configurable, or combined sampling strategies in code.
 
-Use the GUI for quick, one-off sampling. Use the Python API when you need reusable, configurable, or combined sampling strategies in code.
+## Prerequisites
 
-!!! note "Sampling requires a license key"
-    Sampling is a premium feature and requires a valid LightlyStudio license key.
-
-## Prerequisite
-
-Set the `LIGHTLY_STUDIO_LICENSE_KEY` environment variable before using sampling features:
+Sampling is a premium feature and requires a valid LightlyStudio license key. Set the `LIGHTLY_STUDIO_LICENSE_KEY` environment variable before using sampling features:
 
 === "Linux/macOS"
 
@@ -23,9 +18,13 @@ Set the `LIGHTLY_STUDIO_LICENSE_KEY` environment variable before using sampling 
     $env:LIGHTLY_STUDIO_LICENSE_KEY="license_key_here"
     ```
 
-## Sampling in the GUI
+## Sampling in GUI
 
-*Coming soon.*
+Open the export dialog from the `Menu` button in the top-right corner and select `Selection`. The dialog shows a dropdown with all available sampling strategies. Specify the number of samples and the tag name that should be used. [Sampling in Python](#sampling-in-python) lets you explore more sampling strategies and also lets you learn more about how they work.
+
+<video autoplay loop muted playsinline controls style="width: 100%;">
+  <source src="https://storage.googleapis.com/lightly-public/studio/sampling_workflow.mp4" type="video/mp4">
+</video>
 
 ## Sampling in Python
 
@@ -71,8 +70,6 @@ dataset.query().selection().diverse(
     n_samples_to_select=10,
     selection_result_tag_name="diverse_selection",
 )
-
-ls.start_gui()
 ```
 
 If your dataset has multiple embedding models, pass `embedding_model_name` to specify which one to use. See [`Selection.diverse`](../api/selection.md#lightly_studio.selection.select.Selection.diverse) for the full API reference.
@@ -156,7 +153,7 @@ dataset.query().selection().metadata_weighting(
 Class balancing selects samples based on the distribution of annotation classes. This is useful for fixing class imbalance. For example, ensuring you have enough "pedestrians" in a driving dataset.
 
 !!! note "Annotations required"
-    This strategy requires the dataset to have annotations, e.g., loaded via `add_samples_from_coco` or `add_samples_from_yolo`.
+    This strategy requires the dataset to have [annotations](annotations.md). It is primarily designed for **object detection** annotations. Segmentation masks may produce unexpected results, as mask definitions can vary (e.g., all pixels of a class in a single mask vs. multiple masks per class).
 
 ```py
 import lightly_studio as ls
