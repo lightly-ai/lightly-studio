@@ -104,7 +104,6 @@ describe('TagsMenu', () => {
         vi.mocked(renameTag).mockResolvedValue({
             data: {
                 ...sampleTag,
-                collection_id: 'collection-1',
                 name: 'Renamed Vehicle'
             },
             error: undefined,
