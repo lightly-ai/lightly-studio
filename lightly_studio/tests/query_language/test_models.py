@@ -12,16 +12,14 @@ from lightly_studio.query_language import (
     ClassificationMatchExpr,
     DatetimeExpr,
     EqualityComparisonOperator,
+    FieldRef,
     IntegerExpr,
-    IntegerFieldRef,
     NotExpr,
     OrdinalComparisonOperator,
     OrExpr,
     QueryExpr,
     StringExpr,
-    StringFieldRef,
     TagsContainsExpr,
-    TagsFieldRef,
     to_match_expression,
 )
 from tests.helpers_resolvers import (
@@ -127,19 +125,19 @@ def test_query_tree_constructed_from_pydantic_classes() -> None:
         root=AndExpr(
             children=[
                 IntegerExpr(
-                    field=IntegerFieldRef(table="image", name="width"),
+                    field=FieldRef(table="image", name="width"),
                     operator=OrdinalComparisonOperator.GTE,
                     value=128,
                 ),
                 OrExpr(
                     children=[
                         TagsContainsExpr(
-                            field=TagsFieldRef(table="image", name="tags"),
+                            field=FieldRef(table="image", name="tags"),
                             tag_name="reviewed",
                         ),
                         NotExpr(
                             child=StringExpr(
-                                field=StringFieldRef(table="image", name="file_name"),
+                                field=FieldRef(table="image", name="file_name"),
                                 operator=EqualityComparisonOperator.EQ,
                                 value="skip.jpg",
                             ),
@@ -148,7 +146,7 @@ def test_query_tree_constructed_from_pydantic_classes() -> None:
                 ),
                 ClassificationMatchExpr(
                     subexpr=StringExpr(
-                        field=StringFieldRef(table="classification", name="label"),
+                        field=FieldRef(table="classification", name="label"),
                         operator=EqualityComparisonOperator.EQ,
                         value="cat",
                     ),
