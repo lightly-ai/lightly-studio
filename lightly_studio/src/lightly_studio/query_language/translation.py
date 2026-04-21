@@ -99,13 +99,12 @@ _TAGS_FIELDS: dict[tuple[str, str], TagsAccessor] = {
 
 def _lookup(
     mapping: dict[tuple[str, str], Any],
-    table: str,
-    name: str,
+    field: models.FieldRef,
     kind: str,
 ) -> Any:
-    key = (table, name)
+    key = (field.table, field.name)
     if key not in mapping:
-        raise ValueError(f"Unknown {kind} field: {table}.{name}")
+        raise ValueError(f"Unknown {kind} field: {field.table}.{field.name}")
     return mapping[key]
 
 
@@ -118,26 +117,26 @@ def to_match_expression(expr: models.MatchExpr) -> MatchExpression:
     """Translate a validated query-language expression to a dataset-query expression."""
     if isinstance(expr, models.StringExpr):
         return _apply_equality_operator(
-            field=_lookup(_STRING_FIELDS, expr.field.table, expr.field.name, "string"),
+            field=_lookup(_STRING_FIELDS, expr.field, "string"),
             operator=expr.operator,
             value=expr.value,
         )
     if isinstance(expr, models.IntegerExpr):
         return _apply_ordinal_operator(
-            field=_lookup(_INTEGER_FIELDS, expr.field.table, expr.field.name, "integer"),
+            field=_lookup(_INTEGER_FIELDS, expr.field, "integer"),
             operator=expr.operator,
             value=expr.value,
         )
     if isinstance(expr, models.DatetimeExpr):
         return _apply_ordinal_operator(
-            field=_lookup(_DATETIME_FIELDS, expr.field.table, expr.field.name, "datetime"),
+            field=_lookup(_DATETIME_FIELDS, expr.field, "datetime"),
             operator=expr.operator,
             value=expr.value,
         )
     if isinstance(expr, models.OrdinalFloatExpr):
         return _apply_ordinal_operator(
             field=_lookup(
-                _ORDINAL_FLOAT_FIELDS, expr.field.table, expr.field.name, "ordinal float"
+                _ORDINAL_FLOAT_FIELDS, expr.field, "ordinal float"
             ),
             operator=expr.operator,
             value=expr.value,
@@ -145,25 +144,22 @@ def to_match_expression(expr: models.MatchExpr) -> MatchExpression:
     if isinstance(expr, models.EqualityFloatExpr):
         return _apply_equality_operator(
             field=_lookup(
-                _EQUALITY_FLOAT_FIELDS, expr.field.table, expr.field.name, "equality float"
+                _EQUALITY_FLOAT_FIELDS, expr.field, "equality float"
             ),
             operator=expr.operator,
             value=expr.value,
         )
     if isinstance(expr, models.TagsContainsExpr):
         accessor: TagsAccessor = _lookup(
-            _TAGS_FIELDS, expr.field.table, expr.field.name, "tags"
+            _TAGS_FIELDS, expr.field, "tags"
         )
         return accessor.contains(expr.tag_name)
     if isinstance(expr, models.ClassificationMatchExpr):
-        criteria = [to_match_expression(c) for c in expr.criteria]
-        return ClassificationQuery.match(*criteria)
+        return ClassificationQuery.match(to_match_expression(expr.subexpr))
     if isinstance(expr, models.ObjectDetectionMatchExpr):
-        criteria = [to_match_expression(c) for c in expr.criteria]
-        return ObjectDetectionQuery.match(*criteria)
+        return ObjectDetectionQuery.match(to_match_expression(expr.subexpr))
     if isinstance(expr, models.InstanceSegmentationMatchExpr):
-        criteria = [to_match_expression(c) for c in expr.criteria]
-        return InstanceSegmentationQuery.match(*criteria)
+        return InstanceSegmentationQuery.match(to_match_expression(expr.subexpr))
     if isinstance(expr, models.AndExpr):
         return AND(*(to_match_expression(child) for child in expr.children))
     if isinstance(expr, models.OrExpr):

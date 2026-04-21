@@ -117,21 +117,31 @@ class ClassificationMatchExpr(BaseModel):
     """Leaf node checking if a sample has a matching classification annotation."""
 
     type: Literal["classification_match_expr"] = "classification_match_expr"
-    criteria: list[MatchExpr] = Field(min_length=1)
+    subexpr: MatchExpr
 
 
 class ObjectDetectionMatchExpr(BaseModel):
     """Leaf node checking if a sample has a matching object detection annotation."""
 
     type: Literal["object_detection_match_expr"] = "object_detection_match_expr"
-    criteria: list[MatchExpr] = Field(min_length=1)
+    subexpr: MatchExpr
 
 
 class InstanceSegmentationMatchExpr(BaseModel):
     """Leaf node checking if a sample has a matching instance segmentation annotation."""
 
     type: Literal["instance_segmentation_match_expr"] = "instance_segmentation_match_expr"
-    criteria: list[MatchExpr] = Field(min_length=1)
+    subexpr: MatchExpr
+
+
+NestedMatchExpr: TypeAlias = Annotated[
+    Union[
+        ClassificationMatchExpr,
+        ObjectDetectionMatchExpr,
+        InstanceSegmentationMatchExpr,
+    ],
+    Field(discriminator="type"),
+]
 
 
 class AndExpr(BaseModel):
