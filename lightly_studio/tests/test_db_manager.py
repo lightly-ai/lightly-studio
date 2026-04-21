@@ -362,9 +362,8 @@ def test_connect__initializes_database_version_for_new_database(
         db_manager.connect(db_url=db_url, must_exist=False)
     assert caplog.messages == []
     with db_manager.session() as session:
-        db_version = session.exec(select(DatabaseVersionTable.version)).first()
+        assert session.exec(select(DatabaseVersionTable.version)).first() == PACKAGE_VERSION
     db_manager.close()
-    assert db_version == PACKAGE_VERSION
 
 
 def test_connect__warns_for_database_without_version_metadata(
@@ -383,9 +382,8 @@ def test_connect__warns_for_database_without_version_metadata(
         db_manager.connect(db_url=db_url, must_exist=True)
     assert caplog.messages == [expected_warning]
     with db_manager.session() as session:
-        db_version = session.exec(select(DatabaseVersionTable.version)).first()
+        assert session.exec(select(DatabaseVersionTable.version)).first() is None
     db_manager.close()
-    assert db_version is None
 
 
 def test_connect__does_not_warn_for_same_database_version(
@@ -400,9 +398,8 @@ def test_connect__does_not_warn_for_same_database_version(
         db_manager.connect(db_url=db_url, must_exist=True)
     assert caplog.messages == []
     with db_manager.session() as session:
-        db_version = session.exec(select(DatabaseVersionTable.version)).first()
+        assert session.exec(select(DatabaseVersionTable.version)).first() == PACKAGE_VERSION
     db_manager.close()
-    assert db_version == PACKAGE_VERSION
 
 
 def test_connect__warns_for_other_database_version(
@@ -420,9 +417,8 @@ def test_connect__warns_for_other_database_version(
         db_manager.connect(db_url=db_url, must_exist=True)
     assert caplog.messages == [expected_warning]
     with db_manager.session() as session:
-        db_version = session.exec(select(DatabaseVersionTable.version)).first()
+        assert session.exec(select(DatabaseVersionTable.version)).first() == "0.0.0"
     db_manager.close()
-    assert db_version == "0.0.0"
 
 
 def test_connect__raises_for_multiple_database_versions(
