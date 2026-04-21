@@ -22,6 +22,7 @@
         showOutline?: boolean;
         /** Called when the upload button is clicked. */
         onUploadClick: () => void;
+        /** Disables the entire input when true. */
         disabled?: boolean;
     }
 
