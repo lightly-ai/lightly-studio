@@ -2,7 +2,7 @@ import { writable, type Writable } from 'svelte/store';
 
 interface UseFileDropParams {
     /** Called when an image file is accepted from drop, paste, or file input. */
-    onFile: (file: File) => Promise<void> | void;
+    onFileAccepted: (file: File) => Promise<void>;
     /** Called when user input is invalid (for example non-image drop). */
     onError: (message: string) => void;
 }
@@ -14,9 +14,9 @@ interface UseFileDropReturn {
     handleDragOver: (event: DragEvent) => void;
     /** Clears drop-zone active state when the dragged item leaves. */
     handleDragLeave: (event: DragEvent) => void;
-    /** Accepts a dropped image file and forwards it to `onFile`. */
+    /** Accepts a dropped image file and forwards it to `onFileAccepted`. */
     handleDrop: (event: DragEvent) => Promise<void>;
-    /** Accepts pasted image data from clipboard and forwards it to `onFile`. */
+    /** Accepts pasted image data from clipboard and forwards it to `onFileAccepted`. */
     handlePaste: (event: ClipboardEvent) => Promise<void>;
     /** Accepts a selected file from input and resets input value afterward. */
     handleFileSelect: (event: Event) => Promise<void>;
@@ -25,7 +25,7 @@ interface UseFileDropReturn {
 /**
  * Centralizes image intake interactions for search UI components.
  */
-export function useFileDrop({ onFile, onError }: UseFileDropParams): UseFileDropReturn {
+export function useFileDrop({ onFileAccepted, onError }: UseFileDropParams): UseFileDropReturn {
     const dragOver = writable(false);
 
     const handleDragOver = (event: DragEvent) => {
@@ -52,7 +52,7 @@ export function useFileDrop({ onFile, onError }: UseFileDropParams): UseFileDrop
             return;
         }
 
-        await onFile(file);
+        await onFileAccepted(file);
     };
 
     const handlePaste = async (event: ClipboardEvent) => {
@@ -64,7 +64,7 @@ export function useFileDrop({ onFile, onError }: UseFileDropParams): UseFileDrop
         const fileFromFiles = clipboardData.files?.[0];
         if (fileFromFiles && fileFromFiles.type.startsWith('image/')) {
             event.preventDefault();
-            await onFile(fileFromFiles);
+            await onFileAccepted(fileFromFiles);
             return;
         }
 
@@ -76,7 +76,7 @@ export function useFileDrop({ onFile, onError }: UseFileDropParams): UseFileDrop
             const file = item.getAsFile();
             if (file) {
                 event.preventDefault();
-                await onFile(file);
+                await onFileAccepted(file);
                 return;
             }
         }
@@ -87,7 +87,7 @@ export function useFileDrop({ onFile, onError }: UseFileDropParams): UseFileDrop
         const file = target.files?.[0];
 
         if (file) {
-            await onFile(file);
+            await onFileAccepted(file);
         }
 
         target.value = '';

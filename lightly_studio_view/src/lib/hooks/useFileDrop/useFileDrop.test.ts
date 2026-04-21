@@ -3,7 +3,7 @@ import { get } from 'svelte/store';
 import { useFileDrop } from '$lib/hooks';
 
 describe('useFileDrop', () => {
-    const onFile = vi.fn();
+    const onFileAccepted = vi.fn(async () => {});
     const onError = vi.fn();
 
     beforeEach(() => {
@@ -11,7 +11,7 @@ describe('useFileDrop', () => {
     });
 
     it('sets dragOver state during drag events', () => {
-        const drop = useFileDrop({ onFile, onError });
+        const drop = useFileDrop({ onFileAccepted, onError });
 
         const preventDefault = vi.fn();
         drop.handleDragOver({ preventDefault } as unknown as DragEvent);
@@ -23,7 +23,7 @@ describe('useFileDrop', () => {
     });
 
     it('uploads dropped image files', async () => {
-        const drop = useFileDrop({ onFile, onError });
+        const drop = useFileDrop({ onFileAccepted, onError });
         const file = new File(['image'], 'image.png', { type: 'image/png' });
 
         await drop.handleDrop({
@@ -31,13 +31,13 @@ describe('useFileDrop', () => {
             dataTransfer: { files: [file] }
         } as unknown as DragEvent);
 
-        expect(onFile).toHaveBeenCalledWith(file);
+        expect(onFileAccepted).toHaveBeenCalledWith(file);
         expect(onError).not.toHaveBeenCalled();
         expect(get(drop.dragOver)).toBe(false);
     });
 
     it('rejects non-image drops', async () => {
-        const drop = useFileDrop({ onFile, onError });
+        const drop = useFileDrop({ onFileAccepted, onError });
         const file = new File(['text'], 'file.txt', { type: 'text/plain' });
 
         await drop.handleDrop({
@@ -46,11 +46,11 @@ describe('useFileDrop', () => {
         } as unknown as DragEvent);
 
         expect(onError).toHaveBeenCalledWith('Please drop an image file.');
-        expect(onFile).not.toHaveBeenCalled();
+        expect(onFileAccepted).not.toHaveBeenCalled();
     });
 
     it('uploads image from clipboard files', async () => {
-        const drop = useFileDrop({ onFile, onError });
+        const drop = useFileDrop({ onFileAccepted, onError });
         const preventDefault = vi.fn();
         const file = new File(['image'], 'clipboard.png', { type: 'image/png' });
 
@@ -63,11 +63,11 @@ describe('useFileDrop', () => {
         } as unknown as ClipboardEvent);
 
         expect(preventDefault).toHaveBeenCalledOnce();
-        expect(onFile).toHaveBeenCalledWith(file);
+        expect(onFileAccepted).toHaveBeenCalledWith(file);
     });
 
     it('resets file input value after file selection', async () => {
-        const drop = useFileDrop({ onFile, onError });
+        const drop = useFileDrop({ onFileAccepted, onError });
         const file = new File(['image'], 'upload.png', { type: 'image/png' });
         const target = {
             files: [file],
@@ -76,7 +76,7 @@ describe('useFileDrop', () => {
 
         await drop.handleFileSelect({ target } as unknown as Event);
 
-        expect(onFile).toHaveBeenCalledWith(file);
+        expect(onFileAccepted).toHaveBeenCalledWith(file);
         expect(target.value).toBe('');
     });
 });
