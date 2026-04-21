@@ -91,6 +91,23 @@ class ImageDatasetExport:
             output_json=Path(output_json),
         )
 
+    def to_pascalvoc_instance_segmentation(self, output_folder: PathLike) -> None:
+        """Exports instance segmentation annotations to Pascal VOC format.
+
+        Creates a folder with per-pixel class masks (PNG) and a class map (JSON).
+
+        Args:
+            output_folder: The folder where Pascal VOC segmentation files are
+                written. The folder contains a `SegmentationClass` subfolder
+                with PNG masks and a `class_id_to_name.json` file.
+        """
+        to_pascalvoc_instance_segmentation(
+            session=self.session,
+            dataset_id=self._dataset_id,
+            samples=self.samples,
+            output_folder=Path(output_folder),
+        )
+
 
 def to_coco_object_detections(
     session: Session,
@@ -150,7 +167,8 @@ def to_pascalvoc_instance_segmentation(
 ) -> None:
     """Exports instance segmentation annotations to a Pascal VOC segmentation folder.
 
-    This function is for internal use.
+    This function is for internal use. Use
+    `Dataset.export().to_pascalvoc_instance_segmentation()` instead.
 
     Args:
         session: The database session.

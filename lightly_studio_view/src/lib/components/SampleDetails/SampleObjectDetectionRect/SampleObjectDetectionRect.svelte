@@ -14,9 +14,11 @@
     import { addAnnotationCreateToUndoStack } from '$lib/services/addAnnotationCreateToUndoStack';
     import { useGlobalStorage } from '$lib/hooks/useGlobalStorage';
     import { useDeleteAnnotation } from '$lib/hooks/useDeleteAnnotation/useDeleteAnnotation';
+    import { usePendingOperations } from '$lib/hooks/usePendingOperations/usePendingOperations';
     import ResizableRectangle from '$lib/components/ResizableRectangle/ResizableRectangle.svelte';
     import { useAnnotationLabelContext } from '$lib/contexts/SampleDetailsAnnotation.svelte';
     import { getBoundingBox } from '$lib/components/SampleAnnotation/utils';
+    import type { PendingChange } from '../pendingChange';
 
     type D3Event = D3DragEvent<SVGRectElement, unknown, unknown>;
 
@@ -32,6 +34,7 @@
         drawerStrokeColor: string;
         refetch: () => void;
         hoverbbox?: boolean;
+        onCreateBoundingBoxPendingChange?: (pendingChange: PendingChange) => void;
     };
 
     let {
@@ -41,7 +44,8 @@
         refetch,
         sampleId,
         drawerStrokeColor,
-        hoverbbox = $bindable(false)
+        hoverbbox = $bindable(false),
+        onCreateBoundingBoxPendingChange
     }: SampleObjectDetectionRectProps = $props();
 
     let temporaryBbox = $state<BoundingBox | null>(null);
@@ -55,6 +59,17 @@
         collectionId
     });
     const { addReversibleAction } = useGlobalStorage();
+
+    const {
+        startPending: startCreateBoundingBoxPending,
+        endPending: endCreateBoundingBoxPending,
+        resetPending: resetCreateBoundingBoxPending
+    } = usePendingOperations({
+        operationPrefix: 'bbox',
+        onPendingChange: (pendingChange: PendingChange) => {
+            onCreateBoundingBoxPendingChange?.(pendingChange);
+        }
+    });
 
     const cancelDrag = () => {
         setIsDrawing(false);
@@ -151,20 +166,23 @@
         width: number;
         height: number;
     }) => {
-        let label =
-            $labels.data?.find(
-                (label) => label.annotation_label_name === annotationLabelContext.annotationLabel
-            ) ?? $labels.data?.find((label) => label.annotation_label_name === 'DEFAULT');
-
-        // Create an default label if it does not exist yet
-        if (!label) {
-            label = await createLabel({
-                dataset_id: datasetId,
-                annotation_label_name: 'DEFAULT'
-            });
-        }
+        const pendingOperation = startCreateBoundingBoxPending();
 
         try {
+            let label =
+                $labels.data?.find(
+                    (label) =>
+                        label.annotation_label_name === annotationLabelContext.annotationLabel
+                ) ?? $labels.data?.find((label) => label.annotation_label_name === 'DEFAULT');
+
+            // Create an default label if it does not exist yet
+            if (!label) {
+                label = await createLabel({
+                    dataset_id: datasetId,
+                    annotation_label_name: 'DEFAULT'
+                });
+            }
+
             const newAnnotation = await createAnnotation({
                 parent_sample_id: sampleId,
                 annotation_type: 'object_detection',
@@ -202,6 +220,8 @@
             toast.error('Failed to create annotation. Please try again.');
             console.error('Error creating annotation:', error);
             return;
+        } finally {
+            endCreateBoundingBoxPending(pendingOperation);
         }
     };
     const {
@@ -288,6 +308,7 @@
     });
 
     onDestroy(() => {
+        resetCreateBoundingBoxPending();
         detachSvgListeners?.();
     });
 

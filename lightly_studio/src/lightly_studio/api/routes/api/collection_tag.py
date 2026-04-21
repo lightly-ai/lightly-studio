@@ -130,6 +130,7 @@ def update_tag(
                 detail=f"Tag with id {tag_id} not found.",
             )
     except IntegrityError as e:
+        session.rollback()
         raise HTTPException(
             status_code=HTTP_STATUS_CONFLICT,
             detail=f"""
@@ -143,6 +144,11 @@ def update_tag(
 @tag_router.delete("/collections/{collection_id}/tags/{tag_id}")
 def delete_tag(
     session: SessionDep,
+    # collection_id is needed for the generator
+    collection_id: Annotated[  # noqa: ARG001
+        UUID,
+        Path(title="collection Id", description="The ID of the collection"),
+    ],
     tag_id: Annotated[UUID, Path(title="Tag Id")],
 ) -> dict[str, str]:
     """Delete a tag from the database."""

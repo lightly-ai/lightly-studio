@@ -19,10 +19,10 @@
     import { isVideosRoute } from '$lib/routes';
 
     const collectionId = page.params.collection_id;
-    const { setShowPlot, getRangeSelection, setRangeSelectionForcollection } = useGlobalStorage();
+    const { setShowPlot, getRangeSelection, setRangeSelectionForCollection } = useGlobalStorage();
     const rangeSelection = getRangeSelection(collectionId);
     const setRangeSelection = (selection: Point[] | null) => {
-        setRangeSelectionForcollection(collectionId, selection);
+        setRangeSelectionForCollection(collectionId, selection);
     };
 
     function handleClose() {
@@ -289,15 +289,6 @@
             >
                 Reset zoom
             </Button>
-            <Button
-                variant="outline"
-                size="sm"
-                onclick={clearSelection}
-                disabled={!hasActiveSelection}
-                data-testid="plot-reset-selection-button"
-                class="px-2.5"
-                title="Clear selection">Clear selection</Button
-            >
         </div>
     {/if}
 </div>
