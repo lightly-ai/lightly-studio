@@ -50,6 +50,7 @@ export { default as SampleGridItem } from '$lib/components/SampleGridItem/Sample
 export { default as VideoFrameItem } from '$lib/components/VideoFrameItem/VideoFrameItem.svelte';
 export { default as SegmentTags } from '$lib/components/SegmentTags/SegmentTags.svelte';
 export { default as MetadataSegment } from '$lib/components/MetadataSegment/MetadataSegment.svelte';
+export { default as QueryEditor } from '$lib/components/QueryEditor/QueryEditor.svelte';
 export { default as VideoDetailsNavigation } from '$lib/components/VideoDetailsNavigation/VideoDetailsNavigation.svelte';
 export { default as VideoFrameDetails } from '$lib/components/VideoFrameDetails/VideoFrameDetails.svelte';
 export { default as GroupsComponentsMenu } from '$lib/components/GroupsComponentsMenu/GroupsComponentsMenu.svelte';
