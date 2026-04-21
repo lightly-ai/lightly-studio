@@ -53,6 +53,7 @@
             onclick={() => (value = '')}
             title="Clear search"
             data-testid="search-clear-button"
+            type="button"
         >
             <X class="h-4 w-4" />
         </button>
@@ -61,6 +62,7 @@
         class="absolute right-2 top-[50%] translate-y-[-50%] text-muted-foreground hover:text-foreground disabled:opacity-50"
         onclick={onUploadClick}
         title="Upload image for search"
+        type="button"
         disabled={isDisabled}
     >
         <ImageIcon class="h-4 w-4" />
