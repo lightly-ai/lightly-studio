@@ -17,6 +17,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Added a floating selection panel to grid pages.
 - Tags can be created and assigned directly from the sample and annotation detail view.
 - Tags can be created and assigned directly from the side panel in the grid view.
+- Tags can be renamed directly from the side panel in the grid view.
 - Tags can be deleted from the side panel in the grid view.
 - Added warning if connecting to a database with a different LightlyStudio version.
 
