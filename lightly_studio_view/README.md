@@ -37,18 +37,6 @@ But you can always call it manually
 npm run generate-api-client
 ```
 
-## Query Language Generation
-
-The `QueryEditor` component uses Langium for parser/LSP support. Language files are generated from the grammar definition in `src/lib/components/QueryEditor/language/lightly-query.langium`.
-
-Run the generator manually when you update the grammar:
-
-```bash
-npm run generate-language
-```
-
-Generated output is written to `src/lib/components/QueryEditor/language/generated` and is intentionally ignored in git.
-
 ## Developing
 
 ### Configure local environment

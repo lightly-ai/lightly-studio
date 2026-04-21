@@ -30,8 +30,4 @@ src/lib/api/lightly_studio_local
 # Generated version info
 src/lib/version.json
 
-# Generated Langium query language artifacts
-src/lib/components/QueryEditor/language/generated
-
 build-chunk-sizes.log
-storybook-static
