@@ -18,19 +18,18 @@ import re
 from collections.abc import Generator
 from contextlib import contextmanager
 from enum import Enum
-from importlib import metadata
 from pathlib import Path
 from typing import Annotated
 
 import sqlalchemy_utils
 from fastapi import Depends
-from sqlalchemy import StaticPool, inspect, text
+from sqlalchemy import StaticPool, text
 from sqlalchemy.engine import Engine
-from sqlmodel import Session, SQLModel, create_engine, select
+from sqlmodel import Session, SQLModel, create_engine
 
 import lightly_studio.api.db_tables  # noqa: F401, required for SQLModel to work properly
+from lightly_studio.database_version_validation import validate_or_initialize_database_version
 from lightly_studio.dataset.env import LIGHTLY_STUDIO_DATABASE_URL
-from lightly_studio.models.database_version import DatabaseVersionTable
 
 
 class DatabaseBackend(str, Enum):
@@ -113,7 +112,7 @@ class DatabaseEngine:
             SQLModel.metadata.drop_all(bind=self._engine)
             logging.info("Dropped all tables in PostgreSQL database.")
 
-        _validate_or_initialize_database_version(engine=self._engine)
+        validate_or_initialize_database_version(engine=self._engine)
 
     @contextmanager
     def session(self) -> Generator[Session, None, None]:
@@ -347,67 +346,3 @@ def _session_dependency() -> Generator[Session, None, None]:
 
 
 SessionDep = Annotated[Session, Depends(_session_dependency)]
-
-
-def _validate_or_initialize_database_version(engine: Engine) -> None:
-    """Validate database schema version or initialize it for fresh databases.
-
-    These cases are handled:
-    1. Fresh database with no managed tables: Insert the expected version.
-    2. Existing database without a `database_version` table: Warn.
-    3. Existing database with a `database_version` table:
-         a. With 0 rows: Raise an error, this should not happen.
-         b. With >1 rows: Raise an error, this should not happen.
-         c. With 1 row and a different version: Warn about incompatible version.
-         d. With 1 row and the expected version: Do nothing.
-
-    Note that only in case 1 the version row is written. In all other cases the
-    version metadata is left unchanged.
-
-    The DB queries are executed here and not in the resolvers, as they are only used here.
-
-    """
-    existing_table_names = set(inspect(engine).get_table_names())
-    SQLModel.metadata.create_all(bind=engine)
-    if len(existing_table_names) == 0:
-        # Case 1: Fresh database, insert the expected version.
-        with Session(engine) as session:
-            session.add(DatabaseVersionTable(version=metadata.version("lightly-studio")))
-            session.commit()
-        return
-
-    if "database_version" not in existing_table_names:
-        # Case 2: Existing database without a `database_version` table: Warn.
-        logging.warning(
-            f"Incompatible database schema version. Expected version "
-            f"'{metadata.version('lightly-studio')}', but found missing version metadata."
-        )
-        return
-
-    with Session(engine) as session:
-        version_rows = session.exec(select(DatabaseVersionTable)).all()
-        if len(version_rows) == 0:
-            # Case 3a: Existing database with a `database_version` table but 0 rows:
-            # Raise an error.
-            raise RuntimeError(
-                "Expected exactly one row in 'database_version' when the table already "
-                "exists, got 0."
-            )
-        if len(version_rows) > 1:
-            # Case 3b: Existing database with a `database_version` table but >1 rows:
-            # Raise an error.
-            raise RuntimeError(
-                f"Expected at most one row in 'database_version' when the table already "
-                f"exists, got {len(version_rows)}."
-            )
-        version_row = version_rows[0]
-        expected_version = metadata.version("lightly-studio")
-        if version_row.version != expected_version:
-            # Case 3c: Existing database with a `database_version` table but
-            # incompatible version: Warn.
-            logging.warning(
-                f"Incompatible database schema version. Expected version "
-                f"'{expected_version}', got '{version_row.version}'."
-            )
-        # Case 3d: Existing database with a `database_version` table and compatible
-        # version: Do nothing.

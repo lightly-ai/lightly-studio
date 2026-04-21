@@ -74,6 +74,12 @@ def _use_postgres(request: pytest.FixtureRequest) -> bool:
     return bool(request.config.getoption("--postgres"))
 
 
+@pytest.fixture
+def patch_engine_singleton(mocker: MockerFixture) -> None:
+    """Patch the db_manager engine singleton to simulate a fresh module state."""
+    mocker.patch.object(db_manager, "_engine", new=None)
+
+
 @pytest.fixture(scope="session")
 def postgres_url(_use_postgres: bool) -> Generator[str | None, None, None]:
     """Start a Postgres container and yield its URL, or None for DuckDB."""

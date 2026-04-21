@@ -5,13 +5,11 @@
 
 from __future__ import annotations
 
-from importlib import metadata
 from pathlib import Path
 
 import pytest
 import sqlmodel
 from pytest_mock import MockerFixture
-from sqlmodel import select
 
 from lightly_studio import ImageDataset, db_manager
 from lightly_studio.core.dataset_query.image_sample_field import ImageSampleField
@@ -22,23 +20,11 @@ from lightly_studio.db_manager import (
     _detect_backend_from_url,
 )
 from lightly_studio.models.collection import CollectionTable
-from lightly_studio.models.database_version import DatabaseVersionTable
 from lightly_studio.resolvers import image_resolver
 from tests.helpers_resolvers import (
     create_collection,
     create_image,
 )
-
-PACKAGE_VERSION = metadata.version("lightly-studio")
-
-
-@pytest.fixture
-def patch_engine_singleton(mocker: MockerFixture) -> None:
-    """Patch the _engine variable to None before each test.
-
-    This simulates a fresh load of the module.
-    """
-    mocker.patch.object(db_manager, "_engine", new=None)
 
 
 def test_get_engine__default(
@@ -337,126 +323,3 @@ def test_get_backend(
 
     assert db_manager.get_backend() == DatabaseBackend.DUCKDB
     db_manager.close()
-
-
-def _create_database(db_url: str, version: str | None) -> None:
-    db_manager.connect(db_url=db_url)
-    with db_manager.session() as session:
-        db_version = session.exec(select(DatabaseVersionTable)).first()
-        assert db_version is not None
-        if version != db_version.version:
-            session.delete(db_version)
-            if version is not None:
-                session.add(DatabaseVersionTable(version=version))
-    db_manager.close()
-
-
-def _drop_database_version_table(db_url: str) -> None:
-    _create_database(db_url=db_url, version=PACKAGE_VERSION)
-    db_manager.connect(db_url=db_url)
-    with db_manager.session() as session:
-        session.connection().exec_driver_sql("DROP TABLE database_version")
-    db_manager.close()
-
-
-def test_connect__initializes_database_version_for_new_database(
-    tmp_path: Path,
-    caplog: pytest.LogCaptureFixture,
-    patch_engine_singleton: None,  # noqa: ARG001
-) -> None:
-    db_url = f"duckdb:///{tmp_path / 'no_db.db'}"
-    caplog.clear()
-    with caplog.at_level("WARNING"):
-        db_manager.connect(db_url=db_url, must_exist=False)
-    assert caplog.messages == []
-    with db_manager.session() as session:
-        assert session.exec(select(DatabaseVersionTable.version)).first() == PACKAGE_VERSION
-    db_manager.close()
-
-
-def test_connect__warns_for_existing_database_without_database_version_table(
-    tmp_path: Path,
-    caplog: pytest.LogCaptureFixture,
-    patch_engine_singleton: None,  # noqa: ARG001
-) -> None:
-    db_url = f"duckdb:///{tmp_path / 'db_without_version.db'}"
-    _drop_database_version_table(db_url=db_url)
-    expected_warning = (
-        f"Incompatible database schema version. Expected version "
-        f"'{PACKAGE_VERSION}', but found missing version metadata."
-    )
-    caplog.clear()
-    with caplog.at_level("WARNING"):
-        db_manager.connect(db_url=db_url, must_exist=True)
-    assert caplog.messages == [expected_warning]
-    with db_manager.session() as session:
-        assert session.exec(select(DatabaseVersionTable.version)).first() is None
-    db_manager.close()
-
-
-def test_connect__raises_for_database_version_table_without_rows(
-    tmp_path: Path,
-    patch_engine_singleton: None,  # noqa: ARG001
-) -> None:
-    db_url = f"duckdb:///{tmp_path / 'empty_database_version.db'}"
-    _create_database(db_url=db_url, version=None)
-
-    with pytest.raises(
-        RuntimeError,
-        match=(
-            r"Expected exactly one row in 'database_version' when the table already "
-            r"exists, got 0."
-        ),
-    ):
-        db_manager.connect(db_url=db_url, must_exist=True)
-
-
-def test_connect__does_not_warn_for_same_database_version(
-    tmp_path: Path,
-    caplog: pytest.LogCaptureFixture,
-    patch_engine_singleton: None,  # noqa: ARG001
-) -> None:
-    db_url = f"duckdb:///{tmp_path / 'db_with_same_version.db'}"
-    _create_database(db_url=db_url, version=PACKAGE_VERSION)
-    caplog.clear()
-    with caplog.at_level("WARNING"):
-        db_manager.connect(db_url=db_url, must_exist=True)
-    assert caplog.messages == []
-    with db_manager.session() as session:
-        assert session.exec(select(DatabaseVersionTable.version)).first() == PACKAGE_VERSION
-    db_manager.close()
-
-
-def test_connect__warns_for_other_database_version(
-    tmp_path: Path,
-    caplog: pytest.LogCaptureFixture,
-    patch_engine_singleton: None,  # noqa: ARG001
-) -> None:
-    db_url = f"duckdb:///{tmp_path / 'db_with_other_version.db'}"
-    _create_database(db_url=db_url, version="0.0.0")
-    expected_warning = (
-        f"Incompatible database schema version. Expected version '{PACKAGE_VERSION}', got '0.0.0'."
-    )
-    caplog.clear()
-    with caplog.at_level("WARNING"):
-        db_manager.connect(db_url=db_url, must_exist=True)
-    assert caplog.messages == [expected_warning]
-    with db_manager.session() as session:
-        assert session.exec(select(DatabaseVersionTable.version)).first() == "0.0.0"
-    db_manager.close()
-
-
-def test_connect__raises_for_multiple_database_versions(
-    tmp_path: Path,
-    patch_engine_singleton: None,  # noqa: ARG001
-) -> None:
-    db_url = f"duckdb:///{tmp_path / 'db_with_multiple_versions.db'}"
-    _create_database(db_url=db_url, version=PACKAGE_VERSION)
-
-    db_manager.connect(db_url=db_url)
-    with db_manager.session() as session:
-        session.add(DatabaseVersionTable(version="0.0.0"))
-    db_manager.close()
-
-    with pytest.raises(RuntimeError, match=r"Expected at most one row in 'database_version'"):
-        db_manager.connect(db_url=db_url, must_exist=True)
