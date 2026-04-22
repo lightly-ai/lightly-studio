@@ -50,6 +50,7 @@ export function registerLightlyQueryMonacoLanguage(): void {
     // without waiting for the LSP worker to start — the Langium server handles
     // semantics (validation, completion), but coloring is cheap enough to do
     // locally and keeps the editor responsive on first paint.
+    // TODO(kondrat 04/26): Update tokenizer when language is fixed
     monaco.languages.setMonarchTokensProvider(LIGHTLY_QUERY_LANGUAGE_ID, {
         tokenizer: {
             root: [
