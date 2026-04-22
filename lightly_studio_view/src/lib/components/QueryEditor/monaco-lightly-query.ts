@@ -50,8 +50,7 @@ export function registerLightlyQueryMonacoLanguage(): void {
     // and surround-with pairs. Purely UX; does not affect parsing.
     monaco.languages.setLanguageConfiguration(LIGHTLY_QUERY_LANGUAGE_ID, {
         comments: {
-            lineComment: '#',
-            blockComment: ['/*', '*/']
+            lineComment: '#'
         },
         autoClosingPairs: [
             { open: '(', close: ')' },
