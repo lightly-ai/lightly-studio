@@ -168,7 +168,7 @@ def to_pascalvoc_segmentation_mask(
     """Exports instance segmentation annotations to a Pascal VOC segmentation folder.
 
     This function is for internal use. Use
-    `Dataset.export().to_pascalvoc_instance_segmentation()` instead.
+    `Dataset.export().to_pascalvoc_segmentation_mask()` instead.
 
     Args:
         session: The database session.
