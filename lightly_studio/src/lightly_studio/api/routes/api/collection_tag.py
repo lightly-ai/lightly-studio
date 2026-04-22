@@ -22,9 +22,8 @@ from lightly_studio.models.collection import CollectionTable
 from lightly_studio.models.tag import (
     TagCreate,
     TagCreateBody,
+    TagRenameBody,
     TagTable,
-    TagUpdate,
-    TagUpdateBody,
     TagView,
 )
 from lightly_studio.resolvers import tag_resolver
@@ -104,8 +103,8 @@ def read_tag(
     return tag
 
 
-@tag_router.put("/collections/{collection_id}/tags/{tag_id}")
-def update_tag(
+@tag_router.patch("/collections/{collection_id}/tags/{tag_id}", response_model=TagView)
+def rename_tag(
     session: SessionDep,
     collection: Annotated[
         CollectionTable,
@@ -113,16 +112,14 @@ def update_tag(
         Depends(get_and_validate_collection_id),
     ],
     tag_id: Annotated[UUID, Path(title="Tag Id")],
-    body: TagUpdateBody,
+    body: TagRenameBody,
 ) -> TagTable:
-    """Update an existing tag in the database."""
+    """Rename an existing tag."""
     try:
-        tag = tag_resolver.update(
+        tag = tag_resolver.rename(
             session=session,
             tag_id=tag_id,
-            tag_data=TagUpdate(
-                **body.model_dump(exclude_unset=True),
-            ),
+            new_name=body.name,
         )
         if not tag:
             raise HTTPException(
@@ -130,10 +127,11 @@ def update_tag(
                 detail=f"Tag with id {tag_id} not found.",
             )
     except IntegrityError as e:
+        session.rollback()
         raise HTTPException(
             status_code=HTTP_STATUS_CONFLICT,
             detail=f"""
-                Cannot update tag. Tag with name {body.name}
+                Cannot rename tag. Tag with name {body.name}
                 already exists in the collection {collection.collection_id}.
             """,
         ) from e
@@ -143,6 +141,11 @@ def update_tag(
 @tag_router.delete("/collections/{collection_id}/tags/{tag_id}")
 def delete_tag(
     session: SessionDep,
+    # collection_id is needed for the generator
+    collection_id: Annotated[  # noqa: ARG001
+        UUID,
+        Path(title="collection Id", description="The ID of the collection"),
+    ],
     tag_id: Annotated[UUID, Path(title="Tag Id")],
 ) -> dict[str, str]:
     """Delete a tag from the database."""
