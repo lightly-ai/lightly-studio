@@ -56,7 +56,9 @@ export function useMonacoEditor(options: UseMonacoEditorOptions): MonacoEditorHa
 
     $effect(() => {
         const readOnly = options.readOnly?.() ?? false;
-        editor?.updateOptions({ readOnly });
+        if (editor && editor.getOption(monaco.editor.EditorOption.readOnly) !== readOnly) {
+            editor.updateOptions({ readOnly });
+        }
     });
 
     function mount(container: HTMLElement): void {
