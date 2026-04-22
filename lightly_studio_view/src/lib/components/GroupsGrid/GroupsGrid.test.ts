@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { render } from '@testing-library/svelte';
+import { render, screen } from '@testing-library/svelte';
 import { writable } from 'svelte/store';
 import GroupsGridTestWrapper from './GroupsGridTestWrapper.test.svelte';
 import type { GroupView, ImageView } from '$lib/api/lightly_studio_local/types.gen';
@@ -149,7 +149,7 @@ describe('GroupsGrid', () => {
     });
 
     it('renders groups grid when groups are available', () => {
-        const { container } = render(GroupsGridTestWrapper, {
+        render(GroupsGridTestWrapper, {
             props: {
                 groups: mockGroups,
                 isLoading: false,
@@ -161,8 +161,8 @@ describe('GroupsGrid', () => {
             }
         });
 
-        const viewport = container.querySelector('.viewport');
-        expect(viewport).toBeInTheDocument();
+        expect(screen.getByTestId('groups-grid-viewport')).toBeInTheDocument();
+        expect(screen.getByTestId('groups-grid')).toBeInTheDocument();
     });
 
     it('renders grid items for groups', () => {

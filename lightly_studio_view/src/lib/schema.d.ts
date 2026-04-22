@@ -208,11 +208,7 @@ export interface paths {
          * @description Retrieve a single tag from the database.
          */
         get: operations["read_tag"];
-        /**
-         * Update Tag
-         * @description Update an existing tag in the database.
-         */
-        put: operations["update_tag"];
+        put?: never;
         post?: never;
         /**
          * Delete Tag
@@ -221,7 +217,11 @@ export interface paths {
         delete: operations["delete_tag"];
         options?: never;
         head?: never;
-        patch?: never;
+        /**
+         * Rename Tag
+         * @description Rename an existing tag.
+         */
+        patch: operations["rename_tag"];
         trace?: never;
     };
     "/api/collections/{collection_id}/tags/{tag_id}/add/samples": {
@@ -3336,16 +3336,19 @@ export interface components {
             /** Name */
             name: string;
             /**
-             * Description
-             * @default
-             */
-            description: string | null;
-            /**
              * Kind
              * @default sample
              * @enum {string}
              */
             kind: "sample" | "annotation";
+        };
+        /**
+         * TagRenameBody
+         * @description Request body for renaming a tag.
+         */
+        TagRenameBody: {
+            /** Name */
+            name: string;
         };
         /**
          * TagTable
@@ -3354,11 +3357,6 @@ export interface components {
         TagTable: {
             /** Name */
             name: string;
-            /**
-             * Description
-             * @default
-             */
-            description: string | null;
             /**
              * Kind
              * @enum {string}
@@ -3386,38 +3384,12 @@ export interface components {
             updated_at?: string;
         };
         /**
-         * TagUpdateBody
-         * @description Tag model when updating.
-         */
-        TagUpdateBody: {
-            /** Name */
-            name: string;
-            /**
-             * Description
-             * @default
-             */
-            description: string | null;
-            /**
-             * Kind
-             * @default sample
-             * @enum {string}
-             */
-            kind: "sample" | "annotation";
-            /** Collection Id */
-            collection_id?: string | null;
-        };
-        /**
          * TagView
          * @description Tag model when retrieving.
          */
         TagView: {
             /** Name */
             name: string;
-            /**
-             * Description
-             * @default
-             */
-            description: string | null;
             /**
              * Kind
              * @enum {string}
@@ -4079,47 +4051,13 @@ export interface operations {
             };
         };
     };
-    update_tag: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                tag_id: string;
-                collection_id: string;
-            };
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["TagUpdateBody"];
-            };
-        };
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["TagTable"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
     delete_tag: {
         parameters: {
             query?: never;
             header?: never;
             path: {
+                /** @description The ID of the collection */
+                collection_id: string;
                 tag_id: string;
             };
             cookie?: never;
@@ -4135,6 +4073,42 @@ export interface operations {
                     "application/json": {
                         [key: string]: string;
                     };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    rename_tag: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                tag_id: string;
+                collection_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["TagRenameBody"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TagView"];
                 };
             };
             /** @description Validation Error */
