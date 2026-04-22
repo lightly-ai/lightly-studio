@@ -47,7 +47,6 @@ export function useLightlyQueryEditor(options: UseLightlyQueryEditorOptions): Mo
     const editor = useMonacoEditor({
         language: LIGHTLY_QUERY_LANGUAGE_ID,
         theme: LIGHTLY_QUERY_THEME_ID,
-        fileExtension: 'lql',
         value: options.value,
         onValueChange: options.onValueChange,
         readOnly: options.readOnly
