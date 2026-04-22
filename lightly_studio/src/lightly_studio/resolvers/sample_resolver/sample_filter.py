@@ -7,6 +7,7 @@ from pydantic import BaseModel
 from sqlmodel import col, select
 
 from lightly_studio.models.metadata import SampleMetadataTable
+from lightly_studio.models.query_expr import QueryExpr
 from lightly_studio.models.sample import SampleTable
 from lightly_studio.models.tag import TagTable
 from lightly_studio.resolvers.annotations.annotations_filter import AnnotationsFilter
@@ -23,6 +24,7 @@ class SampleFilter(BaseModel):
     sample_ids: Optional[list[UUID]] = None
     has_captions: Optional[bool] = None
     annotations_filter: Optional[AnnotationsFilter] = None
+    query_expr: Optional[QueryExpr] = None
 
     def apply(self, query: QueryType) -> QueryType:
         """Apply the filters to the given query."""
@@ -30,7 +32,8 @@ class SampleFilter(BaseModel):
         query = self._apply_annotation_filters(query)
         query = self._apply_tag_filters(query)
         query = self._apply_metadata_filters(query)
-        return self._apply_captions_filter(query)
+        query = self._apply_captions_filter(query)
+        return self._apply_query_expr_filter(query)
 
     def _apply_sample_ids_filter(self, query: QueryType) -> QueryType:
         if self.sample_ids:
@@ -73,3 +76,11 @@ class SampleFilter(BaseModel):
         if self.has_captions:
             return query.where(col(SampleTable.captions).any())
         return query.where(~col(SampleTable.captions).any())
+
+    def _apply_query_expr_filter(self, query: QueryType) -> QueryType:
+        if self.query_expr is None:
+            return query
+        from lightly_studio.core.dataset_query.query_translation import to_match_expression  # noqa: I001, PLC0415
+
+        match_expression = to_match_expression(self.query_expr.match_expr)
+        return query.where(match_expression.get())
