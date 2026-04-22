@@ -131,7 +131,7 @@ absolute paths under your chosen storage root.
 - If indexing succeeds but files do not open in the GUI, verify that the same
   absolute path works in Python, on the host, and inside the `studio`
   container. To check the expected path, go in the GUI on the details view of an image
-  or view and check the Filepath shown there. 
+  or video and check the Filepath shown there. 
 - If you move or rename files after indexing them, the stored file references
   become invalid and the GUI can no longer load those files.
 - If your Python script runs on another machine, mount the same local/NAS
