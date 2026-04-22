@@ -22,7 +22,7 @@ This means the path used by your Python script must also be valid for the
 `studio` container that later serves the files to the GUI.
 
 !!! warning "Same Path Required"
-    The same absolute path must work in all places:
+    The same absolute path must work in both places:
 
     1. In the Python process that indexes the data
     2. On the Docker host running the on-premise deployment
