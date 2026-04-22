@@ -31,7 +31,7 @@ test.describe('Export Instance Segmentations', () => {
         ]);
 
         // Verify the suggested filename from headers
-        expect(download.suggestedFilename()).toBe(cocoDataset.instanceSegmentationExportFilename);
+        expect(download.suggestedFilename()).toBe(cocoDataset.segmentationMasksExportFilename);
 
         // Read downloaded file contents (acceptDownloads is enabled)
         const filePath = await download.path();
