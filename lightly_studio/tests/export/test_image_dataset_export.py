@@ -281,7 +281,7 @@ class TestImageDatasetExport:
             "annotations": [],
         }
 
-    def test_to_pascalvoc_instance_segmentation__via_class(
+    def test_to_pascalvoc_segmentation_mask__via_class(
         self,
         tmp_path: Path,
         patch_collection: None,  # noqa: ARG002
@@ -303,7 +303,7 @@ class TestImageDatasetExport:
         )
 
         output_folder = tmp_path / "pascalvoc"
-        dataset.export().to_pascalvoc_instance_segmentation(
+        dataset.export().to_pascalvoc_segmentation_mask(
             output_folder=output_folder,
         )
 
@@ -319,7 +319,7 @@ class TestImageDatasetExport:
 
     # TODO(Michal, 04/2026): The tests below test the module method, not the ImageDatasetExport
     # class method. They should move outside of this tests class and not use patch_collection.
-    def test_to_pascalvoc_instance_segmentation(
+    def test_to_pascalvoc_segmentation_mask(
         self,
         tmp_path: Path,
         patch_collection: None,  # noqa: ARG002
@@ -341,7 +341,7 @@ class TestImageDatasetExport:
         )
 
         output_folder = tmp_path / "pascalvoc"
-        image_dataset_export.to_pascalvoc_instance_segmentation(
+        image_dataset_export.to_pascalvoc_segmentation_mask(
             session=dataset.session,
             dataset_id=dataset.dataset_id,
             samples=dataset.query(),
@@ -397,7 +397,7 @@ class TestImageDatasetExport:
         )
 
         output_folder = tmp_path / "pascalvoc"
-        image_dataset_export.to_pascalvoc_instance_segmentation(
+        image_dataset_export.to_pascalvoc_segmentation_mask(
             session=dataset.session,
             dataset_id=dataset.dataset_id,
             samples=dataset.query(),
@@ -445,7 +445,7 @@ class TestImageDatasetExport:
         )
 
         output_folder = tmp_path / "pascalvoc"
-        image_dataset_export.to_pascalvoc_instance_segmentation(
+        image_dataset_export.to_pascalvoc_segmentation_mask(
             session=dataset.session,
             dataset_id=dataset.dataset_id,
             samples=dataset.query(),
@@ -492,7 +492,7 @@ class TestImageDatasetExport:
         )
 
         output_folder = tmp_path / "pascalvoc"
-        image_dataset_export.to_pascalvoc_instance_segmentation(
+        image_dataset_export.to_pascalvoc_segmentation_mask(
             session=dataset.session,
             dataset_id=dataset.dataset_id,
             samples=dataset.query(),
@@ -543,7 +543,7 @@ class TestImageDatasetExport:
         )
 
         output_folder = tmp_path / "pascalvoc"
-        image_dataset_export.to_pascalvoc_instance_segmentation(
+        image_dataset_export.to_pascalvoc_segmentation_mask(
             session=dataset.session,
             dataset_id=dataset.dataset_id,
             samples=dataset.query(),

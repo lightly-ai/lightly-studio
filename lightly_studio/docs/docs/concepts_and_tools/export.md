@@ -53,13 +53,13 @@ import lightly_studio as ls
 # Image dataset export
 dataset = ls.ImageDataset.load()
 dataset.export().to_coco_object_detections("detections.json")
-dataset.export().to_coco_instance_segmentations("segmentations.json")
+dataset.export().to_coco_segmentation_masks("segmentations.json")
 dataset.export().to_coco_captions("captions.json")
-dataset.export().to_pascalvoc_instance_segmentation("pascalvoc_output_dir/")
+dataset.export().to_pascalvoc_segmentation_mask("pascalvoc_output_dir/")
 
 # Video dataset export
 dataset = ls.VideoDataset.load()
-dataset.export().to_youtube_vis_instance_segmentation("youtube_vis.json")
+dataset.export().to_youtube_vis_segmentation_mask("youtube_vis.json")
 ```
 
 ### Export a filtered subset
