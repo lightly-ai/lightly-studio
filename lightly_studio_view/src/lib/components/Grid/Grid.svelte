@@ -6,8 +6,6 @@
 
     const GRID_GAP = 16;
 
-    const GRID_GAP = 16;
-
     let viewport: HTMLElement | null = null;
     let clientWidth = $state(0);
     let clientHeight = $state(0);
