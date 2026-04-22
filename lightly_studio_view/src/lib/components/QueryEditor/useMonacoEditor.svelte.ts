@@ -15,11 +15,6 @@ export interface UseMonacoEditorOptions {
     // `monaco.editor.defineTheme`.
     theme: string;
 
-    // Extension used when minting the in-memory model URI. Monaco routes the
-    // language by the explicit `language` field above, but a realistic
-    // extension makes debugger output and LSP document selectors match.
-    fileExtension?: string;
-
     // Reactive getter for the editor's current value. Read inside `$effect`,
     // so any reactive state it closes over will push updates into the editor
     // (guarded by a diff-check to avoid clobbering the user's cursor).
@@ -62,14 +57,8 @@ export function useMonacoEditor(options: UseMonacoEditorOptions): MonacoEditorHa
     });
 
     function mount(container: HTMLElement): void {
-        // Every Monaco model needs a unique URI — it's the key the editor,
-        // LSP document selectors, and the language client all use to refer to
-        // the same buffer. We mint an `inmemory://` URI with a random UUID so
-        // multiple editor instances on the same page don't collide, and tag
-        // it with the language's real extension (e.g. `.lql`) so LSP
-        // `documentSelector: { pattern: '**/*.lql' }` style filters match.
-        const extension = options.fileExtension ?? 'txt';
-        const uri = monaco.Uri.parse(`inmemory://model/${crypto.randomUUID()}.${extension}`);
+        // Every Monaco model needs a unique URI — it's the key the editor.
+        const uri = monaco.Uri.parse(`inmemory://model/${crypto.randomUUID()}.lql`);
         model = monaco.editor.createModel(options.value(), options.language, uri);
 
         editor = monaco.editor.create(container, {

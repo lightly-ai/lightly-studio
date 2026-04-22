@@ -4,7 +4,9 @@
         {
             "id": "lightly-query",
             "grammar": "src/lib/components/QueryEditor/language/lightly-query.langium",
-            "fileExtensions": [".lql", ".lightlyql"]
+            "fileExtensions": [
+                ".lql"
+            ]
         }
     ],
     "out": "src/lib/components/QueryEditor/language/generated"
