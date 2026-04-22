@@ -50,6 +50,7 @@
 
     let previousScrollResetKey = scrollResetKey;
     let previousInitialScrollPosition = $state<number | undefined>(undefined);
+    let pendingRestoreRaf: number | undefined;
 
     const safeColumnCount = $derived(Math.max(1, columnCount));
 
@@ -96,6 +97,10 @@
         // Mark the current initialScrollPosition as already applied so the
         // restore effect does not immediately scroll back after the reset.
         previousInitialScrollPosition = initialScrollPosition ?? undefined;
+        if (pendingRestoreRaf !== undefined) {
+            cancelAnimationFrame(pendingRestoreRaf);
+            pendingRestoreRaf = undefined;
+        }
         grid?.scrollToPosition(0);
     });
 
@@ -115,7 +120,8 @@
 
         previousInitialScrollPosition = initialScrollPosition;
 
-        requestAnimationFrame(() => {
+        pendingRestoreRaf = requestAnimationFrame(() => {
+            pendingRestoreRaf = undefined;
             grid?.scrollToPosition(initialScrollPosition);
         });
     });
