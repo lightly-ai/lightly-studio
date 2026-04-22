@@ -13,7 +13,7 @@ work for the Lightly-hosted deployment. If you use Lightly-hosted, use
 ## How It Works
 
 When you call `ls.connect()`, LightlyStudio stores file references in the
-shared enterprise database. It does **not** upload files into LightlyStudio,
+shared PostgreSQL database. It does **not** upload files into LightlyStudio,
 copy them into the container, or rewrite their paths. It reads raw images and videos
 directly from your storage when the GUI needs them. The database stores metadata and
 file paths, not the raw media itself.
@@ -40,12 +40,12 @@ This can point to:
 
 Examples:
 
-- `/mnt/lightly-datasets`
-- `/srv/lightly/images`
+- `/mnt/datasets`
+- `/srv/lightly/datasets`
 
 Relative paths are a bad fit for this workflow. Use absolute paths only.
 
-## Step 2: Set and Mount `DATASET_PATH`
+## Step 2: Set `DATASET_PATH`
 
 Set `DATASET_PATH` in your deployment environment `.env` file to the absolute storage
 root you want to expose to LightlyStudio.
@@ -64,25 +64,25 @@ stored for already indexed files remain valid.
 ## Step 3: Make the Same Path Available to Python
 
 Run your Python indexing script in an environment that can access the same
-storage root at the same absolute path.
+storage root at the same absolute path you set in `DATASET_PATH`.
 
-This works well when Python runs:
+This works out of the box when Python runs:
 
 - on the same machine as the Docker host
 - on another machine that mounts the same shared storage at the same absolute
   path
 
-If Python sees `/mnt/lightly-datasets` but the `studio` container sees the same
-files under `/data/datasets`, that setup is not supported directly for local
-storage.
+If Python runs on a different machine where the storage is mounted at a
+different absolute path (for example, `DATASET_PATH=/mnt/datasets` on the
+Docker host, but the NAS is mounted at `/home/alice/datasets` on the Python
+machine), create a symlink on the Python machine so that `DATASET_PATH` also
+resolves there:
 
-In that case, create a symlink so the same absolute path also exists in the
-Python environment, and then index the symlink path instead of the original
-mount path.
+```shell
+sudo ln -s /home/alice/datasets /mnt/datasets
+```
 
-For example, if the `studio` container uses `/data/datasets`, create a symlink
-so `/data/datasets` also exists for Python, then pass `/data/datasets/...` to
-the dataset loading methods.
+Then pass paths under `/mnt/datasets/...` to the dataset loading methods.
 
 ## Step 4: Connect from Python and Index Data
 
@@ -122,7 +122,7 @@ absolute paths under your chosen storage root.
     dataset.add_samples_from_coco(
         annotations_json="/mnt/datasets/local_coco/instances_train.json",
         images_path="/mnt/datasets/local_coco/images",
-        annotation_type=ls.AnnotationType.INSTANCE_SEGMENTATION,
+        annotation_type=ls.AnnotationType.SEGMENTATION_MASK,
     )
     ```
 
@@ -130,7 +130,8 @@ absolute paths under your chosen storage root.
 
 - If indexing succeeds but files do not open in the GUI, verify that the same
   absolute path works in Python, on the host, and inside the `studio`
-  container.
+  container. To check the expected path, go in the GUI on the details view of an image
+  or view and check the Filepath shown there. 
 - If you move or rename files after indexing them, the stored file references
   become invalid and the GUI can no longer load those files.
 - If your Python script runs on another machine, mount the same local/NAS
