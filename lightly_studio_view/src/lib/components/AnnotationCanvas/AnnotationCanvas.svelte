@@ -1,3 +1,17 @@
+<script module lang="ts">
+    let annotationCanvasInstanceCounter = 0;
+
+    const createCanvasInstanceSuffix = (): string => {
+        if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
+            return crypto.randomUUID();
+        }
+
+        const fallbackSuffix = annotationCanvasInstanceCounter;
+        annotationCanvasInstanceCounter += 1;
+        return String(fallbackSuffix);
+    };
+</script>
+
 <script lang="ts">
     import { onDestroy, onMount } from 'svelte';
     import { useCustomLabelColors, type CustomColor } from '$lib/hooks/useCustomLabelColors';
@@ -48,7 +62,7 @@
     let hasOffscreen = false;
     let resizeObserver: ResizeObserver | null = null;
     // Shared workers multiplex multiple canvases
-    const canvasId = sampleId;
+    const canvasId = `${sampleId}-${createCanvasInstanceSuffix()}`;
 
     type ColorParser = (color: string) => [number, number, number, number];
 
