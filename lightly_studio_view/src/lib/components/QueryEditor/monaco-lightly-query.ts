@@ -70,6 +70,43 @@ export function registerLightlyQueryMonacoLanguage(): void {
         ]
     });
 
+    // Client-side Monarch tokenizer. Gives immediate syntax highlighting
+    // without waiting for the LSP worker to start — the Langium server handles
+    // semantics (validation, completion), but coloring is cheap enough to do
+    // locally and keeps the editor responsive on first paint.
+    monaco.languages.setMonarchTokensProvider(LIGHTLY_QUERY_LANGUAGE_ID, {
+        tokenizer: {
+            root: [
+                [/#[^\n\r]*/, 'comment'],
+                [/"([^"\\]|\\.)*$/, 'string.invalid'],
+                [/'([^'\\]|\\.)*$/, 'string.invalid'],
+                [/"/, 'string', '@doubleQuotedString'],
+                [/'/, 'string', '@singleQuotedString'],
+                [/\b(?:AND|OR|NOT)\b/, 'keyword'],
+                [/\b(?:is|in|not)\b/, 'keyword.operator'],
+                [/\b(?:true|false|True|False|null|None|NULL)\b/, 'constant.language'],
+                [/\b(?:ImageSampleField|VideoSampleField|SampleField)\b/, 'type.identifier'],
+                [/-?\d+(?:\.\d+)?(?:[eE][+-]?\d+)?/, 'number'],
+                [/[a-zA-Z_]\w*/, 'identifier'],
+                [/==|!=|<=|>=|=|<|>/, 'operator'],
+                [/[()[\]]/, '@brackets'],
+                [/\./, 'delimiter'],
+                [/,/, 'delimiter'],
+                [/\s+/, 'white']
+            ],
+            doubleQuotedString: [
+                [/[^\\"]+/, 'string'],
+                [/\\./, 'string.escape'],
+                [/"/, 'string', '@pop']
+            ],
+            singleQuotedString: [
+                [/[^\\']+/, 'string'],
+                [/\\./, 'string.escape'],
+                [/'/, 'string', '@pop']
+            ]
+        }
+    });
+
     // Custom dark theme mapping the Monarch token classes above to colors.
     // Applied by the Svelte component via the `theme` editor option.
     monaco.editor.defineTheme(LIGHTLY_QUERY_THEME_ID, {
