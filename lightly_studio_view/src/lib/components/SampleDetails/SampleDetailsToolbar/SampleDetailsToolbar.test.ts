@@ -118,9 +118,7 @@ describe('SampleDetailsToolbar', () => {
         await fireEvent.click(getByLabelText('Segmentation Mask Brush'));
 
         expect(mockSampleDetailsToolbarContext.status).toBe('brush');
-        expect(mockAnnotationLabelContext.annotationType).toBe(
-            AnnotationType.SEGMENTATION_MASK
-        );
+        expect(mockAnnotationLabelContext.annotationType).toBe(AnnotationType.SEGMENTATION_MASK);
         expect(mockAnnotationLabelContext.annotationLabel).toBe('car');
         expect(mockAnnotationLabelContext.annotationId).toBeNull();
     });
@@ -194,9 +192,7 @@ describe('SampleDetailsToolbar', () => {
         await fireEvent.click(getByLabelText('Segmentation Mask Brush'));
 
         expect(mockSampleDetailsToolbarContext.status).toBe('brush');
-        expect(mockAnnotationLabelContext.annotationType).toBe(
-            AnnotationType.SEGMENTATION_MASK
-        );
+        expect(mockAnnotationLabelContext.annotationType).toBe(AnnotationType.SEGMENTATION_MASK);
         expect(mockAnnotationLabelContext.annotationLabel).toBe('car');
         expect(mockAnnotationLabelContext.annotationId).toBe('ann-1');
     });
@@ -230,9 +226,7 @@ describe('SampleDetailsToolbar', () => {
         render(SampleDetailsToolbar);
 
         expect(mockSampleDetailsToolbarContext.status).toBe('brush');
-        expect(mockAnnotationLabelContext.annotationType).toBe(
-            AnnotationType.SEGMENTATION_MASK
-        );
+        expect(mockAnnotationLabelContext.annotationType).toBe(AnnotationType.SEGMENTATION_MASK);
     });
 
     it('normalizes non-instance annotation type to instance segmentation when remounting in brush mode', () => {
@@ -241,9 +235,7 @@ describe('SampleDetailsToolbar', () => {
 
         render(SampleDetailsToolbar);
 
-        expect(mockAnnotationLabelContext.annotationType).toBe(
-            AnnotationType.SEGMENTATION_MASK
-        );
+        expect(mockAnnotationLabelContext.annotationType).toBe(AnnotationType.SEGMENTATION_MASK);
     });
 
     it('syncs annotation type to instance segmentation when mounted in brush mode', () => {
@@ -252,9 +244,7 @@ describe('SampleDetailsToolbar', () => {
 
         render(SampleDetailsToolbar);
 
-        expect(mockAnnotationLabelContext.annotationType).toBe(
-            AnnotationType.SEGMENTATION_MASK
-        );
+        expect(mockAnnotationLabelContext.annotationType).toBe(AnnotationType.SEGMENTATION_MASK);
     });
 
     it('does not trigger toolbar shortcuts while space is held', async () => {

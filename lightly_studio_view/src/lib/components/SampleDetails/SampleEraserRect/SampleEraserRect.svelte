@@ -88,7 +88,7 @@
     const parsedColor = $derived(parseColor(drawerStrokeColor));
 
     // Hook owns mask drawing + preview composition.
-    const previewApi = useInstanceSegmentationPreview({
+    const previewApi = useSegmentationMaskPreview({
         onPreviewVisibilityChange: (visible) => {
             isPreviewVisible = visible;
         }

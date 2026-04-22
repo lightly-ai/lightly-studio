@@ -10,8 +10,8 @@
     import { useAnnotationLabelContext } from '$lib/contexts/SampleDetailsAnnotation.svelte';
     import { useAnnotation } from '$lib/hooks/useAnnotation/useAnnotation';
     import { useAnnotationLabels } from '$lib/hooks/useAnnotationLabels/useAnnotationLabels';
-    import { useInstanceSegmentationBrush } from '$lib/hooks/useInstanceSegmentationBrush';
-    import { useInstanceSegmentationPreview } from '$lib/hooks/useInstanceSegmentationPreview';
+    import { useSegmentationMaskBrush } from '$lib/hooks/useInstanceSegmentationBrush';
+    import { useSegmentationMaskPreview } from '$lib/hooks/useInstanceSegmentationPreview';
     import { usePendingOperations } from '$lib/hooks/usePendingOperations/usePendingOperations';
     import { useCollectionWithChildren } from '$lib/hooks/useCollection/useCollection';
     import { page } from '$app/state';
