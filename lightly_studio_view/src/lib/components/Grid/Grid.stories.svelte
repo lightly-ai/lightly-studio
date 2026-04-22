@@ -69,3 +69,17 @@
         {/snippet}
     </Grid>
 </Story>
+
+<Story name="With scroll restore" asChild>
+    <Grid itemCount={200} columnCount={8} initialScrollPosition={1000} overScan={8}>
+        {#snippet gridItem({ index, style, width, height })}
+            <GridItem {width} {height} {style}>
+                <div
+                    class="flex h-full w-full items-center justify-center bg-gradient-to-br from-blue-500 to-teal-500 font-semibold text-white"
+                >
+                    {index + 1}
+                </div>
+            </GridItem>
+        {/snippet}
+    </Grid>
+</Story>
