@@ -1,12 +1,8 @@
 import { derived, get, writable } from 'svelte/store';
-import type { components } from '$lib/schema';
 import { createMetadataFilters } from '../useMetadataFilters/useMetadataFilters';
 import type { ImagesInfiniteParams } from '../useImagesInfinite/useImagesInfinite';
 import type { DimensionBounds } from '$lib/services/loadDimensionBounds';
-
-type ImageFilter = components['schemas']['ImageFilter'];
-type AnnotationsFilter = components['schemas']['AnnotationsFilter'];
-type SampleFilter = components['schemas']['SampleFilter'];
+import type { AnnotationsFilter, ImageFilter, SampleFilter } from '$lib/api/lightly_studio_local';
 
 const filterParams = writable<ImagesInfiniteParams>({} as ImagesInfiniteParams);
 
