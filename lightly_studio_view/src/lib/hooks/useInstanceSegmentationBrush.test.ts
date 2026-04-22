@@ -2,7 +2,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import type { AnnotationView } from '$lib/api/lightly_studio_local';
 import type { AnnotationLabelContext } from '$lib/contexts/SampleDetailsAnnotation.svelte';
 
-import { useInstanceSegmentationBrush } from './useInstanceSegmentationBrush';
+import { useSegmentationMaskBrush } from './useInstanceSegmentationBrush';
 import {
     computeBoundingBoxFromMask,
     encodeBinaryMaskToRLE
@@ -85,7 +85,7 @@ const mask = new Uint8Array(100);
 
 const sample = { width: 100, height: 100 };
 
-describe('useInstanceSegmentationBrush', () => {
+describe('useSegmentationMaskBrush', () => {
     beforeEach(() => {
         annotationLabelContext.isDrawing = true;
         annotationLabelContext.annotationId = null;
@@ -113,7 +113,7 @@ describe('useInstanceSegmentationBrush', () => {
 
         const refetch = vi.fn();
 
-        const { finishBrush } = useInstanceSegmentationBrush({
+        const { finishBrush } = useSegmentationMaskBrush({
             collectionId: 'c1',
             sampleId: 's1',
             sample,
@@ -132,7 +132,7 @@ describe('useInstanceSegmentationBrush', () => {
 
         const refetch = vi.fn();
 
-        const { finishBrush } = useInstanceSegmentationBrush({
+        const { finishBrush } = useSegmentationMaskBrush({
             collectionId: 'c1',
             sampleId: 's1',
             sample,
@@ -156,7 +156,7 @@ describe('useInstanceSegmentationBrush', () => {
             sample_id: 'existing-id'
         } as AnnotationView;
 
-        const { finishBrush } = useInstanceSegmentationBrush({
+        const { finishBrush } = useSegmentationMaskBrush({
             collectionId: 'c1',
             sampleId: 's1',
             sample,
@@ -184,7 +184,7 @@ describe('useInstanceSegmentationBrush', () => {
             sample_id: 'locked-id'
         } as AnnotationView;
 
-        const { finishBrush } = useInstanceSegmentationBrush({
+        const { finishBrush } = useSegmentationMaskBrush({
             collectionId: 'c1',
             sampleId: 's1',
             sample,
@@ -206,7 +206,7 @@ describe('useInstanceSegmentationBrush', () => {
             sample_id: 'locked-id'
         } as AnnotationView;
 
-        const { finishBrush } = useInstanceSegmentationBrush({
+        const { finishBrush } = useSegmentationMaskBrush({
             collectionId: 'c1',
             sampleId: 's1',
             sample,
@@ -232,7 +232,7 @@ describe('useInstanceSegmentationBrush', () => {
             }
         ];
 
-        const { finishBrush } = useInstanceSegmentationBrush({
+        const { finishBrush } = useSegmentationMaskBrush({
             collectionId: 'c1',
             sampleId: 's1',
             sample,
@@ -244,7 +244,7 @@ describe('useInstanceSegmentationBrush', () => {
         expect(createAnnotation).toHaveBeenCalledWith(
             expect.objectContaining({
                 parent_sample_id: 's1',
-                annotation_type: 'instance_segmentation',
+                annotation_type: 'segmentation_mask',
                 segmentation_mask: rle,
                 annotation_label_id: 'car-label-id'
             })
@@ -258,7 +258,7 @@ describe('useInstanceSegmentationBrush', () => {
     it('creates default label when no label exists', async () => {
         const refetch = vi.fn();
 
-        const { finishBrush } = useInstanceSegmentationBrush({
+        const { finishBrush } = useSegmentationMaskBrush({
             collectionId: 'c1',
             datasetId: 'some-dataset-id',
             sampleId: 's1',

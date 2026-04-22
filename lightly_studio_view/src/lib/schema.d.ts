@@ -1964,7 +1964,7 @@ export interface components {
          * @description The type of annotation task.
          * @enum {string}
          */
-        AnnotationType: "classification" | "instance_segmentation" | "object_detection";
+        AnnotationType: "classification" | "segmentation_mask" | "object_detection";
         /**
          * AnnotationUpdateInput
          * @description API input model for updating an annotation.

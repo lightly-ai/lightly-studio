@@ -41,7 +41,7 @@ class AnnotationType(str, Enum):
     """The type of annotation task."""
 
     CLASSIFICATION = "classification"
-    INSTANCE_SEGMENTATION = "instance_segmentation"
+    SEGMENTATION_MASK = "segmentation_mask"
     OBJECT_DETECTION = "object_detection"
 
 

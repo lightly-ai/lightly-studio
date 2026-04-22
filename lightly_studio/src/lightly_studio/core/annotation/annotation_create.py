@@ -129,7 +129,7 @@ class CreateInstanceSegmentation(CreateAnnotationBase):
         """Convert to AnnotationCreate."""
         return AnnotationCreate(
             annotation_label_id=self._get_label_id(session=session, dataset_id=dataset_id),
-            annotation_type=AnnotationType.INSTANCE_SEGMENTATION,
+            annotation_type=AnnotationType.SEGMENTATION_MASK,
             confidence=self.confidence,
             parent_sample_id=parent_sample_id,
             x=self.x,

@@ -91,7 +91,7 @@ and instance segmentation annotations are supported. See
     dataset.add_videos_from_youtube_vis(
         annotations_json=f"{dataset_path}/youtube_vis_50_videos/train/instances_50.json",
         videos_path=f"{dataset_path}/youtube_vis_50_videos/train/videos",
-        annotation_type=ls.AnnotationType.INSTANCE_SEGMENTATION,
+        annotation_type=ls.AnnotationType.SEGMENTATION_MASK,
     )
     ```
 
