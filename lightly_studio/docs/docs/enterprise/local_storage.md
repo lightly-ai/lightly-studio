@@ -27,7 +27,7 @@ This means the path used by your Python script must also be valid for the
     1. In the Python process that indexes the data
     2. On the Docker host running the on-premise deployment
 
-    If these paths differ, indexing can appear to work, but the LightlyStudio Frontend
+    If these paths differ, indexing can appear to work, but the LightlyStudio GUI
     will later fail to open the files.
 
 ## Step 1: Choose a Shared Absolute Path
@@ -128,10 +128,10 @@ absolute paths under your chosen storage root.
 
 ## Troubleshooting
 
-- If indexing succeeds but files do not open in the Frontend, verify that the same
+- If indexing succeeds but files do not open in the GUI, verify that the same
   absolute path works in Python, on the host, and inside the `studio`
   container.
 - If you move or rename files after indexing them, the stored file references
-  become invalid and the Frontend can no longer load those files.
+  become invalid and the GUI can no longer load those files.
 - If your Python script runs on another machine, mount the same local/NAS
   storage there using the same absolute path.
