@@ -303,7 +303,7 @@ class ImageDataset(BaseSampleDataset[ImageSample]):
             label_input = COCOObjectDetectionInput(
                 input_file=annotations_json,
             )
-        elif annotation_type == AnnotationType.INSTANCE_SEGMENTATION:
+        elif annotation_type == AnnotationType.SEGMENTATION_MASK:
             label_input = COCOInstanceSegmentationInput(
                 input_file=annotations_json,
             )
@@ -336,7 +336,7 @@ class ImageDataset(BaseSampleDataset[ImageSample]):
         """Load a Pascal VOC segmentation dataset and store in DB.
 
         Pascal VOC masks encode class IDs per pixel (semantic segmentation).
-        Imported masks are persisted as `AnnotationType.INSTANCE_SEGMENTATION`.
+        Imported masks are persisted as `AnnotationType.SEGMENTATION_MASK`.
         Query and export workflows should use instance segmentation type filters.
 
         Args:

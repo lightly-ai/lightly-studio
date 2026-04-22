@@ -17,7 +17,7 @@ const createInstanceSegmentationAnnotation = (): ComponentProps<
     ({
         ...BASE_ANNOTATION_FIELDS,
         sample_id: 'instance-segmentation-1',
-        annotation_type: 'instance_segmentation',
+        annotation_type: 'segmentation_mask',
         annotation_label: { annotation_label_name: 'person' },
         segmentation_details: {
             x: 1,
