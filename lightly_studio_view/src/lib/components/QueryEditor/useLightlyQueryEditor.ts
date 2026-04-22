@@ -17,7 +17,6 @@ import {
 } from 'vscode-languageserver-protocol/browser.js';
 import { onDestroy } from 'svelte';
 import {
-    createLanguageServerWorker,
     LIGHTLY_QUERY_LANGUAGE_ID,
     LIGHTLY_QUERY_THEME_ID,
     registerLightlyQueryMonacoLanguage
@@ -64,7 +63,9 @@ export function useLightlyQueryEditor(options: UseLightlyQueryEditorOptions): Mo
 
         // Spawn the Langium LSP worker and bridge it to the client via the
         // browser LSP message transport (postMessage under the hood).
-        lspWorker = createLanguageServerWorker();
+        lspWorker = new Worker(new URL('./language-server-worker.ts', import.meta.url), {
+            type: 'module'
+        });
         const reader = new BrowserMessageReader(lspWorker);
         const writer = new BrowserMessageWriter(lspWorker);
 

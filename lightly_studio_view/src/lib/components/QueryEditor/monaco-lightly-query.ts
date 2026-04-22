@@ -1,8 +1,6 @@
 // Monaco-side adapter for the custom LightlyQuery language. Registers the
 // language, its Monarch tokenizer, editor theme, and worker factories so the
-// Svelte component can stay focused on editor lifecycle. The Monarch grammar
-// provides instant syntax highlighting while the Langium LSP worker (see
-// language-server-worker.ts) layers on validation, completion, and hover.
+// Svelte component can stay focused on editor lifecycle.
 
 import * as monaco from 'monaco-editor';
 
@@ -19,18 +17,15 @@ ImageSampleField.tags.contains("reviewed")
 VideoSampleField.duration > 60
 `;
 
-// Monaco's built-in worker, used for generic services (diffing, fallback
-// tokenization) for any language without a dedicated server.
+// Monaco's built-in editor worker (diffing, link detection, tokenization
+// fallbacks). The LightlyQuery LSP worker is spawned directly by
+// `useLightlyQueryEditor` and bridged through `MonacoLanguageClient` — it does
+// not go through `MonacoEnvironment`, so this hook only serves Monaco's own
+// internal worker requests.
 function createEditorWorker(): Worker {
     return new Worker(new URL('monaco-editor/esm/vs/editor/editor.worker.js', import.meta.url), {
         type: 'module'
     });
-}
-
-// The Langium LSP worker that handles parsing, validation, and completions
-// for LightlyQuery off the main thread.
-export function createLanguageServerWorker(): Worker {
-    return new Worker(new URL('./language-server-worker.ts', import.meta.url), { type: 'module' });
 }
 
 // One-shot setup: registers the language, its config, tokenizer, and theme
@@ -41,23 +36,8 @@ export function registerLightlyQueryMonacoLanguage(): void {
         return;
     }
 
-    // `MonacoEnvironment.getWorker` is the global hook Monaco uses to resolve
-    // workers by label. Routing the LightlyQuery label to our Langium worker
-    // lets Monaco's language-client machinery plug into the custom LSP; any
-    // other label falls back to Monaco's built-in editor worker.
-    const globalScope = globalThis as typeof globalThis & {
-        MonacoEnvironment?: {
-            getWorker: (_moduleId: string, label: string) => Worker;
-        };
-    };
-
-    globalScope.MonacoEnvironment = {
-        getWorker: (_moduleId: string, label: string): Worker => {
-            if (label === LIGHTLY_QUERY_LANGUAGE_ID) {
-                return createLanguageServerWorker();
-            }
-            return createEditorWorker();
-        }
+    globalThis.MonacoEnvironment = {
+        getWorker: (): Worker => createEditorWorker()
     };
 
     // Associate the language ID with file extensions and MIME types so Monaco
