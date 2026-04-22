@@ -79,8 +79,7 @@ SampleComparison<isImage> returns ComparisonExpression:
     SampleFieldReference<isImage> {ComparisonExpression.left=current} operator=('==' | '!=' | '<' | '>' | '<=' | '>=') right=Literal;
 
 SampleFieldReference<isImage> returns QualifiedFieldReference:
-    {FieldReference} name=CommonSampleFieldName
-    | (<isImage> {QualifiedFieldReference} receiver=ImageSampleFieldReceiver '.' member=ImageSampleFieldName)
+    (<isImage> {QualifiedFieldReference} receiver=ImageSampleFieldReceiver '.' member=ImageSampleFieldName)
     | (<!isImage> {QualifiedFieldReference} receiver=VideoSampleFieldReceiver '.' member=VideoSampleFieldName);
 
 ObjectDetection returns Expression:

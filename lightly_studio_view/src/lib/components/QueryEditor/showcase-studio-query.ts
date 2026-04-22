@@ -7,6 +7,7 @@ import {
 } from './language/generated/module.ts';
 import {
     type Query,
+    isFieldReference,
     isBooleanExpression,
     isComparisonExpression,
     isFunctionCall,
@@ -44,11 +45,38 @@ function unquoteStringLiteral(value: string): string {
     return value;
 }
 
-function transformToDSLJson(node: any): any {
+type DSLJson =
+    | boolean
+    | number
+    | string
+    | null
+    | {
+          kind: string;
+          annotation_type?: string;
+          criterion?: DSLJson;
+          field?: string;
+          operator?: string;
+          tag_name?: DSLJson;
+          term?: DSLJson;
+          terms?: DSLJson[];
+          value?: DSLJson;
+      };
+
+function hasName(node: unknown): node is { name: string } {
+    return (
+        typeof node === 'object' && node !== null && 'name' in node && typeof node.name === 'string'
+    );
+}
+
+function hasExpression(node: unknown): node is { expression: unknown } {
+    return typeof node === 'object' && node !== null && 'expression' in node;
+}
+
+function transformToDSLJson(node: unknown): DSLJson {
     if (isBooleanExpression(node)) {
         return {
             kind: node.operator.toUpperCase(),
-            terms: node.children.map((child: any) => transformToDSLJson(child))
+            terms: node.children.map((child) => transformToDSLJson(child))
         };
     }
     if (isNotExpression(node)) {
@@ -66,10 +94,12 @@ function transformToDSLJson(node: any): any {
             if (left.receiver === 'ObjectDetection' || left.receiver === 'ObjectDetectionField') {
                 field = left.member;
             } else {
-                field = left.receiver || (left as any).name || 'unknown_field';
+                field = left.receiver || (hasName(left) ? left.name : 'unknown_field');
             }
+        } else if (isFieldReference(left)) {
+            field = left.name;
         } else {
-            field = (left as any).name || 'unknown_field';
+            field = hasName(left) ? left.name : 'unknown_field';
         }
         return {
             kind: 'COMPARISON',
@@ -95,7 +125,7 @@ function transformToDSLJson(node: any): any {
     if (isStringLiteral(node)) return unquoteStringLiteral(node.value);
     if (isBooleanLiteral(node)) return node.value === 'true';
 
-    if (node.expression) return transformToDSLJson(node.expression);
+    if (hasExpression(node)) return transformToDSLJson(node.expression);
 
     console.warn('transformToDSLJson: Unhandled node type', node);
     return null;
@@ -106,7 +136,7 @@ const services = createStudioQueryServices().StudioQuery;
 const parser = services.parser.LangiumParser;
 
 const queries = [
-    "(Image.width > 100 OR Image.height > 100 OR created_at == 12) AND object_detection(label == 'car')",
+    "(Image.width > 100 OR Image.height > 100 OR Image.created_at == 12) AND object_detection(label == 'car')",
     "tags.contains('dog') or 'cat' IN tags AND Image.width > 100",
     "tags.contains('dog') OR AND('cat' IN tags, Image.created_at >= 12)",
     "video: NOT (Video.width < 50 AND NOT tags.contains('low_res'))",
