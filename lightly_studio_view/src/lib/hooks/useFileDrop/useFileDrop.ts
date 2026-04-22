@@ -61,10 +61,13 @@ export function useFileDrop({ onFileAccepted, onError }: UseFileDropParams): Use
             return;
         }
 
-        const fileFromFiles = clipboardData.files?.[0];
-        if (fileFromFiles && fileFromFiles.type.startsWith('image/')) {
+        for (const file of clipboardData.files ?? []) {
+            if (!file.type.startsWith('image/')) {
+                continue;
+            }
+
             event.preventDefault();
-            await onFileAccepted(fileFromFiles);
+            await onFileAccepted(file);
             return;
         }
 
