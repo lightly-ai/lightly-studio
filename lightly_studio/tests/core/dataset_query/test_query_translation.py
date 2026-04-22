@@ -217,7 +217,7 @@ def test_to_match_expression__instance_segmentation_match() -> None:
     expr = InstanceSegmentationMatchExpr(subexpr=subexpr)
     sql = _to_sql(query_translation.to_match_expression(expr))
     assert "exists" in sql
-    assert "annotation_type = 'instance_segmentation'" in sql
+    assert "annotation_type = 'segmentation_mask'" in sql
     assert "annotation_label_name = 'person'" in sql
 
 
