@@ -133,26 +133,8 @@ export function registerLightlyQueryMonacoLanguage(): void {
     monaco.editor.defineTheme(LIGHTLY_QUERY_THEME_ID, {
         base: 'vs-dark',
         inherit: true,
-        rules: [
-            { token: 'comment', foreground: '6A9955', fontStyle: 'italic' },
-            { token: 'keyword', foreground: 'C586C0', fontStyle: 'bold' },
-            { token: 'keyword.operator', foreground: 'D19A66', fontStyle: 'bold' },
-            { token: 'operator', foreground: '56B6C2' },
-            { token: 'type.identifier', foreground: 'E5C07B' },
-            { token: 'constant.language', foreground: 'D19A66' },
-            { token: 'number', foreground: 'B5CEA8' },
-            { token: 'string', foreground: '98C379' },
-            { token: 'delimiter', foreground: 'ABB2BF' },
-            { token: 'identifier', foreground: 'D7DAE0' }
-        ],
-        colors: {
-            'editor.background': '#11161f',
-            'editorLineNumber.foreground': '#5c6370',
-            'editorLineNumber.activeForeground': '#c8ccd4',
-            'editor.selectionBackground': '#264f78',
-            'editor.inactiveSelectionBackground': '#1f3652',
-            'editorCursor.foreground': '#f8f8f2'
-        }
+        rules: [],
+        colors: {}
     });
 
     isRegistered = true;
