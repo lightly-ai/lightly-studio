@@ -12,8 +12,10 @@
     import { useAnnotationLabels } from '$lib/hooks/useAnnotationLabels/useAnnotationLabels';
     import { useInstanceSegmentationBrush } from '$lib/hooks/useInstanceSegmentationBrush';
     import { useInstanceSegmentationPreview } from '$lib/hooks/useInstanceSegmentationPreview';
+    import { usePendingOperations } from '$lib/hooks/usePendingOperations/usePendingOperations';
     import { useCollectionWithChildren } from '$lib/hooks/useCollection/useCollection';
     import { page } from '$app/state';
+    import type { PendingChange } from '../pendingChange';
     import SampleAnnotationRect from '../SampleAnnotationRect/SampleAnnotationRect.svelte';
 
     type SampleInstanceSegmentationRectProps = {
@@ -31,6 +33,7 @@
         annotationLabel?: string | null | undefined;
         annotationType?: string | null | undefined;
         refetch: () => void;
+        onFinishBrushPendingChange?: (pendingChange: PendingChange) => void;
     };
 
     let {
@@ -41,7 +44,8 @@
         brushRadius,
         drawerStrokeColor,
         mousePosition,
-        refetch
+        refetch,
+        onFinishBrushPendingChange
     }: SampleInstanceSegmentationRectProps = $props();
 
     const labels = useAnnotationLabels({ collectionId });
@@ -109,7 +113,19 @@
         previewApi.setPreviewCanvas(previewCanvas);
     });
 
+    const {
+        startPending: startFinishBrushPending,
+        endPending: endFinishBrushPending,
+        resetPending: resetFinishBrushPending
+    } = usePendingOperations({
+        operationPrefix: 'brush',
+        onPendingChange: (pendingChange: PendingChange) => {
+            onFinishBrushPendingChange?.(pendingChange);
+        }
+    });
+
     onDestroy(() => {
+        resetFinishBrushPending();
         setIsDrawing(false);
         previewApi.destroy();
     });
@@ -201,14 +217,22 @@
         // Keep local base in sync after committing stroke.
         baseMask = updatedMask;
 
-        brushApi.finishBrush(
-            updatedMask,
-            targetAnnotation,
-            $labels.data ?? [],
-            updateAnnotation,
-            annotationLabelContext.lockedAnnotationIds
-        );
-        setIsDrawing(false);
+        const pendingOperation = startFinishBrushPending();
+        void (async () => {
+            try {
+                await brushApi.finishBrush(
+                    updatedMask,
+                    targetAnnotation,
+                    $labels.data ?? [],
+                    updateAnnotation,
+                    annotationLabelContext.lockedAnnotationIds
+                );
+            } catch (error) {
+                console.error('Failed to finish brush stroke:', error);
+            } finally {
+                endFinishBrushPending(pendingOperation);
+            }
+        })();
     };
 
     const handleStrokeCancel = (e: PointerEvent) => {

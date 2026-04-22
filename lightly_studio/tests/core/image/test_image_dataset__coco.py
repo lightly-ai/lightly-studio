@@ -121,7 +121,7 @@ class TestDataset:
         dataset.add_samples_from_coco(
             annotations_json=annotations_path,
             images_path=images_path,
-            annotation_type=AnnotationType.INSTANCE_SEGMENTATION,
+            annotation_type=AnnotationType.SEGMENTATION_MASK,
         )
         assert len(list(dataset)) == 2
 
@@ -270,7 +270,7 @@ class TestDataset:
             dataset.add_samples_from_coco(
                 annotations_json=annotations_path,
                 images_path=images_path,
-                annotation_type=AnnotationType.INSTANCE_SEGMENTATION,
+                annotation_type=AnnotationType.SEGMENTATION_MASK,
             )
 
     def test_add_samples_from_coco__insseg_on_broken_bbox(
@@ -289,7 +289,7 @@ class TestDataset:
         dataset.add_samples_from_coco(
             annotations_json=annotations_path,
             images_path=images_path,
-            annotation_type=AnnotationType.INSTANCE_SEGMENTATION,
+            annotation_type=AnnotationType.SEGMENTATION_MASK,
         )
         assert len(list(dataset)) == 2
 
