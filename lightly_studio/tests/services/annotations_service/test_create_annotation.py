@@ -54,7 +54,7 @@ def test_create_annotation_object_detection(
     assert result.segmentation_details is None
 
 
-def test_create_annotation_instance_segmentation(
+def test_create_annotation_segmentation_mask(
     db_session: Session,
     collection: CollectionTable,
     samples: list[ImageTable],

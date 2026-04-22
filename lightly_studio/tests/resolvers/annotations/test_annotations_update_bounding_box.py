@@ -50,7 +50,7 @@ def test_update_bounding_box__object_detection(
     assert updated_obj_det_annotation.object_detection_details.height == 222
 
 
-def test_update_bounding_box__instance_segmentation(
+def test_update_bounding_box__segmentation_mask(
     db_session: Session,
     annotations_test_data: AnnotationsTestData,  # noqa: ARG001
 ) -> None:

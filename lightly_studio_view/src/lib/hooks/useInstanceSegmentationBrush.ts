@@ -16,7 +16,7 @@ import { useUpdateAnnotationsMutation } from './useUpdateAnnotationsMutation/use
 import { applySegmentationMaskConstraints } from '$lib/utils/segmentationOverlap';
 import { restoreOverriddenSegmentationAnnotationsForUndo } from '$lib/services/restoreOverriddenSegmentationAnnotationsForUndo';
 
-export function useInstanceSegmentationBrush({
+export function useSegmentationMaskBrush({
     collectionId,
     datasetId,
     sampleId,

@@ -621,12 +621,12 @@ def test_process_video_annotations_object_detection() -> None:
     assert annotations[1].object_track_id == object_track_map[1]
 
 
-def test_process_video_annotations_instance_segmentation() -> None:
+def test_process_video_annotations_segmentation_mask() -> None:
     # Arrange
     frame_number_to_id = {0: uuid4(), 1: uuid4()}
     label_map = {0: uuid4(), 1: uuid4()}
     categories = [Category(id=0, name="cat"), Category(id=1, name="dog")]
-    video_annotation = _get_instance_segmentation_track(
+    video_annotation = _get_segmentation_mask_track(
         filename="video",
         number_of_frames=2,
         categories=categories,
@@ -647,7 +647,7 @@ def test_process_video_annotations_instance_segmentation() -> None:
     }
 
     # Act
-    annotations = add_videos._process_video_annotations_instance_segmentation(
+    annotations = add_videos._process_video_annotations_segmentation_mask(
         frame_number_to_id=frame_number_to_id,
         video_annotation=video_annotation,
         label_map=label_map,
@@ -726,7 +726,7 @@ def _get_object_detection_track(
     )
 
 
-def _get_instance_segmentation_track(
+def _get_segmentation_mask_track(
     filename: str,
     number_of_frames: int,
     categories: list[Category],

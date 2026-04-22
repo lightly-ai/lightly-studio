@@ -80,7 +80,7 @@ def test_create_annotation_object_detection(
     )
 
 
-def test_create_annotation_instance_segmentation(
+def test_create_annotation_segmentation_mask(
     mocker: MockerFixture,
     collection: CollectionTable,
     test_client: TestClient,
