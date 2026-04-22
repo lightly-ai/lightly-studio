@@ -57,7 +57,9 @@
         "src/lib/components/Header/Header.test.ts",
         "src/lib/i18n.ts",
         "src/lib/hooks/useClassifiers/useClassifiers.ts",
-        "src/lib/hooks/useHideAnnotations.ts"
+        "src/lib/hooks/useHideAnnotations.ts",
+        "src/lib/components/QueryEditor/language-server-worker.ts",
+        "src/lib/components/QueryEditor/language"
     ]
     // Path aliases are handled by https://svelte.dev/docs/kit/configuration#alias
     // except $lib which is handled by https://svelte.dev/docs/kit/configuration#files

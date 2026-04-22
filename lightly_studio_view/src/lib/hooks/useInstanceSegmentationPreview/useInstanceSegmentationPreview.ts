@@ -3,7 +3,7 @@ import { createPreviewRenderer } from './previewRenderer';
 import { createCanvasMaskManager } from './canvasMaskManager';
 import type { SchedulePreviewComposeParams, UseInstanceSegmentationPreviewParams } from './types';
 
-export function useInstanceSegmentationPreview({
+export function useSegmentationMaskPreview({
     onPreviewVisibilityChange
 }: UseInstanceSegmentationPreviewParams = {}) {
     const canvasMaskManager = createCanvasMaskManager();

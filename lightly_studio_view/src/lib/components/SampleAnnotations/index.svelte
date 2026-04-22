@@ -11,6 +11,7 @@
     >[number];
 
     type SampleView = {
+        sample_id: string;
         width: number;
         height: number;
         annotations: AnnotationView[];
@@ -27,6 +28,7 @@
     const { isHidden } = useHideAnnotations();
     const { showBoundingBoxesForSegmentationStore } = useSettings();
 
+    // Normalize backend annotation variants into the smaller canvas render contract.
     const mapToCanvasAnnotation = (
         annotation: SampleView['annotations'][number],
         showInstanceSegmentationBoundingBoxes: boolean
@@ -73,6 +75,7 @@
 
     let showAnnotations = $state(false);
 
+    // Delay canvas mount work until the browser is idle to reduce scroll/jank on large lists.
     const idle = window.requestIdleCallback ?? ((cb) => setTimeout(cb, 10));
 
     onMount(() => {
@@ -85,6 +88,7 @@
 {#if showAnnotations && !$isHidden && annotationsWithVisuals.length > 0}
     <div data-testid="sample-annotation-item">
         <AnnotationCanvas
+            sampleId={sample.sample_id}
             width={sample.width}
             height={sample.height}
             annotations={annotationsWithVisuals}
