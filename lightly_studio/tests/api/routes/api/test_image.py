@@ -7,6 +7,7 @@ from pytest_mock import MockerFixture
 from sqlmodel import Session
 
 from lightly_studio.api.routes.api.status import (
+    HTTP_STATUS_BAD_REQUEST,
     HTTP_STATUS_OK,
 )
 from lightly_studio.api.routes.api.validators import Paginated
@@ -29,6 +30,7 @@ from tests.helpers_resolvers import (
     create_collection,
     create_image,
 )
+from tests.resolvers.video.helpers import VideoStub, create_video
 
 
 def test_read_samples_calls_get_all(mocker: MockerFixture, test_client: TestClient) -> None:
@@ -216,11 +218,8 @@ def test_read_images__query_expr_filter(
     }
     json_body = {
         "filters": {
-            "sample_filter": {
-                "query_expr": query_expr,
-            },
+            "sample_filter": {"query_expr": query_expr},
         },
-        "pagination": {"offset": 0, "limit": 10},
     }
     response = test_client.post(f"/api/collections/{collection_id}/images/list", json=json_body)
 
@@ -229,6 +228,81 @@ def test_read_images__query_expr_filter(
     assert data["total_count"] == 2
     returned_ids = {item["sample_id"] for item in data["data"]}
     assert returned_ids == {str(wide_image.sample_id), str(annotated_image.sample_id)}
+
+
+def test_read_images__query_expr_nonexistent_field(
+    test_client: TestClient,
+    db_session: Session,
+) -> None:
+    collection = create_collection(session=db_session)
+    collection_id = collection.collection_id
+
+    query_expr = {
+        "match_expr": {
+            "type": "string_expr",
+            "field": {"table": "invalid", "name": "invalid"},
+            "operator": "==",
+            "value": "test",
+        },
+    }
+    json_body = {
+        "filters": {
+            "sample_filter": {"query_expr": query_expr},
+        },
+    }
+    response = test_client.post(f"/api/collections/{collection_id}/images/list", json=json_body)
+
+    assert response.status_code == HTTP_STATUS_BAD_REQUEST
+    data = response.json()
+    assert data["error"] == "Unknown string field: invalid.invalid"
+
+
+def test_read_images__query_expr_wrong_context(
+    test_client: TestClient,
+    db_session: Session,
+) -> None:
+    """This test documents an edge case behaviour.
+
+    An invalid query referencing a field in the wrong context (e.g. video in an image context) will
+    not error out. Instead, SQLAlchemy performs an outer join and samples will be returned if the
+    query matches.
+    """
+    collection = create_collection(session=db_session, sample_type=SampleType.IMAGE)
+    collection_id = collection.collection_id
+    image = create_image(
+        session=db_session,
+        collection_id=collection_id,
+        file_path_abs="/image.png",
+    )
+
+    video_collection = create_collection(session=db_session, sample_type=SampleType.VIDEO)
+    create_video(
+        session=db_session,
+        collection_id=video_collection.collection_id,
+        video=VideoStub(path="/video.mp4"),
+    )
+
+    # Video query for image dataset
+    query_expr = {
+        "match_expr": {
+            "type": "string_expr",
+            "field": {"table": "video", "name": "file_name"},
+            "operator": "==",
+            "value": "video.mp4",
+        },
+    }
+    json_body = {
+        "filters": {
+            "sample_filter": {"query_expr": query_expr},
+        },
+    }
+    response = test_client.post(f"/api/collections/{collection_id}/images/list", json=json_body)
+
+    assert response.status_code == HTTP_STATUS_OK
+    data = response.json()
+    assert data["total_count"] == 1
+    returned_ids = {item["sample_id"] for item in data["data"]}
+    assert returned_ids == {str(image.sample_id)}
 
 
 def test_get_samples_dimensions_calls_get_dimension_bounds(
