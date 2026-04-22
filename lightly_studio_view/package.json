@@ -56,6 +56,7 @@
     "eslint-plugin-svelte": "^2.36.0",
     "globals": "^15.0.0",
     "jsdom": "^25.0.1",
+    "langium-cli": "^4.2.0",
     "openapi-fetch": "^0.13.4",
     "openapi-typescript": "^7.4.3",
     "prettier": "^3.3.2",
@@ -87,12 +88,18 @@
     "d3-transition": "^3.0.1",
     "d3-zoom": "^3.0.0",
     "embedding-atlas": "^0.10.0",
+    "langium": "^4.2.2",
     "lodash-es": "^4.17.22",
+    "monaco-editor": "^0.55.1",
+    "monaco-languageclient": "^10.7.0",
     "paneforge": "^1.0.2",
     "posthog-js": "^1.276.0",
     "svelte-infinite-loading": "^1.4.0",
     "svelte-sonner": "^1.0.5",
     "svelte-virtual": "^1.0.0-next.22",
-    "uuid": "^13.0.0"
+    "uuid": "^13.0.0",
+    "vscode-languageclient": "^9.0.1",
+    "vscode-languageserver": "^9.0.1",
+    "vscode-languageserver-protocol": "^3.17.5"
   }
 }
