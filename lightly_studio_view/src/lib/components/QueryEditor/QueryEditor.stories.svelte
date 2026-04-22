@@ -12,18 +12,11 @@
             readOnly: { control: 'boolean' }
         }
     });
-
-    const defaultValue = `# Lightly query examples
-ImageSampleField.width > 1920
-ImageSampleField.tags.contains("reviewed")
-VideoSampleField.duration > 60
-`;
 </script>
 
 <Story
     name="Default"
     args={{
-        value: defaultValue,
         height: '360px'
     }}
 />
@@ -31,7 +24,6 @@ VideoSampleField.duration > 60
 <Story
     name="Read only"
     args={{
-        value: defaultValue,
         height: '240px',
         readOnly: true
     }}
