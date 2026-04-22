@@ -104,7 +104,7 @@ ObjectDetectionComparison returns ComparisonExpression:
 ObjectDetectionFieldReceiver returns string:
     'ObjectDetection' | 'ObjectDetectionField';
 
-ObjectDetectionFieldReference returns QualifiedFieldReference:
+ObjectDetectionFieldReference returns Expression:
     {FieldReference} name=ObjectDetectionFieldName
     | {QualifiedFieldReference} receiver=ObjectDetectionFieldReceiver '.' member=ObjectDetectionFieldName;
 
