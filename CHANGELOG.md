@@ -11,6 +11,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- Refactored annotation mask rendering to use a shared web worker pool instead of spawning one worker per canvas.
+
 ### Deprecated
 
 ### Removed
