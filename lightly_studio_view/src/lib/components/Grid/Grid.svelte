@@ -2,6 +2,7 @@
     import VirtualGrid from 'svelte-virtual/grid';
     import type { ComponentProps, Snippet } from 'svelte';
     import type { HTMLAttributes } from 'svelte/elements';
+    import { cn } from '$lib/utils';
 
     const GRID_GAP = 16;
 
@@ -40,7 +41,7 @@
         /** Initial vertical scroll position */
         initialScrollPosition?: number;
         /** Resets scroll position to top when this key changes */
-        scrollResetKey?: string | number | boolean | null;
+        scrollResetKey?: string;
         /** Additional HTML attributes for the viewport div */
         viewportProps?: HTMLAttributes<HTMLDivElement>;
         /** Additional props to pass to the VirtualGrid component */
@@ -52,21 +53,13 @@
 
     const safeColumnCount = $derived(Math.max(1, columnCount));
 
-    function mergeClass(baseClass: string, extraClass?: string): string {
-        return extraClass ? `${baseClass} ${extraClass}` : baseClass;
-    }
+    const viewportClassName = $derived(cn('viewport h-full w-full', viewportProps?.class));
 
-    const viewportClassName = $derived(
-        mergeClass('viewport h-full w-full', viewportProps?.class as string | undefined)
-    );
+    const gridClassName = $derived(cn('grid-scroll', gridProps?.class));
 
-    const gridClassName = $derived(
-        mergeClass('grid-scroll', gridProps?.class as string | undefined)
-    );
+    const resolvedOverScan = $derived(overScan ?? overscan ?? gridProps?.overScan);
 
-    const resolvedOverScan = $derived.by(() => overScan ?? overscan ?? gridProps?.overScan);
-
-    const resolvedOnScroll = $derived.by(() => onScroll ?? gridProps?.onscroll);
+    const resolvedOnScroll = $derived(onScroll ?? gridProps?.onscroll);
 
     $effect(() => {
         if (!viewport) {
@@ -100,7 +93,9 @@
         }
 
         previousScrollResetKey = scrollResetKey;
-        previousInitialScrollPosition = undefined;
+        // Mark the current initialScrollPosition as already applied so the
+        // restore effect does not immediately scroll back after the reset.
+        previousInitialScrollPosition = initialScrollPosition ?? undefined;
         grid?.scrollToPosition(0);
     });
 
