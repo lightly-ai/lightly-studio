@@ -63,10 +63,7 @@ export function registerLightlyQueryMonacoLanguage(): void {
     // Associate the language ID with file extensions and MIME types so Monaco
     // can auto-detect it when a model is created from a URI.
     monaco.languages.register({
-        id: LIGHTLY_QUERY_LANGUAGE_ID,
-        extensions: ['.lql', '.lightlyql'],
-        aliases: ['LightlyQuery', 'lightly-query', 'LQL'],
-        mimetypes: ['text/lightly-query']
+        id: LIGHTLY_QUERY_LANGUAGE_ID
     });
 
     // Editor-level behavior: comment toggling, bracket matching, auto-close,
