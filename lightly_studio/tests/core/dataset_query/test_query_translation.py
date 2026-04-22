@@ -91,6 +91,16 @@ def test_to_match_expression__integer_unknown_field() -> None:
         query_translation.to_match_expression(expr)
 
 
+def test_to_match_expression__integer_wrong_type_for_valid_field() -> None:
+    expr = IntegerExpr(
+        field=FieldRef(table="classification", name="label"),
+        operator=OrdinalComparisonOperator.EQ,
+        value=3,
+    )
+    with pytest.raises(QueryExprError, match="Unknown integer field"):
+        query_translation.to_match_expression(expr)
+
+
 def test_to_match_expression__datetime_gt() -> None:
     dt = datetime(2024, 1, 15, 12, 0, 0, tzinfo=timezone.utc)
     expr = DatetimeExpr(
