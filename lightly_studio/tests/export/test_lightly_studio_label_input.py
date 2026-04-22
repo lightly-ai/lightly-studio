@@ -46,7 +46,7 @@ class TestLightlyStudioLabelInput:
             Category(id=2, name="zebra"),
         ]
 
-    def test_get_categories__pascalvoc_instance_segmentation_starts_with_one(
+    def test_get_categories__pascalvoc_segmentation_mask_starts_with_one(
         self,
         db_session: Session,
         collection_with_annotations: CollectionTable,
@@ -177,7 +177,7 @@ class TestLightlyStudioLabelInput:
             objects=[],
         )
 
-    def test_get_labels__instance_segmentation(self, db_session: Session) -> None:
+    def test_get_labels__segmentation_mask(self, db_session: Session) -> None:
         """We currently export only object detection annotations, not instance segmentation."""
         collection = create_collection(session=db_session)
         images_to_create = [

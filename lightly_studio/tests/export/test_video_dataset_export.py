@@ -67,7 +67,7 @@ class TestVideoDatasetExport:
         )
 
         output_json = tmp_path / "instances.json"
-        dataset.export().to_youtube_vis_instance_segmentation(output_json=output_json)
+        dataset.export().to_youtube_vis_segmentation_mask(output_json=output_json)
 
         yvis = json.loads(output_json.read_text(encoding="utf-8"))
         assert yvis["categories"] == [{"id": 1, "name": "cat"}]

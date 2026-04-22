@@ -18,7 +18,7 @@ from tests.helpers_resolvers import (
 
 
 class TestInstanceSegmentationExpressions:
-    def test_annotation_instance_segmentation_width__sql(self) -> None:
+    def test_annotation_segmentation_mask_width__sql(self) -> None:
         query = select(ImageTable).where(
             InstanceSegmentationQuery.match(InstanceSegmentationField.width <= 100).get()
         )
@@ -28,7 +28,7 @@ class TestInstanceSegmentationExpressions:
         assert "FROM segmentation_annotation" in sql
         assert "segmentation_annotation.width <= 100" in sql
 
-    def test_annotation_instance_segmentation__filters_matching_samples(
+    def test_annotation_segmentation_mask__filters_matching_samples(
         self, db_session: Session
     ) -> None:
         collection = create_collection(session=db_session)
@@ -80,7 +80,7 @@ class TestInstanceSegmentationExpressions:
         results = db_session.exec(query).all()
         assert [image.sample_id for image in results] == [image1.sample_id]
 
-    def test_annotation_instance_segmentation__with_other_annotations(
+    def test_annotation_segmentation_mask__with_other_annotations(
         self, db_session: Session
     ) -> None:
         collection = create_collection(session=db_session)

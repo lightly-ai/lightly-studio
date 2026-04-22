@@ -88,7 +88,7 @@ samples = query.to_list()
 # Export all resulting samples in coco format
 dataset.export(query).to_coco_object_detections()
 # For video datasets: export in a video format
-# dataset.export(query).to_youtube_vis_instance_segmentation()
+# dataset.export(query).to_youtube_vis_segmentation_mask()
 
 ```
 
