@@ -36,6 +36,14 @@ def patch_engine_singleton(mocker: MockerFixture) -> None:
     mocker.patch.object(db_manager, "_engine", new=None)
 
 
+def _create_fake_postgres_engine(mocker: MockerFixture) -> tuple[object, object]:
+    """Create a fake Postgres engine with a connectable mock connection."""
+    fake_engine = mocker.MagicMock()
+    fake_connection = mocker.MagicMock()
+    fake_engine.connect.return_value.__enter__.return_value = fake_connection
+    return fake_engine, fake_connection
+
+
 def test_get_engine__default(
     mocker: MockerFixture,
     patch_engine_singleton: None,  # noqa ARG001
@@ -238,6 +246,20 @@ def test_database_engine__from_env_var(
     assert engine._engine_url == env_url
 
 
+def test_database_engine__default_url_without_env(
+    mocker: MockerFixture,
+    patch_engine_singleton: None,  # noqa: ARG001
+) -> None:
+    mocker.patch.object(db_manager, "LIGHTLY_STUDIO_DATABASE_URL", None)
+    fake_engine = mocker.MagicMock()
+    mocker.patch.object(db_manager, "create_engine", return_value=fake_engine)
+    mocker.patch.object(db_manager.SQLModel.metadata, "create_all")
+
+    engine = DatabaseEngine(single_threaded=True)
+
+    assert engine._engine_url == "duckdb:///lightly_studio.db"
+
+
 def test_database_engine__explicit_url_over_env(
     tmp_path: Path,
     mocker: MockerFixture,
@@ -249,6 +271,24 @@ def test_database_engine__explicit_url_over_env(
     explicit_url = f"duckdb:///{tmp_path / 'explicit.db'}"
     engine = DatabaseEngine(engine_url=explicit_url, single_threaded=True)
     assert engine._engine_url == explicit_url
+
+
+def test_database_engine__normalizes_postgres_url(
+    mocker: MockerFixture,
+    patch_engine_singleton: None,  # noqa: ARG001
+) -> None:
+    fake_engine, fake_connection = _create_fake_postgres_engine(mocker=mocker)
+    mocker.patch.object(db_manager._DatabaseInitState, "_database_exists", return_value=True)
+    mocker.patch.object(db_manager, "create_engine", return_value=fake_engine)
+    mocker.patch.object(db_manager.SQLModel.metadata, "create_all")
+
+    engine = DatabaseEngine(
+        engine_url="postgresql://user:pass@localhost/db",
+        single_threaded=True,
+    )
+
+    assert engine._engine_url == "postgresql+psycopg://user:pass@localhost/db"
+    fake_connection.commit.assert_called_once()
 
 
 def test_connect__with_engine_url(
@@ -321,6 +361,30 @@ def test_connect__cleanup_existing(
         collections = session.exec(sqlmodel.select(CollectionTable)).all()
         assert len(collections) == 0
     db_manager.close()
+
+
+def test_database_engine__cleanup_existing_postgres__drops_tables(
+    mocker: MockerFixture,
+    patch_engine_singleton: None,  # noqa: ARG001
+) -> None:
+    fake_engine, _ = _create_fake_postgres_engine(mocker=mocker)
+    mocker.patch.object(db_manager._DatabaseInitState, "_database_exists", return_value=True)
+    mocker.patch.object(db_manager, "create_engine", return_value=fake_engine)
+    mock_cleanup_database_file = mocker.patch.object(
+        db_manager._DatabaseInitState,
+        "_cleanup_database_file",
+    )
+    mock_drop_all = mocker.patch.object(db_manager.SQLModel.metadata, "drop_all")
+    mocker.patch.object(db_manager.SQLModel.metadata, "create_all")
+
+    DatabaseEngine(
+        engine_url="postgresql://user:pass@localhost/db",
+        cleanup_existing=True,
+        single_threaded=True,
+    )
+
+    mock_cleanup_database_file.assert_not_called()
+    mock_drop_all.assert_called_once_with(bind=fake_engine)
 
 
 def test_get_backend(
