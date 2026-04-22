@@ -35,7 +35,7 @@ def test_update_segmentation_mask(db_session: Session) -> None:
             AnnotationCreate(
                 parent_sample_id=image.sample_id,
                 annotation_label_id=car_label.annotation_label_id,
-                annotation_type=AnnotationType.INSTANCE_SEGMENTATION,
+                annotation_type=AnnotationType.SEGMENTATION_MASK,
                 x=50,
                 y=50,
                 width=20,

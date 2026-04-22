@@ -27,7 +27,7 @@ export const removeOverlapFromOtherSegmentationAnnotations = async ({
 
     annotations
         .filter((ann) => {
-            const isTargetType = ann.annotation_type === 'instance_segmentation';
+            const isTargetType = ann.annotation_type === 'segmentation_mask';
             const hasMask = ann.segmentation_details?.segmentation_mask;
             const isSame = ann.sample_id === skipId;
             const isLocked = lockedAnnotationIds?.has(ann.sample_id);

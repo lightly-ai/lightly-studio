@@ -57,7 +57,7 @@ def test_update_bounding_box__instance_segmentation(
     """Test updating bounding box coordinates for instance segmentation annotation."""
     annotations = annotation_resolver.get_all(db_session).annotations
     inst_segm_annotation = get_annotation_by_type(
-        annotations=annotations, annotation_type=AnnotationType.INSTANCE_SEGMENTATION
+        annotations=annotations, annotation_type=AnnotationType.SEGMENTATION_MASK
     )
     annotation_id = inst_segm_annotation.sample_id
 
