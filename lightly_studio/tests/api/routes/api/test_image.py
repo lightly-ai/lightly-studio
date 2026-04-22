@@ -147,6 +147,90 @@ def test_read_samples_calls_get_all__no_sample_resolver_mock(
     assert response.json()["total_count"] == 0
 
 
+def test_read_images__query_expr_filter(
+    test_client: TestClient,
+    db_session: Session,
+) -> None:
+    """Integration test: QueryExpr with OR across image and annotation fields."""
+    collection = create_collection(session=db_session)
+    collection_id = collection.collection_id
+
+    # Three images: one wide, one with a "cat" detection, one with neither.
+    wide_image = create_image(
+        session=db_session,
+        collection_id=collection_id,
+        file_path_abs="/data/wide.png",
+        width=800,
+    )
+    annotated_image = create_image(
+        session=db_session,
+        collection_id=collection_id,
+        file_path_abs="/data/annotated.png",
+        width=200,
+    )
+    create_image(
+        session=db_session,
+        collection_id=collection_id,
+        file_path_abs="/data/neither.png",
+        width=200,
+    )
+
+    cat_label = create_annotation_label(
+        session=db_session,
+        root_collection_id=collection_id,
+        label_name="cat",
+    )
+    create_annotation(
+        session=db_session,
+        collection_id=collection_id,
+        sample_id=annotated_image.sample_id,
+        annotation_label_id=cat_label.annotation_label_id,
+    )
+
+    # Query: width >= 500 OR has_object_detection(label == "cat")
+    # Should match wide_image (via width) and annotated_image (via annotation).
+    query_expr = {
+        "match_expr": {
+            "type": "or",
+            "children": [
+                {
+                    "type": "integer_expr",
+                    "field": {"table": "image", "name": "width"},
+                    "operator": ">=",
+                    "value": 500,
+                },
+                {
+                    "type": "object_detection_match_expr",
+                    "subexpr": {
+                        "type": "string_expr",
+                        "field": {
+                            "table": "object_detection",
+                            "name": "label",
+                        },
+                        "operator": "==",
+                        "value": "cat",
+                    },
+                },
+            ],
+        },
+    }
+    json_body = {
+        "filters": {
+            "sample_filter": {
+                "query_expr": query_expr,
+            },
+        },
+        "pagination": {"offset": 0, "limit": 10},
+    }
+    response = test_client.post(f"/api/collections/{collection_id}/images/list", json=json_body)
+
+    assert response.status_code == HTTP_STATUS_OK
+    data = response.json()
+    assert data["total_count"] == 2
+    returned_ids = {item["sample_id"] for item in data["data"]}
+    assert returned_ids == {str(wide_image.sample_id), str(annotated_image.sample_id)}
+
+
 def test_get_samples_dimensions_calls_get_dimension_bounds(
     mocker: MockerFixture,
     test_client: TestClient,
