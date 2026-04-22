@@ -207,8 +207,8 @@ def test_to_match_expression__classification_label_at_top_level(
     # Wrong: the top-level EXISTS subquery is not scoped to the current sample,
     # and the predicate ignores annotation_type. A single object-detection
     # annotation labeled "cat" makes every sample match.
-    assert [result.sample_id for result in results] == [
+    assert {result.sample_id for result in results} == {
         object_detection_image.sample_id,
         classification_other_label_image.sample_id,
         bare_image.sample_id,
-    ]
+    }
