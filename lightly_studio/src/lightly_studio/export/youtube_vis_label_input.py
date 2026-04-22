@@ -133,7 +133,7 @@ class LightlyStudioYouTubeVISInstanceSegmentationTrackInput(
             annotations = annotation_resolver.get_all_by_object_track_id(
                 session=session,
                 object_track_id=track.object_track_id,
-                annotation_types=[AnnotationType.INSTANCE_SEGMENTATION],
+                annotation_types=[AnnotationType.SEGMENTATION_MASK],
             )
             if not annotations:
                 continue
@@ -154,7 +154,7 @@ class LightlyStudioYouTubeVISInstanceSegmentationTrackInput(
                     continue
                 video_id_to_tracks[video_id].append(track_obj)
 
-        return _track_tuples_to_video_instance_segmentation(
+        return _track_tuples_to_video_segmentation_mask(
             video_id_to_tracks, self._export_context.uuid_to_videos
         )
 
@@ -301,7 +301,7 @@ def _build_label_id_to_category(session: Session, dataset_id: UUID) -> dict[UUID
     }
 
 
-def _track_tuples_to_video_instance_segmentation(
+def _track_tuples_to_video_segmentation_mask(
     video_id_to_tracks: dict[UUID, list[SingleInstanceSegmentationTrack]],
     video_by_uuid: dict[UUID, Video],
 ) -> list[VideoInstanceSegmentationTrack]:

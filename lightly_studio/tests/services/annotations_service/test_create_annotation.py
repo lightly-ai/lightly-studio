@@ -54,7 +54,7 @@ def test_create_annotation_object_detection(
     assert result.segmentation_details is None
 
 
-def test_create_annotation_instance_segmentation(
+def test_create_annotation_segmentation_mask(
     db_session: Session,
     collection: CollectionTable,
     samples: list[ImageTable],
@@ -63,7 +63,7 @@ def test_create_annotation_instance_segmentation(
     """Test to create instance segmentation annotation."""
     annotation = AnnotationCreateParams(
         annotation_label_id=annotation_labels[0].annotation_label_id,
-        annotation_type=AnnotationType.INSTANCE_SEGMENTATION,
+        annotation_type=AnnotationType.SEGMENTATION_MASK,
         collection_id=collection.collection_id,
         parent_sample_id=samples[0].sample_id,
         x=101,

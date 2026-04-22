@@ -99,7 +99,7 @@ vi.mock('$lib/hooks/useCollection/useCollection', () => ({
 }));
 
 vi.mock('$lib/hooks/useInstanceSegmentationBrush', () => ({
-    useInstanceSegmentationBrush: useInstanceSegmentationBrushMock
+    useSegmentationMaskBrush: useInstanceSegmentationBrushMock
 }));
 
 const baseProps = {
@@ -348,7 +348,7 @@ describe('SampleInstanceSegmentationRect', () => {
                         {
                             parent_sample_id: 'parent-sample-1',
                             sample_id: 'annotation-1',
-                            annotation_type: 'instance_segmentation',
+                            annotation_type: 'segmentation_mask',
                             annotation_label: { annotation_label_name: 'label-1' },
                             created_at: new Date('1970-01-01T00:00:00.000Z'),
                             segmentation_details: {
