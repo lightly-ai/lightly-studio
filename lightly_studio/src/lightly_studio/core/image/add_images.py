@@ -174,7 +174,7 @@ def load_into_dataset_from_labelformat(
     )
 
     if isinstance(input_labels, InstanceSegmentationInput):
-        annotation_type = AnnotationType.INSTANCE_SEGMENTATION
+        annotation_type = AnnotationType.SEGMENTATION_MASK
     elif isinstance(input_labels, ObjectDetectionInput):
         annotation_type = AnnotationType.OBJECT_DETECTION
     else:
@@ -470,7 +470,7 @@ def _process_segmentation_annotations(
 ) -> list[AnnotationCreate]:
     """Process instance segmentation annotations for a single image."""
     if not (
-        anno_data.annotation_type == AnnotationType.INSTANCE_SEGMENTATION
+        anno_data.annotation_type == AnnotationType.SEGMENTATION_MASK
         and isinstance(anno_data.data, ImageInstanceSegmentation)
     ):
         raise ValueError("Invalid annotation data for segmentation processing.")
@@ -509,7 +509,7 @@ def _process_batch_annotations(
             label_map=label_map,
         )
 
-        if anno_data.annotation_type == AnnotationType.INSTANCE_SEGMENTATION:
+        if anno_data.annotation_type == AnnotationType.SEGMENTATION_MASK:
             new_annotations = _process_segmentation_annotations(
                 context=context, anno_data=anno_data
             )

@@ -90,7 +90,7 @@ class LightlyStudioInstanceSegmentationInput(LightlyStudioInputBase, InstanceSeg
         # TODO(lukas, 02/2026): We can optimise in the future to filter annotations in a DB query.
         objects = []
         for annotation in sample.sample_table.annotations:
-            if annotation.annotation_type == AnnotationType.INSTANCE_SEGMENTATION:
+            if annotation.annotation_type == AnnotationType.SEGMENTATION_MASK:
                 obj = _annotation_to_single_inst_seg(
                     annotation=annotation,
                     label_id_to_category=label_id_to_category,
@@ -135,7 +135,7 @@ class LightlyStudioPascalVOCInstanceSegmentationInput(
     ) -> ImageInstanceSegmentation:
         objects = []
         for annotation in sample.sample_table.annotations:
-            if annotation.annotation_type == AnnotationType.INSTANCE_SEGMENTATION:
+            if annotation.annotation_type == AnnotationType.SEGMENTATION_MASK:
                 obj = _annotation_to_single_inst_seg(
                     annotation=annotation,
                     label_id_to_category=label_id_to_category,

@@ -197,7 +197,7 @@ class TestLightlyStudioLabelInput:
                 AnnotationCreate(
                     parent_sample_id=images[0].sample_id,
                     annotation_label_id=dog_label.annotation_label_id,
-                    annotation_type=AnnotationType.INSTANCE_SEGMENTATION,
+                    annotation_type=AnnotationType.SEGMENTATION_MASK,
                     confidence=None,
                     x=50,
                     y=50,

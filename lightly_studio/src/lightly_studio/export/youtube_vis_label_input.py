@@ -133,7 +133,7 @@ class LightlyStudioYouTubeVISInstanceSegmentationTrackInput(
             annotations = annotation_resolver.get_all_by_object_track_id(
                 session=session,
                 object_track_id=track.object_track_id,
-                annotation_types=[AnnotationType.INSTANCE_SEGMENTATION],
+                annotation_types=[AnnotationType.SEGMENTATION_MASK],
             )
             if not annotations:
                 continue

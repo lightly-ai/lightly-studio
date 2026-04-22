@@ -244,7 +244,7 @@ describe('useInstanceSegmentationBrush', () => {
         expect(createAnnotation).toHaveBeenCalledWith(
             expect.objectContaining({
                 parent_sample_id: 's1',
-                annotation_type: 'instance_segmentation',
+                annotation_type: 'segmentation_mask',
                 segmentation_mask: rle,
                 annotation_label_id: 'car-label-id'
             })

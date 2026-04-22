@@ -15,7 +15,7 @@ dataset = VideoDataset.create()
 dataset.add_videos_from_youtube_vis(
     annotations_json="datasets/youtube_vis_50_videos/train/instances_50.json",
     videos_path="datasets/youtube_vis_50_videos/train/videos",
-    annotation_type=AnnotationType.INSTANCE_SEGMENTATION,
+    annotation_type=AnnotationType.SEGMENTATION_MASK,
     embed=False,
 )
 
