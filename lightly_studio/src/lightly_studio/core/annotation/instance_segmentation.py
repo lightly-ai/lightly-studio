@@ -42,7 +42,7 @@ class InstanceSegmentationAnnotation(Annotation):
         Args:
             inner: The SegmentationAnnotationTable SQLAlchemy model instance.
         """
-        if inner.annotation_base.annotation_type != AnnotationType.INSTANCE_SEGMENTATION:
+        if inner.annotation_base.annotation_type != AnnotationType.SEGMENTATION_MASK:
             raise ValueError("Expected annotation type: instance segmentation")
 
         super().__init__(inner.annotation_base)

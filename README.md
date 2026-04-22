@@ -193,7 +193,7 @@ dataset = ls.ImageDataset.create()
 dataset.add_samples_from_coco(
     annotations_json=f"{dataset_path}/coco_subset_128_images/instances_train2017.json",
     images_path=f"{dataset_path}/coco_subset_128_images/images",
-    annotation_type=ls.AnnotationType.INSTANCE_SEGMENTATION,
+    annotation_type=ls.AnnotationType.SEGMENTATION_MASK,
 )
 
 ls.start_gui()

@@ -35,8 +35,12 @@ export default ts.config(
             'build/',
             '.svelte-kit/',
             'dist/',
+            'storybook-static/',
+            'test-results/',
             'src/lib/components/ui/',
-            'src/lib/api/lightly_studio_local/'
+            'src/lib/api/lightly_studio_local/',
+            'src/lib/components/QueryEditor/language/',
+            'src/lib/components/QueryEditor/language-server-worker.ts'
         ]
     },
     storybook.configs['flat/recommended']

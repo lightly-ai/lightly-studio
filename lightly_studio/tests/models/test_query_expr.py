@@ -58,7 +58,7 @@ class TestQueryExpr:
                     "type": "not",
                     "child": {
                         "type": "tags_contains_expr",
-                        "field": {"table": "sample", "name": "tags"},
+                        "field": {"table": "image", "name": "tags"},
                         "tag_name": "reviewed",
                     },
                 }

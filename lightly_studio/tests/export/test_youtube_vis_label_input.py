@@ -160,7 +160,7 @@ class TestLightlyStudioYouTubeVISInstanceSegmentationTrackInput:
                 AnnotationCreate(
                     parent_sample_id=video_with_frames.frame_sample_ids[0],
                     annotation_label_id=cat_label.annotation_label_id,
-                    annotation_type=AnnotationType.INSTANCE_SEGMENTATION,
+                    annotation_type=AnnotationType.SEGMENTATION_MASK,
                     x=0,
                     y=1,
                     width=1,

@@ -75,7 +75,7 @@ class ImageDatasetExport:
             output_json = DEFAULT_EXPORT_FILENAME
         to_coco_captions(samples=self.samples, output_json=Path(output_json))
 
-    def to_coco_instance_segmentations(self, output_json: PathLike | None = None) -> None:
+    def to_coco_segmentation_masks(self, output_json: PathLike | None = None) -> None:
         """Exports instance segmentations to a COCO format JSON file.
 
         Args:
@@ -84,14 +84,14 @@ class ImageDatasetExport:
         """
         if output_json is None:
             output_json = DEFAULT_EXPORT_FILENAME
-        to_coco_instance_segmentations(
+        to_coco_segmentation_masks(
             session=self.session,
             dataset_id=self._dataset_id,
             samples=self.samples,
             output_json=Path(output_json),
         )
 
-    def to_pascalvoc_instance_segmentation(self, output_folder: PathLike) -> None:
+    def to_pascalvoc_segmentation_mask(self, output_folder: PathLike) -> None:
         """Exports instance segmentation annotations to Pascal VOC format.
 
         Creates a folder with per-pixel class masks (PNG) and a class map (JSON).
@@ -101,7 +101,7 @@ class ImageDatasetExport:
                 written. The folder contains a `SegmentationClass` subfolder
                 with PNG masks and a `class_id_to_name.json` file.
         """
-        to_pascalvoc_instance_segmentation(
+        to_pascalvoc_segmentation_mask(
             session=self.session,
             dataset_id=self._dataset_id,
             samples=self.samples,
@@ -134,7 +134,7 @@ def to_coco_object_detections(
     COCOObjectDetectionOutput(output_file=output_json).save(label_input=export_input)
 
 
-def to_coco_instance_segmentations(
+def to_coco_segmentation_masks(
     session: Session,
     dataset_id: UUID,
     samples: Iterable[ImageSample],
@@ -142,7 +142,7 @@ def to_coco_instance_segmentations(
 ) -> None:
     """Exports instance segmentation annotations to a COCO format JSON file.
 
-    This function is for internal use. Use `Dataset.export().to_coco_instance_segmentations()`
+    This function is for internal use. Use `Dataset.export().to_coco_segmentation_masks()`
     instead.
 
     Args:
@@ -159,7 +159,7 @@ def to_coco_instance_segmentations(
     COCOInstanceSegmentationOutput(output_file=output_json).save(label_input=export_input)
 
 
-def to_pascalvoc_instance_segmentation(
+def to_pascalvoc_segmentation_mask(
     session: Session,
     dataset_id: UUID,
     samples: Iterable[ImageSample],
@@ -168,7 +168,7 @@ def to_pascalvoc_instance_segmentation(
     """Exports instance segmentation annotations to a Pascal VOC segmentation folder.
 
     This function is for internal use. Use
-    `Dataset.export().to_pascalvoc_instance_segmentation()` instead.
+    `Dataset.export().to_pascalvoc_segmentation_mask()` instead.
 
     Args:
         session: The database session.

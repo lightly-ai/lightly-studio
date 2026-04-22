@@ -35,7 +35,7 @@ def test_get_segmentation_annotation_create__with_multipolygon() -> None:
 
     assert annotation.parent_sample_id == parent_sample_id
     assert annotation.annotation_label_id == annotation_label_id
-    assert annotation.annotation_type == AnnotationType.INSTANCE_SEGMENTATION
+    assert annotation.annotation_type == AnnotationType.SEGMENTATION_MASK
     assert annotation.x == 10
     assert annotation.y == 20
     assert annotation.width == 20
@@ -69,7 +69,7 @@ def test_get_segmentation_annotation_create__with_binary_mask() -> None:
 
     assert annotation.parent_sample_id == parent_sample_id
     assert annotation.annotation_label_id == annotation_label_id
-    assert annotation.annotation_type == AnnotationType.INSTANCE_SEGMENTATION
+    assert annotation.annotation_type == AnnotationType.SEGMENTATION_MASK
     assert annotation.x == 0
     assert annotation.y == 0
     assert annotation.width == 2
