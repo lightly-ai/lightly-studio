@@ -46,30 +46,6 @@ export function registerLightlyQueryMonacoLanguage(): void {
         id: LIGHTLY_QUERY_LANGUAGE_ID
     });
 
-    // Editor-level behavior: comment toggling, bracket matching, auto-close,
-    // and surround-with pairs. Purely UX; does not affect parsing.
-    monaco.languages.setLanguageConfiguration(LIGHTLY_QUERY_LANGUAGE_ID, {
-        comments: {
-            lineComment: '#'
-        },
-        autoClosingPairs: [
-            { open: '(', close: ')' },
-            { open: '[', close: ']' },
-            { open: '"', close: '"' },
-            { open: "'", close: "'" }
-        ],
-        surroundingPairs: [
-            { open: '(', close: ')' },
-            { open: '[', close: ']' },
-            { open: '"', close: '"' },
-            { open: "'", close: "'" }
-        ],
-        brackets: [
-            ['(', ')'],
-            ['[', ']']
-        ]
-    });
-
     // Client-side Monarch tokenizer. Gives immediate syntax highlighting
     // without waiting for the LSP worker to start — the Langium server handles
     // semantics (validation, completion), but coloring is cheap enough to do
