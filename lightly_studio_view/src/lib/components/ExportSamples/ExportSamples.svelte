@@ -333,8 +333,7 @@
                     {#if isVideoCollection}
                         <Tabs.Content value="youtube_vis_segmentation" class="pt-2">
                             <p class="text-sm text-muted-foreground">
-                                The video Segmentation masks will be exported in YouTube-VIS
-                                format.
+                                The video Segmentation masks will be exported in YouTube-VIS format.
                             </p>
 
                             <Button
