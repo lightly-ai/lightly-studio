@@ -32,9 +32,7 @@ class SampleFilter(BaseModel):
     #
     # Important note: The expression can (and usually will) reference fields outside of SampleTable.
     # It is caller's responsibility to ensure that the necessary joins are present in the query
-    # before applying this filter. Usually, this is done by using SampleFilter from another
-    # class, e.g. ImageFilter. That's also the reason why we test this filter outside of
-    # test_sample_filter.py.
+    # before applying this filter.
     query_expr: Optional[QueryExpr] = None
 
     def apply(self, query: QueryType) -> QueryType:
