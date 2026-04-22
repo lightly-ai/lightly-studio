@@ -1,1 +1,1 @@
-export { useInstanceSegmentationPreview } from './useInstanceSegmentationPreview';
+export { useSegmentationMaskPreview } from './useInstanceSegmentationPreview';

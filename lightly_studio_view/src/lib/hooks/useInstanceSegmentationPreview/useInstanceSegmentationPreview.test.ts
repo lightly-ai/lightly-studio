@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { useInstanceSegmentationPreview } from './useInstanceSegmentationPreview';
+import { useSegmentationMaskPreview } from './useInstanceSegmentationPreview';
 
 type ScheduledFrame = {
     id: number;
@@ -27,7 +27,7 @@ type Mock2dContext = {
     lineJoin: CanvasLineJoin;
 };
 
-describe('useInstanceSegmentationPreview', () => {
+describe('useSegmentationMaskPreview', () => {
     let previewCanvas: HTMLCanvasElement;
     let previewContext: Mock2dContext;
     let sourceContext: Mock2dContext;
@@ -143,7 +143,7 @@ describe('useInstanceSegmentationPreview', () => {
     });
 
     it('draws a binary mask into the source canvas alpha channel', () => {
-        const hook = useInstanceSegmentationPreview();
+        const hook = useSegmentationMaskPreview();
 
         hook.drawMaskToCanvas(new Uint8Array([0, 1, 0, 1]), 2, 2);
 
@@ -158,7 +158,7 @@ describe('useInstanceSegmentationPreview', () => {
     });
 
     it('supports destination-out compositing for eraser strokes', () => {
-        const hook = useInstanceSegmentationPreview();
+        const hook = useSegmentationMaskPreview();
 
         hook.drawBrushDot({
             point: { x: 1, y: 1 },
@@ -184,7 +184,7 @@ describe('useInstanceSegmentationPreview', () => {
 
     it('keeps only the latest scheduled preview composition and updates visibility', () => {
         const onPreviewVisibilityChange = vi.fn();
-        const hook = useInstanceSegmentationPreview({ onPreviewVisibilityChange });
+        const hook = useSegmentationMaskPreview({ onPreviewVisibilityChange });
         hook.setPreviewCanvas(previewCanvas);
         hook.drawMaskToCanvas(new Uint8Array([1, 0, 0, 0]), 2, 2);
 
@@ -215,7 +215,7 @@ describe('useInstanceSegmentationPreview', () => {
 
     it('uses the latest scheduled draw state when replacing a queued frame', () => {
         const onPreviewVisibilityChange = vi.fn();
-        const hook = useInstanceSegmentationPreview({ onPreviewVisibilityChange });
+        const hook = useSegmentationMaskPreview({ onPreviewVisibilityChange });
         hook.setPreviewCanvas(previewCanvas);
         hook.drawMaskToCanvas(new Uint8Array([1, 0, 0, 0]), 2, 2);
 
@@ -240,7 +240,7 @@ describe('useInstanceSegmentationPreview', () => {
 
     it('does not compose preview when drawing is disabled', () => {
         const onPreviewVisibilityChange = vi.fn();
-        const hook = useInstanceSegmentationPreview({ onPreviewVisibilityChange });
+        const hook = useSegmentationMaskPreview({ onPreviewVisibilityChange });
         hook.setPreviewCanvas(previewCanvas);
         hook.drawMaskToCanvas(new Uint8Array([1, 0, 0, 0]), 2, 2);
 
@@ -264,7 +264,7 @@ describe('useInstanceSegmentationPreview', () => {
             height: 2
         });
 
-        const hook = useInstanceSegmentationPreview();
+        const hook = useSegmentationMaskPreview();
         hook.drawMaskToCanvas(null, 2, 2);
 
         const mask = hook.toBinaryMaskFromCanvas(2, 2);
@@ -274,7 +274,7 @@ describe('useInstanceSegmentationPreview', () => {
     });
 
     it('cancels scheduled preview compose', () => {
-        const hook = useInstanceSegmentationPreview();
+        const hook = useSegmentationMaskPreview();
         hook.setPreviewCanvas(previewCanvas);
         hook.drawMaskToCanvas(new Uint8Array([1, 0, 0, 0]), 2, 2);
 
@@ -293,7 +293,7 @@ describe('useInstanceSegmentationPreview', () => {
     });
 
     it('cancels scheduled preview compose when clearing preview', () => {
-        const hook = useInstanceSegmentationPreview();
+        const hook = useSegmentationMaskPreview();
         hook.setPreviewCanvas(previewCanvas);
         hook.drawMaskToCanvas(new Uint8Array([1, 0, 0, 0]), 2, 2);
 

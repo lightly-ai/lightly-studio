@@ -63,7 +63,7 @@ def export_collection_annotations(
         output_path = PathlibPath(temp_dir.name) / "coco_instance_segmentation_export.json"
 
         try:
-            image_dataset_export.to_coco_instance_segmentations(
+            image_dataset_export.to_coco_segmentation_masks(
                 session=session,
                 dataset_id=collection.dataset_id,
                 samples=dataset_query,
@@ -77,7 +77,7 @@ def export_collection_annotations(
         output_path = PathlibPath(temp_dir.name) / "pascalvoc"
 
         try:
-            image_dataset_export.to_pascalvoc_instance_segmentation(
+            image_dataset_export.to_pascalvoc_segmentation_mask(
                 session=session,
                 dataset_id=collection.dataset_id,
                 samples=dataset_query,
@@ -269,7 +269,7 @@ def export_collection_youtube_vis(
     output_path = PathlibPath(temp_dir.name) / "youtube_vis_instance_segmentation_export.json"
 
     try:
-        video_dataset_export.to_youtube_vis_instance_segmentation(
+        video_dataset_export.to_youtube_vis_segmentation_mask(
             session=session,
             samples=dataset_query,
             output_json=output_path,
