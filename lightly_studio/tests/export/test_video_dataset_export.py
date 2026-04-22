@@ -40,7 +40,7 @@ class TestVideoDatasetExport:
                 AnnotationCreate(
                     parent_sample_id=frame_0,
                     annotation_label_id=label.annotation_label_id,
-                    annotation_type=AnnotationType.INSTANCE_SEGMENTATION,
+                    annotation_type=AnnotationType.SEGMENTATION_MASK,
                     x=0,
                     y=1,
                     width=1,
@@ -53,7 +53,7 @@ class TestVideoDatasetExport:
                 AnnotationCreate(
                     parent_sample_id=frame_1,
                     annotation_label_id=label.annotation_label_id,
-                    annotation_type=AnnotationType.INSTANCE_SEGMENTATION,
+                    annotation_type=AnnotationType.SEGMENTATION_MASK,
                     x=0,
                     y=1,
                     width=1,

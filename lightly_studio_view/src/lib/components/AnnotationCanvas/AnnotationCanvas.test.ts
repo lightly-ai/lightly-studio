@@ -106,7 +106,7 @@ describe('AnnotationCanvas', () => {
                 height: 8,
                 annotations: [
                     {
-                        annotation_type: 'instance_segmentation',
+                        annotation_type: 'segmentation_mask',
                         annotation_label_name: 'road',
                         segmentation_mask: [0, 3, 2]
                     }

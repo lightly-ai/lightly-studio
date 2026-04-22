@@ -354,7 +354,7 @@ def annotations_test_data(
     annotation_types: list[AnnotationType] = [
         AnnotationType.CLASSIFICATION,
         AnnotationType.OBJECT_DETECTION,
-        AnnotationType.INSTANCE_SEGMENTATION,
+        AnnotationType.SEGMENTATION_MASK,
     ]
 
     annotations_to_create_first_collection: list[AnnotationCreate] = []
@@ -381,7 +381,7 @@ def annotations_test_data(
                 annotation.y = 20
                 annotation.width = 100
                 annotation.height = 200
-            elif annotation_type == AnnotationType.INSTANCE_SEGMENTATION:
+            elif annotation_type == AnnotationType.SEGMENTATION_MASK:
                 annotation.x = 15
                 annotation.y = 25
                 annotation.width = 150

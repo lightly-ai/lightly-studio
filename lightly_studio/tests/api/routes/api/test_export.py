@@ -100,7 +100,7 @@ def test_export_collection_instance_segmentations(
         annotations=[
             AnnotationCreate(
                 annotation_label_id=label.annotation_label_id,
-                annotation_type=AnnotationType.INSTANCE_SEGMENTATION,
+                annotation_type=AnnotationType.SEGMENTATION_MASK,
                 parent_sample_id=image.sample_id,
                 x=2,
                 y=0,
@@ -159,7 +159,7 @@ def test_export_collection_pascalvoc_from_instance_segmentations(
         annotations=[
             AnnotationCreate(
                 annotation_label_id=label.annotation_label_id,
-                annotation_type=AnnotationType.INSTANCE_SEGMENTATION,
+                annotation_type=AnnotationType.SEGMENTATION_MASK,
                 parent_sample_id=image.sample_id,
                 x=1,
                 y=0,
@@ -295,7 +295,7 @@ def test_export_collection_youtube_vis(
             AnnotationCreate(
                 parent_sample_id=frame_0,
                 annotation_label_id=label.annotation_label_id,
-                annotation_type=AnnotationType.INSTANCE_SEGMENTATION,
+                annotation_type=AnnotationType.SEGMENTATION_MASK,
                 x=0,
                 y=1,
                 width=1,

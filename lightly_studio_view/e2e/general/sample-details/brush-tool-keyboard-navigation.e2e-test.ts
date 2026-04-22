@@ -80,7 +80,7 @@ test('brush stays effective across keyboard navigation while creating masks on 3
             body: JSON.stringify({
                 sample_id: `stub-${parentSampleId}-${now}`,
                 parent_sample_id: parentSampleId,
-                annotation_type: 'instance_segmentation',
+                annotation_type: 'segmentation_mask',
                 annotation_label: {
                     annotation_label_id: 'stub-label-id',
                     annotation_label_name: cocoDataset.labels.person.name

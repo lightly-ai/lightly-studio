@@ -25,7 +25,7 @@ def test_update_annotation_instance_segmentation(
     # Get all annotations and pick the first one
     annotations = annotation_resolver.get_all(db_session).annotations
     instance_segmentation_annotation = get_annotation_by_type(
-        annotations=annotations, annotation_type=AnnotationType.INSTANCE_SEGMENTATION
+        annotations=annotations, annotation_type=AnnotationType.SEGMENTATION_MASK
     )
     annotation_id = instance_segmentation_annotation.sample_id
 

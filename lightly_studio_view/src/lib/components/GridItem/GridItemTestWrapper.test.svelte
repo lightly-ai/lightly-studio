@@ -1,20 +1,44 @@
 <script lang="ts">
-    import type { HTMLAttributes } from 'svelte/elements';
     import GridItem from './GridItem.svelte';
 
     let {
         content = '',
         width,
         height,
-        props
+        style,
+        dataTestId = 'grid-item',
+        ariaLabel = 'View item',
+        isSelected = false,
+        tag = true,
+        caption,
+        onSelect,
+        ondblclick
     }: {
         content?: string;
         width?: string | number;
         height?: string | number;
-        props?: HTMLAttributes<HTMLDivElement>;
+        style?: string;
+        dataTestId?: string;
+        ariaLabel?: string;
+        isSelected?: boolean;
+        tag?: boolean;
+        caption?: string;
+        onSelect?: (event: MouseEvent | KeyboardEvent) => void;
+        ondblclick?: (event: MouseEvent) => void;
     } = $props();
 </script>
 
-<GridItem {width} {height} containerProps={props}>
+<GridItem
+    {width}
+    {height}
+    {style}
+    {dataTestId}
+    {ariaLabel}
+    {isSelected}
+    {tag}
+    {caption}
+    {onSelect}
+    {ondblclick}
+>
     {content}
 </GridItem>

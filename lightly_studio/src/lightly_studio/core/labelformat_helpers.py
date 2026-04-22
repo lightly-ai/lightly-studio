@@ -61,7 +61,7 @@ def get_segmentation_annotation_create(
     return AnnotationCreate(
         parent_sample_id=parent_sample_id,
         annotation_label_id=annotation_label_id,
-        annotation_type=AnnotationType.INSTANCE_SEGMENTATION,
+        annotation_type=AnnotationType.SEGMENTATION_MASK,
         x=int(x),
         y=int(y),
         width=int(width),

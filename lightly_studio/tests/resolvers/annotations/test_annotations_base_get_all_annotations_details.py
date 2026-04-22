@@ -43,7 +43,7 @@ def test_segmentation_details(
     """Test that segmentation details are correctly loaded."""
     annotations = annotation_resolver.get_all(
         db_session,
-        filters=AnnotationsFilter(annotation_types=[AnnotationType.INSTANCE_SEGMENTATION]),
+        filters=AnnotationsFilter(annotation_types=[AnnotationType.SEGMENTATION_MASK]),
     ).annotations
 
     assert annotations
