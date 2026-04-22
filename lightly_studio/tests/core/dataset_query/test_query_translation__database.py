@@ -201,7 +201,7 @@ def test_to_match_expression__instance_segmentation_match(db_session: Session) -
         collection_id=cid,
         sample_id=image1.sample_id,
         annotation_label_id=label.annotation_label_id,
-        annotation_type=AnnotationType.INSTANCE_SEGMENTATION,
+        annotation_type=AnnotationType.SEGMENTATION_MASK,
     )
 
     expr = InstanceSegmentationMatchExpr(
