@@ -15,43 +15,11 @@ import {
     type DefaultSharedModuleContext,
     inject,
     type LangiumServices,
-    type LangiumSharedServices,
-    type PartialLangiumServices
+    type LangiumSharedServices
 } from 'langium';
 import { LightlyQueryGeneratedModule } from './generated/module.js';
-import {
-    LightlyQueryValidationRegistry,
-    LightlyQueryValidator
-} from './lightly-query-validator.js';
 
-// Services this language adds on top of Langium's defaults.
-export type LightlyQueryAddedServices = {
-    validation: {
-        LightlyQueryValidator: LightlyQueryValidator;
-    };
-};
-
-export type LightlyQueryServices = LangiumServices & LightlyQueryAddedServices;
-
-// DI module — keys here override the default and generated modules.
-//
-// Example: add "type '.' → suggest fields" by subclassing
-// DefaultCompletionProvider and registering under `lsp.CompletionProvider`:
-//
-//   class LightlyQueryCompletionProvider extends DefaultCompletionProvider {
-//       override readonly completionOptions = { triggerCharacters: ['.'] };
-//       protected override completionFor(ctx, next, accept) { /* emit items */ }
-//   }
-//   // lsp: { CompletionProvider: (s) => new LightlyQueryCompletionProvider(s) }
-export const LightlyQueryModule: Module<
-    LightlyQueryServices,
-    PartialLangiumServices & LightlyQueryAddedServices
-> = {
-    validation: {
-        ValidationRegistry: (services) => new LightlyQueryValidationRegistry(services),
-        LightlyQueryValidator: () => new LightlyQueryValidator()
-    }
-};
+export type LightlyQueryServices = LangiumServices;
 
 // Composes three modules (later overrides earlier): Langium defaults →
 // generated (grammar) → custom above. Registers the language in the shared
@@ -60,11 +28,7 @@ export function createLightlyQueryServices(
     context: DefaultSharedModuleContext
 ): LangiumSharedServices {
     const shared = createDefaultSharedModule(context);
-    const LightlyQuery = inject(
-        createDefaultModule({ shared }),
-        LightlyQueryGeneratedModule,
-        LightlyQueryModule
-    );
+    const LightlyQuery = inject(createDefaultModule({ shared }), LightlyQueryGeneratedModule);
     shared.ServiceRegistry.register(LightlyQuery);
     return shared;
 }
