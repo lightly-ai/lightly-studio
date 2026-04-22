@@ -187,6 +187,7 @@
                                 {width}
                                 {height}
                                 {style}
+                                dataIndex={index}
                                 dataTestId="frame-grid-item"
                                 isSelected={$selectedSampleIds.has(items[index].sample_id)}
                                 ariaLabel={`View sample: ${items[index].sample_id}`}
