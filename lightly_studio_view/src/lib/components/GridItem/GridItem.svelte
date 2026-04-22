@@ -12,6 +12,7 @@
         isSelected = false,
         tag = true,
         caption,
+        dataSampleName,
         dataIndex,
         onSelect,
         ondblclick
@@ -25,6 +26,7 @@
         isSelected?: boolean;
         tag?: boolean;
         caption?: string;
+        dataSampleName?: string;
         dataIndex?: number;
         onSelect?: (event: MouseEvent | KeyboardEvent) => void;
         ondblclick?: (event: MouseEvent) => void;
@@ -54,6 +56,7 @@
         class:grid-item-selected={isSelected}
         style="width: {formatSize(width)}; height: {formatSize(height)};"
         data-testid={dataTestId}
+        data-sample-name={dataSampleName}
         data-index={dataIndex}
         {ondblclick}
         onclick={handleOnClick}

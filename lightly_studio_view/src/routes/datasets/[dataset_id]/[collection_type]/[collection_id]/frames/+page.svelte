@@ -187,6 +187,7 @@
                                 {width}
                                 {height}
                                 {style}
+                                dataSampleName={items[index].file_name ?? items[index].sample_id}
                                 dataIndex={index}
                                 dataTestId="frame-grid-item"
                                 isSelected={$selectedSampleIds.has(items[index].sample_id)}
