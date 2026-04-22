@@ -171,7 +171,7 @@ class TestDataset:
         assert len(all_annotations) == 2
         assert all(a.annotation_type == "object_detection" for a in all_annotations)
 
-    def test_add_videos_from_youtube_vis__instance_segmentation(
+    def test_add_videos_from_youtube_vis__segmentation_mask(
         self,
         patch_collection: None,  # noqa: ARG002
         tmp_path: Path,
