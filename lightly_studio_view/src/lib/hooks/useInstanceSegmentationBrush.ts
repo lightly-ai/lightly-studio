@@ -16,7 +16,7 @@ import { useUpdateAnnotationsMutation } from './useUpdateAnnotationsMutation/use
 import { applySegmentationMaskConstraints } from '$lib/utils/segmentationOverlap';
 import { restoreOverriddenSegmentationAnnotationsForUndo } from '$lib/services/restoreOverriddenSegmentationAnnotationsForUndo';
 
-export function useInstanceSegmentationBrush({
+export function useSegmentationMaskBrush({
     collectionId,
     datasetId,
     sampleId,
@@ -117,7 +117,7 @@ export function useInstanceSegmentationBrush({
                     segmentation_mask: rle
                 });
 
-                setAnnotationType('instance_segmentation');
+                setAnnotationType('segmentation_mask');
                 refetch();
 
                 addAnnotationUpdateToUndoStack({
@@ -152,7 +152,7 @@ export function useInstanceSegmentationBrush({
 
         const newAnnotation = await createAnnotation({
             parent_sample_id: sampleId,
-            annotation_type: 'instance_segmentation',
+            annotation_type: 'segmentation_mask',
             x: bbox.x,
             y: bbox.y,
             width: bbox.width,
@@ -169,7 +169,7 @@ export function useInstanceSegmentationBrush({
             onUndo: restoreOverriddenAnnotations
         });
 
-        setAnnotationType('instance_segmentation');
+        setAnnotationType('segmentation_mask');
         setAnnotationLabel(label.annotation_label_name!);
         setAnnotationId(newAnnotation.sample_id);
         setLastCreatedAnnotationId(newAnnotation.sample_id);
