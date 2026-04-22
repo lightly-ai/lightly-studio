@@ -46,7 +46,7 @@
         switch (annotationType) {
             case 'object_detection':
                 return 'Object Detection';
-            case 'instance_segmentation':
+            case 'segmentation_mask':
                 return 'Segmentation Mask';
             case 'classification':
                 return 'Image Classification';

@@ -47,6 +47,7 @@ export { default as Typography } from '$lib/components/Typography/Typography.sve
 export { default as GroupsGrid } from '$lib/components/GroupsGrid/GroupsGrid.svelte';
 export { default as SampleGrid } from '$lib/components/SampleGrid/SampleGrid.svelte';
 export { default as SampleGridItem } from '$lib/components/SampleGridItem/SampleGridItem.svelte';
+export { default as GridItem } from '$lib/components/GridItem/GridItem.svelte';
 export { default as VideoFrameItem } from '$lib/components/VideoFrameItem/VideoFrameItem.svelte';
 export { default as SegmentTags } from '$lib/components/SegmentTags/SegmentTags.svelte';
 export { default as MetadataSegment } from '$lib/components/MetadataSegment/MetadataSegment.svelte';
