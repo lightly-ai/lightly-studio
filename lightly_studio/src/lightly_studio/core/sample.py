@@ -247,7 +247,7 @@ class Sample(ABC):
                 annotations.append(
                     ObjectDetectionAnnotation(inner=annotation.object_detection_details)
                 )
-            elif annotation.annotation_type == AnnotationType.INSTANCE_SEGMENTATION:
+            elif annotation.annotation_type == AnnotationType.SEGMENTATION_MASK:
                 assert annotation.segmentation_details is not None, "Invalid sample annotation data"
                 annotations.append(
                     InstanceSegmentationAnnotation(inner=annotation.segmentation_details)

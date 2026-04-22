@@ -73,7 +73,7 @@ class InstanceSegmentationMatchExpression(MatchExpression):
         """Get the instance segmentation match expression."""
         return SampleTable.annotations.any(
             and_(
-                col(AnnotationBaseTable.annotation_type) == AnnotationType.INSTANCE_SEGMENTATION,
+                col(AnnotationBaseTable.annotation_type) == AnnotationType.SEGMENTATION_MASK,
                 self.criterion.get(),
             )
         )
