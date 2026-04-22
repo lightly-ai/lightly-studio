@@ -1,19 +1,7 @@
 <script lang="ts">
     import { onMount } from 'svelte';
-    import * as monaco from 'monaco-editor';
-    import { MonacoLanguageClient } from 'monaco-languageclient';
-    import { CloseAction, ErrorAction } from 'vscode-languageclient';
-    import {
-        BrowserMessageReader,
-        BrowserMessageWriter
-    } from 'vscode-languageserver-protocol/browser.js';
-    import {
-        createLightlyQueryLanguageServerWorker,
-        LIGHTLY_QUERY_DEFAULT_VALUE,
-        LIGHTLY_QUERY_LANGUAGE_ID,
-        LIGHTLY_QUERY_THEME_ID,
-        registerLightlyQueryMonacoLanguage
-    } from './monaco-lightly-query.js';
+    import { LIGHTLY_QUERY_DEFAULT_VALUE } from './monaco-lightly-query.js';
+    import { useLightlyQueryEditor } from './useLightlyQueryEditor.js';
 
     interface QueryEditorProps {
         value?: string;
@@ -29,98 +17,18 @@
 
     let containerEl: HTMLDivElement | null = null;
 
-    let editor: monaco.editor.IStandaloneCodeEditor | null = null;
-    let languageClient: MonacoLanguageClient | null = null;
-    let worker: Worker | null = null;
-
-    function createLanguageClient(languageWorker: Worker): MonacoLanguageClient {
-        const reader = new BrowserMessageReader(languageWorker);
-        const writer = new BrowserMessageWriter(languageWorker);
-
-        return new MonacoLanguageClient({
-            name: 'LightlyQuery Language Client',
-            clientOptions: {
-                documentSelector: [{ language: LIGHTLY_QUERY_LANGUAGE_ID }],
-                errorHandler: {
-                    error: () => ({ action: ErrorAction.Continue }),
-                    closed: () => ({ action: CloseAction.DoNotRestart })
-                }
-            },
-            messageTransports: { reader, writer }
-        });
-    }
+    const editor = useLightlyQueryEditor({
+        value: () => value,
+        onValueChange: (next) => {
+            value = next;
+        },
+        readOnly: () => readOnly
+    });
 
     onMount(() => {
-        if (!containerEl) {
-            return;
+        if (containerEl) {
+            editor.mount(containerEl);
         }
-
-        registerLightlyQueryMonacoLanguage();
-
-        const modelUri = monaco.Uri.parse(`inmemory://model/${crypto.randomUUID()}.lql`);
-        const model = monaco.editor.createModel(value, LIGHTLY_QUERY_LANGUAGE_ID, modelUri);
-
-        editor = monaco.editor.create(containerEl, {
-            model,
-            theme: LIGHTLY_QUERY_THEME_ID,
-            readOnly,
-            automaticLayout: true,
-            minimap: {
-                enabled: false
-            },
-            scrollBeyondLastLine: false,
-            fontSize: 13
-        });
-
-        editor.onDidChangeModelContent(() => {
-            value = editor?.getValue() ?? value;
-        });
-
-        worker = createLightlyQueryLanguageServerWorker();
-        languageClient = createLanguageClient(worker);
-
-        let cancelled = false;
-        const startupPromise = languageClient.start().catch((error) => {
-            if (!cancelled) {
-                console.error('Failed to start LightlyQuery language client:', error);
-            }
-        });
-
-        return () => {
-            cancelled = true;
-            const clientToStop = languageClient;
-            const editorToDispose = editor;
-            const workerToTerminate = worker;
-
-            languageClient = null;
-            editor = null;
-            worker = null;
-
-            void startupPromise.finally(async () => {
-                try {
-                    await clientToStop?.stop();
-                } catch (error) {
-                    console.error('Failed to stop LightlyQuery language client:', error);
-                }
-                editorToDispose?.dispose();
-                model.dispose();
-                workerToTerminate?.terminate();
-            });
-        };
-    });
-
-    $effect(() => {
-        if (!editor) {
-            return;
-        }
-
-        if (value !== editor.getValue()) {
-            editor.setValue(value);
-        }
-    });
-
-    $effect(() => {
-        editor?.updateOptions({ readOnly });
     });
 </script>
 
