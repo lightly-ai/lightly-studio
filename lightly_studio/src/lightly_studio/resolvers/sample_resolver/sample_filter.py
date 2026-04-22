@@ -6,6 +6,7 @@ from uuid import UUID
 from pydantic import BaseModel
 from sqlmodel import col, select
 
+from lightly_studio.core.dataset_query import query_translation
 from lightly_studio.models.metadata import SampleMetadataTable
 from lightly_studio.models.query_expr import QueryExpr
 from lightly_studio.models.sample import SampleTable
@@ -80,7 +81,5 @@ class SampleFilter(BaseModel):
     def _apply_query_expr_filter(self, query: QueryType) -> QueryType:
         if self.query_expr is None:
             return query
-        from lightly_studio.core.dataset_query.query_translation import to_match_expression  # noqa: I001, PLC0415
-
-        match_expression = to_match_expression(self.query_expr.match_expr)
+        match_expression = query_translation.to_match_expression(self.query_expr.match_expr)
         return query.where(match_expression.get())
