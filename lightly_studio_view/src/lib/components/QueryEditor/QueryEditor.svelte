@@ -3,6 +3,7 @@
     import { Button } from '$lib/components/ui/button';
     import { LIGHTLY_QUERY_DEFAULT_VALUE } from './monaco-lightly-query.js';
     import { useLightlyQueryEditor } from './useLightlyQueryEditor.js';
+    import Typography from '../Typography/Typography.svelte';
 
     interface QueryEditorProps {
         value?: string;
@@ -35,56 +36,22 @@
     });
 </script>
 
-<div class="query-editor">
-    <div class="query-editor__surface" style={`height: ${height}`} bind:this={containerEl}></div>
+<div class="w-full overflow-hidden rounded-lg border border-[#3c3c3c] bg-[#1e1e1e]">
+    <div style={`height: ${height}`} bind:this={containerEl}></div>
     {#if onSave}
-        <div class="query-editor__toolbar">
+        <div
+            class="flex items-center justify-end gap-2 border-b border-[#3c3c3c] bg-[#252526] px-2 py-1 text-xs text-[#cccccc]"
+        >
             <Button
                 type="button"
                 size="sm"
                 variant="ghost"
-                class="query-editor__action"
+                class="h-6 px-2 text-[#cccccc] hover:bg-white/10 hover:text-white"
                 disabled={readOnly}
                 onclick={() => onSave?.(value)}
             >
-                Save
+                <Typography variant="caption">Save</Typography>
             </Button>
         </div>
     {/if}
 </div>
-
-<style>
-    .query-editor {
-        width: 100%;
-        border: 1px solid rgb(60 60 60);
-        border-radius: 0.5rem;
-        overflow: hidden;
-        background: #1e1e1e;
-    }
-
-    .query-editor__toolbar {
-        display: flex;
-        align-items: center;
-        justify-content: flex-end;
-        gap: 0.5rem;
-        padding: 0.25rem 0.5rem;
-        background: #252526;
-        border-bottom: 1px solid rgb(60 60 60);
-        font-family:
-            ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New',
-            monospace;
-        font-size: 12px;
-        color: #cccccc;
-    }
-
-    .query-editor :global(.query-editor__action) {
-        height: 1.5rem;
-        padding: 0 0.5rem;
-        color: #cccccc;
-    }
-
-    .query-editor :global(.query-editor__action:hover) {
-        background: rgba(255, 255, 255, 0.08);
-        color: #ffffff;
-    }
-</style>
