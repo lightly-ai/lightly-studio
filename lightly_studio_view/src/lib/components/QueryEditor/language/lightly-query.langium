@@ -73,11 +73,24 @@ SampleUnary<isImage> returns Expression:
     | AnnotationQuery;
 
 SampleComparison<isImage> returns ComparisonExpression:
-  SampleFieldReference<isImage> {ComparisonExpression.left=current} operator=('==' | '!=' | '<' | '>' | '<=' | '>=') right=Literal;
+  SampleIntFieldReference<isImage> {ComparisonExpression.left=current} operator=('==' | '!=' | '<' | '>' | '<=' | '>=') right=IntLiteral
+   | SampleFloatFieldReference<isImage> {ComparisonExpression.left=current} operator=('==' | '!=' | '<' | '>' | '<=' | '>=') right=NumericLiteral
+   | SampleStringFieldReference<isImage> {ComparisonExpression.left=current} operator=('==' | '!=') right=StringLiteral
+   | SampleDateTimeFieldReference<isImage> {ComparisonExpression.left=current} operator=('==' | '!=' | '<' | '>' | '<=' | '>=') right=StringLiteral;
 
-SampleFieldReference<isImage> returns QualifiedFieldReference:
-  (<isImage> {QualifiedFieldReference} receiver=ImageSampleFieldReceiver '.' member=ImageSampleFieldName)
-    | (<!isImage> {QualifiedFieldReference} receiver=VideoSampleFieldReceiver '.' member=VideoSampleFieldName);
+SampleIntFieldReference<isImage> returns QualifiedFieldReference:
+  (<isImage> {QualifiedFieldReference} receiver=ImageFieldReceiver '.' member=ImageIntFieldName)
+    | (<!isImage> {QualifiedFieldReference} receiver=VideoFieldReceiver '.' member=VideoIntFieldName);
+
+SampleFloatFieldReference<isImage> returns QualifiedFieldReference:
+  (<!isImage> {QualifiedFieldReference} receiver=VideoFieldReceiver '.' member=VideoFloatFieldName);
+
+SampleStringFieldReference<isImage> returns QualifiedFieldReference:
+  (<isImage> {QualifiedFieldReference} receiver=ImageFieldReceiver '.' member=ImageStringFieldName)
+    | (<!isImage> {QualifiedFieldReference} receiver=VideoFieldReceiver '.' member=VideoStringFieldName);
+
+SampleDateTimeFieldReference<isImage> returns QualifiedFieldReference:
+  (<isImage> {QualifiedFieldReference} receiver=ImageFieldReceiver '.' member=ImageDateTimeFieldName);
 
 ObjectDetection returns Expression:
   ObjectDetectionOr;
@@ -112,34 +125,50 @@ TagInExpression returns Expression:
   {TagInExpression} 'tags.contains(' tag_name=StringLiteral ')' |
     {TagInExpression} tag_name=StringLiteral 'in' 'tags';
 
-ImageSampleFieldReceiver returns string:
+ImageFieldReceiver returns string:
   'Image' | 'ImageSampleField';
 
-VideoSampleFieldReceiver returns string:
+VideoFieldReceiver returns string:
   'Video' | 'VideoSampleField';
 
-CommonSampleFieldName returns string:
+ImageIntFieldName returns string:
+  'height' | 'width';
+
+ImageStringFieldName returns string:
+  'file_name' | 'file_path_abs';
+
+ImageDateTimeFieldName returns string:
   'created_at';
 
-ImageSampleFieldName returns string:
-  'file_name' | 'file_path_abs' | 'height' | 'width' | CommonSampleFieldName;
+VideoIntFieldName returns string:
+  'height' | 'width';
 
-VideoSampleFieldName returns string:
-  'file_name' | 'file_path_abs' | 'height' | 'width' | 'duration_s' | 'fps' | CommonSampleFieldName;
+VideoFloatFieldName returns string:
+  'duration_s' | 'fps';
+
+VideoStringFieldName returns string:
+  'file_name' | 'file_path_abs';
 
 ObjectDetectionFieldName returns string:
   'height' | 'label' | 'width' | 'x' | 'y';
 
 Literal returns Expression:
-  NumberLiteral | StringLiteral;
+  IntLiteral | FloatLiteral | StringLiteral;
 
-NumberLiteral returns Expression:
-  {NumberLiteral} value=NUMBER;
+NumericLiteral returns Expression:
+  IntLiteral | FloatLiteral;
+
+IntLiteral returns Expression:
+  {NumberLiteral} value=INT;
+
+FloatLiteral returns Expression:
+  {NumberLiteral} value=FLOAT;
 
 StringLiteral returns Expression:
   {StringLiteral} value=STRING;
 
-terminal NUMBER returns number: /[0-9]+(\.[0-9]*)?/;
+terminal INT returns number: /[0-9]+/;
+terminal FLOAT returns number: /[0-9]+(\.[0-9]*)?/;
 terminal STRING: /"([^"\\\n\r]|\\.)*"|'([^'\\\n\r]|\\.)*'/;
 
 hidden terminal WS: /\s+/;

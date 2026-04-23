@@ -139,10 +139,10 @@ const services = createLightlyQueryServices().LightlyQuery;
 const parser = services.parser.LangiumParser;
 
 const queries = [
-    "(Image.width > 100 OR Image.height > 100 OR Image.created_at == 12) AND object_detection(label == 'car')",
+    "(Image.width > 100 OR Image.height > 100 OR Image.created_at == '2026-04-23 12:47:18+02:00') AND object_detection(label == 'car')",
     "tags.contains('dog') or 'cat' IN tags AND Image.width > 100",
-    "tags.contains('dog') OR AND('cat' IN tags, Image.created_at >= 12)",
-    "video: NOT (Video.width < 50 AND NOT tags.contains('low_res'))",
+    "tags.contains('dog') OR AND('cat' IN tags, Image.width >= 12)",
+    "video: NOT (Video.fps < 30.0 AND NOT tags.contains('low_res'))",
     "object_detection(label == 'car' AND x < 10 OR label == 'truck' AND x > 90)"
 ];
 
@@ -169,7 +169,7 @@ const expectedOutputs = [
                         kind: 'COMPARISON',
                         field: 'created_at',
                         operator: '==',
-                        value: 12
+                        value: '2026-04-23 12:47:18+02:00'
                     }
                 ]
             },
@@ -225,7 +225,7 @@ const expectedOutputs = [
                     },
                     {
                         kind: 'COMPARISON',
-                        field: 'created_at',
+                        field: 'width',
                         operator: '>=',
                         value: 12
                     }
@@ -240,9 +240,9 @@ const expectedOutputs = [
             terms: [
                 {
                     kind: 'COMPARISON',
-                    field: 'width',
+                    field: 'fps',
                     operator: '<',
-                    value: 50
+                    value: 30.0
                 },
                 {
                     kind: 'NOT',
