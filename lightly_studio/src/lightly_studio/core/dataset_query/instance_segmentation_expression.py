@@ -65,7 +65,7 @@ class InstanceSegmentationQuery:
 
 @dataclass
 class InstanceSegmentationMatchExpression(MatchExpression):
-    """Expression for checking if a sample has an segmentation mask matching a criterion."""
+    """Expression for checking if a sample has a segmentation mask matching a criterion."""
 
     criterion: MatchExpression
 
