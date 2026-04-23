@@ -1,5 +1,5 @@
 import { expect, type Page } from '@playwright/test';
-import { pressButton } from '../utils';
+import { waitForRequestsToSettle } from '../utils';
 
 export class VideosPage {
     constructor(public readonly page: Page) {
@@ -62,24 +62,29 @@ export class VideosPage {
     }
 
     async createTag(tagName: string): Promise<void> {
-        const responsePromise = this.page.waitForResponse(
+        const createTagResponsePromise = this.page.waitForResponse(
             (response) =>
                 response.request().method() === 'POST' &&
-                response.url().includes('/tags') &&
+                /\/tags(?:\?|$)/.test(response.request().url()) &&
                 response.status() === 201
         );
+        const assignTagResponsePromise = this.page.waitForResponse(
+            (response) =>
+                response.request().method() === 'POST' &&
+                response.url().includes('/add/samples') &&
+                response.status() >= 200 &&
+                response.status() < 300
+        );
 
-        await pressButton(this.page, 'tag-create-dialog-button');
-        const tagTextInput = this.page.getByTestId('tag-create-dialog-input');
-        await tagTextInput.click();
+        const tagInput = this.page.getByPlaceholder('Assign tag to selection');
+        await expect(tagInput).toBeEnabled();
+        await tagInput.fill(tagName);
+        await this.page.getByRole('button', { name: `Create "${tagName}"` }).click();
 
-        await this.page.waitForTimeout(10);
-        await this.page.keyboard.type(tagName);
-        await this.page.waitForTimeout(100);
-        await pressButton(this.page, 'tag-create-dialog-create');
-        await pressButton(this.page, 'tag-create-dialog-save');
-
-        await responsePromise;
+        await createTagResponsePromise;
+        await assignTagResponsePromise;
+        await waitForRequestsToSettle(this.page, '/tags');
+        await expect(this.getTagsMenuItem(tagName)).toBeVisible();
     }
 
     getTagsMenuItem(tagName: string) {

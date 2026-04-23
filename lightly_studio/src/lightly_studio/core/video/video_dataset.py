@@ -20,7 +20,7 @@ from lightly_studio.core.video.add_videos import VIDEO_EXTENSIONS
 from lightly_studio.core.video.video_sample import VideoSample
 from lightly_studio.dataset import fsspec_lister
 from lightly_studio.dataset.embedding_manager import EmbeddingManagerProvider
-from lightly_studio.export.export_video_dataset import VideoDatasetExport
+from lightly_studio.export.video_dataset_export import VideoDatasetExport
 from lightly_studio.models.annotation.annotation_base import AnnotationType
 from lightly_studio.models.collection import SampleType
 from lightly_studio.resolvers import video_resolver

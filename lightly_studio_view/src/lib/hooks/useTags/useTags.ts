@@ -12,6 +12,7 @@ interface UseTagsReturn {
     tags: Readable<Tag[]>;
     tagsSelected: Readable<Set<string>>;
     clearTagsSelected: () => void;
+    clearTagSelected: (tagId: string) => void;
     loadTags: () => void;
     tagSelectionToggle: (tagId: string) => void;
     isLoading: Readable<boolean>;
@@ -42,11 +43,25 @@ export function useTags(options: UseTagsOptions): UseTagsReturn {
                     throw new Error(JSON.stringify(response.error));
                 }
                 if (response.data) {
+                    const validTagIds = response.data.map((tag) => tag.tag_id);
+
                     // Store tags by collection_id to prevent preloading from overwriting other collections' tags
                     tagsData.update((tagsByCollection) => ({
                         ...tagsByCollection,
                         [collection_id]: response.data ?? []
                     }));
+
+                    tagsSelectedByCollection.update((selectedByCollection) => {
+                        const selected = selectedByCollection[collection_id] ?? new Set<string>();
+                        const prunedSelected = new Set(
+                            Array.from(selected).filter((tagId) => validTagIds.includes(tagId))
+                        );
+
+                        return {
+                            ...selectedByCollection,
+                            [collection_id]: prunedSelected
+                        };
+                    });
                 }
             })
             .catch((err) => {
@@ -103,12 +118,25 @@ export function useTags(options: UseTagsOptions): UseTagsReturn {
         });
     };
 
+    const clearTagSelected = (tagId: string) => {
+        tagsSelectedByCollection.update((selectedByCollection) => {
+            const selected = new Set(selectedByCollection[collection_id] ?? []);
+            selected.delete(tagId);
+
+            return {
+                ...selectedByCollection,
+                [collection_id]: selected
+            };
+        });
+    };
+
     return {
         tags: readonly(tags),
         loadTags,
         tagsSelected: readonly(tagsSelectedForCollection),
         tagSelectionToggle,
         clearTagsSelected,
+        clearTagSelected,
         isLoading: readonly(isLoading),
         error
     };

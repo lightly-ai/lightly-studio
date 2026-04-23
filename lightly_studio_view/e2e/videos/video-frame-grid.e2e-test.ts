@@ -57,6 +57,23 @@ test.describe('video-frames-page-flow', () => {
                 youtubeVisVideosDataset.labels.elephant.frameCount
         );
     });
+
+    test('Tags can be created from the side panel for selected frames', async ({
+        videoFramesPage
+    }) => {
+        const tagName = `frame_tag_${Date.now()}`;
+
+        await videoFramesPage.getVideoFrameByIndex(0).click();
+        await videoFramesPage.getVideoFrameByIndex(1).click();
+        expect(await videoFramesPage.getNumSelectedSamples()).toBe(2);
+
+        await videoFramesPage.createTag(tagName);
+        await videoFramesPage.pressTag(tagName);
+
+        await expect(videoFramesPage.getVideoFrames()).toHaveCount(2, {
+            timeout: 10000
+        });
+    });
 });
 
 test('We can see clicked element when navigating back from details', async ({

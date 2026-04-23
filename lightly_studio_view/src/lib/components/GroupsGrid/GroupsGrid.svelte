@@ -53,17 +53,25 @@
             </div>
         </div>
     {:else}
-        <Grid itemCount={groups.length} {columnCount}>
+        <Grid
+            itemCount={groups.length}
+            {columnCount}
+            viewportProps={{ 'data-testid': 'groups-grid-viewport' }}
+            gridProps={{ 'data-testid': 'groups-grid' }}
+        >
             {#snippet gridItem({ index, style, width, height })}
-                <GridItem {width} {height} containerProps={{ style }}>
+                <GridItem
+                    {width}
+                    {height}
+                    {style}
+                    dataTestId={`group-grid-item-button-${groups[index].sample_id}`}
+                    tag={false}
+                    ondblclick={() => handleDblClick(groups[index])}
+                    ariaLabel={`View group ${index + 1}`}
+                >
                     <GroupGridItem
                         sample={groups[index].group_preview}
                         sample_count={groups[index].sample_count}
-                        containerProps={{
-                            tabindex: 0,
-                            role: 'button',
-                            ondblclick: () => handleDblClick(groups[index])
-                        }}
                         {width}
                         {height}
                     />
