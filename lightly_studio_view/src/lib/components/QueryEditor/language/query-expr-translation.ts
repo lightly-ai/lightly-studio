@@ -16,11 +16,11 @@ export type QueryExprTranslationResult =
     | { status: 'ok'; queryExpr: QueryExpr }
     | { status: 'error'; errors: QueryParseError[] };
 
-export const TranslateQueryExprRequest = new RequestType<
+export const QueryExprTranslationRequest = new RequestType<
     void,
     QueryExprTranslationResult | null,
     never
->('lightly-query/translateQueryExpr');
+>('lightly-query/queryExprTranslation');
 
 export function toQueryExpr(parseResult: {
     lexerErrors: Array<{ message: string; line?: number; column?: number }>;

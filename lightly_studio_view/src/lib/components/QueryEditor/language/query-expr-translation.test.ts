@@ -1,10 +1,10 @@
 import { describe, it, expect } from 'vitest';
-import { TranslateQueryExprRequest, toQueryExpr } from './query-expr-translation.js';
+import { QueryExprTranslationRequest, toQueryExpr } from './query-expr-translation.js';
 import type { Query } from './generated/ast.js';
 
-describe('TranslateQueryExprRequest', () => {
+describe('QueryExprTranslationRequest', () => {
     it('has the expected method name', () => {
-        expect(TranslateQueryExprRequest.method).toBe('lightly-query/translateQueryExpr');
+        expect(QueryExprTranslationRequest.method).toBe('lightly-query/queryExprTranslation');
     });
 });
 

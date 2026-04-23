@@ -21,7 +21,7 @@ import {
     LightlyQueryGeneratedSharedModule
 } from './generated/module.js';
 import {
-    TranslateQueryExprRequest,
+    QueryExprTranslationRequest,
     type QueryExprTranslationResult,
     toQueryExpr
 } from './query-expr-translation.js';
@@ -39,7 +39,7 @@ export function createLightlyQueryServices(
     shared.ServiceRegistry.register(LightlyQuery);
     let latestTranslation: QueryExprTranslationResult | null = null;
 
-    shared.lsp?.Connection.onRequest(TranslateQueryExprRequest, () => latestTranslation);
+    shared.lsp?.Connection.onRequest(QueryExprTranslationRequest, () => latestTranslation);
 
     // `onDocumentPhase` fires per-document even when rapid typing cancels
     // in-flight builds, so the worker-side cache stays aligned with the most

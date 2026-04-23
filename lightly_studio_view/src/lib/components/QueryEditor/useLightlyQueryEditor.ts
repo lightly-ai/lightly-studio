@@ -23,7 +23,7 @@ import {
 } from './monaco-lightly-query.js';
 import { useMonacoEditor, type MonacoEditorHandle } from './useMonacoEditor.svelte.js';
 import {
-    TranslateQueryExprRequest,
+    QueryExprTranslationRequest,
     type QueryExprTranslationResult
 } from './language/query-expr-translation.js';
 
@@ -96,13 +96,11 @@ export function useLightlyQueryEditor(
             messageTransports: { reader, writer }
         });
 
-        startupPromise = languageClient
-            .start()
-            .catch((error) => {
-                if (!isDestroyed) {
-                    console.error('Failed to start LightlyQuery language client:', error);
-                }
-            });
+        startupPromise = languageClient.start().catch((error) => {
+            if (!isDestroyed) {
+                console.error('Failed to start LightlyQuery language client:', error);
+            }
+        });
     }
 
     async function getLatestTranslationResult(): Promise<QueryExprTranslationResult | null> {
@@ -112,7 +110,7 @@ export function useLightlyQueryEditor(
         }
 
         try {
-            return await languageClient.sendRequest(TranslateQueryExprRequest);
+            return await languageClient.sendRequest(QueryExprTranslationRequest);
         } catch (error) {
             console.error('Failed to fetch latest LightlyQuery translation result:', error);
             return null;
