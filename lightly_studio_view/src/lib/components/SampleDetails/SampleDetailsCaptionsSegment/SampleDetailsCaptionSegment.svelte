@@ -1,6 +1,6 @@
 <script lang="ts">
     import type { CaptionView } from '$lib/api/lightly_studio_local';
-    import { Segment } from '$lib/components';
+    import Segment from '$lib/components/Segment/Segment.svelte';
     import CaptionField from '$lib/components/CaptionField/CaptionField.svelte';
     import CreateCaptionField from '$lib/components/CaptionField/CreateCaptionField.svelte';
     import { useCreateCaption } from '$lib/hooks/useCreateCaption/useCreateCaption';

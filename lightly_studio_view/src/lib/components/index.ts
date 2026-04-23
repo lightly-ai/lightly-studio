@@ -24,7 +24,6 @@ export { default as SampleImage } from '$lib/components/SampleImage/index.svelte
 export { default as Samples } from '$lib/components/Samples/Samples.svelte';
 export { default as SelectableBox } from '$lib/components/SelectableBox/SelectableBox.svelte';
 export { SettingsDialog } from '$lib/components/Settings/';
-export { default as TagCreateDialog } from '$lib/components/TagCreateDialog/TagCreateDialog.svelte';
 export { default as TagsMenu } from '$lib/components/TagsMenu/TagsMenu.svelte';
 export { default as UserInfo } from '$lib/components/UserInfo/index.svelte';
 export { default as CreateSelectionDialog } from '$lib/components/Selection/CreateSelectionDialog.svelte';
@@ -48,6 +47,8 @@ export { default as Typography } from '$lib/components/Typography/Typography.sve
 export { default as GroupsGrid } from '$lib/components/GroupsGrid/GroupsGrid.svelte';
 export { default as SampleGrid } from '$lib/components/SampleGrid/SampleGrid.svelte';
 export { default as SampleGridItem } from '$lib/components/SampleGridItem/SampleGridItem.svelte';
+export { default as GridItem } from '$lib/components/GridItem/GridItem.svelte';
+export { GridContainer } from '$lib/components/GridContainer';
 export { default as VideoFrameItem } from '$lib/components/VideoFrameItem/VideoFrameItem.svelte';
 export { default as SegmentTags } from '$lib/components/SegmentTags/SegmentTags.svelte';
 export { default as MetadataSegment } from '$lib/components/MetadataSegment/MetadataSegment.svelte';
@@ -57,3 +58,5 @@ export { default as GroupsComponentsMenu } from '$lib/components/GroupsComponent
 export { default as LayoutCard } from '$lib/components/LayoutCard/LayoutCard.svelte';
 export { default as SelectionPill } from '$lib/components/SelectionPill/SelectionPill.svelte';
 export { default as Separator } from '$lib/components/ui/separator/separator.svelte';
+export { default as CollectionSearchImage } from '$lib/components/CollectionSearch/CollectionSearchImage/CollectionSearchImage.svelte';
+export { default as CollectionSearchInput } from '$lib/components/CollectionSearch/SearchInput/CollectionSearchInput.svelte';

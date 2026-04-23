@@ -3,7 +3,7 @@ import { EmbeddingView, type Point } from 'embedding-atlas/svelte';
 import type { ComponentProps } from 'svelte';
 import type { ArrowData } from '../useArrowData/useArrowData';
 import { getCategoryBySelection } from '../getCategoryBySelection/getCategoryBySelection';
-import { FILTERED_CATEGORY, SELECTED_CATEGORY } from '../plotCategories';
+import { FILTERED_CATEGORY, NOT_FILTERED_CATEGORY } from '../plotCategories';
 
 type PlotColumn = 'x' | 'y' | 'category';
 
@@ -22,16 +22,19 @@ type Selection = Point[] | null;
  *
  * @param arrowData - Parsed Arrow data containing x/y coordinates, filter status, and sample IDs
  * @param rangeSelection - Optional polygon selection to further categorize points within the range
+ * @param hasActiveFilter - When false, all points start as FILTERED_CATEGORY so range selection still works without a pre-existing filter
  * @returns Object with formatted plot data, error store, and selected sample IDs store
  */
 export function usePlotData({
     arrowData,
     rangeSelection,
-    highlightedSampleIds = []
+    highlightedSampleIds = [],
+    hasActiveFilter = true
 }: {
     arrowData: ArrowData;
     rangeSelection: Selection;
     highlightedSampleIds?: string[];
+    hasActiveFilter?: boolean;
 }): UsePlotDataReturn {
     const error = writable<string | undefined>();
     const plotData = writable<Record<PlotColumn, unknown>>();
@@ -43,38 +46,32 @@ export function usePlotData({
         return { data: plotData, error, selectedSampleIds };
     }
 
-    let category = data.fulfils_filter as Uint8Array;
+    let category = hasActiveFilter
+        ? (data.fulfils_filter as Uint8Array)
+        : new Uint8Array((data.x as Float32Array).length).fill(FILTERED_CATEGORY);
     const sampleIds = data.sample_id as string[];
 
     if (rangeSelection) {
-        const hasRangeSelection = typeof rangeSelection !== 'undefined';
+        // Points inside the polygon keep their prevValue; points outside are demoted to NOT_FILTERED_CATEGORY.
+        category = category.map(getCategoryBySelection(rangeSelection, data));
 
-        // if we have range selection, update category based on it
-        if (hasRangeSelection) {
-            category = category.map(getCategoryBySelection(rangeSelection, data));
-
-            // collect selected sample ids by category
-            const _ids = category.reduce<string[]>((acc, pointCategory, index) => {
-                if (pointCategory === SELECTED_CATEGORY) {
-                    acc.push(sampleIds[index]);
-                }
-                return acc;
-            }, []);
-            selectedSampleIds.update(() => _ids);
-        }
-    }
-
-    if (highlightedSampleIds.length > 0) {
+        // Collect selected sample ids: in-polygon filtered points have FILTERED_CATEGORY.
+        const _ids = category.reduce<string[]>((acc, pointCategory, index) => {
+            if (pointCategory === FILTERED_CATEGORY) {
+                acc.push(sampleIds[index]);
+            }
+            return acc;
+        }, []);
+        selectedSampleIds.update(() => _ids);
+    } else if (highlightedSampleIds.length > 0) {
         const highlightedSampleIdSet = new Set(highlightedSampleIds);
         category = category.map((pointCategory, index) => {
             if (pointCategory !== FILTERED_CATEGORY) {
                 return pointCategory;
             }
-            const isHighlightedSample = highlightedSampleIdSet.has(sampleIds[index]);
-            if (!isHighlightedSample) {
-                return pointCategory;
-            }
-            return SELECTED_CATEGORY;
+            return highlightedSampleIdSet.has(sampleIds[index])
+                ? FILTERED_CATEGORY
+                : NOT_FILTERED_CATEGORY;
         });
     }
 
