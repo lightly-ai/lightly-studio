@@ -67,7 +67,7 @@ This works out of the box when Python runs:
 - on another machine that mounts the same shared storage at the same absolute
   path
 
-If Python runs on a different machine where the storage is mounted at a different absolute path, create a symlink on the Python machine so that `DATASET_PATH` resolves there, too. For example, if `DATASET_PATH=/mnt/datasets` on the Docker host, but the NAS is mounted at `/home/alice/datasets` on the Python machine:
+If Python runs on a machine where the storage is mounted at a different absolute path, create a symlink on the Python machine so that `DATASET_PATH` resolves there, too. For example, if `DATASET_PATH=/mnt/datasets` on the Docker host, but the NAS is mounted at `/home/alice/datasets` on the Python machine:
 
 ```shell
 sudo ln -s /home/alice/datasets /mnt/datasets
