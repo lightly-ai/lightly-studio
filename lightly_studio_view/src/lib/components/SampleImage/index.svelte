@@ -78,8 +78,8 @@
 
 <style>
     .sample-image {
-        width: var(--sample-width);
-        height: var(--sample-height);
+        width: var(--sample-width, 100%);
+        height: var(--sample-height, 100%);
         object-fit: var(--object-fit);
     }
 </style>
