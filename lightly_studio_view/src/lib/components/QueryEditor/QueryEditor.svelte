@@ -3,6 +3,7 @@
     import { Button } from '$lib/components/ui/button';
     import { LIGHTLY_QUERY_DEFAULT_VALUE } from './monaco-lightly-query.js';
     import { useLightlyQueryEditor } from './useLightlyQueryEditor.js';
+    import type { QueryExprNotificationParams } from './language/query-expr-notification.js';
     import Typography from '$lib/components/Typography/Typography.svelte';
 
     interface QueryEditorProps {
@@ -10,13 +11,15 @@
         height?: string;
         readOnly?: boolean;
         onSave?: (value: string) => void;
+        onParsed?: (params: QueryExprNotificationParams) => void;
     }
 
     let {
         value = $bindable(LIGHTLY_QUERY_DEFAULT_VALUE),
         height = '320px',
         readOnly = false,
-        onSave
+        onSave,
+        onParsed
     }: QueryEditorProps = $props();
 
     let containerEl: HTMLDivElement | null = null;
@@ -26,6 +29,7 @@
         onValueChange: (next) => {
             value = next;
         },
+        onParsed,
         readOnly: () => readOnly
     });
 
