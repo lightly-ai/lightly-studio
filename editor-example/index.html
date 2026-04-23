@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lightly Query Monaco Editor</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background-color: #1e1e1e;
+            color: #d4d4d4;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+        
+        header {
+            background-color: #252526;
+            padding: 1rem 1.5rem;
+            border-bottom: 1px solid #3e3e42;
+        }
+        
+        h1 {
+            font-size: 1.25rem;
+            font-weight: 500;
+            color: #cccccc;
+        }
+        
+        .subtitle {
+            font-size: 0.875rem;
+            color: #858585;
+            margin-top: 0.25rem;
+        }
+        
+        #editor {
+            flex: 1;
+            min-height: 0;
+        }
+        
+        .info {
+            background-color: #252526;
+            padding: 0.75rem 1.5rem;
+            border-top: 1px solid #3e3e42;
+            font-size: 0.75rem;
+            color: #858585;
+        }
+        
+        .info a {
+            color: #4db8ff;
+            text-decoration: none;
+        }
+        
+        .info a:hover {
+            text-decoration: underline;
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <h1>Lightly Query Monaco Editor</h1>
+        <div class="subtitle">Lightly Query syntax support with Langium LSP in a Web Worker</div>
+    </header>
+    
+    <div id="editor"></div>
+    
+    <div class="info">
+        <strong>Features:</strong> Operator autocomplete (width [space]) • Label autocomplete • Tag autocomplete • Field properties • Hover docs
+        <span style="margin-left: 2rem;">
+            Built with <a href="https://microsoft.github.io/monaco-editor/" target="_blank">Monaco Editor</a> + 
+            <a href="https://langium.org/" target="_blank">Langium</a>
+        </span>
+    </div>
+    
+    <script type="module" src="/src/main.ts"></script>
+</body>
+</html>
