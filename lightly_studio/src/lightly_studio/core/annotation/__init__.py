@@ -6,8 +6,8 @@ from .annotation_create import (
     CreateObjectDetection,
 )
 from .classification import ClassificationAnnotation
-from .instance_segmentation import InstanceSegmentationAnnotation
 from .object_detection import ObjectDetectionAnnotation
+from .segmentation_mask import SegmentationMaskAnnotation
 
 __all__ = [
     "Annotation",
@@ -16,6 +16,6 @@ __all__ = [
     "CreateClassification",
     "CreateInstanceSegmentation",
     "CreateObjectDetection",
-    "InstanceSegmentationAnnotation",
     "ObjectDetectionAnnotation",
+    "SegmentationMaskAnnotation",
 ]
