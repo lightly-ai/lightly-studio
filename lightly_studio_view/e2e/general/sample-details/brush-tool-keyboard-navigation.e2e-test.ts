@@ -3,7 +3,7 @@ import type { Page } from '@playwright/test';
 import { cocoDataset } from '../fixtures';
 
 const getCurrentSampleIdFromUrl = (page: Page): string => {
-    const match = page.url().match(/\/samples\/([^/]+)$/);
+    const match = page.url().match(/\/images\/([^/]+)$/);
     if (!match?.[1]) {
         throw new Error(`Could not parse sample id from URL: ${page.url()}`);
     }
@@ -11,7 +11,7 @@ const getCurrentSampleIdFromUrl = (page: Page): string => {
 };
 
 const getCollectionIdFromUrl = (page: Page): string => {
-    const match = page.url().match(/\/datasets\/[^/]+\/[^/]+\/([^/]+)\/samples/);
+    const match = page.url().match(/\/datasets\/[^/]+\/[^/]+\/([^/]+)\/images/);
     if (!match?.[1]) {
         throw new Error(`Could not parse collection id from URL: ${page.url()}`);
     }
