@@ -234,7 +234,8 @@
     const { videoFramesBoundsValues } = useVideoFramesBounds();
     const { videoBoundsValues } = useVideoBounds();
 
-    const { imageFilter: imageFilterFromHook } = useImageFilters();
+    const { imageFilter: imageFilterFromHook, imageQueryExpression } = useImageFilters();
+
     const { videoFilter: videoFilterFromHook } = useVideoFilters();
     const plotFilterImageSampleIds = $derived(
         $imageFilterFromHook?.sample_filter?.sample_ids ?? []
@@ -515,6 +516,9 @@
                         <div
                             class="min-h-0 flex-1 space-y-2 overflow-y-auto px-4 pb-2 dark:[color-scheme:dark]"
                         >
+                            {#if $imageQueryExpression?.query_expr_str}
+                                Custom filter applied
+                            {/if}
                             <div>
                                 <TagsMenu collection_id={collectionId} {gridType} />
                             </div>

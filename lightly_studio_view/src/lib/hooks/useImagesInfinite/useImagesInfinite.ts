@@ -1,6 +1,6 @@
 import type { InfiniteData } from '@tanstack/svelte-query';
 import { createInfiniteQuery, infiniteQueryOptions, useQueryClient } from '@tanstack/svelte-query';
-import type { ReadImagesError, ReadImagesResponse } from '$lib/api/lightly_studio_local';
+import type { QueryExpr, ReadImagesError, ReadImagesResponse } from '$lib/api/lightly_studio_local';
 import { readImages, type ReadImagesRequest } from '$lib/api/lightly_studio_local';
 import type { DimensionBounds } from '$lib/services/loadDimensionBounds';
 import { createMetadataFilters } from '$lib/hooks/useMetadataFilters/useMetadataFilters';
@@ -17,6 +17,7 @@ interface NormalModeFilters {
     annotation_label_ids?: string[];
     tag_ids?: string[];
     dimensions?: DimensionBounds;
+    query_expr?: QueryExpr;
     sample_ids?: string[];
 }
 
