@@ -683,7 +683,11 @@
                                             (isQueryFilterEditing = !isQueryFilterEditing)}
                                     >
                                         <Filter class="size-4" />
-                                        <span>Define filtering query</span>
+                                        {#if isQueryFilterEditing}
+                                            <span>Close query editor</span>
+                                        {:else}
+                                            <span>Show query editor</span>
+                                        {/if}
                                     </Button>
                                 {/if}
                                 {#if (isSamples || isVideos) && hasEmbeddings}
