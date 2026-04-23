@@ -1,6 +1,7 @@
 <script module>
     import { defineMeta } from '@storybook/addon-svelte-csf';
     import QueryEditor from './QueryEditor.svelte';
+    import { fn } from 'storybook/test';
 
     const { Story } = defineMeta({
         title: 'Components/QueryEditor',
@@ -9,7 +10,8 @@
         argTypes: {
             value: { control: 'text' },
             height: { control: 'text' },
-            readOnly: { control: 'boolean' }
+            readOnly: { control: 'boolean' },
+            onSave: { action: 'save' }
         }
     });
 </script>
@@ -26,5 +28,13 @@
     args={{
         height: '240px',
         readOnly: true
+    }}
+/>
+
+<Story
+    name="With save"
+    args={{
+        height: '320px',
+        onSave: fn()
     }}
 />

@@ -1,73 +1,144 @@
 grammar LightlyQuery
 
+interface Expression {}
+
+interface BooleanExpression extends Expression {
+    operator: string;
+    children: Expression[];
+}
+
+interface NotExpression extends Expression {
+    expression: Expression;
+}
+
+interface ComparisonExpression extends Expression {
+    left: Expression;
+    operator: '==' | '!=' | '<' | '>' | '<=' | '>=';
+    right: Expression;
+}
+
+interface FunctionCall extends Expression {
+    name: string;
+    args: Expression[];
+}
+
+interface MemberCall extends Expression {
+    receiver: string;
+    member: string;
+    args: Expression[];
+}
+
+interface QualifiedFieldReference extends Expression {
+    receiver: string;
+    member: string;
+}
+
+interface TagInExpression extends Expression {
+    tag_name: Expression;
+}
+
+interface FieldReference extends Expression {
+    name: string;
+}
+
+interface NumberLiteral extends Expression {
+    value: number;
+}
+
+interface StringLiteral extends Expression {
+    value: string;
+}
+
 entry Query:
-    expression=Expression;
+    (expression=Sample<true>) |
+    ('video:' expression=Sample<false>);
 
-Expression infers Expr:
-    LogicalOrExpression;
+Sample<isImage> returns Expression:
+    SampleOr<isImage>;
 
-LogicalOrExpression infers Expr:
-    LogicalAndExpression ({infer BinaryExpr.left=current} operator='OR' right=LogicalAndExpression)*;
+SampleOr<isImage> returns Expression:
+    SampleAnd<isImage> ({BooleanExpression.children+=current} operator='or' children+=SampleAnd<isImage> ('or' children+=SampleAnd<isImage>)*)?
+    | {BooleanExpression} operator='or' '(' children+=Sample<isImage> (',' children+=Sample<isImage>)+ ')';
 
-LogicalAndExpression infers Expr:
-    UnaryExpression ({infer BinaryExpr.left=current} operator='AND' right=UnaryExpression)*;
+SampleAnd<isImage> returns Expression:
+    SampleUnary<isImage> ({BooleanExpression.children+=current} operator='and' children+=SampleUnary<isImage> ('and' children+=SampleUnary<isImage>)*)?
+    | {BooleanExpression} operator='and' '(' children+=Sample<isImage> (',' children+=Sample<isImage>)+ ')';
 
-UnaryExpression infers Expr:
-    {infer UnaryExpr} operator='NOT' expression=PrimaryExpression | PrimaryExpression;
+SampleUnary<isImage> returns Expression:
+    '(' Sample<isImage> ')'
+    | {NotExpression} 'not' expression=SampleUnary<isImage>
+    | SampleComparison<isImage>
+    | TagInExpression
+    | AnnotationQuery;
 
-PrimaryExpression infers Expr:
-    '(' expression=Expression ')' |
-    FieldAccess;
+SampleComparison<isImage> returns ComparisonExpression:
+    SampleFieldReference<isImage> {ComparisonExpression.left=current} operator=('==' | '!=' | '<' | '>' | '<=' | '>=') right=Literal;
 
-FieldAccess:
-    field=FieldReference (operator=ComparisonOperator negated?='not'? value=Value)? method=MethodCall?;
+SampleFieldReference<isImage> returns QualifiedFieldReference:
+    (<isImage> {QualifiedFieldReference} receiver=ImageSampleFieldReceiver '.' member=ImageSampleFieldName)
+    | (<!isImage> {QualifiedFieldReference} receiver=VideoSampleFieldReceiver '.' member=VideoSampleFieldName);
 
-FieldReference:
-    base=FieldType ('.' properties+=PropertyAccess)*;
+ObjectDetection returns Expression:
+    ObjectDetectionOr;
 
-FieldType:
-    type=('ImageSampleField' | 'VideoSampleField' | 'SampleField');
+ObjectDetectionOr returns Expression:
+    ObjectDetectionAnd ({BooleanExpression.children+=current} operator='or' children+=ObjectDetectionAnd ('or' children+=ObjectDetectionAnd)*)?
+    | {BooleanExpression} operator='or' '(' children+=ObjectDetection (',' children+=ObjectDetection)+ ')';
 
-PropertyAccess:
-    name=ID ('[' index=INT ']')?;
+ObjectDetectionAnd returns Expression:
+    ObjectDetectionUnary ({BooleanExpression.children+=current} operator='and' children+=ObjectDetectionUnary ('and' children+=ObjectDetectionUnary)*)?
+    | {BooleanExpression} operator='and' '(' children+=ObjectDetection (',' children+=ObjectDetection)+ ')';
 
-MethodCall:
-    '.' method=MethodName '(' arguments+=Value (',' arguments+=Value)* ')';
+ObjectDetectionUnary returns Expression:
+    '(' ObjectDetection ')'
+    | {NotExpression} 'not' expression=ObjectDetectionUnary
+    | ObjectDetectionComparison;
 
-MethodName:
-    method=('contains' | 'startswith' | 'endswith' | 'exists' | 'is_null' | 'is_not_null' | 'not_in' | 'matches' | 'icontains');
+ObjectDetectionComparison returns ComparisonExpression:
+    ObjectDetectionFieldReference {ComparisonExpression.left=current} operator=('==' | '!=' | '<' | '>' | '<=' | '>=') right=Literal;
 
-ComparisonOperator:
-    op=('is' | 'in' | '==' | '!=' | '<=' | '>=' | '<' | '>' | '=');
+ObjectDetectionFieldReceiver returns string:
+    'ObjectDetection' | 'ObjectDetectionField';
 
-Value infers Value:
-    StringValue | NumberValue | BooleanValue | NullValue | ListValue | DateValue | FieldReference;
+ObjectDetectionFieldReference returns Expression:
+    {FieldReference} name=ObjectDetectionFieldName
+    | {QualifiedFieldReference} receiver=ObjectDetectionFieldReceiver '.' member=ObjectDetectionFieldName;
 
-StringValue:
-    value=STRING;
+AnnotationQuery returns Expression:
+    {FunctionCall} name='object_detection' '(' args+=ObjectDetection ')';
 
-NumberValue:
-    value=NUMBER;
+TagInExpression returns Expression:
+    {TagInExpression} 'tags.contains(' tag_name=StringLiteral ')' |
+    {TagInExpression} tag_name=StringLiteral 'in' 'tags';
 
-BooleanValue:
-    value=('true' | 'false' | 'True' | 'False');
+ImageSampleFieldReceiver returns string:
+    'Image' | 'ImageSampleField';
 
-NullValue:
-    value=('null' | 'None' | 'NULL');
+VideoSampleFieldReceiver returns string:
+    'Video' | 'VideoSampleField';
 
-ListValue:
-    '[' values+=Value (',' values+=Value)* ']';
+CommonSampleFieldName returns string:
+    'created_at';
 
-DateValue:
-    type=('date' | 'datetime' | 'timestamp') '(' value=STRING ')';
+ImageSampleFieldName returns string:
+    'file_name' | 'file_path_abs' | 'height' | 'width' | CommonSampleFieldName;
 
-terminal NUMBER returns string:
-    /-?\d+(\.\d+)?([eE][+-]?\d+)?/;
+VideoSampleFieldName returns string:
+    'file_name' | 'file_path_abs' | 'height' | 'width' | 'duration_s' | 'fps' | CommonSampleFieldName;
 
-terminal ID: /[_a-zA-Z][\w_]*/;
-terminal INT returns number: /[0-9]+/;
-terminal STRING returns string: /"([^"\\]|\\.)*"|'([^'\\]|\\.)*'/;
+ObjectDetectionFieldName returns string:
+    'height' | 'label' | 'width' | 'x' | 'y';
+
+Literal returns Expression:
+    NumberLiteral | StringLiteral;
+
+NumberLiteral returns Expression:
+    {NumberLiteral} value=NUMBER;
+
+StringLiteral returns Expression:
+    {StringLiteral} value=STRING;
+
+terminal NUMBER returns number: /[0-9]+(\.[0-9]*)?/;
+terminal STRING: /"([^"\\\n\r]|\\.)*"|'([^'\\\n\r]|\\.)*'/;
 
 hidden terminal WS: /\s+/;
-hidden terminal COMMENT: /#[^\n\r]*/;
-hidden terminal MULTILINE_COMMENT: /\/\*[\s\S]*?\*\//;
