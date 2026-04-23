@@ -13,13 +13,10 @@
     import { isEqual, omit } from 'lodash-es';
     import { page } from '$app/state';
     import type { VideoFrameFilterParams } from '$lib/hooks/useFramesFilter/frameFilter';
-    import {
-        GridHeader,
-        Separator,
-        SampleGrid,
-        SampleGridItem,
-        VideoFrameItem
-    } from '$lib/components';
+    import { GridHeader, Separator, VideoFrameItem } from '$lib/components';
+    import { GridContainer } from '$lib/components/GridContainer';
+    import { Grid } from '$lib/components/Grid';
+    import { GridItem } from '$lib/components/GridItem';
     import { useScrollRestoration } from '$lib/hooks/useScrollRestoration/useScrollRestoration';
     import { onMount } from 'svelte';
 
@@ -89,8 +86,9 @@
     const { data, query, loadMore, totalCount } = $derived(
         useFrames(collectionId, currentFrameFilter)
     );
-    const { setfilteredSampleCount, getSelectedSampleIds, toggleSampleSelection } =
+    const { setfilteredSampleCount, getSelectedSampleIds, toggleSampleSelection, sampleSize } =
         useGlobalStorage();
+    const columnCount = $derived($sampleSize.width);
 
     let items = $derived($data);
     const selectedSampleIds = $derived(getSelectedSampleIds(collectionId));
@@ -120,6 +118,14 @@
                 toggleSampleSelection(selectedSampleId, collectionId)
         });
     }
+
+    function handleGridItemSelect(
+        event: MouseEvent | KeyboardEvent,
+        sampleId: string,
+        index: number
+    ) {
+        handleSampleSelect({ sampleId, index, shiftKey: event.shiftKey });
+    }
     const filterHash = $derived(JSON.stringify($filterParams));
     const { initialize, savePosition, getRestoredPosition } = useScrollRestoration('frames_scroll');
     onMount(async () => {
@@ -139,13 +145,8 @@
     <GridHeader />
     <Separator class="mb-4 bg-border-hard" />
 
-    <SampleGrid
+    <GridContainer
         itemCount={items.length}
-        overScan={30}
-        testId="video-frames-grid"
-        onScroll={handleScroll}
-        scrollPosition={initialScrollPosition}
-        {scrollResetKey}
         message={{
             loading: 'Loading video frames...',
             error: 'Error loading video frames',
@@ -166,22 +167,43 @@
             loading: $query.isFetchingNextPage
         }}
     >
-        {#snippet gridItem({ index, style, sampleSize })}
-            {#if items[index]}
-                <SampleGridItem
-                    {style}
-                    {index}
-                    dataTestId="frame-grid-item"
-                    sampleId={items[index].sample_id}
-                    {collectionId}
-                    dataSampleName={items[index].sample_id}
-                    onSelect={handleSampleSelect}
-                >
-                    {#snippet item()}
-                        <VideoFrameItem videoFrame={items[index]} size={sampleSize} />
-                    {/snippet}
-                </SampleGridItem>
-            {/if}
+        {#snippet children({ footer })}
+            <Grid
+                itemCount={items.length}
+                {columnCount}
+                overScan={30}
+                onScroll={handleScroll}
+                {initialScrollPosition}
+                {scrollResetKey}
+                gridProps={{
+                    'data-testid': 'video-frames-grid',
+                    class: 'dark:[color-scheme:dark]'
+                }}
+            >
+                {#snippet gridItem({ index, style, width, height })}
+                    {#if items[index]}
+                        {#key items[index].sample_id}
+                            <GridItem
+                                {width}
+                                {height}
+                                {style}
+                                dataSampleName={items[index].sample_id}
+                                dataIndex={index}
+                                dataTestId="frame-grid-item"
+                                isSelected={$selectedSampleIds.has(items[index].sample_id)}
+                                ariaLabel={`View sample: ${items[index].sample_id}`}
+                                onSelect={(event) =>
+                                    handleGridItemSelect(event, items[index].sample_id, index)}
+                            >
+                                <VideoFrameItem videoFrame={items[index]} size={width} />
+                            </GridItem>
+                        {/key}
+                    {/if}
+                {/snippet}
+                {#snippet footerItem()}
+                    {@render footer()}
+                {/snippet}
+            </Grid>
         {/snippet}
-    </SampleGrid>
+    </GridContainer>
 </div>
