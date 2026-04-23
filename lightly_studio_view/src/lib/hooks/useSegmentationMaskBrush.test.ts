@@ -2,7 +2,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import type { AnnotationView } from '$lib/api/lightly_studio_local';
 import type { AnnotationLabelContext } from '$lib/contexts/SampleDetailsAnnotation.svelte';
 
-import { useSegmentationMaskBrush } from './useInstanceSegmentationBrush';
+import { useSegmentationMaskBrush } from './useSegmentationMaskBrush';
 import {
     computeBoundingBoxFromMask,
     encodeBinaryMaskToRLE
