@@ -1,10 +1,15 @@
 import assert from 'node:assert';
-import { inject, EmptyFileSystem, type LangiumServices, type LangiumSharedServices } from 'langium';
-import { createDefaultModule, createDefaultSharedModule } from 'langium/lsp';
+import { inject, EmptyFileSystem } from 'langium';
+import {
+    createDefaultModule,
+    createDefaultSharedModule,
+    type LangiumServices,
+    type LangiumSharedServices
+} from 'langium/lsp';
 import {
     LightlyQueryGeneratedSharedModule,
     LightlyQueryGeneratedModule
-} from './language/generated/module.ts';
+} from './language/generated/module';
 import {
     type Query,
     isFieldReference,
@@ -16,9 +21,9 @@ import {
     isTagInExpression,
     isNumberLiteral,
     isStringLiteral,
-    isBooleanLiteral,
+    // isBooleanLiteral,
     isNotExpression
-} from './language/generated/ast.ts';
+} from './language/generated/ast';
 
 export type LightlyQueryServices = LangiumServices;
 
@@ -123,7 +128,7 @@ function transformToDSLJson(node: unknown): DSLJson {
     }
     if (isNumberLiteral(node)) return node.value;
     if (isStringLiteral(node)) return unquoteStringLiteral(node.value);
-    if (isBooleanLiteral(node)) return node.value === 'true';
+    // if (isBooleanLiteral(node)) return node.value === 'true';
 
     if (hasExpression(node)) return transformToDSLJson(node.expression);
 
