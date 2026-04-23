@@ -8,7 +8,7 @@
 //   Services & DI:   https://langium.org/docs/reference/configuration-services/
 //   Validation:      https://langium.org/docs/learn/workflow/create_validations/
 
-import { DocumentState, inject } from 'langium';
+import { inject } from 'langium';
 import {
     createDefaultModule,
     createDefaultSharedModule,
@@ -22,10 +22,8 @@ import {
 } from './generated/module.js';
 import {
     QueryExprTranslationRequest,
-    type QueryExprTranslationResult,
-    toQueryExpr
+    parseLightlyQuery
 } from './query-expr-translation.js';
-import { isQuery } from './generated/ast.js';
 
 export type LightlyQueryServices = LangiumServices;
 
@@ -38,24 +36,9 @@ export function createLightlyQueryServices(
     const shared = inject(createDefaultSharedModule(context), LightlyQueryGeneratedSharedModule);
     const LightlyQuery = inject(createDefaultModule({ shared }), LightlyQueryGeneratedModule);
     shared.ServiceRegistry.register(LightlyQuery);
-    let latestTranslation: QueryExprTranslationResult | null = null;
-
-    shared.lsp?.Connection?.onRequest(QueryExprTranslationRequest, () => latestTranslation);
-
-    // `onDocumentPhase` fires per-document even when rapid typing cancels
-    // in-flight builds, so the worker-side cache stays aligned with the most
-    // recent validation result for the active buffer.
-    shared.workspace.DocumentBuilder.onDocumentPhase(DocumentState.Validated, (document) => {
-        if (!isQuery(document.parseResult.value)) {
-            latestTranslation = null;
-            return;
-        }
-        latestTranslation = toQueryExpr({
-            lexerErrors: document.parseResult.lexerErrors,
-            parserErrors: document.parseResult.parserErrors,
-            value: document.parseResult.value
-        });
-    });
+    shared.lsp?.Connection?.onRequest(QueryExprTranslationRequest, (value) =>
+        parseLightlyQuery(LightlyQuery.parser.LangiumParser, value)
+    );
 
     return shared;
 }

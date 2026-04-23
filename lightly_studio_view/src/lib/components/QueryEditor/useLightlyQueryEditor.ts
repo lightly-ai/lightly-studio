@@ -44,7 +44,7 @@ export interface UseLightlyQueryEditorOptions {
 }
 
 export interface LightlyQueryEditorHandle extends MonacoEditorHandle {
-    getLatestTranslationResult: () => Promise<QueryExprTranslationResult | null>;
+    translateLightlyQuery: (value: string) => Promise<QueryExprTranslationResult | null>;
 }
 
 export function useLightlyQueryEditor(
@@ -103,16 +103,16 @@ export function useLightlyQueryEditor(
         });
     }
 
-    async function getLatestTranslationResult(): Promise<QueryExprTranslationResult | null> {
+    async function translateLightlyQuery(value: string): Promise<QueryExprTranslationResult | null> {
         await startupPromise;
         if (!languageClient || isDestroyed) {
             return null;
         }
 
         try {
-            return await languageClient.sendRequest(QueryExprTranslationRequest);
+            return await languageClient.sendRequest(QueryExprTranslationRequest, value);
         } catch (error) {
-            console.error('Failed to fetch latest LightlyQuery translation result:', error);
+            console.error('Failed to translate LightlyQuery value:', error);
             return null;
         }
     }
@@ -138,5 +138,5 @@ export function useLightlyQueryEditor(
         });
     });
 
-    return { mount, getLatestTranslationResult };
+    return { mount, translateLightlyQuery };
 }

@@ -31,7 +31,7 @@
     });
 
     async function handleSave() {
-        const parsed = await editor.getLatestTranslationResult();
+        const parsed = await editor.translateLightlyQuery(value);
         onSave?.(value, parsed);
     }
 
