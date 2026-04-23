@@ -3,7 +3,7 @@
     import { Button } from '$lib/components/ui/button';
     import { LIGHTLY_QUERY_DEFAULT_VALUE } from './monaco-lightly-query.js';
     import { useLightlyQueryEditor } from './useLightlyQueryEditor.js';
-    import Typography from '../Typography/Typography.svelte';
+    import Typography from '$lib/components/Typography/Typography.svelte';
 
     interface QueryEditorProps {
         value?: string;
