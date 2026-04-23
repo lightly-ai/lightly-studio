@@ -40,17 +40,10 @@
     const exportTypeLabels: Record<typeof exportType, string> = {
         samples: 'Image Filenames',
         object_detections: 'Image Object Detections',
-<<<<<<< HEAD
-        segmentation: 'Image Segmentation masks',
-        semantic_segmentations: 'Image Semantic Segmentations',
-        captions: 'Image Captions',
-        youtube_vis_segmentation: 'YouTube-VIS Video Segmentation masks'
-=======
         segmentation: 'Image Segmentation Masks',
         semantic_segmentations: 'Image Semantic Segmentations',
         captions: 'Image Captions',
         youtube_vis_segmentation: 'YouTube-VIS Video Segmentation Masks'
->>>>>>> main
     };
     const exportTypeTriggerContent = $derived(exportTypeLabels[exportType]);
     let collectionId = page.params.collection_id;
@@ -172,13 +165,8 @@
                                 {#if isVideoCollection}
                                     <Select.Item
                                         value="youtube_vis_segmentation"
-<<<<<<< HEAD
-                                        label="YouTube-VIS Video Segmentation masks"
-                                        >YouTube-VIS Video Segmentation masks</Select.Item
-=======
                                         label="YouTube-VIS Video Segmentation Masks"
                                         >YouTube-VIS Video Segmentation Masks</Select.Item
->>>>>>> main
                                     >
                                 {:else}
                                     <Select.Item value="samples" label="Image Filenames"
@@ -191,13 +179,8 @@
                                     >
                                     <Select.Item
                                         value="segmentation"
-<<<<<<< HEAD
-                                        label="Image Segmentation masks"
-                                        >Image Segmentation masks</Select.Item
-=======
                                         label="Image Segmentation Masks"
                                         >Image Segmentation Masks</Select.Item
->>>>>>> main
                                     >
                                     <Select.Item
                                         value="semantic_segmentations"
@@ -350,12 +333,7 @@
                     {#if isVideoCollection}
                         <Tabs.Content value="youtube_vis_segmentation" class="pt-2">
                             <p class="text-sm text-muted-foreground">
-<<<<<<< HEAD
-                                The video Segmentation masks will be exported in YouTube-VIS
-                                format.
-=======
                                 The video segmentation masks will be exported in YouTube-VIS format.
->>>>>>> main
                             </p>
 
                             <Button

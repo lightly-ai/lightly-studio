@@ -92,7 +92,7 @@ class ImageDatasetExport:
         )
 
     def to_pascalvoc_segmentation_mask(self, output_folder: PathLike) -> None:
-        """Exports instance segmentation annotations to Pascal VOC format.
+        """Exports segmentation mask annotations to Pascal VOC format.
 
         Creates a folder with per-pixel class masks (PNG) and a class map (JSON).
 

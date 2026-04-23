@@ -1,6 +1,6 @@
-"""Instance segmentation annotation models.
+"""Segmentation mask annotation models.
 
-Instance segmentation combines object detection and semantic segmentation,
+Segmentation mask combines object detection and semantic segmentation,
 identifying objects and providing pixel-level masks for each instance.
 """
 
