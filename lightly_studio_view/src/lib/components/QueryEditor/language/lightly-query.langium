@@ -49,10 +49,6 @@ interface StringLiteral extends Expression {
     value: string;
 }
 
-interface BooleanLiteral extends Expression {
-    value: 'true' | 'false';
-}
-
 entry Query:
     (expression=Sample<true>) |
     ('video:' expression=Sample<false>);
@@ -134,16 +130,13 @@ ObjectDetectionFieldName returns string:
     'height' | 'label' | 'width' | 'x' | 'y';
 
 Literal returns Expression:
-    NumberLiteral | StringLiteral | BooleanLiteral;
+    NumberLiteral | StringLiteral;
 
 NumberLiteral returns Expression:
     {NumberLiteral} value=NUMBER;
 
 StringLiteral returns Expression:
     {StringLiteral} value=STRING;
-
-BooleanLiteral returns Expression:
-    {BooleanLiteral} value=('true' | 'false');
 
 terminal NUMBER returns number: /[0-9]+(\.[0-9]*)?/;
 terminal STRING: /"([^"\\\n\r]|\\.)*"|'([^'\\\n\r]|\\.)*'/;
