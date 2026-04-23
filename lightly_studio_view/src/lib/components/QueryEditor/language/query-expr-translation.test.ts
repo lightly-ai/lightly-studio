@@ -49,20 +49,28 @@ describe('parseLightlyQuery', () => {
         });
     });
 
-    it('passes the input through to the parser', () => {
-        let receivedValue = '';
-
-        parseLightlyQuery({
-            parse: (value) => {
-                receivedValue = value;
-                return {
-                    lexerErrors: [],
-                    parserErrors: [],
-                    value: {} as Query
-                };
-            }
+    it('returns the hardcoded object_detection stub for a valid object_detection query', () => {
+        const result = parseLightlyQuery({
+            parse: () => ({
+                lexerErrors: [],
+                parserErrors: [],
+                value: {} as Query
+            })
         }, 'object_detection(label == "cat")');
 
-        expect(receivedValue).toBe('object_detection(label == "cat")');
+        expect(result).toEqual({
+            status: 'ok',
+            queryExpr: {
+                match_expr: {
+                    type: 'object_detection_match_expr',
+                    subexpr: {
+                        type: 'string_expr',
+                        field: { table: 'object_detection', name: 'label' },
+                        operator: '==',
+                        value: 'cat'
+                    }
+                }
+            }
+        });
     });
 });
