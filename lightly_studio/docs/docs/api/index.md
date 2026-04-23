@@ -173,13 +173,13 @@ sample.add_annotation(CreateObjectDetection(
 ))
 ```
 
-There are also `CreateClassification` and `CreateInstanceSegmentation` classes for other annotation types.
+There are also `CreateClassification` and `CreateSegmentationMask` classes for other annotation types.
 
 For segmentation annotations, it is recommended to use the `from_binary_mask` method, which automatically handles the bounding box and mask encoding from a 2D numpy array:
 
 ```python
 import numpy as np
-from lightly_studio.core.annotation import CreateInstanceSegmentation
+from lightly_studio.core.annotation import CreateSegmentationMask
 
 # A 2D numpy array representing the binary mask (1 for foreground, 0 for background)
 mask = np.array([
@@ -190,7 +190,7 @@ mask = np.array([
 ])
 
 sample.add_annotation(
-    CreateInstanceSegmentation.from_binary_mask(
+    CreateSegmentationMask.from_binary_mask(
         label="car",
         binary_mask=mask,
         confidence=0.85, # optional
@@ -201,14 +201,14 @@ sample.add_annotation(
 Alternatively, you can provide the mask encoding using the `from_rle_mask` method:
 
 ```python
-from lightly_studio.core.annotation import CreateInstanceSegmentation
+from lightly_studio.core.annotation import CreateSegmentationMask
 
 # E.g., for a 2x4 mask:
 # [[0, 1, 1, 0],
 #  [1, 1, 1, 1]]
 # A row-wise Run-Length Encoding (RLE) mask is: [1, 2, 1, 4]
 sample.add_annotation(
-    CreateInstanceSegmentation.from_rle_mask(
+    CreateSegmentationMask.from_rle_mask(
         label="car",
         segmentation_mask=[1, 2, 1, 4],
         # `sample` could be ImageSample or another 2D sample, such as a video frame
@@ -221,7 +221,7 @@ sample.add_annotation(
 
 ??? note "Binary Mask Format"
 
-    For segmentation annotations (`CreateInstanceSegmentation`), the `segmentation_mask` is expected to be a list of integers representing the binary mask in a row-wise Run-Length Encoding (RLE) format.
+    For segmentation annotations (`CreateSegmentationMask`), the `segmentation_mask` is expected to be a list of integers representing the binary mask in a row-wise Run-Length Encoding (RLE) format.
 
     !!! tip
         We recommend using the `from_binary_mask` method described above to automatically generate this encoding from a numpy array.
