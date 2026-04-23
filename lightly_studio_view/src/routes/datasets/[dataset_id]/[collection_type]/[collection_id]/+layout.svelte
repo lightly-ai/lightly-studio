@@ -497,7 +497,7 @@
     // const isQueryFilterEnabled = $derived($featureFlags.includes('query_filter'));
     const isQueryFilterEnabled = true; // Temporary hardcode to show query filter UI while in development
     let isQueryFilterEditing = $state(false);
-    let queryFilterValue = $state('');
+    let queryEditorValue = $state('');
 </script>
 
 <div class="flex-none">
@@ -799,12 +799,11 @@
                     {/if}
                 </div>
                 {#if isQueryFilterEnabled && isQueryFilterEditing}
-                    <div class="flex h-full w-96 min-w-80 flex-col rounded-[1vw] bg-card p-4">
-                        {#await import('$lib/components/QueryEditor/QueryEditor.svelte') then { default: QueryEditor }}
-                            <!-- <QueryEditor height="100%" /> -->
-                            Query editor
-                        {/await}
-                    </div>
+                    {#await import('$lib/components/QueryEditor/QueryEditor.svelte') then { default: QueryEditor }}
+                        <div class="flex h-full flex-1 flex-col rounded-[1vw] bg-card p-4">
+                            <QueryEditor height="100%" bind:value={queryEditorValue} />
+                        </div>
+                    {/await}
                 {/if}
             {/if}
             {#if hasEmbeddings}
