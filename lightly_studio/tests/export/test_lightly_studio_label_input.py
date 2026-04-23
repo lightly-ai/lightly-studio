@@ -178,7 +178,7 @@ class TestLightlyStudioLabelInput:
         )
 
     def test_get_labels__segmentation_mask(self, db_session: Session) -> None:
-        """We currently export only object detection annotations, not instance segmentation."""
+        """We currently export only object detection annotations, not segmentation mask."""
         collection = create_collection(session=db_session)
         images_to_create = [
             ImageStub(path="img1", width=100, height=100),

@@ -34,7 +34,7 @@ from lightly_studio.resolvers import (
 
 
 class _LightlyStudioYouTubeVISTrackInputBase:
-    """Shared base for YouTube-VIS instance segmentation track input."""
+    """Shared base for YouTube-VIS segmentation mask track input."""
 
     def __init__(
         self,
@@ -115,14 +115,14 @@ class LightlyStudioYouTubeVISInstanceSegmentationTrackInput(
         )
 
     def get_labels(self) -> Iterable[VideoInstanceSegmentationTrack]:
-        """Yield video instance segmentation tracks for export."""
+        """Yield video segmentation mask tracks for export."""
         yield from self._tracks
 
     def _load_youtube_vis_segmentation_tracks_out(
         self,
         session: Session,
     ) -> list[VideoInstanceSegmentationTrack]:
-        """Load per-video instance segmentation tracks for YouTube-VIS export."""
+        """Load per-video segmentation mask tracks for YouTube-VIS export."""
         dataset_id = self._export_context.dataset_id
         if dataset_id is None:
             return []
