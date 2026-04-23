@@ -23,7 +23,7 @@ import {
 } from './monaco-lightly-query.js';
 import { useMonacoEditor, type MonacoEditorHandle } from './useMonacoEditor.svelte.js';
 import {
-    QueryExprNotification,
+    GetLatestQueryExprRequest,
     type QueryExprNotificationParams
 } from './language/query-expr-notification.js';
 
@@ -38,16 +38,18 @@ export interface UseLightlyQueryEditorOptions {
     // value binding.
     onValueChange: (value: string) => void;
 
-    // Called whenever the LSP worker finishes parsing. Receives either the
-    // converted QueryExpr or a list of parse errors.
-    onParsed?: (params: QueryExprNotificationParams) => void;
-
     // Reactive getter for the readOnly flag. Optional; defaults to false.
     // Tracked in a `$effect` so toggling it at runtime updates the editor.
     readOnly?: () => boolean;
 }
 
-export function useLightlyQueryEditor(options: UseLightlyQueryEditorOptions): MonacoEditorHandle {
+export interface LightlyQueryEditorHandle extends MonacoEditorHandle {
+    getLatestParsed: () => Promise<QueryExprNotificationParams | null>;
+}
+
+export function useLightlyQueryEditor(
+    options: UseLightlyQueryEditorOptions
+): LightlyQueryEditorHandle {
     // Safe to call on every mount — the function is idempotent.
     registerLightlyQueryMonacoLanguage();
 
@@ -63,7 +65,6 @@ export function useLightlyQueryEditor(options: UseLightlyQueryEditorOptions): Mo
     // down. `startupPromise` lets destroy synchronize with an in-flight start.
     let lspWorker: Worker | null = null;
     let languageClient: MonacoLanguageClient | null = null;
-    let notificationDisposable: { dispose(): void } | null = null;
     let startupPromise: Promise<void> | null = null;
     let isDestroyed = false;
 
@@ -95,16 +96,8 @@ export function useLightlyQueryEditor(options: UseLightlyQueryEditorOptions): Mo
             messageTransports: { reader, writer }
         });
 
-        // After the client starts, register a handler for the custom
-        // QueryExpr notification sent by the Langium worker on every parse.
         startupPromise = languageClient
             .start()
-            .then(() => {
-                notificationDisposable =
-                    languageClient?.onNotification(QueryExprNotification, (params) =>
-                        options.onParsed?.(params)
-                    ) ?? null;
-            })
             .catch((error) => {
                 if (!isDestroyed) {
                     console.error('Failed to start LightlyQuery language client:', error);
@@ -112,12 +105,24 @@ export function useLightlyQueryEditor(options: UseLightlyQueryEditorOptions): Mo
             });
     }
 
+    async function getLatestParsed(): Promise<QueryExprNotificationParams | null> {
+        await startupPromise;
+        if (!languageClient || isDestroyed) {
+            return null;
+        }
+
+        try {
+            return await languageClient.sendRequest(GetLatestQueryExprRequest);
+        } catch (error) {
+            console.error('Failed to fetch latest LightlyQuery parse result:', error);
+            return null;
+        }
+    }
+
     onDestroy(() => {
         // Snapshot references before nulling so the async teardown below
         // still sees them even after the component has detached.
         isDestroyed = true;
-        notificationDisposable?.dispose();
-        notificationDisposable = null;
         const clientToStop = languageClient;
         const workerToTerminate = lspWorker;
         languageClient = null;
@@ -135,5 +140,5 @@ export function useLightlyQueryEditor(options: UseLightlyQueryEditorOptions): Mo
         });
     });
 
-    return { mount };
+    return { mount, getLatestParsed };
 }

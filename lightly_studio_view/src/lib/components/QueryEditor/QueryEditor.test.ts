@@ -1,10 +1,13 @@
-import { describe, it, expect, vi } from 'vitest';
+import { beforeEach, describe, it, expect, vi } from 'vitest';
 import { fireEvent, render, screen } from '@testing-library/svelte';
 import '@testing-library/jest-dom';
 import QueryEditor from './QueryEditor.svelte';
+import type { QueryExprNotificationParams } from './language/query-expr-notification.js';
+
+const getLatestParsed = vi.fn();
 
 vi.mock('./useLightlyQueryEditor.js', () => ({
-    useLightlyQueryEditor: () => ({ mount: vi.fn() })
+    useLightlyQueryEditor: () => ({ mount: vi.fn(), getLatestParsed })
 }));
 
 vi.mock('./monaco-lightly-query.js', () => ({
@@ -15,6 +18,27 @@ vi.mock('./monaco-lightly-query.js', () => ({
 }));
 
 describe('QueryEditor', () => {
+    beforeEach(() => {
+        vi.clearAllMocks();
+    });
+
+    it('calls onSave with the latest parsed result when the Save button is clicked', async () => {
+        const onSave = vi.fn();
+        const parsed = {
+            status: 'ok',
+            queryExpr: { match_expr: { type: 'dummy' } }
+        } as QueryExprNotificationParams;
+        getLatestParsed.mockResolvedValueOnce(parsed);
+
+        render(QueryEditor, { props: { value: 'my query', onSave } });
+
+        await fireEvent.click(screen.getByRole('button', { name: 'Save' }));
+
+        expect(getLatestParsed).toHaveBeenCalledOnce();
+        expect(onSave).toHaveBeenCalledOnce();
+        expect(onSave).toHaveBeenCalledWith('my query', parsed);
+    });
+
     it('does not render the toolbar when onSave is not provided', () => {
         render(QueryEditor, { props: { value: 'query' } });
 
@@ -27,8 +51,9 @@ describe('QueryEditor', () => {
         expect(screen.getByRole('button', { name: 'Save' })).toBeInTheDocument();
     });
 
-    it('calls onSave with the current value when the Save button is clicked', async () => {
+    it('calls onSave with null when no parsed result is available', async () => {
         const onSave = vi.fn();
+        getLatestParsed.mockResolvedValueOnce(null);
         render(QueryEditor, { props: { value: 'my query', onSave } });
 
         await fireEvent.click(screen.getByRole('button', { name: 'Save' }));

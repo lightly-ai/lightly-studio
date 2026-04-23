@@ -21,18 +21,19 @@
     }: QueryEditorProps = $props();
 
     let containerEl: HTMLDivElement | null = null;
-    let lastParsed: QueryExprNotificationParams | null = $state(null);
 
     const editor = useLightlyQueryEditor({
         value: () => value,
         onValueChange: (next) => {
             value = next;
         },
-        onParsed: (params) => {
-            lastParsed = params;
-        },
         readOnly: () => readOnly
     });
+
+    async function handleSave() {
+        const parsed = await editor.getLatestParsed();
+        onSave?.(value, parsed);
+    }
 
     onMount(() => {
         if (containerEl) {
@@ -56,7 +57,7 @@
                 variant="ghost"
                 class="h-6 px-2 text-[#cccccc] hover:bg-white/10 hover:text-white"
                 disabled={readOnly}
-                onclick={() => onSave?.(value, lastParsed)}
+                onclick={handleSave}
             >
                 <Typography variant="caption">Save</Typography>
             </Button>

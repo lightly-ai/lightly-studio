@@ -1,8 +1,8 @@
-// Shared contract for the custom LSP notification that carries the parsed
-// QueryExpr from the Langium worker to the main thread. Both sides import
-// this module so the notification method string and payload shape stay in sync.
+// Shared contract for the custom LSP messages that carry the parsed QueryExpr
+// between the Langium worker and the main thread. Both sides import this
+// module so the method strings and payload shapes stay in sync.
 
-import { NotificationType } from 'vscode-languageserver-protocol';
+import { NotificationType, RequestType } from 'vscode-languageserver-protocol';
 import type { QueryExpr } from '$lib/api/lightly_studio_local';
 import type { Query } from './generated/ast.js';
 
@@ -19,6 +19,35 @@ export type QueryExprNotificationParams =
 export const QueryExprNotification = new NotificationType<QueryExprNotificationParams>(
     'lightly-query/queryExpr'
 );
+
+export const GetLatestQueryExprRequest = new RequestType<
+    void,
+    QueryExprNotificationParams | null,
+    never
+>('lightly-query/getLatestQueryExpr');
+
+export function toQueryExprNotificationParams(parseResult: {
+    lexerErrors: Array<{ message: string; line?: number; column?: number }>;
+    parserErrors: Array<{ message: string; line?: number; column?: number }>;
+    value: Query;
+}): QueryExprNotificationParams {
+    const errors = [...parseResult.lexerErrors, ...parseResult.parserErrors];
+    if (errors.length > 0) {
+        return {
+            status: 'error',
+            errors: errors.map((error) => ({
+                message: error.message,
+                line: error.line,
+                column: error.column
+            }))
+        };
+    }
+
+    return {
+        status: 'ok',
+        queryExpr: toQueryExpr(parseResult.value)
+    };
+}
 
 /**
  * Converts a Langium parse result into a backend-compatible QueryExpr.

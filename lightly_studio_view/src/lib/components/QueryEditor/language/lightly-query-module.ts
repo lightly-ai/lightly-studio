@@ -20,7 +20,11 @@ import {
     LightlyQueryGeneratedModule,
     LightlyQueryGeneratedSharedModule
 } from './generated/module.js';
-import { QueryExprNotification, toQueryExpr } from './query-expr-notification.js';
+import {
+    GetLatestQueryExprRequest,
+    type QueryExprNotificationParams,
+    toQueryExprNotificationParams
+} from './query-expr-notification.js';
 
 export type LightlyQueryServices = LangiumServices;
 
@@ -33,31 +37,15 @@ export function createLightlyQueryServices(
     const shared = inject(createDefaultSharedModule(context), LightlyQueryGeneratedSharedModule);
     const LightlyQuery = inject(createDefaultModule({ shared }), LightlyQueryGeneratedModule);
     shared.ServiceRegistry.register(LightlyQuery);
+    let latestParsed: QueryExprNotificationParams | null = null;
 
-    // After every successful parse (or failed lex/parse), send the result to
-    // the main thread as a custom LSP notification. `onDocumentPhase` fires
-    // per-document even when rapid typing cancels in-flight builds, so the
-    // main thread always gets the latest state.
+    shared.lsp?.Connection.onRequest(GetLatestQueryExprRequest, () => latestParsed);
+
+    // `onDocumentPhase` fires per-document even when rapid typing cancels
+    // in-flight builds, so the worker-side cache stays aligned with the most
+    // recent validation result for the active buffer.
     shared.workspace.DocumentBuilder.onDocumentPhase(DocumentState.Validated, (document) => {
-        const connection = shared.lsp?.Connection;
-        if (!connection) return;
-
-        const { lexerErrors, parserErrors } = document.parseResult;
-        if (lexerErrors.length > 0 || parserErrors.length > 0) {
-            connection.sendNotification(QueryExprNotification, {
-                status: 'error',
-                errors: [...lexerErrors, ...parserErrors].map((e) => ({
-                    message: e.message,
-                    line: 'line' in e ? (e.line as number) : undefined,
-                    column: 'column' in e ? (e.column as number) : undefined
-                }))
-            });
-        } else {
-            connection.sendNotification(QueryExprNotification, {
-                status: 'ok',
-                queryExpr: toQueryExpr(document.parseResult.value)
-            });
-        }
+        latestParsed = toQueryExprNotificationParams(document.parseResult);
     });
 
     return shared;
