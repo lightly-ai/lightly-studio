@@ -212,6 +212,8 @@
                                 {width}
                                 {height}
                                 {style}
+                                dataSampleName={items[index].file_name}
+                                dataIndex={index}
                                 dataTestId="video-grid-item"
                                 isSelected={$selectedSampleIds.has(items[index].sample_id)}
                                 ariaLabel={`View sample: ${items[index].file_name}`}

@@ -11,20 +11,22 @@ from typing import Protocol, TypeVar, Union
 
 from typing_extensions import assert_never
 
-from lightly_studio.core.dataset_query import (
-    AND,
-    NOT,
-    OR,
+from lightly_studio.core.dataset_query.boolean_expression import AND, NOT, OR
+from lightly_studio.core.dataset_query.classification_expression import (
     ClassificationField,
     ClassificationQuery,
-    ImageSampleField,
+)
+from lightly_studio.core.dataset_query.image_sample_field import ImageSampleField
+from lightly_studio.core.dataset_query.instance_segmentation_expression import (
     InstanceSegmentationField,
     InstanceSegmentationQuery,
-    ObjectDetectionField,
-    ObjectDetectionQuery,
-    VideoSampleField,
 )
 from lightly_studio.core.dataset_query.match_expression import MatchExpression
+from lightly_studio.core.dataset_query.object_detection_expression import (
+    ObjectDetectionField,
+    ObjectDetectionQuery,
+)
+from lightly_studio.core.dataset_query.video_sample_field import VideoSampleField
 from lightly_studio.errors import QueryExprError
 from lightly_studio.models.query_expr import (
     AndExpr,
