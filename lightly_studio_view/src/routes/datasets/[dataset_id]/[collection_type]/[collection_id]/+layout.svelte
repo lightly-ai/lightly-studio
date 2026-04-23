@@ -7,7 +7,8 @@
         GridHeader,
         LabelsMenu,
         SelectionPill,
-        TagsMenu
+        TagsMenu,
+        Spinner
     } from '$lib/components';
     import Input from '$lib/components/ui/input/input.svelte';
     import Separator from '$lib/components/ui/separator/separator.svelte';
@@ -493,9 +494,8 @@
         isSamples || isAnnotations || isVideos || isVideoFrames || isGroups
     );
 
-    // const { featureFlags } = useFeatureFlags();
-    // const isQueryFilterEnabled = $derived($featureFlags.includes('query_filter'));
-    const isQueryFilterEnabled = true; // Temporary hardcode to show query filter UI while in development
+    const { featureFlags } = useFeatureFlags();
+    const isQueryFilterEnabled = $derived($featureFlags.includes('query_filter'));
     let isQueryFilterEditing = $state(false);
     let queryEditorValue = $state('');
 </script>
@@ -799,11 +799,13 @@
                     {/if}
                 </div>
                 {#if isQueryFilterEnabled && isQueryFilterEditing}
-                    {#await import('$lib/components/QueryEditor/QueryEditor.svelte') then { default: QueryEditor }}
-                        <div class="flex h-full flex-1 flex-col rounded-[1vw] bg-card p-4">
+                    <div class="flex h-full flex-1 flex-col rounded-[1vw] bg-card p-4">
+                        {#await import('$lib/components/QueryEditor/QueryEditor.svelte')}
+                            <Spinner />
+                        {:then { default: QueryEditor }}
                             <QueryEditor height="100%" bind:value={queryEditorValue} />
-                        </div>
-                    {/await}
+                        {/await}
+                    </div>
                 {/if}
             {/if}
             {#if hasEmbeddings}
@@ -823,3 +825,18 @@
         />
     {/if}
 </div>
+
+<style>
+    .query-editor-progress-bar {
+        width: 30%;
+        animation: query-editor-progress-indeterminate 1.2s ease-in-out infinite;
+    }
+    @keyframes query-editor-progress-indeterminate {
+        0% {
+            left: -30%;
+        }
+        100% {
+            left: 100%;
+        }
+    }
+</style>
