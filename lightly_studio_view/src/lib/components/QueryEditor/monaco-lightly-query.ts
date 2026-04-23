@@ -11,10 +11,9 @@ const LIGHTLY_QUERY_THEME_ID = 'lightly-query-theme';
 // instances mounting in the same page don't re-register the language.
 let isRegistered = false;
 
-export const LIGHTLY_QUERY_DEFAULT_VALUE = `# Lightly Query examples
-ImageSampleField.width > 1920
-ImageSampleField.tags.contains("reviewed")
-VideoSampleField.duration > 60
+export const LIGHTLY_QUERY_DEFAULT_VALUE = `# Lightly Query example:
+Image.width > 1920 AND tags.contains("reviewed")
+AND object_detection(label == "car" and x > 10)
 `;
 
 // Monaco's built-in editor worker (diffing, link detection, tokenization
@@ -52,6 +51,7 @@ export function registerLightlyQueryMonacoLanguage(): void {
     // locally and keeps the editor responsive on first paint.
     // TODO(kondrat 04/26): Update tokenizer when language is fixed
     monaco.languages.setMonarchTokensProvider(LIGHTLY_QUERY_LANGUAGE_ID, {
+        ignoreCase: true,
         tokenizer: {
             root: [
                 [/#[^\n\r]*/, 'comment'],
@@ -59,13 +59,22 @@ export function registerLightlyQueryMonacoLanguage(): void {
                 [/'([^'\\]|\\.)*$/, 'string.invalid'],
                 [/"/, 'string', '@doubleQuotedString'],
                 [/'/, 'string', '@singleQuotedString'],
-                [/\b(?:AND|OR|NOT)\b/, 'keyword'],
-                [/\b(?:is|in|not)\b/, 'keyword.operator'],
-                [/\b(?:true|false|True|False|null|None|NULL)\b/, 'constant.language'],
-                [/\b(?:ImageSampleField|VideoSampleField|SampleField)\b/, 'type.identifier'],
-                [/-?\d+(?:\.\d+)?(?:[eE][+-]?\d+)?/, 'number'],
+                [/tags\.contains\(/, 'predefined'],
+                [/video:/, 'keyword'],
+                [/\b(?:and|or|not|in)\b/, 'keyword'],
+                [/\b(?:true|false)\b/, 'constant.language'],
+                [
+                    /\b(?:Image|ImageSampleField|Video|VideoSampleField|ObjectDetection|ObjectDetectionField)\b/,
+                    'type.identifier'
+                ],
+                [/\b(?:object_detection|tags)\b/, 'predefined'],
+                [
+                    /\b(?:created_at|duration_s|file_name|file_path_abs|fps|height|label|width|x|y)\b/,
+                    'identifier'
+                ],
+                [/[0-9]+(?:\.[0-9]*)?/, 'number'],
                 [/[a-zA-Z_]\w*/, 'identifier'],
-                [/==|!=|<=|>=|=|<|>/, 'operator'],
+                [/==|!=|<=|>=|<|>/, 'operator'],
                 [/[()[\]]/, '@brackets'],
                 [/\./, 'delimiter'],
                 [/,/, 'delimiter'],
