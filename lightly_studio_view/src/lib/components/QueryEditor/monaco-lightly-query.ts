@@ -11,7 +11,7 @@ const LIGHTLY_QUERY_THEME_ID = 'lightly-query-theme';
 // instances mounting in the same page don't re-register the language.
 let isRegistered = false;
 
-export const LIGHTLY_QUERY_DEFAULT_VALUE = `# Lightly Query examples
+export const LIGHTLY_QUERY_DEFAULT_VALUE = `# Lightly Query example:
 Image.width > 1920 AND tags.contains("reviewed")
 AND object_detection(label == "car" and x > 10)
 `;
