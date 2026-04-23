@@ -22,7 +22,7 @@ export const TranslateQueryExprRequest = new RequestType<
     never
 >('lightly-query/translateQueryExpr');
 
-export function toQueryExprTranslationResult(parseResult: {
+export function toQueryExpr(parseResult: {
     lexerErrors: Array<{ message: string; line?: number; column?: number }>;
     parserErrors: Array<{ message: string; line?: number; column?: number }>;
     value: Query;
@@ -41,17 +41,17 @@ export function toQueryExprTranslationResult(parseResult: {
 
     return {
         status: 'ok',
-        queryExpr: toQueryExpr(parseResult.value)
+        queryExpr: toQueryExprImpl(parseResult.value)
     };
 }
 
 /**
- * Converts a Langium parse result into a backend-compatible QueryExpr.
+ * Converts a Langium AST into a backend-compatible QueryExpr.
  *
  * Stub: always returns `object_detection(label == "cat")`. The real recursive
  * AST visitor will replace this once the grammar-to-API mapping is finalized.
  */
-export function toQueryExpr(_parseResult: Query): QueryExpr {
+function toQueryExprImpl(_parseResult: Query): QueryExpr {
     return {
         match_expr: {
             type: 'object_detection_match_expr',

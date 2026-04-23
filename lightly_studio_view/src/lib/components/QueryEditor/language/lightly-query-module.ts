@@ -23,7 +23,7 @@ import {
 import {
     TranslateQueryExprRequest,
     type QueryExprTranslationResult,
-    toQueryExprTranslationResult
+    toQueryExpr
 } from './query-expr-translation.js';
 
 export type LightlyQueryServices = LangiumServices;
@@ -45,7 +45,7 @@ export function createLightlyQueryServices(
     // in-flight builds, so the worker-side cache stays aligned with the most
     // recent validation result for the active buffer.
     shared.workspace.DocumentBuilder.onDocumentPhase(DocumentState.Validated, (document) => {
-        latestTranslation = toQueryExprTranslationResult(document.parseResult);
+        latestTranslation = toQueryExpr(document.parseResult);
     });
 
     return shared;
