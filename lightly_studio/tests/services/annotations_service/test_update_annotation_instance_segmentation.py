@@ -1,4 +1,4 @@
-"""Tests for updating bounding box of annotation instance segmentation."""
+"""Tests for updating bounding box of annotation segmentation mask."""
 
 from __future__ import annotations
 
@@ -17,15 +17,15 @@ from tests.conftest import AnnotationsTestData, assert_contains_properties
 from tests.helpers_resolvers import get_annotation_by_type
 
 
-def test_update_annotation_instance_segmentation(
+def test_update_annotation_segmentation_mask(
     db_session: Session,
     annotations_test_data: AnnotationsTestData,  # noqa: ARG001
 ) -> None:
-    """Test updating annotation instance segmentation mask."""
+    """Test updating annotation segmentation mask."""
     # Get all annotations and pick the first one
     annotations = annotation_resolver.get_all(db_session).annotations
     instance_segmentation_annotation = get_annotation_by_type(
-        annotations=annotations, annotation_type=AnnotationType.INSTANCE_SEGMENTATION
+        annotations=annotations, annotation_type=AnnotationType.SEGMENTATION_MASK
     )
     annotation_id = instance_segmentation_annotation.sample_id
 

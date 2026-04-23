@@ -103,4 +103,18 @@ describe('GridItem', () => {
         expect(screen.getByTestId('grid-item-caption-text')).toHaveTextContent('caption text');
         expect(caption).toHaveAttribute('title', 'caption text');
     });
+
+    it('renders qa metadata attributes when provided', () => {
+        render(GridItemTestWrapper, {
+            props: {
+                ...defaultProps,
+                dataSampleName: 'sample-001.jpg',
+                dataIndex: 7
+            }
+        });
+
+        const gridItem = screen.getByTestId('grid-item');
+        expect(gridItem).toHaveAttribute('data-sample-name', 'sample-001.jpg');
+        expect(gridItem).toHaveAttribute('data-index', '7');
+    });
 });

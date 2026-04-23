@@ -1,4 +1,4 @@
-"""Classes and functions for building complex queries against instance segmentation annotations."""
+"""Classes and functions for building complex queries against segmentation mask annotations."""
 
 from __future__ import annotations
 
@@ -23,7 +23,7 @@ from lightly_studio.models.sample import SampleTable
 
 
 class InstanceSegmentationField:
-    """Providing access to predefined instance segmentation fields for queries."""
+    """Providing access to predefined segmentation mask fields for queries."""
 
     width = ForeignNumericalField(
         column=col(SegmentationAnnotationTable.width),
@@ -48,11 +48,11 @@ class InstanceSegmentationField:
 
 
 class InstanceSegmentationQuery:
-    """Provides access to instance segmentation query operations."""
+    """Provides access to segmentation mask query operations."""
 
     @staticmethod
     def match(*criteria: MatchExpression) -> InstanceSegmentationMatchExpression:
-        """Combine multiple instance segmentation criteria into a single subquery using logical AND.
+        """Combine multiple segmentation mask criteria into a single subquery using logical AND.
 
         Args:
             criteria: The criteria to combine.
@@ -65,15 +65,15 @@ class InstanceSegmentationQuery:
 
 @dataclass
 class InstanceSegmentationMatchExpression(MatchExpression):
-    """Expression for checking if a sample has an instance segmentation matching a criterion."""
+    """Expression for checking if a sample has a segmentation mask matching a criterion."""
 
     criterion: MatchExpression
 
     def get(self) -> ColumnElement[bool]:
-        """Get the instance segmentation match expression."""
+        """Get the segmentation mask match expression."""
         return SampleTable.annotations.any(
             and_(
-                col(AnnotationBaseTable.annotation_type) == AnnotationType.INSTANCE_SEGMENTATION,
+                col(AnnotationBaseTable.annotation_type) == AnnotationType.SEGMENTATION_MASK,
                 self.criterion.get(),
             )
         )

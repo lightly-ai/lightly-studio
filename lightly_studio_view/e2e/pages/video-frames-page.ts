@@ -110,11 +110,22 @@ export class VideoFramesPage {
     }
 
     async doubleClickFirstVideoFrame() {
+        const gridContainer = this.page.getByTestId('video-frames-grid');
+        await expect(gridContainer).toBeVisible({
+            timeout: 10000
+        });
+        await gridContainer.evaluate((el) => {
+            el.scrollTop = 0;
+        });
         await this.doubleClickNthVideoFrame(0);
     }
 
     async doubleClickNthVideoFrame(index: number): Promise<void> {
-        await this.getVideoFrameByIndex(index).dblclick();
+        const videoFrame = this.getVideoFrameByIndex(index);
+        await expect(videoFrame).toBeVisible({
+            timeout: 10000
+        });
+        await videoFrame.dblclick();
         await this.page.getByTestId('sample-details-loading').waitFor({ state: 'hidden' });
     }
 

@@ -99,7 +99,7 @@ vi.mock('$lib/hooks/useCollection/useCollection', () => ({
 }));
 
 vi.mock('$lib/hooks/useInstanceSegmentationBrush', () => ({
-    useInstanceSegmentationBrush: useInstanceSegmentationBrushMock
+    useSegmentationMaskBrush: useInstanceSegmentationBrushMock
 }));
 
 const baseProps = {
@@ -348,7 +348,7 @@ describe('SampleInstanceSegmentationRect', () => {
                         {
                             parent_sample_id: 'parent-sample-1',
                             sample_id: 'annotation-1',
-                            annotation_type: 'instance_segmentation',
+                            annotation_type: 'segmentation_mask',
                             annotation_label: { annotation_label_name: 'label-1' },
                             created_at: new Date('1970-01-01T00:00:00.000Z'),
                             segmentation_details: {
@@ -380,5 +380,47 @@ describe('SampleInstanceSegmentationRect', () => {
         expect(cancelAnimationFrame).toHaveBeenCalledTimes(1);
         expect(cancelAnimationFrame).toHaveBeenCalledWith(1);
         expect(scheduledFrames).toHaveLength(0);
+    });
+
+    it('notifies pending state while finishBrush is in flight', async () => {
+        let resolveFinishBrush: (() => void) | undefined;
+        const finishBrush = vi.fn(
+            () =>
+                new Promise<void>((resolve) => {
+                    resolveFinishBrush = resolve;
+                })
+        );
+        useInstanceSegmentationBrushMock.mockReturnValueOnce({ finishBrush });
+        const onFinishBrushPendingChange = vi.fn();
+
+        const { container } = render(SampleInstanceSegmentationRect, {
+            props: {
+                ...baseProps,
+                sampleId: 'sample-1',
+                sample: { width: 100, height: 100, annotations: [] },
+                onFinishBrushPendingChange
+            }
+        });
+
+        const drawingRect = getDrawingRect(container);
+        await fireEvent.pointerDown(drawingRect, {
+            pointerId: 1,
+            clientX: 20,
+            clientY: 20
+        });
+        await fireEvent.pointerUp(drawingRect, { pointerId: 1 });
+
+        expect(onFinishBrushPendingChange).toHaveBeenCalledWith({
+            operation: 'brush-1',
+            isPending: true
+        });
+
+        resolveFinishBrush?.();
+        await tick();
+
+        expect(onFinishBrushPendingChange).toHaveBeenLastCalledWith({
+            operation: 'brush-1',
+            isPending: false
+        });
     });
 });
