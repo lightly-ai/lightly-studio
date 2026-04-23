@@ -10,14 +10,21 @@
 
 import type { Module } from 'langium';
 import {
+    createDefaultCoreModule,
     createDefaultModule,
+    createDefaultSharedCoreModule,
     createDefaultSharedModule,
     type DefaultSharedModuleContext,
+    EmptyFileSystem,
     inject,
+    type LangiumCoreServices,
     type LangiumServices,
     type LangiumSharedServices
 } from 'langium';
-import { LightlyQueryGeneratedModule } from './generated/module.js';
+import {
+    LightlyQueryGeneratedModule,
+    LightlyQueryGeneratedSharedModule
+} from './generated/module.js';
 
 export type LightlyQueryServices = LangiumServices;
 
@@ -31,4 +38,16 @@ export function createLightlyQueryServices(
     const LightlyQuery = inject(createDefaultModule({ shared }), LightlyQueryGeneratedModule);
     shared.ServiceRegistry.register(LightlyQuery);
     return shared;
+}
+
+// Lightweight core-only services (no LSP wiring) — suitable for main-thread
+// parsing where a full language server is not needed.
+export function createLightlyQueryCoreServices(): LangiumCoreServices {
+    const shared = inject(
+        createDefaultSharedCoreModule(EmptyFileSystem),
+        LightlyQueryGeneratedSharedModule
+    );
+    const services = inject(createDefaultCoreModule({ shared }), LightlyQueryGeneratedModule);
+    shared.ServiceRegistry.register(services);
+    return services;
 }
