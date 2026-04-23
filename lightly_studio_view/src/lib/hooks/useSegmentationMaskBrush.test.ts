@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import type { AnnotationView } from '$lib/api/lightly_studio_local';
+import type { AnnotationType, AnnotationView } from '$lib/api/lightly_studio_local';
 import type { AnnotationLabelContext } from '$lib/contexts/SampleDetailsAnnotation.svelte';
 
 import { useSegmentationMaskBrush } from './useSegmentationMaskBrush';
@@ -34,7 +34,7 @@ vi.mock('$lib/contexts/SampleDetailsAnnotation.svelte', () => ({
         setIsDrawing(value: boolean) {
             annotationLabelContext.isDrawing = value;
         },
-        setAnnotationType(type: string | null) {
+        setAnnotationType(type: AnnotationType | null) {
             annotationLabelContext.annotationType = type;
         }
     })
@@ -82,6 +82,7 @@ vi.mock('svelte-sonner', () => {
 const bbox = { x: 1, y: 2, width: 10, height: 20 };
 const rle = [1, 2, 3];
 const mask = new Uint8Array(100);
+const datasetId = 'd1';
 
 const sample = { width: 100, height: 100 };
 
@@ -94,8 +95,8 @@ describe('useSegmentationMaskBrush', () => {
 
         vi.clearAllMocks();
 
-        computeBoundingBoxFromMask.mockReturnValue(bbox);
-        encodeBinaryMaskToRLE.mockReturnValue(rle);
+        vi.mocked(computeBoundingBoxFromMask).mockReturnValue(bbox);
+        vi.mocked(encodeBinaryMaskToRLE).mockReturnValue(rle);
         vi.mocked(applySegmentationMaskConstraints).mockResolvedValue([]);
 
         createAnnotation.mockResolvedValue({
@@ -115,6 +116,7 @@ describe('useSegmentationMaskBrush', () => {
 
         const { finishBrush } = useSegmentationMaskBrush({
             collectionId: 'c1',
+            datasetId,
             sampleId: 's1',
             sample,
             refetch
@@ -128,12 +130,13 @@ describe('useSegmentationMaskBrush', () => {
     });
 
     it('shows toast error when bounding box is invalid', async () => {
-        computeBoundingBoxFromMask.mockReturnValue(null);
+        vi.mocked(computeBoundingBoxFromMask).mockReturnValue(null);
 
         const refetch = vi.fn();
 
         const { finishBrush } = useSegmentationMaskBrush({
             collectionId: 'c1',
+            datasetId,
             sampleId: 's1',
             sample,
             refetch
@@ -158,6 +161,7 @@ describe('useSegmentationMaskBrush', () => {
 
         const { finishBrush } = useSegmentationMaskBrush({
             collectionId: 'c1',
+            datasetId,
             sampleId: 's1',
             sample,
             refetch
@@ -186,6 +190,7 @@ describe('useSegmentationMaskBrush', () => {
 
         const { finishBrush } = useSegmentationMaskBrush({
             collectionId: 'c1',
+            datasetId,
             sampleId: 's1',
             sample,
             refetch
@@ -208,6 +213,7 @@ describe('useSegmentationMaskBrush', () => {
 
         const { finishBrush } = useSegmentationMaskBrush({
             collectionId: 'c1',
+            datasetId,
             sampleId: 's1',
             sample,
             refetch
@@ -234,6 +240,7 @@ describe('useSegmentationMaskBrush', () => {
 
         const { finishBrush } = useSegmentationMaskBrush({
             collectionId: 'c1',
+            datasetId,
             sampleId: 's1',
             sample,
             refetch
@@ -260,7 +267,7 @@ describe('useSegmentationMaskBrush', () => {
 
         const { finishBrush } = useSegmentationMaskBrush({
             collectionId: 'c1',
-            datasetId: 'some-dataset-id',
+            datasetId,
             sampleId: 's1',
             sample,
             refetch
@@ -269,7 +276,7 @@ describe('useSegmentationMaskBrush', () => {
         await finishBrush(mask, null, []);
 
         expect(createLabel).toHaveBeenCalledWith({
-            dataset_id: 'some-dataset-id',
+            dataset_id: datasetId,
             annotation_label_name: 'DEFAULT'
         });
 
