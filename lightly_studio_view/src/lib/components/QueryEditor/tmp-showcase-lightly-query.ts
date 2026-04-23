@@ -21,7 +21,6 @@ import {
     isTagInExpression,
     isNumberLiteral,
     isStringLiteral,
-    // isBooleanLiteral,
     isNotExpression
 } from './language/generated/ast';
 
@@ -128,7 +127,6 @@ function transformToDSLJson(node: unknown): DSLJson {
     }
     if (isNumberLiteral(node)) return node.value;
     if (isStringLiteral(node)) return unquoteStringLiteral(node.value);
-    // if (isBooleanLiteral(node)) return node.value === 'true';
 
     if (hasExpression(node)) return transformToDSLJson(node.expression);
 
