@@ -1,4 +1,4 @@
-"""Tests for updating segmentation mask of annotation instance segmentation."""
+"""Tests for updating segmentation mask of annotation segmentation mask."""
 
 from sqlmodel import Session
 

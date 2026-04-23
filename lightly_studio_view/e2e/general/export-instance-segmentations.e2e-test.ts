@@ -2,8 +2,8 @@ import { expect, test, gotoFirstPage } from '../utils';
 import { cocoDataset } from './fixtures';
 import fs from 'node:fs/promises';
 
-test.describe('Export Instance Segmentations', () => {
-    test('Download instance segmentations export JSON', async ({ page }) => {
+test.describe('Export Segmentation Masks', () => {
+    test('Download segmentation masks export JSON', async ({ page }) => {
         await gotoFirstPage(page);
 
         // Open the Export side panel from the header
@@ -13,7 +13,7 @@ test.describe('Export Instance Segmentations', () => {
 
         // Switch to the correct export type
         await page.getByTestId('export-type-select').click();
-        await page.getByRole('option', { name: 'Image Segmentation masks' }).click();
+        await page.getByRole('option', { name: 'Image Segmentation Masks' }).click();
         await expect(page.getByTestId('submit-button-instance-segmentations')).toHaveAttribute(
             'href',
             /\/api\/collections\/.*\/export\/annotations\?ts=\d+&export_format=segmentation_mask_coco/
@@ -67,7 +67,7 @@ test.describe('Export Instance Segmentations', () => {
         expect(ann).toHaveProperty('bbox');
         expect(Array.isArray(ann.bbox)).toBeTruthy();
         expect(ann).toHaveProperty('segmentation');
-        // Ensure it's instance segmentation (it can be an array of polygons or RLE)
+        // Ensure it's segmentation mask (it can be an array of polygons or RLE)
         expect(
             Array.isArray(ann.segmentation) ||
                 (typeof ann.segmentation === 'object' && ann.segmentation !== null)
