@@ -34,7 +34,7 @@ describe('QueryEditor', () => {
         await fireEvent.click(screen.getByRole('button', { name: 'Save' }));
 
         expect(onSave).toHaveBeenCalledOnce();
-        expect(onSave).toHaveBeenCalledWith('my query');
+        expect(onSave).toHaveBeenCalledWith('my query', null);
     });
 
     it('disables the Save button when readOnly is true', () => {

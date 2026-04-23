@@ -10,26 +10,27 @@
         value?: string;
         height?: string;
         readOnly?: boolean;
-        onSave?: (value: string) => void;
-        onParsed?: (params: QueryExprNotificationParams) => void;
+        onSave?: (value: string, parsed: QueryExprNotificationParams | null) => void;
     }
 
     let {
         value = $bindable(LIGHTLY_QUERY_DEFAULT_VALUE),
         height = '320px',
         readOnly = false,
-        onSave,
-        onParsed
+        onSave
     }: QueryEditorProps = $props();
 
     let containerEl: HTMLDivElement | null = null;
+    let lastParsed: QueryExprNotificationParams | null = $state(null);
 
     const editor = useLightlyQueryEditor({
         value: () => value,
         onValueChange: (next) => {
             value = next;
         },
-        onParsed,
+        onParsed: (params) => {
+            lastParsed = params;
+        },
         readOnly: () => readOnly
     });
 
@@ -55,7 +56,7 @@
                 variant="ghost"
                 class="h-6 px-2 text-[#cccccc] hover:bg-white/10 hover:text-white"
                 disabled={readOnly}
-                onclick={() => onSave?.(value)}
+                onclick={() => onSave?.(value, lastParsed)}
             >
                 <Typography variant="caption">Save</Typography>
             </Button>
