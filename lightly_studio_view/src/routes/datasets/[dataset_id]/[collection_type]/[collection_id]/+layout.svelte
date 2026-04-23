@@ -498,6 +498,9 @@
     const isQueryFilterEnabled = $derived($featureFlags.includes('query_filter'));
     let isQueryFilterEditing = $state(false);
     let queryEditorValue = $state('');
+    const handleQueryEditorValueChange = (value: string) => {
+        console.log('Saved query editor value:', value);
+    };
 </script>
 
 <div class="flex-none">
@@ -803,7 +806,11 @@
                         {#await import('$lib/components/QueryEditor/QueryEditor.svelte')}
                             <Spinner />
                         {:then { default: QueryEditor }}
-                            <QueryEditor height="100%" bind:value={queryEditorValue} />
+                            <QueryEditor
+                                height="100%"
+                                bind:value={queryEditorValue}
+                                onSave={handleQueryEditorValueChange}
+                            />
                         {/await}
                     </div>
                 {/if}
