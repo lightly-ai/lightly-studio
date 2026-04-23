@@ -26,7 +26,14 @@ describe('QueryEditor', () => {
         const onSave = vi.fn();
         const parsed = {
             status: 'ok',
-            queryExpr: { match_expr: { type: 'dummy' } }
+            queryExpr: {
+                match_expr: {
+                    type: 'string_expr',
+                    field: { table: 'object_detection', name: 'label' },
+                    operator: '==',
+                    value: 'cat'
+                }
+            }
         } as QueryExprTranslationResult;
         getLatestTranslationResult.mockResolvedValueOnce(parsed);
 

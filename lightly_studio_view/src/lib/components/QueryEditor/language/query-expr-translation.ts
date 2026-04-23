@@ -2,7 +2,7 @@
 // Both sides import this module so the request method and result shape stay
 // in sync.
 
-import { RequestType } from 'vscode-languageserver-protocol';
+import { RequestType0 } from 'vscode-languageserver-protocol';
 import type { QueryExpr } from '$lib/api/lightly_studio_local';
 import type { Query } from './generated/ast.js';
 
@@ -16,8 +16,7 @@ export type QueryExprTranslationResult =
     | { status: 'ok'; queryExpr: QueryExpr }
     | { status: 'error'; errors: QueryParseError[] };
 
-export const QueryExprTranslationRequest = new RequestType<
-    void,
+export const QueryExprTranslationRequest = new RequestType0<
     QueryExprTranslationResult | null,
     never
 >('lightly-query/queryExprTranslation');

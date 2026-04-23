@@ -25,6 +25,7 @@ import {
     type QueryExprTranslationResult,
     toQueryExpr
 } from './query-expr-translation.js';
+import { isQuery } from './generated/ast.js';
 
 export type LightlyQueryServices = LangiumServices;
 
@@ -39,13 +40,21 @@ export function createLightlyQueryServices(
     shared.ServiceRegistry.register(LightlyQuery);
     let latestTranslation: QueryExprTranslationResult | null = null;
 
-    shared.lsp?.Connection.onRequest(QueryExprTranslationRequest, () => latestTranslation);
+    shared.lsp?.Connection?.onRequest(QueryExprTranslationRequest, () => latestTranslation);
 
     // `onDocumentPhase` fires per-document even when rapid typing cancels
     // in-flight builds, so the worker-side cache stays aligned with the most
     // recent validation result for the active buffer.
     shared.workspace.DocumentBuilder.onDocumentPhase(DocumentState.Validated, (document) => {
-        latestTranslation = toQueryExpr(document.parseResult);
+        if (!isQuery(document.parseResult.value)) {
+            latestTranslation = null;
+            return;
+        }
+        latestTranslation = toQueryExpr({
+            lexerErrors: document.parseResult.lexerErrors,
+            parserErrors: document.parseResult.parserErrors,
+            value: document.parseResult.value
+        });
     });
 
     return shared;
