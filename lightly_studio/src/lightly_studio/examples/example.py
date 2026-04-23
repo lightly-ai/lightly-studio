@@ -22,7 +22,4 @@ dataset.add_images_from_path(path=dataset_path)
 for sample in dataset:
     print(sample)
 
-for sample in dataset:
-    print(sample)
-
 ls.start_gui()
