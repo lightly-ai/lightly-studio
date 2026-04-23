@@ -7,9 +7,9 @@
         GridHeader,
         LabelsMenu,
         SelectionPill,
-        TagsMenu,
-        Spinner
+        TagsMenu
     } from '$lib/components';
+    import QueryEditorPanel from '$lib/components/QueryEditorPanel/QueryEditorPanel.svelte';
     import Input from '$lib/components/ui/input/input.svelte';
     import Separator from '$lib/components/ui/separator/separator.svelte';
     import {
@@ -497,10 +497,6 @@
     const { featureFlags } = useFeatureFlags();
     const isQueryFilterEnabled = $derived($featureFlags.includes('query_filter'));
     let isQueryFilterEditing = $state(false);
-    let queryEditorValue = $state('');
-    const handleQueryEditorValueChange = (value: string) => {
-        console.log('Saved query editor value:', value);
-    };
 </script>
 
 <div class="flex-none">
@@ -802,17 +798,7 @@
                     {/if}
                 </div>
                 {#if isQueryFilterEnabled && isQueryFilterEditing}
-                    <div class="flex h-full flex-1 flex-col rounded-[1vw] bg-card p-4">
-                        {#await import('$lib/components/QueryEditor/QueryEditor.svelte')}
-                            <Spinner />
-                        {:then { default: QueryEditor }}
-                            <QueryEditor
-                                height="100%"
-                                bind:value={queryEditorValue}
-                                onSave={handleQueryEditorValueChange}
-                            />
-                        {/await}
-                    </div>
+                    <QueryEditorPanel />
                 {/if}
             {/if}
             {#if hasEmbeddings}

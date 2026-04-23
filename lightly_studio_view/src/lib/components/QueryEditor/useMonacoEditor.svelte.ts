@@ -58,7 +58,7 @@ export function useMonacoEditor(options: UseMonacoEditorOptions): MonacoEditorHa
 
     function mount(container: HTMLElement): void {
         // Every Monaco model needs a unique URI — it's the key the editor.
-        const uri = monaco.Uri.parse(`inmemory://model/${crypto.randomUUID()}.lql`);
+        const uri = monaco.Uri.parse(`inmemory://model/lightly-query.lql`);
         model = monaco.editor.createModel(options.value(), options.language, uri);
 
         editor = monaco.editor.create(container, {
