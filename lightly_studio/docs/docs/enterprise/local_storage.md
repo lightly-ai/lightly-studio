@@ -14,12 +14,13 @@ work for the Lightly-hosted deployment. If you use Lightly-hosted, use
 
 When you call `ls.connect()`, LightlyStudio stores file references in the
 shared PostgreSQL database. It does **not** upload files into LightlyStudio,
-copy them into the container, or rewrite their paths. It reads raw images and videos
+copy them into the container, or rewrite their paths. It reads images and videos
 directly from your storage when the GUI needs them. The database stores metadata and
-file paths, not the raw media itself.
+file paths, not the media itself.
 
-This means the path used by your Python script must also be valid for the
-`studio` container that later serves the files to the GUI.
+This means the path used by your Python script must also be valid on the
+Docker host, where the `studio` container reads the files and serves them to
+the GUI.
 
 !!! warning "Same Absolute Path Required"
     Always use absolute paths; relative paths do not work in this workflow. The same absolute path must work in both places:
@@ -54,9 +55,9 @@ For example, you can set `DATASET_PATH=/mnt/datasets` and then index
 `/mnt/datasets/dataset_a/images` and `/mnt/datasets/dataset_b/images` as
 different datasets.
 
-You can broaden the mounted root later — for example, `/mnt/datasets/dataset_a` to `/mnt/datasets`. Previously indexed files must still be reachable at their stored absolute paths.
+You can broaden the storage root later — for example, `/mnt/datasets/dataset_a` to `/mnt/datasets`. Previously indexed files must still be reachable at their stored absolute paths.
 
-## Step 3: Make the Same Path Available to Python
+## Step 3: Make `DATASET_PATH` Available to Python
 
 Run your Python indexing script on a machine that can access the storage root at the absolute path you set in `DATASET_PATH`.
 
@@ -72,12 +73,12 @@ If Python runs on a different machine where the storage is mounted at a differen
 sudo ln -s /home/alice/datasets /mnt/datasets
 ```
 
-The paths you pass to the dataset loading methods must be under `/mnt/datasets` (e.g., `/mnt/datasets/local_images`).
+The paths you pass to the dataset loading methods must be under your configured `DATASET_PATH`. For example, if `DATASET_PATH=/mnt/datasets`, use paths like `/mnt/datasets/dataset_a`.
 
 ## Step 4: Connect from Python and Index Data
 
 Start with [Connect from Python](connect.md). After `ls.connect()`, use
-absolute paths under your chosen storage root.
+absolute paths under your storage root.
 
 === "Raw Images"
 
@@ -86,8 +87,8 @@ absolute paths under your chosen storage root.
 
     ls.connect()
 
-    dataset = ls.ImageDataset.load_or_create("local_images")
-    dataset.add_images_from_path(path="/mnt/datasets/local_images/images")
+    dataset = ls.ImageDataset.load_or_create("dataset_a")
+    dataset.add_images_from_path(path="/mnt/datasets/dataset_a/images")
     ```
 
 === "Raw Videos"
@@ -97,8 +98,8 @@ absolute paths under your chosen storage root.
 
     ls.connect()
 
-    dataset = ls.VideoDataset.load_or_create("local_videos")
-    dataset.add_videos_from_path(path="/mnt/datasets/local_videos/videos")
+    dataset = ls.VideoDataset.load_or_create("dataset_b")
+    dataset.add_videos_from_path(path="/mnt/datasets/dataset_b/videos")
     ```
 
 === "COCO Import"
@@ -108,10 +109,10 @@ absolute paths under your chosen storage root.
 
     ls.connect()
 
-    dataset = ls.ImageDataset.load_or_create("local_coco")
+    dataset = ls.ImageDataset.load_or_create("dataset_c")
     dataset.add_samples_from_coco(
-        annotations_json="/mnt/datasets/local_coco/instances_train.json",
-        images_path="/mnt/datasets/local_coco/images",
+        annotations_json="/mnt/datasets/dataset_c/instances_train.json",
+        images_path="/mnt/datasets/dataset_c/images",
         annotation_type=ls.AnnotationType.SEGMENTATION_MASK,
     )
     ```
@@ -119,9 +120,9 @@ absolute paths under your chosen storage root.
 ## Troubleshooting
 
 - If indexing succeeds but files do not open in the GUI, verify that the same
-  absolute path works in Python, on the host, and inside the `studio`
-  container. To check the expected path, go in the GUI on the details view of an image
-  or video and check the Filepath shown there. 
+  absolute path is valid on the Python machine and on the Docker host. To
+  check the expected path, open the details view of any image or video in
+  the GUI and check the Filepath shown there.
 - If you move or rename files after indexing them, the stored file references
   become invalid and the GUI can no longer load those files.
 - If your Python script runs on another machine, mount the same local/NAS
