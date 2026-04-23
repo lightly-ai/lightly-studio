@@ -1,18 +1,22 @@
 <script lang="ts">
     import { onMount } from 'svelte';
+    import { Button } from '$lib/components/ui/button';
     import { LIGHTLY_QUERY_DEFAULT_VALUE } from './monaco-lightly-query.js';
     import { useLightlyQueryEditor } from './useLightlyQueryEditor.js';
+    import Typography from '$lib/components/Typography/Typography.svelte';
 
     interface QueryEditorProps {
         value?: string;
         height?: string;
         readOnly?: boolean;
+        onSave?: (value: string) => void;
     }
 
     let {
         value = $bindable(LIGHTLY_QUERY_DEFAULT_VALUE),
         height = '320px',
-        readOnly = false
+        readOnly = false,
+        onSave
     }: QueryEditorProps = $props();
 
     let containerEl: HTMLDivElement | null = null;
@@ -32,13 +36,25 @@
     });
 </script>
 
-<div class="query-editor" style={`height: ${height}`} bind:this={containerEl}></div>
-
-<style>
-    .query-editor {
-        width: 100%;
-        border: 1px solid rgb(60 60 60);
-        border-radius: 0.5rem;
-        overflow: hidden;
-    }
-</style>
+<div
+    class="flex w-full flex-col overflow-hidden rounded-lg border border-[#3c3c3c] bg-[#1e1e1e]"
+    style={`height: ${height}`}
+>
+    <div class="min-h-0 flex-1" bind:this={containerEl}></div>
+    {#if onSave}
+        <div
+            class="flex items-center justify-end gap-2 border-b border-[#3c3c3c] bg-[#252526] px-2 py-1 text-xs text-[#cccccc]"
+        >
+            <Button
+                type="button"
+                size="sm"
+                variant="ghost"
+                class="h-6 px-2 text-[#cccccc] hover:bg-white/10 hover:text-white"
+                disabled={readOnly}
+                onclick={() => onSave?.(value)}
+            >
+                <Typography variant="caption">Save</Typography>
+            </Button>
+        </div>
+    {/if}
+</div>
