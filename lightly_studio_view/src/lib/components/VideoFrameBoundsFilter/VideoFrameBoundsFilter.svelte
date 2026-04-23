@@ -2,12 +2,11 @@
     import { page } from '$app/state';
     import { formatInteger } from '$lib/utils';
     import { Slider } from '$lib/components/ui/slider/index.js';
-    import type { SliderMultipleRootProps } from 'bits-ui/dist/types';
     import { useVideoFramesBounds } from '$lib/hooks/useVideoFramesBounds/useVideoFramesBounds';
     const { videoFramesBounds, videoFramesBoundsValues, updateVideoFramesBoundsValues } =
         useVideoFramesBounds(page.params.collection_id);
 
-    const handleChangeFrameNumber: SliderMultipleRootProps['onValueChange'] = (newValues) => {
+    const handleChangeFrameNumber = (newValues: number[]) => {
         if (!$videoFramesBoundsValues) return;
         updateVideoFramesBoundsValues({
             ...$videoFramesBoundsValues,
