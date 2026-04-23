@@ -18,8 +18,9 @@
     import type { ImageView } from '$lib/api/lightly_studio_local';
     import { goto } from '$app/navigation';
     import { omit, isEqual } from 'lodash-es';
-    import SampleGrid from '../SampleGrid/SampleGrid.svelte';
-    import SampleGridItem from '../SampleGridItem/SampleGridItem.svelte';
+    import { GridContainer } from '../GridContainer';
+    import { Grid } from '../Grid';
+    import { GridItem } from '../GridItem';
     import { selectRangeByAnchor } from '$lib/utils/selectRangeByAnchor';
     import { page } from '$app/state';
     import SampleImageGridItem from '../SampleImageGridItem/SampleImageGridItem.svelte';
@@ -49,8 +50,10 @@
         getCollectionVersion,
         setfilteredSampleCount,
         getSelectedSampleIds,
-        toggleSampleSelection
+        toggleSampleSelection,
+        sampleSize
     } = useGlobalStorage();
+    const columnCount = $derived($sampleSize.width);
 
     const samplesParams = $derived({
         collection_id,
@@ -184,9 +187,7 @@
     const datasetId = $derived(page.params.dataset_id!);
     const collectionType = $derived(page.params.collection_type!);
 
-    function handleOnDoubleClick(event: MouseEvent) {
-        const sampleId = (event.currentTarget as HTMLElement).dataset.sampleId!;
-
+    function handleOnDoubleClick(sampleId: string) {
         if (datasetId && collectionType) {
             goto(
                 routeHelpers.toSample({
@@ -220,16 +221,18 @@
         });
     }
 
+    function handleGridItemSelect(
+        event: MouseEvent | KeyboardEvent,
+        sampleId: string,
+        index: number
+    ) {
+        handleSampleSelect({ sampleId, index, shiftKey: event.shiftKey });
+    }
+
     const scrollResetKey = $derived(filterHash + ($textEmbedding?.queryText ?? ''));
 </script>
 
-<SampleGrid
-    itemCount={samples.length}
-    overScan={sampleGridOverscan}
-    scrollPosition={initialScrollPosition}
-    {scrollResetKey}
-    testId="images-grid"
-    onScroll={handleScroll}
+<GridContainer
     message={{
         loading: 'Loading samples...',
         error: 'Error loading samples',
@@ -249,33 +252,50 @@
         disabled: !$infiniteSamples.hasNextPage || $infiniteSamples.isFetchingNextPage,
         loading: $infiniteSamples.isFetchingNextPage
     }}
+    itemCount={samples.length}
 >
-    {#snippet gridItem({ index, style, sampleSize })}
-        {#if samples[index]}
-            {#key samples[index].sample_id}
-                {@const displayTextOnImage = $showSampleFilenamesStore
-                    ? samples[index].file_name
-                    : samples[index].captions?.[0]?.text}
-                <SampleGridItem
-                    {style}
-                    {index}
-                    dataTestId="sample-grid-item"
-                    collectionId={collection_id}
-                    sampleId={samples[index].sample_id}
-                    dataSampleName={samples[index].file_name}
-                    ondblclick={handleOnDoubleClick}
-                    onSelect={handleSampleSelect}
-                >
-                    {#snippet item()}
-                        <SampleImageGridItem
-                            sample={samples[index]}
-                            {objectFit}
-                            {sampleSize}
-                            {displayTextOnImage}
-                        />
-                    {/snippet}
-                </SampleGridItem>
-            {/key}
-        {/if}
+    {#snippet children({ footer })}
+        <Grid
+            itemCount={samples.length}
+            {columnCount}
+            overScan={sampleGridOverscan}
+            onScroll={handleScroll}
+            {initialScrollPosition}
+            {scrollResetKey}
+            gridProps={{ 'data-testid': 'images-grid', class: 'dark:[color-scheme:dark]' }}
+        >
+            {#snippet gridItem({ index, style, width, height })}
+                {#if samples[index]}
+                    {#key samples[index].sample_id}
+                        {@const displayTextOnImage = $showSampleFilenamesStore
+                            ? samples[index].file_name
+                            : samples[index].captions?.[0]?.text}
+                        <GridItem
+                            {width}
+                            {height}
+                            {style}
+                            dataSampleName={samples[index].file_name}
+                            dataIndex={index}
+                            dataTestId="sample-grid-item"
+                            isSelected={$selectedSampleIds.has(samples[index].sample_id)}
+                            ariaLabel={`View sample: ${samples[index].file_name}`}
+                            ondblclick={() => handleOnDoubleClick(samples[index].sample_id)}
+                            onSelect={(event) =>
+                                handleGridItemSelect(event, samples[index].sample_id, index)}
+                        >
+                            <SampleImageGridItem
+                                sample={samples[index]}
+                                {objectFit}
+                                sampleSize={width}
+                                {displayTextOnImage}
+                            />
+                        </GridItem>
+                    {/key}
+                {/if}
+            {/snippet}
+            {#snippet footerItem()}
+                {@render footer()}
+            {/snippet}
+        </Grid>
     {/snippet}
-</SampleGrid>
+</GridContainer>

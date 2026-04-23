@@ -179,7 +179,7 @@ Run the script with `python example_yolo.py`. Now you can inspect samples with t
 
 ### COCO Segmentation Mask
 
-To run an segmentation mask example using a [COCO](https://labelformat.com/formats/object-detection/coco/) dataset, create a file named
+To run a segmentation mask example using a [COCO](https://labelformat.com/formats/object-detection/coco/) dataset, create a file named
 `example_coco.py`:
 
 ```python title="example_coco.py"

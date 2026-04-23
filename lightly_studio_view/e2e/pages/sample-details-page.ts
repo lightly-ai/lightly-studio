@@ -123,7 +123,7 @@ export class SampleDetailsPage {
         const createTagResponse = this.page.waitForResponse(
             (response) =>
                 response.request().method() === 'POST' &&
-                response.url().includes('/tags') &&
+                /\/tags(?:\?|$)/.test(response.request().url()) &&
                 response.status() === 201
         );
         const addToSampleResponse = this.page.waitForResponse(

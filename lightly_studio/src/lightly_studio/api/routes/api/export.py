@@ -18,7 +18,7 @@ from lightly_studio.api.routes.api import collection as collection_api
 from lightly_studio.core.dataset_query.dataset_query import DatasetQuery
 from lightly_studio.core.video.video_sample import VideoSample
 from lightly_studio.db_manager import SessionDep
-from lightly_studio.export import export_dataset, export_video_dataset
+from lightly_studio.export import image_dataset_export, video_dataset_export
 from lightly_studio.models.collection import CollectionTable, SampleType
 from lightly_studio.models.export_format import ExportFormat
 from lightly_studio.resolvers import collection_resolver
@@ -49,7 +49,7 @@ def export_collection_annotations(
     if export_format == ExportFormat.OBJECT_DETECTION_COCO:
         output_path = PathlibPath(temp_dir.name) / "coco_export.json"
         try:
-            export_dataset.to_coco_object_detections(
+            image_dataset_export.to_coco_object_detections(
                 session=session,
                 dataset_id=collection.dataset_id,
                 samples=dataset_query,
@@ -63,7 +63,7 @@ def export_collection_annotations(
         output_path = PathlibPath(temp_dir.name) / "coco_segmentation_mask_export.json"
 
         try:
-            export_dataset.to_coco_segmentation_masks(
+            image_dataset_export.to_coco_segmentation_masks(
                 session=session,
                 dataset_id=collection.dataset_id,
                 samples=dataset_query,
@@ -77,7 +77,7 @@ def export_collection_annotations(
         output_path = PathlibPath(temp_dir.name) / "pascalvoc"
 
         try:
-            export_dataset.to_pascalvoc_segmentation_mask(
+            image_dataset_export.to_pascalvoc_segmentation_mask(
                 session=session,
                 dataset_id=collection.dataset_id,
                 samples=dataset_query,
@@ -139,7 +139,7 @@ def export_collection_captions(
     output_path = PathlibPath(temp_dir.name) / "coco_captions_export.json"
 
     try:
-        export_dataset.to_coco_captions(
+        image_dataset_export.to_coco_captions(
             samples=dataset_query,
             output_json=output_path,
         )
@@ -269,7 +269,7 @@ def export_collection_youtube_vis(
     output_path = PathlibPath(temp_dir.name) / "youtube_vis_segmentation_mask_export.json"
 
     try:
-        export_video_dataset.to_youtube_vis_segmentation_mask(
+        video_dataset_export.to_youtube_vis_segmentation_mask(
             session=session,
             samples=dataset_query,
             output_json=output_path,

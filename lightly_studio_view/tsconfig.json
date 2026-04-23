@@ -8,9 +8,7 @@
         "resolveJsonModule": true,
         "skipLibCheck": true,
         "sourceMap": true,
-        "strict": true,
-        "moduleResolution": "node",
-        "module": "ESNext"
+        "strict": true
     },
     "exclude": [
         // Storybook files
@@ -27,7 +25,6 @@
         "src/routes/datasets/[dataset_id]/page.test.ts",
         "src/routes/page.test.ts",
         "src/routes/error.test.ts",
-        "src/lib/components/TagCreateDialog/TagCreateDialog.test.ts",
         "src/lib/utils/segmentationOverlap/stripLockedPixels.test.ts",
         "src/lib/utils/segmentationOverlap/applySegmentationMaskConstraints.test.ts",
         "src/lib/services/addAnnotationDeleteToUndoStack.test.ts",
