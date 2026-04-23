@@ -60,7 +60,7 @@ def test_create_annotation_segmentation_mask(
     samples: list[ImageTable],
     annotation_labels: list[AnnotationLabelTable],
 ) -> None:
-    """Test to create instance segmentation annotation."""
+    """Test to create segmentation mask annotation."""
     annotation = AnnotationCreateParams(
         annotation_label_id=annotation_labels[0].annotation_label_id,
         annotation_type=AnnotationType.SEGMENTATION_MASK,

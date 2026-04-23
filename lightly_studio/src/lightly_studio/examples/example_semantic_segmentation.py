@@ -28,7 +28,7 @@ class_id_to_name_path = env.path(
 json_dict = json.loads(Path(class_id_to_name_path).read_text())
 class_id_to_name = {int(k): v for k, v in json_dict.items()}
 
-# Create a dataset and load Pascal VOC masks as instance segmentation annotations.
+# Create a dataset and load Pascal VOC masks as segmentation mask annotations.
 dataset = ls.ImageDataset.create()
 dataset.add_samples_from_pascal_voc_segmentations(
     images_path=images_path,

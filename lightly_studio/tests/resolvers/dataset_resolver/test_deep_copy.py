@@ -546,7 +546,7 @@ def test_deep_copy__with_annotations(db_session: Session) -> None:
     assert copied_track.object_track_number == 7
     assert copied_track.dataset_id == copied.dataset_id
 
-    # Assert - instance segmentation detail table copied
+    # Assert - segmentation mask detail table copied
     copied_is = copied_by_type[AnnotationType.SEGMENTATION_MASK]
     is_detail = db_session.get(SegmentationAnnotationTable, copied_is.sample_id)
     assert is_detail is not None
