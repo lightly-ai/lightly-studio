@@ -3365,7 +3365,7 @@ export interface components {
         };
         /**
          * SegmentationAnnotationView
-         * @description API response model for instance segmentation annotations.
+         * @description API response model for segmentation mask annotations.
          */
         SegmentationAnnotationView: {
             /** X */

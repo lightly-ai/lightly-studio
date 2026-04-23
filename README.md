@@ -177,9 +177,9 @@ ls.start_gui()
 
 Run the script with `python example_yolo.py`. Now you can inspect samples with their assigned annotations in the app.
 
-### COCO Instance Segmentation
+### COCO Segmentation Mask
 
-To run an instance segmentation example using a [COCO](https://labelformat.com/formats/object-detection/coco/) dataset, create a file named
+To run a segmentation mask example using a [COCO](https://labelformat.com/formats/object-detection/coco/) dataset, create a file named
 `example_coco.py`:
 
 ```python title="example_coco.py"
@@ -237,7 +237,7 @@ pip install "lightly-studio[cloud-storage]"
 This installs the necessary libraries: s3fs (for S3), gcsfs (for GCS), and adlfs (for Azure).
 Our tool uses the fsspec library, which also supports other file systems. If you need a different provider (like FTP, SSH, etc.), you can find the required library in the [fsspec documentation](https://filesystem-spec.readthedocs.io/en/latest/api.html#other-known-implementations) and install it manually (e.g., pip install sftpfs).
 
-**Current Support Limitations for Annotations (Labels):** Cloud-hosted annotations are currently supported for COCO object detection and instance segmentation; other dataset importers still expect local files.
+**Current Support Limitations for Annotations (Labels):** Cloud-hosted annotations are currently supported for COCO object detection and segmentation mask; other dataset importers still expect local files.
 
 ### Dataset
 

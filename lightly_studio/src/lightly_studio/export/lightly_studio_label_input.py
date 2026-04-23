@@ -79,7 +79,7 @@ class LightlyStudioObjectDetectionInput(LightlyStudioInputBase, ObjectDetectionI
 
 
 class LightlyStudioInstanceSegmentationInput(LightlyStudioInputBase, InstanceSegmentationInput):
-    """Labelformat adapter for instance segmentation backed by dataset samples and annotations."""
+    """Labelformat adapter for segmentation mask backed by dataset samples and annotations."""
 
     @staticmethod
     def _sample_to_image_inst_seg(
@@ -121,7 +121,7 @@ class LightlyStudioInstanceSegmentationInput(LightlyStudioInputBase, InstanceSeg
 class LightlyStudioPascalVOCInstanceSegmentationInput(
     LightlyStudioInputBase, InstanceSegmentationInput
 ):
-    """Labelformat adapter for Pascal VOC export from instance segmentation annotations."""
+    """Labelformat adapter for Pascal VOC export from segmentation mask annotations."""
 
     # TODO(Leonardo, 03/26): Ensure Pascal VOC export maps user-defined background to class ID 0
     # and void/ignore to 255 for spec compliance.

@@ -1,4 +1,4 @@
-"""Tests for the LightlyStudio YouTube-VIS instance segmentation track input adapter."""
+"""Tests for the LightlyStudio YouTube-VIS segmentation mask track input adapter."""
 
 from __future__ import annotations
 

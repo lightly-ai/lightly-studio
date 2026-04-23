@@ -54,7 +54,7 @@ def test_update_bounding_box__segmentation_mask(
     db_session: Session,
     annotations_test_data: AnnotationsTestData,  # noqa: ARG001
 ) -> None:
-    """Test updating bounding box coordinates for instance segmentation annotation."""
+    """Test updating bounding box coordinates for segmentation mask annotation."""
     annotations = annotation_resolver.get_all(db_session).annotations
     inst_segm_annotation = get_annotation_by_type(
         annotations=annotations, annotation_type=AnnotationType.SEGMENTATION_MASK
