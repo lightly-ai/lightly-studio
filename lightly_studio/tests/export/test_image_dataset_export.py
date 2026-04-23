@@ -333,7 +333,7 @@ class TestImageDatasetExport:
 
         samples = list(dataset)
         samples[0].add_annotation(
-            CreateInstanceSegmentation.from_rle_mask(
+            CreateSegmentationMask.from_rle_mask(
                 label="dog",
                 sample_2d=samples[0],
                 segmentation_mask=[1, 1, 4],
