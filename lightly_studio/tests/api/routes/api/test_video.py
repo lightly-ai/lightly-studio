@@ -113,7 +113,6 @@ def test_get_video_sample_ids__query_expr_filter(
         ],
     )
 
-    # Video query for image dataset
     query_expr = {
         "match_expr": {
             "type": "string_expr",
