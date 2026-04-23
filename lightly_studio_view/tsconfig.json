@@ -60,7 +60,7 @@
         "src/lib/hooks/useHideAnnotations.ts",
         "src/lib/components/QueryEditor/language-server-worker.ts",
         "src/lib/components/QueryEditor/language",
-        "src/lib/components/QueryEditor/tmp-showcase-studio-query.ts"
+        "src/lib/components/QueryEditor/tmp-showcase-lightly-query.ts"
     ]
     // Path aliases are handled by https://svelte.dev/docs/kit/configuration#alias
     // except $lib which is handled by https://svelte.dev/docs/kit/configuration#files

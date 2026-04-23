@@ -3,7 +3,7 @@ import { inject, EmptyFileSystem, type LangiumServices, type LangiumSharedServic
 import { createDefaultModule, createDefaultSharedModule } from 'langium/lsp';
 import {
     LightlyQueryGeneratedSharedModule,
-    StudioQueryGeneratedModule
+    LightlyQueryGeneratedModule
 } from './language/generated/module.ts';
 import {
     type Query,
@@ -20,19 +20,19 @@ import {
     isNotExpression
 } from './language/generated/ast.ts';
 
-export type StudioQueryServices = LangiumServices;
+export type LightlyQueryServices = LangiumServices;
 
-export function createStudioQueryServices(): {
+export function createLightlyQueryServices(): {
     shared: LangiumSharedServices;
-    StudioQuery: StudioQueryServices;
+    LightlyQuery: LightlyQueryServices;
 } {
     const shared = inject(
         createDefaultSharedModule(EmptyFileSystem),
         LightlyQueryGeneratedSharedModule
     );
-    const StudioQuery = inject(createDefaultModule({ shared }), StudioQueryGeneratedModule);
-    shared.ServiceRegistry.register(StudioQuery);
-    return { shared, StudioQuery };
+    const LightlyQuery = inject(createDefaultModule({ shared }), LightlyQueryGeneratedModule);
+    shared.ServiceRegistry.register(LightlyQuery);
+    return { shared, LightlyQuery };
 }
 
 function unquoteStringLiteral(value: string): string {
@@ -131,7 +131,7 @@ function transformToDSLJson(node: unknown): DSLJson {
     return null;
 }
 
-const services = createStudioQueryServices().StudioQuery;
+const services = createLightlyQueryServices().LightlyQuery;
 
 const parser = services.parser.LangiumParser;
 
