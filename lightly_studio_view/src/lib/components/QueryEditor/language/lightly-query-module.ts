@@ -8,16 +8,18 @@
 //   Services & DI:   https://langium.org/docs/reference/configuration-services/
 //   Validation:      https://langium.org/docs/learn/workflow/create_validations/
 
-import type { Module } from 'langium';
+import { inject } from 'langium';
 import {
     createDefaultModule,
     createDefaultSharedModule,
     type DefaultSharedModuleContext,
-    inject,
     type LangiumServices,
     type LangiumSharedServices
-} from 'langium';
-import { LightlyQueryGeneratedModule } from './generated/module.js';
+} from 'langium/lsp';
+import {
+    LightlyQueryGeneratedModule,
+    LightlyQueryGeneratedSharedModule
+} from './generated/module.js';
 
 export type LightlyQueryServices = LangiumServices;
 
@@ -27,7 +29,7 @@ export type LightlyQueryServices = LangiumServices;
 export function createLightlyQueryServices(
     context: DefaultSharedModuleContext
 ): LangiumSharedServices {
-    const shared = createDefaultSharedModule(context);
+    const shared = inject(createDefaultSharedModule(context), LightlyQueryGeneratedSharedModule);
     const LightlyQuery = inject(createDefaultModule({ shared }), LightlyQueryGeneratedModule);
     shared.ServiceRegistry.register(LightlyQuery);
     return shared;
