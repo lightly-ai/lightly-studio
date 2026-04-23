@@ -55,7 +55,7 @@ For example, you can set `DATASET_PATH=/mnt/datasets` and then index
 `/mnt/datasets/dataset_a/images` and `/mnt/datasets/dataset_b/images` as
 different datasets.
 
-You can broaden the storage root later — for example, `/mnt/datasets/dataset_a` to `/mnt/datasets`. Previously indexed files must still be reachable at their stored absolute paths.
+You can broaden the storage root later — for example, from `/mnt/datasets/dataset_a` to `/mnt/datasets`. Previously indexed files must still be reachable at their stored absolute paths.
 
 ## Step 3: Make `DATASET_PATH` Available to Python
 
