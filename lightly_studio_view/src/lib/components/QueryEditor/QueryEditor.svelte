@@ -36,8 +36,11 @@
     });
 </script>
 
-<div class="w-full overflow-hidden rounded-lg border border-[#3c3c3c] bg-[#1e1e1e]">
-    <div style={`height: ${height}`} bind:this={containerEl}></div>
+<div
+    class="flex w-full flex-col overflow-hidden rounded-lg border border-[#3c3c3c] bg-[#1e1e1e]"
+    style={`height: ${height}`}
+>
+    <div class="min-h-0 flex-1" bind:this={containerEl}></div>
     {#if onSave}
         <div
             class="flex items-center justify-end gap-2 border-b border-[#3c3c3c] bg-[#252526] px-2 py-1 text-xs text-[#cccccc]"
