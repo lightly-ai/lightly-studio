@@ -23,9 +23,9 @@ import {
 } from './monaco-lightly-query.js';
 import { useMonacoEditor, type MonacoEditorHandle } from './useMonacoEditor.svelte.js';
 import {
-    GetLatestQueryExprRequest,
-    type QueryExprNotificationParams
-} from './language/query-expr-notification.js';
+    TranslateQueryExprRequest,
+    type QueryExprTranslationResult
+} from './language/query-expr-translation.js';
 
 export interface UseLightlyQueryEditorOptions {
     // Reactive getter for the editor's current text. Tracked inside a
@@ -44,7 +44,7 @@ export interface UseLightlyQueryEditorOptions {
 }
 
 export interface LightlyQueryEditorHandle extends MonacoEditorHandle {
-    getLatestParsed: () => Promise<QueryExprNotificationParams | null>;
+    getLatestTranslationResult: () => Promise<QueryExprTranslationResult | null>;
 }
 
 export function useLightlyQueryEditor(
@@ -105,16 +105,16 @@ export function useLightlyQueryEditor(
             });
     }
 
-    async function getLatestParsed(): Promise<QueryExprNotificationParams | null> {
+    async function getLatestTranslationResult(): Promise<QueryExprTranslationResult | null> {
         await startupPromise;
         if (!languageClient || isDestroyed) {
             return null;
         }
 
         try {
-            return await languageClient.sendRequest(GetLatestQueryExprRequest);
+            return await languageClient.sendRequest(TranslateQueryExprRequest);
         } catch (error) {
-            console.error('Failed to fetch latest LightlyQuery parse result:', error);
+            console.error('Failed to fetch latest LightlyQuery translation result:', error);
             return null;
         }
     }
@@ -140,5 +140,5 @@ export function useLightlyQueryEditor(
         });
     });
 
-    return { mount, getLatestParsed };
+    return { mount, getLatestTranslationResult };
 }

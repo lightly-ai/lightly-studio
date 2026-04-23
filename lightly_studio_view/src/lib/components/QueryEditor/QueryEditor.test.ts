@@ -2,12 +2,12 @@ import { beforeEach, describe, it, expect, vi } from 'vitest';
 import { fireEvent, render, screen } from '@testing-library/svelte';
 import '@testing-library/jest-dom';
 import QueryEditor from './QueryEditor.svelte';
-import type { QueryExprNotificationParams } from './language/query-expr-notification.js';
+import type { QueryExprTranslationResult } from './language/query-expr-translation.js';
 
-const getLatestParsed = vi.fn();
+const getLatestTranslationResult = vi.fn();
 
 vi.mock('./useLightlyQueryEditor.js', () => ({
-    useLightlyQueryEditor: () => ({ mount: vi.fn(), getLatestParsed })
+    useLightlyQueryEditor: () => ({ mount: vi.fn(), getLatestTranslationResult })
 }));
 
 vi.mock('./monaco-lightly-query.js', () => ({
@@ -27,14 +27,14 @@ describe('QueryEditor', () => {
         const parsed = {
             status: 'ok',
             queryExpr: { match_expr: { type: 'dummy' } }
-        } as QueryExprNotificationParams;
-        getLatestParsed.mockResolvedValueOnce(parsed);
+        } as QueryExprTranslationResult;
+        getLatestTranslationResult.mockResolvedValueOnce(parsed);
 
         render(QueryEditor, { props: { value: 'my query', onSave } });
 
         await fireEvent.click(screen.getByRole('button', { name: 'Save' }));
 
-        expect(getLatestParsed).toHaveBeenCalledOnce();
+        expect(getLatestTranslationResult).toHaveBeenCalledOnce();
         expect(onSave).toHaveBeenCalledOnce();
         expect(onSave).toHaveBeenCalledWith('my query', parsed);
     });
@@ -53,7 +53,7 @@ describe('QueryEditor', () => {
 
     it('calls onSave with null when no parsed result is available', async () => {
         const onSave = vi.fn();
-        getLatestParsed.mockResolvedValueOnce(null);
+        getLatestTranslationResult.mockResolvedValueOnce(null);
         render(QueryEditor, { props: { value: 'my query', onSave } });
 
         await fireEvent.click(screen.getByRole('button', { name: 'Save' }));

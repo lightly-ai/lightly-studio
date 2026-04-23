@@ -21,10 +21,10 @@ import {
     LightlyQueryGeneratedSharedModule
 } from './generated/module.js';
 import {
-    GetLatestQueryExprRequest,
-    type QueryExprNotificationParams,
-    toQueryExprNotificationParams
-} from './query-expr-notification.js';
+    TranslateQueryExprRequest,
+    type QueryExprTranslationResult,
+    toQueryExprTranslationResult
+} from './query-expr-translation.js';
 
 export type LightlyQueryServices = LangiumServices;
 
@@ -37,15 +37,15 @@ export function createLightlyQueryServices(
     const shared = inject(createDefaultSharedModule(context), LightlyQueryGeneratedSharedModule);
     const LightlyQuery = inject(createDefaultModule({ shared }), LightlyQueryGeneratedModule);
     shared.ServiceRegistry.register(LightlyQuery);
-    let latestParsed: QueryExprNotificationParams | null = null;
+    let latestTranslation: QueryExprTranslationResult | null = null;
 
-    shared.lsp?.Connection.onRequest(GetLatestQueryExprRequest, () => latestParsed);
+    shared.lsp?.Connection.onRequest(TranslateQueryExprRequest, () => latestTranslation);
 
     // `onDocumentPhase` fires per-document even when rapid typing cancels
     // in-flight builds, so the worker-side cache stays aligned with the most
     // recent validation result for the active buffer.
     shared.workspace.DocumentBuilder.onDocumentPhase(DocumentState.Validated, (document) => {
-        latestParsed = toQueryExprNotificationParams(document.parseResult);
+        latestTranslation = toQueryExprTranslationResult(document.parseResult);
     });
 
     return shared;

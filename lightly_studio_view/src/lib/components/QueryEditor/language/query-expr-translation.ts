@@ -1,8 +1,8 @@
-// Shared contract for the custom LSP messages that carry the parsed QueryExpr
-// between the Langium worker and the main thread. Both sides import this
-// module so the method strings and payload shapes stay in sync.
+// Shared contract for translating a parsed query into the backend QueryExpr.
+// Both sides import this module so the request method and result shape stay
+// in sync.
 
-import { NotificationType, RequestType } from 'vscode-languageserver-protocol';
+import { RequestType } from 'vscode-languageserver-protocol';
 import type { QueryExpr } from '$lib/api/lightly_studio_local';
 import type { Query } from './generated/ast.js';
 
@@ -12,25 +12,21 @@ export interface QueryParseError {
     column?: number;
 }
 
-export type QueryExprNotificationParams =
+export type QueryExprTranslationResult =
     | { status: 'ok'; queryExpr: QueryExpr }
     | { status: 'error'; errors: QueryParseError[] };
 
-export const QueryExprNotification = new NotificationType<QueryExprNotificationParams>(
-    'lightly-query/queryExpr'
-);
-
-export const GetLatestQueryExprRequest = new RequestType<
+export const TranslateQueryExprRequest = new RequestType<
     void,
-    QueryExprNotificationParams | null,
+    QueryExprTranslationResult | null,
     never
->('lightly-query/getLatestQueryExpr');
+>('lightly-query/translateQueryExpr');
 
-export function toQueryExprNotificationParams(parseResult: {
+export function toQueryExprTranslationResult(parseResult: {
     lexerErrors: Array<{ message: string; line?: number; column?: number }>;
     parserErrors: Array<{ message: string; line?: number; column?: number }>;
     value: Query;
-}): QueryExprNotificationParams {
+}): QueryExprTranslationResult {
     const errors = [...parseResult.lexerErrors, ...parseResult.parserErrors];
     if (errors.length > 0) {
         return {

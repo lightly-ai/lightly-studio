@@ -1,21 +1,14 @@
 import { describe, it, expect } from 'vitest';
 import {
-    GetLatestQueryExprRequest,
-    QueryExprNotification,
+    TranslateQueryExprRequest,
     toQueryExpr,
-    toQueryExprNotificationParams
-} from './query-expr-notification.js';
+    toQueryExprTranslationResult
+} from './query-expr-translation.js';
 import type { Query } from './generated/ast.js';
 
-describe('QueryExprNotification', () => {
+describe('TranslateQueryExprRequest', () => {
     it('has the expected method name', () => {
-        expect(QueryExprNotification.method).toBe('lightly-query/queryExpr');
-    });
-});
-
-describe('GetLatestQueryExprRequest', () => {
-    it('has the expected method name', () => {
-        expect(GetLatestQueryExprRequest.method).toBe('lightly-query/getLatestQueryExpr');
+        expect(TranslateQueryExprRequest.method).toBe('lightly-query/translateQueryExpr');
     });
 });
 
@@ -37,9 +30,9 @@ describe('toQueryExpr', () => {
     });
 });
 
-describe('toQueryExprNotificationParams', () => {
-    it('returns error params when the parser reports errors', () => {
-        const result = toQueryExprNotificationParams({
+describe('toQueryExprTranslationResult', () => {
+    it('returns an error result when the parser reports errors', () => {
+        const result = toQueryExprTranslationResult({
             lexerErrors: [],
             parserErrors: [{ message: 'Unexpected token', line: 3, column: 5 }],
             value: {} as Query
