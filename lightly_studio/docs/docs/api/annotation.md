@@ -22,11 +22,11 @@
     options:
         members: [SegmentationMaskAnnotation]
 
-### CreateInstanceSegmentation
+### CreateSegmentationMask
 
 ::: lightly_studio.core.annotation
     options:
-        members: [CreateInstanceSegmentation]
+        members: [CreateSegmentationMask]
 
 ## Object Detection
 

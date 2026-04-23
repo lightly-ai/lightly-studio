@@ -5,8 +5,8 @@ from sqlmodel import Session
 from lightly_studio.core.annotation import (
     CreateAnnotation,
     CreateClassification,
-    CreateInstanceSegmentation,
     CreateObjectDetection,
+    CreateSegmentationMask,
 )
 from lightly_studio.core.annotation.classification import ClassificationAnnotation
 from lightly_studio.core.annotation.object_detection import ObjectDetectionAnnotation
@@ -498,7 +498,7 @@ class TestImageSample:
         image = ImageSample(inner=image_table)
 
         # Add segmentation mask annotation.
-        annotation_create = CreateInstanceSegmentation(
+        annotation_create = CreateSegmentationMask(
             label="cat",
             confidence=0.95,
             x=5,
