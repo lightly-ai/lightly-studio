@@ -10,6 +10,7 @@ import {
 
 type RenderMessage = {
     type: 'render';
+    canvasId: string;
     width: number;
     height: number;
     masks: MaskInput[];
@@ -20,19 +21,36 @@ type RenderMessage = {
 
 type InitMessage = {
     type: 'init';
+    canvasId: string;
     canvas: OffscreenCanvas;
 };
 
-type WorkerMessage = RenderMessage | InitMessage;
+type DisposeMessage = {
+    type: 'dispose';
+    canvasId: string;
+};
 
-let ctx: OffscreenCanvasRenderingContext2D | null = null;
+type WorkerMessage = RenderMessage | InitMessage | DisposeMessage;
 
-const handleRender = ({ width, height, masks, boxes, scaleX = 1, scaleY = 1 }: RenderMessage) => {
+// One worker can serve multiple canvases; each canvas keeps its own 2D context keyed by id.
+const contexts = new Map<string, OffscreenCanvasRenderingContext2D>();
+
+const handleRender = ({
+    canvasId,
+    width,
+    height,
+    masks,
+    boxes,
+    scaleX = 1,
+    scaleY = 1
+}: RenderMessage) => {
     // Render masks into a pixel buffer and overlay boxes; stroke is scaled to CSS size.
     const pixelData = renderMasks(width, height, masks);
     const stroke = computeStroke(scaleX, scaleY);
+    const ctx = contexts.get(canvasId);
 
     if (ctx) {
+        // Offscreen path: paint fully inside worker.
         const imageData = new ImageData(pixelData, width, height);
         ctx.canvas.width = width;
         ctx.canvas.height = height;
@@ -40,8 +58,8 @@ const handleRender = ({ width, height, masks, boxes, scaleX = 1, scaleY = 1 }: R
         ctx.putImageData(imageData, 0, 0);
         drawBoxesOnContext(ctx, boxes, width, height, stroke);
     } else {
-        // Fallback: send pixel data and boxes back to main thread for painting.
-        postMessage({ type: 'image', width, height, data: pixelData, boxes, stroke }, [
+        // Fallback path when no OffscreenCanvas context was registered for this canvas id.
+        postMessage({ type: 'image', canvasId, width, height, data: pixelData, boxes, stroke }, [
             pixelData.buffer
         ]);
     }
@@ -51,7 +69,17 @@ self.onmessage = (event: MessageEvent<WorkerMessage>) => {
     const message = event.data;
 
     if (message.type === 'init') {
-        ctx = message.canvas.getContext('2d', { willReadFrequently: true });
+        // Register or replace the drawing context for this canvas id.
+        const ctx = message.canvas.getContext('2d', { willReadFrequently: true });
+        if (ctx) {
+            contexts.set(message.canvasId, ctx);
+        }
+        return;
+    }
+
+    if (message.type === 'dispose') {
+        // Canvas unmounted on main thread; release its context from this worker.
+        contexts.delete(message.canvasId);
         return;
     }
 

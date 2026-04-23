@@ -1,4 +1,4 @@
-"""Interface for instance segmentation annotations."""
+"""Interface for segmentation mask annotations."""
 
 from __future__ import annotations
 
@@ -12,8 +12,8 @@ from lightly_studio.models.annotation.segmentation import (
 )
 
 
-class InstanceSegmentationAnnotation(Annotation):
-    """Class for instance segmentation annotations.
+class SegmentationMaskAnnotation(Annotation):
+    """Class for segmentation mask annotations.
 
     The properties of the annotation are accessible as attributes of this class.
 
@@ -26,13 +26,13 @@ class InstanceSegmentationAnnotation(Annotation):
     """
 
     x = DBField(col(SegmentationAnnotationTable.x))
-    """X coordinate (px) of the instance bounding box."""
+    """X coordinate (px) of the segmentation mask bounding box."""
     y = DBField(col(SegmentationAnnotationTable.y))
-    """Y coordinate (px) of the instance bounding box."""
+    """Y coordinate (px) of the segmentation mask bounding box."""
     width = DBField(col(SegmentationAnnotationTable.width))
-    """Width (px) of the instance bounding box."""
+    """Width (px) of the segmentation mask bounding box."""
     height = DBField(col(SegmentationAnnotationTable.height))
-    """Height (px) of the instance bounding box."""
+    """Height (px) of the segmentation mask bounding box."""
     segmentation_mask = DBField(col(SegmentationAnnotationTable.segmentation_mask))
     """Segmentation mask given as a run-length encoding."""
 
@@ -43,7 +43,7 @@ class InstanceSegmentationAnnotation(Annotation):
             inner: The SegmentationAnnotationTable SQLAlchemy model instance.
         """
         if inner.annotation_base.annotation_type != AnnotationType.SEGMENTATION_MASK:
-            raise ValueError("Expected annotation type: instance segmentation")
+            raise ValueError("Expected annotation type: segmentation mask")
 
         super().__init__(inner.annotation_base)
         self.inner = inner

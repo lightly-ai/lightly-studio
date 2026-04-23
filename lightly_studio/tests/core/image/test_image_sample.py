@@ -9,8 +9,8 @@ from lightly_studio.core.annotation import (
     CreateObjectDetection,
 )
 from lightly_studio.core.annotation.classification import ClassificationAnnotation
-from lightly_studio.core.annotation.instance_segmentation import InstanceSegmentationAnnotation
 from lightly_studio.core.annotation.object_detection import ObjectDetectionAnnotation
+from lightly_studio.core.annotation.segmentation_mask import SegmentationMaskAnnotation
 from lightly_studio.core.image.image_sample import ImageSample
 from lightly_studio.models.annotation.annotation_base import AnnotationType
 from lightly_studio.resolvers import image_resolver
@@ -339,7 +339,7 @@ class TestImageSample:
 
         annotations = image.annotations
         assert len(annotations) == 1
-        assert isinstance(annotations[0], InstanceSegmentationAnnotation)
+        assert isinstance(annotations[0], SegmentationMaskAnnotation)
         assert annotations[0].label == "cat"
         assert annotations[0].confidence == pytest.approx(0.9)
         assert annotations[0].x == 10
@@ -425,7 +425,7 @@ class TestImageSample:
         annotations = image.annotations
         assert len(annotations) == 3
         assert isinstance(annotations[0], ObjectDetectionAnnotation)
-        assert isinstance(annotations[1], InstanceSegmentationAnnotation)
+        assert isinstance(annotations[1], SegmentationMaskAnnotation)
         assert isinstance(annotations[2], ClassificationAnnotation)
 
     def test_add_annotation_classification(
@@ -497,7 +497,7 @@ class TestImageSample:
         )
         image = ImageSample(inner=image_table)
 
-        # Add instance segmentation annotation.
+        # Add segmentation mask annotation.
         annotation_create = CreateInstanceSegmentation(
             label="cat",
             confidence=0.95,
@@ -512,7 +512,7 @@ class TestImageSample:
         # Verify annotation was added.
         annotations = image.annotations
         assert len(annotations) == 1
-        assert isinstance(annotations[0], InstanceSegmentationAnnotation)
+        assert isinstance(annotations[0], SegmentationMaskAnnotation)
         assert annotations[0].label == "cat"
         assert annotations[0].confidence == pytest.approx(0.95)
         assert annotations[0].x == 5

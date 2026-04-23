@@ -24,8 +24,8 @@ from lightly_studio.resolvers import (
 
 from .annotation import Annotation
 from .annotation.classification import ClassificationAnnotation
-from .annotation.instance_segmentation import InstanceSegmentationAnnotation
 from .annotation.object_detection import ObjectDetectionAnnotation
+from .annotation.segmentation_mask import SegmentationMaskAnnotation
 
 
 class Sample(ABC):
@@ -250,7 +250,7 @@ class Sample(ABC):
             elif annotation.annotation_type == AnnotationType.SEGMENTATION_MASK:
                 assert annotation.segmentation_details is not None, "Invalid sample annotation data"
                 annotations.append(
-                    InstanceSegmentationAnnotation(inner=annotation.segmentation_details)
+                    SegmentationMaskAnnotation(inner=annotation.segmentation_details)
                 )
             elif annotation.annotation_type == AnnotationType.CLASSIFICATION:
                 annotations.append(ClassificationAnnotation(annotation_base=annotation))

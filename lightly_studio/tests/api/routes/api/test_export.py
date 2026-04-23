@@ -134,7 +134,7 @@ def test_export_collection_segmentation_masks(
 
     assert (
         response.headers["Content-Disposition"]
-        == "attachment; filename=coco_instance_segmentation_export.json"
+        == "attachment; filename=coco_segmentation_mask_export.json"
     )
 
 
@@ -345,7 +345,7 @@ def test_export_collection_youtube_vis(
     }
     assert (
         response.headers["Content-Disposition"]
-        == "attachment; filename=youtube_vis_instance_segmentation_export.json"
+        == "attachment; filename=youtube_vis_segmentation_mask_export.json"
     )
 
 
