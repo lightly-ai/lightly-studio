@@ -153,7 +153,7 @@ for sample in dataset:
             print(annotation.x, annotation.y, annotation.width, annotation.height)
 ```
 
-There are 3 different types: `ClassificationAnnotation`, `InstanceSegmentationAnnotation`, and `ObjectDetectionAnnotation`.
+There are 3 different types: `ClassificationAnnotation`, `SegmentationMaskAnnotation`, and `ObjectDetectionAnnotation`.
 
 ### Adding annotations
 
