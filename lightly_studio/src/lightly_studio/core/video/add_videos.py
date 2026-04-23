@@ -558,7 +558,7 @@ def _process_video_annotations_segmentation_mask(
     label_map: dict[int, UUID],
     object_track_map: dict[int, UUID],
 ) -> list[AnnotationCreate]:
-    """Process instance segmentation annotations for a single video."""
+    """Process segmentation mask annotations for a single video."""
     annotations = []
     for frame_number, frame_id in frame_number_to_id.items():
         for obj_idx, obj in enumerate(video_annotation.objects):

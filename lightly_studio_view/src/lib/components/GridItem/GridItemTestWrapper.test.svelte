@@ -11,6 +11,8 @@
         isSelected = false,
         tag = true,
         caption,
+        dataSampleName,
+        dataIndex,
         onSelect,
         ondblclick
     }: {
@@ -23,6 +25,8 @@
         isSelected?: boolean;
         tag?: boolean;
         caption?: string;
+        dataSampleName?: string;
+        dataIndex?: number;
         onSelect?: (event: MouseEvent | KeyboardEvent) => void;
         ondblclick?: (event: MouseEvent) => void;
     } = $props();
@@ -37,6 +41,8 @@
     {isSelected}
     {tag}
     {caption}
+    {dataSampleName}
+    {dataIndex}
     {onSelect}
     {ondblclick}
 >

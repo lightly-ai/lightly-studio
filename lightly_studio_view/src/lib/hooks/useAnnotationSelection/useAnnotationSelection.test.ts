@@ -60,7 +60,7 @@ describe('useAnnotationSelection', () => {
         updateLastAnnotationLabelMock.mockClear();
     });
 
-    it('selects instance segmentation annotation and enables brush', () => {
+    it('selects segmentation mask annotation and enables brush', () => {
         const annotations = [
             {
                 sample_id: 'a1',
