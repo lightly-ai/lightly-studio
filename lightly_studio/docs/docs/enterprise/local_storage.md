@@ -21,8 +21,8 @@ file paths, not the raw media itself.
 This means the path used by your Python script must also be valid for the
 `studio` container that later serves the files to the GUI.
 
-!!! warning "Same Path Required"
-    The same absolute path must work in both places:
+!!! warning "Same Absolute Path Required"
+    Always use absolute paths; relative paths do not work in this workflow. The same absolute path must work in both places:
 
     1. In the Python process that indexes the data
     2. On the Docker host running the on-premise deployment
@@ -43,46 +43,36 @@ Examples:
 - `/mnt/datasets`
 - `/srv/lightly/datasets`
 
-Relative paths are a bad fit for this workflow. Use absolute paths only.
-
 ## Step 2: Set `DATASET_PATH`
 
-Set `DATASET_PATH` in your deployment environment `.env` file to the absolute storage
-root you want to expose to LightlyStudio.
+In your deployment's `.env` file, set `DATASET_PATH` to the absolute storage root you want to expose to LightlyStudio.
 
 Mounting a top-level path is fine. Your Python scripts can later index specific
-subdirectories below that root as separate datasets.
+subdirectories under that root as separate datasets.
 
 For example, you can set `DATASET_PATH=/mnt/datasets` and then index
 `/mnt/datasets/dataset_a/images` and `/mnt/datasets/dataset_b/images` as
 different datasets.
 
-It is also fine to broaden the mounted root later, for example from
-`/mnt/datasets/dataset_a` to `/mnt/datasets`, as long as the absolute paths
-stored for already indexed files remain valid.
+You can broaden the mounted root later — for example, `/mnt/datasets/dataset_a` to `/mnt/datasets`. Previously indexed files must still be reachable at their stored absolute paths.
 
 ## Step 3: Make the Same Path Available to Python
 
-Run your Python indexing script in an environment that can access the same
-storage root at the same absolute path you set in `DATASET_PATH`.
+Run your Python indexing script on a machine that can access the storage root at the absolute path you set in `DATASET_PATH`.
 
 This works out of the box when Python runs:
 
-- on the same machine as the Docker host
+- on the Docker host
 - on another machine that mounts the same shared storage at the same absolute
   path
 
-If Python runs on a different machine where the storage is mounted at a
-different absolute path (for example, `DATASET_PATH=/mnt/datasets` on the
-Docker host, but the NAS is mounted at `/home/alice/datasets` on the Python
-machine), create a symlink on the Python machine so that `DATASET_PATH` also
-resolves there:
+If Python runs on a different machine where the storage is mounted at a different absolute path, create a symlink on the Python machine so that `DATASET_PATH` resolves there, too. For example, if `DATASET_PATH=/mnt/datasets` on the Docker host, but the NAS is mounted at `/home/alice/datasets` on the Python machine:
 
 ```shell
 sudo ln -s /home/alice/datasets /mnt/datasets
 ```
 
-Then pass paths under `/mnt/datasets/...` to the dataset loading methods.
+The paths you pass to the dataset loading methods must be under `/mnt/datasets` (e.g., `/mnt/datasets/local_images`).
 
 ## Step 4: Connect from Python and Index Data
 
