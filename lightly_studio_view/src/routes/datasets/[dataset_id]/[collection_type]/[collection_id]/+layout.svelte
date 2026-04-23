@@ -17,7 +17,8 @@
         Image as ImageIcon,
         X,
         ChartNetwork,
-        GripVertical
+        GripVertical,
+        Filter
     } from '@lucide/svelte';
     import { onDestroy, onMount } from 'svelte';
     import { toStore } from 'svelte/store';
@@ -66,7 +67,7 @@
         buildVideoFrameAnnotationCountsFilter
     } from '$lib/utils/buildAnnotationCountsFilters';
     import EmbeddingSelectionFilterItem from '$lib/components/EmbeddingSelectionFilterItem/EmbeddingSelectionFilterItem.svelte';
-    import { useSelectionSummary } from '$lib/hooks';
+    import { useSelectionSummary, useFeatureFlags } from '$lib/hooks';
     import { shutdownMaskRendererPool } from '$lib/workers/maskRendererPool';
     const { data, children } = $props();
     const {
@@ -491,6 +492,12 @@
     const showLeftSidebar = $derived(
         isSamples || isAnnotations || isVideos || isVideoFrames || isGroups
     );
+
+    // const { featureFlags } = useFeatureFlags();
+    // const isQueryFilterEnabled = $derived($featureFlags.includes('query_filter'));
+    const isQueryFilterEnabled = true; // Temporary hardcode to show query filter UI while in development
+    let isQueryFilterEditing = $state(false);
+    let queryFilterValue = $state('');
 </script>
 
 <div class="flex-none">
@@ -661,10 +668,24 @@
                 </PaneGroup>
             {:else}
                 <!-- When plot is hidden or not samples view, show normal layout -->
-                <div class="relative flex flex-1 flex-col space-y-4 rounded-[1vw] bg-card p-4 pb-2">
+                <div
+                    class="relative flex min-w-0 flex-1 flex-col space-y-4 rounded-[1vw] bg-card p-4 pb-2"
+                >
                     {#if isSamples || isAnnotations || isVideos || isGroups}
                         <GridHeader>
                             {#snippet auxControls()}
+                                {#if isQueryFilterEnabled}
+                                    <Button
+                                        class="flex items-center space-x-1"
+                                        data-testid="toggle-plot-button"
+                                        variant={isQueryFilterEditing ? 'default' : 'ghost'}
+                                        onclick={() =>
+                                            (isQueryFilterEditing = !isQueryFilterEditing)}
+                                    >
+                                        <Filter class="size-4" />
+                                        <span>Define filtering query</span>
+                                    </Button>
+                                {/if}
                                 {#if (isSamples || isVideos) && hasEmbeddings}
                                     <Button
                                         class="flex items-center space-x-1"
@@ -773,6 +794,14 @@
                         <SelectionPill selectedCount={$selectedCount} onClear={clearSelection} />
                     {/if}
                 </div>
+                {#if isQueryFilterEnabled && isQueryFilterEditing}
+                    <div class="flex h-full w-96 min-w-80 flex-col rounded-[1vw] bg-card p-4">
+                        {#await import('$lib/components/QueryEditor/QueryEditor.svelte') then { default: QueryEditor }}
+                            <!-- <QueryEditor height="100%" /> -->
+                            Query editor
+                        {/await}
+                    </div>
+                {/if}
             {/if}
             {#if hasEmbeddings}
                 {#await import('$lib/components/FewShotClassifier/CreateClassifierDialog.svelte') then { default: CreateClassifierDialog }}
