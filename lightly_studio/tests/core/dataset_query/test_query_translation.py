@@ -16,13 +16,13 @@ from lightly_studio.models.query_expr import (
     EqualityComparisonOperator,
     EqualityFloatExpr,
     FieldRef,
-    InstanceSegmentationMatchExpr,
     IntegerExpr,
     NotExpr,
     ObjectDetectionMatchExpr,
     OrdinalComparisonOperator,
     OrdinalFloatExpr,
     OrExpr,
+    SegmentationMaskMatchExpr,
     StringExpr,
     TagsContainsExpr,
 )
@@ -218,13 +218,13 @@ def test_to_match_expression__object_detection_match() -> None:
     assert "object_detection_annotation.width > 50" in sql
 
 
-def test_to_match_expression__instance_segmentation_match() -> None:
+def test_to_match_expression__segmentation_mask_match() -> None:
     subexpr = StringExpr(
-        field=FieldRef(table="instance_segmentation", name="label"),
+        field=FieldRef(table="segmentation_mask", name="label"),
         operator=EqualityComparisonOperator.EQ,
         value="person",
     )
-    expr = InstanceSegmentationMatchExpr(subexpr=subexpr)
+    expr = SegmentationMaskMatchExpr(subexpr=subexpr)
     sql = _to_sql(query_translation.to_match_expression(expr))
     assert "exists" in sql
     assert "annotation_type = 'segmentation_mask'" in sql

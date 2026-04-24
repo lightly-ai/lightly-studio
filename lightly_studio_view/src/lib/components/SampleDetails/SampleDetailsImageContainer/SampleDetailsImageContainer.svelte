@@ -7,7 +7,7 @@
     import { useHideAnnotations } from '$lib/hooks/useHideAnnotations';
     import SampleDetailsAnnotation from '../SampleDetailsAnnotation/SampleDetailsAnnotation.svelte';
     import SampleEraserRect from '../SampleEraserRect/SampleEraserRect.svelte';
-    import SampleInstanceSegmentationRect from '../SampleInstanceSegmentationRect/SampleInstanceSegmentationRect.svelte';
+    import SampleSegmentationMaskRect from '../SampleSegmentationMaskRect/SampleSegmentationMaskRect.svelte';
     import SampleObjectDetectionRect from '../SampleObjectDetectionRect/SampleObjectDetectionRect.svelte';
     import { select } from 'd3-selection';
     import { getColorByLabel } from '$lib/utils';
@@ -229,7 +229,7 @@
 
         <g class:invisible={$isHidden}>
             {#each actualAnnotationsToShow as annotation (annotation.sample_id)}
-                <!-- The SampleInstanceSegmentationRect or SampleEraserRect component will render the preview while drawing a segmentation mask-->
+                <!-- The SampleSegmentationMaskRect or SampleEraserRect component will render the preview while drawing a segmentation mask-->
                 <g
                     class:hidden={annotationLabelContext.isDrawing &&
                         annotation.sample_id === annotationLabelContext.annotationId}
@@ -289,7 +289,7 @@
                     onFinishErasePendingChange={handlePendingChange}
                 />
             {:else if sampleDetailsToolbarContext.status === 'brush' && isSegmentationType(annotationTypeInCurrentView)}
-                <SampleInstanceSegmentationRect
+                <SampleSegmentationMaskRect
                     bind:interactionRect
                     {mousePosition}
                     {sampleId}

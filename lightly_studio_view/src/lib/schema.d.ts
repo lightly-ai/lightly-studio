@@ -1849,7 +1849,7 @@ export interface components {
              */
             type: "and";
             /** Children */
-            children: (components["schemas"]["StringExpr"] | components["schemas"]["IntegerExpr"] | components["schemas"]["DatetimeExpr"] | components["schemas"]["OrdinalFloatExpr"] | components["schemas"]["EqualityFloatExpr"] | components["schemas"]["TagsContainsExpr"] | components["schemas"]["ClassificationMatchExpr"] | components["schemas"]["ObjectDetectionMatchExpr"] | components["schemas"]["InstanceSegmentationMatchExpr"] | components["schemas"]["AndExpr"] | components["schemas"]["OrExpr"] | components["schemas"]["NotExpr"])[];
+            children: (components["schemas"]["StringExpr"] | components["schemas"]["IntegerExpr"] | components["schemas"]["DatetimeExpr"] | components["schemas"]["OrdinalFloatExpr"] | components["schemas"]["EqualityFloatExpr"] | components["schemas"]["TagsContainsExpr"] | components["schemas"]["ClassificationMatchExpr"] | components["schemas"]["ObjectDetectionMatchExpr"] | components["schemas"]["SegmentationMaskMatchExpr"] | components["schemas"]["AndExpr"] | components["schemas"]["OrExpr"] | components["schemas"]["NotExpr"])[];
         };
         /**
          * AnnotationBaseTable
@@ -2205,7 +2205,7 @@ export interface components {
              */
             type: "classification_match_expr";
             /** Subexpr */
-            subexpr: components["schemas"]["StringExpr"] | components["schemas"]["IntegerExpr"] | components["schemas"]["DatetimeExpr"] | components["schemas"]["OrdinalFloatExpr"] | components["schemas"]["EqualityFloatExpr"] | components["schemas"]["TagsContainsExpr"] | components["schemas"]["ClassificationMatchExpr"] | components["schemas"]["ObjectDetectionMatchExpr"] | components["schemas"]["InstanceSegmentationMatchExpr"] | components["schemas"]["AndExpr"] | components["schemas"]["OrExpr"] | components["schemas"]["NotExpr"];
+            subexpr: components["schemas"]["StringExpr"] | components["schemas"]["IntegerExpr"] | components["schemas"]["DatetimeExpr"] | components["schemas"]["OrdinalFloatExpr"] | components["schemas"]["EqualityFloatExpr"] | components["schemas"]["TagsContainsExpr"] | components["schemas"]["ClassificationMatchExpr"] | components["schemas"]["ObjectDetectionMatchExpr"] | components["schemas"]["SegmentationMaskMatchExpr"] | components["schemas"]["AndExpr"] | components["schemas"]["OrExpr"] | components["schemas"]["NotExpr"];
         };
         /**
          * CollectionCreate
@@ -2875,19 +2875,6 @@ export interface components {
             nextCursor?: number | null;
         };
         /**
-         * InstanceSegmentationMatchExpr
-         * @description Leaf node checking if a sample has a matching instance segmentation annotation.
-         */
-        InstanceSegmentationMatchExpr: {
-            /**
-             * @description discriminator enum property added by openapi-typescript
-             * @enum {string}
-             */
-            type: "instance_segmentation_match_expr";
-            /** Subexpr */
-            subexpr: components["schemas"]["StringExpr"] | components["schemas"]["IntegerExpr"] | components["schemas"]["DatetimeExpr"] | components["schemas"]["OrdinalFloatExpr"] | components["schemas"]["EqualityFloatExpr"] | components["schemas"]["TagsContainsExpr"] | components["schemas"]["ClassificationMatchExpr"] | components["schemas"]["ObjectDetectionMatchExpr"] | components["schemas"]["InstanceSegmentationMatchExpr"] | components["schemas"]["AndExpr"] | components["schemas"]["OrExpr"] | components["schemas"]["NotExpr"];
-        };
-        /**
          * IntRange
          * @description Defines a range of integer-point values.
          */
@@ -3006,7 +2993,7 @@ export interface components {
              */
             type: "not";
             /** Child */
-            child: components["schemas"]["StringExpr"] | components["schemas"]["IntegerExpr"] | components["schemas"]["DatetimeExpr"] | components["schemas"]["OrdinalFloatExpr"] | components["schemas"]["EqualityFloatExpr"] | components["schemas"]["TagsContainsExpr"] | components["schemas"]["ClassificationMatchExpr"] | components["schemas"]["ObjectDetectionMatchExpr"] | components["schemas"]["InstanceSegmentationMatchExpr"] | components["schemas"]["AndExpr"] | components["schemas"]["OrExpr"] | components["schemas"]["NotExpr"];
+            child: components["schemas"]["StringExpr"] | components["schemas"]["IntegerExpr"] | components["schemas"]["DatetimeExpr"] | components["schemas"]["OrdinalFloatExpr"] | components["schemas"]["EqualityFloatExpr"] | components["schemas"]["TagsContainsExpr"] | components["schemas"]["ClassificationMatchExpr"] | components["schemas"]["ObjectDetectionMatchExpr"] | components["schemas"]["SegmentationMaskMatchExpr"] | components["schemas"]["AndExpr"] | components["schemas"]["OrExpr"] | components["schemas"]["NotExpr"];
         };
         /**
          * ObjectDetectionAnnotationView
@@ -3033,7 +3020,7 @@ export interface components {
              */
             type: "object_detection_match_expr";
             /** Subexpr */
-            subexpr: components["schemas"]["StringExpr"] | components["schemas"]["IntegerExpr"] | components["schemas"]["DatetimeExpr"] | components["schemas"]["OrdinalFloatExpr"] | components["schemas"]["EqualityFloatExpr"] | components["schemas"]["TagsContainsExpr"] | components["schemas"]["ClassificationMatchExpr"] | components["schemas"]["ObjectDetectionMatchExpr"] | components["schemas"]["InstanceSegmentationMatchExpr"] | components["schemas"]["AndExpr"] | components["schemas"]["OrExpr"] | components["schemas"]["NotExpr"];
+            subexpr: components["schemas"]["StringExpr"] | components["schemas"]["IntegerExpr"] | components["schemas"]["DatetimeExpr"] | components["schemas"]["OrdinalFloatExpr"] | components["schemas"]["EqualityFloatExpr"] | components["schemas"]["TagsContainsExpr"] | components["schemas"]["ClassificationMatchExpr"] | components["schemas"]["ObjectDetectionMatchExpr"] | components["schemas"]["SegmentationMaskMatchExpr"] | components["schemas"]["AndExpr"] | components["schemas"]["OrExpr"] | components["schemas"]["NotExpr"];
         };
         /**
          * OperatorContextRequest
@@ -3075,7 +3062,7 @@ export interface components {
              */
             type: "or";
             /** Children */
-            children: (components["schemas"]["StringExpr"] | components["schemas"]["IntegerExpr"] | components["schemas"]["DatetimeExpr"] | components["schemas"]["OrdinalFloatExpr"] | components["schemas"]["EqualityFloatExpr"] | components["schemas"]["TagsContainsExpr"] | components["schemas"]["ClassificationMatchExpr"] | components["schemas"]["ObjectDetectionMatchExpr"] | components["schemas"]["InstanceSegmentationMatchExpr"] | components["schemas"]["AndExpr"] | components["schemas"]["OrExpr"] | components["schemas"]["NotExpr"])[];
+            children: (components["schemas"]["StringExpr"] | components["schemas"]["IntegerExpr"] | components["schemas"]["DatetimeExpr"] | components["schemas"]["OrdinalFloatExpr"] | components["schemas"]["EqualityFloatExpr"] | components["schemas"]["TagsContainsExpr"] | components["schemas"]["ClassificationMatchExpr"] | components["schemas"]["ObjectDetectionMatchExpr"] | components["schemas"]["SegmentationMaskMatchExpr"] | components["schemas"]["AndExpr"] | components["schemas"]["OrExpr"] | components["schemas"]["NotExpr"])[];
         };
         /**
          * OrdinalComparisonOperator
@@ -3122,7 +3109,7 @@ export interface components {
          */
         QueryExpr: {
             /** Match Expr */
-            match_expr: components["schemas"]["StringExpr"] | components["schemas"]["IntegerExpr"] | components["schemas"]["DatetimeExpr"] | components["schemas"]["OrdinalFloatExpr"] | components["schemas"]["EqualityFloatExpr"] | components["schemas"]["TagsContainsExpr"] | components["schemas"]["ClassificationMatchExpr"] | components["schemas"]["ObjectDetectionMatchExpr"] | components["schemas"]["InstanceSegmentationMatchExpr"] | components["schemas"]["AndExpr"] | components["schemas"]["OrExpr"] | components["schemas"]["NotExpr"];
+            match_expr: components["schemas"]["StringExpr"] | components["schemas"]["IntegerExpr"] | components["schemas"]["DatetimeExpr"] | components["schemas"]["OrdinalFloatExpr"] | components["schemas"]["EqualityFloatExpr"] | components["schemas"]["TagsContainsExpr"] | components["schemas"]["ClassificationMatchExpr"] | components["schemas"]["ObjectDetectionMatchExpr"] | components["schemas"]["SegmentationMaskMatchExpr"] | components["schemas"]["AndExpr"] | components["schemas"]["OrExpr"] | components["schemas"]["NotExpr"];
         };
         /**
          * ReadCountImageAnnotationsRequest
@@ -3378,6 +3365,19 @@ export interface components {
             height: number;
             /** Segmentation Mask */
             segmentation_mask?: number[] | null;
+        };
+        /**
+         * SegmentationMaskMatchExpr
+         * @description Leaf node checking if a sample has a matching segmentation mask annotation.
+         */
+        SegmentationMaskMatchExpr: {
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            type: "segmentation_mask_match_expr";
+            /** Subexpr */
+            subexpr: components["schemas"]["StringExpr"] | components["schemas"]["IntegerExpr"] | components["schemas"]["DatetimeExpr"] | components["schemas"]["OrdinalFloatExpr"] | components["schemas"]["EqualityFloatExpr"] | components["schemas"]["TagsContainsExpr"] | components["schemas"]["ClassificationMatchExpr"] | components["schemas"]["ObjectDetectionMatchExpr"] | components["schemas"]["SegmentationMaskMatchExpr"] | components["schemas"]["AndExpr"] | components["schemas"]["OrExpr"] | components["schemas"]["NotExpr"];
         };
         /**
          * SelectionRequest
