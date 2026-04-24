@@ -21,12 +21,12 @@ from lightly_studio.models.query_expr import (
     DatetimeExpr,
     EqualityComparisonOperator,
     FieldRef,
-    InstanceSegmentationMatchExpr,
     IntegerExpr,
     NotExpr,
     ObjectDetectionMatchExpr,
     OrdinalComparisonOperator,
     OrExpr,
+    SegmentationMaskMatchExpr,
     StringExpr,
     TagsContainsExpr,
 )
@@ -189,7 +189,7 @@ def test_to_match_expression__object_detection_match(db_session: Session) -> Non
     assert [r.sample_id for r in results] == [image1.sample_id]
 
 
-def test_to_match_expression__instance_segmentation_match(db_session: Session) -> None:
+def test_to_match_expression__segmentation_mask_match(db_session: Session) -> None:
     dataset = create_collection(session=db_session)
     cid = dataset.collection_id
     image1 = create_image(session=db_session, collection_id=cid, file_path_abs="/path/to/1.jpg")
@@ -204,9 +204,9 @@ def test_to_match_expression__instance_segmentation_match(db_session: Session) -
         annotation_type=AnnotationType.SEGMENTATION_MASK,
     )
 
-    expr = InstanceSegmentationMatchExpr(
+    expr = SegmentationMaskMatchExpr(
         subexpr=StringExpr(
-            field=FieldRef(table="instance_segmentation", name="label"),
+            field=FieldRef(table="segmentation_mask", name="label"),
             operator=EqualityComparisonOperator.EQ,
             value="person",
         )

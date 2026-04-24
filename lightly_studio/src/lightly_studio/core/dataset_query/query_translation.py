@@ -35,7 +35,6 @@ from lightly_studio.models.query_expr import (
     EqualityComparisonOperator,
     EqualityFloatExpr,
     FieldRef,
-    InstanceSegmentationMatchExpr,
     IntegerExpr,
     MatchExpr,
     NotExpr,
@@ -43,6 +42,7 @@ from lightly_studio.models.query_expr import (
     OrdinalComparisonOperator,
     OrdinalFloatExpr,
     OrExpr,
+    SegmentationMaskMatchExpr,
     StringExpr,
     TagsContainsExpr,
 )
@@ -85,7 +85,7 @@ _STRING_FIELDS: dict[tuple[str, str], _EqualityField[str]] = {
     ("video", "file_path_abs"): VideoSampleField.file_path_abs,
     ("classification", "label"): ClassificationField.label,
     ("object_detection", "label"): ObjectDetectionField.label,
-    ("instance_segmentation", "label"): InstanceSegmentationField.label,
+    ("segmentation_mask", "label"): InstanceSegmentationField.label,
 }
 
 _INTEGER_FIELDS: dict[tuple[str, str], _OrdinalField[int]] = {
@@ -97,10 +97,10 @@ _INTEGER_FIELDS: dict[tuple[str, str], _OrdinalField[int]] = {
     ("object_detection", "y"): ObjectDetectionField.y,
     ("object_detection", "width"): ObjectDetectionField.width,
     ("object_detection", "height"): ObjectDetectionField.height,
-    ("instance_segmentation", "x"): InstanceSegmentationField.x,
-    ("instance_segmentation", "y"): InstanceSegmentationField.y,
-    ("instance_segmentation", "width"): InstanceSegmentationField.width,
-    ("instance_segmentation", "height"): InstanceSegmentationField.height,
+    ("segmentation_mask", "x"): InstanceSegmentationField.x,
+    ("segmentation_mask", "y"): InstanceSegmentationField.y,
+    ("segmentation_mask", "width"): InstanceSegmentationField.width,
+    ("segmentation_mask", "height"): InstanceSegmentationField.height,
 }
 
 _DATETIME_FIELDS: dict[tuple[str, str], _OrdinalField[datetime]] = {
@@ -183,7 +183,7 @@ def to_match_expression(expr: MatchExpr) -> MatchExpression:  # noqa: PLR0911 C9
         return ClassificationQuery.match(to_match_expression(expr=expr.subexpr))
     if isinstance(expr, ObjectDetectionMatchExpr):
         return ObjectDetectionQuery.match(to_match_expression(expr=expr.subexpr))
-    if isinstance(expr, InstanceSegmentationMatchExpr):
+    if isinstance(expr, SegmentationMaskMatchExpr):
         return InstanceSegmentationQuery.match(to_match_expression(expr=expr.subexpr))
     if isinstance(expr, AndExpr):
         return AND(*(to_match_expression(expr=child) for child in expr.children))

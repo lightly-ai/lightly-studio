@@ -10,7 +10,7 @@ export interface ParsedColor {
     a: number;
 }
 
-export interface UseInstanceSegmentationPreviewParams {
+export interface UseSegmentationMaskPreviewParams {
     onPreviewVisibilityChange?: (visible: boolean) => void;
 }
 
