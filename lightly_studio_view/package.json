@@ -29,7 +29,8 @@
     "get-schema": "openapi-typescript ../lightly_studio/openapi.json -o src/lib/schema.d.ts",
     "verify-schema": "openapi-typescript ../lightly_studio/openapi.json -o src/lib/schema.d.ts --check",
     "generate-api-client": "npm run get-schema && npx @hey-api/openapi-ts",
-    "generate-language": "langium generate"
+    "clean-generated-language": "node --input-type=module -e \"import { rmSync } from 'node:fs'; rmSync('src/lib/components/QueryEditor/language/generated/monarch.ts', { force: true });\"",
+    "generate-language": "npm run clean-generated-language && langium generate"
   },
   "devDependencies": {
     "@hey-api/openapi-ts": "^0.80.1",
