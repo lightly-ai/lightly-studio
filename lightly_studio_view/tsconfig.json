@@ -43,7 +43,7 @@
         "src/lib/hooks/useAuth/useAuth.test.ts",
         "src/lib/hooks/useSegmentationMaskEraser.test.ts",
         "src/lib/components/Settings/SettingsDialog.test.ts",
-        "src/lib/hooks/useInstanceSegmentationBrush.test.ts",
+        "src/lib/hooks/useSegmentationMaskBrush.test.ts",
         "src/lib/components/SampleDetails/SampleDetailsToolbar/SampleDetailsToolbar.test.ts",
         "src/lib/components/SampleAnnotation/SampleAnnotationSegmentationRLE/calculateBinaryMaskFromRLE/calculateBinaryMaskFromRLE.test.ts",
         "src/lib/components/SampleDetails/BrushToolPopUp/BrushToolPopUp.test.ts",
