@@ -62,13 +62,10 @@ export function parseLightlyQuery(
 function toQueryExpr(_parseResult: Query): QueryExpr {
     return {
         match_expr: {
-            type: ''
-            subexpr: {
-                type: 'integer_expr',
-                field: { table: 'image', name: 'width' },
-                operator: '>',
-                value: 600
-            }
+            type: 'integer_expr',
+            field: { table: 'image', name: 'width' },
+            operator: '>',
+            value: 600
         }
     };
 }

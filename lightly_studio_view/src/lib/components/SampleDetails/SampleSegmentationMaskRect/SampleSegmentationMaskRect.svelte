@@ -10,15 +10,15 @@
     import { useAnnotationLabelContext } from '$lib/contexts/SampleDetailsAnnotation.svelte';
     import { useAnnotation } from '$lib/hooks/useAnnotation/useAnnotation';
     import { useAnnotationLabels } from '$lib/hooks/useAnnotationLabels/useAnnotationLabels';
-    import { useSegmentationMaskBrush } from '$lib/hooks/useInstanceSegmentationBrush';
-    import { useSegmentationMaskPreview } from '$lib/hooks/useInstanceSegmentationPreview';
+    import { useSegmentationMaskBrush } from '$lib/hooks/useSegmentationMaskBrush';
+    import { useSegmentationMaskPreview } from '$lib/hooks/useSegmentationMaskPreview';
     import { usePendingOperations } from '$lib/hooks/usePendingOperations/usePendingOperations';
     import { useCollectionWithChildren } from '$lib/hooks/useCollection/useCollection';
     import { page } from '$app/state';
     import type { PendingChange } from '../pendingChange';
     import SampleAnnotationRect from '../SampleAnnotationRect/SampleAnnotationRect.svelte';
 
-    type SampleInstanceSegmentationRectProps = {
+    type SampleSegmentationMaskRectProps = {
         sample: {
             width: number;
             height: number;
@@ -46,7 +46,7 @@
         mousePosition,
         refetch,
         onFinishBrushPendingChange
-    }: SampleInstanceSegmentationRectProps = $props();
+    }: SampleSegmentationMaskRectProps = $props();
 
     const labels = useAnnotationLabels({ collectionId });
     const activeAnnotationId = $derived.by(() => {

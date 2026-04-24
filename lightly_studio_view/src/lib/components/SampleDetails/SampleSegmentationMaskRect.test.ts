@@ -2,14 +2,14 @@ import { fireEvent, render } from '@testing-library/svelte';
 import { tick } from 'svelte';
 import { writable } from 'svelte/store';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import SampleInstanceSegmentationRect from './SampleInstanceSegmentationRect/SampleInstanceSegmentationRect.svelte';
+import SampleSegmentationMaskRect from './SampleSegmentationMaskRect/SampleSegmentationMaskRect.svelte';
 
 const {
     mockAnnotationContext,
     setAnnotationId,
     setIsDrawing,
     committedSampleIds,
-    useInstanceSegmentationBrushMock,
+    useSegmentationMaskBrushMock,
     decodeRLEToBinaryMaskMock,
     getImageCoordsFromMouseMock,
     withAlphaMock
@@ -43,7 +43,7 @@ const {
         setAnnotationId: setAnnotationIdMock,
         setIsDrawing: setIsDrawingMock,
         committedSampleIds: sampleIds,
-        useInstanceSegmentationBrushMock: brushHookMock,
+        useSegmentationMaskBrushMock: brushHookMock,
         decodeRLEToBinaryMaskMock: decodeRLEToBinaryMask,
         getImageCoordsFromMouseMock: getImageCoordsFromMouse,
         withAlphaMock: withAlpha
@@ -98,8 +98,8 @@ vi.mock('$lib/hooks/useCollection/useCollection', () => ({
     })
 }));
 
-vi.mock('$lib/hooks/useInstanceSegmentationBrush', () => ({
-    useSegmentationMaskBrush: useInstanceSegmentationBrushMock
+vi.mock('$lib/hooks/useSegmentationMaskBrush', () => ({
+    useSegmentationMaskBrush: useSegmentationMaskBrushMock
 }));
 
 const baseProps = {
@@ -159,7 +159,7 @@ const getPreviewLayer = (container: HTMLElement): SVGForeignObjectElement => {
     return previewLayer as SVGForeignObjectElement;
 };
 
-describe('SampleInstanceSegmentationRect', () => {
+describe('SampleSegmentationMaskRect', () => {
     beforeEach(() => {
         vi.clearAllMocks();
         mockAnnotationContext.annotationId = null;
@@ -231,7 +231,7 @@ describe('SampleInstanceSegmentationRect', () => {
     });
 
     it('uses the latest sample id for brush commit after rerender', async () => {
-        const { container, rerender } = render(SampleInstanceSegmentationRect, {
+        const { container, rerender } = render(SampleSegmentationMaskRect, {
             props: {
                 ...baseProps,
                 sampleId: 'sample-1',
@@ -258,7 +258,7 @@ describe('SampleInstanceSegmentationRect', () => {
     });
 
     it('renders preview only after the animation frame callback runs', async () => {
-        const { container } = render(SampleInstanceSegmentationRect, {
+        const { container } = render(SampleSegmentationMaskRect, {
             props: {
                 ...baseProps,
                 sampleId: 'sample-1',
@@ -284,7 +284,7 @@ describe('SampleInstanceSegmentationRect', () => {
     });
 
     it('replaces a queued preview animation frame with the latest update', async () => {
-        const { container } = render(SampleInstanceSegmentationRect, {
+        const { container } = render(SampleSegmentationMaskRect, {
             props: {
                 ...baseProps,
                 sampleId: 'sample-1',
@@ -312,7 +312,7 @@ describe('SampleInstanceSegmentationRect', () => {
     });
 
     it('cancels scheduled preview updates when the component unmounts', async () => {
-        const { container, unmount } = render(SampleInstanceSegmentationRect, {
+        const { container, unmount } = render(SampleSegmentationMaskRect, {
             props: {
                 ...baseProps,
                 sampleId: 'sample-1',
@@ -337,7 +337,7 @@ describe('SampleInstanceSegmentationRect', () => {
     it('cancels a scheduled preview update when annotation state is reset by rerender', async () => {
         mockAnnotationContext.annotationId = 'annotation-1';
 
-        const { container, rerender } = render(SampleInstanceSegmentationRect, {
+        const { container, rerender } = render(SampleSegmentationMaskRect, {
             props: {
                 ...baseProps,
                 sampleId: 'sample-1',
@@ -390,10 +390,10 @@ describe('SampleInstanceSegmentationRect', () => {
                     resolveFinishBrush = resolve;
                 })
         );
-        useInstanceSegmentationBrushMock.mockReturnValueOnce({ finishBrush });
+        useSegmentationMaskBrushMock.mockReturnValueOnce({ finishBrush });
         const onFinishBrushPendingChange = vi.fn();
 
-        const { container } = render(SampleInstanceSegmentationRect, {
+        const { container } = render(SampleSegmentationMaskRect, {
             props: {
                 ...baseProps,
                 sampleId: 'sample-1',

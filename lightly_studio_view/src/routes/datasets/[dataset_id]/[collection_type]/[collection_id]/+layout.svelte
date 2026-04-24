@@ -38,7 +38,7 @@
         isAnnotationsRoute,
         isCaptionsRoute,
         isSampleDetailsRoute,
-        isSamplesRoute,
+        isImagesRoute,
         isVideoFramesRoute,
         isVideosRoute,
         isGroupsRoute,
@@ -121,7 +121,7 @@
         }
     });
 
-    const isSamples = $derived(isSamplesRoute(page.route.id));
+    const isSamples = $derived(isImagesRoute(page.route.id));
     const isGroups = $derived(isGroupsRoute(page.route.id));
     const isGroupDetails = $derived(isGroupDetailsRoute(page.route.id));
     const isAnnotations = $derived(isAnnotationsRoute(page.route.id));
