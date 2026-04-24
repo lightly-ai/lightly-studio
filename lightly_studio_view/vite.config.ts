@@ -2,13 +2,6 @@ import { defineConfig } from 'vitest/config';
 import { sveltekit } from '@sveltejs/kit/vite';
 import { fileURLToPath } from 'node:url';
 
-const monacoCssValuePath = fileURLToPath(
-    new URL(
-        './node_modules/@codingame/monaco-vscode-api/vscode/src/vs/base/browser/cssValue.js',
-        import.meta.url
-    )
-);
-
 export default defineConfig({
     plugins: [sveltekit()],
     worker: {
@@ -25,8 +18,12 @@ export default defineConfig({
             // `QueryEditor`) on the same instance so LSP and highlighting
             // attach to the same editor, rather than two separate monacos.
             'monaco-editor': '@codingame/monaco-vscode-editor-api',
-            '@codingame/monaco-vscode-api/vscode/vs/base/browser/cssValue':
-                monacoCssValuePath
+            '@codingame/monaco-vscode-api/vscode/vs/base/browser/cssValue': fileURLToPath(
+                new URL(
+                    './node_modules/@codingame/monaco-vscode-api/vscode/src/vs/base/browser/cssValue.js',
+                    import.meta.url
+                )
+            )
         }
     },
 

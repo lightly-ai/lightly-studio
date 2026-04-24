@@ -90,7 +90,7 @@ const imageFilter = derived(filterParams, ($filterParams): ImageFilter | null =>
     return Object.keys(filters).length > 0 ? filters : null;
 });
 
-interface QueryExpression {
+export interface QueryExpression {
     query_expr: QueryExpr;
     query_expr_str: string;
 }

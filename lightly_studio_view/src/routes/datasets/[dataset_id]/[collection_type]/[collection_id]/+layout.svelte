@@ -50,6 +50,7 @@
     import { useImageAnnotationCounts } from '$lib/hooks/useImageAnnotationCounts/useImageAnnotationCounts';
     import { useGlobalStorage } from '$lib/hooks/useGlobalStorage.js';
     import { Button } from '$lib/components/ui/index.js';
+    import QueryControl from '$lib/components/QueryControl/QueryControl.svelte';
     import { PaneGroup, Pane, PaneResizer } from 'paneforge';
     import { useVideoAnnotationCounts } from '$lib/hooks/useVideoAnnotationsCount/useVideoAnnotationsCount.js';
     import {
@@ -234,7 +235,7 @@
     const { videoFramesBoundsValues } = useVideoFramesBounds();
     const { videoBoundsValues } = useVideoBounds();
 
-    const { imageFilter: imageFilterFromHook, imageQueryExpression } = useImageFilters();
+    const { imageFilter: imageFilterFromHook } = useImageFilters();
 
     const { videoFilter: videoFilterFromHook } = useVideoFilters();
     const plotFilterImageSampleIds = $derived(
@@ -516,9 +517,14 @@
                         <div
                             class="min-h-0 flex-1 space-y-2 overflow-y-auto px-4 pb-2 dark:[color-scheme:dark]"
                         >
-                            {#if $imageQueryExpression?.query_expr_str}
-                                Custom filter applied
+                            {#if isQueryFilterEnabled}
+                                <QueryControl
+                                    onToggle={() => {
+                                        isQueryFilterEditing = !isQueryFilterEditing;
+                                    }}
+                                />
                             {/if}
+
                             <div>
                                 <TagsMenu collection_id={collectionId} {gridType} />
                             </div>
@@ -677,22 +683,6 @@
                     {#if isSamples || isAnnotations || isVideos || isGroups}
                         <GridHeader>
                             {#snippet auxControls()}
-                                {#if isQueryFilterEnabled}
-                                    <Button
-                                        class="flex items-center space-x-1"
-                                        data-testid="toggle-plot-button"
-                                        variant={isQueryFilterEditing ? 'default' : 'ghost'}
-                                        onclick={() =>
-                                            (isQueryFilterEditing = !isQueryFilterEditing)}
-                                    >
-                                        <Filter class="size-4" />
-                                        {#if isQueryFilterEditing}
-                                            <span>Close query editor</span>
-                                        {:else}
-                                            <span>Show query editor</span>
-                                        {/if}
-                                    </Button>
-                                {/if}
                                 {#if (isSamples || isVideos) && hasEmbeddings}
                                     <Button
                                         class="flex items-center space-x-1"
