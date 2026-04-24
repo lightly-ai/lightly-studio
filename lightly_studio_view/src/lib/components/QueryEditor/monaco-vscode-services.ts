@@ -23,7 +23,16 @@ export function ensureMonacoVscodeServices(): Promise<void> {
             viewsConfig: { $type: 'EditorService' },
             logLevel: LogLevel.Warning
         });
-        startupPromise = wrapper.start({ caller: 'LightlyQueryEditor' });
+        // Clear the cache on failure so a transient startup error (e.g. a
+        // worker/module load hiccup) doesn't brick every future editor mount
+        // by replaying the same rejected promise.
+        const attempt = wrapper.start({ caller: 'LightlyQueryEditor' }).catch((err) => {
+            if (startupPromise === attempt) {
+                startupPromise = null;
+            }
+            throw err;
+        });
+        startupPromise = attempt;
     }
     return startupPromise;
 }
