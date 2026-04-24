@@ -10,13 +10,16 @@ describe('QueryExprTranslationRequest', () => {
 
 describe('parseLightlyQuery', () => {
     it('returns an error result when the parser reports errors', () => {
-        const result = parseLightlyQuery({
-            parse: () => ({
-                lexerErrors: [],
-                parserErrors: [{ message: 'Unexpected token', line: 3, column: 5 }],
-                value: {} as Query
-            })
-        }, 'invalid');
+        const result = parseLightlyQuery(
+            {
+                parse: () => ({
+                    lexerErrors: [],
+                    parserErrors: [{ message: 'Unexpected token', line: 3, column: 5 }],
+                    value: {} as Query
+                })
+            },
+            'invalid'
+        );
 
         expect(result).toEqual({
             status: 'error',
@@ -25,13 +28,16 @@ describe('parseLightlyQuery', () => {
     });
 
     it('returns the hardcoded object_detection stub when parsing succeeds', () => {
-        const result = parseLightlyQuery({
-            parse: () => ({
-                lexerErrors: [],
-                parserErrors: [],
-                value: {} as Query
-            })
-        }, 'valid');
+        const result = parseLightlyQuery(
+            {
+                parse: () => ({
+                    lexerErrors: [],
+                    parserErrors: [],
+                    value: {} as Query
+                })
+            },
+            'valid'
+        );
 
         expect(result).toEqual({
             status: 'ok',
@@ -50,13 +56,16 @@ describe('parseLightlyQuery', () => {
     });
 
     it('returns the hardcoded object_detection stub for a valid object_detection query', () => {
-        const result = parseLightlyQuery({
-            parse: () => ({
-                lexerErrors: [],
-                parserErrors: [],
-                value: {} as Query
-            })
-        }, 'object_detection(label == "cat")');
+        const result = parseLightlyQuery(
+            {
+                parse: () => ({
+                    lexerErrors: [],
+                    parserErrors: [],
+                    value: {} as Query
+                })
+            },
+            'object_detection(label == "cat")'
+        );
 
         expect(result).toEqual({
             status: 'ok',

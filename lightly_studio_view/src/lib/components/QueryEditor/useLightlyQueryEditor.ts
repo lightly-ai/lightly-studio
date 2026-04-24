@@ -103,7 +103,9 @@ export function useLightlyQueryEditor(
         });
     }
 
-    async function translateLightlyQuery(value: string): Promise<QueryExprTranslationResult | null> {
+    async function translateLightlyQuery(
+        value: string
+    ): Promise<QueryExprTranslationResult | null> {
         await startupPromise;
         if (!languageClient || isDestroyed) {
             return null;

@@ -20,10 +20,7 @@ import {
     LightlyQueryGeneratedModule,
     LightlyQueryGeneratedSharedModule
 } from './generated/module.js';
-import {
-    QueryExprTranslationRequest,
-    parseLightlyQuery
-} from './query-expr-translation.js';
+import { QueryExprTranslationRequest, parseLightlyQuery } from './query-expr-translation.js';
 
 export type LightlyQueryServices = LangiumServices;
 
