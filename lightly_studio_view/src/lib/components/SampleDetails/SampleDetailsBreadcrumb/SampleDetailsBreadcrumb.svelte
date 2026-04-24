@@ -66,7 +66,7 @@
         <!-- Samples -->
         <BreadcrumbItem>
             <BreadcrumbLink
-                href={routeHelpers.toSamples(datasetId, collectionType, collectionId)}
+                href={routeHelpers.toImages(datasetId, collectionType, collectionId)}
                 class="flex items-center gap-2"
             >
                 <Images class="h-4 w-4" />
