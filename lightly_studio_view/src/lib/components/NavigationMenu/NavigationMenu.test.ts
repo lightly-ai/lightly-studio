@@ -28,7 +28,7 @@ describe('NavigationMenu', () => {
             route: {
                 id: null,
                 uid: null,
-                pattern: '/datasets/[dataset_id]/[collection_type]/[collection_id]/samples'
+                pattern: '/datasets/[dataset_id]/[collection_type]/[collection_id]/images'
             },
             params: {
                 dataset_id: 'test-dataset-id',
