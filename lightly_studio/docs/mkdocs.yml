@@ -62,6 +62,7 @@ nav:
     - Connect from Python: enterprise/connect.md
     - Security and Architecture: enterprise/security.md
     - On-Premise Deployment: enterprise/on-premise.md
+    - Local Storage: enterprise/local_storage.md
     - Cloud Storage:
       - enterprise/cloud_storage/index.md
       - AWS S3: enterprise/cloud_storage/aws.md
