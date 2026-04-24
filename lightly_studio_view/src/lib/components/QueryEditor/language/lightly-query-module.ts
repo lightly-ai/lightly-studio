@@ -8,21 +8,29 @@
 //   Services & DI:   https://langium.org/docs/reference/configuration-services/
 //   Validation:      https://langium.org/docs/learn/workflow/create_validations/
 
-import { inject } from 'langium';
+import { type Module, inject } from 'langium';
 import {
+    type LangiumServices,
+    type LangiumSharedServices,
+    type PartialLangiumServices,
     createDefaultModule,
     createDefaultSharedModule,
-    type DefaultSharedModuleContext,
-    type LangiumServices,
-    type LangiumSharedServices
+    type DefaultSharedModuleContext
 } from 'langium/lsp';
 import {
     LightlyQueryGeneratedModule,
     LightlyQueryGeneratedSharedModule
 } from './generated/module.js';
+import { LightlyQueryCompletionProvider } from './lightly-query-completion-provider.js';
 import { QueryExprTranslationRequest, parseLightlyQuery } from './query-expr-translation.js';
 
 export type LightlyQueryServices = LangiumServices;
+
+const LightlyQueryModule: Module<LightlyQueryServices, PartialLangiumServices> = {
+    lsp: {
+        CompletionProvider: (services) => new LightlyQueryCompletionProvider(services)
+    }
+};
 
 // Composes three modules (later overrides earlier): Langium defaults →
 // generated (grammar) → custom above. Registers the language in the shared
@@ -31,7 +39,11 @@ export function createLightlyQueryServices(
     context: DefaultSharedModuleContext
 ): LangiumSharedServices {
     const shared = inject(createDefaultSharedModule(context), LightlyQueryGeneratedSharedModule);
-    const LightlyQuery = inject(createDefaultModule({ shared }), LightlyQueryGeneratedModule);
+    const LightlyQuery = inject(
+        createDefaultModule({ shared }),
+        LightlyQueryGeneratedModule,
+        LightlyQueryModule
+    );
     shared.ServiceRegistry.register(LightlyQuery);
     shared.lsp?.Connection?.onRequest(QueryExprTranslationRequest, (value) =>
         parseLightlyQuery(LightlyQuery.parser.LangiumParser, value)
