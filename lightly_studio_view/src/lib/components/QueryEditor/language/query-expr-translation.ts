@@ -66,7 +66,7 @@ function toQueryExpr(_parseResult: Query): QueryExpr {
             subexpr: {
                 type: 'integer_expr',
                 field: { table: 'image', name: 'width' },
-                operator: '<',
+                operator: '>',
                 value: 600
             }
         }
