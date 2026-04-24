@@ -1,4 +1,4 @@
-import { redirect } from '@sveltejs/kit';
+import { goto } from '$app/navigation';
 import { SampleType } from '$lib/api/lightly_studio_local';
 import { routeHelpers } from '$lib/routes';
 import { readCollection } from '$lib/api/lightly_studio_local/sdk.gen';
@@ -28,10 +28,12 @@ export const load: PageLoad = async ({ params: { dataset_id } }) => {
     // - Not a root collection
     // - Invalid root collection type (ANNOTATION, VIDEO_FRAME, CAPTION)
     if (!collectionData || collectionData.parent_collection_id !== null || !routeBuilder) {
-        throw redirect(307, routeHelpers.toHome());
+        goto(routeHelpers.toHome());
+        return new Promise(() => {});
     }
 
     // Redirect to proper URL
     const collectionType = collectionData.sample_type.toLowerCase();
-    throw redirect(307, routeBuilder(dataset_id, collectionType, dataset_id));
+    goto(routeBuilder(dataset_id, collectionType, dataset_id));
+    return new Promise(() => {});
 };

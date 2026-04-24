@@ -1,30 +1,29 @@
 import { readCollection } from '$lib/api/lightly_studio_local/sdk.gen';
+import { routeHelpers } from '$lib/routes';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { SampleType } from '$lib/api/lightly_studio_local';
 import type { PageLoadEvent } from './$types';
 import { load } from './+page';
-import { routeHelpers } from '$lib/routes';
-import { SampleType } from '$lib/api/lightly_studio_local';
 
-vi.mock('$lib/api/lightly_studio_local/sdk.gen');
-vi.mock('@sveltejs/kit', () => ({
-    redirect: vi.fn((status, location) => {
-        const error = new Error('Redirect') as Error & { status: number; location: string };
-        error.status = status;
-        error.location = location;
-        throw error;
-    })
+const { gotoMock } = vi.hoisted(() => ({
+    gotoMock: vi.fn()
 }));
 
-type RedirectError = Error & { status: number; location: string };
+vi.mock('$lib/api/lightly_studio_local/sdk.gen');
+vi.mock('$app/navigation', () => ({
+    goto: gotoMock
+}));
 
 describe('+page.ts', () => {
     const mockDatasetId = '123e4567-e89b-12d3-a456-426614174000';
 
     beforeEach(() => {
         vi.clearAllMocks();
+        gotoMock.mockClear();
+        vi.mocked(readCollection).mockReset();
     });
 
-    it('should redirect to samples for IMAGE collection', async () => {
+    it('should navigate to samples for IMAGE collection', async () => {
         vi.mocked(readCollection).mockResolvedValue({
             data: {
                 collection_id: mockDatasetId,
@@ -36,21 +35,18 @@ describe('+page.ts', () => {
             response: undefined
         });
 
-        try {
-            await load({
-                params: { dataset_id: mockDatasetId }
-            } as PageLoadEvent);
-            expect.fail('Should have thrown redirect');
-        } catch (error: unknown) {
-            const redirectError = error as RedirectError;
-            expect(redirectError.status).toBe(307);
-            expect(redirectError.location).toBe(
+        void load({
+            params: { dataset_id: mockDatasetId }
+        } as PageLoadEvent);
+
+        await vi.waitFor(() => {
+            expect(gotoMock).toHaveBeenCalledWith(
                 routeHelpers.toSamples(mockDatasetId, 'image', mockDatasetId)
             );
-        }
+        });
     });
 
-    it('should redirect to videos for VIDEO collection', async () => {
+    it('should navigate to videos for VIDEO collection', async () => {
         vi.mocked(readCollection).mockResolvedValue({
             data: {
                 collection_id: mockDatasetId,
@@ -62,21 +58,18 @@ describe('+page.ts', () => {
             response: undefined
         });
 
-        try {
-            await load({
-                params: { dataset_id: mockDatasetId }
-            } as PageLoadEvent);
-            expect.fail('Should have thrown redirect');
-        } catch (error: unknown) {
-            const redirectError = error as RedirectError;
-            expect(redirectError.status).toBe(307);
-            expect(redirectError.location).toBe(
+        void load({
+            params: { dataset_id: mockDatasetId }
+        } as PageLoadEvent);
+
+        await vi.waitFor(() => {
+            expect(gotoMock).toHaveBeenCalledWith(
                 routeHelpers.toVideos(mockDatasetId, 'video', mockDatasetId)
             );
-        }
+        });
     });
 
-    it('should redirect to groups for GROUP collection', async () => {
+    it('should navigate to groups for GROUP collection', async () => {
         vi.mocked(readCollection).mockResolvedValue({
             data: {
                 collection_id: mockDatasetId,
@@ -88,55 +81,46 @@ describe('+page.ts', () => {
             response: undefined
         });
 
-        try {
-            await load({
-                params: { dataset_id: mockDatasetId }
-            } as PageLoadEvent);
-            expect.fail('Should have thrown redirect');
-        } catch (error: unknown) {
-            const redirectError = error as RedirectError;
-            expect(redirectError.status).toBe(307);
-            expect(redirectError.location).toBe(
+        void load({
+            params: { dataset_id: mockDatasetId }
+        } as PageLoadEvent);
+
+        await vi.waitFor(() => {
+            expect(gotoMock).toHaveBeenCalledWith(
                 routeHelpers.toGroups(mockDatasetId, 'group', mockDatasetId)
             );
-        }
+        });
     });
 
-    it('should redirect to home when collection not found', async () => {
+    it('should navigate to home when collection not found', async () => {
         vi.mocked(readCollection).mockRejectedValue(new Error('Not found'));
 
-        try {
-            await load({
-                params: { dataset_id: mockDatasetId }
-            } as PageLoadEvent);
-            expect.fail('Should have thrown redirect');
-        } catch (error: unknown) {
-            const redirectError = error as RedirectError;
-            expect(redirectError.status).toBe(307);
-            expect(redirectError.location).toBe(routeHelpers.toHome());
-        }
+        void load({
+            params: { dataset_id: mockDatasetId }
+        } as PageLoadEvent);
+
+        await vi.waitFor(() => {
+            expect(gotoMock).toHaveBeenCalledWith(routeHelpers.toHome());
+        });
     });
 
-    it('should redirect to home when collection data is undefined', async () => {
+    it('should navigate to home when collection data is undefined', async () => {
         vi.mocked(readCollection).mockResolvedValue({
             data: undefined,
             request: undefined,
             response: undefined
         });
 
-        try {
-            await load({
-                params: { dataset_id: mockDatasetId }
-            } as PageLoadEvent);
-            expect.fail('Should have thrown redirect');
-        } catch (error: unknown) {
-            const redirectError = error as RedirectError;
-            expect(redirectError.status).toBe(307);
-            expect(redirectError.location).toBe(routeHelpers.toHome());
-        }
+        void load({
+            params: { dataset_id: mockDatasetId }
+        } as PageLoadEvent);
+
+        await vi.waitFor(() => {
+            expect(gotoMock).toHaveBeenCalledWith(routeHelpers.toHome());
+        });
     });
 
-    it('should redirect to home when collection is not a root)', async () => {
+    it('should navigate to home when collection is not a root', async () => {
         vi.mocked(readCollection).mockResolvedValue({
             data: {
                 collection_id: mockDatasetId,
@@ -148,39 +132,33 @@ describe('+page.ts', () => {
             response: undefined
         });
 
-        try {
-            await load({
-                params: { dataset_id: mockDatasetId }
-            } as PageLoadEvent);
-            expect.fail('Should have thrown redirect');
-        } catch (error: unknown) {
-            const redirectError = error as RedirectError;
-            expect(redirectError.status).toBe(307);
-            expect(redirectError.location).toBe(routeHelpers.toHome());
-        }
+        void load({
+            params: { dataset_id: mockDatasetId }
+        } as PageLoadEvent);
+
+        await vi.waitFor(() => {
+            expect(gotoMock).toHaveBeenCalledWith(routeHelpers.toHome());
+        });
     });
 
-    it('should redirect to home for invalid root collection type (ANNOTATION)', async () => {
+    it('should navigate to home for invalid root collection type (ANNOTATION)', async () => {
         vi.mocked(readCollection).mockResolvedValue({
             data: {
                 collection_id: mockDatasetId,
                 name: 'Annotation Collection',
                 sample_type: SampleType.ANNOTATION,
-                parent_collection_id: 'test-parent-id'
+                parent_collection_id: null
             },
             request: undefined,
             response: undefined
         });
 
-        try {
-            await load({
-                params: { dataset_id: mockDatasetId }
-            } as PageLoadEvent);
-            expect.fail('Should have thrown redirect');
-        } catch (error: unknown) {
-            const redirectError = error as RedirectError;
-            expect(redirectError.status).toBe(307);
-            expect(redirectError.location).toBe(routeHelpers.toHome());
-        }
+        void load({
+            params: { dataset_id: mockDatasetId }
+        } as PageLoadEvent);
+
+        await vi.waitFor(() => {
+            expect(gotoMock).toHaveBeenCalledWith(routeHelpers.toHome());
+        });
     });
 });
