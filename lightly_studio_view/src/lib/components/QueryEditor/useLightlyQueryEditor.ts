@@ -21,6 +21,7 @@ import {
     LIGHTLY_QUERY_THEME_ID,
     registerLightlyQueryMonacoLanguage
 } from './monaco-lightly-query.js';
+import { ensureMonacoVscodeServices } from './monaco-vscode-services.js';
 import { useMonacoEditor, type MonacoEditorHandle } from './useMonacoEditor.svelte.js';
 import {
     QueryExprTranslationRequest,
@@ -50,9 +51,6 @@ export interface LightlyQueryEditorHandle extends MonacoEditorHandle {
 export function useLightlyQueryEditor(
     options: UseLightlyQueryEditorOptions
 ): LightlyQueryEditorHandle {
-    // Safe to call on every mount — the function is idempotent.
-    registerLightlyQueryMonacoLanguage();
-
     const editor = useMonacoEditor({
         language: LIGHTLY_QUERY_LANGUAGE_ID,
         theme: LIGHTLY_QUERY_THEME_ID,
@@ -68,7 +66,12 @@ export function useLightlyQueryEditor(
     let startupPromise: Promise<void> | null = null;
     let isDestroyed = false;
 
-    function mount(container: HTMLElement): void {
+    async function mount(container: HTMLElement): Promise<void> {
+        startupPromise = ensureMonacoVscodeServices();
+        // Wait for the VSCode API services to initialize
+        await startupPromise;
+
+        registerLightlyQueryMonacoLanguage();
         editor.mount(container);
 
         // Spawn the Langium LSP worker and bridge it to the client via the
@@ -79,11 +82,8 @@ export function useLightlyQueryEditor(
         const reader = new BrowserMessageReader(lspWorker);
         const writer = new BrowserMessageWriter(lspWorker);
 
-        // The language client provides validation, completion, and hover to
-        // Monaco for documents matching the LightlyQuery language ID. We keep
-        // the editor alive on transport errors (Continue) but do not auto-
-        // restart a closed connection, since the worker won't recover on its
-        // own after a hard failure.
+        // The language client provides validation, completion, and hover
+        // to Monaco for documents matching the LightlyQuery language ID.
         languageClient = new MonacoLanguageClient({
             name: 'LightlyQuery Language Client',
             clientOptions: {
@@ -95,18 +95,11 @@ export function useLightlyQueryEditor(
             },
             messageTransports: { reader, writer }
         });
-
-        startupPromise = languageClient.start().catch((error) => {
-            if (!isDestroyed) {
-                console.error('Failed to start LightlyQuery language client:', error);
-            }
-        });
     }
 
     async function translateLightlyQuery(
         value: string
     ): Promise<QueryExprTranslationResult | null> {
-        await startupPromise;
         if (!languageClient || isDestroyed) {
             return null;
         }
