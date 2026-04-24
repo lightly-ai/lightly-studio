@@ -24,10 +24,10 @@ def test_update_annotation_segmentation_mask(
     """Test updating annotation segmentation mask."""
     # Get all annotations and pick the first one
     annotations = annotation_resolver.get_all(db_session).annotations
-    instance_segmentation_annotation = get_annotation_by_type(
+    segmentation_mask_annotation = get_annotation_by_type(
         annotations=annotations, annotation_type=AnnotationType.SEGMENTATION_MASK
     )
-    annotation_id = instance_segmentation_annotation.sample_id
+    annotation_id = segmentation_mask_annotation.sample_id
 
     bounding_box = {"x": 11, "y": 21, "width": 201, "height": 202}
 
@@ -35,7 +35,7 @@ def test_update_annotation_segmentation_mask(
     updated_annotation = annotations_service.update_annotation(
         db_session,
         AnnotationUpdate(
-            collection_id=instance_segmentation_annotation.sample.collection_id,
+            collection_id=segmentation_mask_annotation.sample.collection_id,
             annotation_id=annotation_id,
             bounding_box=BoundingBoxCoordinates(
                 x=bounding_box["x"],
