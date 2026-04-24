@@ -102,10 +102,10 @@ class ObjectDetectionMatchExpr(BaseModel):
     subexpr: MatchExpr
 
 
-class InstanceSegmentationMatchExpr(BaseModel):
-    """Leaf node checking if a sample has a matching instance segmentation annotation."""
+class SegmentationMaskMatchExpr(BaseModel):
+    """Leaf node checking if a sample has a matching segmentation mask annotation."""
 
-    type: Literal["instance_segmentation_match_expr"] = "instance_segmentation_match_expr"
+    type: Literal["segmentation_mask_match_expr"] = "segmentation_mask_match_expr"
     subexpr: MatchExpr
 
 
@@ -140,7 +140,7 @@ MatchExpr: TypeAlias = Annotated[
         TagsContainsExpr,
         ClassificationMatchExpr,
         ObjectDetectionMatchExpr,
-        InstanceSegmentationMatchExpr,
+        SegmentationMaskMatchExpr,
         AndExpr,
         OrExpr,
         NotExpr,
@@ -152,7 +152,7 @@ MatchExpr: TypeAlias = Annotated[
 # Rebuild models with recursive references between them.
 ClassificationMatchExpr.model_rebuild()
 ObjectDetectionMatchExpr.model_rebuild()
-InstanceSegmentationMatchExpr.model_rebuild()
+SegmentationMaskMatchExpr.model_rebuild()
 AndExpr.model_rebuild()
 OrExpr.model_rebuild()
 NotExpr.model_rebuild()
