@@ -67,14 +67,6 @@ export function useLightlyQueryEditor(
     let isDestroyed = false;
 
     function mount(container: HTMLElement): void {
-        // `MonacoLanguageClient`'s base class reaches for a `vscode` API that
-        // only exists once `@codingame/monaco-vscode-api` is initialized, so
-        // every editor mount funnels through a shared, memoized startup.
-        // Language registration must run *after* this: `defineTheme` and
-        // `setMonarchTokensProvider` call `StandaloneServices.get(...)`, which
-        // auto-initializes services with empty overrides on first access —
-        // flipping the `servicesInitialized` flag and causing the wrapper's
-        // own `initialize(...)` call to throw "Services are already initialized".
         startupPromise = ensureMonacoVscodeServices()
             .then(() => {
                 if (isDestroyed) {
@@ -94,9 +86,6 @@ export function useLightlyQueryEditor(
 
                 // The language client provides validation, completion, and hover
                 // to Monaco for documents matching the LightlyQuery language ID.
-                // We keep the editor alive on transport errors (Continue) but do
-                // not auto-restart a closed connection, since the worker won't
-                // recover on its own after a hard failure.
                 languageClient = new MonacoLanguageClient({
                     name: 'LightlyQuery Language Client',
                     clientOptions: {
@@ -121,7 +110,6 @@ export function useLightlyQueryEditor(
     async function translateLightlyQuery(
         value: string
     ): Promise<QueryExprTranslationResult | null> {
-        await startupPromise;
         if (!languageClient || isDestroyed) {
             return null;
         }
