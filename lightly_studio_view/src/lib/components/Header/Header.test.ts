@@ -48,7 +48,7 @@ describe('Header', () => {
             route: {
                 id: null,
                 uid: null,
-                pattern: '/datasets/[dataset_id]/[collection_type]/[collection_id]/samples'
+                pattern: '/datasets/[dataset_id]/[collection_type]/[collection_id]/images'
             }
         } as unknown as Page<Record<string, string>, string | null>);
 
