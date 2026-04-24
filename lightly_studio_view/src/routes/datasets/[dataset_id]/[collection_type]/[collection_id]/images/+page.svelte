@@ -22,7 +22,7 @@
     );
 
     $effect(() => {
-        if ($lastGridType !== 'samples') {
+        if ($lastGridType !== 'images') {
             clearTagsSelected();
         }
     });
