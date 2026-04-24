@@ -13,10 +13,6 @@ export default defineConfig({
     resolve: {
         alias: {
             // `monaco-languageclient` wires its services into
-            // `@codingame/monaco-vscode-editor-api`. Aliasing keeps our
-            // `monaco-editor` imports (language/theme registration in
-            // `QueryEditor`) on the same instance so LSP and highlighting
-            // attach to the same editor, rather than two separate monacos.
             'monaco-editor': '@codingame/monaco-vscode-editor-api',
             '@codingame/monaco-vscode-api/vscode/vs/base/browser/cssValue': fileURLToPath(
                 new URL(
