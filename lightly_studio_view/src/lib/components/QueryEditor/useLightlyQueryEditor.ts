@@ -69,6 +69,7 @@ export function useLightlyQueryEditor(
     let isDestroyed = false;
 
     function mount(container: HTMLElement): void {
+        debugger;
         editor.mount(container);
 
         // Spawn the Langium LSP worker and bridge it to the client via the
@@ -76,6 +77,7 @@ export function useLightlyQueryEditor(
         lspWorker = new Worker(new URL('./language-server-worker.ts', import.meta.url), {
             type: 'module'
         });
+        debugger;
         const reader = new BrowserMessageReader(lspWorker);
         const writer = new BrowserMessageWriter(lspWorker);
 
@@ -95,18 +97,26 @@ export function useLightlyQueryEditor(
             },
             messageTransports: { reader, writer }
         });
-
-        startupPromise = languageClient.start().catch((error) => {
-            if (!isDestroyed) {
-                console.error('Failed to start LightlyQuery language client:', error);
-            }
-        });
+        debugger;
+        startupPromise = languageClient
+            .start()
+            .catch((error) => {
+                if (!isDestroyed) {
+                    console.error('Failed to start LightlyQuery language client:', error);
+                }
+            })
+            .finally(() => {
+                // Clear the startup promise so `translateLightlyQuery` can check it as a proxy for "is the client ready?".
+                startupPromise = null;
+                debugger;
+            });
     }
 
     async function translateLightlyQuery(
         value: string
     ): Promise<QueryExprTranslationResult | null> {
         await startupPromise;
+        debugger;
         if (!languageClient || isDestroyed) {
             return null;
         }

@@ -1,22 +1,23 @@
 <script lang="ts">
     import QueryEditor from '$lib/components/QueryEditor/QueryEditor.svelte';
-    import type { QueryExpr } from '$lib/api/lightly_studio_local';
     import { useImageFilters } from '$lib/hooks/useImageFilters/useImageFilters';
+    import type { QueryExprTranslationResult } from '../QueryEditor/language/query-expr-translation';
 
     const { updateQueryExpr } = useImageFilters();
 
-    const dummyQueryExpr: QueryExpr = {
-        match_expr: {
-            type: 'integer_expr',
-            field: { table: 'image', name: 'width' },
-            operator: '>',
-            value: 500
+    const handleQueryEditorValueChange = (
+        value: string,
+        parsed: QueryExprTranslationResult | null
+    ) => {
+        debugger;
+        if (!parsed) {
+            throw new Error('Failed to parse query expression');
         }
-    };
-
-    const handleQueryEditorValueChange = (value: string) => {
+        if (parsed.status === 'error') {
+            throw new Error(`Failed to parse query expression: ${JSON.stringify(parsed.errors)}`);
+        }
         updateQueryExpr({
-            query_expr: dummyQueryExpr,
+            query_expr: parsed.queryExpr,
             query_expr_str: value
         });
     };
