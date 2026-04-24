@@ -64,10 +64,10 @@ function toQueryExpr(_parseResult: Query): QueryExpr {
         match_expr: {
             type: 'object_detection_match_expr',
             subexpr: {
-                type: 'string_expr',
-                field: { table: 'object_detection', name: 'label' },
-                operator: '==',
-                value: 'cat'
+                type: 'integer_expr',
+                field: { table: 'image', name: 'width' },
+                operator: '<',
+                value: 600
             }
         }
     };
