@@ -43,6 +43,7 @@ interface ClassifierModeParams {
 }
 
 export type ImagesInfiniteParams = {
+    query_expr?: QueryExpr;
     collection_id: string;
 } & (NormalModeParams | ClassifierModeParams) &
     CommonFilters;
@@ -106,6 +107,7 @@ const buildRequestBody = (params: ImagesInfiniteParams, pageParam: number): Read
         text_embedding: params.text_embedding,
         filters: {
             sample_filter: {
+                query_expr: params.query_expr ?? undefined,
                 metadata_filters: params.metadata_values
                     ? createMetadataFilters(params.metadata_values)
                     : undefined

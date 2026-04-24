@@ -103,25 +103,7 @@ export const useImageFilters = () => {
     };
 
     const updateQueryExpr = (expr?: QueryExpression) => {
-        const params: ImagesInfiniteParams = {
-            ...get(filterParams)
-        };
-
-        if (params.mode !== 'normal') {
-            return;
-        }
-
         imageQueryExpression.set(expr ?? null);
-
-        const newParams: ImagesInfiniteParams = {
-            ...params,
-            filters: {
-                ...params.filters,
-                query_expr: expr ? expr.query_expr : undefined
-            }
-        };
-
-        filterParams.set(newParams);
     };
 
     // updates only sample ids in the existing filter params

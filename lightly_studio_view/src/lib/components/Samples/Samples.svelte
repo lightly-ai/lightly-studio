@@ -73,7 +73,7 @@
         };
     };
 
-    const { filterParams, updateFilterParams } = useImageFilters();
+    const { filterParams, updateFilterParams, imageQueryExpression } = useImageFilters();
 
     $effect(() => {
         // Synchronize the global filter parameters with the local samples parameters
@@ -112,7 +112,11 @@
     });
 
     const { samples: infiniteSamples } = $derived(
-        useImagesInfinite({ ...$filterParams, collection_id: collection_id })
+        useImagesInfinite({
+            ...$filterParams,
+            collection_id: collection_id,
+            query_expr: $imageQueryExpression?.query_expr
+        })
     );
     // Derived list of samples from TanStack infinite query
     const samples: ImageView[] = $derived(
@@ -145,6 +149,7 @@
     const filterHash = $derived.by(() => {
         const parts = [
             $selectedAnnotationFilterIds.join(','),
+            $imageQueryExpression?.query_expr_str || '',
             Array.from($tagsSelected).join(','),
             `${$dimensions?.min_width}-${$dimensions?.max_width}`,
             `${$dimensions?.min_height}-${$dimensions?.max_height}`,
