@@ -129,14 +129,14 @@
     const isVideoFrames = $derived(isVideoFramesRoute(page.route.id));
     const isVideoDetails = $derived(isVideoDetailsRoute(page.route.id));
 
-    let gridType = $state<GridType>('samples');
+    let gridType = $state<GridType>('images');
     let lastCollectionId: string | null = null;
     $effect(() => {
         let nextGridType: GridType | null = null;
         if (isAnnotations) {
             nextGridType = 'annotations';
         } else if (isSamples) {
-            nextGridType = 'samples';
+            nextGridType = 'images';
         } else if (isCaptions) {
             nextGridType = 'captions';
         } else if (isVideoFrames) {
