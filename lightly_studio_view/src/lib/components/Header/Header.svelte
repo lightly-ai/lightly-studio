@@ -7,7 +7,7 @@
     import Button from '../ui/button/button.svelte';
     import { page } from '$app/state';
     import NavigationMenu from '../NavigationMenu/NavigationMenu.svelte';
-    import { isSamplesRoute, isVideosRoute } from '$lib/routes';
+    import { isImagesRoute, isVideosRoute } from '$lib/routes';
     import { get } from 'svelte/store';
     import Menu from '$lib/components/Header/Menu.svelte';
     import type { CollectionView } from '$lib/api/lightly_studio_local';
@@ -18,7 +18,7 @@
 
     let { collection }: { collection: CollectionView } = $props();
 
-    const isSamples = $derived(isSamplesRoute(page.route.id));
+    const isSamples = $derived(isImagesRoute(page.route.id));
     const isVideos = $derived(isVideosRoute(page.route.id));
     const { settingsStore } = useSettings();
 

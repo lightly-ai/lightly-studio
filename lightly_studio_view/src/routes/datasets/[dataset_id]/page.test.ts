@@ -23,7 +23,7 @@ describe('+page.ts', () => {
         vi.mocked(readCollection).mockReset();
     });
 
-    it('should navigate to samples for IMAGE collection', async () => {
+    it('should navigate to images for IMAGE collection', async () => {
         vi.mocked(readCollection).mockResolvedValue({
             data: {
                 collection_id: mockDatasetId,
@@ -41,7 +41,7 @@ describe('+page.ts', () => {
 
         await vi.waitFor(() => {
             expect(gotoMock).toHaveBeenCalledWith(
-                routeHelpers.toSamples(mockDatasetId, 'image', mockDatasetId)
+                routeHelpers.toImages(mockDatasetId, 'image', mockDatasetId)
             );
         });
     });

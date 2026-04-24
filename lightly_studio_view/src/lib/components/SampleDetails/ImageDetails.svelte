@@ -32,7 +32,7 @@
     // Handle Escape key
     const handleEscape = () => {
         if (datasetId && collectionType) {
-            goto(routeHelpers.toSamples(datasetId, collectionType, collectionId));
+            goto(routeHelpers.toImages(datasetId, collectionType, collectionId));
         }
     };
 

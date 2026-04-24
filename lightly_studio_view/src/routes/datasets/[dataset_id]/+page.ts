@@ -7,7 +7,7 @@ import type { PageLoad } from './$types';
 const rootCollectionRoutes: Partial<
     Record<SampleType, (datasetId: string, collectionType: string, collectionId: string) => string>
 > = {
-    [SampleType.IMAGE]: routeHelpers.toSamples,
+    [SampleType.IMAGE]: routeHelpers.toImages,
     [SampleType.VIDEO]: routeHelpers.toVideos,
     [SampleType.GROUP]: routeHelpers.toGroups
 };
