@@ -73,44 +73,46 @@ export function useLightlyQueryEditor(
         // `MonacoLanguageClient`'s base class reaches for a `vscode` API that
         // only exists once `@codingame/monaco-vscode-api` is initialized, so
         // every editor mount funnels through a shared, memoized startup.
-        startupPromise = ensureMonacoVscodeServices().then(() => {
-            if (isDestroyed) {
-                return;
-            }
+        startupPromise = ensureMonacoVscodeServices()
+            .then(() => {
+                if (isDestroyed) {
+                    return;
+                }
 
-            editor.mount(container);
+                editor.mount(container);
 
-            // Spawn the Langium LSP worker and bridge it to the client via the
-            // browser LSP message transport (postMessage under the hood).
-            lspWorker = new Worker(new URL('./language-server-worker.ts', import.meta.url), {
-                type: 'module'
+                // Spawn the Langium LSP worker and bridge it to the client via the
+                // browser LSP message transport (postMessage under the hood).
+                lspWorker = new Worker(new URL('./language-server-worker.ts', import.meta.url), {
+                    type: 'module'
+                });
+                const reader = new BrowserMessageReader(lspWorker);
+                const writer = new BrowserMessageWriter(lspWorker);
+
+                // The language client provides validation, completion, and hover
+                // to Monaco for documents matching the LightlyQuery language ID.
+                // We keep the editor alive on transport errors (Continue) but do
+                // not auto-restart a closed connection, since the worker won't
+                // recover on its own after a hard failure.
+                languageClient = new MonacoLanguageClient({
+                    name: 'LightlyQuery Language Client',
+                    clientOptions: {
+                        documentSelector: [{ language: LIGHTLY_QUERY_LANGUAGE_ID }],
+                        errorHandler: {
+                            error: () => ({ action: ErrorAction.Continue }),
+                            closed: () => ({ action: CloseAction.DoNotRestart })
+                        }
+                    },
+                    messageTransports: { reader, writer }
+                });
+
+                return languageClient.start();
+            })
+            .catch((error) => {
+                if (!isDestroyed) {
+                    console.error('Failed to start LightlyQuery language client:', error);
+                }
             });
-            const reader = new BrowserMessageReader(lspWorker);
-            const writer = new BrowserMessageWriter(lspWorker);
-
-            // The language client provides validation, completion, and hover
-            // to Monaco for documents matching the LightlyQuery language ID.
-            // We keep the editor alive on transport errors (Continue) but do
-            // not auto-restart a closed connection, since the worker won't
-            // recover on its own after a hard failure.
-            languageClient = new MonacoLanguageClient({
-                name: 'LightlyQuery Language Client',
-                clientOptions: {
-                    documentSelector: [{ language: LIGHTLY_QUERY_LANGUAGE_ID }],
-                    errorHandler: {
-                        error: () => ({ action: ErrorAction.Continue }),
-                        closed: () => ({ action: CloseAction.DoNotRestart })
-                    }
-                },
-                messageTransports: { reader, writer }
-            });
-
-            return languageClient.start();
-        }).catch((error) => {
-            if (!isDestroyed) {
-                console.error('Failed to start LightlyQuery language client:', error);
-            }
-        });
     }
 
     async function translateLightlyQuery(
