@@ -1,15 +1,13 @@
 <script lang="ts">
-    import { AnnotationsGridItem, SelectableBox, LazyTrigger } from '$lib/components';
+    import { AnnotationsGridItem, SelectableBox } from '$lib/components';
     import { useSelectedAnnotationsFilter } from '$lib/hooks/useAnnotationsFilter/useAnnotationsFilter';
     import { useGlobalStorage } from '$lib/hooks/useGlobalStorage';
     import { useSettings } from '$lib/hooks/useSettings';
     import { useTags } from '$lib/hooks/useTags/useTags';
     import { routeHelpers } from '$lib/routes';
     import { onMount } from 'svelte';
-    import { Grid } from 'svelte-virtual';
     import { page } from '$app/state';
     import { useAnnotationsInfinite } from '$lib/hooks/useAnnotationsInfinite/useAnnotationsInfinite';
-    import Spinner from '../Spinner/Spinner.svelte';
     import { afterNavigate, goto } from '$app/navigation';
     import SelectedAnnotations from './SelectedAnnotations/SelectedAnnotations.svelte';
     import { useScrollRestoration } from '$lib/hooks/useScrollRestoration/useScrollRestoration';
@@ -19,6 +17,9 @@
     import { selectRangeByAnchor } from '$lib/utils/selectRangeByAnchor';
     import useAuth from '$lib/hooks/useAuth/useAuth';
     import { hasMinimumRole } from '$lib/hooks/useAuth/hasMinimumRole';
+    import { GridContainer } from '$lib/components/GridContainer';
+    import { Grid } from '$lib/components/Grid';
+    import { GridItem } from '$lib/components/GridItem';
 
     type AnnotationsProps = {
         collection_id: string;
@@ -65,10 +66,6 @@
         collectionVersion = await getCollectionVersion(collection_id);
     });
 
-    let viewport: HTMLElement | null = $state(null);
-    let clientWidth = $state(0);
-    let clientHeight = $state(0);
-
     const queryParams = $derived({
         path: {
             collection_id: collection_id
@@ -105,11 +102,13 @@
     }
 
     $effect(() => {
-        infiniteAnnotations.subscribe((result) => {
+        const unsubscribe = infiniteAnnotations.subscribe((result) => {
             if (result.isSuccess && result.data.pages.length > 0) {
                 setfilteredAnnotationCount(result.data.pages[0].total_count);
             }
         });
+
+        return unsubscribe;
     });
 
     const { user } = useAuth();
@@ -119,7 +118,6 @@
         clearSelectedSampleAnnotationCrops
     } = useGlobalStorage();
 
-    const gridGap = 16;
     let selectionAnchorAnnotationId = $state<string | null>(null);
 
     function handleToggleSelection(annotationId: string) {
@@ -145,16 +143,13 @@
         }
     }
 
-    function handleOnClick(event: MouseEvent) {
-        const annotationId = (event.currentTarget as HTMLElement).dataset.annotationId!;
-        const index = Number((event.currentTarget as HTMLElement).dataset.index!);
-
+    function handleAnnotationSelect(annotationId: string, index: number, shiftKey: boolean) {
         selectionAnchorAnnotationId = selectRangeByAnchor({
             sampleIdsInOrder: annotations.map((annotation) => annotation.annotation.sample_id),
             selectedSampleIds: $pickedAnnotationIds[collection_id] ?? new Set<string>(),
             clickedSampleId: annotationId,
             clickedIndex: index,
-            shiftKey: event.shiftKey,
+            shiftKey,
             anchorSampleId: selectionAnchorAnnotationId,
             onSelectSample: (selectedAnnotationId) => handleToggleSelection(selectedAnnotationId)
         });
@@ -163,9 +158,7 @@
     const datasetId = $derived(page.params.dataset_id!);
     const collectionType = $derived(page.params.collection_type!);
 
-    function handleOnDoubleClick(event: MouseEvent) {
-        const annotationId = (event.currentTarget as HTMLElement).dataset.annotationId!;
-
+    function handleOnDoubleClick(annotationId: string) {
         if (datasetId && collectionType) {
             goto(
                 routeHelpers.toSampleWithAnnotation({
@@ -178,22 +171,12 @@
         }
     }
 
-    function handleKeyDown(event: KeyboardEvent) {
-        if (event.key === 'Enter' || event.key === ' ') {
-            event.preventDefault();
-            const annotationId = (event.currentTarget as HTMLElement).dataset.annotationId!;
-            const index = Number((event.currentTarget as HTMLElement).dataset.index!);
-            selectionAnchorAnnotationId = selectRangeByAnchor({
-                sampleIdsInOrder: annotations.map((annotation) => annotation.annotation.sample_id),
-                selectedSampleIds: $pickedAnnotationIds[collection_id] ?? new Set<string>(),
-                clickedSampleId: annotationId,
-                clickedIndex: index,
-                shiftKey: event.shiftKey,
-                anchorSampleId: selectionAnchorAnnotationId,
-                onSelectSample: (selectedAnnotationId) =>
-                    handleToggleSelection(selectedAnnotationId)
-            });
-        }
+    function handleGridItemSelect(
+        event: MouseEvent | KeyboardEvent,
+        annotationId: string,
+        index: number
+    ) {
+        handleAnnotationSelect(annotationId, index, event.shiftKey);
     }
 
     const selectedAnnotations = $derived(
@@ -221,68 +204,77 @@
         clearSelectedSampleAnnotationCrops(collection_id);
     };
 
-    const size = $derived.by(() => {
-        if (clientWidth === 0) {
-            return 0;
-        }
-        return clientWidth / itemWidth;
-    });
-    const annotationSize = $derived(Math.max(size - gridGap, 0));
-    const viewportHeight = $derived(clientHeight);
-
-    let grid: ReturnType<typeof Grid> | undefined = $state();
-
-    $effect(() => {
-        if (grid && initialScrollPosition && size > 0) {
-            requestAnimationFrame(() => {
-                grid?.scrollToPosition(initialScrollPosition);
-            });
-        }
-    });
+    const scrollResetKey = $derived(infiniteLoaderIdentifier);
+    const hideSelectedAnnotationsPanel = $derived(
+        $infiniteAnnotations.isFetched && annotations.length === 0
+    );
 </script>
 
-{#if $infiniteAnnotations.isFetched && annotations.length === 0}
-    <div class="flex h-full flex-1 items-center justify-center">
-        <div class="text-center text-muted-foreground">
-            <div class="mb-2 text-lg font-medium">No annotations found</div>
-            <div class="text-sm">This collection doesn't contain any annotations.</div>
-        </div>
-    </div>
-{:else}
-    <div class="flex h-full flex-1" bind:this={viewport} bind:clientWidth bind:clientHeight>
-        <div class="viewport flex-1">
-            {#key infiniteLoaderIdentifier}
+<div class="flex h-full flex-1">
+    <div class="flex-1">
+        <GridContainer
+            itemCount={annotations.length}
+            message={{
+                loading: 'Loading annotations...',
+                error: 'Error loading annotations',
+                empty: {
+                    title: 'No annotations found',
+                    description: "This collection doesn't contain any annotations."
+                }
+            }}
+            status={{
+                loading: $infiniteAnnotations.isPending && annotations.length === 0,
+                error: $infiniteAnnotations.isError && annotations.length === 0,
+                empty: $infiniteAnnotations.isFetched && annotations.length === 0,
+                success: annotations.length > 0
+            }}
+            loader={{
+                loadMore: handleLoadMore,
+                disabled:
+                    !$infiniteAnnotations.hasNextPage || $infiniteAnnotations.isFetchingNextPage,
+                loading: $infiniteAnnotations.isFetchingNextPage
+            }}
+        >
+            {#snippet children({ footer })}
                 <Grid
-                    bind:this={grid}
-                    itemCount={annotations?.length}
-                    itemHeight={size}
-                    itemWidth={size}
-                    height={viewportHeight}
+                    itemCount={annotations.length}
                     columnCount={itemWidth}
-                    onscroll={handleScroll}
-                    data-testid="annotations-grid"
-                    class="annotations-grid-scroll overflow-y-auto dark:[color-scheme:dark]"
-                    style="--sample-width: {annotationSize}px; --sample-height: {annotationSize}px;"
+                    onScroll={handleScroll}
+                    {initialScrollPosition}
+                    {scrollResetKey}
+                    gridProps={{
+                        'data-testid': 'annotations-grid',
+                        class: 'annotations-grid-scroll dark:[color-scheme:dark]'
+                    }}
                 >
-                    {#snippet item({ index, style }: { index: number; style: string })}
+                    {#snippet gridItem({ index, style, width, height })}
                         {#key $infiniteAnnotations.dataUpdatedAt}
                             {#if annotations[index]}
-                                <div {style}>
+                                <GridItem
+                                    {width}
+                                    {height}
+                                    {style}
+                                    dataTestId="annotation-grid-item"
+                                    tag={false}
+                                    ariaLabel={`Edit annotation: ${annotations[index].annotation.sample_id}`}
+                                    onSelect={(event) =>
+                                        handleGridItemSelect(
+                                            event,
+                                            annotations[index].annotation.sample_id,
+                                            index
+                                        )}
+                                    ondblclick={() =>
+                                        handleOnDoubleClick(
+                                            annotations[index].annotation.sample_id
+                                        )}
+                                >
                                     <div
-                                        class="annotation-grid-item relative select-none overflow-hidden rounded-lg"
-                                        style="width: {annotationSize}px; height: {annotationSize}px;"
-                                        data-testid="annotation-grid-item"
+                                        class="annotation-grid-item relative h-full w-full"
                                         data-annotation-id={annotations[index].annotation.sample_id}
                                         data-annotation-index={index}
                                         data-sample-id={annotations[index].annotation
                                             .parent_sample_id}
                                         data-index={index}
-                                        onclick={handleOnClick}
-                                        ondblclick={handleOnDoubleClick}
-                                        onkeydown={handleKeyDown}
-                                        aria-label={`Edit annotation: ${annotations[index].annotation.sample_id}`}
-                                        role="button"
-                                        tabindex="0"
                                     >
                                         {#if hasMinimumRole(user?.role, 'labeler') && $pickedAnnotationIds[collection_id]?.has(annotations[index].annotation.sample_id)}
                                             <div
@@ -298,8 +290,8 @@
 
                                         <AnnotationsGridItem
                                             annotation={annotations[index]}
-                                            width={annotationSize}
-                                            height={annotationSize}
+                                            {width}
+                                            {height}
                                             cachedCollectionVersion={collectionVersion}
                                             showLabel={showLabels}
                                             selected={$pickedAnnotationIds[collection_id]?.has(
@@ -307,39 +299,26 @@
                                             )}
                                         />
                                     </div>
-                                </div>
+                                </GridItem>
                             {/if}
                         {/key}
                     {/snippet}
-                    {#snippet footer()}
-                        {#key annotations.length}
-                            <LazyTrigger onIntersect={handleLoadMore} />
-                        {/key}
-                        {#if $infiniteAnnotations.isFetchingNextPage}
-                            <div class="flex justify-center p-4">
-                                <Spinner />
-                            </div>
-                        {/if}
+                    {#snippet footerItem()}
+                        {@render footer()}
                     {/snippet}
                 </Grid>
-            {/key}
-        </div>
-        {#if $isEditingMode}
-            <div class="min-w-[250px] max-w-[30%] flex-1">
-                <SelectedAnnotations
-                    {selectedAnnotations}
-                    disabled={selectedAnnotations.length === 0}
-                    isLoading={$isPending}
-                    onSelect={handleSelectLabel}
-                    collectionId={collection_id}
-                />
-            </div>
-        {/if}
+            {/snippet}
+        </GridContainer>
     </div>
-{/if}
-
-<style>
-    .viewport :global(.annotations-grid-scroll) {
-        overflow-x: hidden !important;
-    }
-</style>
+    {#if $isEditingMode && !hideSelectedAnnotationsPanel}
+        <div class="min-w-[250px] max-w-[30%] flex-1">
+            <SelectedAnnotations
+                {selectedAnnotations}
+                disabled={selectedAnnotations.length === 0}
+                isLoading={$isPending}
+                onSelect={handleSelectLabel}
+                collectionId={collection_id}
+            />
+        </div>
+    {/if}
+</div>
