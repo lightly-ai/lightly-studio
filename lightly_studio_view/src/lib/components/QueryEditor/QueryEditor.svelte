@@ -3,13 +3,14 @@
     import { Button } from '$lib/components/ui/button';
     import { LIGHTLY_QUERY_DEFAULT_VALUE } from './monaco-lightly-query.js';
     import { useLightlyQueryEditor } from './useLightlyQueryEditor.js';
+    import type { QueryExprTranslationResult } from './language/query-expr-translation.js';
     import Typography from '$lib/components/Typography/Typography.svelte';
 
     interface QueryEditorProps {
         value?: string;
         height?: string;
         readOnly?: boolean;
-        onSave?: (value: string) => void;
+        onSave?: (value: string, parsed: QueryExprTranslationResult | null) => void;
     }
 
     let {
@@ -28,6 +29,11 @@
         },
         readOnly: () => readOnly
     });
+
+    async function handleSave() {
+        const parsed = await editor.translateLightlyQuery(value);
+        onSave?.(value, parsed);
+    }
 
     onMount(() => {
         if (containerEl) {
@@ -51,7 +57,7 @@
                 variant="ghost"
                 class="h-6 px-2 text-[#cccccc] hover:bg-white/10 hover:text-white"
                 disabled={readOnly}
-                onclick={() => onSave?.(value)}
+                onclick={handleSave}
             >
                 <Typography variant="caption">Save</Typography>
             </Button>

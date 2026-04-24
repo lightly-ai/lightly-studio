@@ -22,6 +22,10 @@ import {
     registerLightlyQueryMonacoLanguage
 } from './monaco-lightly-query.js';
 import { useMonacoEditor, type MonacoEditorHandle } from './useMonacoEditor.svelte.js';
+import {
+    QueryExprTranslationRequest,
+    type QueryExprTranslationResult
+} from './language/query-expr-translation.js';
 
 export interface UseLightlyQueryEditorOptions {
     // Reactive getter for the editor's current text. Tracked inside a
@@ -39,7 +43,13 @@ export interface UseLightlyQueryEditorOptions {
     readOnly?: () => boolean;
 }
 
-export function useLightlyQueryEditor(options: UseLightlyQueryEditorOptions): MonacoEditorHandle {
+export interface LightlyQueryEditorHandle extends MonacoEditorHandle {
+    translateLightlyQuery: (value: string) => Promise<QueryExprTranslationResult | null>;
+}
+
+export function useLightlyQueryEditor(
+    options: UseLightlyQueryEditorOptions
+): LightlyQueryEditorHandle {
     // Safe to call on every mount — the function is idempotent.
     registerLightlyQueryMonacoLanguage();
 
@@ -86,13 +96,27 @@ export function useLightlyQueryEditor(options: UseLightlyQueryEditorOptions): Mo
             messageTransports: { reader, writer }
         });
 
-        // `isDestroyed` suppresses the error log when the component unmounts
-        // before the client has finished starting.
         startupPromise = languageClient.start().catch((error) => {
             if (!isDestroyed) {
                 console.error('Failed to start LightlyQuery language client:', error);
             }
         });
+    }
+
+    async function translateLightlyQuery(
+        value: string
+    ): Promise<QueryExprTranslationResult | null> {
+        await startupPromise;
+        if (!languageClient || isDestroyed) {
+            return null;
+        }
+
+        try {
+            return await languageClient.sendRequest(QueryExprTranslationRequest, value);
+        } catch (error) {
+            console.error('Failed to translate LightlyQuery value:', error);
+            return null;
+        }
     }
 
     onDestroy(() => {
@@ -116,5 +140,5 @@ export function useLightlyQueryEditor(options: UseLightlyQueryEditorOptions): Mo
         });
     });
 
-    return { mount };
+    return { mount, translateLightlyQuery };
 }

@@ -99,7 +99,7 @@ def create_many(
             )
             object_detection_annotations.append(db_object_detection)
 
-        # Create instance segmentation details
+        # Create segmentation mask details
         elif annotation_type == AnnotationType.SEGMENTATION_MASK:
             x, y, width, height = _validate_bbox(annotation=annotation_create, kind=annotation_type)
             db_instance_segmentation = SegmentationAnnotationTable(

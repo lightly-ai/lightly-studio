@@ -37,7 +37,7 @@ def get_segmentation_annotation_create(
     segmentation: MultiPolygon | BinaryMaskSegmentation,
     object_track_id: UUID | None = None,
 ) -> AnnotationCreate:
-    """Get a AnnotationCreate instance for the provided labelformat instance segmentation.
+    """Get a AnnotationCreate instance for the provided labelformat segmentation mask.
 
     Args:
         parent_sample_id: ID of the parent sample of the annotation.

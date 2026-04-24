@@ -20,6 +20,7 @@ import {
     LightlyQueryGeneratedModule,
     LightlyQueryGeneratedSharedModule
 } from './generated/module.js';
+import { QueryExprTranslationRequest, parseLightlyQuery } from './query-expr-translation.js';
 
 export type LightlyQueryServices = LangiumServices;
 
@@ -32,5 +33,9 @@ export function createLightlyQueryServices(
     const shared = inject(createDefaultSharedModule(context), LightlyQueryGeneratedSharedModule);
     const LightlyQuery = inject(createDefaultModule({ shared }), LightlyQueryGeneratedModule);
     shared.ServiceRegistry.register(LightlyQuery);
+    shared.lsp?.Connection?.onRequest(QueryExprTranslationRequest, (value) =>
+        parseLightlyQuery(LightlyQuery.parser.LangiumParser, value)
+    );
+
     return shared;
 }
