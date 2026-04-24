@@ -1,0 +1,45 @@
+"""Public API for the query_language package."""
+
+from lightly_studio.query_language.models import (
+    AndExpr,
+    ClassificationMatchExpr,
+    DatetimeExpr,
+    EqualityComparisonOperator,
+    EqualityFloatExpr,
+    FieldRef,
+    InstanceSegmentationMatchExpr,
+    IntegerExpr,
+    MatchExpr,
+    NestedMatchExpr,
+    NotExpr,
+    ObjectDetectionMatchExpr,
+    OrdinalComparisonOperator,
+    OrdinalFloatExpr,
+    OrExpr,
+    QueryExpr,
+    StringExpr,
+    TagsContainsExpr,
+)
+from lightly_studio.query_language.translation import to_match_expression
+
+__all__ = [
+    "AndExpr",
+    "ClassificationMatchExpr",
+    "DatetimeExpr",
+    "EqualityComparisonOperator",
+    "EqualityFloatExpr",
+    "FieldRef",
+    "InstanceSegmentationMatchExpr",
+    "IntegerExpr",
+    "MatchExpr",
+    "NestedMatchExpr",
+    "NotExpr",
+    "ObjectDetectionMatchExpr",
+    "OrdinalComparisonOperator",
+    "OrdinalFloatExpr",
+    "OrExpr",
+    "QueryExpr",
+    "StringExpr",
+    "TagsContainsExpr",
+    "to_match_expression",
+]
