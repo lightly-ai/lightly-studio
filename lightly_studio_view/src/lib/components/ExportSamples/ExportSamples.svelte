@@ -40,8 +40,8 @@
     const exportTypeLabels: Record<typeof exportType, string> = {
         samples: 'Image Filenames',
         object_detections: 'Image Object Detections',
-        segmentation: 'Image Segmentation Masks',
-        semantic_segmentations: 'Image Semantic Segmentations',
+        segmentation: 'Image Segmentation Mask (COCO)',
+        semantic_segmentations: 'Image Segmentation Mask (PASCAL VOC)',
         captions: 'Image Captions',
         youtube_vis_segmentation: 'YouTube-VIS Video Segmentation Masks'
     };
@@ -129,7 +129,7 @@
     const exportYoutubeVisSegmentationMaskURL = `${PUBLIC_LIGHTLY_STUDIO_API_URL}api/collections/${collectionId}/export/youtube-vis?ts=${Date.now()}&export_format=youtube_vis_segmentation`;
     // Semantic segmentation export
     //
-    const exportSemanticSegmentationsURL = `${PUBLIC_LIGHTLY_STUDIO_API_URL}api/collections/${collectionId}/export/annotations?ts=${Date.now()}&export_format=pascal_voc`;
+    const exportPascalVocURL = `${PUBLIC_LIGHTLY_STUDIO_API_URL}api/collections/${collectionId}/export/annotations?ts=${Date.now()}&export_format=pascal_voc`;
 
     //
     // Caption export
@@ -179,13 +179,13 @@
                                     >
                                     <Select.Item
                                         value="segmentation"
-                                        label="Image Segmentation Masks"
-                                        >Image Segmentation Masks</Select.Item
+                                        label="Image Segmentation Mask (COCO)"
+                                        >Image Segmentation Mask (COCO)</Select.Item
                                     >
                                     <Select.Item
                                         value="semantic_segmentations"
-                                        label="Image Semantic Segmentations"
-                                        >Image Semantic Segmentations</Select.Item
+                                        label="Image Segmentation Mask (PASCAL VOC)"
+                                        >Image Segmentation Mask (PASCAL VOC)</Select.Item
                                     >
                                     <Select.Item value="captions" label="Image Captions"
                                         >Image Captions</Select.Item
@@ -353,7 +353,7 @@
 
                         <Button
                             class="relative my-4 w-full"
-                            href={exportSemanticSegmentationsURL}
+                            href={exportPascalVocURL}
                             target="_blank"
                             data-testid="submit-button-semantic-segmentations"
                         >
