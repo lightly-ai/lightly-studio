@@ -143,3 +143,4 @@ terminal NUMBER returns number: /[0-9]+(\.[0-9]*)?/;
 terminal STRING: /"([^"\\\n\r]|\\.)*"|'([^'\\\n\r]|\\.)*'/;
 
 hidden terminal WS: /\s+/;
+hidden terminal SL_COMMENT: /#[^\n\r]*/;
