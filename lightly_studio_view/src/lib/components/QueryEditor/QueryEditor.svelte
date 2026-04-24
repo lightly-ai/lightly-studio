@@ -1,12 +1,13 @@
 <script lang="ts">
     import { onMount } from 'svelte';
+    import { toast } from 'svelte-sonner';
     import { Button } from '$lib/components/ui/button';
     import { LIGHTLY_QUERY_DEFAULT_VALUE } from './monaco-lightly-query.js';
     import { useLightlyQueryEditor } from './useLightlyQueryEditor.js';
     import type { QueryExprTranslationResult } from './language/query-expr-translation.js';
     import Typography from '$lib/components/Typography/Typography.svelte';
 
-    interface QueryEditorProps {
+    export interface QueryEditorProps {
         value?: string;
         height?: string;
         readOnly?: boolean;
@@ -31,8 +32,14 @@
     });
 
     async function handleSave() {
-        const parsed = await editor.translateLightlyQuery(value);
-        onSave?.(value, parsed);
+        try {
+            const parsed = await editor.translateLightlyQuery(value);
+            onSave?.(value, parsed);
+        } catch (error) {
+            toast.error('Failed to parse query expression', {
+                description: error instanceof Error ? error.message : String(error)
+            });
+        }
     }
 
     onMount(() => {

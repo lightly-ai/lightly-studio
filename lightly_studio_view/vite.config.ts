@@ -1,17 +1,25 @@
 import { defineConfig } from 'vitest/config';
 import { sveltekit } from '@sveltejs/kit/vite';
+import { fileURLToPath } from 'node:url';
 
 export default defineConfig({
     plugins: [sveltekit()],
+    worker: {
+        // `monaco-languageclient` worker build cannot use `iife` with
+        // code-splitting, so force ESM workers for production bundling.
+        format: 'es'
+    },
 
     resolve: {
         alias: {
             // `monaco-languageclient` wires its services into
-            // `@codingame/monaco-vscode-editor-api`. Aliasing keeps our
-            // `monaco-editor` imports (language/theme registration in
-            // `QueryEditor`) on the same instance so LSP and highlighting
-            // attach to the same editor, rather than two separate monacos.
-            'monaco-editor': '@codingame/monaco-vscode-editor-api'
+            'monaco-editor': '@codingame/monaco-vscode-editor-api',
+            '@codingame/monaco-vscode-api/vscode/vs/base/browser/cssValue': fileURLToPath(
+                new URL(
+                    './node_modules/@codingame/monaco-vscode-api/vscode/src/vs/base/browser/cssValue.js',
+                    import.meta.url
+                )
+            )
         }
     },
 
