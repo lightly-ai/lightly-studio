@@ -24,8 +24,8 @@ and select `Export`. The dialog shows a dropdown with all available formats for 
 
 ### Exporting annotations
 
-For annotation formats (`Image Object Detections`, `Image Segmentation Masks`,
-`Image Semantic Segmentations`, `Image Captions`, `YouTube-VIS Video Segmentation Masks`),
+For annotation formats (`Image Object Detections`, `Image Segmentation Mask (COCO)`,
+`Image Segmentation Mask (PASCAL VOC)`, `Image Captions`, `YouTube-VIS Video Segmentation Masks`),
 select the format and click `Download`. A zip file is created if the export includes multiple files.
 The export includes all samples in the dataset.
 
