@@ -17,14 +17,14 @@ from lightly_studio.core.dataset_query.classification_expression import (
     ClassificationQuery,
 )
 from lightly_studio.core.dataset_query.image_sample_field import ImageSampleField
-from lightly_studio.core.dataset_query.instance_segmentation_expression import (
-    InstanceSegmentationField,
-    InstanceSegmentationQuery,
-)
 from lightly_studio.core.dataset_query.match_expression import MatchExpression
 from lightly_studio.core.dataset_query.object_detection_expression import (
     ObjectDetectionField,
     ObjectDetectionQuery,
+)
+from lightly_studio.core.dataset_query.segmentation_mask_expression import (
+    SegmentationMaskField,
+    SegmentationMaskQuery,
 )
 from lightly_studio.core.dataset_query.video_sample_field import VideoSampleField
 from lightly_studio.errors import QueryExprError
@@ -85,7 +85,7 @@ _STRING_FIELDS: dict[tuple[str, str], _EqualityField[str]] = {
     ("video", "file_path_abs"): VideoSampleField.file_path_abs,
     ("classification", "label"): ClassificationField.label,
     ("object_detection", "label"): ObjectDetectionField.label,
-    ("segmentation_mask", "label"): InstanceSegmentationField.label,
+    ("segmentation_mask", "label"): SegmentationMaskField.label,
 }
 
 _INTEGER_FIELDS: dict[tuple[str, str], _OrdinalField[int]] = {
@@ -97,10 +97,10 @@ _INTEGER_FIELDS: dict[tuple[str, str], _OrdinalField[int]] = {
     ("object_detection", "y"): ObjectDetectionField.y,
     ("object_detection", "width"): ObjectDetectionField.width,
     ("object_detection", "height"): ObjectDetectionField.height,
-    ("segmentation_mask", "x"): InstanceSegmentationField.x,
-    ("segmentation_mask", "y"): InstanceSegmentationField.y,
-    ("segmentation_mask", "width"): InstanceSegmentationField.width,
-    ("segmentation_mask", "height"): InstanceSegmentationField.height,
+    ("segmentation_mask", "x"): SegmentationMaskField.x,
+    ("segmentation_mask", "y"): SegmentationMaskField.y,
+    ("segmentation_mask", "width"): SegmentationMaskField.width,
+    ("segmentation_mask", "height"): SegmentationMaskField.height,
 }
 
 _DATETIME_FIELDS: dict[tuple[str, str], _OrdinalField[datetime]] = {
@@ -184,7 +184,7 @@ def to_match_expression(expr: MatchExpr) -> MatchExpression:  # noqa: PLR0911 C9
     if isinstance(expr, ObjectDetectionMatchExpr):
         return ObjectDetectionQuery.match(to_match_expression(expr=expr.subexpr))
     if isinstance(expr, SegmentationMaskMatchExpr):
-        return InstanceSegmentationQuery.match(to_match_expression(expr=expr.subexpr))
+        return SegmentationMaskQuery.match(to_match_expression(expr=expr.subexpr))
     if isinstance(expr, AndExpr):
         return AND(*(to_match_expression(expr=child) for child in expr.children))
     if isinstance(expr, OrExpr):
