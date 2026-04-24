@@ -4,6 +4,8 @@
 
 import * as monaco from 'monaco-editor';
 
+import lightlyQueryMonarch from './language/generated/monarch';
+
 const LIGHTLY_QUERY_LANGUAGE_ID = 'lightly-query';
 const LIGHTLY_QUERY_THEME_ID = 'lightly-query-theme';
 
@@ -11,8 +13,7 @@ const LIGHTLY_QUERY_THEME_ID = 'lightly-query-theme';
 // instances mounting in the same page don't re-register the language.
 let isRegistered = false;
 
-export const LIGHTLY_QUERY_DEFAULT_VALUE = `# Lightly Query example:
-Image.width > 1920 AND tags.contains("reviewed")
+export const LIGHTLY_QUERY_DEFAULT_VALUE = `Image.width > 1920 AND tags.contains("reviewed")
 AND object_detection(label == "car" and x > 10)
 `;
 
@@ -45,53 +46,13 @@ export function registerLightlyQueryMonacoLanguage(): void {
         id: LIGHTLY_QUERY_LANGUAGE_ID
     });
 
-    // Client-side Monarch tokenizer. Gives immediate syntax highlighting
-    // without waiting for the LSP worker to start — the Langium server handles
-    // semantics (validation, completion), but coloring is cheap enough to do
-    // locally and keeps the editor responsive on first paint.
-    // TODO(kondrat 04/26): Update tokenizer when language is fixed
-    monaco.languages.setMonarchTokensProvider(LIGHTLY_QUERY_LANGUAGE_ID, {
-        ignoreCase: true,
-        tokenizer: {
-            root: [
-                [/#[^\n\r]*/, 'comment'],
-                [/"([^"\\]|\\.)*$/, 'string.invalid'],
-                [/'([^'\\]|\\.)*$/, 'string.invalid'],
-                [/"/, 'string', '@doubleQuotedString'],
-                [/'/, 'string', '@singleQuotedString'],
-                [/tags\.contains\(/, 'predefined'],
-                [/video:/, 'keyword'],
-                [/\b(?:and|or|not|in)\b/, 'keyword'],
-                [/\b(?:true|false)\b/, 'constant.language'],
-                [
-                    /\b(?:Image|ImageSampleField|Video|VideoSampleField|ObjectDetection|ObjectDetectionField)\b/,
-                    'type.identifier'
-                ],
-                [/\b(?:object_detection|tags)\b/, 'predefined'],
-                [
-                    /\b(?:created_at|duration_s|file_name|file_path_abs|fps|height|label|width|x|y)\b/,
-                    'identifier'
-                ],
-                [/[0-9]+(?:\.[0-9]*)?/, 'number'],
-                [/[a-zA-Z_]\w*/, 'identifier'],
-                [/==|!=|<=|>=|<|>/, 'operator'],
-                [/[()[\]]/, '@brackets'],
-                [/\./, 'delimiter'],
-                [/,/, 'delimiter'],
-                [/\s+/, 'white']
-            ],
-            doubleQuotedString: [
-                [/[^\\"]+/, 'string'],
-                [/\\./, 'string.escape'],
-                [/"/, 'string', '@pop']
-            ],
-            singleQuotedString: [
-                [/[^\\']+/, 'string'],
-                [/\\./, 'string.escape'],
-                [/'/, 'string', '@pop']
-            ]
-        }
-    });
+    // Tokenizer is generated from the .langium grammar by `langium generate`
+    // (see `langium-config.json`). Regenerated automatically by the
+    // `generate-language` npm script that runs before dev/build/storybook.
+    monaco.languages.setMonarchTokensProvider(
+        LIGHTLY_QUERY_LANGUAGE_ID,
+        lightlyQueryMonarch as monaco.languages.IMonarchLanguage
+    );
 
     // Custom dark theme mapping the Monarch token classes above to colors.
     // Applied by the Svelte component via the `theme` editor option.

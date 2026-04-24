@@ -5,7 +5,10 @@
             "id": "lightly-query",
             "grammar": "src/lib/components/QueryEditor/language/lightly-query.langium",
             "fileExtensions": [".lql"],
-            "caseInsensitive": true
+            "caseInsensitive": true,
+            "monarch": {
+                "out": "src/lib/components/QueryEditor/language/generated/monarch.ts"
+            }
         }
     ],
     "out": "src/lib/components/QueryEditor/language/generated"
