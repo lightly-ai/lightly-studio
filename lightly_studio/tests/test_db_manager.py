@@ -27,15 +27,6 @@ from tests.helpers_resolvers import (
 )
 
 
-@pytest.fixture
-def patch_engine_singleton(mocker: MockerFixture) -> None:
-    """Patch the _engine variable to None before each test.
-
-    This simulates a fresh load of the module.
-    """
-    mocker.patch.object(db_manager, "_engine", new=None)
-
-
 def test_get_engine__default(
     mocker: MockerFixture,
     patch_engine_singleton: None,  # noqa ARG001

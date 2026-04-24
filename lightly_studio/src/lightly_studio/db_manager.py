@@ -28,6 +28,7 @@ from sqlalchemy.engine import Engine
 from sqlmodel import Session, SQLModel, create_engine
 
 import lightly_studio.api.db_tables  # noqa: F401, required for SQLModel to work properly
+from lightly_studio.database_version_validation import validate_or_initialize_database_version
 from lightly_studio.dataset.env import LIGHTLY_STUDIO_DATABASE_URL
 
 
@@ -111,7 +112,7 @@ class DatabaseEngine:
             SQLModel.metadata.drop_all(bind=self._engine)
             logging.info("Dropped all tables in PostgreSQL database.")
 
-        SQLModel.metadata.create_all(self._engine)
+        validate_or_initialize_database_version(engine=self._engine)
 
     @contextmanager
     def session(self) -> Generator[Session, None, None]:
