@@ -6,7 +6,7 @@
     import type { QueryExprTranslationResult } from './language/query-expr-translation.js';
     import Typography from '$lib/components/Typography/Typography.svelte';
 
-    interface QueryEditorProps {
+    export interface QueryEditorProps {
         value?: string;
         height?: string;
         readOnly?: boolean;
@@ -32,6 +32,7 @@
 
     async function handleSave() {
         const parsed = await editor.translateLightlyQuery(value);
+        debugger;
         onSave?.(value, parsed);
     }
 
