@@ -28,12 +28,12 @@
     // Import the settings hook
     const { gridViewSampleRenderingStore, showSampleFilenamesStore } = useSettings();
 
-    type SamplesProps = {
+    type ImagesProps = {
         collection_id: string;
         sampleWidth: number;
         textEmbedding: Readable<TextEmbedding | undefined>;
     };
-    const { collection_id, textEmbedding }: SamplesProps = $props();
+    const { collection_id, textEmbedding }: ImagesProps = $props();
 
     const { selectedAnnotationFilterIdsArray: selectedAnnotationFilterIds } =
         useSelectedAnnotationsFilter();
