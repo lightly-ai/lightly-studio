@@ -468,7 +468,7 @@ def _process_object_detection_annotations(
 def _process_segmentation_annotations(
     context: _AnnotationProcessingContext, anno_data: AnnotationImageData
 ) -> list[AnnotationCreate]:
-    """Process instance segmentation annotations for a single image."""
+    """Process segmentation mask annotations for a single image."""
     if not (
         anno_data.annotation_type == AnnotationType.SEGMENTATION_MASK
         and isinstance(anno_data.data, ImageInstanceSegmentation)

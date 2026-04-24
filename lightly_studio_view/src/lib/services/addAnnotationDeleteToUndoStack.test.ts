@@ -130,7 +130,7 @@ describe('addAnnotationDeleteToUndoStack', () => {
         expect(addReversibleAction).not.toHaveBeenCalled();
     });
 
-    it('should handle instance segmentation annotations', async () => {
+    it('should handle segmentation mask annotations', async () => {
         const addReversibleAction = vi.fn();
         const createAnnotation = vi.fn().mockResolvedValue({} as CreateAnnotationResponse);
         const refetch = vi.fn();
