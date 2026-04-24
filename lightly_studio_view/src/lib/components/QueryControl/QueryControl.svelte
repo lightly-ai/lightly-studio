@@ -10,7 +10,7 @@
     import { Filter, Pencil } from '@lucide/svelte';
 
     interface Props {
-        onOpen: () => void;
+        onToggle: () => void;
     }
     let { onToggle }: Props = $props();
 
