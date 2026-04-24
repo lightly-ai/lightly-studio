@@ -18,7 +18,7 @@
 
     let { collection }: { collection: CollectionView } = $props();
 
-    const isSamples = $derived(isImagesRoute(page.route.id));
+    const isImages = $derived(isImagesRoute(page.route.id));
     const isVideos = $derived(isVideosRoute(page.route.id));
     const { settingsStore } = useSettings();
 
@@ -80,7 +80,7 @@
                 {/if}
             </div>
             <div class="flex flex-auto justify-end gap-2">
-                <Menu {isSamples} {isVideos} {hasEmbeddings} {collection} {user} />
+                <Menu {isImages} {isVideos} {hasEmbeddings} {collection} {user} />
                 {#if hasMinimumRole(user?.role, 'labeler')}
                     {#if $isEditingMode}
                         <Button

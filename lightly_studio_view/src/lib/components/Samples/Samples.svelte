@@ -234,11 +234,11 @@
 
 <GridContainer
     message={{
-        loading: 'Loading samples...',
-        error: 'Error loading samples',
+        loading: 'Loading images...',
+        error: 'Error loading images',
         empty: {
-            title: 'No samples found',
-            description: "This collection doesn't contain any samples."
+            title: 'No images found',
+            description: "This collection doesn't contain any images."
         }
     }}
     status={{
@@ -278,7 +278,7 @@
                             dataIndex={index}
                             dataTestId="sample-grid-item"
                             isSelected={$selectedSampleIds.has(samples[index].sample_id)}
-                            ariaLabel={`View sample: ${samples[index].file_name}`}
+                            ariaLabel={`View image: ${samples[index].file_name}`}
                             ondblclick={() => handleOnDoubleClick(samples[index].sample_id)}
                             onSelect={(event) =>
                                 handleGridItemSelect(event, samples[index].sample_id, index)}

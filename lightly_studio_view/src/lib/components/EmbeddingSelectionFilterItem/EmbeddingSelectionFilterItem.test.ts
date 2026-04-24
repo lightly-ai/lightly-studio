@@ -58,12 +58,12 @@ describe('EmbeddingSelectionFilterItem', () => {
         });
     });
 
-    it('uses image hook only and renders sample label in samples view', () => {
+    it('uses image hook only and renders sample label in images view', () => {
         render(EmbeddingSelectionFilterItem, {
             props: {
                 collectionIdStore: writable('collection-id'),
                 isVideos: false,
-                isSamples: true
+                isImages: true
             }
         });
 
@@ -79,7 +79,7 @@ describe('EmbeddingSelectionFilterItem', () => {
             props: {
                 collectionIdStore: writable('collection-id'),
                 isVideos: true,
-                isSamples: false
+                isImages: false
             }
         });
 
@@ -93,7 +93,7 @@ describe('EmbeddingSelectionFilterItem', () => {
             props: {
                 collectionIdStore: writable('collection-id'),
                 isVideos: true,
-                isSamples: false
+                isImages: false
             }
         });
 
@@ -107,7 +107,7 @@ describe('EmbeddingSelectionFilterItem', () => {
             props: {
                 collectionIdStore: writable('collection-id'),
                 isVideos: false,
-                isSamples: true
+                isImages: true
             }
         });
 
@@ -121,7 +121,7 @@ describe('EmbeddingSelectionFilterItem', () => {
             props: {
                 collectionIdStore: writable('collection-id'),
                 isVideos: false,
-                isSamples: false
+                isImages: false
             }
         });
 
