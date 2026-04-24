@@ -17,3 +17,5 @@ storage, and security. You can run it fully offline or air-gapped if needed.
 
 For the user-facing security and architecture overview, see [Security and Architecture](security.md).
 
+For on-premise local disk or NAS/shared mounts used with `ls.connect()`, see
+[Local Storage](local_storage.md).
