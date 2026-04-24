@@ -62,7 +62,7 @@ export function parseLightlyQuery(
 function toQueryExpr(_parseResult: Query): QueryExpr {
     return {
         match_expr: {
-            type: 'object_detection_match_expr',
+            type: ''
             subexpr: {
                 type: 'integer_expr',
                 field: { table: 'image', name: 'width' },

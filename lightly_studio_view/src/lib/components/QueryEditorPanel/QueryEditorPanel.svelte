@@ -9,7 +9,6 @@
         value: string,
         parsed: QueryExprTranslationResult | null
     ) => {
-        debugger;
         if (!parsed) {
             throw new Error('Failed to parse query expression');
         }
