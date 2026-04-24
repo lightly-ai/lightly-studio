@@ -22,7 +22,7 @@ describe('resolveIsDetailPage', () => {
     });
 
     it('returns false for collection routes', () => {
-        expect(resolveIsDetailPage(APP_ROUTES.samples)).toBe(false);
+        expect(resolveIsDetailPage(APP_ROUTES.images)).toBe(false);
         expect(resolveIsDetailPage(APP_ROUTES.videos)).toBe(false);
         expect(resolveIsDetailPage(APP_ROUTES.frames)).toBe(false);
         expect(resolveIsDetailPage(APP_ROUTES.annotations)).toBe(false);
@@ -31,7 +31,7 @@ describe('resolveIsDetailPage', () => {
     });
 
     it('returns true for sample detail', () => {
-        expect(resolveIsDetailPage(APP_ROUTES.sampleDetails)).toBe(true);
+        expect(resolveIsDetailPage(APP_ROUTES.imageDetails)).toBe(true);
     });
 
     it('returns true for frame detail', () => {
@@ -101,7 +101,7 @@ describe('resolveContextFilter', () => {
 
     describe('other detail routes', () => {
         it('returns sampleId as sample_ids on sample detail', () => {
-            const ctx = { ...BASE_CONTEXT, routeId: APP_ROUTES.sampleDetails, sampleId: 'smp-1' };
+            const ctx = { ...BASE_CONTEXT, routeId: APP_ROUTES.imageDetails, sampleId: 'smp-1' };
             expect(resolveContextFilter(ctx, null, null, null, new Set(), new Set())).toEqual({
                 sample_ids: ['smp-1']
             });
@@ -122,7 +122,7 @@ describe('resolveContextFilter', () => {
         });
 
         it('returns undefined when sampleId is absent on detail page', () => {
-            const ctx = { ...BASE_CONTEXT, routeId: APP_ROUTES.sampleDetails };
+            const ctx = { ...BASE_CONTEXT, routeId: APP_ROUTES.imageDetails };
             expect(
                 resolveContextFilter(ctx, null, null, null, new Set(), new Set())
             ).toBeUndefined();
@@ -174,14 +174,14 @@ describe('resolveContextFilter', () => {
         const frameFilter = { sample_filter: {} };
 
         it('returns imageFilter for samples route', () => {
-            const ctx = { ...BASE_CONTEXT, routeId: APP_ROUTES.samples };
+            const ctx = { ...BASE_CONTEXT, routeId: APP_ROUTES.images };
             expect(resolveContextFilter(ctx, imageFilter, null, null, new Set(), new Set())).toBe(
                 imageFilter
             );
         });
 
         it('returns undefined when imageFilter is null on samples route', () => {
-            const ctx = { ...BASE_CONTEXT, routeId: APP_ROUTES.samples };
+            const ctx = { ...BASE_CONTEXT, routeId: APP_ROUTES.images };
             expect(
                 resolveContextFilter(ctx, null, null, null, new Set(), new Set())
             ).toBeUndefined();
