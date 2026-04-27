@@ -28,10 +28,24 @@ describe('QueryExprTranslationRequest', () => {
     });
 });
 
+describe('parseLightlyQuery error handling', () => {
+    it('returns an error result when the parser reports errors', () => {
+        const parser = createParser();
+        const result = parseLightlyQuery(parser, 'invalid_query');
+
+        expect(result.status).toBe('error');
+        if (result.status !== 'error') return;
+        expect(result.errors).toHaveLength(2);
+        expect(result.errors[0].message).toMatch(/unexpected character/);
+        expect(result.errors[1].message).toMatch(
+            /Expecting: one of these possible Token sequences:/
+        );
+    });
+});
+
 describe('parseLightlyQuery', () => {
     it('example parse-translate test', () => {
         const parser = createParser();
-
         const result = parseLightlyQuery(parser, 'Image.width == 1000');
 
         expect(result).toEqual({
