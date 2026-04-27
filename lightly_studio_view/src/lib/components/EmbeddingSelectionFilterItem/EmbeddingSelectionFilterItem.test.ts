@@ -58,7 +58,7 @@ describe('EmbeddingSelectionFilterItem', () => {
         });
     });
 
-    it('uses image hook only and renders sample label in images view', () => {
+    it('uses image hook only and renders image label in images view', () => {
         render(EmbeddingSelectionFilterItem, {
             props: {
                 collectionIdStore: writable('collection-id'),
@@ -71,7 +71,7 @@ describe('EmbeddingSelectionFilterItem', () => {
         expect(mocks.useEmbeddingFilterForVideos).not.toHaveBeenCalled();
         expect(screen.getByTestId('embedding-selection-filter-chip')).toBeInTheDocument();
         expect(screen.getByText('Embedding Plot Filter')).toBeInTheDocument();
-        expect(screen.getByText(/1\s*sample/i)).toBeInTheDocument();
+        expect(screen.getByText(/1\s*image/i)).toBeInTheDocument();
     });
 
     it('uses video hook only and renders video label in videos view', () => {
