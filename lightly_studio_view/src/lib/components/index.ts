@@ -21,7 +21,7 @@ export { default as SampleAnnotations } from '$lib/components/SampleAnnotations/
 export { default as ImageDetails } from '$lib/components/SampleDetails/ImageDetails.svelte';
 export { default as SampleDetailsSidePanel } from '$lib/components/SampleDetails/SampleDetailsSidePanel/SampleDetailsSidePanel.svelte';
 export { default as SampleImage } from '$lib/components/SampleImage/index.svelte';
-export { default as Samples } from '$lib/components/Samples/Samples.svelte';
+export { default as Images } from '$lib/components/Images/Images.svelte';
 export { default as SelectableBox } from '$lib/components/SelectableBox/SelectableBox.svelte';
 export { SettingsDialog } from '$lib/components/Settings/';
 export { default as TagsMenu } from '$lib/components/TagsMenu/TagsMenu.svelte';

@@ -27,7 +27,7 @@ describe('parseLightlyQuery', () => {
         });
     });
 
-    it('returns the hardcoded object_detection stub when parsing succeeds', () => {
+    it('returns the hardcoded query stub when parsing succeeds', () => {
         const result = parseLightlyQuery(
             {
                 parse: () => ({
@@ -43,41 +43,10 @@ describe('parseLightlyQuery', () => {
             status: 'ok',
             queryExpr: {
                 match_expr: {
-                    type: 'object_detection_match_expr',
-                    subexpr: {
-                        type: 'string_expr',
-                        field: { table: 'object_detection', name: 'label' },
-                        operator: '==',
-                        value: 'cat'
-                    }
-                }
-            }
-        });
-    });
-
-    it('returns the hardcoded object_detection stub for a valid object_detection query', () => {
-        const result = parseLightlyQuery(
-            {
-                parse: () => ({
-                    lexerErrors: [],
-                    parserErrors: [],
-                    value: {} as Query
-                })
-            },
-            'object_detection(label == "cat")'
-        );
-
-        expect(result).toEqual({
-            status: 'ok',
-            queryExpr: {
-                match_expr: {
-                    type: 'object_detection_match_expr',
-                    subexpr: {
-                        type: 'string_expr',
-                        field: { table: 'object_detection', name: 'label' },
-                        operator: '==',
-                        value: 'cat'
-                    }
+                    type: 'integer_expr',
+                    field: { table: 'image', name: 'width' },
+                    operator: '<',
+                    value: 400
                 }
             }
         });
