@@ -120,7 +120,7 @@ describe('TagsMenu', () => {
         render(TagsMenu, {
             props: {
                 collection_id: 'collection-1',
-                gridType: 'samples'
+                gridType: 'images'
             }
         });
 
@@ -191,7 +191,7 @@ describe('TagsMenu', () => {
         render(TagsMenu, {
             props: {
                 collection_id: 'collection-1',
-                gridType: 'samples'
+                gridType: 'images'
             }
         });
 
@@ -208,7 +208,7 @@ describe('TagsMenu', () => {
         render(TagsMenu, {
             props: {
                 collection_id: 'collection-1',
-                gridType: 'samples'
+                gridType: 'images'
             }
         });
 
@@ -229,7 +229,7 @@ describe('TagsMenu', () => {
         render(TagsMenu, {
             props: {
                 collection_id: 'collection-1',
-                gridType: 'samples'
+                gridType: 'images'
             }
         });
 
@@ -256,7 +256,7 @@ describe('TagsMenu', () => {
         render(TagsMenu, {
             props: {
                 collection_id: 'collection-1',
-                gridType: 'samples'
+                gridType: 'images'
             }
         });
 
@@ -275,7 +275,7 @@ describe('TagsMenu', () => {
         render(TagsMenu, {
             props: {
                 collection_id: 'collection-1',
-                gridType: 'samples'
+                gridType: 'images'
             }
         });
 
@@ -318,7 +318,7 @@ describe('TagsMenu', () => {
         render(TagsMenu, {
             props: {
                 collection_id: 'collection-1',
-                gridType: 'samples'
+                gridType: 'images'
             }
         });
 
@@ -341,7 +341,7 @@ describe('TagsMenu', () => {
         render(TagsMenu, {
             props: {
                 collection_id: 'collection-1',
-                gridType: 'samples'
+                gridType: 'images'
             }
         });
 
