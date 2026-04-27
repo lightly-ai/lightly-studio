@@ -812,18 +812,3 @@
         />
     {/if}
 </div>
-
-<style>
-    .query-editor-progress-bar {
-        width: 30%;
-        animation: query-editor-progress-indeterminate 1.2s ease-in-out infinite;
-    }
-    @keyframes query-editor-progress-indeterminate {
-        0% {
-            left: -30%;
-        }
-        100% {
-            left: 100%;
-        }
-    }
-</style>
