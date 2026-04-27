@@ -1,6 +1,26 @@
 import { describe, it, expect } from 'vitest';
+import {
+    EmptyFileSystem,
+    createDefaultCoreModule,
+    createDefaultSharedCoreModule,
+    inject
+} from 'langium';
 import { QueryExprTranslationRequest, parseLightlyQuery } from './query-expr-translation.js';
+import {
+    LightlyQueryGeneratedModule,
+    LightlyQueryGeneratedSharedModule
+} from './generated/module.js';
 import type { Query } from './generated/ast.js';
+
+function createParser() {
+    const shared = inject(
+        createDefaultSharedCoreModule(EmptyFileSystem),
+        LightlyQueryGeneratedSharedModule
+    );
+    const LightlyQuery = inject(createDefaultCoreModule({ shared }), LightlyQueryGeneratedModule);
+    shared.ServiceRegistry.register(LightlyQuery);
+    return LightlyQuery.parser.LangiumParser;
+}
 
 describe('QueryExprTranslationRequest', () => {
     it('has the expected method name', () => {
@@ -9,35 +29,10 @@ describe('QueryExprTranslationRequest', () => {
 });
 
 describe('parseLightlyQuery', () => {
-    it('returns an error result when the parser reports errors', () => {
-        const result = parseLightlyQuery(
-            {
-                parse: () => ({
-                    lexerErrors: [],
-                    parserErrors: [{ message: 'Unexpected token', line: 3, column: 5 }],
-                    value: {} as Query
-                })
-            },
-            'invalid'
-        );
+    it('example parse-translate test', () => {
+        const parser = createParser();
 
-        expect(result).toEqual({
-            status: 'error',
-            errors: [{ message: 'Unexpected token', line: 3, column: 5 }]
-        });
-    });
-
-    it('returns the hardcoded query stub when parsing succeeds', () => {
-        const result = parseLightlyQuery(
-            {
-                parse: () => ({
-                    lexerErrors: [],
-                    parserErrors: [],
-                    value: {} as Query
-                })
-            },
-            'valid'
-        );
+        const result = parseLightlyQuery(parser, 'Image.width == 1000');
 
         expect(result).toEqual({
             status: 'ok',
