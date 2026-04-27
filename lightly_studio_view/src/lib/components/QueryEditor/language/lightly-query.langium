@@ -74,7 +74,8 @@ SampleUnary<isImage> returns Expression:
 
 SampleComparison<isImage> returns ComparisonExpression:
   SampleIntFieldReference<isImage> {ComparisonExpression.left=current} operator=('==' | '!=' | '<' | '>' | '<=' | '>=') right=IntLiteral
-   | SampleFloatFieldReference<isImage> {ComparisonExpression.left=current} operator=('==' | '!=' | '<' | '>' | '<=' | '>=') right=NumericLiteral
+   | SampleOrdinalFloatFieldReference<isImage> {ComparisonExpression.left=current} operator=('==' | '!=' | '<' | '>' | '<=' | '>=') right=NumericLiteral
+   | SampleEqualityFloatFieldReference<isImage> {ComparisonExpression.left=current} operator=('==' | '!=') right=NumericLiteral
    | SampleStringFieldReference<isImage> {ComparisonExpression.left=current} operator=('==' | '!=') right=StringLiteral
    | SampleDateTimeFieldReference<isImage> {ComparisonExpression.left=current} operator=('==' | '!=' | '<' | '>' | '<=' | '>=') right=StringLiteral;
 
@@ -82,8 +83,11 @@ SampleIntFieldReference<isImage> returns QualifiedFieldReference:
   (<isImage> {QualifiedFieldReference} receiver=ImageFieldReceiver '.' member=ImageIntFieldName)
     | (<!isImage> {QualifiedFieldReference} receiver=VideoFieldReceiver '.' member=VideoIntFieldName);
 
-SampleFloatFieldReference<isImage> returns QualifiedFieldReference:
-  (<!isImage> {QualifiedFieldReference} receiver=VideoFieldReceiver '.' member=VideoFloatFieldName);
+SampleOrdinalFloatFieldReference<isImage> returns QualifiedFieldReference:
+  (<!isImage> {QualifiedFieldReference} receiver=VideoFieldReceiver '.' member=VideoOrdinalFloatFieldName);
+
+SampleEqualityFloatFieldReference<isImage> returns QualifiedFieldReference:
+  (<!isImage> {QualifiedFieldReference} receiver=VideoFieldReceiver '.' member=VideoEqualityFloatFieldName);
 
 SampleStringFieldReference<isImage> returns QualifiedFieldReference:
   (<isImage> {QualifiedFieldReference} receiver=ImageFieldReceiver '.' member=ImageStringFieldName)
@@ -143,8 +147,11 @@ ImageDateTimeFieldName returns string:
 VideoIntFieldName returns string:
   'height' | 'width';
 
-VideoFloatFieldName returns string:
-  'duration_s' | 'fps';
+VideoOrdinalFloatFieldName returns string:
+  'fps';
+
+VideoEqualityFloatFieldName returns string:
+  'duration_s';
 
 VideoStringFieldName returns string:
   'file_name' | 'file_path_abs';
@@ -167,8 +174,8 @@ FloatLiteral returns Expression:
 StringLiteral returns Expression:
   {StringLiteral} value=STRING;
 
+terminal FLOAT returns number: /[0-9]+\.[0-9]*/;
 terminal INT returns number: /[0-9]+/;
-terminal FLOAT returns number: /[0-9]+(\.[0-9]*)?/;
 terminal STRING: /"([^"\\\n\r]|\\.)*"|'([^'\\\n\r]|\\.)*'/;
 
 hidden terminal WS: /\s+/;
