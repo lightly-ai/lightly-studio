@@ -5,13 +5,14 @@ import {
     createDefaultSharedCoreModule,
     inject
 } from 'langium';
+import type { LangiumParser } from 'langium';
 import { QueryExprTranslationRequest, parseLightlyQuery } from './query-expr-translation.js';
 import {
     LightlyQueryGeneratedModule,
     LightlyQueryGeneratedSharedModule
 } from './generated/module.js';
 
-function createParser() {
+function createParser(): LangiumParser {
     const shared = inject(
         createDefaultSharedCoreModule(EmptyFileSystem),
         LightlyQueryGeneratedSharedModule
