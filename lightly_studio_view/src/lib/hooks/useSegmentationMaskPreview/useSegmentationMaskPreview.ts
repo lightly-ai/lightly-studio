@@ -1,11 +1,11 @@
 import { createBrushDrawer } from './brushDrawer';
 import { createPreviewRenderer } from './previewRenderer';
 import { createCanvasMaskManager } from './canvasMaskManager';
-import type { SchedulePreviewComposeParams, UseInstanceSegmentationPreviewParams } from './types';
+import type { SchedulePreviewComposeParams, UseSegmentationMaskPreviewParams } from './types';
 
 export function useSegmentationMaskPreview({
     onPreviewVisibilityChange
-}: UseInstanceSegmentationPreviewParams = {}) {
+}: UseSegmentationMaskPreviewParams = {}) {
     const canvasMaskManager = createCanvasMaskManager();
     const previewRenderer = createPreviewRenderer({ onPreviewVisibilityChange });
     const brushDrawer = createBrushDrawer({

@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { useSegmentationMaskPreview } from './useInstanceSegmentationPreview';
+import { useSegmentationMaskPreview } from './useSegmentationMaskPreview';
 
 type ScheduledFrame = {
     id: number;
