@@ -10,16 +10,15 @@ import {
     LightlyQueryGeneratedModule,
     LightlyQueryGeneratedSharedModule
 } from './generated/module.js';
-import type { Query } from './generated/ast.js';
 
 function createParser() {
     const shared = inject(
         createDefaultSharedCoreModule(EmptyFileSystem),
         LightlyQueryGeneratedSharedModule
     );
-    const LightlyQuery = inject(createDefaultCoreModule({ shared }), LightlyQueryGeneratedModule);
-    shared.ServiceRegistry.register(LightlyQuery);
-    return LightlyQuery.parser.LangiumParser;
+    const lightlyQuery = inject(createDefaultCoreModule({ shared }), LightlyQueryGeneratedModule);
+    shared.ServiceRegistry.register(lightlyQuery);
+    return lightlyQuery.parser.LangiumParser;
 }
 
 const parser = createParser();
