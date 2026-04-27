@@ -143,7 +143,7 @@ const queries = [
     "tags.contains('dog') or 'cat' IN tags AND Image.width > 100",
     "tags.contains('dog') OR AND('cat' IN tags, Image.width >= 12)",
     "video: NOT (Video.fps != 30.0 AND NOT tags.contains('low_res'))",
-    "object_detection(label == 'car' AND x < 10 OR label == 'truck' AND x > 90)"
+    "object_detection(label == 'car' AND x < 10 OR label == 'truck' AND width > 100)"
 ];
 
 const expectedOutputs = [
@@ -288,9 +288,9 @@ const expectedOutputs = [
                         },
                         {
                             kind: 'COMPARISON',
-                            field: 'x',
+                            field: 'width',
                             operator: '>',
-                            value: 90
+                            value: 100
                         }
                     ]
                 }
