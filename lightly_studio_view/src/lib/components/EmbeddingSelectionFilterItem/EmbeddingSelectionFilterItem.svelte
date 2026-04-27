@@ -31,7 +31,7 @@
         embeddingFilter.clearFilter();
     };
 
-    const plotFilterItemLabel = $derived(isVideos ? 'video' : 'images');
+    const plotFilterItemLabel = $derived(isVideos ? 'video' : 'image');
     const isPlotFilterApplied = $derived($isPlotFilterAppliedStore);
     const plotFilterCount = $derived($plotFilterCountStore);
     const hasPlotFilterContext = $derived((isImages || isVideos) && plotFilterCount > 0);
