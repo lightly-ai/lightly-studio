@@ -7,7 +7,7 @@
             "fileExtensions": [".lql"],
             "caseInsensitive": true,
             "monarch": {
-                "out": "src/lib/components/QueryEditor/language/generated/monarch.ts"
+                "out": "src/lib/components/QueryEditor/language/monarch.generated.ts"
             }
         }
     ],

@@ -4,7 +4,7 @@
 
 import * as monaco from 'monaco-editor';
 
-import lightlyQueryMonarch from './language/generated/monarch';
+import lightlyQueryMonarch from './language/monarch.generated';
 
 const LIGHTLY_QUERY_LANGUAGE_ID = 'lightly-query';
 const LIGHTLY_QUERY_THEME_ID = 'lightly-query-theme';
@@ -47,8 +47,7 @@ export function registerLightlyQueryMonacoLanguage(): void {
     });
 
     // Tokenizer is generated from the .langium grammar by `langium generate`
-    // (see `langium-config.json`). Regenerated automatically by the
-    // `generate-language` npm script that runs before dev/build/storybook.
+    // (see `langium-config.json`).
     monaco.languages.setMonarchTokensProvider(
         LIGHTLY_QUERY_LANGUAGE_ID,
         lightlyQueryMonarch as monaco.languages.IMonarchLanguage
