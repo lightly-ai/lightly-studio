@@ -66,35 +66,45 @@ export function useLightlyQueryEditor(
     let startupPromise: Promise<void> | null = null;
     let isDestroyed = false;
 
-    async function mount(container: HTMLElement): Promise<void> {
-        startupPromise = ensureMonacoVscodeServices();
-        // Wait for the VSCode API services to initialize
-        await startupPromise;
-
-        registerLightlyQueryMonacoLanguage();
-        editor.mount(container);
-
-        // Spawn the Langium LSP worker and bridge it to the client via the
-        // browser LSP message transport (postMessage under the hood).
-        lspWorker = new Worker(new URL('./language-server-worker.ts', import.meta.url), {
-            type: 'module'
-        });
-        const reader = new BrowserMessageReader(lspWorker);
-        const writer = new BrowserMessageWriter(lspWorker);
-
-        // The language client provides validation, completion, and hover
-        // to Monaco for documents matching the LightlyQuery language ID.
-        languageClient = new MonacoLanguageClient({
-            name: 'LightlyQuery Language Client',
-            clientOptions: {
-                documentSelector: [{ language: LIGHTLY_QUERY_LANGUAGE_ID }],
-                errorHandler: {
-                    error: () => ({ action: ErrorAction.Continue }),
-                    closed: () => ({ action: CloseAction.DoNotRestart })
+    function mount(container: HTMLElement): void {
+        startupPromise = ensureMonacoVscodeServices()
+            .then(() => {
+                if (isDestroyed) {
+                    return;
                 }
-            },
-            messageTransports: { reader, writer }
-        });
+
+                registerLightlyQueryMonacoLanguage();
+                editor.mount(container);
+
+                // Spawn the Langium LSP worker and bridge it to the client via the
+                // browser LSP message transport (postMessage under the hood).
+                lspWorker = new Worker(new URL('./language-server-worker.ts', import.meta.url), {
+                    type: 'module'
+                });
+                const reader = new BrowserMessageReader(lspWorker);
+                const writer = new BrowserMessageWriter(lspWorker);
+
+                // The language client provides validation, completion, and hover
+                // to Monaco for documents matching the LightlyQuery language ID.
+                languageClient = new MonacoLanguageClient({
+                    name: 'LightlyQuery Language Client',
+                    clientOptions: {
+                        documentSelector: [{ language: LIGHTLY_QUERY_LANGUAGE_ID }],
+                        errorHandler: {
+                            error: () => ({ action: ErrorAction.Continue }),
+                            closed: () => ({ action: CloseAction.DoNotRestart })
+                        }
+                    },
+                    messageTransports: { reader, writer }
+                });
+
+                return languageClient.start();
+            })
+            .catch((error) => {
+                if (!isDestroyed) {
+                    console.error('Failed to start LightlyQuery language client:', error);
+                }
+            });
     }
 
     async function translateLightlyQuery(
