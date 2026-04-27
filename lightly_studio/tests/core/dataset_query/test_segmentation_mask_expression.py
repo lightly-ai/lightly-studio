@@ -2,9 +2,9 @@ from __future__ import annotations
 
 from sqlmodel import Session, select
 
-from lightly_studio.core.dataset_query.instance_segmentation_expression import (
-    InstanceSegmentationField,
-    InstanceSegmentationQuery,
+from lightly_studio.core.dataset_query.segmentation_mask_expression import (
+    SegmentationMaskField,
+    SegmentationMaskQuery,
 )
 from lightly_studio.models.annotation.annotation_base import AnnotationType
 from lightly_studio.models.image import ImageTable
@@ -17,10 +17,10 @@ from tests.helpers_resolvers import (
 )
 
 
-class TestInstanceSegmentationExpressions:
+class TestSegmentationMaskExpressions:
     def test_annotation_segmentation_mask_width__sql(self) -> None:
         query = select(ImageTable).where(
-            InstanceSegmentationQuery.match(InstanceSegmentationField.width <= 100).get()
+            SegmentationMaskQuery.match(SegmentationMaskField.width <= 100).get()
         )
         sql = str(query.compile(compile_kwargs={"literal_binds": True}))
         assert "EXISTS (SELECT 1" in sql
@@ -71,9 +71,9 @@ class TestInstanceSegmentationExpressions:
             .join(ImageTable.sample)
             .where(SampleTable.collection_id == collection_id)
             .where(
-                InstanceSegmentationQuery.match(
-                    InstanceSegmentationField.width > 100,
-                    InstanceSegmentationField.height == 100,
+                SegmentationMaskQuery.match(
+                    SegmentationMaskField.width > 100,
+                    SegmentationMaskField.height == 100,
                 ).get()
             )
         )
@@ -116,9 +116,7 @@ class TestInstanceSegmentationExpressions:
             select(ImageTable)
             .join(ImageTable.sample)
             .where(SampleTable.collection_id == collection_id)
-            .where(
-                InstanceSegmentationQuery.match(InstanceSegmentationField.label == "label1").get()
-            )
+            .where(SegmentationMaskQuery.match(SegmentationMaskField.label == "label1").get())
         )
         results = db_session.exec(query).all()
         # There are two annotations with this label but only one of the right type.

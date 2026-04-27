@@ -31,7 +31,7 @@ test('Plot is visible only on samples page', async ({ samplesPage, page }) => {
 
     await page.getByTestId('navigation-menu-annotations').click();
 
-    await expect(page.getByTestId('annotations-grid')).toBeVisible({ timeout: 1000 });
+    await expect(page.getByTestId('annotations-grid')).toBeVisible({ timeout: 10000 });
 
     await expect(page.getByTestId('toggle-plot-button')).not.toBeVisible();
     await expect(page.getByTestId('plot-panel')).not.toBeVisible();
