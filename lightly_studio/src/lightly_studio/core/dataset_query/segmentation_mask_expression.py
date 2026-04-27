@@ -22,7 +22,7 @@ from lightly_studio.models.annotation_label import AnnotationLabelTable
 from lightly_studio.models.sample import SampleTable
 
 
-class InstanceSegmentationField:
+class SegmentationMaskField:
     """Providing access to predefined segmentation mask fields for queries."""
 
     width = ForeignNumericalField(
@@ -47,11 +47,11 @@ class InstanceSegmentationField:
     )
 
 
-class InstanceSegmentationQuery:
+class SegmentationMaskQuery:
     """Provides access to segmentation mask query operations."""
 
     @staticmethod
-    def match(*criteria: MatchExpression) -> InstanceSegmentationMatchExpression:
+    def match(*criteria: MatchExpression) -> SegmentationMaskMatchExpression:
         """Combine multiple segmentation mask criteria into a single subquery using logical AND.
 
         Args:
@@ -60,11 +60,11 @@ class InstanceSegmentationQuery:
         Returns:
             A single match expression for satisfying all criteria.
         """
-        return InstanceSegmentationMatchExpression(criterion=AND(*criteria))
+        return SegmentationMaskMatchExpression(criterion=AND(*criteria))
 
 
 @dataclass
-class InstanceSegmentationMatchExpression(MatchExpression):
+class SegmentationMaskMatchExpression(MatchExpression):
     """Expression for checking if a sample has a segmentation mask matching a criterion."""
 
     criterion: MatchExpression

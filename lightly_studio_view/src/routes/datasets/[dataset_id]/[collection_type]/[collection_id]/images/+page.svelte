@@ -1,5 +1,5 @@
 <script lang="ts">
-    import { Samples } from '$lib/components/index.js';
+    import { Images } from '$lib/components/index.js';
     import { useGlobalStorage } from '$lib/hooks/useGlobalStorage.js';
     import { useTags } from '$lib/hooks/useTags/useTags';
     import { page } from '$app/state';
@@ -28,4 +28,4 @@
     });
 </script>
 
-<Samples sampleWidth={$sampleSize.width} {textEmbedding} {collection_id} />
+<Images sampleWidth={$sampleSize.width} {textEmbedding} {collection_id} />
