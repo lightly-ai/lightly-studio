@@ -32,6 +32,7 @@ src/lib/version.json
 
 # Generated Langium query language artifacts
 src/lib/components/QueryEditor/language/generated
+src/lib/components/QueryEditor/language/monarch.generated.ts
 
 build-chunk-sizes.log
 storybook-static
