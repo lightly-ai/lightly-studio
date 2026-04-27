@@ -135,8 +135,14 @@ ImageFieldReceiver returns string:
 VideoFieldReceiver returns string:
   VIDEO_SAMPLE_RECEIVER;
 
+terminal HEIGHT returns string: /\bheight\b/;
+terminal WIDTH returns string: /\bwidth\b/;
+terminal LABEL returns string: /\blabel\b/;
+terminal X_COORD returns string: /\bx\b/;
+terminal Y_COORD returns string: /\by\b/;
+
 ImageIntFieldName returns string:
-  INT_FIELD_NAME;
+  HEIGHT | WIDTH;
 
 ImageStringFieldName returns string:
   STRING_FIELD_NAME;
@@ -145,7 +151,7 @@ ImageDateTimeFieldName returns string:
   DATE_TIME_FIELD_NAME;
 
 VideoIntFieldName returns string:
-  INT_FIELD_NAME;
+  HEIGHT | WIDTH;
 
 VideoOrdinalFloatFieldName returns string:
   ORDINAL_FLOAT_FIELD_NAME;
@@ -157,7 +163,7 @@ VideoStringFieldName returns string:
   STRING_FIELD_NAME;
 
 ObjectDetectionFieldName returns string:
-  OBJECT_DETECTION_FIELD_NAME;
+  HEIGHT | WIDTH | LABEL | X_COORD | Y_COORD;
 
 Literal returns Expression:
   IntLiteral | FloatLiteral | StringLiteral;
@@ -187,13 +193,11 @@ terminal TAGS_CONTAINS returns string: /\btags\.contains\b/;
 terminal TAGS_KEYWORD returns string: /\btags\b/;
 terminal IMAGE_SAMPLE_RECEIVER returns string: /\b(ImageSampleField|Image)\b/;
 terminal VIDEO_SAMPLE_RECEIVER returns string: /\b(VideoSampleField|Video)\b/;
-terminal INT_FIELD_NAME returns string: /\b(height|width)\b/;
 terminal ORDINAL_FLOAT_FIELD_NAME returns string: /\bduration_s\b/;
 terminal EQUALITY_FLOAT_FIELD_NAME returns string: /\bfps\b/;
 terminal STRING_FIELD_NAME returns string: /\b(file_name|file_path_abs)\b/;
 terminal DATE_TIME_FIELD_NAME returns string: /\bcreated_at\b/;
 terminal OBJECT_DETECTION_RECEIVER returns string: /\b(ObjectDetectionField|ObjectDetection)\b/;
-terminal OBJECT_DETECTION_FIELD_NAME returns string: /\b(height|label|width|x|y)\b/;
 
 hidden terminal WS: /\s+/;
 hidden terminal SL_COMMENT: /#[^\n\r]*/;

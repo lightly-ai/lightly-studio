@@ -143,7 +143,8 @@ const queries = [
     "tags.contains('dog') or 'cat' IN tags AND Image.width > 100",
     "tags.contains('dog') OR AND('cat' IN tags, Image.width >= 12)",
     "video: NOT (Video.fps != 30.0 AND NOT tags.contains('low_res'))",
-    "object_detection(label == 'car' AND x < 10 OR label == 'truck' AND width > 100)"
+    "object_detection(label == 'car' AND x < 10 OR label == 'truck' AND width > 100)",
+    'object_detection(ObjectDetection.width > 50 AND ObjectDetection.height < 200)'
 ];
 
 const expectedOutputs = [
@@ -293,6 +294,27 @@ const expectedOutputs = [
                             value: 100
                         }
                     ]
+                }
+            ]
+        }
+    },
+    {
+        kind: 'ANNOTATION_QUERY',
+        annotation_type: 'object_detection',
+        criterion: {
+            kind: 'AND',
+            terms: [
+                {
+                    kind: 'COMPARISON',
+                    field: 'width',
+                    operator: '>',
+                    value: 50
+                },
+                {
+                    kind: 'COMPARISON',
+                    field: 'height',
+                    operator: '<',
+                    value: 200
                 }
             ]
         }
