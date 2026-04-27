@@ -118,7 +118,7 @@
         }
     });
 
-    const isSamples = $derived(isImagesRoute(page.route.id));
+    const isImages = $derived(isImagesRoute(page.route.id));
     const isGroups = $derived(isGroupsRoute(page.route.id));
     const isGroupDetails = $derived(isGroupDetailsRoute(page.route.id));
     const isAnnotations = $derived(isAnnotationsRoute(page.route.id));
@@ -135,7 +135,7 @@
         let nextGridType: GridType | null = null;
         if (isAnnotations) {
             nextGridType = 'annotations';
-        } else if (isSamples) {
+        } else if (isImages) {
             nextGridType = 'images';
         } else if (isCaptions) {
             nextGridType = 'captions';
@@ -489,13 +489,13 @@
     });
 
     const showLeftSidebar = $derived(
-        isSamples || isAnnotations || isVideos || isVideoFrames || isGroups
+        isImages || isAnnotations || isVideos || isVideoFrames || isGroups
     );
 </script>
 
 <div class="flex-none">
     <Header {collection} />
-    <MenuDialogHost {isSamples} {isVideos} {hasEmbeddings} {collection} />
+    <MenuDialogHost {isImages} {isVideos} {hasEmbeddings} {collection} />
 </div>
 
 <div class="relative flex min-h-0 flex-1 flex-col">
@@ -517,14 +517,14 @@
                                     <EmbeddingSelectionFilterItem
                                         {collectionIdStore}
                                         {isVideos}
-                                        {isSamples}
+                                        {isImages}
                                     />
                                     <LabelsMenu
                                         {annotationFilterRows}
                                         onToggleAnnotationFilter={toggleAnnotationFilterSelection}
                                     />
 
-                                    {#if isSamples || isVideos || isVideoFrames}
+                                    {#if isImages || isVideos || isVideoFrames}
                                         {#key collectionId}
                                             <CombinedMetadataDimensionsFilters
                                                 {isVideos}
@@ -539,7 +539,7 @@
                 </div>
             {/if}
 
-            {#if (isSamples || isVideos) && $showPlot}
+            {#if (isImages || isVideos) && $showPlot}
                 <!-- When plot is shown, use PaneGroup for the main content + plot -->
                 <PaneGroup direction="horizontal" class="flex-1">
                     <Pane defaultSize={50} minSize={30} class="flex">
@@ -662,10 +662,10 @@
             {:else}
                 <!-- When plot is hidden or not samples view, show normal layout -->
                 <div class="relative flex flex-1 flex-col space-y-4 rounded-[1vw] bg-card p-4 pb-2">
-                    {#if isSamples || isAnnotations || isVideos || isGroups}
+                    {#if isImages || isAnnotations || isVideos || isGroups}
                         <GridHeader>
                             {#snippet auxControls()}
-                                {#if (isSamples || isVideos) && hasEmbeddings}
+                                {#if (isImages || isVideos) && hasEmbeddings}
                                     <Button
                                         class="flex items-center space-x-1"
                                         data-testid="toggle-plot-button"
@@ -678,7 +678,7 @@
                                     </Button>
                                 {/if}
                             {/snippet}
-                            {#if (isSamples || isVideos) && hasEmbeddings}
+                            {#if (isImages || isVideos) && hasEmbeddings}
                                 <div
                                     class="relative"
                                     role="region"
