@@ -22,6 +22,8 @@ function createParser() {
     return LightlyQuery.parser.LangiumParser;
 }
 
+const parser = createParser();
+
 describe('QueryExprTranslationRequest', () => {
     it('has the expected method name', () => {
         expect(QueryExprTranslationRequest.method).toBe('lightly-query/queryExprTranslation');
@@ -30,7 +32,6 @@ describe('QueryExprTranslationRequest', () => {
 
 describe('parseLightlyQuery error handling', () => {
     it('returns an error result when the parser reports errors', () => {
-        const parser = createParser();
         const result = parseLightlyQuery(parser, 'invalid_query');
 
         expect(result.status).toBe('error');
@@ -45,7 +46,6 @@ describe('parseLightlyQuery error handling', () => {
 
 describe('parseLightlyQuery', () => {
     it('example parse-translate test', () => {
-        const parser = createParser();
         const result = parseLightlyQuery(parser, 'Image.width == 1000');
 
         expect(result).toEqual({
