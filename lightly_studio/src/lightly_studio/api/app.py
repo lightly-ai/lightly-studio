@@ -23,6 +23,7 @@ from lightly_studio.api.routes import (
 )
 from lightly_studio.api.routes.api import (
     annotation,
+    annotation_collection,
     annotation_label,
     caption,
     classifier,
@@ -30,6 +31,7 @@ from lightly_studio.api.routes.api import (
     collection_tag,
     embeddings2d,
     enterprise,
+    evaluation,
     export,
     features,
     frame,
@@ -154,6 +156,8 @@ api_router.include_router(frame.frame_router)
 api_router.include_router(video.video_router)
 api_router.include_router(group.group_router)
 api_router.include_router(enterprise.enterprise_router)
+api_router.include_router(annotation_collection.annotation_collection_router)
+api_router.include_router(evaluation.evaluation_router)
 
 app.include_router(api_router)
 

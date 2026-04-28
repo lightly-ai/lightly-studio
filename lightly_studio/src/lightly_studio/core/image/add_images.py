@@ -147,6 +147,7 @@ def load_into_dataset_from_labelformat(
     root_collection_id: UUID,
     input_labels: ObjectDetectionInput | InstanceSegmentationInput,
     images_path: PathLike,
+    annotation_collection_name: str | None = None,
 ) -> list[UUID]:
     """Load samples and their annotations from a labelformat input into the dataset.
 
@@ -213,6 +214,7 @@ def load_into_dataset_from_labelformat(
                 path_to_anno_data=path_to_anno_data,
                 collection_id=root_collection_id,
                 label_map=label_map,
+                annotation_collection_name=annotation_collection_name,
             )
             samples_to_create.clear()
             path_to_anno_data.clear()
@@ -493,6 +495,7 @@ def _process_batch_annotations(
     path_to_anno_data: Mapping[str, AnnotationImageData],
     collection_id: UUID,
     label_map: dict[int, UUID],
+    annotation_collection_name: str | None = None,
 ) -> None:
     """Process annotations for a batch of samples."""
     if len(created_path_to_id) == 0:
@@ -523,7 +526,10 @@ def _process_batch_annotations(
         annotations_to_create.extend(new_annotations)
 
     annotation_resolver.create_many(
-        session=session, parent_collection_id=collection_id, annotations=annotations_to_create
+        session=session,
+        parent_collection_id=collection_id,
+        annotations=annotations_to_create,
+        collection_name=annotation_collection_name,
     )
 
 
