@@ -7,7 +7,7 @@ from collections.abc import Mapping
 from pathlib import Path
 from typing import Any
 
-from jinja2 import Environment, StrictUndefined
+from jinja2 import Environment
 
 from lightly_studio.core.dataset_query import ImageSampleField
 from lightly_studio.core.image.image_dataset import ImageDataset
@@ -31,7 +31,7 @@ def update_train_object_detection_template(
         The rendered training script as a string.
     """
     template_text = TRAIN_OBJECT_DETECTION_TEMPLATE_PATH.read_text(encoding="utf-8")
-    template = Environment(undefined=StrictUndefined).from_string(template_text)
+    template = Environment().from_string(template_text)
     return template.render(**template_values)
 
 
@@ -99,7 +99,6 @@ def lt_train_script(
     )
 
     template_values: dict[str, Any] = {
-        "out": (resolved_output_dir / "lightly_train_output").as_posix(),
         "train_annotations": train_annotations_path.as_posix(),
         "val_annotations": val_annotations_path.as_posix(),
     }
