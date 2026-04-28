@@ -18,7 +18,9 @@ self.MonacoEnvironment = {
 
 export const useQueryEditor = () => {
     const mount = (el: HTMLElement) => {
-        monaco.editor.create(el!);
+        monaco.editor.create(el!, {
+            value: ['function x() {', '\tconsole.log("Hello world!");', '}'].join('\n')
+        });
     };
 
     return { mount };
