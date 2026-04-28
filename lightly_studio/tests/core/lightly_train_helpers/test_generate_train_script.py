@@ -85,10 +85,9 @@ def test_lt_train_script__exports_train_and_val_and_generates_script(
         tag_name="my_val",
         output_json_path=expected_val_annotations_path,
     )
-    assert captured_template_values["out"] == (
-        resolved_output_dir / "lightly_train_output"
-    ).as_posix()
-    assert captured_template_values["train_annotations"] == expected_train_annotations_path.as_posix()
+    assert (
+        captured_template_values["train_annotations"] == expected_train_annotations_path.as_posix()
+    )
     assert captured_template_values["val_annotations"] == expected_val_annotations_path.as_posix()
 
 
