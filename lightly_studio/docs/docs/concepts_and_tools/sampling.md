@@ -86,7 +86,6 @@ dataset.query().selection().metadata_weighting(
     selection_result_tag_name="sharpest_samples",
     metadata_key="sharpness",
 )
-```
 
 # Sample the 5 items with the lowest value of a custom "sharpness" metadata field.
 dataset.query().selection().metadata_weighting(
@@ -95,6 +94,8 @@ dataset.query().selection().metadata_weighting(
     metadata_key="sharpness",
     strength=-1
 )
+```
+
 See [`Selection.metadata_weighting`](../api/selection.md#lightly_studio.selection.select.Selection.metadata_weighting) for the full API reference.
 
 #### Typicality Sampling and Outlier Sampling
@@ -116,6 +117,14 @@ dataset.query().selection().metadata_weighting(
     n_samples_to_select=5,
     selection_result_tag_name="typical_selection",
     metadata_key="typicality",
+)
+
+# Sample 5 outliers.
+dataset.query().selection().metadata_weighting(
+    n_samples_to_select=5,
+    selection_result_tag_name="outlier_selection",
+    metadata_key="typicality",
+    strength=-1
 )
 ```
 
