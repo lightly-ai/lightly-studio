@@ -1,7 +1,9 @@
 import {
     expect,
     measureElementRendering,
-    measureWithMedian,
+    measureMemoryConsumption,
+    measureRenderAndMemory,
+    type MeasurementSummary,
     setNetworkThrottling,
     test
 } from '../utils';
@@ -18,6 +20,7 @@ const metrics: Array<{
     min: number;
     max: number;
     average: number;
+    memoryUsageMb: MeasurementSummary;
     passed: boolean;
 }> = [];
 
@@ -31,105 +34,124 @@ function saveMetrics() {
 test('videos grid renders within 5 seconds', async ({ page, videosPage }) => {
     await setNetworkThrottling(page, 'Fast4G');
 
-    const result = await measureWithMedian(async () => {
+    const result = await measureRenderAndMemory(async () => {
         await page.reload();
         await videosPage.goto();
-        return await measureElementRendering(page, videosPage.getVideoByIndex(1));
+        const renderTimeMs = await measureElementRendering(page, videosPage.getVideoByIndex(1));
+        const memoryUsageMb = await measureMemoryConsumption(page);
+        return { renderTimeMs, memoryUsageMb };
     }, MEASUREMENT_ITERATIONS);
 
-    const passed = result.median < MAX_RENDER_TIME_MS;
+    const passed = result.renderTimeMs.median < MAX_RENDER_TIME_MS;
 
     metrics.push({
         test: 'videos-grid',
-        measurements: result.measurements,
-        median: result.median,
-        min: result.min,
-        max: result.max,
-        average: result.average,
+        measurements: result.renderTimeMs.measurements,
+        median: result.renderTimeMs.median,
+        min: result.renderTimeMs.min,
+        max: result.renderTimeMs.max,
+        average: result.renderTimeMs.average,
+        memoryUsageMb: result.memoryUsageMb,
         passed
     });
     saveMetrics();
 
-    expect(result.median).toBeLessThan(MAX_RENDER_TIME_MS);
+    expect(result.renderTimeMs.median).toBeLessThan(MAX_RENDER_TIME_MS);
 });
 
 test('video frames grid renders within 5 seconds', async ({ page, videoFramesPage }) => {
     await setNetworkThrottling(page, 'Fast4G');
 
-    const result = await measureWithMedian(async () => {
+    const result = await measureRenderAndMemory(async () => {
         await page.reload();
         await videoFramesPage.goto();
-        return await measureElementRendering(page, videoFramesPage.getVideoFrameByIndex(1));
+        const renderTimeMs = await measureElementRendering(
+            page,
+            videoFramesPage.getVideoFrameByIndex(1)
+        );
+        const memoryUsageMb = await measureMemoryConsumption(page);
+        return { renderTimeMs, memoryUsageMb };
     }, MEASUREMENT_ITERATIONS);
 
-    const passed = result.median < MAX_RENDER_TIME_MS;
+    const passed = result.renderTimeMs.median < MAX_RENDER_TIME_MS;
 
     metrics.push({
         test: 'video-frames-grid',
-        measurements: result.measurements,
-        median: result.median,
-        min: result.min,
-        max: result.max,
-        average: result.average,
+        measurements: result.renderTimeMs.measurements,
+        median: result.renderTimeMs.median,
+        min: result.renderTimeMs.min,
+        max: result.renderTimeMs.max,
+        average: result.renderTimeMs.average,
+        memoryUsageMb: result.memoryUsageMb,
         passed
     });
     saveMetrics();
 
-    expect(result.median).toBeLessThan(MAX_RENDER_TIME_MS);
+    expect(result.renderTimeMs.median).toBeLessThan(MAX_RENDER_TIME_MS);
 });
 
 test('video frame details renders within 5 seconds', async ({ page, videoFramesPage }) => {
     await videoFramesPage.goto();
     await setNetworkThrottling(page, 'Fast4G');
 
-    const result = await measureWithMedian(async () => {
+    const result = await measureRenderAndMemory(async () => {
         await videoFramesPage.goto();
         await videoFramesPage.doubleClickFirstVideoFrame();
-        const time = await measureElementRendering(page, videoFramesPage.getSampleDetails());
+        const renderTimeMs = await measureElementRendering(
+            page,
+            videoFramesPage.getSampleDetails()
+        );
+        const memoryUsageMb = await measureMemoryConsumption(page);
         await page.goBack();
-        return time;
+        return { renderTimeMs, memoryUsageMb };
     }, MEASUREMENT_ITERATIONS);
 
-    const passed = result.median < MAX_RENDER_TIME_MS;
+    const passed = result.renderTimeMs.median < MAX_RENDER_TIME_MS;
 
     metrics.push({
         test: 'video-frame-details',
-        measurements: result.measurements,
-        median: result.median,
-        min: result.min,
-        max: result.max,
-        average: result.average,
+        measurements: result.renderTimeMs.measurements,
+        median: result.renderTimeMs.median,
+        min: result.renderTimeMs.min,
+        max: result.renderTimeMs.max,
+        average: result.renderTimeMs.average,
+        memoryUsageMb: result.memoryUsageMb,
         passed
     });
     saveMetrics();
 
-    expect(result.median).toBeLessThan(MAX_RENDER_TIME_MS);
+    expect(result.renderTimeMs.median).toBeLessThan(MAX_RENDER_TIME_MS);
 });
 
 test('video details renders within 5 seconds', async ({ page, videosPage }) => {
     await videosPage.goto();
     await setNetworkThrottling(page, 'Fast4G');
 
-    const result = await measureWithMedian(async () => {
+    const result = await measureRenderAndMemory(async () => {
         await videosPage.goto();
         await videosPage.getVideoByIndex(0).dblclick();
-        const time = await measureElementRendering(page, page.getByTestId('video-file-name'));
+        const renderTimeMs = await measureElementRendering(
+            page,
+            page.getByTestId('video-file-name')
+        );
+        const memoryUsageMb = await measureMemoryConsumption(page);
         await page.goBack();
-        return time;
+        return { renderTimeMs, memoryUsageMb };
     }, MEASUREMENT_ITERATIONS);
 
-    const passed = result.median < MAX_RENDER_TIME_MS;
+    const passed = result.renderTimeMs.median < MAX_RENDER_TIME_MS;
 
     metrics.push({
         test: 'video-details',
-        measurements: result.measurements,
-        median: result.median,
-        min: result.min,
-        max: result.max,
-        average: result.average,
+        measurements: result.renderTimeMs.measurements,
+        median: result.renderTimeMs.median,
+        min: result.renderTimeMs.min,
+        max: result.renderTimeMs.max,
+        average: result.renderTimeMs.average,
+        memoryUsageMb: result.memoryUsageMb,
         passed
     });
     saveMetrics();
 
-    expect(result.median).toBeLessThan(MAX_RENDER_TIME_MS);
+    expect(result.renderTimeMs.median).toBeLessThan(MAX_RENDER_TIME_MS);
 });
