@@ -53,11 +53,31 @@ describe('parseLightlyQuery error handling', () => {
             /Expecting: one of these possible Token sequences:/
         );
     });
+
+    const PARSE_FAILURE_CASES: Array<{ name: string; source: string }> = [
+        { name: 'empty input', source: '' },
+        { name: 'unknown field', source: 'x == 1' },
+        { name: 'single equals operator', source: 'height = 400' },
+        { name: 'unterminated string literal', source: 'file_name == "cat' },
+        { name: 'unmatched opening paren', source: '(height > 400' },
+        { name: 'unmatched closing paren', source: 'height > 400)' },
+        { name: 'trailing boolean operator', source: 'height > 400 AND' },
+        { name: 'missing right-hand side', source: 'height >' },
+        { name: 'string compared to int field', source: 'height == "tall"' },
+        { name: 'obj detection without arguments', source: 'object_detection()' },
+        { name: 'obj detection unknown field', source: 'object_detection(file_name == "a.jpg")' },
+        { name: 'wrong in operator use', source: '"jpg" IN file_name' },
+        { name: 'stray punctuation', source: '@@@' }
+    ];
+
+    it.each(PARSE_FAILURE_CASES)('reports errors for $name', ({ source }) => {
+        const result = parseLightlyQuery(parser, source);
+        expect(result.status).toBe('error');
+    });
 });
 
 /*
- * End-to-end translation tests.
- * Helper functions to construct expected QueryExpr shapes followed by tests cases.
+ * Helper functions to construct expected QueryExpr shapes, followed by tests cases.
  */
 
 type MatchExpr = QueryExpr['match_expr'];
