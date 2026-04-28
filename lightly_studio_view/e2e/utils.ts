@@ -14,14 +14,6 @@ import { NETWORK_PRESETS, type NetworkPreset } from './constants';
 
 export { expect };
 
-export interface MeasurementSummary {
-    measurements: number[];
-    median: number;
-    min: number;
-    max: number;
-    average: number;
-}
-
 interface BrowserPerformanceWithMemory extends Performance {
     memory?: {
         usedJSHeapSize?: number;
@@ -34,8 +26,13 @@ interface RenderAndMemoryMeasurement {
 }
 
 export interface RenderAndMemorySummary {
-    renderTimeMs: MeasurementSummary;
-    memoryUsageMb: MeasurementSummary;
+    renderTimeMs: ReturnType<typeof summarizeMeasurements>;
+    memoryUsageMb: ReturnType<typeof summarizeMeasurements>;
+}
+
+export interface PerformanceLimits {
+    maxRenderTimeMs: number;
+    maxMemoryUsageMb: number;
 }
 
 export async function gotoFirstPage(page: Page): Promise<void> {
@@ -281,6 +278,8 @@ export function summarizeMeasurements(measurements: number[]): MeasurementSummar
     };
 }
 
+type MeasurementSummary = ReturnType<typeof summarizeMeasurements>;
+
 export async function measureMemoryConsumption(page: Page): Promise<number> {
     return page.evaluate(() => {
         const memory = (performance as BrowserPerformanceWithMemory).memory;
@@ -342,6 +341,24 @@ export async function measureRenderAndMemory(
         renderTimeMs: summarizeMeasurements(renderMeasurements),
         memoryUsageMb: summarizeMeasurements(memoryMeasurements)
     };
+}
+
+export function isWithinPerformanceLimits(
+    result: RenderAndMemorySummary,
+    limits: PerformanceLimits
+): boolean {
+    return (
+        result.renderTimeMs.median < limits.maxRenderTimeMs &&
+        result.memoryUsageMb.median < limits.maxMemoryUsageMb
+    );
+}
+
+export function expectWithinPerformanceLimits(
+    result: RenderAndMemorySummary,
+    limits: PerformanceLimits
+): void {
+    expect(result.renderTimeMs.median).toBeLessThan(limits.maxRenderTimeMs);
+    expect(result.memoryUsageMb.median).toBeLessThan(limits.maxMemoryUsageMb);
 }
 
 /**

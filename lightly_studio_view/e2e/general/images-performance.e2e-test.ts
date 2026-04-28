@@ -1,17 +1,21 @@
 import {
-    expect,
+    expectWithinPerformanceLimits,
+    isWithinPerformanceLimits,
     measureElementRendering,
     measureMemoryConsumption,
     measureRenderAndMemory,
-    type MeasurementSummary,
     setNetworkThrottling,
     test
 } from '../utils';
 import * as fs from 'fs';
 import * as path from 'path';
 
-const MAX_RENDER_TIME_MS = 5000;
+const PERFORMANCE_LIMITS = {
+    maxRenderTimeMs: 5000,
+    maxMemoryUsageMb: 256
+};
 const MEASUREMENT_ITERATIONS = 5;
+type MeasurementSummary = Awaited<ReturnType<typeof measureRenderAndMemory>>['memoryUsageMb'];
 
 const metrics: Array<{
     test: string;
@@ -42,7 +46,7 @@ test('samples grid renders within 5 seconds', async ({ page, samplesPage }) => {
         return { renderTimeMs, memoryUsageMb };
     }, MEASUREMENT_ITERATIONS);
 
-    const passed = result.renderTimeMs.median < MAX_RENDER_TIME_MS;
+    const passed = isWithinPerformanceLimits(result, PERFORMANCE_LIMITS);
 
     console.log('samples-grid measurements:', result);
 
@@ -57,7 +61,7 @@ test('samples grid renders within 5 seconds', async ({ page, samplesPage }) => {
         passed
     });
     saveMetrics();
-    expect(result.renderTimeMs.median).toBeLessThan(MAX_RENDER_TIME_MS);
+    expectWithinPerformanceLimits(result, PERFORMANCE_LIMITS);
 });
 
 test('sample details renders within 5 seconds', async ({ page, samplesPage }) => {
@@ -74,7 +78,7 @@ test('sample details renders within 5 seconds', async ({ page, samplesPage }) =>
         return { renderTimeMs, memoryUsageMb };
     }, MEASUREMENT_ITERATIONS);
 
-    const passed = result.renderTimeMs.median < MAX_RENDER_TIME_MS;
+    const passed = isWithinPerformanceLimits(result, PERFORMANCE_LIMITS);
     console.log('sample-details measurements:', result);
 
     metrics.push({
@@ -89,7 +93,7 @@ test('sample details renders within 5 seconds', async ({ page, samplesPage }) =>
     });
     saveMetrics();
 
-    expect(result.renderTimeMs.median).toBeLessThan(MAX_RENDER_TIME_MS);
+    expectWithinPerformanceLimits(result, PERFORMANCE_LIMITS);
 });
 
 test('sample details renders next image within 5 seconds', async ({
@@ -112,7 +116,7 @@ test('sample details renders next image within 5 seconds', async ({
         return { renderTimeMs, memoryUsageMb };
     }, MEASUREMENT_ITERATIONS);
 
-    const passed = result.renderTimeMs.median < MAX_RENDER_TIME_MS;
+    const passed = isWithinPerformanceLimits(result, PERFORMANCE_LIMITS);
     console.log('sample-details-next-image measurements:', result);
 
     metrics.push({
@@ -127,7 +131,7 @@ test('sample details renders next image within 5 seconds', async ({
     });
     saveMetrics();
 
-    expect(result.renderTimeMs.median).toBeLessThan(MAX_RENDER_TIME_MS);
+    expectWithinPerformanceLimits(result, PERFORMANCE_LIMITS);
 });
 
 test('sample details renders prev image within 5 seconds', async ({
@@ -149,7 +153,7 @@ test('sample details renders prev image within 5 seconds', async ({
         return { renderTimeMs, memoryUsageMb };
     }, MEASUREMENT_ITERATIONS);
 
-    const passed = result.renderTimeMs.median < MAX_RENDER_TIME_MS;
+    const passed = isWithinPerformanceLimits(result, PERFORMANCE_LIMITS);
     console.log('sample-details-prev-image measurements:', result);
 
     metrics.push({
@@ -164,7 +168,7 @@ test('sample details renders prev image within 5 seconds', async ({
     });
     saveMetrics();
 
-    expect(result.renderTimeMs.median).toBeLessThan(MAX_RENDER_TIME_MS);
+    expectWithinPerformanceLimits(result, PERFORMANCE_LIMITS);
 });
 
 test('annotations grid renders within 5 seconds', async ({ page, annotationsPage }) => {
@@ -181,7 +185,7 @@ test('annotations grid renders within 5 seconds', async ({ page, annotationsPage
         return { renderTimeMs, memoryUsageMb };
     }, MEASUREMENT_ITERATIONS);
 
-    const passed = result.renderTimeMs.median < MAX_RENDER_TIME_MS;
+    const passed = isWithinPerformanceLimits(result, PERFORMANCE_LIMITS);
 
     metrics.push({
         test: 'annotations-grid',
@@ -195,7 +199,7 @@ test('annotations grid renders within 5 seconds', async ({ page, annotationsPage
     });
     saveMetrics();
 
-    expect(result.renderTimeMs.median).toBeLessThan(MAX_RENDER_TIME_MS);
+    expectWithinPerformanceLimits(result, PERFORMANCE_LIMITS);
 });
 
 test('annotation details renders within 5 seconds', async ({
@@ -219,7 +223,7 @@ test('annotation details renders within 5 seconds', async ({
         return { renderTimeMs, memoryUsageMb };
     }, MEASUREMENT_ITERATIONS);
 
-    const passed = result.renderTimeMs.median < MAX_RENDER_TIME_MS;
+    const passed = isWithinPerformanceLimits(result, PERFORMANCE_LIMITS);
 
     metrics.push({
         test: 'annotation-details',
@@ -233,5 +237,5 @@ test('annotation details renders within 5 seconds', async ({
     });
     saveMetrics();
 
-    expect(result.renderTimeMs.median).toBeLessThan(MAX_RENDER_TIME_MS);
+    expectWithinPerformanceLimits(result, PERFORMANCE_LIMITS);
 });

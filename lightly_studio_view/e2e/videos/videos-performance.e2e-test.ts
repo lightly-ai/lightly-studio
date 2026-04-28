@@ -1,17 +1,21 @@
 import {
-    expect,
+    expectWithinPerformanceLimits,
+    isWithinPerformanceLimits,
     measureElementRendering,
     measureMemoryConsumption,
     measureRenderAndMemory,
-    type MeasurementSummary,
     setNetworkThrottling,
     test
 } from '../utils';
 import * as fs from 'fs';
 import * as path from 'path';
 
-const MAX_RENDER_TIME_MS = 5000;
+const PERFORMANCE_LIMITS = {
+    maxRenderTimeMs: 5000,
+    maxMemoryUsageMb: 256
+};
 const MEASUREMENT_ITERATIONS = 5;
+type MeasurementSummary = Awaited<ReturnType<typeof measureRenderAndMemory>>['memoryUsageMb'];
 
 const metrics: Array<{
     test: string;
@@ -42,7 +46,7 @@ test('videos grid renders within 5 seconds', async ({ page, videosPage }) => {
         return { renderTimeMs, memoryUsageMb };
     }, MEASUREMENT_ITERATIONS);
 
-    const passed = result.renderTimeMs.median < MAX_RENDER_TIME_MS;
+    const passed = isWithinPerformanceLimits(result, PERFORMANCE_LIMITS);
 
     metrics.push({
         test: 'videos-grid',
@@ -56,7 +60,7 @@ test('videos grid renders within 5 seconds', async ({ page, videosPage }) => {
     });
     saveMetrics();
 
-    expect(result.renderTimeMs.median).toBeLessThan(MAX_RENDER_TIME_MS);
+    expectWithinPerformanceLimits(result, PERFORMANCE_LIMITS);
 });
 
 test('video frames grid renders within 5 seconds', async ({ page, videoFramesPage }) => {
@@ -73,7 +77,7 @@ test('video frames grid renders within 5 seconds', async ({ page, videoFramesPag
         return { renderTimeMs, memoryUsageMb };
     }, MEASUREMENT_ITERATIONS);
 
-    const passed = result.renderTimeMs.median < MAX_RENDER_TIME_MS;
+    const passed = isWithinPerformanceLimits(result, PERFORMANCE_LIMITS);
 
     metrics.push({
         test: 'video-frames-grid',
@@ -87,7 +91,7 @@ test('video frames grid renders within 5 seconds', async ({ page, videoFramesPag
     });
     saveMetrics();
 
-    expect(result.renderTimeMs.median).toBeLessThan(MAX_RENDER_TIME_MS);
+    expectWithinPerformanceLimits(result, PERFORMANCE_LIMITS);
 });
 
 test('video frame details renders within 5 seconds', async ({ page, videoFramesPage }) => {
@@ -106,7 +110,7 @@ test('video frame details renders within 5 seconds', async ({ page, videoFramesP
         return { renderTimeMs, memoryUsageMb };
     }, MEASUREMENT_ITERATIONS);
 
-    const passed = result.renderTimeMs.median < MAX_RENDER_TIME_MS;
+    const passed = isWithinPerformanceLimits(result, PERFORMANCE_LIMITS);
 
     metrics.push({
         test: 'video-frame-details',
@@ -120,7 +124,7 @@ test('video frame details renders within 5 seconds', async ({ page, videoFramesP
     });
     saveMetrics();
 
-    expect(result.renderTimeMs.median).toBeLessThan(MAX_RENDER_TIME_MS);
+    expectWithinPerformanceLimits(result, PERFORMANCE_LIMITS);
 });
 
 test('video details renders within 5 seconds', async ({ page, videosPage }) => {
@@ -139,7 +143,7 @@ test('video details renders within 5 seconds', async ({ page, videosPage }) => {
         return { renderTimeMs, memoryUsageMb };
     }, MEASUREMENT_ITERATIONS);
 
-    const passed = result.renderTimeMs.median < MAX_RENDER_TIME_MS;
+    const passed = isWithinPerformanceLimits(result, PERFORMANCE_LIMITS);
 
     metrics.push({
         test: 'video-details',
@@ -153,5 +157,5 @@ test('video details renders within 5 seconds', async ({ page, videosPage }) => {
     });
     saveMetrics();
 
-    expect(result.renderTimeMs.median).toBeLessThan(MAX_RENDER_TIME_MS);
+    expectWithinPerformanceLimits(result, PERFORMANCE_LIMITS);
 });
