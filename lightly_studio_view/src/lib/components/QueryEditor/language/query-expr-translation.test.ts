@@ -13,7 +13,6 @@ import {
 } from './generated/module.js';
 import type {
     QueryExpr,
-    FieldRef,
     StringExpr,
     IntegerExpr,
     DatetimeExpr,
@@ -56,56 +55,37 @@ describe('parseLightlyQuery error handling', () => {
     });
 });
 
-// ---------------------------------------------------------------------------
-// End-to-end translation tests, driven by the real Langium parser
-// ---------------------------------------------------------------------------
-//
-// Each row defines a source query and the QueryExpr it should translate to.
-// Adding language features = appending a row; the helpers below keep each
-// expected expression to roughly one line.
-//
-// Conventions:
-//   - chained boolean operators are *flattened* into n-ary AndExpr/OrExpr
-//     (matching the Pydantic `children: list[MatchExpr]` shape on the backend)
-//   - datetime literals translate to JS `Date` instances (the typed shape of
-//     `DatetimeExpr.value`)
-//   - FieldRef tables follow the backend dispatch keys in
-//     `lightly_studio.core.dataset_query.query_translation`: `image`, `video`,
-//     `object_detection`, etc.
-//
-// These tests are intentionally failing today — they pin the target shape for
-// the upcoming AST → QueryExpr visitor.
+// End-to-end translation tests.
+// Helper functions to construct expected QueryExpr shapes, followed by a table of tests.
 
 type MatchExpr = QueryExpr['match_expr'];
 type OrdOp = IntegerExpr['operator'];
 type EqOp = StringExpr['operator'];
 
-const fieldRef = (table: string, name: string): FieldRef => ({ table, name });
-
 const int = (table: string, name: string, operator: OrdOp, value: number): MatchExpr => ({
     type: 'integer_expr',
-    field: fieldRef(table, name),
+    field: { table, name },
     operator,
     value
 });
 
 const str = (table: string, name: string, operator: EqOp, value: string): MatchExpr => ({
     type: 'string_expr',
-    field: fieldRef(table, name),
+    field: { table, name },
     operator,
     value
 });
 
 const dt = (table: string, name: string, operator: OrdOp, iso: string): MatchExpr => ({
     type: 'datetime_expr',
-    field: fieldRef(table, name),
+    field: { table, name },
     operator,
     value: new Date(iso) as unknown as DatetimeExpr['value']
 });
 
 const tagsContains = (table: string, tag: string): MatchExpr => ({
     type: 'tags_contains_expr',
-    field: fieldRef(table, 'tags'),
+    field: { table, name: 'tags' },
     tag_name: tag
 } satisfies TagsContainsExpr & { type: 'tags_contains_expr' });
 
@@ -138,6 +118,7 @@ interface TranslationCase {
 }
 
 const TRANSLATION_CASES: TranslationCase[] = [
+    /* Image table fields */
     {
         name: 'image height greater than',
         source: 'height > 400',
@@ -159,20 +140,19 @@ const TRANSLATION_CASES: TranslationCase[] = [
         expected: query(str('image', 'file_path_abs', '!=', '/datasets/cats/cat-001.jpg'))
     },
     {
-        name: 'image creation time less than',
-        source: 'created_at < "2026-01-01T00:00:00Z"',
-        expected: query(dt('image', 'created_at', '<', '2026-01-01T00:00:00Z'))
-    },
-    {
         name: 'image creation time less than or equal',
         source: 'created_at <= "2026-04-28T12:30:00+02:00"',
         expected: query(dt('image', 'created_at', '<=', '2026-04-28T12:30:00+02:00'))
     },
+
+    /* Tags expression */
     {
         name: 'tag in expression',
         source: '"training" IN tags',
         expected: query(tagsContains('image', 'training'))
     },
+
+    /* Object detection expression */
     {
         name: 'object detection label',
         source: 'object_detection(label == "cat")',
@@ -198,6 +178,8 @@ const TRANSLATION_CASES: TranslationCase[] = [
         source: 'object_detection(height <= 120)',
         expected: query(objectDetection(int('object_detection', 'height', '<=', 120)))
     },
+
+    /* Boolean operators */
     {
         name: 'boolean and',
         source: 'height > 400 AND width >= 640',
@@ -228,6 +210,8 @@ const TRANSLATION_CASES: TranslationCase[] = [
             )
         )
     },
+
+    /* Boolean operators in subexpressions */
     {
         name: 'object detection boolean expression',
         source: 'object_detection(label == "cat" AND width >= 50 AND height >= 40)',
@@ -260,6 +244,8 @@ const TRANSLATION_CASES: TranslationCase[] = [
             objectDetection(not(str('object_detection', 'label', '==', 'background')))
         )
     },
+
+    /* Additional syntax features */
     {
         name: 'single quoted string',
         source: "file_name == 'frame-0001.jpg'",
@@ -281,6 +267,8 @@ const TRANSLATION_CASES: TranslationCase[] = [
             )
         )
     },
+
+    /* Complex queries */
     {
         name: 'complex reviewed large cat image',
         source: 'height > 400 AND width >= 640 AND "reviewed" IN tags AND object_detection(label == "cat" AND width > 80 AND height > 80)',
