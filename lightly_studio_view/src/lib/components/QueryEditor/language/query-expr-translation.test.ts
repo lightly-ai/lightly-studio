@@ -55,8 +55,10 @@ describe('parseLightlyQuery error handling', () => {
     });
 });
 
-// End-to-end translation tests.
-// Helper functions to construct expected QueryExpr shapes, followed by a table of tests.
+/*
+ * End-to-end translation tests.
+ * Helper functions to construct expected QueryExpr shapes followed by tests cases.
+ */
 
 type MatchExpr = QueryExpr['match_expr'];
 type OrdOp = IntegerExpr['operator'];
@@ -83,41 +85,46 @@ const dt = (table: string, name: string, operator: OrdOp, iso: string): MatchExp
     value: new Date(iso) as unknown as DatetimeExpr['value']
 });
 
-const tagsContains = (table: string, tag: string): MatchExpr => ({
-    type: 'tags_contains_expr',
-    field: { table, name: 'tags' },
-    tag_name: tag
-} satisfies TagsContainsExpr & { type: 'tags_contains_expr' });
+const tagsContains = (table: string, tag: string): MatchExpr =>
+    ({
+        type: 'tags_contains_expr',
+        field: { table, name: 'tags' },
+        tag_name: tag
+    }) satisfies TagsContainsExpr & { type: 'tags_contains_expr' };
 
-const objectDetection = (subexpr: MatchExpr): MatchExpr => ({
-    type: 'object_detection_match_expr',
-    subexpr
-} satisfies ObjectDetectionMatchExpr & { type: 'object_detection_match_expr' });
+const objectDetection = (subexpr: MatchExpr): MatchExpr =>
+    ({
+        type: 'object_detection_match_expr',
+        subexpr
+    }) satisfies ObjectDetectionMatchExpr & { type: 'object_detection_match_expr' };
 
-const and = (...children: MatchExpr[]): MatchExpr => ({
-    type: 'and',
-    children
-} satisfies AndExpr & { type: 'and' });
+const and = (...children: MatchExpr[]): MatchExpr =>
+    ({
+        type: 'and',
+        children
+    }) satisfies AndExpr & { type: 'and' };
 
-const or = (...children: MatchExpr[]): MatchExpr => ({
-    type: 'or',
-    children
-} satisfies OrExpr & { type: 'or' });
+const or = (...children: MatchExpr[]): MatchExpr =>
+    ({
+        type: 'or',
+        children
+    }) satisfies OrExpr & { type: 'or' };
 
-const not = (child: MatchExpr): MatchExpr => ({
-    type: 'not',
-    child
-} satisfies NotExpr & { type: 'not' });
+const not = (child: MatchExpr): MatchExpr =>
+    ({
+        type: 'not',
+        child
+    }) satisfies NotExpr & { type: 'not' };
 
 const query = (match_expr: MatchExpr): QueryExpr => ({ match_expr });
 
-interface TranslationCase {
+interface TranslationTestCase {
     name: string;
     source: string;
     expected: QueryExpr;
 }
 
-const TRANSLATION_CASES: TranslationCase[] = [
+const TRANSLATION_TEST_CASES: TranslationTestCase[] = [
     /* Image table fields */
     {
         name: 'image height greater than',
@@ -240,9 +247,7 @@ const TRANSLATION_CASES: TranslationCase[] = [
     {
         name: 'object detection negation',
         source: 'object_detection(NOT label == "background")',
-        expected: query(
-            objectDetection(not(str('object_detection', 'label', '==', 'background')))
-        )
+        expected: query(objectDetection(not(str('object_detection', 'label', '==', 'background'))))
     },
 
     /* Additional syntax features */
@@ -315,7 +320,7 @@ const TRANSLATION_CASES: TranslationCase[] = [
 ];
 
 describe('parseLightlyQuery translates example queries', () => {
-    it.each(TRANSLATION_CASES)('$name', ({ source, expected }) => {
+    it.each(TRANSLATION_TEST_CASES)('$name', ({ source, expected }) => {
         const result = parseLightlyQuery(parser, source);
         expect(result).toEqual({ status: 'ok', queryExpr: expected });
     });
