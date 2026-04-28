@@ -1,16 +1,16 @@
-import { describe, it, expect, beforeAll } from 'vitest';
+import { describe, it, expect } from 'vitest';
 import {
-    inject,
     EmptyFileSystem,
     createDefaultCoreModule,
-    createDefaultSharedCoreModule
+    createDefaultSharedCoreModule,
+    inject
 } from 'langium';
+import type { LangiumParser } from 'langium';
 import { QueryExprTranslationRequest, parseLightlyQuery } from './query-expr-translation.js';
 import {
     LightlyQueryGeneratedModule,
     LightlyQueryGeneratedSharedModule
 } from './generated/module.js';
-import type { Query } from './generated/ast.js';
 import type {
     QueryExpr,
     FieldRef,
@@ -24,9 +24,17 @@ import type {
     NotExpr
 } from '$lib/api/lightly_studio_local';
 
-// ---------------------------------------------------------------------------
-// Mock-parser tests for the framing logic in `parseLightlyQuery`
-// ---------------------------------------------------------------------------
+function createParser(): LangiumParser {
+    const shared = inject(
+        createDefaultSharedCoreModule(EmptyFileSystem),
+        LightlyQueryGeneratedSharedModule
+    );
+    const lightlyQuery = inject(createDefaultCoreModule({ shared }), LightlyQueryGeneratedModule);
+    shared.ServiceRegistry.register(lightlyQuery);
+    return lightlyQuery.parser.LangiumParser;
+}
+
+const parser = createParser();
 
 describe('QueryExprTranslationRequest', () => {
     it('has the expected method name', () => {
@@ -34,23 +42,17 @@ describe('QueryExprTranslationRequest', () => {
     });
 });
 
-describe('parseLightlyQuery error path', () => {
+describe('parseLightlyQuery error handling', () => {
     it('returns an error result when the parser reports errors', () => {
-        const result = parseLightlyQuery(
-            {
-                parse: () => ({
-                    lexerErrors: [],
-                    parserErrors: [{ message: 'Unexpected token', line: 3, column: 5 }],
-                    value: {} as Query
-                })
-            },
-            'invalid'
-        );
+        const result = parseLightlyQuery(parser, 'invalid_query');
 
-        expect(result).toEqual({
-            status: 'error',
-            errors: [{ message: 'Unexpected token', line: 3, column: 5 }]
-        });
+        expect(result.status).toBe('error');
+        if (result.status !== 'error') return;
+        expect(result.errors).toHaveLength(2);
+        expect(result.errors[0].message).toMatch(/unexpected character/);
+        expect(result.errors[1].message).toMatch(
+            /Expecting: one of these possible Token sequences:/
+        );
     });
 });
 
@@ -325,21 +327,6 @@ const TRANSLATION_CASES: TranslationCase[] = [
 ];
 
 describe('parseLightlyQuery translates example queries', () => {
-    let parser: Parameters<typeof parseLightlyQuery>[0];
-
-    beforeAll(() => {
-        const shared = inject(
-            createDefaultSharedCoreModule(EmptyFileSystem),
-            LightlyQueryGeneratedSharedModule
-        );
-        const LightlyQuery = inject(
-            createDefaultCoreModule({ shared }),
-            LightlyQueryGeneratedModule
-        );
-        shared.ServiceRegistry.register(LightlyQuery);
-        parser = LightlyQuery.parser.LangiumParser;
-    });
-
     it.each(TRANSLATION_CASES)('$name', ({ source, expected }) => {
         const result = parseLightlyQuery(parser, source);
         expect(result).toEqual({ status: 'ok', queryExpr: expected });
