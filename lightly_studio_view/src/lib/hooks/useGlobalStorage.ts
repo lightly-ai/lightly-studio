@@ -11,7 +11,7 @@ import { useReversibleActions } from './useReversibleActions';
 import type { CollectionView, SampleType } from '$lib/api/lightly_studio_local';
 import type { Point } from 'embedding-atlas/svelte';
 
-const lastGridType = writable<GridType>('samples');
+const lastGridType = writable<GridType>('images');
 const selectedSampleIdsByCollection = writable<Record<string, Set<string>>>({});
 const selectedSampleAnnotationCropIds = writable<Record<string, Set<string>>>({});
 const selectedAnnotationFilterIds = writable<Set<string>>(new Set());

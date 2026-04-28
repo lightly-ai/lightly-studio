@@ -67,7 +67,6 @@ export function useLightlyQueryEditor(
     let isDestroyed = false;
 
     function mount(container: HTMLElement): void {
-        // Wait for the VSCode API services to initialize
         startupPromise = ensureMonacoVscodeServices()
             .then(() => {
                 if (isDestroyed) {
