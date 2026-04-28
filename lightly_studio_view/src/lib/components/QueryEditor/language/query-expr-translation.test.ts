@@ -1,6 +1,28 @@
 import { describe, it, expect } from 'vitest';
+import {
+    EmptyFileSystem,
+    createDefaultCoreModule,
+    createDefaultSharedCoreModule,
+    inject
+} from 'langium';
+import type { LangiumParser } from 'langium';
 import { QueryExprTranslationRequest, parseLightlyQuery } from './query-expr-translation.js';
-import type { Query } from './generated/ast.js';
+import {
+    LightlyQueryGeneratedModule,
+    LightlyQueryGeneratedSharedModule
+} from './generated/module.js';
+
+function createParser(): LangiumParser {
+    const shared = inject(
+        createDefaultSharedCoreModule(EmptyFileSystem),
+        LightlyQueryGeneratedSharedModule
+    );
+    const lightlyQuery = inject(createDefaultCoreModule({ shared }), LightlyQueryGeneratedModule);
+    shared.ServiceRegistry.register(lightlyQuery);
+    return lightlyQuery.parser.LangiumParser;
+}
+
+const parser = createParser();
 
 describe('QueryExprTranslationRequest', () => {
     it('has the expected method name', () => {
@@ -8,36 +30,23 @@ describe('QueryExprTranslationRequest', () => {
     });
 });
 
-describe('parseLightlyQuery', () => {
+describe('parseLightlyQuery error handling', () => {
     it('returns an error result when the parser reports errors', () => {
-        const result = parseLightlyQuery(
-            {
-                parse: () => ({
-                    lexerErrors: [],
-                    parserErrors: [{ message: 'Unexpected token', line: 3, column: 5 }],
-                    value: {} as Query
-                })
-            },
-            'invalid'
-        );
+        const result = parseLightlyQuery(parser, 'invalid_query');
 
-        expect(result).toEqual({
-            status: 'error',
-            errors: [{ message: 'Unexpected token', line: 3, column: 5 }]
-        });
+        expect(result.status).toBe('error');
+        if (result.status !== 'error') return;
+        expect(result.errors).toHaveLength(2);
+        expect(result.errors[0].message).toMatch(/unexpected character/);
+        expect(result.errors[1].message).toMatch(
+            /Expecting: one of these possible Token sequences:/
+        );
     });
+});
 
-    it('returns the hardcoded query stub when parsing succeeds', () => {
-        const result = parseLightlyQuery(
-            {
-                parse: () => ({
-                    lexerErrors: [],
-                    parserErrors: [],
-                    value: {} as Query
-                })
-            },
-            'valid'
-        );
+describe('parseLightlyQuery', () => {
+    it('example parse-translate test', () => {
+        const result = parseLightlyQuery(parser, 'Image.width == 1000');
 
         expect(result).toEqual({
             status: 'ok',
