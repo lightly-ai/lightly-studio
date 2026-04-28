@@ -2,16 +2,18 @@
     import { onMount } from 'svelte';
     import { toast } from 'svelte-sonner';
     import { Button } from '$lib/components/ui/button';
-    import { LIGHTLY_QUERY_DEFAULT_VALUE } from './monaco-lightly-query.js';
-    import { useLightlyQueryEditor } from './useLightlyQueryEditor.js';
-    import type { QueryExprTranslationResult } from './language/query-expr-translation.js';
     import Typography from '$lib/components/Typography/Typography.svelte';
+
+    import { useQueryEditor, type QueryEditorResponse } from './useQueryEditor';
+
+    const LIGHTLY_QUERY_DEFAULT_VALUE = `Image.width > 1920 AND tags.contains("reviewed")
+AND object_detection(label == "car" and x > 10)`;
 
     export interface QueryEditorProps {
         value?: string;
         height?: string;
         readOnly?: boolean;
-        onSave?: (value: string, parsed: QueryExprTranslationResult | null) => void;
+        onSave?: (value: string, parsed: QueryEditorResponse | null) => void;
     }
 
     let {
@@ -23,28 +25,13 @@
 
     let containerEl: HTMLDivElement | null = null;
 
-    const editor = useLightlyQueryEditor({
-        value: () => value,
-        onValueChange: (next) => {
-            value = next;
-        },
-        readOnly: () => readOnly
-    });
+    const { mount } = useQueryEditor();
 
-    async function handleSave() {
-        try {
-            const parsed = await editor.translateLightlyQuery(value);
-            onSave?.(value, parsed);
-        } catch (error) {
-            toast.error('Failed to parse query expression', {
-                description: error instanceof Error ? error.message : String(error)
-            });
-        }
-    }
+    async function handleSave() {}
 
     onMount(() => {
         if (containerEl) {
-            editor.mount(containerEl);
+            mount(containerEl);
         }
     });
 </script>
