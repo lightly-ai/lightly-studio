@@ -3,6 +3,10 @@ export { useVideoFrameAnnotations } from '$lib/hooks/useVideoFrameAnnotations/us
 export { useSamplesInfinite } from '$lib/hooks/useSamplesInfinite/useSamplesInfinite';
 export { useGlobalStorage } from '$lib/hooks/useGlobalStorage';
 export { useGroupsInfinite } from '$lib/hooks/useGroupsInfinite/useGroupsInfinite';
+export { useAnnotationCollections } from '$lib/hooks/useAnnotationCollections/useAnnotationCollections';
+export { useCreateEvaluation } from '$lib/hooks/useCreateEvaluation/useCreateEvaluation';
+export { useEvaluation } from '$lib/hooks/useEvaluation/useEvaluation';
+export { useEvaluations } from '$lib/hooks/useEvaluations/useEvaluations';
 export { useFrames } from '$lib/hooks/useFrames/useFrames';
 export { useTags } from '$lib/hooks/useTags/useTags';
 export { useVideoFramesBounds } from '$lib/hooks/useVideoFramesBounds/useVideoFramesBounds';

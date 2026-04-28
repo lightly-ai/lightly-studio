@@ -1706,6 +1706,79 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/datasets/{dataset_id}/annotation-collections": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List Annotation Collections
+         * @description List all annotation collections for a dataset.
+         */
+        get: operations["list_annotation_collections"];
+        put?: never;
+        /**
+         * Create Annotation Collection
+         * @description Register an annotation collection by name.
+         *
+         *     The underlying annotation child collection must already exist (i.e. annotations
+         *     have been loaded via add_samples_from_coco or add_predictions_from_coco).
+         */
+        post: operations["create_annotation_collection"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/datasets/{dataset_id}/evaluations": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List Evaluations
+         * @description Return all evaluation results for a dataset, newest first.
+         */
+        get: operations["list_evaluations"];
+        put?: never;
+        /**
+         * Create Evaluation
+         * @description Compute COCO metrics and persist the result.
+         *
+         *     Metrics are computed per prediction collection and per subset (one per tag + "all").
+         */
+        post: operations["create_evaluation"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/datasets/{dataset_id}/evaluations/{evaluation_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Evaluation
+         * @description Return a single evaluation result.
+         */
+        get: operations["get_evaluation"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/images/sample/{sample_id}": {
         parameters: {
             query?: never;
@@ -1881,6 +1954,57 @@ export interface components {
             parent_sample_id: string;
             /** Object Track Id */
             object_track_id?: string | null;
+        };
+        /**
+         * AnnotationCollectionCreate
+         * @description Input model for creating an annotation collection.
+         */
+        AnnotationCollectionCreate: {
+            /** Name */
+            name: string;
+            /**
+             * Is Ground Truth
+             * @default false
+             */
+            is_ground_truth: boolean;
+            /** Processed Sample Count */
+            processed_sample_count?: number | null;
+            /** Notes */
+            notes?: string | null;
+        };
+        /**
+         * AnnotationCollectionView
+         * @description Response model for an annotation collection.
+         */
+        AnnotationCollectionView: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /**
+             * Dataset Id
+             * Format: uuid
+             */
+            dataset_id: string;
+            /**
+             * Collection Id
+             * Format: uuid
+             */
+            collection_id: string;
+            /** Name */
+            name: string;
+            /** Is Ground Truth */
+            is_ground_truth: boolean;
+            /** Processed Sample Count */
+            processed_sample_count: number | null;
+            /** Notes */
+            notes: string | null;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
         };
         /**
          * AnnotationCreateInput
@@ -2524,6 +2648,80 @@ export interface components {
             operator: components["schemas"]["EqualityComparisonOperator"];
             /** Value */
             value: number;
+        };
+        /**
+         * EvaluationCreateInput
+         * @description Input for triggering a metric computation.
+         */
+        EvaluationCreateInput: {
+            /** Gt Collection Name */
+            gt_collection_name: string;
+            /** Prediction Collection Names */
+            prediction_collection_names: string[];
+            /**
+             * Iou Threshold
+             * @default 0.5
+             */
+            iou_threshold: number;
+            /**
+             * Confidence Threshold
+             * @default 0
+             */
+            confidence_threshold: number;
+        };
+        /**
+         * EvaluationMetrics
+         * @description Per-subset COCO metrics.
+         */
+        EvaluationMetrics: {
+            /** Precision */
+            precision: number;
+            /** Recall */
+            recall: number;
+            /** F1 */
+            f1: number;
+            /** Map */
+            mAP: number;
+            /** Avg Confidence */
+            avg_confidence: number;
+        };
+        /**
+         * EvaluationResultView
+         * @description Response model for an evaluation result.
+         */
+        EvaluationResultView: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /**
+             * Dataset Id
+             * Format: uuid
+             */
+            dataset_id: string;
+            /**
+             * Gt Collection Id
+             * Format: uuid
+             */
+            gt_collection_id: string;
+            /** Prediction Collection Ids */
+            prediction_collection_ids: string[];
+            /** Iou Threshold */
+            iou_threshold: number;
+            /** Confidence Threshold */
+            confidence_threshold: number;
+            /** Metrics */
+            metrics: {
+                [key: string]: {
+                    [key: string]: components["schemas"]["EvaluationMetrics"];
+                };
+            };
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
         };
         /**
          * ExecuteOperatorRequest
@@ -6610,6 +6808,170 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_annotation_collections: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                dataset_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AnnotationCollectionView"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    create_annotation_collection: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                dataset_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AnnotationCollectionCreate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AnnotationCollectionView"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_evaluations: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                dataset_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EvaluationResultView"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    create_evaluation: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                dataset_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["EvaluationCreateInput"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EvaluationResultView"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_evaluation: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                dataset_id: string;
+                evaluation_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EvaluationResultView"];
+                };
             };
             /** @description Validation Error */
             422: {
