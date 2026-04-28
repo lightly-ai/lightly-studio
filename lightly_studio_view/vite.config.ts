@@ -1,6 +1,7 @@
 import { defineConfig } from 'vitest/config';
 import { sveltekit } from '@sveltejs/kit/vite';
-import { fileURLToPath } from 'node:url';
+// import { join } from 'path';
+// import { fileURLToPath } from 'node:url';
 
 export default defineConfig({
     plugins: [sveltekit()],
@@ -9,19 +10,38 @@ export default defineConfig({
         // code-splitting, so force ESM workers for production bundling.
         format: 'es'
     },
-
+    // server: {
+    //     fs: {
+    //         allow: ['../../', '../../../vscode']
+    //     }
+    // },
     resolve: {
-        alias: {
-            // `monaco-languageclient` wires its services into
-            'monaco-editor': '@codingame/monaco-vscode-editor-api',
-            '@codingame/monaco-vscode-api/vscode/vs/base/browser/cssValue': fileURLToPath(
-                new URL(
-                    './node_modules/@codingame/monaco-vscode-api/vscode/src/vs/base/browser/cssValue.js',
-                    import.meta.url
-                )
-            )
-        }
+        // `monaco-languageclient` wires its services into
+        // 'monaco-editor': '@codingame/monaco-vscode-editor-api'
+        // alias: [
+        //     {
+        //         find: 'monaco-editor-core/esm/vs',
+        //         replacement: join(__dirname, '../../../vscode/src/vs')
+        //     },
+        //     {
+        //         find: 'monaco-editor-core',
+        //         replacement: join(__dirname, '../../../vscode/src/vs/editor/editor.main.ts')
+        //     }
+        // ]
     },
+
+    // resolve: {
+    //     alias: {
+    //         // `monaco-languageclient` wires its services into
+    //         'monaco-editor': '@codingame/monaco-vscode-editor-api',
+    //         '@codingame/monaco-vscode-api/vscode/vs/base/browser/cssValue': fileURLToPath(
+    //             new URL(
+    //                 './node_modules/@codingame/monaco-vscode-api/vscode/src/vs/base/browser/cssValue.js',
+    //                 import.meta.url
+    //             )
+    //         )
+    //     }
+    // },
 
     build: {
         rollupOptions: {
