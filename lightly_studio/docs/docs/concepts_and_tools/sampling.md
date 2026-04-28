@@ -20,7 +20,7 @@ Sampling is a premium feature and requires a valid LightlyStudio license key. Se
 
 ## Sampling in GUI
 
-Open the export dialog from the `Menu` button in the top-right corner and select `Selection`. The dialog shows a dropdown with all available sampling strategies. Specify the number of samples and the tag name that should be used. [Sampling in Python](#sampling-in-python) lets you explore more sampling strategies and also lets you learn more about how they work.
+Open the dialog from the `Menu` button in the top-right corner and select `Selection`. The dialog shows a dropdown with available sampling strategies. Specify the number of samples and the tag name that should be used. [Sampling in Python](#sampling-in-python) supports more sampling strategies than available in the GUI and also lets you learn more about how they work.
 
 <video autoplay loop muted playsinline controls style="width: 100%;">
   <source src="https://storage.googleapis.com/lightly-public/studio/sampling_workflow.mp4" type="video/mp4">
@@ -28,10 +28,7 @@ Open the export dialog from the `Menu` button in the top-right corner and select
 
 ## Sampling in Python
 
-Each strategy is configured directly from a [`DatasetQuery`](../api/dataset_query.md#lightly_studio.core.dataset_query.dataset_query.DatasetQuery) via [`selection()`](../api/dataset_query.md#lightly_studio.core.dataset_query.dataset_query.DatasetQuery.selection). The sampled items are stored under the tag passed as `selection_result_tag_name`, so you can filter or export them later.
-
-!!! note "Tag names must be unique"
-    `selection_result_tag_name` must be a tag name that does not yet exist in the dataset.
+Each strategy is configured directly from a [`DatasetQuery`](../api/dataset_query.md#lightly_studio.core.dataset_query.dataset_query.DatasetQuery) via [`selection()`](../api/dataset_query.md#lightly_studio.core.dataset_query.dataset_query.DatasetQuery.selection). The sampled items are stored under the tag passed as `selection_result_tag_name`, so you can filter or export them later. `selection_result_tag_name` must be a tag name that does not yet exist in the dataset.
 
 ### Filtering before sampling
 
@@ -91,9 +88,16 @@ dataset.query().selection().metadata_weighting(
 )
 ```
 
+# Sample the 5 items with the lowest value of a custom "sharpness" metadata field.
+dataset.query().selection().metadata_weighting(
+    n_samples_to_select=5,
+    selection_result_tag_name="blurriest_samples",
+    metadata_key="sharpness",
+    strength=-1
+)
 See [`Selection.metadata_weighting`](../api/selection.md#lightly_studio.selection.select.Selection.metadata_weighting) for the full API reference.
 
-#### Typicality
+#### Typicality Sampling and Outlier Sampling
 
 Typicality is a per-sample score derived from embeddings. Samples that are close to many other samples in embedding space (i.e. "typical" of the dataset) receive a high score; outliers receive a low score. It is computed with `compute_typicality_metadata` and then passed to `metadata_weighting`.
 
@@ -119,7 +123,7 @@ If your dataset has multiple embedding models, pass `embedding_model_name` to se
 
 #### Similarity
 
-Similarity weighting selects samples based on their embedding similarity to a reference set. First, tag the samples you want to use as the query, then compute per-sample similarity scores with `compute_similarity_metadata`, and finally pass those scores to `metadata_weighting`.
+Similarity-based sampling selects samples based on their embedding similarity to a reference set. First, tag the samples you want to use as the query, then compute per-sample similarity scores with `compute_similarity_metadata`, and finally pass those scores to `metadata_weighting`.
 
 ```py
 import lightly_studio as ls
@@ -135,7 +139,7 @@ dataset[:5].add_tag("my_query_samples")
 # The method returns the name under which the metadata was stored.
 metadata_name = dataset.compute_similarity_metadata(
     query_tag_name="my_query_samples",
-    metadata_name="similarity_to_query",
+    metadata_name="similarity_to_query", # optional. auto-generated when omitted.
 )
 
 # Sample the 10 items most similar to the query set.
