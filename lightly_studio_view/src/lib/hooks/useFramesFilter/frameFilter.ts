@@ -1,12 +1,10 @@
 import { createMetadataFilters } from '../useMetadataFilters/useMetadataFilters';
-import type { components } from '$lib/schema';
 import type {
+    AnnotationsFilter,
+    SampleFilter,
     VideoFrameFilter,
     VideoFrameFieldsBoundsView
 } from '$lib/api/lightly_studio_local/types.gen';
-
-type AnnotationsFilter = components['schemas']['AnnotationsFilter'];
-type SampleFilter = components['schemas']['SampleFilter'];
 type MetadataValues = Record<string, { min: number; max: number }>;
 
 export type VideoFrameFilterParams = {

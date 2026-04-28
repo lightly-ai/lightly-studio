@@ -34,7 +34,7 @@ the full list of arguments.
 ### From an Annotation Format
 
 `VideoDataset` can be loaded with annotations from the YouTube-VIS format. Currently, object detection
-and instance segmentation annotations are supported. See
+and segmentation mask annotations are supported. See
 [API reference](../api/dataset.md#lightly_studio.VideoDataset.add_videos_from_youtube_vis) for full details.
 
 === "YouTube-VIS Object Detections"
@@ -79,7 +79,7 @@ and instance segmentation annotations are supported. See
 
     </details>
 
-=== "YouTube-VIS Instance Segmentations"
+=== "YouTube-VIS Segmentation Masks"
 
     ```python
     import lightly_studio as ls
@@ -91,7 +91,7 @@ and instance segmentation annotations are supported. See
     dataset.add_videos_from_youtube_vis(
         annotations_json=f"{dataset_path}/youtube_vis_50_videos/train/instances_50.json",
         videos_path=f"{dataset_path}/youtube_vis_50_videos/train/videos",
-        annotation_type=ls.AnnotationType.INSTANCE_SEGMENTATION,
+        annotation_type=ls.AnnotationType.SEGMENTATION_MASK,
     )
     ```
 

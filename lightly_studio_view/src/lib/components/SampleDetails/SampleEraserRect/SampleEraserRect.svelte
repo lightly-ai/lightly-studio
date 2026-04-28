@@ -14,7 +14,7 @@
     import { useCreateAnnotation } from '$lib/hooks/useCreateAnnotation/useCreateAnnotation';
     import { useDeleteAnnotation } from '$lib/hooks/useDeleteAnnotation/useDeleteAnnotation';
     import { useGlobalStorage } from '$lib/hooks/useGlobalStorage';
-    import { useInstanceSegmentationPreview } from '$lib/hooks/useInstanceSegmentationPreview';
+    import { useSegmentationMaskPreview } from '$lib/hooks/useSegmentationMaskPreview';
     import { usePendingOperations } from '$lib/hooks/usePendingOperations/usePendingOperations';
     import { useSegmentationMaskEraser } from '$lib/hooks/useSegmentationMaskEraser';
     import { addAnnotationDeleteToUndoStack } from '$lib/services/addAnnotationDeleteToUndoStack';
@@ -88,7 +88,7 @@
     const parsedColor = $derived(parseColor(drawerStrokeColor));
 
     // Hook owns mask drawing + preview composition.
-    const previewApi = useInstanceSegmentationPreview({
+    const previewApi = useSegmentationMaskPreview({
         onPreviewVisibilityChange: (visible) => {
             isPreviewVisible = visible;
         }

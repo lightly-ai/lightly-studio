@@ -6,7 +6,9 @@ from uuid import UUID
 from pydantic import BaseModel
 from sqlmodel import col, select
 
+from lightly_studio.core.dataset_query import query_translation
 from lightly_studio.models.metadata import SampleMetadataTable
+from lightly_studio.models.query_expr import QueryExpr
 from lightly_studio.models.sample import SampleTable
 from lightly_studio.models.tag import TagTable
 from lightly_studio.resolvers.annotations.annotations_filter import AnnotationsFilter
@@ -24,13 +26,23 @@ class SampleFilter(BaseModel):
     has_captions: Optional[bool] = None
     annotations_filter: Optional[AnnotationsFilter] = None
 
+    # Query expression filter
+    #
+    # Adds an arbitrary "where" condition that can be expressed with QueryExpr.
+    #
+    # Important note: The expression can (and usually will) reference fields outside of SampleTable.
+    # It is caller's responsibility to ensure that the necessary joins are present in the query
+    # before applying this filter.
+    query_expr: Optional[QueryExpr] = None
+
     def apply(self, query: QueryType) -> QueryType:
         """Apply the filters to the given query."""
         query = self._apply_sample_ids_filter(query)
         query = self._apply_annotation_filters(query)
         query = self._apply_tag_filters(query)
         query = self._apply_metadata_filters(query)
-        return self._apply_captions_filter(query)
+        query = self._apply_captions_filter(query)
+        return self._apply_query_expr_filter(query)
 
     def _apply_sample_ids_filter(self, query: QueryType) -> QueryType:
         if self.sample_ids:
@@ -73,3 +85,9 @@ class SampleFilter(BaseModel):
         if self.has_captions:
             return query.where(col(SampleTable.captions).any())
         return query.where(~col(SampleTable.captions).any())
+
+    def _apply_query_expr_filter(self, query: QueryType) -> QueryType:
+        if self.query_expr is None:
+            return query
+        match_expression = query_translation.to_match_expression(self.query_expr.match_expr)
+        return query.where(match_expression.get())

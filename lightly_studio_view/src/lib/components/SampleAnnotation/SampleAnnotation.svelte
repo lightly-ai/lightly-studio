@@ -106,7 +106,7 @@
     const showAnnotationLabel = $derived(
         showLabel &&
             (highlight === 'auto' || highlight === 'active') &&
-            (annotation.annotation_type !== 'instance_segmentation' || showBoundingBox)
+            (annotation.annotation_type !== 'segmentation_mask' || showBoundingBox)
     );
 </script>
 

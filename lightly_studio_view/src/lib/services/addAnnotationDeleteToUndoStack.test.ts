@@ -130,14 +130,14 @@ describe('addAnnotationDeleteToUndoStack', () => {
         expect(addReversibleAction).not.toHaveBeenCalled();
     });
 
-    it('should handle instance segmentation annotations', async () => {
+    it('should handle segmentation mask annotations', async () => {
         const addReversibleAction = vi.fn();
         const createAnnotation = vi.fn().mockResolvedValue({} as CreateAnnotationResponse);
         const refetch = vi.fn();
 
         const segmentationAnnotation: AnnotationView = {
             ...mockAnnotation,
-            annotation_type: 'instance_segmentation',
+            annotation_type: 'segmentation_mask',
             object_detection_details: undefined,
             segmentation_details: {
                 x: 15,
@@ -161,7 +161,7 @@ describe('addAnnotationDeleteToUndoStack', () => {
 
         expect(createAnnotation).toHaveBeenCalledWith({
             parent_sample_id: 'sample-456',
-            annotation_type: 'instance_segmentation',
+            annotation_type: 'segmentation_mask',
             annotation_label_id: 'label-id-car',
             x: 15,
             y: 25,

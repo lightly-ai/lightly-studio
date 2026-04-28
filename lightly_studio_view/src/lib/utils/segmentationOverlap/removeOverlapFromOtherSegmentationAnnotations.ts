@@ -8,7 +8,7 @@ import type { OverriddenSegmentationAnnotations, RemoveOverlapParams } from './t
 
 /**
  * `removeOverlapFromOtherSegmentationAnnotations` clears pixels from other
- * instance segmentation annotations that overlap the new mask while respecting
+ * segmentation mask annotations that overlap the new mask while respecting
  * locked annotations.
  */
 export const removeOverlapFromOtherSegmentationAnnotations = async ({
@@ -27,7 +27,7 @@ export const removeOverlapFromOtherSegmentationAnnotations = async ({
 
     annotations
         .filter((ann) => {
-            const isTargetType = ann.annotation_type === 'instance_segmentation';
+            const isTargetType = ann.annotation_type === 'segmentation_mask';
             const hasMask = ann.segmentation_details?.segmentation_mask;
             const isSame = ann.sample_id === skipId;
             const isLocked = lockedAnnotationIds?.has(ann.sample_id);
