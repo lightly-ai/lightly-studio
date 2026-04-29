@@ -69,6 +69,8 @@
     } from '$lib/utils/buildAnnotationCountsFilters';
     import EmbeddingSelectionFilterItem from '$lib/components/EmbeddingSelectionFilterItem/EmbeddingSelectionFilterItem.svelte';
     import { useSelectionSummary, useFeatureFlags } from '$lib/hooks';
+    import { useSelectAll } from '$lib/hooks/useSelectAll/useSelectAll';
+    import { isInputElement } from '$lib/utils';
     import { shutdownMaskRendererPool } from '$lib/workers/maskRendererPool';
     const { data, children } = $props();
     const {
@@ -104,22 +106,6 @@
         retrieveParentCollection($collections, collectionId)
     );
 
-    // Setup event handlers for keyboard shortcuts
-    onMount(() => {
-        if (browser) {
-            window.addEventListener('keydown', handleKeyEvent);
-            window.addEventListener('keyup', handleKeyEvent);
-        }
-    });
-
-    onDestroy(() => {
-        if (browser) {
-            window.removeEventListener('keydown', handleKeyEvent);
-            window.removeEventListener('keyup', handleKeyEvent);
-            shutdownMaskRendererPool();
-        }
-    });
-
     const isImages = $derived(isImagesRoute(page.route.id));
     const isGroups = $derived(isGroupsRoute(page.route.id));
     const isGroupDetails = $derived(isGroupDetailsRoute(page.route.id));
@@ -133,6 +119,37 @@
 
     let gridType = $state<GridType>('images');
     let lastCollectionId: string | null = null;
+
+    // Select-all hook
+    let selectAllHandle = $derived(useSelectAll(collectionId, gridType));
+
+    function handleSelectAllKeydown(event: KeyboardEvent) {
+        if (isInputElement(event.target) || (event.target as HTMLElement)?.isContentEditable)
+            return;
+        if (event.key !== 'a' || (!event.ctrlKey && !event.metaKey)) return;
+        if (!isImages && !isVideos && !isVideoFrames && !isAnnotations) return;
+
+        event.preventDefault();
+        selectAllHandle.handleSelectAll();
+    }
+
+    // Setup event handlers for keyboard shortcuts
+    onMount(() => {
+        if (browser) {
+            window.addEventListener('keydown', handleKeyEvent);
+            window.addEventListener('keyup', handleKeyEvent);
+            window.addEventListener('keydown', handleSelectAllKeydown);
+        }
+    });
+
+    onDestroy(() => {
+        if (browser) {
+            window.removeEventListener('keydown', handleKeyEvent);
+            window.removeEventListener('keyup', handleKeyEvent);
+            window.removeEventListener('keydown', handleSelectAllKeydown);
+            shutdownMaskRendererPool();
+        }
+    });
     $effect(() => {
         let nextGridType: GridType | null = null;
         if (isAnnotations) {
