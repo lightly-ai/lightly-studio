@@ -2,7 +2,12 @@ import { derived, get, writable } from 'svelte/store';
 import { createMetadataFilters } from '../useMetadataFilters/useMetadataFilters';
 import type { ImagesInfiniteParams } from '../useImagesInfinite/useImagesInfinite';
 import type { DimensionBounds } from '$lib/services/loadDimensionBounds';
-import type { AnnotationsFilter, ImageFilter, SampleFilter } from '$lib/api/lightly_studio_local';
+import type {
+    AnnotationsFilter,
+    ImageFilter,
+    QueryExpr,
+    SampleFilter
+} from '$lib/api/lightly_studio_local';
 
 const filterParams = writable<ImagesInfiniteParams>({} as ImagesInfiniteParams);
 
@@ -85,9 +90,20 @@ const imageFilter = derived(filterParams, ($filterParams): ImageFilter | null =>
     return Object.keys(filters).length > 0 ? filters : null;
 });
 
+export interface QueryExpression {
+    query_expr: QueryExpr;
+    query_expr_str: string;
+}
+
+const imageQueryExpression = writable<QueryExpression | null>({} as QueryExpression);
+
 export const useImageFilters = () => {
     const updateFilterParams = (params: ImagesInfiniteParams) => {
         filterParams.set(params);
+    };
+
+    const updateQueryExpr = (expr?: QueryExpression) => {
+        imageQueryExpression.set(expr ?? null);
     };
 
     // updates only sample ids in the existing filter params
@@ -112,9 +128,11 @@ export const useImageFilters = () => {
     };
 
     return {
+        imageQueryExpression,
         filterParams,
         imageFilter,
         updateFilterParams,
+        updateQueryExpr,
         updateSampleIds
     };
 };

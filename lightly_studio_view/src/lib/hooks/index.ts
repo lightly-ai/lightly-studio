@@ -16,3 +16,4 @@ export { useVideo } from '$lib/hooks/useVideo/useVideo';
 export { useAddTagToSample } from '$lib/hooks/useAddTagToSample/useAddTagToSample';
 export { useFileDrop } from '$lib/hooks/useFileDrop/useFileDrop';
 export { useImageUpload } from '$lib/hooks/useImageUpload/useImageUpload';
+export { useFeatureFlags } from '$lib/hooks/useFeatureFlags/useFeatureFlags';
