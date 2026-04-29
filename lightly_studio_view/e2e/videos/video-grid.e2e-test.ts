@@ -255,3 +255,35 @@ test('We can see clicked element when navigating back from details', async ({
         })
     ).toBe(false);
 });
+
+test('select all videos with label filter via keyboard shortcut', async ({ page, videosPage }) => {
+    // Apply a label filter to reduce the visible videos
+    await videosPage.clickLabel(youtubeVisVideosDataset.labels.airplane.name);
+    const filteredCount = await videosPage.getVideos().count();
+    expect(filteredCount).toBe(youtubeVisVideosDataset.labels.airplane.sampleCount);
+
+    // Press Cmd+A / Ctrl+A to select all filtered videos
+    const sampleIdsResponse = page.waitForResponse(
+        (response) => response.url().includes('/video/sample_ids') && response.status() === 200
+    );
+    await page.keyboard.press('Meta+A');
+    await sampleIdsResponse;
+
+    // All filtered videos should be selected
+    expect(await videosPage.getNumSelectedSamples()).toBe(
+        youtubeVisVideosDataset.labels.airplane.sampleCount
+    );
+
+    // Remove the label filter and select all again
+    await videosPage.clickLabel(youtubeVisVideosDataset.labels.airplane.name);
+    await videosPage.getVideos().first().waitFor({ state: 'attached', timeout: 10000 });
+
+    const allSampleIdsResponse = page.waitForResponse(
+        (response) => response.url().includes('/video/sample_ids') && response.status() === 200
+    );
+    await page.keyboard.press('Meta+A');
+    await allSampleIdsResponse;
+
+    // All videos should be selected
+    expect(await videosPage.getNumSelectedSamples()).toBe(youtubeVisVideosDataset.totalSamples);
+});
