@@ -4,7 +4,7 @@
     import { Button } from '$lib/components/ui/button';
     import Typography from '$lib/components/Typography/Typography.svelte';
 
-    import { useQueryEditor, type QueryEditorResponse } from './useQueryEditor';
+    import { useQueryEditor, type TranslateQueryReturn } from './useQueryEditor';
 
     const LIGHTLY_QUERY_DEFAULT_VALUE = `Image.width > 1920 AND tags.contains("reviewed")
 AND object_detection(label == "car" and x > 10)`;
@@ -13,7 +13,7 @@ AND object_detection(label == "car" and x > 10)`;
         value?: string;
         height?: string;
         readOnly?: boolean;
-        onSave?: (value: string, parsed: QueryEditorResponse | null) => void;
+        onSave?: (value: string, parsed: TranslateQueryReturn) => void;
     }
 
     let {
@@ -25,9 +25,16 @@ AND object_detection(label == "car" and x > 10)`;
 
     let containerEl: HTMLDivElement | null = null;
 
-    const { mount } = useQueryEditor();
+    const { mount, translateQuery } = useQueryEditor();
 
-    async function handleSave() {}
+    async function handleSave() {
+        const translationResult = await translateQuery(value);
+        if (!translationResult) {
+            toast.error('Failed to translate query. Please try again.');
+            return;
+        }
+        onSave?.(value, translationResult);
+    }
 
     onMount(() => {
         if (containerEl) {

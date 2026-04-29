@@ -8,11 +8,10 @@
 //   Services & DI:   https://langium.org/docs/reference/configuration-services/
 //   Validation:      https://langium.org/docs/learn/workflow/create_validations/
 
-import { inject } from 'langium';
+import { EmptyFileSystem, inject } from 'langium';
 import {
     createDefaultModule,
     createDefaultSharedModule,
-    type DefaultSharedModuleContext,
     type LangiumServices,
     type LangiumSharedServices
 } from 'langium/lsp';
@@ -20,22 +19,26 @@ import {
     LightlyQueryGeneratedModule,
     LightlyQueryGeneratedSharedModule
 } from './generated/module.js';
-import { QueryExprTranslationRequest, parseLightlyQuery } from './query-expr-translation.js';
 
 export type LightlyQueryServices = LangiumServices;
 
+export interface LightlyQueryServicesBundle {
+    shared: LangiumSharedServices;
+    LightlyQuery: LightlyQueryServices;
+}
+
 // Composes three modules (later overrides earlier): Langium defaults →
 // generated (grammar) → custom above. Registers the language in the shared
-// ServiceRegistry so document URIs route to it.
-export function createLightlyQueryServices(
-    context: DefaultSharedModuleContext
-): LangiumSharedServices {
-    const shared = inject(createDefaultSharedModule(context), LightlyQueryGeneratedSharedModule);
+// ServiceRegistry so document URIs route to it. We pull from `langium/lsp`
+// to get the bundled provider classes (CompletionProvider, HoverProvider, …)
+// but never start an LSP transport: the providers are invoked directly on
+// the main thread.
+export function createLightlyQueryServices(): LightlyQueryServicesBundle {
+    const shared = inject(
+        createDefaultSharedModule(EmptyFileSystem),
+        LightlyQueryGeneratedSharedModule
+    );
     const LightlyQuery = inject(createDefaultModule({ shared }), LightlyQueryGeneratedModule);
     shared.ServiceRegistry.register(LightlyQuery);
-    shared.lsp?.Connection?.onRequest(QueryExprTranslationRequest, (value) =>
-        parseLightlyQuery(LightlyQuery.parser.LangiumParser, value)
-    );
-
-    return shared;
+    return { shared, LightlyQuery };
 }

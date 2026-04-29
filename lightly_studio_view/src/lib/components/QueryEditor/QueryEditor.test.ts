@@ -4,17 +4,10 @@ import '@testing-library/jest-dom';
 import QueryEditor from './QueryEditor.svelte';
 import type { QueryExprTranslationResult } from './language/query-expr-translation.js';
 
-const translateLightlyQuery = vi.fn();
+const translateQuery = vi.fn();
 
-vi.mock('./useLightlyQueryEditor.js', () => ({
-    useLightlyQueryEditor: () => ({ mount: vi.fn(), translateLightlyQuery })
-}));
-
-vi.mock('./monaco-lightly-query.js', () => ({
-    LIGHTLY_QUERY_DEFAULT_VALUE: '',
-    LIGHTLY_QUERY_LANGUAGE_ID: 'lightly-query',
-    LIGHTLY_QUERY_THEME_ID: 'lightly-query-theme',
-    registerLightlyQueryMonacoLanguage: vi.fn()
+vi.mock('./useQueryEditor', () => ({
+    useQueryEditor: () => ({ mount: vi.fn(), translateQuery })
 }));
 
 describe('QueryEditor', () => {
@@ -35,14 +28,14 @@ describe('QueryEditor', () => {
                 }
             }
         } as QueryExprTranslationResult;
-        translateLightlyQuery.mockResolvedValueOnce(parsed);
+        translateQuery.mockResolvedValueOnce(parsed);
 
         render(QueryEditor, { props: { value: 'my query', onSave } });
 
         await fireEvent.click(screen.getByRole('button', { name: 'Save' }));
 
-        expect(translateLightlyQuery).toHaveBeenCalledOnce();
-        expect(translateLightlyQuery).toHaveBeenCalledWith('my query');
+        expect(translateQuery).toHaveBeenCalledOnce();
+        expect(translateQuery).toHaveBeenCalledWith('my query');
         expect(onSave).toHaveBeenCalledOnce();
         expect(onSave).toHaveBeenCalledWith('my query', parsed);
     });
@@ -59,17 +52,16 @@ describe('QueryEditor', () => {
         expect(screen.getByRole('button', { name: 'Save' })).toBeInTheDocument();
     });
 
-    it('calls onSave with null when no parsed result is available', async () => {
+    it('shows an error toast when translation returns null', async () => {
         const onSave = vi.fn();
-        translateLightlyQuery.mockResolvedValueOnce(null);
+        translateQuery.mockResolvedValueOnce(null);
         render(QueryEditor, { props: { value: 'my query', onSave } });
 
         await fireEvent.click(screen.getByRole('button', { name: 'Save' }));
 
-        expect(translateLightlyQuery).toHaveBeenCalledOnce();
-        expect(translateLightlyQuery).toHaveBeenCalledWith('my query');
-        expect(onSave).toHaveBeenCalledOnce();
-        expect(onSave).toHaveBeenCalledWith('my query', null);
+        expect(translateQuery).toHaveBeenCalledOnce();
+        expect(translateQuery).toHaveBeenCalledWith('my query');
+        expect(onSave).not.toHaveBeenCalled();
     });
 
     it('disables the Save button when readOnly is true', () => {
