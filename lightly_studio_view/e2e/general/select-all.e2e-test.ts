@@ -13,11 +13,14 @@ test('select all images with label filter via keyboard shortcut', async ({ page,
         (response) => response.url().includes('/images/sample_ids') && response.status() === 200,
         { timeout: 10000 }
     );
-    await page.keyboard.press('Meta+A');
+    await page.keyboard.press('Control+a');
     await sampleIdsResponse;
 
     // All filtered samples should be selected
     expect(await samplesPage.getNumSelectedSamples()).toBe(cocoDataset.labels.dog.sampleCount);
+
+    // Clear the selection
+    await page.getByTestId('clear-selection-button').click();
 
     // Remove the label filter and select all again
     await samplesPage.clickLabel(cocoDataset.labels.dog.name);
@@ -28,7 +31,7 @@ test('select all images with label filter via keyboard shortcut', async ({ page,
         (response) => response.url().includes('/images/sample_ids') && response.status() === 200,
         { timeout: 10000 }
     );
-    await page.keyboard.press('Meta+A');
+    await page.keyboard.press('Control+a');
     await allSampleIdsResponse;
 
     // All samples should be selected

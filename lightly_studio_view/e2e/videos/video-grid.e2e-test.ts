@@ -268,13 +268,16 @@ test('select all videos with label filter via keyboard shortcut', async ({ page,
         (response) => response.url().includes('/video/sample_ids') && response.status() === 200,
         { timeout: 10000 }
     );
-    await page.keyboard.press('Meta+A');
+    await page.keyboard.press('Control+a');
     await sampleIdsResponse;
 
     // All filtered videos should be selected
     expect(await videosPage.getNumSelectedSamples()).toBe(
         youtubeVisVideosDataset.labels.airplane.sampleCount
     );
+
+    // Clear the selection
+    await page.getByTestId('clear-selection-button').click();
 
     // Remove the label filter and select all again
     await videosPage.clickLabel(youtubeVisVideosDataset.labels.airplane.name);
@@ -285,7 +288,7 @@ test('select all videos with label filter via keyboard shortcut', async ({ page,
         (response) => response.url().includes('/video/sample_ids') && response.status() === 200,
         { timeout: 10000 }
     );
-    await page.keyboard.press('Meta+A');
+    await page.keyboard.press('Control+a');
     await allSampleIdsResponse;
 
     // All videos should be selected
