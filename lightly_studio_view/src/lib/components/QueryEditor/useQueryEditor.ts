@@ -14,7 +14,7 @@ self.MonacoEnvironment = {
     }
 };
 
-export interface MountOptions {
+interface MountOptions {
     value: string;
     readOnly?: boolean;
     onChange?: (value: string) => void;
