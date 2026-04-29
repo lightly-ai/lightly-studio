@@ -19,8 +19,14 @@ test('select all images with label filter via keyboard shortcut', async ({ page,
     // All filtered samples should be selected
     expect(await samplesPage.getNumSelectedSamples()).toBe(cocoDataset.labels.dog.sampleCount);
 
+    // Wait for the success toast to disappear before proceeding
+    await expect(page.locator('[data-sonner-toast]')).toHaveCount(0, { timeout: 5000 });
+
     // Clear the selection
     await page.getByTestId('clear-selection-button').click();
+
+    // Wait for the selection pill to disappear
+    await expect(page.getByTestId('clear-selection-button')).toBeHidden();
 
     // Remove the label filter and select all again
     await samplesPage.clickLabel(cocoDataset.labels.dog.name);

@@ -276,8 +276,14 @@ test('select all videos with label filter via keyboard shortcut', async ({ page,
         youtubeVisVideosDataset.labels.airplane.sampleCount
     );
 
+    // Wait for the success toast to disappear before proceeding
+    await expect(page.locator('[data-sonner-toast]')).toHaveCount(0, { timeout: 5000 });
+
     // Clear the selection
     await page.getByTestId('clear-selection-button').click();
+
+    // Wait for the selection pill to disappear
+    await expect(page.getByTestId('clear-selection-button')).toBeHidden();
 
     // Remove the label filter and select all again
     await videosPage.clickLabel(youtubeVisVideosDataset.labels.airplane.name);
