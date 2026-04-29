@@ -9,6 +9,7 @@ from sqlmodel import Session
 from lightly_studio.api.routes.api.status import HTTP_STATUS_NOT_FOUND, HTTP_STATUS_OK
 from lightly_studio.models.collection import SampleType
 from lightly_studio.models.tag import TagTable
+from lightly_studio.resolvers import collection_resolver
 from tests.conftest import AnnotationsTestData
 from tests.helpers_resolvers import (
     create_annotation,
@@ -262,3 +263,38 @@ def test_get_annotation_with_payload(
 
     assert result["parent_sample_data"]["file_path_abs"] == "/path/to/sample2.png"
     assert result["parent_sample_data"]["sample"]["sample_id"] == str(image_1.sample.sample_id)
+
+
+def test_get_annotation_sample_ids(
+    test_client: TestClient,
+    db_session: Session,
+) -> None:
+    collection = create_collection(session=db_session)
+    sample = create_image(
+        session=db_session,
+        collection_id=collection.collection_id,
+        file_path_abs="/path/to/sample.png",
+    )
+    label = create_annotation_label(
+        session=db_session,
+        root_collection_id=collection.collection_id,
+    )
+    annotation = create_annotation(
+        session=db_session,
+        collection_id=collection.collection_id,
+        sample_id=sample.sample_id,
+        annotation_label_id=label.annotation_label_id,
+    )
+    annotation_collection_id = collection_resolver.get_or_create_child_collection(
+        session=db_session,
+        collection_id=collection.collection_id,
+        sample_type=SampleType.ANNOTATION,
+    )
+
+    response = test_client.post(
+        f"/api/collections/{annotation_collection_id}/annotations/sample_ids",
+        json={},
+    )
+
+    assert response.status_code == HTTP_STATUS_OK
+    assert response.json() == [str(annotation.sample_id)]
