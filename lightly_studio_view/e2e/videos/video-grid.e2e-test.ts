@@ -287,7 +287,9 @@ test('select all videos with label filter via keyboard shortcut', async ({ page,
 
     // Remove the label filter and select all again
     await videosPage.clickLabel(youtubeVisVideosDataset.labels.airplane.name);
-    await videosPage.getVideos().first().waitFor({ state: 'attached', timeout: 10000 });
+    await expect(videosPage.getVideos()).toHaveCount(youtubeVisVideosDataset.defaultPageSize, {
+        timeout: 10000
+    });
 
     await page.click('body');
     const allSampleIdsResponse = page.waitForResponse(
