@@ -3,14 +3,11 @@
 import * as monaco from 'monaco-editor';
 import editorWorker from 'monaco-editor/esm/vs/editor/editor.worker?worker';
 import lightlyQueryMonarch from './language/monarch.generated';
-import { useLightlyQueryLanguage } from './useLanguageService';
+import { useLightlyQueryLanguage } from './useLightlyQueryLanguage/useLightlyQueryLanguage';
 import type { QueryExprTranslationResult } from './language/query-expr-translation';
 
 const LIGHTLY_QUERY_LANGUAGE_ID = 'lightly-query';
 const LIGHTLY_QUERY_THEME_ID = 'lightly-query-theme';
-const LIGHTLY_QUERY_DEFAULT_VALUE = `Image.width > 1920 AND tags.contains("reviewed")
-AND object_detection(label == "car" and x > 10)
-`;
 
 self.MonacoEnvironment = {
     getWorker() {
@@ -20,13 +17,17 @@ self.MonacoEnvironment = {
 
 export type TranslateQueryReturn = QueryExprTranslationResult;
 
-/**
- * Setup Monaco editor with the lightly query language and theme.
- */
+export interface MountOptions {
+    value: string;
+    readOnly?: boolean;
+    onChange?: (value: string) => void;
+}
+
+let monacoSetupDone = false;
+
 const setupMonaco = () => {
-    monaco.languages.register({
-        id: LIGHTLY_QUERY_LANGUAGE_ID
-    });
+    if (monacoSetupDone) return;
+    monaco.languages.register({ id: LIGHTLY_QUERY_LANGUAGE_ID });
     monaco.languages.setMonarchTokensProvider(
         LIGHTLY_QUERY_LANGUAGE_ID,
         lightlyQueryMonarch as monaco.languages.IMonarchLanguage
@@ -37,7 +38,10 @@ const setupMonaco = () => {
         rules: [],
         colors: {}
     });
+    monacoSetupDone = true;
 };
+
+let modelCounter = 0;
 
 /**
  * Hook to create and manage a Monaco editor instance for editing lightly query expressions.
@@ -45,20 +49,32 @@ const setupMonaco = () => {
 export const useQueryEditor = () => {
     const language = useLightlyQueryLanguage();
 
-    const mount = (el: HTMLElement) => {
-        const value = LIGHTLY_QUERY_DEFAULT_VALUE;
-        const uri = monaco.Uri.parse(`inmemory://model/lightly-query.lql`);
-        const model = monaco.editor.createModel(value, LIGHTLY_QUERY_LANGUAGE_ID, uri);
-
+    const mount = (el: HTMLElement, options: MountOptions): (() => void) => {
         setupMonaco();
 
-        monaco.editor.create(el, {
+        // Each mount gets a unique URI; otherwise Monaco throws
+        // "Cannot add model because it already exists!" on remount.
+        const uri = monaco.Uri.parse(`inmemory://model/lightly-query-${++modelCounter}.lql`);
+        const model = monaco.editor.createModel(options.value, LIGHTLY_QUERY_LANGUAGE_ID, uri);
+
+        const editor = monaco.editor.create(el, {
             model,
             theme: LIGHTLY_QUERY_THEME_ID,
-            automaticLayout: true
+            automaticLayout: true,
+            readOnly: options.readOnly ?? false
         });
 
-        language.attach(model);
+        const detachLanguage = language.attach(model);
+        const contentSub = model.onDidChangeContent(() => {
+            options.onChange?.(model.getValue());
+        });
+
+        return () => {
+            contentSub.dispose();
+            detachLanguage();
+            editor.dispose();
+            model.dispose();
+        };
     };
 
     return { mount, translateQuery: language.translateQuery };

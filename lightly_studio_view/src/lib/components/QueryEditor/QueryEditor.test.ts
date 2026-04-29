@@ -1,6 +1,7 @@
 import { beforeEach, describe, it, expect, vi } from 'vitest';
 import { fireEvent, render, screen } from '@testing-library/svelte';
 import '@testing-library/jest-dom';
+import { toast } from 'svelte-sonner';
 import QueryEditor from './QueryEditor.svelte';
 import type { QueryExprTranslationResult } from './language/query-expr-translation.js';
 
@@ -8,6 +9,13 @@ const translateQuery = vi.fn();
 
 vi.mock('./useQueryEditor', () => ({
     useQueryEditor: () => ({ mount: vi.fn(), translateQuery })
+}));
+
+vi.mock('svelte-sonner', () => ({
+    toast: {
+        error: vi.fn(),
+        success: vi.fn()
+    }
 }));
 
 describe('QueryEditor', () => {
@@ -28,7 +36,7 @@ describe('QueryEditor', () => {
                 }
             }
         } as QueryExprTranslationResult;
-        translateQuery.mockResolvedValueOnce(parsed);
+        translateQuery.mockReturnValueOnce(parsed);
 
         render(QueryEditor, { props: { value: 'my query', onSave } });
 
@@ -52,15 +60,20 @@ describe('QueryEditor', () => {
         expect(screen.getByRole('button', { name: 'Save' })).toBeInTheDocument();
     });
 
-    it('shows an error toast when translation returns null', async () => {
+    it('shows an error toast when translation returns an error result', async () => {
         const onSave = vi.fn();
-        translateQuery.mockResolvedValueOnce(null);
+        const errorResult = {
+            status: 'error',
+            errors: [{ message: 'unexpected token', line: 1, column: 5 }]
+        } as QueryExprTranslationResult;
+        translateQuery.mockReturnValueOnce(errorResult);
         render(QueryEditor, { props: { value: 'my query', onSave } });
 
         await fireEvent.click(screen.getByRole('button', { name: 'Save' }));
 
         expect(translateQuery).toHaveBeenCalledOnce();
         expect(translateQuery).toHaveBeenCalledWith('my query');
+        expect(toast.error).toHaveBeenCalledWith('Failed to translate query. Please try again.');
         expect(onSave).not.toHaveBeenCalled();
     });
 

@@ -4,16 +4,17 @@
     import { Button } from '$lib/components/ui/button';
     import Typography from '$lib/components/Typography/Typography.svelte';
 
-    import { useQueryEditor, type TranslateQueryReturn } from './useQueryEditor';
+    import { useQueryEditor } from './useQueryEditor';
+    import type { QueryExprTranslationResult } from './language/query-expr-translation';
 
-    const LIGHTLY_QUERY_DEFAULT_VALUE = `Image.width > 1920 AND tags.contains("reviewed")
+    const LIGHTLY_QUERY_DEFAULT_VALUE = `Image.width > 1920 AND ("reviewed" IN tags)
 AND object_detection(label == "car" and x > 10)`;
 
     export interface QueryEditorProps {
         value?: string;
         height?: string;
         readOnly?: boolean;
-        onSave?: (value: string, parsed: TranslateQueryReturn) => void;
+        onSave?: (value: string, parsed: QueryExprTranslationResult) => void;
     }
 
     let {
@@ -27,9 +28,9 @@ AND object_detection(label == "car" and x > 10)`;
 
     const { mount, translateQuery } = useQueryEditor();
 
-    async function handleSave() {
-        const translationResult = await translateQuery(value);
-        if (!translationResult) {
+    function handleSave() {
+        const translationResult = translateQuery(value);
+        if (translationResult.status === 'error') {
             toast.error('Failed to translate query. Please try again.');
             return;
         }
@@ -37,9 +38,14 @@ AND object_detection(label == "car" and x > 10)`;
     }
 
     onMount(() => {
-        if (containerEl) {
-            mount(containerEl);
-        }
+        if (!containerEl) return;
+        return mount(containerEl, {
+            value,
+            readOnly,
+            onChange: (next) => {
+                value = next;
+            }
+        });
     });
 </script>
 
