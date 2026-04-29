@@ -94,7 +94,6 @@
     "langium": "^4.2.2",
     "lodash-es": "^4.17.22",
     "monaco-editor": "^0.55.1",
-    "monaco-languageclient": "^10.7.0",
     "paneforge": "^1.0.2",
     "posthog-js": "^1.276.0",
     "svelte-infinite-loading": "^1.4.0",

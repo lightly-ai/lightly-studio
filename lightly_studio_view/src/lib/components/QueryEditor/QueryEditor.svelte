@@ -1,16 +1,19 @@
 <script lang="ts">
     import { onMount } from 'svelte';
+    import { toast } from 'svelte-sonner';
     import { Button } from '$lib/components/ui/button';
-    import { LIGHTLY_QUERY_DEFAULT_VALUE } from './monaco-lightly-query.js';
-    import { useLightlyQueryEditor } from './useLightlyQueryEditor.js';
-    import type { QueryExprTranslationResult } from './language/query-expr-translation.js';
     import Typography from '$lib/components/Typography/Typography.svelte';
 
-    interface QueryEditorProps {
+    import { useQueryEditor, type TranslateQueryReturn } from './useQueryEditor';
+
+    const LIGHTLY_QUERY_DEFAULT_VALUE = `Image.width > 1920 AND tags.contains("reviewed")
+AND object_detection(label == "car" and x > 10)`;
+
+    export interface QueryEditorProps {
         value?: string;
         height?: string;
         readOnly?: boolean;
-        onSave?: (value: string, parsed: QueryExprTranslationResult | null) => void;
+        onSave?: (value: string, parsed: TranslateQueryReturn) => void;
     }
 
     let {
@@ -22,22 +25,20 @@
 
     let containerEl: HTMLDivElement | null = null;
 
-    const editor = useLightlyQueryEditor({
-        value: () => value,
-        onValueChange: (next) => {
-            value = next;
-        },
-        readOnly: () => readOnly
-    });
+    const { mount, translateQuery } = useQueryEditor();
 
     async function handleSave() {
-        const parsed = await editor.translateLightlyQuery(value);
-        onSave?.(value, parsed);
+        const translationResult = await translateQuery(value);
+        if (!translationResult) {
+            toast.error('Failed to translate query. Please try again.');
+            return;
+        }
+        onSave?.(value, translationResult);
     }
 
     onMount(() => {
         if (containerEl) {
-            editor.mount(containerEl);
+            mount(containerEl);
         }
     });
 </script>
