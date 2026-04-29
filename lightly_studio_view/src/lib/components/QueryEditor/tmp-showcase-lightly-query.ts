@@ -140,9 +140,9 @@ const parser = services.parser.LangiumParser;
 
 const queries = [
     "(Image.width > 100 OR Image.height > 100 OR Image.created_at == '2026-04-23 12:47:18+02:00') AND object_detection(label == 'car')",
-    "tags.contains('dog') or 'cat' IN tags AND Image.width > 100",
-    "tags.contains('dog') OR AND('cat' IN tags, Image.width >= 12)",
-    "video: NOT (Video.fps != 30.0 AND NOT tags.contains('low_res'))",
+    "'dog' in tags OR 'cat' IN tags AND Image.width > 100",
+    "'dog' in tags OR ('cat' IN tags AND Image.width >= 12)",
+    "video: NOT (Video.fps != 30.0 AND NOT 'low_res' IN tags)",
     "object_detection(label == 'car' AND x < 10 OR label == 'truck' AND width > 100)",
     'object_detection(ObjectDetection.width > 50 AND ObjectDetection.height < 200)'
 ];

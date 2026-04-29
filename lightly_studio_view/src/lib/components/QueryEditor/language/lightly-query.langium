@@ -58,12 +58,10 @@ Sample<isImage> returns Expression:
   SampleOr<isImage>;
 
 SampleOr<isImage> returns Expression:
-  SampleAnd<isImage> ({BooleanExpression.children+=current} operator=OR children+=SampleAnd<isImage> (OR children+=SampleAnd<isImage>)*)?
-    | {BooleanExpression} operator=OR '(' children+=Sample<isImage> (',' children+=Sample<isImage>)+ ')';
+  SampleAnd<isImage> ({BooleanExpression.children+=current} operator=OR children+=SampleAnd<isImage> (OR children+=SampleAnd<isImage>)*)?;
 
 SampleAnd<isImage> returns Expression:
-  SampleUnary<isImage> ({BooleanExpression.children+=current} operator=AND children+=SampleUnary<isImage> (AND children+=SampleUnary<isImage>)*)?
-    | {BooleanExpression} operator=AND '(' children+=Sample<isImage> (',' children+=Sample<isImage>)+ ')';
+  SampleUnary<isImage> ({BooleanExpression.children+=current} operator=AND children+=SampleUnary<isImage> (AND children+=SampleUnary<isImage>)*)?;
 
 SampleUnary<isImage> returns Expression:
   '(' Sample<isImage> ')'
@@ -100,12 +98,10 @@ ObjectDetection returns Expression:
   ObjectDetectionOr;
 
 ObjectDetectionOr returns Expression:
-  ObjectDetectionAnd ({BooleanExpression.children+=current} operator=OR children+=ObjectDetectionAnd (OR children+=ObjectDetectionAnd)*)?
-    | {BooleanExpression} operator=OR '(' children+=ObjectDetection (',' children+=ObjectDetection)+ ')';
+  ObjectDetectionAnd ({BooleanExpression.children+=current} operator=OR children+=ObjectDetectionAnd (OR children+=ObjectDetectionAnd)*)?;
 
 ObjectDetectionAnd returns Expression:
-  ObjectDetectionUnary ({BooleanExpression.children+=current} operator=AND children+=ObjectDetectionUnary (AND children+=ObjectDetectionUnary)*)?
-    | {BooleanExpression} operator=AND '(' children+=ObjectDetection (',' children+=ObjectDetection)+ ')';
+  ObjectDetectionUnary ({BooleanExpression.children+=current} operator=AND children+=ObjectDetectionUnary (AND children+=ObjectDetectionUnary)*)?;
 
 ObjectDetectionUnary returns Expression:
   '(' ObjectDetection ')'
@@ -126,8 +122,7 @@ AnnotationQuery returns Expression:
   {FunctionCall} name=ANNOTATION_FUNCTION '(' args+=ObjectDetection ')';
 
 TagInExpression returns Expression:
-  {TagInExpression} TAGS_CONTAINS '(' tag_name=StringLiteral ')' |
-    {TagInExpression} tag_name=StringLiteral IN TAGS_KEYWORD;
+  {TagInExpression} tag_name=StringLiteral IN TAGS_KEYWORD;
 
 ImageFieldReceiver returns string:
   IMAGE_SAMPLE_RECEIVER;
@@ -189,7 +184,6 @@ terminal OR: /\bOR\b/i;
 terminal NOT: /\bNOT\b/i;
 terminal IN returns string: /\bIN\b/i;
 terminal ANNOTATION_FUNCTION returns string: /\bobject_detection\b/;
-terminal TAGS_CONTAINS returns string: /\btags\.contains\b/;
 terminal TAGS_KEYWORD returns string: /\btags\b/;
 terminal IMAGE_SAMPLE_RECEIVER returns string: /\b(ImageSampleField|Image)\b/;
 terminal VIDEO_SAMPLE_RECEIVER returns string: /\b(VideoSampleField|Video)\b/;
