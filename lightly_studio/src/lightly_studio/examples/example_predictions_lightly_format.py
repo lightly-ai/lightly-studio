@@ -30,10 +30,10 @@ from lightly_studio import db_manager
 env = Env()
 env.read_env()
 
-gt_folder_train = "/Users/jonaswurst/Lightly/dataset_examples/coco_subset_128_images/images"
-gt_json = "/Users/jonaswurst/Lightly/dataset_examples/coco_subset_128_images/instances_train2017.json"
-model_1_folder = "/Users/jonaswurst/Lightly/dataset_examples/coco_subset_128_images/predictions"
-model_2_folder = "/Users/jonaswurst/Lightly/dataset_examples/coco_subset_128_images/predictions"
+gt_folder_train = "/Users/jonaswurst/Lightly/dataset_examples_large_mock/coco_subset_128_images_x1000/images"
+gt_json = "/Users/jonaswurst/Lightly/dataset_examples_large_mock/coco_subset_128_images_x1000/instances_train2017.json"
+model_1_folder = "/Users/jonaswurst/Lightly/dataset_examples_large_mock/coco_subset_128_images_x1000/predictions"
+model_2_folder = "/Users/jonaswurst/Lightly/dataset_examples_large_mock/coco_subset_128_images_x1000/predictions"
 
 db_manager.connect(cleanup_existing=True)
 

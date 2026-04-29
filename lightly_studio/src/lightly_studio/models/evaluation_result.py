@@ -40,6 +40,21 @@ class EvaluationResultTable(SQLModel, table=True):
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 
 
+class ConfusionMatrix(BaseModel):
+    """Confusion matrix for matched GT/prediction pairs."""
+
+    labels: list[str]
+    matrix: list[list[int]]
+
+
+class PerClassMetrics(BaseModel):
+    """Per-class COCO metrics for one class."""
+
+    ap: float
+    recall: float
+    f1: float
+
+
 class EvaluationMetrics(BaseModel):
     """Per-subset COCO metrics."""
 
@@ -48,6 +63,8 @@ class EvaluationMetrics(BaseModel):
     f1: float
     mAP: float
     avg_confidence: float
+    confusion_matrix: ConfusionMatrix | None = None
+    per_class_metrics: dict[str, PerClassMetrics] | None = None
 
 
 class EvaluationResultView(BaseModel):

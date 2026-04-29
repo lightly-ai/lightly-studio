@@ -5,7 +5,11 @@ import type {
     TagView
 } from '$lib/api/lightly_studio_local';
 
-export const metricRows: Array<{ key: keyof EvaluationMetrics; label: string }> = [
+export type EvaluationViewMode = 'models' | 'subsets';
+
+export type NumericMetricKey = 'precision' | 'recall' | 'f1' | 'mAP' | 'avg_confidence';
+
+export const metricRows: Array<{ key: NumericMetricKey; label: string }> = [
     { key: 'precision', label: 'Precision' },
     { key: 'recall', label: 'Recall' },
     { key: 'f1', label: 'F1-Score' },
@@ -61,8 +65,8 @@ export const getMetricValue = (
     result: EvaluationResultView | undefined,
     modelName: string,
     subsetName: string,
-    metricKey: keyof EvaluationMetrics
-) => result?.metrics[modelName]?.[subsetName]?.[metricKey] ?? 0;
+    metricKey: NumericMetricKey
+): number => result?.metrics[modelName]?.[subsetName]?.[metricKey] ?? 0;
 
 export const formatMetricValue = (value: number) => `${(value * 100).toFixed(1)}%`;
 
@@ -80,3 +84,41 @@ export const formatEvaluationLabel = (result: EvaluationResultView) => {
     const createdAt = new Date(result.created_at).toLocaleString();
     return `${createdAt} · ${modelCount} model${modelCount === 1 ? '' : 's'}`;
 };
+
+export const chartPalette = [
+    '#2563eb',
+    '#f97316',
+    '#16a34a',
+    '#dc2626',
+    '#0891b2',
+    '#7c3aed'
+];
+
+export const getActiveComparisonLabels = ({
+    mode,
+    modelNames,
+    subsetNames
+}: {
+    mode: EvaluationViewMode;
+    modelNames: string[];
+    subsetNames: string[];
+}) => (mode === 'models' ? modelNames : subsetNames);
+
+export const getChartSeriesValue = ({
+    result,
+    mode,
+    seriesLabel,
+    selectedModel,
+    selectedSubset,
+    metricKey
+}: {
+    result: EvaluationResultView | undefined;
+    mode: EvaluationViewMode;
+    seriesLabel: string;
+    selectedModel: string;
+    selectedSubset: string;
+    metricKey: NumericMetricKey;
+}) =>
+    mode === 'models'
+        ? getMetricValue(result, seriesLabel, selectedSubset, metricKey)
+        : getMetricValue(result, selectedModel, seriesLabel, metricKey);

@@ -2533,6 +2533,16 @@ export interface components {
             metadata_name: string;
         };
         /**
+         * ConfusionMatrix
+         * @description Confusion matrix for matched GT/prediction pairs.
+         */
+        ConfusionMatrix: {
+            /** Labels */
+            labels: string[];
+            /** Matrix */
+            matrix: number[][];
+        };
+        /**
          * CountAnnotationsView
          * @description Count annotations view.
          */
@@ -2684,6 +2694,11 @@ export interface components {
             mAP: number;
             /** Avg Confidence */
             avg_confidence: number;
+            confusion_matrix?: components["schemas"]["ConfusionMatrix"] | null;
+            /** Per Class Metrics */
+            per_class_metrics?: {
+                [key: string]: components["schemas"]["PerClassMetrics"];
+            } | null;
         };
         /**
          * EvaluationResultView
@@ -3300,6 +3315,18 @@ export interface components {
              * @default 100
              */
             limit: number;
+        };
+        /**
+         * PerClassMetrics
+         * @description Per-class COCO metrics for one class.
+         */
+        PerClassMetrics: {
+            /** Ap */
+            ap: number;
+            /** Recall */
+            recall: number;
+            /** F1 */
+            f1: number;
         };
         /**
          * QueryExpr

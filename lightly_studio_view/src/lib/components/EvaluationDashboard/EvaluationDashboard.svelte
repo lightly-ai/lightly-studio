@@ -8,17 +8,20 @@
     import { useAnnotationCollections, useCreateEvaluation, useEvaluation, useEvaluations } from '$lib/hooks';
     import { useTags } from '$lib/hooks/useTags/useTags';
     import { ArrowLeftRight, Loader2 } from '@lucide/svelte';
-    import type { EvaluationMetrics } from '$lib/api/lightly_studio_local';
+    import type { EvaluationResultView } from '$lib/api/lightly_studio_local';
+    import EvaluationPlots from './EvaluationPlots.svelte';
+    import ConfusionMatrix from './ConfusionMatrix.svelte';
+    import ClassMetricsPlot from './ClassMetricsPlot.svelte';
     import {
         formatEvaluationLabel,
         formatMetricDelta,
         formatMetricValue,
-        getAvailableSubsetNames,
         getGroundTruthCollections,
         getMetricValue,
         getPredictionCollections,
         getSelectedSubsetNames,
-        metricRows
+        metricRows,
+        type NumericMetricKey
     } from './evaluationDashboard';
 
     let { datasetId }: { datasetId: string } = $props();
@@ -53,7 +56,7 @@
         })
     );
     const selectedEvaluation = $derived(
-        $evaluationQuery.data ?? $evaluationsQuery.data?.find((item) => item.id === selectedEvaluationId)
+        $evaluationQuery.data ?? $evaluationsQuery.data?.find((item: EvaluationResultView) => item.id === selectedEvaluationId)
     );
     const subsetNames = $derived(
         getSelectedSubsetNames({
@@ -97,7 +100,7 @@
             : [...selectedTagIds, tagId];
     };
 
-    const getDifference = (metricKey: keyof EvaluationMetrics) => {
+    const getDifference = (metricKey: NumericMetricKey) => {
         if (!selectedEvaluation) {
             return '0.0%';
         }
@@ -317,6 +320,33 @@
         </div>
 
         {#if selectedEvaluation}
+            <div class="mb-6 flex flex-col gap-6">
+                <EvaluationPlots
+                    result={selectedEvaluation}
+                    {mode}
+                    {modelNames}
+                    {selectedModel}
+                    {selectedSubset}
+                    {subsetNames}
+                />
+                <ClassMetricsPlot
+                    result={selectedEvaluation}
+                    {mode}
+                    {modelNames}
+                    {selectedModel}
+                    {selectedSubset}
+                    {subsetNames}
+                />
+                <ConfusionMatrix
+                    result={selectedEvaluation}
+                    {mode}
+                    {modelNames}
+                    {selectedModel}
+                    {selectedSubset}
+                    {subsetNames}
+                />
+            </div>
+
             <div class="overflow-x-auto">
                 <table class="min-w-full border-collapse text-sm">
                     <thead>
