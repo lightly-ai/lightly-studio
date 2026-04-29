@@ -10,7 +10,7 @@
     const LIGHTLY_QUERY_DEFAULT_VALUE = `Image.width > 1920 AND ("reviewed" IN tags)
 AND object_detection(label == "car" and x > 10)`;
 
-    export interface QueryEditorProps {
+    interface QueryEditorProps {
         value?: string;
         height?: string;
         readOnly?: boolean;
@@ -28,10 +28,23 @@ AND object_detection(label == "car" and x > 10)`;
 
     const { mount, translateQuery } = useQueryEditor();
 
+    function formatTranslationErrors(
+        result: Extract<QueryExprTranslationResult, { status: 'error' }>
+    ): string {
+        return result.errors
+            .map((error) => {
+                if (error.line !== undefined && error.column !== undefined) {
+                    return `${error.message} (line ${error.line}, column ${error.column})`;
+                }
+                return error.message;
+            })
+            .join('\n');
+    }
+
     function handleSave() {
         const translationResult = translateQuery(value);
         if (translationResult.status === 'error') {
-            toast.error('Failed to translate query. Please try again.');
+            toast.error(`Failed to translate query: ${formatTranslationErrors(translationResult)}`);
             return;
         }
         onSave?.(value, translationResult);
