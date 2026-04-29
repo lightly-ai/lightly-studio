@@ -10,7 +10,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 
 - Added API endpoints to fetch only sample IDs with optional filters for images, video frames, and annotations (used by the select-all keyboard shortcut).
-- Added `Cmd+A` / `Ctrl+A` keyboard shortcut to select all samples matching the current filters in grid views (images, videos, video frames, annotations).
 
 ### Changed
 
@@ -41,11 +40,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
-- Embedding plot shows only 2 categories `Filtered` and `Not Filtered`.
+ - Embedding plot shows only 2 categories `Filtered` and `Not Filtered`.
 
 ### Fixed
 
 - Fixed annotation editing UX in sample details by showing a Saving indicator while changes are persisted.
+
 
 ## \[0.4.12\] - 2026-04-01
 
@@ -122,14 +122,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 
 - Semantic segmentation labeling support:
-  - Load semantic segmentation from Pascal VOC format
-  - Visualize and label semantic segmentation in the GUI
+    - Load semantic segmentation from Pascal VOC format
+    - Visualize and label semantic segmentation in the GUI
 - Object tracking support:
-  - Loading videos with object track annotations from youtube-vis format via `dataset.add_videos_from_youtube_vis`.
-  - Visualize object track-IDs in the GUI (available for object detection and instance segmentation).
-- Hotkeys:
-  - Added `Escape` shortcut support in the embedding plot to clear the current selection.
-  - Added Shift+click range selection in grid views.
+    - Loading videos with object track annotations from youtube-vis format via `dataset.add_videos_from_youtube_vis`.
+    - Visualize object track-IDs in the GUI (available for object detection and instance segmentation).
+- Hotkeys: 
+    - Added `Escape` shortcut support in the embedding plot to clear the current selection.
+    - Added Shift+click range selection in grid views.
 - Added cloud storage support for COCO object detection and instance segmentation annotations.
 - Add “View Video” button in the frame details view to open video details for the selected frame.
 - Example script for LightlyTrain training and inference plugins.
@@ -168,21 +168,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Editing of segmentation masks and deletion of annotations in the details view.
 - Customizable toolbar shortcuts.
 - GUI (Video):
-  - Visualize video embeddings in the embedding plot.
-  - Auto Selection for videos.
-  - Video can be played/paused by space bar.
+    - Visualize video embeddings in the embedding plot.
+    - Auto Selection for videos.
+    - Video can be played/paused by space bar.
 - Python Interface:
-  - Group samples can be loaded in Python UI.
-  - Semantic segmentation annotations can be loaded in Python UI (e.g. with `add_samples_from_pascal_voc_segmentations`).
-  - Annotation Python UI: add/delete an annotation (`Sample.add_annotation()`, `Sample.delete_annotation()`), create `CreateInstanceSegmentation` and `CreateSemanticSegmentation` using `from_binary_mask()` or `from_rle_mask()`
+    - Group samples can be loaded in Python UI.
+    - Semantic segmentation annotations can be loaded in Python UI (e.g. with `add_samples_from_pascal_voc_segmentations`).
+    - Annotation Python UI: add/delete an annotation (`Sample.add_annotation()`, `Sample.delete_annotation()`), create `CreateInstanceSegmentation` and `CreateSemanticSegmentation` using `from_binary_mask()` or `from_rle_mask()`
+
 
 ### Changed
 
 - Embedding plot doesn't require a license key anymore.
 - Improved segmentation mask drawing performance.
 - Improved caption support for videos:
-  - Preview video when hover-over in caption grid view,
-  - Caption preview in video grid view.
+    - Preview video when hover-over in caption grid view,
+    - Caption preview in video grid view.
 
 ### Fixed
 
@@ -193,7 +194,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## \[0.4.7\] - 2026-01-19
 
 ### Added
-
 - Added `VideoDataset` class.
 - Added Captions support for videos.
 - Allow creating tags from all samples matching the current filters when no samples are explicitly selected.
@@ -223,7 +223,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Improved erase mode by making masks more transparent while erasing to simplify mask corrections.
 
 ### Fixed
-
 - Fixed a startup problem when IPv6 is not enabled.
 
 ## \[0.4.6\] - 2025-12-16
@@ -335,7 +334,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Allowed users to remove `Annotation` tags from the Annotation Details.
 
 ### Changed
-
 - Updated button text to "View sample" in annotation details panel for better clarity.
 - Pressing Escape while adding an annotation now cancels add-annotation mode.
 - Improved the navbar to display button titles on hover and removed button text on small screens.
@@ -350,5 +348,4 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## \[0.4.0\] - 2025-10-21
 
 ### Added
-
 - Public LightlyStudio release
