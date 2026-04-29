@@ -10,6 +10,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 
 - Added API endpoints to fetch only sample IDs with optional filters for images, video frames, and annotations (used by the select-all keyboard shortcut).
+- Added `Cmd+A` / `Ctrl+A` keyboard shortcut to select all samples matching the current filters in grid views (images, videos, video frames, annotations).
 
 ### Changed
 
