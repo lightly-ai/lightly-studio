@@ -30,7 +30,9 @@ test('select all images with label filter via keyboard shortcut', async ({ page,
 
     // Remove the label filter and select all again
     await samplesPage.clickLabel(cocoDataset.labels.dog.name);
-    await expect(samplesPage.getSamples()).toHaveCount(cocoDataset.defaultPageSize, { timeout: 10000 });
+    await expect(samplesPage.getSamples()).toHaveCount(cocoDataset.defaultPageSize, {
+        timeout: 10000
+    });
 
     await page.click('body');
     const allSampleIdsResponse = page.waitForResponse(
