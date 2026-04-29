@@ -73,7 +73,9 @@ describe('QueryEditor', () => {
 
         expect(translateQuery).toHaveBeenCalledOnce();
         expect(translateQuery).toHaveBeenCalledWith('my query');
-        expect(toast.error).toHaveBeenCalledWith('Failed to translate query. Please try again.');
+        expect(toast.error).toHaveBeenCalledWith(
+            'Failed to translate query: unexpected token (line 1, column 5)'
+        );
         expect(onSave).not.toHaveBeenCalled();
     });
 
