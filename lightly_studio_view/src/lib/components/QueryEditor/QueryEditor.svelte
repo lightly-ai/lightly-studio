@@ -38,9 +38,14 @@ AND object_detection(label == "car" and x > 10)`;
     }
 
     onMount(() => {
-        if (containerEl) {
-            mount(containerEl);
-        }
+        if (!containerEl) return;
+        return mount(containerEl, {
+            value,
+            readOnly,
+            onChange: (next) => {
+                value = next;
+            }
+        });
     });
 </script>
 
