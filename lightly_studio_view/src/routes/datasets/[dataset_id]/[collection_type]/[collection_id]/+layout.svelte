@@ -18,8 +18,7 @@
         Image as ImageIcon,
         X,
         ChartNetwork,
-        GripVertical,
-        Filter
+        GripVertical
     } from '@lucide/svelte';
     import { onDestroy, onMount } from 'svelte';
     import { toStore } from 'svelte/store';
