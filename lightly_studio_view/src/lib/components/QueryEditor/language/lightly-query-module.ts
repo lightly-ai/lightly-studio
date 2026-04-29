@@ -8,34 +8,35 @@
 //   Services & DI:   https://langium.org/docs/reference/configuration-services/
 //   Validation:      https://langium.org/docs/learn/workflow/create_validations/
 
-import { inject } from 'langium';
 import {
-    createDefaultModule,
-    createDefaultSharedModule,
-    type DefaultSharedModuleContext,
-    type LangiumServices,
-    type LangiumSharedServices
-} from 'langium/lsp';
+    EmptyFileSystem,
+    createDefaultCoreModule,
+    createDefaultSharedCoreModule,
+    inject,
+    type LangiumCoreServices,
+    type LangiumSharedCoreServices
+} from 'langium';
 import {
     LightlyQueryGeneratedModule,
     LightlyQueryGeneratedSharedModule
 } from './generated/module.js';
-import { QueryExprTranslationRequest, parseLightlyQuery } from './query-expr-translation.js';
 
-export type LightlyQueryServices = LangiumServices;
+export type LightlyQueryServices = LangiumCoreServices;
+
+export interface LightlyQueryServicesBundle {
+    shared: LangiumSharedCoreServices;
+    LightlyQuery: LightlyQueryServices;
+}
 
 // Composes three modules (later overrides earlier): Langium defaults →
 // generated (grammar) → custom above. Registers the language in the shared
 // ServiceRegistry so document URIs route to it.
-export function createLightlyQueryServices(
-    context: DefaultSharedModuleContext
-): LangiumSharedServices {
-    const shared = inject(createDefaultSharedModule(context), LightlyQueryGeneratedSharedModule);
-    const LightlyQuery = inject(createDefaultModule({ shared }), LightlyQueryGeneratedModule);
-    shared.ServiceRegistry.register(LightlyQuery);
-    shared.lsp?.Connection?.onRequest(QueryExprTranslationRequest, (value) =>
-        parseLightlyQuery(LightlyQuery.parser.LangiumParser, value)
+export function createLightlyQueryServices(): LightlyQueryServicesBundle {
+    const shared = inject(
+        createDefaultSharedCoreModule(EmptyFileSystem),
+        LightlyQueryGeneratedSharedModule
     );
-
-    return shared;
+    const LightlyQuery = inject(createDefaultCoreModule({ shared }), LightlyQueryGeneratedModule);
+    shared.ServiceRegistry.register(LightlyQuery);
+    return { shared, LightlyQuery };
 }
