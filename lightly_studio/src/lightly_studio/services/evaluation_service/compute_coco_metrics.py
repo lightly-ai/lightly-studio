@@ -44,19 +44,31 @@ def _load_annotations(
     return list(session.exec(stmt).all())
 
 
-def _load_bbox(
+def _load_bboxes_batch(
     session: Session,
-    sample_id: UUID,
-) -> tuple[int, int, int, int] | None:
-    """Return [x, y, w, h] for an OD annotation sample, or None."""
-    row = session.get(ObjectDetectionAnnotationTable, sample_id)
-    if row is None:
-        return None
-    return (row.x, row.y, row.width, row.height)
+    sample_ids: set[UUID],
+) -> dict[UUID, tuple[int, int, int, int]]:
+    """Batch-load bounding boxes for a set of annotation sample IDs."""
+    if not sample_ids:
+        return {}
+    stmt = select(ObjectDetectionAnnotationTable).where(
+        col(ObjectDetectionAnnotationTable.sample_id).in_(sample_ids)
+    )
+    return {
+        row.sample_id: (row.x, row.y, row.width, row.height)
+        for row in session.exec(stmt).all()
+    }
 
 
-def _load_parent_image(session: Session, parent_sample_id: UUID) -> ImageTable | None:
-    return session.get(ImageTable, parent_sample_id)
+def _load_images_batch(
+    session: Session,
+    parent_ids: set[UUID],
+) -> dict[UUID, ImageTable]:
+    """Batch-load ImageTable rows for a set of parent sample IDs."""
+    if not parent_ids:
+        return {}
+    stmt = select(ImageTable).where(col(ImageTable.sample_id).in_(parent_ids))
+    return {row.sample_id: row for row in session.exec(stmt).all()}
 
 
 def _load_label_names(session: Session, label_ids: set[UUID]) -> dict[UUID, str]:
@@ -82,10 +94,10 @@ def _iou(b1: tuple[int, int, int, int], b2: tuple[int, int, int, int]) -> float:
 
 
 def _compute_confusion_matrix(
-    session: Session,
     gt_anns: list[AnnotationBaseTable],
     pred_anns: list[AnnotationBaseTable],
     label_id_to_name: dict[UUID, str],
+    bbox_cache: dict[UUID, tuple[int, int, int, int]],
     iou_threshold: float,
     confidence_threshold: float,
 ) -> dict[str, Any]:
@@ -114,13 +126,13 @@ def _compute_confusion_matrix(
     matrix: list[list[int]] = [[0] * n for _ in range(n)]
 
     for image_id, image_gt_anns in gt_by_image.items():
-        gt_bboxes = [(ann, _load_bbox(session, ann.sample_id)) for ann in image_gt_anns]
+        gt_bboxes = [(ann, bbox_cache.get(ann.sample_id)) for ann in image_gt_anns]
         image_pred_anns = sorted(
             pred_by_image.get(image_id, []),
             key=lambda a: a.confidence or 0.0,
             reverse=True,
         )
-        pred_bboxes = [(ann, _load_bbox(session, ann.sample_id)) for ann in image_pred_anns]
+        pred_bboxes = [(ann, bbox_cache.get(ann.sample_id)) for ann in image_pred_anns]
 
         matched_gt: set[int] = set()
 
@@ -192,10 +204,11 @@ def _extract_per_class_metrics(
 
 
 def _build_coco_gt(
-    session: Session,
     gt_annotations: list[AnnotationBaseTable],
     label_to_cat_id: dict[UUID, int],
     image_id_map: dict[UUID, int],
+    bbox_cache: dict[UUID, tuple[int, int, int, int]],
+    image_cache: dict[UUID, ImageTable],
 ) -> dict[str, Any]:
     """Build a COCO-format GT dict from annotation records."""
     images = []
@@ -205,7 +218,7 @@ def _build_coco_gt(
     for ann in gt_annotations:
         parent_id = ann.parent_sample_id
         if parent_id not in seen_images:
-            img = _load_parent_image(session, parent_id)
+            img = image_cache.get(parent_id)
             if img is not None:
                 images.append(
                     {
@@ -217,7 +230,7 @@ def _build_coco_gt(
                 )
             seen_images.add(parent_id)
 
-        bbox = _load_bbox(session, ann.sample_id)
+        bbox = bbox_cache.get(ann.sample_id)
         if bbox is None:
             continue
         x, y, w, h = bbox
@@ -240,7 +253,7 @@ def _build_coco_dt(
     pred_annotations: list[AnnotationBaseTable],
     label_to_cat_id: dict[UUID, int],
     image_id_map: dict[UUID, int],
-    session: Session,
+    bbox_cache: dict[UUID, tuple[int, int, int, int]],
     confidence_threshold: float,
 ) -> list[dict[str, Any]]:
     """Build a COCO-format results list from prediction annotation records."""
@@ -249,7 +262,7 @@ def _build_coco_dt(
         score = ann.confidence or 0.0
         if score < confidence_threshold:
             continue
-        bbox = _load_bbox(session, ann.sample_id)
+        bbox = bbox_cache.get(ann.sample_id)
         if bbox is None:
             continue
         x, y, w, h = bbox
@@ -303,10 +316,13 @@ def compute_metrics_for_pair(
     # Load human-readable label names for confusion matrix
     label_id_to_name = _load_label_names(session, all_label_ids)
 
-    gt_dict = _build_coco_gt(session, gt_anns, label_to_cat_id, image_id_map)
-    dt_list = _build_coco_dt(
-        pred_anns, label_to_cat_id, image_id_map, session, confidence_threshold
-    )
+    # Batch-load bboxes and images to avoid N+1 queries in builders
+    all_sample_ids = {ann.sample_id for ann in gt_anns} | {ann.sample_id for ann in pred_anns}
+    bbox_cache = _load_bboxes_batch(session, all_sample_ids)
+    image_cache = _load_images_batch(session, all_parent_ids)
+
+    gt_dict = _build_coco_gt(gt_anns, label_to_cat_id, image_id_map, bbox_cache, image_cache)
+    dt_list = _build_coco_dt(pred_anns, label_to_cat_id, image_id_map, bbox_cache, confidence_threshold)
 
     # Lazy import so pycocotools is only required when actually computing metrics.
     from pycocotools.coco import COCO  # noqa: PLC0415
@@ -320,7 +336,7 @@ def compute_metrics_for_pair(
 
         if not dt_list:
             confusion = _compute_confusion_matrix(
-                session, gt_anns, pred_anns, label_id_to_name, iou_threshold, confidence_threshold
+                gt_anns, pred_anns, label_id_to_name, bbox_cache, iou_threshold, confidence_threshold
             )
             return {
                 "precision": 0.0,
@@ -362,7 +378,7 @@ def compute_metrics_for_pair(
     )
 
     confusion = _compute_confusion_matrix(
-        session, gt_anns, pred_anns, label_id_to_name, iou_threshold, confidence_threshold
+        gt_anns, pred_anns, label_id_to_name, bbox_cache, iou_threshold, confidence_threshold
     )
 
     return {
