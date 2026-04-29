@@ -34,6 +34,6 @@ test('select all images with label filter via keyboard shortcut', async ({ page,
     await page.keyboard.press('Control+a');
     await allSampleIdsResponse;
 
-    // All samples should be selected
-    expect(await samplesPage.getNumSelectedSamples()).toBe(cocoDataset.totalSamples);
+    // All samples should be selected (use selection pill since not all items are rendered)
+    await expect(page.getByText(`${cocoDataset.totalSamples} selected`)).toBeVisible();
 });

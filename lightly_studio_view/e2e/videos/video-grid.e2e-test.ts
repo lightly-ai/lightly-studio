@@ -291,6 +291,6 @@ test('select all videos with label filter via keyboard shortcut', async ({ page,
     await page.keyboard.press('Control+a');
     await allSampleIdsResponse;
 
-    // All videos should be selected
-    expect(await videosPage.getNumSelectedSamples()).toBe(youtubeVisVideosDataset.totalSamples);
+    // All videos should be selected (use selection pill since not all items are rendered)
+    await expect(page.getByText(`${youtubeVisVideosDataset.totalSamples} selected`)).toBeVisible();
 });
