@@ -30,7 +30,7 @@ AND object_detection(label == "car" and x > 10)`;
 
     function handleSave() {
         const translationResult = translateQuery(value);
-        if (!translationResult) {
+        if (translationResult.status === 'error') {
             toast.error('Failed to translate query. Please try again.');
             return;
         }
