@@ -8,8 +8,10 @@ test('select all images with label filter via keyboard shortcut', async ({ page,
     expect(filteredCount).toBe(cocoDataset.labels.dog.sampleCount);
 
     // Press Cmd+A / Ctrl+A to select all filtered samples
+    await page.click('body');
     const sampleIdsResponse = page.waitForResponse(
-        (response) => response.url().includes('/images/sample_ids') && response.status() === 200
+        (response) => response.url().includes('/images/sample_ids') && response.status() === 200,
+        { timeout: 10000 }
     );
     await page.keyboard.press('Meta+A');
     await sampleIdsResponse;
@@ -21,8 +23,10 @@ test('select all images with label filter via keyboard shortcut', async ({ page,
     await samplesPage.clickLabel(cocoDataset.labels.dog.name);
     await samplesPage.getSamples().first().waitFor({ state: 'attached', timeout: 10000 });
 
+    await page.click('body');
     const allSampleIdsResponse = page.waitForResponse(
-        (response) => response.url().includes('/images/sample_ids') && response.status() === 200
+        (response) => response.url().includes('/images/sample_ids') && response.status() === 200,
+        { timeout: 10000 }
     );
     await page.keyboard.press('Meta+A');
     await allSampleIdsResponse;

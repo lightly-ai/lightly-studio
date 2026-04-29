@@ -263,8 +263,10 @@ test('select all videos with label filter via keyboard shortcut', async ({ page,
     expect(filteredCount).toBe(youtubeVisVideosDataset.labels.airplane.sampleCount);
 
     // Press Cmd+A / Ctrl+A to select all filtered videos
+    await page.click('body');
     const sampleIdsResponse = page.waitForResponse(
-        (response) => response.url().includes('/video/sample_ids') && response.status() === 200
+        (response) => response.url().includes('/video/sample_ids') && response.status() === 200,
+        { timeout: 10000 }
     );
     await page.keyboard.press('Meta+A');
     await sampleIdsResponse;
@@ -278,8 +280,10 @@ test('select all videos with label filter via keyboard shortcut', async ({ page,
     await videosPage.clickLabel(youtubeVisVideosDataset.labels.airplane.name);
     await videosPage.getVideos().first().waitFor({ state: 'attached', timeout: 10000 });
 
+    await page.click('body');
     const allSampleIdsResponse = page.waitForResponse(
-        (response) => response.url().includes('/video/sample_ids') && response.status() === 200
+        (response) => response.url().includes('/video/sample_ids') && response.status() === 200,
+        { timeout: 10000 }
     );
     await page.keyboard.press('Meta+A');
     await allSampleIdsResponse;
