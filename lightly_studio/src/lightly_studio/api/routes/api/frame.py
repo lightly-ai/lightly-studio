@@ -58,6 +58,12 @@ class ReadCountVideoFramesAnnotationsRequest(BaseModel):
     )
 
 
+class ReadVideoFrameSampleIdsRequest(BaseModel):
+    """Request body for reading matching video frame sample ids."""
+
+    filter: VideoFrameFilter | None = Field(None, description="Filter parameters for video frames")
+
+
 @frame_router.post("/", response_model=VideoFrameViewsWithCount)
 def get_all_frames(
     video_frame_collection_id: Annotated[UUID, Path(title="Video collection Id")],
@@ -87,6 +93,22 @@ def get_all_frames(
         samples=[_build_video_frame_view(vf=frame) for frame in result.samples],
         total_count=result.total_count,
         next_cursor=result.next_cursor,
+    )
+
+
+@frame_router.post("/sample_ids", response_model=list[UUID])
+def get_video_frame_sample_ids(
+    video_frame_collection_id: Annotated[UUID, Path(title="Video collection Id")],
+    session: SessionDep,
+    body: ReadVideoFrameSampleIdsRequest,
+) -> list[UUID]:
+    """Retrieve all sample ids of video frames matching the given filters."""
+    return list(
+        video_frame_resolver.get_sample_ids(
+            session=session,
+            collection_id=video_frame_collection_id,
+            filters=body.filter,
+        )
     )
 
 
