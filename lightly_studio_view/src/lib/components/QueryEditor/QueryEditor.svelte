@@ -4,8 +4,8 @@
     import { Button } from '$lib/components/ui/button';
     import Typography from '$lib/components/Typography/Typography.svelte';
 
-import { useQueryEditor } from './useQueryEditor';
-import type { QueryExprTranslationResult } from './language/query-expr-translation';
+    import { useQueryEditor } from './useQueryEditor';
+    import type { QueryExprTranslationResult } from './language/query-expr-translation';
 
     const LIGHTLY_QUERY_DEFAULT_VALUE = `Image.width > 1920 AND ("reviewed" IN tags)
 AND object_detection(label == "car" and x > 10)`;
@@ -28,7 +28,9 @@ AND object_detection(label == "car" and x > 10)`;
 
     const { mount, translateQuery } = useQueryEditor();
 
-    function formatTranslationErrors(result: Extract<QueryExprTranslationResult, { status: 'error' }>): string {
+    function formatTranslationErrors(
+        result: Extract<QueryExprTranslationResult, { status: 'error' }>
+    ): string {
         return result.errors
             .map((error) => {
                 if (error.line !== undefined && error.column !== undefined) {
