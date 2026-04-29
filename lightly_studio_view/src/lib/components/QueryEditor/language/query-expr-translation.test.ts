@@ -6,7 +6,7 @@ import {
     inject
 } from 'langium';
 import type { LangiumParser } from 'langium';
-import { QueryExprTranslationRequest, parseLightlyQuery } from './query-expr-translation.js';
+import { parseLightlyQuery } from './query-expr-translation.js';
 import {
     LightlyQueryGeneratedModule,
     LightlyQueryGeneratedSharedModule
@@ -34,12 +34,6 @@ function createParser(): LangiumParser {
 }
 
 const parser = createParser();
-
-describe('QueryExprTranslationRequest', () => {
-    it('has the expected method name', () => {
-        expect(QueryExprTranslationRequest.method).toBe('lightly-query/queryExprTranslation');
-    });
-});
 
 describe('parseLightlyQuery error handling', () => {
     it('returns an error result when the parser reports errors', () => {

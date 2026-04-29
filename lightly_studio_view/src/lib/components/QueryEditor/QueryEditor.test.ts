@@ -1,20 +1,21 @@
 import { beforeEach, describe, it, expect, vi } from 'vitest';
 import { fireEvent, render, screen } from '@testing-library/svelte';
 import '@testing-library/jest-dom';
+import { toast } from 'svelte-sonner';
 import QueryEditor from './QueryEditor.svelte';
 import type { QueryExprTranslationResult } from './language/query-expr-translation.js';
 
-const translateLightlyQuery = vi.fn();
+const translateQuery = vi.fn();
 
-vi.mock('./useLightlyQueryEditor.js', () => ({
-    useLightlyQueryEditor: () => ({ mount: vi.fn(), translateLightlyQuery })
+vi.mock('./useQueryEditor', () => ({
+    useQueryEditor: () => ({ mount: vi.fn(), translateQuery })
 }));
 
-vi.mock('./monaco-lightly-query.js', () => ({
-    LIGHTLY_QUERY_DEFAULT_VALUE: '',
-    LIGHTLY_QUERY_LANGUAGE_ID: 'lightly-query',
-    LIGHTLY_QUERY_THEME_ID: 'lightly-query-theme',
-    registerLightlyQueryMonacoLanguage: vi.fn()
+vi.mock('svelte-sonner', () => ({
+    toast: {
+        error: vi.fn(),
+        success: vi.fn()
+    }
 }));
 
 describe('QueryEditor', () => {
@@ -35,14 +36,14 @@ describe('QueryEditor', () => {
                 }
             }
         } as QueryExprTranslationResult;
-        translateLightlyQuery.mockResolvedValueOnce(parsed);
+        translateQuery.mockReturnValueOnce(parsed);
 
         render(QueryEditor, { props: { value: 'my query', onSave } });
 
         await fireEvent.click(screen.getByRole('button', { name: 'Save' }));
 
-        expect(translateLightlyQuery).toHaveBeenCalledOnce();
-        expect(translateLightlyQuery).toHaveBeenCalledWith('my query');
+        expect(translateQuery).toHaveBeenCalledOnce();
+        expect(translateQuery).toHaveBeenCalledWith('my query');
         expect(onSave).toHaveBeenCalledOnce();
         expect(onSave).toHaveBeenCalledWith('my query', parsed);
     });
@@ -59,17 +60,23 @@ describe('QueryEditor', () => {
         expect(screen.getByRole('button', { name: 'Save' })).toBeInTheDocument();
     });
 
-    it('calls onSave with null when no parsed result is available', async () => {
+    it('shows an error toast when translation returns an error result', async () => {
         const onSave = vi.fn();
-        translateLightlyQuery.mockResolvedValueOnce(null);
+        const errorResult = {
+            status: 'error',
+            errors: [{ message: 'unexpected token', line: 1, column: 5 }]
+        } as QueryExprTranslationResult;
+        translateQuery.mockReturnValueOnce(errorResult);
         render(QueryEditor, { props: { value: 'my query', onSave } });
 
         await fireEvent.click(screen.getByRole('button', { name: 'Save' }));
 
-        expect(translateLightlyQuery).toHaveBeenCalledOnce();
-        expect(translateLightlyQuery).toHaveBeenCalledWith('my query');
-        expect(onSave).toHaveBeenCalledOnce();
-        expect(onSave).toHaveBeenCalledWith('my query', null);
+        expect(translateQuery).toHaveBeenCalledOnce();
+        expect(translateQuery).toHaveBeenCalledWith('my query');
+        expect(toast.error).toHaveBeenCalledWith(
+            'Failed to translate query: unexpected token (line 1, column 5)'
+        );
+        expect(onSave).not.toHaveBeenCalled();
     });
 
     it('disables the Save button when readOnly is true', () => {
