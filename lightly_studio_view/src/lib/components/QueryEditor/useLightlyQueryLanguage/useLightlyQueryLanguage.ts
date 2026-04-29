@@ -8,15 +8,23 @@ import * as monaco from 'monaco-editor';
 import {
     createLightlyQueryServices,
     type LightlyQueryServicesBundle
-} from './language/lightly-query-module';
+} from '../language/lightly-query-module';
 import {
     parseLightlyQuery,
     type QueryExprTranslationResult
-} from './language/query-expr-translation';
+} from '../language/query-expr-translation';
+import { lexerErrorToMarker, type LexerErrorLike } from './lexerErrorToMarker';
+import { parserErrorToMarker, type ParserErrorLike } from './parserErrorToMarker';
 
 const LANGUAGE_ID = 'lightly-query';
 const MARKER_OWNER = LANGUAGE_ID;
 
+// Lazy module-level singleton for the Langium DI container. The hook is
+// called on every editor mount, but we only want to build the parser/services
+// once: composition is expensive, and `createLightlyQueryServices` registers
+// the language in a shared `ServiceRegistry` that misbehaves on duplicate
+// registration. Lazy (vs. a top-level const) so importers that never mount
+// the editor don't pay the init cost.
 let cachedServices: LightlyQueryServicesBundle | null = null;
 function getServices(): LightlyQueryServicesBundle {
     if (!cachedServices) {
@@ -25,58 +33,16 @@ function getServices(): LightlyQueryServicesBundle {
     return cachedServices;
 }
 
-interface ParserErrorLike {
-    message: string;
-    token?: {
-        startLine?: number;
-        startColumn?: number;
-        endLine?: number;
-        endColumn?: number;
-        image?: string;
-    };
-}
-
-interface LexerErrorLike {
-    message: string;
-    line?: number;
-    column?: number;
-    length?: number;
-}
-
-function lexerErrorToMarker(err: LexerErrorLike): monaco.editor.IMarkerData {
-    const startLine = err.line ?? 1;
-    const startColumn = err.column ?? 1;
-    const length = err.length ?? 1;
-    return {
-        severity: monaco.MarkerSeverity.Error,
-        message: err.message,
-        startLineNumber: startLine,
-        startColumn,
-        endLineNumber: startLine,
-        endColumn: startColumn + length
-    };
-}
-
-function parserErrorToMarker(err: ParserErrorLike): monaco.editor.IMarkerData {
-    const token = err.token;
-    const startLine = token?.startLine ?? 1;
-    const startColumn = token?.startColumn ?? 1;
-    const endLine = token?.endLine ?? startLine;
-    // Chevrotain's endColumn is the column of the last character; Monaco's
-    // endColumn is exclusive, so add 1.
-    const endColumn = (token?.endColumn ?? startColumn) + 1;
-    return {
-        severity: monaco.MarkerSeverity.Error,
-        message: err.message,
-        startLineNumber: startLine,
-        startColumn,
-        endLineNumber: endLine,
-        endColumn
-    };
-}
-
 export interface UseLightlyQueryLanguageReturn {
+    /** Wires the language service to a Monaco model: runs an initial validation
+     * pass, subscribes to content changes to keep diagnostics in sync, and
+     * publishes errors as Monaco markers. Returns a cleanup function that
+     * disposes the subscription and clears any markers this hook owns. */
     attach: (model: monaco.editor.ITextModel) => () => void;
+    /** Synchronously parses a query string and returns either the translated
+     * backend `QueryExpr` (`status: 'ok'`) or the collected lexer/parser errors
+     * (`status: 'error'`). Intended for one-off translation outside the editor
+     * lifecycle (e.g. on Save). */
     translateQuery: (value: string) => QueryExprTranslationResult;
 }
 

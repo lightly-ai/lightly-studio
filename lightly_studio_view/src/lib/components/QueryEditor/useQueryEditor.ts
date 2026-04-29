@@ -3,7 +3,7 @@
 import * as monaco from 'monaco-editor';
 import editorWorker from 'monaco-editor/esm/vs/editor/editor.worker?worker';
 import lightlyQueryMonarch from './language/monarch.generated';
-import { useLightlyQueryLanguage } from './useLanguageService';
+import { useLightlyQueryLanguage } from './useLightlyQueryLanguage/useLightlyQueryLanguage';
 import type { QueryExprTranslationResult } from './language/query-expr-translation';
 
 const LIGHTLY_QUERY_LANGUAGE_ID = 'lightly-query';

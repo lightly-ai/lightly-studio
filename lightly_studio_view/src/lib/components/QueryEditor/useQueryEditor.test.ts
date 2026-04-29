@@ -34,7 +34,7 @@ vi.mock('./language/monarch.generated', () => ({
     default: {}
 }));
 
-vi.mock('./useLanguageService', () => ({
+vi.mock('./useLightlyQueryLanguage/useLightlyQueryLanguage', () => ({
     useLightlyQueryLanguage: () => ({
         attach: mocks.attachFn,
         translateQuery: mocks.translateQueryFn
