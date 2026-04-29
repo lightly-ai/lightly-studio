@@ -7,7 +7,7 @@
     import { useQueryEditor } from './useQueryEditor';
     import type { QueryExprTranslationResult } from './language/query-expr-translation';
 
-    const LIGHTLY_QUERY_DEFAULT_VALUE = `Image.width > 1920 AND tags.contains("reviewed")
+    const LIGHTLY_QUERY_DEFAULT_VALUE = `Image.width > 1920 AND ("reviewed" IN tags)
 AND object_detection(label == "car" and x > 10)`;
 
     export interface QueryEditorProps {

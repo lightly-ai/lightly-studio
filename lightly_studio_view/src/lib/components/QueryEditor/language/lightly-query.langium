@@ -58,16 +58,16 @@ Sample<isImage> returns Expression:
   SampleOr<isImage>;
 
 SampleOr<isImage> returns Expression:
-  SampleAnd<isImage> ({BooleanExpression.children+=current} operator='or' children+=SampleAnd<isImage> ('or' children+=SampleAnd<isImage>)*)?
-    | {BooleanExpression} operator='or' '(' children+=Sample<isImage> (',' children+=Sample<isImage>)+ ')';
+  SampleAnd<isImage> ({BooleanExpression.children+=current} operator=OR children+=SampleAnd<isImage> (OR children+=SampleAnd<isImage>)*)?
+    | {BooleanExpression} operator=OR '(' children+=Sample<isImage> (',' children+=Sample<isImage>)+ ')';
 
 SampleAnd<isImage> returns Expression:
-  SampleUnary<isImage> ({BooleanExpression.children+=current} operator='and' children+=SampleUnary<isImage> ('and' children+=SampleUnary<isImage>)*)?
-    | {BooleanExpression} operator='and' '(' children+=Sample<isImage> (',' children+=Sample<isImage>)+ ')';
+  SampleUnary<isImage> ({BooleanExpression.children+=current} operator=AND children+=SampleUnary<isImage> (AND children+=SampleUnary<isImage>)*)?
+    | {BooleanExpression} operator=AND '(' children+=Sample<isImage> (',' children+=Sample<isImage>)+ ')';
 
 SampleUnary<isImage> returns Expression:
   '(' Sample<isImage> ')'
-    | {NotExpression} 'not' expression=SampleUnary<isImage>
+    | {NotExpression} NOT expression=SampleUnary<isImage>
     | SampleComparison<isImage>
     | TagInExpression
     | AnnotationQuery;
@@ -100,64 +100,70 @@ ObjectDetection returns Expression:
   ObjectDetectionOr;
 
 ObjectDetectionOr returns Expression:
-  ObjectDetectionAnd ({BooleanExpression.children+=current} operator='or' children+=ObjectDetectionAnd ('or' children+=ObjectDetectionAnd)*)?
-    | {BooleanExpression} operator='or' '(' children+=ObjectDetection (',' children+=ObjectDetection)+ ')';
+  ObjectDetectionAnd ({BooleanExpression.children+=current} operator=OR children+=ObjectDetectionAnd (OR children+=ObjectDetectionAnd)*)?
+    | {BooleanExpression} operator=OR '(' children+=ObjectDetection (',' children+=ObjectDetection)+ ')';
 
 ObjectDetectionAnd returns Expression:
-  ObjectDetectionUnary ({BooleanExpression.children+=current} operator='and' children+=ObjectDetectionUnary ('and' children+=ObjectDetectionUnary)*)?
-    | {BooleanExpression} operator='and' '(' children+=ObjectDetection (',' children+=ObjectDetection)+ ')';
+  ObjectDetectionUnary ({BooleanExpression.children+=current} operator=AND children+=ObjectDetectionUnary (AND children+=ObjectDetectionUnary)*)?
+    | {BooleanExpression} operator=AND '(' children+=ObjectDetection (',' children+=ObjectDetection)+ ')';
 
 ObjectDetectionUnary returns Expression:
   '(' ObjectDetection ')'
-    | {NotExpression} 'not' expression=ObjectDetectionUnary
+    | {NotExpression} NOT expression=ObjectDetectionUnary
     | ObjectDetectionComparison;
 
 ObjectDetectionComparison returns ComparisonExpression:
   ObjectDetectionFieldReference {ComparisonExpression.left=current} operator=('==' | '!=' | '<' | '>' | '<=' | '>=') right=Literal;
 
 ObjectDetectionFieldReceiver returns string:
-  'ObjectDetection' | 'ObjectDetectionField';
+  OBJECT_DETECTION_RECEIVER;
 
 ObjectDetectionFieldReference returns Expression:
   {FieldReference} name=ObjectDetectionFieldName
     | {QualifiedFieldReference} receiver=ObjectDetectionFieldReceiver '.' member=ObjectDetectionFieldName;
 
 AnnotationQuery returns Expression:
-  {FunctionCall} name='object_detection' '(' args+=ObjectDetection ')';
+  {FunctionCall} name=ANNOTATION_FUNCTION '(' args+=ObjectDetection ')';
 
 TagInExpression returns Expression:
-  {TagInExpression} 'tags.contains(' tag_name=StringLiteral ')' |
-    {TagInExpression} tag_name=StringLiteral 'in' 'tags';
+  {TagInExpression} TAGS_CONTAINS '(' tag_name=StringLiteral ')' |
+    {TagInExpression} tag_name=StringLiteral IN TAGS_KEYWORD;
 
 ImageFieldReceiver returns string:
-  'Image' | 'ImageSampleField';
+  IMAGE_SAMPLE_RECEIVER;
 
 VideoFieldReceiver returns string:
-  'Video' | 'VideoSampleField';
+  VIDEO_SAMPLE_RECEIVER;
+
+terminal HEIGHT returns string: /\bheight\b/;
+terminal WIDTH returns string: /\bwidth\b/;
+terminal LABEL returns string: /\blabel\b/;
+terminal X_COORD returns string: /\bx\b/;
+terminal Y_COORD returns string: /\by\b/;
 
 ImageIntFieldName returns string:
-  'height' | 'width';
+  HEIGHT | WIDTH;
 
 ImageStringFieldName returns string:
-  'file_name' | 'file_path_abs';
+  STRING_FIELD_NAME;
 
 ImageDateTimeFieldName returns string:
-  'created_at';
+  DATE_TIME_FIELD_NAME;
 
 VideoIntFieldName returns string:
-  'height' | 'width';
+  HEIGHT | WIDTH;
 
 VideoOrdinalFloatFieldName returns string:
-  'fps';
+  ORDINAL_FLOAT_FIELD_NAME;
 
 VideoEqualityFloatFieldName returns string:
-  'duration_s';
+  EQUALITY_FLOAT_FIELD_NAME;
 
 VideoStringFieldName returns string:
-  'file_name' | 'file_path_abs';
+  STRING_FIELD_NAME;
 
 ObjectDetectionFieldName returns string:
-  'height' | 'label' | 'width' | 'x' | 'y';
+  HEIGHT | WIDTH | LABEL | X_COORD | Y_COORD;
 
 Literal returns Expression:
   IntLiteral | FloatLiteral | StringLiteral;
@@ -177,6 +183,21 @@ StringLiteral returns Expression:
 terminal FLOAT returns number: /[0-9]+\.[0-9]*/;
 terminal INT returns number: /[0-9]+/;
 terminal STRING: /"([^"\\\n\r]|\\.)*"|'([^'\\\n\r]|\\.)*'/;
+
+terminal AND: /\bAND\b/i;
+terminal OR: /\bOR\b/i;
+terminal NOT: /\bNOT\b/i;
+terminal IN returns string: /\bIN\b/i;
+terminal ANNOTATION_FUNCTION returns string: /\bobject_detection\b/;
+terminal TAGS_CONTAINS returns string: /\btags\.contains\b/;
+terminal TAGS_KEYWORD returns string: /\btags\b/;
+terminal IMAGE_SAMPLE_RECEIVER returns string: /\b(ImageSampleField|Image)\b/;
+terminal VIDEO_SAMPLE_RECEIVER returns string: /\b(VideoSampleField|Video)\b/;
+terminal ORDINAL_FLOAT_FIELD_NAME returns string: /\bduration_s\b/;
+terminal EQUALITY_FLOAT_FIELD_NAME returns string: /\bfps\b/;
+terminal STRING_FIELD_NAME returns string: /\b(file_name|file_path_abs)\b/;
+terminal DATE_TIME_FIELD_NAME returns string: /\bcreated_at\b/;
+terminal OBJECT_DETECTION_RECEIVER returns string: /\b(ObjectDetectionField|ObjectDetection)\b/;
 
 hidden terminal WS: /\s+/;
 hidden terminal SL_COMMENT: /#[^\n\r]*/;
