@@ -10,7 +10,7 @@
     const LIGHTLY_QUERY_DEFAULT_VALUE = `Image.width > 1920 AND ("reviewed" IN tags)
 AND object_detection(label == "car" and x > 10)`;
 
-    export interface QueryEditorProps {
+    interface QueryEditorProps {
         value?: string;
         height?: string;
         readOnly?: boolean;
