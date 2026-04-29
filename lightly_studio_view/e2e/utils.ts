@@ -14,6 +14,27 @@ import { NETWORK_PRESETS, type NetworkPreset } from './constants';
 
 export { expect };
 
+interface BrowserPerformanceWithMemory extends Performance {
+    memory?: {
+        usedJSHeapSize?: number;
+    };
+}
+
+interface RenderAndMemoryMeasurement {
+    renderTimeMs: number;
+    memoryUsageMb: number;
+}
+
+export interface RenderAndMemorySummary {
+    renderTimeMs: ReturnType<typeof summarizeMeasurements>;
+    memoryUsageMb: ReturnType<typeof summarizeMeasurements>;
+}
+
+export interface PerformanceLimits {
+    maxRenderTimeMs: number;
+    maxMemoryUsageMb: number;
+}
+
 export async function gotoFirstPage(page: Page): Promise<void> {
     await page.goto('/');
     await expect(page.getByTestId('sample-grid-item').first()).toBeVisible({ timeout: 10000 });
@@ -247,6 +268,33 @@ function calculateMedian(values: number[]): number {
     return sorted[mid];
 }
 
+export function summarizeMeasurements(measurements: number[]): MeasurementSummary {
+    return {
+        measurements,
+        median: calculateMedian(measurements),
+        min: Math.min(...measurements),
+        max: Math.max(...measurements),
+        average: measurements.reduce((a, b) => a + b, 0) / measurements.length
+    };
+}
+
+type MeasurementSummary = ReturnType<typeof summarizeMeasurements>;
+
+export async function measureMemoryConsumption(page: Page): Promise<number> {
+    return page.evaluate(() => {
+        const memory = (performance as BrowserPerformanceWithMemory).memory;
+        const usedJsHeapSize = memory?.usedJSHeapSize;
+
+        if (typeof usedJsHeapSize !== 'number') {
+            throw new Error(
+                'performance.memory.usedJSHeapSize is unavailable. Run this test in Chromium.'
+            );
+        }
+
+        return usedJsHeapSize / (1024 * 1024);
+    });
+}
+
 /**
  * Measures element rendering time multiple times and returns statistics including the median.
  * This provides more stable performance measurements by reducing the impact of outliers.
@@ -265,13 +313,7 @@ function calculateMedian(values: number[]): number {
 export async function measureWithMedian(
     measureFn: () => Promise<number>,
     iterations: number = 5
-): Promise<{
-    measurements: number[];
-    median: number;
-    min: number;
-    max: number;
-    average: number;
-}> {
+): Promise<MeasurementSummary> {
     const measurements: number[] = [];
 
     for (let i = 0; i < iterations; i++) {
@@ -279,13 +321,44 @@ export async function measureWithMedian(
         measurements.push(measurement);
     }
 
+    return summarizeMeasurements(measurements);
+}
+
+export async function measureRenderAndMemory(
+    measureFn: () => Promise<RenderAndMemoryMeasurement>,
+    iterations: number = 5
+): Promise<RenderAndMemorySummary> {
+    const renderMeasurements: number[] = [];
+    const memoryMeasurements: number[] = [];
+
+    for (let i = 0; i < iterations; i++) {
+        const measurement = await measureFn();
+        renderMeasurements.push(measurement.renderTimeMs);
+        memoryMeasurements.push(measurement.memoryUsageMb);
+    }
+
     return {
-        measurements,
-        median: calculateMedian(measurements),
-        min: Math.min(...measurements),
-        max: Math.max(...measurements),
-        average: measurements.reduce((a, b) => a + b, 0) / measurements.length
+        renderTimeMs: summarizeMeasurements(renderMeasurements),
+        memoryUsageMb: summarizeMeasurements(memoryMeasurements)
     };
+}
+
+export function isWithinPerformanceLimits(
+    result: RenderAndMemorySummary,
+    limits: PerformanceLimits
+): boolean {
+    return (
+        result.renderTimeMs.median < limits.maxRenderTimeMs &&
+        result.memoryUsageMb.median < limits.maxMemoryUsageMb
+    );
+}
+
+export function expectWithinPerformanceLimits(
+    result: RenderAndMemorySummary,
+    limits: PerformanceLimits
+): void {
+    expect(result.renderTimeMs.median).toBeLessThan(limits.maxRenderTimeMs);
+    expect(result.memoryUsageMb.median).toBeLessThan(limits.maxMemoryUsageMb);
 }
 
 /**

@@ -9,10 +9,10 @@
     type Props = {
         collectionIdStore: Readable<string>;
         isVideos: boolean;
-        isSamples: boolean;
+        isImages: boolean;
     };
 
-    let { collectionIdStore, isVideos, isSamples }: Props = $props();
+    let { collectionIdStore, isVideos, isImages }: Props = $props();
 
     const { setRangeSelectionForCollection } = useGlobalStorage();
 
@@ -31,10 +31,10 @@
         embeddingFilter.clearFilter();
     };
 
-    const plotFilterItemLabel = $derived(isVideos ? 'video' : 'sample');
+    const plotFilterItemLabel = $derived(isVideos ? 'video' : 'image');
     const isPlotFilterApplied = $derived($isPlotFilterAppliedStore);
     const plotFilterCount = $derived($plotFilterCountStore);
-    const hasPlotFilterContext = $derived((isSamples || isVideos) && plotFilterCount > 0);
+    const hasPlotFilterContext = $derived((isImages || isVideos) && plotFilterCount > 0);
 </script>
 
 {#if hasPlotFilterContext}

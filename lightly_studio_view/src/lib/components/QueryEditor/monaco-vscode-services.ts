@@ -5,7 +5,7 @@ import { MonacoVscodeApiWrapper } from 'monaco-languageclient/vscodeApiWrapper';
 
 let startupPromise: Promise<void> | null = null;
 
-export function ensureMonacoVscodeServices(): Promise<void> | null {
+export function ensureMonacoVscodeServices(): Promise<void> {
     if (!startupPromise) {
         const wrapper = new MonacoVscodeApiWrapper({
             $type: 'classic',

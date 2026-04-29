@@ -354,20 +354,22 @@ jobs:
           if [ -f performance-metrics.json ]; then
             echo "## 🚀 Performance Test Results" >> $GITHUB_STEP_SUMMARY
             echo "" >> $GITHUB_STEP_SUMMARY
-            echo "| Test | Render Time | Status |" >> $GITHUB_STEP_SUMMARY
-            echo "|------|-------------|--------|" >> $GITHUB_STEP_SUMMARY
+            echo "| Test | Render Time | Memory Consumption | Status |" >> $GITHUB_STEP_SUMMARY
+            echo "|------|-------------|--------------------|--------|" >> $GITHUB_STEP_SUMMARY
 
             node -e "
               const metrics = require('./performance-metrics.json');
               metrics.forEach(m => {
                 const status = m.passed ? '✅ Pass' : '❌ Fail';
                 const time = Math.round(m.median);
-                console.log(\`| \${m.test} | \${time}ms | \${status} |\`);
+                const memoryUsageMb = Math.round(m.memoryUsageMb?.median ?? m.memoryUsageMb ?? NaN);
+                const memory = Number.isNaN(memoryUsageMb) ? 'N/A' : \`\${memoryUsageMb} MB\`;
+                console.log(\`| \${m.test} | \${time}ms | \${memory} | \${status} |\`);
               });
             " >> $GITHUB_STEP_SUMMARY
 
             echo "" >> $GITHUB_STEP_SUMMARY
-            echo "_Max render time: 5000ms_" >> $GITHUB_STEP_SUMMARY
+            echo "_Max render time: 5000ms • Max memory consumption: 256 MB_" >> $GITHUB_STEP_SUMMARY
           else
             echo "⚠️ No performance metrics found" >> $GITHUB_STEP_SUMMARY
           fi
