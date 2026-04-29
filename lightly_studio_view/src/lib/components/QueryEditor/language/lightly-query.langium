@@ -23,23 +23,12 @@ interface FunctionCall extends Expression {
   args: Expression[];
 }
 
-interface MemberCall extends Expression {
-  receiver: string;
-  member: string;
-  args: Expression[];
-}
-
-interface QualifiedFieldReference extends Expression {
-  receiver: string;
+interface FieldReference extends Expression {
   member: string;
 }
 
 interface TagInExpression extends Expression {
   tag_name: Expression;
-}
-
-interface FieldReference extends Expression {
-  name: string;
 }
 
 interface NumberLiteral extends Expression {
@@ -77,22 +66,22 @@ SampleComparison<isImage> returns ComparisonExpression:
    | SampleStringFieldReference<isImage> {ComparisonExpression.left=current} operator=('==' | '!=') right=StringLiteral
    | SampleDateTimeFieldReference<isImage> {ComparisonExpression.left=current} operator=('==' | '!=' | '<' | '>' | '<=' | '>=') right=StringLiteral;
 
-SampleIntFieldReference<isImage> returns QualifiedFieldReference:
-  (<isImage> {QualifiedFieldReference} receiver=ImageFieldReceiver '.' member=ImageIntFieldName)
-    | (<!isImage> {QualifiedFieldReference} receiver=VideoFieldReceiver '.' member=VideoIntFieldName);
+SampleIntFieldReference<isImage> returns FieldReference:
+  (<isImage> {FieldReference} member=ImageIntFieldName)
+    | (<!isImage> {FieldReference} member=VideoIntFieldName);
 
-SampleOrdinalFloatFieldReference<isImage> returns QualifiedFieldReference:
-  (<!isImage> {QualifiedFieldReference} receiver=VideoFieldReceiver '.' member=VideoOrdinalFloatFieldName);
+SampleOrdinalFloatFieldReference<isImage> returns FieldReference:
+  (<!isImage> {FieldReference} member=VideoOrdinalFloatFieldName);
 
-SampleEqualityFloatFieldReference<isImage> returns QualifiedFieldReference:
-  (<!isImage> {QualifiedFieldReference} receiver=VideoFieldReceiver '.' member=VideoEqualityFloatFieldName);
+SampleEqualityFloatFieldReference<isImage> returns FieldReference:
+  (<!isImage> {FieldReference} member=VideoEqualityFloatFieldName);
 
-SampleStringFieldReference<isImage> returns QualifiedFieldReference:
-  (<isImage> {QualifiedFieldReference} receiver=ImageFieldReceiver '.' member=ImageStringFieldName)
-    | (<!isImage> {QualifiedFieldReference} receiver=VideoFieldReceiver '.' member=VideoStringFieldName);
+SampleStringFieldReference<isImage> returns FieldReference:
+  (<isImage> {FieldReference} member=ImageStringFieldName)
+    | (<!isImage> {FieldReference} member=VideoStringFieldName);
 
-SampleDateTimeFieldReference<isImage> returns QualifiedFieldReference:
-  (<isImage> {QualifiedFieldReference} receiver=ImageFieldReceiver '.' member=ImageDateTimeFieldName);
+SampleDateTimeFieldReference<isImage> returns FieldReference:
+  (<isImage> {FieldReference} member=ImageDateTimeFieldName);
 
 ObjectDetection returns Expression:
   ObjectDetectionOr;
@@ -111,24 +100,14 @@ ObjectDetectionUnary returns Expression:
 ObjectDetectionComparison returns ComparisonExpression:
   ObjectDetectionFieldReference {ComparisonExpression.left=current} operator=('==' | '!=' | '<' | '>' | '<=' | '>=') right=Literal;
 
-ObjectDetectionFieldReceiver returns string:
-  OBJECT_DETECTION_RECEIVER;
-
 ObjectDetectionFieldReference returns Expression:
-  {FieldReference} name=ObjectDetectionFieldName
-    | {QualifiedFieldReference} receiver=ObjectDetectionFieldReceiver '.' member=ObjectDetectionFieldName;
+  {FieldReference} member=ObjectDetectionFieldName;
 
 AnnotationQuery returns Expression:
   {FunctionCall} name=ANNOTATION_FUNCTION '(' args+=ObjectDetection ')';
 
 TagInExpression returns Expression:
   {TagInExpression} tag_name=StringLiteral IN TAGS_KEYWORD;
-
-ImageFieldReceiver returns string:
-  IMAGE_SAMPLE_RECEIVER;
-
-VideoFieldReceiver returns string:
-  VIDEO_SAMPLE_RECEIVER;
 
 terminal HEIGHT returns string: /\bheight\b/;
 terminal WIDTH returns string: /\bwidth\b/;
@@ -185,13 +164,10 @@ terminal NOT: /\bNOT\b/i;
 terminal IN returns string: /\bIN\b/i;
 terminal ANNOTATION_FUNCTION returns string: /\bobject_detection\b/;
 terminal TAGS_KEYWORD returns string: /\btags\b/;
-terminal IMAGE_SAMPLE_RECEIVER returns string: /\b(ImageSampleField|Image)\b/;
-terminal VIDEO_SAMPLE_RECEIVER returns string: /\b(VideoSampleField|Video)\b/;
 terminal ORDINAL_FLOAT_FIELD_NAME returns string: /\bduration_s\b/;
 terminal EQUALITY_FLOAT_FIELD_NAME returns string: /\bfps\b/;
 terminal STRING_FIELD_NAME returns string: /\b(file_name|file_path_abs)\b/;
 terminal DATE_TIME_FIELD_NAME returns string: /\bcreated_at\b/;
-terminal OBJECT_DETECTION_RECEIVER returns string: /\b(ObjectDetectionField|ObjectDetection)\b/;
 
 hidden terminal WS: /\s+/;
 hidden terminal SL_COMMENT: /#[^\n\r]*/;
