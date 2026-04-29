@@ -26,7 +26,7 @@ def get_sample_ids(
     Returns:
         Set of sample ids matching the given filters.
     """
-    query = select(VideoFrameTable.sample_id).join(VideoFrameTable.sample)
+    query = select(VideoFrameTable.sample_id).join(VideoFrameTable.sample).join(VideoFrameTable.video)
     query = query.where(col(SampleTable.collection_id) == collection_id)
     if filters is not None:
         query = filters.apply(query)
