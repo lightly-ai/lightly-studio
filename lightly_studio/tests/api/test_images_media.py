@@ -10,6 +10,7 @@ from fastapi.testclient import TestClient
 from PIL import Image as PILImage
 from sqlmodel import Session
 
+import lightly_studio.utils.executor as executor_module
 from lightly_studio.models.collection import SampleType
 from tests.helpers_resolvers import create_collection, create_image
 
@@ -125,3 +126,41 @@ def test_stream_image_high_requires_bounds(
     )
 
     assert response.status_code == 400
+
+
+def test_stream_image_sample_not_found(
+    test_client: TestClient,
+) -> None:
+    """Test that a missing sample ID returns 404."""
+    response = test_client.get("/images/sample/nonexistent-id")
+
+    assert response.status_code == 404
+
+
+def test_stream_image_file_not_found(
+    test_client: TestClient,
+    db_session: Session,
+) -> None:
+    """Test that a sample pointing to a missing file returns 404."""
+    collection = create_collection(session=db_session, sample_type=SampleType.IMAGE)
+    image = create_image(
+        session=db_session,
+        collection_id=collection.collection_id,
+        file_path_abs="/nonexistent/path/image.png",
+        width=100,
+        height=100,
+    )
+
+    response = test_client.get(f"/images/sample/{image.sample_id}")
+
+    assert response.status_code == 404
+
+
+def test_get_media_executor_has_workers() -> None:
+    """Test get_media_executor creates an executor with at least one worker."""
+    executor_module._executors.clear()
+
+    executor = executor_module.get_media_executor("image_thumbnail")
+
+    assert executor is not None
+    assert executor._max_workers >= 1
