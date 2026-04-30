@@ -13,7 +13,6 @@ from lightly_studio.models.annotation.object_detection import ObjectDetectionAnn
 from lightly_studio.models.collection import SampleType
 from lightly_studio.resolvers import (
     annotation_collection_coverage_resolver,
-    annotation_resolver,
     collection_resolver,
 )
 
