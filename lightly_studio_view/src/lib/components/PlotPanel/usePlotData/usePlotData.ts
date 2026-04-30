@@ -52,8 +52,10 @@ export function usePlotData({
     const sampleIds = data.sample_id as string[];
 
     if (rangeSelection) {
+        // Points inside the polygon keep their prevValue; points outside are demoted to NOT_FILTERED_CATEGORY.
         category = category.map(getCategoryBySelection(rangeSelection, data));
 
+        // Collect selected sample ids: in-polygon filtered points have FILTERED_CATEGORY.
         const _ids = category.reduce<string[]>((acc, pointCategory, index) => {
             if (pointCategory === FILTERED_CATEGORY) {
                 acc.push(sampleIds[index]);

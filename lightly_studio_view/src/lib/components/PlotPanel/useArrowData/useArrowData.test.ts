@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { get } from 'svelte/store';
 import { useArrowData } from './useArrowData';
 import { Table, tableFromIPC } from 'apache-arrow';

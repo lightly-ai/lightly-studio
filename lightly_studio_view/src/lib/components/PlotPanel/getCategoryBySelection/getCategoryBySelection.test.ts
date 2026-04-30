@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import type { ArrowData } from '../useArrowData/useArrowData';
 
 type Point = { x: number; y: number };
@@ -7,6 +7,7 @@ vi.mock('../isPointInPolygon/isPointInPolygon', () => ({
     isPointInPolygon: vi.fn()
 }));
 
+// Import after mock is set up
 const { getCategoryBySelection } = await import('./getCategoryBySelection');
 const { isPointInPolygon } = await import('../isPointInPolygon/isPointInPolygon');
 
@@ -83,11 +84,12 @@ describe('getCategoryBySelection', () => {
 
     it('should work correctly with array reduce for multiple points', () => {
         const mockData = createMockArrowData();
+        // Mock: first two points are in selection, last two are not
         vi.mocked(isPointInPolygon)
-            .mockReturnValueOnce(true)
-            .mockReturnValueOnce(true)
-            .mockReturnValueOnce(false)
-            .mockReturnValueOnce(false);
+            .mockReturnValueOnce(true) // index 0
+            .mockReturnValueOnce(true) // index 1
+            .mockReturnValueOnce(false) // index 2
+            .mockReturnValueOnce(false); // index 3
 
         const reducer = getCategoryBySelection(mockSelection, mockData);
         const categories = [1, 1, 1, 1];
@@ -105,6 +107,7 @@ describe('getCategoryBySelection', () => {
         const categories = [0, 1, 0, 1];
         const result = categories.map(reducer);
 
+        // In-polygon points keep their prevValue
         expect(result).toEqual([0, 1, 0, 1]);
     });
 

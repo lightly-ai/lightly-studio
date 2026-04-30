@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import { get } from 'svelte/store';
 import type { ArrowData } from '../useArrowData/useArrowData';
 
@@ -10,11 +10,13 @@ vi.mock('embedding-atlas/svelte', () => ({
 
 vi.mock('../getCategoryBySelection/getCategoryBySelection', () => ({
     getCategoryBySelection: vi.fn((selection) => (prevValue: number, index: number) => {
+        // Mock implementation: first two points are inside the polygon (keep prevValue), rest are outside (0)
         if (!selection) return prevValue;
         return index < 2 ? prevValue : 0;
     })
 }));
 
+// Import after mocks are set up
 const { usePlotData } = await import('./usePlotData');
 
 describe('usePlotData', () => {
@@ -70,11 +72,12 @@ describe('usePlotData', () => {
         const data = get(result.data);
         expect(data?.category).toBeInstanceOf(Uint8Array);
 
+        // First two points are in polygon (keep prevValue=1), last two are outside (demoted to 0)
         const categoryArray = Array.from(data?.category as Uint8Array);
-        expect(categoryArray[0]).toBe(1);
-        expect(categoryArray[1]).toBe(1);
-        expect(categoryArray[2]).toBe(0);
-        expect(categoryArray[3]).toBe(0);
+        expect(categoryArray[0]).toBe(1); // in polygon, keeps FILTERED_CATEGORY
+        expect(categoryArray[1]).toBe(1); // in polygon, keeps FILTERED_CATEGORY
+        expect(categoryArray[2]).toBe(0); // outside polygon, demoted to NOT_FILTERED_CATEGORY
+        expect(categoryArray[3]).toBe(0); // outside polygon, demoted to NOT_FILTERED_CATEGORY
     });
 
     it('should collect selected sample ids when range selection is applied', () => {
@@ -92,6 +95,7 @@ describe('usePlotData', () => {
         });
 
         const selectedIds = get(result.selectedSampleIds);
+        // Based on our mock, first two samples should be selected
         expect(selectedIds).toEqual(['sample1', 'sample2']);
     });
 
@@ -105,6 +109,7 @@ describe('usePlotData', () => {
 
         const data = get(result.data);
         expect(data?.category).toBeInstanceOf(Uint8Array);
+        // Empty array still triggers selection logic with our mock
         expect(get(result.selectedSampleIds)).toEqual(['sample1', 'sample2']);
     });
 

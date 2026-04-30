@@ -1808,7 +1808,7 @@ export interface paths {
         put?: never;
         /**
          * Create Evaluation
-         * @description Compute OD metrics and persist the result.
+         * @description Compute one evaluation run and persist the result.
          */
         post: operations["create_evaluation"];
         delete?: never;
@@ -2767,6 +2767,8 @@ export interface components {
          * @description Request body for POST /evaluations.
          */
         EvaluationCreateInput: {
+            /** Name */
+            name: string;
             /** Gt Collection Name */
             gt_collection_name: string;
             /** Prediction Collection Name */
@@ -2783,6 +2785,8 @@ export interface components {
              * @default 0
              */
             confidence_threshold: number;
+            /** Sample Ids */
+            sample_ids?: string[] | null;
         };
         /**
          * EvaluationResultView
@@ -2799,6 +2803,8 @@ export interface components {
              * Format: uuid
              */
             dataset_id: string;
+            /** Name */
+            name: string;
             /**
              * Gt Collection Id
              * Format: uuid

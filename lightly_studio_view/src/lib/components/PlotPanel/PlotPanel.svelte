@@ -29,8 +29,10 @@
         setShowPlot(false);
     }
 
+    // Detect if we're on the videos route
     const isVideos = $derived(isVideosRoute(page.route?.id ?? null));
 
+    // Use appropriate filter hook based on route
     const imageFilters = useImageFilters();
     const videoFilters = useVideoFilters();
 
@@ -43,6 +45,7 @@
         (isVideos ? $videoFilter : $imageFilter)?.sample_filter?.sample_ids ?? []
     );
 
+    // Prepare filter for embeddings API - use VideoFilter for videos, ImageFilter for images
     const filter = $derived.by(() => {
         const currentFilter = isVideos ? $videoFilter : $imageFilter;
         if (!currentFilter) return null;
@@ -118,6 +121,7 @@
     let width = $state(0);
     let height = $state(0);
 
+    // Require at least 50px in each dimension to avoid unstable first-frame canvas rendering.
     const MIN_RENDER_SIZE = 50;
     const embeddingConfig = {
         colorScheme: 'dark',
@@ -131,6 +135,7 @@
         const normalizedWidth = Math.max(0, Math.floor(nextWidth));
         const normalizedHeight = Math.max(0, Math.floor(nextHeight));
 
+        // Ignore transient zero-size measurements while pane layout settles.
         if (normalizedWidth === 0 || normalizedHeight === 0) return;
         if (normalizedWidth === width && normalizedHeight === height) return;
 
@@ -197,6 +202,7 @@
     };
 
     const onRangeSelection = (selection: RangeSelection) => {
+        // we clear selection
         if (!selection && $rangeSelection) {
             clearSelection();
             return;

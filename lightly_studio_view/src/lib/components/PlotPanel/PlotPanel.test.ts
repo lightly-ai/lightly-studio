@@ -23,6 +23,7 @@ vi.mock('$app/state', () => ({
     }
 }));
 
+// Mock dependencies
 vi.mock('embedding-atlas/svelte', () => ({
     EmbeddingView: class MockEmbeddingView {}
 }));
