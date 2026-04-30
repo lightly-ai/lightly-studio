@@ -10,11 +10,11 @@ from pydantic import BaseModel
 
 from lightly_studio.api.routes.api.status import HTTP_STATUS_NOT_FOUND
 from lightly_studio.core.dataset_query.dataset_query import DatasetQuery
+from lightly_studio.core.evaluation import run_evaluation
 from lightly_studio.db_manager import SessionDep
 from lightly_studio.models.collection import CollectionTable
 from lightly_studio.models.evaluation_result import EvaluationResultView, EvaluationTaskType
 from lightly_studio.resolvers import evaluation_result_resolver
-from lightly_studio.services import evaluation_service
 
 evaluation_router = APIRouter(prefix="/datasets/{dataset_id}", tags=["evaluations"])
 
@@ -73,7 +73,7 @@ def create_evaluation(
         sample_ids = body.sample_ids
 
     try:
-        result = evaluation_service.run_evaluation(
+        result = run_evaluation(
             session=session,
             dataset_id=root_collection.dataset_id,
             name=body.name,

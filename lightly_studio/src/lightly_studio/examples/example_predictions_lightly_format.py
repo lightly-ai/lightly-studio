@@ -9,11 +9,11 @@ from environs import Env
 import lightly_studio as ls
 from lightly_studio import db_manager
 from lightly_studio.core.annotation import CreateClassification, CreateSegmentationMask
-from lightly_studio.models.evaluation_result import EvaluationResultTable, EvaluationTaskType
-from lightly_studio.resolvers import annotation_resolver
-from lightly_studio.services.evaluation_service.register_gt_collection import (
+from lightly_studio.core.evaluation.register_gt_collection import (
     register_annotation_collection,
 )
+from lightly_studio.models.evaluation_result import EvaluationResultTable, EvaluationTaskType
+from lightly_studio.resolvers import annotation_resolver
 
 env = Env()
 env.read_env()

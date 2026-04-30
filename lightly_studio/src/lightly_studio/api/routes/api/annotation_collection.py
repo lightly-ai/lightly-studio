@@ -8,18 +8,16 @@ from uuid import UUID
 from fastapi import APIRouter, HTTPException, Path
 
 from lightly_studio.api.routes.api.status import HTTP_STATUS_NOT_FOUND
+from lightly_studio.core.evaluation.register_gt_collection import (
+    register_annotation_collection,
+)
 from lightly_studio.db_manager import SessionDep
 from lightly_studio.models.annotation_collection import (
     AnnotationCollectionCreate,
     AnnotationCollectionView,
 )
-from sqlmodel import col, select
-
 from lightly_studio.models.collection import CollectionTable
 from lightly_studio.resolvers import annotation_collection_resolver
-from lightly_studio.services.evaluation_service.register_gt_collection import (
-    register_annotation_collection,
-)
 
 annotation_collection_router = APIRouter(
     prefix="/datasets/{dataset_id}", tags=["annotation-collections"]

@@ -12,11 +12,11 @@ from sqlmodel import Session, col, select
 from lightly_studio.models.annotation.annotation_base import AnnotationCreate, AnnotationType
 from lightly_studio.models.annotation_collection import AnnotationCollectionTable
 from lightly_studio.models.annotation_label import AnnotationLabelCreate
+from lightly_studio.models.collection import SampleType
 from lightly_studio.models.image import ImageTable
 from lightly_studio.resolvers import annotation_collection_resolver, annotation_label_resolver
 from lightly_studio.resolvers.annotation_resolver import create_many
 from lightly_studio.resolvers.collection_resolver import get_or_create_child_collection
-from lightly_studio.models.collection import SampleType
 
 logger = logging.getLogger(__name__)
 

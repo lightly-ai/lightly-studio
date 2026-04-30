@@ -27,6 +27,15 @@ from sqlmodel import Session
 
 from lightly_studio.core.dataset import BaseSampleDataset
 from lightly_studio.core.dataset_query.dataset_query import DatasetQuery
+from lightly_studio.core.evaluation.add_predictions import (
+    add_predictions_from_coco as _add_predictions_from_coco,
+)
+from lightly_studio.core.evaluation.add_predictions_lightly import (
+    add_predictions_from_lightly as _add_predictions_from_lightly,
+)
+from lightly_studio.core.evaluation.register_gt_collection import (
+    register_annotation_collection as _register_annotation_collection,
+)
 from lightly_studio.core.image import add_images
 from lightly_studio.core.image.image_sample import ImageSample
 from lightly_studio.dataset import fsspec_lister
@@ -38,15 +47,6 @@ from lightly_studio.models.evaluation_result import EvaluationResultTable, Evalu
 from lightly_studio.resolvers import (
     image_resolver,
     tag_resolver,
-)
-from lightly_studio.services.evaluation_service.add_predictions import (
-    add_predictions_from_coco as _add_predictions_from_coco,
-)
-from lightly_studio.services.evaluation_service.add_predictions_lightly import (
-    add_predictions_from_lightly as _add_predictions_from_lightly,
-)
-from lightly_studio.services.evaluation_service.register_gt_collection import (
-    register_annotation_collection as _register_annotation_collection,
 )
 from lightly_studio.type_definitions import PathLike
 

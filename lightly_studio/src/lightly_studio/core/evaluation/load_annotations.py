@@ -6,17 +6,17 @@ from uuid import UUID
 
 from sqlmodel import Session, col, select
 
+from lightly_studio.core.evaluation import (
+    compute_classification_metrics,
+    compute_instance_segmentation_metrics,
+    compute_od_metrics,
+)
 from lightly_studio.models.annotation.annotation_base import AnnotationBaseTable, AnnotationType
 from lightly_studio.models.annotation.object_detection import ObjectDetectionAnnotationTable
 from lightly_studio.models.annotation.segmentation import SegmentationAnnotationTable
 from lightly_studio.models.annotation_label import AnnotationLabelTable
 from lightly_studio.models.image import ImageTable
 from lightly_studio.models.sample import SampleTable
-from lightly_studio.services.evaluation_service import (
-    compute_classification_metrics,
-    compute_instance_segmentation_metrics,
-    compute_od_metrics,
-)
 
 
 def load_object_detection_annotations(

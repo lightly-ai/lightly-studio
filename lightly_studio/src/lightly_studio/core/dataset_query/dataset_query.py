@@ -13,6 +13,7 @@ from typing_extensions import Self, TypeVar
 from lightly_studio.core.dataset_query.image_sample_field import ImageSampleField
 from lightly_studio.core.dataset_query.match_expression import MatchExpression
 from lightly_studio.core.dataset_query.order_by import OrderByExpression, OrderByField
+from lightly_studio.core.evaluation import run_evaluation
 from lightly_studio.core.image.image_sample import ImageSample
 from lightly_studio.core.sample import Sample
 from lightly_studio.models.collection import CollectionTable, SampleType
@@ -23,7 +24,6 @@ from lightly_studio.models.sample import SampleTable
 from lightly_studio.models.video import VideoTable
 from lightly_studio.resolvers import tag_resolver
 from lightly_studio.selection.select import Selection
-from lightly_studio.services import evaluation_service
 
 _SliceType = slice  # to avoid shadowing built-in slice in type annotations
 
@@ -337,7 +337,7 @@ class DatasetQuery(Generic[T]):
         confidence_threshold: float = 0.0,
     ) -> EvaluationResultTable:
         """Evaluate one prediction collection on the current query result snapshot."""
-        return evaluation_service.run_evaluation(
+        return run_evaluation(
             session=self.session,
             dataset_id=self.dataset.dataset_id,
             name=name,

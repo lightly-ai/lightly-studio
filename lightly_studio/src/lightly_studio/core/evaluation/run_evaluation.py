@@ -1,4 +1,4 @@
-"""Evaluation service dispatcher."""
+"""Evaluation dispatcher."""
 
 from __future__ import annotations
 
@@ -7,14 +7,13 @@ from uuid import UUID
 
 from sqlmodel import Session
 
-from lightly_studio.models.evaluation_result import EvaluationResultTable, EvaluationTaskType
-from lightly_studio.resolvers import evaluation_result_resolver
-from lightly_studio.services.evaluation_service import (
-    common,
+from lightly_studio.core.evaluation import (
     run_classification,
     run_instance_segmentation,
     run_object_detection,
 )
+from lightly_studio.models.evaluation_result import EvaluationResultTable, EvaluationTaskType
+from lightly_studio.resolvers import annotation_collection_resolver, evaluation_result_resolver
 
 
 def run_evaluation(  # noqa: PLR0913
@@ -31,7 +30,7 @@ def run_evaluation(  # noqa: PLR0913
     """Run one evaluation task and persist the result."""
     frozen_sample_ids = list(dict.fromkeys(sample_ids))
     sample_id_set = set(frozen_sample_ids)
-    gt_collection, prediction_collection = common.resolve_annotation_collections(
+    gt_collection, prediction_collection = annotation_collection_resolver.resolve_collections(
         session=session,
         dataset_id=dataset_id,
         gt_collection_name=gt_collection_name,
@@ -77,7 +76,7 @@ def run_evaluation(  # noqa: PLR0913
         confidence_threshold=confidence_threshold,
         metrics=run_result.metrics,
     )
-    common.persist_sample_ids(session, result.id, frozen_sample_ids)
-    common.persist_matches(session, result.id, run_result.match_records)
+    evaluation_result_resolver.persist_sample_ids(session, result.id, frozen_sample_ids)
+    evaluation_result_resolver.persist_matches(session, result.id, run_result.match_records)
     session.commit()
     return result

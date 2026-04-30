@@ -6,7 +6,7 @@ from uuid import UUID
 
 from sqlmodel import Session
 
-from lightly_studio.services.evaluation_service import (
+from lightly_studio.core.evaluation import (
     common,
     compute_classification_metrics,
     load_annotations,
