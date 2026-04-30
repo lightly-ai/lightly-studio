@@ -89,3 +89,11 @@ export const TOP_LEVEL_KEYWORDS: KeywordDoc[] = [
         insertText: 'tags.contains("${1:tag}")'
     }
 ];
+
+export function findReceiverByName(name: string): ReceiverDoc | undefined {
+    return RECEIVERS.find((r) => r.name === name);
+}
+
+export function findFieldByName(receiver: ReceiverDoc, name: string): FieldDoc | undefined {
+    return receiver.fields.find((f) => f.name === name);
+}

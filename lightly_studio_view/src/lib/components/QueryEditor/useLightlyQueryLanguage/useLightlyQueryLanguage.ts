@@ -15,6 +15,8 @@ import {
 } from '../language/query-expr-translation';
 import { lexerErrorToMarker, type LexerErrorLike } from './lexerErrorToMarker';
 import { parserErrorToMarker, type ParserErrorLike } from './parserErrorToMarker';
+import { useSyntaxCompletion } from './useSyntaxCompletion';
+import { useSyntaxDocumentation } from './useSyntaxDocumentation';
 
 const LANGUAGE_ID = 'lightly-query';
 const MARKER_OWNER = LANGUAGE_ID;
@@ -60,6 +62,12 @@ export function useLightlyQueryLanguage(): UseLightlyQueryLanguageReturn {
     }
 
     function attach(model: monaco.editor.ITextModel): () => void {
+        useSyntaxCompletion({
+            languageId: LANGUAGE_ID
+        });
+        useSyntaxDocumentation({
+            languageId: LANGUAGE_ID
+        });
         validate(model);
         const sub = model.onDidChangeContent(() => validate(model));
         return () => {

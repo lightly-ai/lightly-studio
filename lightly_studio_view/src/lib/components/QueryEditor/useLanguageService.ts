@@ -1,4 +1,11 @@
-/** Module to attach Monaco syntax completion */
+/** Main-thread Langium integration for the LightlyQuery editor.
+ *
+ * The Langium parser, document builder, and provider classes all run directly
+ * on the main thread (no worker, no LSP transport). Diagnostics are pushed
+ * into Monaco via `setModelMarkers`, completions are produced by Langium's
+ * own `CompletionProvider`, and `translateQuery` is a synchronous call into
+ * `parseLightlyQuery`. */
+
 import * as monaco from 'monaco-editor';
 import { URI } from 'langium';
 import {
@@ -11,9 +18,19 @@ import {
 import {
     createLightlyQueryServices,
     type LightlyQueryServicesBundle
-} from '../language/lightly-query-module';
-import { type QueryExprTranslationResult } from '../language/query-expr-translation';
-import { RECEIVERS, findReceiverByName, findFieldByName } from '../language/lightly-query-schema';
+} from './language/lightly-query-module';
+import {
+    parseLightlyQuery,
+    type QueryExprTranslationResult
+} from './language/query-expr-translation';
+import {
+    RECEIVERS,
+    type FieldDoc,
+    type ReceiverDoc
+} from './language/lightly-query-schema';
+
+const LANGUAGE_ID = 'lightly-query';
+const MARKER_OWNER = LANGUAGE_ID;
 
 let cachedServices: LightlyQueryServicesBundle | null = null;
 function getServices(): LightlyQueryServicesBundle {
@@ -21,6 +38,62 @@ function getServices(): LightlyQueryServicesBundle {
         cachedServices = createLightlyQueryServices();
     }
     return cachedServices;
+}
+
+interface ParserErrorLike {
+    message: string;
+    token?: {
+        startLine?: number;
+        startColumn?: number;
+        endLine?: number;
+        endColumn?: number;
+        image?: string;
+    };
+}
+
+interface LexerErrorLike {
+    message: string;
+    line?: number;
+    column?: number;
+    length?: number;
+}
+
+function lexerErrorToMarker(err: LexerErrorLike): monaco.editor.IMarkerData {
+    const startLine = err.line ?? 1;
+    const startColumn = err.column ?? 1;
+    const length = err.length ?? 1;
+    return {
+        severity: monaco.MarkerSeverity.Error,
+        message: err.message,
+        startLineNumber: startLine,
+        startColumn,
+        endLineNumber: startLine,
+        endColumn: startColumn + length
+    };
+}
+
+function parserErrorToMarker(err: ParserErrorLike): monaco.editor.IMarkerData {
+    const token = err.token;
+    const startLine = token?.startLine ?? 1;
+    const startColumn = token?.startColumn ?? 1;
+    const endLine = token?.endLine ?? startLine;
+    const endColumn = (token?.endColumn ?? startColumn) + 1;
+    return {
+        severity: monaco.MarkerSeverity.Error,
+        message: err.message,
+        startLineNumber: startLine,
+        startColumn,
+        endLineNumber: endLine,
+        endColumn
+    };
+}
+
+function findReceiverByName(name: string): ReceiverDoc | undefined {
+    return RECEIVERS.find((r) => r.name === name);
+}
+
+function findFieldByName(receiver: ReceiverDoc, name: string): FieldDoc | undefined {
+    return receiver.fields.find((f) => f.name === name);
 }
 
 // Build (or rebuild) the LangiumDocument backing this Monaco model so that
@@ -161,8 +234,88 @@ async function getCompletions(
     });
 
     return {
-        suggestions: (result?.items ?? []).map((item) => lspToMonacoCompletion(item, fallbackRange))
+        suggestions: (result?.items ?? []).map((item) =>
+            lspToMonacoCompletion(item, fallbackRange)
+        )
     };
+}
+
+function getHover(
+    model: monaco.editor.ITextModel,
+    position: monaco.Position
+): monaco.languages.Hover | null {
+    const word = model.getWordAtPosition(position);
+    if (!word) return null;
+
+    const line = model.getLineContent(position.lineNumber);
+    const cursorOffset = position.column - 1;
+
+    const qualifiedReference = /([A-Za-z_][A-Za-z0-9_]*)\.([A-Za-z_][A-Za-z0-9_]*)/g;
+    let match: RegExpExecArray | null;
+    while ((match = qualifiedReference.exec(line))) {
+        const fullStart = match.index;
+        const fullEnd = match.index + match[0].length;
+        if (cursorOffset < fullStart || cursorOffset > fullEnd) continue;
+
+        const receiver = findReceiverByName(match[1]);
+        if (!receiver) continue;
+
+        const memberStart = match.index + match[1].length + 1;
+        if (cursorOffset >= memberStart) {
+            const field = findFieldByName(receiver, match[2]);
+            if (!field) return null;
+            return {
+                contents: [
+                    { value: `\`\`\`\n${receiver.name}.${field.name}: ${field.type}\n\`\`\`` },
+                    { value: field.description }
+                ],
+                range: new monaco.Range(
+                    position.lineNumber,
+                    memberStart + 1,
+                    position.lineNumber,
+                    memberStart + 1 + match[2].length
+                )
+            };
+        }
+        return {
+            contents: [{ value: `**${receiver.name}** — ${receiver.description}` }],
+            range: new monaco.Range(
+                position.lineNumber,
+                fullStart + 1,
+                position.lineNumber,
+                fullStart + 1 + match[1].length
+            )
+        };
+    }
+
+    const receiver = findReceiverByName(word.word);
+    if (receiver) {
+        return {
+            contents: [{ value: `**${receiver.name}** — ${receiver.description}` }],
+            range: new monaco.Range(
+                position.lineNumber,
+                word.startColumn,
+                position.lineNumber,
+                word.endColumn
+            )
+        };
+    }
+    return null;
+}
+
+let providersRegistered = false;
+function registerProviders(): void {
+    if (providersRegistered) return;
+    providersRegistered = true;
+
+    monaco.languages.registerCompletionItemProvider(LANGUAGE_ID, {
+        triggerCharacters: ['.', ' ', '('],
+        provideCompletionItems: (model, position) => getCompletions(model, position)
+    });
+
+    monaco.languages.registerHoverProvider(LANGUAGE_ID, {
+        provideHover: (model, position) => getHover(model, position)
+    });
 }
 
 export interface UseLightlyQueryLanguageReturn {
@@ -170,12 +323,32 @@ export interface UseLightlyQueryLanguageReturn {
     translateQuery: (value: string) => QueryExprTranslationResult;
 }
 
-/**
- * Hook to attach syntax completion
- */
-export function useSyntaxCompletion(params: { languageId: string }) {
-    monaco.languages.registerCompletionItemProvider(params.languageId, {
-        triggerCharacters: ['.', ' ', '('],
-        provideCompletionItems: (model, position) => getCompletions(model, position)
-    });
+export function useLightlyQueryLanguage(): UseLightlyQueryLanguageReturn {
+    const services = getServices();
+    const parser = services.LightlyQuery.parser.LangiumParser;
+
+    function validate(model: monaco.editor.ITextModel): void {
+        const result = parser.parse(model.getValue());
+        const markers = [
+            ...result.lexerErrors.map((e) => lexerErrorToMarker(e as LexerErrorLike)),
+            ...result.parserErrors.map((e) => parserErrorToMarker(e as ParserErrorLike))
+        ];
+        monaco.editor.setModelMarkers(model, MARKER_OWNER, markers);
+    }
+
+    function attach(model: monaco.editor.ITextModel): () => void {
+        registerProviders();
+        validate(model);
+        const sub = model.onDidChangeContent(() => validate(model));
+        return () => {
+            sub.dispose();
+            monaco.editor.setModelMarkers(model, MARKER_OWNER, []);
+        };
+    }
+
+    function translateQuery(value: string): QueryExprTranslationResult {
+        return parseLightlyQuery(parser, value);
+    }
+
+    return { attach, translateQuery };
 }

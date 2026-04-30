@@ -3,8 +3,10 @@
     "languages": [
         {
             "id": "lightly-query",
-            "grammar": "src/lib/components/QueryEditor/language/lightly-query.langium",
-            "fileExtensions": [".lql"],
+            "grammar": "src/lib/components/QueryEditor/language/lightly-query-old.langium",
+            "fileExtensions": [
+                ".lql"
+            ],
             "caseInsensitive": true,
             "monarch": {
                 "out": "src/lib/components/QueryEditor/language/monarch.generated.ts"
