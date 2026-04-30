@@ -23,23 +23,12 @@ interface FunctionCall extends Expression {
   args: Expression[];
 }
 
-interface MemberCall extends Expression {
-  receiver: string;
-  member: string;
-  args: Expression[];
-}
-
-interface QualifiedFieldReference extends Expression {
-  receiver: string;
+interface FieldReference extends Expression {
   member: string;
 }
 
 interface TagInExpression extends Expression {
   tag_name: Expression;
-}
-
-interface FieldReference extends Expression {
-  name: string;
 }
 
 interface NumberLiteral extends Expression {
@@ -58,12 +47,10 @@ Sample<isImage> returns Expression:
   SampleOr<isImage>;
 
 SampleOr<isImage> returns Expression:
-  SampleAnd<isImage> ({BooleanExpression.children+=current} operator=OR children+=SampleAnd<isImage> (OR children+=SampleAnd<isImage>)*)?
-    | {BooleanExpression} operator=OR '(' children+=Sample<isImage> (',' children+=Sample<isImage>)+ ')';
+  SampleAnd<isImage> ({BooleanExpression.children+=current} operator=OR children+=SampleAnd<isImage> (OR children+=SampleAnd<isImage>)*)?;
 
 SampleAnd<isImage> returns Expression:
-  SampleUnary<isImage> ({BooleanExpression.children+=current} operator=AND children+=SampleUnary<isImage> (AND children+=SampleUnary<isImage>)*)?
-    | {BooleanExpression} operator=AND '(' children+=Sample<isImage> (',' children+=Sample<isImage>)+ ')';
+  SampleUnary<isImage> ({BooleanExpression.children+=current} operator=AND children+=SampleUnary<isImage> (AND children+=SampleUnary<isImage>)*)?;
 
 SampleUnary<isImage> returns Expression:
   '(' Sample<isImage> ')'
@@ -79,33 +66,31 @@ SampleComparison<isImage> returns ComparisonExpression:
    | SampleStringFieldReference<isImage> {ComparisonExpression.left=current} operator=('==' | '!=') right=StringLiteral
    | SampleDateTimeFieldReference<isImage> {ComparisonExpression.left=current} operator=('==' | '!=' | '<' | '>' | '<=' | '>=') right=StringLiteral;
 
-SampleIntFieldReference<isImage> returns QualifiedFieldReference:
-  (<isImage> {QualifiedFieldReference} receiver=ImageFieldReceiver '.' member=ImageIntFieldName)
-    | (<!isImage> {QualifiedFieldReference} receiver=VideoFieldReceiver '.' member=VideoIntFieldName);
+SampleIntFieldReference<isImage> returns FieldReference:
+  (<isImage> {FieldReference} member=ImageIntFieldName)
+    | (<!isImage> {FieldReference} member=VideoIntFieldName);
 
-SampleOrdinalFloatFieldReference<isImage> returns QualifiedFieldReference:
-  (<!isImage> {QualifiedFieldReference} receiver=VideoFieldReceiver '.' member=VideoOrdinalFloatFieldName);
+SampleOrdinalFloatFieldReference<isImage> returns FieldReference:
+  (<!isImage> {FieldReference} member=VideoOrdinalFloatFieldName);
 
-SampleEqualityFloatFieldReference<isImage> returns QualifiedFieldReference:
-  (<!isImage> {QualifiedFieldReference} receiver=VideoFieldReceiver '.' member=VideoEqualityFloatFieldName);
+SampleEqualityFloatFieldReference<isImage> returns FieldReference:
+  (<!isImage> {FieldReference} member=VideoEqualityFloatFieldName);
 
-SampleStringFieldReference<isImage> returns QualifiedFieldReference:
-  (<isImage> {QualifiedFieldReference} receiver=ImageFieldReceiver '.' member=ImageStringFieldName)
-    | (<!isImage> {QualifiedFieldReference} receiver=VideoFieldReceiver '.' member=VideoStringFieldName);
+SampleStringFieldReference<isImage> returns FieldReference:
+  (<isImage> {FieldReference} member=ImageStringFieldName)
+    | (<!isImage> {FieldReference} member=VideoStringFieldName);
 
-SampleDateTimeFieldReference<isImage> returns QualifiedFieldReference:
-  (<isImage> {QualifiedFieldReference} receiver=ImageFieldReceiver '.' member=ImageDateTimeFieldName);
+SampleDateTimeFieldReference<isImage> returns FieldReference:
+  (<isImage> {FieldReference} member=ImageDateTimeFieldName);
 
 ObjectDetection returns Expression:
   ObjectDetectionOr;
 
 ObjectDetectionOr returns Expression:
-  ObjectDetectionAnd ({BooleanExpression.children+=current} operator=OR children+=ObjectDetectionAnd (OR children+=ObjectDetectionAnd)*)?
-    | {BooleanExpression} operator=OR '(' children+=ObjectDetection (',' children+=ObjectDetection)+ ')';
+  ObjectDetectionAnd ({BooleanExpression.children+=current} operator=OR children+=ObjectDetectionAnd (OR children+=ObjectDetectionAnd)*)?;
 
 ObjectDetectionAnd returns Expression:
-  ObjectDetectionUnary ({BooleanExpression.children+=current} operator=AND children+=ObjectDetectionUnary (AND children+=ObjectDetectionUnary)*)?
-    | {BooleanExpression} operator=AND '(' children+=ObjectDetection (',' children+=ObjectDetection)+ ')';
+  ObjectDetectionUnary ({BooleanExpression.children+=current} operator=AND children+=ObjectDetectionUnary (AND children+=ObjectDetectionUnary)*)?;
 
 ObjectDetectionUnary returns Expression:
   '(' ObjectDetection ')'
@@ -115,25 +100,14 @@ ObjectDetectionUnary returns Expression:
 ObjectDetectionComparison returns ComparisonExpression:
   ObjectDetectionFieldReference {ComparisonExpression.left=current} operator=('==' | '!=' | '<' | '>' | '<=' | '>=') right=Literal;
 
-ObjectDetectionFieldReceiver returns string:
-  OBJECT_DETECTION_RECEIVER;
-
 ObjectDetectionFieldReference returns Expression:
-  {FieldReference} name=ObjectDetectionFieldName
-    | {QualifiedFieldReference} receiver=ObjectDetectionFieldReceiver '.' member=ObjectDetectionFieldName;
+  {FieldReference} member=ObjectDetectionFieldName;
 
 AnnotationQuery returns Expression:
   {FunctionCall} name=ANNOTATION_FUNCTION '(' args+=ObjectDetection ')';
 
 TagInExpression returns Expression:
-  {TagInExpression} TAGS_CONTAINS '(' tag_name=StringLiteral ')' |
-    {TagInExpression} tag_name=StringLiteral IN TAGS_KEYWORD;
-
-ImageFieldReceiver returns string:
-  IMAGE_SAMPLE_RECEIVER;
-
-VideoFieldReceiver returns string:
-  VIDEO_SAMPLE_RECEIVER;
+  {TagInExpression} tag_name=StringLiteral IN TAGS_KEYWORD;
 
 terminal HEIGHT returns string: /\bheight\b/;
 terminal WIDTH returns string: /\bwidth\b/;
@@ -189,15 +163,11 @@ terminal OR: /\bOR\b/i;
 terminal NOT: /\bNOT\b/i;
 terminal IN returns string: /\bIN\b/i;
 terminal ANNOTATION_FUNCTION returns string: /\bobject_detection\b/;
-terminal TAGS_CONTAINS returns string: /\btags\.contains\b/;
 terminal TAGS_KEYWORD returns string: /\btags\b/;
-terminal IMAGE_SAMPLE_RECEIVER returns string: /\b(ImageSampleField|Image)\b/;
-terminal VIDEO_SAMPLE_RECEIVER returns string: /\b(VideoSampleField|Video)\b/;
 terminal ORDINAL_FLOAT_FIELD_NAME returns string: /\bduration_s\b/;
 terminal EQUALITY_FLOAT_FIELD_NAME returns string: /\bfps\b/;
 terminal STRING_FIELD_NAME returns string: /\b(file_name|file_path_abs)\b/;
 terminal DATE_TIME_FIELD_NAME returns string: /\bcreated_at\b/;
-terminal OBJECT_DETECTION_RECEIVER returns string: /\b(ObjectDetectionField|ObjectDetection)\b/;
 
 hidden terminal WS: /\s+/;
 hidden terminal SL_COMMENT: /#[^\n\r]*/;
