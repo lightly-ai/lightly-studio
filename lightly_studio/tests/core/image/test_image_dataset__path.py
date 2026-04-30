@@ -26,7 +26,7 @@ class TestDataset:
                 images_path / "image3.BMP",
                 images_path / "image4.tif",
                 images_path / "image5.TIFF",
-                images_path / "subfolder" / "image4.jpg",
+                images_path / "subfolder" / "image6.jpg",
             ]
         )
 
@@ -41,7 +41,7 @@ class TestDataset:
             "image3.BMP",
             "image4.tif",
             "image5.TIFF",
-            "image4.jpg",
+            "image6.jpg",
         }
         # Check that embeddings were created
         assert all(len(sample.sample_table.embeddings) == 1 for sample in samples)
