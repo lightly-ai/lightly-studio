@@ -31,10 +31,9 @@ def run(
         sample_ids=sample_ids,
     )
 
-    all_label_ids = {annotation.label_id for annotation in gt_annotations} | {
-        annotation.label_id for annotation in pred_annotations
-    }
-    label_names = load_annotations.load_label_names(session, all_label_ids)
+    label_names = load_annotations.load_label_names_for_annotations(
+        session, gt_annotations, pred_annotations
+    )
 
     match_records, total_gt_samples = compute_classification_metrics.match_annotations(
         gt_annotations, pred_annotations

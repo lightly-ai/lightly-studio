@@ -5,15 +5,42 @@ from __future__ import annotations
 from collections.abc import Sequence
 from uuid import UUID
 
-from sqlmodel import Session
+from sqlmodel import Session, col, select
 
 from lightly_studio.core.evaluation import (
     run_classification,
     run_instance_segmentation,
     run_object_detection,
 )
+from lightly_studio.models.annotation.annotation_base import AnnotationBaseTable, AnnotationType
+from lightly_studio.models.annotation_collection import AnnotationCollectionTable
 from lightly_studio.models.evaluation_result import EvaluationResultTable, EvaluationTaskType
+from lightly_studio.models.sample import SampleTable
 from lightly_studio.resolvers import annotation_collection_resolver, evaluation_result_resolver
+
+_TASK_TO_ANNOTATION_TYPE: dict[EvaluationTaskType, AnnotationType] = {
+    EvaluationTaskType.OBJECT_DETECTION: AnnotationType.OBJECT_DETECTION,
+    EvaluationTaskType.CLASSIFICATION: AnnotationType.CLASSIFICATION,
+    EvaluationTaskType.INSTANCE_SEGMENTATION: AnnotationType.SEGMENTATION_MASK,
+}
+
+
+def _assert_annotation_type(
+    session: Session,
+    collection: AnnotationCollectionTable,
+    expected_type: AnnotationType,
+) -> None:
+    stmt = (
+        select(AnnotationBaseTable)
+        .join(SampleTable, col(SampleTable.sample_id) == col(AnnotationBaseTable.sample_id))
+        .where(col(SampleTable.collection_id) == collection.collection_id)
+        .where(col(AnnotationBaseTable.annotation_type) == expected_type)
+        .limit(1)
+    )
+    if session.exec(stmt).first() is None:
+        raise ValueError(
+            f"Collection '{collection.name}' contains no {expected_type.value} annotations."
+        )
 
 
 def run_evaluation(  # noqa: PLR0913
@@ -36,6 +63,10 @@ def run_evaluation(  # noqa: PLR0913
         gt_collection_name=gt_collection_name,
         prediction_collection_name=prediction_collection_name,
     )
+
+    expected_annotation_type = _TASK_TO_ANNOTATION_TYPE[task_type]
+    _assert_annotation_type(session, gt_collection, expected_annotation_type)
+    _assert_annotation_type(session, prediction_collection, expected_annotation_type)
 
     if task_type == EvaluationTaskType.OBJECT_DETECTION:
         run_result = run_object_detection.run(

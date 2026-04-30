@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from collections.abc import Iterable
+from typing import Protocol
 from uuid import UUID
 
 from sqlmodel import Session, col, select
@@ -148,6 +150,20 @@ def load_instance_segmentation_annotations(
             )
         )
     return result
+
+
+class _HasLabelId(Protocol):
+    label_id: UUID
+
+
+def load_label_names_for_annotations(
+    session: Session,
+    gt_annotations: Iterable[_HasLabelId],
+    pred_annotations: Iterable[_HasLabelId],
+) -> dict[UUID, str]:
+    """Load label names for all label IDs appearing in two annotation collections."""
+    label_ids = {a.label_id for a in gt_annotations} | {a.label_id for a in pred_annotations}
+    return load_label_names(session, label_ids)
 
 
 def load_label_names(session: Session, label_ids: set[UUID]) -> dict[UUID, str]:
