@@ -41,7 +41,7 @@ interface StringLiteral extends Expression {
 
 entry Query:
   (expression=Sample<true>) |
-    ('video:' expression=Sample<false>);
+    (isVideo?='video:' expression=Sample<false>);
 
 Sample<isImage> returns Expression:
   SampleOr<isImage>;
@@ -98,10 +98,14 @@ ObjectDetectionUnary returns Expression:
     | ObjectDetectionComparison;
 
 ObjectDetectionComparison returns ComparisonExpression:
-  ObjectDetectionFieldReference {ComparisonExpression.left=current} operator=('==' | '!=' | '<' | '>' | '<=' | '>=') right=Literal;
+  ObjectDetectionIntFieldReference {ComparisonExpression.left=current} operator=('==' | '!=' | '<' | '>' | '<=' | '>=') right=IntLiteral
+   | ObjectDetectionStringFieldReference {ComparisonExpression.left=current} operator=('==' | '!=') right=StringLiteral;
 
-ObjectDetectionFieldReference returns Expression:
-  {FieldReference} member=ObjectDetectionFieldName;
+ObjectDetectionIntFieldReference returns FieldReference:
+  {FieldReference} member=ObjectDetectionIntFieldName;
+
+ObjectDetectionStringFieldReference returns FieldReference:
+  {FieldReference} member=ObjectDetectionStringFieldName;
 
 Classification returns Expression:
   ClassificationOr;
@@ -157,11 +161,11 @@ VideoEqualityFloatFieldName returns string:
 VideoStringFieldName returns string:
   STRING_FIELD_NAME;
 
-ObjectDetectionFieldName returns string:
-  HEIGHT | WIDTH | LABEL | X_COORD | Y_COORD;
+ObjectDetectionIntFieldName returns string:
+  HEIGHT | WIDTH | X_COORD | Y_COORD;
 
-Literal returns Expression:
-  IntLiteral | FloatLiteral | StringLiteral;
+ObjectDetectionStringFieldName returns string:
+  LABEL;
 
 NumericLiteral returns Expression:
   IntLiteral | FloatLiteral;
