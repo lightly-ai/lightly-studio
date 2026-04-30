@@ -66,11 +66,7 @@ export const OBJECT_DETECTION_RECEIVER: ReceiverDoc = {
     ]
 };
 
-export const RECEIVERS: ReceiverDoc[] = [
-    IMAGE_RECEIVER,
-    VIDEO_RECEIVER,
-    OBJECT_DETECTION_RECEIVER
-];
+export const RECEIVERS: ReceiverDoc[] = [IMAGE_RECEIVER, VIDEO_RECEIVER, OBJECT_DETECTION_RECEIVER];
 
 export interface KeywordDoc {
     name: string;
