@@ -1,4 +1,4 @@
-"""Implementation of add_many for annotation_collection_coverage_resolver."""
+"""Resolver for annotation collection coverage."""
 
 from __future__ import annotations
 
@@ -54,3 +54,25 @@ def add_many(
 
     session.bulk_save_objects(new_rows)
     session.flush()
+
+
+def list_by_collection_id(
+    session: Session, annotation_collection_id: UUID
+) -> list[UUID]:
+    """Return parent sample IDs covered by the given annotation collection.
+
+    Args:
+        session: SQLAlchemy session for database operations.
+        annotation_collection_id: UUID of the annotation collection.
+
+    Returns:
+        List of parent sample IDs that this collection was applied to.
+    """
+    return list(
+        session.exec(
+            select(AnnotationCollectionCoverageTable.parent_sample_id).where(
+                AnnotationCollectionCoverageTable.annotation_collection_id
+                == annotation_collection_id
+            )
+        ).all()
+    )

@@ -30,10 +30,12 @@ def test_add_many__inserts_rows(db_session: Session) -> None:
         parent_sample_ids=[s.sample_id for s in samples],
     )
 
-    covered = annotation_collection_coverage_resolver.list_by_collection_id(
-        session=db_session, annotation_collection_id=annotation_collection_id
+    covered = set(
+        annotation_collection_coverage_resolver.list_by_collection_id(
+            session=db_session, annotation_collection_id=annotation_collection_id
+        )
     )
-    assert set(covered) == {s.sample_id for s in samples}
+    assert covered == {s.sample_id for s in samples}
 
 
 def test_add_many__is_idempotent(db_session: Session) -> None:
@@ -52,10 +54,12 @@ def test_add_many__is_idempotent(db_session: Session) -> None:
             parent_sample_ids=[sample.sample_id],
         )
 
-    covered = annotation_collection_coverage_resolver.list_by_collection_id(
-        session=db_session, annotation_collection_id=annotation_collection_id
+    covered = set(
+        annotation_collection_coverage_resolver.list_by_collection_id(
+            session=db_session, annotation_collection_id=annotation_collection_id
+        )
     )
-    assert covered == [sample.sample_id]
+    assert covered == {sample.sample_id}
 
 
 def test_add_many__mixed_new_and_existing(db_session: Session) -> None:
@@ -85,10 +89,12 @@ def test_add_many__mixed_new_and_existing(db_session: Session) -> None:
         parent_sample_ids=[s.sample_id for s in samples],
     )
 
-    covered = annotation_collection_coverage_resolver.list_by_collection_id(
-        session=db_session, annotation_collection_id=annotation_collection_id
+    covered = set(
+        annotation_collection_coverage_resolver.list_by_collection_id(
+            session=db_session, annotation_collection_id=annotation_collection_id
+        )
     )
-    assert set(covered) == {s.sample_id for s in samples}
+    assert covered == {s.sample_id for s in samples}
 
 
 def test_add_many__empty_input_is_noop(db_session: Session) -> None:
@@ -126,9 +132,9 @@ def test_add_many__deduplicates_within_input(db_session: Session) -> None:
         parent_sample_ids=[sample.sample_id, sample.sample_id, sample.sample_id],
     )
 
-    assert (
-        annotation_collection_coverage_resolver.count_by_collection_id(
+    covered = set(
+        annotation_collection_coverage_resolver.list_by_collection_id(
             session=db_session, annotation_collection_id=annotation_collection_id
         )
-        == 1
     )
+    assert covered == {sample.sample_id}

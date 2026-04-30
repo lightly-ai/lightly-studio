@@ -398,10 +398,12 @@ class TestDataset:
             collection_id=dataset.collection_id,
             sample_type=SampleType.ANNOTATION,
         )
-        covered = annotation_collection_coverage_resolver.list_by_collection_id(
-            session=dataset.session, annotation_collection_id=annotation_collection_id
+        covered = set(
+            annotation_collection_coverage_resolver.list_by_collection_id(
+                session=dataset.session, annotation_collection_id=annotation_collection_id
+            )
         )
-        assert set(covered) == {s.sample_id for s in samples}
+        assert covered == {s.sample_id for s in samples}
 
 
 def _create_sample_images(image_paths: list[Path]) -> None:

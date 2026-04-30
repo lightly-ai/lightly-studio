@@ -518,10 +518,12 @@ class TestDataset:
             collection_id=dataset.collection_id,
             sample_type=SampleType.ANNOTATION,
         )
-        covered = annotation_collection_coverage_resolver.list_by_collection_id(
-            session=dataset.session, annotation_collection_id=annotation_collection_id
+        covered = set(
+            annotation_collection_coverage_resolver.list_by_collection_id(
+                session=dataset.session, annotation_collection_id=annotation_collection_id
+            )
         )
-        assert set(covered) == {s.sample_id for s in samples}
+        assert covered == {s.sample_id for s in samples}
 
     def test_add_samples_from_coco__relative_local_images_path_normalized_to_absolute(
         self,
