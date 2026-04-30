@@ -13,6 +13,7 @@ from lightly_studio.models.annotation.object_detection import ObjectDetectionAnn
 from lightly_studio.models.collection import SampleType
 from lightly_studio.resolvers import (
     annotation_collection_coverage_resolver,
+    annotation_resolver,
     collection_resolver,
 )
 
@@ -386,6 +387,13 @@ class TestDataset:
         )
 
         samples = list(dataset)
+        # Verify both images were loaded (including empty-label image2).
+        assert len(samples) == 2, f"Expected 2 samples, got {len(samples)}"
+        image1_sample = next((s for s in samples if "image1" in s.file_path_abs), None)
+        image2_sample = next((s for s in samples if "image2" in s.file_path_abs), None)
+        assert image1_sample is not None, "image1 must be loaded"
+        assert image2_sample is not None, "image2 (empty label) must be loaded"
+
         cov_id = collection_resolver.get_or_create_child_collection(
             session=dataset.session,
             collection_id=dataset.collection_id,
@@ -396,7 +404,7 @@ class TestDataset:
                 session=dataset.session, annotation_collection_id=cov_id
             )
         )
-        assert covered == {s.sample_id for s in samples}
+        assert covered == {image1_sample.sample_id, image2_sample.sample_id}
 
 
 def _create_sample_images(image_paths: list[Path]) -> None:
