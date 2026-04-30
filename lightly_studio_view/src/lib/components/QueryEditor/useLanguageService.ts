@@ -23,11 +23,7 @@ import {
     parseLightlyQuery,
     type QueryExprTranslationResult
 } from './language/query-expr-translation';
-import {
-    RECEIVERS,
-    type FieldDoc,
-    type ReceiverDoc
-} from './language/lightly-query-schema';
+import { RECEIVERS, type FieldDoc, type ReceiverDoc } from './language/lightly-query-schema';
 
 const LANGUAGE_ID = 'lightly-query';
 const MARKER_OWNER = LANGUAGE_ID;
@@ -234,9 +230,7 @@ async function getCompletions(
     });
 
     return {
-        suggestions: (result?.items ?? []).map((item) =>
-            lspToMonacoCompletion(item, fallbackRange)
-        )
+        suggestions: (result?.items ?? []).map((item) => lspToMonacoCompletion(item, fallbackRange))
     };
 }
 
