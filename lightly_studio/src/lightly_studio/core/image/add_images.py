@@ -525,8 +525,10 @@ def _process_batch_annotations(
 
         annotations_to_create.extend(new_annotations)
 
-    # Ensure the annotation collection exists so coverage has an FK target,
-    # even when the entire batch produced zero detections.
+    annotation_resolver.create_many(
+        session=session, parent_collection_id=collection_id, annotations=annotations_to_create
+    )
+
     annotation_collection_id = collection_resolver.get_or_create_child_collection(
         session=session,
         collection_id=collection_id,
@@ -536,10 +538,6 @@ def _process_batch_annotations(
         session=session,
         annotation_collection_id=annotation_collection_id,
         parent_sample_ids=created_path_to_id.values(),
-    )
-
-    annotation_resolver.create_many(
-        session=session, parent_collection_id=collection_id, annotations=annotations_to_create
     )
 
 

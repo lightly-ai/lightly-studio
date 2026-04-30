@@ -120,8 +120,7 @@ def create_many(
     session.bulk_save_objects(object_detection_annotations)
     session.bulk_save_objects(segmentation_annotations)
 
-    # Record that this annotation collection was applied to each parent sample.
-    # Idempotent: re-running create_many for the same pair is a no-op.
+    # Bulk add annotation collection coverage entries.
     annotation_collection_coverage_resolver.add_many(
         session=session,
         annotation_collection_id=annotation_collection_id,

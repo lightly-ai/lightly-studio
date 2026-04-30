@@ -5,7 +5,9 @@ from __future__ import annotations
 from collections.abc import Iterable
 from uuid import UUID
 
-from sqlmodel import Session, col, select
+from sqlalchemy import insert
+from sqlalchemy.dialects.postgresql import insert as pg_insert
+from sqlmodel import Session, select
 
 from lightly_studio.models.annotation_collection_coverage import (
     AnnotationCollectionCoverageTable,
@@ -19,8 +21,9 @@ def add_many(
 ) -> None:
     """Insert coverage rows for the given (collection, parent_sample) pairs.
 
-    Idempotent: pairs that already exist are skipped, so callers may safely
-    re-invoke this on every annotation save without conflict errors.
+    Idempotent: pairs that already exist are skipped via database-level conflict
+    handling, so callers may safely re-invoke this on every annotation save
+    without race conditions.
 
     Args:
         session: SQLAlchemy session for database operations.
@@ -28,31 +31,29 @@ def add_many(
         parent_sample_ids: Parent sample IDs covered by this collection. May
             contain duplicates and may be empty.
     """
-    requested_ids = set(parent_sample_ids)
-    if not requested_ids:
+    ids = set(parent_sample_ids)
+    if not ids:
         return
 
-    existing_ids = set(
-        session.exec(
-            select(col(AnnotationCollectionCoverageTable.parent_sample_id)).where(
-                col(AnnotationCollectionCoverageTable.annotation_collection_id)
-                == annotation_collection_id,
-                col(AnnotationCollectionCoverageTable.parent_sample_id).in_(requested_ids),
-            )
-        ).all()
-    )
-
-    new_rows = [
-        AnnotationCollectionCoverageTable(
-            annotation_collection_id=annotation_collection_id,
-            parent_sample_id=parent_sample_id,
-        )
-        for parent_sample_id in requested_ids - existing_ids
+    rows = [
+        {
+            "annotation_collection_id": annotation_collection_id,
+            "parent_sample_id": sample_id,
+        }
+        for sample_id in ids
     ]
-    if not new_rows:
-        return
 
-    session.bulk_save_objects(new_rows)
+    # Use database-level conflict handling (idempotent across both Postgres and DuckDB).
+    dialect_name = session.get_bind().dialect.name if session.get_bind() else None
+    if dialect_name == "postgresql":
+        session.exec(
+            pg_insert(AnnotationCollectionCoverageTable).values(rows).on_conflict_do_nothing()
+        )
+    else:
+        # DuckDB and SQLite: use OR IGNORE prefix.
+        session.exec(
+            insert(AnnotationCollectionCoverageTable).values(rows).prefix_with("OR IGNORE")
+        )
     session.flush()
 
 
