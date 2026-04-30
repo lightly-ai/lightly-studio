@@ -302,6 +302,13 @@ const TRANSLATION_TEST_CASES: TranslationTestCase[] = [
         )
     },
 
+    /* Video queries */
+    {
+        name: 'video height greater than',
+        source: 'video:height > 720',
+        expected: query(int('video', 'height', '>', 720))
+    },
+
     /* Complex queries */
     {
         name: 'complex reviewed large cat image',
@@ -326,8 +333,10 @@ const TRANSLATION_TEST_CASES: TranslationTestCase[] = [
         source: '(file_path_abs != "/datasets/archive/bad.jpg" AND created_at >= "2025-01-01T00:00:00Z") AND ("training" IN tags OR "validation" IN tags) AND object_detection((label == "cat" OR label == "dog") AND NOT (x < 5 OR y < 5))',
         expected: query(
             and(
-                str('image', 'file_path_abs', '!=', '/datasets/archive/bad.jpg'),
-                dt('image', 'created_at', '>=', '2025-01-01T00:00:00Z'),
+                and(
+                    str('image', 'file_path_abs', '!=', '/datasets/archive/bad.jpg'),
+                    dt('image', 'created_at', '>=', '2025-01-01T00:00:00Z')
+                ),
                 or(tagsContains('image', 'training'), tagsContains('image', 'validation')),
                 objectDetection(
                     and(
@@ -348,7 +357,7 @@ const TRANSLATION_TEST_CASES: TranslationTestCase[] = [
     }
 ];
 
-describe.skip('parseLightlyQuery translates example queries', () => {
+describe('parseLightlyQuery translates example queries', () => {
     it.each(TRANSLATION_TEST_CASES)('$name', ({ source, expected }) => {
         const result = parseLightlyQuery(parser, source);
         expect(result).toEqual({ status: 'ok', queryExpr: expected });
