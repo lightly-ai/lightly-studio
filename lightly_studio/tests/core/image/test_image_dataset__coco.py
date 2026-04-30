@@ -451,6 +451,27 @@ class TestDataset:
         assert len(samples[0].tags) == 0
         assert len(samples[1].tags) == 0
 
+    def test_add_samples_from_coco__relative_local_images_path_normalized_to_absolute(
+        self,
+        patch_collection: None,  # noqa: ARG002
+        tmp_path: Path,
+    ) -> None:
+        annotations_path = tmp_path / "annotations.json"
+        annotations_path.write_text(json.dumps(get_coco_annotation_dict_valid()))
+
+        dataset = ImageDataset.create(name="test_dataset")
+        dataset.add_samples_from_coco(
+            annotations_json=annotations_path,
+            images_path="images",
+            annotation_type=AnnotationType.OBJECT_DETECTION,
+            embed=False,
+        )
+
+        samples = list(dataset)
+        assert len(samples) == 2
+        assert Path(samples[0].file_path_abs).is_absolute()
+        assert Path(samples[1].file_path_abs).is_absolute()
+
 
 def _create_sample_images(image_paths: list[Path]) -> None:
     for image_path in image_paths:
