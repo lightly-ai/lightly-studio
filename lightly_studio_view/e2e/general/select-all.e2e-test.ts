@@ -1,7 +1,7 @@
 import { expect, test } from '../utils';
 import { cocoDataset } from './fixtures';
 
-test.skip('select all images with label filter via keyboard shortcut', async ({
+test('select all images with label filter via keyboard shortcut', async ({
     page,
     samplesPage
 }) => {
