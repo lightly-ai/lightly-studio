@@ -16,6 +16,7 @@
         SlidersHorizontal,
         Image as ImageIcon,
         X,
+        ChartNetwork,
         GripVertical
     } from '@lucide/svelte';
     import { onDestroy, onMount } from 'svelte';
@@ -91,6 +92,8 @@
     const {
         retrieveParentCollection,
         collections,
+        showPlot,
+        setShowPlot,
         showEvalPanel,
         setShowEvalPanel,
         filteredSampleCount,
@@ -538,8 +541,7 @@
                 </div>
             {/if}
 
-            {#if isImages && $showEvalPanel}
-                <!-- Right panel active: use PaneGroup for main content + right panel -->
+            {#if ((isImages || isVideos) && $showPlot) || (isImages && $showEvalPanel)}
                 <PaneGroup direction="horizontal" class="flex-1">
                     <Pane defaultSize={50} minSize={30} class="flex">
                         <div
@@ -552,9 +554,28 @@
                                             class="flex items-center space-x-1"
                                             data-testid="toggle-eval-panel-button"
                                             variant={$showEvalPanel ? 'default' : 'ghost'}
-                                            onclick={() => setShowEvalPanel(!$showEvalPanel)}
+                                            onclick={() => {
+                                                setShowPlot(false);
+                                                setShowEvalPanel(!$showEvalPanel);
+                                            }}
                                         >
                                             <span>Evaluations</span>
+                                        </Button>
+                                    {/if}
+                                    {#if (isImages || isVideos) && hasEmbeddings}
+                                        <Button
+                                            class="flex items-center space-x-1"
+                                            data-testid="toggle-plot-button"
+                                            variant={$showPlot ? 'default' : 'ghost'}
+                                            onclick={() => {
+                                                if (!$showPlot) {
+                                                    setShowEvalPanel(false);
+                                                }
+                                                setShowPlot(!$showPlot);
+                                            }}
+                                        >
+                                            <ChartNetwork class="size-4" />
+                                            <span>Show Embeddings</span>
                                         </Button>
                                     {/if}
                                 {/snippet}
@@ -665,7 +686,11 @@
                     </PaneResizer>
 
                     <Pane defaultSize={50} minSize={30} class="flex min-h-0 flex-col">
-                        {#if $showEvalPanel}
+                        {#if $showPlot}
+                            {#await import('$lib/components/PlotPanel/PlotPanel.svelte') then { default: PlotPanel }}
+                                <PlotPanel />
+                            {/await}
+                        {:else if $showEvalPanel}
                             {#await import('$lib/components/EvaluationPanel/EvaluationPanel.svelte') then { default: EvaluationPanel }}
                                 <EvaluationPanel {datasetId} />
                             {/await}
@@ -683,9 +708,28 @@
                                         class="flex items-center space-x-1"
                                         data-testid="toggle-eval-panel-button"
                                         variant={$showEvalPanel ? 'default' : 'ghost'}
-                                        onclick={() => setShowEvalPanel(!$showEvalPanel)}
+                                        onclick={() => {
+                                            setShowPlot(false);
+                                            setShowEvalPanel(!$showEvalPanel);
+                                        }}
                                     >
                                         <span>Evaluations</span>
+                                    </Button>
+                                {/if}
+                                {#if (isImages || isVideos) && hasEmbeddings}
+                                    <Button
+                                        class="flex items-center space-x-1"
+                                        data-testid="toggle-plot-button"
+                                        variant={$showPlot ? 'default' : 'ghost'}
+                                        onclick={() => {
+                                            if (!$showPlot) {
+                                                setShowEvalPanel(false);
+                                            }
+                                            setShowPlot(!$showPlot);
+                                        }}
+                                    >
+                                        <ChartNetwork class="size-4" />
+                                        <span>Show Embeddings</span>
                                     </Button>
                                 {/if}
                             {/snippet}

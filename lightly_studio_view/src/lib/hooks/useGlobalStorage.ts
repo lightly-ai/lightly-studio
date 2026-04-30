@@ -83,6 +83,7 @@ export type TextEmbedding = {
 };
 
 const showEvalPanel = writable<boolean>(false);
+const showPlot = writable<boolean>(false);
 const activeEvaluationId = writable<string | null>(null);
 const evaluationSampleSort = writable<EvaluationSampleSort>(null);
 const rangeSelectionBycollection = writable<Record<string, Point[] | null>>({});
@@ -296,6 +297,10 @@ export const useGlobalStorage = () => {
         showEvalPanel,
         setShowEvalPanel: (show: boolean) => {
             showEvalPanel.set(show);
+        },
+        showPlot,
+        setShowPlot: (show: boolean) => {
+            showPlot.set(show);
         },
         activeEvaluationId,
         setActiveEvaluationId: (id: string | null) => {
