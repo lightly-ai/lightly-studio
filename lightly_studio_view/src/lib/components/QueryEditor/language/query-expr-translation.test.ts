@@ -18,6 +18,7 @@ import type {
     DatetimeExpr,
     TagsContainsExpr,
     ObjectDetectionMatchExpr,
+    ClassificationMatchExpr,
     AndExpr,
     OrExpr,
     NotExpr
@@ -60,6 +61,7 @@ describe('parseLightlyQuery error handling', () => {
         { name: 'string compared to int field', source: 'height == "tall"' },
         { name: 'obj detection without arguments', source: 'object_detection()' },
         { name: 'obj detection unknown field', source: 'object_detection(file_name == "a.jpg")' },
+        { name: 'classification unknown field', source: 'classification(x == 0)' },
         { name: 'wrong in operator use', source: '"jpg" IN file_name' },
         { name: 'stray punctuation', source: '@@@' }
     ];
@@ -111,6 +113,12 @@ const objectDetection = (subexpr: MatchExpr): MatchExpr =>
         type: 'object_detection_match_expr',
         subexpr
     }) satisfies ObjectDetectionMatchExpr & { type: 'object_detection_match_expr' };
+
+const classification = (subexpr: MatchExpr): MatchExpr =>
+    ({
+        type: 'classification_match_expr',
+        subexpr
+    }) satisfies ClassificationMatchExpr & { type: 'classification_match_expr' };
 
 const and = (...children: MatchExpr[]): MatchExpr =>
     ({
@@ -198,6 +206,13 @@ const TRANSLATION_TEST_CASES: TranslationTestCase[] = [
         name: 'object detection height less than or equal',
         source: 'object_detection(height <= 120)',
         expected: query(objectDetection(int('object_detection', 'height', '<=', 120)))
+    },
+
+    /* Classification expression */
+    {
+        name: 'classification label',
+        source: 'classification(label == "cat")',
+        expected: query(classification(str('classification', 'label', '==', 'cat')))
     },
 
     /* Boolean operators */
