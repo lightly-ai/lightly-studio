@@ -27,10 +27,7 @@ from sqlmodel import Session
 
 from lightly_studio.core.dataset import BaseSampleDataset
 from lightly_studio.core.dataset_query.dataset_query import DatasetQuery
-from lightly_studio.core.evaluation.add_predictions import (
-    add_predictions_from_coco as _add_predictions_from_coco,
-)
-from lightly_studio.core.evaluation.add_predictions_lightly import (
+from lightly_studio.core.image.add_predictions import (
     add_predictions_from_lightly as _add_predictions_from_lightly,
 )
 from lightly_studio.core.evaluation.register_gt_collection import (
@@ -479,33 +476,6 @@ class ImageDataset(BaseSampleDataset[ImageSample]):
             input_folder=Path(input_folder).absolute(),
             collection_name=collection_name,
             images_rel_path=images_rel_path,
-        )
-
-    def add_predictions_from_coco(
-        self,
-        gt_annotations_json: PathLike,
-        predictions_json: PathLike,
-        collection_name: str,
-    ) -> None:
-        """Load COCO-format model predictions and register them as a named AnnotationCollection.
-
-        Images must already exist in the dataset (loaded via add_samples_from_coco or similar).
-
-        Args:
-            gt_annotations_json: The COCO annotations JSON that was used to produce the
-                predictions. Used only to resolve image_id → file_name and
-                category_id → category_name.
-            predictions_json: COCO results file — a JSON array of dicts with keys
-                image_id, category_id, bbox ([x, y, w, h]), score.
-            collection_name: Name for this prediction set (e.g. "YOLOv8-n epoch 50").
-        """
-        _add_predictions_from_coco(
-            session=self.session,
-            dataset_id=self.dataset_id,
-            root_collection_id=self.collection_id,
-            gt_annotations_json=Path(gt_annotations_json),
-            predictions_json=Path(predictions_json),
-            collection_name=collection_name,
         )
 
     def evaluate(  # noqa: PLR0913

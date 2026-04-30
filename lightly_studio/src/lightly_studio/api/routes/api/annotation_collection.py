@@ -67,7 +67,7 @@ def create_annotation_collection(
     """Register an annotation collection by name.
 
     The underlying annotation child collection must already exist (i.e. annotations
-    have been loaded via add_samples_from_coco or add_predictions_from_coco).
+    have been loaded via add_samples_from_coco or add_predictions_from_lightly).
     """
     root_collection = _get_root_collection_or_404(session=session, root_collection_id=dataset_id)
 
