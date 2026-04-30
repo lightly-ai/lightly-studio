@@ -70,6 +70,15 @@ describe('parseLightlyQuery error handling', () => {
         const result = parseLightlyQuery(parser, source);
         expect(result.status).toBe('error');
     });
+
+    it('returns an error result for an invalid datetime literal', () => {
+        const result = parseLightlyQuery(parser, 'created_at == "not-a-date"');
+
+        expect(result).toEqual({
+            status: 'error',
+            errors: [{ message: 'Invalid datetime literal: not-a-date' }]
+        });
+    });
 });
 
 /*

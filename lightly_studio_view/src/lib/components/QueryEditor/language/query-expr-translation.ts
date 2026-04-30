@@ -62,10 +62,17 @@ export function parseLightlyQuery(
         };
     }
 
-    return {
-        status: 'ok',
-        queryExpr: toQueryExpr(parseResult.value)
-    };
+    try {
+        return {
+            status: 'ok',
+            queryExpr: toQueryExpr(parseResult.value)
+        };
+    } catch (error) {
+        return {
+            status: 'error',
+            errors: [{ message: toErrorMessage(error) }]
+        };
+    }
 }
 
 /**
@@ -154,7 +161,7 @@ function visitComparisonExpression(
                         type: 'datetime_expr',
                         field: { table, name: fieldName },
                         operator: expr.operator,
-                        value: new Date(right.value)
+                        value: parseDatetimeLiteral(right.value)
                     };
                 }
                 break;
@@ -242,7 +249,7 @@ function visitComparisonExpression(
         }
     }
 
-    throw new Error(`Unsupported comparison: ${fieldName} ${expr.operator} ${right.$type}}`);
+    throw new Error(`Unsupported comparison: ${fieldName} ${expr.operator} ${right.$type}`);
 }
 
 function getRootScope(parseResult: Query): Extract<QueryScope, 'image' | 'video'> {
@@ -274,4 +281,23 @@ function toEqualityComparisonOperator(operator: string): EqualityComparisonOpera
     }
 
     throw new Error(`Unsupported equality operator: ${operator}`);
+}
+
+function parseDatetimeLiteral(value: string): Date {
+    // TODO(lukas, 04/2026): Replace this with a stricter ISO 8601 parser to avoid
+    // environment-dependent parsing. We might be able to also validate the format in Langium.
+    const parsed = new Date(value);
+    if (Number.isNaN(parsed.getTime())) {
+        throw new Error(`Invalid datetime literal: ${value}`);
+    }
+
+    return parsed;
+}
+
+function toErrorMessage(error: unknown): string {
+    if (error instanceof Error) {
+        return error.message;
+    }
+
+    return 'Unknown query translation error';
 }
