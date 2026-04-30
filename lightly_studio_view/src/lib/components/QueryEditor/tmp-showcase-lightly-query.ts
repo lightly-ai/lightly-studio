@@ -13,6 +13,7 @@ import {
 import {
     type Query,
     isFieldReference,
+    isQualifiedFieldReference,
     isBooleanExpression,
     isComparisonExpression,
     isFunctionCall,
@@ -94,8 +95,10 @@ function transformToDSLJson(
     if (isComparisonExpression(node)) {
         const left = node.left;
         let field = '';
-        if (isFieldReference(left)) {
+        if (isQualifiedFieldReference(left)) {
             field = left.member;
+        } else if (isFieldReference(left)) {
+            field = left.name;
             // The grammar already enforces valid fields for the context.
             // We are just forwarding the context to recursive calls.
         } else {
