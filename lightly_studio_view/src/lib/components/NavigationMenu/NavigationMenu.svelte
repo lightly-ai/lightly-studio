@@ -7,7 +7,6 @@
     import MenuItem from '../MenuItem/MenuItem.svelte';
     import { useGlobalStorage } from '$lib/hooks/useGlobalStorage';
     import useAuth from '$lib/hooks/useAuth/useAuth';
-    import { routeHelpers } from '$lib/routes';
     const {
         collection
     }: {
@@ -33,32 +32,14 @@
     const datasetId = $derived(page.params.dataset_id!);
 
     const currentCollectionId = $derived(page.params.collection_id);
+
     const navigationPath = $derived(
         currentCollectionId ? findNavigationPath(collection, currentCollectionId) : null
     );
 
-    const breadcrumbLevels: BreadcrumbLevel[] = $derived.by(() => {
-        if (!currentCollectionId) {
-            return [
-                {
-                    selected: {
-                        title: collection.group_component_name || collection.name || 'Dataset',
-                        id: `dataset-${collection.collection_id}`,
-                        href: routeHelpers.toCollectionHome(
-                            datasetId,
-                            collection.sample_type.toLowerCase(),
-                            collection.collection_id
-                        ),
-                        isSelected: false,
-                        icon: LayoutDashboard
-                    },
-                    siblings: []
-                }
-            ];
-        }
-
-        return buildBreadcrumbLevels(navigationPath, collection, currentCollectionId, datasetId);
-    });
+    const breadcrumbLevels: BreadcrumbLevel[] = $derived(
+        buildBreadcrumbLevels(navigationPath, collection, currentCollectionId, datasetId)
+    );
 
     const { user } = useAuth();
 </script>
@@ -82,5 +63,4 @@
             siblings={level.siblings.length > 1 ? level.siblings : []}
         />
     {/each}
-
 </div>

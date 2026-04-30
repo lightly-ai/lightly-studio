@@ -89,12 +89,3 @@
         z-index: 5;
     }
 }
-
-/* Observable Plot tooltip overrides */
-g.plot-tip > rect {
-    fill: #000 !important;
-    stroke: #333 !important;
-}
-g.plot-tip text {
-    fill: #fff !important;
-}
