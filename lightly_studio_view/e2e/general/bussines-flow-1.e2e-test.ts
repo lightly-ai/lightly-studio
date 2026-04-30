@@ -12,6 +12,9 @@ test.describe('bussines-flow1', () => {
         expect(await samplesPage.getSamples().count()).toBe(cocoDataset.defaultPageSize);
 
         // Check if we have some annotations on screen.
+        await expect(page.getByTestId('sample-annotation-item').first()).toBeVisible({
+            timeout: 10000
+        });
         const annotationCount = await page.getByTestId('sample-annotation-item').count();
         expect(annotationCount).toBeGreaterThan(0);
 
