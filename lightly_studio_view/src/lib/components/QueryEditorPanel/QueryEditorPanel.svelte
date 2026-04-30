@@ -1,14 +1,13 @@
 <script lang="ts">
+    import type { ComponentProps } from 'svelte';
     import QueryEditor from '$lib/components/QueryEditor/QueryEditor.svelte';
     import { useImageFilters } from '$lib/hooks/useImageFilters/useImageFilters';
-    import type { QueryExprTranslationResult } from '../QueryEditor/language/query-expr-translation';
+
+    type OnSaveHandler = ComponentProps<typeof QueryEditor>['onSave'];
 
     const { updateQueryExpr } = useImageFilters();
 
-    const handleQueryEditorValueChange = (
-        value: string,
-        parsed: QueryExprTranslationResult | null
-    ) => {
+    const handleQueryEditorValueChange: OnSaveHandler = (value, parsed) => {
         if (!parsed) {
             throw new Error('Failed to parse query expression');
         }
