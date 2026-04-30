@@ -26,6 +26,20 @@ annotation_collection_router = APIRouter(
 )
 
 
+def _get_root_collection_or_404(
+    session: SessionDep,
+    root_collection_id: UUID,
+) -> CollectionTable:
+    """Resolve the route-level dataset identifier to the root collection row."""
+    root_collection = session.get(CollectionTable, root_collection_id)
+    if root_collection is None:
+        raise HTTPException(
+            status_code=HTTP_STATUS_NOT_FOUND,
+            detail=f"Dataset {root_collection_id} not found.",
+        )
+    return root_collection
+
+
 @annotation_collection_router.get(
     "/annotation-collections",
     response_model=list[AnnotationCollectionView],
@@ -35,7 +49,10 @@ def list_annotation_collections(
     session: SessionDep,
 ) -> list[AnnotationCollectionView]:
     """List all annotation collections for a dataset."""
-    records = annotation_collection_resolver.get_all(session=session, dataset_id=dataset_id)
+    root_collection = _get_root_collection_or_404(session=session, root_collection_id=dataset_id)
+    records = annotation_collection_resolver.get_all(
+        session=session, dataset_id=root_collection.dataset_id
+    )
     return [AnnotationCollectionView.model_validate(r) for r in records]
 
 
@@ -54,20 +71,11 @@ def create_annotation_collection(
     The underlying annotation child collection must already exist (i.e. annotations
     have been loaded via add_samples_from_coco or add_predictions_from_coco).
     """
-    root_collection = session.exec(
-        select(CollectionTable)
-        .where(col(CollectionTable.dataset_id) == dataset_id)
-        .where(col(CollectionTable.parent_collection_id).is_(None))
-    ).first()
-    if root_collection is None:
-        raise HTTPException(
-            status_code=HTTP_STATUS_NOT_FOUND,
-            detail=f"Dataset {dataset_id} not found.",
-        )
+    root_collection = _get_root_collection_or_404(session=session, root_collection_id=dataset_id)
 
     record = register_annotation_collection(
         session=session,
-        dataset_id=dataset_id,
+        dataset_id=root_collection.dataset_id,
         root_collection_id=root_collection.collection_id,
         collection_name=body.name,
         is_ground_truth=body.is_ground_truth,

@@ -11,6 +11,12 @@ import { useReversibleActions } from './useReversibleActions';
 import type { CollectionView, SampleType } from '$lib/api/lightly_studio_local';
 import type { Point } from 'embedding-atlas/svelte';
 
+export type EvaluationCountMetric = 'tp' | 'fp' | 'fn';
+export type EvaluationSampleSort = {
+    metric: EvaluationCountMetric;
+    direction: 'asc' | 'desc';
+} | null;
+
 const lastGridType = writable<GridType>('images');
 const selectedSampleIdsByCollection = writable<Record<string, Set<string>>>({});
 const selectedSampleAnnotationCropIds = writable<Record<string, Set<string>>>({});
@@ -76,7 +82,9 @@ export type TextEmbedding = {
     queryText: string;
 };
 
-const showPlot = writable<boolean>(false);
+const showEvalPanel = writable<boolean>(false);
+const activeEvaluationId = writable<string | null>(null);
+const evaluationSampleSort = writable<EvaluationSampleSort>(null);
 const rangeSelectionBycollection = writable<Record<string, Point[] | null>>({});
 
 // Rewrite the hook to return values and methods
@@ -285,9 +293,17 @@ export const useGlobalStorage = () => {
 
         isEditingMode,
         setIsEditingMode,
-        showPlot,
-        setShowPlot: (show: boolean) => {
-            showPlot.set(show);
+        showEvalPanel,
+        setShowEvalPanel: (show: boolean) => {
+            showEvalPanel.set(show);
+        },
+        activeEvaluationId,
+        setActiveEvaluationId: (id: string | null) => {
+            activeEvaluationId.set(id);
+        },
+        evaluationSampleSort,
+        setEvaluationSampleSort: (sort: EvaluationSampleSort) => {
+            evaluationSampleSort.set(sort);
         },
         getRangeSelection,
         setRangeSelectionForCollection: (collectionId: string, selection: Point[] | null) => {

@@ -1748,9 +1748,7 @@ export interface paths {
         put?: never;
         /**
          * Create Evaluation
-         * @description Compute COCO metrics and persist the result.
-         *
-         *     Metrics are computed per prediction collection and per subset (one per tag + "all").
+         * @description Compute OD metrics and persist the result.
          */
         post: operations["create_evaluation"];
         delete?: never;
@@ -1771,6 +1769,26 @@ export interface paths {
          * @description Return a single evaluation result.
          */
         get: operations["get_evaluation"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/datasets/{dataset_id}/evaluations/{evaluation_id}/sample-counts": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Evaluation Sample Counts
+         * @description Return per-image TP/FP/FN counts for an evaluation run.
+         */
+        get: operations["get_evaluation_sample_counts"];
         put?: never;
         post?: never;
         delete?: never;
@@ -2319,6 +2337,27 @@ export interface components {
             text: string;
         };
         /**
+         * ClassificationEvaluationMetrics
+         * @description Aggregate classification metrics for one subset.
+         */
+        ClassificationEvaluationMetrics: {
+            /** Accuracy */
+            accuracy: number;
+            /** Precision */
+            precision: number;
+            /** Recall */
+            recall: number;
+            /** F1 */
+            f1: number;
+            /**
+             * Per Class Metrics
+             * @default {}
+             */
+            per_class_metrics: {
+                [key: string]: components["schemas"]["ClassificationPerClassMetrics"];
+            };
+        };
+        /**
          * ClassificationMatchExpr
          * @description Leaf node checking if a sample has a matching classification annotation.
          */
@@ -2330,6 +2369,20 @@ export interface components {
             type: "classification_match_expr";
             /** Subexpr */
             subexpr: components["schemas"]["StringExpr"] | components["schemas"]["IntegerExpr"] | components["schemas"]["DatetimeExpr"] | components["schemas"]["OrdinalFloatExpr"] | components["schemas"]["EqualityFloatExpr"] | components["schemas"]["TagsContainsExpr"] | components["schemas"]["ClassificationMatchExpr"] | components["schemas"]["ObjectDetectionMatchExpr"] | components["schemas"]["SegmentationMaskMatchExpr"] | components["schemas"]["AndExpr"] | components["schemas"]["OrExpr"] | components["schemas"]["NotExpr"];
+        };
+        /**
+         * ClassificationPerClassMetrics
+         * @description Per-class classification metrics.
+         */
+        ClassificationPerClassMetrics: {
+            /** Precision */
+            precision: number;
+            /** Recall */
+            recall: number;
+            /** F1 */
+            f1: number;
+            /** Support */
+            support: number;
         };
         /**
          * CollectionCreate
@@ -2533,16 +2586,6 @@ export interface components {
             metadata_name: string;
         };
         /**
-         * ConfusionMatrix
-         * @description Confusion matrix for matched GT/prediction pairs.
-         */
-        ConfusionMatrix: {
-            /** Labels */
-            labels: string[];
-            /** Matrix */
-            matrix: number[][];
-        };
-        /**
          * CountAnnotationsView
          * @description Count annotations view.
          */
@@ -2661,13 +2704,15 @@ export interface components {
         };
         /**
          * EvaluationCreateInput
-         * @description Input for triggering a metric computation.
+         * @description Request body for POST /evaluations.
          */
         EvaluationCreateInput: {
             /** Gt Collection Name */
             gt_collection_name: string;
-            /** Prediction Collection Names */
-            prediction_collection_names: string[];
+            /** Prediction Collection Name */
+            prediction_collection_name: string;
+            /** @default object_detection */
+            task_type: components["schemas"]["EvaluationTaskType"];
             /**
              * Iou Threshold
              * @default 0.5
@@ -2680,29 +2725,8 @@ export interface components {
             confidence_threshold: number;
         };
         /**
-         * EvaluationMetrics
-         * @description Per-subset COCO metrics.
-         */
-        EvaluationMetrics: {
-            /** Precision */
-            precision: number;
-            /** Recall */
-            recall: number;
-            /** F1 */
-            f1: number;
-            /** Map */
-            mAP: number;
-            /** Avg Confidence */
-            avg_confidence: number;
-            confusion_matrix?: components["schemas"]["ConfusionMatrix"] | null;
-            /** Per Class Metrics */
-            per_class_metrics?: {
-                [key: string]: components["schemas"]["PerClassMetrics"];
-            } | null;
-        };
-        /**
          * EvaluationResultView
-         * @description Response model for an evaluation result.
+         * @description Read-only view of a persisted EvaluationResultTable row.
          */
         EvaluationResultView: {
             /**
@@ -2720,17 +2744,19 @@ export interface components {
              * Format: uuid
              */
             gt_collection_id: string;
-            /** Prediction Collection Ids */
-            prediction_collection_ids: string[];
+            /**
+             * Prediction Collection Id
+             * Format: uuid
+             */
+            prediction_collection_id: string;
+            task_type: components["schemas"]["EvaluationTaskType"];
             /** Iou Threshold */
             iou_threshold: number;
             /** Confidence Threshold */
             confidence_threshold: number;
             /** Metrics */
             metrics: {
-                [key: string]: {
-                    [key: string]: components["schemas"]["EvaluationMetrics"];
-                };
+                [key: string]: components["schemas"]["ObjectDetectionEvaluationMetrics"] | components["schemas"]["ClassificationEvaluationMetrics"] | components["schemas"]["InstanceSegmentationEvaluationMetrics"];
             };
             /**
              * Created At
@@ -2738,6 +2764,12 @@ export interface components {
              */
             created_at: string;
         };
+        /**
+         * EvaluationTaskType
+         * @description Supported evaluation task types.
+         * @enum {string}
+         */
+        EvaluationTaskType: "object_detection" | "classification" | "instance_segmentation";
         /**
          * ExecuteOperatorRequest
          * @description Request model for executing an operator.
@@ -3088,6 +3120,41 @@ export interface components {
             nextCursor?: number | null;
         };
         /**
+         * InstanceSegmentationEvaluationMetrics
+         * @description Aggregate instance segmentation metrics for one subset.
+         */
+        InstanceSegmentationEvaluationMetrics: {
+            /** Precision */
+            precision: number;
+            /** Recall */
+            recall: number;
+            /** F1 */
+            f1: number;
+            /** Map */
+            mAP: number;
+            /**
+             * Per Class Metrics
+             * @default {}
+             */
+            per_class_metrics: {
+                [key: string]: components["schemas"]["InstanceSegmentationPerClassMetrics"];
+            };
+        };
+        /**
+         * InstanceSegmentationPerClassMetrics
+         * @description Per-class instance segmentation metrics.
+         */
+        InstanceSegmentationPerClassMetrics: {
+            /** Ap */
+            ap: number;
+            /** Precision */
+            precision: number;
+            /** Recall */
+            recall: number;
+            /** F1 */
+            f1: number;
+        };
+        /**
          * IntRange
          * @description Defines a range of integer-point values.
          */
@@ -3223,6 +3290,27 @@ export interface components {
             height: number;
         };
         /**
+         * ObjectDetectionEvaluationMetrics
+         * @description Aggregate object detection metrics for one subset (e.g. "all" or a tag name).
+         */
+        ObjectDetectionEvaluationMetrics: {
+            /** Precision */
+            precision: number;
+            /** Recall */
+            recall: number;
+            /** F1 */
+            f1: number;
+            /** Map */
+            mAP: number;
+            /**
+             * Per Class Metrics
+             * @default {}
+             */
+            per_class_metrics: {
+                [key: string]: components["schemas"]["ObjectDetectionPerClassMetrics"];
+            };
+        };
+        /**
          * ObjectDetectionMatchExpr
          * @description Leaf node checking if a sample has a matching object detection annotation.
          */
@@ -3234,6 +3322,20 @@ export interface components {
             type: "object_detection_match_expr";
             /** Subexpr */
             subexpr: components["schemas"]["StringExpr"] | components["schemas"]["IntegerExpr"] | components["schemas"]["DatetimeExpr"] | components["schemas"]["OrdinalFloatExpr"] | components["schemas"]["EqualityFloatExpr"] | components["schemas"]["TagsContainsExpr"] | components["schemas"]["ClassificationMatchExpr"] | components["schemas"]["ObjectDetectionMatchExpr"] | components["schemas"]["SegmentationMaskMatchExpr"] | components["schemas"]["AndExpr"] | components["schemas"]["OrExpr"] | components["schemas"]["NotExpr"];
+        };
+        /**
+         * ObjectDetectionPerClassMetrics
+         * @description Per-class object detection metrics.
+         */
+        ObjectDetectionPerClassMetrics: {
+            /** Ap */
+            ap: number;
+            /** Precision */
+            precision: number;
+            /** Recall */
+            recall: number;
+            /** F1 */
+            f1: number;
         };
         /**
          * OperatorContextRequest
@@ -3315,18 +3417,6 @@ export interface components {
              * @default 100
              */
             limit: number;
-        };
-        /**
-         * PerClassMetrics
-         * @description Per-class COCO metrics for one class.
-         */
-        PerClassMetrics: {
-            /** Ap */
-            ap: number;
-            /** Recall */
-            recall: number;
-            /** F1 */
-            f1: number;
         };
         /**
          * QueryExpr
@@ -3464,6 +3554,18 @@ export interface components {
              * Format: uuid
              */
             collection_id: string;
+        };
+        /**
+         * SampleCountsResponse
+         * @description Per-image TP/FP/FN count map returned by the sample-counts endpoint.
+         */
+        SampleCountsResponse: {
+            /** Counts */
+            counts: {
+                [key: string]: {
+                    [key: string]: number;
+                };
+            };
         };
         /**
          * SampleFilter
@@ -6998,6 +7100,38 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["EvaluationResultView"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_evaluation_sample_counts: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                dataset_id: string;
+                evaluation_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SampleCountsResponse"];
                 };
             };
             /** @description Validation Error */

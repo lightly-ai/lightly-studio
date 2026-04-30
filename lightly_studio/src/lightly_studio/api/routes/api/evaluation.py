@@ -7,13 +7,12 @@ from uuid import UUID
 
 from fastapi import APIRouter, HTTPException, Path
 from pydantic import BaseModel
-from sqlmodel import col, select
 
 from lightly_studio.api.routes.api.status import HTTP_STATUS_NOT_FOUND
+from lightly_studio.core.dataset_query.dataset_query import DatasetQuery
 from lightly_studio.db_manager import SessionDep
 from lightly_studio.models.collection import CollectionTable
-from lightly_studio.models.evaluation_result import EvaluationResultView
-from lightly_studio.models.tag import TagTable
+from lightly_studio.models.evaluation_result import EvaluationResultView, EvaluationTaskType
 from lightly_studio.resolvers import evaluation_result_resolver
 from lightly_studio.services import evaluation_service
 
@@ -21,12 +20,39 @@ evaluation_router = APIRouter(prefix="/datasets/{dataset_id}", tags=["evaluation
 
 
 class EvaluationCreateInput(BaseModel):
-    """Input for triggering a metric computation."""
+    """Request body for POST /evaluations."""
 
+    name: str
     gt_collection_name: str
-    prediction_collection_names: list[str]
+    prediction_collection_name: str
+    task_type: EvaluationTaskType = EvaluationTaskType.OBJECT_DETECTION
     iou_threshold: float = 0.5
     confidence_threshold: float = 0.0
+    sample_ids: list[UUID] | None = None
+
+
+class SampleCountsResponse(BaseModel):
+    """Per-image TP/FP/FN count map returned by the sample-counts endpoint."""
+
+    counts: dict[str, dict[str, int]]
+
+
+def _get_root_collection_or_404(
+    session: SessionDep,
+    root_collection_id: UUID,
+) -> CollectionTable:
+    """Resolve the route-level dataset identifier to the root collection row.
+
+    In the GUI routes, ``/datasets/{dataset_id}`` historically carries the root
+    collection UUID, not the dataset table UUID.
+    """
+    root_collection = session.get(CollectionTable, root_collection_id)
+    if root_collection is None:
+        raise HTTPException(
+            status_code=HTTP_STATUS_NOT_FOUND,
+            detail=f"Dataset {root_collection_id} not found.",
+        )
+    return root_collection
 
 
 @evaluation_router.post(
@@ -39,36 +65,27 @@ def create_evaluation(
     session: SessionDep,
     body: EvaluationCreateInput,
 ) -> EvaluationResultView:
-    """Compute COCO metrics and persist the result.
-
-    Metrics are computed per prediction collection and per subset (one per tag + "all").
-    """
-    root_collection = session.exec(
-        select(CollectionTable)
-        .where(col(CollectionTable.dataset_id) == dataset_id)
-        .where(col(CollectionTable.parent_collection_id).is_(None))
-    ).first()
-    if root_collection is None:
-        raise HTTPException(
-            status_code=HTTP_STATUS_NOT_FOUND, detail=f"Dataset {dataset_id} not found."
-        )
-
-    tags = list(
-        session.exec(
-            select(TagTable).where(col(TagTable.collection_id) == root_collection.collection_id)
-        ).all()
-    )
+    """Compute one evaluation run and persist the result."""
+    root_collection = _get_root_collection_or_404(session=session, root_collection_id=dataset_id)
+    if body.sample_ids is None:
+        sample_ids = DatasetQuery(dataset=root_collection, session=session).get_sample_ids()
+    else:
+        sample_ids = body.sample_ids
 
     try:
         result = evaluation_service.run_evaluation(
             session=session,
-            dataset_id=dataset_id,
+            dataset_id=root_collection.dataset_id,
+            name=body.name,
             gt_collection_name=body.gt_collection_name,
-            prediction_collection_names=body.prediction_collection_names,
-            tags=tags,
+            prediction_collection_name=body.prediction_collection_name,
+            sample_ids=sample_ids,
+            task_type=body.task_type,
             iou_threshold=body.iou_threshold,
             confidence_threshold=body.confidence_threshold,
         )
+    except NotImplementedError as exc:
+        raise HTTPException(status_code=501, detail=str(exc)) from exc
     except ValueError as exc:
         raise HTTPException(status_code=HTTP_STATUS_NOT_FOUND, detail=str(exc)) from exc
 
@@ -84,7 +101,10 @@ def list_evaluations(
     session: SessionDep,
 ) -> list[EvaluationResultView]:
     """Return all evaluation results for a dataset, newest first."""
-    results = evaluation_result_resolver.get_all(session=session, dataset_id=dataset_id)
+    root_collection = _get_root_collection_or_404(session=session, root_collection_id=dataset_id)
+    results = evaluation_result_resolver.get_all(
+        session=session, dataset_id=root_collection.dataset_id
+    )
     return [EvaluationResultView.model_validate(r) for r in results]
 
 
@@ -93,15 +113,44 @@ def list_evaluations(
     response_model=EvaluationResultView,
 )
 def get_evaluation(
-    dataset_id: Annotated[UUID, Path()],  # noqa: ARG001
+    dataset_id: Annotated[UUID, Path()],
     evaluation_id: Annotated[UUID, Path()],
     session: SessionDep,
 ) -> EvaluationResultView:
     """Return a single evaluation result."""
+    root_collection = _get_root_collection_or_404(session=session, root_collection_id=dataset_id)
     result = evaluation_result_resolver.get_by_id(session=session, evaluation_id=evaluation_id)
     if result is None:
         raise HTTPException(
             status_code=HTTP_STATUS_NOT_FOUND,
             detail=f"Evaluation {evaluation_id} not found.",
         )
+    if result.dataset_id != root_collection.dataset_id:
+        raise HTTPException(
+            status_code=HTTP_STATUS_NOT_FOUND,
+            detail=f"Evaluation {evaluation_id} not found.",
+        )
     return EvaluationResultView.model_validate(result)
+
+
+@evaluation_router.get(
+    "/evaluations/{evaluation_id}/sample-counts",
+    response_model=SampleCountsResponse,
+)
+def get_evaluation_sample_counts(
+    dataset_id: Annotated[UUID, Path()],
+    evaluation_id: Annotated[UUID, Path()],
+    session: SessionDep,
+) -> SampleCountsResponse:
+    """Return per-image TP/FP/FN counts for an evaluation run."""
+    root_collection = _get_root_collection_or_404(session=session, root_collection_id=dataset_id)
+    result = evaluation_result_resolver.get_by_id(session=session, evaluation_id=evaluation_id)
+    if result is None or result.dataset_id != root_collection.dataset_id:
+        raise HTTPException(
+            status_code=HTTP_STATUS_NOT_FOUND,
+            detail=f"Evaluation {evaluation_id} not found.",
+        )
+    counts = evaluation_result_resolver.get_sample_counts(
+        session=session, evaluation_result_id=evaluation_id
+    )
+    return SampleCountsResponse(counts={str(k): v for k, v in counts.items()})

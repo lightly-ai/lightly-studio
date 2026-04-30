@@ -16,7 +16,6 @@
         SlidersHorizontal,
         Image as ImageIcon,
         X,
-        ChartNetwork,
         GripVertical
     } from '@lucide/svelte';
     import { onDestroy, onMount } from 'svelte';
@@ -92,8 +91,8 @@
     const {
         retrieveParentCollection,
         collections,
-        showPlot,
-        setShowPlot,
+        showEvalPanel,
+        setShowEvalPanel,
         filteredSampleCount,
         filteredAnnotationCount
     } = useGlobalStorage();
@@ -539,14 +538,26 @@
                 </div>
             {/if}
 
-            {#if (isImages || isVideos) && $showPlot}
-                <!-- When plot is shown, use PaneGroup for the main content + plot -->
+            {#if isImages && $showEvalPanel}
+                <!-- Right panel active: use PaneGroup for main content + right panel -->
                 <PaneGroup direction="horizontal" class="flex-1">
                     <Pane defaultSize={50} minSize={30} class="flex">
                         <div
                             class="relative flex flex-1 flex-col space-y-4 rounded-[1vw] bg-card p-4"
                         >
                             <GridHeader>
+                                {#snippet auxControls()}
+                                    {#if isImages}
+                                        <Button
+                                            class="flex items-center space-x-1"
+                                            data-testid="toggle-eval-panel-button"
+                                            variant={$showEvalPanel ? 'default' : 'ghost'}
+                                            onclick={() => setShowEvalPanel(!$showEvalPanel)}
+                                        >
+                                            <span>Evaluations</span>
+                                        </Button>
+                                    {/if}
+                                {/snippet}
                                 <div class="flex-1">
                                     {#if hasEmbeddings}
                                         <div
@@ -654,9 +665,11 @@
                     </PaneResizer>
 
                     <Pane defaultSize={50} minSize={30} class="flex min-h-0 flex-col">
-                        {#await import('$lib/components/PlotPanel/PlotPanel.svelte') then { default: PlotPanel }}
-                            <PlotPanel />
-                        {/await}
+                        {#if $showEvalPanel}
+                            {#await import('$lib/components/EvaluationPanel/EvaluationPanel.svelte') then { default: EvaluationPanel }}
+                                <EvaluationPanel {datasetId} />
+                            {/await}
+                        {/if}
                     </Pane>
                 </PaneGroup>
             {:else}
@@ -665,16 +678,14 @@
                     {#if isImages || isAnnotations || isVideos || isGroups}
                         <GridHeader>
                             {#snippet auxControls()}
-                                {#if (isImages || isVideos) && hasEmbeddings}
+                                {#if isImages}
                                     <Button
                                         class="flex items-center space-x-1"
-                                        data-testid="toggle-plot-button"
-                                        variant={$showPlot ? 'default' : 'ghost'}
-                                        onclick={() =>
-                                            $showPlot ? setShowPlot(false) : setShowPlot(true)}
+                                        data-testid="toggle-eval-panel-button"
+                                        variant={$showEvalPanel ? 'default' : 'ghost'}
+                                        onclick={() => setShowEvalPanel(!$showEvalPanel)}
                                     >
-                                        <ChartNetwork class="size-4" />
-                                        <span>Show Embeddings</span>
+                                        <span>Evaluations</span>
                                     </Button>
                                 {/if}
                             {/snippet}

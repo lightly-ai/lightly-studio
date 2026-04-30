@@ -9,19 +9,19 @@ from uuid import UUID
 from labelformat.formats import LightlyObjectDetectionInput
 from sqlmodel import Session, col, select
 
+from lightly_studio.core import labelformat_helpers
 from lightly_studio.models.annotation.annotation_base import AnnotationCreate, AnnotationType
 from lightly_studio.models.annotation_collection import AnnotationCollectionTable
 from lightly_studio.models.collection import SampleType
 from lightly_studio.models.image import ImageTable
-from lightly_studio.resolvers import annotation_collection_resolver, annotation_label_resolver
+from lightly_studio.resolvers import annotation_collection_resolver
 from lightly_studio.resolvers.annotation_resolver import create_many
 from lightly_studio.resolvers.collection_resolver import get_or_create_child_collection
-from lightly_studio.core import labelformat_helpers
 
 logger = logging.getLogger(__name__)
 
 
-def add_predictions_from_lightly(
+def add_predictions_from_lightly(  # noqa: PLR0913
     session: Session,
     dataset_id: UUID,
     root_collection_id: UUID,
@@ -38,6 +38,9 @@ def add_predictions_from_lightly(
     ``score`` field in each annotation JSON file.
 
     Args:
+        session: Active database session.
+        dataset_id: ID of the dataset to load predictions into.
+        root_collection_id: Root collection of the dataset.
         input_folder: Folder containing the Lightly annotation files (.json per image).
         collection_name: Name for this prediction set (e.g. "YOLOv8-n epoch 50").
         images_rel_path: Relative path from input_folder to the images directory.
@@ -55,14 +58,12 @@ def add_predictions_from_lightly(
         input_folder=input_folder, images_rel_path=images_rel_path
     )
 
-    # Build a label map (category name → annotation_label_id), creating missing labels
     label_map = labelformat_helpers.create_label_map(
         session=session,
         root_collection_id=root_collection_id,
         input_labels=label_input,
     )
 
-    # Build file_name → sample_id lookup from existing images
     all_filenames = [str(img.filename) for img in label_input.get_images()]
     stmt = select(ImageTable).where(col(ImageTable.file_name).in_(all_filenames))
     filename_to_sample_id: dict[str, UUID] = {

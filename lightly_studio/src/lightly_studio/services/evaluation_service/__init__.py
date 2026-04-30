@@ -1,84 +1,83 @@
-"""Evaluation service — compute and persist COCO metrics."""
+"""Evaluation service dispatcher."""
 
 from __future__ import annotations
 
+from collections.abc import Sequence
 from uuid import UUID
 
 from sqlmodel import Session
 
-from lightly_studio.models.evaluation_result import EvaluationResultTable
-from lightly_studio.models.tag import TagTable
-from lightly_studio.resolvers import annotation_collection_resolver, evaluation_result_resolver
-from lightly_studio.services.evaluation_service.compute_coco_metrics import compute_metrics_for_pair
+from lightly_studio.models.evaluation_result import EvaluationResultTable, EvaluationTaskType
+from lightly_studio.resolvers import evaluation_result_resolver
+from lightly_studio.services.evaluation_service import (
+    common,
+    run_classification,
+    run_instance_segmentation,
+    run_object_detection,
+)
 
 
-def run_evaluation(
+def run_evaluation(  # noqa: PLR0913
     session: Session,
     dataset_id: UUID,
+    name: str,
     gt_collection_name: str,
-    prediction_collection_names: list[str],
-    tags: list[TagTable],
+    prediction_collection_name: str,
+    sample_ids: Sequence[UUID],
+    task_type: EvaluationTaskType,
     iou_threshold: float = 0.5,
     confidence_threshold: float = 0.0,
 ) -> EvaluationResultTable:
-    """Compute COCO metrics and persist the result.
-
-    Metrics are computed for every (prediction_collection × subset) combination.
-    Subsets always include "all" plus one entry per provided tag.
-
-    Args:
-        tags: Tag records to use as subsets. Typically loaded by the caller
-              from the root image collection. Pass an empty list to compute
-              only the "all" subset.
-    """
-    gt = annotation_collection_resolver.get_by_name(
-        session=session, dataset_id=dataset_id, name=gt_collection_name
+    """Run one evaluation task and persist the result."""
+    frozen_sample_ids = list(dict.fromkeys(sample_ids))
+    sample_id_set = set(frozen_sample_ids)
+    gt_collection, prediction_collection = common.resolve_annotation_collections(
+        session=session,
+        dataset_id=dataset_id,
+        gt_collection_name=gt_collection_name,
+        prediction_collection_name=prediction_collection_name,
     )
-    if gt is None:
-        raise ValueError(f"Ground-truth collection '{gt_collection_name}' not found.")
 
-    pred_collections = []
-    for name in prediction_collection_names:
-        coll = annotation_collection_resolver.get_by_name(
-            session=session, dataset_id=dataset_id, name=name
-        )
-        if coll is None:
-            raise ValueError(f"Prediction collection '{name}' not found.")
-        pred_collections.append(coll)
-
-    metrics: dict = {}
-    for pred_coll in pred_collections:
-        subsets: dict = {}
-
-        # "all" subset — no tag filter
-        subsets["all"] = compute_metrics_for_pair(
+    if task_type == EvaluationTaskType.OBJECT_DETECTION:
+        run_result = run_object_detection.run(
             session=session,
-            gt_collection=gt,
-            pred_collection=pred_coll,
-            tag_id=None,
+            gt_collection_id=gt_collection.collection_id,
+            prediction_collection_id=prediction_collection.collection_id,
+            sample_ids=sample_id_set,
             iou_threshold=iou_threshold,
             confidence_threshold=confidence_threshold,
         )
+    elif task_type == EvaluationTaskType.CLASSIFICATION:
+        run_result = run_classification.run(
+            session=session,
+            gt_collection_id=gt_collection.collection_id,
+            prediction_collection_id=prediction_collection.collection_id,
+            sample_ids=sample_id_set,
+        )
+    elif task_type == EvaluationTaskType.INSTANCE_SEGMENTATION:
+        run_result = run_instance_segmentation.run(
+            session=session,
+            gt_collection_id=gt_collection.collection_id,
+            prediction_collection_id=prediction_collection.collection_id,
+            sample_ids=sample_id_set,
+            iou_threshold=iou_threshold,
+            confidence_threshold=confidence_threshold,
+        )
+    else:
+        raise NotImplementedError(f"Evaluation task type '{task_type.value}' is not supported yet.")
 
-        # One subset per tag
-        for tag in tags:
-            subsets[tag.name] = compute_metrics_for_pair(
-                session=session,
-                gt_collection=gt,
-                pred_collection=pred_coll,
-                tag_id=tag.tag_id,
-                iou_threshold=iou_threshold,
-                confidence_threshold=confidence_threshold,
-            )
-
-        metrics[pred_coll.name] = subsets
-
-    return evaluation_result_resolver.create(
+    result = evaluation_result_resolver.create(
         session=session,
         dataset_id=dataset_id,
-        gt_collection_id=gt.id,
-        prediction_collection_ids=[c.id for c in pred_collections],
+        name=name,
+        gt_collection_id=gt_collection.id,
+        prediction_collection_id=prediction_collection.id,
+        task_type=task_type,
         iou_threshold=iou_threshold,
         confidence_threshold=confidence_threshold,
-        metrics=metrics,
+        metrics=run_result.metrics,
     )
+    common.persist_sample_ids(session, result.id, frozen_sample_ids)
+    common.persist_matches(session, result.id, run_result.match_records)
+    session.commit()
+    return result

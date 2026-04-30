@@ -2,12 +2,12 @@
     import type { BreadcrumbLevel } from './types';
     import { findNavigationPath, buildBreadcrumbLevels } from './utils';
     import { page } from '$app/state';
-    import { LayoutDashboard, TableProperties } from '@lucide/svelte';
+    import { LayoutDashboard } from '@lucide/svelte';
     import { type CollectionView } from '$lib/api/lightly_studio_local';
     import MenuItem from '../MenuItem/MenuItem.svelte';
     import { useGlobalStorage } from '$lib/hooks/useGlobalStorage';
     import useAuth from '$lib/hooks/useAuth/useAuth';
-    import { APP_ROUTES, routeHelpers } from '$lib/routes';
+    import { routeHelpers } from '$lib/routes';
     const {
         collection
     }: {
@@ -33,8 +33,6 @@
     const datasetId = $derived(page.params.dataset_id!);
 
     const currentCollectionId = $derived(page.params.collection_id);
-    const isEvaluationsRoute = $derived(page.route.id === APP_ROUTES.evaluations);
-
     const navigationPath = $derived(
         currentCollectionId ? findNavigationPath(collection, currentCollectionId) : null
     );
@@ -85,13 +83,4 @@
         />
     {/each}
 
-    <MenuItem
-        item={{
-            title: 'Evaluation',
-            id: `evaluation-${datasetId}`,
-            href: routeHelpers.toEvaluations(datasetId),
-            isSelected: isEvaluationsRoute,
-            icon: TableProperties
-        }}
-    />
 </div>

@@ -43,3 +43,9 @@ from lightly_studio.models.annotation_collection import (
 from lightly_studio.models.evaluation_result import (
     EvaluationResultTable,  # noqa: F401, required for SQLModel to work properly
 )
+from lightly_studio.models.evaluation_match import (
+    EvaluationMatchTable,  # noqa: F401, required for SQLModel to work properly
+)
+from lightly_studio.models.evaluation_result_sample import (
+    EvaluationResultSampleTable,  # noqa: F401, required for SQLModel to work properly
+)

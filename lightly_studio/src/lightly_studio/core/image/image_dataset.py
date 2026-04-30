@@ -34,7 +34,7 @@ from lightly_studio.dataset.embedding_manager import EmbeddingManagerProvider
 from lightly_studio.export.image_dataset_export import ImageDatasetExport
 from lightly_studio.models.annotation.annotation_base import AnnotationType
 from lightly_studio.models.collection import SampleType
-from lightly_studio.models.evaluation_result import EvaluationResultTable
+from lightly_studio.models.evaluation_result import EvaluationResultTable, EvaluationTaskType
 from lightly_studio.resolvers import (
     image_resolver,
     tag_resolver,
@@ -507,38 +507,30 @@ class ImageDataset(BaseSampleDataset[ImageSample]):
             collection_name=collection_name,
         )
 
-    def evaluate(
+    def evaluate(  # noqa: PLR0913
         self,
+        name: str,
         gt_collection: str,
-        prediction_collections: list[str],
+        prediction_collection: str,
+        task_type: EvaluationTaskType = EvaluationTaskType.OBJECT_DETECTION,
         iou_threshold: float = 0.5,
         confidence_threshold: float = 0.0,
     ) -> EvaluationResultTable:
-        """Compute COCO metrics and persist the result.
-
-        Metrics are computed for every combination of prediction collection and subset.
-        Subsets are "all" (entire dataset) plus one entry per tag on the root collection.
+        """Run one evaluation on the full dataset and persist the result.
 
         Args:
+            name: User-defined name for the evaluation run.
             gt_collection: Name of the ground-truth AnnotationCollection.
-            prediction_collections: Names of the prediction AnnotationCollections to evaluate.
-            iou_threshold: IoU threshold passed to COCOeval.
+            prediction_collection: Name of the prediction collection to evaluate.
+            task_type: Evaluation task type.
+            iou_threshold: IoU overlap threshold for matching predictions to GTs.
             confidence_threshold: Predictions below this confidence are ignored.
-
-        Returns:
-            The persisted EvaluationResultTable record (includes the metrics dict).
         """
-        from lightly_studio.services import evaluation_service
-
-        tags = tag_resolver.get_all_by_collection_id(
-            session=self.session, collection_id=self.collection_id
-        )
-        return evaluation_service.run_evaluation(
-            session=self.session,
-            dataset_id=self.dataset_id,
-            gt_collection_name=gt_collection,
-            prediction_collection_names=prediction_collections,
-            tags=tags,
+        return self.query().evaluate(
+            name=name,
+            gt_collection=gt_collection,
+            prediction_collection=prediction_collection,
+            task_type=task_type,
             iou_threshold=iou_threshold,
             confidence_threshold=confidence_threshold,
         )
