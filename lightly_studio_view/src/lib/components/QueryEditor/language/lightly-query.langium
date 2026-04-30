@@ -23,23 +23,12 @@ interface FunctionCall extends Expression {
   args: Expression[];
 }
 
-interface MemberCall extends Expression {
-  receiver: string;
-  member: string;
-  args: Expression[];
-}
-
-interface QualifiedFieldReference extends Expression {
-  receiver: string;
+interface FieldReference extends Expression {
   member: string;
 }
 
 interface TagInExpression extends Expression {
   tag_name: Expression;
-}
-
-interface FieldReference extends Expression {
-  name: string;
 }
 
 interface NumberLiteral extends Expression {
@@ -58,16 +47,14 @@ Sample<isImage> returns Expression:
   SampleOr<isImage>;
 
 SampleOr<isImage> returns Expression:
-  SampleAnd<isImage> ({BooleanExpression.children+=current} operator='or' children+=SampleAnd<isImage> ('or' children+=SampleAnd<isImage>)*)?
-    | {BooleanExpression} operator='or' '(' children+=Sample<isImage> (',' children+=Sample<isImage>)+ ')';
+  SampleAnd<isImage> ({BooleanExpression.children+=current} operator=OR children+=SampleAnd<isImage> (OR children+=SampleAnd<isImage>)*)?;
 
 SampleAnd<isImage> returns Expression:
-  SampleUnary<isImage> ({BooleanExpression.children+=current} operator='and' children+=SampleUnary<isImage> ('and' children+=SampleUnary<isImage>)*)?
-    | {BooleanExpression} operator='and' '(' children+=Sample<isImage> (',' children+=Sample<isImage>)+ ')';
+  SampleUnary<isImage> ({BooleanExpression.children+=current} operator=AND children+=SampleUnary<isImage> (AND children+=SampleUnary<isImage>)*)?;
 
 SampleUnary<isImage> returns Expression:
   '(' Sample<isImage> ')'
-    | {NotExpression} 'not' expression=SampleUnary<isImage>
+    | {NotExpression} NOT expression=SampleUnary<isImage>
     | SampleComparison<isImage>
     | TagInExpression
     | AnnotationQuery;
@@ -79,85 +66,78 @@ SampleComparison<isImage> returns ComparisonExpression:
    | SampleStringFieldReference<isImage> {ComparisonExpression.left=current} operator=('==' | '!=') right=StringLiteral
    | SampleDateTimeFieldReference<isImage> {ComparisonExpression.left=current} operator=('==' | '!=' | '<' | '>' | '<=' | '>=') right=StringLiteral;
 
-SampleIntFieldReference<isImage> returns QualifiedFieldReference:
-  (<isImage> {QualifiedFieldReference} receiver=ImageFieldReceiver '.' member=ImageIntFieldName)
-    | (<!isImage> {QualifiedFieldReference} receiver=VideoFieldReceiver '.' member=VideoIntFieldName);
+SampleIntFieldReference<isImage> returns FieldReference:
+  (<isImage> {FieldReference} member=ImageIntFieldName)
+    | (<!isImage> {FieldReference} member=VideoIntFieldName);
 
-SampleOrdinalFloatFieldReference<isImage> returns QualifiedFieldReference:
-  (<!isImage> {QualifiedFieldReference} receiver=VideoFieldReceiver '.' member=VideoOrdinalFloatFieldName);
+SampleOrdinalFloatFieldReference<isImage> returns FieldReference:
+  (<!isImage> {FieldReference} member=VideoOrdinalFloatFieldName);
 
-SampleEqualityFloatFieldReference<isImage> returns QualifiedFieldReference:
-  (<!isImage> {QualifiedFieldReference} receiver=VideoFieldReceiver '.' member=VideoEqualityFloatFieldName);
+SampleEqualityFloatFieldReference<isImage> returns FieldReference:
+  (<!isImage> {FieldReference} member=VideoEqualityFloatFieldName);
 
-SampleStringFieldReference<isImage> returns QualifiedFieldReference:
-  (<isImage> {QualifiedFieldReference} receiver=ImageFieldReceiver '.' member=ImageStringFieldName)
-    | (<!isImage> {QualifiedFieldReference} receiver=VideoFieldReceiver '.' member=VideoStringFieldName);
+SampleStringFieldReference<isImage> returns FieldReference:
+  (<isImage> {FieldReference} member=ImageStringFieldName)
+    | (<!isImage> {FieldReference} member=VideoStringFieldName);
 
-SampleDateTimeFieldReference<isImage> returns QualifiedFieldReference:
-  (<isImage> {QualifiedFieldReference} receiver=ImageFieldReceiver '.' member=ImageDateTimeFieldName);
+SampleDateTimeFieldReference<isImage> returns FieldReference:
+  (<isImage> {FieldReference} member=ImageDateTimeFieldName);
 
 ObjectDetection returns Expression:
   ObjectDetectionOr;
 
 ObjectDetectionOr returns Expression:
-  ObjectDetectionAnd ({BooleanExpression.children+=current} operator='or' children+=ObjectDetectionAnd ('or' children+=ObjectDetectionAnd)*)?
-    | {BooleanExpression} operator='or' '(' children+=ObjectDetection (',' children+=ObjectDetection)+ ')';
+  ObjectDetectionAnd ({BooleanExpression.children+=current} operator=OR children+=ObjectDetectionAnd (OR children+=ObjectDetectionAnd)*)?;
 
 ObjectDetectionAnd returns Expression:
-  ObjectDetectionUnary ({BooleanExpression.children+=current} operator='and' children+=ObjectDetectionUnary ('and' children+=ObjectDetectionUnary)*)?
-    | {BooleanExpression} operator='and' '(' children+=ObjectDetection (',' children+=ObjectDetection)+ ')';
+  ObjectDetectionUnary ({BooleanExpression.children+=current} operator=AND children+=ObjectDetectionUnary (AND children+=ObjectDetectionUnary)*)?;
 
 ObjectDetectionUnary returns Expression:
   '(' ObjectDetection ')'
-    | {NotExpression} 'not' expression=ObjectDetectionUnary
+    | {NotExpression} NOT expression=ObjectDetectionUnary
     | ObjectDetectionComparison;
 
 ObjectDetectionComparison returns ComparisonExpression:
   ObjectDetectionFieldReference {ComparisonExpression.left=current} operator=('==' | '!=' | '<' | '>' | '<=' | '>=') right=Literal;
 
-ObjectDetectionFieldReceiver returns string:
-  'ObjectDetection' | 'ObjectDetectionField';
-
 ObjectDetectionFieldReference returns Expression:
-  {FieldReference} name=ObjectDetectionFieldName
-    | {QualifiedFieldReference} receiver=ObjectDetectionFieldReceiver '.' member=ObjectDetectionFieldName;
+  {FieldReference} member=ObjectDetectionFieldName;
 
 AnnotationQuery returns Expression:
-  {FunctionCall} name='object_detection' '(' args+=ObjectDetection ')';
+  {FunctionCall} name=ANNOTATION_FUNCTION '(' args+=ObjectDetection ')';
 
 TagInExpression returns Expression:
-  {TagInExpression} 'tags.contains(' tag_name=StringLiteral ')' |
-    {TagInExpression} tag_name=StringLiteral 'in' 'tags';
+  {TagInExpression} tag_name=StringLiteral IN TAGS_KEYWORD;
 
-ImageFieldReceiver returns string:
-  'Image' | 'ImageSampleField';
-
-VideoFieldReceiver returns string:
-  'Video' | 'VideoSampleField';
+terminal HEIGHT returns string: /\bheight\b/;
+terminal WIDTH returns string: /\bwidth\b/;
+terminal LABEL returns string: /\blabel\b/;
+terminal X_COORD returns string: /\bx\b/;
+terminal Y_COORD returns string: /\by\b/;
 
 ImageIntFieldName returns string:
-  'height' | 'width';
+  HEIGHT | WIDTH;
 
 ImageStringFieldName returns string:
-  'file_name' | 'file_path_abs';
+  STRING_FIELD_NAME;
 
 ImageDateTimeFieldName returns string:
-  'created_at';
+  DATE_TIME_FIELD_NAME;
 
 VideoIntFieldName returns string:
-  'height' | 'width';
+  HEIGHT | WIDTH;
 
 VideoOrdinalFloatFieldName returns string:
-  'fps';
+  ORDINAL_FLOAT_FIELD_NAME;
 
 VideoEqualityFloatFieldName returns string:
-  'duration_s';
+  EQUALITY_FLOAT_FIELD_NAME;
 
 VideoStringFieldName returns string:
-  'file_name' | 'file_path_abs';
+  STRING_FIELD_NAME;
 
 ObjectDetectionFieldName returns string:
-  'height' | 'label' | 'width' | 'x' | 'y';
+  HEIGHT | WIDTH | LABEL | X_COORD | Y_COORD;
 
 Literal returns Expression:
   IntLiteral | FloatLiteral | StringLiteral;
@@ -177,6 +157,17 @@ StringLiteral returns Expression:
 terminal FLOAT returns number: /[0-9]+\.[0-9]*/;
 terminal INT returns number: /[0-9]+/;
 terminal STRING: /"([^"\\\n\r]|\\.)*"|'([^'\\\n\r]|\\.)*'/;
+
+terminal AND: /\bAND\b/i;
+terminal OR: /\bOR\b/i;
+terminal NOT: /\bNOT\b/i;
+terminal IN returns string: /\bIN\b/i;
+terminal ANNOTATION_FUNCTION returns string: /\bobject_detection\b/;
+terminal TAGS_KEYWORD returns string: /\btags\b/;
+terminal ORDINAL_FLOAT_FIELD_NAME returns string: /\bduration_s\b/;
+terminal EQUALITY_FLOAT_FIELD_NAME returns string: /\bfps\b/;
+terminal STRING_FIELD_NAME returns string: /\b(file_name|file_path_abs)\b/;
+terminal DATE_TIME_FIELD_NAME returns string: /\bcreated_at\b/;
 
 hidden terminal WS: /\s+/;
 hidden terminal SL_COMMENT: /#[^\n\r]*/;

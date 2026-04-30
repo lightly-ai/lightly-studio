@@ -1,16 +1,20 @@
 <script lang="ts">
     import { onMount } from 'svelte';
+    import { toast } from 'svelte-sonner';
     import { Button } from '$lib/components/ui/button';
-    import { LIGHTLY_QUERY_DEFAULT_VALUE } from './monaco-lightly-query.js';
-    import { useLightlyQueryEditor } from './useLightlyQueryEditor.js';
-    import type { QueryExprTranslationResult } from './language/query-expr-translation.js';
     import Typography from '$lib/components/Typography/Typography.svelte';
+
+    import { useQueryEditor } from './useQueryEditor';
+    import type { QueryExprTranslationResult } from './language/query-expr-translation';
+
+    const LIGHTLY_QUERY_DEFAULT_VALUE = `width > 1920 AND ("reviewed" IN tags)
+AND object_detection(label == "car" and x > 10)`;
 
     interface QueryEditorProps {
         value?: string;
         height?: string;
         readOnly?: boolean;
-        onSave?: (value: string, parsed: QueryExprTranslationResult | null) => void;
+        onSave?: (value: string, parsed: QueryExprTranslationResult) => void;
     }
 
     let {
@@ -22,23 +26,39 @@
 
     let containerEl: HTMLDivElement | null = null;
 
-    const editor = useLightlyQueryEditor({
-        value: () => value,
-        onValueChange: (next) => {
-            value = next;
-        },
-        readOnly: () => readOnly
-    });
+    const { mount, translateQuery } = useQueryEditor();
 
-    async function handleSave() {
-        const parsed = await editor.translateLightlyQuery(value);
-        onSave?.(value, parsed);
+    function formatTranslationErrors(
+        result: Extract<QueryExprTranslationResult, { status: 'error' }>
+    ): string {
+        return result.errors
+            .map((error) => {
+                if (error.line !== undefined && error.column !== undefined) {
+                    return `${error.message} (line ${error.line}, column ${error.column})`;
+                }
+                return error.message;
+            })
+            .join('\n');
+    }
+
+    function handleSave() {
+        const translationResult = translateQuery(value);
+        if (translationResult.status === 'error') {
+            toast.error(`Failed to translate query: ${formatTranslationErrors(translationResult)}`);
+            return;
+        }
+        onSave?.(value, translationResult);
     }
 
     onMount(() => {
-        if (containerEl) {
-            editor.mount(containerEl);
-        }
+        if (!containerEl) return;
+        return mount(containerEl, {
+            value,
+            readOnly,
+            onChange: (next) => {
+                value = next;
+            }
+        });
     });
 </script>
 

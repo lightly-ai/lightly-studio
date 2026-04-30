@@ -9,6 +9,7 @@
         SelectionPill,
         TagsMenu
     } from '$lib/components';
+    import QueryEditorPanel from '$lib/components/QueryEditorPanel/QueryEditorPanel.svelte';
     import Input from '$lib/components/ui/input/input.svelte';
     import Separator from '$lib/components/ui/separator/separator.svelte';
     import {
@@ -48,6 +49,7 @@
     import { useImageAnnotationCounts } from '$lib/hooks/useImageAnnotationCounts/useImageAnnotationCounts';
     import { useGlobalStorage } from '$lib/hooks/useGlobalStorage.js';
     import { Button } from '$lib/components/ui/index.js';
+    import QueryControl from '$lib/components/QueryControl/QueryControl.svelte';
     import { PaneGroup, Pane, PaneResizer } from 'paneforge';
     import { useVideoAnnotationCounts } from '$lib/hooks/useVideoAnnotationsCount/useVideoAnnotationsCount.js';
     import {
@@ -66,7 +68,9 @@
         buildVideoFrameAnnotationCountsFilter
     } from '$lib/utils/buildAnnotationCountsFilters';
     import EmbeddingSelectionFilterItem from '$lib/components/EmbeddingSelectionFilterItem/EmbeddingSelectionFilterItem.svelte';
-    import { useSelectionSummary } from '$lib/hooks';
+    import { useSelectionSummary, useFeatureFlags } from '$lib/hooks';
+    import { useSelectAll } from '$lib/hooks/useSelectAll/useSelectAll';
+    import { isInputElement } from '$lib/utils';
     import { shutdownMaskRendererPool } from '$lib/workers/maskRendererPool';
     const { data, children } = $props();
     const {
@@ -104,22 +108,6 @@
         retrieveParentCollection($collections, collectionId)
     );
 
-    // Setup event handlers for keyboard shortcuts
-    onMount(() => {
-        if (browser) {
-            window.addEventListener('keydown', handleKeyEvent);
-            window.addEventListener('keyup', handleKeyEvent);
-        }
-    });
-
-    onDestroy(() => {
-        if (browser) {
-            window.removeEventListener('keydown', handleKeyEvent);
-            window.removeEventListener('keyup', handleKeyEvent);
-            shutdownMaskRendererPool();
-        }
-    });
-
     const isImages = $derived(isImagesRoute(page.route.id));
     const isGroups = $derived(isGroupsRoute(page.route.id));
     const isGroupDetails = $derived(isGroupDetailsRoute(page.route.id));
@@ -133,6 +121,37 @@
 
     let gridType = $state<GridType>('images');
     let lastCollectionId: string | null = null;
+
+    // Select-all hook
+    let selectAllHandle = $derived(useSelectAll(collectionId, gridType));
+
+    function handleSelectAllKeydown(event: KeyboardEvent) {
+        if (isInputElement(event.target) || (event.target as HTMLElement)?.isContentEditable)
+            return;
+        if (event.key !== 'a' || (!event.ctrlKey && !event.metaKey)) return;
+        if (!isImages && !isVideos && !isVideoFrames && !isAnnotations) return;
+
+        event.preventDefault();
+        selectAllHandle.handleSelectAll();
+    }
+
+    // Setup event handlers for keyboard shortcuts
+    onMount(() => {
+        if (browser) {
+            window.addEventListener('keydown', handleKeyEvent);
+            window.addEventListener('keyup', handleKeyEvent);
+            window.addEventListener('keydown', handleSelectAllKeydown);
+        }
+    });
+
+    onDestroy(() => {
+        if (browser) {
+            window.removeEventListener('keydown', handleKeyEvent);
+            window.removeEventListener('keyup', handleKeyEvent);
+            window.removeEventListener('keydown', handleSelectAllKeydown);
+            shutdownMaskRendererPool();
+        }
+    });
     $effect(() => {
         let nextGridType: GridType | null = null;
         if (isAnnotations) {
@@ -235,6 +254,7 @@
     const { videoBoundsValues } = useVideoBounds();
 
     const { imageFilter: imageFilterFromHook } = useImageFilters();
+
     const { videoFilter: videoFilterFromHook } = useVideoFilters();
     const plotFilterImageSampleIds = $derived(
         $imageFilterFromHook?.sample_filter?.sample_ids ?? []
@@ -493,6 +513,10 @@
     const showLeftSidebar = $derived(
         isImages || isAnnotations || isVideos || isVideoFrames || isGroups
     );
+
+    const { featureFlags } = useFeatureFlags();
+    const isQueryFilterEnabled = $derived($featureFlags.includes('query_filter'));
+    let isQueryFilterEditing = $state(false);
 </script>
 
 <div class="flex-none">
@@ -511,6 +535,14 @@
                         <div
                             class="min-h-0 flex-1 space-y-2 overflow-y-auto px-4 pb-2 dark:[color-scheme:dark]"
                         >
+                            {#if isQueryFilterEnabled}
+                                <QueryControl
+                                    onToggle={() => {
+                                        isQueryFilterEditing = !isQueryFilterEditing;
+                                    }}
+                                />
+                            {/if}
+
                             <div>
                                 <TagsMenu collection_id={collectionId} {gridType} />
                             </div>
@@ -828,6 +860,9 @@
                         <SelectionPill selectedCount={$selectedCount} onClear={clearSelection} />
                     {/if}
                 </div>
+                {#if isQueryFilterEnabled && isQueryFilterEditing}
+                    <QueryEditorPanel />
+                {/if}
             {/if}
             {#if hasEmbeddings}
                 {#await import('$lib/components/FewShotClassifier/CreateClassifierDialog.svelte') then { default: CreateClassifierDialog }}

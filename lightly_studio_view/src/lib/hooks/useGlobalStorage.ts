@@ -221,6 +221,15 @@ export const useGlobalStorage = () => {
             });
         },
 
+        setAllSelectedSampleIds: (collection_id: string, ids: Set<string>) => {
+            selectedSampleIdsByCollection.update((selectedByCollection) => {
+                return {
+                    ...selectedByCollection,
+                    [collection_id]: new Set([...ids])
+                };
+            });
+        },
+
         // Individual sample annotation crop selection methods
         toggleSampleAnnotationCropSelection: (collectionId: string, annotationId: string) => {
             selectedSampleAnnotationCropIds.update((state) => {
@@ -243,6 +252,14 @@ export const useGlobalStorage = () => {
                 return {
                     ...state,
                     [collectionId]: new Set<string>()
+                };
+            });
+        },
+        setAllSelectedAnnotationCropIds: (collectionId: string, ids: Set<string>) => {
+            selectedSampleAnnotationCropIds.update((state) => {
+                return {
+                    ...state,
+                    [collectionId]: new Set([...ids])
                 };
             });
         },

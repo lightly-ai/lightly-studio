@@ -311,6 +311,7 @@ class ImageDataset(BaseSampleDataset[ImageSample]):
                 registered as ground truth, making it available as the GT selector in
                 the evaluation UI.
         """
+        images_path = _normalize_input_path(path=images_path)
         fs, fs_path = fsspec.core.url_to_fs(url=annotations_json)
         if not fs.isfile(fs_path) or not str(annotations_json).endswith(".json"):
             raise FileNotFoundError(f"COCO annotations json file not found: '{annotations_json}'")
