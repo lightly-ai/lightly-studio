@@ -4,11 +4,9 @@ from __future__ import annotations
 
 import asyncio
 import io
-import os
 import threading
 from collections import OrderedDict
 from collections.abc import Generator
-from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass
 from typing import Annotated, Any, cast
 from uuid import UUID
@@ -21,6 +19,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
 
+from lightly_studio.api.routes.executor import get_media_executor
 from lightly_studio.db_manager import SessionDep
 from lightly_studio.models.settings import GridViewThumbnailQualityType
 from lightly_studio.resolvers import video_frame_resolver
@@ -28,9 +27,6 @@ from lightly_studio.resolvers import video_frame_resolver
 frames_router = APIRouter(prefix="/frames/media", tags=["frames streaming"])
 
 JPEG_QUALITY = 75
-
-# Thread pool for CPU-intensive video processing
-_thread_pool_executor: ThreadPoolExecutor | None = None
 
 # Thread-local cache for VideoCapture + stream (per thread, not shared)
 _thread_local = threading.local()
@@ -52,19 +48,6 @@ class FrameTransformQuery(BaseModel):
     quality: GridViewThumbnailQualityType = GridViewThumbnailQualityType.RAW
     max_width: int | None = Query(default=None, ge=1, le=4096)
     max_height: int | None = Query(default=None, ge=1, le=4096)
-
-
-def get_thread_pool_executor() -> ThreadPoolExecutor:
-    """Get or create the shared thread pool executor."""
-    global _thread_pool_executor  # noqa: PLW0603
-    if _thread_pool_executor is None:
-        cpu_count = os.cpu_count() or 1
-        # Use available cores - 1 but at least 1. Cap to prevent runaway usage.
-        max_workers = max(1, min(cpu_count - 1 or 1, 16))
-        _thread_pool_executor = ThreadPoolExecutor(
-            max_workers=max_workers, thread_name_prefix="video_frame"
-        )
-    return _thread_pool_executor
 
 
 ROTATION_MAP: dict[int, Any] = {
@@ -286,8 +269,8 @@ async def stream_frame(
 
     # Run CPU-intensive video processing in thread pool to avoid blocking event loop
     try:
-        buffer, media_type = await asyncio.get_event_loop().run_in_executor(
-            get_thread_pool_executor(),
+        buffer, media_type = await asyncio.get_running_loop().run_in_executor(
+            get_media_executor("video_frame"),
             _process_video_frame,
             video_path,
             video_frame.frame_number,
