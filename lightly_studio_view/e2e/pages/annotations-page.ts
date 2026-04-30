@@ -13,7 +13,19 @@ export class AnnotationsPage {
             timeout: 10000
         });
 
+        const annotationsResponsePromise = this.page.waitForResponse(
+            (response) =>
+                response.request().method() === 'GET' &&
+                response.url().includes('/annotations/payload') &&
+                response.status() === 200,
+            { timeout: 15000 }
+        );
+
         await this.page.getByTestId('navigation-menu-annotations').click();
+        await annotationsResponsePromise;
+        await expect(this.page.getByTestId('annotations-grid')).toBeVisible({
+            timeout: 10000
+        });
 
         // Wait for the annotations grid to be visible
         await expect(this.getAnnotations().first()).toBeVisible({
