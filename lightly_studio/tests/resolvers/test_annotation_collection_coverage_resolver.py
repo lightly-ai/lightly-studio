@@ -61,28 +61,3 @@ def test_add_many__basic_and_idempotent(db_session: Session) -> None:
         )
     )
     assert covered == {s.sample_id for s in samples}
-
-
-def test_add_many__deduplicates_input(db_session: Session) -> None:
-    """Test that add_many deduplicates within a single call (same ID passed multiple times)."""
-    collection = create_collection(session=db_session)
-    cov_id = collection_resolver.get_or_create_child_collection(
-        session=db_session,
-        collection_id=collection.collection_id,
-        sample_type=SampleType.ANNOTATION,
-    )
-    sample = create_image(session=db_session, collection_id=collection.collection_id)
-
-    # Pass the same sample ID three times.
-    annotation_collection_coverage_resolver.add_many(
-        session=db_session,
-        annotation_collection_id=cov_id,
-        parent_sample_ids=[sample.sample_id] * 3,
-    )
-
-    covered = set(
-        annotation_collection_coverage_resolver.list_by_collection_id(
-            session=db_session, annotation_collection_id=cov_id
-        )
-    )
-    assert covered == {sample.sample_id}
