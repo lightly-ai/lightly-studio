@@ -16,6 +16,7 @@ from lightly_studio.models.collection import CollectionTable, SampleType
 from lightly_studio.models.image import ImageTable
 from lightly_studio.models.video import VideoFrameCreate
 from lightly_studio.resolvers import (
+    annotation_collection_coverage_resolver,
     annotation_resolver,
     collection_resolver,
     tag_resolver,
@@ -648,3 +649,67 @@ def test_create_many_annotations(db_session: Session) -> None:
     assert all(
         anno.annotation_label_id == cat_label.annotation_label_id for anno in created_annotations
     )
+
+
+def test_create_many__populates_coverage(db_session: Session) -> None:
+    """create_many must record coverage for every distinct parent_sample_id.
+
+    This is the chokepoint guarding GUI, SDK, video, classifier and plugin paths
+    against missing coverage rows.
+    """
+    collection = create_collection(session=db_session)
+    label = create_annotation_label(
+        session=db_session, root_collection_id=collection.collection_id, label_name="cat"
+    )
+    images = [
+        create_image(
+            session=db_session,
+            collection_id=collection.collection_id,
+            file_path_abs=f"/path/to/image_{i}.png",
+        )
+        for i in range(3)
+    ]
+
+    # 2 annotations on image[0], 1 on image[1], 0 on image[2].
+    annotations_to_create = [
+        AnnotationCreate(
+            parent_sample_id=images[0].sample_id,
+            annotation_label_id=label.annotation_label_id,
+            annotation_type=AnnotationType.OBJECT_DETECTION,
+            x=0,
+            y=0,
+            width=10,
+            height=10,
+        ),
+        AnnotationCreate(
+            parent_sample_id=images[0].sample_id,
+            annotation_label_id=label.annotation_label_id,
+            annotation_type=AnnotationType.OBJECT_DETECTION,
+            x=20,
+            y=20,
+            width=10,
+            height=10,
+        ),
+        AnnotationCreate(
+            parent_sample_id=images[1].sample_id,
+            annotation_label_id=label.annotation_label_id,
+            annotation_type=AnnotationType.OBJECT_DETECTION,
+            x=0,
+            y=0,
+            width=10,
+            height=10,
+        ),
+    ]
+    annotation_resolver.create_many(
+        session=db_session,
+        parent_collection_id=collection.collection_id,
+        annotations=annotations_to_create,
+    )
+
+    annotation_collection_id = collection.children[0].collection_id
+    covered = annotation_collection_coverage_resolver.list_by_collection_id(
+        session=db_session, annotation_collection_id=annotation_collection_id
+    )
+    # images[0] and images[1] are covered (each appears once despite multiple annotations
+    # for images[0]); images[2] received no annotations so create_many cannot cover it.
+    assert set(covered) == {images[0].sample_id, images[1].sample_id}

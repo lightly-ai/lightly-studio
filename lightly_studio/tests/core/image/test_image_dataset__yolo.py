@@ -10,6 +10,11 @@ from PIL import Image
 
 from lightly_studio import ImageDataset
 from lightly_studio.models.annotation.object_detection import ObjectDetectionAnnotationTable
+from lightly_studio.models.collection import SampleType
+from lightly_studio.resolvers import (
+    annotation_collection_coverage_resolver,
+    collection_resolver,
+)
 
 
 def get_yolo_yaml_dict_valid() -> dict[str, Any]:
@@ -359,6 +364,44 @@ class TestDataset:
         samples = list(dataset)
         assert len(samples) == 1
         assert len(samples[0].sample_table.embeddings) == 0
+
+    def test_add_samples_from_yolo__coverage_includes_empty_label_file(
+        self,
+        patch_collection: None,  # noqa: ARG002
+        tmp_path: Path,
+    ) -> None:
+        # Two images: one has detections, the other has an empty label file.
+        # Both must appear in coverage because the run was applied to both.
+        annotations_path = tmp_path / "data.yaml"
+        annotations_path.write_text(yaml.dump(get_yolo_yaml_dict_valid()))
+
+        images_path_train = tmp_path / "train" / "images"
+        labels_path_train = tmp_path / "train" / "labels"
+        images_path_train.mkdir(parents=True, exist_ok=True)
+        labels_path_train.mkdir(parents=True, exist_ok=True)
+        _create_sample_images(
+            [
+                images_path_train / "image1.jpg",
+                images_path_train / "image2.jpg",
+            ]
+        )
+        _create_sample_labels([labels_path_train / "image1.txt"])
+        (labels_path_train / "image2.txt").write_text("")
+
+        dataset = ImageDataset.create(name="test_dataset")
+        dataset.add_samples_from_yolo(data_yaml=annotations_path, input_split="train", embed=False)
+
+        samples = list(dataset)
+        assert len(samples) == 2
+        annotation_collection_id = collection_resolver.get_or_create_child_collection(
+            session=dataset.session,
+            collection_id=dataset.collection_id,
+            sample_type=SampleType.ANNOTATION,
+        )
+        covered = annotation_collection_coverage_resolver.list_by_collection_id(
+            session=dataset.session, annotation_collection_id=annotation_collection_id
+        )
+        assert set(covered) == {s.sample_id for s in samples}
 
 
 def _create_sample_images(image_paths: list[Path]) -> None:

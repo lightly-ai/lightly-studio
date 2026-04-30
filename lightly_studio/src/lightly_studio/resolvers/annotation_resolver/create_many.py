@@ -19,7 +19,11 @@ from lightly_studio.models.annotation.segmentation import (
 )
 from lightly_studio.models.collection import SampleType
 from lightly_studio.models.sample import SampleCreate
-from lightly_studio.resolvers import collection_resolver, sample_resolver
+from lightly_studio.resolvers import (
+    annotation_collection_coverage_resolver,
+    collection_resolver,
+    sample_resolver,
+)
 
 
 def create_many(
@@ -115,6 +119,14 @@ def create_many(
     # Bulk save object detection annotations
     session.bulk_save_objects(object_detection_annotations)
     session.bulk_save_objects(segmentation_annotations)
+
+    # Record that this annotation collection was applied to each parent sample.
+    # Idempotent: re-running create_many for the same pair is a no-op.
+    annotation_collection_coverage_resolver.add_many(
+        session=session,
+        annotation_collection_id=annotation_collection_id,
+        parent_sample_ids={a.parent_sample_id for a in annotations},
+    )
 
     # Commit everything
     session.commit()

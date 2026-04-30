@@ -33,10 +33,13 @@ from lightly_studio.models.annotation.annotation_base import (
     AnnotationType,
 )
 from lightly_studio.models.caption import CaptionCreate
+from lightly_studio.models.collection import SampleType
 from lightly_studio.models.image import ImageCreate
 from lightly_studio.resolvers import (
+    annotation_collection_coverage_resolver,
     annotation_resolver,
     caption_resolver,
+    collection_resolver,
     image_resolver,
     sample_resolver,
     tag_resolver,
@@ -522,9 +525,25 @@ def _process_batch_annotations(
 
         annotations_to_create.extend(new_annotations)
 
-    annotation_resolver.create_many(
-        session=session, parent_collection_id=collection_id, annotations=annotations_to_create
+    # Ensure the annotation collection exists so coverage has an FK target,
+    # even when the entire batch produced zero detections.
+    annotation_collection_id = collection_resolver.get_or_create_child_collection(
+        session=session,
+        collection_id=collection_id,
+        sample_type=SampleType.ANNOTATION,
     )
+    annotation_collection_coverage_resolver.add_many(
+        session=session,
+        annotation_collection_id=annotation_collection_id,
+        parent_sample_ids=created_path_to_id.values(),
+    )
+
+    if annotations_to_create:
+        annotation_resolver.create_many(
+            session=session,
+            parent_collection_id=collection_id,
+            annotations=annotations_to_create,
+        )
 
 
 def _process_batch_captions(
