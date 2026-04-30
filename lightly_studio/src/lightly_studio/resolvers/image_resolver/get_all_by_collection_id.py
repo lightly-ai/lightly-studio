@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from collections.abc import Sequence
+from typing import Union, cast, overload
 from uuid import UUID
 
 from pydantic import BaseModel
@@ -10,8 +11,10 @@ from sqlalchemy import ColumnElement
 from sqlalchemy.orm import joinedload, selectinload
 from sqlalchemy.orm.interfaces import LoaderOption
 from sqlmodel import Session, col, func, select
+from sqlmodel.sql.expression import Select, SelectOfScalar
 
 from lightly_studio.api.routes.api.validators import Paginated
+from lightly_studio.core.dataset_query.order_by import OrderByExpression
 from lightly_studio.models.annotation.annotation_base import AnnotationBaseTable
 from lightly_studio.models.image import ImageTable
 from lightly_studio.models.sample import SampleTable
@@ -21,6 +24,8 @@ from lightly_studio.resolvers.similarity_utils import (
     distance_to_similarity,
     get_distance_expression,
 )
+
+ImageQuery = Union[SelectOfScalar[ImageTable], Select[tuple[ImageTable, float]]]
 
 
 class GetAllSamplesByCollectionIdResult(BaseModel):
@@ -65,6 +70,7 @@ def get_all_by_collection_id(  # noqa: PLR0913
     filters: ImageFilter | None = None,
     text_embedding: list[float] | None = None,
     sample_ids: list[UUID] | None = None,
+    order_by: Sequence[OrderByExpression] | None = None,
 ) -> GetAllSamplesByCollectionIdResult:
     """Retrieve samples for a specific collection with optional filtering."""
     embedding_model_id, distance_expr = get_distance_expression(
@@ -82,6 +88,7 @@ def get_all_by_collection_id(  # noqa: PLR0913
             pagination=pagination,
             filters=filters,
             sample_ids=sample_ids,
+            order_by=order_by,
         )
     return _get_all_without_similarity(
         session=session,
@@ -89,6 +96,7 @@ def get_all_by_collection_id(  # noqa: PLR0913
         pagination=pagination,
         filters=filters,
         sample_ids=sample_ids,
+        order_by=order_by,
     )
 
 
@@ -100,6 +108,7 @@ def _get_all_with_similarity(  # noqa: PLR0913
     pagination: Paginated | None,
     filters: ImageFilter | None,
     sample_ids: list[UUID] | None,
+    order_by: Sequence[OrderByExpression] | None,
 ) -> GetAllSamplesByCollectionIdResult:
     """Get samples with similarity search - returns (ImageTable, float) tuples."""
     load_options = _get_load_options()
@@ -137,7 +146,10 @@ def _get_all_with_similarity(  # noqa: PLR0913
         samples_query = samples_query.where(col(ImageTable.sample_id).in_(sample_ids))
         total_count_query = total_count_query.where(col(ImageTable.sample_id).in_(sample_ids))
 
-    samples_query = samples_query.order_by(distance_expr)
+    if order_by:
+        samples_query = _apply_order_by(query=samples_query, order_by=order_by)
+    else:
+        samples_query = samples_query.order_by(distance_expr)
 
     if pagination is not None:
         samples_query = samples_query.offset(pagination.offset).limit(pagination.limit)
@@ -156,12 +168,13 @@ def _get_all_with_similarity(  # noqa: PLR0913
     )
 
 
-def _get_all_without_similarity(
+def _get_all_without_similarity(  # noqa: PLR0913
     session: Session,
     collection_id: UUID,
     pagination: Paginated | None,
     filters: ImageFilter | None,
     sample_ids: list[UUID] | None,
+    order_by: Sequence[OrderByExpression] | None,
 ) -> GetAllSamplesByCollectionIdResult:
     """Get samples without similarity search - returns ImageTable directly."""
     load_options = _get_load_options()
@@ -189,7 +202,10 @@ def _get_all_without_similarity(
         samples_query = samples_query.where(col(ImageTable.sample_id).in_(sample_ids))
         total_count_query = total_count_query.where(col(ImageTable.sample_id).in_(sample_ids))
 
-    samples_query = samples_query.order_by(col(ImageTable.file_path_abs).asc())
+    if order_by:
+        samples_query = _apply_order_by(query=samples_query, order_by=order_by)
+    else:
+        samples_query = samples_query.order_by(col(ImageTable.file_path_abs).asc())
 
     if pagination is not None:
         samples_query = samples_query.offset(pagination.offset).limit(pagination.limit)
@@ -203,3 +219,28 @@ def _get_all_without_similarity(
         next_cursor=_compute_next_cursor(pagination, total_count),
         similarity_scores=None,
     )
+
+
+@overload
+def _apply_order_by(
+    query: SelectOfScalar[ImageTable],
+    order_by: Sequence[OrderByExpression],
+) -> SelectOfScalar[ImageTable]: ...
+
+
+@overload
+def _apply_order_by(
+    query: Select[tuple[ImageTable, float]],
+    order_by: Sequence[OrderByExpression],
+) -> Select[tuple[ImageTable, float]]: ...
+
+
+def _apply_order_by(
+    query: ImageQuery,
+    order_by: Sequence[OrderByExpression],
+) -> ImageQuery:
+    """Apply core order-by expressions to image queries."""
+    ordered_query = cast(SelectOfScalar[ImageTable], query)
+    for expression in order_by:
+        ordered_query = expression.apply(ordered_query)
+    return cast(ImageQuery, ordered_query)

@@ -7,3 +7,7 @@ class TagNotFoundError(Exception):
 
 class QueryExprError(Exception):
     """Exception raised when a query expression cannot be translated."""
+
+
+class SortExprError(Exception):
+    """Exception raised when a sort expression cannot be translated."""

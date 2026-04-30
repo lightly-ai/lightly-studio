@@ -55,6 +55,8 @@
     } = useGlobalStorage();
     const columnCount = $derived($sampleSize.width);
 
+    const { filterParams, updateFilterParams, imageQueryExpression, imageSort } = useImageFilters();
+
     const samplesParams = $derived({
         collection_id,
         mode: 'normal' as const,
@@ -66,7 +68,8 @@
             dimensions: $dimensions ?? undefined
         },
         metadata_values: $metadataValues,
-        text_embedding: $textEmbedding?.embedding
+        text_embedding: $textEmbedding?.embedding,
+        sort_by: $imageSort ? $imageSort : undefined
     });
 
     const paramsWithoutSampleIds = (params: ImagesInfiniteParams) => {
@@ -75,8 +78,6 @@
             filters: isNormalModeParams(params) ? omit(params.filters, ['sample_ids']) : undefined
         };
     };
-
-    const { filterParams, updateFilterParams, imageQueryExpression } = useImageFilters();
 
     $effect(() => {
         // Synchronize the global filter parameters with the local samples parameters
@@ -157,7 +158,8 @@
             `${$dimensions?.min_width}-${$dimensions?.max_width}`,
             `${$dimensions?.min_height}-${$dimensions?.max_height}`,
             JSON.stringify($metadataValues),
-            $textEmbedding?.queryText || ''
+            $textEmbedding?.queryText || '',
+            $imageSort ? `${$imageSort.id}:${$imageSort.direction}` : ''
         ];
 
         return parts.filter(Boolean).join('|');

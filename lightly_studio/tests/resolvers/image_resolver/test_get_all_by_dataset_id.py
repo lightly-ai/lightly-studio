@@ -3,6 +3,8 @@ from pydantic_core._pydantic_core import ValidationError
 from sqlmodel import Session
 
 from lightly_studio.api.routes.api.validators import Paginated
+from lightly_studio.core.dataset_query.image_sample_field import ImageSampleField
+from lightly_studio.core.dataset_query.order_by import OrderByField
 from lightly_studio.resolvers import (
     image_resolver,
     tag_resolver,
@@ -113,6 +115,123 @@ def test_get_all_by_collection_id__with_pagination(
     )
     assert len(result_empty.samples) == 0
     assert result_empty.total_count == 5
+
+
+def test_get_all_by_collection_id__with_order_by(db_session: Session) -> None:
+    collection = create_collection(session=db_session)
+    collection_id = collection.collection_id
+
+    create_image(
+        session=db_session,
+        collection_id=collection_id,
+        file_path_abs="/path/to/small.png",
+        width=100,
+    )
+    create_image(
+        session=db_session,
+        collection_id=collection_id,
+        file_path_abs="/path/to/large.png",
+        width=300,
+    )
+    create_image(
+        session=db_session,
+        collection_id=collection_id,
+        file_path_abs="/path/to/medium.png",
+        width=200,
+    )
+
+    result = image_resolver.get_all_by_collection_id(
+        session=db_session,
+        collection_id=collection_id,
+        order_by=[OrderByField(ImageSampleField.width).desc()],
+    )
+
+    assert [image.width for image in result.samples] == [300, 200, 100]
+
+
+def test_get_all_by_collection_id__with_multiple_order_by(db_session: Session) -> None:
+    collection = create_collection(session=db_session)
+    collection_id = collection.collection_id
+
+    create_image(
+        session=db_session,
+        collection_id=collection_id,
+        file_path_abs="/path/to/short.png",
+        width=100,
+        height=100,
+    )
+    create_image(
+        session=db_session,
+        collection_id=collection_id,
+        file_path_abs="/path/to/tall.png",
+        width=100,
+        height=300,
+    )
+    create_image(
+        session=db_session,
+        collection_id=collection_id,
+        file_path_abs="/path/to/wide.png",
+        width=200,
+        height=200,
+    )
+
+    result = image_resolver.get_all_by_collection_id(
+        session=db_session,
+        collection_id=collection_id,
+        order_by=[
+            OrderByField(ImageSampleField.width),
+            OrderByField(ImageSampleField.height).desc(),
+        ],
+    )
+
+    assert [(image.width, image.height) for image in result.samples] == [
+        (100, 300),
+        (100, 100),
+        (200, 200),
+    ]
+
+
+def test_get_all_by_collection_id__with_similarity_and_order_by(db_session: Session) -> None:
+    collection = create_collection(session=db_session)
+    collection_id = collection.collection_id
+    embedding_model = create_embedding_model(
+        session=db_session,
+        collection_id=collection_id,
+        embedding_model_name="example_embedding_model",
+        embedding_dimension=3,
+    )
+    small_image = create_image(
+        session=db_session,
+        collection_id=collection_id,
+        file_path_abs="/path/to/small.png",
+        width=100,
+    )
+    large_image = create_image(
+        session=db_session,
+        collection_id=collection_id,
+        file_path_abs="/path/to/large.png",
+        width=300,
+    )
+    for image in [small_image, large_image]:
+        create_sample_embedding(
+            session=db_session,
+            sample_id=image.sample_id,
+            embedding=[1.0, 1.0, 1.0],
+            embedding_model_id=embedding_model.embedding_model_id,
+        )
+
+    result = image_resolver.get_all_by_collection_id(
+        session=db_session,
+        collection_id=collection_id,
+        text_embedding=[1.0, 1.0, 1.0],
+        order_by=[OrderByField(ImageSampleField.width).desc()],
+    )
+
+    assert [image.sample_id for image in result.samples] == [
+        large_image.sample_id,
+        small_image.sample_id,
+    ]
+    assert result.similarity_scores is not None
 
 
 def test_get_all_by_collection_id__empty_output(

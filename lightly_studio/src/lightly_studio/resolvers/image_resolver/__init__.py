@@ -15,6 +15,7 @@ from lightly_studio.resolvers.image_resolver.get_dimension_bounds import get_dim
 from lightly_studio.resolvers.image_resolver.get_many_by_id import get_many_by_id
 from lightly_studio.resolvers.image_resolver.get_sample_ids import get_sample_ids
 from lightly_studio.resolvers.image_resolver.get_samples_excluding import get_samples_excluding
+from lightly_studio.resolvers.image_resolver.get_sort_field_specs import get_sort_field_specs
 
 __all__ = [
     "count_image_annotations_by_collection",
@@ -28,4 +29,5 @@ __all__ = [
     "get_many_by_id",
     "get_sample_ids",
     "get_samples_excluding",
+    "get_sort_field_specs",
 ]

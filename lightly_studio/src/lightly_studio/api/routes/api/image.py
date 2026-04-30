@@ -13,12 +13,17 @@ from lightly_studio.api.routes.api.status import (
     HTTP_STATUS_NOT_FOUND,
 )
 from lightly_studio.api.routes.api.validators import Paginated
+from lightly_studio.core.dataset_query.field import Field as DatasetQueryField
+from lightly_studio.core.dataset_query.image_sample_field import ImageSampleField
+from lightly_studio.core.dataset_query.order_by import OrderByExpression, OrderByField
 from lightly_studio.db_manager import SessionDep
+from lightly_studio.errors import SortExprError
 from lightly_studio.models.collection import CollectionTable
 from lightly_studio.models.image import (
     ImageView,
     ImageViewsWithCount,
 )
+from lightly_studio.models.sort import SortDirection, SortFieldExpr, SortFieldSource, SortFieldSpec
 from lightly_studio.resolvers import (
     image_resolver,
 )
@@ -27,6 +32,18 @@ from lightly_studio.resolvers.image_filter import (
 )
 
 image_router = APIRouter(tags=["image"])
+
+_IMAGE_SORT_FIELDS: dict[str, DatasetQueryField] = {
+    "file_name": ImageSampleField.file_name,
+    "file_path_abs": ImageSampleField.file_path_abs,
+    "created_at": ImageSampleField.created_at,
+    "width": ImageSampleField.width,
+    "height": ImageSampleField.height,
+}
+
+_SAMPLE_SORT_FIELDS: dict[str, DatasetQueryField] = {
+    "created_at": ImageSampleField.created_at,
+}
 
 
 class ReadImagesRequest(BaseModel):
@@ -38,6 +55,16 @@ class ReadImagesRequest(BaseModel):
     pagination: Paginated | None = Field(
         None, description="Pagination parameters for offset and limit"
     )
+    sort_by: list[SortFieldExpr] | None = Field(None, description="Sort parameters for samples")
+
+
+@image_router.get("/datasets/{dataset_id}/sort/image/fields")
+def get_image_sort_fields(
+    session: SessionDep,
+    dataset_id: Annotated[UUID, Path(title="Dataset Id")],
+) -> list[SortFieldSpec]:
+    """Retrieve image fields available for sorting in a dataset."""
+    return image_resolver.get_sort_field_specs(session=session, dataset_id=dataset_id)
 
 
 @image_router.post("/collections/{collection_id}/images/list")
@@ -63,6 +90,7 @@ def read_images(
         filters=body.filters,
         text_embedding=body.text_embedding,
         sample_ids=body.sample_ids,
+        order_by=_to_order_by_expressions(sort_by=body.sort_by),
     )
     # TODO(Michal, 10/2025): Add SampleView to ImageView and then use a response model
     # instead of manual conversion.
@@ -171,3 +199,37 @@ def count_image_annotations_by_collection(
         }
         for label_name, current_count, total_count in counts
     ]
+
+
+def _to_order_by_expressions(
+    sort_by: list[SortFieldExpr] | None,
+) -> list[OrderByExpression] | None:
+    """Translate API sort expressions to core order-by expressions."""
+    if sort_by is None:
+        return None
+    return [_to_order_by_expression(sort_expr=sort_expr) for sort_expr in sort_by]
+
+
+def _to_order_by_expression(sort_expr: SortFieldExpr) -> OrderByExpression:
+    """Translate one API sort expression to a core order-by expression."""
+    if sort_expr.aggregate_fn is not None:
+        raise SortExprError(f"Unsupported image sort aggregate function: {sort_expr.aggregate_fn}")
+
+    if sort_expr.source == SortFieldSource.IMAGE:
+        order_by = OrderByField(_IMAGE_SORT_FIELDS[sort_expr.field_name])
+
+        if sort_expr.direction is SortDirection.DESC:
+            return order_by.desc()
+
+        return order_by.asc()
+    if sort_expr.source == SortFieldSource.SAMPLE:
+        order_by = OrderByField(_SAMPLE_SORT_FIELDS[sort_expr.field_name])
+
+        if sort_expr.direction is SortDirection.DESC:
+            return order_by.desc()
+
+        return order_by.asc()
+
+    raise SortExprError(
+            f"Unsupported source {sort_expr.source} for image sort field {sort_expr.field_name}"
+        )

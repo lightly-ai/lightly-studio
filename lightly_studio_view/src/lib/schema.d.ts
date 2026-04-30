@@ -364,6 +364,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/datasets/{dataset_id}/sort/image/fields": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Image Sort Fields
+         * @description Retrieve image fields available for sorting in a dataset.
+         */
+        get: operations["get_image_sort_fields"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/collections/{collection_id}/images/list": {
         parameters: {
             query?: never;
@@ -3229,6 +3249,11 @@ export interface components {
             sample_ids?: string[] | null;
             /** @description Pagination parameters for offset and limit */
             pagination?: components["schemas"]["Paginated"] | null;
+            /**
+             * Sort By
+             * @description Sort parameters for samples
+             */
+            sort_by?: components["schemas"]["SortFieldExpr"][] | null;
         };
         /**
          * ReadSamplesRequest
@@ -3583,6 +3608,51 @@ export interface components {
              * Format: date-time
              */
             updated_at: string;
+        };
+        /**
+         * SortAggregateFn
+         * @description Aggregate functions supported for repeated sort fields.
+         * @enum {string}
+         */
+        SortAggregateFn: "min" | "max" | "avg" | "count";
+        /**
+         * SortDirection
+         * @description Directions supported for sort fields.
+         * @enum {string}
+         */
+        SortDirection: "asc" | "desc";
+        /**
+         * SortFieldExpr
+         * @description Sort field selected by the GUI.
+         */
+        SortFieldExpr: {
+            /** Id */
+            id: string;
+            /** Field Name */
+            field_name: string;
+            source: components["schemas"]["SortFieldSource"];
+            aggregate_fn?: components["schemas"]["SortAggregateFn"] | null;
+            direction: components["schemas"]["SortDirection"];
+        };
+        /**
+         * SortFieldSource
+         * @description Sources supported for sort fields.
+         * @enum {string}
+         */
+        SortFieldSource: "image" | "sample" | "object_detection" | "metadata" | "tags";
+        /**
+         * SortFieldSpec
+         * @description Field that can be selected for sorting in the GUI.
+         */
+        SortFieldSpec: {
+            /** Id */
+            id: string;
+            /** Field Name */
+            field_name: string;
+            /** Label */
+            label: string;
+            source: components["schemas"]["SortFieldSource"];
+            aggregate_fn?: components["schemas"]["SortAggregateFn"] | null;
         };
         /**
          * StringExpr
@@ -4633,6 +4703,37 @@ export interface operations {
                 };
                 content: {
                     "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_image_sort_fields: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                dataset_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SortFieldSpec"][];
                 };
             };
             /** @description Validation Error */

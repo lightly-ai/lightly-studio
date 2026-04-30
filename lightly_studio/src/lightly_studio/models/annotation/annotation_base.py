@@ -3,7 +3,7 @@
 from abc import ABC
 from datetime import datetime, timezone
 from enum import Enum
-from typing import TYPE_CHECKING, Optional, Union
+from typing import TYPE_CHECKING, Literal, Optional, Union
 from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict
@@ -35,6 +35,16 @@ else:
     TagTable = object
     AnnotationLabelTable = object
     ImageTable = object
+
+
+class SortFieldDescriptor(BaseModel):
+    """Descriptor for fields available in annotation-aware sorting."""
+
+    field_name: str
+    label: str
+    source: Literal["image", "sample", "annotation", "metadata"]
+    aggregate_fn: Optional[Literal["min", "max", "avg"]] = None
+    value_type: Literal["int", "float", "str", "datetime"]
 
 
 class AnnotationType(str, Enum):

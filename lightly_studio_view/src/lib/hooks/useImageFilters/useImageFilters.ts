@@ -6,10 +6,13 @@ import type {
     AnnotationsFilter,
     ImageFilter,
     QueryExpr,
-    SampleFilter
+    SampleFilter,
+    SortFieldExpr,
+    SortFieldSpec
 } from '$lib/api/lightly_studio_local';
 
 const filterParams = writable<ImagesInfiniteParams>({} as ImagesInfiniteParams);
+const imageSort = writable<SortFieldExpr[]>([]);
 
 const buildFilterDimensions = (min?: number, max?: number) => {
     if (min == null && max == null) {
@@ -106,6 +109,33 @@ export const useImageFilters = () => {
         imageQueryExpression.set(expr ?? null);
     };
 
+    const updateImageSort = (
+        field: SortFieldSpec,
+        direction: SortFieldExpr['direction'] = 'desc'
+    ) => {
+        imageSort.update((sorts) => {
+        const existingIndex = sorts.findIndex((s) => s.id === field.id);
+
+        if (existingIndex >= 0) {
+            return sorts.map((sort) =>
+                sort.id === field.id
+                    ? { ...sort, ...field, direction }
+                    : sort
+            );
+        }
+
+        return [...sorts, { ...field, direction }];
+    });
+    };
+
+    const removeImageSort = (fieldId: string) => {
+        imageSort.update((sorts) => sorts.filter((s) => s.id !== fieldId));
+    };
+
+    const clearImageSort = () => {
+        imageSort.set([]);
+    };
+
     // updates only sample ids in the existing filter params
     const updateSampleIds = (sampleIds: string[]) => {
         const params: ImagesInfiniteParams = {
@@ -128,11 +158,16 @@ export const useImageFilters = () => {
     };
 
     return {
+        removeImageSort,
+
         imageQueryExpression,
+        imageSort,
         filterParams,
         imageFilter,
         updateFilterParams,
         updateQueryExpr,
+        updateImageSort,
+        clearImageSort,
         updateSampleIds
     };
 };

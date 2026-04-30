@@ -11,6 +11,8 @@ from lightly_studio.api.routes.api.status import (
     HTTP_STATUS_OK,
 )
 from lightly_studio.api.routes.api.validators import Paginated
+from lightly_studio.core.dataset_query.image_sample_field import ImageSampleField
+from lightly_studio.core.dataset_query.order_by import OrderByField
 from lightly_studio.models.collection import CollectionTable, SampleType
 from lightly_studio.resolvers import (
     collection_resolver,
@@ -72,6 +74,14 @@ def test_read_samples_calls_get_all(mocker: MockerFixture, test_client: TestClie
             "offset": 0,
             "limit": 100,
         },
+        "sort_by": [
+            {
+                "id": "image.width",
+                "field_name": "width",
+                "source": "image",
+                "direction": "desc",
+            }
+        ],
     }
     response = test_client.post(f"/api/collections/{collection_id}/images/list", json=json_body)
 
@@ -103,7 +113,121 @@ def test_read_samples_calls_get_all(mocker: MockerFixture, test_client: TestClie
         pagination=Paginated(offset=0, limit=100),
         text_embedding=json_body["text_embedding"],
         sample_ids=None,
+        order_by=mocker.ANY,
     )
+    order_by = mock_get_all_by_collection_id.call_args.kwargs["order_by"]
+    assert len(order_by) == 1
+    assert isinstance(order_by[0], OrderByField)
+    assert order_by[0].field is ImageSampleField.width
+    assert order_by[0].ascending is False
+
+
+def test_get_image_sort_fields(test_client: TestClient, db_session: Session) -> None:
+    collection = create_collection(session=db_session)
+
+    response = test_client.get(f"/api/datasets/{collection.dataset_id}/sort/image/fields")
+
+    assert response.status_code == HTTP_STATUS_OK
+    assert response.json() == [
+        {
+            "id": "image.file_name",
+            "field_name": "file_name",
+            "label": "File Name",
+            "source": "image",
+            "aggregate_fn": None,
+        },
+        {
+            "id": "image.file_path_abs",
+            "field_name": "file_path_abs",
+            "label": "File Path",
+            "source": "image",
+            "aggregate_fn": None,
+        },
+        {
+            "id": "image.width",
+            "field_name": "width",
+            "label": "Width",
+            "source": "image",
+            "aggregate_fn": None,
+        },
+        {
+            "id": "image.height",
+            "field_name": "height",
+            "label": "Height",
+            "source": "image",
+            "aggregate_fn": None,
+        },
+        {
+            "id": "sample.created_at",
+            "field_name": "created_at",
+            "label": "Created At",
+            "source": "sample",
+            "aggregate_fn": None,
+        },
+    ]
+
+
+def test_read_images__sort_by(
+    test_client: TestClient,
+    db_session: Session,
+) -> None:
+    collection = create_collection(session=db_session)
+    collection_id = collection.collection_id
+    narrow_image = create_image(
+        session=db_session,
+        collection_id=collection_id,
+        file_path_abs="/data/narrow.png",
+        width=100,
+    )
+    wide_image = create_image(
+        session=db_session,
+        collection_id=collection_id,
+        file_path_abs="/data/wide.png",
+        width=300,
+    )
+
+    json_body = {
+        "sort_by": [
+            {
+                "id": "image.width",
+                "field_name": "width",
+                "source": "image",
+                "direction": "desc",
+            }
+        ]
+    }
+    response = test_client.post(f"/api/collections/{collection_id}/images/list", json=json_body)
+
+    assert response.status_code == HTTP_STATUS_OK
+    data = response.json()
+    assert data["total_count"] == 2
+    assert [item["sample_id"] for item in data["data"]] == [
+        str(wide_image.sample_id),
+        str(narrow_image.sample_id),
+    ]
+
+
+def test_read_images__sort_by_unknown_field(
+    test_client: TestClient,
+    db_session: Session,
+) -> None:
+    collection = create_collection(session=db_session)
+    collection_id = collection.collection_id
+
+    json_body = {
+        "sort_by": [
+            {
+                "id": "image.unknown",
+                "field_name": "unknown",
+                "source": "image",
+                "direction": "desc",
+            }
+        ]
+    }
+    response = test_client.post(f"/api/collections/{collection_id}/images/list", json=json_body)
+
+    assert response.status_code == HTTP_STATUS_BAD_REQUEST
+    assert response.json()["error"] == "Unknown image sort field: unknown"
 
 
 def test_read_samples_calls_get_all__no_sample_resolver_mock(

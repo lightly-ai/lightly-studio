@@ -5,6 +5,7 @@
         CombinedMetadataDimensionsFilters,
         Footer,
         GridHeader,
+        ImageSortControl,
         LabelsMenu,
         SelectionPill,
         TagsMenu
@@ -579,6 +580,11 @@
                             class="relative flex flex-1 flex-col space-y-4 rounded-[1vw] bg-card p-4"
                         >
                             <GridHeader>
+                                {#snippet auxControls()}
+                                    {#if isImages}
+                                        <ImageSortControl {datasetId} />
+                                    {/if}
+                                {/snippet}
                                 <div class="flex-1">
                                     {#if hasEmbeddings}
                                         <div
@@ -708,6 +714,9 @@
                                         <ChartNetwork class="size-4" />
                                         <span>Show Embeddings</span>
                                     </Button>
+                                {/if}
+                                {#if isImages}
+                                    <ImageSortControl {datasetId} />
                                 {/if}
                             {/snippet}
                             {#if (isImages || isVideos) && hasEmbeddings}

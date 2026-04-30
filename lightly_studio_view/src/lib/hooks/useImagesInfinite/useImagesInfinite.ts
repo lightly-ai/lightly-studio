@@ -1,6 +1,11 @@
 import type { InfiniteData } from '@tanstack/svelte-query';
 import { createInfiniteQuery, infiniteQueryOptions, useQueryClient } from '@tanstack/svelte-query';
-import type { QueryExpr, ReadImagesError, ReadImagesResponse } from '$lib/api/lightly_studio_local';
+import type {
+    QueryExpr,
+    ReadImagesError,
+    ReadImagesResponse,
+    SortFieldExpr
+} from '$lib/api/lightly_studio_local';
 import { readImages, type ReadImagesRequest } from '$lib/api/lightly_studio_local';
 import type { DimensionBounds } from '$lib/services/loadDimensionBounds';
 import { createMetadataFilters } from '$lib/hooks/useMetadataFilters/useMetadataFilters';
@@ -24,6 +29,7 @@ interface NormalModeFilters {
 interface CommonFilters {
     metadata_values?: MetadataValues;
     text_embedding?: number[];
+    sort_by?: SortFieldExpr[];
 }
 
 interface NormalModeParams {
@@ -56,6 +62,7 @@ type SamplesQueryKey = readonly [
     {
         metadata_values?: MetadataValues;
         text_embedding?: number[];
+        sort_by?: SortFieldExpr[];
     }
 ];
 
@@ -69,7 +76,8 @@ const createImagesInfiniteOptions = (params: ImagesInfiniteParams) => {
         params.mode === 'normal' ? params.filters : params.classifierSamples,
         {
             metadata_values: params.metadata_values,
-            text_embedding: params.text_embedding
+            text_embedding: params.text_embedding,
+            sort_by: params.sort_by
         }
     ];
 
@@ -105,6 +113,7 @@ const buildRequestBody = (params: ImagesInfiniteParams, pageParam: number): Read
             limit: GRID_PAGE_SIZE
         },
         text_embedding: params.text_embedding,
+        sort_by: params.sort_by?.length ? params.sort_by : undefined,
         filters: {
             sample_filter: {
                 query_expr: params.query_expr ?? undefined,
