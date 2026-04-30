@@ -538,12 +538,9 @@ def _process_batch_annotations(
         parent_sample_ids=created_path_to_id.values(),
     )
 
-    if annotations_to_create:
-        annotation_resolver.create_many(
-            session=session,
-            parent_collection_id=collection_id,
-            annotations=annotations_to_create,
-        )
+    annotation_resolver.create_many(
+        session=session, parent_collection_id=collection_id, annotations=annotations_to_create
+    )
 
 
 def _process_batch_captions(

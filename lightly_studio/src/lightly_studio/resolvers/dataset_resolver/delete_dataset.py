@@ -179,9 +179,7 @@ def _delete_annotation_base(session: Session, sample_ids: list[UUID]) -> None:
     )
 
 
-def _delete_annotation_collection_coverage(
-    session: Session, collection_ids: list[UUID]
-) -> None:
+def _delete_annotation_collection_coverage(session: Session, collection_ids: list[UUID]) -> None:
     """Delete annotation collection coverage rows scoped to the dataset's collections."""
     if not collection_ids:
         return

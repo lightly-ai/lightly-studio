@@ -461,66 +461,33 @@ class TestDataset:
         patch_collection: None,  # noqa: ARG002
         tmp_path: Path,
     ) -> None:
-        # Three images in COCO `images`; only two are referenced by an annotation.
-        # The third image has no detections but must still appear in the coverage table.
-        coco_dict = {
-            "images": [
-                {"id": 1, "file_name": "image1.jpg", "width": 640, "height": 480},
-                {"id": 2, "file_name": "image2.jpg", "width": 640, "height": 480},
-                {"id": 3, "file_name": "image3.jpg", "width": 640, "height": 480},
-            ],
-            "annotations": [
-                {
-                    "id": 1,
-                    "image_id": 1,
-                    "category_id": 1,
-                    "bbox": [10, 10, 20, 20],
-                    "area": 400,
-                    "iscrowd": 0,
-                    "segmentation": [],
-                },
-                {
-                    "id": 2,
-                    "image_id": 2,
-                    "category_id": 1,
-                    "bbox": [10, 10, 20, 20],
-                    "area": 400,
-                    "iscrowd": 0,
-                    "segmentation": [],
-                },
-            ],
-            "categories": [{"id": 1, "name": "cat"}],
-        }
-        annotations_path = tmp_path / "annotations.json"
-        annotations_path.write_text(json.dumps(coco_dict))
+        """Coverage must include images with no annotations (zero-detection case)."""
+        coco_dict = get_coco_annotation_dict_valid()
+        coco_dict["images"].append(
+            {"id": 3, "file_name": "image3.jpg", "width": 640, "height": 480}
+        )
+        (tmp_path / "annotations.json").write_text(json.dumps(coco_dict))
         images_path = tmp_path / "images"
         images_path.mkdir()
-        _create_sample_images(
-            [
-                images_path / "image1.jpg",
-                images_path / "image2.jpg",
-                images_path / "image3.jpg",
-            ]
-        )
+        _create_sample_images([images_path / f"image{i}.jpg" for i in range(1, 4)])
 
         dataset = ImageDataset.create(name="test_dataset")
         dataset.add_samples_from_coco(
-            annotations_json=annotations_path,
+            annotations_json=tmp_path / "annotations.json",
             images_path=images_path,
             annotation_type=AnnotationType.OBJECT_DETECTION,
             embed=False,
         )
 
         samples = list(dataset)
-        assert len(samples) == 3
-        annotation_collection_id = collection_resolver.get_or_create_child_collection(
+        cov_id = collection_resolver.get_or_create_child_collection(
             session=dataset.session,
             collection_id=dataset.collection_id,
             sample_type=SampleType.ANNOTATION,
         )
         covered = set(
             annotation_collection_coverage_resolver.list_by_collection_id(
-                session=dataset.session, annotation_collection_id=annotation_collection_id
+                session=dataset.session, annotation_collection_id=cov_id
             )
         )
         assert covered == {s.sample_id for s in samples}

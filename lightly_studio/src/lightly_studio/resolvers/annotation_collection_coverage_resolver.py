@@ -56,9 +56,7 @@ def add_many(
     session.flush()
 
 
-def list_by_collection_id(
-    session: Session, annotation_collection_id: UUID
-) -> list[UUID]:
+def list_by_collection_id(session: Session, annotation_collection_id: UUID) -> list[UUID]:
     """Return parent sample IDs covered by the given annotation collection.
 
     Args:
