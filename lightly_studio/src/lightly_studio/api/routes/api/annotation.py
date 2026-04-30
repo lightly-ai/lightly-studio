@@ -7,7 +7,7 @@ from uuid import UUID
 
 from fastapi import APIRouter, Body, Depends, HTTPException, Path
 from fastapi.params import Query
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 from lightly_studio.api.routes.api import annotations as annotations_module
 from lightly_studio.api.routes.api.status import HTTP_STATUS_NOT_FOUND
@@ -82,6 +82,28 @@ def read_annotations(
             annotation_label_ids=annotation_label_ids,
             tag_ids=tag_ids,
         ),
+    )
+
+
+class ReadAnnotationSampleIdsRequest(BaseModel):
+    """Request body for reading matching annotation sample ids."""
+
+    filters: AnnotationsFilter | None = Field(None, description="Filter parameters for annotations")
+
+
+@annotations_router.post("/annotations/sample_ids", response_model=list[UUID])
+def get_annotation_sample_ids(
+    collection_id: Annotated[UUID, Path(title="collection Id")],
+    session: SessionDep,
+    body: ReadAnnotationSampleIdsRequest,
+) -> list[UUID]:
+    """Retrieve all sample ids of annotations matching the given filters."""
+    return list(
+        annotation_resolver.get_sample_ids(
+            session=session,
+            collection_id=collection_id,
+            filters=body.filters,
+        )
     )
 
 

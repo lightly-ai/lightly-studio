@@ -458,3 +458,23 @@ def test_count_image_annotations_by_collection__without_body(
     assert result == [
         {"label_name": "dog", "current_count": 1, "total_count": 1},
     ]
+
+
+def test_get_image_sample_ids(
+    test_client: TestClient,
+    db_session: Session,
+) -> None:
+    collection = create_collection(session=db_session)
+    image = create_image(
+        session=db_session,
+        collection_id=collection.collection_id,
+        file_path_abs="/path/to/sample.png",
+    )
+
+    response = test_client.post(
+        f"/api/collections/{collection.collection_id}/images/sample_ids",
+        json={},
+    )
+
+    assert response.status_code == HTTP_STATUS_OK
+    assert response.json() == [str(image.sample_id)]
