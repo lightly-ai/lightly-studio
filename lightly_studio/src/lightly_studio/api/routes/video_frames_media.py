@@ -19,10 +19,10 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
 
-from lightly_studio.api.routes.executor import get_media_executor
 from lightly_studio.db_manager import SessionDep
 from lightly_studio.models.settings import GridViewThumbnailQualityType
 from lightly_studio.resolvers import video_frame_resolver
+from lightly_studio.utils.executor import get_media_executor
 
 frames_router = APIRouter(prefix="/frames/media", tags=["frames streaming"])
 

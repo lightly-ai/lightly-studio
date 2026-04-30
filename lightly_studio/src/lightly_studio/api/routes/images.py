@@ -13,10 +13,10 @@ from fastapi.responses import StreamingResponse
 from PIL import Image, ImageOps, UnidentifiedImageError
 
 from lightly_studio.api.routes.api import status
-from lightly_studio.api.routes.executor import get_media_executor
 from lightly_studio.db_manager import SessionDep
 from lightly_studio.models import image
 from lightly_studio.models.settings import GridViewThumbnailQualityType
+from lightly_studio.utils.executor import get_media_executor
 
 app_router = APIRouter()
 
