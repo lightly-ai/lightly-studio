@@ -164,6 +164,7 @@ def _get_content_type(file_path: str) -> str:
         ".gif": "image/gif",
         ".webp": "image/webp",
         ".bmp": "image/bmp",
+        ".tif": "image/tiff",
         ".tiff": "image/tiff",
         ".mov": "video/quicktime",
         ".mp4": "video/mp4",
