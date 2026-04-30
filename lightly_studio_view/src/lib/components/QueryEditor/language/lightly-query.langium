@@ -103,8 +103,29 @@ ObjectDetectionComparison returns ComparisonExpression:
 ObjectDetectionFieldReference returns Expression:
   {FieldReference} member=ObjectDetectionFieldName;
 
+Classification returns Expression:
+  ClassificationOr;
+
+ClassificationOr returns Expression:
+  ClassificationAnd ({BooleanExpression.children+=current} operator=OR children+=ClassificationAnd (OR children+=ClassificationAnd)*)?;
+
+ClassificationAnd returns Expression:
+  ClassificationUnary ({BooleanExpression.children+=current} operator=AND children+=ClassificationUnary (AND children+=ClassificationUnary)*)?;
+
+ClassificationUnary returns Expression:
+  '(' Classification ')'
+    | {NotExpression} NOT expression=ClassificationUnary
+    | ClassificationComparison;
+
+ClassificationComparison returns ComparisonExpression:
+  ClassificationFieldReference {ComparisonExpression.left=current} operator=('==' | '!=') right=StringLiteral;
+
+ClassificationFieldReference returns Expression:
+  {FieldReference} member=LABEL;
+
 AnnotationQuery returns Expression:
-  {FunctionCall} name=ANNOTATION_FUNCTION '(' args+=ObjectDetection ')';
+  {FunctionCall} name=OBJECT_DETECTION_FUNCTION '(' args+=ObjectDetection ')'
+  | {FunctionCall} name=CLASSIFICATION_FUNCTION '(' args+=Classification ')';
 
 TagInExpression returns Expression:
   {TagInExpression} tag_name=StringLiteral IN TAGS_KEYWORD;
@@ -162,7 +183,8 @@ terminal AND: /\bAND\b/i;
 terminal OR: /\bOR\b/i;
 terminal NOT: /\bNOT\b/i;
 terminal IN returns string: /\bIN\b/i;
-terminal ANNOTATION_FUNCTION returns string: /\bobject_detection\b/;
+terminal OBJECT_DETECTION_FUNCTION returns string: /\bobject_detection\b/;
+terminal CLASSIFICATION_FUNCTION returns string: /\bclassification\b/;
 terminal TAGS_KEYWORD returns string: /\btags\b/;
 terminal ORDINAL_FLOAT_FIELD_NAME returns string: /\bduration_s\b/;
 terminal EQUALITY_FLOAT_FIELD_NAME returns string: /\bfps\b/;
