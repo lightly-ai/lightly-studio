@@ -22,7 +22,7 @@ from pydantic import BaseModel
 from lightly_studio.db_manager import SessionDep
 from lightly_studio.models.settings import GridViewThumbnailQualityType
 from lightly_studio.resolvers import video_frame_resolver
-from lightly_studio.utils.executor import get_media_executor
+from lightly_studio.utils.executor import _get_media_executor
 
 frames_router = APIRouter(prefix="/frames/media", tags=["frames streaming"])
 
@@ -270,7 +270,7 @@ async def stream_frame(
     # Run CPU-intensive video processing in thread pool to avoid blocking event loop
     try:
         buffer, media_type = await asyncio.get_running_loop().run_in_executor(
-            get_media_executor("video_frame"),
+            _get_media_executor("video_frame"),
             _process_video_frame,
             video_path,
             video_frame.frame_number,

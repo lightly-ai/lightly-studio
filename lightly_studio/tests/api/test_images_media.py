@@ -156,11 +156,11 @@ def test_stream_image_file_not_found(
     assert response.status_code == 404
 
 
-def test_get_media_executor_has_workers() -> None:
-    """Test get_media_executor creates an executor with at least one worker."""
+def test__get_media_executor_has_workers() -> None:
+    """Test _get_media_executor creates an executor with at least one worker."""
     executor_module._executors.clear()
 
-    executor = executor_module.get_media_executor("image_thumbnail")
+    executor = executor_module._get_media_executor("image_thumbnail")
 
     assert executor is not None
     assert executor._max_workers >= 1

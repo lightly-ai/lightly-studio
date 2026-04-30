@@ -3,26 +3,26 @@
 from __future__ import annotations
 
 import lightly_studio.utils.executor as executor_module
-from lightly_studio.utils.executor import get_media_executor
+from lightly_studio.utils.executor import _get_media_executor
 
 
 def setup_function() -> None:
     executor_module._executors.clear()
 
 
-def test_get_media_executor_is_singleton_per_prefix() -> None:
+def test__get_media_executor_is_singleton_per_prefix() -> None:
     # The registry must return the same instance on repeated calls so threads
     # are shared rather than a new pool being created on every request.
-    executor1 = get_media_executor("image_thumbnail")
-    executor2 = get_media_executor("image_thumbnail")
+    executor1 = _get_media_executor("image_thumbnail")
+    executor2 = _get_media_executor("image_thumbnail")
 
     assert executor1 is executor2
 
 
-def test_get_media_executor_isolates_different_prefixes() -> None:
+def test__get_media_executor_isolates_different_prefixes() -> None:
     # Each prefix gets its own pool so image and video workers don't compete
     # for the same slots.
-    image_executor = get_media_executor("image_thumbnail")
-    video_executor = get_media_executor("video_frame")
+    image_executor = _get_media_executor("image_thumbnail")
+    video_executor = _get_media_executor("video_frame")
 
     assert image_executor is not video_executor
