@@ -5,9 +5,12 @@ export class AnnotationDetailsPage {
         this.page = page;
     }
 
-    waitForNavigation() {
-        return this.page.waitForSelector('[data-testid="annotation-navigation"]', {
-            state: 'attached'
+    async waitForNavigation() {
+        await expect(this.page.getByTestId('sample-details')).toBeVisible({
+            timeout: 10000
+        });
+        await expect(this.getAnnotationBox()).toBeVisible({
+            timeout: 10000
         });
     }
 

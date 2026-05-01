@@ -12,8 +12,6 @@ import {
     isImageStringFieldName,
     isNotExpression,
     isNumberLiteral,
-    isObjectDetectionIntFieldName,
-    isObjectDetectionStringFieldName,
     isStringLiteral,
     isTagInExpression,
     isVideoEqualityFloatFieldName,
@@ -36,6 +34,7 @@ export type QueryExprTranslationResult =
     | { status: 'error'; errors: QueryParseError[] };
 
 type QueryScope = 'image' | 'video' | 'object_detection' | 'classification';
+type QueryWithVideoPrefix = Query & { isVideo?: boolean };
 
 interface TranslationParser {
     parse: (value: string) => {
@@ -253,7 +252,18 @@ function visitComparisonExpression(
 }
 
 function getRootScope(parseResult: Query): Extract<QueryScope, 'image' | 'video'> {
-    return parseResult.isVideo ? 'video' : 'image';
+    const query = parseResult as QueryWithVideoPrefix;
+    return query.isVideo ? 'video' : 'image';
+}
+
+function isObjectDetectionIntFieldName(fieldName: string): boolean {
+    return (
+        fieldName === 'height' || fieldName === 'width' || fieldName === 'x' || fieldName === 'y'
+    );
+}
+
+function isObjectDetectionStringFieldName(fieldName: string): boolean {
+    return fieldName === 'label';
 }
 
 function getFunctionScope(
