@@ -39,19 +39,19 @@ export class AnnotationsPage {
     }
 
     async clickLabel(label: string) {
-        const responsePromise = this.page.waitForResponse(
-            (response) => response.url().includes('/annotations') && response.status() === 200
-        );
+        const requestsSettled = waitForRequestsToSettle(this.page, '/annotations');
 
         await this.page
             .getByTestId('label-menu-label-name')
             .getByText(label, { exact: true })
             .click();
 
-        await responsePromise;
+        await requestsSettled;
+        await expect(this.page.getByTestId('annotations-grid')).toBeVisible({
+            timeout: 10000
+        });
 
-        await this.getAnnotations().first().waitFor({
-            state: 'attached',
+        await expect(this.getAnnotations().first()).toBeVisible({
             timeout: 10000
         });
     }
