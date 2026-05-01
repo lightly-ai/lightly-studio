@@ -108,7 +108,7 @@ test('sample details renders next image within 5 seconds', async ({ page }) => {
         await samplesPage.goto();
         await samplesPage.doubleClickFirstSample();
 
-        await page.getByText('Sample 1 of 128').waitFor();
+        await page.getByText('Sample 1 of 128').waitFor({ state: 'visible', timeout: 10000 });
         await sampleDetailsPage.getNextButton().click();
         const renderTimeMs = await measureElementRendering(page, page.getByText('Sample 2 of 128'));
         const memoryUsageMb = await measureMemoryConsumption(page);
@@ -141,8 +141,8 @@ test('sample details renders prev image within 5 seconds', async ({ page }) => {
 
     const result = await measureRenderAndMemory(async () => {
         await samplesPage.goto();
-        await samplesPage.getSampleByIndex(1).dblclick();
-        await page.getByText('Sample 2 of 128').waitFor({ state: 'visible' });
+        await samplesPage.doubleClickNthSample(1);
+        await page.getByText('Sample 2 of 128').waitFor({ state: 'visible', timeout: 10000 });
         await sampleDetailsPage.getPrevButton().click();
         const renderTimeMs = await measureElementRendering(page, page.getByText('Sample 1 of 128'));
         const memoryUsageMb = await measureMemoryConsumption(page);
