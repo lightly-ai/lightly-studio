@@ -12,11 +12,11 @@ test.describe('bussines-flow1', () => {
         expect(await samplesPage.getSamples().count()).toBe(cocoDataset.defaultPageSize);
 
         // Check if we have some annotations on screen.
-        await expect(page.getByTestId('sample-annotation-item').first()).toBeVisible({
+        const annotations = page.getByTestId('sample-annotation-item');
+        await expect(annotations.locator('canvas').first()).toBeVisible({
             timeout: 10000
         });
-        const annotationCount = await page.getByTestId('sample-annotation-item').count();
-        expect(annotationCount).toBeGreaterThan(0);
+        await expect.poll(() => annotations.count(), { timeout: 10000 }).toBeGreaterThan(0);
 
         // No images in the grid view should be selected
         expect(await samplesPage.getNumSelectedSamples()).toBe(0);
