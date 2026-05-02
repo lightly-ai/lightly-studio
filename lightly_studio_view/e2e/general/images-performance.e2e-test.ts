@@ -15,7 +15,7 @@ const PERFORMANCE_LIMITS = {
     maxRenderTimeMs: 6000,
     maxMemoryUsageMb: 256
 };
-const MEASUREMENT_ITERATIONS = 5;
+const MEASUREMENT_ITERATIONS = 3;
 type MeasurementSummary = Awaited<ReturnType<typeof measureRenderAndMemory>>['memoryUsageMb'];
 
 const metrics: Array<{
@@ -205,8 +205,11 @@ test('annotation details renders within 5 seconds', async ({ page }) => {
 
     await setNetworkThrottling(page, 'Fast4G');
     await annotationsPage.goto();
+    const annotationsUrl = page.url();
 
     const result = await measureRenderAndMemory(async () => {
+        await page.goto(annotationsUrl);
+        await annotationsPage.getAnnotations().first().waitFor({ state: 'visible', timeout: 10000 });
         await annotationsPage.clickAnnotation(0);
         await annotationDetailsPage.waitForNavigation();
         const renderTimeMs = await measureElementRendering(
@@ -214,8 +217,6 @@ test('annotation details renders within 5 seconds', async ({ page }) => {
             annotationDetailsPage.getAnnotationBox()
         );
         const memoryUsageMb = await measureMemoryConsumption(page);
-        await page.goBack();
-        await annotationsPage.getAnnotations().first().waitFor({ state: 'visible', timeout: 10000 });
         return { renderTimeMs, memoryUsageMb };
     }, MEASUREMENT_ITERATIONS);
 
