@@ -209,7 +209,10 @@ test('annotation details renders within 5 seconds', async ({ page }) => {
 
     const result = await measureRenderAndMemory(async () => {
         await page.goto(annotationsUrl);
-        await annotationsPage.getAnnotations().first().waitFor({ state: 'visible', timeout: 10000 });
+        await annotationsPage
+            .getAnnotations()
+            .first()
+            .waitFor({ state: 'visible', timeout: 10000 });
         await annotationsPage.clickAnnotation(0);
         await annotationDetailsPage.waitForNavigation();
         const renderTimeMs = await measureElementRendering(
