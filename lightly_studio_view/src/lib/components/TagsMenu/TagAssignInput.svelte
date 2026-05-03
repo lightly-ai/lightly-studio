@@ -1,14 +1,16 @@
 <script lang="ts">
     import { Input } from '$lib/components/ui/input/index.js';
+    import { Tooltip } from '$lib/components/ui/tooltip';
     import type { TagView } from '$lib/services/types';
 
     interface Props {
         options: TagView[];
         busy: boolean;
+        showSelectionHint?: boolean;
         onSelect: (name: string) => void;
     }
 
-    let { options, busy, onSelect }: Props = $props();
+    let { options, busy, showSelectionHint = false, onSelect }: Props = $props();
 
     let searchQuery = $state('');
     let showDropdown = $state(false);
@@ -72,17 +74,27 @@
 </script>
 
 <div class="relative pt-2">
-    <Input
-        type="text"
-        placeholder="Assign tag to selection"
-        bind:value={searchQuery}
-        onkeydown={handleKeydown}
-        oninput={handleInput}
-        onfocus={handleFocus}
-        onblur={handleBlur}
-        class="h-8 text-xs disabled:opacity-60"
-        disabled={busy}
-    />
+    <Tooltip
+        content={showSelectionHint
+            ? 'Select items in the grid, then assign or create a tag here.'
+            : ''}
+        position="right"
+        triggerClass="block w-full"
+    >
+        <div class="w-full">
+            <Input
+                type="text"
+                placeholder="Assign tag to selection"
+                bind:value={searchQuery}
+                onkeydown={handleKeydown}
+                oninput={handleInput}
+                onfocus={handleFocus}
+                onblur={handleBlur}
+                class="h-8 text-xs disabled:opacity-60"
+                disabled={busy}
+            />
+        </div>
+    </Tooltip>
     {#if showDropdown && (filteredOptions.length > 0 || (trimmedSearchQuery && !hasExactMatch))}
         <div
             class="absolute left-0 top-full z-50 mt-1 max-h-44 w-full overflow-auto rounded-md border bg-popover shadow-md"
