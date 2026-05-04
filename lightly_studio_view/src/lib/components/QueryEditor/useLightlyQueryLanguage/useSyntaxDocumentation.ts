@@ -1,4 +1,4 @@
-/** Module to attach Monaco syntax completion */
+/** Module to register hover provider */
 import * as monaco from 'monaco-editor';
 import { getHover } from './syntaxDocumentation/getHover';
 
