@@ -18,7 +18,8 @@
         Image as ImageIcon,
         X,
         ChartNetwork,
-        GripVertical
+        GripVertical,
+        ListChecks
     } from '@lucide/svelte';
     import { onDestroy, onMount } from 'svelte';
     import { toStore } from 'svelte/store';
@@ -116,6 +117,7 @@
     const isVideos = $derived(isVideosRoute(page.route.id));
     const isVideoFrames = $derived(isVideoFramesRoute(page.route.id));
     const isVideoDetails = $derived(isVideoDetailsRoute(page.route.id));
+    const canSelectAll = $derived(isImages || isVideos || isVideoFrames || isAnnotations);
 
     let gridType = $state<GridType>('images');
     let lastCollectionId: string | null = null;
@@ -579,6 +581,21 @@
                             class="relative flex flex-1 flex-col space-y-4 rounded-[1vw] bg-card p-4"
                         >
                             <GridHeader>
+                                {#snippet selectionControls()}
+                                    {#if canSelectAll}
+                                        <Button
+                                            class="flex shrink-0 items-center space-x-1"
+                                            data-testid="select-all-button"
+                                            variant="ghost"
+                                            aria-label="Select all samples"
+                                            title="Select all samples"
+                                            onclick={selectAllHandle.handleSelectAll}
+                                        >
+                                            <ListChecks class="size-4" />
+                                            <span>Select all</span>
+                                        </Button>
+                                    {/if}
+                                {/snippet}
                                 <div class="flex-1">
                                     {#if hasEmbeddings}
                                         <div
@@ -696,6 +713,21 @@
                 <div class="relative flex flex-1 flex-col space-y-4 rounded-[1vw] bg-card p-4 pb-2">
                     {#if isImages || isAnnotations || isVideos || isGroups}
                         <GridHeader>
+                            {#snippet selectionControls()}
+                                {#if canSelectAll}
+                                    <Button
+                                        class="flex shrink-0 items-center space-x-1"
+                                        data-testid="select-all-button"
+                                        variant="ghost"
+                                        aria-label="Select all samples"
+                                        title="Select all samples"
+                                        onclick={selectAllHandle.handleSelectAll}
+                                    >
+                                        <ListChecks class="size-4" />
+                                        <span>Select all</span>
+                                    </Button>
+                                {/if}
+                            {/snippet}
                             {#snippet auxControls()}
                                 {#if (isImages || isVideos) && hasEmbeddings}
                                     <Button
