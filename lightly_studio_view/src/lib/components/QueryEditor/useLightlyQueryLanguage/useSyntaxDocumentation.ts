@@ -1,6 +1,11 @@
 /** Module to attach Monaco syntax completion */
 import * as monaco from 'monaco-editor';
-import { findFieldByName, findReceiverByName } from '../language/lightly-query-schema';
+import {
+    SCOPES,
+    detectScopeAt,
+    findFieldInScope,
+    findKeyword
+} from '../language/lightly-query-schema';
 
 function getHover(
     model: monaco.editor.ITextModel,
@@ -9,66 +14,51 @@ function getHover(
     const word = model.getWordAtPosition(position);
     if (!word) return null;
 
-    const line = model.getLineContent(position.lineNumber);
-    const cursorOffset = position.column - 1;
+    const range = new monaco.Range(
+        position.lineNumber,
+        word.startColumn,
+        position.lineNumber,
+        word.endColumn
+    );
 
-    const qualifiedReference = /([A-Za-z_][A-Za-z0-9_]*)\.([A-Za-z_][A-Za-z0-9_]*)/g;
-    let match: RegExpExecArray | null;
-    while ((match = qualifiedReference.exec(line))) {
-        const fullStart = match.index;
-        const fullEnd = match.index + match[0].length;
-        if (cursorOffset < fullStart || cursorOffset > fullEnd) continue;
-
-        const receiver = findReceiverByName(match[1]);
-        if (!receiver) continue;
-
-        const memberStart = match.index + match[1].length + 1;
-        if (cursorOffset >= memberStart) {
-            const field = findFieldByName(receiver, match[2]);
-            if (!field) return null;
-            return {
-                contents: [
-                    { value: `\`\`\`\n${receiver.name}.${field.name}: ${field.type}\n\`\`\`` },
-                    { value: field.description }
-                ],
-                range: new monaco.Range(
-                    position.lineNumber,
-                    memberStart + 1,
-                    position.lineNumber,
-                    memberStart + 1 + match[2].length
-                )
-            };
-        }
+    const keyword = findKeyword(word.word);
+    if (keyword) {
         return {
-            contents: [{ value: `**${receiver.name}** — ${receiver.description}` }],
-            range: new monaco.Range(
-                position.lineNumber,
-                fullStart + 1,
-                position.lineNumber,
-                fullStart + 1 + match[1].length
-            )
+            contents: [{ value: `**${keyword.name}** — ${keyword.description}` }],
+            range
         };
     }
 
-    const receiver = findReceiverByName(word.word);
-    if (receiver) {
-        return {
-            contents: [{ value: `**${receiver.name}** — ${receiver.description}` }],
-            range: new monaco.Range(
-                position.lineNumber,
-                word.startColumn,
-                position.lineNumber,
-                word.endColumn
-            )
-        };
-    }
-    return null;
+    const text = model.getValue();
+    const offset = model.getOffsetAt({
+        lineNumber: position.lineNumber,
+        column: word.startColumn
+    });
+    const scope = detectScopeAt(text, offset);
+    const field = findFieldInScope(scope, word.word);
+    if (!field) return null;
+
+    const scopeDoc = SCOPES[scope];
+    return {
+        contents: [
+            { value: `\`\`\`\n${scopeDoc.title}.${field.name}: ${field.type}\n\`\`\`` },
+            { value: field.description }
+        ],
+        range
+    };
 }
+
+// Monaco merges results from every registered HoverProvider, so registering
+// per editor mount produces N copies of the same hover content. Track which
+// language ids we've already wired up and skip the duplicate registration.
+const registeredLanguageIds = new Set<string>();
 
 /**
  * Hook to attach syntax completion
  */
 export function useSyntaxDocumentation(params: { languageId: string }) {
+    if (registeredLanguageIds.has(params.languageId)) return;
+    registeredLanguageIds.add(params.languageId);
     monaco.languages.registerHoverProvider(params.languageId, {
         provideHover: (model, position) => getHover(model, position)
     });
