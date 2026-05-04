@@ -1766,6 +1766,28 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/version": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Version
+         * @description Get backend runtime version information.
+         *
+         *     Prefer the build-generated version file and fall back to runtime generation.
+         */
+        get: operations["get_version"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/images/sample/{sample_id}": {
         parameters: {
             query?: never;
@@ -3291,6 +3313,15 @@ export interface components {
             name: string;
             /** Supported Scopes */
             supported_scopes?: components["schemas"]["OperatorScope"][];
+        };
+        /** RuntimeVersionInfo */
+        RuntimeVersionInfo: {
+            /** Version */
+            version: string;
+            /** Git Sha */
+            git_sha: string;
+            /** Is Tagged Commit */
+            is_tagged_commit: boolean;
         };
         /**
          * SampleAnnotationDetailsView
@@ -6807,6 +6838,26 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_version: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RuntimeVersionInfo"];
                 };
             };
         };
