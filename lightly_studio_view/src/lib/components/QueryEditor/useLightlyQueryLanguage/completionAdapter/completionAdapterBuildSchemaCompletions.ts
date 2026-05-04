@@ -3,8 +3,8 @@ import { SCOPES, TOP_LEVEL_KEYWORDS } from '../../language/lightly-query-schema'
 import { ALLOWED_NESTED_KEYWORDS } from './completionAdapterShared';
 
 /** Build scope-aware schema fallback completion items. */
-export function buildSchemaCompletions<S extends keyof typeof SCOPES>(
-    scope: S,
+export function buildSchemaCompletions<Scope extends keyof typeof SCOPES>(
+    scope: Scope,
     range: monaco.IRange
 ): monaco.languages.CompletionItem[] {
     const items: monaco.languages.CompletionItem[] = [];

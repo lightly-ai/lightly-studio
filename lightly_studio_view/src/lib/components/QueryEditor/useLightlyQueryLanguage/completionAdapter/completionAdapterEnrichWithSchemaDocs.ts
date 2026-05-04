@@ -2,9 +2,9 @@ import type * as monaco from 'monaco-editor';
 import { SCOPES, findFieldInScope, findKeyword } from '../../language/lightly-query-schema';
 
 /** Fill missing docs/detail for completion items from query schema metadata. */
-export function enrichWithSchemaDocs<S extends keyof typeof SCOPES>(
+export function enrichWithSchemaDocs<Scope extends keyof typeof SCOPES>(
     item: monaco.languages.CompletionItem,
-    scope: S
+    scope: Scope
 ): monaco.languages.CompletionItem {
     if (item.documentation) return item;
     const label = typeof item.label === 'string' ? item.label : item.label.label;

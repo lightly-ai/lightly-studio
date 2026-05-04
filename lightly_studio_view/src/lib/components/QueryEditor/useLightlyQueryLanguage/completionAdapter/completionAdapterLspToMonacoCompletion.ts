@@ -9,10 +9,10 @@ import { mapDocumentation } from './completionAdapterMapDocumentation';
 import { LSP_TO_MONACO_KIND } from './completionAdapterShared';
 
 /** Adapt one LSP completion item into Monaco completion shape. */
-export function lspToMonacoCompletion<S extends keyof typeof SCOPES>(
+export function lspToMonacoCompletion<Scope extends keyof typeof SCOPES>(
     item: LspCompletionItem,
     fallbackRange: monaco.IRange,
-    scope: S
+    scope: Scope
 ): monaco.languages.CompletionItem {
     const { label, kind, detail, documentation, sortText, filterText, textEdit } = item;
     const isSnippet = item.insertTextFormat === LspInsertTextFormat.Snippet;
