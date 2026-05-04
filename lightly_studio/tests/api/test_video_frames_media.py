@@ -10,10 +10,10 @@ from fastapi.testclient import TestClient
 from sqlmodel import Session
 
 import lightly_studio.api.routes.video_frames_media as video_frames_media_module
+import lightly_studio.utils.executor as executor_module
 from lightly_studio.api.routes.video_frames_media import (
     _CAP_CACHE_SIZE,
     _get_cached_capture,
-    get_thread_pool_executor,
 )
 from lightly_studio.models.collection import SampleType
 from tests.helpers_resolvers import create_collection
@@ -244,22 +244,21 @@ def test_get_cached_capture_handles_stale_entry(
     assert id(cap1) != id(cap2), "Should create new VideoCapture for stale entry"
 
 
-def test_get_thread_pool_executor_creates_singleton() -> None:
-    """Test get_thread_pool_executor returns the same executor instance."""
-    # Reset the global executor
-    video_frames_media_module._thread_pool_executor = None
+def test_get_media_executor_creates_singleton() -> None:
+    """Test get_media_executor returns the same executor instance on repeated calls."""
+    executor_module._executors.clear()
 
-    executor1 = get_thread_pool_executor()
-    executor2 = get_thread_pool_executor()
+    executor1 = executor_module.get_media_executor("video_frame")
+    executor2 = executor_module.get_media_executor("video_frame")
 
     assert executor1 is executor2, "Should return the same executor instance"
 
 
-def test_get_thread_pool_executor_has_workers() -> None:
-    """Test get_thread_pool_executor creates executor with workers."""
-    video_frames_media_module._thread_pool_executor = None
+def test_get_media_executor_has_workers() -> None:
+    """Test get_media_executor creates an executor with at least one worker."""
+    executor_module._executors.clear()
 
-    executor = get_thread_pool_executor()
+    executor = executor_module.get_media_executor("video_frame")
 
     assert executor is not None
     assert executor._max_workers >= 1
