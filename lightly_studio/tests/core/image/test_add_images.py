@@ -24,6 +24,7 @@ from labelformat.model.object_detection import (
 from PIL import Image as PILImage
 from sqlmodel import Session
 
+from lightly_studio.core import labelformat_helpers
 from lightly_studio.core.image import add_annotations, add_images
 from lightly_studio.models.image import ImageCreate
 from lightly_studio.resolvers import image_resolver
@@ -107,6 +108,31 @@ def test_load_into_collection_from_labelformat__obj_det(
     assert anns[0].object_detection_details.y == 20.0
     assert anns[0].object_detection_details.width == 20.0
     assert anns[0].object_detection_details.height == 20.0
+
+
+def test_load_into_collection_from_labelformat__relative_images_path_normalized(
+    db_session: Session,
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.chdir(tmp_path)
+    collection = helpers_resolvers.create_collection(db_session)
+    label_input = _get_labelformat_input_obj_det(filename="image.jpg")
+
+    sample_ids = add_images.load_into_dataset_from_labelformat(
+        session=db_session,
+        root_collection_id=collection.collection_id,
+        input_labels=label_input,
+        images_path="images",
+    )
+
+    samples = image_resolver.get_all_by_collection_id(
+        session=db_session, collection_id=collection.collection_id
+    ).samples
+    assert len(samples) == 1
+    assert samples[0].sample_id == sample_ids[0]
+    assert samples[0].file_path_abs == str((tmp_path / "images" / "image.jpg").absolute())
+    assert len(samples[0].sample.annotations) == 1
 
 
 @pytest.mark.parametrize(
@@ -300,7 +326,7 @@ def test_create_label_map(db_session: Session) -> None:
         filename="image.jpg", category_names=["dog", "cat"]
     )
 
-    label_map_1 = add_annotations._create_label_map(
+    label_map_1 = labelformat_helpers.create_label_map(
         session=db_session,
         root_collection_id=collection_id,
         input_labels=label_input,
@@ -310,7 +336,7 @@ def test_create_label_map(db_session: Session) -> None:
         filename="image.jpg", category_names=["dog", "cat", "bird"]
     )
 
-    label_map_2 = add_annotations._create_label_map(
+    label_map_2 = labelformat_helpers.create_label_map(
         session=db_session,
         root_collection_id=collection_id,
         input_labels=label_input_2,
@@ -512,6 +538,43 @@ def test_add_annotations_from_labelformat__all_images_exist(db_session: Session)
         session=db_session, collection_id=collection.collection_id
     ).samples
     assert len(samples) == 1
+    assert len(samples[0].sample.annotations) == 1
+
+
+def test_add_annotations_from_labelformat__relative_images_root_matches_absolute_path(
+    db_session: Session,
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Test that local images_root is resolved before matching existing images."""
+    monkeypatch.chdir(tmp_path)
+    images_dir = tmp_path / "images"
+    collection = helpers_resolvers.create_collection(db_session)
+    helpers_resolvers.create_images(
+        db_session,
+        collection.collection_id,
+        [
+            ImageStub(
+                path=str((images_dir / "image.jpg").absolute()),
+                width=100,
+                height=200,
+            ),
+        ],
+    )
+    helpers_resolvers.create_annotation_label(db_session, collection.collection_id, "dog")
+    label_input = _get_labelformat_input_obj_det(filename="image.jpg")
+
+    missing_paths = add_annotations.add_annotations_from_labelformat(
+        session=db_session,
+        root_collection_id=collection.collection_id,
+        input_labels=label_input,
+        images_root="images",
+    )
+
+    assert missing_paths == []
+    samples = image_resolver.get_all_by_collection_id(
+        session=db_session, collection_id=collection.collection_id
+    ).samples
     assert len(samples[0].sample.annotations) == 1
 
 

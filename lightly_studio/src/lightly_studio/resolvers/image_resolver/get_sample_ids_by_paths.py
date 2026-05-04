@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from collections.abc import Sequence
 from uuid import UUID
 
 from sqlmodel import Session, col, select
@@ -13,7 +14,7 @@ from lightly_studio.models.sample import SampleTable
 def get_sample_ids_by_paths(
     session: Session,
     collection_id: UUID,
-    file_paths_abs: list[str],
+    file_paths_abs: Sequence[str],
 ) -> dict[str, UUID]:
     """Get sample IDs for images with given absolute file paths in a collection.
 
