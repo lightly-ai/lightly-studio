@@ -3,7 +3,7 @@
     "languages": [
         {
             "id": "lightly-query",
-            "grammar": "src/lib/components/QueryEditor/language/lightly-query-old.langium",
+            "grammar": "src/lib/components/QueryEditor/language/lightly-query.langium",
             "fileExtensions": [".lql"],
             "caseInsensitive": true,
             "monarch": {
