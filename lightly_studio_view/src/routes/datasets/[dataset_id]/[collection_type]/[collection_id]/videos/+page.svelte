@@ -17,6 +17,7 @@
     import { selectRangeByAnchor } from '$lib/utils/selectRangeByAnchor';
     import { onMount } from 'svelte';
     import { useScrollRestoration } from '$lib/hooks/useScrollRestoration/useScrollRestoration';
+    import { getGridFrameURL } from '$lib/utils';
 
     const collectionId = $derived($page.params.collection_id!);
     const { tagsSelected } = $derived.by(() =>
@@ -217,6 +218,15 @@
                                 dataTestId="video-grid-item"
                                 isSelected={$selectedSampleIds.has(items[index].sample_id)}
                                 ariaLabel={`View sample: ${items[index].file_name}`}
+                                dragData={items[index].frame
+                                    ? {
+                                          url: getGridFrameURL({
+                                              sampleId: items[index].frame.sample_id,
+                                              quality: 'raw'
+                                          }),
+                                          fileName: `${items[index].file_name}.jpg`
+                                      }
+                                    : undefined}
                                 onSelect={(event) =>
                                     handleGridItemSelect(event, items[index].sample_id, index)}
                             >

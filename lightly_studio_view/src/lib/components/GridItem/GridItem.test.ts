@@ -7,6 +7,20 @@ describe('GridItem', () => {
         content: 'Sample content'
     };
 
+    function createPointerEvent(
+        type: string,
+        options: { button?: number; pointerId?: number; clientX: number; clientY: number }
+    ): Event {
+        const event = new Event(type, { bubbles: true }) as PointerEvent;
+        Object.defineProperties(event, {
+            button: { value: options.button ?? 0 },
+            pointerId: { value: options.pointerId ?? 1 },
+            clientX: { value: options.clientX },
+            clientY: { value: options.clientY }
+        });
+        return event;
+    }
+
     it('renders with default dimensions and content', () => {
         render(GridItemTestWrapper, { props: defaultProps });
 
@@ -63,9 +77,12 @@ describe('GridItem', () => {
         expect(ondblclick).toHaveBeenCalledTimes(1);
     });
 
-    it('adds drag data for draggable grid items', async () => {
+    it('drops draggable grid items on the search target after threshold movement', async () => {
         const onSelect = vi.fn();
-        const setData = vi.fn();
+        const onGridImageSearchDrop = vi.fn();
+        const onGridImageSearchDragState = vi.fn();
+        window.addEventListener('lightly:grid-image-search-drop', onGridImageSearchDrop);
+        window.addEventListener('lightly:grid-image-search-drag-state', onGridImageSearchDragState);
         render(GridItemTestWrapper, {
             props: {
                 ...defaultProps,
@@ -78,29 +95,77 @@ describe('GridItem', () => {
         });
 
         const gridItem = screen.getByTestId('grid-item');
-        await fireEvent.dragStart(gridItem, {
-            dataTransfer: {
-                effectAllowed: 'move',
-                setData
-            }
+        const searchTarget = document.createElement('div');
+        searchTarget.setAttribute('data-grid-search-drop-target', '');
+        Object.defineProperty(document, 'elementFromPoint', {
+            configurable: true,
+            value: vi.fn(() => searchTarget)
         });
-        await fireEvent.click(gridItem);
 
-        expect(setData).toHaveBeenCalledWith(
-            'application/vnd.lightly-studio.grid-image+json',
-            JSON.stringify({
-                url: '/api/images/sample/sample-1',
-                fileName: 'sample-1.jpg'
+        await fireEvent(gridItem, createPointerEvent('pointerdown', { clientX: 10, clientY: 10 }));
+        await fireEvent(gridItem, createPointerEvent('pointermove', { clientX: 30, clientY: 10 }));
+        expect(screen.getByTestId('grid-item-drag-preview')).toBeInTheDocument();
+        expect(gridItem).toHaveClass('cursor-grabbing');
+        expect(document.body.style.cursor).toBe('grabbing');
+        expect(onGridImageSearchDragState).toHaveBeenLastCalledWith(
+            expect.objectContaining({
+                detail: { active: true, overDropTarget: true }
             })
         );
-        expect(setData).toHaveBeenCalledWith('text/uri-list', '/api/images/sample/sample-1');
-        expect(setData).toHaveBeenCalledWith('text/plain', '/api/images/sample/sample-1');
+
+        await fireEvent(gridItem, createPointerEvent('pointerup', { clientX: 30, clientY: 10 }));
+        await fireEvent.click(gridItem);
+
+        expect(screen.queryByTestId('grid-item-drag-preview')).not.toBeInTheDocument();
+        expect(document.body.style.cursor).toBe('');
+        expect(onGridImageSearchDrop).toHaveBeenCalledOnce();
+        expect(onGridImageSearchDrop.mock.calls[0][0].detail).toEqual({
+            url: '/api/images/sample/sample-1',
+            fileName: 'sample-1.jpg'
+        });
         expect(onSelect).not.toHaveBeenCalled();
+
+        window.removeEventListener('lightly:grid-image-search-drop', onGridImageSearchDrop);
+        window.removeEventListener(
+            'lightly:grid-image-search-drag-state',
+            onGridImageSearchDragState
+        );
+        vi.restoreAllMocks();
+    });
+
+    it('does not drop draggable grid items away from the search target', async () => {
+        const onGridImageSearchDrop = vi.fn();
+        window.addEventListener('lightly:grid-image-search-drop', onGridImageSearchDrop);
+        render(GridItemTestWrapper, {
+            props: {
+                ...defaultProps,
+                dragData: {
+                    url: '/api/images/sample/sample-1',
+                    fileName: 'sample-1.jpg'
+                }
+            }
+        });
+
+        const gridItem = screen.getByTestId('grid-item');
+        Object.defineProperty(document, 'elementFromPoint', {
+            configurable: true,
+            value: vi.fn(() => document.createElement('div'))
+        });
+
+        await fireEvent(gridItem, createPointerEvent('pointerdown', { clientX: 10, clientY: 10 }));
+        await fireEvent(gridItem, createPointerEvent('pointermove', { clientX: 30, clientY: 10 }));
+        await fireEvent(gridItem, createPointerEvent('pointerup', { clientX: 30, clientY: 10 }));
+
+        expect(onGridImageSearchDrop).not.toHaveBeenCalled();
+
+        window.removeEventListener('lightly:grid-image-search-drop', onGridImageSearchDrop);
+        vi.restoreAllMocks();
     });
 
     it('keeps small pointer movements selectable on draggable grid items', async () => {
         const onSelect = vi.fn();
-        const setData = vi.fn();
+        const onGridImageSearchDrop = vi.fn();
+        window.addEventListener('lightly:grid-image-search-drop', onGridImageSearchDrop);
         render(GridItemTestWrapper, {
             props: {
                 ...defaultProps,
@@ -113,26 +178,130 @@ describe('GridItem', () => {
         });
 
         const gridItem = screen.getByTestId('grid-item');
-        await fireEvent(
-            gridItem,
-            new MouseEvent('mousedown', { bubbles: true, clientX: 10, clientY: 10 })
-        );
-        const dragStartEvent = new Event('dragstart') as DragEvent;
-        Object.defineProperties(dragStartEvent, {
-            clientX: { value: 13 },
-            clientY: { value: 12 },
-            dataTransfer: {
-                value: {
-                    effectAllowed: 'move',
-                    setData
+        await fireEvent(gridItem, createPointerEvent('pointerdown', { clientX: 10, clientY: 10 }));
+        await fireEvent(gridItem, createPointerEvent('pointermove', { clientX: 13, clientY: 12 }));
+        expect(screen.queryByTestId('grid-item-drag-preview')).not.toBeInTheDocument();
+        await fireEvent(gridItem, createPointerEvent('pointerup', { clientX: 13, clientY: 12 }));
+        await fireEvent.click(gridItem);
+
+        expect(onGridImageSearchDrop).not.toHaveBeenCalled();
+        expect(onSelect).toHaveBeenCalledOnce();
+
+        window.removeEventListener('lightly:grid-image-search-drop', onGridImageSearchDrop);
+    });
+
+    it('prevents native browser dragging for draggable grid items', () => {
+        render(GridItemTestWrapper, {
+            props: {
+                ...defaultProps,
+                dragData: {
+                    url: '/api/images/sample/sample-1',
+                    fileName: 'sample-1.jpg'
                 }
             }
         });
-        await fireEvent(gridItem, dragStartEvent);
-        await fireEvent.click(gridItem);
 
-        expect(setData).not.toHaveBeenCalled();
-        expect(onSelect).toHaveBeenCalledOnce();
+        expect(screen.getByTestId('grid-item')).toHaveAttribute('draggable', 'false');
+    });
+
+    it('cleans up drag feedback on pointer cancel', async () => {
+        render(GridItemTestWrapper, {
+            props: {
+                ...defaultProps,
+                dragData: {
+                    url: '/api/images/sample/sample-1',
+                    fileName: 'sample-1.jpg'
+                }
+            }
+        });
+
+        const gridItem = screen.getByTestId('grid-item');
+        await fireEvent(gridItem, createPointerEvent('pointerdown', { clientX: 10, clientY: 10 }));
+        await fireEvent(gridItem, createPointerEvent('pointermove', { clientX: 30, clientY: 10 }));
+
+        expect(screen.getByTestId('grid-item-drag-preview')).toBeInTheDocument();
+        expect(document.body.style.cursor).toBe('grabbing');
+
+        await fireEvent(
+            gridItem,
+            createPointerEvent('pointercancel', { clientX: 30, clientY: 10 })
+        );
+
+        expect(screen.queryByTestId('grid-item-drag-preview')).not.toBeInTheDocument();
+        expect(document.body.style.cursor).toBe('');
+    });
+
+    it('cleans up drag feedback when pointer capture is lost', async () => {
+        render(GridItemTestWrapper, {
+            props: {
+                ...defaultProps,
+                dragData: {
+                    url: '/api/images/sample/sample-1',
+                    fileName: 'sample-1.jpg'
+                }
+            }
+        });
+
+        const gridItem = screen.getByTestId('grid-item');
+        await fireEvent(gridItem, createPointerEvent('pointerdown', { clientX: 10, clientY: 10 }));
+        await fireEvent(gridItem, createPointerEvent('pointermove', { clientX: 30, clientY: 10 }));
+
+        expect(screen.getByTestId('grid-item-drag-preview')).toBeInTheDocument();
+
+        await fireEvent(gridItem, new Event('lostpointercapture', { bubbles: true }));
+
+        expect(screen.queryByTestId('grid-item-drag-preview')).not.toBeInTheDocument();
+        expect(document.body.style.cursor).toBe('');
+    });
+
+    it('cleans up drag feedback on window pointerup if the item misses pointerup', async () => {
+        render(GridItemTestWrapper, {
+            props: {
+                ...defaultProps,
+                dragData: {
+                    url: '/api/images/sample/sample-1',
+                    fileName: 'sample-1.jpg'
+                }
+            }
+        });
+
+        const gridItem = screen.getByTestId('grid-item');
+        await fireEvent(gridItem, createPointerEvent('pointerdown', { clientX: 10, clientY: 10 }));
+        await fireEvent(gridItem, createPointerEvent('pointermove', { clientX: 30, clientY: 10 }));
+
+        expect(screen.getByTestId('grid-item-drag-preview')).toBeInTheDocument();
+
+        await fireEvent(window, createPointerEvent('pointerup', { clientX: 30, clientY: 10 }));
+
+        expect(screen.queryByTestId('grid-item-drag-preview')).not.toBeInTheDocument();
+        expect(document.body.style.cursor).toBe('');
+    });
+
+    it('cleans up drag feedback on window blur and Escape', async () => {
+        render(GridItemTestWrapper, {
+            props: {
+                ...defaultProps,
+                dragData: {
+                    url: '/api/images/sample/sample-1',
+                    fileName: 'sample-1.jpg'
+                }
+            }
+        });
+
+        const gridItem = screen.getByTestId('grid-item');
+        await fireEvent(gridItem, createPointerEvent('pointerdown', { clientX: 10, clientY: 10 }));
+        await fireEvent(gridItem, createPointerEvent('pointermove', { clientX: 30, clientY: 10 }));
+        await fireEvent(window, new Event('blur'));
+
+        expect(screen.queryByTestId('grid-item-drag-preview')).not.toBeInTheDocument();
+        expect(document.body.style.cursor).toBe('');
+
+        await fireEvent(gridItem, createPointerEvent('pointerdown', { clientX: 10, clientY: 10 }));
+        await fireEvent(gridItem, createPointerEvent('pointermove', { clientX: 30, clientY: 10 }));
+        await fireEvent.keyDown(window, { key: 'Escape' });
+
+        expect(screen.queryByTestId('grid-item-drag-preview')).not.toBeInTheDocument();
+        expect(document.body.style.cursor).toBe('');
     });
 
     it('applies selected style and renders selectable tag', () => {

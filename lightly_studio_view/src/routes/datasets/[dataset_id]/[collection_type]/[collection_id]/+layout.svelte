@@ -72,6 +72,7 @@
     import { useSelectAll } from '$lib/hooks/useSelectAll/useSelectAll';
     import { isInputElement } from '$lib/utils';
     import { shutdownMaskRendererPool } from '$lib/workers/maskRendererPool';
+    import { embedImageFromFile } from '$lib/api/lightly_studio_local';
     const { data, children } = $props();
     const {
         collection,
@@ -139,6 +140,11 @@
             window.addEventListener('keydown', handleKeyEvent);
             window.addEventListener('keyup', handleKeyEvent);
             window.addEventListener('keydown', handleSelectAllKeydown);
+            window.addEventListener(GRID_IMAGE_SEARCH_DROP_EVENT, handleGridImageSearchDrop);
+            window.addEventListener(
+                GRID_IMAGE_SEARCH_DRAG_STATE_EVENT,
+                handleGridImageSearchDragState
+            );
         }
     });
 
@@ -147,6 +153,11 @@
             window.removeEventListener('keydown', handleKeyEvent);
             window.removeEventListener('keyup', handleKeyEvent);
             window.removeEventListener('keydown', handleSelectAllKeydown);
+            window.removeEventListener(GRID_IMAGE_SEARCH_DROP_EVENT, handleGridImageSearchDrop);
+            window.removeEventListener(
+                GRID_IMAGE_SEARCH_DRAG_STATE_EVENT,
+                handleGridImageSearchDragState
+            );
             shutdownMaskRendererPool();
         }
     });
@@ -325,6 +336,13 @@
     const MAX_IMAGE_SIZE_MB = 50;
     const MAX_IMAGE_SIZE_BYTES = MAX_IMAGE_SIZE_MB * 1024 * 1024;
     const GRID_IMAGE_DRAG_MIME_TYPE = 'application/vnd.lightly-studio.grid-image+json';
+    const GRID_IMAGE_SEARCH_DROP_EVENT = 'lightly:grid-image-search-drop';
+    const GRID_IMAGE_SEARCH_DRAG_STATE_EVENT = 'lightly:grid-image-search-drag-state';
+
+    type GridImageDragData = {
+        url?: string;
+        fileName?: string;
+    };
 
     let dragOver = $state(false);
     let activeImage = $state<string | null>(null);
@@ -371,25 +389,49 @@
         }
 
         try {
-            const parsedDragData = JSON.parse(dragData) as { url?: string; fileName?: string };
-            if (!parsedDragData.url) {
-                return null;
-            }
-
-            const response = await fetch(parsedDragData.url);
-            if (!response.ok) {
-                throw new Error(`Failed to fetch dragged image: ${response.statusText}`);
-            }
-
-            const blob = await response.blob();
-            const fileName = parsedDragData.fileName || 'grid-image';
-            return new File([blob], fileName, { type: blob.type || 'image/jpeg' });
+            return await getGridImageFile(JSON.parse(dragData) as GridImageDragData);
         } catch (err: unknown) {
             const message =
                 err instanceof Error ? err.message : 'Failed to load dragged image for search';
             setError(message);
             return null;
         }
+    }
+
+    async function getGridImageFile(dragData: GridImageDragData): Promise<File | null> {
+        if (!dragData.url) {
+            return null;
+        }
+
+        const response = await fetch(dragData.url);
+        if (!response.ok) {
+            throw new Error(`Failed to fetch dragged image: ${response.statusText}`);
+        }
+
+        const blob = await response.blob();
+        const fileName = dragData.fileName || 'grid-image';
+        return new File([blob], fileName, { type: blob.type || 'image/jpeg' });
+    }
+
+    async function handleGridImageSearchDrop(event: Event) {
+        const dragData = (event as CustomEvent<GridImageDragData>).detail;
+        try {
+            const file = await getGridImageFile(dragData);
+            if (file) {
+                await uploadImage(file);
+            }
+        } catch (err: unknown) {
+            const message =
+                err instanceof Error ? err.message : 'Failed to load dragged image for search';
+            setError(message);
+        }
+    }
+
+    function handleGridImageSearchDragState(event: Event) {
+        dragOver = Boolean(
+            (event as CustomEvent<{ active?: boolean; overDropTarget?: boolean }>).detail
+                ?.overDropTarget
+        );
     }
 
     async function handlePaste(e: ClipboardEvent) {
@@ -437,28 +479,22 @@
             return;
         }
 
-        const formData = new FormData();
-        formData.append('file', file);
-
         isUploading = true;
         try {
             const currentCollectionId = page.params.collection_id;
             if (!currentCollectionId) {
                 throw new Error('Collection ID is not available');
             }
-            const response = await fetch(
-                `/api/image_embedding/from_file/for_collection/${currentCollectionId}`,
-                {
-                    method: 'POST',
-                    body: formData
-                }
-            );
 
-            if (!response.ok) {
-                throw new Error(`Error uploading image: ${response.statusText}`);
+            const response = await embedImageFromFile({
+                path: { collection_id: currentCollectionId },
+                body: { file }
+            });
+
+            if (response.error) {
+                throw new Error('Error uploading image');
             }
-
-            const embedding = await response.json();
+            const embedding = response.data;
 
             // Clear text search state
             query_text = '';
@@ -623,6 +659,7 @@
                                             class="relative"
                                             role="region"
                                             aria-label="Search by image or text"
+                                            data-grid-search-drop-target
                                             ondragover={handleDragOver}
                                             ondragleave={handleDragLeave}
                                             ondrop={handleDrop}
@@ -753,6 +790,7 @@
                                     class="relative"
                                     role="region"
                                     aria-label="Search by image or text"
+                                    data-grid-search-drop-target
                                     ondragover={handleDragOver}
                                     ondragleave={handleDragLeave}
                                     ondrop={handleDrop}
