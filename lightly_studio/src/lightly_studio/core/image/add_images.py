@@ -127,12 +127,12 @@ def load_into_dataset_from_labelformat(
         root_collection_id: The ID of the root collection to load samples into.
         input_labels: The labelformat input containing images and annotations.
         images_path: The path to the directory containing the images.
-        collection_name: Optional name for the annotation collection. Internal use only;
-            public add_samples_from_* methods do not expose this parameter.
+        collection_name: Optional name for the annotation collection.
 
     Returns:
         A list of UUIDs of the created samples.
     """
+    images_root_abs = add_annotations.normalize_images_root(images_root=images_path)
     logging_context = LoadingLoggingContext(
         n_samples_to_be_inserted=sum(1 for _ in input_labels.get_labels()),
         n_samples_before_loading=sample_resolver.count_by_collection_id(
@@ -149,7 +149,7 @@ def load_into_dataset_from_labelformat(
 
         sample = ImageCreate(
             file_name=str(image.filename),
-            file_path_abs=posixpath.join(str(images_path), str(image.filename)),
+            file_path_abs=posixpath.join(images_root_abs, str(image.filename)),
             width=image.width,
             height=image.height,
         )
@@ -175,7 +175,7 @@ def load_into_dataset_from_labelformat(
         session=session,
         root_collection_id=root_collection_id,
         input_labels=input_labels,
-        images_root=images_path,
+        images_root=images_root_abs,
         collection_name=collection_name,
         restrict_to_sample_ids=set(created_sample_ids),
     )

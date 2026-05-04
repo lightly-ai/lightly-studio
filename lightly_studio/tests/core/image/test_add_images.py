@@ -27,7 +27,7 @@ from sqlmodel import Session
 from lightly_studio.core import labelformat_helpers
 from lightly_studio.core.image import add_annotations, add_images
 from lightly_studio.models.image import ImageCreate
-from lightly_studio.resolvers import image_resolver
+from lightly_studio.resolvers import annotation_resolver, image_resolver
 from tests import helpers_resolvers
 from tests.helpers_resolvers import (
     ImageStub,
@@ -65,6 +65,7 @@ def test_load_into_collection_from_paths(db_session: Session, tmp_path: Path) ->
     "images_path",
     [
         "/",
+        "images",
         "/some/path/to/images",
         "/some/path/to/images/with/trailing/slash/",
         "s3://test-bucket/images",
@@ -74,8 +75,11 @@ def test_load_into_collection_from_paths(db_session: Session, tmp_path: Path) ->
 def test_load_into_collection_from_labelformat__obj_det(
     db_session: Session,
     images_path: str,
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
 ) -> None:
     # Arrange
+    monkeypatch.chdir(tmp_path)
     collection = helpers_resolvers.create_collection(db_session)
     label_input = _get_labelformat_input_obj_det(filename="image.jpg")
 
@@ -94,7 +98,11 @@ def test_load_into_collection_from_labelformat__obj_det(
 
     assert samples[0].sample_id == sample_ids[0]
     assert samples[0].file_name == "image.jpg"
-    assert samples[0].file_path_abs == images_path.rstrip("/\\") + "/image.jpg"
+    if images_path == "images":
+        expected_file_path = str((tmp_path / "images" / "image.jpg").absolute())
+    else:
+        expected_file_path = images_path.rstrip("/\\") + "/image.jpg"
+    assert samples[0].file_path_abs == expected_file_path
     assert samples[0].width == 100
     assert samples[0].height == 200
     assert samples[0].sample.collection_id == collection.collection_id
@@ -108,31 +116,6 @@ def test_load_into_collection_from_labelformat__obj_det(
     assert anns[0].object_detection_details.y == 20.0
     assert anns[0].object_detection_details.width == 20.0
     assert anns[0].object_detection_details.height == 20.0
-
-
-def test_load_into_collection_from_labelformat__relative_images_path_normalized(
-    db_session: Session,
-    tmp_path: Path,
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    monkeypatch.chdir(tmp_path)
-    collection = helpers_resolvers.create_collection(db_session)
-    label_input = _get_labelformat_input_obj_det(filename="image.jpg")
-
-    sample_ids = add_images.load_into_dataset_from_labelformat(
-        session=db_session,
-        root_collection_id=collection.collection_id,
-        input_labels=label_input,
-        images_path="images",
-    )
-
-    samples = image_resolver.get_all_by_collection_id(
-        session=db_session, collection_id=collection.collection_id
-    ).samples
-    assert len(samples) == 1
-    assert samples[0].sample_id == sample_ids[0]
-    assert samples[0].file_path_abs == str((tmp_path / "images" / "image.jpg").absolute())
-    assert len(samples[0].sample.annotations) == 1
 
 
 @pytest.mark.parametrize(
@@ -506,62 +489,24 @@ def _get_captions_input(annotations_path: Path) -> None:
     annotations_path.write_text(json.dumps(coco_caption_dict))
 
 
-def test_add_annotations_from_labelformat__all_images_exist(db_session: Session) -> None:
-    """Test adding annotations to pre-existing images in a collection."""
-    # Arrange: Create collection with pre-existing images
-    collection = helpers_resolvers.create_collection(db_session)
-    helpers_resolvers.create_images(
-        db_session,
-        collection.collection_id,
-        [
-            ImageStub(path="/images/image.jpg", width=100, height=200),
-        ],
-    )
-
-    # Create annotation labels
-    helpers_resolvers.create_annotation_label(db_session, collection.collection_id, "dog")
-
-    # Create labelformat input with matching image
-    label_input = _get_labelformat_input_obj_det(filename="image.jpg")
-
-    # Act: Add annotations to existing images
-    missing_paths = add_annotations.add_annotations_from_labelformat(
-        session=db_session,
-        root_collection_id=collection.collection_id,
-        input_labels=label_input,
-        images_root="/images",
-    )
-
-    # Assert: No missing paths and annotations were created
-    assert len(missing_paths) == 0
-    samples = image_resolver.get_all_by_collection_id(
-        session=db_session, collection_id=collection.collection_id
-    ).samples
-    assert len(samples) == 1
-    assert len(samples[0].sample.annotations) == 1
-
-
-def test_add_annotations_from_labelformat__relative_images_root_matches_absolute_path(
+def test_add_annotations_from_labelformat__resolved_path_and_collection_name(
     db_session: Session,
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """Test that local images_root is resolved before matching existing images."""
     monkeypatch.chdir(tmp_path)
-    images_dir = tmp_path / "images"
     collection = helpers_resolvers.create_collection(db_session)
-    helpers_resolvers.create_images(
+    images = helpers_resolvers.create_images(
         db_session,
         collection.collection_id,
         [
             ImageStub(
-                path=str((images_dir / "image.jpg").absolute()),
+                path=str((tmp_path / "images" / "image.jpg").absolute()),
                 width=100,
                 height=200,
             ),
         ],
     )
-    helpers_resolvers.create_annotation_label(db_session, collection.collection_id, "dog")
     label_input = _get_labelformat_input_obj_det(filename="image.jpg")
 
     missing_paths = add_annotations.add_annotations_from_labelformat(
@@ -569,24 +514,24 @@ def test_add_annotations_from_labelformat__relative_images_root_matches_absolute
         root_collection_id=collection.collection_id,
         input_labels=label_input,
         images_root="images",
+        collection_name="model_v1",
     )
 
     assert missing_paths == []
-    samples = image_resolver.get_all_by_collection_id(
-        session=db_session, collection_id=collection.collection_id
-    ).samples
-    assert len(samples[0].sample.annotations) == 1
+    annotations = annotation_resolver.get_all_by_collection_name(
+        session=db_session,
+        collection_name="model_v1",
+        parent_collection_id=collection.collection_id,
+    ).annotations
+    assert len(annotations) == 1
+    assert annotations[0].parent_sample_id == images[0].sample_id
+    assert annotations[0].annotation_label.annotation_label_name == "dog"
 
 
 def test_add_annotations_from_labelformat__missing_images(db_session: Session) -> None:
-    """Test that missing images are reported and don't cause errors."""
-    # Arrange
     collection = helpers_resolvers.create_collection(db_session)
-
-    # Create labelformat input with image that won't exist in DB
     label_input = _get_labelformat_input_obj_det(filename="nonexistent.jpg")
 
-    # Act: Add annotations even though image doesn't exist
     missing_paths = add_annotations.add_annotations_from_labelformat(
         session=db_session,
         root_collection_id=collection.collection_id,
@@ -594,82 +539,37 @@ def test_add_annotations_from_labelformat__missing_images(db_session: Session) -
         images_root="/images",
     )
 
-    # Assert: Missing path is reported
-    assert len(missing_paths) == 1
-    assert missing_paths[0] == "/images/nonexistent.jpg"
-
-    # No annotations were created
+    assert missing_paths == ["/images/nonexistent.jpg"]
     samples = image_resolver.get_all_by_collection_id(
         session=db_session, collection_id=collection.collection_id
     ).samples
     assert len(samples) == 0
 
 
-def test_add_annotations_from_labelformat__named_collection(db_session: Session) -> None:
-    """Test adding annotations with a collection_name parameter."""
-    # Arrange
-    collection = helpers_resolvers.create_collection(db_session)
-    helpers_resolvers.create_images(
-        db_session,
-        collection.collection_id,
-        [
-            ImageStub(path="/images/image.jpg", width=100, height=200),
-        ],
-    )
-
-    helpers_resolvers.create_annotation_label(db_session, collection.collection_id, "dog")
-
-    label_input = _get_labelformat_input_obj_det(filename="image.jpg")
-
-    # Act: Add annotations with a specific collection name (should not raise)
-    add_annotations.add_annotations_from_labelformat(
-        session=db_session,
-        root_collection_id=collection.collection_id,
-        input_labels=label_input,
-        images_root="/images",
-        collection_name="model_v1",
-    )
-
-    # Assert: Annotations were created successfully
-    samples = image_resolver.get_all_by_collection_id(
-        session=db_session, collection_id=collection.collection_id
-    ).samples
-    assert len(samples[0].sample.annotations) == 1
-
-
-def test_add_annotations_from_labelformat__restrict_to_sample_ids(db_session: Session) -> None:
-    """Test that restrict_to_sample_ids filters correctly."""
-    # Arrange: Create two images
+def test_load_into_collection_from_labelformat__does_not_annotate_existing_images(
+    db_session: Session,
+) -> None:
     collection = helpers_resolvers.create_collection(db_session)
     images = helpers_resolvers.create_images(
         db_session,
         collection.collection_id,
         [
             ImageStub(path="/images/image.jpg", width=100, height=200),
-            ImageStub(path="/images/image2.jpg", width=100, height=200),
         ],
     )
-
-    helpers_resolvers.create_annotation_label(db_session, collection.collection_id, "dog")
-
-    # Create labelformat input with one image
     label_input = _get_labelformat_input_obj_det(filename="image.jpg")
 
-    # Act: Add annotations but restrict to only the first image
-    add_annotations.add_annotations_from_labelformat(
+    sample_ids = add_images.load_into_dataset_from_labelformat(
         session=db_session,
         root_collection_id=collection.collection_id,
         input_labels=label_input,
-        images_root="/images",
-        restrict_to_sample_ids={images[0].sample_id},
+        images_path="/images",
     )
 
-    # Assert: Only the first image got annotations
+    assert sample_ids == []
     samples = image_resolver.get_all_by_collection_id(
         session=db_session, collection_id=collection.collection_id
     ).samples
-    image1 = next(s for s in samples if s.sample_id == images[0].sample_id)
-    image2 = next(s for s in samples if s.sample_id == images[1].sample_id)
-
-    assert len(image1.sample.annotations) == 1
-    assert len(image2.sample.annotations) == 0
+    assert len(samples) == 1
+    assert samples[0].sample_id == images[0].sample_id
+    assert len(samples[0].sample.annotations) == 0
