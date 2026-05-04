@@ -25,9 +25,9 @@ from PIL import Image as PILImage
 from sqlmodel import Session
 
 from lightly_studio.core import labelformat_helpers
-from lightly_studio.core.image import add_annotations, add_images
+from lightly_studio.core.image import add_images
 from lightly_studio.models.image import ImageCreate
-from lightly_studio.resolvers import annotation_resolver, image_resolver
+from lightly_studio.resolvers import image_resolver
 from tests import helpers_resolvers
 from tests.helpers_resolvers import (
     ImageStub,
@@ -75,11 +75,8 @@ def test_load_into_collection_from_paths(db_session: Session, tmp_path: Path) ->
 def test_load_into_collection_from_labelformat__obj_det(
     db_session: Session,
     images_path: str,
-    monkeypatch: pytest.MonkeyPatch,
-    tmp_path: Path,
 ) -> None:
     # Arrange
-    monkeypatch.chdir(tmp_path)
     collection = helpers_resolvers.create_collection(db_session)
     label_input = _get_labelformat_input_obj_det(filename="image.jpg")
 
@@ -99,7 +96,7 @@ def test_load_into_collection_from_labelformat__obj_det(
     assert samples[0].sample_id == sample_ids[0]
     assert samples[0].file_name == "image.jpg"
     if images_path == "images":
-        expected_file_path = str((tmp_path / "images" / "image.jpg").absolute())
+        expected_file_path = str(Path("images/image.jpg").absolute())
     else:
         expected_file_path = images_path.rstrip("/\\") + "/image.jpg"
     assert samples[0].file_path_abs == expected_file_path
@@ -193,6 +190,35 @@ def test_load_into_collection_from_labelformat__ins_seg(
     assert anns[0].segmentation_details.y == 5.0
     assert anns[0].segmentation_details.width == 10.0
     assert anns[0].segmentation_details.height == 5.0
+
+
+def test_load_into_dataset_from_labelformat__does_not_annotate_existing_images(
+    db_session: Session,
+) -> None:
+    collection = helpers_resolvers.create_collection(db_session)
+    images = helpers_resolvers.create_images(
+        db_session,
+        collection.collection_id,
+        [
+            ImageStub(path="/images/image.jpg", width=100, height=200),
+        ],
+    )
+    label_input = _get_labelformat_input_obj_det(filename="image.jpg")
+
+    sample_ids = add_images.load_into_dataset_from_labelformat(
+        session=db_session,
+        root_collection_id=collection.collection_id,
+        input_labels=label_input,
+        images_path="/images",
+    )
+
+    assert sample_ids == []
+    samples = image_resolver.get_all_by_collection_id(
+        session=db_session, collection_id=collection.collection_id
+    ).samples
+    assert len(samples) == 1
+    assert samples[0].sample_id == images[0].sample_id
+    assert len(samples[0].sample.annotations) == 0
 
 
 def test_load_into_collection_from_coco_captions(db_session: Session, tmp_path: Path) -> None:
@@ -487,89 +513,3 @@ def _get_captions_input(annotations_path: Path) -> None:
         ],
     }
     annotations_path.write_text(json.dumps(coco_caption_dict))
-
-
-def test_add_annotations_from_labelformat__resolved_path_and_collection_name(
-    db_session: Session,
-    tmp_path: Path,
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    monkeypatch.chdir(tmp_path)
-    collection = helpers_resolvers.create_collection(db_session)
-    images = helpers_resolvers.create_images(
-        db_session,
-        collection.collection_id,
-        [
-            ImageStub(
-                path=str((tmp_path / "images" / "image.jpg").absolute()),
-                width=100,
-                height=200,
-            ),
-        ],
-    )
-    label_input = _get_labelformat_input_obj_det(filename="image.jpg")
-
-    missing_paths = add_annotations.add_annotations_from_labelformat(
-        session=db_session,
-        root_collection_id=collection.collection_id,
-        input_labels=label_input,
-        images_root="images",
-        collection_name="model_v1",
-    )
-
-    assert missing_paths == []
-    annotations = annotation_resolver.get_all_by_collection_name(
-        session=db_session,
-        collection_name="model_v1",
-        parent_collection_id=collection.collection_id,
-    ).annotations
-    assert len(annotations) == 1
-    assert annotations[0].parent_sample_id == images[0].sample_id
-    assert annotations[0].annotation_label.annotation_label_name == "dog"
-
-
-def test_add_annotations_from_labelformat__missing_images(db_session: Session) -> None:
-    collection = helpers_resolvers.create_collection(db_session)
-    label_input = _get_labelformat_input_obj_det(filename="nonexistent.jpg")
-
-    missing_paths = add_annotations.add_annotations_from_labelformat(
-        session=db_session,
-        root_collection_id=collection.collection_id,
-        input_labels=label_input,
-        images_root="/images",
-    )
-
-    assert missing_paths == ["/images/nonexistent.jpg"]
-    samples = image_resolver.get_all_by_collection_id(
-        session=db_session, collection_id=collection.collection_id
-    ).samples
-    assert len(samples) == 0
-
-
-def test_load_into_collection_from_labelformat__does_not_annotate_existing_images(
-    db_session: Session,
-) -> None:
-    collection = helpers_resolvers.create_collection(db_session)
-    images = helpers_resolvers.create_images(
-        db_session,
-        collection.collection_id,
-        [
-            ImageStub(path="/images/image.jpg", width=100, height=200),
-        ],
-    )
-    label_input = _get_labelformat_input_obj_det(filename="image.jpg")
-
-    sample_ids = add_images.load_into_dataset_from_labelformat(
-        session=db_session,
-        root_collection_id=collection.collection_id,
-        input_labels=label_input,
-        images_path="/images",
-    )
-
-    assert sample_ids == []
-    samples = image_resolver.get_all_by_collection_id(
-        session=db_session, collection_id=collection.collection_id
-    ).samples
-    assert len(samples) == 1
-    assert samples[0].sample_id == images[0].sample_id
-    assert len(samples[0].sample.annotations) == 0

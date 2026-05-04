@@ -81,21 +81,7 @@ def add_annotations_from_labelformat(  # noqa: PLR0913
         path_to_anno_data[file_path_abs] = annotation_data
 
         if len(path_to_anno_data) >= SAMPLE_BATCH_SIZE:
-            missing_paths.extend(
-                _process_annotation_batch(
-                    session=session,
-                    root_collection_id=root_collection_id,
-                    path_to_anno_data=path_to_anno_data,
-                    label_map=label_map,
-                    collection_name=collection_name,
-                    restrict_to_sample_ids=restrict_to_sample_ids,
-                )
-            )
-            path_to_anno_data.clear()
-
-    if path_to_anno_data:
-        missing_paths.extend(
-            _process_annotation_batch(
+            missing_paths += _process_annotation_batch(
                 session=session,
                 root_collection_id=root_collection_id,
                 path_to_anno_data=path_to_anno_data,
@@ -103,6 +89,16 @@ def add_annotations_from_labelformat(  # noqa: PLR0913
                 collection_name=collection_name,
                 restrict_to_sample_ids=restrict_to_sample_ids,
             )
+            path_to_anno_data.clear()
+
+    if path_to_anno_data:
+        missing_paths += _process_annotation_batch(
+            session=session,
+            root_collection_id=root_collection_id,
+            path_to_anno_data=path_to_anno_data,
+            label_map=label_map,
+            collection_name=collection_name,
+            restrict_to_sample_ids=restrict_to_sample_ids,
         )
 
     return missing_paths
@@ -162,13 +158,25 @@ def _process_annotation_batch(  # noqa: PLR0913
             continue
 
         matched_sample_ids.add(sample_id)
-        annotations_to_create.extend(
-            _get_annotation_creates(
-                sample_id=sample_id,
-                label_map=label_map,
-                anno_data=anno_data,
-            )
-        )
+        if isinstance(anno_data, ImageInstanceSegmentation):
+            annotations_to_create += [
+                labelformat_helpers.get_segmentation_annotation_create(
+                    parent_sample_id=sample_id,
+                    annotation_label_id=label_map[obj.category.id],
+                    segmentation=obj.segmentation,
+                )
+                for obj in anno_data.objects
+            ]
+        else:
+            annotations_to_create += [
+                labelformat_helpers.get_object_detection_annotation_create(
+                    parent_sample_id=sample_id,
+                    annotation_label_id=label_map[obj.category.id],
+                    box=obj.box,
+                    confidence=obj.confidence,
+                )
+                for obj in anno_data.objects
+            ]
 
     if annotations_to_create:
         annotation_resolver.create_many(
@@ -192,30 +200,3 @@ def _process_annotation_batch(  # noqa: PLR0913
         )
 
     return missing_paths
-
-
-def _get_annotation_creates(
-    sample_id: UUID,
-    label_map: dict[int, UUID],
-    anno_data: ImageInstanceSegmentation | ImageObjectDetection,
-) -> list[AnnotationCreate]:
-    """Create annotation inputs for a single image sample."""
-    if isinstance(anno_data, ImageInstanceSegmentation):
-        return [
-            labelformat_helpers.get_segmentation_annotation_create(
-                parent_sample_id=sample_id,
-                annotation_label_id=label_map[obj.category.id],
-                segmentation=obj.segmentation,
-            )
-            for obj in anno_data.objects
-        ]
-
-    return [
-        labelformat_helpers.get_object_detection_annotation_create(
-            parent_sample_id=sample_id,
-            annotation_label_id=label_map[obj.category.id],
-            box=obj.box,
-            confidence=obj.confidence,
-        )
-        for obj in anno_data.objects
-    ]
