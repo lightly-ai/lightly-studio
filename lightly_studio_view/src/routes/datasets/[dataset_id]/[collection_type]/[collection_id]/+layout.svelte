@@ -73,10 +73,7 @@
     import { isInputElement } from '$lib/utils';
     import { shutdownMaskRendererPool } from '$lib/workers/maskRendererPool';
     import { embedImageFromFile } from '$lib/api/lightly_studio_local';
-    import {
-        GRID_IMAGE_SEARCH_DROP_EVENT,
-        type GridItemDragData
-    } from '$lib/components/GridItem';
+    import { GRID_IMAGE_SEARCH_DROP_EVENT, type GridItemDragData } from '$lib/components/GridItem';
     const { data, children } = $props();
     const {
         collection,

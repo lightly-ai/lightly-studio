@@ -2,10 +2,7 @@
     import { onDestroy } from 'svelte';
     import type { Snippet } from 'svelte';
     import GridItemTag from './GridItemTag.svelte';
-    import {
-        GRID_IMAGE_SEARCH_DROP_EVENT,
-        type GridItemDragData
-    } from './GridItem.constants';
+    import { GRID_IMAGE_SEARCH_DROP_EVENT, type GridItemDragData } from './GridItem.constants';
     const GRID_IMAGE_SEARCH_DROP_TARGET_SELECTOR = '[data-grid-search-drop-target]';
     const DRAG_START_THRESHOLD_PX = 8;
     const DRAG_PREVIEW_OFFSET_PX = 14;
