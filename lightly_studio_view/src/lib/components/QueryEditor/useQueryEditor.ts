@@ -4,6 +4,7 @@ import * as monaco from 'monaco-editor';
 import editorWorker from 'monaco-editor/esm/vs/editor/editor.worker?worker';
 import lightlyQueryMonarch from './language/monarch.generated';
 import { useLightlyQueryLanguage } from './useLightlyQueryLanguage/useLightlyQueryLanguage';
+import { useSyntaxDocumentation } from './useLightlyQueryLanguage/useSyntaxDocumentation';
 
 const LIGHTLY_QUERY_LANGUAGE_ID = 'lightly-query';
 const LIGHTLY_QUERY_THEME_ID = 'lightly-query-theme';
@@ -29,6 +30,7 @@ const setupMonaco = () => {
         LIGHTLY_QUERY_LANGUAGE_ID,
         lightlyQueryMonarch as monaco.languages.IMonarchLanguage
     );
+    useSyntaxDocumentation({ languageId: LIGHTLY_QUERY_LANGUAGE_ID });
     monaco.editor.defineTheme(LIGHTLY_QUERY_THEME_ID, {
         base: 'vs-dark',
         inherit: true,
