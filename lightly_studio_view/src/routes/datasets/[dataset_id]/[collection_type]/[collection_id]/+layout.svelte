@@ -141,10 +141,6 @@
             window.addEventListener('keyup', handleKeyEvent);
             window.addEventListener('keydown', handleSelectAllKeydown);
             window.addEventListener(GRID_IMAGE_SEARCH_DROP_EVENT, handleGridImageSearchDrop);
-            window.addEventListener(
-                GRID_IMAGE_SEARCH_DRAG_STATE_EVENT,
-                handleGridImageSearchDragState
-            );
         }
     });
 
@@ -154,10 +150,6 @@
             window.removeEventListener('keyup', handleKeyEvent);
             window.removeEventListener('keydown', handleSelectAllKeydown);
             window.removeEventListener(GRID_IMAGE_SEARCH_DROP_EVENT, handleGridImageSearchDrop);
-            window.removeEventListener(
-                GRID_IMAGE_SEARCH_DRAG_STATE_EVENT,
-                handleGridImageSearchDragState
-            );
             shutdownMaskRendererPool();
         }
     });
@@ -335,9 +327,7 @@
 
     const MAX_IMAGE_SIZE_MB = 50;
     const MAX_IMAGE_SIZE_BYTES = MAX_IMAGE_SIZE_MB * 1024 * 1024;
-    const GRID_IMAGE_DRAG_MIME_TYPE = 'application/vnd.lightly-studio.grid-image+json';
     const GRID_IMAGE_SEARCH_DROP_EVENT = 'lightly:grid-image-search-drop';
-    const GRID_IMAGE_SEARCH_DRAG_STATE_EVENT = 'lightly:grid-image-search-drag-state';
 
     type GridImageDragData = {
         url?: string;
@@ -364,12 +354,6 @@
         e.preventDefault();
         dragOver = false;
 
-        const gridImageFile = await getDroppedGridImageFile(e.dataTransfer);
-        if (gridImageFile) {
-            await uploadImage(gridImageFile);
-            return;
-        }
-
         if (e.dataTransfer?.files && e.dataTransfer.files.length > 0) {
             const file = e.dataTransfer.files[0];
             if (file.type.startsWith('image/')) {
@@ -377,24 +361,6 @@
             } else {
                 setError('Please drop an image file.');
             }
-        }
-    }
-
-    async function getDroppedGridImageFile(
-        dataTransfer: DataTransfer | null
-    ): Promise<File | null> {
-        const dragData = dataTransfer?.getData(GRID_IMAGE_DRAG_MIME_TYPE);
-        if (!dragData) {
-            return null;
-        }
-
-        try {
-            return await getGridImageFile(JSON.parse(dragData) as GridImageDragData);
-        } catch (err: unknown) {
-            const message =
-                err instanceof Error ? err.message : 'Failed to load dragged image for search';
-            setError(message);
-            return null;
         }
     }
 
@@ -425,13 +391,6 @@
                 err instanceof Error ? err.message : 'Failed to load dragged image for search';
             setError(message);
         }
-    }
-
-    function handleGridImageSearchDragState(event: Event) {
-        dragOver = Boolean(
-            (event as CustomEvent<{ active?: boolean; overDropTarget?: boolean }>).detail
-                ?.overDropTarget
-        );
     }
 
     async function handlePaste(e: ClipboardEvent) {

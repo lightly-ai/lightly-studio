@@ -80,9 +80,7 @@ describe('GridItem', () => {
     it('drops draggable grid items on the search target after threshold movement', async () => {
         const onSelect = vi.fn();
         const onGridImageSearchDrop = vi.fn();
-        const onGridImageSearchDragState = vi.fn();
         window.addEventListener('lightly:grid-image-search-drop', onGridImageSearchDrop);
-        window.addEventListener('lightly:grid-image-search-drag-state', onGridImageSearchDragState);
         render(GridItemTestWrapper, {
             props: {
                 ...defaultProps,
@@ -107,11 +105,6 @@ describe('GridItem', () => {
         expect(screen.getByTestId('grid-item-drag-preview')).toBeInTheDocument();
         expect(gridItem).toHaveClass('cursor-grabbing');
         expect(document.body.style.cursor).toBe('grabbing');
-        expect(onGridImageSearchDragState).toHaveBeenLastCalledWith(
-            expect.objectContaining({
-                detail: { active: true, overDropTarget: true }
-            })
-        );
 
         await fireEvent(gridItem, createPointerEvent('pointerup', { clientX: 30, clientY: 10 }));
         await fireEvent.click(gridItem);
@@ -126,10 +119,6 @@ describe('GridItem', () => {
         expect(onSelect).not.toHaveBeenCalled();
 
         window.removeEventListener('lightly:grid-image-search-drop', onGridImageSearchDrop);
-        window.removeEventListener(
-            'lightly:grid-image-search-drag-state',
-            onGridImageSearchDragState
-        );
         vi.restoreAllMocks();
     });
 
@@ -249,56 +238,6 @@ describe('GridItem', () => {
         expect(screen.getByTestId('grid-item-drag-preview')).toBeInTheDocument();
 
         await fireEvent(gridItem, new Event('lostpointercapture', { bubbles: true }));
-
-        expect(screen.queryByTestId('grid-item-drag-preview')).not.toBeInTheDocument();
-        expect(document.body.style.cursor).toBe('');
-    });
-
-    it('cleans up drag feedback on window pointerup if the item misses pointerup', async () => {
-        render(GridItemTestWrapper, {
-            props: {
-                ...defaultProps,
-                dragData: {
-                    url: '/api/images/sample/sample-1',
-                    fileName: 'sample-1.jpg'
-                }
-            }
-        });
-
-        const gridItem = screen.getByTestId('grid-item');
-        await fireEvent(gridItem, createPointerEvent('pointerdown', { clientX: 10, clientY: 10 }));
-        await fireEvent(gridItem, createPointerEvent('pointermove', { clientX: 30, clientY: 10 }));
-
-        expect(screen.getByTestId('grid-item-drag-preview')).toBeInTheDocument();
-
-        await fireEvent(window, createPointerEvent('pointerup', { clientX: 30, clientY: 10 }));
-
-        expect(screen.queryByTestId('grid-item-drag-preview')).not.toBeInTheDocument();
-        expect(document.body.style.cursor).toBe('');
-    });
-
-    it('cleans up drag feedback on window blur and Escape', async () => {
-        render(GridItemTestWrapper, {
-            props: {
-                ...defaultProps,
-                dragData: {
-                    url: '/api/images/sample/sample-1',
-                    fileName: 'sample-1.jpg'
-                }
-            }
-        });
-
-        const gridItem = screen.getByTestId('grid-item');
-        await fireEvent(gridItem, createPointerEvent('pointerdown', { clientX: 10, clientY: 10 }));
-        await fireEvent(gridItem, createPointerEvent('pointermove', { clientX: 30, clientY: 10 }));
-        await fireEvent(window, new Event('blur'));
-
-        expect(screen.queryByTestId('grid-item-drag-preview')).not.toBeInTheDocument();
-        expect(document.body.style.cursor).toBe('');
-
-        await fireEvent(gridItem, createPointerEvent('pointerdown', { clientX: 10, clientY: 10 }));
-        await fireEvent(gridItem, createPointerEvent('pointermove', { clientX: 30, clientY: 10 }));
-        await fireEvent.keyDown(window, { key: 'Escape' });
 
         expect(screen.queryByTestId('grid-item-drag-preview')).not.toBeInTheDocument();
         expect(document.body.style.cursor).toBe('');

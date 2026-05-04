@@ -1,5 +1,5 @@
 <script lang="ts">
-    import { onDestroy, onMount } from 'svelte';
+    import { onDestroy } from 'svelte';
     import type { Snippet } from 'svelte';
     import GridItemTag from './GridItemTag.svelte';
 
@@ -9,11 +9,9 @@
     };
 
     const GRID_IMAGE_SEARCH_DROP_EVENT = 'lightly:grid-image-search-drop';
-    const GRID_IMAGE_SEARCH_DRAG_STATE_EVENT = 'lightly:grid-image-search-drag-state';
     const GRID_IMAGE_SEARCH_DROP_TARGET_SELECTOR = '[data-grid-search-drop-target]';
     const DRAG_START_THRESHOLD_PX = 8;
     const DRAG_PREVIEW_OFFSET_PX = 14;
-    const DRAG_INACTIVITY_TIMEOUT_MS = 8000;
 
     let {
         children,
@@ -50,9 +48,7 @@
     let suppressNextClick = false;
     let pointerStart: { x: number; y: number; id: number } | null = null;
     let capturedPointerElement: HTMLElement | null = null;
-    let dragCleanupTimeout: number | null = null;
     let isPointerDragging = $state(false);
-    let isOverSearchDropTarget = $state(false);
     let dragPreview = $state<{ x: number; y: number } | null>(null);
 
     function formatSize(value: string | number): string {
@@ -107,41 +103,8 @@
         document.body.style.cursor = isDragging ? 'grabbing' : '';
     }
 
-    function clearDragCleanupTimeout() {
-        if (dragCleanupTimeout) {
-            window.clearTimeout(dragCleanupTimeout);
-            dragCleanupTimeout = null;
-        }
-    }
-
-    function scheduleDragCleanupTimeout() {
-        clearDragCleanupTimeout();
-        dragCleanupTimeout = window.setTimeout(() => {
-            stopDragging();
-        }, DRAG_INACTIVITY_TIMEOUT_MS);
-    }
-
-    function dispatchDragState(event: PointerEvent | null) {
-        const isOverDropTarget = event ? Boolean(getSearchDropTarget(event)) : false;
-        if (isOverSearchDropTarget === isOverDropTarget && event) {
-            return;
-        }
-
-        isOverSearchDropTarget = isOverDropTarget;
-        window.dispatchEvent(
-            new CustomEvent(GRID_IMAGE_SEARCH_DRAG_STATE_EVENT, {
-                detail: {
-                    active: Boolean(event),
-                    overDropTarget: isOverDropTarget
-                }
-            })
-        );
-    }
-
     function updateDragPreview(event: PointerEvent) {
         dragPreview = { x: event.clientX, y: event.clientY };
-        dispatchDragState(event);
-        scheduleDragCleanupTimeout();
     }
 
     function releaseCapturedPointer(pointerId = pointerStart?.id) {
@@ -158,13 +121,11 @@
     }
 
     function stopDragging() {
-        clearDragCleanupTimeout();
         releaseCapturedPointer();
         pointerStart = null;
         isPointerDragging = false;
         dragPreview = null;
         setBodyDraggingCursor(false);
-        dispatchDragState(null);
     }
 
     function handlePointerDown(event: PointerEvent) {
@@ -225,43 +186,7 @@
         stopDragging();
     }
 
-    function handleWindowPointerEnd(event: PointerEvent) {
-        if (!pointerStart || pointerStart.id !== event.pointerId) {
-            return;
-        }
-        stopDragging();
-    }
-
-    function handleWindowBlur() {
-        stopDragging();
-    }
-
-    function handleVisibilityChange() {
-        if (document.visibilityState === 'hidden') {
-            stopDragging();
-        }
-    }
-
-    function handleWindowKeyDown(event: KeyboardEvent) {
-        if (event.key === 'Escape') {
-            stopDragging();
-        }
-    }
-
-    onMount(() => {
-        window.addEventListener('pointerup', handleWindowPointerEnd);
-        window.addEventListener('pointercancel', handleWindowPointerEnd);
-        window.addEventListener('blur', handleWindowBlur);
-        window.addEventListener('keydown', handleWindowKeyDown);
-        document.addEventListener('visibilitychange', handleVisibilityChange);
-    });
-
     onDestroy(() => {
-        window.removeEventListener('pointerup', handleWindowPointerEnd);
-        window.removeEventListener('pointercancel', handleWindowPointerEnd);
-        window.removeEventListener('blur', handleWindowBlur);
-        window.removeEventListener('keydown', handleWindowKeyDown);
-        document.removeEventListener('visibilitychange', handleVisibilityChange);
         stopDragging();
     });
 </script>
@@ -310,9 +235,7 @@
 
 {#if dragData && dragPreview}
     <div
-        class="pointer-events-none fixed z-50 h-20 w-20 overflow-hidden rounded-md border border-primary/60 bg-background shadow-xl ring-2 ring-primary/30"
-        class:opacity-90={isOverSearchDropTarget}
-        class:opacity-70={!isOverSearchDropTarget}
+        class="pointer-events-none fixed z-50 h-20 w-20 overflow-hidden rounded-md border border-primary/60 bg-background opacity-80 shadow-xl ring-2 ring-primary/30"
         style="left: {dragPreview.x + DRAG_PREVIEW_OFFSET_PX}px; top: {dragPreview.y +
             DRAG_PREVIEW_OFFSET_PX}px;"
         data-testid="grid-item-drag-preview"
