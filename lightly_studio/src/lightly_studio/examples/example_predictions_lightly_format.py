@@ -18,13 +18,10 @@ from lightly_studio.resolvers import annotation_resolver
 env = Env()
 env.read_env()
 
-gt_folder = "/Users/jonaswurst/Lightly/dataset_examples_large_mock/coco_subset_128_images/images"
-gt_json = (
-    "/Users/jonaswurst/Lightly/dataset_examples_large_mock/"
-    "coco_subset_128_images/instances_train2017.json"
-)
+gt_folder = ""
+gt_json = ""
 predictions_folder = (
-    "/Users/jonaswurst/Lightly/dataset_examples_large_mock/coco_subset_128_images/predictions"
+    ""
 )
 
 
