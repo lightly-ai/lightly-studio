@@ -1,5 +1,6 @@
 import * as monaco from 'monaco-editor';
-import { detectScopeAt, findFieldInScope } from '../../language/lightly-query-schema';
+import { detectScopeAt } from '../../language/detectScopeAt';
+import { findFieldInScope } from '../../language/lightly-query-schema';
 import { buildFieldHover } from './buildFieldHover';
 import { getWordRange } from './getWordRange';
 
