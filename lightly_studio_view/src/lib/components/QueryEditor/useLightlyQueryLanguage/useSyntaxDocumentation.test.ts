@@ -28,6 +28,7 @@ interface ModelMock {
     getWordAtPosition: ReturnType<typeof vi.fn>;
     getValue: ReturnType<typeof vi.fn>;
     getOffsetAt: ReturnType<typeof vi.fn>;
+    getValueInRange: ReturnType<typeof vi.fn>;
 }
 
 function makeModel(params: { text: string; wordAtPosition: WordAtPosition | null }): ModelMock {
@@ -35,7 +36,10 @@ function makeModel(params: { text: string; wordAtPosition: WordAtPosition | null
         getWordAtPosition: vi.fn(() => params.wordAtPosition),
         getValue: vi.fn(() => params.text),
         // Single-line tests: offset is just column - 1.
-        getOffsetAt: vi.fn((pos: { lineNumber: number; column: number }) => pos.column - 1)
+        getOffsetAt: vi.fn((pos: { lineNumber: number; column: number }) => pos.column - 1),
+        getValueInRange: vi.fn((range: { startColumn: number; endColumn: number }) =>
+            params.text.slice(range.startColumn - 1, range.endColumn - 1)
+        )
     };
 }
 
@@ -124,6 +128,32 @@ describe('useSyntaxDocumentation', () => {
                 startColumn: 8,
                 endLineNumber: 1,
                 endColumn: 11
+            })
+        });
+    });
+
+    it('returns keyword hover for `video:` even though Monaco strips the trailing colon', async () => {
+        const { useSyntaxDocumentation } = await import('./useSyntaxDocumentation');
+        useSyntaxDocumentation({ languageId: 'lightly-query' });
+
+        const provider = mocks.registerHoverProvider.mock.calls[0][1];
+        const model = makeModel({
+            text: 'video: fps == 30',
+            wordAtPosition: { word: 'video', startColumn: 1, endColumn: 6 }
+        });
+        const hover = provider.provideHover(model, { lineNumber: 1, column: 3 });
+
+        expect(hover).toEqual({
+            contents: [
+                {
+                    value: '**video:** — Switch the top-level scope from image to video. Must appear at the start of the query.'
+                }
+            ],
+            range: expect.objectContaining({
+                startLineNumber: 1,
+                startColumn: 1,
+                endLineNumber: 1,
+                endColumn: 7
             })
         });
     });

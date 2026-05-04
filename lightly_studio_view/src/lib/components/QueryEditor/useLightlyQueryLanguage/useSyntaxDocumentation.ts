@@ -21,11 +21,31 @@ function getHover(
         word.endColumn
     );
 
-    const keyword = findKeyword(word.word);
+    // Some keywords end in punctuation that Monaco strips from word extraction
+    // (e.g. `video:`). Peek one char past the word so the lookup and the hover
+    // range both cover the trailing `:`.
+    const nextChar = model.getValueInRange({
+        startLineNumber: position.lineNumber,
+        startColumn: word.endColumn,
+        endLineNumber: position.lineNumber,
+        endColumn: word.endColumn + 1
+    });
+    const hasColonSuffix = nextChar === ':';
+    const keywordName = hasColonSuffix ? `${word.word}:` : word.word;
+    const keywordRange = hasColonSuffix
+        ? new monaco.Range(
+              position.lineNumber,
+              word.startColumn,
+              position.lineNumber,
+              word.endColumn + 1
+          )
+        : range;
+
+    const keyword = findKeyword(keywordName) ?? findKeyword(word.word);
     if (keyword) {
         return {
             contents: [{ value: `**${keyword.name}** — ${keyword.description}` }],
-            range
+            range: keyword.name === keywordName ? keywordRange : range
         };
     }
 
