@@ -10,20 +10,7 @@
  * providers attach human-friendly documentation without re-parsing the
  * grammar at runtime. Keep both in sync when the grammar changes. */
 
-export type Scope = 'image' | 'video' | 'object_detection' | 'classification';
-
-export interface FieldDoc {
-    name: string;
-    type: 'int' | 'float' | 'string' | 'datetime';
-    description: string;
-}
-
-export interface ScopeDoc {
-    scope: Scope;
-    title: string;
-    description: string;
-    fields: FieldDoc[];
-}
+import type { FieldDoc, KeywordDoc, Scope, ScopeDoc } from './types';
 
 export const SCOPES: Record<Scope, ScopeDoc> = {
     image: {
@@ -89,13 +76,7 @@ export const SCOPES: Record<Scope, ScopeDoc> = {
     }
 };
 
-export interface KeywordDoc {
-    name: string;
-    description: string;
-    insertText?: string;
-}
-
-export const TOP_LEVEL_KEYWORDS: KeywordDoc[] = [
+const TOP_LEVEL_KEYWORDS: KeywordDoc[] = [
     { name: 'AND', description: 'Boolean AND. Combines two conditions.' },
     { name: 'OR', description: 'Boolean OR.' },
     { name: 'NOT', description: 'Boolean NOT.' },

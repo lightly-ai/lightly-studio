@@ -1,4 +1,4 @@
-import type { Scope } from './lightly-query-schema';
+import type { Scope } from './types';
 
 /** Resolve the query scope at `offset` within `text`.
  *

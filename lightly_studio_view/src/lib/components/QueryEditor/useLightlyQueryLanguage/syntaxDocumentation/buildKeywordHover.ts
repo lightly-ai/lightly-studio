@@ -1,5 +1,5 @@
 import * as monaco from 'monaco-editor';
-import type { KeywordDoc } from '../../language/lightly-query-schema';
+import type { KeywordDoc } from '../../language/types';
 
 /** Build hover content for a language keyword using its schema description. */
 export function buildKeywordHover(
