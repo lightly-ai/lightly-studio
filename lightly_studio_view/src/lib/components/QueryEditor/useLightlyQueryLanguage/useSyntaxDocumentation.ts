@@ -48,17 +48,11 @@ function getHover(
     };
 }
 
-// Monaco merges results from every registered HoverProvider, so registering
-// per editor mount produces N copies of the same hover content. Track which
-// language ids we've already wired up and skip the duplicate registration.
-const registeredLanguageIds = new Set<string>();
-
-/**
- * Hook to attach syntax completion
- */
+// Registers the Monaco hover provider for the LightlyQuery language. Must be
+// called exactly once per language id (e.g. from one-time editor setup).
+// Monaco merges results from every registered provider, so calling this more
+// than once produces duplicated hover content.
 export function useSyntaxDocumentation(params: { languageId: string }) {
-    if (registeredLanguageIds.has(params.languageId)) return;
-    registeredLanguageIds.add(params.languageId);
     monaco.languages.registerHoverProvider(params.languageId, {
         provideHover: (model, position) => getHover(model, position)
     });

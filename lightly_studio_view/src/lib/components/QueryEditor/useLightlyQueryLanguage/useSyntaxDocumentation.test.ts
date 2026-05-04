@@ -56,14 +56,6 @@ describe('useSyntaxDocumentation', () => {
         );
     });
 
-    it('skips re-registering when called again with the same language id', async () => {
-        const { useSyntaxDocumentation } = await import('./useSyntaxDocumentation');
-        useSyntaxDocumentation({ languageId: 'lightly-query' });
-        useSyntaxDocumentation({ languageId: 'lightly-query' });
-
-        expect(mocks.registerHoverProvider).toHaveBeenCalledOnce();
-    });
-
     it('returns keyword hover for top-level keywords', async () => {
         const { useSyntaxDocumentation } = await import('./useSyntaxDocumentation');
         useSyntaxDocumentation({ languageId: 'lightly-query' });
