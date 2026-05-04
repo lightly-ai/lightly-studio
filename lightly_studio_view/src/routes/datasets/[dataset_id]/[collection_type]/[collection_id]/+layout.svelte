@@ -73,6 +73,10 @@
     import { isInputElement } from '$lib/utils';
     import { shutdownMaskRendererPool } from '$lib/workers/maskRendererPool';
     import { embedImageFromFile } from '$lib/api/lightly_studio_local';
+    import {
+        GRID_IMAGE_SEARCH_DROP_EVENT,
+        type GridItemDragData
+    } from '$lib/components/GridItem';
     const { data, children } = $props();
     const {
         collection,
@@ -327,12 +331,6 @@
 
     const MAX_IMAGE_SIZE_MB = 50;
     const MAX_IMAGE_SIZE_BYTES = MAX_IMAGE_SIZE_MB * 1024 * 1024;
-    const GRID_IMAGE_SEARCH_DROP_EVENT = 'lightly:grid-image-search-drop';
-
-    type GridImageDragData = {
-        url?: string;
-        fileName?: string;
-    };
 
     let dragOver = $state(false);
     let activeImage = $state<string | null>(null);
@@ -364,28 +362,15 @@
         }
     }
 
-    async function getGridImageFile(dragData: GridImageDragData): Promise<File | null> {
-        if (!dragData.url) {
-            return null;
-        }
-
-        const response = await fetch(dragData.url);
-        if (!response.ok) {
-            throw new Error(`Failed to fetch dragged image: ${response.statusText}`);
-        }
-
-        const blob = await response.blob();
-        const fileName = dragData.fileName || 'grid-image';
-        return new File([blob], fileName, { type: blob.type || 'image/jpeg' });
-    }
-
     async function handleGridImageSearchDrop(event: Event) {
-        const dragData = (event as CustomEvent<GridImageDragData>).detail;
+        const { url, fileName } = (event as CustomEvent<GridItemDragData>).detail;
         try {
-            const file = await getGridImageFile(dragData);
-            if (file) {
-                await uploadImage(file);
+            const response = await fetch(url);
+            if (!response.ok) {
+                throw new Error(`Failed to fetch dragged image: ${response.statusText}`);
             }
+            const blob = await response.blob();
+            await uploadImage(new File([blob], fileName, { type: blob.type || 'image/jpeg' }));
         } catch (err: unknown) {
             const message =
                 err instanceof Error ? err.message : 'Failed to load dragged image for search';

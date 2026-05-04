@@ -2,13 +2,10 @@
     import { onDestroy } from 'svelte';
     import type { Snippet } from 'svelte';
     import GridItemTag from './GridItemTag.svelte';
-
-    export type GridItemDragData = {
-        url: string;
-        fileName: string;
-    };
-
-    const GRID_IMAGE_SEARCH_DROP_EVENT = 'lightly:grid-image-search-drop';
+    import {
+        GRID_IMAGE_SEARCH_DROP_EVENT,
+        type GridItemDragData
+    } from './GridItem.constants';
     const GRID_IMAGE_SEARCH_DROP_TARGET_SELECTOR = '[data-grid-search-drop-target]';
     const DRAG_START_THRESHOLD_PX = 8;
     const DRAG_PREVIEW_OFFSET_PX = 14;
@@ -75,7 +72,7 @@
 
     function suppressNextSelectionClick() {
         suppressNextClick = true;
-        window.setTimeout(() => {
+        setTimeout(() => {
             suppressNextClick = false;
         }, 100);
     }
@@ -142,16 +139,14 @@
         if (!dragData || !pointerStart || pointerStart.id !== event.pointerId) {
             return;
         }
-        if (isPointerDragging || getPointerDistance(event) < DRAG_START_THRESHOLD_PX) {
-            if (isPointerDragging) {
-                updateDragPreview(event);
-            }
+        if (!isPointerDragging && getPointerDistance(event) < DRAG_START_THRESHOLD_PX) {
             return;
         }
-
-        isPointerDragging = true;
-        suppressNextSelectionClick();
-        setBodyDraggingCursor(true);
+        if (!isPointerDragging) {
+            isPointerDragging = true;
+            suppressNextSelectionClick();
+            setBodyDraggingCursor(true);
+        }
         updateDragPreview(event);
     }
 
