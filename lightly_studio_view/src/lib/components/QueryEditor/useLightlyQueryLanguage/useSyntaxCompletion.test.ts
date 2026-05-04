@@ -52,11 +52,16 @@ vi.mock('monaco-editor', () => ({
     }
 }));
 
-vi.mock('langium', () => ({
-    URI: {
-        parse: (value: string) => ({ toString: () => value })
-    }
-}));
+vi.mock('langium', async (importOriginal) => {
+    const actual = await importOriginal<typeof import('langium')>();
+    return {
+        ...actual,
+        URI: {
+            ...actual.URI,
+            parse: (value: string) => ({ toString: () => value })
+        }
+    };
+});
 
 vi.mock('../language/lightly-query-module', () => ({
     createLightlyQueryServices: mocks.createLightlyQueryServices
@@ -66,6 +71,7 @@ interface ModelMock {
     uri: { toString: () => string };
     getValue: () => string;
     getWordUntilPosition: ReturnType<typeof vi.fn>;
+    getOffsetAt: ReturnType<typeof vi.fn>;
 }
 
 function makeModel(
@@ -75,7 +81,9 @@ function makeModel(
     return {
         uri: { toString: () => 'inmemory://model/1' },
         getValue: () => value,
-        getWordUntilPosition: vi.fn(() => word)
+        getWordUntilPosition: vi.fn(() => word),
+        // Single-line tests: offset is just column - 1.
+        getOffsetAt: vi.fn((pos: { lineNumber: number; column: number }) => pos.column - 1)
     };
 }
 
@@ -134,7 +142,7 @@ describe('useSyntaxCompletion', () => {
 
         expect(mocks.registerCompletionItemProvider).toHaveBeenCalledOnce();
         expect(languageId).toBe('lightly-query');
-        expect(triggerCharacters).toEqual(['.', ' ', '(']);
+        expect(triggerCharacters).toEqual(['.', ' ', '(', ':']);
     });
 
     it('returns no suggestions when the language service has no CompletionProvider', async () => {
@@ -195,14 +203,18 @@ describe('useSyntaxCompletion', () => {
         expect(mocks.createLightlyQueryServices).toHaveBeenCalledOnce();
     });
 
-    it('returns an empty list when LSP getCompletion resolves to undefined', async () => {
+    it('returns schema suggestions when LSP getCompletion resolves to undefined', async () => {
         const { provideCompletionItems } = await loadAndAttach(undefined);
         const result = await provideCompletionItems(
             makeModel('q') as never,
             { lineNumber: 1, column: 2 } as never
         );
 
-        expect(result).toEqual({ suggestions: [] });
+        const labels = result.suggestions.map((suggestion) =>
+            typeof suggestion.label === 'string' ? suggestion.label : suggestion.label.label
+        );
+        expect(labels).toContain('width');
+        expect(labels).toContain('AND');
     });
 
     it('falls back to the word range under the cursor when the LSP item has no textEdit', async () => {
@@ -314,34 +326,66 @@ describe('useSyntaxCompletion', () => {
         expect(result.suggestions[1].documentation).toEqual({ value: '**bold**' });
     });
 
-    it('enriches receiver labels with schema description when LSP omits documentation', async () => {
+    it('enriches keyword labels with schema description when LSP omits documentation', async () => {
         const { provideCompletionItems } = await loadAndAttach([
-            { label: 'Image', kind: LspCompletionItemKind.Class }
+            { label: 'AND', kind: LspCompletionItemKind.Keyword }
         ]);
         const result = await provideCompletionItems(
             makeModel('') as never,
             { lineNumber: 1, column: 1 } as never
         );
 
-        expect(result.suggestions[0].detail).toBe(
-            'Image sample. Filter expressions on a single image.'
-        );
+        expect(result.suggestions[0].detail).toBe('Boolean AND. Combines two conditions.');
         expect(result.suggestions[0].documentation).toEqual({
-            value: 'Image sample. Filter expressions on a single image.'
+            value: 'Boolean AND. Combines two conditions.'
         });
     });
 
-    it('enriches field labels with their owning receiver and type metadata', async () => {
+    it('enriches field labels with their owning scope and type metadata', async () => {
         const { provideCompletionItems } = await loadAndAttach([
             { label: 'fps', kind: LspCompletionItemKind.Field }
         ]);
         const result = await provideCompletionItems(
-            makeModel('') as never,
-            { lineNumber: 1, column: 1 } as never
+            makeModel('video: fps') as never,
+            { lineNumber: 1, column: 11 } as never
         );
 
         expect(result.suggestions[0].detail).toBe('(field) Video.fps: float');
-        expect(result.suggestions[0].documentation).toEqual({ value: 'Frames per second.' });
+        expect(result.suggestions[0].documentation).toEqual({
+            value: 'Frames per second. Equality only (`==`, `!=`).'
+        });
+    });
+
+    it('suggests video-scope properties after `video:`', async () => {
+        const { provideCompletionItems } = await loadAndAttach([]);
+        const result = await provideCompletionItems(
+            makeModel('video: ') as never,
+            { lineNumber: 1, column: 8 } as never
+        );
+
+        const labels = result.suggestions.map((suggestion) =>
+            typeof suggestion.label === 'string' ? suggestion.label : suggestion.label.label
+        );
+
+        expect(labels).toContain('fps');
+        expect(labels).toContain('duration_s');
+        expect(labels).toContain('file_name');
+        expect(labels).not.toContain('created_at');
+    });
+
+    it('resolves field scope from cursor context (object_detection)', async () => {
+        const { provideCompletionItems } = await loadAndAttach([
+            { label: 'label', kind: LspCompletionItemKind.Field }
+        ]);
+        const result = await provideCompletionItems(
+            makeModel('object_detection(label') as never,
+            { lineNumber: 1, column: 23 } as never
+        );
+
+        expect(result.suggestions[0].detail).toBe('(field) ObjectDetection.label: string');
+        expect(result.suggestions[0].documentation).toEqual({
+            value: 'Class label of the detection.'
+        });
     });
 
     it('leaves unknown labels untouched when neither LSP nor schema provides documentation', async () => {

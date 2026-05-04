@@ -13,7 +13,14 @@ import {
     type LightlyQueryServicesBundle
 } from '../language/lightly-query-module';
 import { type QueryExprTranslationResult } from '../language/query-expr-translation';
-import { RECEIVERS, findReceiverByName, findFieldByName } from '../language/lightly-query-schema';
+import {
+    SCOPES,
+    TOP_LEVEL_KEYWORDS,
+    detectScopeAt,
+    findFieldInScope,
+    findKeyword,
+    type Scope
+} from '../language/lightly-query-schema';
 
 let cachedServices: LightlyQueryServicesBundle | null = null;
 function getServices(): LightlyQueryServicesBundle {
@@ -75,35 +82,35 @@ function mapDocumentation(
 }
 
 function enrichWithSchemaDocs(
-    item: monaco.languages.CompletionItem
+    item: monaco.languages.CompletionItem,
+    scope: Scope
 ): monaco.languages.CompletionItem {
     if (item.documentation) return item;
     const label = typeof item.label === 'string' ? item.label : item.label.label;
 
-    const receiver = findReceiverByName(label);
-    if (receiver) {
+    const keyword = findKeyword(label);
+    if (keyword) {
         return {
             ...item,
-            detail: receiver.description,
-            documentation: { value: receiver.description }
+            detail: keyword.description,
+            documentation: { value: keyword.description }
         };
     }
-    for (const r of RECEIVERS) {
-        const field = findFieldByName(r, label);
-        if (field) {
-            return {
-                ...item,
-                detail: `(field) ${r.name}.${field.name}: ${field.type}`,
-                documentation: { value: field.description }
-            };
-        }
+    const field = findFieldInScope(scope, label);
+    if (field) {
+        return {
+            ...item,
+            detail: `(field) ${SCOPES[scope].title}.${field.name}: ${field.type}`,
+            documentation: { value: field.description }
+        };
     }
     return item;
 }
 
 function lspToMonacoCompletion(
     item: LspCompletionItem,
-    fallbackRange: monaco.IRange
+    fallbackRange: monaco.IRange,
+    scope: Scope
 ): monaco.languages.CompletionItem {
     const isSnippet = item.insertTextFormat === LspInsertTextFormat.Snippet;
 
@@ -120,21 +127,70 @@ function lspToMonacoCompletion(
         insertText = item.textEdit.newText;
     }
 
-    return enrichWithSchemaDocs({
-        label: item.label,
-        kind: item.kind
-            ? (LSP_TO_MONACO_KIND[item.kind] ?? monaco.languages.CompletionItemKind.Text)
-            : monaco.languages.CompletionItemKind.Text,
-        detail: item.detail,
-        documentation: mapDocumentation(item.documentation),
-        insertText,
-        insertTextRules: isSnippet
-            ? monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet
-            : undefined,
-        range,
-        sortText: item.sortText,
-        filterText: item.filterText
+    return enrichWithSchemaDocs(
+        {
+            label: item.label,
+            kind: item.kind
+                ? (LSP_TO_MONACO_KIND[item.kind] ?? monaco.languages.CompletionItemKind.Text)
+                : monaco.languages.CompletionItemKind.Text,
+            detail: item.detail,
+            documentation: mapDocumentation(item.documentation),
+            insertText,
+            insertTextRules: isSnippet
+                ? monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet
+                : undefined,
+            range,
+            sortText: item.sortText,
+            filterText: item.filterText
+        },
+        scope
+    );
+}
+
+function buildSchemaCompletions(
+    scope: Scope,
+    range: monaco.IRange
+): monaco.languages.CompletionItem[] {
+    const items: monaco.languages.CompletionItem[] = [];
+
+    for (const field of SCOPES[scope].fields) {
+        items.push({
+            label: field.name,
+            kind: monaco.languages.CompletionItemKind.Field,
+            detail: `(field) ${SCOPES[scope].title}.${field.name}: ${field.type}`,
+            documentation: { value: field.description },
+            insertText: field.name,
+            range
+        });
+    }
+
+    // Top-level structural keywords (video:, object_detection, classification,
+    // tags, IN) only make sense in image/video scope; nested scopes get just
+    // the boolean operators.
+    const allowNested = new Set(['AND', 'OR', 'NOT']);
+    const keywords = TOP_LEVEL_KEYWORDS.filter((kw) => {
+        if (scope === 'image') return true;
+        if (scope === 'video') return kw.name !== 'video:';
+        return allowNested.has(kw.name);
     });
+
+    for (const kw of keywords) {
+        const insertText = kw.insertText ?? kw.name;
+        const isSnippet = insertText.includes('$');
+        items.push({
+            label: kw.name,
+            kind: monaco.languages.CompletionItemKind.Keyword,
+            detail: kw.description,
+            documentation: { value: kw.description },
+            insertText,
+            insertTextRules: isSnippet
+                ? monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet
+                : undefined,
+            range
+        });
+    }
+
+    return items;
 }
 
 async function getCompletions(
@@ -160,9 +216,24 @@ async function getCompletions(
         position: { line: position.lineNumber - 1, character: position.column - 1 }
     });
 
-    return {
-        suggestions: (result?.items ?? []).map((item) => lspToMonacoCompletion(item, fallbackRange))
-    };
+    const scope = detectScopeAt(model.getValue(), model.getOffsetAt(position));
+
+    const lspSuggestions = (result?.items ?? []).map((item) =>
+        lspToMonacoCompletion(item, fallbackRange, scope)
+    );
+
+    // Langium's default provider only emits literal-string keywords from the
+    // grammar, so terminal-defined names (width, fps, object_detection, …)
+    // never show up. Augment with scope-aware schema completions and dedupe
+    // against the LSP results.
+    const seen = new Set(
+        lspSuggestions.map((s) => (typeof s.label === 'string' ? s.label : s.label.label))
+    );
+    const schemaSuggestions = buildSchemaCompletions(scope, fallbackRange).filter(
+        (s) => !seen.has(typeof s.label === 'string' ? s.label : s.label.label)
+    );
+
+    return { suggestions: [...lspSuggestions, ...schemaSuggestions] };
 }
 
 export interface UseLightlyQueryLanguageReturn {
@@ -175,7 +246,7 @@ export interface UseLightlyQueryLanguageReturn {
  */
 export function useSyntaxCompletion(params: { languageId: string }) {
     monaco.languages.registerCompletionItemProvider(params.languageId, {
-        triggerCharacters: ['.', ' ', '('],
+        triggerCharacters: ['.', ' ', '(', ':'],
         provideCompletionItems: (model, position) => getCompletions(model, position)
     });
 }
