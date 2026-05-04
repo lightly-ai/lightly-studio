@@ -10,7 +10,7 @@ import {
     buildSchemaCompletions,
     lspToMonacoCompletion,
     syncLangiumDocument
-} from './completionBridge';
+} from './completionAdapter';
 
 let cachedServices: LightlyQueryServicesBundle | null = null;
 function getServices(): LightlyQueryServicesBundle {

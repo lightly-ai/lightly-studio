@@ -76,7 +76,7 @@ export const SCOPES: Record<Scope, ScopeDoc> = {
     }
 };
 
-const TOP_LEVEL_KEYWORDS: KeywordDoc[] = [
+export const TOP_LEVEL_KEYWORDS: KeywordDoc[] = [
     { name: 'AND', description: 'Boolean AND. Combines two conditions.' },
     { name: 'OR', description: 'Boolean OR.' },
     { name: 'NOT', description: 'Boolean NOT.' },
