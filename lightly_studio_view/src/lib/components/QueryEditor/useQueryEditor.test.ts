@@ -3,6 +3,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 const mocks = vi.hoisted(() => ({
     register: vi.fn(),
     setMonarchTokensProvider: vi.fn(),
+    registerHoverProvider: vi.fn(),
     defineTheme: vi.fn(),
     createModel: vi.fn(),
     editorCreate: vi.fn(),
@@ -18,7 +19,8 @@ vi.mock('monaco-editor/esm/vs/editor/editor.worker?worker', () => ({
 vi.mock('monaco-editor', () => ({
     languages: {
         register: mocks.register,
-        setMonarchTokensProvider: mocks.setMonarchTokensProvider
+        setMonarchTokensProvider: mocks.setMonarchTokensProvider,
+        registerHoverProvider: mocks.registerHoverProvider
     },
     editor: {
         defineTheme: mocks.defineTheme,
@@ -27,7 +29,8 @@ vi.mock('monaco-editor', () => ({
     },
     Uri: {
         parse: mocks.uriParse
-    }
+    },
+    Range: class {}
 }));
 
 vi.mock('./language/monarch.generated', () => ({
