@@ -594,13 +594,12 @@
                             class="relative flex flex-1 flex-col space-y-4 rounded-[1vw] bg-card p-4"
                         >
                             <GridHeader>
-                                <div class="flex-1">
+                                <div class="flex-1" data-grid-search-drop-target>
                                     {#if hasEmbeddings}
                                         <div
                                             class="relative"
                                             role="region"
                                             aria-label="Search by image or text"
-                                            data-grid-search-drop-target
                                             ondragover={handleDragOver}
                                             ondragleave={handleDragLeave}
                                             ondrop={handleDrop}
