@@ -76,7 +76,7 @@ async function getCompletions(
 export function useSyntaxCompletion(params: { languageId: string }) {
     const { languageId } = params;
     monaco.languages.registerCompletionItemProvider(languageId, {
-        triggerCharacters: ['.', ' ', '(', ':'],
+        triggerCharacters: [' ', '(', ':'],
         provideCompletionItems: (model, position) => getCompletions(model, position)
     });
 }

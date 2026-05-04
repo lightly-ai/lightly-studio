@@ -142,7 +142,7 @@ describe('useSyntaxCompletion', () => {
 
         expect(mocks.registerCompletionItemProvider).toHaveBeenCalledOnce();
         expect(languageId).toBe('lightly-query');
-        expect(triggerCharacters).toEqual(['.', ' ', '(', ':']);
+        expect(triggerCharacters).toEqual([' ', '(', ':']);
     });
 
     it('returns no suggestions when the language service has no CompletionProvider', async () => {
