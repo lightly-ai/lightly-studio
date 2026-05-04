@@ -4,7 +4,8 @@ import argparse
 import json
 import subprocess
 from importlib import metadata
-from typing import TypedDict
+
+from typing_extensions import TypedDict
 
 
 class VersionInfo(TypedDict):
