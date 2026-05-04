@@ -98,6 +98,8 @@
         collections,
         showPlot,
         setShowPlot,
+        showEvalPanel,
+        setShowEvalPanel,
         filteredSampleCount,
         filteredAnnotationCount
     } = useGlobalStorage();
@@ -571,14 +573,44 @@
                 </div>
             {/if}
 
-            {#if (isImages || isVideos) && $showPlot}
-                <!-- When plot is shown, use PaneGroup for the main content + plot -->
+            {#if ((isImages || isVideos) && $showPlot) || (isImages && $showEvalPanel)}
                 <PaneGroup direction="horizontal" class="flex-1">
                     <Pane defaultSize={50} minSize={30} class="flex">
                         <div
                             class="relative flex flex-1 flex-col space-y-4 rounded-[1vw] bg-card p-4"
                         >
                             <GridHeader>
+                                {#snippet auxControls()}
+                                    {#if isImages}
+                                        <Button
+                                            class="flex items-center space-x-1"
+                                            data-testid="toggle-eval-panel-button"
+                                            variant={$showEvalPanel ? 'default' : 'ghost'}
+                                            onclick={() => {
+                                                setShowPlot(false);
+                                                setShowEvalPanel(!$showEvalPanel);
+                                            }}
+                                        >
+                                            <span>Evaluations</span>
+                                        </Button>
+                                    {/if}
+                                    {#if (isImages || isVideos) && hasEmbeddings}
+                                        <Button
+                                            class="flex items-center space-x-1"
+                                            data-testid="toggle-plot-button"
+                                            variant={$showPlot ? 'default' : 'ghost'}
+                                            onclick={() => {
+                                                if (!$showPlot) {
+                                                    setShowEvalPanel(false);
+                                                }
+                                                setShowPlot(!$showPlot);
+                                            }}
+                                        >
+                                            <ChartNetwork class="size-4" />
+                                            <span>Show Embeddings</span>
+                                        </Button>
+                                    {/if}
+                                {/snippet}
                                 <div class="flex-1">
                                     {#if hasEmbeddings}
                                         <div
@@ -686,9 +718,15 @@
                     </PaneResizer>
 
                     <Pane defaultSize={50} minSize={30} class="flex min-h-0 flex-col">
-                        {#await import('$lib/components/PlotPanel/PlotPanel.svelte') then { default: PlotPanel }}
-                            <PlotPanel />
-                        {/await}
+                        {#if $showPlot}
+                            {#await import('$lib/components/PlotPanel/PlotPanel.svelte') then { default: PlotPanel }}
+                                <PlotPanel />
+                            {/await}
+                        {:else if $showEvalPanel}
+                            {#await import('$lib/components/EvaluationPanel/EvaluationPanel.svelte') then { default: EvaluationPanel }}
+                                <EvaluationPanel {datasetId} />
+                            {/await}
+                        {/if}
                     </Pane>
                 </PaneGroup>
             {:else}
@@ -697,13 +735,30 @@
                     {#if isImages || isAnnotations || isVideos || isGroups}
                         <GridHeader>
                             {#snippet auxControls()}
+                                {#if isImages}
+                                    <Button
+                                        class="flex items-center space-x-1"
+                                        data-testid="toggle-eval-panel-button"
+                                        variant={$showEvalPanel ? 'default' : 'ghost'}
+                                        onclick={() => {
+                                            setShowPlot(false);
+                                            setShowEvalPanel(!$showEvalPanel);
+                                        }}
+                                    >
+                                        <span>Evaluations</span>
+                                    </Button>
+                                {/if}
                                 {#if (isImages || isVideos) && hasEmbeddings}
                                     <Button
                                         class="flex items-center space-x-1"
                                         data-testid="toggle-plot-button"
                                         variant={$showPlot ? 'default' : 'ghost'}
-                                        onclick={() =>
-                                            $showPlot ? setShowPlot(false) : setShowPlot(true)}
+                                        onclick={() => {
+                                            if (!$showPlot) {
+                                                setShowEvalPanel(false);
+                                            }
+                                            setShowPlot(!$showPlot);
+                                        }}
                                     >
                                         <ChartNetwork class="size-4" />
                                         <span>Show Embeddings</span>

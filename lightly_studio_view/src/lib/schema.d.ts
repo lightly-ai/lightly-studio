@@ -1766,6 +1766,120 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/datasets/{dataset_id}/annotation-collections": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List Annotation Collections
+         * @description List all annotation collections for a dataset.
+         */
+        get: operations["list_annotation_collections"];
+        put?: never;
+        /**
+         * Create Annotation Collection
+         * @description Register an annotation collection by name.
+         *
+         *     The underlying annotation child collection must already exist (i.e. annotations
+         *     have been loaded via add_samples_from_coco or add_predictions_from_lightly).
+         */
+        post: operations["create_annotation_collection"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/datasets/{dataset_id}/evaluations": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List Evaluations
+         * @description Return all evaluation results for a dataset, newest first.
+         */
+        get: operations["list_evaluations"];
+        put?: never;
+        /**
+         * Create Evaluation
+         * @description Compute one evaluation run and persist the result.
+         */
+        post: operations["create_evaluation"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/datasets/{dataset_id}/evaluations/{evaluation_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Evaluation
+         * @description Return a single evaluation result.
+         */
+        get: operations["get_evaluation"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/datasets/{dataset_id}/evaluations/{evaluation_id}/sample-metrics": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Evaluation Sample Metrics
+         * @description Return per-image metric values for an evaluation run.
+         *
+         *     When label_id is omitted, returns aggregate rows (all classes combined).
+         *     When label_id is provided, returns per-class rows for that label.
+         */
+        get: operations["get_evaluation_sample_metrics"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/datasets/{dataset_id}/evaluations/{evaluation_id}/annotation-results": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Evaluation Annotation Results
+         * @description Return annotation pairing results for one sample in an evaluation run.
+         */
+        get: operations["get_evaluation_annotation_results"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/images/sample/{sample_id}": {
         parameters: {
             query?: never;
@@ -1943,6 +2057,57 @@ export interface components {
             object_track_id?: string | null;
         };
         /**
+         * AnnotationCollectionCreate
+         * @description Input model for creating an annotation collection.
+         */
+        AnnotationCollectionCreate: {
+            /** Name */
+            name: string;
+            /**
+             * Is Ground Truth
+             * @default false
+             */
+            is_ground_truth: boolean;
+            /** Processed Sample Count */
+            processed_sample_count?: number | null;
+            /** Notes */
+            notes?: string | null;
+        };
+        /**
+         * AnnotationCollectionView
+         * @description Response model for an annotation collection.
+         */
+        AnnotationCollectionView: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /**
+             * Dataset Id
+             * Format: uuid
+             */
+            dataset_id: string;
+            /**
+             * Collection Id
+             * Format: uuid
+             */
+            collection_id: string;
+            /** Name */
+            name: string;
+            /** Is Ground Truth */
+            is_ground_truth: boolean;
+            /** Processed Sample Count */
+            processed_sample_count: number | null;
+            /** Notes */
+            notes: string | null;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+        };
+        /**
          * AnnotationCreateInput
          * @description API interface to create annotation.
          *
@@ -2031,6 +2196,28 @@ export interface components {
             annotation_label_id?: string;
             /** Created At */
             created_at?: string;
+        };
+        /**
+         * AnnotationResultItem
+         * @description One annotation pairing returned by the annotation-results endpoint.
+         */
+        AnnotationResultItem: {
+            /** Pred Annotation Id */
+            pred_annotation_id: string | null;
+            /** Gt Annotation Id */
+            gt_annotation_id: string | null;
+            /** Metrics */
+            metrics: {
+                [key: string]: unknown;
+            };
+        };
+        /**
+         * AnnotationResultsResponse
+         * @description List of annotation results for one sample.
+         */
+        AnnotationResultsResponse: {
+            /** Results */
+            results: components["schemas"]["AnnotationResultItem"][];
         };
         /**
          * AnnotationType
@@ -2255,6 +2442,27 @@ export interface components {
             text: string;
         };
         /**
+         * ClassificationEvaluationMetrics
+         * @description Aggregate classification metrics for one subset.
+         */
+        ClassificationEvaluationMetrics: {
+            /** Accuracy */
+            accuracy: number;
+            /** Precision */
+            precision: number;
+            /** Recall */
+            recall: number;
+            /** F1 */
+            f1: number;
+            /**
+             * Per Class Metrics
+             * @default {}
+             */
+            per_class_metrics: {
+                [key: string]: components["schemas"]["ClassificationPerClassMetrics"];
+            };
+        };
+        /**
          * ClassificationMatchExpr
          * @description Leaf node checking if a sample has a matching classification annotation.
          */
@@ -2266,6 +2474,20 @@ export interface components {
             type: "classification_match_expr";
             /** Subexpr */
             subexpr: components["schemas"]["StringExpr"] | components["schemas"]["IntegerExpr"] | components["schemas"]["DatetimeExpr"] | components["schemas"]["OrdinalFloatExpr"] | components["schemas"]["EqualityFloatExpr"] | components["schemas"]["TagsContainsExpr"] | components["schemas"]["ClassificationMatchExpr"] | components["schemas"]["ObjectDetectionMatchExpr"] | components["schemas"]["SegmentationMaskMatchExpr"] | components["schemas"]["AndExpr"] | components["schemas"]["OrExpr"] | components["schemas"]["NotExpr"];
+        };
+        /**
+         * ClassificationPerClassMetrics
+         * @description Per-class classification metrics.
+         */
+        ClassificationPerClassMetrics: {
+            /** Precision */
+            precision: number;
+            /** Recall */
+            recall: number;
+            /** F1 */
+            f1: number;
+            /** Support */
+            support: number;
         };
         /**
          * CollectionCreate
@@ -2585,6 +2807,80 @@ export interface components {
             /** Value */
             value: number;
         };
+        /**
+         * EvaluationCreateInput
+         * @description Request body for POST /evaluations.
+         */
+        EvaluationCreateInput: {
+            /** Name */
+            name: string;
+            /** Gt Collection Name */
+            gt_collection_name: string;
+            /** Prediction Collection Name */
+            prediction_collection_name: string;
+            /** @default object_detection */
+            task_type: components["schemas"]["EvaluationTaskType"];
+            /**
+             * Iou Threshold
+             * @default 0.5
+             */
+            iou_threshold: number;
+            /**
+             * Confidence Threshold
+             * @default 0
+             */
+            confidence_threshold: number;
+            /** Sample Ids */
+            sample_ids?: string[] | null;
+        };
+        /**
+         * EvaluationResultView
+         * @description Read-only view of a persisted EvaluationResultTable row.
+         */
+        EvaluationResultView: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /**
+             * Dataset Id
+             * Format: uuid
+             */
+            dataset_id: string;
+            /** Name */
+            name: string;
+            /**
+             * Gt Collection Id
+             * Format: uuid
+             */
+            gt_collection_id: string;
+            /**
+             * Prediction Collection Id
+             * Format: uuid
+             */
+            prediction_collection_id: string;
+            task_type: components["schemas"]["EvaluationTaskType"];
+            /** Iou Threshold */
+            iou_threshold: number;
+            /** Confidence Threshold */
+            confidence_threshold: number;
+            /** Metrics */
+            metrics: {
+                [key: string]: components["schemas"]["ObjectDetectionEvaluationMetrics"] | components["schemas"]["ClassificationEvaluationMetrics"] | components["schemas"]["InstanceSegmentationEvaluationMetrics"];
+            };
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+        };
+        /**
+         * EvaluationTaskType
+         * @description Supported evaluation task types.
+         * @enum {string}
+         */
+        EvaluationTaskType: "object_detection" | "classification" | "instance_segmentation";
         /**
          * ExecuteOperatorRequest
          * @description Request model for executing an operator.
@@ -2935,6 +3231,41 @@ export interface components {
             nextCursor?: number | null;
         };
         /**
+         * InstanceSegmentationEvaluationMetrics
+         * @description Aggregate instance segmentation metrics for one subset.
+         */
+        InstanceSegmentationEvaluationMetrics: {
+            /** Precision */
+            precision: number;
+            /** Recall */
+            recall: number;
+            /** F1 */
+            f1: number;
+            /** Map */
+            mAP: number;
+            /**
+             * Per Class Metrics
+             * @default {}
+             */
+            per_class_metrics: {
+                [key: string]: components["schemas"]["InstanceSegmentationPerClassMetrics"];
+            };
+        };
+        /**
+         * InstanceSegmentationPerClassMetrics
+         * @description Per-class instance segmentation metrics.
+         */
+        InstanceSegmentationPerClassMetrics: {
+            /** Ap */
+            ap: number;
+            /** Precision */
+            precision: number;
+            /** Recall */
+            recall: number;
+            /** F1 */
+            f1: number;
+        };
+        /**
          * IntRange
          * @description Defines a range of integer-point values.
          */
@@ -3070,6 +3401,27 @@ export interface components {
             height: number;
         };
         /**
+         * ObjectDetectionEvaluationMetrics
+         * @description Aggregate object detection metrics for one subset (e.g. "all" or a tag name).
+         */
+        ObjectDetectionEvaluationMetrics: {
+            /** Precision */
+            precision: number;
+            /** Recall */
+            recall: number;
+            /** F1 */
+            f1: number;
+            /** Map */
+            mAP: number;
+            /**
+             * Per Class Metrics
+             * @default {}
+             */
+            per_class_metrics: {
+                [key: string]: components["schemas"]["ObjectDetectionPerClassMetrics"];
+            };
+        };
+        /**
          * ObjectDetectionMatchExpr
          * @description Leaf node checking if a sample has a matching object detection annotation.
          */
@@ -3081,6 +3433,20 @@ export interface components {
             type: "object_detection_match_expr";
             /** Subexpr */
             subexpr: components["schemas"]["StringExpr"] | components["schemas"]["IntegerExpr"] | components["schemas"]["DatetimeExpr"] | components["schemas"]["OrdinalFloatExpr"] | components["schemas"]["EqualityFloatExpr"] | components["schemas"]["TagsContainsExpr"] | components["schemas"]["ClassificationMatchExpr"] | components["schemas"]["ObjectDetectionMatchExpr"] | components["schemas"]["SegmentationMaskMatchExpr"] | components["schemas"]["AndExpr"] | components["schemas"]["OrExpr"] | components["schemas"]["NotExpr"];
+        };
+        /**
+         * ObjectDetectionPerClassMetrics
+         * @description Per-class object detection metrics.
+         */
+        ObjectDetectionPerClassMetrics: {
+            /** Ap */
+            ap: number;
+            /** Precision */
+            precision: number;
+            /** Recall */
+            recall: number;
+            /** F1 */
+            f1: number;
         };
         /**
          * OperatorContextRequest
@@ -3359,6 +3725,18 @@ export interface components {
             /** Data */
             data: {
                 [key: string]: unknown;
+            };
+        };
+        /**
+         * SampleMetricsResponse
+         * @description Per-image metric map returned by the sample-metrics endpoint.
+         */
+        SampleMetricsResponse: {
+            /** Metrics */
+            metrics: {
+                [key: string]: {
+                    [key: string]: number;
+                };
             };
         };
         /**
@@ -6799,6 +7177,238 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_annotation_collections: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                dataset_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AnnotationCollectionView"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    create_annotation_collection: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                dataset_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AnnotationCollectionCreate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AnnotationCollectionView"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_evaluations: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                dataset_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EvaluationResultView"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    create_evaluation: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                dataset_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["EvaluationCreateInput"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EvaluationResultView"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_evaluation: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                dataset_id: string;
+                evaluation_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EvaluationResultView"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_evaluation_sample_metrics: {
+        parameters: {
+            query?: {
+                label_id?: string | null;
+            };
+            header?: never;
+            path: {
+                dataset_id: string;
+                evaluation_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SampleMetricsResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_evaluation_annotation_results: {
+        parameters: {
+            query: {
+                sample_id: string;
+            };
+            header?: never;
+            path: {
+                dataset_id: string;
+                evaluation_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AnnotationResultsResponse"];
+                };
             };
             /** @description Validation Error */
             422: {

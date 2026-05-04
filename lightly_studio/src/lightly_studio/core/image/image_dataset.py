@@ -27,6 +27,12 @@ from sqlmodel import Session
 
 from lightly_studio.core.dataset import BaseSampleDataset
 from lightly_studio.core.dataset_query.dataset_query import DatasetQuery
+from lightly_studio.core.image.add_predictions import (
+    add_predictions_from_lightly as _add_predictions_from_lightly,
+)
+from lightly_studio.core.evaluation.register_gt_collection import (
+    register_annotation_collection as _register_annotation_collection,
+)
 from lightly_studio.core.image import add_images
 from lightly_studio.core.image.image_sample import ImageSample
 from lightly_studio.dataset import fsspec_lister
@@ -34,6 +40,7 @@ from lightly_studio.dataset.embedding_manager import EmbeddingManagerProvider
 from lightly_studio.export.image_dataset_export import ImageDatasetExport
 from lightly_studio.models.annotation.annotation_base import AnnotationType
 from lightly_studio.models.collection import SampleType
+from lightly_studio.models.evaluation_result import EvaluationResultTable, EvaluationTaskType
 from lightly_studio.resolvers import (
     image_resolver,
     tag_resolver,
@@ -281,6 +288,8 @@ class ImageDataset(BaseSampleDataset[ImageSample]):
         annotation_type: AnnotationType = AnnotationType.OBJECT_DETECTION,
         split: str | None = None,
         embed: bool = True,
+        annotation_collection: str | None = None,
+        is_ground_truth: bool = False,
     ) -> None:
         """Load a dataset in COCO Object Detection format and store in DB.
 
@@ -292,6 +301,12 @@ class ImageDataset(BaseSampleDataset[ImageSample]):
             split: Optional split name to tag samples (e.g., 'train', 'val').
                 If provided, all samples will be tagged with this name.
             embed: If True, generate embeddings for the newly added samples.
+            annotation_collection: Optional name for the AnnotationCollection that groups
+                these annotations. Pass the same name across multiple calls to accumulate
+                annotations from different splits into one collection.
+            is_ground_truth: When True (and annotation_collection is set) the collection is
+                registered as ground truth, making it available as the GT selector in
+                the evaluation UI.
         """
         images_path = _normalize_input_path(path=images_path)
         fs, fs_path = fsspec.core.url_to_fs(url=annotations_json)
@@ -316,6 +331,7 @@ class ImageDataset(BaseSampleDataset[ImageSample]):
             root_collection_id=self.collection_id,
             input_labels=label_input,
             images_path=images_path,
+            annotation_collection_name=annotation_collection,
         )
 
         _postprocess_created_images(
@@ -325,6 +341,15 @@ class ImageDataset(BaseSampleDataset[ImageSample]):
             tag=split,
             embed=embed,
         )
+
+        if annotation_collection:
+            _register_annotation_collection(
+                session=self.session,
+                dataset_id=self.dataset_id,
+                root_collection_id=self.collection_id,
+                collection_name=annotation_collection,
+                is_ground_truth=is_ground_truth,
+            )
 
     def add_samples_from_pascal_voc_segmentations(
         self,
@@ -378,6 +403,8 @@ class ImageDataset(BaseSampleDataset[ImageSample]):
         images_rel_path: str = "../images",
         split: str | None = None,
         embed: bool = True,
+        annotation_collection: str | None = None,
+        is_ground_truth: bool = False,
     ) -> None:
         """Load a dataset in Lightly format and store in DB.
 
@@ -387,10 +414,14 @@ class ImageDataset(BaseSampleDataset[ImageSample]):
             split: Optional split name to tag samples (e.g., 'train', 'val').
                 If provided, all samples will be tagged with this name.
             embed: If True, generate embeddings for the newly added samples.
+            annotation_collection: Optional name for the AnnotationCollection that groups
+                these annotations. Pass the same name across multiple calls to accumulate
+                annotations from different splits into one collection.
+            is_ground_truth: When True (and annotation_collection is set) the collection is
+                registered as ground truth for the evaluation UI.
         """
         input_folder = Path(input_folder).absolute()
 
-        # Load the dataset using labelformat.
         label_input = LightlyObjectDetectionInput(
             input_folder=input_folder, images_rel_path=images_rel_path
         )
@@ -401,6 +432,7 @@ class ImageDataset(BaseSampleDataset[ImageSample]):
             root_collection_id=self.collection_id,
             input_labels=label_input,
             images_path=images_path,
+            annotation_collection_name=annotation_collection,
         )
 
         _postprocess_created_images(
@@ -409,6 +441,69 @@ class ImageDataset(BaseSampleDataset[ImageSample]):
             sample_ids=created_sample_ids,
             tag=split,
             embed=embed,
+        )
+
+        if annotation_collection:
+            _register_annotation_collection(
+                session=self.session,
+                dataset_id=self.dataset_id,
+                root_collection_id=self.collection_id,
+                collection_name=annotation_collection,
+                is_ground_truth=is_ground_truth,
+            )
+
+    def add_predictions_from_lightly(
+        self,
+        input_folder: PathLike,
+        collection_name: str,
+        images_rel_path: str = "../images",
+    ) -> None:
+        """Load Lightly-format predictions and register them as a named AnnotationCollection.
+
+        Unlike add_samples_from_lightly, this method adds annotations to EXISTING images
+        and supports confidence scores (the ``score`` field in Lightly annotation files).
+        Images not found in the dataset are skipped with a warning.
+
+        Args:
+            input_folder: Folder containing the Lightly annotation files.
+            collection_name: Name for this prediction set (e.g. "YOLOv8-n epoch 50").
+            images_rel_path: Relative path from input_folder to the images directory.
+        """
+        _add_predictions_from_lightly(
+            session=self.session,
+            dataset_id=self.dataset_id,
+            root_collection_id=self.collection_id,
+            input_folder=Path(input_folder).absolute(),
+            collection_name=collection_name,
+            images_rel_path=images_rel_path,
+        )
+
+    def evaluate(  # noqa: PLR0913
+        self,
+        name: str,
+        gt_collection: str,
+        prediction_collection: str,
+        task_type: EvaluationTaskType = EvaluationTaskType.OBJECT_DETECTION,
+        iou_threshold: float = 0.5,
+        confidence_threshold: float = 0.0,
+    ) -> EvaluationResultTable:
+        """Run one evaluation on the full dataset and persist the result.
+
+        Args:
+            name: User-defined name for the evaluation run.
+            gt_collection: Name of the ground-truth AnnotationCollection.
+            prediction_collection: Name of the prediction collection to evaluate.
+            task_type: Evaluation task type.
+            iou_threshold: IoU overlap threshold for matching predictions to GTs.
+            confidence_threshold: Predictions below this confidence are ignored.
+        """
+        return self.query().evaluate(
+            name=name,
+            gt_collection=gt_collection,
+            prediction_collection=prediction_collection,
+            task_type=task_type,
+            iou_threshold=iou_threshold,
+            confidence_threshold=confidence_threshold,
         )
 
     def add_samples_from_coco_caption(

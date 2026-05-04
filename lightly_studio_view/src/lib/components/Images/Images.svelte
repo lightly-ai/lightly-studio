@@ -24,6 +24,8 @@
     import { selectRangeByAnchor } from '$lib/utils/selectRangeByAnchor';
     import { page } from '$app/state';
     import SampleImageGridItem from '../SampleImageGridItem/SampleImageGridItem.svelte';
+    import { useEvaluationSampleMetrics } from '$lib/hooks/useEvaluationSampleMetrics/useEvaluationSampleMetrics';
+    import { sortSamplesByEvaluationCount } from './sortSamplesByEvaluationCount';
 
     // Import the settings hook
     const { gridViewSampleRenderingStore, showSampleFilenamesStore } = useSettings();
@@ -51,7 +53,9 @@
         setfilteredSampleCount,
         getSelectedSampleIds,
         toggleSampleSelection,
-        sampleSize
+        sampleSize,
+        activeEvaluationId,
+        evaluationSampleSort
     } = useGlobalStorage();
     const columnCount = $derived($sampleSize.width);
 
@@ -191,6 +195,18 @@
 
     const datasetId = $derived(page.params.dataset_id!);
     const collectionType = $derived(page.params.collection_type!);
+    const evaluationSampleCountsQuery = $derived(
+        useEvaluationSampleMetrics({
+            datasetId,
+            evaluationId: $activeEvaluationId
+        })
+    );
+    const evaluationSampleCounts = $derived(
+        ($evaluationSampleCountsQuery.data?.metrics ?? {}) as Record<string, Record<string, number>>
+    );
+    const sortedSamples = $derived(
+        sortSamplesByEvaluationCount(samples, evaluationSampleCounts, $evaluationSampleSort)
+    );
 
     function handleOnDoubleClick(sampleId: string) {
         if (datasetId && collectionType) {
@@ -215,7 +231,7 @@
         shiftKey: boolean;
     }) {
         selectionAnchorSampleId = selectRangeByAnchor({
-            sampleIdsInOrder: samples.map((sample) => sample.sample_id),
+            sampleIdsInOrder: sortedSamples.map((sample) => sample.sample_id),
             selectedSampleIds: $selectedSampleIds,
             clickedSampleId: sampleId,
             clickedIndex: index,
@@ -249,7 +265,7 @@
     status={{
         loading: $infiniteSamples.isPending,
         error: $infiniteSamples.isError,
-        empty: $infiniteSamples.isSuccess && samples.length === 0,
+        empty: $infiniteSamples.isSuccess && sortedSamples.length === 0,
         success: isReady
     }}
     loader={{
@@ -257,11 +273,11 @@
         disabled: !$infiniteSamples.hasNextPage || $infiniteSamples.isFetchingNextPage,
         loading: $infiniteSamples.isFetchingNextPage
     }}
-    itemCount={samples.length}
+    itemCount={sortedSamples.length}
 >
     {#snippet children({ footer })}
         <Grid
-            itemCount={samples.length}
+            itemCount={sortedSamples.length}
             {columnCount}
             overScan={sampleGridOverscan}
             onScroll={handleScroll}
@@ -270,26 +286,26 @@
             gridProps={{ 'data-testid': 'images-grid', class: 'dark:[color-scheme:dark]' }}
         >
             {#snippet gridItem({ index, style, width, height })}
-                {#if samples[index]}
-                    {#key samples[index].sample_id}
+                {#if sortedSamples[index]}
+                    {#key sortedSamples[index].sample_id}
                         {@const displayTextOnImage = $showSampleFilenamesStore
-                            ? samples[index].file_name
-                            : samples[index].captions?.[0]?.text}
+                            ? sortedSamples[index].file_name
+                            : sortedSamples[index].captions?.[0]?.text}
                         <GridItem
                             {width}
                             {height}
                             {style}
-                            dataSampleName={samples[index].file_name}
+                            dataSampleName={sortedSamples[index].file_name}
                             dataIndex={index}
                             dataTestId="sample-grid-item"
-                            isSelected={$selectedSampleIds.has(samples[index].sample_id)}
-                            ariaLabel={`View image: ${samples[index].file_name}`}
-                            ondblclick={() => handleOnDoubleClick(samples[index].sample_id)}
+                            isSelected={$selectedSampleIds.has(sortedSamples[index].sample_id)}
+                            ariaLabel={`View image: ${sortedSamples[index].file_name}`}
+                            ondblclick={() => handleOnDoubleClick(sortedSamples[index].sample_id)}
                             onSelect={(event) =>
-                                handleGridItemSelect(event, samples[index].sample_id, index)}
+                                handleGridItemSelect(event, sortedSamples[index].sample_id, index)}
                         >
                             <SampleImageGridItem
-                                sample={samples[index]}
+                                sample={sortedSamples[index]}
                                 {objectFit}
                                 sampleSize={width}
                                 {displayTextOnImage}

@@ -37,3 +37,18 @@ from lightly_studio.models.tag import (
 from lightly_studio.models.two_dim_embedding import (
     TwoDimEmbeddingTable,  # noqa: F401, required for SQLModel to work properly
 )
+from lightly_studio.models.annotation_collection import (
+    AnnotationCollectionTable,  # noqa: F401, required for SQLModel to work properly
+)
+from lightly_studio.models.evaluation_result import (
+    EvaluationResultTable,  # noqa: F401, required for SQLModel to work properly
+)
+from lightly_studio.models.evaluation_result_sample import (
+    EvaluationResultSampleTable,  # noqa: F401, required for SQLModel to work properly
+)
+from lightly_studio.models.evaluation_sample_metric import (
+    EvaluationSampleMetricTable,  # noqa: F401, required for SQLModel to work properly
+)
+from lightly_studio.models.evaluation_annotation_result import (
+    EvaluationAnnotationResultTable,  # noqa: F401, required for SQLModel to work properly
+)

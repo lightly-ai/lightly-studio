@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from collections.abc import Iterator
 from typing import Generic, cast
+from uuid import UUID
 
 from sqlmodel import Session, select
 from sqlmodel.sql.expression import SelectOfScalar
@@ -12,9 +13,11 @@ from typing_extensions import Self, TypeVar
 from lightly_studio.core.dataset_query.image_sample_field import ImageSampleField
 from lightly_studio.core.dataset_query.match_expression import MatchExpression
 from lightly_studio.core.dataset_query.order_by import OrderByExpression, OrderByField
+from lightly_studio.core.evaluation import run_evaluation
 from lightly_studio.core.image.image_sample import ImageSample
 from lightly_studio.core.sample import Sample
 from lightly_studio.models.collection import CollectionTable, SampleType
+from lightly_studio.models.evaluation_result import EvaluationResultTable, EvaluationTaskType
 from lightly_studio.models.group import GroupTable
 from lightly_studio.models.image import ImageTable
 from lightly_studio.models.sample import SampleTable
@@ -319,6 +322,32 @@ class DatasetQuery(Generic[T]):
             List of Sample objects from the database.
         """
         return list(self)
+
+    def get_sample_ids(self) -> list[UUID]:
+        """Return the current query result as a frozen list of sample IDs."""
+        return [sample.sample_id for sample in self]
+
+    def evaluate(  # noqa: PLR0913
+        self,
+        name: str,
+        gt_collection: str,
+        prediction_collection: str,
+        task_type: EvaluationTaskType = EvaluationTaskType.OBJECT_DETECTION,
+        iou_threshold: float = 0.5,
+        confidence_threshold: float = 0.0,
+    ) -> EvaluationResultTable:
+        """Evaluate one prediction collection on the current query result snapshot."""
+        return run_evaluation(
+            session=self.session,
+            dataset_id=self.dataset.dataset_id,
+            name=name,
+            gt_collection_name=gt_collection,
+            prediction_collection_name=prediction_collection,
+            sample_ids=self.get_sample_ids(),
+            task_type=task_type,
+            iou_threshold=iou_threshold,
+            confidence_threshold=confidence_threshold,
+        )
 
     def add_tag(self, tag_name: str) -> None:
         """Add a tag to all samples returned by this query.
