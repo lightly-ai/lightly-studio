@@ -35,62 +35,6 @@ logger = logging.getLogger(__name__)
 SAMPLE_BATCH_SIZE = 32  # Number of samples to process in a single batch
 
 
-@dataclass
-class _AnnotationProcessingContext:
-    """Context for processing annotations for a single sample."""
-
-    collection_id: UUID
-    sample_id: UUID
-    label_map: dict[int, UUID]
-
-
-def _create_label_map(
-    session: Session,
-    root_collection_id: UUID,
-    input_labels: ObjectDetectionInput | InstanceSegmentationInput,
-) -> dict[int, UUID]:
-    """Create a mapping of category IDs to annotation label IDs."""
-    return labelformat_helpers.create_label_map(
-        session=session,
-        root_collection_id=root_collection_id,
-        input_labels=input_labels,
-    )
-
-
-def _process_object_detection_annotations(
-    context: _AnnotationProcessingContext,
-    anno_data: ImageObjectDetection,
-) -> list[AnnotationCreate]:
-    """Process object detection annotations for a single image."""
-    new_annotations = []
-    for obj in anno_data.objects:
-        new_annotations.append(
-            labelformat_helpers.get_object_detection_annotation_create(
-                parent_sample_id=context.sample_id,
-                annotation_label_id=context.label_map[obj.category.id],
-                box=obj.box,
-                confidence=obj.confidence,
-            )
-        )
-    return new_annotations
-
-
-def _process_segmentation_annotations(
-    context: _AnnotationProcessingContext, anno_data: ImageInstanceSegmentation
-) -> list[AnnotationCreate]:
-    """Process segmentation mask annotations for a single image."""
-    new_annotations = []
-    for obj in anno_data.objects:
-        new_annotations.append(
-            labelformat_helpers.get_segmentation_annotation_create(
-                parent_sample_id=context.sample_id,
-                annotation_label_id=context.label_map[obj.category.id],
-                segmentation=obj.segmentation,
-            )
-        )
-    return new_annotations
-
-
 def add_annotations_from_labelformat(  # noqa: PLR0913
     session: Session,
     root_collection_id: UUID,
@@ -170,6 +114,28 @@ def add_annotations_from_labelformat(  # noqa: PLR0913
         )
 
     return missing_paths
+
+
+@dataclass
+class _AnnotationProcessingContext:
+    """Context for processing annotations for a single sample."""
+
+    collection_id: UUID
+    sample_id: UUID
+    label_map: dict[int, UUID]
+
+
+def _create_label_map(
+    session: Session,
+    root_collection_id: UUID,
+    input_labels: ObjectDetectionInput | InstanceSegmentationInput,
+) -> dict[int, UUID]:
+    """Create a mapping of category IDs to annotation label IDs."""
+    return labelformat_helpers.create_label_map(
+        session=session,
+        root_collection_id=root_collection_id,
+        input_labels=input_labels,
+    )
 
 
 def _process_annotation_batch(  # noqa: PLR0913
@@ -261,3 +227,37 @@ def _process_annotation_batch(  # noqa: PLR0913
             annotation_collection_id=annotation_collection_id,
             parent_sample_ids=matched_sample_ids,
         )
+
+
+def _process_object_detection_annotations(
+    context: _AnnotationProcessingContext,
+    anno_data: ImageObjectDetection,
+) -> list[AnnotationCreate]:
+    """Process object detection annotations for a single image."""
+    new_annotations = []
+    for obj in anno_data.objects:
+        new_annotations.append(
+            labelformat_helpers.get_object_detection_annotation_create(
+                parent_sample_id=context.sample_id,
+                annotation_label_id=context.label_map[obj.category.id],
+                box=obj.box,
+                confidence=obj.confidence,
+            )
+        )
+    return new_annotations
+
+
+def _process_segmentation_annotations(
+    context: _AnnotationProcessingContext, anno_data: ImageInstanceSegmentation
+) -> list[AnnotationCreate]:
+    """Process segmentation mask annotations for a single image."""
+    new_annotations = []
+    for obj in anno_data.objects:
+        new_annotations.append(
+            labelformat_helpers.get_segmentation_annotation_create(
+                parent_sample_id=context.sample_id,
+                annotation_label_id=context.label_map[obj.category.id],
+                segmentation=obj.segmentation,
+            )
+        )
+    return new_annotations

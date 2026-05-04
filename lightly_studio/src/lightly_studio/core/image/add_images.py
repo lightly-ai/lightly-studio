@@ -18,12 +18,7 @@ from labelformat.model.object_detection import ObjectDetectionInput
 from sqlmodel import Session
 from tqdm import tqdm
 
-from lightly_studio.core.image.add_annotations import (
-    SAMPLE_BATCH_SIZE as _SAMPLE_BATCH_SIZE,
-)
-from lightly_studio.core.image.add_annotations import (
-    add_annotations_from_labelformat,
-)
+from lightly_studio.core.image import add_annotations
 from lightly_studio.core.image.image_sample import ImageSample
 from lightly_studio.core.loading_log import LoadingLoggingContext, log_loading_results
 from lightly_studio.models.caption import CaptionCreate
@@ -39,7 +34,7 @@ from lightly_studio.type_definitions import PathLike
 logger = logging.getLogger(__name__)
 
 # Constants
-SAMPLE_BATCH_SIZE = _SAMPLE_BATCH_SIZE
+SAMPLE_BATCH_SIZE = add_annotations.SAMPLE_BATCH_SIZE
 MAX_EXAMPLE_PATHS_TO_SHOW = 5
 
 
@@ -176,7 +171,7 @@ def load_into_dataset_from_labelformat(
         logging_context.update_example_paths(paths_not_inserted)
 
     # Phase 2: Annotation creation
-    add_annotations_from_labelformat(
+    add_annotations.add_annotations_from_labelformat(
         session=session,
         root_collection_id=root_collection_id,
         input_labels=input_labels,
