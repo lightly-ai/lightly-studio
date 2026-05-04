@@ -8,6 +8,19 @@ import { enrichWithSchemaDocs } from './completionAdapterEnrichWithSchemaDocs';
 import { mapDocumentation } from './completionAdapterMapDocumentation';
 import { LSP_TO_MONACO_KIND } from './completionAdapterShared';
 
+function toMonacoRange(range: {
+    start: { line: number; character: number };
+    end: { line: number; character: number };
+}): monaco.IRange {
+    // LSP positions are 0-based (line/character), Monaco ranges are 1-based.
+    return {
+        startLineNumber: range.start.line + 1,
+        startColumn: range.start.character + 1,
+        endLineNumber: range.end.line + 1,
+        endColumn: range.end.character + 1
+    };
+}
+
 /** Adapt one LSP completion item into Monaco completion shape. */
 export function lspToMonacoCompletion<Scope extends keyof typeof SCOPES>(
     item: LspCompletionItem,
@@ -17,17 +30,19 @@ export function lspToMonacoCompletion<Scope extends keyof typeof SCOPES>(
     const { label, kind, detail, documentation, sortText, filterText, textEdit } = item;
     const isSnippet = item.insertTextFormat === LspInsertTextFormat.Snippet;
 
-    let range: monaco.IRange = fallbackRange;
+    let range: monaco.IRange | monaco.languages.CompletionItemRanges = fallbackRange;
     let insertText = item.insertText ?? label;
     if (textEdit && 'range' in textEdit) {
-        const { range: editRange, newText } = textEdit;
+        range = toMonacoRange(textEdit.range);
+        insertText = textEdit.newText;
+    } else if (textEdit && 'insert' in textEdit && 'replace' in textEdit) {
+        // InsertReplaceEdit: preserve dual-range semantics so Monaco can insert
+        // when typing in-place and replace when completing over a wider span.
         range = {
-            startLineNumber: editRange.start.line + 1,
-            startColumn: editRange.start.character + 1,
-            endLineNumber: editRange.end.line + 1,
-            endColumn: editRange.end.character + 1
+            insert: toMonacoRange(textEdit.insert),
+            replace: toMonacoRange(textEdit.replace)
         };
-        insertText = newText;
+        insertText = textEdit.newText;
     }
 
     return enrichWithSchemaDocs(

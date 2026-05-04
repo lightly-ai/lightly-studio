@@ -145,6 +145,13 @@ describe('useSyntaxCompletion', () => {
         expect(triggerCharacters).toEqual([' ', '(', ':']);
     });
 
+    it('registers completion provider only once per language id', async () => {
+        const { useSyntaxCompletion } = await import('./useSyntaxCompletion');
+        useSyntaxCompletion({ languageId: 'lightly-query' });
+        useSyntaxCompletion({ languageId: 'lightly-query' });
+        expect(mocks.registerCompletionItemProvider).toHaveBeenCalledOnce();
+    });
+
     it('returns no suggestions when the language service has no CompletionProvider', async () => {
         mocks.createLightlyQueryServices.mockReturnValueOnce({
             shared: {
@@ -259,6 +266,46 @@ describe('useSyntaxCompletion', () => {
             startColumn: 5,
             endLineNumber: 1,
             endColumn: 10
+        });
+        expect(result.suggestions[0].insertText).toBe('expanded');
+    });
+
+    it('uses LSP InsertReplaceEdit ranges when present', async () => {
+        const { provideCompletionItems } = await loadAndAttach([
+            {
+                label: 'replaceMe',
+                kind: LspCompletionItemKind.Keyword,
+                textEdit: {
+                    newText: 'expanded',
+                    insert: {
+                        start: { line: 0, character: 2 },
+                        end: { line: 0, character: 4 }
+                    },
+                    replace: {
+                        start: { line: 0, character: 2 },
+                        end: { line: 0, character: 9 }
+                    }
+                }
+            }
+        ]);
+        const result = await provideCompletionItems(
+            makeModel('something') as never,
+            { lineNumber: 1, column: 5 } as never
+        );
+
+        expect(result.suggestions[0].range).toEqual({
+            insert: {
+                startLineNumber: 1,
+                startColumn: 3,
+                endLineNumber: 1,
+                endColumn: 5
+            },
+            replace: {
+                startLineNumber: 1,
+                startColumn: 3,
+                endLineNumber: 1,
+                endColumn: 10
+            }
         });
         expect(result.suggestions[0].insertText).toBe('expanded');
     });

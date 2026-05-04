@@ -13,6 +13,7 @@ import {
 } from './completionAdapter';
 
 let cachedServices: LightlyQueryServicesBundle | null = null;
+const registeredCompletionLanguages = new Set<string>();
 function getServices(): LightlyQueryServicesBundle {
     if (!cachedServices) {
         cachedServices = createLightlyQueryServices();
@@ -49,6 +50,7 @@ async function getCompletions(
 
     const result: LspCompletionList | undefined = await provider.getCompletion(doc, {
         textDocument: { uri: doc.uri.toString() },
+        // Monaco positions are 1-based; LSP expects 0-based line/character.
         position: { line: lineNumber - 1, character: column - 1 }
     });
 
@@ -75,8 +77,10 @@ async function getCompletions(
  */
 export function useSyntaxCompletion(params: { languageId: string }) {
     const { languageId } = params;
+    if (registeredCompletionLanguages.has(languageId)) return;
     monaco.languages.registerCompletionItemProvider(languageId, {
         triggerCharacters: [' ', '(', ':'],
         provideCompletionItems: (model, position) => getCompletions(model, position)
     });
+    registeredCompletionLanguages.add(languageId);
 }
