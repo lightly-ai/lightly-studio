@@ -4,12 +4,17 @@ from fastapi.testclient import TestClient
 from pytest_mock import MockerFixture
 
 from lightly_studio.api.routes.api.status import HTTP_STATUS_OK
+from lightly_studio.api.routes.api.version import RuntimeVersionInfo
 
 
 def test_get_version(test_client: TestClient, mocker: MockerFixture) -> None:
     mocker.patch(
         "lightly_studio.api.routes.api.version._load_version_info_from_file",
-        return_value=("1.2.3", "abc1234"),
+        return_value=RuntimeVersionInfo(
+            version="1.2.3",
+            git_sha="abc1234",
+            is_tagged_commit=True,
+        ),
     )
     get_version_info_mock = mocker.patch(
         "lightly_studio.api.routes.api.version.get_version_info",
@@ -27,6 +32,7 @@ def test_get_version(test_client: TestClient, mocker: MockerFixture) -> None:
     assert response.json() == {
         "version": "1.2.3",
         "git_sha": "abc1234",
+        "is_tagged_commit": True,
     }
     get_version_info_mock.assert_not_called()
 
@@ -53,5 +59,6 @@ def test_get_version_falls_back_to_runtime_version(
     assert response.json() == {
         "version": "1.2.3",
         "git_sha": "abc1234",
+        "is_tagged_commit": False,
     }
     get_version_info_mock.assert_called_once()

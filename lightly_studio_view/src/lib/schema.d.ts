@@ -1715,7 +1715,7 @@ export interface paths {
         };
         /**
          * Get Version
-         * @description Get backend version and git SHA at runtime.
+         * @description Get backend runtime version information.
          *
          *     Prefer the build-generated version file and fall back to runtime generation.
          */
@@ -3229,6 +3229,15 @@ export interface components {
             name: string;
             /** Supported Scopes */
             supported_scopes?: components["schemas"]["OperatorScope"][];
+        };
+        /** RuntimeVersionInfo */
+        RuntimeVersionInfo: {
+            /** Version */
+            version: string;
+            /** Git Sha */
+            git_sha: string;
+            /** Is Tagged Commit */
+            is_tagged_commit: boolean;
         };
         /**
          * SampleAnnotationDetailsView
@@ -6659,9 +6668,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": {
-                        [key: string]: string;
-                    };
+                    "application/json": components["schemas"]["RuntimeVersionInfo"];
                 };
             };
         };
