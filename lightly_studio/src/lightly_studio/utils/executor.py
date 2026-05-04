@@ -8,7 +8,7 @@ from concurrent.futures import ThreadPoolExecutor
 _executors: dict[str, ThreadPoolExecutor] = {}
 
 
-def _get_media_executor(thread_name_prefix: str) -> ThreadPoolExecutor:
+def get_media_executor(thread_name_prefix: str) -> ThreadPoolExecutor:
     """Return a shared ``ThreadPoolExecutor`` for CPU-intensive media processing.
 
     Executors are created lazily and cached by prefix, so each logical worker group

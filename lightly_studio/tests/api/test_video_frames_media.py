@@ -244,21 +244,21 @@ def test_get_cached_capture_handles_stale_entry(
     assert id(cap1) != id(cap2), "Should create new VideoCapture for stale entry"
 
 
-def test__get_media_executor_creates_singleton() -> None:
-    """Test _get_media_executor returns the same executor instance on repeated calls."""
+def test_get_media_executor_creates_singleton() -> None:
+    """Test get_media_executor returns the same executor instance on repeated calls."""
     executor_module._executors.clear()
 
-    executor1 = executor_module._get_media_executor("video_frame")
-    executor2 = executor_module._get_media_executor("video_frame")
+    executor1 = executor_module.get_media_executor("video_frame")
+    executor2 = executor_module.get_media_executor("video_frame")
 
     assert executor1 is executor2, "Should return the same executor instance"
 
 
-def test__get_media_executor_has_workers() -> None:
-    """Test _get_media_executor creates an executor with at least one worker."""
+def test_get_media_executor_has_workers() -> None:
+    """Test get_media_executor creates an executor with at least one worker."""
     executor_module._executors.clear()
 
-    executor = executor_module._get_media_executor("video_frame")
+    executor = executor_module.get_media_executor("video_frame")
 
     assert executor is not None
     assert executor._max_workers >= 1

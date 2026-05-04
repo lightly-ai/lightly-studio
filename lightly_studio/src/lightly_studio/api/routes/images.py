@@ -16,7 +16,7 @@ from lightly_studio.api.routes.api import status
 from lightly_studio.db_manager import SessionDep
 from lightly_studio.models import image
 from lightly_studio.models.settings import GridViewThumbnailQualityType
-from lightly_studio.utils.executor import _get_media_executor
+from lightly_studio.utils.executor import get_media_executor
 
 app_router = APIRouter()
 
@@ -58,7 +58,7 @@ async def serve_image_by_sample_id(
 
     try:
         content, content_type = await asyncio.get_running_loop().run_in_executor(
-            _get_media_executor("image_thumbnail"),
+            get_media_executor("image_thumbnail"),
             _read_and_transform_image,
             file_path,
             quality,
