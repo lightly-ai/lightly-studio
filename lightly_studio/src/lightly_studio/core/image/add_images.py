@@ -34,7 +34,7 @@ from lightly_studio.type_definitions import PathLike
 logger = logging.getLogger(__name__)
 
 # Constants
-SAMPLE_BATCH_SIZE = add_annotations.SAMPLE_BATCH_SIZE
+SAMPLE_BATCH_SIZE = 32  # Number of samples to process in a single batch
 MAX_EXAMPLE_PATHS_TO_SHOW = 5
 
 

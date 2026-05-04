@@ -24,11 +24,7 @@ from labelformat.model.object_detection import (
 from PIL import Image as PILImage
 from sqlmodel import Session
 
-from lightly_studio.core.image import add_images
-from lightly_studio.core.image.add_annotations import (
-    _create_label_map,
-    add_annotations_from_labelformat,
-)
+from lightly_studio.core.image import add_annotations, add_images
 from lightly_studio.models.image import ImageCreate
 from lightly_studio.resolvers import image_resolver
 from tests import helpers_resolvers
@@ -304,7 +300,7 @@ def test_create_label_map(db_session: Session) -> None:
         filename="image.jpg", category_names=["dog", "cat"]
     )
 
-    label_map_1 = _create_label_map(
+    label_map_1 = add_annotations._create_label_map(
         session=db_session,
         root_collection_id=collection_id,
         input_labels=label_input,
@@ -314,7 +310,7 @@ def test_create_label_map(db_session: Session) -> None:
         filename="image.jpg", category_names=["dog", "cat", "bird"]
     )
 
-    label_map_2 = _create_label_map(
+    label_map_2 = add_annotations._create_label_map(
         session=db_session,
         root_collection_id=collection_id,
         input_labels=label_input_2,
@@ -503,7 +499,7 @@ def test_add_annotations_from_labelformat__all_images_exist(db_session: Session)
     label_input = _get_labelformat_input_obj_det(filename="image.jpg")
 
     # Act: Add annotations to existing images
-    missing_paths = add_annotations_from_labelformat(
+    missing_paths = add_annotations.add_annotations_from_labelformat(
         session=db_session,
         root_collection_id=collection.collection_id,
         input_labels=label_input,
@@ -528,7 +524,7 @@ def test_add_annotations_from_labelformat__missing_images(db_session: Session) -
     label_input = _get_labelformat_input_obj_det(filename="nonexistent.jpg")
 
     # Act: Add annotations even though image doesn't exist
-    missing_paths = add_annotations_from_labelformat(
+    missing_paths = add_annotations.add_annotations_from_labelformat(
         session=db_session,
         root_collection_id=collection.collection_id,
         input_labels=label_input,
@@ -563,7 +559,7 @@ def test_add_annotations_from_labelformat__named_collection(db_session: Session)
     label_input = _get_labelformat_input_obj_det(filename="image.jpg")
 
     # Act: Add annotations with a specific collection name (should not raise)
-    add_annotations_from_labelformat(
+    add_annotations.add_annotations_from_labelformat(
         session=db_session,
         root_collection_id=collection.collection_id,
         input_labels=label_input,
@@ -597,7 +593,7 @@ def test_add_annotations_from_labelformat__restrict_to_sample_ids(db_session: Se
     label_input = _get_labelformat_input_obj_det(filename="image.jpg")
 
     # Act: Add annotations but restrict to only the first image
-    add_annotations_from_labelformat(
+    add_annotations.add_annotations_from_labelformat(
         session=db_session,
         root_collection_id=collection.collection_id,
         input_labels=label_input,
