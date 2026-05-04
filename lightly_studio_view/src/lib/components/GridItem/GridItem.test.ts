@@ -63,6 +63,78 @@ describe('GridItem', () => {
         expect(ondblclick).toHaveBeenCalledTimes(1);
     });
 
+    it('adds drag data for draggable grid items', async () => {
+        const onSelect = vi.fn();
+        const setData = vi.fn();
+        render(GridItemTestWrapper, {
+            props: {
+                ...defaultProps,
+                dragData: {
+                    url: '/api/images/sample/sample-1',
+                    fileName: 'sample-1.jpg'
+                },
+                onSelect
+            }
+        });
+
+        const gridItem = screen.getByTestId('grid-item');
+        await fireEvent.dragStart(gridItem, {
+            dataTransfer: {
+                effectAllowed: 'move',
+                setData
+            }
+        });
+        await fireEvent.click(gridItem);
+
+        expect(setData).toHaveBeenCalledWith(
+            'application/vnd.lightly-studio.grid-image+json',
+            JSON.stringify({
+                url: '/api/images/sample/sample-1',
+                fileName: 'sample-1.jpg'
+            })
+        );
+        expect(setData).toHaveBeenCalledWith('text/uri-list', '/api/images/sample/sample-1');
+        expect(setData).toHaveBeenCalledWith('text/plain', '/api/images/sample/sample-1');
+        expect(onSelect).not.toHaveBeenCalled();
+    });
+
+    it('keeps small pointer movements selectable on draggable grid items', async () => {
+        const onSelect = vi.fn();
+        const setData = vi.fn();
+        render(GridItemTestWrapper, {
+            props: {
+                ...defaultProps,
+                dragData: {
+                    url: '/api/images/sample/sample-1',
+                    fileName: 'sample-1.jpg'
+                },
+                onSelect
+            }
+        });
+
+        const gridItem = screen.getByTestId('grid-item');
+        await fireEvent(
+            gridItem,
+            new MouseEvent('mousedown', { bubbles: true, clientX: 10, clientY: 10 })
+        );
+        const dragStartEvent = new Event('dragstart') as DragEvent;
+        Object.defineProperties(dragStartEvent, {
+            clientX: { value: 13 },
+            clientY: { value: 12 },
+            dataTransfer: {
+                value: {
+                    effectAllowed: 'move',
+                    setData
+                }
+            }
+        });
+        await fireEvent(gridItem, dragStartEvent);
+        await fireEvent.click(gridItem);
+
+        expect(setData).not.toHaveBeenCalled();
+        expect(onSelect).toHaveBeenCalledOnce();
+    });
+
     it('applies selected style and renders selectable tag', () => {
         render(GridItemTestWrapper, {
             props: {

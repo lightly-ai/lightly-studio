@@ -324,6 +324,7 @@
 
     const MAX_IMAGE_SIZE_MB = 50;
     const MAX_IMAGE_SIZE_BYTES = MAX_IMAGE_SIZE_MB * 1024 * 1024;
+    const GRID_IMAGE_DRAG_MIME_TYPE = 'application/vnd.lightly-studio.grid-image+json';
 
     let dragOver = $state(false);
     let activeImage = $state<string | null>(null);
@@ -344,6 +345,13 @@
     async function handleDrop(e: DragEvent) {
         e.preventDefault();
         dragOver = false;
+
+        const gridImageFile = await getDroppedGridImageFile(e.dataTransfer);
+        if (gridImageFile) {
+            await uploadImage(gridImageFile);
+            return;
+        }
+
         if (e.dataTransfer?.files && e.dataTransfer.files.length > 0) {
             const file = e.dataTransfer.files[0];
             if (file.type.startsWith('image/')) {
@@ -351,6 +359,36 @@
             } else {
                 setError('Please drop an image file.');
             }
+        }
+    }
+
+    async function getDroppedGridImageFile(
+        dataTransfer: DataTransfer | null
+    ): Promise<File | null> {
+        const dragData = dataTransfer?.getData(GRID_IMAGE_DRAG_MIME_TYPE);
+        if (!dragData) {
+            return null;
+        }
+
+        try {
+            const parsedDragData = JSON.parse(dragData) as { url?: string; fileName?: string };
+            if (!parsedDragData.url) {
+                return null;
+            }
+
+            const response = await fetch(parsedDragData.url);
+            if (!response.ok) {
+                throw new Error(`Failed to fetch dragged image: ${response.statusText}`);
+            }
+
+            const blob = await response.blob();
+            const fileName = parsedDragData.fileName || 'grid-image';
+            return new File([blob], fileName, { type: blob.type || 'image/jpeg' });
+        } catch (err: unknown) {
+            const message =
+                err instanceof Error ? err.message : 'Failed to load dragged image for search';
+            setError(message);
+            return null;
         }
     }
 
