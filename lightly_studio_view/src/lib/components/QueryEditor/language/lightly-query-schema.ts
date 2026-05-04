@@ -10,20 +10,7 @@
  * providers attach human-friendly documentation without re-parsing the
  * grammar at runtime. Keep both in sync when the grammar changes. */
 
-export type Scope = 'image' | 'video' | 'object_detection' | 'classification';
-
-export interface FieldDoc {
-    name: string;
-    type: 'int' | 'float' | 'string' | 'datetime';
-    description: string;
-}
-
-export interface ScopeDoc {
-    scope: Scope;
-    title: string;
-    description: string;
-    fields: FieldDoc[];
-}
+import type { FieldDoc, KeywordDoc, Scope, ScopeDoc } from './types';
 
 export const SCOPES: Record<Scope, ScopeDoc> = {
     image: {
@@ -89,13 +76,7 @@ export const SCOPES: Record<Scope, ScopeDoc> = {
     }
 };
 
-export interface KeywordDoc {
-    name: string;
-    description: string;
-    insertText?: string;
-}
-
-export const TOP_LEVEL_KEYWORDS: KeywordDoc[] = [
+const TOP_LEVEL_KEYWORDS: KeywordDoc[] = [
     { name: 'AND', description: 'Boolean AND. Combines two conditions.' },
     { name: 'OR', description: 'Boolean OR.' },
     { name: 'NOT', description: 'Boolean NOT.' },
@@ -129,35 +110,4 @@ export function findFieldInScope(scope: Scope, name: string): FieldDoc | undefin
 export function findKeyword(name: string): KeywordDoc | undefined {
     return TOP_LEVEL_KEYWORDS.find((k) => k.name.toLowerCase() === name.toLowerCase());
 }
-
-/** Resolve the scope of an identifier at `offset` within `text`.
- *
- * Walks the text up to `offset`, tracking parentheses so nested expressions
- * pop back to the right scope. Strings are stripped first so a literal like
- * `"object_detection("` inside a string doesn't shift the scope. */
-export function detectScopeAt(text: string, offset: number): Scope {
-    const upTo = stripStrings(text.slice(0, offset));
-    type Frame = Scope | 'paren';
-    const stack: Frame[] = [];
-    const re = /\b(object_detection|classification)\s*\(|\(|\)/g;
-    let match: RegExpExecArray | null;
-    while ((match = re.exec(upTo))) {
-        if (match[1] === 'object_detection' || match[1] === 'classification') {
-            stack.push(match[1]);
-        } else if (match[0] === '(') {
-            stack.push('paren');
-        } else {
-            stack.pop();
-        }
-    }
-    for (let i = stack.length - 1; i >= 0; i--) {
-        const frame = stack[i];
-        if (frame === 'object_detection' || frame === 'classification') return frame;
-    }
-    if (/^\s*video:/i.test(text)) return 'video';
-    return 'image';
-}
-
-function stripStrings(text: string): string {
-    return text.replace(/"([^"\\]|\\.)*"|'([^'\\]|\\.)*'/g, '""');
-}
+export { detectScopeAt } from './detectScopeAt';
