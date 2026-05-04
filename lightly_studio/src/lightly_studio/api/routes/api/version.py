@@ -12,7 +12,7 @@ from lightly_studio.export_version import get_version_info
 
 version_router = APIRouter(tags=["version"])
 package_root = Path(__file__).resolve().parent.parent.parent.parent
-version_file = package_root / "dist_lightly_studio_view_app_app" / "version.json"
+version_file = package_root / "dist_lightly_studio_view_app" / "version-info.json"
 
 
 @dataclass
@@ -25,7 +25,7 @@ class RuntimeVersionInfo:
 
 
 def _load_version_info_from_file() -> RuntimeVersionInfo | None:
-    """Load runtime version info from build-generated version.json."""
+    """Load runtime version info from build-generated version-info.json."""
     try:
         with version_file.open() as f:
             data = json.load(f)
