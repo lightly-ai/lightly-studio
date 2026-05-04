@@ -12,11 +12,16 @@ from lightly_studio.models.annotation.object_detection import (
 )
 from lightly_studio.models.annotation.object_track import ObjectTrackTable
 from lightly_studio.models.annotation.segmentation import SegmentationAnnotationTable
+from lightly_studio.models.annotation_collection import AnnotationCollectionTable
 from lightly_studio.models.annotation_label import AnnotationLabelTable
 from lightly_studio.models.caption import CaptionTable
 from lightly_studio.models.collection import CollectionTable
 from lightly_studio.models.dataset import DatasetTable
 from lightly_studio.models.embedding_model import EmbeddingModelTable
+from lightly_studio.models.evaluation_annotation_result import EvaluationAnnotationResultTable
+from lightly_studio.models.evaluation_result import EvaluationResultTable
+from lightly_studio.models.evaluation_result_sample import EvaluationResultSampleTable
+from lightly_studio.models.evaluation_sample_metric import EvaluationSampleMetricTable
 from lightly_studio.models.group import GroupTable, SampleGroupLinkTable
 from lightly_studio.models.image import ImageTable
 from lightly_studio.models.metadata import SampleMetadataTable
@@ -90,10 +95,16 @@ def delete_dataset(
     _delete_object_tracks(session=session, dataset_id=dataset_id)
     session.commit()  # Required before deleting collections.
 
-    # 6. Delete collections (with individual commits due to self-referential FKs).
+    # 6. Delete evaluation tables (must come before annotation_collection and dataset).
+    _delete_evaluation_sub_tables(session=session, dataset_id=dataset_id)
+    _delete_evaluation_results(session=session, dataset_id=dataset_id)
+    _delete_annotation_collections(session=session, dataset_id=dataset_id)
+    session.commit()
+
+    # 7. Delete collections (with individual commits due to self-referential FKs).
     _delete_collections(session=session, collection_ids=collection_ids)
 
-    # 7. Delete the dataset entry itself.
+    # 8. Delete the dataset entry itself.
     _delete_dataset(session=session, dataset_id=dataset_id)
     session.commit()
 
@@ -248,6 +259,52 @@ def _delete_embedding_models(session: Session, collection_ids: list[UUID]) -> No
     session.exec(
         delete(EmbeddingModelTable).where(
             col(EmbeddingModelTable.collection_id).in_(collection_ids)
+        )
+    )
+
+
+def _delete_evaluation_sub_tables(session: Session, dataset_id: UUID) -> None:
+    """Delete evaluation sub-table rows (metrics, results, sample lists) for the dataset."""
+    eval_ids = list(
+        session.exec(
+            select(EvaluationResultTable.id).where(
+                col(EvaluationResultTable.dataset_id) == dataset_id
+            )
+        ).all()
+    )
+    if not eval_ids:
+        return
+    session.exec(
+        delete(EvaluationAnnotationResultTable).where(
+            col(EvaluationAnnotationResultTable.evaluation_result_id).in_(eval_ids)
+        )
+    )
+    session.exec(
+        delete(EvaluationSampleMetricTable).where(
+            col(EvaluationSampleMetricTable.evaluation_result_id).in_(eval_ids)
+        )
+    )
+    session.exec(
+        delete(EvaluationResultSampleTable).where(
+            col(EvaluationResultSampleTable.evaluation_result_id).in_(eval_ids)
+        )
+    )
+
+
+def _delete_evaluation_results(session: Session, dataset_id: UUID) -> None:
+    """Delete evaluation result rows for the dataset."""
+    session.exec(
+        delete(EvaluationResultTable).where(
+            col(EvaluationResultTable.dataset_id) == dataset_id
+        )
+    )
+
+
+def _delete_annotation_collections(session: Session, dataset_id: UUID) -> None:
+    """Delete annotation collection rows for the dataset."""
+    session.exec(
+        delete(AnnotationCollectionTable).where(
+            col(AnnotationCollectionTable.dataset_id) == dataset_id
         )
     )
 

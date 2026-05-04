@@ -95,9 +95,7 @@ def add_predictions_from_lightly(  # noqa: PLR0913
             )
 
     if skipped:
-        logger.warning(
-            "Skipped annotations for %d images not found in the dataset.", skipped
-        )
+        logger.warning("Skipped annotations for %d images not found in the dataset.", skipped)
 
     annotation_child_collection_id = get_or_create_child_collection(
         session=session,

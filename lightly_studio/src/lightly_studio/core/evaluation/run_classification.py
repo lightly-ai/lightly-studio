@@ -46,4 +46,11 @@ def run(
             label_names=label_names,
         )
     }
-    return common.EvaluationRunResult(metrics=metrics, match_records=match_records)
+    annotation_results, sample_metrics = common.build_results_from_matches(
+        match_records, include_iou=False
+    )
+    return common.EvaluationRunResult(
+        metrics=metrics,
+        annotation_results=annotation_results,
+        sample_metrics=sample_metrics,
+    )

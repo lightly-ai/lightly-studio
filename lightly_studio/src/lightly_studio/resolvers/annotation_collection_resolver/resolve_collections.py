@@ -23,9 +23,7 @@ def resolve_collections(
     if not gt.is_ground_truth:
         raise ValueError(f"Collection '{gt_collection_name}' is not marked as ground truth.")
 
-    pred = get_by_name(
-        session=session, dataset_id=dataset_id, name=prediction_collection_name
-    )
+    pred = get_by_name(session=session, dataset_id=dataset_id, name=prediction_collection_name)
     if pred is None:
         raise ValueError(f"Prediction collection '{prediction_collection_name}' not found.")
     if pred.is_ground_truth:

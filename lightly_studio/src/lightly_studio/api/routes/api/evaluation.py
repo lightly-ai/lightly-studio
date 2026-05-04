@@ -2,10 +2,10 @@
 
 from __future__ import annotations
 
-from typing import Annotated
+from typing import Annotated, Any
 from uuid import UUID
 
-from fastapi import APIRouter, HTTPException, Path
+from fastapi import APIRouter, HTTPException, Path, Query
 from pydantic import BaseModel
 
 from lightly_studio.api.routes.api.status import HTTP_STATUS_NOT_FOUND
@@ -31,10 +31,24 @@ class EvaluationCreateInput(BaseModel):
     sample_ids: list[UUID] | None = None
 
 
-class SampleCountsResponse(BaseModel):
-    """Per-image TP/FP/FN count map returned by the sample-counts endpoint."""
+class SampleMetricsResponse(BaseModel):
+    """Per-image metric map returned by the sample-metrics endpoint."""
 
-    counts: dict[str, dict[str, int]]
+    metrics: dict[str, dict[str, float]]
+
+
+class AnnotationResultItem(BaseModel):
+    """One annotation pairing returned by the annotation-results endpoint."""
+
+    pred_annotation_id: UUID | None
+    gt_annotation_id: UUID | None
+    metrics: dict[str, Any]
+
+
+class AnnotationResultsResponse(BaseModel):
+    """List of annotation results for one sample."""
+
+    results: list[AnnotationResultItem]
 
 
 def _get_root_collection_or_404(
@@ -134,15 +148,20 @@ def get_evaluation(
 
 
 @evaluation_router.get(
-    "/evaluations/{evaluation_id}/sample-counts",
-    response_model=SampleCountsResponse,
+    "/evaluations/{evaluation_id}/sample-metrics",
+    response_model=SampleMetricsResponse,
 )
-def get_evaluation_sample_counts(
+def get_evaluation_sample_metrics(
     dataset_id: Annotated[UUID, Path()],
     evaluation_id: Annotated[UUID, Path()],
     session: SessionDep,
-) -> SampleCountsResponse:
-    """Return per-image TP/FP/FN counts for an evaluation run."""
+    label_id: Annotated[UUID | None, Query()] = None,
+) -> SampleMetricsResponse:
+    """Return per-image metric values for an evaluation run.
+
+    When label_id is omitted, returns aggregate rows (all classes combined).
+    When label_id is provided, returns per-class rows for that label.
+    """
     root_collection = _get_root_collection_or_404(session=session, root_collection_id=dataset_id)
     result = evaluation_result_resolver.get_by_id(session=session, evaluation_id=evaluation_id)
     if result is None or result.dataset_id != root_collection.dataset_id:
@@ -150,7 +169,40 @@ def get_evaluation_sample_counts(
             status_code=HTTP_STATUS_NOT_FOUND,
             detail=f"Evaluation {evaluation_id} not found.",
         )
-    counts = evaluation_result_resolver.get_sample_counts(
-        session=session, evaluation_result_id=evaluation_id
+    metrics = evaluation_result_resolver.get_sample_metrics(
+        session=session, evaluation_result_id=evaluation_id, label_id=label_id
     )
-    return SampleCountsResponse(counts={str(k): v for k, v in counts.items()})
+    return SampleMetricsResponse(metrics={str(k): v for k, v in metrics.items()})
+
+
+@evaluation_router.get(
+    "/evaluations/{evaluation_id}/annotation-results",
+    response_model=AnnotationResultsResponse,
+)
+def get_evaluation_annotation_results(
+    dataset_id: Annotated[UUID, Path()],
+    evaluation_id: Annotated[UUID, Path()],
+    session: SessionDep,
+    sample_id: Annotated[UUID, Query()],
+) -> AnnotationResultsResponse:
+    """Return annotation pairing results for one sample in an evaluation run."""
+    root_collection = _get_root_collection_or_404(session=session, root_collection_id=dataset_id)
+    result = evaluation_result_resolver.get_by_id(session=session, evaluation_id=evaluation_id)
+    if result is None or result.dataset_id != root_collection.dataset_id:
+        raise HTTPException(
+            status_code=HTTP_STATUS_NOT_FOUND,
+            detail=f"Evaluation {evaluation_id} not found.",
+        )
+    rows = evaluation_result_resolver.get_annotation_results(
+        session=session, evaluation_result_id=evaluation_id, sample_id=sample_id
+    )
+    return AnnotationResultsResponse(
+        results=[
+            AnnotationResultItem(
+                pred_annotation_id=row.pred_annotation_id,
+                gt_annotation_id=row.gt_annotation_id,
+                metrics=row.metrics,
+            )
+            for row in rows
+        ]
+    )

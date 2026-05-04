@@ -1,13 +1,10 @@
 <script lang="ts">
     import { useEvaluations } from '$lib/hooks/useEvaluations/useEvaluations';
-    import { useEvaluationSampleCounts } from '$lib/hooks/useEvaluationSampleCounts/useEvaluationSampleCounts';
+    import { useEvaluationSampleMetrics } from '$lib/hooks/useEvaluationSampleMetrics/useEvaluationSampleMetrics';
     import { useAnnotationCollections } from '$lib/hooks/useAnnotationCollections/useAnnotationCollections';
-    import { type EvaluationCountMetric, useGlobalStorage } from '$lib/hooks/useGlobalStorage';
+    import { useGlobalStorage } from '$lib/hooks/useGlobalStorage';
     import { useImageFilters } from '$lib/hooks/useImageFilters/useImageFilters';
-    import type {
-        EvaluationResultView,
-        GetEvaluationSampleCountsResponse
-    } from '$lib/api/lightly_studio_local';
+    import type { EvaluationResultView } from '$lib/api/lightly_studio_local';
     import { ChevronDown, ChevronRight, X } from '@lucide/svelte';
 
     const EMPTY_RESULT_SAMPLE_ID = '00000000-0000-0000-0000-000000000000';
@@ -31,25 +28,26 @@
 
     const collectionNameById = $derived(Object.fromEntries(collections.map((c) => [c.id, c.name])));
 
-    const countsQuery = $derived(
-        useEvaluationSampleCounts({
+    const metricsQuery = $derived(
+        useEvaluationSampleMetrics({
             datasetId,
             evaluationId: $activeEvaluationId
         })
     );
-    const sampleCounts = $derived(
-        (($countsQuery.data as GetEvaluationSampleCountsResponse | undefined)?.counts ??
-            {}) as Record<string, Record<string, number>>
+    const sampleMetrics = $derived(
+        ($metricsQuery.data?.metrics ?? {}) as Record<string, Record<string, number>>
     );
 
-    // TP/FP/FN filter state
-    let minFp = $state<number | undefined>(undefined);
-    let maxFp = $state<number | undefined>(undefined);
-    let minFn = $state<number | undefined>(undefined);
-    let maxFn = $state<number | undefined>(undefined);
-    let minTp = $state<number | undefined>(undefined);
-    let maxTp = $state<number | undefined>(undefined);
-    let sortMetric = $state<EvaluationCountMetric | ''>('');
+    // Derive available metric names from response values
+    const availableMetrics = $derived(
+        Array.from(new Set(Object.values(sampleMetrics).flatMap((m) => Object.keys(m)))).sort()
+    );
+
+    // Dynamic filter state: metric name → { min, max }
+    let filterRanges = $state<Record<string, { min: number | undefined; max: number | undefined }>>(
+        {}
+    );
+    let sortMetric = $state<string>('');
     let sortDirection = $state<'asc' | 'desc'>('desc');
 
     $effect(() => {
@@ -78,29 +76,19 @@
 
     function selectEval(id: string) {
         setActiveEvaluationId(id);
-        // Reset filters when switching evals
-        minFp = undefined;
-        maxFp = undefined;
-        minFn = undefined;
-        maxFn = undefined;
-        minTp = undefined;
-        maxTp = undefined;
+        filterRanges = {};
         setEvaluationSampleSort(null);
         updateSampleIds([]);
     }
 
     function applyCountFilter() {
-        const matchingSampleIds = Object.entries(sampleCounts)
+        const matchingSampleIds = Object.entries(sampleMetrics)
             .filter(([, counts]) => {
-                const fp = counts.fp ?? 0;
-                const fn = counts.fn ?? 0;
-                const tp = counts.tp ?? 0;
-                if (minFp != null && fp < minFp) return false;
-                if (maxFp != null && fp > maxFp) return false;
-                if (minFn != null && fn < minFn) return false;
-                if (maxFn != null && fn > maxFn) return false;
-                if (minTp != null && tp < minTp) return false;
-                if (maxTp != null && tp > maxTp) return false;
+                for (const [metric, range] of Object.entries(filterRanges)) {
+                    const val = counts[metric] ?? 0;
+                    if (range.min != null && val < range.min) return false;
+                    if (range.max != null && val > range.max) return false;
+                }
                 return true;
             })
             .map(([sampleId]) => sampleId);
@@ -110,12 +98,7 @@
     }
 
     function clearCountFilter() {
-        minFp = undefined;
-        maxFp = undefined;
-        minFn = undefined;
-        maxFn = undefined;
-        minTp = undefined;
-        maxTp = undefined;
+        filterRanges = {};
         updateSampleIds([]);
     }
 
@@ -146,8 +129,15 @@
         });
     }
 
-    function formatPct(val: number) {
-        return (val * 100).toFixed(1) + '%';
+    function formatVal(val: number) {
+        return val.toFixed(2);
+    }
+
+    function toTitleCase(key: string) {
+        return key
+            .split('_')
+            .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+            .join(' ');
     }
 
     function formatTaskType(taskType: string) {
@@ -155,15 +145,6 @@
             .split('_')
             .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
             .join(' ');
-    }
-
-    function hasMetric(metrics: unknown, key: string): metrics is Record<string, number> {
-        return (
-            typeof metrics === 'object' &&
-            metrics !== null &&
-            key in metrics &&
-            typeof (metrics as Record<string, unknown>)[key] === 'number'
-        );
     }
 
     function hasPerClassMetrics(
@@ -283,29 +264,16 @@
                         {#if expandedSubset === subset}
                             <div class="mt-2 space-y-1 text-[11px]">
                                 <div class="grid grid-cols-2 gap-x-4">
-                                    {#if hasMetric(metrics, 'accuracy')}
-                                        <span class="text-muted-foreground">Accuracy</span>
-                                        <span class="text-right font-mono"
-                                            >{formatPct(metrics.accuracy)}</span
-                                        >
-                                    {/if}
-                                    {#if hasMetric(metrics, 'mAP')}
-                                        <span class="text-muted-foreground">mAP</span>
-                                        <span class="text-right font-mono"
-                                            >{formatPct(metrics.mAP)}</span
-                                        >
-                                    {/if}
-                                    <span class="text-muted-foreground">Precision</span>
-                                    <span class="text-right font-mono"
-                                        >{formatPct(metrics.precision)}</span
-                                    >
-                                    <span class="text-muted-foreground">Recall</span>
-                                    <span class="text-right font-mono"
-                                        >{formatPct(metrics.recall)}</span
-                                    >
-                                    <span class="text-muted-foreground">F1</span>
-                                    <span class="text-right font-mono">{formatPct(metrics.f1)}</span
-                                    >
+                                    {#each Object.entries(metrics).filter(([k]) => k !== 'per_class_metrics') as [key, val]}
+                                        {#if typeof val === 'number'}
+                                            <span class="text-muted-foreground"
+                                                >{toTitleCase(key)}</span
+                                            >
+                                            <span class="text-right font-mono"
+                                                >{formatVal(val)}</span
+                                            >
+                                        {/if}
+                                    {/each}
                                 </div>
                                 {#if hasPerClassMetrics(metrics) && Object.keys(metrics.per_class_metrics).length > 0}
                                     <div class="mt-2 border-t border-border pt-2">
@@ -315,17 +283,12 @@
                                                 <span class="truncate text-muted-foreground"
                                                     >{cls}</span
                                                 >
-                                                {#if 'ap' in cm && typeof cm.ap === 'number'}
-                                                    <span class="text-right font-mono"
-                                                        >AP {formatPct(cm.ap)}</span
-                                                    >
-                                                {:else if 'f1' in cm && typeof cm.f1 === 'number'}
-                                                    <span class="text-right font-mono"
-                                                        >F1 {formatPct(cm.f1)}</span
-                                                    >
-                                                {:else}
-                                                    <span class="text-right font-mono">-</span>
-                                                {/if}
+                                                <span class="text-right font-mono">
+                                                    {#each Object.entries(cm).slice(0, 1) as [k, v]}
+                                                        {toTitleCase(k)}
+                                                        {typeof v === 'number' ? formatVal(v) : v}
+                                                    {/each}
+                                                </span>
                                             </div>
                                         {/each}
                                     </div>
@@ -345,9 +308,9 @@
                             bind:value={sortMetric}
                         >
                             <option value="">None</option>
-                            <option value="fp">False positives</option>
-                            <option value="fn">False negatives</option>
-                            <option value="tp">True positives</option>
+                            {#each availableMetrics as metric}
+                                <option value={metric}>{toTitleCase(metric)}</option>
+                            {/each}
                         </select>
                         <select
                             class="rounded border border-input bg-background px-2 py-1"
@@ -375,67 +338,54 @@
                 </div>
             </div>
 
-            <!-- TP/FP/FN filter -->
-            {#if Object.keys(sampleCounts).length > 0}
+            <!-- Dynamic metric filter -->
+            {#if availableMetrics.length > 0}
                 <div class="rounded-md border border-border bg-background">
                     <div class="border-b border-border px-3 py-2 text-xs font-medium">
-                        Filter by counts
+                        Filter by metrics
                     </div>
                     <div class="space-y-2 px-3 py-2 text-xs">
-                        <div class="flex items-center gap-2">
-                            <span class="w-6 text-muted-foreground">FP</span>
-                            <input
-                                type="number"
-                                min="0"
-                                placeholder="min"
-                                class="w-14 rounded border border-input bg-background px-2 py-1 text-xs"
-                                bind:value={minFp}
-                            />
-                            <span class="text-muted-foreground">–</span>
-                            <input
-                                type="number"
-                                min="0"
-                                placeholder="max"
-                                class="w-14 rounded border border-input bg-background px-2 py-1 text-xs"
-                                bind:value={maxFp}
-                            />
-                        </div>
-                        <div class="flex items-center gap-2">
-                            <span class="w-6 text-muted-foreground">FN</span>
-                            <input
-                                type="number"
-                                min="0"
-                                placeholder="min"
-                                class="w-14 rounded border border-input bg-background px-2 py-1 text-xs"
-                                bind:value={minFn}
-                            />
-                            <span class="text-muted-foreground">–</span>
-                            <input
-                                type="number"
-                                min="0"
-                                placeholder="max"
-                                class="w-14 rounded border border-input bg-background px-2 py-1 text-xs"
-                                bind:value={maxFn}
-                            />
-                        </div>
-                        <div class="flex items-center gap-2">
-                            <span class="w-6 text-muted-foreground">TP</span>
-                            <input
-                                type="number"
-                                min="0"
-                                placeholder="min"
-                                class="w-14 rounded border border-input bg-background px-2 py-1 text-xs"
-                                bind:value={minTp}
-                            />
-                            <span class="text-muted-foreground">–</span>
-                            <input
-                                type="number"
-                                min="0"
-                                placeholder="max"
-                                class="w-14 rounded border border-input bg-background px-2 py-1 text-xs"
-                                bind:value={maxTp}
-                            />
-                        </div>
+                        {#each availableMetrics as metric}
+                            <div class="flex items-center gap-2">
+                                <span class="w-8 text-muted-foreground">{metric.toUpperCase()}</span
+                                >
+                                <input
+                                    type="number"
+                                    min="0"
+                                    placeholder="min"
+                                    class="w-14 rounded border border-input bg-background px-2 py-1 text-xs"
+                                    value={filterRanges[metric]?.min ?? ''}
+                                    oninput={(e) => {
+                                        const v = (e.target as HTMLInputElement).valueAsNumber;
+                                        filterRanges = {
+                                            ...filterRanges,
+                                            [metric]: {
+                                                ...filterRanges[metric],
+                                                min: isNaN(v) ? undefined : v
+                                            }
+                                        };
+                                    }}
+                                />
+                                <span class="text-muted-foreground">–</span>
+                                <input
+                                    type="number"
+                                    min="0"
+                                    placeholder="max"
+                                    class="w-14 rounded border border-input bg-background px-2 py-1 text-xs"
+                                    value={filterRanges[metric]?.max ?? ''}
+                                    oninput={(e) => {
+                                        const v = (e.target as HTMLInputElement).valueAsNumber;
+                                        filterRanges = {
+                                            ...filterRanges,
+                                            [metric]: {
+                                                ...filterRanges[metric],
+                                                max: isNaN(v) ? undefined : v
+                                            }
+                                        };
+                                    }}
+                                />
+                            </div>
+                        {/each}
                         <div class="flex gap-2 pt-1">
                             <button
                                 class="rounded bg-primary px-2 py-1 text-xs text-primary-foreground"

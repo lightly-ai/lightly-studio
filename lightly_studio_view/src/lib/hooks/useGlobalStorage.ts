@@ -11,9 +11,8 @@ import { useReversibleActions } from './useReversibleActions';
 import type { CollectionView, SampleType } from '$lib/api/lightly_studio_local';
 import type { Point } from 'embedding-atlas/svelte';
 
-export type EvaluationCountMetric = 'tp' | 'fp' | 'fn';
 export type EvaluationSampleSort = {
-    metric: EvaluationCountMetric;
+    metric: string;
     direction: 'asc' | 'desc';
 } | null;
 

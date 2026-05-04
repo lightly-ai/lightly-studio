@@ -108,6 +108,9 @@ def run_evaluation(  # noqa: PLR0913
         metrics=run_result.metrics,
     )
     evaluation_result_resolver.persist_sample_ids(session, result.id, frozen_sample_ids)
-    evaluation_result_resolver.persist_matches(session, result.id, run_result.match_records)
+    evaluation_result_resolver.persist_annotation_results(
+        session, result.id, run_result.annotation_results
+    )
+    evaluation_result_resolver.persist_sample_metrics(session, result.id, run_result.sample_metrics)
     session.commit()
     return result

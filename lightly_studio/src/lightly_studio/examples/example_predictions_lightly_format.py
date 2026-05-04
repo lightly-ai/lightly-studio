@@ -24,8 +24,7 @@ gt_json = (
     "coco_subset_128_images/instances_train2017.json"
 )
 predictions_folder = (
-    "/Users/jonaswurst/Lightly/dataset_examples_large_mock/"
-    "coco_subset_128_images/predictions"
+    "/Users/jonaswurst/Lightly/dataset_examples_large_mock/coco_subset_128_images/predictions"
 )
 
 

@@ -52,4 +52,11 @@ def run(  # noqa: PLR0913
             match_records, pred_confidences, label_names
         )
     }
-    return common.EvaluationRunResult(metrics=metrics, match_records=match_records)
+    annotation_results, sample_metrics = common.build_results_from_matches(
+        match_records, include_iou=True
+    )
+    return common.EvaluationRunResult(
+        metrics=metrics,
+        annotation_results=annotation_results,
+        sample_metrics=sample_metrics,
+    )

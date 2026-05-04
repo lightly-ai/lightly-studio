@@ -8,7 +8,9 @@ until they are updated to handle the new tables.
 from sqlmodel import SQLModel
 
 # Tables handled by deep_copy and delete_dataset.
-_HANDLED_TABLES_COUNT = 19
+# Includes: 19 core tables + annotation_collection + evaluation_result +
+#   evaluation_result_sample + evaluation_annotation_result + evaluation_sample_metric
+_HANDLED_TABLES_COUNT = 24
 
 # Tables not relevant for collection operations:
 # - setting (application-level, not collection-specific)

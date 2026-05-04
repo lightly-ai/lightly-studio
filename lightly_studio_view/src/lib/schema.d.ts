@@ -1784,7 +1784,7 @@ export interface paths {
          * @description Register an annotation collection by name.
          *
          *     The underlying annotation child collection must already exist (i.e. annotations
-         *     have been loaded via add_samples_from_coco or add_predictions_from_coco).
+         *     have been loaded via add_samples_from_coco or add_predictions_from_lightly).
          */
         post: operations["create_annotation_collection"];
         delete?: never;
@@ -1837,7 +1837,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/datasets/{dataset_id}/evaluations/{evaluation_id}/sample-counts": {
+    "/api/datasets/{dataset_id}/evaluations/{evaluation_id}/sample-metrics": {
         parameters: {
             query?: never;
             header?: never;
@@ -1845,10 +1845,33 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * Get Evaluation Sample Counts
-         * @description Return per-image TP/FP/FN counts for an evaluation run.
+         * Get Evaluation Sample Metrics
+         * @description Return per-image metric values for an evaluation run.
+         *
+         *     When label_id is omitted, returns aggregate rows (all classes combined).
+         *     When label_id is provided, returns per-class rows for that label.
          */
-        get: operations["get_evaluation_sample_counts"];
+        get: operations["get_evaluation_sample_metrics"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/datasets/{dataset_id}/evaluations/{evaluation_id}/annotation-results": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Evaluation Annotation Results
+         * @description Return annotation pairing results for one sample in an evaluation run.
+         */
+        get: operations["get_evaluation_annotation_results"];
         put?: never;
         post?: never;
         delete?: never;
@@ -2173,6 +2196,28 @@ export interface components {
             annotation_label_id?: string;
             /** Created At */
             created_at?: string;
+        };
+        /**
+         * AnnotationResultItem
+         * @description One annotation pairing returned by the annotation-results endpoint.
+         */
+        AnnotationResultItem: {
+            /** Pred Annotation Id */
+            pred_annotation_id: string | null;
+            /** Gt Annotation Id */
+            gt_annotation_id: string | null;
+            /** Metrics */
+            metrics: {
+                [key: string]: unknown;
+            };
+        };
+        /**
+         * AnnotationResultsResponse
+         * @description List of annotation results for one sample.
+         */
+        AnnotationResultsResponse: {
+            /** Results */
+            results: components["schemas"]["AnnotationResultItem"][];
         };
         /**
          * AnnotationType
@@ -3646,18 +3691,6 @@ export interface components {
             collection_id: string;
         };
         /**
-         * SampleCountsResponse
-         * @description Per-image TP/FP/FN count map returned by the sample-counts endpoint.
-         */
-        SampleCountsResponse: {
-            /** Counts */
-            counts: {
-                [key: string]: {
-                    [key: string]: number;
-                };
-            };
-        };
-        /**
          * SampleFilter
          * @description Encapsulates filter parameters for querying samples.
          */
@@ -3692,6 +3725,18 @@ export interface components {
             /** Data */
             data: {
                 [key: string]: unknown;
+            };
+        };
+        /**
+         * SampleMetricsResponse
+         * @description Per-image metric map returned by the sample-metrics endpoint.
+         */
+        SampleMetricsResponse: {
+            /** Metrics */
+            metrics: {
+                [key: string]: {
+                    [key: string]: number;
+                };
             };
         };
         /**
@@ -7308,9 +7353,11 @@ export interface operations {
             };
         };
     };
-    get_evaluation_sample_counts: {
+    get_evaluation_sample_metrics: {
         parameters: {
-            query?: never;
+            query?: {
+                label_id?: string | null;
+            };
             header?: never;
             path: {
                 dataset_id: string;
@@ -7326,7 +7373,41 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["SampleCountsResponse"];
+                    "application/json": components["schemas"]["SampleMetricsResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_evaluation_annotation_results: {
+        parameters: {
+            query: {
+                sample_id: string;
+            };
+            header?: never;
+            path: {
+                dataset_id: string;
+                evaluation_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AnnotationResultsResponse"];
                 };
             };
             /** @description Validation Error */

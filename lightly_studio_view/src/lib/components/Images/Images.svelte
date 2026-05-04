@@ -15,10 +15,7 @@
     } from '$lib/hooks/useImagesInfinite/useImagesInfinite';
     import { useScrollRestoration } from '$lib/hooks/useScrollRestoration/useScrollRestoration';
     import { useImageFilters } from '$lib/hooks/useImageFilters/useImageFilters';
-    import type {
-        GetEvaluationSampleCountsResponse,
-        ImageView
-    } from '$lib/api/lightly_studio_local';
+    import type { ImageView } from '$lib/api/lightly_studio_local';
     import { goto } from '$app/navigation';
     import { omit, isEqual } from 'lodash-es';
     import { GridContainer } from '../GridContainer';
@@ -27,7 +24,7 @@
     import { selectRangeByAnchor } from '$lib/utils/selectRangeByAnchor';
     import { page } from '$app/state';
     import SampleImageGridItem from '../SampleImageGridItem/SampleImageGridItem.svelte';
-    import { useEvaluationSampleCounts } from '$lib/hooks/useEvaluationSampleCounts/useEvaluationSampleCounts';
+    import { useEvaluationSampleMetrics } from '$lib/hooks/useEvaluationSampleMetrics/useEvaluationSampleMetrics';
     import { sortSamplesByEvaluationCount } from './sortSamplesByEvaluationCount';
 
     // Import the settings hook
@@ -199,14 +196,13 @@
     const datasetId = $derived(page.params.dataset_id!);
     const collectionType = $derived(page.params.collection_type!);
     const evaluationSampleCountsQuery = $derived(
-        useEvaluationSampleCounts({
+        useEvaluationSampleMetrics({
             datasetId,
             evaluationId: $activeEvaluationId
         })
     );
     const evaluationSampleCounts = $derived(
-        (($evaluationSampleCountsQuery.data as GetEvaluationSampleCountsResponse | undefined)
-            ?.counts ?? {}) as Record<string, Record<string, number>>
+        ($evaluationSampleCountsQuery.data?.metrics ?? {}) as Record<string, Record<string, number>>
     );
     const sortedSamples = $derived(
         sortSamplesByEvaluationCount(samples, evaluationSampleCounts, $evaluationSampleSort)
