@@ -61,9 +61,9 @@ describe('QueryEditor', () => {
         await fireEvent.click(screen.getByRole('button', { name: 'Apply' }));
 
         expect(translateQuery).toHaveBeenCalledOnce();
-        expect(translateQuery).toHaveBeenCalledWith('my query');
+        expect(translateQuery).toHaveBeenCalledWith('my modified query');
         expect(onSave).toHaveBeenCalledOnce();
-        expect(onSave).toHaveBeenCalledWith('my query', parsed);
+        expect(onSave).toHaveBeenCalledWith('my modified query', parsed);
     });
 
     it('does not render the toolbar when onSave is not provided', () => {
@@ -115,7 +115,7 @@ describe('QueryEditor', () => {
         await fireEvent.click(screen.getByRole('button', { name: 'Apply' }));
 
         expect(translateQuery).toHaveBeenCalledOnce();
-        expect(translateQuery).toHaveBeenCalledWith('my query');
+        expect(translateQuery).toHaveBeenCalledWith('my modified query');
         expect(toast.error).toHaveBeenCalledWith(
             'Failed to translate query: unexpected token (line 1, column 5)'
         );

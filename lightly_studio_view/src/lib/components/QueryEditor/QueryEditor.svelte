@@ -41,12 +41,12 @@ AND object_detection(label == "car" and x > 10)`;
     }
 
     function handleSave() {
-        const translationResult = translateQuery(value);
+        const translationResult = translateQuery(draftValue);
         if (translationResult.status === 'error') {
             toast.error(`Failed to translate query: ${formatTranslationErrors(translationResult)}`);
             return;
         }
-        onSave?.(value, translationResult);
+        onSave?.(draftValue, translationResult);
     }
 
     let draftValue = $state(value);
