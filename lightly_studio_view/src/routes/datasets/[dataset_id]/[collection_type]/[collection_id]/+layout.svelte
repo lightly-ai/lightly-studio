@@ -19,7 +19,7 @@
         X,
         ChartNetwork,
         GripVertical,
-        ListChecks
+        SquareCheck
     } from '@lucide/svelte';
     import { onDestroy, onMount } from 'svelte';
     import { toStore } from 'svelte/store';
@@ -599,14 +599,14 @@
                                 {#snippet selectionControls()}
                                     {#if canSelectAll}
                                         <Button
-                                            class="flex shrink-0 items-center space-x-1"
+                                            class="h-8 shrink-0 gap-1.5 px-2 text-diffuse-foreground hover:bg-background hover:text-foreground"
                                             data-testid="select-all-button"
                                             variant="ghost"
-                                            aria-label="Select all samples"
-                                            title="Select all samples"
+                                            aria-label="Select all"
+                                            title="Select all"
                                             onclick={selectAllHandle.handleSelectAll}
                                         >
-                                            <ListChecks class="size-4" />
+                                            <SquareCheck class="size-4" />
                                             <span>Select all</span>
                                         </Button>
                                     {/if}
@@ -731,14 +731,14 @@
                             {#snippet selectionControls()}
                                 {#if canSelectAll}
                                     <Button
-                                        class="flex shrink-0 items-center space-x-1"
+                                        class="h-8 shrink-0 gap-1.5 px-2 text-diffuse-foreground hover:bg-background hover:text-foreground"
                                         data-testid="select-all-button"
                                         variant="ghost"
-                                        aria-label="Select all samples"
-                                        title="Select all samples"
+                                        aria-label="Select all"
+                                        title="Select all"
                                         onclick={selectAllHandle.handleSelectAll}
                                     >
-                                        <ListChecks class="size-4" />
+                                        <SquareCheck class="size-4" />
                                         <span>Select all</span>
                                     </Button>
                                 {/if}
