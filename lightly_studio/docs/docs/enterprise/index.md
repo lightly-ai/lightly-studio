@@ -20,4 +20,7 @@ Contact [sales@lightly.ai](mailto:sales@lightly.ai) to learn more about LightlyS
 ## Getting Started
 
 - [Connect from Python](connect.md)
+- [Security and Architecture](security.md)
+- [On-Premise Deployment](on-premise.md)
+- [Local Storage](local_storage.md)
 - [Cloud Storage](cloud_storage/index.md)

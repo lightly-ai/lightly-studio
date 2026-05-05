@@ -33,10 +33,13 @@ from lightly_studio.models.annotation.annotation_base import (
     AnnotationType,
 )
 from lightly_studio.models.caption import CaptionCreate
+from lightly_studio.models.collection import SampleType
 from lightly_studio.models.image import ImageCreate
 from lightly_studio.resolvers import (
+    annotation_collection_coverage_resolver,
     annotation_resolver,
     caption_resolver,
+    collection_resolver,
     image_resolver,
     sample_resolver,
     tag_resolver,
@@ -174,7 +177,7 @@ def load_into_dataset_from_labelformat(
     )
 
     if isinstance(input_labels, InstanceSegmentationInput):
-        annotation_type = AnnotationType.INSTANCE_SEGMENTATION
+        annotation_type = AnnotationType.SEGMENTATION_MASK
     elif isinstance(input_labels, ObjectDetectionInput):
         annotation_type = AnnotationType.OBJECT_DETECTION
     else:
@@ -468,9 +471,9 @@ def _process_object_detection_annotations(
 def _process_segmentation_annotations(
     context: _AnnotationProcessingContext, anno_data: AnnotationImageData
 ) -> list[AnnotationCreate]:
-    """Process instance segmentation annotations for a single image."""
+    """Process segmentation mask annotations for a single image."""
     if not (
-        anno_data.annotation_type == AnnotationType.INSTANCE_SEGMENTATION
+        anno_data.annotation_type == AnnotationType.SEGMENTATION_MASK
         and isinstance(anno_data.data, ImageInstanceSegmentation)
     ):
         raise ValueError("Invalid annotation data for segmentation processing.")
@@ -509,7 +512,7 @@ def _process_batch_annotations(
             label_map=label_map,
         )
 
-        if anno_data.annotation_type == AnnotationType.INSTANCE_SEGMENTATION:
+        if anno_data.annotation_type == AnnotationType.SEGMENTATION_MASK:
             new_annotations = _process_segmentation_annotations(
                 context=context, anno_data=anno_data
             )
@@ -524,6 +527,18 @@ def _process_batch_annotations(
 
     annotation_resolver.create_many(
         session=session, parent_collection_id=collection_id, annotations=annotations_to_create
+    )
+
+    annotation_collection_id = collection_resolver.get_or_create_child_collection(
+        session=session,
+        collection_id=collection_id,
+        sample_type=SampleType.ANNOTATION,
+    )
+    # Add coverage for every created sample, including images without annotations.
+    annotation_collection_coverage_resolver.add_many(
+        session=session,
+        annotation_collection_id=annotation_collection_id,
+        parent_sample_ids=created_path_to_id.values(),
     )
 
 

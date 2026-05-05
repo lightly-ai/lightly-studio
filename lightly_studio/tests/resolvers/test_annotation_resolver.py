@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from uuid import UUID
 
 import pytest
 from sqlmodel import Session
@@ -16,6 +17,7 @@ from lightly_studio.models.collection import CollectionTable, SampleType
 from lightly_studio.models.image import ImageTable
 from lightly_studio.models.video import VideoFrameCreate
 from lightly_studio.resolvers import (
+    annotation_collection_coverage_resolver,
     annotation_resolver,
     collection_resolver,
     tag_resolver,
@@ -49,6 +51,14 @@ class _TestData:
     mouse_annotation: AnnotationBaseTable
     collection2: CollectionTable
     sample_with_mouse: ImageTable
+
+
+def _get_annotation_collection_id(session: Session, collection_id: UUID) -> UUID:
+    return collection_resolver.get_or_create_child_collection(
+        session=session,
+        collection_id=collection_id,
+        sample_type=SampleType.ANNOTATION,
+    )
 
 
 @pytest.fixture
@@ -358,12 +368,14 @@ def test_get_all_returns_filtered_by_collection_results(
 ) -> None:
     collection = test_data.collection
     collection2 = test_data.collection2
+    annotation_collection_id = _get_annotation_collection_id(db_session, collection.collection_id)
+    annotation_collection2_id = _get_annotation_collection_id(db_session, collection2.collection_id)
 
     annotations_for_collection1 = annotation_resolver.get_all(
         session=db_session,
         filters=AnnotationsFilter(
             collection_ids=[
-                collection.children[0].collection_id,
+                annotation_collection_id,
             ]
         ),
     ).annotations
@@ -373,7 +385,7 @@ def test_get_all_returns_filtered_by_collection_results(
         session=db_session,
         filters=AnnotationsFilter(
             collection_ids=[
-                collection2.children[0].collection_id,
+                annotation_collection2_id,
             ]
         ),
     ).annotations
@@ -383,8 +395,8 @@ def test_get_all_returns_filtered_by_collection_results(
         session=db_session,
         filters=AnnotationsFilter(
             collection_ids=[
-                collection.children[0].collection_id,
-                collection2.children[0].collection_id,
+                annotation_collection_id,
+                annotation_collection2_id,
             ]
         ),
     ).annotations
@@ -569,11 +581,13 @@ def test_get_all__with_tag_filtering(db_session: Session) -> None:
         ],
     )
 
+    annotation_collection_id = _get_annotation_collection_id(db_session, collection.collection_id)
+
     # Test filtering by tags
     annotations_part1 = annotation_resolver.get_all(
         session=db_session,
         filters=AnnotationsFilter(
-            collection_ids=[collection.children[0].collection_id],
+            collection_ids=[annotation_collection_id],
             tag_ids=[tag_1.tag_id],
         ),
     ).annotations
@@ -586,7 +600,7 @@ def test_get_all__with_tag_filtering(db_session: Session) -> None:
     annotations_part2 = annotation_resolver.get_all(
         session=db_session,
         filters=AnnotationsFilter(
-            collection_ids=[collection.children[0].collection_id],
+            collection_ids=[annotation_collection_id],
             tag_ids=[tag_2.tag_id],
         ),
     ).annotations
@@ -600,7 +614,7 @@ def test_get_all__with_tag_filtering(db_session: Session) -> None:
     annotations_all = annotation_resolver.get_all(
         session=db_session,
         filters=AnnotationsFilter(
-            collection_ids=[collection.children[0].collection_id],
+            collection_ids=[annotation_collection_id],
             tag_ids=[tag_1.tag_id, tag_2.tag_id],
         ),
     ).annotations
@@ -633,18 +647,59 @@ def test_create_many_annotations(db_session: Session) -> None:
         parent_collection_id=collection.collection_id,
         annotations=annotations_to_create,
     )
+    annotation_collection_id = _get_annotation_collection_id(db_session, collection.collection_id)
 
     created_annotations = annotation_resolver.get_all(
         session=db_session,
-        filters=AnnotationsFilter(collection_ids=[collection.children[0].collection_id]),
+        filters=AnnotationsFilter(collection_ids=[annotation_collection_id]),
     ).annotations
 
     assert len(created_annotations) == 3
     assert all(
-        anno.sample.collection_id == collection.children[0].collection_id
-        for anno in created_annotations
+        anno.sample.collection_id == annotation_collection_id for anno in created_annotations
     )
     assert all(anno.parent_sample_id == image.sample_id for anno in created_annotations)
     assert all(
         anno.annotation_label_id == cat_label.annotation_label_id for anno in created_annotations
     )
+
+
+def test_create_many__populates_coverage(db_session: Session) -> None:
+    """Creating annotations must also populate the AnnotationCollectionCoverageTable."""
+    collection = create_collection(session=db_session)
+    label = create_annotation_label(
+        session=db_session, root_collection_id=collection.collection_id, label_name="cat"
+    )
+    images = [
+        create_image(
+            session=db_session,
+            collection_id=collection.collection_id,
+            file_path_abs=f"/img_{i}.png",
+        )
+        for i in range(2)
+    ]
+
+    # Create annotations for images[0] and images[1].
+    annotations_to_create = [
+        AnnotationCreate(
+            parent_sample_id=img.sample_id,
+            annotation_label_id=label.annotation_label_id,
+            annotation_type=AnnotationType.OBJECT_DETECTION,
+            x=0,
+            y=0,
+            width=10,
+            height=10,
+        )
+        for img in images
+    ]
+    annotation_resolver.create_many(
+        session=db_session,
+        parent_collection_id=collection.collection_id,
+        annotations=annotations_to_create,
+    )
+
+    annotation_collection_id = _get_annotation_collection_id(db_session, collection.collection_id)
+    covered = annotation_collection_coverage_resolver.list_by_collection_id(
+        session=db_session, annotation_collection_id=annotation_collection_id
+    )
+    assert set(covered) == {images[0].sample_id, images[1].sample_id}

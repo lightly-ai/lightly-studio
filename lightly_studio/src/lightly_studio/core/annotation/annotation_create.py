@@ -109,8 +109,8 @@ class CreateObjectDetection(CreateAnnotationBase):
         )
 
 
-class CreateInstanceSegmentation(CreateAnnotationBase):
-    """Input model for creating instance segmentation annotations."""
+class CreateSegmentationMask(CreateAnnotationBase):
+    """Input model for creating segmentation mask annotations."""
 
     x: int
     """Left X coordinate (px) of the object detection bounding box."""
@@ -129,7 +129,7 @@ class CreateInstanceSegmentation(CreateAnnotationBase):
         """Convert to AnnotationCreate."""
         return AnnotationCreate(
             annotation_label_id=self._get_label_id(session=session, dataset_id=dataset_id),
-            annotation_type=AnnotationType.INSTANCE_SEGMENTATION,
+            annotation_type=AnnotationType.SEGMENTATION_MASK,
             confidence=self.confidence,
             parent_sample_id=parent_sample_id,
             x=self.x,
@@ -144,8 +144,8 @@ class CreateInstanceSegmentation(CreateAnnotationBase):
         label: str,
         binary_mask: NDArray[np.int_],
         confidence: float | None = None,
-    ) -> CreateInstanceSegmentation:
-        """Create an instance segmentation annotation from a binary mask.
+    ) -> CreateSegmentationMask:
+        """Create a segmentation mask annotation from a binary mask.
 
         Args:
             label: Annotation label
@@ -154,12 +154,12 @@ class CreateInstanceSegmentation(CreateAnnotationBase):
             confidence: Optional annotation confidence, between 0.0 and 1.0 (inclusive).
 
         Returns:
-            The CreateInstanceSegmentation instance for the provided details.
+            The CreateSegmentationMask instance for the provided details.
         """
         (segmentation_mask, bbox) = _segmentation_mask_and_bounding_box(binary_mask=binary_mask)
         x, y, width, height = bbox
 
-        return CreateInstanceSegmentation(
+        return CreateSegmentationMask(
             x=x,
             y=y,
             width=width,
@@ -175,8 +175,8 @@ class CreateInstanceSegmentation(CreateAnnotationBase):
         segmentation_mask: list[int],
         sample_2d: Sample2D,
         confidence: float | None = None,
-    ) -> CreateInstanceSegmentation:
-        """Create an instance segmentation annotation from a RLE segmentation mask.
+    ) -> CreateSegmentationMask:
+        """Create a segmentation mask annotation from an RLE mask.
 
         Args:
             label: Annotation label
@@ -185,12 +185,12 @@ class CreateInstanceSegmentation(CreateAnnotationBase):
             confidence: Optional annotation confidence, between 0.0 and 1.0 (inclusive).
 
         Returns:
-            The CreateInstanceSegmentation instance for the provided details.
+            The CreateSegmentationMask instance for the provided details.
         """
         x, y, width, height = _bounding_box_from_rle(
             segmentation_mask=segmentation_mask, sample_2d=sample_2d
         )
-        return CreateInstanceSegmentation(
+        return CreateSegmentationMask(
             label=label,
             x=x,
             y=y,

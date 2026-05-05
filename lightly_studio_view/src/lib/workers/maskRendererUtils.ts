@@ -1,7 +1,5 @@
-import { decodeRLEToBinaryMask } from '$lib/components/SampleAnnotation/utils';
-
 export type MaskInput = {
-    rle: number[];
+    rle: ReadonlyArray<number>;
     color: [number, number, number, number]; // RGBA 0-255
 };
 
@@ -15,24 +13,33 @@ export type BoundingBoxInput = {
 
 export const renderMasks = (width: number, height: number, masks: MaskInput[]) => {
     const pixelData = new Uint8ClampedArray(width * height * 4);
+    const maxPixels = width * height;
 
     for (const { rle, color } of masks) {
         if (!rle?.length) {
             continue;
         }
 
-        const mask = decodeRLEToBinaryMask(rle, width, height);
+        // Decode RLE runs directly into RGBA output to avoid allocating an intermediate mask.
+        let pixelIndex = 0;
+        let value = 0;
 
-        for (let i = 0; i < mask.length; i++) {
-            if (mask[i] !== 1) {
-                continue;
+        for (let runIndex = 0; runIndex < rle.length && pixelIndex < maxPixels; runIndex++) {
+            const count = Math.max(0, Math.floor(Number(rle[runIndex]) || 0));
+            const end = Math.min(pixelIndex + count, maxPixels);
+
+            if (value === 1) {
+                for (let i = pixelIndex; i < end; i++) {
+                    const offset = i * 4;
+                    pixelData[offset] = color[0];
+                    pixelData[offset + 1] = color[1];
+                    pixelData[offset + 2] = color[2];
+                    pixelData[offset + 3] = color[3];
+                }
             }
 
-            const offset = i * 4;
-            pixelData[offset] = color[0];
-            pixelData[offset + 1] = color[1];
-            pixelData[offset + 2] = color[2];
-            pixelData[offset + 3] = color[3];
+            pixelIndex = end;
+            value = value === 0 ? 1 : 0;
         }
     }
 

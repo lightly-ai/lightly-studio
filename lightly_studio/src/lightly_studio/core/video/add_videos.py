@@ -293,7 +293,7 @@ def load_video_annotations_from_labelformat(  # noqa: PLR0913
         )
 
         if isinstance(video_annotation, VideoInstanceSegmentationTrack):
-            annotations_to_create = _process_video_annotations_instance_segmentation(
+            annotations_to_create = _process_video_annotations_segmentation_mask(
                 frame_number_to_id=frame_number_to_id,
                 video_annotation=video_annotation,
                 label_map=label_map,
@@ -552,13 +552,13 @@ def _create_object_tracks(
     return object_track_map
 
 
-def _process_video_annotations_instance_segmentation(
+def _process_video_annotations_segmentation_mask(
     frame_number_to_id: dict[int, UUID],
     video_annotation: VideoInstanceSegmentationTrack,
     label_map: dict[int, UUID],
     object_track_map: dict[int, UUID],
 ) -> list[AnnotationCreate]:
-    """Process instance segmentation annotations for a single video."""
+    """Process segmentation mask annotations for a single video."""
     annotations = []
     for frame_number, frame_id in frame_number_to_id.items():
         for obj_idx, obj in enumerate(video_annotation.objects):

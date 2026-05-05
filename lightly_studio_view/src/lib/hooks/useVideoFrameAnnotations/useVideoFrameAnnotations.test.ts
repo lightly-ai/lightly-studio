@@ -35,7 +35,7 @@ describe('useVideoFrameAnnotations', () => {
     const mockSegmentationAnnotation: AnnotationView = {
         sample_id: 'annotation-1',
         parent_sample_id: 'frame-1',
-        annotation_type: 'instance_segmentation',
+        annotation_type: 'segmentation_mask',
         annotation_label: mockAnnotationLabel,
         segmentation_details: {
             segmentation_mask: [10, 5, 3, 2],
@@ -155,7 +155,7 @@ describe('useVideoFrameAnnotations', () => {
         const secondSegmentationAnnotation: AnnotationView = {
             sample_id: 'annotation-3',
             parent_sample_id: 'frame-1',
-            annotation_type: 'instance_segmentation',
+            annotation_type: 'segmentation_mask',
             annotation_label: { ...mockAnnotationLabel, annotation_label_name: 'car' },
             segmentation_details: {
                 segmentation_mask: [5, 5, 5, 5],

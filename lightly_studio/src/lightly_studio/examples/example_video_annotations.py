@@ -25,7 +25,7 @@ dataset = VideoDataset.create()
 dataset.add_videos_from_youtube_vis(
     annotations_json=annotations_path,
     videos_path=dataset_path,
-    annotation_type=AnnotationType.INSTANCE_SEGMENTATION,
+    annotation_type=AnnotationType.SEGMENTATION_MASK,
 )
 
 # Start the GUI

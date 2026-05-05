@@ -1,7 +1,7 @@
 """This module contains the Tag model and related enumerations."""
 
 from datetime import datetime, timezone
-from typing import Literal, Optional
+from typing import Literal
 from uuid import UUID, uuid4
 
 from sqlalchemy import UniqueConstraint
@@ -21,7 +21,6 @@ class TagBase(SQLModel):
     """Base class for the Tag model."""
 
     name: str
-    description: Optional[str] = ""
     kind: TagKind = "sample"
 
 
@@ -35,14 +34,10 @@ class TagCreateBody(TagBase):
     """Tag model when creating."""
 
 
-class TagUpdate(TagBase):
-    """Tag model when updating."""
+class TagRenameBody(SQLModel):
+    """Request body for renaming a tag."""
 
-
-class TagUpdateBody(TagBase):
-    """Tag model when updating."""
-
-    collection_id: Optional[UUID] = None
+    name: str
 
 
 class TagView(TagBase):

@@ -5,6 +5,15 @@ from __future__ import annotations
 from sqlmodel import Session, col, select
 
 from lightly_studio.models.caption import CaptionCreate
+from lightly_studio.models.image import ImageTable
+from lightly_studio.models.query_expr import (
+    EqualityComparisonOperator,
+    FieldRef,
+    IntegerExpr,
+    OrdinalComparisonOperator,
+    QueryExpr,
+    StringExpr,
+)
 from lightly_studio.models.sample import SampleTable
 from lightly_studio.resolvers import caption_resolver, tag_resolver
 from lightly_studio.resolvers.annotations.annotations_filter import AnnotationsFilter
@@ -366,6 +375,31 @@ class TestSampleFilter:
         assert len(result) == 1
         assert result[0].sample_id == samples[1].sample_id
 
+    def test_apply__query_expr_filter(self, db_session: Session) -> None:
+        collection = create_collection(session=db_session)
+        samples = create_images(
+            db_session=db_session,
+            collection_id=collection.collection_id,
+            images=[ImageStub(path="a.png"), ImageStub(path="b.png")],
+        )
+
+        sample_filter = SampleFilter(
+            query_expr=QueryExpr(
+                match_expr=StringExpr(
+                    field=FieldRef(table="image", name="file_name"),
+                    operator=EqualityComparisonOperator.EQ,
+                    value="b.png",
+                )
+            )
+        )
+
+        query = select(ImageTable).join(ImageTable.sample)
+        filtered_query = sample_filter.apply(query=query)
+        result = db_session.exec(filtered_query).all()
+
+        assert len(result) == 1
+        assert result[0].sample_id == samples[1].sample_id
+
     def test_query__combination(self, db_session: Session) -> None:
         collection = create_collection(session=db_session)
         collection_id = collection.collection_id
@@ -425,3 +459,36 @@ class TestSampleFilter:
             samples[1].sample_id,
             samples[2].sample_id,
         }
+
+    def test_apply__combination_with_query_expr(self, db_session: Session) -> None:
+        collection = create_collection(session=db_session)
+        samples = create_images(
+            db_session=db_session,
+            collection_id=collection.collection_id,
+            images=[
+                ImageStub(path="a.png", width=800),
+                ImageStub(path="b.png", width=800),
+                ImageStub(path="c.png", width=200),
+            ],
+        )
+
+        # query_expr matches samples[0] and samples[1] (width > 500)
+        # sample_ids restricts to samples[1] and samples[2]
+        # AND gives only samples[1]
+        sample_filter = SampleFilter(
+            sample_ids=[samples[1].sample_id, samples[2].sample_id],
+            query_expr=QueryExpr(
+                match_expr=IntegerExpr(
+                    field=FieldRef(table="image", name="width"),
+                    operator=OrdinalComparisonOperator.GT,
+                    value=500,
+                )
+            ),
+        )
+
+        query = select(ImageTable).join(ImageTable.sample)
+        filtered_query = sample_filter.apply(query=query)
+        result = db_session.exec(filtered_query).all()
+
+        assert len(result) == 1
+        assert result[0].sample_id == samples[1].sample_id

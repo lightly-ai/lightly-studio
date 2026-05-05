@@ -1,11 +1,9 @@
 import { derived, get, readonly, writable, type Readable } from 'svelte/store';
-import type { components } from '$lib/schema';
+import type { AnnotationsFilter } from '$lib/api/lightly_studio_local';
 import type { Annotation } from '$lib/types';
 import type { AnnotationLabel } from '$lib/services/types';
 import { useGlobalStorage } from '../useGlobalStorage';
 import { useTags } from '../useTags/useTags';
-
-type AnnotationsFilter = components['schemas']['AnnotationsFilter'];
 
 /**
  * Low-level hook: manages selected annotation label IDs and produces an AnnotationsFilter.

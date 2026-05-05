@@ -45,7 +45,7 @@ export function useVideoFrameAnnotations({
         // Find all segmentation annotations with masks
         const segmentationAnnotations = annotations.filter(
             (annotation) =>
-                annotation.annotation_type === 'instance_segmentation' &&
+                annotation.annotation_type === 'segmentation_mask' &&
                 annotation.segmentation_details?.segmentation_mask
         );
 

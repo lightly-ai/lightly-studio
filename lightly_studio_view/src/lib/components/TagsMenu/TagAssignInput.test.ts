@@ -8,7 +8,6 @@ const options: TagView[] = [
         tag_id: 'tag-1',
         name: 'Vehicle',
         kind: 'sample',
-        description: 'Vehicle description',
         created_at: new Date('2024-01-01T00:00:00.000Z'),
         updated_at: new Date('2024-01-01T00:00:00.000Z')
     },
@@ -16,7 +15,6 @@ const options: TagView[] = [
         tag_id: 'tag-2',
         name: 'Person',
         kind: 'sample',
-        description: 'Person description',
         created_at: new Date('2024-01-02T00:00:00.000Z'),
         updated_at: new Date('2024-01-02T00:00:00.000Z')
     }

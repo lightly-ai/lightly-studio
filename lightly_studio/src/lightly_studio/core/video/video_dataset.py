@@ -20,7 +20,7 @@ from lightly_studio.core.video.add_videos import VIDEO_EXTENSIONS
 from lightly_studio.core.video.video_sample import VideoSample
 from lightly_studio.dataset import fsspec_lister
 from lightly_studio.dataset.embedding_manager import EmbeddingManagerProvider
-from lightly_studio.export.export_video_dataset import VideoDatasetExport
+from lightly_studio.export.video_dataset_export import VideoDatasetExport
 from lightly_studio.models.annotation.annotation_base import AnnotationType
 from lightly_studio.models.collection import SampleType
 from lightly_studio.resolvers import video_resolver
@@ -164,7 +164,7 @@ class VideoDataset(BaseSampleDataset[VideoSample]):
         input_labels: YouTubeVISObjectDetectionTrackInput | YouTubeVISInstanceSegmentationTrackInput
         if annotation_type == AnnotationType.OBJECT_DETECTION:
             input_labels = YouTubeVISObjectDetectionTrackInput(input_file=annotations_json)
-        elif annotation_type == AnnotationType.INSTANCE_SEGMENTATION:
+        elif annotation_type == AnnotationType.SEGMENTATION_MASK:
             input_labels = YouTubeVISInstanceSegmentationTrackInput(input_file=annotations_json)
         else:
             raise ValueError(f"Invalid annotation type: {annotation_type}")

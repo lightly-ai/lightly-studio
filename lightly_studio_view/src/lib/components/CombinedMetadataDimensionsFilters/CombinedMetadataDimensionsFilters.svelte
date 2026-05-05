@@ -6,7 +6,6 @@
     import { useMetadataFilters } from '$lib/hooks/useMetadataFilters/useMetadataFilters';
     import type { MetadataValues } from '$lib/services/types';
     import { formatInteger } from '$lib/utils';
-    import type { SliderMultipleRootProps } from 'bits-ui/dist/types';
     import MetadataFilterItem from './MetadataFilterItem/MetadataFilterItem.svelte';
     import VideoFrameBoundsFilter from '../VideoFrameBoundsFilter/VideoFrameBoundsFilter.svelte';
     import VideoFieldBoundsFilters from '../VideoFieldBoundsFilters/VideoFieldBoundsFilters.svelte';
@@ -28,7 +27,7 @@
         updateDimensionsValues: onChange
     } = useDimensions();
 
-    const handleChangeWidth: SliderMultipleRootProps['onValueChange'] = (newValues) => {
+    const handleChangeWidth = (newValues: number[]) => {
         if (!$values) return;
         onChange({
             min_width: newValues[0],
@@ -38,7 +37,7 @@
         });
     };
 
-    const handleChangeHeight: SliderMultipleRootProps['onValueChange'] = (newValues) => {
+    const handleChangeHeight = (newValues: number[]) => {
         if (!$values) return;
         onChange({
             min_width: $values.min_width,

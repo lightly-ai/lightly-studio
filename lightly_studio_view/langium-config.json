@@ -1,0 +1,15 @@
+{
+    "projectName": "LightlyQuery",
+    "languages": [
+        {
+            "id": "lightly-query",
+            "grammar": "src/lib/components/QueryEditor/language/lightly-query.langium",
+            "fileExtensions": [".lql"],
+            "caseInsensitive": true,
+            "monarch": {
+                "out": "src/lib/components/QueryEditor/language/monarch.generated.ts"
+            }
+        }
+    ],
+    "out": "src/lib/components/QueryEditor/language/generated"
+}

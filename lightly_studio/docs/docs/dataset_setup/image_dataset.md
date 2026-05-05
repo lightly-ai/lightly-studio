@@ -117,11 +117,11 @@ standard formats. See [API reference](../api/dataset.md#lightly_studio.ImageData
     - Images: Defines metadata for each image in the dataset.
     - Categories: Defines the object classes.
     - Annotations: Defines object bounding boxes. Note that in the example dataset the file contains
-      also instance segmentation information, however we load just the bounding boxes.
+      also segmentation mask information, however we load just the bounding boxes.
 
     </details>
 
-=== "COCO Instance Segmentations"
+=== "COCO Segmentation Masks"
 
     ```python
     import lightly_studio as ls
@@ -133,7 +133,7 @@ standard formats. See [API reference](../api/dataset.md#lightly_studio.ImageData
     dataset.add_samples_from_coco(
         annotations_json=f"{dataset_path}/coco_subset_128_images/instances_train2017.json",
         images_path=f"{dataset_path}/coco_subset_128_images/images",
-        annotation_type=ls.AnnotationType.INSTANCE_SEGMENTATION,
+        annotation_type=ls.AnnotationType.SEGMENTATION_MASK,
     )
     ```
 
@@ -220,7 +220,7 @@ standard formats. See [API reference](../api/dataset.md#lightly_studio.ImageData
     format and must be provided separately. In the example above, we load it from a JSON file,
     but you can also create it manually in Python.
 
-    Imported masks are stored as `AnnotationType.INSTANCE_SEGMENTATION`. Use instance segmentation type filters for querying and exporting these annotations.
+    Imported masks are stored as `AnnotationType.SEGMENTATION_MASK`. Use segmentation mask type filters for querying and exporting these annotations.
 
     <details>
     <summary>The Pascal VOC format details:</summary>

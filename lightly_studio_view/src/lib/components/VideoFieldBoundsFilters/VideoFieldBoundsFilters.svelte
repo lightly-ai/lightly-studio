@@ -3,12 +3,11 @@
     import { useVideoBounds } from '$lib/hooks/useVideosBounds/useVideosBounds';
     import { formatInteger } from '$lib/utils';
     import { Slider } from '$lib/components/ui/slider/index.js';
-    import type { SliderMultipleRootProps } from 'bits-ui/dist/types';
     const { videoBounds, videoBoundsValues, updateVideoBoundsValues } = useVideoBounds(
         page.params.collection_id
     );
 
-    const handleChangeWidth: SliderMultipleRootProps['onValueChange'] = (newValues) => {
+    const handleChangeWidth = (newValues: number[]) => {
         if (!$videoBoundsValues) return;
         updateVideoBoundsValues({
             ...$videoBoundsValues,
@@ -19,7 +18,7 @@
         });
     };
 
-    const handleChangeHeight: SliderMultipleRootProps['onValueChange'] = (newValues) => {
+    const handleChangeHeight = (newValues: number[]) => {
         if (!$videoBoundsValues) return;
         updateVideoBoundsValues({
             ...$videoBoundsValues,
@@ -30,7 +29,7 @@
         });
     };
 
-    const handleChangeFps: SliderMultipleRootProps['onValueChange'] = (newValues) => {
+    const handleChangeFps = (newValues: number[]) => {
         if (!$videoBoundsValues) return;
         updateVideoBoundsValues({
             ...$videoBoundsValues,
@@ -41,7 +40,7 @@
         });
     };
 
-    const handleChangeDuration: SliderMultipleRootProps['onValueChange'] = (newValues) => {
+    const handleChangeDuration = (newValues: number[]) => {
         if (!$videoBoundsValues) return;
         updateVideoBoundsValues({
             ...$videoBoundsValues,

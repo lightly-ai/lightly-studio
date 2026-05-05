@@ -13,7 +13,7 @@ import {
     isFrameDetailsRoute,
     isVideoDetailsRoute,
     isAnnotationDetailsRoute,
-    isSamplesRoute,
+    isImagesRoute,
     isVideosRoute,
     isVideoFramesRoute,
     isAnnotationsRoute,
@@ -80,7 +80,7 @@ export function resolveContextFilter(
         return Object.keys(filter).length > 0 ? filter : undefined;
     }
     if (isCaptionsRoute(routeId)) return { has_captions: true } satisfies SampleFilter;
-    if (isSamplesRoute(routeId)) return imageFilter ?? undefined;
+    if (isImagesRoute(routeId)) return imageFilter ?? undefined;
     if (isVideosRoute(routeId)) return videoFilter ?? undefined;
     if (isVideoFramesRoute(routeId)) return frameFilter ?? undefined;
     return undefined;

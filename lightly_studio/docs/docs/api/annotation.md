@@ -14,19 +14,19 @@
     options:
         members: [CreateClassification]
 
-## Instance Segmentation
+## Segmentation Mask
 
-### InstanceSegmentationAnnotation
-
-::: lightly_studio.core.annotation
-    options:
-        members: [InstanceSegmentationAnnotation]
-
-### CreateInstanceSegmentation
+### SegmentationMaskAnnotation
 
 ::: lightly_studio.core.annotation
     options:
-        members: [CreateInstanceSegmentation]
+        members: [SegmentationMaskAnnotation]
+
+### CreateSegmentationMask
+
+::: lightly_studio.core.annotation
+    options:
+        members: [CreateSegmentationMask]
 
 ## Object Detection
 

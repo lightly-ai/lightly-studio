@@ -26,7 +26,7 @@ export const cocoDataset = {
 
     /** Expected filenames for export */
     annotationExportFilename: 'coco_export.json',
-    instanceSegmentationExportFilename: 'coco_instance_segmentation_export.json',
+    segmentationMasksExportFilename: 'coco_segmentation_mask_export.json',
     captionExportFilename: 'coco_captions_export.json',
 
     /** Labels actively used in tests with their sample/annotation counts */

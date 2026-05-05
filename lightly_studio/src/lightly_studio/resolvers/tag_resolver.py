@@ -6,10 +6,11 @@ from datetime import datetime, timezone
 from uuid import UUID
 
 import sqlmodel
+from sqlalchemy.exc import IntegrityError
 from sqlmodel import Session, col, select
 
 from lightly_studio.models.sample import SampleTable, SampleTagLinkTable
-from lightly_studio.models.tag import TagCreate, TagTable, TagUpdate
+from lightly_studio.models.tag import TagCreate, TagTable
 
 
 def create(session: Session, tag: TagCreate) -> TagTable:
@@ -54,31 +55,62 @@ def get_by_name(session: Session, tag_name: str, collection_id: UUID | None) -> 
     return session.exec(select(TagTable).where(TagTable.name == tag_name)).one_or_none()
 
 
-def update(session: Session, tag_id: UUID, tag_data: TagUpdate) -> TagTable | None:
-    """Update an existing tag."""
+def rename(session: Session, tag_id: UUID, new_name: str) -> TagTable | None:
+    """Rename an existing tag."""
     tag = get_by_id(session=session, tag_id=tag_id)
     if not tag:
         return None
 
-    # due to duckdb/OLAP optimisations, update operations effecting unique
-    # constraints (e.g colums) will lead to a unique constraint violation.
-    # This is due to a update is implemented as delete+insert. The error
-    # happens only within the same session.
-    # To fix it, we can delete, commit + insert a new tag.
-    # https://duckdb.org/docs/sql/indexes#over-eager-unique-constraint-checking
+    conflicting_tag = get_by_name(
+        session=session, tag_name=new_name, collection_id=tag.collection_id
+    )
+    if conflicting_tag and conflicting_tag.tag_id != tag_id and conflicting_tag.kind == tag.kind:
+        raise IntegrityError(statement=None, params=None, orig=Exception("Tag already exists"))
+
+    if new_name == tag.name:
+        return tag
+
+    sample_ids = [
+        sample_id
+        for sample_id in session.exec(
+            select(SampleTagLinkTable.sample_id).where(col(SampleTagLinkTable.tag_id) == tag_id)
+        ).all()
+        if sample_id is not None
+    ]
+
+    # DuckDB rejects updates and deletes of referenced rows in the same transaction.
+    # Commit each step so renaming a tag preserves existing sample links.
+    session.exec(
+        sqlmodel.delete(SampleTagLinkTable).where(col(SampleTagLinkTable.tag_id) == tag_id)
+    )
+    session.commit()
+
+    tag = get_by_id(session=session, tag_id=tag_id)
+    if not tag:
+        return None
+
     session.delete(tag)
     session.commit()
 
-    # create clone of tag with updated values
-    tag_updated = TagTable.model_validate(tag)
-    tag_updated.name = tag_data.name
-    tag_updated.description = tag_data.description
-    tag_updated.updated_at = datetime.now(timezone.utc)
-
-    session.add(tag_updated)
+    tag_renamed = TagTable(
+        tag_id=tag_id,
+        collection_id=tag.collection_id,
+        name=new_name,
+        kind=tag.kind,
+        created_at=tag.created_at,
+        updated_at=datetime.now(timezone.utc),
+    )
+    session.add(tag_renamed)
     session.commit()
-    session.refresh(tag_updated)
-    return tag_updated
+
+    if sample_ids:
+        session.add_all(
+            [SampleTagLinkTable(sample_id=sample_id, tag_id=tag_id) for sample_id in sample_ids]
+        )
+        session.commit()
+
+    session.refresh(tag_renamed)
+    return tag_renamed
 
 
 def delete(session: Session, tag_id: UUID) -> bool:
@@ -86,6 +118,11 @@ def delete(session: Session, tag_id: UUID) -> bool:
     tag = get_by_id(session=session, tag_id=tag_id)
     if not tag:
         return False
+
+    session.exec(
+        sqlmodel.delete(SampleTagLinkTable).where(col(SampleTagLinkTable.tag_id) == tag_id)
+    )
+    session.commit()
 
     session.delete(tag)
     session.commit()

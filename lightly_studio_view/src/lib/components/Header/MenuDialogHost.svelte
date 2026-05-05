@@ -6,19 +6,19 @@
     import type { CollectionView } from '$lib/api/lightly_studio_local';
 
     let {
-        isSamples = false,
+        isImages = false,
         isVideos = false,
         hasEmbeddings = false,
         collection
     } = $props<{
-        isSamples?: boolean;
+        isImages?: boolean;
         isVideos?: boolean;
         hasEmbeddings?: boolean;
         collection: CollectionView;
     }>();
 
-    const hasClassifier = $derived(isSamples && hasEmbeddings);
-    const hasSelection = $derived(isSamples || isVideos);
+    const hasClassifier = $derived(isImages && hasEmbeddings);
+    const hasSelection = $derived(isImages || isVideos);
     const isImageCollection = $derived(collection.sample_type == 'image');
     const isVideoCollection = $derived(
         collection.sample_type == 'video' || collection.sample_type == 'video_frame'

@@ -142,7 +142,7 @@ class TestObjectDetectionExpressions:
             collection_id=collection_id,
             sample_id=image2.sample_id,
             annotation_label_id=label1.annotation_label_id,
-            annotation_type=AnnotationType.INSTANCE_SEGMENTATION,
+            annotation_type=AnnotationType.SEGMENTATION_MASK,
             annotation_data={"segmentation_mask": [1, 2, 3, 4]},
         )
 

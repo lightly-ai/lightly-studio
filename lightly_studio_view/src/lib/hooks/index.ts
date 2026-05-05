@@ -14,3 +14,8 @@ export { useCollectionWithChildren } from '$lib/hooks/useCollection/useCollectio
 export { useSelectionSummary } from '$lib/hooks/useSelectionSummary/useSelectionSummary';
 export { useVideo } from '$lib/hooks/useVideo/useVideo';
 export { useAddTagToSample } from '$lib/hooks/useAddTagToSample/useAddTagToSample';
+export { useFileDrop } from '$lib/hooks/useFileDrop/useFileDrop';
+export { useImageUpload } from '$lib/hooks/useImageUpload/useImageUpload';
+export { useFeatureFlags } from '$lib/hooks/useFeatureFlags/useFeatureFlags';
+export { useSelectAll } from '$lib/hooks/useSelectAll/useSelectAll';
+export { useEmbedText } from '$lib/hooks/useEmbedText/useEmbedText';

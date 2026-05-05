@@ -19,7 +19,11 @@ from lightly_studio.models.annotation.segmentation import (
 )
 from lightly_studio.models.collection import SampleType
 from lightly_studio.models.sample import SampleCreate
-from lightly_studio.resolvers import collection_resolver, sample_resolver
+from lightly_studio.resolvers import (
+    annotation_collection_coverage_resolver,
+    collection_resolver,
+    sample_resolver,
+)
 
 
 def create_many(
@@ -99,10 +103,10 @@ def create_many(
             )
             object_detection_annotations.append(db_object_detection)
 
-        # Create instance segmentation details
-        elif annotation_type == AnnotationType.INSTANCE_SEGMENTATION:
+        # Create segmentation mask details
+        elif annotation_type == AnnotationType.SEGMENTATION_MASK:
             x, y, width, height = _validate_bbox(annotation=annotation_create, kind=annotation_type)
-            db_instance_segmentation = SegmentationAnnotationTable(
+            db_segmentation_mask = SegmentationAnnotationTable(
                 sample_id=base_annotations[i].sample_id,
                 segmentation_mask=annotation_create.segmentation_mask,
                 x=x,
@@ -110,11 +114,18 @@ def create_many(
                 width=width,
                 height=height,
             )
-            segmentation_annotations.append(db_instance_segmentation)
+            segmentation_annotations.append(db_segmentation_mask)
 
     # Bulk save object detection annotations
     session.bulk_save_objects(object_detection_annotations)
     session.bulk_save_objects(segmentation_annotations)
+
+    # Bulk add annotation collection coverage entries.
+    annotation_collection_coverage_resolver.add_many(
+        session=session,
+        annotation_collection_id=annotation_collection_id,
+        parent_sample_ids={a.parent_sample_id for a in annotations},
+    )
 
     # Commit everything
     session.commit()

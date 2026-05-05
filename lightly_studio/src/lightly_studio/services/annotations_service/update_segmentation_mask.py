@@ -1,4 +1,4 @@
-"""Update the instance segmentation segmentation mask field."""
+"""Update the segmentation mask field."""
 
 from __future__ import annotations
 

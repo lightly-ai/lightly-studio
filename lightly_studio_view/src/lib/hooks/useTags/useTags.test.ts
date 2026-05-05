@@ -79,7 +79,7 @@ describe('useTags Hook', () => {
         // Mock loading state
         setup({ data: null, isLoading: true, error: null });
 
-        const { isLoading, tags } = useTags({ collection_id: '123' });
+        const { isLoading, tags } = useTags({ collection_id: 'loading-collection' });
 
         expect(get(isLoading)).toBe(true);
         expect(get(tags)).toEqual([]);
@@ -91,7 +91,7 @@ describe('useTags Hook', () => {
         // Mock error state
         vi.spyOn(lightly_studio_local, 'readTags').mockRejectedValueOnce(testError);
 
-        const { error, tags } = useTags({ collection_id: '123' });
+        const { error, tags } = useTags({ collection_id: 'error-collection' });
 
         expect(get(tags)).toEqual([]);
 
@@ -192,6 +192,19 @@ describe('useTags Hook', () => {
         expect(get(tags2Selected).has('3')).toBe(true);
     });
 
+    it('should clear a single selected tag for a collection', () => {
+        const { tagsSelected, tagSelectionToggle, clearTagSelected } = useTags({
+            collection_id: 'collection1'
+        });
+
+        tagSelectionToggle('1');
+        tagSelectionToggle('2');
+        clearTagSelected('1');
+
+        expect(get(tagsSelected).has('1')).toBe(false);
+        expect(get(tagsSelected).has('2')).toBe(true);
+    });
+
     it('should toggle tags independently across collections', () => {
         const { tagsSelected: tags1Selected, tagSelectionToggle: toggle1 } = useTags({
             collection_id: 'collection1'
@@ -215,18 +228,54 @@ describe('useTags Hook', () => {
     });
 
     it('should persist selections when creating multiple instances for same collection', () => {
-        const { tagSelectionToggle: toggle1 } = useTags({
-            collection_id: 'collection1'
+        const { tagSelectionToggle: toggle1, clearTagsSelected } = useTags({
+            collection_id: 'persist-collection'
         });
         const { tagsSelected: tags1SelectedAgain } = useTags({
-            collection_id: 'collection1'
+            collection_id: 'persist-collection'
         });
 
+        clearTagsSelected();
         toggle1('1');
         toggle1('2');
 
         expect(get(tags1SelectedAgain).has('1')).toBe(true);
         expect(get(tags1SelectedAgain).has('2')).toBe(true);
         expect(get(tags1SelectedAgain).size).toBe(2);
+    });
+
+    it('should prune stale selected tags after reloading tags', async () => {
+        const readTagsSpy = vi
+            .spyOn(lightly_studio_local, 'readTags')
+            .mockResolvedValueOnce({
+                data: mockTags,
+                error: undefined
+            })
+            .mockResolvedValueOnce({
+                data: [mockTags[0]],
+                error: undefined
+            });
+
+        const { tagsSelected, tagSelectionToggle, loadTags, clearTagsSelected, isLoading } =
+            useTags({
+                collection_id: 'prune-collection'
+            });
+
+        clearTagsSelected();
+        await waitFor(() => expect(readTagsSpy).toHaveBeenCalledTimes(1));
+        await waitFor(() => expect(get(isLoading)).toBe(false));
+        await waitFor(() => expect(get(tagsSelected).size).toBe(0));
+
+        tagSelectionToggle('1');
+        tagSelectionToggle('3');
+        expect(get(tagsSelected).size).toBe(2);
+
+        loadTags();
+
+        await waitFor(() => {
+            expect(get(tagsSelected).has('1')).toBe(true);
+            expect(get(tagsSelected).has('3')).toBe(false);
+        });
+        expect(readTagsSpy).toHaveBeenCalledTimes(2);
     });
 });

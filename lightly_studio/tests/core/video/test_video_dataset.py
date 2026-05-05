@@ -171,7 +171,7 @@ class TestDataset:
         assert len(all_annotations) == 2
         assert all(a.annotation_type == "object_detection" for a in all_annotations)
 
-    def test_add_videos_from_youtube_vis__instance_segmentation(
+    def test_add_videos_from_youtube_vis__segmentation_mask(
         self,
         patch_collection: None,  # noqa: ARG002
         tmp_path: Path,
@@ -221,7 +221,7 @@ class TestDataset:
         dataset.add_videos_from_youtube_vis(
             annotations_json=annotations_path,
             videos_path=tmp_path,
-            annotation_type=AnnotationType.INSTANCE_SEGMENTATION,
+            annotation_type=AnnotationType.SEGMENTATION_MASK,
             embed=False,
         )
 
@@ -235,7 +235,7 @@ class TestDataset:
         # Verify annotations were created.
         all_annotations = annotation_resolver.get_all(dataset.session).annotations
         assert len(all_annotations) == 2
-        assert all(a.annotation_type == "instance_segmentation" for a in all_annotations)
+        assert all(a.annotation_type == "segmentation_mask" for a in all_annotations)
 
     def test_add_videos_from_youtube_vis__multiple_videos_same_stem(
         self,

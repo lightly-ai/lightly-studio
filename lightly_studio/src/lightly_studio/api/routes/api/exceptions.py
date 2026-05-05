@@ -15,6 +15,7 @@ from lightly_studio.api.routes.api.status import (
     HTTP_STATUS_INTERNAL_SERVER_ERROR,
     HTTP_STATUS_UNPROCESSABLE_ENTITY,
 )
+from lightly_studio.errors import QueryExprError
 
 # Set up logger for error handling
 logger = logging.getLogger("lightly_studio.api.exceptions")
@@ -111,4 +112,16 @@ def register_exception_handlers(app: FastAPI) -> None:
         return JSONResponse(
             status_code=HTTP_STATUS_UNPROCESSABLE_ENTITY,
             content={"detail": exc.errors()},
+        )
+
+    @app.exception_handler(QueryExprError)
+    async def _query_expr_error_handler(_request: Request, _exc: QueryExprError) -> JSONResponse:
+        """Handle query expression errors."""
+        _log_error_details(
+            exc=_exc,
+            status_code=HTTP_STATUS_BAD_REQUEST,
+        )
+        return JSONResponse(
+            status_code=HTTP_STATUS_BAD_REQUEST,
+            content={"error": str(_exc) or "Invalid query expression."},
         )

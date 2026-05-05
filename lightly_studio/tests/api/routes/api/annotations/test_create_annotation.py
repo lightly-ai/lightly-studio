@@ -80,7 +80,7 @@ def test_create_annotation_object_detection(
     )
 
 
-def test_create_annotation_instance_segmentation(
+def test_create_annotation_segmentation_mask(
     mocker: MockerFixture,
     collection: CollectionTable,
     test_client: TestClient,
@@ -97,7 +97,7 @@ def test_create_annotation_instance_segmentation(
         route,
         json={
             "annotation_label_id": str(expected_label.annotation_label_id),
-            "annotation_type": AnnotationType.INSTANCE_SEGMENTATION,
+            "annotation_type": AnnotationType.SEGMENTATION_MASK,
             "collection_id": str(collection.collection_id),
             "parent_sample_id": str(parent_sample_id),
             "x": 10,
@@ -113,7 +113,7 @@ def test_create_annotation_instance_segmentation(
         annotation=AnnotationCreateParams.model_validate(
             {
                 "annotation_label_id": str(expected_label.annotation_label_id),
-                "annotation_type": AnnotationType.INSTANCE_SEGMENTATION,
+                "annotation_type": AnnotationType.SEGMENTATION_MASK,
                 "collection_id": str(collection.collection_id),
                 "parent_sample_id": str(parent_sample_id),
                 "x": 10,
@@ -129,7 +129,7 @@ def test_create_annotation_instance_segmentation(
     result = AnnotationView(**response.json())
 
     assert result == AnnotationView(
-        annotation_type=AnnotationType.INSTANCE_SEGMENTATION,
+        annotation_type=AnnotationType.SEGMENTATION_MASK,
         sample_id=result.sample_id,
         parent_sample_id=UUID(str(parent_sample_id)),
         annotation_label=AnnotationView.AnnotationLabel.model_validate(expected_label),

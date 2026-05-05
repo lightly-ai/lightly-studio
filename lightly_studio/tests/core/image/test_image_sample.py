@@ -5,12 +5,12 @@ from sqlmodel import Session
 from lightly_studio.core.annotation import (
     CreateAnnotation,
     CreateClassification,
-    CreateInstanceSegmentation,
     CreateObjectDetection,
+    CreateSegmentationMask,
 )
 from lightly_studio.core.annotation.classification import ClassificationAnnotation
-from lightly_studio.core.annotation.instance_segmentation import InstanceSegmentationAnnotation
 from lightly_studio.core.annotation.object_detection import ObjectDetectionAnnotation
+from lightly_studio.core.annotation.segmentation_mask import SegmentationMaskAnnotation
 from lightly_studio.core.image.image_sample import ImageSample
 from lightly_studio.models.annotation.annotation_base import AnnotationType
 from lightly_studio.resolvers import image_resolver
@@ -306,7 +306,7 @@ class TestImageSample:
         assert annotations[0].width == 400
         assert annotations[0].height == 300
 
-    def test_annotations_instance_segmentation(
+    def test_annotations_segmentation_mask(
         self,
         db_session: Session,
     ) -> None:
@@ -326,7 +326,7 @@ class TestImageSample:
             collection_id=collection.collection_id,
             sample_id=image.sample_id,
             annotation_label_id=cat_label.annotation_label_id,
-            annotation_type=AnnotationType.INSTANCE_SEGMENTATION,
+            annotation_type=AnnotationType.SEGMENTATION_MASK,
             annotation_data={
                 "x": 10,
                 "y": 20,
@@ -339,7 +339,7 @@ class TestImageSample:
 
         annotations = image.annotations
         assert len(annotations) == 1
-        assert isinstance(annotations[0], InstanceSegmentationAnnotation)
+        assert isinstance(annotations[0], SegmentationMaskAnnotation)
         assert annotations[0].label == "cat"
         assert annotations[0].confidence == pytest.approx(0.9)
         assert annotations[0].x == 10
@@ -405,7 +405,7 @@ class TestImageSample:
             collection_id=collection.collection_id,
             sample_id=image.sample_id,
             annotation_label_id=cat_label.annotation_label_id,
-            annotation_type=AnnotationType.INSTANCE_SEGMENTATION,
+            annotation_type=AnnotationType.SEGMENTATION_MASK,
             annotation_data={
                 "x": 10,
                 "y": 20,
@@ -425,7 +425,7 @@ class TestImageSample:
         annotations = image.annotations
         assert len(annotations) == 3
         assert isinstance(annotations[0], ObjectDetectionAnnotation)
-        assert isinstance(annotations[1], InstanceSegmentationAnnotation)
+        assert isinstance(annotations[1], SegmentationMaskAnnotation)
         assert isinstance(annotations[2], ClassificationAnnotation)
 
     def test_add_annotation_classification(
@@ -486,7 +486,7 @@ class TestImageSample:
         assert annotations[0].width == 30
         assert annotations[0].height == 40
 
-    def test_add_annotation_instance_segmentation(
+    def test_add_annotation_segmentation_mask(
         self,
         db_session: Session,
     ) -> None:
@@ -497,8 +497,8 @@ class TestImageSample:
         )
         image = ImageSample(inner=image_table)
 
-        # Add instance segmentation annotation.
-        annotation_create = CreateInstanceSegmentation(
+        # Add segmentation mask annotation.
+        annotation_create = CreateSegmentationMask(
             label="cat",
             confidence=0.95,
             x=5,
@@ -512,7 +512,7 @@ class TestImageSample:
         # Verify annotation was added.
         annotations = image.annotations
         assert len(annotations) == 1
-        assert isinstance(annotations[0], InstanceSegmentationAnnotation)
+        assert isinstance(annotations[0], SegmentationMaskAnnotation)
         assert annotations[0].label == "cat"
         assert annotations[0].confidence == pytest.approx(0.95)
         assert annotations[0].x == 5

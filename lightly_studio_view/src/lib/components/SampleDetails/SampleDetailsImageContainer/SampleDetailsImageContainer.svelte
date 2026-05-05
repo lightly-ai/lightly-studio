@@ -1,4 +1,5 @@
 <script lang="ts">
+    import { LoaderCircle } from '@lucide/svelte';
     import { AnnotationType, type AnnotationView } from '$lib/api/lightly_studio_local';
     import { ZoomableContainer } from '$lib/components';
     import { useGlobalStorage } from '$lib/hooks/useGlobalStorage';
@@ -6,7 +7,7 @@
     import { useHideAnnotations } from '$lib/hooks/useHideAnnotations';
     import SampleDetailsAnnotation from '../SampleDetailsAnnotation/SampleDetailsAnnotation.svelte';
     import SampleEraserRect from '../SampleEraserRect/SampleEraserRect.svelte';
-    import SampleInstanceSegmentationRect from '../SampleInstanceSegmentationRect/SampleInstanceSegmentationRect.svelte';
+    import SampleSegmentationMaskRect from '../SampleSegmentationMaskRect/SampleSegmentationMaskRect.svelte';
     import SampleObjectDetectionRect from '../SampleObjectDetectionRect/SampleObjectDetectionRect.svelte';
     import { select } from 'd3-selection';
     import { getColorByLabel } from '$lib/utils';
@@ -17,6 +18,7 @@
     import { useSampleDetailsToolbarContext } from '$lib/contexts/SampleDetailsToolbar.svelte';
     import { getBoundingBox } from '$lib/components/SampleAnnotation/utils';
     import { onDestroy, onMount } from 'svelte';
+    import { usePendingState } from '../usePendingState';
 
     type SampleDetailsImageContainerProps = {
         sample: {
@@ -60,6 +62,7 @@
     let mousePosition = $state<{ x: number; y: number } | null>(null);
     let isHoveringBoundingBox = $state(false);
     let interactionRect: SVGRectElement | null = $state(null);
+    const { isPending, handlePendingChange } = usePendingState();
 
     let sampleId = $derived(sample.sampleId);
     const actualAnnotationsToShow = $derived.by(() => {
@@ -156,7 +159,7 @@
             : undefined
     );
     const isSegmentationType = (type: string | null | undefined) =>
-        type === AnnotationType.INSTANCE_SEGMENTATION;
+        type === AnnotationType.SEGMENTATION_MASK;
 
     const shouldShowBrushToolPopup = $derived.by(() => {
         if (!$isEditingMode) return false;
@@ -203,6 +206,17 @@
             <BrushToolPopUp />
         {/if}
     {/snippet}
+    {#snippet zoomPanelRightContent()}
+        {#if $isPending}
+            <div
+                class="pointer-events-auto inline-flex h-9 items-center justify-center gap-1.5 rounded-lg bg-muted/80 px-2.5 text-sm text-muted-foreground shadow-md backdrop-blur-sm"
+                data-testid="finish-brush-loading-indicator"
+            >
+                <LoaderCircle class="size-4 animate-spin" />
+                <span>Saving</span>
+            </div>
+        {/if}
+    {/snippet}
     {#snippet zoomableContent({ scale })}
         <foreignObject x="0" y="0" width={sample.width} height={sample.height}>
             <img
@@ -215,7 +229,7 @@
 
         <g class:invisible={$isHidden}>
             {#each actualAnnotationsToShow as annotation (annotation.sample_id)}
-                <!-- The SampleInstanceSegmentationRect or SampleEraserRect component will render the preview while drawing a segmentation mask-->
+                <!-- The SampleSegmentationMaskRect or SampleEraserRect component will render the preview while drawing a segmentation mask-->
                 <g
                     class:hidden={annotationLabelContext.isDrawing &&
                         annotation.sample_id === annotationLabelContext.annotationId}
@@ -272,9 +286,10 @@
                     {sample}
                     {mousePosition}
                     {drawerStrokeColor}
+                    onFinishErasePendingChange={handlePendingChange}
                 />
             {:else if sampleDetailsToolbarContext.status === 'brush' && isSegmentationType(annotationTypeInCurrentView)}
-                <SampleInstanceSegmentationRect
+                <SampleSegmentationMaskRect
                     bind:interactionRect
                     {mousePosition}
                     {sampleId}
@@ -284,6 +299,7 @@
                     {drawerStrokeColor}
                     {sample}
                     annotationType={annotationTypeInCurrentView}
+                    onFinishBrushPendingChange={handlePendingChange}
                 />
             {:else if sampleDetailsToolbarContext.status === 'bounding-box' && !annotationLabelContext.isOnAnnotationDetailsView && annotationTypeInCurrentView == AnnotationType.OBJECT_DETECTION}
                 <SampleObjectDetectionRect
@@ -294,6 +310,7 @@
                     {collectionId}
                     {drawerStrokeColor}
                     {refetch}
+                    onCreateBoundingBoxPendingChange={handlePendingChange}
                 />
             {/if}
         {/if}

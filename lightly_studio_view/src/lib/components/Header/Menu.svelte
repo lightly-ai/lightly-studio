@@ -21,13 +21,13 @@
     import type { LightlyEnterpriseSession } from '$lib/hooks/useAuth/getLightlyEnterpriseSession/getLightlyEnterpriseSession';
 
     let {
-        isSamples = false,
+        isImages = false,
         isVideos = false,
         hasEmbeddings = false,
         collection,
         user
     } = $props<{
-        isSamples?: boolean;
+        isImages?: boolean;
         isVideos?: boolean;
         hasEmbeddings?: boolean;
         collection: CollectionView;
@@ -50,8 +50,8 @@
         testId: string;
     };
 
-    const hasClassifier = $derived(isSamples && hasEmbeddings);
-    const hasSelection = $derived(isSamples || isVideos);
+    const hasClassifier = $derived(isImages && hasEmbeddings);
+    const hasSelection = $derived(isImages || isVideos);
     const hasExport = $derived(
         collection.sample_type == 'image' ||
             collection.sample_type == 'video' ||

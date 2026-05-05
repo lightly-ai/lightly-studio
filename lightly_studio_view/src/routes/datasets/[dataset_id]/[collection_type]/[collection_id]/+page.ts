@@ -9,7 +9,7 @@ const sampleTypeRoutes: Record<
 > = {
     [SampleType.VIDEO]: routeHelpers.toVideos,
     [SampleType.VIDEO_FRAME]: routeHelpers.toFrames,
-    [SampleType.IMAGE]: routeHelpers.toSamples,
+    [SampleType.IMAGE]: routeHelpers.toImages,
     [SampleType.ANNOTATION]: routeHelpers.toAnnotations,
     [SampleType.CAPTION]: routeHelpers.toCaptions,
     [SampleType.GROUP]: routeHelpers.toGroups

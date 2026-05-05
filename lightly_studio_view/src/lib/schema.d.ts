@@ -208,11 +208,7 @@ export interface paths {
          * @description Retrieve a single tag from the database.
          */
         get: operations["read_tag"];
-        /**
-         * Update Tag
-         * @description Update an existing tag in the database.
-         */
-        put: operations["update_tag"];
+        put?: never;
         post?: never;
         /**
          * Delete Tag
@@ -221,7 +217,11 @@ export interface paths {
         delete: operations["delete_tag"];
         options?: never;
         head?: never;
-        patch?: never;
+        /**
+         * Rename Tag
+         * @description Rename an existing tag.
+         */
+        patch: operations["rename_tag"];
         trace?: never;
     };
     "/api/collections/{collection_id}/tags/{tag_id}/add/samples": {
@@ -432,6 +432,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/collections/{collection_id}/images/sample_ids": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Get Image Sample Ids
+         * @description Retrieve all sample ids of images matching the given filters.
+         */
+        post: operations["get_image_sample_ids"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/collections/{collection_id}/images/annotations/count": {
         parameters: {
             query?: never;
@@ -607,6 +627,26 @@ export interface paths {
          * @description Create a new annotation.
          */
         post: operations["create_annotation"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/collections/{collection_id}/annotations/sample_ids": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Get Annotation Sample Ids
+         * @description Retrieve all sample ids of annotations matching the given filters.
+         */
+        post: operations["get_annotation_sample_ids"];
         delete?: never;
         options?: never;
         head?: never;
@@ -1413,6 +1453,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/collections/{video_frame_collection_id}/frame/sample_ids": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Get Video Frame Sample Ids
+         * @description Retrieve all sample ids of video frames matching the given filters.
+         */
+        post: operations["get_video_frame_sample_ids"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/collections/{video_frame_collection_id}/frame/bounds": {
         parameters: {
             query?: never;
@@ -1839,6 +1899,19 @@ export interface components {
             total_count: number;
         };
         /**
+         * AndExpr
+         * @description Boolean AND of multiple query nodes.
+         */
+        AndExpr: {
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            type: "and";
+            /** Children */
+            children: (components["schemas"]["StringExpr"] | components["schemas"]["IntegerExpr"] | components["schemas"]["DatetimeExpr"] | components["schemas"]["OrdinalFloatExpr"] | components["schemas"]["EqualityFloatExpr"] | components["schemas"]["TagsContainsExpr"] | components["schemas"]["ClassificationMatchExpr"] | components["schemas"]["ObjectDetectionMatchExpr"] | components["schemas"]["SegmentationMaskMatchExpr"] | components["schemas"]["AndExpr"] | components["schemas"]["OrExpr"] | components["schemas"]["NotExpr"])[];
+        };
+        /**
          * AnnotationBaseTable
          * @description Base class for all annotation models.
          */
@@ -1964,7 +2037,7 @@ export interface components {
          * @description The type of annotation task.
          * @enum {string}
          */
-        AnnotationType: "classification" | "instance_segmentation" | "object_detection";
+        AnnotationType: "classification" | "segmentation_mask" | "object_detection";
         /**
          * AnnotationUpdateInput
          * @description API input model for updating an annotation.
@@ -2180,6 +2253,19 @@ export interface components {
             sample_id: string;
             /** Text */
             text: string;
+        };
+        /**
+         * ClassificationMatchExpr
+         * @description Leaf node checking if a sample has a matching classification annotation.
+         */
+        ClassificationMatchExpr: {
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            type: "classification_match_expr";
+            /** Subexpr */
+            subexpr: components["schemas"]["StringExpr"] | components["schemas"]["IntegerExpr"] | components["schemas"]["DatetimeExpr"] | components["schemas"]["OrdinalFloatExpr"] | components["schemas"]["EqualityFloatExpr"] | components["schemas"]["TagsContainsExpr"] | components["schemas"]["ClassificationMatchExpr"] | components["schemas"]["ObjectDetectionMatchExpr"] | components["schemas"]["SegmentationMaskMatchExpr"] | components["schemas"]["AndExpr"] | components["schemas"]["OrExpr"] | components["schemas"]["NotExpr"];
         };
         /**
          * CollectionCreate
@@ -2420,6 +2506,24 @@ export interface components {
             classifier_id: string;
         };
         /**
+         * DatetimeExpr
+         * @description Leaf node for ordinal comparisons on datetime sample fields.
+         */
+        DatetimeExpr: {
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            type: "datetime_expr";
+            field: components["schemas"]["FieldRef"];
+            operator: components["schemas"]["OrdinalComparisonOperator"];
+            /**
+             * Value
+             * Format: date-time
+             */
+            value: string;
+        };
+        /**
          * DeepCopyRequest
          * @description Request model for deep copy endpoint.
          */
@@ -2459,6 +2563,27 @@ export interface components {
             strategy_name: "diversity";
             /** Embedding Model Name */
             embedding_model_name?: string | null;
+        };
+        /**
+         * EqualityComparisonOperator
+         * @description Operators supported by equality-only fields.
+         * @enum {string}
+         */
+        EqualityComparisonOperator: "==" | "!=";
+        /**
+         * EqualityFloatExpr
+         * @description Leaf node for equality comparisons on equality-only float sample fields.
+         */
+        EqualityFloatExpr: {
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            type: "equality_float_expr";
+            field: components["schemas"]["FieldRef"];
+            operator: components["schemas"]["EqualityComparisonOperator"];
+            /** Value */
+            value: number;
         };
         /**
          * ExecuteOperatorRequest
@@ -2508,6 +2633,16 @@ export interface components {
          * @enum {string}
          */
         ExportFormat: "object_detection_coco" | "segmentation_mask_coco" | "pascal_voc" | "youtube_vis_segmentation";
+        /**
+         * FieldRef
+         * @description Reference to a field on a table.
+         */
+        FieldRef: {
+            /** Table */
+            table: string;
+            /** Name */
+            name: string;
+        };
         /**
          * FilterDimensions
          * @description Encapsulates dimension-based filter parameters for querying samples.
@@ -2810,6 +2945,21 @@ export interface components {
             max: number;
         };
         /**
+         * IntegerExpr
+         * @description Leaf node for ordinal comparisons on integer sample fields.
+         */
+        IntegerExpr: {
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            type: "integer_expr";
+            field: components["schemas"]["FieldRef"];
+            operator: components["schemas"]["OrdinalComparisonOperator"];
+            /** Value */
+            value: number;
+        };
+        /**
          * LoadClassifierRequest
          * @description Request for loading classifier from a file.
          */
@@ -2893,6 +3043,19 @@ export interface components {
             metadata_key: string;
         };
         /**
+         * NotExpr
+         * @description Boolean NOT of a single query node.
+         */
+        NotExpr: {
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            type: "not";
+            /** Child */
+            child: components["schemas"]["StringExpr"] | components["schemas"]["IntegerExpr"] | components["schemas"]["DatetimeExpr"] | components["schemas"]["OrdinalFloatExpr"] | components["schemas"]["EqualityFloatExpr"] | components["schemas"]["TagsContainsExpr"] | components["schemas"]["ClassificationMatchExpr"] | components["schemas"]["ObjectDetectionMatchExpr"] | components["schemas"]["SegmentationMaskMatchExpr"] | components["schemas"]["AndExpr"] | components["schemas"]["OrExpr"] | components["schemas"]["NotExpr"];
+        };
+        /**
          * ObjectDetectionAnnotationView
          * @description API response model for object detection annotations.
          */
@@ -2905,6 +3068,19 @@ export interface components {
             width: number;
             /** Height */
             height: number;
+        };
+        /**
+         * ObjectDetectionMatchExpr
+         * @description Leaf node checking if a sample has a matching object detection annotation.
+         */
+        ObjectDetectionMatchExpr: {
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            type: "object_detection_match_expr";
+            /** Subexpr */
+            subexpr: components["schemas"]["StringExpr"] | components["schemas"]["IntegerExpr"] | components["schemas"]["DatetimeExpr"] | components["schemas"]["OrdinalFloatExpr"] | components["schemas"]["EqualityFloatExpr"] | components["schemas"]["TagsContainsExpr"] | components["schemas"]["ClassificationMatchExpr"] | components["schemas"]["ObjectDetectionMatchExpr"] | components["schemas"]["SegmentationMaskMatchExpr"] | components["schemas"]["AndExpr"] | components["schemas"]["OrExpr"] | components["schemas"]["NotExpr"];
         };
         /**
          * OperatorContextRequest
@@ -2936,6 +3112,40 @@ export interface components {
          */
         OperatorScope: "root" | "image" | "video_frame" | "video" | "annotation" | "group" | "caption";
         /**
+         * OrExpr
+         * @description Boolean OR of multiple query nodes.
+         */
+        OrExpr: {
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            type: "or";
+            /** Children */
+            children: (components["schemas"]["StringExpr"] | components["schemas"]["IntegerExpr"] | components["schemas"]["DatetimeExpr"] | components["schemas"]["OrdinalFloatExpr"] | components["schemas"]["EqualityFloatExpr"] | components["schemas"]["TagsContainsExpr"] | components["schemas"]["ClassificationMatchExpr"] | components["schemas"]["ObjectDetectionMatchExpr"] | components["schemas"]["SegmentationMaskMatchExpr"] | components["schemas"]["AndExpr"] | components["schemas"]["OrExpr"] | components["schemas"]["NotExpr"])[];
+        };
+        /**
+         * OrdinalComparisonOperator
+         * @description Operators supported by ordinal fields.
+         * @enum {string}
+         */
+        OrdinalComparisonOperator: "==" | "!=" | "<" | ">" | "<=" | ">=";
+        /**
+         * OrdinalFloatExpr
+         * @description Leaf node for ordinal comparisons on float sample fields.
+         */
+        OrdinalFloatExpr: {
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            type: "ordinal_float_expr";
+            field: components["schemas"]["FieldRef"];
+            operator: components["schemas"]["OrdinalComparisonOperator"];
+            /** Value */
+            value: number;
+        };
+        /**
          * Paginated
          * @description Paginated query parameters.
          */
@@ -2952,6 +3162,22 @@ export interface components {
              * @default 100
              */
             limit: number;
+        };
+        /**
+         * QueryExpr
+         * @description Top-level model representing a complete query expression.
+         */
+        QueryExpr: {
+            /** Match Expr */
+            match_expr: components["schemas"]["StringExpr"] | components["schemas"]["IntegerExpr"] | components["schemas"]["DatetimeExpr"] | components["schemas"]["OrdinalFloatExpr"] | components["schemas"]["EqualityFloatExpr"] | components["schemas"]["TagsContainsExpr"] | components["schemas"]["ClassificationMatchExpr"] | components["schemas"]["ObjectDetectionMatchExpr"] | components["schemas"]["SegmentationMaskMatchExpr"] | components["schemas"]["AndExpr"] | components["schemas"]["OrExpr"] | components["schemas"]["NotExpr"];
+        };
+        /**
+         * ReadAnnotationSampleIdsRequest
+         * @description Request body for reading matching annotation sample ids.
+         */
+        ReadAnnotationSampleIdsRequest: {
+            /** @description Filter parameters for annotations */
+            filters?: components["schemas"]["AnnotationsFilter"] | null;
         };
         /**
          * ReadCountImageAnnotationsRequest
@@ -2975,6 +3201,14 @@ export interface components {
         ReadGroupsRequest: {
             /** @description Filter parameters for groups */
             filter?: components["schemas"]["GroupFilter"] | null;
+        };
+        /**
+         * ReadImageSampleIdsRequest
+         * @description Request body for reading matching image sample ids.
+         */
+        ReadImageSampleIdsRequest: {
+            /** @description Filter parameters for images */
+            filters?: components["schemas"]["ImageFilter"] | null;
         };
         /**
          * ReadImagesRequest
@@ -3011,6 +3245,14 @@ export interface components {
         ReadVideoCountAnnotationsRequest: {
             /** @description Filter parameters for video annotations counter */
             filter?: components["schemas"]["VideoFilter"] | null;
+        };
+        /**
+         * ReadVideoFrameSampleIdsRequest
+         * @description Request body for reading matching video frame sample ids.
+         */
+        ReadVideoFrameSampleIdsRequest: {
+            /** @description Filter parameters for video frames */
+            filter?: components["schemas"]["VideoFrameFilter"] | null;
         };
         /**
          * ReadVideoFramesRequest
@@ -3096,6 +3338,7 @@ export interface components {
             /** Has Captions */
             has_captions?: boolean | null;
             annotations_filter?: components["schemas"]["AnnotationsFilter"] | null;
+            query_expr?: components["schemas"]["QueryExpr"] | null;
         };
         /**
          * SampleIdsBody
@@ -3193,7 +3436,7 @@ export interface components {
         };
         /**
          * SegmentationAnnotationView
-         * @description API response model for instance segmentation annotations.
+         * @description API response model for segmentation mask annotations.
          */
         SegmentationAnnotationView: {
             /** X */
@@ -3206,6 +3449,19 @@ export interface components {
             height: number;
             /** Segmentation Mask */
             segmentation_mask?: number[] | null;
+        };
+        /**
+         * SegmentationMaskMatchExpr
+         * @description Leaf node checking if a sample has a matching segmentation mask annotation.
+         */
+        SegmentationMaskMatchExpr: {
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            type: "segmentation_mask_match_expr";
+            /** Subexpr */
+            subexpr: components["schemas"]["StringExpr"] | components["schemas"]["IntegerExpr"] | components["schemas"]["DatetimeExpr"] | components["schemas"]["OrdinalFloatExpr"] | components["schemas"]["EqualityFloatExpr"] | components["schemas"]["TagsContainsExpr"] | components["schemas"]["ClassificationMatchExpr"] | components["schemas"]["ObjectDetectionMatchExpr"] | components["schemas"]["SegmentationMaskMatchExpr"] | components["schemas"]["AndExpr"] | components["schemas"]["OrExpr"] | components["schemas"]["NotExpr"];
         };
         /**
          * SelectionRequest
@@ -3329,17 +3585,27 @@ export interface components {
             updated_at: string;
         };
         /**
+         * StringExpr
+         * @description Leaf node for equality comparisons on string sample fields.
+         */
+        StringExpr: {
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            type: "string_expr";
+            field: components["schemas"]["FieldRef"];
+            operator: components["schemas"]["EqualityComparisonOperator"];
+            /** Value */
+            value: string;
+        };
+        /**
          * TagCreateBody
          * @description Tag model when creating.
          */
         TagCreateBody: {
             /** Name */
             name: string;
-            /**
-             * Description
-             * @default
-             */
-            description: string | null;
             /**
              * Kind
              * @default sample
@@ -3348,17 +3614,20 @@ export interface components {
             kind: "sample" | "annotation";
         };
         /**
+         * TagRenameBody
+         * @description Request body for renaming a tag.
+         */
+        TagRenameBody: {
+            /** Name */
+            name: string;
+        };
+        /**
          * TagTable
          * @description This class defines the Tag model.
          */
         TagTable: {
             /** Name */
             name: string;
-            /**
-             * Description
-             * @default
-             */
-            description: string | null;
             /**
              * Kind
              * @enum {string}
@@ -3386,38 +3655,12 @@ export interface components {
             updated_at?: string;
         };
         /**
-         * TagUpdateBody
-         * @description Tag model when updating.
-         */
-        TagUpdateBody: {
-            /** Name */
-            name: string;
-            /**
-             * Description
-             * @default
-             */
-            description: string | null;
-            /**
-             * Kind
-             * @default sample
-             * @enum {string}
-             */
-            kind: "sample" | "annotation";
-            /** Collection Id */
-            collection_id?: string | null;
-        };
-        /**
          * TagView
          * @description Tag model when retrieving.
          */
         TagView: {
             /** Name */
             name: string;
-            /**
-             * Description
-             * @default
-             */
-            description: string | null;
             /**
              * Kind
              * @enum {string}
@@ -3438,6 +3681,20 @@ export interface components {
              * Format: date-time
              */
             updated_at: string;
+        };
+        /**
+         * TagsContainsExpr
+         * @description Leaf node checking if a sample has a specific tag.
+         */
+        TagsContainsExpr: {
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            type: "tags_contains_expr";
+            field: components["schemas"]["FieldRef"];
+            /** Tag Name */
+            tag_name: string;
         };
         /**
          * UpdateAnnotationsRequest
@@ -4079,47 +4336,13 @@ export interface operations {
             };
         };
     };
-    update_tag: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                tag_id: string;
-                collection_id: string;
-            };
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["TagUpdateBody"];
-            };
-        };
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["TagTable"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
     delete_tag: {
         parameters: {
             query?: never;
             header?: never;
             path: {
+                /** @description The ID of the collection */
+                collection_id: string;
                 tag_id: string;
             };
             cookie?: never;
@@ -4135,6 +4358,42 @@ export interface operations {
                     "application/json": {
                         [key: string]: string;
                     };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    rename_tag: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                tag_id: string;
+                collection_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["TagRenameBody"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TagView"];
                 };
             };
             /** @description Validation Error */
@@ -4475,6 +4734,41 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ImageView"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_image_sample_ids: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                collection_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ReadImageSampleIdsRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": string[];
                 };
             };
             /** @description Validation Error */
@@ -4928,6 +5222,41 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["AnnotationView"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_annotation_sample_ids: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                collection_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ReadAnnotationSampleIdsRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": string[];
                 };
             };
             /** @description Validation Error */
@@ -6061,6 +6390,41 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["VideoFrameViewsWithCount"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_video_frame_sample_ids: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                video_frame_collection_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ReadVideoFrameSampleIdsRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": string[];
                 };
             };
             /** @description Validation Error */

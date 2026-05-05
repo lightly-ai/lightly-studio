@@ -2,7 +2,6 @@
     import { Slider } from '$lib/components/ui/slider/index.js';
     import type { MetadataBounds, MetadataValues } from '$lib/services/types';
     import { formatFloat, formatInteger } from '$lib/utils';
-    import type { SliderMultipleRootProps } from 'bits-ui/dist/types';
     import {
         clampMetadataValuesToMax,
         getMetadataSliderMax,
@@ -27,7 +26,7 @@
     const sliderMax = $derived(getMetadataSliderMax(bound.min, bound.max, sliderStep));
     const sliderValueMax = $derived(getSliderDisplayMaxValue(value.max, bound.max, sliderMax));
 
-    const handleValueCommit: SliderMultipleRootProps['onValueChange'] = (newValues) => {
+    const handleValueCommit = (newValues: number[]) => {
         onValueCommit(metadataKey, clampMetadataValuesToMax(newValues, bound.max));
     };
 

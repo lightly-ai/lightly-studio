@@ -176,7 +176,7 @@ test.describe('videos-page-flow', () => {
         ).toBeVisible();
     });
 
-    test('add new tag', async ({ videosPage }) => {
+    test('Tags can be created from the side panel for selected videos', async ({ videosPage }) => {
         const tagName = `tag_${Date.now()}`;
         expect(await videosPage.getVideos().count()).toBe(youtubeVisVideosDataset.defaultPageSize);
         // Select 2 samples
@@ -254,4 +254,51 @@ test('We can see clicked element when navigating back from details', async ({
             viewport
         })
     ).toBe(false);
+});
+
+test('select all videos with label filter via keyboard shortcut', async ({ page, videosPage }) => {
+    // Apply a label filter to reduce the visible videos
+    await videosPage.clickLabel(youtubeVisVideosDataset.labels.airplane.name);
+    const filteredCount = await videosPage.getVideos().count();
+    expect(filteredCount).toBe(youtubeVisVideosDataset.labels.airplane.sampleCount);
+
+    // Press Cmd+A / Ctrl+A to select all filtered videos
+    await page.click('body');
+    const sampleIdsResponse = page.waitForResponse(
+        (response) => response.url().includes('/video/sample_ids') && response.status() === 200,
+        { timeout: 10000 }
+    );
+    await page.keyboard.press('Control+a');
+    await sampleIdsResponse;
+
+    // All filtered videos should be selected
+    expect(await videosPage.getNumSelectedSamples()).toBe(
+        youtubeVisVideosDataset.labels.airplane.sampleCount
+    );
+
+    // Wait for the success toast to disappear before proceeding
+    await expect(page.locator('[data-sonner-toast]')).toHaveCount(0, { timeout: 5000 });
+
+    // Clear the selection
+    await page.getByTestId('clear-selection-button').click();
+
+    // Wait for the selection pill to disappear
+    await expect(page.getByTestId('clear-selection-button')).toBeHidden();
+
+    // Remove the label filter and select all again
+    await videosPage.clickLabel(youtubeVisVideosDataset.labels.airplane.name);
+    await expect(videosPage.getVideos()).toHaveCount(youtubeVisVideosDataset.defaultPageSize, {
+        timeout: 10000
+    });
+
+    await page.click('body');
+    const allSampleIdsResponse = page.waitForResponse(
+        (response) => response.url().includes('/video/sample_ids') && response.status() === 200,
+        { timeout: 10000 }
+    );
+    await page.keyboard.press('Control+a');
+    await allSampleIdsResponse;
+
+    // All videos should be selected (use selection pill since not all items are rendered)
+    await expect(page.getByText(`${youtubeVisVideosDataset.totalSamples} selected`)).toBeVisible();
 });

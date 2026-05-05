@@ -86,6 +86,8 @@ for sample in list(dataset)[:3]:
 
 ## Next Steps
 
+- [Local Storage](local_storage.md) — use local disk or NAS/shared storage in an
+  on-premise deployment.
 - [Cloud Storage](cloud_storage/index.md) — configure cloud storage credentials so
   Python clients can access S3 buckets without local credential setup.
 

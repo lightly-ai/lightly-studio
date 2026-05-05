@@ -106,7 +106,7 @@ def test_get_all_by_object_track_id__filter_by_annotation_type(
                 sample_id=image_sample.sample_id,
                 annotation_label_id=label.annotation_label_id,
                 object_track_id=track_id,
-                annotation_type=AnnotationType.INSTANCE_SEGMENTATION,
+                annotation_type=AnnotationType.SEGMENTATION_MASK,
             ),
             AnnotationDetails(
                 sample_id=image_sample.sample_id,
@@ -118,7 +118,7 @@ def test_get_all_by_object_track_id__filter_by_annotation_type(
     result = annotation_resolver.get_all_by_object_track_id(
         session=db_session,
         object_track_id=track_id,
-        annotation_types=[AnnotationType.INSTANCE_SEGMENTATION],
+        annotation_types=[AnnotationType.SEGMENTATION_MASK],
     )
     assert len(result) == 1
     assert {annotation.sample_id for annotation in result} == {

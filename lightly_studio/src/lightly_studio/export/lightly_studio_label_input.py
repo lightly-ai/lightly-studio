@@ -79,7 +79,7 @@ class LightlyStudioObjectDetectionInput(LightlyStudioInputBase, ObjectDetectionI
 
 
 class LightlyStudioInstanceSegmentationInput(LightlyStudioInputBase, InstanceSegmentationInput):
-    """Labelformat adapter for instance segmentation backed by dataset samples and annotations."""
+    """Labelformat adapter for segmentation mask backed by dataset samples and annotations."""
 
     @staticmethod
     def _sample_to_image_inst_seg(
@@ -90,7 +90,7 @@ class LightlyStudioInstanceSegmentationInput(LightlyStudioInputBase, InstanceSeg
         # TODO(lukas, 02/2026): We can optimise in the future to filter annotations in a DB query.
         objects = []
         for annotation in sample.sample_table.annotations:
-            if annotation.annotation_type == AnnotationType.INSTANCE_SEGMENTATION:
+            if annotation.annotation_type == AnnotationType.SEGMENTATION_MASK:
                 obj = _annotation_to_single_inst_seg(
                     annotation=annotation,
                     label_id_to_category=label_id_to_category,
@@ -121,21 +121,21 @@ class LightlyStudioInstanceSegmentationInput(LightlyStudioInputBase, InstanceSeg
 class LightlyStudioPascalVOCInstanceSegmentationInput(
     LightlyStudioInputBase, InstanceSegmentationInput
 ):
-    """Labelformat adapter for Pascal VOC export from instance segmentation annotations."""
+    """Labelformat adapter for Pascal VOC export from segmentation mask annotations."""
 
     # TODO(Leonardo, 03/26): Ensure Pascal VOC export maps user-defined background to class ID 0
     # and void/ignore to 255 for spec compliance.
     CATEGORY_ID_START = 1
 
     @staticmethod
-    def _sample_to_image_pascalvoc_instance_segmentation(
+    def _sample_to_image_pascalvoc_segmentation_mask(
         sample: ImageSample,
         image_id: int,
         label_id_to_category: dict[UUID, Category],
     ) -> ImageInstanceSegmentation:
         objects = []
         for annotation in sample.sample_table.annotations:
-            if annotation.annotation_type == AnnotationType.INSTANCE_SEGMENTATION:
+            if annotation.annotation_type == AnnotationType.SEGMENTATION_MASK:
                 obj = _annotation_to_single_inst_seg(
                     annotation=annotation,
                     label_id_to_category=label_id_to_category,
@@ -168,7 +168,7 @@ class LightlyStudioPascalVOCInstanceSegmentationInput(
     def get_labels(self) -> Iterable[ImageInstanceSegmentation]:
         """Returns the labels for Pascal VOC export."""
         for idx, sample in enumerate(self._samples):
-            yield self._sample_to_image_pascalvoc_instance_segmentation(
+            yield self._sample_to_image_pascalvoc_segmentation_mask(
                 sample=sample,
                 image_id=idx,
                 label_id_to_category=self._label_id_to_category,

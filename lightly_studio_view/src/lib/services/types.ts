@@ -61,10 +61,10 @@ export function isObjectDetectionAnnotation(
     return annotation.annotation_type === 'object_detection';
 }
 
-export function isInstanceSegmentationAnnotation(
+export function isSegmentationMaskAnnotation(
     annotation: Annotation | AnnotationSegmentation
 ): annotation is AnnotationSegmentation {
-    return annotation.annotation_type === 'instance_segmentation';
+    return annotation.annotation_type === 'segmentation_mask';
 }
 
 export function isClassificationAnnotation(

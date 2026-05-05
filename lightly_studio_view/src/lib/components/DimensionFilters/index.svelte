@@ -1,7 +1,6 @@
 <script lang="ts">
     import { formatInteger } from '$lib/utils';
     import { Slider } from '$lib/components/ui/slider/index.js';
-    import type { SliderMultipleRootProps } from 'bits-ui/dist/types';
     import Segment from '$lib/components/Segment/Segment.svelte';
     import { useDimensions } from '$lib/hooks/useDimensions/useDimensions';
 
@@ -11,7 +10,7 @@
         updateDimensionsValues: onChange
     } = useDimensions();
 
-    const handleChangeWidth: SliderMultipleRootProps['onValueChange'] = (newValues) => {
+    const handleChangeWidth = (newValues: number[]) => {
         if (!$values) return;
         onChange({
             min_width: newValues[0],
@@ -21,7 +20,7 @@
         });
     };
 
-    const handleChangeHeight: SliderMultipleRootProps['onValueChange'] = (newValues) => {
+    const handleChangeHeight = (newValues: number[]) => {
         if (!$values) return;
         onChange({
             min_width: $values.min_width,

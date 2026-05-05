@@ -100,7 +100,7 @@ Files remain in the remote storage and are streamed to the UI on demand. Make su
 **Current Limitations:**
 
 !!! warning "Cloud Storage Limitation"
-    Cloud storage is supported for raw media folders via `add_images_from_path()` and `add_videos_from_path()`, and for COCO object detection and instance segmentation imports via `add_samples_from_coco()`. Other dataset importers still expect local files.
+    Cloud storage is supported for raw media folders via `add_images_from_path()` and `add_videos_from_path()`, and for COCO object detection and segmentation mask imports via `add_samples_from_coco()`. Other dataset importers still expect local files.
 
 
 ## Sample
@@ -142,7 +142,7 @@ for sample in dataset:
 
 ### Accessing annotations
 
-You can access annotations of each sample. They can be created in the GUI or imported, e.g. from the COCO format, see the [COCO Instance Segmentation](../#quickstart) example. In the next section [Indexing with Predictions](#indexing-with-predictions) an example of creating annotations from Python is provided.
+You can access annotations of each sample. They can be created in the GUI or imported, e.g. from the COCO format, see the [COCO Segmentation Mask](../#quickstart) example. In the next section [Indexing with Predictions](#indexing-with-predictions) an example of creating annotations from Python is provided.
 
 ```py
 from lightly_studio.core.annotation import ObjectDetectionAnnotation
@@ -153,7 +153,7 @@ for sample in dataset:
             print(annotation.x, annotation.y, annotation.width, annotation.height)
 ```
 
-There are 3 different types: `ClassificationAnnotation`, `InstanceSegmentationAnnotation`, and `ObjectDetectionAnnotation`.
+There are 3 different types: `ClassificationAnnotation`, `SegmentationMaskAnnotation`, and `ObjectDetectionAnnotation`.
 
 ### Adding annotations
 
@@ -173,13 +173,13 @@ sample.add_annotation(CreateObjectDetection(
 ))
 ```
 
-There are also `CreateClassification` and `CreateInstanceSegmentation` classes for other annotation types.
+There are also `CreateClassification` and `CreateSegmentationMask` classes for other annotation types.
 
 For segmentation annotations, it is recommended to use the `from_binary_mask` method, which automatically handles the bounding box and mask encoding from a 2D numpy array:
 
 ```python
 import numpy as np
-from lightly_studio.core.annotation import CreateInstanceSegmentation
+from lightly_studio.core.annotation import CreateSegmentationMask
 
 # A 2D numpy array representing the binary mask (1 for foreground, 0 for background)
 mask = np.array([
@@ -190,7 +190,7 @@ mask = np.array([
 ])
 
 sample.add_annotation(
-    CreateInstanceSegmentation.from_binary_mask(
+    CreateSegmentationMask.from_binary_mask(
         label="car",
         binary_mask=mask,
         confidence=0.85, # optional
@@ -201,14 +201,14 @@ sample.add_annotation(
 Alternatively, you can provide the mask encoding using the `from_rle_mask` method:
 
 ```python
-from lightly_studio.core.annotation import CreateInstanceSegmentation
+from lightly_studio.core.annotation import CreateSegmentationMask
 
 # E.g., for a 2x4 mask:
 # [[0, 1, 1, 0],
 #  [1, 1, 1, 1]]
 # A row-wise Run-Length Encoding (RLE) mask is: [1, 2, 1, 4]
 sample.add_annotation(
-    CreateInstanceSegmentation.from_rle_mask(
+    CreateSegmentationMask.from_rle_mask(
         label="car",
         segmentation_mask=[1, 2, 1, 4],
         # `sample` could be ImageSample or another 2D sample, such as a video frame
@@ -221,7 +221,7 @@ sample.add_annotation(
 
 ??? note "Binary Mask Format"
 
-    For segmentation annotations (`CreateInstanceSegmentation`), the `segmentation_mask` is expected to be a list of integers representing the binary mask in a row-wise Run-Length Encoding (RLE) format.
+    For segmentation annotations (`CreateSegmentationMask`), the `segmentation_mask` is expected to be a list of integers representing the binary mask in a row-wise Run-Length Encoding (RLE) format.
 
     !!! tip
         We recommend using the `from_binary_mask` method described above to automatically generate this encoding from a numpy array.

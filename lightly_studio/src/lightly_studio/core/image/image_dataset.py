@@ -31,7 +31,7 @@ from lightly_studio.core.image import add_images
 from lightly_studio.core.image.image_sample import ImageSample
 from lightly_studio.dataset import fsspec_lister
 from lightly_studio.dataset.embedding_manager import EmbeddingManagerProvider
-from lightly_studio.export.export_dataset import DatasetExport
+from lightly_studio.export.image_dataset_export import ImageDatasetExport
 from lightly_studio.models.annotation.annotation_base import AnnotationType
 from lightly_studio.models.collection import SampleType
 from lightly_studio.resolvers import (
@@ -94,8 +94,8 @@ class ImageDataset(BaseSampleDataset[ImageSample]):
         """Returns the sample class."""
         return ImageSample
 
-    def export(self, query: DatasetQuery | None = None) -> DatasetExport:
-        """Return a DatasetExport instance which can export the dataset in various formats.
+    def export(self, query: DatasetQuery | None = None) -> ImageDatasetExport:
+        """Return an ImageDatasetExport instance which can export the dataset in various formats.
 
         Args:
             query:
@@ -103,7 +103,7 @@ class ImageDataset(BaseSampleDataset[ImageSample]):
         """
         if query is None:
             query = self.query()
-        return DatasetExport(session=self.session, dataset_id=self.dataset_id, samples=query)
+        return ImageDatasetExport(session=self.session, dataset_id=self.dataset_id, samples=query)
 
     def get_sample(self, sample_id: UUID) -> ImageSample:
         """Get a single sample from the dataset by its ID.
@@ -293,6 +293,7 @@ class ImageDataset(BaseSampleDataset[ImageSample]):
                 If provided, all samples will be tagged with this name.
             embed: If True, generate embeddings for the newly added samples.
         """
+        images_path = _normalize_input_path(path=images_path)
         fs, fs_path = fsspec.core.url_to_fs(url=annotations_json)
         if not fs.isfile(fs_path) or not str(annotations_json).endswith(".json"):
             raise FileNotFoundError(f"COCO annotations json file not found: '{annotations_json}'")
@@ -303,7 +304,7 @@ class ImageDataset(BaseSampleDataset[ImageSample]):
             label_input = COCOObjectDetectionInput(
                 input_file=annotations_json,
             )
-        elif annotation_type == AnnotationType.INSTANCE_SEGMENTATION:
+        elif annotation_type == AnnotationType.SEGMENTATION_MASK:
             label_input = COCOInstanceSegmentationInput(
                 input_file=annotations_json,
             )
@@ -336,8 +337,8 @@ class ImageDataset(BaseSampleDataset[ImageSample]):
         """Load a Pascal VOC segmentation dataset and store in DB.
 
         Pascal VOC masks encode class IDs per pixel (semantic segmentation).
-        Imported masks are persisted as `AnnotationType.INSTANCE_SEGMENTATION`.
-        Query and export workflows should use instance segmentation type filters.
+        Imported masks are persisted as `AnnotationType.SEGMENTATION_MASK`.
+        Query and export workflows should use segmentation mask type filters.
 
         Args:
             images_path: Path to the folder containing the images.

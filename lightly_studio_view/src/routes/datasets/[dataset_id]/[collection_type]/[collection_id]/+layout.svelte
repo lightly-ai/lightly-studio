@@ -7,9 +7,10 @@
         GridHeader,
         LabelsMenu,
         SelectionPill,
-        TagCreateDialog,
         TagsMenu
     } from '$lib/components';
+    import GridHeaderSelectAllButton from '$lib/components/GridHeaderSelectAllButton/GridHeaderSelectAllButton.svelte';
+    import QueryEditorPanel from '$lib/components/QueryEditorPanel/QueryEditorPanel.svelte';
     import Input from '$lib/components/ui/input/input.svelte';
     import Separator from '$lib/components/ui/separator/separator.svelte';
     import {
@@ -21,7 +22,7 @@
         GripVertical
     } from '@lucide/svelte';
     import { onDestroy, onMount } from 'svelte';
-    import { get, toStore } from 'svelte/store';
+    import { toStore } from 'svelte/store';
     import { toast } from 'svelte-sonner';
     import { Header } from '$lib/components';
     import MenuDialogHost from '$lib/components/Header/MenuDialogHost.svelte';
@@ -37,7 +38,7 @@
         isAnnotationsRoute,
         isCaptionsRoute,
         isSampleDetailsRoute,
-        isSamplesRoute,
+        isImagesRoute,
         isVideoFramesRoute,
         isVideosRoute,
         isGroupsRoute,
@@ -49,6 +50,7 @@
     import { useImageAnnotationCounts } from '$lib/hooks/useImageAnnotationCounts/useImageAnnotationCounts';
     import { useGlobalStorage } from '$lib/hooks/useGlobalStorage.js';
     import { Button } from '$lib/components/ui/index.js';
+    import QueryControl from '$lib/components/QueryControl/QueryControl.svelte';
     import { PaneGroup, Pane, PaneResizer } from 'paneforge';
     import { useVideoAnnotationCounts } from '$lib/hooks/useVideoAnnotationsCount/useVideoAnnotationsCount.js';
     import {
@@ -58,15 +60,21 @@
     import { useVideoFrameAnnotationCounts } from '$lib/hooks/useVideoFrameAnnotationsCount/useVideoFrameAnnotationsCount.js';
     import { useVideoFramesBounds } from '$lib/hooks/useVideoFramesBounds/useVideoFramesBounds.js';
     import { useVideoBounds } from '$lib/hooks/useVideosBounds/useVideosBounds.js';
-    import { SampleType } from '$lib/api/lightly_studio_local/types.gen.js';
-    import { buildImageFilter } from '$lib/utils/buildImageFilter';
     import { useImageFilters } from '$lib/hooks/useImageFilters/useImageFilters';
     import { useVideoFilters } from '$lib/hooks/useVideoFilters/useVideoFilters';
+    import { SampleType } from '$lib/api/lightly_studio_local/types.gen';
+    import { buildImageFilter } from '$lib/utils/buildImageFilter';
     import {
         buildVideoAnnotationCountsFilter,
         buildVideoFrameAnnotationCountsFilter
     } from '$lib/utils/buildAnnotationCountsFilters';
-    import { useSelectionSummary } from '$lib/hooks';
+    import EmbeddingSelectionFilterItem from '$lib/components/EmbeddingSelectionFilterItem/EmbeddingSelectionFilterItem.svelte';
+    import { useSelectionSummary, useFeatureFlags } from '$lib/hooks';
+    import { useSelectAll } from '$lib/hooks/useSelectAll/useSelectAll';
+    import { isInputElement } from '$lib/utils';
+    import { shutdownMaskRendererPool } from '$lib/workers/maskRendererPool';
+    import { embedImageFromFile } from '$lib/api/lightly_studio_local';
+    import { GRID_IMAGE_SEARCH_DROP_EVENT, type GridItemDragData } from '$lib/components/GridItem';
     const { data, children } = $props();
     const {
         collection,
@@ -88,28 +96,20 @@
     // Use hideAnnotations hook
     const { handleKeyEvent } = useHideAnnotations();
 
-    const { retrieveParentCollection, collections } = useGlobalStorage();
+    const {
+        retrieveParentCollection,
+        collections,
+        showPlot,
+        setShowPlot,
+        filteredSampleCount,
+        filteredAnnotationCount
+    } = useGlobalStorage();
 
     const parentCollection = $derived.by(() =>
         retrieveParentCollection($collections, collectionId)
     );
 
-    // Setup event handlers for keyboard shortcuts
-    onMount(() => {
-        if (browser) {
-            window.addEventListener('keydown', handleKeyEvent);
-            window.addEventListener('keyup', handleKeyEvent);
-        }
-    });
-
-    onDestroy(() => {
-        if (browser) {
-            window.removeEventListener('keydown', handleKeyEvent);
-            window.removeEventListener('keyup', handleKeyEvent);
-        }
-    });
-
-    const isSamples = $derived(isSamplesRoute(page.route.id));
+    const isImages = $derived(isImagesRoute(page.route.id));
     const isGroups = $derived(isGroupsRoute(page.route.id));
     const isGroupDetails = $derived(isGroupDetailsRoute(page.route.id));
     const isAnnotations = $derived(isAnnotationsRoute(page.route.id));
@@ -119,15 +119,49 @@
     const isVideos = $derived(isVideosRoute(page.route.id));
     const isVideoFrames = $derived(isVideoFramesRoute(page.route.id));
     const isVideoDetails = $derived(isVideoDetailsRoute(page.route.id));
+    const canSelectAll = $derived(isImages || isVideos || isVideoFrames || isAnnotations);
 
-    let gridType = $state<GridType>('samples');
+    let gridType = $state<GridType>('images');
     let lastCollectionId: string | null = null;
+
+    // Select-all hook
+    let selectAllHandle = $derived(useSelectAll(collectionId, gridType));
+
+    function handleSelectAllKeydown(event: KeyboardEvent) {
+        if (isInputElement(event.target) || (event.target as HTMLElement)?.isContentEditable)
+            return;
+        if (event.key !== 'a' || (!event.ctrlKey && !event.metaKey)) return;
+        if (!isImages && !isVideos && !isVideoFrames && !isAnnotations) return;
+
+        event.preventDefault();
+        selectAllHandle.handleSelectAll();
+    }
+
+    // Setup event handlers for keyboard shortcuts
+    onMount(() => {
+        if (browser) {
+            window.addEventListener('keydown', handleKeyEvent);
+            window.addEventListener('keyup', handleKeyEvent);
+            window.addEventListener('keydown', handleSelectAllKeydown);
+            window.addEventListener(GRID_IMAGE_SEARCH_DROP_EVENT, handleGridImageSearchDrop);
+        }
+    });
+
+    onDestroy(() => {
+        if (browser) {
+            window.removeEventListener('keydown', handleKeyEvent);
+            window.removeEventListener('keyup', handleKeyEvent);
+            window.removeEventListener('keydown', handleSelectAllKeydown);
+            window.removeEventListener(GRID_IMAGE_SEARCH_DROP_EVENT, handleGridImageSearchDrop);
+            shutdownMaskRendererPool();
+        }
+    });
     $effect(() => {
         let nextGridType: GridType | null = null;
         if (isAnnotations) {
             nextGridType = 'annotations';
-        } else if (isSamples) {
-            nextGridType = 'samples';
+        } else if (isImages) {
+            nextGridType = 'images';
         } else if (isCaptions) {
             nextGridType = 'captions';
         } else if (isVideoFrames) {
@@ -205,9 +239,6 @@
         useAnnotationLabels({ collectionId: collectionId ?? '' })
     );
     const annotationLabelsData = $derived($annotationLabelsQuery?.data);
-    const { showPlot, setShowPlot, filteredSampleCount, filteredAnnotationCount } =
-        useGlobalStorage();
-
     const annotationLabelsStore = toStore(() => annotationLabelsData);
 
     // Initialize annotation filter hook (must be before annotationCounts to avoid init-order crash)
@@ -227,11 +258,12 @@
     const { videoBoundsValues } = useVideoBounds();
 
     const { imageFilter: imageFilterFromHook } = useImageFilters();
+
     const { videoFilter: videoFilterFromHook } = useVideoFilters();
-    const plotSelectionImageSampleIds = $derived(
+    const plotFilterImageSampleIds = $derived(
         $imageFilterFromHook?.sample_filter?.sample_ids ?? []
     );
-    const plotSelectionVideoSampleIds = $derived(
+    const plotFilterVideoSampleIds = $derived(
         $videoFilterFromHook?.sample_filter?.sample_ids ?? []
     );
 
@@ -241,8 +273,9 @@
             (isAnnotations && parentCollection?.sampleType == SampleType.VIDEO_FRAME)
         ) {
             let videoFrameCollectionId = collectionId;
-            if (isAnnotations && parentCollection?.sampleType == SampleType.VIDEO_FRAME)
-                videoFrameCollectionId = parentCollection.collectionId;
+            if (isAnnotations && parentCollection?.sampleType == SampleType.VIDEO_FRAME) {
+                videoFrameCollectionId = parentCollection?.collectionId ?? collectionId;
+            }
             return useVideoFrameAnnotationCounts({
                 collectionId: videoFrameCollectionId,
                 filter: buildVideoFrameAnnotationCountsFilter({
@@ -258,7 +291,7 @@
                     metadataFilters,
                     annotationFilter: $annotationFilterStore,
                     videoBoundsValues: $videoBoundsValues,
-                    sampleIds: plotSelectionVideoSampleIds
+                    sampleIds: plotFilterVideoSampleIds
                 })
             });
         }
@@ -268,7 +301,7 @@
                 dimensionsValues: $dimensionsValues,
                 annotationFilter: $annotationFilterStore,
                 metadataFilters,
-                sampleIds: isAnnotations ? [] : plotSelectionImageSampleIds
+                sampleIds: isAnnotations ? [] : plotFilterImageSampleIds
             })
         });
     });
@@ -317,6 +350,7 @@
     async function handleDrop(e: DragEvent) {
         e.preventDefault();
         dragOver = false;
+
         if (e.dataTransfer?.files && e.dataTransfer.files.length > 0) {
             const file = e.dataTransfer.files[0];
             if (file.type.startsWith('image/')) {
@@ -324,6 +358,22 @@
             } else {
                 setError('Please drop an image file.');
             }
+        }
+    }
+
+    async function handleGridImageSearchDrop(event: Event) {
+        const { url, fileName } = (event as CustomEvent<GridItemDragData>).detail;
+        try {
+            const response = await fetch(url);
+            if (!response.ok) {
+                throw new Error(`Failed to fetch dragged image: ${response.statusText}`);
+            }
+            const blob = await response.blob();
+            await uploadImage(new File([blob], fileName, { type: blob.type || 'image/jpeg' }));
+        } catch (err: unknown) {
+            const message =
+                err instanceof Error ? err.message : 'Failed to load dragged image for search';
+            setError(message);
         }
     }
 
@@ -372,28 +422,22 @@
             return;
         }
 
-        const formData = new FormData();
-        formData.append('file', file);
-
         isUploading = true;
         try {
             const currentCollectionId = page.params.collection_id;
             if (!currentCollectionId) {
                 throw new Error('Collection ID is not available');
             }
-            const response = await fetch(
-                `/api/image_embedding/from_file/for_collection/${currentCollectionId}`,
-                {
-                    method: 'POST',
-                    body: formData
-                }
-            );
 
-            if (!response.ok) {
-                throw new Error(`Error uploading image: ${response.statusText}`);
+            const response = await embedImageFromFile({
+                path: { collection_id: currentCollectionId },
+                body: { file }
+            });
+
+            if (response.error) {
+                throw new Error('Error uploading image');
             }
-
-            const embedding = await response.json();
+            const embedding = response.data;
 
             // Clear text search state
             query_text = '';
@@ -482,13 +526,17 @@
     });
 
     const showLeftSidebar = $derived(
-        isSamples || isAnnotations || isVideos || isVideoFrames || isGroups
+        isImages || isAnnotations || isVideos || isVideoFrames || isGroups
     );
+
+    const { featureFlags } = useFeatureFlags();
+    const isQueryFilterEnabled = $derived($featureFlags.includes('query_filter'));
+    let isQueryFilterEditing = $state(false);
 </script>
 
 <div class="flex-none">
     <Header {collection} />
-    <MenuDialogHost {isSamples} {isVideos} {hasEmbeddings} {collection} />
+    <MenuDialogHost {isImages} {isVideos} {hasEmbeddings} {collection} />
 </div>
 
 <div class="relative flex min-h-0 flex-1 flex-col">
@@ -502,22 +550,30 @@
                         <div
                             class="min-h-0 flex-1 space-y-2 overflow-y-auto px-4 pb-2 dark:[color-scheme:dark]"
                         >
+                            {#if isQueryFilterEnabled}
+                                <QueryControl
+                                    onToggle={() => {
+                                        isQueryFilterEditing = !isQueryFilterEditing;
+                                    }}
+                                />
+                            {/if}
+
                             <div>
                                 <TagsMenu collection_id={collectionId} {gridType} />
-                                <TagCreateDialog
-                                    {collectionId}
-                                    {gridType}
-                                    textEmbedding={get(textEmbedding)}
-                                />
                             </div>
                             <Segment title="Filters" icon={SlidersHorizontal}>
                                 <div class="space-y-2">
+                                    <EmbeddingSelectionFilterItem
+                                        {collectionIdStore}
+                                        {isVideos}
+                                        {isImages}
+                                    />
                                     <LabelsMenu
                                         {annotationFilterRows}
                                         onToggleAnnotationFilter={toggleAnnotationFilterSelection}
                                     />
 
-                                    {#if isSamples || isVideos || isVideoFrames}
+                                    {#if isImages || isVideos || isVideoFrames}
                                         {#key collectionId}
                                             <CombinedMetadataDimensionsFilters
                                                 {isVideos}
@@ -532,7 +588,7 @@
                 </div>
             {/if}
 
-            {#if (isSamples || isVideos) && $showPlot}
+            {#if (isImages || isVideos) && $showPlot}
                 <!-- When plot is shown, use PaneGroup for the main content + plot -->
                 <PaneGroup direction="horizontal" class="flex-1">
                     <Pane defaultSize={50} minSize={30} class="flex">
@@ -540,7 +596,14 @@
                             class="relative flex flex-1 flex-col space-y-4 rounded-[1vw] bg-card p-4"
                         >
                             <GridHeader>
-                                <div class="flex-1">
+                                {#snippet selectionControls()}
+                                    {#if canSelectAll}
+                                        <GridHeaderSelectAllButton
+                                            onclick={selectAllHandle.handleSelectAll}
+                                        />
+                                    {/if}
+                                {/snippet}
+                                <div class="flex-1" data-grid-search-drop-target>
                                     {#if hasEmbeddings}
                                         <div
                                             class="relative"
@@ -655,26 +718,35 @@
             {:else}
                 <!-- When plot is hidden or not samples view, show normal layout -->
                 <div class="relative flex flex-1 flex-col space-y-4 rounded-[1vw] bg-card p-4 pb-2">
-                    {#if isSamples || isAnnotations || isVideos || isGroups}
+                    {#if isImages || isAnnotations || isVideos || isVideoFrames || isGroups}
                         <GridHeader>
+                            {#snippet selectionControls()}
+                                {#if canSelectAll}
+                                    <GridHeaderSelectAllButton
+                                        onclick={selectAllHandle.handleSelectAll}
+                                    />
+                                {/if}
+                            {/snippet}
                             {#snippet auxControls()}
-                                {#if (isSamples || isVideos) && hasEmbeddings}
+                                {#if (isImages || isVideos) && hasEmbeddings}
                                     <Button
                                         class="flex items-center space-x-1"
                                         data-testid="toggle-plot-button"
                                         variant={$showPlot ? 'default' : 'ghost'}
-                                        onclick={() => setShowPlot(!$showPlot)}
+                                        onclick={() =>
+                                            $showPlot ? setShowPlot(false) : setShowPlot(true)}
                                     >
                                         <ChartNetwork class="size-4" />
                                         <span>Show Embeddings</span>
                                     </Button>
                                 {/if}
                             {/snippet}
-                            {#if (isSamples || isVideos) && hasEmbeddings}
+                            {#if (isImages || isVideos) && hasEmbeddings}
                                 <div
                                     class="relative"
                                     role="region"
                                     aria-label="Search by image or text"
+                                    data-grid-search-drop-target
                                     ondragover={handleDragOver}
                                     ondragleave={handleDragLeave}
                                     ondrop={handleDrop}
@@ -765,6 +837,9 @@
                         <SelectionPill selectedCount={$selectedCount} onClear={clearSelection} />
                     {/if}
                 </div>
+                {#if isQueryFilterEnabled && isQueryFilterEditing}
+                    <QueryEditorPanel />
+                {/if}
             {/if}
             {#if hasEmbeddings}
                 {#await import('$lib/components/FewShotClassifier/CreateClassifierDialog.svelte') then { default: CreateClassifierDialog }}

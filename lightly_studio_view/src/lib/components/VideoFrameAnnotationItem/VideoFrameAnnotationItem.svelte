@@ -59,8 +59,10 @@
 </script>
 
 {#if !showLabel}
+    <!-- Label-free mode uses the shared canvas renderer for better performance with many masks. -->
     <SampleAnnotations
         sample={{
+            sample_id: sample.sample_id,
             width: sampleWidth,
             height: sampleHeight,
             annotations: annotations

@@ -1,11 +1,11 @@
 import { derived, get, writable } from 'svelte/store';
-import type { components } from '$lib/schema';
 import { createMetadataFilters } from '../useMetadataFilters/useMetadataFilters';
-import type { VideoFilter } from '$lib/api/lightly_studio_local/types.gen';
-import type { VideoFieldsBoundsView } from '$lib/api/lightly_studio_local/types.gen';
-
-type AnnotationsFilter = components['schemas']['AnnotationsFilter'];
-type SampleFilter = components['schemas']['SampleFilter'];
+import type {
+    AnnotationsFilter,
+    SampleFilter,
+    VideoFilter,
+    VideoFieldsBoundsView
+} from '$lib/api/lightly_studio_local/types.gen';
 type MetadataValues = Record<string, { min: number; max: number }>;
 
 export type VideoFilterParams = {

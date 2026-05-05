@@ -19,7 +19,7 @@ const OVERLAP_FIRST_PIXEL = [1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
 const baseAnn = (id: string, mask: number[]): AnnotationView =>
     ({
         sample_id: id,
-        annotation_type: 'instance_segmentation',
+        annotation_type: 'segmentation_mask',
         segmentation_details: { segmentation_mask: mask },
         annotation_label: { annotation_label_name: 'a', annotation_label_id: 'a' },
         parent_sample_id: 'p',

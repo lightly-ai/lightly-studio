@@ -101,7 +101,7 @@
                 }
                 setBrushMode('brush');
             } else if (sampleDetailsToolbarContext.status === 'brush') {
-                setAnnotationType(AnnotationType.INSTANCE_SEGMENTATION);
+                setAnnotationType(AnnotationType.SEGMENTATION_MASK);
             }
         }
         if (sampleDetailsToolbarContext.status === 'drag') {
@@ -130,7 +130,7 @@
         if (!showSegmentationTool) return;
 
         setStatus('brush');
-        setAnnotationType(AnnotationType.INSTANCE_SEGMENTATION);
+        setAnnotationType(AnnotationType.SEGMENTATION_MASK);
         if (!annotationLabelContext.isOnAnnotationDetailsView) setAnnotationId(null);
         setLastCreatedAnnotationId(null);
     };
@@ -184,8 +184,7 @@
                 <BrushToolbarButton
                     onclick={onClickBrush}
                     isActive={sampleDetailsToolbarContext.status === 'brush' &&
-                        annotationLabelContext.annotationType ===
-                            AnnotationType.INSTANCE_SEGMENTATION}
+                        annotationLabelContext.annotationType === AnnotationType.SEGMENTATION_MASK}
                 />
             </SampleDetailsToolbarTooltip>
         {/if}

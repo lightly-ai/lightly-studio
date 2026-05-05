@@ -127,7 +127,7 @@ def test_update_annotation_label_object_detection(
     )
 
 
-def test_update_annotation_label_instance_segmentation(
+def test_update_annotation_label_segmentation_mask(
     db_session: Session,
     annotations_test_data: AnnotationsTestData,
 ) -> None:
@@ -136,7 +136,7 @@ def test_update_annotation_label_instance_segmentation(
         db_session,
     ).annotations
     annotation = get_annotation_by_type(
-        annotations=annotations, annotation_type=AnnotationType.INSTANCE_SEGMENTATION
+        annotations=annotations, annotation_type=AnnotationType.SEGMENTATION_MASK
     )
     annotation_id = annotation.sample_id
     current_annotation_label_id = annotation.annotation_label_id
