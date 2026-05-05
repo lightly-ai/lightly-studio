@@ -13,7 +13,7 @@
     import { isEqual, omit } from 'lodash-es';
     import { page } from '$app/state';
     import type { VideoFrameFilterParams } from '$lib/hooks/useFramesFilter/frameFilter';
-    import { GridHeader, Separator, VideoFrameItem } from '$lib/components';
+    import { VideoFrameItem } from '$lib/components';
     import { GridContainer } from '$lib/components/GridContainer';
     import { Grid } from '$lib/components/Grid';
     import { GridItem } from '$lib/components/GridItem';
@@ -142,9 +142,6 @@
 </script>
 
 <div class="flex flex-1 flex-col space-y-4">
-    <GridHeader />
-    <Separator class="mb-4 bg-border-hard" />
-
     <GridContainer
         itemCount={items.length}
         message={{

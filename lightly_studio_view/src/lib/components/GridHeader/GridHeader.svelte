@@ -5,10 +5,16 @@
     interface GridHeaderProps {
         showImageSizeControl?: boolean;
         children?: Snippet;
+        selectionControls?: Snippet;
         auxControls?: Snippet;
     }
 
-    let { showImageSizeControl = true, children, auxControls }: GridHeaderProps = $props();
+    let {
+        showImageSizeControl = true,
+        children,
+        selectionControls,
+        auxControls
+    }: GridHeaderProps = $props();
 </script>
 
 <div class="my-2 flex items-center space-x-4">
@@ -16,6 +22,7 @@
         {@render children?.()}
     </div>
 
+    {@render selectionControls?.()}
     {#if showImageSizeControl}
         <ImageSizeControl />
     {/if}
