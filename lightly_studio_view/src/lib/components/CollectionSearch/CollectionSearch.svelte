@@ -4,14 +4,11 @@
   interactions, while delegating rendering details to `SearchInput` and `ImageSearchDisplay`.
 -->
 <script lang="ts">
-    import { useEmbedText } from '$lib/hooks/useEmbedText/useEmbedText';
     import type { TextEmbedding } from '$lib/hooks/useGlobalStorage';
-    import { useFileDrop } from '$lib/hooks/useFileDrop';
-    import { useImageUpload } from '$lib/hooks/useImageUpload';
+    import { useImageUpload, useFileDrop, useEmbedText } from '$lib/hooks';
     import { onDestroy } from 'svelte';
     import { toast } from 'svelte-sonner';
-    import SearchInput from './SearchInput/SearchInput.svelte';
-    import ImageSearchDisplay from './ImageSearchDisplay/ImageSearchDisplay.svelte';
+    import { CollectionSearchInput, CollectionSearchImage } from '$lib/components';
 
     type Props = {
         collectionId: string;
@@ -30,10 +27,10 @@
         toast.error('Error', { description: errorMessage });
     };
 
-    const { activeImage, previewUrl, isUploading, uploadImage, clearImage } = useImageUpload({
+    const { imageName, previewUrl, isUploading, upload, clear } = useImageUpload({
         collectionId,
         onError: setError,
-        onUploadSuccess: ({ fileName, embedding }) => {
+        onSuccess: ({ fileName, embedding }) => {
             queryText = '';
             submittedQueryText = '';
             setTextEmbedding({
@@ -45,12 +42,12 @@
 
     const { dragOver, handleDragOver, handleDragLeave, handleDrop, handlePaste, handleFileSelect } =
         useFileDrop({
-            onFile: uploadImage,
+            onFileAccepted: upload,
             onError: setError
         });
 
     onDestroy(() => {
-        clearImage();
+        clear();
     });
 
     const embedTextQuery = $derived(
@@ -89,10 +86,6 @@
         }
     }
 
-    const onQueryTextChange = (value: string) => {
-        queryText = value;
-    };
-
     const triggerFileInput = () => {
         fileInput?.click();
     };
@@ -100,7 +93,7 @@
     const clearSearch = () => {
         queryText = '';
         submittedQueryText = '';
-        clearImage();
+        clear();
         setTextEmbedding(undefined);
     };
 
@@ -112,7 +105,7 @@
 
         lastAppliedTextEmbeddingQuery = committedQuery;
 
-        if ($activeImage) {
+        if ($imageName) {
             return;
         }
 
@@ -127,7 +120,7 @@
     });
 
     $effect(() => {
-        if ($activeImage) {
+        if ($imageName) {
             return;
         }
 
@@ -162,24 +155,24 @@
     ondragleave={handleDragLeave}
     ondrop={handleDrop}
 >
-    {#if $activeImage}
-        <ImageSearchDisplay
-            activeImage={$activeImage}
-            previewUrl={$previewUrl}
-            dragOver={$dragOver}
+    {#if $imageName}
+        <CollectionSearchImage
+            name={$imageName}
+            src={$previewUrl}
+            showOutline={$dragOver}
             onClear={clearSearch}
         />
     {:else}
-        <SearchInput
-            {queryText}
-            {submittedQueryText}
-            isUploading={$isUploading}
-            dragOver={$dragOver}
-            {onKeyDown}
-            onPaste={handlePaste}
-            onClear={clearSearch}
+        <CollectionSearchInput
+            value={queryText}
+            disabled={$isUploading}
+            showOutline={$dragOver}
+            inputProps={{
+                placeholder: 'Search samples by description or image',
+                onkeydown: onKeyDown,
+                onpaste: handlePaste
+            }}
             onUploadClick={triggerFileInput}
-            {onQueryTextChange}
         />
     {/if}
 

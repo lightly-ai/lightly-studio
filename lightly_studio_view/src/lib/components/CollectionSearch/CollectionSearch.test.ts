@@ -27,7 +27,7 @@ const mocks = vi.hoisted(() => {
     };
 
     return {
-        activeImage: createStore<string | null>(null),
+        imageName: createStore<string | null>(null),
         previewUrl: createStore<string | null>(null),
         isUploading: createStore(false),
         dragOver: createStore(false),
@@ -37,8 +37,8 @@ const mocks = vi.hoisted(() => {
             error: null,
             data: [] as number[]
         }),
-        uploadImage: vi.fn(),
-        clearImage: vi.fn(),
+        upload: vi.fn(),
+        clear: vi.fn(),
         handleDragOver: vi.fn(),
         handleDragLeave: vi.fn(),
         handleDrop: vi.fn(),
@@ -47,17 +47,17 @@ const mocks = vi.hoisted(() => {
     };
 });
 
-vi.mock('$lib/hooks/useImageUpload', () => ({
+vi.mock('$lib/hooks/useImageUpload/useImageUpload', () => ({
     useImageUpload: () => ({
-        activeImage: mocks.activeImage,
+        imageName: mocks.imageName,
         previewUrl: mocks.previewUrl,
         isUploading: mocks.isUploading,
-        uploadImage: mocks.uploadImage,
-        clearImage: mocks.clearImage
+        upload: mocks.upload,
+        clear: mocks.clear
     })
 }));
 
-vi.mock('$lib/hooks/useFileDrop', () => ({
+vi.mock('$lib/hooks/useFileDrop/useFileDrop', () => ({
     useFileDrop: () => ({
         dragOver: mocks.dragOver,
         handleDragOver: mocks.handleDragOver,
@@ -75,7 +75,7 @@ vi.mock('$lib/hooks/useEmbedText/useEmbedText', () => ({
 describe('CollectionSearch', () => {
     beforeEach(() => {
         vi.clearAllMocks();
-        mocks.activeImage.set(null);
+        mocks.imageName.set(null);
         mocks.previewUrl.set(null);
         mocks.isUploading.set(false);
         mocks.dragOver.set(false);
@@ -100,7 +100,7 @@ describe('CollectionSearch', () => {
     });
 
     it('renders image search display when an image is active', () => {
-        mocks.activeImage.set('query.png');
+        mocks.imageName.set('query.png');
 
         render(CollectionSearch, {
             props: {
@@ -115,7 +115,7 @@ describe('CollectionSearch', () => {
     });
 
     it('clears embedding when image clear button is clicked', async () => {
-        mocks.activeImage.set('query.png');
+        mocks.imageName.set('query.png');
         const setTextEmbedding = vi.fn();
 
         render(CollectionSearch, {
@@ -131,6 +131,6 @@ describe('CollectionSearch', () => {
         await fireEvent.click(screen.getByTestId('search-clear-button'));
 
         expect(setTextEmbedding).toHaveBeenCalledWith(undefined);
-        expect(mocks.clearImage).toHaveBeenCalled();
+        expect(mocks.clear).toHaveBeenCalled();
     });
 });
