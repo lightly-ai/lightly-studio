@@ -7,39 +7,24 @@ import logging
 import posixpath
 from collections import defaultdict
 from collections.abc import Iterable, Mapping
-from dataclasses import dataclass
 from pathlib import Path
 from uuid import UUID
 
 import fsspec
 import PIL
 from labelformat.model.image import Image
-from labelformat.model.instance_segmentation import (
-    ImageInstanceSegmentation,
-    InstanceSegmentationInput,
-)
-from labelformat.model.object_detection import (
-    ImageObjectDetection,
-    ObjectDetectionInput,
-)
+from labelformat.model.instance_segmentation import InstanceSegmentationInput
+from labelformat.model.object_detection import ObjectDetectionInput
 from sqlmodel import Session
 from tqdm import tqdm
 
-from lightly_studio.core import labelformat_helpers
+from lightly_studio.core.image import add_annotations
 from lightly_studio.core.image.image_sample import ImageSample
 from lightly_studio.core.loading_log import LoadingLoggingContext, log_loading_results
-from lightly_studio.models.annotation.annotation_base import (
-    AnnotationCreate,
-    AnnotationType,
-)
 from lightly_studio.models.caption import CaptionCreate
-from lightly_studio.models.collection import SampleType
 from lightly_studio.models.image import ImageCreate
 from lightly_studio.resolvers import (
-    annotation_collection_coverage_resolver,
-    annotation_resolver,
     caption_resolver,
-    collection_resolver,
     image_resolver,
     sample_resolver,
     tag_resolver,
@@ -51,23 +36,6 @@ logger = logging.getLogger(__name__)
 # Constants
 SAMPLE_BATCH_SIZE = 32  # Number of samples to process in a single batch
 MAX_EXAMPLE_PATHS_TO_SHOW = 5
-
-
-@dataclass
-class _AnnotationProcessingContext:
-    """Context for processing annotations for a single sample."""
-
-    collection_id: UUID
-    sample_id: UUID
-    label_map: dict[int, UUID]
-
-
-@dataclass
-class AnnotationImageData:
-    """Holds image data and its associated annotations."""
-
-    annotation_type: AnnotationType
-    data: ImageInstanceSegmentation | ImageObjectDetection
 
 
 def load_into_dataset_from_paths(
@@ -111,9 +79,10 @@ def load_into_dataset_from_paths(
         except (FileNotFoundError, PIL.UnidentifiedImageError, OSError):
             continue
 
+        normalized_path = add_annotations.normalize_images_root(image_path)
         sample = ImageCreate(
-            file_name=Path(image_path).name,
-            file_path_abs=image_path,
+            file_name=Path(normalized_path).name,
+            file_path_abs=normalized_path,
             width=width,
             height=height,
         )
@@ -150,6 +119,7 @@ def load_into_dataset_from_labelformat(
     root_collection_id: UUID,
     input_labels: ObjectDetectionInput | InstanceSegmentationInput,
     images_path: PathLike,
+    collection_name: str | None = None,
 ) -> list[UUID]:
     """Load samples and their annotations from a labelformat input into the dataset.
 
@@ -158,10 +128,12 @@ def load_into_dataset_from_labelformat(
         root_collection_id: The ID of the root collection to load samples into.
         input_labels: The labelformat input containing images and annotations.
         images_path: The path to the directory containing the images.
+        collection_name: Optional name for the annotation collection.
 
     Returns:
         A list of UUIDs of the created samples.
     """
+    images_root_abs = add_annotations.normalize_images_root(images_root=images_path)
     logging_context = LoadingLoggingContext(
         n_samples_to_be_inserted=sum(1 for _ in input_labels.get_labels()),
         n_samples_before_loading=sample_resolver.count_by_collection_id(
@@ -169,40 +141,20 @@ def load_into_dataset_from_labelformat(
         ),
     )
 
-    # Create label mapping
-    label_map = _create_label_map(
-        session=session,
-        root_collection_id=root_collection_id,
-        input_labels=input_labels,
-    )
-
-    if isinstance(input_labels, InstanceSegmentationInput):
-        annotation_type = AnnotationType.SEGMENTATION_MASK
-    elif isinstance(input_labels, ObjectDetectionInput):
-        annotation_type = AnnotationType.OBJECT_DETECTION
-    else:
-        raise ValueError(f"Unsupported input labels type: {type(input_labels)}")
-
+    # Phase 1: Image creation
     samples_to_create: list[ImageCreate] = []
     created_sample_ids: list[UUID] = []
-    path_to_anno_data: dict[str, AnnotationImageData] = {}
 
     for image_data in tqdm(input_labels.get_labels(), desc="Processing images", unit=" images"):
         image: Image = image_data.image  # type: ignore[attr-defined]
 
-        typed_image_data: ImageInstanceSegmentation | ImageObjectDetection = image_data  # type: ignore[assignment]
-
         sample = ImageCreate(
             file_name=str(image.filename),
-            file_path_abs=posixpath.join(str(images_path), str(image.filename)),
+            file_path_abs=posixpath.join(images_root_abs, str(image.filename)),
             width=image.width,
             height=image.height,
         )
         samples_to_create.append(sample)
-        path_to_anno_data[sample.file_path_abs] = AnnotationImageData(
-            annotation_type=annotation_type,
-            data=typed_image_data,
-        )
 
         if len(samples_to_create) >= SAMPLE_BATCH_SIZE:
             created_path_to_id, paths_not_inserted = _create_batch_samples(
@@ -210,15 +162,7 @@ def load_into_dataset_from_labelformat(
             )
             created_sample_ids.extend(created_path_to_id.values())
             logging_context.update_example_paths(paths_not_inserted)
-            _process_batch_annotations(
-                session=session,
-                created_path_to_id=created_path_to_id,
-                path_to_anno_data=path_to_anno_data,
-                collection_id=root_collection_id,
-                label_map=label_map,
-            )
             samples_to_create.clear()
-            path_to_anno_data.clear()
 
     if samples_to_create:
         created_path_to_id, paths_not_inserted = _create_batch_samples(
@@ -226,12 +170,16 @@ def load_into_dataset_from_labelformat(
         )
         created_sample_ids.extend(created_path_to_id.values())
         logging_context.update_example_paths(paths_not_inserted)
-        _process_batch_annotations(
+
+    # Phase 2: Annotation creation (only if samples were created)
+    if created_sample_ids:
+        add_annotations.add_annotations_from_labelformat(
             session=session,
-            created_path_to_id=created_path_to_id,
-            path_to_anno_data=path_to_anno_data,
-            collection_id=root_collection_id,
-            label_map=label_map,
+            root_collection_id=root_collection_id,
+            input_labels=input_labels,
+            images_root=images_root_abs,
+            collection_name=collection_name,
+            restrict_to_sample_ids=set(created_sample_ids),
         )
 
     log_loading_results(
@@ -358,7 +306,7 @@ def tag_samples_by_directory(
     if tag_depth > 1:
         raise NotImplementedError("tag_depth > 1 is not yet implemented for add_images_from_path.")
 
-    input_path_abs = Path(input_path).absolute()
+    input_path_abs = add_annotations.normalize_images_root(input_path)
 
     newly_created_images = image_resolver.get_many_by_id(
         session=session,
@@ -423,123 +371,6 @@ def _create_batch_samples(
     # Create a mapping from file path to sample ID for new samples
     file_path_new_to_sample_id = dict(zip(file_paths_new, created_sample_ids))
     return (file_path_new_to_sample_id, file_paths_exist)
-
-
-def _create_label_map(
-    session: Session,
-    root_collection_id: UUID,
-    input_labels: ObjectDetectionInput | InstanceSegmentationInput,
-) -> dict[int, UUID]:
-    """Create a mapping of category IDs to annotation label IDs.
-
-    Args:
-        session: The database session.
-        root_collection_id: The ID of the root collection the labels belong to.
-        input_labels: The labelformat input containing the categories.
-    """
-    return labelformat_helpers.create_label_map(
-        session=session,
-        root_collection_id=root_collection_id,
-        input_labels=input_labels,
-    )
-
-
-def _process_object_detection_annotations(
-    context: _AnnotationProcessingContext,
-    anno_data: AnnotationImageData,
-) -> list[AnnotationCreate]:
-    """Process object detection annotations for a single image."""
-    if not (
-        anno_data.annotation_type == AnnotationType.OBJECT_DETECTION
-        and isinstance(anno_data.data, ImageObjectDetection)
-    ):
-        raise ValueError("Invalid annotation data for object detection processing.")
-
-    new_annotations = []
-    for obj in anno_data.data.objects:
-        new_annotations.append(
-            labelformat_helpers.get_object_detection_annotation_create(
-                parent_sample_id=context.sample_id,
-                annotation_label_id=context.label_map[obj.category.id],
-                box=obj.box,
-                confidence=obj.confidence,
-            )
-        )
-    return new_annotations
-
-
-def _process_segmentation_annotations(
-    context: _AnnotationProcessingContext, anno_data: AnnotationImageData
-) -> list[AnnotationCreate]:
-    """Process segmentation mask annotations for a single image."""
-    if not (
-        anno_data.annotation_type == AnnotationType.SEGMENTATION_MASK
-        and isinstance(anno_data.data, ImageInstanceSegmentation)
-    ):
-        raise ValueError("Invalid annotation data for segmentation processing.")
-
-    new_annotations = []
-    for obj in anno_data.data.objects:
-        new_annotations.append(
-            labelformat_helpers.get_segmentation_annotation_create(
-                parent_sample_id=context.sample_id,
-                annotation_label_id=context.label_map[obj.category.id],
-                segmentation=obj.segmentation,
-            )
-        )
-    return new_annotations
-
-
-def _process_batch_annotations(
-    session: Session,
-    created_path_to_id: Mapping[str, UUID],
-    path_to_anno_data: Mapping[str, AnnotationImageData],
-    collection_id: UUID,
-    label_map: dict[int, UUID],
-) -> None:
-    """Process annotations for a batch of samples."""
-    if len(created_path_to_id) == 0:
-        return
-
-    annotations_to_create: list[AnnotationCreate] = []
-
-    for sample_path, sample_id in created_path_to_id.items():
-        anno_data = path_to_anno_data[sample_path]
-
-        context = _AnnotationProcessingContext(
-            collection_id=collection_id,
-            sample_id=sample_id,
-            label_map=label_map,
-        )
-
-        if anno_data.annotation_type == AnnotationType.SEGMENTATION_MASK:
-            new_annotations = _process_segmentation_annotations(
-                context=context, anno_data=anno_data
-            )
-        elif anno_data.annotation_type == AnnotationType.OBJECT_DETECTION:
-            new_annotations = _process_object_detection_annotations(
-                context=context, anno_data=anno_data
-            )
-        else:
-            raise ValueError(f"Unsupported annotation type: {anno_data.annotation_type}")
-
-        annotations_to_create.extend(new_annotations)
-
-    annotation_resolver.create_many(
-        session=session, parent_collection_id=collection_id, annotations=annotations_to_create
-    )
-
-    annotation_collection_id = collection_resolver.get_or_create_child_collection(
-        session=session,
-        collection_id=collection_id,
-        sample_type=SampleType.ANNOTATION,
-    )
-    # Add coverage for every created sample, including images without annotations.
-    annotation_collection_coverage_resolver.add_many(
-        session=session,
-        annotation_collection_id=annotation_collection_id,
-        parent_sample_ids=created_path_to_id.values(),
-    )
 
 
 def _process_batch_captions(
