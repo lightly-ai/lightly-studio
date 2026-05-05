@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import asyncio
 import io
 import os
 from collections.abc import Generator
@@ -15,6 +16,7 @@ from lightly_studio.api.routes.api import status
 from lightly_studio.db_manager import SessionDep
 from lightly_studio.models import image
 from lightly_studio.models.settings import GridViewThumbnailQualityType
+from lightly_studio.utils.executor import get_media_executor
 
 app_router = APIRouter()
 
@@ -55,19 +57,14 @@ async def serve_image_by_sample_id(
     file_path = sample_record.file_path_abs
 
     try:
-        # Open the file.
-        fs, fs_path = fsspec.core.url_to_fs(file_path)
-        content = fs.cat_file(fs_path)
-
-        if quality == GridViewThumbnailQualityType.HIGH:
-            content, content_type = _transform_image(
-                content=content,
-                max_width=max_width,
-                max_height=max_height,
-            )
-        else:
-            # Determine content type based on file extension.
-            content_type = _get_content_type(file_path)
+        content, content_type = await asyncio.get_running_loop().run_in_executor(
+            get_media_executor("image_thumbnail"),
+            _read_and_transform_image,
+            file_path,
+            quality,
+            max_width,
+            max_height,
+        )
 
         # Create a streaming response.
         def generate() -> Generator[bytes, None, None]:
@@ -93,6 +90,26 @@ async def serve_image_by_sample_id(
             status_code=status.HTTP_STATUS_NOT_FOUND,
             detail=f"Error accessing file {file_path}: {exc.strerror}",
         ) from exc
+
+
+def _read_and_transform_image(
+    file_path: str,
+    quality: GridViewThumbnailQualityType,
+    max_width: int | None,
+    max_height: int | None,
+) -> tuple[bytes, str]:
+    """Read image content and apply transport-level thumbnail conversion."""
+    fs, fs_path = fsspec.core.url_to_fs(file_path)
+    content = fs.cat_file(fs_path)
+
+    if quality == GridViewThumbnailQualityType.HIGH:
+        return _transform_image(
+            content=content,
+            max_width=max_width,
+            max_height=max_height,
+        )
+
+    return content, _get_content_type(file_path)
 
 
 def _transform_image(
@@ -150,7 +167,7 @@ def _resize_image(
         max(1, round(image.width * scale)),
         max(1, round(image.height * scale)),
     )
-    return image.resize(target_size, Image.Resampling.LANCZOS)
+    return image.resize(target_size, Image.Resampling.BILINEAR)
 
 
 def _get_content_type(file_path: str) -> str:
@@ -164,6 +181,7 @@ def _get_content_type(file_path: str) -> str:
         ".gif": "image/gif",
         ".webp": "image/webp",
         ".bmp": "image/bmp",
+        ".tif": "image/tiff",
         ".tiff": "image/tiff",
         ".mov": "video/quicktime",
         ".mp4": "video/mp4",

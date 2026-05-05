@@ -21,6 +21,7 @@
     import { GridContainer } from '../GridContainer';
     import { Grid } from '../Grid';
     import { GridItem } from '../GridItem';
+    import { getGridImageURL } from '$lib/utils';
     import { selectRangeByAnchor } from '$lib/utils/selectRangeByAnchor';
     import { page } from '$app/state';
     import SampleImageGridItem from '../SampleImageGridItem/SampleImageGridItem.svelte';
@@ -284,6 +285,13 @@
                             dataTestId="sample-grid-item"
                             isSelected={$selectedSampleIds.has(samples[index].sample_id)}
                             ariaLabel={`View image: ${samples[index].file_name}`}
+                            dragData={{
+                                url: getGridImageURL({
+                                    sampleId: samples[index].sample_id,
+                                    quality: 'raw'
+                                }),
+                                fileName: samples[index].file_name
+                            }}
                             ondblclick={() => handleOnDoubleClick(samples[index].sample_id)}
                             onSelect={(event) =>
                                 handleGridItemSelect(event, samples[index].sample_id, index)}

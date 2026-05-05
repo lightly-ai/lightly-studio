@@ -41,7 +41,7 @@ interface StringLiteral extends Expression {
 
 entry Query:
   (expression=Sample<true>) |
-    ('video:' expression=Sample<false>);
+    (isVideo?='video:' expression=Sample<false>);
 
 Sample<isImage> returns Expression:
   SampleOr<isImage>;
@@ -98,13 +98,38 @@ ObjectDetectionUnary returns Expression:
     | ObjectDetectionComparison;
 
 ObjectDetectionComparison returns ComparisonExpression:
-  ObjectDetectionFieldReference {ComparisonExpression.left=current} operator=('==' | '!=' | '<' | '>' | '<=' | '>=') right=Literal;
+  ObjectDetectionIntFieldReference {ComparisonExpression.left=current} operator=('==' | '!=' | '<' | '>' | '<=' | '>=') right=IntLiteral
+   | ObjectDetectionStringFieldReference {ComparisonExpression.left=current} operator=('==' | '!=') right=StringLiteral;
 
-ObjectDetectionFieldReference returns Expression:
-  {FieldReference} member=ObjectDetectionFieldName;
+ObjectDetectionIntFieldReference returns FieldReference:
+  {FieldReference} member=ObjectDetectionIntFieldName;
+
+ObjectDetectionStringFieldReference returns FieldReference:
+  {FieldReference} member=ObjectDetectionStringFieldName;
+
+Classification returns Expression:
+  ClassificationOr;
+
+ClassificationOr returns Expression:
+  ClassificationAnd ({BooleanExpression.children+=current} operator=OR children+=ClassificationAnd (OR children+=ClassificationAnd)*)?;
+
+ClassificationAnd returns Expression:
+  ClassificationUnary ({BooleanExpression.children+=current} operator=AND children+=ClassificationUnary (AND children+=ClassificationUnary)*)?;
+
+ClassificationUnary returns Expression:
+  '(' Classification ')'
+    | {NotExpression} NOT expression=ClassificationUnary
+    | ClassificationComparison;
+
+ClassificationComparison returns ComparisonExpression:
+  ClassificationFieldReference {ComparisonExpression.left=current} operator=('==' | '!=') right=StringLiteral;
+
+ClassificationFieldReference returns Expression:
+  {FieldReference} member=LABEL;
 
 AnnotationQuery returns Expression:
-  {FunctionCall} name=ANNOTATION_FUNCTION '(' args+=ObjectDetection ')';
+  {FunctionCall} name=OBJECT_DETECTION_FUNCTION '(' args+=ObjectDetection ')'
+  | {FunctionCall} name=CLASSIFICATION_FUNCTION '(' args+=Classification ')';
 
 TagInExpression returns Expression:
   {TagInExpression} tag_name=StringLiteral IN TAGS_KEYWORD;
@@ -136,11 +161,11 @@ VideoEqualityFloatFieldName returns string:
 VideoStringFieldName returns string:
   STRING_FIELD_NAME;
 
-ObjectDetectionFieldName returns string:
-  HEIGHT | WIDTH | LABEL | X_COORD | Y_COORD;
+ObjectDetectionIntFieldName returns string:
+  HEIGHT | WIDTH | X_COORD | Y_COORD;
 
-Literal returns Expression:
-  IntLiteral | FloatLiteral | StringLiteral;
+ObjectDetectionStringFieldName returns string:
+  LABEL;
 
 NumericLiteral returns Expression:
   IntLiteral | FloatLiteral;
@@ -162,7 +187,8 @@ terminal AND: /\bAND\b/i;
 terminal OR: /\bOR\b/i;
 terminal NOT: /\bNOT\b/i;
 terminal IN returns string: /\bIN\b/i;
-terminal ANNOTATION_FUNCTION returns string: /\bobject_detection\b/;
+terminal OBJECT_DETECTION_FUNCTION returns string: /\bobject_detection\b/;
+terminal CLASSIFICATION_FUNCTION returns string: /\bclassification\b/;
 terminal TAGS_KEYWORD returns string: /\btags\b/;
 terminal ORDINAL_FLOAT_FIELD_NAME returns string: /\bduration_s\b/;
 terminal EQUALITY_FLOAT_FIELD_NAME returns string: /\bfps\b/;

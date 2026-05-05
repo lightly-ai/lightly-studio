@@ -24,7 +24,9 @@ class TestDataset:
                 images_path / "image1.jpg",
                 images_path / "image2.png",
                 images_path / "image3.BMP",
-                images_path / "subfolder" / "image4.jpg",
+                images_path / "image4.tif",
+                images_path / "image5.TIFF",
+                images_path / "subfolder" / "image6.jpg",
             ]
         )
 
@@ -32,12 +34,14 @@ class TestDataset:
         dataset.add_images_from_path(path=images_path)
 
         samples = dataset.query().to_list()
-        assert len(samples) == 4
+        assert len(samples) == 6
         assert {s.file_name for s in samples} == {
             "image1.jpg",
             "image2.png",
             "image3.BMP",
-            "image4.jpg",
+            "image4.tif",
+            "image5.TIFF",
+            "image6.jpg",
         }
         # Check that embeddings were created
         assert all(len(sample.sample_table.embeddings) == 1 for sample in samples)
