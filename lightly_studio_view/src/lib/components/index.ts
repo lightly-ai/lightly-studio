@@ -56,5 +56,6 @@ export { default as GroupsComponentsMenu } from '$lib/components/GroupsComponent
 export { default as LayoutCard } from '$lib/components/LayoutCard/LayoutCard.svelte';
 export { default as SelectionPill } from '$lib/components/SelectionPill/SelectionPill.svelte';
 export { default as Separator } from '$lib/components/ui/separator/separator.svelte';
+export { default as CollectionSearch } from '$lib/components/CollectionSearch/CollectionSearch.svelte';
 export { default as CollectionSearchImage } from '$lib/components/CollectionSearch/CollectionSearchImage/CollectionSearchImage.svelte';
 export { default as CollectionSearchInput } from '$lib/components/CollectionSearch/SearchInput/CollectionSearchInput.svelte';
