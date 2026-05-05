@@ -7,7 +7,6 @@ import {
     setNetworkThrottling,
     test
 } from '../utils';
-import { AnnotationDetailsPage, AnnotationsPage, SampleDetailsPage, SamplesPage } from '../pages';
 import * as fs from 'fs';
 import * as path from 'path';
 
@@ -165,9 +164,7 @@ test('sample details renders prev image within 5 seconds', async ({
     expectWithinPerformanceLimits(result, PERFORMANCE_LIMITS);
 });
 
-test('annotations grid renders within 5 seconds', async ({ page }) => {
-    const annotationsPage = new AnnotationsPage(page);
-
+test('annotations grid renders within 5 seconds', async ({ page, annotationsPage }) => {
     await setNetworkThrottling(page, 'Fast4G');
 
     const result = await measureRenderAndMemory(async () => {
