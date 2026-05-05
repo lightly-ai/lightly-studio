@@ -25,7 +25,7 @@ from PIL import Image as PILImage
 from sqlmodel import Session
 
 from lightly_studio.core import labelformat_helpers
-from lightly_studio.core.image import add_images
+from lightly_studio.core.image import add_annotations, add_images
 from lightly_studio.models.image import ImageCreate
 from lightly_studio.resolvers import image_resolver
 from tests import helpers_resolvers
@@ -552,8 +552,6 @@ def test_load_into_dataset_from_paths__file_url_normalization(
     # (Without path normalization, this would fail to match)
     helpers_resolvers.create_annotation_label(db_session, collection.collection_id, "dog")
     label_input = _get_labelformat_input_obj_det(filename="image.jpg")
-
-    from lightly_studio.core.image import add_annotations
 
     missing_paths = add_annotations.add_annotations_from_labelformat(
         session=db_session,

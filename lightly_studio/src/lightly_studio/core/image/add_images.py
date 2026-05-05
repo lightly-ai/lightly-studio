@@ -171,15 +171,16 @@ def load_into_dataset_from_labelformat(
         created_sample_ids.extend(created_path_to_id.values())
         logging_context.update_example_paths(paths_not_inserted)
 
-    # Phase 2: Annotation creation
-    add_annotations.add_annotations_from_labelformat(
-        session=session,
-        root_collection_id=root_collection_id,
-        input_labels=input_labels,
-        images_root=images_root_abs,
-        collection_name=collection_name,
-        restrict_to_sample_ids=set(created_sample_ids),
-    )
+    # Phase 2: Annotation creation (only if samples were created)
+    if created_sample_ids:
+        add_annotations.add_annotations_from_labelformat(
+            session=session,
+            root_collection_id=root_collection_id,
+            input_labels=input_labels,
+            images_root=images_root_abs,
+            collection_name=collection_name,
+            restrict_to_sample_ids=set(created_sample_ids),
+        )
 
     log_loading_results(
         session=session,
