@@ -127,9 +127,34 @@ ClassificationComparison returns ComparisonExpression:
 ClassificationFieldReference returns Expression:
   {FieldReference} member=LABEL;
 
+SegmentationMask returns Expression:
+  SegmentationMaskOr;
+
+SegmentationMaskOr returns Expression:
+  SegmentationMaskAnd ({BooleanExpression.children+=current} operator=OR children+=SegmentationMaskAnd (OR children+=SegmentationMaskAnd)*)?;
+
+SegmentationMaskAnd returns Expression:
+  SegmentationMaskUnary ({BooleanExpression.children+=current} operator=AND children+=SegmentationMaskUnary (AND children+=SegmentationMaskUnary)*)?;
+
+SegmentationMaskUnary returns Expression:
+  '(' SegmentationMask ')'
+    | {NotExpression} NOT expression=SegmentationMaskUnary
+    | SegmentationMaskComparison;
+
+SegmentationMaskComparison returns ComparisonExpression:
+  SegmentationMaskIntFieldReference {ComparisonExpression.left=current} operator=('==' | '!=' | '<' | '>' | '<=' | '>=') right=IntLiteral
+   | SegmentationMaskStringFieldReference {ComparisonExpression.left=current} operator=('==' | '!=') right=StringLiteral;
+
+SegmentationMaskIntFieldReference returns FieldReference:
+  {FieldReference} member=SegmentationMaskIntFieldName;
+
+SegmentationMaskStringFieldReference returns FieldReference:
+  {FieldReference} member=SegmentationMaskStringFieldName;
+
 AnnotationQuery returns Expression:
   {FunctionCall} name=OBJECT_DETECTION_FUNCTION '(' args+=ObjectDetection ')'
-  | {FunctionCall} name=CLASSIFICATION_FUNCTION '(' args+=Classification ')';
+  | {FunctionCall} name=CLASSIFICATION_FUNCTION '(' args+=Classification ')'
+  | {FunctionCall} name=SEGMENTATION_MASK_FUNCTION '(' args+=SegmentationMask ')';
 
 TagInExpression returns Expression:
   {TagInExpression} tag_name=StringLiteral IN TAGS_KEYWORD;
@@ -167,6 +192,12 @@ ObjectDetectionIntFieldName returns string:
 ObjectDetectionStringFieldName returns string:
   LABEL;
 
+SegmentationMaskIntFieldName returns string:
+  HEIGHT | WIDTH | X_COORD | Y_COORD;
+
+SegmentationMaskStringFieldName returns string:
+  LABEL;
+
 NumericLiteral returns Expression:
   IntLiteral | FloatLiteral;
 
@@ -189,6 +220,7 @@ terminal NOT: /\bNOT\b/i;
 terminal IN returns string: /\bIN\b/i;
 terminal OBJECT_DETECTION_FUNCTION returns string: /\bobject_detection\b/;
 terminal CLASSIFICATION_FUNCTION returns string: /\bclassification\b/;
+terminal SEGMENTATION_MASK_FUNCTION returns string: /\bsegmentation_mask\b/;
 terminal TAGS_KEYWORD returns string: /\btags\b/;
 terminal ORDINAL_FLOAT_FIELD_NAME returns string: /\bduration_s\b/;
 terminal EQUALITY_FLOAT_FIELD_NAME returns string: /\bfps\b/;
