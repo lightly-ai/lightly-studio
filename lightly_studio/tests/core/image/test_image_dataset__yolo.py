@@ -392,6 +392,7 @@ class TestDataset:
         image2_sample = next((s for s in samples if "image2" in s.file_path_abs), None)
         assert image1_sample is not None, "image1 must be loaded"
         assert image2_sample is not None, "image2 (empty label) must be loaded"
+        assert len(image2_sample.sample_table.annotations) == 0
 
         cov_id = collection_resolver.get_or_create_child_collection(
             session=dataset.session,

@@ -534,6 +534,7 @@ def _process_batch_annotations(
         collection_id=collection_id,
         sample_type=SampleType.ANNOTATION,
     )
+    # Add coverage for every created sample, including images without annotations.
     annotation_collection_coverage_resolver.add_many(
         session=session,
         annotation_collection_id=annotation_collection_id,
