@@ -306,7 +306,7 @@ def tag_samples_by_directory(
     if tag_depth > 1:
         raise NotImplementedError("tag_depth > 1 is not yet implemented for add_images_from_path.")
 
-    input_path_abs = Path(input_path).absolute()
+    input_path_abs = add_annotations.normalize_images_root(input_path)
 
     newly_created_images = image_resolver.get_many_by_id(
         session=session,

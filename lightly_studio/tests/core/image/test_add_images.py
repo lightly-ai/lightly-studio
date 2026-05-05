@@ -450,6 +450,50 @@ def test_tag_samples_by_directory_tag_depth_1(
     assert sample_filename_to_tags["root_img.png"] == set()
 
 
+def test_tag_samples_by_directory__file_url_normalization(
+    db_session: Session,
+    tmp_path: Path,
+) -> None:
+    """Tests that tag_depth=1 works correctly with file:// URLs."""
+    # Arrange: Create directory structure with file:// URLs
+    site_1_dir = tmp_path / "site_1"
+    site_1_dir.mkdir()
+    (site_1_dir / "img1.png").touch()
+    (tmp_path / "img0.png").touch()
+
+    collection_table = helpers_resolvers.create_collection(db_session, "test_collection")
+
+    # Create samples with normalized absolute paths (as load_into_dataset_from_paths would)
+    created_images = helpers_resolvers.create_images(
+        db_session=db_session,
+        collection_id=collection_table.collection_id,
+        images=[
+            ImageStub(path=str((tmp_path / "img0.png").absolute())),
+            ImageStub(path=str((site_1_dir / "img1.png").absolute())),
+        ],
+    )
+
+    # Act: Tag using file:// URL (as user might pass)
+    file_url = f"file://{tmp_path}"
+    add_images.tag_samples_by_directory(
+        session=db_session,
+        collection_id=collection_table.collection_id,
+        input_path=file_url,
+        sample_ids=[img.sample_id for img in created_images],
+        tag_depth=1,
+    )
+
+    # Assert: Tags correctly extracted despite file:// URL normalization
+    samples = image_resolver.get_all_by_collection_id(
+        session=db_session, collection_id=collection_table.collection_id
+    ).samples
+    assert len(samples) == 2
+
+    sample_filename_to_tags = {s.file_name: {t.name for t in s.sample.tags} for s in samples}
+    assert sample_filename_to_tags["img0.png"] == set()
+    assert sample_filename_to_tags["img1.png"] == {"site_1"}
+
+
 def _get_labelformat_input_obj_det(
     filename: str = "image.jpg", category_names: list[str] | None = None
 ) -> LabelformatObjectDetectionInput:
