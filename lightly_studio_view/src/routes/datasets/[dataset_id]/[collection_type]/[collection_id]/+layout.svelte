@@ -72,6 +72,8 @@
     import { useSelectAll } from '$lib/hooks/useSelectAll/useSelectAll';
     import { isInputElement } from '$lib/utils';
     import { shutdownMaskRendererPool } from '$lib/workers/maskRendererPool';
+    import { embedImageFromFile } from '$lib/api/lightly_studio_local';
+    import { GRID_IMAGE_SEARCH_DROP_EVENT, type GridItemDragData } from '$lib/components/GridItem';
     const { data, children } = $props();
     const {
         collection,
@@ -139,6 +141,7 @@
             window.addEventListener('keydown', handleKeyEvent);
             window.addEventListener('keyup', handleKeyEvent);
             window.addEventListener('keydown', handleSelectAllKeydown);
+            window.addEventListener(GRID_IMAGE_SEARCH_DROP_EVENT, handleGridImageSearchDrop);
         }
     });
 
@@ -147,6 +150,7 @@
             window.removeEventListener('keydown', handleKeyEvent);
             window.removeEventListener('keyup', handleKeyEvent);
             window.removeEventListener('keydown', handleSelectAllKeydown);
+            window.removeEventListener(GRID_IMAGE_SEARCH_DROP_EVENT, handleGridImageSearchDrop);
             shutdownMaskRendererPool();
         }
     });
@@ -344,6 +348,7 @@
     async function handleDrop(e: DragEvent) {
         e.preventDefault();
         dragOver = false;
+
         if (e.dataTransfer?.files && e.dataTransfer.files.length > 0) {
             const file = e.dataTransfer.files[0];
             if (file.type.startsWith('image/')) {
@@ -351,6 +356,22 @@
             } else {
                 setError('Please drop an image file.');
             }
+        }
+    }
+
+    async function handleGridImageSearchDrop(event: Event) {
+        const { url, fileName } = (event as CustomEvent<GridItemDragData>).detail;
+        try {
+            const response = await fetch(url);
+            if (!response.ok) {
+                throw new Error(`Failed to fetch dragged image: ${response.statusText}`);
+            }
+            const blob = await response.blob();
+            await uploadImage(new File([blob], fileName, { type: blob.type || 'image/jpeg' }));
+        } catch (err: unknown) {
+            const message =
+                err instanceof Error ? err.message : 'Failed to load dragged image for search';
+            setError(message);
         }
     }
 
@@ -399,28 +420,22 @@
             return;
         }
 
-        const formData = new FormData();
-        formData.append('file', file);
-
         isUploading = true;
         try {
             const currentCollectionId = page.params.collection_id;
             if (!currentCollectionId) {
                 throw new Error('Collection ID is not available');
             }
-            const response = await fetch(
-                `/api/image_embedding/from_file/for_collection/${currentCollectionId}`,
-                {
-                    method: 'POST',
-                    body: formData
-                }
-            );
 
-            if (!response.ok) {
-                throw new Error(`Error uploading image: ${response.statusText}`);
+            const response = await embedImageFromFile({
+                path: { collection_id: currentCollectionId },
+                body: { file }
+            });
+
+            if (response.error) {
+                throw new Error('Error uploading image');
             }
-
-            const embedding = await response.json();
+            const embedding = response.data;
 
             // Clear text search state
             query_text = '';
@@ -579,7 +594,7 @@
                             class="relative flex flex-1 flex-col space-y-4 rounded-[1vw] bg-card p-4"
                         >
                             <GridHeader>
-                                <div class="flex-1">
+                                <div class="flex-1" data-grid-search-drop-target>
                                     {#if hasEmbeddings}
                                         <div
                                             class="relative"
@@ -715,6 +730,7 @@
                                     class="relative"
                                     role="region"
                                     aria-label="Search by image or text"
+                                    data-grid-search-drop-target
                                     ondragover={handleDragOver}
                                     ondragleave={handleDragLeave}
                                     ondrop={handleDrop}

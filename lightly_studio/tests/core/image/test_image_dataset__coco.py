@@ -12,6 +12,11 @@ from PIL import Image
 from lightly_studio import ImageDataset
 from lightly_studio.models.annotation.annotation_base import AnnotationType
 from lightly_studio.models.annotation.object_detection import ObjectDetectionAnnotationTable
+from lightly_studio.models.collection import SampleType
+from lightly_studio.resolvers import (
+    annotation_collection_coverage_resolver,
+    collection_resolver,
+)
 
 
 def get_coco_annotation_dict_valid() -> dict[str, Any]:
@@ -450,6 +455,42 @@ class TestDataset:
 
         assert len(samples[0].tags) == 0
         assert len(samples[1].tags) == 0
+
+    def test_add_samples_from_coco__coverage_includes_zero_detection_image(
+        self,
+        patch_collection: None,  # noqa: ARG002
+        tmp_path: Path,
+    ) -> None:
+        """Coverage must include images with no annotations (zero-detection case)."""
+        coco_dict = get_coco_annotation_dict_valid()
+        coco_dict["images"].append(
+            {"id": 3, "file_name": "image3.jpg", "width": 640, "height": 480}
+        )
+        (tmp_path / "annotations.json").write_text(json.dumps(coco_dict))
+        images_path = tmp_path / "images"
+        images_path.mkdir()
+        _create_sample_images([images_path / f"image{i}.jpg" for i in range(1, 4)])
+
+        dataset = ImageDataset.create(name="test_dataset")
+        dataset.add_samples_from_coco(
+            annotations_json=tmp_path / "annotations.json",
+            images_path=images_path,
+            annotation_type=AnnotationType.OBJECT_DETECTION,
+            embed=False,
+        )
+
+        samples = list(dataset)
+        cov_id = collection_resolver.get_or_create_child_collection(
+            session=dataset.session,
+            collection_id=dataset.collection_id,
+            sample_type=SampleType.ANNOTATION,
+        )
+        covered = set(
+            annotation_collection_coverage_resolver.list_by_collection_id(
+                session=dataset.session, annotation_collection_id=cov_id
+            )
+        )
+        assert covered == {s.sample_id for s in samples}
 
     def test_add_samples_from_coco__relative_local_images_path_normalized_to_absolute(
         self,

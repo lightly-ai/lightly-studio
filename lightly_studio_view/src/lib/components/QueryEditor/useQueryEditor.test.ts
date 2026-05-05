@@ -9,7 +9,8 @@ const mocks = vi.hoisted(() => ({
     editorCreate: vi.fn(),
     uriParse: vi.fn((s: string) => ({ scheme: 'inmemory', path: s, toString: () => s })),
     attachFn: vi.fn(),
-    translateQueryFn: vi.fn()
+    translateQueryFn: vi.fn(),
+    useSyntaxCompletion: vi.fn()
 }));
 
 vi.mock('monaco-editor/esm/vs/editor/editor.worker?worker', () => ({
@@ -42,6 +43,10 @@ vi.mock('./useLightlyQueryLanguage/useLightlyQueryLanguage', () => ({
         attach: mocks.attachFn,
         translateQuery: mocks.translateQueryFn
     })
+}));
+
+vi.mock('./useLightlyQueryLanguage/useSyntaxCompletion', () => ({
+    useSyntaxCompletion: mocks.useSyntaxCompletion
 }));
 
 import { useQueryEditor } from './useQueryEditor';
