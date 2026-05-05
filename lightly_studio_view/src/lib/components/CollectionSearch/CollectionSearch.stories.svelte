@@ -1,5 +1,6 @@
 <script module>
     import { defineMeta } from '@storybook/addon-svelte-csf';
+    import { fn } from 'storybook/test';
     import { QueryClient, QueryClientProvider } from '@tanstack/svelte-query';
     import CollectionSearch from './CollectionSearch.svelte';
 
@@ -15,16 +16,14 @@
             mutations: { retry: false }
         }
     });
-
-    const noopSetTextEmbedding = () => undefined;
 </script>
 
 <Story
     name="Default"
     args={{
         collectionId: 'collection-id',
-        textEmbedding: undefined,
-        setTextEmbedding: noopSetTextEmbedding
+        value: undefined,
+        onChange: fn()
     }}
 >
     {#snippet template(args)}
@@ -38,11 +37,11 @@
     name="With Existing Query"
     args={{
         collectionId: 'collection-id',
-        textEmbedding: {
+        value: {
             queryText: 'a yellow excavator',
             embedding: [0, 0, 0]
         },
-        setTextEmbedding: noopSetTextEmbedding
+        onChange: fn()
     }}
 >
     {#snippet template(args)}

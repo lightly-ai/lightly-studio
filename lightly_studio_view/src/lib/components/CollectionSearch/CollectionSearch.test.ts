@@ -91,8 +91,8 @@ describe('CollectionSearch', () => {
         render(CollectionSearch, {
             props: {
                 collectionId: 'collection-id',
-                textEmbedding: undefined,
-                setTextEmbedding: vi.fn()
+                value: undefined,
+                onChange: vi.fn()
             }
         });
 
@@ -105,8 +105,8 @@ describe('CollectionSearch', () => {
         render(CollectionSearch, {
             props: {
                 collectionId: 'collection-id',
-                textEmbedding: undefined,
-                setTextEmbedding: vi.fn()
+                value: undefined,
+                onChange: vi.fn()
             }
         });
 
@@ -116,21 +116,21 @@ describe('CollectionSearch', () => {
 
     it('clears embedding when image clear button is clicked', async () => {
         mocks.imageName.set('query.png');
-        const setTextEmbedding = vi.fn();
+        const onChange = vi.fn();
 
         render(CollectionSearch, {
             props: {
                 collectionId: 'collection-id',
-                textEmbedding: undefined,
-                setTextEmbedding
+                value: undefined,
+                onChange
             }
         });
 
-        setTextEmbedding.mockClear();
+        onChange.mockClear();
 
         await fireEvent.click(screen.getByTestId('search-clear-button'));
 
-        expect(setTextEmbedding).toHaveBeenCalledWith(undefined);
+        expect(onChange).toHaveBeenCalledWith(undefined);
         expect(mocks.clear).toHaveBeenCalled();
     });
 });

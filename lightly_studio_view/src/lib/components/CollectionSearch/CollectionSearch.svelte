@@ -12,15 +12,15 @@
 
     type Props = {
         collectionId: string;
-        textEmbedding: TextEmbedding | undefined;
-        setTextEmbedding: (embedding: TextEmbedding | undefined) => void;
+        value: TextEmbedding | undefined;
+        onChange: (embedding: TextEmbedding | undefined) => void;
     };
 
-    let { collectionId, textEmbedding, setTextEmbedding }: Props = $props();
+    let { collectionId, value, onChange }: Props = $props();
 
-    let queryText = $state(textEmbedding ? textEmbedding.queryText : '');
-    let submittedQueryText = $state(textEmbedding ? textEmbedding.queryText : '');
-    let lastAppliedTextEmbeddingQuery = $state(textEmbedding ? textEmbedding.queryText : '');
+    let queryText = $state(value ? value.queryText : '');
+    let submittedQueryText = $state(value ? value.queryText : '');
+    let lastAppliedTextEmbeddingQuery = $state(value ? value.queryText : '');
     let fileInput = $state<HTMLInputElement | null>(null);
 
     const setError = (errorMessage: string) => {
@@ -33,7 +33,7 @@
         onSuccess: ({ fileName, embedding }) => {
             queryText = '';
             submittedQueryText = '';
-            setTextEmbedding({
+            onChange({
                 queryText: fileName,
                 embedding
             });
@@ -94,11 +94,11 @@
         queryText = '';
         submittedQueryText = '';
         clear();
-        setTextEmbedding(undefined);
+        onChange(undefined);
     };
 
     $effect(() => {
-        const committedQuery = textEmbedding?.queryText ?? '';
+        const committedQuery = value?.queryText ?? '';
         if (committedQuery === lastAppliedTextEmbeddingQuery) {
             return;
         }
@@ -134,12 +134,12 @@
         }
 
         if (!submittedQueryText) {
-            setTextEmbedding(undefined);
+            onChange(undefined);
             return;
         }
 
         if ($embedTextQuery.isSuccess) {
-            setTextEmbedding({
+            onChange({
                 queryText: submittedQueryText,
                 embedding: $embedTextQuery.data
             });
