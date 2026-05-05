@@ -105,7 +105,7 @@ test('sample details renders next image within 5 seconds', async ({
         await samplesPage.goto();
         await samplesPage.doubleClickFirstSample();
 
-        await page.getByText('Sample 1 of 128').waitFor({ state: 'visible', timeout: 10000 });
+        await page.getByText('Sample 1 of 128').waitFor();
         await sampleDetailsPage.getNextButton().click();
         const renderTimeMs = await measureElementRendering(page, page.getByText('Sample 2 of 128'));
         const memoryUsageMb = await measureMemoryConsumption(page);
@@ -140,7 +140,7 @@ test('sample details renders prev image within 5 seconds', async ({
     const result = await measureRenderAndMemory(async () => {
         await samplesPage.goto();
         await samplesPage.doubleClickNthSample(1);
-        await page.getByText('Sample 2 of 128').waitFor({ state: 'visible', timeout: 10000 });
+        await page.getByText('Sample 2 of 128').waitFor();
         await sampleDetailsPage.getPrevButton().click();
         const renderTimeMs = await measureElementRendering(page, page.getByText('Sample 1 of 128'));
         const memoryUsageMb = await measureMemoryConsumption(page);
@@ -208,10 +208,7 @@ test('annotation details renders within 5 seconds', async ({
 
     const result = await measureRenderAndMemory(async () => {
         await page.goto(annotationsUrl);
-        await annotationsPage
-            .getAnnotations()
-            .first()
-            .waitFor({ state: 'visible', timeout: 10000 });
+        await annotationsPage.getAnnotations().first().waitFor();
         await annotationsPage.clickAnnotation(0);
         await annotationDetailsPage.waitForNavigation();
         const renderTimeMs = await measureElementRendering(
