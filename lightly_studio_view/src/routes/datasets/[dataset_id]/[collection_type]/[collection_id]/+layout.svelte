@@ -726,7 +726,7 @@
             {:else}
                 <!-- When plot is hidden or not samples view, show normal layout -->
                 <div class="relative flex flex-1 flex-col space-y-4 rounded-[1vw] bg-card p-4 pb-2">
-                    {#if isImages || isAnnotations || isVideos || isGroups}
+                    {#if isImages || isAnnotations || isVideos || isVideoFrames || isGroups}
                         <GridHeader>
                             {#snippet selectionControls()}
                                 {#if canSelectAll}
