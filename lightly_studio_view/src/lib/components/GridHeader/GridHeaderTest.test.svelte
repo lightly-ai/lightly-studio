@@ -15,9 +15,19 @@
             Aux Controls
         {/snippet}
     </GridHeader>
+{:else if testCase === 'with-selection-controls'}
+    <GridHeader>
+        Main Content
+        {#snippet selectionControls()}
+            Selection Controls
+        {/snippet}
+    </GridHeader>
 {:else if testCase === 'all-elements'}
     <GridHeader showImageSizeControl={true}>
         Main Content
+        {#snippet selectionControls()}
+            Selection Controls
+        {/snippet}
         {#snippet auxControls()}
             Extra Controls
         {/snippet}
