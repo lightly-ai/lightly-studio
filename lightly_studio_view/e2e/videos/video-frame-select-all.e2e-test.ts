@@ -1,5 +1,5 @@
 import { expect, test } from '../utils';
-import { youtubeVisVideosDataset } from './fixtures';
+import { youtubeVisVideosDataset } from './fixtures/youtubeVisVideosDataset';
 
 test('select all video frames with label filter via keyboard shortcut', async ({
     page,
