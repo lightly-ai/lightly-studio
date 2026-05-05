@@ -9,6 +9,7 @@
         SelectionPill,
         TagsMenu
     } from '$lib/components';
+    import GridHeaderSelectAllButton from '$lib/components/GridHeaderSelectAllButton/GridHeaderSelectAllButton.svelte';
     import QueryEditorPanel from '$lib/components/QueryEditorPanel/QueryEditorPanel.svelte';
     import Input from '$lib/components/ui/input/input.svelte';
     import Separator from '$lib/components/ui/separator/separator.svelte';
@@ -18,8 +19,7 @@
         Image as ImageIcon,
         X,
         ChartNetwork,
-        GripVertical,
-        SquareCheck
+        GripVertical
     } from '@lucide/svelte';
     import { onDestroy, onMount } from 'svelte';
     import { toStore } from 'svelte/store';
@@ -598,17 +598,9 @@
                             <GridHeader>
                                 {#snippet selectionControls()}
                                     {#if canSelectAll}
-                                        <Button
-                                            class="h-8 shrink-0 gap-1.5 px-2 text-diffuse-foreground hover:bg-background hover:text-foreground"
-                                            data-testid="select-all-button"
-                                            variant="ghost"
-                                            aria-label="Select all"
-                                            title="Select all"
+                                        <GridHeaderSelectAllButton
                                             onclick={selectAllHandle.handleSelectAll}
-                                        >
-                                            <SquareCheck class="size-4" />
-                                            <span>Select all</span>
-                                        </Button>
+                                        />
                                     {/if}
                                 {/snippet}
                                 <div class="flex-1" data-grid-search-drop-target>
@@ -730,17 +722,9 @@
                         <GridHeader>
                             {#snippet selectionControls()}
                                 {#if canSelectAll}
-                                    <Button
-                                        class="h-8 shrink-0 gap-1.5 px-2 text-diffuse-foreground hover:bg-background hover:text-foreground"
-                                        data-testid="select-all-button"
-                                        variant="ghost"
-                                        aria-label="Select all"
-                                        title="Select all"
+                                    <GridHeaderSelectAllButton
                                         onclick={selectAllHandle.handleSelectAll}
-                                    >
-                                        <SquareCheck class="size-4" />
-                                        <span>Select all</span>
-                                    </Button>
+                                    />
                                 {/if}
                             {/snippet}
                             {#snippet auxControls()}
