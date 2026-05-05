@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import datetime
 import logging
 from collections import Counter, defaultdict
 from collections.abc import Mapping, Sequence
@@ -272,15 +271,12 @@ def select_via_database(
     selected_indices = mundig.run(n_samples=n_samples_to_select)
     selected_sample_ids = [input_sample_ids[i] for i in selected_indices]
 
-    datetime_str = datetime.datetime.now(tz=datetime.timezone.utc).isoformat()
-    tag_description = f"Selected at {datetime_str} UTC"
     tag = tag_resolver.create(
         session=session,
         tag=TagCreate(
             collection_id=config.collection_id,
             name=config.selection_result_tag_name,
             kind="sample",
-            description=tag_description,
         ),
     )
     tag_resolver.add_sample_ids_to_tag_id(

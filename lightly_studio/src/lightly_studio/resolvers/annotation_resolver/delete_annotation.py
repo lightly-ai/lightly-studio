@@ -13,7 +13,7 @@ from lightly_studio.models.annotation.object_detection import (
 from lightly_studio.models.annotation.segmentation import (
     SegmentationAnnotationTable,
 )
-from lightly_studio.models.sample import SampleTable
+from lightly_studio.models.sample import SampleTable, SampleTagLinkTable
 from lightly_studio.resolvers import annotation_resolver
 
 
@@ -64,6 +64,13 @@ def delete_annotation(
     # Then delete the annotation's sample (created specifically for this annotation)
     # unless we're keeping it for reuse (e.g., when updating annotation label)
     if delete_sample:
+        session.exec(
+            delete(SampleTagLinkTable).where(
+                col(SampleTagLinkTable.sample_id) == annotation_sample_id
+            )
+        )
+        session.commit()
+
         annotation_sample = session.get(SampleTable, annotation_sample_id)
         if annotation_sample:
             session.delete(annotation_sample)

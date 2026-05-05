@@ -8,8 +8,9 @@
     import { useTags } from '$lib/hooks/useTags/useTags';
     import { useVideoBounds } from '$lib/hooks/useVideosBounds/useVideosBounds';
     import { buildVideoFilter, useVideoFilters } from '$lib/hooks/useVideoFilters/useVideoFilters';
-    import SampleGridItem from '$lib/components/SampleGridItem/SampleGridItem.svelte';
-    import SampleGrid from '$lib/components/SampleGrid/SampleGrid.svelte';
+    import { GridContainer } from '$lib/components/GridContainer';
+    import { Grid } from '$lib/components/Grid';
+    import { GridItem } from '$lib/components/GridItem';
     import type { VideoFilterParams } from '$lib/hooks/useVideoFilters/useVideoFilters';
     import { isEqual, omit } from 'lodash-es';
     import { get } from 'svelte/store';
@@ -30,7 +31,9 @@
         useSelectedAnnotationsFilter();
     const { videoBoundsValues } = $derived.by(() => useVideoBounds(collectionId));
 
-    const { textEmbedding, getSelectedSampleIds, toggleSampleSelection } = useGlobalStorage();
+    const { textEmbedding, getSelectedSampleIds, toggleSampleSelection, sampleSize } =
+        useGlobalStorage();
+    const columnCount = $derived($sampleSize.width);
 
     const videosParams = $derived({
         collection_id: collectionId,
@@ -117,6 +120,7 @@
     const { setfilteredSampleCount } = useGlobalStorage();
 
     let items = $derived($data);
+    const selectedSampleIds = $derived(getSelectedSampleIds(collectionId));
     let selectionAnchorSampleId = $state<string | null>(null);
 
     $effect(() => {
@@ -132,10 +136,10 @@
         index: number;
         shiftKey: boolean;
     }) {
-        const selectedSampleIds = getSelectedSampleIds(collectionId);
+        const selectedSampleIdsStore = getSelectedSampleIds(collectionId);
         selectionAnchorSampleId = selectRangeByAnchor({
             sampleIdsInOrder: items.map((item) => item.sample_id),
-            selectedSampleIds: get(selectedSampleIds),
+            selectedSampleIds: get(selectedSampleIdsStore),
             clickedSampleId: sampleId,
             clickedIndex: index,
             shiftKey,
@@ -143,6 +147,14 @@
             onSelectSample: (selectedSampleId) =>
                 toggleSampleSelection(selectedSampleId, collectionId)
         });
+    }
+
+    function handleGridItemSelect(
+        event: MouseEvent | KeyboardEvent,
+        sampleId: string,
+        index: number
+    ) {
+        handleSampleSelect({ sampleId, index, shiftKey: event.shiftKey });
     }
 
     const filterHash = $derived(JSON.stringify($filterParams));
@@ -161,13 +173,8 @@
 </script>
 
 <div class="flex flex-1 flex-col space-y-4">
-    <SampleGrid
+    <GridContainer
         itemCount={items.length}
-        overScan={20}
-        {scrollResetKey}
-        onScroll={handleScroll}
-        scrollPosition={initialScrollPosition}
-        testId="video-grid"
         message={{
             loading: 'Loading videos...',
             error: 'Error loading videos',
@@ -188,24 +195,40 @@
             loading: $query.isFetchingNextPage
         }}
     >
-        {#snippet gridItem({ index, style, sampleSize })}
-            {#if items[index]}
-                {#key items[index].sample_id}
-                    <SampleGridItem
-                        {style}
-                        {index}
-                        dataTestId="video-grid-item"
-                        sampleId={items[index].sample_id}
-                        {collectionId}
-                        dataSampleName={items[index].file_name}
-                        onSelect={handleSampleSelect}
-                    >
-                        {#snippet item()}
-                            <VideoItem video={items[index]} size={sampleSize} showCaption={true} />
-                        {/snippet}
-                    </SampleGridItem>
-                {/key}
-            {/if}
+        {#snippet children({ footer })}
+            <Grid
+                itemCount={items.length}
+                {columnCount}
+                overScan={20}
+                onScroll={handleScroll}
+                {initialScrollPosition}
+                {scrollResetKey}
+                gridProps={{ 'data-testid': 'video-grid', class: 'dark:[color-scheme:dark]' }}
+            >
+                {#snippet gridItem({ index, style, width, height })}
+                    {#if items[index]}
+                        {#key items[index].sample_id}
+                            <GridItem
+                                {width}
+                                {height}
+                                {style}
+                                dataSampleName={items[index].file_name}
+                                dataIndex={index}
+                                dataTestId="video-grid-item"
+                                isSelected={$selectedSampleIds.has(items[index].sample_id)}
+                                ariaLabel={`View sample: ${items[index].file_name}`}
+                                onSelect={(event) =>
+                                    handleGridItemSelect(event, items[index].sample_id, index)}
+                            >
+                                <VideoItem video={items[index]} size={width} showCaption={true} />
+                            </GridItem>
+                        {/key}
+                    {/if}
+                {/snippet}
+                {#snippet footerItem()}
+                    {@render footer()}
+                {/snippet}
+            </Grid>
         {/snippet}
-    </SampleGrid>
+    </GridContainer>
 </div>

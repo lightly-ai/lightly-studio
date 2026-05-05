@@ -11,13 +11,13 @@ const BASE_ANNOTATION_FIELDS = {
     'parent_sample_id' | 'created_at'
 >;
 
-const createInstanceSegmentationAnnotation = (): ComponentProps<
+const createSegmentationMaskAnnotation = (): ComponentProps<
     typeof SampleAnnotation
 >['annotation'] =>
     ({
         ...BASE_ANNOTATION_FIELDS,
         sample_id: 'instance-segmentation-1',
-        annotation_type: 'instance_segmentation',
+        annotation_type: 'segmentation_mask',
         annotation_label: { annotation_label_name: 'person' },
         segmentation_details: {
             x: 1,
@@ -64,7 +64,7 @@ describe('SampleAnnotation', () => {
     it('hides instance-segmentation label when bounding boxes are hidden', () => {
         render(SampleAnnotation, {
             props: {
-                annotation: createInstanceSegmentationAnnotation(),
+                annotation: createSegmentationMaskAnnotation(),
                 imageWidth: 100,
                 showLabel: true,
                 showBoundingBox: false
@@ -77,7 +77,7 @@ describe('SampleAnnotation', () => {
     it('shows instance-segmentation label when bounding boxes are shown', () => {
         render(SampleAnnotation, {
             props: {
-                annotation: createInstanceSegmentationAnnotation(),
+                annotation: createSegmentationMaskAnnotation(),
                 imageWidth: 100,
                 showLabel: true,
                 showBoundingBox: true
@@ -90,7 +90,7 @@ describe('SampleAnnotation', () => {
     it('shows instance-segmentation label when bounding-box visibility is omitted', () => {
         render(SampleAnnotation, {
             props: {
-                annotation: createInstanceSegmentationAnnotation(),
+                annotation: createSegmentationMaskAnnotation(),
                 imageWidth: 100,
                 showLabel: true
             }

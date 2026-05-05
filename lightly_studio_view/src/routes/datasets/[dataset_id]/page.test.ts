@@ -24,7 +24,7 @@ describe('+page.ts', () => {
         vi.clearAllMocks();
     });
 
-    it('should redirect to samples for IMAGE collection', async () => {
+    it('should redirect to images for IMAGE collection', async () => {
         vi.mocked(readCollection).mockResolvedValue({
             data: {
                 collection_id: mockDatasetId,
@@ -45,7 +45,7 @@ describe('+page.ts', () => {
             const redirectError = error as RedirectError;
             expect(redirectError.status).toBe(307);
             expect(redirectError.location).toBe(
-                routeHelpers.toSamples(mockDatasetId, 'image', mockDatasetId)
+                routeHelpers.toImages(mockDatasetId, 'image', mockDatasetId)
             );
         }
     });

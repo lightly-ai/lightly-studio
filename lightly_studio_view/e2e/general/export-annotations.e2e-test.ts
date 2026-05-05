@@ -61,7 +61,7 @@ test.describe('Export Annotations', () => {
         expect(cat.name).toBe(cocoDataset.labels.airplane.name);
 
         // TODO(Michal, 10/2025): Currently we export only object detections, but the test collection
-        // has instance segmentations. Update the test to expect more than 0 annotations later.
+        // has segmentation masks. Update the test to expect more than 0 annotations later.
         expect(data.annotations.length).toEqual(0);
     });
 });

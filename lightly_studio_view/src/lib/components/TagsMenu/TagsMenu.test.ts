@@ -2,7 +2,7 @@ import {
     addSampleIdsToTagId,
     createTag,
     deleteTag,
-    updateTag
+    renameTag
 } from '$lib/api/lightly_studio_local';
 import { fireEvent, render, screen, waitFor } from '@testing-library/svelte';
 import { readable } from 'svelte/store';
@@ -28,7 +28,7 @@ vi.mock('$lib/api/lightly_studio_local', async () => {
         createTag: vi.fn(),
         addSampleIdsToTagId: vi.fn(),
         deleteTag: vi.fn(),
-        updateTag: vi.fn()
+        renameTag: vi.fn()
     };
 });
 
@@ -61,7 +61,6 @@ const sampleTag: TagView = {
     tag_id: 'tag-1',
     name: 'Vehicle',
     kind: 'sample',
-    description: 'Vehicle description',
     created_at: new Date('2024-01-01T00:00:00.000Z'),
     updated_at: new Date('2024-01-01T00:00:00.000Z')
 };
@@ -87,7 +86,6 @@ describe('TagsMenu', () => {
                 tag_id: 'created-tag-id',
                 name: 'Created Tag',
                 kind: 'sample',
-                description: 'Created Tag description',
                 created_at: new Date('2024-01-03T00:00:00.000Z'),
                 updated_at: new Date('2024-01-03T00:00:00.000Z')
             },
@@ -103,10 +101,9 @@ describe('TagsMenu', () => {
             request: mockRequest,
             response: mockResponse
         });
-        vi.mocked(updateTag).mockResolvedValue({
+        vi.mocked(renameTag).mockResolvedValue({
             data: {
                 ...sampleTag,
-                collection_id: 'collection-1',
                 name: 'Renamed Vehicle'
             },
             error: undefined,
@@ -123,7 +120,7 @@ describe('TagsMenu', () => {
         render(TagsMenu, {
             props: {
                 collection_id: 'collection-1',
-                gridType: 'samples'
+                gridType: 'images'
             }
         });
 
@@ -173,7 +170,6 @@ describe('TagsMenu', () => {
                 },
                 body: {
                     name: 'New Annotation Tag',
-                    description: 'New Annotation Tag description',
                     kind: 'annotation'
                 }
             });
@@ -195,7 +191,7 @@ describe('TagsMenu', () => {
         render(TagsMenu, {
             props: {
                 collection_id: 'collection-1',
-                gridType: 'samples'
+                gridType: 'images'
             }
         });
 
@@ -212,7 +208,7 @@ describe('TagsMenu', () => {
         render(TagsMenu, {
             props: {
                 collection_id: 'collection-1',
-                gridType: 'samples'
+                gridType: 'images'
             }
         });
 
@@ -233,7 +229,7 @@ describe('TagsMenu', () => {
         render(TagsMenu, {
             props: {
                 collection_id: 'collection-1',
-                gridType: 'samples'
+                gridType: 'images'
             }
         });
 
@@ -260,7 +256,7 @@ describe('TagsMenu', () => {
         render(TagsMenu, {
             props: {
                 collection_id: 'collection-1',
-                gridType: 'samples'
+                gridType: 'images'
             }
         });
 
@@ -279,7 +275,7 @@ describe('TagsMenu', () => {
         render(TagsMenu, {
             props: {
                 collection_id: 'collection-1',
-                gridType: 'samples'
+                gridType: 'images'
             }
         });
 
@@ -300,15 +296,13 @@ describe('TagsMenu', () => {
         await fireEvent.click(screen.getByTestId('save-tag-rename-tag-1'));
 
         await waitFor(() => {
-            expect(updateTag).toHaveBeenCalledWith({
+            expect(renameTag).toHaveBeenCalledWith({
                 path: {
                     collection_id: 'collection-1',
                     tag_id: 'tag-1'
                 },
                 body: {
-                    name: 'Renamed Vehicle',
-                    description: 'Vehicle description',
-                    kind: 'sample'
+                    name: 'Renamed Vehicle'
                 }
             });
             expect(mocks.loadTags).toHaveBeenCalled();
@@ -319,12 +313,12 @@ describe('TagsMenu', () => {
     });
 
     it('shows a toast when renaming a tag fails', async () => {
-        vi.mocked(updateTag).mockRejectedValue(new Error('network error'));
+        vi.mocked(renameTag).mockRejectedValue(new Error('network error'));
 
         render(TagsMenu, {
             props: {
                 collection_id: 'collection-1',
-                gridType: 'samples'
+                gridType: 'images'
             }
         });
 
@@ -347,7 +341,7 @@ describe('TagsMenu', () => {
         render(TagsMenu, {
             props: {
                 collection_id: 'collection-1',
-                gridType: 'samples'
+                gridType: 'images'
             }
         });
 

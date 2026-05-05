@@ -7,6 +7,7 @@ from pytest_mock import MockerFixture
 from sqlmodel import Session
 
 from lightly_studio.api.routes.api.status import (
+    HTTP_STATUS_BAD_REQUEST,
     HTTP_STATUS_OK,
 )
 from lightly_studio.api.routes.api.validators import Paginated
@@ -29,6 +30,7 @@ from tests.helpers_resolvers import (
     create_collection,
     create_image,
 )
+from tests.resolvers.video.helpers import VideoStub, create_video
 
 
 def test_read_samples_calls_get_all(mocker: MockerFixture, test_client: TestClient) -> None:
@@ -145,6 +147,162 @@ def test_read_samples_calls_get_all__no_sample_resolver_mock(
     assert response.status_code == HTTP_STATUS_OK
     assert response.json()["data"] == []  # There are no samples in the database.
     assert response.json()["total_count"] == 0
+
+
+def test_read_images__query_expr_filter(
+    test_client: TestClient,
+    db_session: Session,
+) -> None:
+    """Integration test: QueryExpr with OR across image and annotation fields."""
+    collection = create_collection(session=db_session)
+    collection_id = collection.collection_id
+
+    # Three images: one wide, one with a "cat" detection, one with neither.
+    wide_image = create_image(
+        session=db_session,
+        collection_id=collection_id,
+        file_path_abs="/data/wide.png",
+        width=800,
+    )
+    annotated_image = create_image(
+        session=db_session,
+        collection_id=collection_id,
+        file_path_abs="/data/annotated.png",
+        width=200,
+    )
+    create_image(
+        session=db_session,
+        collection_id=collection_id,
+        file_path_abs="/data/neither.png",
+        width=200,
+    )
+
+    cat_label = create_annotation_label(
+        session=db_session,
+        root_collection_id=collection_id,
+        label_name="cat",
+    )
+    create_annotation(
+        session=db_session,
+        collection_id=collection_id,
+        sample_id=annotated_image.sample_id,
+        annotation_label_id=cat_label.annotation_label_id,
+    )
+
+    # Query: width >= 500 OR has_object_detection(label == "cat")
+    # Should match wide_image (via width) and annotated_image (via annotation).
+    query_expr = {
+        "match_expr": {
+            "type": "or",
+            "children": [
+                {
+                    "type": "integer_expr",
+                    "field": {"table": "image", "name": "width"},
+                    "operator": ">=",
+                    "value": 500,
+                },
+                {
+                    "type": "object_detection_match_expr",
+                    "subexpr": {
+                        "type": "string_expr",
+                        "field": {
+                            "table": "object_detection",
+                            "name": "label",
+                        },
+                        "operator": "==",
+                        "value": "cat",
+                    },
+                },
+            ],
+        },
+    }
+    json_body = {
+        "filters": {
+            "sample_filter": {"query_expr": query_expr},
+        },
+    }
+    response = test_client.post(f"/api/collections/{collection_id}/images/list", json=json_body)
+
+    assert response.status_code == HTTP_STATUS_OK
+    data = response.json()
+    assert data["total_count"] == 2
+    returned_ids = {item["sample_id"] for item in data["data"]}
+    assert returned_ids == {str(wide_image.sample_id), str(annotated_image.sample_id)}
+
+
+def test_read_images__query_expr_nonexistent_field(
+    test_client: TestClient,
+    db_session: Session,
+) -> None:
+    collection = create_collection(session=db_session)
+    collection_id = collection.collection_id
+
+    query_expr = {
+        "match_expr": {
+            "type": "string_expr",
+            "field": {"table": "invalid", "name": "invalid"},
+            "operator": "==",
+            "value": "test",
+        },
+    }
+    json_body = {
+        "filters": {
+            "sample_filter": {"query_expr": query_expr},
+        },
+    }
+    response = test_client.post(f"/api/collections/{collection_id}/images/list", json=json_body)
+
+    assert response.status_code == HTTP_STATUS_BAD_REQUEST
+    data = response.json()
+    assert data["error"] == "Unknown string field: invalid.invalid"
+
+
+def test_read_images__query_expr_wrong_context(
+    test_client: TestClient,
+    db_session: Session,
+) -> None:
+    """This test documents an edge case behaviour.
+
+    An invalid query referencing a field in the wrong context (e.g. video in an image context) will
+    not error out. Instead, SQLAlchemy performs an outer join and samples will be returned if the
+    query matches.
+    """
+    collection = create_collection(session=db_session, sample_type=SampleType.IMAGE)
+    collection_id = collection.collection_id
+    image = create_image(
+        session=db_session,
+        collection_id=collection_id,
+        file_path_abs="/image.png",
+    )
+
+    video_collection = create_collection(session=db_session, sample_type=SampleType.VIDEO)
+    create_video(
+        session=db_session,
+        collection_id=video_collection.collection_id,
+        video=VideoStub(path="/video.mp4"),
+    )
+
+    # Video query for image dataset
+    query_expr = {
+        "match_expr": {
+            "type": "string_expr",
+            "field": {"table": "video", "name": "file_name"},
+            "operator": "==",
+            "value": "video.mp4",
+        },
+    }
+    json_body = {
+        "filters": {
+            "sample_filter": {"query_expr": query_expr},
+        },
+    }
+    response = test_client.post(f"/api/collections/{collection_id}/images/list", json=json_body)
+
+    assert response.status_code == HTTP_STATUS_OK
+    data = response.json()
+    assert data["total_count"] == 1
+    returned_ids = {item["sample_id"] for item in data["data"]}
+    assert returned_ids == {str(image.sample_id)}
 
 
 def test_get_samples_dimensions_calls_get_dimension_bounds(
@@ -300,3 +458,23 @@ def test_count_image_annotations_by_collection__without_body(
     assert result == [
         {"label_name": "dog", "current_count": 1, "total_count": 1},
     ]
+
+
+def test_get_image_sample_ids(
+    test_client: TestClient,
+    db_session: Session,
+) -> None:
+    collection = create_collection(session=db_session)
+    image = create_image(
+        session=db_session,
+        collection_id=collection.collection_id,
+        file_path_abs="/path/to/sample.png",
+    )
+
+    response = test_client.post(
+        f"/api/collections/{collection.collection_id}/images/sample_ids",
+        json={},
+    )
+
+    assert response.status_code == HTTP_STATUS_OK
+    assert response.json() == [str(image.sample_id)]

@@ -19,7 +19,7 @@ export function getMenuItem(
             return {
                 title: groupComponentName || 'Images',
                 id: elementId,
-                href: routeHelpers.toSamples(datasetId, collectionType, collectionId),
+                href: routeHelpers.toImages(datasetId, collectionType, collectionId),
                 isSelected,
                 icon: Image
             };

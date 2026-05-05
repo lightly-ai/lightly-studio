@@ -10,6 +10,7 @@
         SelectionPill,
         TagsMenu
     } from '$lib/components';
+    import QueryEditorPanel from '$lib/components/QueryEditorPanel/QueryEditorPanel.svelte';
     import Separator from '$lib/components/ui/separator/separator.svelte';
     import { SlidersHorizontal, ChartNetwork, GripVertical } from '@lucide/svelte';
     import { onDestroy, onMount } from 'svelte';
@@ -28,7 +29,7 @@
         isAnnotationsRoute,
         isCaptionsRoute,
         isSampleDetailsRoute,
-        isSamplesRoute,
+        isImagesRoute,
         isVideoFramesRoute,
         isVideosRoute,
         isGroupsRoute,
@@ -39,6 +40,7 @@
     import { useImageAnnotationCounts } from '$lib/hooks/useImageAnnotationCounts/useImageAnnotationCounts';
     import { useGlobalStorage } from '$lib/hooks/useGlobalStorage.js';
     import { Button } from '$lib/components/ui/index.js';
+    import QueryControl from '$lib/components/QueryControl/QueryControl.svelte';
     import { PaneGroup, Pane, PaneResizer } from 'paneforge';
     import { useVideoAnnotationCounts } from '$lib/hooks/useVideoAnnotationsCount/useVideoAnnotationsCount.js';
     import {
@@ -57,7 +59,12 @@
         buildVideoFrameAnnotationCountsFilter
     } from '$lib/utils/buildAnnotationCountsFilters';
     import EmbeddingSelectionFilterItem from '$lib/components/EmbeddingSelectionFilterItem/EmbeddingSelectionFilterItem.svelte';
-    import { useSelectionSummary } from '$lib/hooks';
+    import { useSelectionSummary, useFeatureFlags } from '$lib/hooks';
+    import { useSelectAll } from '$lib/hooks/useSelectAll/useSelectAll';
+    import { isInputElement } from '$lib/utils';
+    import { shutdownMaskRendererPool } from '$lib/workers/maskRendererPool';
+    import { embedImageFromFile } from '$lib/api/lightly_studio_local';
+    import { GRID_IMAGE_SEARCH_DROP_EVENT, type GridItemDragData } from '$lib/components/GridItem';
     const { data, children } = $props();
     const {
         collection,
@@ -92,22 +99,7 @@
         retrieveParentCollection($collections, collectionId)
     );
 
-    // Setup event handlers for keyboard shortcuts
-    onMount(() => {
-        if (browser) {
-            window.addEventListener('keydown', handleKeyEvent);
-            window.addEventListener('keyup', handleKeyEvent);
-        }
-    });
-
-    onDestroy(() => {
-        if (browser) {
-            window.removeEventListener('keydown', handleKeyEvent);
-            window.removeEventListener('keyup', handleKeyEvent);
-        }
-    });
-
-    const isSamples = $derived(isSamplesRoute(page.route.id));
+    const isImages = $derived(isImagesRoute(page.route.id));
     const isGroups = $derived(isGroupsRoute(page.route.id));
     const isGroupDetails = $derived(isGroupDetailsRoute(page.route.id));
     const isAnnotations = $derived(isAnnotationsRoute(page.route.id));
@@ -118,14 +110,47 @@
     const isVideoFrames = $derived(isVideoFramesRoute(page.route.id));
     const isVideoDetails = $derived(isVideoDetailsRoute(page.route.id));
 
-    let gridType = $state<GridType>('samples');
+    let gridType = $state<GridType>('images');
     let lastCollectionId: string | null = null;
+
+    // Select-all hook
+    let selectAllHandle = $derived(useSelectAll(collectionId, gridType));
+
+    function handleSelectAllKeydown(event: KeyboardEvent) {
+        if (isInputElement(event.target) || (event.target as HTMLElement)?.isContentEditable)
+            return;
+        if (event.key !== 'a' || (!event.ctrlKey && !event.metaKey)) return;
+        if (!isImages && !isVideos && !isVideoFrames && !isAnnotations) return;
+
+        event.preventDefault();
+        selectAllHandle.handleSelectAll();
+    }
+
+    // Setup event handlers for keyboard shortcuts
+    onMount(() => {
+        if (browser) {
+            window.addEventListener('keydown', handleKeyEvent);
+            window.addEventListener('keyup', handleKeyEvent);
+            window.addEventListener('keydown', handleSelectAllKeydown);
+            window.addEventListener(GRID_IMAGE_SEARCH_DROP_EVENT, handleGridImageSearchDrop);
+        }
+    });
+
+    onDestroy(() => {
+        if (browser) {
+            window.removeEventListener('keydown', handleKeyEvent);
+            window.removeEventListener('keyup', handleKeyEvent);
+            window.removeEventListener('keydown', handleSelectAllKeydown);
+            window.removeEventListener(GRID_IMAGE_SEARCH_DROP_EVENT, handleGridImageSearchDrop);
+            shutdownMaskRendererPool();
+        }
+    });
     $effect(() => {
         let nextGridType: GridType | null = null;
         if (isAnnotations) {
             nextGridType = 'annotations';
-        } else if (isSamples) {
-            nextGridType = 'samples';
+        } else if (isImages) {
+            nextGridType = 'images';
         } else if (isCaptions) {
             nextGridType = 'captions';
         } else if (isVideoFrames) {
@@ -182,6 +207,7 @@
     const { videoBoundsValues } = useVideoBounds();
 
     const { imageFilter: imageFilterFromHook } = useImageFilters();
+
     const { videoFilter: videoFilterFromHook } = useVideoFilters();
     const plotFilterImageSampleIds = $derived(
         $imageFilterFromHook?.sample_filter?.sample_ids ?? []
@@ -247,13 +273,17 @@
     });
 
     const showLeftSidebar = $derived(
-        isSamples || isAnnotations || isVideos || isVideoFrames || isGroups
+        isImages || isAnnotations || isVideos || isVideoFrames || isGroups
     );
+
+    const { featureFlags } = useFeatureFlags();
+    const isQueryFilterEnabled = $derived($featureFlags.includes('query_filter'));
+    let isQueryFilterEditing = $state(false);
 </script>
 
 <div class="flex-none">
     <Header {collection} />
-    <MenuDialogHost {isSamples} {isVideos} {hasEmbeddings} {collection} />
+    <MenuDialogHost {isImages} {isVideos} {hasEmbeddings} {collection} />
 </div>
 
 <div class="relative flex min-h-0 flex-1 flex-col">
@@ -267,6 +297,14 @@
                         <div
                             class="min-h-0 flex-1 space-y-2 overflow-y-auto px-4 pb-2 dark:[color-scheme:dark]"
                         >
+                            {#if isQueryFilterEnabled}
+                                <QueryControl
+                                    onToggle={() => {
+                                        isQueryFilterEditing = !isQueryFilterEditing;
+                                    }}
+                                />
+                            {/if}
+
                             <div>
                                 <TagsMenu collection_id={collectionId} {gridType} />
                             </div>
@@ -275,14 +313,14 @@
                                     <EmbeddingSelectionFilterItem
                                         {collectionIdStore}
                                         {isVideos}
-                                        {isSamples}
+                                        {isImages}
                                     />
                                     <LabelsMenu
                                         {annotationFilterRows}
                                         onToggleAnnotationFilter={toggleAnnotationFilterSelection}
                                     />
 
-                                    {#if isSamples || isVideos || isVideoFrames}
+                                    {#if isImages || isVideos || isVideoFrames}
                                         {#key collectionId}
                                             <CombinedMetadataDimensionsFilters
                                                 {isVideos}
@@ -297,7 +335,7 @@
                 </div>
             {/if}
 
-            {#if (isSamples || isVideos) && $showPlot}
+            {#if (isImages || isVideos) && $showPlot}
                 <!-- When plot is shown, use PaneGroup for the main content + plot -->
                 <PaneGroup direction="horizontal" class="flex-1">
                     <Pane defaultSize={50} minSize={30} class="flex">
@@ -305,7 +343,7 @@
                             class="relative flex flex-1 flex-col space-y-4 rounded-[1vw] bg-card p-4"
                         >
                             <GridHeader>
-                                <div class="flex-1">
+                                <div class="flex-1" data-grid-search-drop-target>
                                     {#if hasEmbeddings}
                                         <CollectionSearch
                                             {collectionId}
@@ -343,10 +381,10 @@
             {:else}
                 <!-- When plot is hidden or not samples view, show normal layout -->
                 <div class="relative flex flex-1 flex-col space-y-4 rounded-[1vw] bg-card p-4 pb-2">
-                    {#if isSamples || isAnnotations || isVideos || isGroups}
+                    {#if isImages || isAnnotations || isVideos || isGroups}
                         <GridHeader>
                             {#snippet auxControls()}
-                                {#if (isSamples || isVideos) && hasEmbeddings}
+                                {#if (isImages || isVideos) && hasEmbeddings}
                                     <Button
                                         class="flex items-center space-x-1"
                                         data-testid="toggle-plot-button"
@@ -377,6 +415,9 @@
                         <SelectionPill selectedCount={$selectedCount} onClear={clearSelection} />
                     {/if}
                 </div>
+                {#if isQueryFilterEnabled && isQueryFilterEditing}
+                    <QueryEditorPanel />
+                {/if}
             {/if}
             {#if hasEmbeddings}
                 {#await import('$lib/components/FewShotClassifier/CreateClassifierDialog.svelte') then { default: CreateClassifierDialog }}
