@@ -1,150 +1,84 @@
 <!--
-  Orchestrator component to keep collection search behavior in one place.
-  It coordinates text embedding search, image upload search, and drag/paste/file input
-  interactions, while delegating rendering details to `SearchInput` and `ImageSearchDisplay`.
+  Presentational orchestrator for collection search input.
+  Owns transient UI state (typing buffer, drag/drop, file input) and emits user
+  intent. The parent owns embedding/upload requests and passes back the resulting
+  image chip + pending state.
 -->
 <script lang="ts">
-    import type { TextEmbedding } from '$lib/hooks/useGlobalStorage';
-    import { useImageUpload, useFileDrop, useEmbedText } from '$lib/hooks';
-    import { onDestroy } from 'svelte';
-    import { toast } from 'svelte-sonner';
+    import { useFileDrop } from '$lib/hooks';
     import { CollectionSearchInput, CollectionSearchImage } from '$lib/components';
 
+    type ImageState = {
+        name: string;
+        previewUrl: string;
+    };
+
     type Props = {
-        collectionId: string;
-        value: TextEmbedding | undefined;
-        onChange: (embedding: TextEmbedding | undefined) => void;
+        image: ImageState | undefined;
+        isPending?: boolean;
+        initialQueryText?: string;
+        onSubmitText: (text: string) => void;
+        onSubmitFile: (file: File) => void | Promise<void>;
+        onClear: () => void;
+        onError: (message: string) => void;
     };
 
-    let { collectionId, value, onChange }: Props = $props();
+    let {
+        image,
+        isPending = false,
+        initialQueryText = '',
+        onSubmitText,
+        onSubmitFile,
+        onClear,
+        onError
+    }: Props = $props();
 
-    let queryText = $state(value ? value.queryText : '');
-    let submittedQueryText = $state(value ? value.queryText : '');
-    let lastAppliedTextEmbeddingQuery = $state(value ? value.queryText : '');
+    let queryText = $state(initialQueryText);
+    let submittedQueryText = $state(initialQueryText);
     let fileInput = $state<HTMLInputElement | null>(null);
-
-    const setError = (errorMessage: string) => {
-        toast.error('Error', { description: errorMessage });
-    };
-
-    const { imageName, previewUrl, isUploading, upload, clear } = useImageUpload({
-        collectionId,
-        onError: setError,
-        onSuccess: ({ fileName, embedding }) => {
-            queryText = '';
-            submittedQueryText = '';
-            onChange({
-                queryText: fileName,
-                embedding
-            });
-        }
-    });
 
     const { dragOver, handleDragOver, handleDragLeave, handleDrop, handlePaste, handleFileSelect } =
         useFileDrop({
-            onFileAccepted: upload,
-            onError: setError
+            onFileAccepted: async (file) => {
+                await onSubmitFile(file);
+            },
+            onError
         });
 
-    onDestroy(() => {
-        clear();
-    });
-
-    const embedTextQuery = $derived(
-        useEmbedText({
-            collectionId,
-            queryText: submittedQueryText,
-            embeddingModelId: null
-        })
-    );
-
-    async function onKeyDown(event: KeyboardEvent) {
-        const input = event.currentTarget as HTMLInputElement | null;
-
-        if (event.key === 'Enter') {
-            event.preventDefault();
-            const trimmedQuery = queryText.trim();
-            if (!trimmedQuery) {
-                clearSearch();
-                input?.blur();
-                return;
-            }
-
-            queryText = trimmedQuery;
-            submittedQueryText = trimmedQuery;
-            input?.blur();
-        }
-
-        if (event.key === 'Escape') {
-            event.preventDefault();
-            if (submittedQueryText) {
-                queryText = submittedQueryText;
-            } else {
-                queryText = '';
-            }
-            input?.blur();
-        }
-    }
+    const handleClear = () => {
+        queryText = '';
+        submittedQueryText = '';
+        onClear();
+    };
 
     const triggerFileInput = () => {
         fileInput?.click();
     };
 
-    const clearSearch = () => {
-        queryText = '';
-        submittedQueryText = '';
-        clear();
-        onChange(undefined);
-    };
+    function onKeyDown(event: KeyboardEvent) {
+        const input = event.currentTarget as HTMLInputElement | null;
 
-    $effect(() => {
-        const committedQuery = value?.queryText ?? '';
-        if (committedQuery === lastAppliedTextEmbeddingQuery) {
+        if (event.key === 'Enter') {
+            event.preventDefault();
+            const trimmed = queryText.trim();
+            if (!trimmed) {
+                handleClear();
+                input?.blur();
+                return;
+            }
+            queryText = trimmed;
+            submittedQueryText = trimmed;
+            onSubmitText(trimmed);
+            input?.blur();
             return;
         }
 
-        lastAppliedTextEmbeddingQuery = committedQuery;
-
-        if ($imageName) {
-            return;
+        if (event.key === 'Escape') {
+            event.preventDefault();
+            queryText = submittedQueryText;
+            input?.blur();
         }
-
-        if (!committedQuery) {
-            submittedQueryText = '';
-            queryText = '';
-            return;
-        }
-
-        submittedQueryText = committedQuery;
-        queryText = committedQuery;
-    });
-
-    $effect(() => {
-        if ($imageName) {
-            return;
-        }
-
-        if ($embedTextQuery.isError && $embedTextQuery.error) {
-            const queryError = $embedTextQuery.error as
-                | { error?: unknown; message?: string }
-                | Error;
-            const message = 'error' in queryError ? queryError.error : queryError.message;
-            setError(String(message));
-            return;
-        }
-
-        if (!submittedQueryText) {
-            onChange(undefined);
-            return;
-        }
-
-        if ($embedTextQuery.isSuccess) {
-            onChange({
-                queryText: submittedQueryText,
-                embedding: $embedTextQuery.data
-            });
-        }
-    });
+    }
 </script>
 
 <div
@@ -155,17 +89,17 @@
     ondragleave={handleDragLeave}
     ondrop={handleDrop}
 >
-    {#if $imageName}
+    {#if image}
         <CollectionSearchImage
-            name={$imageName}
-            src={$previewUrl}
+            name={image.name}
+            src={image.previewUrl}
             showOutline={$dragOver}
-            onClear={clearSearch}
+            onClear={handleClear}
         />
     {:else}
         <CollectionSearchInput
-            value={queryText}
-            disabled={$isUploading}
+            bind:value={queryText}
+            disabled={isPending}
             showOutline={$dragOver}
             inputProps={{
                 placeholder: 'Search samples by description or image',
@@ -182,6 +116,6 @@
         class="hidden"
         bind:this={fileInput}
         onchange={handleFileSelect}
-        disabled={$isUploading}
+        disabled={isPending}
     />
 </div>

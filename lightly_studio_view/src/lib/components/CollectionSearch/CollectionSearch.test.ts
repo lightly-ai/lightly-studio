@@ -27,18 +27,7 @@ const mocks = vi.hoisted(() => {
     };
 
     return {
-        imageName: createStore<string | null>(null),
-        previewUrl: createStore<string | null>(null),
-        isUploading: createStore(false),
         dragOver: createStore(false),
-        embedTextQuery: createStore({
-            isError: false,
-            isSuccess: false,
-            error: null,
-            data: [] as number[]
-        }),
-        upload: vi.fn(),
-        clear: vi.fn(),
         handleDragOver: vi.fn(),
         handleDragLeave: vi.fn(),
         handleDrop: vi.fn(),
@@ -46,16 +35,6 @@ const mocks = vi.hoisted(() => {
         handleFileSelect: vi.fn()
     };
 });
-
-vi.mock('$lib/hooks/useImageUpload/useImageUpload', () => ({
-    useImageUpload: () => ({
-        imageName: mocks.imageName,
-        previewUrl: mocks.previewUrl,
-        isUploading: mocks.isUploading,
-        upload: mocks.upload,
-        clear: mocks.clear
-    })
-}));
 
 vi.mock('$lib/hooks/useFileDrop/useFileDrop', () => ({
     useFileDrop: () => ({
@@ -68,45 +47,31 @@ vi.mock('$lib/hooks/useFileDrop/useFileDrop', () => ({
     })
 }));
 
-vi.mock('$lib/hooks/useEmbedText/useEmbedText', () => ({
-    useEmbedText: () => mocks.embedTextQuery
-}));
+const baseProps = () => ({
+    image: undefined,
+    onSubmitText: vi.fn(),
+    onSubmitFile: vi.fn(),
+    onClear: vi.fn(),
+    onError: vi.fn()
+});
 
 describe('CollectionSearch', () => {
     beforeEach(() => {
         vi.clearAllMocks();
-        mocks.imageName.set(null);
-        mocks.previewUrl.set(null);
-        mocks.isUploading.set(false);
         mocks.dragOver.set(false);
-        mocks.embedTextQuery.set({
-            isError: false,
-            isSuccess: false,
-            error: null,
-            data: []
-        });
     });
 
     it('renders text search input by default', () => {
-        render(CollectionSearch, {
-            props: {
-                collectionId: 'collection-id',
-                value: undefined,
-                onChange: vi.fn()
-            }
-        });
+        render(CollectionSearch, { props: baseProps() });
 
         expect(screen.getByTestId('text-embedding-search-input')).toBeInTheDocument();
     });
 
-    it('renders image search display when an image is active', () => {
-        mocks.imageName.set('query.png');
-
+    it('renders image chip when image is set', () => {
         render(CollectionSearch, {
             props: {
-                collectionId: 'collection-id',
-                value: undefined,
-                onChange: vi.fn()
+                ...baseProps(),
+                image: { name: 'query.png', previewUrl: 'blob:preview' }
             }
         });
 
@@ -114,23 +79,16 @@ describe('CollectionSearch', () => {
         expect(screen.getByTestId('search-clear-button')).toBeInTheDocument();
     });
 
-    it('clears embedding when image clear button is clicked', async () => {
-        mocks.imageName.set('query.png');
-        const onChange = vi.fn();
+    it('calls onClear when image clear button is clicked', async () => {
+        const props = {
+            ...baseProps(),
+            image: { name: 'query.png', previewUrl: 'blob:preview' }
+        };
 
-        render(CollectionSearch, {
-            props: {
-                collectionId: 'collection-id',
-                value: undefined,
-                onChange
-            }
-        });
-
-        onChange.mockClear();
+        render(CollectionSearch, { props });
 
         await fireEvent.click(screen.getByTestId('search-clear-button'));
 
-        expect(onChange).toHaveBeenCalledWith(undefined);
-        expect(mocks.clear).toHaveBeenCalled();
+        expect(props.onClear).toHaveBeenCalledTimes(1);
     });
 });
