@@ -73,6 +73,7 @@
     style="--object-fit: {objectFit}"
     {width}
     {height}
+    draggable="false"
     loading="lazy"
 />
 
