@@ -20,6 +20,9 @@ from lightly_studio.models.annotation.object_track import ObjectTrackTable
 from lightly_studio.models.annotation.segmentation import (
     SegmentationAnnotationTable,
 )
+from lightly_studio.models.annotation_collection_coverage import (
+    AnnotationCollectionCoverageTable,
+)
 from lightly_studio.models.annotation_label import AnnotationLabelTable
 from lightly_studio.models.caption import CaptionTable
 from lightly_studio.models.collection import CollectionTable
@@ -131,6 +134,7 @@ def deep_copy(
     # 6. Copy link tables.
     _copy_sample_tag_links(session=session, old_sample_ids=old_sample_ids, ctx=ctx)
     _copy_sample_group_links(session=session, old_sample_ids=old_sample_ids, ctx=ctx)
+    _copy_annotation_collection_coverage(session=session, ctx=ctx)
 
     session.commit()
 
@@ -550,6 +554,28 @@ def _copy_sample_group_links(
                 parent_sample_id=ctx.sample_map[old_link.parent_sample_id],
             )
             session.add(new_link)
+
+
+def _copy_annotation_collection_coverage(
+    session: Session,
+    ctx: DeepCopyContext,
+) -> None:
+    """Copy annotation collection coverage rows, remapping collection and sample IDs."""
+    if not ctx.collection_map:
+        return
+    old_collection_ids = list(ctx.collection_map.keys())
+    rows = session.exec(
+        select(AnnotationCollectionCoverageTable).where(
+            col(AnnotationCollectionCoverageTable.annotation_collection_id).in_(old_collection_ids)
+        )
+    ).all()
+
+    for old_row in rows:
+        new_row = AnnotationCollectionCoverageTable(
+            annotation_collection_id=ctx.collection_map[old_row.annotation_collection_id],
+            parent_sample_id=ctx.sample_map[old_row.parent_sample_id],
+        )
+        session.add(new_row)
 
 
 def _copy_with_updates(
