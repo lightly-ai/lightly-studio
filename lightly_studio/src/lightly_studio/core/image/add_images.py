@@ -79,9 +79,10 @@ def load_into_dataset_from_paths(
         except (FileNotFoundError, PIL.UnidentifiedImageError, OSError):
             continue
 
+        normalized_path = add_annotations.normalize_images_root(image_path)
         sample = ImageCreate(
-            file_name=Path(image_path).name,
-            file_path_abs=image_path,
+            file_name=Path(normalized_path).name,
+            file_path_abs=normalized_path,
             width=width,
             height=height,
         )

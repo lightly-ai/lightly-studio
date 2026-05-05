@@ -513,3 +513,57 @@ def _get_captions_input(annotations_path: Path) -> None:
         ],
     }
     annotations_path.write_text(json.dumps(coco_caption_dict))
+
+
+def test_load_into_dataset_from_paths__file_url_normalization(
+    db_session: Session, tmp_path: Path
+) -> None:
+    """Test that file:// URLs are normalized so annotations can be matched later.
+
+    Without normalization in load_into_dataset_from_paths, file:// URLs would be stored
+    verbatim (e.g., file:///tmp/image.jpg), but add_annotations_from_labelformat strips
+    file:// and stores absolute paths (e.g., /tmp/image.jpg). This mismatch would cause
+    annotations to fail matching and be reported as missing. This test verifies that both
+    paths are normalized to the same canonical form so lookups succeed.
+    """
+    # Arrange
+    collection = helpers_resolvers.create_collection(db_session)
+    image_path = tmp_path / "image.jpg"
+    PILImage.new("RGB", (100, 200)).save(str(image_path))
+
+    # Act: Load with file:// directory URL
+    file_url = f"file://{tmp_path}"
+    sample_ids = add_images.load_into_dataset_from_paths(
+        session=db_session,
+        root_collection_id=collection.collection_id,
+        image_paths=[file_url + "/image.jpg"],
+    )
+
+    # Assert: Sample was created with normalized path
+    assert len(sample_ids) == 1
+    samples = image_resolver.get_all_by_collection_id(
+        session=db_session, collection_id=collection.collection_id
+    ).samples
+    assert len(samples) == 1
+    # Path should be absolute (file:// stripped and normalized)
+    assert samples[0].file_path_abs == str(image_path.absolute())
+
+    # Act: Now add annotations using the same file:// directory root
+    # (Without path normalization, this would fail to match)
+    helpers_resolvers.create_annotation_label(db_session, collection.collection_id, "dog")
+    label_input = _get_labelformat_input_obj_det(filename="image.jpg")
+
+    from lightly_studio.core.image import add_annotations
+
+    missing_paths = add_annotations.add_annotations_from_labelformat(
+        session=db_session,
+        root_collection_id=collection.collection_id,
+        input_labels=label_input,
+        images_root=file_url,  # Using file:// URL
+    )
+
+    # Assert: Annotation was matched (not reported as missing)
+    assert len(missing_paths) == 0, "Annotations should match normalized paths"
+    anns = samples[0].sample.annotations
+    assert len(anns) == 1
+    assert anns[0].annotation_label.annotation_label_name == "dog"
