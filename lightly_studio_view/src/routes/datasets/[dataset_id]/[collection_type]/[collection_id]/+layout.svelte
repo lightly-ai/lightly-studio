@@ -9,6 +9,7 @@
         SelectionPill,
         TagsMenu
     } from '$lib/components';
+    import GridHeaderSelectAllButton from '$lib/components/GridHeaderSelectAllButton/GridHeaderSelectAllButton.svelte';
     import QueryEditorPanel from '$lib/components/QueryEditorPanel/QueryEditorPanel.svelte';
     import Input from '$lib/components/ui/input/input.svelte';
     import Separator from '$lib/components/ui/separator/separator.svelte';
@@ -118,6 +119,7 @@
     const isVideos = $derived(isVideosRoute(page.route.id));
     const isVideoFrames = $derived(isVideoFramesRoute(page.route.id));
     const isVideoDetails = $derived(isVideoDetailsRoute(page.route.id));
+    const canSelectAll = $derived(isImages || isVideos || isVideoFrames || isAnnotations);
 
     let gridType = $state<GridType>('images');
     let lastCollectionId: string | null = null;
@@ -594,6 +596,13 @@
                             class="relative flex flex-1 flex-col space-y-4 rounded-[1vw] bg-card p-4"
                         >
                             <GridHeader>
+                                {#snippet selectionControls()}
+                                    {#if canSelectAll}
+                                        <GridHeaderSelectAllButton
+                                            onclick={selectAllHandle.handleSelectAll}
+                                        />
+                                    {/if}
+                                {/snippet}
                                 <div class="flex-1" data-grid-search-drop-target>
                                     {#if hasEmbeddings}
                                         <div
@@ -709,8 +718,15 @@
             {:else}
                 <!-- When plot is hidden or not samples view, show normal layout -->
                 <div class="relative flex flex-1 flex-col space-y-4 rounded-[1vw] bg-card p-4 pb-2">
-                    {#if isImages || isAnnotations || isVideos || isGroups}
+                    {#if isImages || isAnnotations || isVideos || isVideoFrames || isGroups}
                         <GridHeader>
+                            {#snippet selectionControls()}
+                                {#if canSelectAll}
+                                    <GridHeaderSelectAllButton
+                                        onclick={selectAllHandle.handleSelectAll}
+                                    />
+                                {/if}
+                            {/snippet}
                             {#snippet auxControls()}
                                 {#if (isImages || isVideos) && hasEmbeddings}
                                     <Button
