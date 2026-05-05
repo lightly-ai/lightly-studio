@@ -370,7 +370,6 @@ def _create_batch_samples(
     file_path_new_to_sample_id = dict(zip(file_paths_new, created_sample_ids))
     return (file_path_new_to_sample_id, file_paths_exist)
 
-
 def _process_batch_captions(
     session: Session,
     collection_id: UUID,

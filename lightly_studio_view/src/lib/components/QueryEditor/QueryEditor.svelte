@@ -2,7 +2,6 @@
     import { onMount } from 'svelte';
     import { toast } from 'svelte-sonner';
     import { Button } from '$lib/components/ui/button';
-    import Typography from '$lib/components/Typography/Typography.svelte';
 
     import { useQueryEditor } from './useQueryEditor';
     import type { QueryExprTranslationResult } from './language/query-expr-translation';
@@ -14,7 +13,7 @@ AND object_detection(label == "car" and x > 10)`;
         value?: string;
         height?: string;
         readOnly?: boolean;
-        onSave?: (value: string, parsed: QueryExprTranslationResult) => void;
+        onSave?: (value: string, parsed: QueryExprTranslationResult | null) => void;
     }
 
     let {
@@ -42,13 +41,15 @@ AND object_detection(label == "car" and x > 10)`;
     }
 
     function handleSave() {
-        const translationResult = translateQuery(value);
+        const translationResult = translateQuery(draftValue);
         if (translationResult.status === 'error') {
             toast.error(`Failed to translate query: ${formatTranslationErrors(translationResult)}`);
             return;
         }
-        onSave?.(value, translationResult);
+        onSave?.(draftValue, translationResult);
     }
+
+    let draftValue = $state(value);
 
     onMount(() => {
         if (!containerEl) return;
@@ -56,10 +57,11 @@ AND object_detection(label == "car" and x > 10)`;
             value,
             readOnly,
             onChange: (next) => {
-                value = next;
+                draftValue = next;
             }
         });
     });
+    const isModified = $derived(value !== draftValue);
 </script>
 
 <div
@@ -69,18 +71,11 @@ AND object_detection(label == "car" and x > 10)`;
     <div class="min-h-0 flex-1" bind:this={containerEl}></div>
     {#if onSave}
         <div
-            class="flex items-center justify-end gap-2 border-b border-[#3c3c3c] bg-[#252526] px-2 py-1 text-xs text-[#cccccc]"
+            class="flex items-center justify-end gap-2 border-b border-[#3c3c3c] bg-[#252526] px-4 py-2"
         >
-            <Button
-                type="button"
-                size="sm"
-                variant="ghost"
-                class="h-6 px-2 text-[#cccccc] hover:bg-white/10 hover:text-white"
-                disabled={readOnly}
-                onclick={handleSave}
+            <Button type="button" disabled={readOnly || !isModified} onclick={handleSave}
+                >Apply</Button
             >
-                <Typography variant="caption">Save</Typography>
-            </Button>
         </div>
     {/if}
 </div>

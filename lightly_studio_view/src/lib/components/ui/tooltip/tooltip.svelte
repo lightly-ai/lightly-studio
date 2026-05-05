@@ -8,11 +8,13 @@
         content,
         position = 'top',
         class: className,
+        triggerClass,
         children
     }: {
         content: string;
         position?: 'top' | 'bottom' | 'left' | 'right';
         class?: string;
+        triggerClass?: string;
         children: Snippet;
     } = $props();
 
@@ -86,7 +88,7 @@
 </script>
 
 <div
-    class="relative inline-block"
+    class={cn('relative inline-block', triggerClass)}
     onmouseenter={showTooltipHandler}
     onmouseleave={hideTooltipHandler}
     onfocusin={showTooltipHandler}

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from uuid import UUID
 
 import pytest
 from sqlmodel import Session
@@ -50,6 +51,14 @@ class _TestData:
     mouse_annotation: AnnotationBaseTable
     collection2: CollectionTable
     sample_with_mouse: ImageTable
+
+
+def _get_annotation_collection_id(session: Session, collection_id: UUID) -> UUID:
+    return collection_resolver.get_or_create_child_collection(
+        session=session,
+        collection_id=collection_id,
+        sample_type=SampleType.ANNOTATION,
+    )
 
 
 @pytest.fixture
@@ -359,12 +368,14 @@ def test_get_all_returns_filtered_by_collection_results(
 ) -> None:
     collection = test_data.collection
     collection2 = test_data.collection2
+    annotation_collection_id = _get_annotation_collection_id(db_session, collection.collection_id)
+    annotation_collection2_id = _get_annotation_collection_id(db_session, collection2.collection_id)
 
     annotations_for_collection1 = annotation_resolver.get_all(
         session=db_session,
         filters=AnnotationsFilter(
             collection_ids=[
-                collection.children[0].collection_id,
+                annotation_collection_id,
             ]
         ),
     ).annotations
@@ -374,7 +385,7 @@ def test_get_all_returns_filtered_by_collection_results(
         session=db_session,
         filters=AnnotationsFilter(
             collection_ids=[
-                collection2.children[0].collection_id,
+                annotation_collection2_id,
             ]
         ),
     ).annotations
@@ -384,8 +395,8 @@ def test_get_all_returns_filtered_by_collection_results(
         session=db_session,
         filters=AnnotationsFilter(
             collection_ids=[
-                collection.children[0].collection_id,
-                collection2.children[0].collection_id,
+                annotation_collection_id,
+                annotation_collection2_id,
             ]
         ),
     ).annotations
@@ -570,11 +581,13 @@ def test_get_all__with_tag_filtering(db_session: Session) -> None:
         ],
     )
 
+    annotation_collection_id = _get_annotation_collection_id(db_session, collection.collection_id)
+
     # Test filtering by tags
     annotations_part1 = annotation_resolver.get_all(
         session=db_session,
         filters=AnnotationsFilter(
-            collection_ids=[collection.children[0].collection_id],
+            collection_ids=[annotation_collection_id],
             tag_ids=[tag_1.tag_id],
         ),
     ).annotations
@@ -587,7 +600,7 @@ def test_get_all__with_tag_filtering(db_session: Session) -> None:
     annotations_part2 = annotation_resolver.get_all(
         session=db_session,
         filters=AnnotationsFilter(
-            collection_ids=[collection.children[0].collection_id],
+            collection_ids=[annotation_collection_id],
             tag_ids=[tag_2.tag_id],
         ),
     ).annotations
@@ -601,7 +614,7 @@ def test_get_all__with_tag_filtering(db_session: Session) -> None:
     annotations_all = annotation_resolver.get_all(
         session=db_session,
         filters=AnnotationsFilter(
-            collection_ids=[collection.children[0].collection_id],
+            collection_ids=[annotation_collection_id],
             tag_ids=[tag_1.tag_id, tag_2.tag_id],
         ),
     ).annotations
@@ -634,16 +647,16 @@ def test_create_many_annotations(db_session: Session) -> None:
         parent_collection_id=collection.collection_id,
         annotations=annotations_to_create,
     )
+    annotation_collection_id = _get_annotation_collection_id(db_session, collection.collection_id)
 
     created_annotations = annotation_resolver.get_all(
         session=db_session,
-        filters=AnnotationsFilter(collection_ids=[collection.children[0].collection_id]),
+        filters=AnnotationsFilter(collection_ids=[annotation_collection_id]),
     ).annotations
 
     assert len(created_annotations) == 3
     assert all(
-        anno.sample.collection_id == collection.children[0].collection_id
-        for anno in created_annotations
+        anno.sample.collection_id == annotation_collection_id for anno in created_annotations
     )
     assert all(anno.parent_sample_id == image.sample_id for anno in created_annotations)
     assert all(
@@ -685,7 +698,7 @@ def test_create_many__populates_coverage(db_session: Session) -> None:
         annotations=annotations_to_create,
     )
 
-    annotation_collection_id = collection.children[0].collection_id
+    annotation_collection_id = _get_annotation_collection_id(db_session, collection.collection_id)
     covered = annotation_collection_coverage_resolver.list_by_collection_id(
         session=db_session, annotation_collection_id=annotation_collection_id
     )
