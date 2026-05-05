@@ -7,8 +7,7 @@ test('select all annotations with label filter via keyboard shortcut', async ({
 }) => {
     // Apply a label filter to reduce the visible annotations
     await annotationsPage.clickLabel(cocoDataset.labels.dog.name);
-    const filteredCount = await annotationsPage.getAnnotations().count();
-    expect(filteredCount).toBe(cocoDataset.labels.dog.annotationCount);
+    await expect(annotationsPage.getAnnotations().first()).toBeVisible({ timeout: 10000 });
 
     // Press Cmd+A / Ctrl+A to select all filtered annotations
     await page.click('body');
@@ -20,10 +19,10 @@ test('select all annotations with label filter via keyboard shortcut', async ({
     await page.keyboard.press('Control+a');
     await sampleIdsResponse;
 
-    // All filtered annotations should be selected
-    expect(await annotationsPage.getSelectedItemsCount()).toBe(
-        cocoDataset.labels.dog.annotationCount
-    );
+    // All filtered annotations should be selected (use selection pill since grid uses infinite scroll)
+    await expect(
+        page.getByText(`${cocoDataset.labels.dog.annotationCount} selected`)
+    ).toBeVisible();
 
     // Wait for the success toast to disappear before proceeding
     await expect(page.locator('[data-sonner-toast]')).toHaveCount(0, { timeout: 5000 });
@@ -50,6 +49,7 @@ test('select all annotations with label filter via keyboard shortcut', async ({
     // All annotations should be selected. Since we don't track total annotations in the fixture,
     // assert the selection pill shows a count greater than the filtered count.
     const selectionText = await page.getByText(/\d+ selected/).textContent();
-    const selectedCount = parseInt(selectionText.split(' ')[0], 10);
+    expect(selectionText).not.toBeNull();
+    const selectedCount = parseInt(selectionText!.split(' ')[0], 10);
     expect(selectedCount).toBeGreaterThan(cocoDataset.labels.dog.annotationCount);
 });
