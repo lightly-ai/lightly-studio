@@ -12,6 +12,9 @@ from lightly_studio.models.annotation.object_detection import (
 )
 from lightly_studio.models.annotation.object_track import ObjectTrackTable
 from lightly_studio.models.annotation.segmentation import SegmentationAnnotationTable
+from lightly_studio.models.annotation_collection_coverage import (
+    AnnotationCollectionCoverageTable,
+)
 from lightly_studio.models.annotation_label import AnnotationLabelTable
 from lightly_studio.models.caption import CaptionTable
 from lightly_studio.models.collection import CollectionTable
@@ -73,6 +76,7 @@ def delete_dataset(
     _delete_sample_metadata(session=session, sample_ids=sample_ids)
     _delete_captions(session=session, sample_ids=sample_ids)
     _delete_video_frames(session=session, sample_ids=sample_ids)
+    _delete_annotation_collection_coverage(session=session, collection_ids=collection_ids)
     # Required before deleting videos (VideoFrameTable.parent_sample_id -> VideoTable).
     session.commit()
 
@@ -172,6 +176,17 @@ def _delete_annotation_base(session: Session, sample_ids: list[UUID]) -> None:
         return
     session.exec(
         delete(AnnotationBaseTable).where(col(AnnotationBaseTable.sample_id).in_(sample_ids))
+    )
+
+
+def _delete_annotation_collection_coverage(session: Session, collection_ids: list[UUID]) -> None:
+    """Delete annotation collection coverage rows scoped to the dataset's collections."""
+    if not collection_ids:
+        return
+    session.exec(
+        delete(AnnotationCollectionCoverageTable).where(
+            col(AnnotationCollectionCoverageTable.annotation_collection_id).in_(collection_ids)
+        )
     )
 
 
