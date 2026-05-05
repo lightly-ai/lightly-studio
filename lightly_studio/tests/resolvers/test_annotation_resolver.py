@@ -368,12 +368,8 @@ def test_get_all_returns_filtered_by_collection_results(
 ) -> None:
     collection = test_data.collection
     collection2 = test_data.collection2
-    annotation_collection_id = _get_annotation_collection_id(
-        db_session, collection.collection_id
-    )
-    annotation_collection2_id = _get_annotation_collection_id(
-        db_session, collection2.collection_id
-    )
+    annotation_collection_id = _get_annotation_collection_id(db_session, collection.collection_id)
+    annotation_collection2_id = _get_annotation_collection_id(db_session, collection2.collection_id)
 
     annotations_for_collection1 = annotation_resolver.get_all(
         session=db_session,
@@ -585,9 +581,7 @@ def test_get_all__with_tag_filtering(db_session: Session) -> None:
         ],
     )
 
-    annotation_collection_id = _get_annotation_collection_id(
-        db_session, collection.collection_id
-    )
+    annotation_collection_id = _get_annotation_collection_id(db_session, collection.collection_id)
 
     # Test filtering by tags
     annotations_part1 = annotation_resolver.get_all(
@@ -653,9 +647,7 @@ def test_create_many_annotations(db_session: Session) -> None:
         parent_collection_id=collection.collection_id,
         annotations=annotations_to_create,
     )
-    annotation_collection_id = _get_annotation_collection_id(
-        db_session, collection.collection_id
-    )
+    annotation_collection_id = _get_annotation_collection_id(db_session, collection.collection_id)
 
     created_annotations = annotation_resolver.get_all(
         session=db_session,
@@ -706,9 +698,7 @@ def test_create_many__populates_coverage(db_session: Session) -> None:
         annotations=annotations_to_create,
     )
 
-    annotation_collection_id = _get_annotation_collection_id(
-        db_session, collection.collection_id
-    )
+    annotation_collection_id = _get_annotation_collection_id(db_session, collection.collection_id)
     covered = annotation_collection_coverage_resolver.list_by_collection_id(
         session=db_session, annotation_collection_id=annotation_collection_id
     )
