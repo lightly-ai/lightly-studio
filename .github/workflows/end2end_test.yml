@@ -398,8 +398,30 @@ jobs:
         if: failure() && steps.cache-success.outputs.cache-hit != 'true'
         working-directory: lightly_studio
         run: |
-          echo "Server logs:"
-          cat server.log
+          echo "::group::Full backend server log"
+          cat server.log || echo "No server.log found"
+          echo "::endgroup::"
+
+          echo "::group::Last Python traceback in server log (if any)"
+          awk '/Traceback \(most recent call last\):/{flag=1} flag' server.log | tail -n 200 \
+            || echo "No traceback found"
+          echo "::endgroup::"
+
+          echo "Backend process ${{ env.SERVER_PID }} alive at end of run?"
+          if ps -p ${{ env.SERVER_PID }} > /dev/null 2>&1; then
+            echo "  yes — backend was still running, failure is most likely a frontend/test issue"
+          else
+            echo "  NO — backend died during the test run, see traceback above"
+          fi
+
+      - name: Upload backend server log after failure
+        uses: actions/upload-artifact@v4
+        if: failure() && steps.cache-success.outputs.cache-hit != 'true'
+        with:
+          name: Backend Server Log (${{ matrix.name }})
+          path: lightly_studio/server.log
+          if-no-files-found: warn
+          retention-days: 5
 
       - name: Upload Playwright report after failure
         uses: actions/upload-artifact@v4

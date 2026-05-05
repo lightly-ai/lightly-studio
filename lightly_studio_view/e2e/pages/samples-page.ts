@@ -61,7 +61,8 @@ export class SamplesPage {
 
     async clickLabel(label: string) {
         const responsePromise = this.page.waitForResponse(
-            (response) => response.url().includes('/images/list') && response.status() === 200
+            (response) => response.url().includes('/images/list') && response.status() === 200,
+            { timeout: 15000 }
         );
 
         const labelMenuItem = this.getLabelsMenuItem(label);

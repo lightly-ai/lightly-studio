@@ -7,6 +7,7 @@ import {
     setNetworkThrottling,
     test
 } from '../utils';
+import { VideoFramesPage, VideosPage } from '../pages';
 import * as fs from 'fs';
 import * as path from 'path';
 
@@ -35,11 +36,12 @@ function saveMetrics() {
     }
 }
 
-test('videos grid renders within 5 seconds', async ({ page, videosPage }) => {
+test('videos grid renders within 5 seconds', async ({ page }) => {
+    const videosPage = new VideosPage(page);
+
     await setNetworkThrottling(page, 'Fast4G');
 
     const result = await measureRenderAndMemory(async () => {
-        await page.reload();
         await videosPage.goto();
         const renderTimeMs = await measureElementRendering(page, videosPage.getVideoByIndex(1));
         const memoryUsageMb = await measureMemoryConsumption(page);
@@ -63,11 +65,12 @@ test('videos grid renders within 5 seconds', async ({ page, videosPage }) => {
     expectWithinPerformanceLimits(result, PERFORMANCE_LIMITS);
 });
 
-test('video frames grid renders within 5 seconds', async ({ page, videoFramesPage }) => {
+test('video frames grid renders within 5 seconds', async ({ page }) => {
+    const videoFramesPage = new VideoFramesPage(page);
+
     await setNetworkThrottling(page, 'Fast4G');
 
     const result = await measureRenderAndMemory(async () => {
-        await page.reload();
         await videoFramesPage.goto();
         const renderTimeMs = await measureElementRendering(
             page,
@@ -94,8 +97,9 @@ test('video frames grid renders within 5 seconds', async ({ page, videoFramesPag
     expectWithinPerformanceLimits(result, PERFORMANCE_LIMITS);
 });
 
-test('video frame details renders within 5 seconds', async ({ page, videoFramesPage }) => {
-    await videoFramesPage.goto();
+test('video frame details renders within 5 seconds', async ({ page }) => {
+    const videoFramesPage = new VideoFramesPage(page);
+
     await setNetworkThrottling(page, 'Fast4G');
 
     const result = await measureRenderAndMemory(async () => {
@@ -127,8 +131,9 @@ test('video frame details renders within 5 seconds', async ({ page, videoFramesP
     expectWithinPerformanceLimits(result, PERFORMANCE_LIMITS);
 });
 
-test('video details renders within 5 seconds', async ({ page, videosPage }) => {
-    await videosPage.goto();
+test('video details renders within 5 seconds', async ({ page }) => {
+    const videosPage = new VideosPage(page);
+
     await setNetworkThrottling(page, 'Fast4G');
 
     const result = await measureRenderAndMemory(async () => {
