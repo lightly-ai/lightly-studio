@@ -1,11 +1,19 @@
 <script module>
     import { defineMeta } from '@storybook/addon-svelte-csf';
+    import { QueryClient, QueryClientProvider } from '@tanstack/svelte-query';
     import CollectionSearch from './CollectionSearch.svelte';
 
     const { Story } = defineMeta({
         title: 'Components/CollectionSearch',
         component: CollectionSearch,
         tags: ['autodocs']
+    });
+
+    const queryClient = new QueryClient({
+        defaultOptions: {
+            queries: { retry: false },
+            mutations: { retry: false }
+        }
     });
 
     const noopSetTextEmbedding = () => undefined;
@@ -18,12 +26,11 @@
         textEmbedding: undefined,
         setTextEmbedding: noopSetTextEmbedding
     }}
-    asChild
 >
-    {#snippet children(args)}
-        <div class="w-[480px]">
+    {#snippet template(args)}
+        <QueryClientProvider client={queryClient}>
             <CollectionSearch {...args} />
-        </div>
+        </QueryClientProvider>
     {/snippet}
 </Story>
 
@@ -37,11 +44,10 @@
         },
         setTextEmbedding: noopSetTextEmbedding
     }}
-    asChild
 >
-    {#snippet children(args)}
-        <div class="w-[480px]">
+    {#snippet template(args)}
+        <QueryClientProvider client={queryClient}>
             <CollectionSearch {...args} />
-        </div>
+        </QueryClientProvider>
     {/snippet}
 </Story>
