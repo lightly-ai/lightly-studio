@@ -8,8 +8,8 @@ describe('routes', () => {
             const testCollectionType = 'image';
             const testCollectionId = '123';
             expect(
-                routes.collection.samples(testDatasetId, testCollectionType, testCollectionId)
-            ).toBe('/datasets/root-123/image/123/samples');
+                routes.collection.images(testDatasetId, testCollectionType, testCollectionId)
+            ).toBe('/datasets/root-123/image/123/images');
             expect(
                 routes.collection.annotations(testDatasetId, testCollectionType, testCollectionId)
             ).toBe('/datasets/root-123/image/123/annotations');
@@ -21,10 +21,10 @@ describe('routes', () => {
         const testCollectionType = 'image';
         const testCollectionId = '123';
 
-        it('should generate correct samples route', () => {
-            expect(
-                routeHelpers.toSamples(testDatasetId, testCollectionType, testCollectionId)
-            ).toBe('/datasets/root-123/image/123/samples');
+        it('should generate correct images route', () => {
+            expect(routeHelpers.toImages(testDatasetId, testCollectionType, testCollectionId)).toBe(
+                '/datasets/root-123/image/123/images'
+            );
         });
 
         it('should generate correct annotations route', () => {
@@ -43,7 +43,7 @@ describe('routes', () => {
                     collectionId: testCollectionId
                 })
             ).toBe(
-                `/datasets/${testDatasetId}/${testCollectionType}/${testCollectionId}/samples/${testSampleId}`
+                `/datasets/${testDatasetId}/${testCollectionType}/${testCollectionId}/images/${testSampleId}`
             );
         });
 

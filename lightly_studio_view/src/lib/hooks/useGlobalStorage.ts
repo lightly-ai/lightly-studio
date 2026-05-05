@@ -11,7 +11,7 @@ import { useReversibleActions } from './useReversibleActions';
 import type { CollectionView, SampleType } from '$lib/api/lightly_studio_local';
 import type { Point } from 'embedding-atlas/svelte';
 
-const lastGridType = writable<GridType>('samples');
+const lastGridType = writable<GridType>('images');
 const selectedSampleIdsByCollection = writable<Record<string, Set<string>>>({});
 const selectedSampleAnnotationCropIds = writable<Record<string, Set<string>>>({});
 const selectedAnnotationFilterIds = writable<Set<string>>(new Set());
@@ -212,6 +212,15 @@ export const useGlobalStorage = () => {
             });
         },
 
+        setAllSelectedSampleIds: (collection_id: string, ids: Set<string>) => {
+            selectedSampleIdsByCollection.update((selectedByCollection) => {
+                return {
+                    ...selectedByCollection,
+                    [collection_id]: new Set([...ids])
+                };
+            });
+        },
+
         // Individual sample annotation crop selection methods
         toggleSampleAnnotationCropSelection: (collectionId: string, annotationId: string) => {
             selectedSampleAnnotationCropIds.update((state) => {
@@ -234,6 +243,14 @@ export const useGlobalStorage = () => {
                 return {
                     ...state,
                     [collectionId]: new Set<string>()
+                };
+            });
+        },
+        setAllSelectedAnnotationCropIds: (collectionId: string, ids: Set<string>) => {
+            selectedSampleAnnotationCropIds.update((state) => {
+                return {
+                    ...state,
+                    [collectionId]: new Set([...ids])
                 };
             });
         },

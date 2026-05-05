@@ -20,7 +20,7 @@
 
     $effect(() => {
         if ($isExportDialogOpen) {
-            exportType = isVideoCollection ? 'youtube_vis_instance_segmentations' : 'samples';
+            exportType = isVideoCollection ? 'youtube_vis_segmentation' : 'samples';
         }
     });
 
@@ -32,18 +32,18 @@
     let exportType = $state<
         | 'samples'
         | 'object_detections'
-        | 'instance_segmentations'
+        | 'segmentation'
         | 'captions'
-        | 'youtube_vis_instance_segmentations'
+        | 'youtube_vis_segmentation'
         | 'semantic_segmentations'
     >('samples');
     const exportTypeLabels: Record<typeof exportType, string> = {
         samples: 'Image Filenames',
         object_detections: 'Image Object Detections',
-        instance_segmentations: 'Image Instance Segmentations',
-        semantic_segmentations: 'Image Semantic Segmentations',
+        segmentation: 'Image Segmentation Mask (COCO)',
+        semantic_segmentations: 'Image Segmentation Mask (PASCAL VOC)',
         captions: 'Image Captions',
-        youtube_vis_instance_segmentations: 'YouTube-VIS Video Instance Segmentations'
+        youtube_vis_segmentation: 'YouTube-VIS Video Segmentation Masks'
     };
     const exportTypeTriggerContent = $derived(exportTypeLabels[exportType]);
     let collectionId = page.params.collection_id;
@@ -119,17 +119,17 @@
     const exportAnnotationsURL = `${PUBLIC_LIGHTLY_STUDIO_API_URL}api/collections/${collectionId}/export/annotations?ts=${Date.now()}&export_format=object_detection_coco`;
 
     //
-    // Instance segmentation export
+    // Segmentation mask export
     //
-    const exportInstanceSegmentationsURL = `${PUBLIC_LIGHTLY_STUDIO_API_URL}api/collections/${collectionId}/export/annotations?ts=${Date.now()}&export_format=segmentation_mask_coco`;
+    const exportSegmentationMaskURL = `${PUBLIC_LIGHTLY_STUDIO_API_URL}api/collections/${collectionId}/export/annotations?ts=${Date.now()}&export_format=segmentation_mask_coco`;
 
     //
-    // YouTube-VIS video instance segmentation export
+    // YouTube-VIS video Segmentation mask export
     //
-    const exportYoutubeVisInstanceSegmentationsURL = `${PUBLIC_LIGHTLY_STUDIO_API_URL}api/collections/${collectionId}/export/youtube-vis?ts=${Date.now()}&export_format=youtube_vis_segmentation`;
+    const exportYoutubeVisSegmentationMaskURL = `${PUBLIC_LIGHTLY_STUDIO_API_URL}api/collections/${collectionId}/export/youtube-vis?ts=${Date.now()}&export_format=youtube_vis_segmentation`;
     // Semantic segmentation export
     //
-    const exportSemanticSegmentationsURL = `${PUBLIC_LIGHTLY_STUDIO_API_URL}api/collections/${collectionId}/export/annotations?ts=${Date.now()}&export_format=pascal_voc`;
+    const exportPascalVocURL = `${PUBLIC_LIGHTLY_STUDIO_API_URL}api/collections/${collectionId}/export/annotations?ts=${Date.now()}&export_format=pascal_voc`;
 
     //
     // Caption export
@@ -164,9 +164,9 @@
                             <Select.Content>
                                 {#if isVideoCollection}
                                     <Select.Item
-                                        value="youtube_vis_instance_segmentations"
-                                        label="YouTube-VIS Video Instance Segmentations"
-                                        >YouTube-VIS Video Instance Segmentations</Select.Item
+                                        value="youtube_vis_segmentation"
+                                        label="YouTube-VIS Video Segmentation Masks"
+                                        >YouTube-VIS Video Segmentation Masks</Select.Item
                                     >
                                 {:else}
                                     <Select.Item value="samples" label="Image Filenames"
@@ -178,14 +178,14 @@
                                         >Image Object Detections</Select.Item
                                     >
                                     <Select.Item
-                                        value="instance_segmentations"
-                                        label="Image Instance Segmentations"
-                                        >Image Instance Segmentations</Select.Item
+                                        value="segmentation"
+                                        label="Image Segmentation Mask (COCO)"
+                                        >Image Segmentation Mask (COCO)</Select.Item
                                     >
                                     <Select.Item
                                         value="semantic_segmentations"
-                                        label="Image Semantic Segmentations"
-                                        >Image Semantic Segmentations</Select.Item
+                                        label="Image Segmentation Mask (PASCAL VOC)"
+                                        >Image Segmentation Mask (PASCAL VOC)</Select.Item
                                     >
                                     <Select.Item value="captions" label="Image Captions"
                                         >Image Captions</Select.Item
@@ -315,14 +315,14 @@
                         </Button>
                     </Tabs.Content>
 
-                    <Tabs.Content value="instance_segmentations" class="pt-2">
+                    <Tabs.Content value="segmentation" class="pt-2">
                         <p class="text-sm text-muted-foreground">
-                            The instance segmentations will be exported in COCO format.
+                            The segmentation masks will be exported in COCO format.
                         </p>
 
                         <Button
                             class="relative my-4 w-full"
-                            href={exportInstanceSegmentationsURL}
+                            href={exportSegmentationMaskURL}
                             target="_blank"
                             data-testid="submit-button-instance-segmentations"
                         >
@@ -331,15 +331,14 @@
                     </Tabs.Content>
 
                     {#if isVideoCollection}
-                        <Tabs.Content value="youtube_vis_instance_segmentations" class="pt-2">
+                        <Tabs.Content value="youtube_vis_segmentation" class="pt-2">
                             <p class="text-sm text-muted-foreground">
-                                The video instance segmentations will be exported in YouTube-VIS
-                                format.
+                                The video segmentation masks will be exported in YouTube-VIS format.
                             </p>
 
                             <Button
                                 class="relative my-4 w-full"
-                                href={exportYoutubeVisInstanceSegmentationsURL}
+                                href={exportYoutubeVisSegmentationMaskURL}
                                 target="_blank"
                                 data-testid="submit-button-youtube-vis-instance-segmentations"
                             >
@@ -354,7 +353,7 @@
 
                         <Button
                             class="relative my-4 w-full"
-                            href={exportSemanticSegmentationsURL}
+                            href={exportPascalVocURL}
                             target="_blank"
                             data-testid="submit-button-semantic-segmentations"
                         >

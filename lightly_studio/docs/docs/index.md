@@ -125,7 +125,7 @@ directly use your own image, video, or YOLO/COCO dataset.
     1. Run `python example_yolo.py` in your terminal.
     1. Click on the printed URL to open the app in your browser.
 
-=== "COCO Instance Segmentation"
+=== "COCO Segmentation Mask"
 
     1. Create a file named `example_coco.py` with the following contents:
 
@@ -139,7 +139,7 @@ directly use your own image, video, or YOLO/COCO dataset.
         dataset.add_samples_from_coco(
             annotations_json=f"{dataset_path}/coco_subset_128_images/instances_train2017.json",
             images_path=f"{dataset_path}/coco_subset_128_images/images",
-            annotation_type=ls.AnnotationType.INSTANCE_SEGMENTATION,
+            annotation_type=ls.AnnotationType.SEGMENTATION_MASK,
         )
 
         ls.start_gui()

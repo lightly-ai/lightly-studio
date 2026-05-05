@@ -40,7 +40,7 @@ class TestVideoDatasetExport:
                 AnnotationCreate(
                     parent_sample_id=frame_0,
                     annotation_label_id=label.annotation_label_id,
-                    annotation_type=AnnotationType.INSTANCE_SEGMENTATION,
+                    annotation_type=AnnotationType.SEGMENTATION_MASK,
                     x=0,
                     y=1,
                     width=1,
@@ -53,7 +53,7 @@ class TestVideoDatasetExport:
                 AnnotationCreate(
                     parent_sample_id=frame_1,
                     annotation_label_id=label.annotation_label_id,
-                    annotation_type=AnnotationType.INSTANCE_SEGMENTATION,
+                    annotation_type=AnnotationType.SEGMENTATION_MASK,
                     x=0,
                     y=1,
                     width=1,
@@ -67,7 +67,7 @@ class TestVideoDatasetExport:
         )
 
         output_json = tmp_path / "instances.json"
-        dataset.export().to_youtube_vis_instance_segmentation(output_json=output_json)
+        dataset.export().to_youtube_vis_segmentation_mask(output_json=output_json)
 
         yvis = json.loads(output_json.read_text(encoding="utf-8"))
         assert yvis["categories"] == [{"id": 1, "name": "cat"}]

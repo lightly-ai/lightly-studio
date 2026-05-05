@@ -293,6 +293,7 @@ class ImageDataset(BaseSampleDataset[ImageSample]):
                 If provided, all samples will be tagged with this name.
             embed: If True, generate embeddings for the newly added samples.
         """
+        images_path = _normalize_input_path(path=images_path)
         fs, fs_path = fsspec.core.url_to_fs(url=annotations_json)
         if not fs.isfile(fs_path) or not str(annotations_json).endswith(".json"):
             raise FileNotFoundError(f"COCO annotations json file not found: '{annotations_json}'")
@@ -303,7 +304,7 @@ class ImageDataset(BaseSampleDataset[ImageSample]):
             label_input = COCOObjectDetectionInput(
                 input_file=annotations_json,
             )
-        elif annotation_type == AnnotationType.INSTANCE_SEGMENTATION:
+        elif annotation_type == AnnotationType.SEGMENTATION_MASK:
             label_input = COCOInstanceSegmentationInput(
                 input_file=annotations_json,
             )
@@ -336,8 +337,8 @@ class ImageDataset(BaseSampleDataset[ImageSample]):
         """Load a Pascal VOC segmentation dataset and store in DB.
 
         Pascal VOC masks encode class IDs per pixel (semantic segmentation).
-        Imported masks are persisted as `AnnotationType.INSTANCE_SEGMENTATION`.
-        Query and export workflows should use instance segmentation type filters.
+        Imported masks are persisted as `AnnotationType.SEGMENTATION_MASK`.
+        Query and export workflows should use segmentation mask type filters.
 
         Args:
             images_path: Path to the folder containing the images.

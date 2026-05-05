@@ -18,7 +18,7 @@ vi.mock('$app/state', () => ({
     page: {
         params: { collection_id: 'test-collection-id' },
         route: {
-            id: '/datasets/[dataset_id]/[collection_type]/[collection_id]/samples'
+            id: '/datasets/[dataset_id]/[collection_type]/[collection_id]/images'
         }
     }
 }));

@@ -5,8 +5,12 @@ export class CaptionUtils {
         this.page = page;
     }
 
+    private getVisibleCaptionFields() {
+        return this.page.locator('[data-testid="caption-field"]:visible');
+    }
+
     getCaptionCount() {
-        return this.page.getByTestId('caption-field').count();
+        return this.getVisibleCaptionFields().count();
     }
 
     getVideoFrameImageCount() {
@@ -14,7 +18,7 @@ export class CaptionUtils {
     }
 
     getNthCaption(index: number) {
-        return this.page.getByTestId('caption-field').nth(index);
+        return this.getVisibleCaptionFields().nth(index);
     }
 
     getNthCaptionText(index: number) {
@@ -32,7 +36,7 @@ export class CaptionUtils {
         await expect(newCaptionInput).toBeVisible();
         await newCaptionInput.fill(text);
         await newCaptionInput.press('Enter');
-        await expect(this.page.getByTestId('caption-field')).toHaveCount(captionCountBefore + 1);
+        await expect(this.getVisibleCaptionFields()).toHaveCount(captionCountBefore + 1);
     }
 
     async addCaptionInCaptionPage(addButtonIndex: number = 0, text: string = 'new caption') {
@@ -45,7 +49,7 @@ export class CaptionUtils {
 
         const captionCountBefore = await this.getCaptionCount();
         await captionField.getByTestId('delete-caption-button').click();
-        await expect(this.page.getByTestId('caption-field')).toHaveCount(captionCountBefore - 1);
+        await expect(this.getVisibleCaptionFields()).toHaveCount(captionCountBefore - 1);
     }
 
     async undoLastCaptionDelete() {

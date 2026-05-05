@@ -21,7 +21,7 @@ dataset = ls.ImageDataset.create()
 dataset.add_samples_from_coco(
     annotations_json=annotations_json,
     images_path=images_path,
-    annotation_type=ls.AnnotationType.INSTANCE_SEGMENTATION,
+    annotation_type=ls.AnnotationType.SEGMENTATION_MASK,
 )
 
 ls.start_gui()

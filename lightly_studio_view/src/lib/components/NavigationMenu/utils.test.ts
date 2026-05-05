@@ -50,7 +50,7 @@ describe('getMenuItem', () => {
 
     it('generates correct href', () => {
         const item = getMenuItem('dataset-id', 'current-col-id', 'col-id', SampleType.IMAGE);
-        expect(item.href).toBe('/datasets/dataset-id/image/col-id/samples');
+        expect(item.href).toBe('/datasets/dataset-id/image/col-id/images');
     });
 });
 

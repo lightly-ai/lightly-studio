@@ -10,10 +10,10 @@ The following export formats are supported:
 |---|---|---|
 | Sample Filenames | Absolute file paths of selected samples | TXT |
 | COCO Object Detection | Bounding box annotations | JSON |
-| COCO Instance Segmentation | Segmentation masks with bounding boxes | JSON |
+| COCO Segmentation Mask | Segmentation masks with bounding boxes | JSON |
 | COCO Captions | Image captions | JSON |
 | Pascal VOC Semantic Segmentation | Per-pixel class masks | PNG masks + class map |
-| YouTube-VIS Instance Segmentation | Video instance segmentation tracks | JSON |
+| YouTube-VIS Segmentation Mask | Video segmentation mask tracks | JSON |
 
 ## Export in the GUI
 
@@ -24,8 +24,8 @@ and select `Export`. The dialog shows a dropdown with all available formats for 
 
 ### Exporting annotations
 
-For annotation formats (`Image Object Detections`, `Image Instance Segmentations`,
-`Image Semantic Segmentations`, `Image Captions`, `YouTube-VIS Video Instance Segmentations`),
+For annotation formats (`Image Object Detections`, `Image Segmentation Mask (COCO)`,
+`Image Segmentation Mask (PASCAL VOC)`, `Image Captions`, `YouTube-VIS Video Segmentation Masks`),
 select the format and click `Download`. A zip file is created if the export includes multiple files.
 The export includes all samples in the dataset.
 
@@ -53,13 +53,13 @@ import lightly_studio as ls
 # Image dataset export
 dataset = ls.ImageDataset.load()
 dataset.export().to_coco_object_detections("detections.json")
-dataset.export().to_coco_instance_segmentations("segmentations.json")
+dataset.export().to_coco_segmentation_masks("segmentations.json")
 dataset.export().to_coco_captions("captions.json")
-dataset.export().to_pascalvoc_instance_segmentation("pascalvoc_output_dir/")
+dataset.export().to_pascalvoc_segmentation_mask("pascalvoc_output_dir/")
 
 # Video dataset export
 dataset = ls.VideoDataset.load()
-dataset.export().to_youtube_vis_instance_segmentation("youtube_vis.json")
+dataset.export().to_youtube_vis_segmentation_mask("youtube_vis.json")
 ```
 
 ### Export a filtered subset

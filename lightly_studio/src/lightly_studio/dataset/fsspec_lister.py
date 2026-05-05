@@ -31,6 +31,7 @@ IMAGE_EXTENSIONS = {
     ".gif",
     ".webp",
     ".bmp",
+    ".tif",
     ".tiff",
 }
 

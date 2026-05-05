@@ -13,6 +13,9 @@ from lightly_studio.resolvers.video_frame_resolver.get_all_by_video_ids import (
 from lightly_studio.resolvers.video_frame_resolver.get_by_id import (
     get_by_id,
 )
+from lightly_studio.resolvers.video_frame_resolver.get_sample_ids import (
+    get_sample_ids,
+)
 from lightly_studio.resolvers.video_frame_resolver.get_table_fields_bounds import (
     get_table_fields_bounds,
 )
@@ -30,6 +33,7 @@ __all__ = [
     "get_all_by_collection_id",
     "get_all_by_video_ids",
     "get_by_id",
+    "get_sample_ids",
     "get_table_fields_bounds",
     "get_video_frames_count_annotation_views",
 ]

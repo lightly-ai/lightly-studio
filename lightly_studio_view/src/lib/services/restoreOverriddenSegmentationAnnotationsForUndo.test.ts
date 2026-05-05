@@ -10,7 +10,7 @@ const baseAnnotation = (id: string): AnnotationView =>
     ({
         sample_id: id,
         parent_sample_id: 'parent-sample-id',
-        annotation_type: 'instance_segmentation',
+        annotation_type: 'segmentation_mask',
         annotation_label: {
             annotation_label_name: 'car'
         },
@@ -78,7 +78,7 @@ describe('restoreOverriddenSegmentationAnnotationsForUndo', () => {
         expect(updateAnnotations).toHaveBeenCalledTimes(1);
         expect(createAnnotation).toHaveBeenCalledWith({
             parent_sample_id: 'parent-sample-id',
-            annotation_type: 'instance_segmentation',
+            annotation_type: 'segmentation_mask',
             annotation_label_id: 'label-car',
             x: 3,
             y: 4,
