@@ -8,6 +8,7 @@ from typing import Any
 from uuid import UUID
 
 import numpy as np
+from numpy.typing import NDArray
 
 
 @dataclass
@@ -160,20 +161,20 @@ def match_with_iou_matrix(
 
 
 def compute_iou_matrix(
-    pred_corners: np.ndarray[Any, Any],
-    gt_corners: np.ndarray[Any, Any],
-) -> np.ndarray[Any, Any]:
+    pred_corners: NDArray[np.int64],
+    gt_corners: NDArray[np.int64],
+) -> NDArray[np.float64]:
     """Compute pairwise IoU from corner arrays.
 
     Args:
-        pred_corners: Array of shape (P, 4) with [x1, y1, x2, y2] per prediction.
-        gt_corners: Array of shape (G, 4) with [x1, y1, x2, y2] per ground truth.
+        pred_corners: (P, 4) array of [x1, y1, x2, y2] prediction boxes in image pixel coordinates.
+        gt_corners: (G, 4) array of [x1, y1, x2, y2] ground-truth boxes in image pixel coordinates.
 
     Returns:
         IoU matrix of shape (P, G), or an empty array if either input is empty.
     """
     if pred_corners.size == 0 or gt_corners.size == 0:
-        return np.empty((len(pred_corners), len(gt_corners)))
+        return np.empty((len(pred_corners), len(gt_corners)), dtype=np.float64)
 
     inter_x1 = np.maximum(pred_corners[:, None, 0], gt_corners[None, :, 0])
     inter_y1 = np.maximum(pred_corners[:, None, 1], gt_corners[None, :, 1])
@@ -187,4 +188,5 @@ def compute_iou_matrix(
     gt_area = (gt_corners[:, 2] - gt_corners[:, 0]) * (gt_corners[:, 3] - gt_corners[:, 1])
     union = pred_area[:, None] + gt_area[None, :] - inter
 
-    return inter / union  # (P, G)
+    iou = inter / union
+    return np.asarray(np.nan_to_num(iou, nan=0.0), dtype=np.float64)  # (P, G)
