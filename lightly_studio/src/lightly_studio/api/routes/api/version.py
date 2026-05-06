@@ -3,18 +3,17 @@
 from __future__ import annotations
 
 import json
-from dataclasses import dataclass
 from pathlib import Path
 
 from fastapi import APIRouter
+from pydantic import BaseModel
 
 version_router = APIRouter(tags=["version"])
 package_root = Path(__file__).resolve().parent.parent.parent.parent
 version_file = package_root / "dist_lightly_studio_view_app" / "version-info.json"
 
 
-@dataclass
-class RuntimeVersionInfo:
+class RuntimeVersionInfo(BaseModel):
     """Runtime version information returned by the version endpoint."""
 
     version: str

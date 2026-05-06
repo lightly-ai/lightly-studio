@@ -1717,7 +1717,7 @@ export interface paths {
          * Get Version
          * @description Get backend runtime version information.
          *
-         *     Prefer the build-generated version file and fall back to runtime generation.
+         *     Loads from the build-generated version file or returns a not-available placeholder.
          */
         get: operations["get_version"];
         put?: never;
