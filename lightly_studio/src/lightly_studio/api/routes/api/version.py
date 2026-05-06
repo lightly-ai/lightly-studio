@@ -8,8 +8,6 @@ from pathlib import Path
 
 from fastapi import APIRouter
 
-from lightly_studio.export_version import get_version_info
-
 version_router = APIRouter(tags=["version"])
 package_root = Path(__file__).resolve().parent.parent.parent.parent
 version_file = package_root / "dist_lightly_studio_view_app" / "version-info.json"
@@ -55,15 +53,14 @@ def _load_version_info_from_file() -> RuntimeVersionInfo | None:
 def get_version() -> RuntimeVersionInfo:
     """Get backend runtime version information.
 
-    Prefer the build-generated version file and fall back to runtime generation.
+    Loads from the build-generated version file or returns a not-available placeholder.
     """
     file_version_info = _load_version_info_from_file()
     if file_version_info is not None:
         return file_version_info
 
-    runtime_version_info = get_version_info()
     return RuntimeVersionInfo(
-        version=runtime_version_info["version"],
-        git_sha=runtime_version_info["git_sha"],
-        is_tagged_commit=runtime_version_info["is_tagged_commit"],
+        version="version not available",
+        git_sha="version not available",
+        is_tagged_commit=False,
     )
