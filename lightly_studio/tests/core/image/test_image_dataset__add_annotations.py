@@ -3,7 +3,6 @@ from __future__ import annotations
 import json
 import logging
 from pathlib import Path
-from random import choice
 from typing import Any
 
 import pytest
@@ -42,25 +41,10 @@ def _coco_dict_with(file_names: list[str]) -> dict[str, Any]:
     }
 
 
-def _yolo_yaml_dict() -> dict[str, Any]:
-    return {
-        "train": "../train/images",
-        "val": "../val/images",
-        "nc": 1,
-        "names": ["class_0"],
-    }
-
-
 def _create_sample_images(image_paths: list[Path]) -> None:
     for image_path in image_paths:
         image_path.parent.mkdir(parents=True, exist_ok=True)
         Image.new("RGB", (10, 10)).save(image_path)
-
-
-def _create_yolo_labels(label_paths: list[Path]) -> None:
-    for label_path in label_paths:
-        label_path.parent.mkdir(parents=True, exist_ok=True)
-        label_path.write_text(f"{choice([0])} 0.5 0.5 0.4 0.4\n")
 
 
 def _setup_dataset_with_images(
@@ -230,15 +214,17 @@ class TestDataset:
         tmp_path: Path,
     ) -> None:
         yaml_path = tmp_path / "data.yaml"
-        yaml_path.write_text(yaml.dump(_yolo_yaml_dict()))
+        yaml_path.write_text(
+            yaml.dump(
+                {"train": "../train/images", "val": "../val/images", "nc": 1, "names": ["class_0"]}
+            )
+        )
         images_path = tmp_path / "train" / "images"
         labels_path = tmp_path / "train" / "labels"
-        _create_sample_images(
-            [images_path / "image1.jpg", images_path / "image2.jpg"]
-        )
-        _create_yolo_labels(
-            [labels_path / "image1.txt", labels_path / "image2.txt"]
-        )
+        labels_path.mkdir(parents=True, exist_ok=True)
+        _create_sample_images([images_path / "image1.jpg", images_path / "image2.jpg"])
+        for fn in ("image1.txt", "image2.txt"):
+            (labels_path / fn).write_text("0 0.5 0.5 0.4 0.4\n")
 
         dataset = ImageDataset.create(name="test_dataset")
         dataset.add_images_from_path(path=images_path, embed=False)
