@@ -1,24 +1,16 @@
 from __future__ import annotations
 
-from uuid import UUID
-
 from sqlmodel import Session
 
-from lightly_studio.models.collection import SampleType
-from lightly_studio.models.evaluation_run import (
-    EvaluationRunCreate,
-    EvaluationRunTable,
-    EvaluationTaskType,
-)
 from lightly_studio.models.evaluation_sample_metric import EvaluationSampleMetricTable
-from lightly_studio.models.image import ImageTable
-from lightly_studio.resolvers import evaluation_run_resolver, evaluation_sample_metric_resolver
+from lightly_studio.resolvers import evaluation_sample_metric_resolver
 from tests.helpers_resolvers import create_collection, create_image
+from tests.resolvers.evaluation_sample_metric_resolver.helpers import create_run_and_image
 
 
 def test_create_many(db_session: Session) -> None:
     dataset = create_collection(session=db_session)
-    run, _ = _create_run_and_image(db_session, dataset_collection_id=dataset.collection_id)
+    run, _ = create_run_and_image(db_session, dataset_collection_id=dataset.collection_id)
     image1 = create_image(session=db_session, collection_id=dataset.collection_id)
     image2 = create_image(
         session=db_session,
@@ -54,7 +46,7 @@ def test_create_many(db_session: Session) -> None:
 
 
 def test_create_many__empty_list_is_noop(db_session: Session) -> None:
-    run, _ = _create_run_and_image(db_session)
+    run, _ = create_run_and_image(db_session)
 
     evaluation_sample_metric_resolver.create_many(session=db_session, records=[])
 
@@ -63,35 +55,3 @@ def test_create_many__empty_list_is_noop(db_session: Session) -> None:
         evaluation_run_id=run.id,
     )
     assert results == []
-
-
-def _create_run_and_image(
-    session: Session,
-    dataset_collection_id: UUID | None = None,
-) -> tuple[EvaluationRunTable, ImageTable]:
-    collection_id: UUID = (
-        create_collection(session=session).collection_id
-        if dataset_collection_id is None
-        else dataset_collection_id
-    )
-    gt_collection = create_collection(
-        session=session,
-        sample_type=SampleType.ANNOTATION,
-        parent_collection_id=collection_id,
-    )
-    pred_collection = create_collection(
-        session=session,
-        sample_type=SampleType.ANNOTATION,
-        parent_collection_id=collection_id,
-    )
-    run = evaluation_run_resolver.create(
-        session=session,
-        evaluation_run_input=EvaluationRunCreate(
-            name="test_run",
-            gt_annotation_collection_id=gt_collection.collection_id,
-            pred_annotation_collection_id=pred_collection.collection_id,
-            task_type=EvaluationTaskType.OBJECT_DETECTION,
-        ),
-    )
-    image = create_image(session=session, collection_id=collection_id)
-    return run, image

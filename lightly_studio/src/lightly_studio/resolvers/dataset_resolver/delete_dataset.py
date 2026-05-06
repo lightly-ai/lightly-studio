@@ -21,6 +21,7 @@ from lightly_studio.models.collection import CollectionTable
 from lightly_studio.models.dataset import DatasetTable
 from lightly_studio.models.embedding_model import EmbeddingModelTable
 from lightly_studio.models.evaluation_run import EvaluationRunTable
+from lightly_studio.models.evaluation_sample_metric import EvaluationSampleMetricTable
 from lightly_studio.models.group import GroupTable, SampleGroupLinkTable
 from lightly_studio.models.image import ImageTable
 from lightly_studio.models.metadata import SampleMetadataTable
@@ -93,6 +94,7 @@ def delete_dataset(
     _delete_tags(session=session, collection_ids=collection_ids)
     _delete_embedding_models(session=session, collection_ids=collection_ids)
     _delete_object_tracks(session=session, dataset_id=dataset_id)
+    _delete_evaluation_sample_metrics(session=session, dataset_id=dataset_id)
     _delete_evaluation_runs(session=session, dataset_id=dataset_id)
     session.commit()  # Required before deleting collections.
 
@@ -265,6 +267,24 @@ def _delete_embedding_models(session: Session, collection_ids: list[UUID]) -> No
     session.exec(
         delete(EmbeddingModelTable).where(
             col(EmbeddingModelTable.collection_id).in_(collection_ids)
+        )
+    )
+
+
+def _delete_evaluation_sample_metrics(session: Session, dataset_id: UUID) -> None:
+    """Delete evaluation sample metrics for the given dataset."""
+    run_ids_subquery = (
+        select(EvaluationRunTable.id)
+        .join(
+            CollectionTable,
+            col(EvaluationRunTable.gt_annotation_collection_id)
+            == col(CollectionTable.collection_id),
+        )
+        .where(col(CollectionTable.dataset_id) == dataset_id)
+    )
+    session.exec(
+        delete(EvaluationSampleMetricTable).where(
+            col(EvaluationSampleMetricTable.evaluation_run_id).in_(run_ids_subquery)
         )
     )
 
