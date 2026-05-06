@@ -17,14 +17,13 @@ from tests.helpers_resolvers import create_collection
 
 def test_get_by_id(db_session: Session) -> None:
     dataset = create_collection(session=db_session)
-    run = _create_evaluation_run(db_session, dataset_id=dataset.collection_id)
+    run = _create_evaluation_run(db_session, dataset_collection_id=dataset.collection_id)
 
     result = evaluation_run_resolver.get_by_id(session=db_session, evaluation_id=run.id)
 
     assert isinstance(result, EvaluationRunTable)
     assert result.id == run.id
     assert result.name == run.name
-    assert result.dataset_id == run.dataset_id
 
 
 def test_get_by_id__returns_none_for_unknown_id(db_session: Session) -> None:
@@ -35,16 +34,19 @@ def test_get_by_id__returns_none_for_unknown_id(db_session: Session) -> None:
 
 def test_get_all_by_dataset_id(db_session: Session) -> None:
     dataset = create_collection(session=db_session)
-    run1 = _create_evaluation_run(db_session, dataset_id=dataset.collection_id, name="run_1")
-    run2 = _create_evaluation_run(db_session, dataset_id=dataset.collection_id, name="run_2")
+    run1 = _create_evaluation_run(
+        db_session, dataset_collection_id=dataset.collection_id, name="run_1"
+    )
+    run2 = _create_evaluation_run(
+        db_session, dataset_collection_id=dataset.collection_id, name="run_2"
+    )
 
     results = evaluation_run_resolver.get_all_by_dataset_id(
-        session=db_session, dataset_id=run1.dataset_id
+        session=db_session, dataset_id=dataset.dataset_id
     )
 
     assert len(results) == 2
     assert all(isinstance(r, EvaluationRunTable) for r in results)
-    assert all(r.dataset_id == run1.dataset_id for r in results)
     # newest first
     assert results[0].id == run2.id
     assert results[1].id == run1.id
@@ -61,33 +63,35 @@ def test_get_all_by_dataset_id__returns_empty_for_unknown_dataset(db_session: Se
 def test_get_all_by_dataset_id__excludes_other_datasets(db_session: Session) -> None:
     dataset = create_collection(session=db_session)
     other_dataset = create_collection(session=db_session)
-    run = _create_evaluation_run(db_session, dataset_id=dataset.collection_id)
-    other_run = _create_evaluation_run(db_session, dataset_id=other_dataset.collection_id)
+    run = _create_evaluation_run(db_session, dataset_collection_id=dataset.collection_id)
+    _create_evaluation_run(db_session, dataset_collection_id=other_dataset.collection_id)
 
     results = evaluation_run_resolver.get_all_by_dataset_id(
-        session=db_session, dataset_id=run.dataset_id
+        session=db_session, dataset_id=dataset.dataset_id
     )
 
     assert len(results) == 1
     assert results[0].id == run.id
-    assert all(r.dataset_id != other_run.dataset_id for r in results)
 
 
 def _create_evaluation_run(
     session: Session,
-    dataset_id: UUID,
+    dataset_collection_id: UUID,
     name: str = "test_run",
 ) -> EvaluationRunTable:
     gt_collection = create_collection(
-        session=session, sample_type=SampleType.ANNOTATION, parent_collection_id=dataset_id
+        session=session,
+        sample_type=SampleType.ANNOTATION,
+        parent_collection_id=dataset_collection_id,
     )
     pred_collection = create_collection(
-        session=session, sample_type=SampleType.ANNOTATION, parent_collection_id=dataset_id
+        session=session,
+        sample_type=SampleType.ANNOTATION,
+        parent_collection_id=dataset_collection_id,
     )
     return evaluation_run_resolver.create(
         session=session,
         evaluation_run_input=EvaluationRunCreate(
-            dataset_id=gt_collection.dataset_id,
             name=name,
             gt_annotation_collection_id=gt_collection.collection_id,
             pred_annotation_collection_id=pred_collection.collection_id,

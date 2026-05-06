@@ -6,6 +6,7 @@ from uuid import UUID
 
 from sqlmodel import Session, col, select
 
+from lightly_studio.models.collection import CollectionTable
 from lightly_studio.models.evaluation_run import EvaluationRunTable
 
 
@@ -16,7 +17,12 @@ def get_all_by_dataset_id(
     """Return all evaluation results for a dataset, newest first."""
     stmt = (
         select(EvaluationRunTable)
-        .where(col(EvaluationRunTable.dataset_id) == dataset_id)
+        .join(
+            CollectionTable,
+            col(EvaluationRunTable.gt_annotation_collection_id)
+            == col(CollectionTable.collection_id),
+        )
+        .where(col(CollectionTable.dataset_id) == dataset_id)
         .order_by(col(EvaluationRunTable.created_at).desc())
     )
     return list(session.exec(stmt).all())

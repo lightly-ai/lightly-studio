@@ -1,4 +1,4 @@
-"""Query evaluation runs for a dataset."""
+"""Query an evaluation run by ID."""
 
 from __future__ import annotations
 

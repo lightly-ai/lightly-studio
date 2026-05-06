@@ -22,7 +22,6 @@ class EvaluationTaskType(str, Enum):
 class EvaluationRunBase(SQLModel):
     """Base model for evaluation runs."""
 
-    dataset_id: UUID = Field(foreign_key="dataset.dataset_id", index=True)
     name: str
     # Foreign keys to the annotation collections containing Ground Truth and predicted annotations.
     gt_annotation_collection_id: UUID = Field(foreign_key="collection.collection_id")
