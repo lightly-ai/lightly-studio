@@ -6,7 +6,7 @@ import {
     inject
 } from 'langium';
 import type { LangiumParser } from 'langium';
-import { QueryExprTranslationRequest, parseLightlyQuery } from './query-expr-translation.js';
+import { parseLightlyQuery } from './query-expr-translation.js';
 import {
     LightlyQueryGeneratedModule,
     LightlyQueryGeneratedSharedModule
@@ -18,6 +18,7 @@ import type {
     DatetimeExpr,
     TagsContainsExpr,
     ObjectDetectionMatchExpr,
+    ClassificationMatchExpr,
     AndExpr,
     OrExpr,
     NotExpr
@@ -34,12 +35,6 @@ function createParser(): LangiumParser {
 }
 
 const parser = createParser();
-
-describe('QueryExprTranslationRequest', () => {
-    it('has the expected method name', () => {
-        expect(QueryExprTranslationRequest.method).toBe('lightly-query/queryExprTranslation');
-    });
-});
 
 describe('parseLightlyQuery error handling', () => {
     it('returns an error result when the parser reports errors', () => {
@@ -66,6 +61,7 @@ describe('parseLightlyQuery error handling', () => {
         { name: 'string compared to int field', source: 'height == "tall"' },
         { name: 'obj detection without arguments', source: 'object_detection()' },
         { name: 'obj detection unknown field', source: 'object_detection(file_name == "a.jpg")' },
+        { name: 'classification unknown field', source: 'classification(x == 0)' },
         { name: 'wrong in operator use', source: '"jpg" IN file_name' },
         { name: 'stray punctuation', source: '@@@' }
     ];
@@ -73,6 +69,15 @@ describe('parseLightlyQuery error handling', () => {
     it.each(PARSE_FAILURE_CASES)('reports errors for $name', ({ source }) => {
         const result = parseLightlyQuery(parser, source);
         expect(result.status).toBe('error');
+    });
+
+    it('returns an error result for an invalid datetime literal', () => {
+        const result = parseLightlyQuery(parser, 'created_at == "not-a-date"');
+
+        expect(result).toEqual({
+            status: 'error',
+            errors: [{ message: 'Invalid datetime literal: not-a-date' }]
+        });
     });
 });
 
@@ -117,6 +122,12 @@ const objectDetection = (subexpr: MatchExpr): MatchExpr =>
         type: 'object_detection_match_expr',
         subexpr
     }) satisfies ObjectDetectionMatchExpr & { type: 'object_detection_match_expr' };
+
+const classification = (subexpr: MatchExpr): MatchExpr =>
+    ({
+        type: 'classification_match_expr',
+        subexpr
+    }) satisfies ClassificationMatchExpr & { type: 'classification_match_expr' };
 
 const and = (...children: MatchExpr[]): MatchExpr =>
     ({
@@ -206,6 +217,13 @@ const TRANSLATION_TEST_CASES: TranslationTestCase[] = [
         expected: query(objectDetection(int('object_detection', 'height', '<=', 120)))
     },
 
+    /* Classification expression */
+    {
+        name: 'classification label',
+        source: 'classification(label == "cat")',
+        expected: query(classification(str('classification', 'label', '==', 'cat')))
+    },
+
     /* Boolean operators */
     {
         name: 'boolean and',
@@ -293,6 +311,13 @@ const TRANSLATION_TEST_CASES: TranslationTestCase[] = [
         )
     },
 
+    /* Video queries */
+    {
+        name: 'video height greater than',
+        source: 'video:height > 720',
+        expected: query(int('video', 'height', '>', 720))
+    },
+
     /* Complex queries */
     {
         name: 'complex reviewed large cat image',
@@ -317,8 +342,10 @@ const TRANSLATION_TEST_CASES: TranslationTestCase[] = [
         source: '(file_path_abs != "/datasets/archive/bad.jpg" AND created_at >= "2025-01-01T00:00:00Z") AND ("training" IN tags OR "validation" IN tags) AND object_detection((label == "cat" OR label == "dog") AND NOT (x < 5 OR y < 5))',
         expected: query(
             and(
-                str('image', 'file_path_abs', '!=', '/datasets/archive/bad.jpg'),
-                dt('image', 'created_at', '>=', '2025-01-01T00:00:00Z'),
+                and(
+                    str('image', 'file_path_abs', '!=', '/datasets/archive/bad.jpg'),
+                    dt('image', 'created_at', '>=', '2025-01-01T00:00:00Z')
+                ),
                 or(tagsContains('image', 'training'), tagsContains('image', 'validation')),
                 objectDetection(
                     and(
@@ -339,7 +366,7 @@ const TRANSLATION_TEST_CASES: TranslationTestCase[] = [
     }
 ];
 
-describe.skip('parseLightlyQuery translates example queries', () => {
+describe('parseLightlyQuery translates example queries', () => {
     it.each(TRANSLATION_TEST_CASES)('$name', ({ source, expected }) => {
         const result = parseLightlyQuery(parser, source);
         expect(result).toEqual({ status: 'ok', queryExpr: expected });

@@ -19,21 +19,6 @@
 <Story
     name="Default"
     args={{
-        height: '360px'
-    }}
-/>
-
-<Story
-    name="Read only"
-    args={{
-        height: '240px',
-        readOnly: true
-    }}
-/>
-
-<Story
-    name="With save"
-    args={{
         height: '320px',
         onSave: fn()
     }}

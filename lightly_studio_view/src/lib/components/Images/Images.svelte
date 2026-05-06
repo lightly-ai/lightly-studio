@@ -21,6 +21,7 @@
     import { GridContainer } from '../GridContainer';
     import { Grid } from '../Grid';
     import { GridItem } from '../GridItem';
+    import { getGridImageURL } from '$lib/utils';
     import { selectRangeByAnchor } from '$lib/utils/selectRangeByAnchor';
     import { page } from '$app/state';
     import SampleImageGridItem from '../SampleImageGridItem/SampleImageGridItem.svelte';
@@ -76,7 +77,7 @@
         };
     };
 
-    const { filterParams, updateFilterParams } = useImageFilters();
+    const { filterParams, updateFilterParams, imageQueryExpression } = useImageFilters();
 
     $effect(() => {
         // Synchronize the global filter parameters with the local samples parameters
@@ -115,7 +116,11 @@
     });
 
     const { samples: infiniteSamples } = $derived(
-        useImagesInfinite({ ...$filterParams, collection_id: collection_id })
+        useImagesInfinite({
+            ...$filterParams,
+            collection_id: collection_id,
+            query_expr: $imageQueryExpression?.query_expr
+        })
     );
     // Derived list of samples from TanStack infinite query
     const samples: ImageView[] = $derived(
@@ -148,6 +153,7 @@
     const filterHash = $derived.by(() => {
         const parts = [
             $selectedAnnotationFilterIds.join(','),
+            $imageQueryExpression?.query_expr_str || '',
             Array.from($tagsSelected).join(','),
             `${$dimensions?.min_width}-${$dimensions?.max_width}`,
             `${$dimensions?.min_height}-${$dimensions?.max_height}`,
@@ -279,6 +285,13 @@
                             dataTestId="sample-grid-item"
                             isSelected={$selectedSampleIds.has(samples[index].sample_id)}
                             ariaLabel={`View image: ${samples[index].file_name}`}
+                            dragData={{
+                                url: getGridImageURL({
+                                    sampleId: samples[index].sample_id,
+                                    quality: 'raw'
+                                }),
+                                fileName: samples[index].file_name
+                            }}
                             ondblclick={() => handleOnDoubleClick(samples[index].sample_id)}
                             onSelect={(event) =>
                                 handleGridItemSelect(event, samples[index].sample_id, index)}

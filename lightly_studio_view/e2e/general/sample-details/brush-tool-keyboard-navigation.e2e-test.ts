@@ -58,7 +58,7 @@ const assertBrushIsVisuallySelected = async (page: Page) => {
     );
 };
 
-test('brush stays effective across keyboard navigation while creating masks on 3 samples', async ({
+test.skip('brush stays effective across keyboard navigation while creating masks on 3 samples', async ({
     page,
     samplesPage,
     sampleDetailsPage

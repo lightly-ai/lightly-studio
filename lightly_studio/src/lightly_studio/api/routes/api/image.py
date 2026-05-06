@@ -117,10 +117,32 @@ class SampleAdjacentsParams(BaseModel):
     text_embedding: list[float] | None = None
 
 
+class ReadImageSampleIdsRequest(BaseModel):
+    """Request body for reading matching image sample ids."""
+
+    filters: ImageFilter | None = Field(None, description="Filter parameters for images")
+
+
 class ReadCountImageAnnotationsRequest(BaseModel):
     """Request body for reading image annotation counts."""
 
     filter: ImageFilter | None = None
+
+
+@image_router.post("/collections/{collection_id}/images/sample_ids", response_model=list[UUID])
+def get_image_sample_ids(
+    session: SessionDep,
+    collection_id: Annotated[UUID, Path(title="collection Id")],
+    body: ReadImageSampleIdsRequest,
+) -> list[UUID]:
+    """Retrieve all sample ids of images matching the given filters."""
+    return list(
+        image_resolver.get_sample_ids(
+            session=session,
+            collection_id=collection_id,
+            filters=body.filters,
+        )
+    )
 
 
 @image_router.post("/collections/{collection_id}/images/annotations/count")
