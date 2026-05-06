@@ -37,7 +37,7 @@ class EvaluationRunTable(SQLModel, table=True):
     # Example config: {"iou_threshold": 0.5, "confidence_threshold": 0.0}.
     config_json: dict[str, Any] = Field(
         default_factory=dict,
-        sa_column=Column(JSON),
+        sa_column=Column(JSON, nullable=False),
     )
 
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
