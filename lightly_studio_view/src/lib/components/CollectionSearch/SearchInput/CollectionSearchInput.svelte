@@ -24,6 +24,7 @@
         onUploadClick: () => void;
         /** Disables the entire input when true. */
         disabled?: boolean;
+        onClear?: () => void;
     }
 
     let {
@@ -31,10 +32,15 @@
         inputProps,
         disabled = false,
         showOutline = false,
-        onUploadClick
+        onUploadClick,
+        onClear
     }: Props = $props();
 
     const isDisabled = $derived(Boolean(disabled || inputProps?.disabled));
+    const handleClear = () => {
+        value = '';
+        onClear?.();
+    };
 </script>
 
 <div class="relative">
@@ -50,7 +56,7 @@
     {#if value}
         <button
             class="absolute right-8 top-[50%] translate-y-[-50%] text-muted-foreground hover:text-foreground"
-            onclick={() => (value = '')}
+            onclick={handleClear}
             title="Clear search"
             data-testid="search-clear-button"
             type="button"
