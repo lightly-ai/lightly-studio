@@ -13,6 +13,7 @@
         caption,
         dataSampleName,
         dataIndex,
+        dragData,
         onSelect,
         ondblclick
     }: {
@@ -27,6 +28,10 @@
         caption?: string;
         dataSampleName?: string;
         dataIndex?: number;
+        dragData?: {
+            url: string;
+            fileName: string;
+        };
         onSelect?: (event: MouseEvent | KeyboardEvent) => void;
         ondblclick?: (event: MouseEvent) => void;
     } = $props();
@@ -43,6 +48,7 @@
     {caption}
     {dataSampleName}
     {dataIndex}
+    {dragData}
     {onSelect}
     {ondblclick}
 >

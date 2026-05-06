@@ -3,12 +3,14 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 const mocks = vi.hoisted(() => ({
     register: vi.fn(),
     setMonarchTokensProvider: vi.fn(),
+    registerHoverProvider: vi.fn(),
     defineTheme: vi.fn(),
     createModel: vi.fn(),
     editorCreate: vi.fn(),
     uriParse: vi.fn((s: string) => ({ scheme: 'inmemory', path: s, toString: () => s })),
     attachFn: vi.fn(),
-    translateQueryFn: vi.fn()
+    translateQueryFn: vi.fn(),
+    useSyntaxCompletion: vi.fn()
 }));
 
 vi.mock('monaco-editor/esm/vs/editor/editor.worker?worker', () => ({
@@ -18,7 +20,8 @@ vi.mock('monaco-editor/esm/vs/editor/editor.worker?worker', () => ({
 vi.mock('monaco-editor', () => ({
     languages: {
         register: mocks.register,
-        setMonarchTokensProvider: mocks.setMonarchTokensProvider
+        setMonarchTokensProvider: mocks.setMonarchTokensProvider,
+        registerHoverProvider: mocks.registerHoverProvider
     },
     editor: {
         defineTheme: mocks.defineTheme,
@@ -27,7 +30,8 @@ vi.mock('monaco-editor', () => ({
     },
     Uri: {
         parse: mocks.uriParse
-    }
+    },
+    Range: class {}
 }));
 
 vi.mock('./language/monarch.generated', () => ({
@@ -39,6 +43,10 @@ vi.mock('./useLightlyQueryLanguage/useLightlyQueryLanguage', () => ({
         attach: mocks.attachFn,
         translateQuery: mocks.translateQueryFn
     })
+}));
+
+vi.mock('./useLightlyQueryLanguage/useSyntaxCompletion', () => ({
+    useSyntaxCompletion: mocks.useSyntaxCompletion
 }));
 
 import { useQueryEditor } from './useQueryEditor';

@@ -3,6 +3,7 @@ import type { QueryExprTranslationResult } from '../language/query-expr-translat
 
 const mocks = vi.hoisted(() => ({
     setModelMarkers: vi.fn(),
+    registerHoverProvider: vi.fn(),
     createLightlyQueryServices: vi.fn(),
     parse: vi.fn(),
     parseLightlyQuery: vi.fn()
@@ -10,6 +11,8 @@ const mocks = vi.hoisted(() => ({
 
 vi.mock('monaco-editor', () => ({
     editor: { setModelMarkers: mocks.setModelMarkers },
+    languages: { registerHoverProvider: mocks.registerHoverProvider },
+    Range: class {},
     MarkerSeverity: { Error: 8 }
 }));
 

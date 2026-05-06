@@ -54,6 +54,16 @@ describe('GridHeader', () => {
         expect(container.textContent).toContain('Aux Controls');
     });
 
+    it('renders selectionControls snippet when provided', () => {
+        const { container } = render(GridHeaderTest, {
+            props: {
+                testCase: 'with-selection-controls'
+            }
+        });
+
+        expect(container.textContent).toContain('Selection Controls');
+    });
+
     it('renders all elements together when provided', () => {
         const { container } = render(GridHeaderTest, {
             props: {
@@ -62,6 +72,7 @@ describe('GridHeader', () => {
         });
 
         expect(container.textContent).toContain('Main Content');
+        expect(container.textContent).toContain('Selection Controls');
         expect(container.textContent).toContain('Extra Controls');
         expect(screen.getByLabelText('Zoom out')).toBeInTheDocument();
     });
