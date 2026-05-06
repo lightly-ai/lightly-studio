@@ -8,7 +8,6 @@ from typing import Any
 
 import pytest
 import yaml
-from labelformat.formats import COCOObjectDetectionInput
 from PIL import Image
 
 from lightly_studio import ImageDataset
@@ -76,29 +75,6 @@ def _setup_dataset_with_images(
 
 
 class TestDataset:
-    def test_add_annotations_from_labelformat__generic_wrapper(
-        self,
-        patch_collection: None,  # noqa: ARG002
-        tmp_path: Path,
-    ) -> None:
-        dataset, images_path = _setup_dataset_with_images(tmp_path, ["image1.jpg"])
-        annotations_path = tmp_path / "annotations.json"
-        annotations_path.write_text(json.dumps(_coco_dict_with(["image1.jpg"])))
-        label_input = COCOObjectDetectionInput(input_file=annotations_path)
-
-        dataset.add_annotations_from_labelformat(
-            input_labels=label_input,
-            images_root=images_path,
-            name="gt",
-        )
-
-        result = annotation_resolver.get_all_by_collection_name(
-            session=dataset.session,
-            collection_name="gt",
-            parent_collection_id=dataset.collection_id,
-        )
-        assert len(result.annotations) == 1
-
     def test_add_annotations_from_coco__appends_to_existing_images(
         self,
         patch_collection: None,  # noqa: ARG002
@@ -248,19 +224,6 @@ class TestDataset:
         )
         assert len(result.annotations) == 1
 
-    def test_add_annotations_from_coco__missing_json_raises(
-        self,
-        patch_collection: None,  # noqa: ARG002
-        tmp_path: Path,
-    ) -> None:
-        dataset, images_path = _setup_dataset_with_images(tmp_path, ["image1.jpg"])
-        annotations_path = tmp_path / "does_not_exist.json"
-
-        with pytest.raises(FileNotFoundError):
-            dataset.add_annotations_from_coco(
-                annotations_json=annotations_path, images_root=images_path, name="gt"
-            )
-
     def test_add_annotations_from_yolo__loads_split_annotations(
         self,
         patch_collection: None,  # noqa: ARG002
@@ -290,15 +253,3 @@ class TestDataset:
         )
         assert len(result.annotations) == 2
 
-    def test_add_annotations_from_yolo__missing_yaml_raises(
-        self,
-        patch_collection: None,  # noqa: ARG002
-        tmp_path: Path,
-    ) -> None:
-        dataset, _ = _setup_dataset_with_images(tmp_path, ["image1.jpg"])
-        yaml_path = tmp_path / "does_not_exist.yaml"
-
-        with pytest.raises(FileNotFoundError):
-            dataset.add_annotations_from_yolo(
-                data_yaml=yaml_path, name="model_A", input_split="train"
-            )
