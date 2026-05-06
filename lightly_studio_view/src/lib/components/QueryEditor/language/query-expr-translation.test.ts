@@ -19,6 +19,7 @@ import type {
     TagsContainsExpr,
     ObjectDetectionMatchExpr,
     ClassificationMatchExpr,
+    SegmentationMaskMatchExpr,
     AndExpr,
     OrExpr,
     NotExpr
@@ -61,6 +62,11 @@ describe('parseLightlyQuery error handling', () => {
         { name: 'string compared to int field', source: 'height == "tall"' },
         { name: 'obj detection without arguments', source: 'object_detection()' },
         { name: 'obj detection unknown field', source: 'object_detection(file_name == "a.jpg")' },
+        { name: 'segmentation without arguments', source: 'segmentation_mask()' },
+        {
+            name: 'segmentation unknown field',
+            source: 'segmentation_mask(file_name == "a.jpg")'
+        },
         { name: 'classification unknown field', source: 'classification(x == 0)' },
         { name: 'wrong in operator use', source: '"jpg" IN file_name' },
         { name: 'stray punctuation', source: '@@@' }
@@ -128,6 +134,12 @@ const classification = (subexpr: MatchExpr): MatchExpr =>
         type: 'classification_match_expr',
         subexpr
     }) satisfies ClassificationMatchExpr & { type: 'classification_match_expr' };
+
+const segmentationMask = (subexpr: MatchExpr): MatchExpr =>
+    ({
+        type: 'segmentation_mask_match_expr',
+        subexpr
+    }) satisfies SegmentationMaskMatchExpr & { type: 'segmentation_mask_match_expr' };
 
 const and = (...children: MatchExpr[]): MatchExpr =>
     ({
@@ -223,6 +235,21 @@ const TRANSLATION_TEST_CASES: TranslationTestCase[] = [
         source: 'classification(label == "cat")',
         expected: query(classification(str('classification', 'label', '==', 'cat')))
     },
+    {
+        name: 'segmentation label',
+        source: 'segmentation_mask(label == "cat")',
+        expected: query(segmentationMask(str('segmentation_mask', 'label', '==', 'cat')))
+    },
+    {
+        name: 'segmentation x inequality',
+        source: 'segmentation_mask(x != 0)',
+        expected: query(segmentationMask(int('segmentation_mask', 'x', '!=', 0)))
+    },
+    {
+        name: 'segmentation width greater than',
+        source: 'segmentation_mask(width > 80)',
+        expected: query(segmentationMask(int('segmentation_mask', 'width', '>', 80)))
+    },
 
     /* Boolean operators */
     {
@@ -286,6 +313,19 @@ const TRANSLATION_TEST_CASES: TranslationTestCase[] = [
         name: 'object detection negation',
         source: 'object_detection(NOT label == "background")',
         expected: query(objectDetection(not(str('object_detection', 'label', '==', 'background'))))
+    },
+    {
+        name: 'segmentation boolean expression',
+        source: 'segmentation_mask(label == "cat" AND width >= 50 AND height >= 40)',
+        expected: query(
+            segmentationMask(
+                and(
+                    str('segmentation_mask', 'label', '==', 'cat'),
+                    int('segmentation_mask', 'width', '>=', 50),
+                    int('segmentation_mask', 'height', '>=', 40)
+                )
+            )
+        )
     },
 
     /* Additional syntax features */
