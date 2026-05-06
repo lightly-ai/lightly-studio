@@ -47,9 +47,7 @@ def _create_sample_images(image_paths: list[Path]) -> None:
         Image.new("RGB", (10, 10)).save(image_path)
 
 
-def _setup_dataset_with_images(
-    tmp_path: Path, file_names: list[str]
-) -> tuple[ImageDataset, Path]:
+def _setup_dataset_with_images(tmp_path: Path, file_names: list[str]) -> tuple[ImageDataset, Path]:
     images_path = tmp_path / "images"
     images_path.mkdir()
     _create_sample_images([images_path / fn for fn in file_names])
@@ -64,9 +62,7 @@ class TestDataset:
         patch_collection: None,  # noqa: ARG002
         tmp_path: Path,
     ) -> None:
-        dataset, images_path = _setup_dataset_with_images(
-            tmp_path, ["image1.jpg", "image2.jpg"]
-        )
+        dataset, images_path = _setup_dataset_with_images(tmp_path, ["image1.jpg", "image2.jpg"])
         annotations_path = tmp_path / "annotations.json"
         annotations_path.write_text(json.dumps(_coco_dict_with(["image1.jpg", "image2.jpg"])))
 
@@ -101,9 +97,7 @@ class TestDataset:
         patch_collection: None,  # noqa: ARG002
         tmp_path: Path,
     ) -> None:
-        dataset, images_path = _setup_dataset_with_images(
-            tmp_path, ["image1.jpg", "image2.jpg"]
-        )
+        dataset, images_path = _setup_dataset_with_images(tmp_path, ["image1.jpg", "image2.jpg"])
         first_path = tmp_path / "first.json"
         first_path.write_text(json.dumps(_coco_dict_with(["image1.jpg"])))
         second_path = tmp_path / "second.json"
@@ -163,9 +157,7 @@ class TestDataset:
     ) -> None:
         dataset, images_path = _setup_dataset_with_images(tmp_path, ["image1.jpg"])
         annotations_path = tmp_path / "annotations.json"
-        annotations_path.write_text(
-            json.dumps(_coco_dict_with(["image1.jpg", "missing.jpg"]))
-        )
+        annotations_path.write_text(json.dumps(_coco_dict_with(["image1.jpg", "missing.jpg"])))
 
         with caplog.at_level(logging.WARNING):
             dataset.add_annotations_from_coco(
@@ -228,9 +220,7 @@ class TestDataset:
 
         dataset = ImageDataset.create(name="test_dataset")
         dataset.add_images_from_path(path=images_path, embed=False)
-        dataset.add_annotations_from_yolo(
-            data_yaml=yaml_path, name="model_A", input_split="train"
-        )
+        dataset.add_annotations_from_yolo(data_yaml=yaml_path, name="model_A", input_split="train")
 
         result = annotation_resolver.get_all_by_collection_name(
             session=dataset.session,
@@ -238,4 +228,3 @@ class TestDataset:
             parent_collection_id=dataset.collection_id,
         )
         assert len(result.annotations) == 2
-
