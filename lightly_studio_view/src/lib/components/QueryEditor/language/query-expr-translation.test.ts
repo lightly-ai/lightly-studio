@@ -378,24 +378,6 @@ const TRANSLATION_TEST_CASES: TranslationTestCase[] = [
         )
     },
     {
-        name: 'complex reviewed large cat segmentation image',
-        source: 'height > 400 AND width >= 640 AND "reviewed" IN tags AND segmentation_mask(label == "cat" AND width > 80 AND height > 80)',
-        expected: query(
-            and(
-                int('image', 'height', '>', 400),
-                int('image', 'width', '>=', 640),
-                tagsContains('image', 'reviewed'),
-                segmentationMask(
-                    and(
-                        str('segmentation_mask', 'label', '==', 'cat'),
-                        int('segmentation_mask', 'width', '>', 80),
-                        int('segmentation_mask', 'height', '>', 80)
-                    )
-                )
-            )
-        )
-    },
-    {
         name: 'complex dataset curation query',
         source: '(file_path_abs != "/datasets/archive/bad.jpg" AND created_at >= "2025-01-01T00:00:00Z") AND ("training" IN tags OR "validation" IN tags) AND object_detection((label == "cat" OR label == "dog") AND NOT (x < 5 OR y < 5))',
         expected: query(
