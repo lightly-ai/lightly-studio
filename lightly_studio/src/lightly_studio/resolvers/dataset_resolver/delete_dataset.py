@@ -271,7 +271,14 @@ def _delete_embedding_models(session: Session, collection_ids: list[UUID]) -> No
 
 def _delete_evaluation_runs(session: Session, dataset_id: UUID) -> None:
     """Delete evaluation runs for the given dataset."""
-    session.exec(delete(EvaluationRunTable).where(col(EvaluationRunTable.dataset_id) == dataset_id))
+    collection_ids_subquery = select(CollectionTable.collection_id).where(
+        col(CollectionTable.dataset_id) == dataset_id
+    )
+    session.exec(
+        delete(EvaluationRunTable).where(
+            col(EvaluationRunTable.gt_annotation_collection_id).in_(collection_ids_subquery)
+        )
+    )
 
 
 def _delete_collections(session: Session, collection_ids: list[UUID]) -> None:

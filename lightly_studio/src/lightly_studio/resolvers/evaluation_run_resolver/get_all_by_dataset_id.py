@@ -17,6 +17,7 @@ def get_all_by_dataset_id(
     """Return all evaluation results for a dataset, newest first."""
     stmt = (
         select(EvaluationRunTable)
+        # Join on GT only — creation enforces that GT and pred share the same dataset_id.
         .join(
             CollectionTable,
             col(EvaluationRunTable.gt_annotation_collection_id)

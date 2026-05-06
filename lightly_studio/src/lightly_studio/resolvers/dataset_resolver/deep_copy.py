@@ -563,9 +563,15 @@ def _copy_evaluation_runs(
     old_dataset_id: UUID,
     ctx: DeepCopyContext,
 ) -> None:
-    """Copy evaluation runs, remapping dataset_id and both collection FKs."""
+    """Copy evaluation runs, remapping both collection FKs."""
     runs = session.exec(
-        select(EvaluationRunTable).where(col(EvaluationRunTable.dataset_id) == old_dataset_id)
+        select(EvaluationRunTable)
+        .join(
+            CollectionTable,
+            col(EvaluationRunTable.gt_annotation_collection_id)
+            == col(CollectionTable.collection_id),
+        )
+        .where(col(CollectionTable.dataset_id) == old_dataset_id)
     ).all()
 
     for old_run in runs:
@@ -573,7 +579,6 @@ def _copy_evaluation_runs(
             old_run,
             {
                 "id": uuid4(),
-                "dataset_id": ctx.new_dataset_id,
                 "gt_annotation_collection_id": ctx.collection_map[
                     old_run.gt_annotation_collection_id
                 ],
