@@ -60,12 +60,6 @@ colorByLabel: boolean;
 labelColors: Record<string, string>; // label_name → hex
 ```
 
-#### `DimensionFilter` (or `useDimensions` hook)
-
-Replace two single `<input type="range">` sliders with the existing `Slider` component (bits-ui, supports dual handles via `value: [min, max]`).
-
----
-
 ### New hooks
 
 #### `useAnnotationCollections`
