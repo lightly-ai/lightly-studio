@@ -75,8 +75,31 @@ def _setup_dataset_with_images(
     return dataset, images_path
 
 
-class TestAddAnnotationsFromCoco:
-    def test__appends_to_existing_images(
+class TestDataset:
+    def test_add_annotations_from_labelformat__generic_wrapper(
+        self,
+        patch_collection: None,  # noqa: ARG002
+        tmp_path: Path,
+    ) -> None:
+        dataset, images_path = _setup_dataset_with_images(tmp_path, ["image1.jpg"])
+        annotations_path = tmp_path / "annotations.json"
+        annotations_path.write_text(json.dumps(_coco_dict_with(["image1.jpg"])))
+        label_input = COCOObjectDetectionInput(input_file=annotations_path)
+
+        dataset.add_annotations_from_labelformat(
+            input_labels=label_input,
+            images_root=images_path,
+            name="gt",
+        )
+
+        result = annotation_resolver.get_all_by_collection_name(
+            session=dataset.session,
+            collection_name="gt",
+            parent_collection_id=dataset.collection_id,
+        )
+        assert len(result.annotations) == 1
+
+    def test_add_annotations_from_coco__appends_to_existing_images(
         self,
         patch_collection: None,  # noqa: ARG002
         tmp_path: Path,
@@ -113,7 +136,7 @@ class TestAddAnnotationsFromCoco:
         )
         assert covered == {s.sample_id for s in dataset}
 
-    def test__same_name_appends(
+    def test_add_annotations_from_coco__same_name_appends(
         self,
         patch_collection: None,  # noqa: ARG002
         tmp_path: Path,
@@ -140,7 +163,7 @@ class TestAddAnnotationsFromCoco:
         )
         assert len(result.annotations) == 2
 
-    def test__different_names_separate_collections(
+    def test_add_annotations_from_coco__different_names_separate_collections(
         self,
         patch_collection: None,  # noqa: ARG002
         tmp_path: Path,
@@ -172,7 +195,7 @@ class TestAddAnnotationsFromCoco:
         model_ids = {a.sample_id for a in model_result.annotations}
         assert gt_ids.isdisjoint(model_ids)
 
-    def test__warns_on_missing_images(
+    def test_add_annotations_from_coco__warns_on_missing_images(
         self,
         patch_collection: None,  # noqa: ARG002
         tmp_path: Path,
@@ -202,7 +225,30 @@ class TestAddAnnotationsFromCoco:
         )
         assert len(result.annotations) == 1
 
-    def test__missing_json_raises(
+    def test_add_annotations_from_coco__segmentation_mask_annotation_type(
+        self,
+        patch_collection: None,  # noqa: ARG002
+        tmp_path: Path,
+    ) -> None:
+        dataset, images_path = _setup_dataset_with_images(tmp_path, ["image1.jpg"])
+        annotations_path = tmp_path / "annotations.json"
+        annotations_path.write_text(json.dumps(_coco_dict_with(["image1.jpg"])))
+
+        dataset.add_annotations_from_coco(
+            annotations_json=annotations_path,
+            images_root=images_path,
+            name="seg",
+            annotation_type=AnnotationType.SEGMENTATION_MASK,
+        )
+
+        result = annotation_resolver.get_all_by_collection_name(
+            session=dataset.session,
+            collection_name="seg",
+            parent_collection_id=dataset.collection_id,
+        )
+        assert len(result.annotations) == 1
+
+    def test_add_annotations_from_coco__missing_json_raises(
         self,
         patch_collection: None,  # noqa: ARG002
         tmp_path: Path,
@@ -215,9 +261,7 @@ class TestAddAnnotationsFromCoco:
                 annotations_json=annotations_path, images_root=images_path, name="gt"
             )
 
-
-class TestAddAnnotationsFromYolo:
-    def test__loads_split_annotations(
+    def test_add_annotations_from_yolo__loads_split_annotations(
         self,
         patch_collection: None,  # noqa: ARG002
         tmp_path: Path,
@@ -246,7 +290,7 @@ class TestAddAnnotationsFromYolo:
         )
         assert len(result.annotations) == 2
 
-    def test__missing_yaml_raises(
+    def test_add_annotations_from_yolo__missing_yaml_raises(
         self,
         patch_collection: None,  # noqa: ARG002
         tmp_path: Path,
@@ -258,51 +302,3 @@ class TestAddAnnotationsFromYolo:
             dataset.add_annotations_from_yolo(
                 data_yaml=yaml_path, name="model_A", input_split="train"
             )
-
-
-class TestAddAnnotationsFromLabelformat:
-    def test__generic_wrapper(
-        self,
-        patch_collection: None,  # noqa: ARG002
-        tmp_path: Path,
-    ) -> None:
-        dataset, images_path = _setup_dataset_with_images(tmp_path, ["image1.jpg"])
-        annotations_path = tmp_path / "annotations.json"
-        annotations_path.write_text(json.dumps(_coco_dict_with(["image1.jpg"])))
-        label_input = COCOObjectDetectionInput(input_file=annotations_path)
-
-        dataset.add_annotations_from_labelformat(
-            input_labels=label_input,
-            images_root=images_path,
-            name="gt",
-        )
-
-        result = annotation_resolver.get_all_by_collection_name(
-            session=dataset.session,
-            collection_name="gt",
-            parent_collection_id=dataset.collection_id,
-        )
-        assert len(result.annotations) == 1
-
-    def test__segmentation_mask_annotation_type(
-        self,
-        patch_collection: None,  # noqa: ARG002
-        tmp_path: Path,
-    ) -> None:
-        dataset, images_path = _setup_dataset_with_images(tmp_path, ["image1.jpg"])
-        annotations_path = tmp_path / "annotations.json"
-        annotations_path.write_text(json.dumps(_coco_dict_with(["image1.jpg"])))
-
-        dataset.add_annotations_from_coco(
-            annotations_json=annotations_path,
-            images_root=images_path,
-            name="seg",
-            annotation_type=AnnotationType.SEGMENTATION_MASK,
-        )
-
-        result = annotation_resolver.get_all_by_collection_name(
-            session=dataset.session,
-            collection_name="seg",
-            parent_collection_id=dataset.collection_id,
-        )
-        assert len(result.annotations) == 1

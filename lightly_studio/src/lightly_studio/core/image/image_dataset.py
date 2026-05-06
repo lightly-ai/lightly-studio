@@ -219,15 +219,16 @@ class ImageDataset(BaseSampleDataset[ImageSample]):
             name: Name of the annotation collection.
             annotation_type: ``OBJECT_DETECTION`` or ``SEGMENTATION_MASK``.
         """
-        missing = add_annotations.add_annotations_from_coco(
-            session=self.session,
-            root_collection_id=self.collection_id,
-            annotations_json=annotations_json,
-            images_root=images_root,
-            collection_name=name,
-            annotation_type=annotation_type,
+        label_input: COCOObjectDetectionInput | COCOInstanceSegmentationInput
+        if annotation_type == AnnotationType.OBJECT_DETECTION:
+            label_input = COCOObjectDetectionInput(input_file=annotations_json)
+        elif annotation_type == AnnotationType.SEGMENTATION_MASK:
+            label_input = COCOInstanceSegmentationInput(input_file=annotations_json)
+        else:
+            raise ValueError(f"Invalid annotation type: {annotation_type}")
+        self.add_annotations_from_labelformat(
+            input_labels=label_input, images_root=images_root, name=name
         )
-        _log_missing_images(name=name, missing_paths=missing)
 
     def add_annotations_from_yolo(
         self,
@@ -242,13 +243,19 @@ class ImageDataset(BaseSampleDataset[ImageSample]):
             name: Name of the annotation collection.
             input_split: Specific split (e.g. ``"train"``). ``None`` loads all splits.
         """
-        missing = add_annotations.add_annotations_from_yolo(
-            session=self.session,
-            root_collection_id=self.collection_id,
-            data_yaml=data_yaml,
-            collection_name=name,
-            input_split=input_split,
-        )
+        data_yaml = Path(data_yaml).absolute()
+        missing: list[str] = []
+        for split in add_annotations.resolve_yolo_splits(
+            data_yaml=data_yaml, input_split=input_split
+        ):
+            label_input = YOLOv8ObjectDetectionInput(input_file=data_yaml, input_split=split)
+            missing += add_annotations.add_annotations_from_labelformat(
+                session=self.session,
+                root_collection_id=self.collection_id,
+                input_labels=label_input,
+                images_root=label_input._images_dir(),  # noqa: SLF001
+                collection_name=name,
+            )
         _log_missing_images(name=name, missing_paths=missing)
 
     def add_samples_from_labelformat(
