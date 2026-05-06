@@ -2,10 +2,167 @@
 
 from __future__ import annotations
 
+from collections.abc import Sequence
+from dataclasses import dataclass, field
+from typing import Any
+from uuid import UUID
+
 import numpy as np
 
 
-def compute_iou_matrix(pred_corners: np.ndarray, gt_corners: np.ndarray) -> np.ndarray:
+@dataclass
+class BoundingBox:
+    """A bounding box annotation in [x, y, width, height] format.
+
+    Attributes:
+        annotation_id: Unique identifier, used to map results back to source annotations.
+        x: Left edge coordinate.
+        y: Top edge coordinate.
+        width: Box width.
+        height: Box height.
+        label_id: Class label ID.
+        confidence: Prediction confidence score. None for ground truth annotations.
+    """
+
+    annotation_id: UUID
+    x: float
+    y: float
+    width: float
+    height: float
+    label_id: UUID
+    confidence: float | None = None
+
+
+@dataclass
+class DetectionMatch:
+    """A matched prediction-GT pair (TP).
+
+    Attributes:
+        pred_id: ID of the matched prediction.
+        gt_id: ID of the matched ground truth.
+        iou: IoU between the matched boxes.
+    """
+
+    pred_id: UUID
+    gt_id: UUID
+    iou: float
+
+
+@dataclass
+class SampleMatchingResult:
+    """Full per-sample matching result at a fixed IoU threshold.
+
+    Attributes:
+        sample_id: Identifier for the sample.
+        matches: TP pairs with their IoU values.
+        unmatched_prediction_ids: IDs of FP predictions.
+        unmatched_gt_ids: IDs of FN ground truths.
+    """
+
+    sample_id: UUID
+    matches: list[DetectionMatch] = field(default_factory=list)
+    unmatched_prediction_ids: list[UUID] = field(default_factory=list)
+    unmatched_gt_ids: list[UUID] = field(default_factory=list)
+
+    @property
+    def tp(self) -> int:
+        """Number of true positive detections."""
+        return len(self.matches)
+
+    @property
+    def fp(self) -> int:
+        """Number of false positive detections."""
+        return len(self.unmatched_prediction_ids)
+
+    @property
+    def fn(self) -> int:
+        """Number of false negatives (missed ground truths)."""
+        return len(self.unmatched_gt_ids)
+
+
+def match_with_iou_matrix(
+    sample_id: UUID,
+    predictions: Sequence[BoundingBox],
+    ground_truths: Sequence[BoundingBox],
+    iou_matrix: np.ndarray[Any, Any],
+    iou_threshold: float,
+) -> SampleMatchingResult:
+    """Run greedy matching given a pre-computed IoU matrix.
+
+    Separating matching from IoU computation allows reuse across multiple IoU
+    thresholds (e.g. COCO mAP sweep) without recomputing the matrix.
+
+    Args:
+        sample_id: Identifier for the image.
+        predictions: Predicted bounding boxes.
+        ground_truths: Ground truth bounding boxes.
+        iou_matrix: Pairwise IoU of shape (len(predictions), len(ground_truths)).
+        iou_threshold: Minimum IoU for a prediction to count as a TP.
+
+    Returns:
+        Per-image matching result.
+    """
+    if not predictions and not ground_truths:
+        return SampleMatchingResult(sample_id=sample_id)
+    if not predictions:
+        return SampleMatchingResult(
+            sample_id=sample_id,
+            unmatched_gt_ids=[gt.annotation_id for gt in ground_truths],
+        )
+    if not ground_truths:
+        return SampleMatchingResult(
+            sample_id=sample_id,
+            unmatched_prediction_ids=[p.annotation_id for p in predictions],
+        )
+
+    confidence_order = sorted(
+        range(len(predictions)),
+        key=lambda i: predictions[i].confidence or 0.0,
+        reverse=True,
+    )
+
+    matched_gt: set[int] = set()
+    matched_pred: set[int] = set()
+    matches: list[DetectionMatch] = []
+
+    for pred_idx in confidence_order:
+        pred = predictions[pred_idx]
+        best_iou = -1.0
+        best_gt_idx = -1
+        for gt_idx in range(len(ground_truths)):
+            if gt_idx in matched_gt:
+                continue
+            iou = float(iou_matrix[pred_idx, gt_idx])
+            if iou >= iou_threshold and iou > best_iou:
+                best_iou = iou
+                best_gt_idx = gt_idx
+        if best_gt_idx >= 0:
+            matched_gt.add(best_gt_idx)
+            matched_pred.add(pred_idx)
+            matches.append(
+                DetectionMatch(
+                    pred_id=pred.annotation_id,
+                    gt_id=ground_truths[best_gt_idx].annotation_id,
+                    iou=best_iou,
+                )
+            )
+
+    return SampleMatchingResult(
+        sample_id=sample_id,
+        matches=matches,
+        unmatched_prediction_ids=[
+            p.annotation_id for i, p in enumerate(predictions) if i not in matched_pred
+        ],
+        unmatched_gt_ids=[
+            gt.annotation_id for i, gt in enumerate(ground_truths) if i not in matched_gt
+        ],
+    )
+
+
+def compute_iou_matrix(
+    pred_corners: np.ndarray[Any, Any],
+    gt_corners: np.ndarray[Any, Any],
+) -> np.ndarray[Any, Any]:
     """Compute pairwise IoU from corner arrays.
 
     Args:
