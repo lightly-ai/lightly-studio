@@ -8,6 +8,12 @@ from pathlib import Path
 from uuid import UUID
 
 import fsspec
+import yaml
+from labelformat.formats import (
+    COCOInstanceSegmentationInput,
+    COCOObjectDetectionInput,
+    YOLOv8ObjectDetectionInput,
+)
 from labelformat.model.instance_segmentation import (
     ImageInstanceSegmentation,
     InstanceSegmentationInput,
@@ -20,7 +26,7 @@ from sqlmodel import Session
 from tqdm import tqdm
 
 from lightly_studio.core import labelformat_helpers
-from lightly_studio.models.annotation.annotation_base import AnnotationCreate
+from lightly_studio.models.annotation.annotation_base import AnnotationCreate, AnnotationType
 from lightly_studio.models.collection import SampleType
 from lightly_studio.resolvers import (
     annotation_collection_coverage_resolver,
@@ -32,6 +38,7 @@ from lightly_studio.type_definitions import PathLike
 
 # Constants
 SAMPLE_BATCH_SIZE = 32  # Number of samples to process in a single batch
+ALLOWED_YOLO_SPLITS = {"train", "val", "test", "minival"}
 
 
 def add_annotations_from_labelformat(  # noqa: PLR0913
@@ -200,3 +207,78 @@ def _process_annotation_batch(  # noqa: PLR0913
         )
 
     return missing_paths
+
+
+def add_annotations_from_coco(  # noqa: PLR0913
+    session: Session,
+    root_collection_id: UUID,
+    annotations_json: PathLike,
+    images_root: PathLike,
+    collection_name: str,
+    annotation_type: AnnotationType = AnnotationType.OBJECT_DETECTION,
+) -> list[str]:
+    """Build the COCO labelformat input and add annotations.
+
+    Returns the file paths from the input that had no matching sample in the dataset.
+    """
+    label_input: COCOObjectDetectionInput | COCOInstanceSegmentationInput
+    if annotation_type == AnnotationType.OBJECT_DETECTION:
+        label_input = COCOObjectDetectionInput(input_file=annotations_json)
+    elif annotation_type == AnnotationType.SEGMENTATION_MASK:
+        label_input = COCOInstanceSegmentationInput(input_file=annotations_json)
+    else:
+        raise ValueError(f"Invalid annotation type: {annotation_type}")
+    return add_annotations_from_labelformat(
+        session=session,
+        root_collection_id=root_collection_id,
+        input_labels=label_input,
+        images_root=images_root,
+        collection_name=collection_name,
+    )
+
+
+def add_annotations_from_yolo(
+    session: Session,
+    root_collection_id: UUID,
+    data_yaml: PathLike,
+    collection_name: str,
+    input_split: str | None = None,
+) -> list[str]:
+    """Build YOLO labelformat input(s) per split and add annotations.
+
+    When ``input_split`` is ``None``, all splits present in the yaml are processed.
+    Returns the concatenated file paths from all splits that had no matching sample.
+    """
+    data_yaml_path = Path(data_yaml).absolute()
+    splits = resolve_yolo_splits(data_yaml=data_yaml_path, input_split=input_split)
+    missing: list[str] = []
+    for split in splits:
+        label_input = YOLOv8ObjectDetectionInput(input_file=data_yaml_path, input_split=split)
+        missing += add_annotations_from_labelformat(
+            session=session,
+            root_collection_id=root_collection_id,
+            input_labels=label_input,
+            images_root=label_input._images_dir(),  # noqa: SLF001
+            collection_name=collection_name,
+        )
+    return missing
+
+
+def resolve_yolo_splits(data_yaml: Path, input_split: str | None) -> list[str]:
+    """Determine which YOLO splits to process for the given config."""
+    if input_split is not None:
+        if input_split not in ALLOWED_YOLO_SPLITS:
+            raise ValueError(
+                f"Split '{input_split}' not found in config file '{data_yaml}'. "
+                f"Allowed splits: {sorted(ALLOWED_YOLO_SPLITS)}"
+            )
+        return [input_split]
+
+    with data_yaml.open() as f:
+        config = yaml.safe_load(f)
+
+    config_keys = config.keys() if isinstance(config, dict) else []
+    splits = [key for key in config_keys if key in ALLOWED_YOLO_SPLITS]
+    if not splits:
+        raise ValueError(f"No splits found in config file '{data_yaml}'")
+    return splits

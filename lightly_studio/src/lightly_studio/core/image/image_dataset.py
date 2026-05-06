@@ -8,7 +8,6 @@ from pathlib import Path
 from uuid import UUID
 
 import fsspec
-import yaml
 from fsspec.implementations.local import LocalFileSystem
 from labelformat.formats import (
     COCOInstanceSegmentationInput,
@@ -27,7 +26,7 @@ from sqlmodel import Session
 
 from lightly_studio.core.dataset import BaseSampleDataset
 from lightly_studio.core.dataset_query.dataset_query import DatasetQuery
-from lightly_studio.core.image import add_images
+from lightly_studio.core.image import add_annotations, add_images
 from lightly_studio.core.image.image_sample import ImageSample
 from lightly_studio.dataset import fsspec_lister
 from lightly_studio.dataset.embedding_manager import EmbeddingManagerProvider
@@ -41,8 +40,6 @@ from lightly_studio.resolvers import (
 from lightly_studio.type_definitions import PathLike
 
 logger = logging.getLogger(__name__)
-
-ALLOWED_YOLO_SPLITS = {"train", "val", "test", "minival"}
 
 
 class ImageDataset(BaseSampleDataset[ImageSample]):
@@ -181,6 +178,79 @@ class ImageDataset(BaseSampleDataset[ImageSample]):
                 sample_ids=created_sample_ids,
             )
 
+    def add_annotations_from_labelformat(
+        self,
+        input_labels: ObjectDetectionInput | InstanceSegmentationInput,
+        images_root: PathLike,
+        name: str,
+    ) -> None:
+        """Attach annotations from a labelformat input to images already in the dataset.
+
+        Images are matched by relative path under ``images_root``. Annotations are grouped
+        under an annotation collection identified by ``name``; reusing the same name
+        appends to that collection.
+
+        Args:
+            input_labels: Labelformat input object (e.g. ``COCOObjectDetectionInput``).
+            images_root: Root path used to construct absolute image paths for matching.
+            name: Name of the annotation collection.
+        """
+        missing = add_annotations.add_annotations_from_labelformat(
+            session=self.session,
+            root_collection_id=self.collection_id,
+            input_labels=input_labels,
+            images_root=images_root,
+            collection_name=name,
+        )
+        _log_missing_images(name=name, missing_paths=missing)
+
+    def add_annotations_from_coco(
+        self,
+        annotations_json: PathLike,
+        images_root: PathLike,
+        name: str,
+        annotation_type: AnnotationType = AnnotationType.OBJECT_DETECTION,
+    ) -> None:
+        """Attach COCO annotations to images already in the dataset.
+
+        Args:
+            annotations_json: Path to the COCO annotations JSON file.
+            images_root: Root path used for matching image filenames.
+            name: Name of the annotation collection.
+            annotation_type: ``OBJECT_DETECTION`` or ``SEGMENTATION_MASK``.
+        """
+        missing = add_annotations.add_annotations_from_coco(
+            session=self.session,
+            root_collection_id=self.collection_id,
+            annotations_json=annotations_json,
+            images_root=images_root,
+            collection_name=name,
+            annotation_type=annotation_type,
+        )
+        _log_missing_images(name=name, missing_paths=missing)
+
+    def add_annotations_from_yolo(
+        self,
+        data_yaml: PathLike,
+        name: str,
+        input_split: str | None = None,
+    ) -> None:
+        """Attach YOLO annotations to images already in the dataset.
+
+        Args:
+            data_yaml: Path to the YOLO ``data.yaml`` file.
+            name: Name of the annotation collection.
+            input_split: Specific split (e.g. ``"train"``). ``None`` loads all splits.
+        """
+        missing = add_annotations.add_annotations_from_yolo(
+            session=self.session,
+            root_collection_id=self.collection_id,
+            data_yaml=data_yaml,
+            collection_name=name,
+            input_split=input_split,
+        )
+        _log_missing_images(name=name, missing_paths=missing)
+
     def add_samples_from_labelformat(
         self,
         input_labels: ObjectDetectionInput | InstanceSegmentationInput,
@@ -234,7 +304,9 @@ class ImageDataset(BaseSampleDataset[ImageSample]):
             raise FileNotFoundError(f"YOLO data yaml file not found: '{data_yaml}'")
 
         # Determine which splits to process
-        splits_to_process = _resolve_yolo_splits(data_yaml=data_yaml, input_split=input_split)
+        splits_to_process = add_annotations.resolve_yolo_splits(
+            data_yaml=data_yaml, input_split=input_split
+        )
 
         all_created_sample_ids = []
 
@@ -524,21 +596,15 @@ def _generate_embeddings_image(
     )
 
 
-def _resolve_yolo_splits(data_yaml: Path, input_split: str | None) -> list[str]:
-    """Determine which YOLO splits to process for the given config."""
-    if input_split is not None:
-        if input_split not in ALLOWED_YOLO_SPLITS:
-            raise ValueError(
-                f"Split '{input_split}' not found in config file '{data_yaml}'. "
-                f"Allowed splits: {sorted(ALLOWED_YOLO_SPLITS)}"
-            )
-        return [input_split]
-
-    with data_yaml.open() as f:
-        config = yaml.safe_load(f)
-
-    config_keys = config.keys() if isinstance(config, dict) else []
-    splits = [key for key in config_keys if key in ALLOWED_YOLO_SPLITS]
-    if not splits:
-        raise ValueError(f"No splits found in config file '{data_yaml}'")
-    return splits
+def _log_missing_images(name: str, missing_paths: list[str]) -> None:
+    """Emit a single warning summarising images skipped due to no DB match."""
+    if not missing_paths:
+        return
+    logger.warning(
+        "Annotation collection '%s': skipped %d annotation(s) because no matching "
+        "image was found in the dataset. First %d unmatched path(s): %s",
+        name,
+        len(missing_paths),
+        min(5, len(missing_paths)),
+        missing_paths[:5],
+    )
