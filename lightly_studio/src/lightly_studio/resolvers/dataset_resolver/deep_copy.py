@@ -28,6 +28,7 @@ from lightly_studio.models.caption import CaptionTable
 from lightly_studio.models.collection import CollectionTable
 from lightly_studio.models.dataset import DatasetTable
 from lightly_studio.models.embedding_model import EmbeddingModelTable
+from lightly_studio.models.evaluation_run import EvaluationRunTable
 from lightly_studio.models.group import GroupTable, SampleGroupLinkTable
 from lightly_studio.models.image import ImageTable
 from lightly_studio.models.metadata import SampleMetadataTable
@@ -113,6 +114,7 @@ def deep_copy(
         ctx=ctx,
     )
     _copy_embedding_models(session=session, old_collection_ids=old_collection_ids, ctx=ctx)
+    _copy_evaluation_runs(session=session, old_dataset_id=dataset_id, ctx=ctx)
     _copy_samples(session=session, old_collection_ids=old_collection_ids, ctx=ctx)
     session.flush()
 
@@ -554,6 +556,33 @@ def _copy_sample_group_links(
                 parent_sample_id=ctx.sample_map[old_link.parent_sample_id],
             )
             session.add(new_link)
+
+
+def _copy_evaluation_runs(
+    session: Session,
+    old_dataset_id: UUID,
+    ctx: DeepCopyContext,
+) -> None:
+    """Copy evaluation runs, remapping dataset_id and both collection FKs."""
+    runs = session.exec(
+        select(EvaluationRunTable).where(col(EvaluationRunTable.dataset_id) == old_dataset_id)
+    ).all()
+
+    for old_run in runs:
+        new_run = _copy_with_updates(
+            old_run,
+            {
+                "id": uuid4(),
+                "dataset_id": ctx.new_dataset_id,
+                "gt_annotation_collection_id": ctx.collection_map[
+                    old_run.gt_annotation_collection_id
+                ],
+                "pred_annotation_collection_id": ctx.collection_map[
+                    old_run.pred_annotation_collection_id
+                ],
+            },
+        )
+        session.add(new_run)
 
 
 def _copy_annotation_collection_coverage(

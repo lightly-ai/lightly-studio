@@ -25,6 +25,6 @@ def create(session: Session, evaluation_run_input: EvaluationRunCreate) -> Evalu
 
     record = EvaluationRunTable.model_validate(evaluation_run_input)
     session.add(record)
-    session.flush()
+    session.commit()
     session.refresh(record)
     return record
