@@ -24,6 +24,7 @@
         onUploadClick: () => void;
         /** Disables the entire input when true. */
         disabled?: boolean;
+        /** Called when the clear (×) button is clicked to reset the search value. */
         onClear?: () => void;
     }
 
