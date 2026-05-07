@@ -9,6 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Added `ImageDataset.add_annotations_from_coco`, `add_annotations_from_yolo`, and `add_annotations_from_labelformat` methods to attach named annotation collections to images already in the dataset. Re-using the same `name` appends; a new `name` creates a new collection. Enables ingesting ground truth and predictions from multiple sources side-by-side.
 - Added drag-and-drop from the image grid into the image search area.
 - Added a select-all button to select all grid items matching the active filters.
 - Added API endpoints to fetch only sample IDs with optional filters for images, video frames, and annotations (used by the select-all keyboard shortcut).

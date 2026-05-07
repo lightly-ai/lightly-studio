@@ -7,6 +7,7 @@ from sqlmodel import Session
 
 from lightly_studio.models.annotation.annotation_base import AnnotationType
 from lightly_studio.models.collection import SampleType
+from lightly_studio.models.evaluation_run import EvaluationRunCreate, EvaluationTaskType
 from lightly_studio.models.evaluation_sample_metric import EvaluationSampleMetricTable
 from lightly_studio.resolvers import (
     annotation_label_resolver,
@@ -258,6 +259,34 @@ def test_delete_dataset__with_evaluation_sample_metrics(db_session: Session) -> 
         ],
     )
 
+
+def test_delete_dataset__with_evaluation_runs(db_session: Session) -> None:
+    # Arrange
+    dataset = create_collection(session=db_session, collection_name="to_delete")
+    gt_collection = create_collection(
+        session=db_session,
+        collection_name="to_delete__gt",
+        parent_collection_id=dataset.collection_id,
+        sample_type=SampleType.ANNOTATION,
+    )
+    pred_collection = create_collection(
+        session=db_session,
+        collection_name="to_delete__pred",
+        parent_collection_id=dataset.collection_id,
+        sample_type=SampleType.ANNOTATION,
+    )
+    run = evaluation_run_resolver.create(
+        session=db_session,
+        evaluation_run_input=EvaluationRunCreate(
+            name="my_eval",
+            gt_annotation_collection_id=gt_collection.collection_id,
+            pred_annotation_collection_id=pred_collection.collection_id,
+            task_type=EvaluationTaskType.OBJECT_DETECTION,
+        ),
+    )
+    run_id = run.id  # Capture before delete
+    dataset_collection_id = dataset.collection_id  # Capture before delete
+
     # Act
     dataset_resolver.delete_dataset(
         session=db_session,
@@ -271,6 +300,12 @@ def test_delete_dataset__with_evaluation_sample_metrics(db_session: Session) -> 
         evaluation_run_id=run_id,
     )
     assert metrics == []
+    # Assert - dataset and evaluation run deleted
+    assert (
+        collection_resolver.get_by_id(session=db_session, collection_id=dataset_collection_id)
+        is None
+    )
+    assert evaluation_run_resolver.get_by_id(session=db_session, evaluation_id=run_id) is None
 
 
 def test_delete_dataset__raises_for_nonexistent_dataset(db_session: Session) -> None:
