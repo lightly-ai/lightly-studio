@@ -6,12 +6,15 @@ from collections.abc import Sequence
 
 from sqlmodel import Session
 
-from lightly_studio.models.evaluation_sample_metric import EvaluationSampleMetricTable
+from lightly_studio.models.evaluation_sample_metric import (
+    EvaluationSampleMetricCreate,
+    EvaluationSampleMetricTable,
+)
 
 
 def create_many(
     session: Session,
-    records: Sequence[EvaluationSampleMetricTable],
+    records: Sequence[EvaluationSampleMetricCreate],
 ) -> None:
     """Bulk-insert evaluation sample metric records.
 
@@ -21,5 +24,6 @@ def create_many(
     """
     if not records:
         return
-    session.bulk_save_objects(list(records))
+    table_records = [EvaluationSampleMetricTable.model_validate(obj=record) for record in records]
+    session.bulk_save_objects(objects=table_records)
     session.commit()

@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from sqlmodel import Session
 
-from lightly_studio.models.evaluation_sample_metric import EvaluationSampleMetricTable
+from lightly_studio.models.evaluation_sample_metric import EvaluationSampleMetricCreate
 from lightly_studio.resolvers import evaluation_sample_metric_resolver
 from tests.helpers_resolvers import create_collection, create_image
 from tests.resolvers.evaluation_sample_metric_resolver.helpers import create_run_and_image
@@ -10,7 +10,7 @@ from tests.resolvers.evaluation_sample_metric_resolver.helpers import create_run
 
 def test_create_many(db_session: Session) -> None:
     dataset = create_collection(session=db_session)
-    run, _ = create_run_and_image(db_session, dataset_collection_id=dataset.collection_id)
+    run, _ = create_run_and_image(session=db_session, dataset_collection_id=dataset.collection_id)
     image1 = create_image(session=db_session, collection_id=dataset.collection_id)
     image2 = create_image(
         session=db_session,
@@ -21,13 +21,13 @@ def test_create_many(db_session: Session) -> None:
     evaluation_sample_metric_resolver.create_many(
         session=db_session,
         records=[
-            EvaluationSampleMetricTable(
+            EvaluationSampleMetricCreate(
                 evaluation_run_id=run.id,
                 sample_id=image1.sample_id,
                 metric_name="ap",
                 value=0.75,
             ),
-            EvaluationSampleMetricTable(
+            EvaluationSampleMetricCreate(
                 evaluation_run_id=run.id,
                 sample_id=image2.sample_id,
                 metric_name="ap",
@@ -46,7 +46,7 @@ def test_create_many(db_session: Session) -> None:
 
 
 def test_create_many__empty_list_is_noop(db_session: Session) -> None:
-    run, _ = create_run_and_image(db_session)
+    run, _ = create_run_and_image(session=db_session)
 
     evaluation_sample_metric_resolver.create_many(session=db_session, records=[])
 

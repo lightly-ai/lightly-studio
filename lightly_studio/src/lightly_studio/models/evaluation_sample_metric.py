@@ -8,14 +8,6 @@ from pydantic import BaseModel
 from sqlmodel import Field, SQLModel
 
 
-class EvaluationSampleMetricBoundsView(BaseModel):
-    """Min/max value bounds for a single metric across all samples in a run."""
-
-    metric_name: str
-    min_value: float
-    max_value: float
-
-
 class EvaluationSampleMetricTable(SQLModel, table=True):
     """One row per (evaluation_run, sample, metric_name) tuple."""
 
@@ -32,4 +24,21 @@ class EvaluationSampleMetricTable(SQLModel, table=True):
         index=True,
     )
     metric_name: str = Field(primary_key=True)
+    value: float
+
+
+class EvaluationSampleMetricBoundsView(BaseModel):
+    """Min/max value bounds for a single metric across all samples in a run."""
+
+    metric_name: str
+    min_value: float
+    max_value: float
+
+
+class EvaluationSampleMetricCreate(SQLModel):
+    """Evaluation sample metric payload used when creating new rows."""
+
+    evaluation_run_id: UUID
+    sample_id: UUID
+    metric_name: str
     value: float
