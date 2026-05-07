@@ -238,6 +238,7 @@ def test_delete_dataset__does_not_affect_other_datasets(db_session: Session) -> 
     assert other_samples.total_count == 1
     assert other_samples.samples[0].sample_id == other_sample_id
 
+
 def test_delete_dataset__with_evaluation_runs(db_session: Session) -> None:
     # Arrange
     dataset = create_collection(session=db_session, collection_name="to_delete")

@@ -558,6 +558,7 @@ def test_deep_copy__with_annotations(db_session: Session) -> None:
     assert is_detail.height == 8
     assert is_detail.segmentation_mask == [1, 0, 0, 1]
 
+
 def test_deep_copy__with_evaluation_runs(db_session: Session) -> None:
     # Arrange
     original = create_collection(session=db_session, collection_name="original")
