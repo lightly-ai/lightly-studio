@@ -133,7 +133,6 @@
 
     async function handleGridImageSearchDrop(event: Event) {
         const { url, fileName } = (event as CustomEvent<GridItemDragData>).detail;
-        debugger;
         try {
             const response = await fetch(url);
             if (!response.ok) {
