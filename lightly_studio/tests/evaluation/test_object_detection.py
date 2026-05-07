@@ -65,8 +65,6 @@ def test_match_with_iou_matrix__no_gts() -> None:
     assert result.unmatched_prediction_ids == [pred_id]
 
 
-
-
 def test_match_with_iou_matrix__greedy_match_by_confidence() -> None:
     pred_high_id = uuid4()
     pred_low_id = uuid4()

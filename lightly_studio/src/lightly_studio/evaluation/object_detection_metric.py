@@ -97,6 +97,12 @@ def match_with_iou_matrix(
 
     Returns:
         Matching result with TP pairs, FP prediction IDs, and FN ground truth IDs.
+
+    Note:
+        No class-label filtering is applied. Callers are responsible for
+        ensuring that ``predictions`` and ``ground_truths`` belong to the same
+        class, or for zeroing out cross-class entries in ``iou_matrix`` before
+        calling this function.
     """
     if not predictions and not ground_truths:
         return MatchingResult()
