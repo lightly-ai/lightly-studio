@@ -4,7 +4,6 @@ from __future__ import annotations
 
 from collections.abc import Sequence
 from dataclasses import dataclass, field
-from typing import Any
 from uuid import UUID
 
 import numpy as np
@@ -50,17 +49,15 @@ class DetectionMatch:
 
 
 @dataclass
-class SampleMatchingResult:
-    """Full per-sample matching result at a fixed IoU threshold.
+class MatchingResult:
+    """Full matching result at a fixed IoU threshold.
 
     Attributes:
-        sample_id: Identifier for the sample.
         matches: TP pairs with their IoU values.
         unmatched_prediction_ids: IDs of FP predictions.
         unmatched_gt_ids: IDs of FN ground truths.
     """
 
-    sample_id: UUID
     matches: list[DetectionMatch] = field(default_factory=list)
     unmatched_prediction_ids: list[UUID] = field(default_factory=list)
     unmatched_gt_ids: list[UUID] = field(default_factory=list)
@@ -82,37 +79,33 @@ class SampleMatchingResult:
 
 
 def match_with_iou_matrix(
-    sample_id: UUID,
     predictions: Sequence[BoundingBox],
     ground_truths: Sequence[BoundingBox],
-    iou_matrix: np.ndarray[Any, Any],
+    iou_matrix: NDArray[np.float64],
     iou_threshold: float,
-) -> SampleMatchingResult:
+) -> MatchingResult:
     """Run greedy matching given a pre-computed IoU matrix.
 
     Separating matching from IoU computation allows reuse across multiple IoU
     thresholds (e.g. COCO mAP sweep) without recomputing the matrix.
 
     Args:
-        sample_id: Identifier for the image.
         predictions: Predicted bounding boxes.
         ground_truths: Ground truth bounding boxes.
         iou_matrix: Pairwise IoU of shape (len(predictions), len(ground_truths)).
         iou_threshold: Minimum IoU for a prediction to count as a TP.
 
     Returns:
-        Per-image matching result.
+        Matching result with TP pairs, FP prediction IDs, and FN ground truth IDs.
     """
     if not predictions and not ground_truths:
-        return SampleMatchingResult(sample_id=sample_id)
+        return MatchingResult()
     if not predictions:
-        return SampleMatchingResult(
-            sample_id=sample_id,
+        return MatchingResult(
             unmatched_gt_ids=[gt.annotation_id for gt in ground_truths],
         )
     if not ground_truths:
-        return SampleMatchingResult(
-            sample_id=sample_id,
+        return MatchingResult(
             unmatched_prediction_ids=[p.annotation_id for p in predictions],
         )
 
@@ -148,8 +141,7 @@ def match_with_iou_matrix(
                 )
             )
 
-    return SampleMatchingResult(
-        sample_id=sample_id,
+    return MatchingResult(
         matches=matches,
         unmatched_prediction_ids=[
             p.annotation_id for i, p in enumerate(predictions) if i not in matched_pred

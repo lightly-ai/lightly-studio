@@ -12,27 +12,22 @@ from lightly_studio.evaluation.object_detection_metric import BoundingBox
 
 
 def test_match_with_iou_matrix__no_preds_no_gts() -> None:
-    sample_id = uuid4()
     result = object_detection_metric.match_with_iou_matrix(
-        sample_id=sample_id,
         predictions=[],
         ground_truths=[],
         iou_matrix=np.empty((0, 0)),
         iou_threshold=0.5,
     )
-    assert result.sample_id == sample_id
     assert result.tp == 0
     assert result.fp == 0
     assert result.fn == 0
 
 
 def test_match_with_iou_matrix__no_preds() -> None:
-    sample_id = uuid4()
     gt_id = uuid4()
     label_id = uuid4()
     gts = [BoundingBox(annotation_id=gt_id, x=0, y=0, width=10, height=10, label_id=label_id)]
     result = object_detection_metric.match_with_iou_matrix(
-        sample_id=sample_id,
         predictions=[],
         ground_truths=gts,
         iou_matrix=np.empty((0, 1)),
@@ -45,7 +40,6 @@ def test_match_with_iou_matrix__no_preds() -> None:
 
 
 def test_match_with_iou_matrix__no_gts() -> None:
-    sample_id = uuid4()
     pred_id = uuid4()
     label_id = uuid4()
     preds = [
@@ -60,7 +54,6 @@ def test_match_with_iou_matrix__no_gts() -> None:
         )
     ]
     result = object_detection_metric.match_with_iou_matrix(
-        sample_id=sample_id,
         predictions=preds,
         ground_truths=[],
         iou_matrix=np.empty((1, 0)),
@@ -73,7 +66,6 @@ def test_match_with_iou_matrix__no_gts() -> None:
 
 
 def test_match_with_iou_matrix__perfect_match() -> None:
-    sample_id = uuid4()
     pred_id = uuid4()
     gt_id = uuid4()
     label_id = uuid4()
@@ -91,7 +83,6 @@ def test_match_with_iou_matrix__perfect_match() -> None:
     gts = [BoundingBox(annotation_id=gt_id, x=0, y=0, width=10, height=10, label_id=label_id)]
     iou_matrix = np.array([[1.0]])
     result = object_detection_metric.match_with_iou_matrix(
-        sample_id=sample_id,
         predictions=preds,
         ground_truths=gts,
         iou_matrix=iou_matrix,
@@ -107,7 +98,6 @@ def test_match_with_iou_matrix__perfect_match() -> None:
 
 
 def test_match_with_iou_matrix__no_match_below_threshold() -> None:
-    sample_id = uuid4()
     pred_id = uuid4()
     gt_id = uuid4()
     label_id = uuid4()
@@ -125,7 +115,6 @@ def test_match_with_iou_matrix__no_match_below_threshold() -> None:
     gts = [BoundingBox(annotation_id=gt_id, x=5, y=5, width=10, height=10, label_id=label_id)]
     iou_matrix = np.array([[0.3]])
     result = object_detection_metric.match_with_iou_matrix(
-        sample_id=sample_id,
         predictions=preds,
         ground_truths=gts,
         iou_matrix=iou_matrix,
@@ -139,7 +128,6 @@ def test_match_with_iou_matrix__no_match_below_threshold() -> None:
 
 
 def test_match_with_iou_matrix__match_at_exact_threshold() -> None:
-    sample_id = uuid4()
     pred_id = uuid4()
     gt_id = uuid4()
     label_id = uuid4()
@@ -157,7 +145,6 @@ def test_match_with_iou_matrix__match_at_exact_threshold() -> None:
     gts = [BoundingBox(annotation_id=gt_id, x=0, y=0, width=10, height=10, label_id=label_id)]
     iou_matrix = np.array([[0.5]])
     result = object_detection_metric.match_with_iou_matrix(
-        sample_id=sample_id,
         predictions=preds,
         ground_truths=gts,
         iou_matrix=iou_matrix,
@@ -169,7 +156,6 @@ def test_match_with_iou_matrix__match_at_exact_threshold() -> None:
 
 
 def test_match_with_iou_matrix__greedy_match_by_confidence() -> None:
-    sample_id = uuid4()
     pred_high_id = uuid4()
     pred_low_id = uuid4()
     gt_id = uuid4()
@@ -197,7 +183,6 @@ def test_match_with_iou_matrix__greedy_match_by_confidence() -> None:
     gts = [BoundingBox(annotation_id=gt_id, x=0, y=0, width=10, height=10, label_id=label_id)]
     iou_matrix = np.array([[1.0], [1.0]])
     result = object_detection_metric.match_with_iou_matrix(
-        sample_id=sample_id,
         predictions=preds,
         ground_truths=gts,
         iou_matrix=iou_matrix,
@@ -211,7 +196,6 @@ def test_match_with_iou_matrix__greedy_match_by_confidence() -> None:
 
 
 def test_match_with_iou_matrix__multiple_preds_multiple_gts() -> None:
-    sample_id = uuid4()
     pred_high_id = uuid4()
     pred_mid_id = uuid4()
     pred_low_id = uuid4()
@@ -259,7 +243,6 @@ def test_match_with_iou_matrix__multiple_preds_multiple_gts() -> None:
         ]
     )
     result = object_detection_metric.match_with_iou_matrix(
-        sample_id=sample_id,
         predictions=preds,
         ground_truths=gts,
         iou_matrix=iou_matrix,
@@ -276,7 +259,6 @@ def test_match_with_iou_matrix__multiple_preds_multiple_gts() -> None:
 
 
 def test_match_with_iou_matrix__pred_without_confidence_treated_as_zero() -> None:
-    sample_id = uuid4()
     pred_with_conf_id = uuid4()
     pred_no_conf_id = uuid4()
     gt_id = uuid4()
@@ -304,7 +286,6 @@ def test_match_with_iou_matrix__pred_without_confidence_treated_as_zero() -> Non
     gts = [BoundingBox(annotation_id=gt_id, x=0, y=0, width=10, height=10, label_id=label_id)]
     iou_matrix = np.array([[1.0], [1.0]])
     result = object_detection_metric.match_with_iou_matrix(
-        sample_id=sample_id,
         predictions=preds,
         ground_truths=gts,
         iou_matrix=iou_matrix,
@@ -315,7 +296,6 @@ def test_match_with_iou_matrix__pred_without_confidence_treated_as_zero() -> Non
 
 
 def test_match_with_iou_matrix__all_preds_below_threshold() -> None:
-    sample_id = uuid4()
     pred_first_id = uuid4()
     pred_second_id = uuid4()
     gt_first_id = uuid4()
@@ -352,7 +332,6 @@ def test_match_with_iou_matrix__all_preds_below_threshold() -> None:
         ]
     )
     result = object_detection_metric.match_with_iou_matrix(
-        sample_id=sample_id,
         predictions=preds,
         ground_truths=gts,
         iou_matrix=iou_matrix,
@@ -403,7 +382,7 @@ def test_compute_iou_matrix__touching_boxes_have_zero_iou() -> None:
 
 
 def test_compute_iou_matrix__known_partial_overlap() -> None:
-    # pred [0,0,10,10] and gt [5,0,15,10]: intersection=50, union=150 → IoU=1/3.
+    # pred [0,0,10,10] and gt [5,0,15,10]: intersection=50, union=150 -> IoU=1/3.
     pred = np.array([[0, 0, 10, 10]])
     gt = np.array([[5, 0, 15, 10]])
     result = object_detection_metric.compute_iou_matrix(pred_corners=pred, gt_corners=gt)
