@@ -25,10 +25,10 @@ class BoundingBox:
     """
 
     annotation_id: UUID
-    x: float
-    y: float
-    width: float
-    height: float
+    x: int
+    y: int
+    width: int
+    height: int
     label_id: UUID
     confidence: float | None = None
 
