@@ -23,7 +23,7 @@ interface Return {
     image: Readable<SearchEmbeddingImage | undefined>;
     /** True while a text or image embedding request is in flight. */
     isPending: Readable<boolean>;
-    /** Embed `text` and update the embedding store. Empty string clears it. */
+    /** Embed `text` and update the embedding store. Empty or whitespace-only input clears it. */
     setText: (text: string) => Promise<void>;
     /** Upload `file`, embed it, and update the embedding/image stores. */
     setImage: (file: File) => Promise<void>;
