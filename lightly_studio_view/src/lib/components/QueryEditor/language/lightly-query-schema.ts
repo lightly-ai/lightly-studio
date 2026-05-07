@@ -5,6 +5,7 @@
  *  - top-level: image fields, or video fields when the query starts with `video:`
  *  - inside `object_detection(...)`: object detection fields
  *  - inside `classification(...)`: classification fields
+ *  - inside `segmentation_mask(...)`: segmentation mask fields
  *
  * Mirroring the field tables here lets the Monaco hover and completion
  * providers attach human-friendly documentation without re-parsing the
@@ -73,6 +74,19 @@ export const SCOPES: Record<Scope, ScopeDoc> = {
         fields: [
             { name: 'label', type: 'string', description: 'Class label of the classification.' }
         ]
+    },
+    segmentation_mask: {
+        scope: 'segmentation_mask',
+        title: 'SegmentationMask',
+        description:
+            'Segmentation mask annotation on an image. Used inside `segmentation_mask(...)`.',
+        fields: [
+            { name: 'label', type: 'string', description: 'Class label of the segmentation mask.' },
+            { name: 'x', type: 'int', description: 'Top-left X coordinate of the mask bounds.' },
+            { name: 'y', type: 'int', description: 'Top-left Y coordinate of the mask bounds.' },
+            { name: 'width', type: 'int', description: 'Mask width in pixels.' },
+            { name: 'height', type: 'int', description: 'Mask height in pixels.' }
+        ]
     }
 };
 
@@ -100,6 +114,11 @@ export const TOP_LEVEL_KEYWORDS: KeywordDoc[] = [
         name: 'classification',
         description: 'Filter on the image classification annotation.',
         insertText: 'classification(${1:label == "..."})'
+    },
+    {
+        name: 'segmentation_mask',
+        description: 'Filter on segmentation mask annotations inside an image.',
+        insertText: 'segmentation_mask(${1:label == "..."})'
     }
 ];
 

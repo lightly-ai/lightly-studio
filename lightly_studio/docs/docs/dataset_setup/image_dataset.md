@@ -349,6 +349,40 @@ GUI displays only a single dataset.
     Therefore you can safely use them in a single script with `load_or_create()`,
     adding and embedding the images will be skipped on subsequent calls.
 
+### Adding Annotations to Existing Images
+
+When images are already in the dataset, the `add_annotations_from_*` methods attach
+annotations without re-loading the images. Each call stores its annotations under a named
+collection, so multiple sources (e.g. ground truth and model predictions) can be queried
+and compared independently. Re-running with the same `name` appends to that collection;
+a new `name` creates a new collection.
+
+```python title="Attach annotations from multiple sources"
+import lightly_studio as ls
+
+dataset_path = ls.utils.download_example_dataset(download_dir="dataset_examples")
+images_path = f"{dataset_path}/coco_subset_128_images/images"
+
+# Load images once.
+dataset = ls.ImageDataset.create()
+dataset.add_images_from_path(path=images_path)
+
+# Attach ground truth.
+dataset.add_annotations_from_coco(
+    annotations_json=f"{dataset_path}/coco_subset_128_images/instances_train2017.json",
+    images_root=images_path,
+    name="ground_truth",
+)
+
+# Attach predictions from a model (paths are illustrative).
+dataset.add_annotations_from_coco(
+    annotations_json="/path/to/model_A_predictions.json",
+    images_root=images_path,
+    name="model_A",
+)
+```
+
+See the [API reference](../api/dataset.md#lightly_studio.ImageDataset) for `add_annotations_from_coco`, `add_annotations_from_yolo`, and `add_annotations_from_labelformat`.
 
 ## Image Dataset in the GUI
 

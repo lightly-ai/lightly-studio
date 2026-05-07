@@ -14,6 +14,8 @@ import {
     isNumberLiteral,
     isObjectDetectionIntFieldName,
     isObjectDetectionStringFieldName,
+    isSegmentationMaskIntFieldName,
+    isSegmentationMaskStringFieldName,
     isStringLiteral,
     isTagInExpression,
     isVideoEqualityFloatFieldName,
@@ -35,7 +37,7 @@ export type QueryExprTranslationResult =
     | { status: 'ok'; queryExpr: QueryExpr }
     | { status: 'error'; errors: QueryParseError[] };
 
-type QueryScope = 'image' | 'video' | 'object_detection' | 'classification';
+type QueryScope = 'image' | 'video' | 'object_detection' | 'classification' | 'segmentation_mask';
 
 interface TranslationParser {
     parse: (value: string) => {
@@ -122,10 +124,7 @@ function visit(expr: Expression, table: QueryScope): QueryExpr['match_expr'] {
     }
     if (isFunctionCall(expr)) {
         const subTable = getFunctionScope(expr.name);
-        const type =
-            subTable === 'object_detection'
-                ? 'object_detection_match_expr'
-                : 'classification_match_expr';
+        const type = toAnnotationMatchExprType(subTable);
         return {
             type,
             subexpr: visit(expr.args[0], subTable)
@@ -177,6 +176,16 @@ function visitComparisonExpression(
                 break;
             case 'object_detection':
                 if (isObjectDetectionStringFieldName(fieldName)) {
+                    return {
+                        type: 'string_expr',
+                        field: { table, name: fieldName },
+                        operator: toEqualityComparisonOperator(expr.operator),
+                        value: right.value
+                    };
+                }
+                break;
+            case 'segmentation_mask':
+                if (isSegmentationMaskStringFieldName(fieldName)) {
                     return {
                         type: 'string_expr',
                         field: { table, name: fieldName },
@@ -244,7 +253,18 @@ function visitComparisonExpression(
                     };
                 }
                 break;
+            case 'segmentation_mask':
+                if (isSegmentationMaskIntFieldName(fieldName)) {
+                    return {
+                        type: 'integer_expr',
+                        field: { table, name: fieldName },
+                        operator: expr.operator,
+                        value: right.value
+                    };
+                }
+                break;
             case 'classification':
+                // This is a placeholder in case a field is added later. The code throws later.
                 break;
         }
     }
@@ -258,12 +278,28 @@ function getRootScope(parseResult: Query): Extract<QueryScope, 'image' | 'video'
 
 function getFunctionScope(
     name: string
-): Extract<QueryScope, 'object_detection' | 'classification'> {
-    if (name === 'object_detection' || name === 'classification') {
+): Extract<QueryScope, 'object_detection' | 'classification' | 'segmentation_mask'> {
+    if (name === 'object_detection' || name === 'classification' || name === 'segmentation_mask') {
         return name;
     }
 
     throw new Error(`Unsupported function: ${name}`);
+}
+
+function toAnnotationMatchExprType(
+    scope: Extract<QueryScope, 'object_detection' | 'classification' | 'segmentation_mask'>
+): Extract<
+    QueryExpr['match_expr']['type'],
+    'object_detection_match_expr' | 'classification_match_expr' | 'segmentation_mask_match_expr'
+> {
+    switch (scope) {
+        case 'object_detection':
+            return 'object_detection_match_expr';
+        case 'classification':
+            return 'classification_match_expr';
+        case 'segmentation_mask':
+            return 'segmentation_mask_match_expr';
+    }
 }
 
 function toBooleanExprType(operator: string): 'and' | 'or' {
