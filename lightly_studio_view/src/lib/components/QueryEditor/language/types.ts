@@ -5,12 +5,13 @@
  *  - top-level: image fields, or video fields when the query starts with `video:`
  *  - inside `object_detection(...)`: object detection fields
  *  - inside `classification(...)`: classification fields
+ *  - inside `segmentation_mask(...)`: segmentation mask fields
  *
  * Mirroring the field tables here lets the Monaco hover and completion
  * providers attach human-friendly documentation without re-parsing the
  * grammar at runtime. Keep both in sync when the grammar changes. */
 
-export type Scope = 'image' | 'video' | 'object_detection' | 'classification';
+export type Scope = 'image' | 'video' | 'object_detection' | 'classification' | 'segmentation_mask';
 
 export interface FieldDoc {
     name: string;
