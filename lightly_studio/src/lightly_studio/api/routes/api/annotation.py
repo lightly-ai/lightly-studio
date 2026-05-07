@@ -10,6 +10,7 @@ from fastapi.params import Query
 from pydantic import BaseModel, Field
 
 from lightly_studio.api.routes.api import annotations as annotations_module
+from lightly_studio.api.routes.api.collection import get_and_validate_collection_id
 from lightly_studio.api.routes.api.status import HTTP_STATUS_NOT_FOUND
 from lightly_studio.api.routes.api.validators import Paginated, PaginatedWithCursor
 from lightly_studio.db_manager import SessionDep
@@ -20,7 +21,8 @@ from lightly_studio.models.annotation.annotation_base import (
     AnnotationViewsWithCount,
     AnnotationWithPayloadAndCountView,
 )
-from lightly_studio.resolvers import annotation_resolver
+from lightly_studio.models.collection import CollectionTable, CollectionView
+from lightly_studio.resolvers import annotation_resolver, collection_resolver
 from lightly_studio.resolvers.annotation_resolver.get_all import (
     GetAllAnnotationsResult,
 )
@@ -35,6 +37,25 @@ from lightly_studio.services.annotations_service.update_annotation import (
 
 annotations_router = APIRouter(prefix="/collections/{collection_id}", tags=["annotations"])
 annotations_router.include_router(annotations_module.create_annotation_router)
+
+
+@annotations_router.get(
+    "/annotation_collections",
+    response_model=list[CollectionView],
+)
+def read_annotation_collections(
+    session: SessionDep,
+    collection: Annotated[
+        CollectionTable,
+        Path(title="collection Id"),
+        Depends(get_and_validate_collection_id),
+    ],
+) -> list[CollectionTable]:
+    """List annotation collections under the given parent collection."""
+    return collection_resolver.get_annotation_collections(
+        session=session,
+        parent_collection_id=collection.collection_id,
+    )
 
 
 class AnnotationQueryParamsModel(BaseModel):

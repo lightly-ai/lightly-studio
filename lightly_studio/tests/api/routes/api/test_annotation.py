@@ -298,3 +298,28 @@ def test_get_annotation_sample_ids(
 
     assert response.status_code == HTTP_STATUS_OK
     assert response.json() == [str(annotation.sample_id)]
+
+
+def test_read_annotation_collections(
+    test_client: TestClient,
+    annotations_test_data: AnnotationsTestData,
+) -> None:
+    parent_collection = annotations_test_data.collections[0]
+    expected_annotation_collection = parent_collection.children[0]
+    assert expected_annotation_collection.sample_type == SampleType.ANNOTATION
+
+    response = test_client.get(
+        f"/api/collections/{parent_collection.collection_id!s}/annotation_collections",
+    )
+
+    assert response.status_code == HTTP_STATUS_OK
+    body = response.json()
+    assert len(body) == 1
+    item = body[0]
+    assert UUID(item["collection_id"]) == expected_annotation_collection.collection_id
+    assert UUID(item["parent_collection_id"]) == parent_collection.collection_id
+    assert item["sample_type"] == SampleType.ANNOTATION.value
+    assert item["name"] == expected_annotation_collection.name
+    # CollectionView shape — sanity check the documented fields are present.
+    assert "dataset_id" in item
+    assert "created_at" in item
