@@ -24,6 +24,12 @@ describe('detectScopeAt', () => {
         expect(detectScopeAt(text, offset)).toBe('classification');
     });
 
+    it('returns segmentation_mask scope inside segmentation_mask(...)', () => {
+        const text = 'segmentation_mask(label == "road" AND width > 10)';
+        const offset = text.indexOf('width') + 2;
+        expect(detectScopeAt(text, offset)).toBe('segmentation_mask');
+    });
+
     it('falls back to outer scope after nested expression closes', () => {
         const text = 'object_detection(label == "cat") AND width > 10';
         const offset = text.lastIndexOf('width') + 2;

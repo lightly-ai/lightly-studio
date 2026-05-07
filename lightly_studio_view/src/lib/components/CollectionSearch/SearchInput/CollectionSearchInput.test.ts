@@ -31,15 +31,17 @@ describe('CollectionSearchInput', () => {
         expect(clearButton).toBeInTheDocument();
     });
 
-    it('updates value, clears it, and calls upload handler', async () => {
+    it('updates value, clears it, and calls upload and clear handlers', async () => {
         const onUploadClick = vi.fn();
+        const onClear = vi.fn();
 
         render(CollectionSearchInput, {
             props: {
                 value: 'cat',
                 inputProps: { disabled: false, onkeydown: vi.fn(), onpaste: vi.fn() },
                 showOutline: false,
-                onUploadClick
+                onUploadClick,
+                onClear
             }
         });
 
@@ -52,7 +54,25 @@ describe('CollectionSearchInput', () => {
         await fireEvent.click(screen.getByTitle('Upload image for search'));
 
         expect(input.value).toBe('');
+        expect(onClear).toHaveBeenCalledOnce();
         expect(onUploadClick).toHaveBeenCalledOnce();
+    });
+
+    it('does not throw when clear is clicked without an onClear handler', async () => {
+        render(CollectionSearchInput, {
+            props: {
+                value: 'cat',
+                inputProps: { disabled: false, onkeydown: vi.fn(), onpaste: vi.fn() },
+                showOutline: false,
+                onUploadClick: vi.fn()
+            }
+        });
+
+        const input = screen.getByTestId('text-embedding-search-input') as HTMLInputElement;
+
+        await fireEvent.click(screen.getByTestId('search-clear-button'));
+
+        expect(input.value).toBe('');
     });
 
     it('applies disabled state consistently when provided via inputProps', () => {
