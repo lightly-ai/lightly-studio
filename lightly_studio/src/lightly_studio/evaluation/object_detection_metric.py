@@ -103,6 +103,11 @@ def match_with_iou_matrix(
         ensuring that ``predictions`` and ``ground_truths`` belong to the same
         class if strict class-wise matching is required.
     """
+    if iou_matrix.shape != (len(predictions), len(ground_truths)):
+        raise ValueError(
+            f"iou_matrix shape {iou_matrix.shape} does not match "
+            f"(len(predictions)={len(predictions)}, len(ground_truths)={len(ground_truths)})"
+        )
     if not predictions and not ground_truths:
         return MatchingResult()
     if not predictions:
@@ -125,7 +130,6 @@ def match_with_iou_matrix(
     matches: list[DetectionMatch] = []
 
     for pred_idx in confidence_order:
-        pred = predictions[pred_idx]
         best_iou = -1.0
         best_gt_idx = -1
         for gt_idx in range(len(ground_truths)):
@@ -140,7 +144,7 @@ def match_with_iou_matrix(
             matched_pred.add(pred_idx)
             matches.append(
                 DetectionMatch(
-                    pred_id=pred.annotation_id,
+                    pred_id=predictions[pred_idx].annotation_id,
                     gt_id=ground_truths[best_gt_idx].annotation_id,
                     iou=best_iou,
                 )

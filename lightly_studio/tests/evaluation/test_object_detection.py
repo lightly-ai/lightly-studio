@@ -11,6 +11,35 @@ from lightly_studio.evaluation import object_detection_metric
 from lightly_studio.evaluation.object_detection_metric import BoundingBox
 
 
+def test_match_with_iou_matrix__wrong_iou_matrix_shape() -> None:
+    pred_id = uuid4()
+    gt_id = uuid4()
+    label_id = uuid4()
+    preds = [
+        BoundingBox(
+            annotation_id=pred_id,
+            x=0,
+            y=0,
+            width=10,
+            height=10,
+            label_id=label_id,
+            confidence=0.9,
+        )
+    ]
+    gts = [
+        BoundingBox(annotation_id=gt_id, x=0, y=0, width=10, height=10, label_id=label_id),
+        BoundingBox(annotation_id=uuid4(), x=20, y=0, width=10, height=10, label_id=label_id),
+    ]
+    iou_matrix = np.array([[1.0]])
+    with pytest.raises(ValueError, match="iou_matrix shape"):
+        object_detection_metric.match_with_iou_matrix(
+            predictions=preds,
+            ground_truths=gts,
+            iou_matrix=iou_matrix,
+            iou_threshold=0.5,
+        )
+
+
 def test_match_with_iou_matrix__no_preds_no_gts() -> None:
     result = object_detection_metric.match_with_iou_matrix(
         predictions=[],
@@ -168,6 +197,46 @@ def test_match_with_iou_matrix__multiple_preds_multiple_gts() -> None:
     assert result.matches[0].iou == pytest.approx(0.5)
     assert result.matches[1].iou == pytest.approx(0.5)
     assert result.unmatched_prediction_ids == [pred_low_id]
+
+
+def test_match_with_iou_matrix__equal_confidence_uses_list_order() -> None:
+    """Predictions with equal confidence are matched in list order (first wins)."""
+    pred_first_id = uuid4()
+    pred_second_id = uuid4()
+    gt_id = uuid4()
+    label_id = uuid4()
+    preds = [
+        BoundingBox(
+            annotation_id=pred_first_id,
+            x=0,
+            y=0,
+            width=10,
+            height=10,
+            label_id=label_id,
+            confidence=0.8,
+        ),
+        BoundingBox(
+            annotation_id=pred_second_id,
+            x=0,
+            y=0,
+            width=10,
+            height=10,
+            label_id=label_id,
+            confidence=0.8,
+        ),
+    ]
+    gts = [BoundingBox(annotation_id=gt_id, x=0, y=0, width=10, height=10, label_id=label_id)]
+    iou_matrix = np.array([[1.0], [1.0]])
+    result = object_detection_metric.match_with_iou_matrix(
+        predictions=preds,
+        ground_truths=gts,
+        iou_matrix=iou_matrix,
+        iou_threshold=0.5,
+    )
+    assert result.tp == 1
+    assert result.fp == 1
+    assert result.matches[0].pred_id == pred_first_id
+    assert result.unmatched_prediction_ids == [pred_second_id]
 
 
 def test_match_with_iou_matrix__pred_without_confidence_treated_as_zero() -> None:
