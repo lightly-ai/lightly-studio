@@ -150,18 +150,25 @@ describe('useImageUpload', () => {
         expect(revokeObjectURL).toHaveBeenCalledWith('blob:first-preview-url');
     });
 
-    it('revokes preview URL when clearing image', () => {
+    it('revokes preview URL when clearing image', async () => {
+        mutateMock.mockImplementation((_variables, callbacks) => {
+            callbacks?.onSuccess?.([1, 2, 3], undefined, undefined);
+        });
+
         const upload = useImageUpload({
             collectionId: 'collection-id',
             onError,
             onSuccess
         });
 
-        upload.previewUrl.set('blob:previous-url');
+        const file = new File(['image'], 'image.png', { type: 'image/png' });
+        await upload.upload(file);
+
+        expect(get(upload.previewUrl)).toBe('blob:preview-url');
 
         upload.clear();
 
-        expect(revokeObjectURL).toHaveBeenCalledWith('blob:previous-url');
+        expect(revokeObjectURL).toHaveBeenCalledWith('blob:preview-url');
         expect(get(upload.previewUrl)).toBeUndefined();
         expect(get(upload.imageName)).toBeUndefined();
     });
