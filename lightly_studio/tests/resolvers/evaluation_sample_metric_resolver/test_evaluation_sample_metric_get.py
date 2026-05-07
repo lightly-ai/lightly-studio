@@ -15,8 +15,13 @@ from tests.resolvers.evaluation_sample_metric_resolver.helpers import (
 
 
 def test_get_all_by_evaluation_run_id(db_session: Session) -> None:
-    run, image = create_run_and_image(db_session)
-    insert_metrics(db_session, run.id, image.sample_id, {"precision": 0.9, "recall": 0.8})
+    run, image = create_run_and_image(session=db_session)
+    insert_metrics(
+        session=db_session,
+        evaluation_run_id=run.id,
+        sample_id=image.sample_id,
+        metrics={"precision": 0.9, "recall": 0.8},
+    )
 
     results = evaluation_sample_metric_resolver.get_all_by_evaluation_run_id(
         session=db_session,
@@ -41,10 +46,24 @@ def test_get_all_by_evaluation_run_id__returns_empty_for_unknown_run(db_session:
 
 def test_get_all_by_evaluation_run_id__excludes_other_runs(db_session: Session) -> None:
     dataset = create_collection(session=db_session)
-    run1, image1 = create_run_and_image(db_session, dataset_collection_id=dataset.collection_id)
-    run2, image2 = create_run_and_image(db_session, dataset_collection_id=dataset.collection_id)
-    insert_metrics(db_session, run1.id, image1.sample_id, {"ap": 0.9})
-    insert_metrics(db_session, run2.id, image2.sample_id, {"ap": 0.5})
+    run1, image1 = create_run_and_image(
+        session=db_session, dataset_collection_id=dataset.collection_id
+    )
+    run2, image2 = create_run_and_image(
+        session=db_session, dataset_collection_id=dataset.collection_id
+    )
+    insert_metrics(
+        session=db_session,
+        evaluation_run_id=run1.id,
+        sample_id=image1.sample_id,
+        metrics={"ap": 0.9},
+    )
+    insert_metrics(
+        session=db_session,
+        evaluation_run_id=run2.id,
+        sample_id=image2.sample_id,
+        metrics={"ap": 0.5},
+    )
 
     results = evaluation_sample_metric_resolver.get_all_by_evaluation_run_id(
         session=db_session,
@@ -54,3 +73,4 @@ def test_get_all_by_evaluation_run_id__excludes_other_runs(db_session: Session) 
     assert len(results) == 1
     assert results[0].evaluation_run_id == run1.id
     assert results[0].sample_id == image1.sample_id
+    assert results[0].value == pytest.approx(0.9)

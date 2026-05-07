@@ -10,7 +10,7 @@ from lightly_studio.models.evaluation_run import (
     EvaluationRunTable,
     EvaluationTaskType,
 )
-from lightly_studio.models.evaluation_sample_metric import EvaluationSampleMetricTable
+from lightly_studio.models.evaluation_sample_metric import EvaluationSampleMetricCreate
 from lightly_studio.models.image import ImageTable
 from lightly_studio.resolvers import evaluation_run_resolver, evaluation_sample_metric_resolver
 from tests.helpers_resolvers import create_collection, create_image
@@ -54,7 +54,7 @@ def insert_metrics(
     evaluation_sample_metric_resolver.create_many(
         session=session,
         records=[
-            EvaluationSampleMetricTable(
+            EvaluationSampleMetricCreate(
                 evaluation_run_id=evaluation_run_id,
                 sample_id=sample_id,
                 metric_name=name,
