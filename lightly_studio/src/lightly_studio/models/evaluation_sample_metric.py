@@ -4,7 +4,16 @@ from __future__ import annotations
 
 from uuid import UUID
 
+from pydantic import BaseModel
 from sqlmodel import Field, SQLModel
+
+
+class EvaluationSampleMetricBoundsView(BaseModel):
+    """Min/max value bounds for a single metric across all samples in a run."""
+
+    metric_name: str
+    min_value: float
+    max_value: float
 
 
 class EvaluationSampleMetricTable(SQLModel, table=True):
