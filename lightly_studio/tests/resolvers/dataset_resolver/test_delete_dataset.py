@@ -259,6 +259,20 @@ def test_delete_dataset__with_evaluation_sample_metrics(db_session: Session) -> 
         ],
     )
 
+    # Act
+    dataset_resolver.delete_dataset(
+        session=db_session,
+        dataset_id=dataset.dataset_id,
+    )
+
+    # Assert - evaluation run and its metrics deleted
+    assert evaluation_run_resolver.get_by_id(session=db_session, evaluation_id=run_id) is None
+    metrics = evaluation_sample_metric_resolver.get_all_by_evaluation_run_id(
+        session=db_session,
+        evaluation_run_id=run_id,
+    )
+    assert metrics == []
+
 
 def test_delete_dataset__with_evaluation_runs(db_session: Session) -> None:
     # Arrange

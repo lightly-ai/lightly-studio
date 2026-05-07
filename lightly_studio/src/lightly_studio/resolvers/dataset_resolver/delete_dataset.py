@@ -64,6 +64,7 @@ def delete_dataset(
     # 1. Delete all tables that reference annotation_base.
     _delete_object_detection_annotations(session=session, sample_ids=sample_ids)
     _delete_segmentation_annotations(session=session, sample_ids=sample_ids)
+    _delete_evaluation_sample_metrics(session=session, dataset_id=dataset_id)
     session.commit()  # Commit before deleting annotation_base.
 
     # 2. Delete annotation_base and tables that reference sample type tables.
@@ -94,7 +95,6 @@ def delete_dataset(
     _delete_tags(session=session, collection_ids=collection_ids)
     _delete_embedding_models(session=session, collection_ids=collection_ids)
     _delete_object_tracks(session=session, dataset_id=dataset_id)
-    _delete_evaluation_sample_metrics(session=session, dataset_id=dataset_id)
     _delete_evaluation_runs(session=session, dataset_id=dataset_id)
     session.commit()  # Required before deleting collections.
 
