@@ -1,18 +1,17 @@
 from __future__ import annotations
 
 import uuid
-from uuid import UUID
 
 import pytest
 from sqlmodel import Session
 
-from lightly_studio.models.evaluation_sample_metric import (
-    EvaluationSampleMetricBoundsView,
-    EvaluationSampleMetricTable,
-)
+from lightly_studio.models.evaluation_sample_metric import EvaluationSampleMetricBoundsView
 from lightly_studio.resolvers import evaluation_sample_metric_resolver
 from tests.helpers_resolvers import create_collection, create_image
-from tests.resolvers.evaluation_sample_metric_resolver.helpers import create_run_and_image
+from tests.resolvers.evaluation_sample_metric_resolver.helpers import (
+    create_run_and_image,
+    insert_metrics,
+)
 
 
 def test_get_metric_list_by_evaluation_run_id(db_session: Session) -> None:
@@ -23,8 +22,8 @@ def test_get_metric_list_by_evaluation_run_id(db_session: Session) -> None:
         collection_id=dataset.collection_id,
         file_path_abs="/path/to/sample2.png",
     )
-    _insert_metrics(db_session, run.id, image1.sample_id, {"precision": 0.9, "recall": 0.7})
-    _insert_metrics(db_session, run.id, image2.sample_id, {"precision": 0.6, "recall": 0.8})
+    insert_metrics(db_session, run.id, image1.sample_id, {"precision": 0.9, "recall": 0.7})
+    insert_metrics(db_session, run.id, image2.sample_id, {"precision": 0.6, "recall": 0.8})
 
     results = evaluation_sample_metric_resolver.get_metric_list_by_evaluation_run_id(
         session=db_session,
@@ -42,7 +41,7 @@ def test_get_metric_list_by_evaluation_run_id(db_session: Session) -> None:
 
 def test_get_metric_list_by_evaluation_run_id__single_sample(db_session: Session) -> None:
     run, image = create_run_and_image(db_session)
-    _insert_metrics(db_session, run.id, image.sample_id, {"ap": 0.75})
+    insert_metrics(db_session, run.id, image.sample_id, {"ap": 0.75})
 
     results = evaluation_sample_metric_resolver.get_metric_list_by_evaluation_run_id(
         session=db_session,
@@ -70,8 +69,8 @@ def test_get_metric_list_by_evaluation_run_id__excludes_other_runs(db_session: S
     dataset = create_collection(session=db_session)
     run1, image1 = create_run_and_image(db_session, dataset_collection_id=dataset.collection_id)
     run2, image2 = create_run_and_image(db_session, dataset_collection_id=dataset.collection_id)
-    _insert_metrics(db_session, run1.id, image1.sample_id, {"ap": 0.9})
-    _insert_metrics(db_session, run2.id, image2.sample_id, {"ap": 0.1})
+    insert_metrics(db_session, run1.id, image1.sample_id, {"ap": 0.9})
+    insert_metrics(db_session, run2.id, image2.sample_id, {"ap": 0.1})
 
     results = evaluation_sample_metric_resolver.get_metric_list_by_evaluation_run_id(
         session=db_session,
@@ -82,23 +81,3 @@ def test_get_metric_list_by_evaluation_run_id__excludes_other_runs(db_session: S
     assert results[0].metric_name == "ap"
     assert results[0].min_value == pytest.approx(0.9)
     assert results[0].max_value == pytest.approx(0.9)
-
-
-def _insert_metrics(
-    session: Session,
-    evaluation_run_id: UUID,
-    sample_id: UUID,
-    metrics: dict[str, float],
-) -> None:
-    evaluation_sample_metric_resolver.create_many(
-        session=session,
-        records=[
-            EvaluationSampleMetricTable(
-                evaluation_run_id=evaluation_run_id,
-                sample_id=sample_id,
-                metric_name=name,
-                value=value,
-            )
-            for name, value in metrics.items()
-        ],
-    )

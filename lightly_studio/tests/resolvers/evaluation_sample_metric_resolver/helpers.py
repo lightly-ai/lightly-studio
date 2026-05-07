@@ -10,8 +10,9 @@ from lightly_studio.models.evaluation_run import (
     EvaluationRunTable,
     EvaluationTaskType,
 )
+from lightly_studio.models.evaluation_sample_metric import EvaluationSampleMetricTable
 from lightly_studio.models.image import ImageTable
-from lightly_studio.resolvers import evaluation_run_resolver
+from lightly_studio.resolvers import evaluation_run_resolver, evaluation_sample_metric_resolver
 from tests.helpers_resolvers import create_collection, create_image
 
 
@@ -42,3 +43,23 @@ def create_run_and_image(
     )
     image = create_image(session=session, collection_id=dataset_collection_id)
     return run, image
+
+
+def insert_metrics(
+    session: Session,
+    evaluation_run_id: UUID,
+    sample_id: UUID,
+    metrics: dict[str, float],
+) -> None:
+    evaluation_sample_metric_resolver.create_many(
+        session=session,
+        records=[
+            EvaluationSampleMetricTable(
+                evaluation_run_id=evaluation_run_id,
+                sample_id=sample_id,
+                metric_name=name,
+                value=value,
+            )
+            for name, value in metrics.items()
+        ],
+    )
