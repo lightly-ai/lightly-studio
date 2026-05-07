@@ -101,8 +101,7 @@ def match_with_iou_matrix(
     Note:
         No class-label filtering is applied. Callers are responsible for
         ensuring that ``predictions`` and ``ground_truths`` belong to the same
-        class, or for zeroing out cross-class entries in ``iou_matrix`` before
-        calling this function.
+        class if strict class-wise matching is required.
     """
     if not predictions and not ground_truths:
         return MatchingResult()
