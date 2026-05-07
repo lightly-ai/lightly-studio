@@ -103,7 +103,17 @@ describe('useSearchEmbedding', () => {
         expect(mocks.clearImage).toHaveBeenCalled();
     });
 
-    it('setText with empty / whitespace clears the embedding store', async () => {
+    it('setText with empty string clears the embedding store', async () => {
+        embedding.set({ queryText: 'old', embedding: [0] });
+        const search = useSearchEmbedding({ collectionId: 'collection-id', embedding });
+
+        await search.setText('');
+
+        expect(get(embedding)).toBeUndefined();
+        expect(mocks.clearImage).toHaveBeenCalled();
+    });
+
+    it('setText with whitespace clears the embedding store', async () => {
         embedding.set({ queryText: 'old', embedding: [0] });
         const search = useSearchEmbedding({ collectionId: 'collection-id', embedding });
 
