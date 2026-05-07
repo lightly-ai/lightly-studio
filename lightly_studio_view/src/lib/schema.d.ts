@@ -3314,7 +3314,10 @@ export interface components {
             /** Supported Scopes */
             supported_scopes?: components["schemas"]["OperatorScope"][];
         };
-        /** RuntimeVersionInfo */
+        /**
+         * RuntimeVersionInfo
+         * @description Runtime version information returned by the version endpoint.
+         */
         RuntimeVersionInfo: {
             /** Version */
             version: string;
