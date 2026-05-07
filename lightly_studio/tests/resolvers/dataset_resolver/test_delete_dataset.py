@@ -264,6 +264,7 @@ def test_delete_dataset__with_evaluation_runs(db_session: Session) -> None:
         ),
     )
     run_id = run.id  # Capture before delete
+    dataset_collection_id = dataset.collection_id  # Capture before delete
 
     # Act
     dataset_resolver.delete_dataset(
@@ -273,7 +274,7 @@ def test_delete_dataset__with_evaluation_runs(db_session: Session) -> None:
 
     # Assert - dataset and evaluation run deleted
     assert (
-        collection_resolver.get_by_id(session=db_session, collection_id=dataset.collection_id)
+        collection_resolver.get_by_id(session=db_session, collection_id=dataset_collection_id)
         is None
     )
     assert evaluation_run_resolver.get_by_id(session=db_session, evaluation_id=run_id) is None
