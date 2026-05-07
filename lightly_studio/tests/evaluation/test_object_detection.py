@@ -382,7 +382,7 @@ def test_compute_iou_matrix__touching_boxes_have_zero_iou() -> None:
 
 
 def test_compute_iou_matrix__known_partial_overlap() -> None:
-    # pred [0,0,10,10] and gt [5,0,15,10]: intersection=50, union=150 -> IoU=1/3.
+    # pred [0,0,10,10] and gt [5,0,15,10]: intersection=50, union=150 → IoU=1/3.
     pred = np.array([[0, 0, 10, 10]])
     gt = np.array([[5, 0, 15, 10]])
     result = object_detection_metric.compute_iou_matrix(pred_corners=pred, gt_corners=gt)
