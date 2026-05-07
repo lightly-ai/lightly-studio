@@ -11,11 +11,13 @@ from lightly_studio.models.annotation.object_detection import ObjectDetectionAnn
 from lightly_studio.models.annotation.object_track import ObjectTrackCreate
 from lightly_studio.models.annotation.segmentation import SegmentationAnnotationTable
 from lightly_studio.models.collection import SampleType
+from lightly_studio.models.evaluation_run import EvaluationRunCreate, EvaluationTaskType
 from lightly_studio.resolvers import (
     annotation_resolver,
     collection_resolver,
     dataset_resolver,
     embedding_model_resolver,
+    evaluation_run_resolver,
     image_resolver,
     metadata_resolver,
     object_track_resolver,
@@ -555,3 +557,79 @@ def test_deep_copy__with_annotations(db_session: Session) -> None:
     assert is_detail.width == 6
     assert is_detail.height == 8
     assert is_detail.segmentation_mask == [1, 0, 0, 1]
+
+
+def test_deep_copy__with_evaluation_runs(db_session: Session) -> None:
+    # Arrange
+    original = create_collection(session=db_session, collection_name="original")
+    gt_collection = create_collection(
+        session=db_session,
+        collection_name="original__gt",
+        parent_collection_id=original.collection_id,
+        sample_type=SampleType.ANNOTATION,
+    )
+    pred_collection = create_collection(
+        session=db_session,
+        collection_name="original__pred",
+        parent_collection_id=original.collection_id,
+        sample_type=SampleType.ANNOTATION,
+    )
+    run = evaluation_run_resolver.create(
+        session=db_session,
+        evaluation_run_input=EvaluationRunCreate(
+            name="my_eval",
+            gt_annotation_collection_id=gt_collection.collection_id,
+            pred_annotation_collection_id=pred_collection.collection_id,
+            task_type=EvaluationTaskType.OBJECT_DETECTION,
+            config_json={"iou_threshold": 0.5},
+        ),
+    )
+
+    # Act
+    copied = dataset_resolver.deep_copy(
+        session=db_session,
+        dataset_id=original.dataset_id,
+        copy_name="copied",
+    )
+
+    # Assert - exactly one evaluation run copied
+    copied_runs = evaluation_run_resolver.get_all_by_dataset_id(
+        session=db_session,
+        dataset_id=copied.dataset_id,
+    )
+    assert len(copied_runs) == 1
+    copied_run = copied_runs[0]
+
+    # Assert - new ID assigned
+    assert copied_run.id != run.id
+
+    # Assert - fields preserved
+    assert copied_run.name == "my_eval"
+    assert copied_run.task_type == EvaluationTaskType.OBJECT_DETECTION
+    assert copied_run.config_json == {"iou_threshold": 0.5}
+
+    # Assert - collection FKs remapped to copied collections (not the originals)
+    assert copied_run.gt_annotation_collection_id != gt_collection.collection_id
+    assert copied_run.pred_annotation_collection_id != pred_collection.collection_id
+
+    # Assert - referenced collections belong to the copied dataset
+    copied_gt = collection_resolver.get_by_id(
+        session=db_session, collection_id=copied_run.gt_annotation_collection_id
+    )
+    copied_pred = collection_resolver.get_by_id(
+        session=db_session, collection_id=copied_run.pred_annotation_collection_id
+    )
+    assert copied_gt is not None
+    assert copied_pred is not None
+    assert copied_gt.dataset_id == copied.dataset_id
+    assert copied_pred.dataset_id == copied.dataset_id
+
+    # Assert - original run unchanged
+    original_runs = evaluation_run_resolver.get_all_by_dataset_id(
+        session=db_session,
+        dataset_id=original.dataset_id,
+    )
+    assert len(original_runs) == 1
+    assert original_runs[0].id == run.id
+    assert original_runs[0].gt_annotation_collection_id == gt_collection.collection_id
+    assert original_runs[0].pred_annotation_collection_id == pred_collection.collection_id

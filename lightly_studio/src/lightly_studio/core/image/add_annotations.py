@@ -8,6 +8,7 @@ from pathlib import Path
 from uuid import UUID
 
 import fsspec
+import yaml
 from labelformat.model.instance_segmentation import (
     ImageInstanceSegmentation,
     InstanceSegmentationInput,
@@ -32,6 +33,7 @@ from lightly_studio.type_definitions import PathLike
 
 # Constants
 SAMPLE_BATCH_SIZE = 32  # Number of samples to process in a single batch
+ALLOWED_YOLO_SPLITS = {"train", "val", "test", "minival"}
 
 
 def add_annotations_from_labelformat(  # noqa: PLR0913
@@ -113,6 +115,26 @@ def normalize_images_root(images_root: PathLike) -> str:
     if protocol == "file":
         return str(Path(fsspec.core.strip_protocol(images_root_str)).absolute())
     return images_root_str
+
+
+def resolve_yolo_splits(data_yaml: Path, input_split: str | None) -> list[str]:
+    """Determine which YOLO splits to process for the given config."""
+    if input_split is not None:
+        if input_split not in ALLOWED_YOLO_SPLITS:
+            raise ValueError(
+                f"Split '{input_split}' not found in config file '{data_yaml}'. "
+                f"Allowed splits: {sorted(ALLOWED_YOLO_SPLITS)}"
+            )
+        return [input_split]
+
+    with data_yaml.open() as f:
+        config = yaml.safe_load(f)
+
+    config_keys = config.keys() if isinstance(config, dict) else []
+    splits = [key for key in config_keys if key in ALLOWED_YOLO_SPLITS]
+    if not splits:
+        raise ValueError(f"No splits found in config file '{data_yaml}'")
+    return splits
 
 
 def _process_annotation_batch(  # noqa: PLR0913

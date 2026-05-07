@@ -17,7 +17,7 @@ from tests.helpers_resolvers import create_collection
 
 def test_get_by_id(db_session: Session) -> None:
     dataset = create_collection(session=db_session)
-    run = _create_evaluation_run(db_session, dataset_collection_id=dataset.collection_id)
+    run = _create_evaluation_run(session=db_session, dataset_collection_id=dataset.collection_id)
 
     result = evaluation_run_resolver.get_by_id(session=db_session, evaluation_id=run.id)
 
@@ -35,10 +35,10 @@ def test_get_by_id__returns_none_for_unknown_id(db_session: Session) -> None:
 def test_get_all_by_dataset_id(db_session: Session) -> None:
     dataset = create_collection(session=db_session)
     run1 = _create_evaluation_run(
-        db_session, dataset_collection_id=dataset.collection_id, name="run_1"
+        session=db_session, dataset_collection_id=dataset.collection_id, name="run_1"
     )
     run2 = _create_evaluation_run(
-        db_session, dataset_collection_id=dataset.collection_id, name="run_2"
+        session=db_session, dataset_collection_id=dataset.collection_id, name="run_2"
     )
 
     results = evaluation_run_resolver.get_all_by_dataset_id(
@@ -63,8 +63,8 @@ def test_get_all_by_dataset_id__returns_empty_for_unknown_dataset(db_session: Se
 def test_get_all_by_dataset_id__excludes_other_datasets(db_session: Session) -> None:
     dataset = create_collection(session=db_session)
     other_dataset = create_collection(session=db_session)
-    run = _create_evaluation_run(db_session, dataset_collection_id=dataset.collection_id)
-    _create_evaluation_run(db_session, dataset_collection_id=other_dataset.collection_id)
+    run = _create_evaluation_run(session=db_session, dataset_collection_id=dataset.collection_id)
+    _create_evaluation_run(session=db_session, dataset_collection_id=other_dataset.collection_id)
 
     results = evaluation_run_resolver.get_all_by_dataset_id(
         session=db_session, dataset_id=dataset.dataset_id
