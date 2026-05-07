@@ -12,12 +12,14 @@ from lightly_studio.models.annotation.object_track import ObjectTrackCreate
 from lightly_studio.models.annotation.segmentation import SegmentationAnnotationTable
 from lightly_studio.models.collection import SampleType
 from lightly_studio.models.evaluation_run import EvaluationRunCreate, EvaluationTaskType
+from lightly_studio.models.evaluation_sample_metric import EvaluationSampleMetricCreate
 from lightly_studio.resolvers import (
     annotation_resolver,
     collection_resolver,
     dataset_resolver,
     embedding_model_resolver,
     evaluation_run_resolver,
+    evaluation_sample_metric_resolver,
     image_resolver,
     metadata_resolver,
     object_track_resolver,
@@ -33,6 +35,7 @@ from tests.helpers_resolvers import (
     create_image,
     create_sample_embedding,
 )
+from tests.resolvers.evaluation_sample_metric_resolver.helpers import create_run_and_image
 
 
 def test_deep_copy__empty_collection(db_session: Session) -> None:
@@ -433,6 +436,65 @@ def test_deep_copy__can_delete_original_after_copy(db_session: Session) -> None:
         filters=AnnotationsFilter(collection_ids=[copied.children[0].collection_id]),
     )
     assert copied_annotations.total_count == 3
+
+
+def test_deep_copy__with_evaluation_sample_metrics(db_session: Session) -> None:
+    # Arrange
+    dataset = create_collection(session=db_session, collection_name="original")
+    run, image = create_run_and_image(db_session, dataset_collection_id=dataset.collection_id)
+    evaluation_sample_metric_resolver.create_many(
+        session=db_session,
+        records=[
+            EvaluationSampleMetricCreate(
+                evaluation_run_id=run.id,
+                sample_id=image.sample_id,
+                metric_name="precision",
+                value=0.9,
+            ),
+            EvaluationSampleMetricCreate(
+                evaluation_run_id=run.id,
+                sample_id=image.sample_id,
+                metric_name="recall",
+                value=0.7,
+            ),
+        ],
+    )
+
+    # Act
+    copied = dataset_resolver.deep_copy(
+        session=db_session,
+        dataset_id=dataset.dataset_id,
+        copy_name="copied",
+    )
+
+    # Assert - copied dataset has one evaluation run with the same metrics
+    copied_runs = evaluation_run_resolver.get_all_by_dataset_id(
+        session=db_session,
+        dataset_id=copied.dataset_id,
+    )
+    assert len(copied_runs) == 1
+    copied_run = copied_runs[0]
+    assert copied_run.id != run.id
+
+    copied_metrics = evaluation_sample_metric_resolver.get_all_by_evaluation_run_id(
+        session=db_session,
+        evaluation_run_id=copied_run.id,
+    )
+    assert len(copied_metrics) == 2
+    metric_map = {m.metric_name: m.value for m in copied_metrics}
+    assert metric_map == pytest.approx({"precision": 0.9, "recall": 0.7})
+
+    # Assert - copied metrics reference new sample IDs (not the originals)
+    original_sample_ids = {image.sample_id}
+    copied_sample_ids = {m.sample_id for m in copied_metrics}
+    assert original_sample_ids.isdisjoint(copied_sample_ids)
+
+    # Assert - original run metrics are untouched
+    original_metrics = evaluation_sample_metric_resolver.get_all_by_evaluation_run_id(
+        session=db_session,
+        evaluation_run_id=run.id,
+    )
+    assert len(original_metrics) == 2
 
 
 def test_deep_copy__raises_for_nonexistent_dataset(db_session: Session) -> None:
