@@ -8,7 +8,7 @@ from sqlmodel import Session
 from lightly_studio.models.annotation.annotation_base import AnnotationType
 from lightly_studio.models.collection import SampleType
 from lightly_studio.models.evaluation_run import EvaluationRunCreate, EvaluationTaskType
-from lightly_studio.models.evaluation_sample_metric import EvaluationSampleMetricTable
+from lightly_studio.models.evaluation_sample_metric import EvaluationSampleMetricCreate
 from lightly_studio.resolvers import (
     annotation_label_resolver,
     collection_resolver,
@@ -250,7 +250,7 @@ def test_delete_dataset__with_evaluation_sample_metrics(db_session: Session) -> 
     evaluation_sample_metric_resolver.create_many(
         session=db_session,
         records=[
-            EvaluationSampleMetricTable(
+            EvaluationSampleMetricCreate(
                 evaluation_run_id=run_id,
                 sample_id=image.sample_id,
                 metric_name="precision",

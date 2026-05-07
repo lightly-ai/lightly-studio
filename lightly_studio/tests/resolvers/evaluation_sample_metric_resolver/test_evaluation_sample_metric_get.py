@@ -73,3 +73,4 @@ def test_get_all_by_evaluation_run_id__excludes_other_runs(db_session: Session) 
     assert len(results) == 1
     assert results[0].evaluation_run_id == run1.id
     assert results[0].sample_id == image1.sample_id
+    assert results[0].value == pytest.approx(0.9)

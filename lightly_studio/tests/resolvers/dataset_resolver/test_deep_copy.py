@@ -12,7 +12,7 @@ from lightly_studio.models.annotation.object_track import ObjectTrackCreate
 from lightly_studio.models.annotation.segmentation import SegmentationAnnotationTable
 from lightly_studio.models.collection import SampleType
 from lightly_studio.models.evaluation_run import EvaluationRunCreate, EvaluationTaskType
-from lightly_studio.models.evaluation_sample_metric import EvaluationSampleMetricTable
+from lightly_studio.models.evaluation_sample_metric import EvaluationSampleMetricCreate
 from lightly_studio.resolvers import (
     annotation_resolver,
     collection_resolver,
@@ -445,13 +445,13 @@ def test_deep_copy__with_evaluation_sample_metrics(db_session: Session) -> None:
     evaluation_sample_metric_resolver.create_many(
         session=db_session,
         records=[
-            EvaluationSampleMetricTable(
+            EvaluationSampleMetricCreate(
                 evaluation_run_id=run.id,
                 sample_id=image.sample_id,
                 metric_name="precision",
                 value=0.9,
             ),
-            EvaluationSampleMetricTable(
+            EvaluationSampleMetricCreate(
                 evaluation_run_id=run.id,
                 sample_id=image.sample_id,
                 metric_name="recall",
