@@ -106,6 +106,7 @@
                 onkeydown: onKeyDown,
                 onpaste: handlePaste
             }}
+            onClear={handleClear}
             onUploadClick={triggerFileInput}
         />
     {/if}
