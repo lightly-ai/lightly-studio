@@ -8,7 +8,7 @@ until they are updated to handle the new tables.
 from sqlmodel import SQLModel
 
 # Tables handled by deep_copy and delete_dataset.
-_HANDLED_TABLES_COUNT = 20
+_HANDLED_TABLES_COUNT = 21
 
 # Tables not relevant for collection operations:
 # - setting (application-level, not collection-specific)
