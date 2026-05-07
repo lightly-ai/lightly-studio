@@ -24,7 +24,8 @@ from labelformat.model.object_detection import (
 from PIL import Image as PILImage
 from sqlmodel import Session
 
-from lightly_studio.core.image import add_images
+from lightly_studio.core import labelformat_helpers
+from lightly_studio.core.image import add_annotations, add_images
 from lightly_studio.models.image import ImageCreate
 from lightly_studio.resolvers import image_resolver
 from tests import helpers_resolvers
@@ -64,6 +65,7 @@ def test_load_into_collection_from_paths(db_session: Session, tmp_path: Path) ->
     "images_path",
     [
         "/",
+        "images",
         "/some/path/to/images",
         "/some/path/to/images/with/trailing/slash/",
         "s3://test-bucket/images",
@@ -93,7 +95,11 @@ def test_load_into_collection_from_labelformat__obj_det(
 
     assert samples[0].sample_id == sample_ids[0]
     assert samples[0].file_name == "image.jpg"
-    assert samples[0].file_path_abs == images_path.rstrip("/\\") + "/image.jpg"
+    if images_path == "images":
+        expected_file_path = str(Path("images/image.jpg").absolute())
+    else:
+        expected_file_path = images_path.rstrip("/\\") + "/image.jpg"
+    assert samples[0].file_path_abs == expected_file_path
     assert samples[0].width == 100
     assert samples[0].height == 200
     assert samples[0].sample.collection_id == collection.collection_id
@@ -184,6 +190,35 @@ def test_load_into_collection_from_labelformat__ins_seg(
     assert anns[0].segmentation_details.y == 5.0
     assert anns[0].segmentation_details.width == 10.0
     assert anns[0].segmentation_details.height == 5.0
+
+
+def test_load_into_dataset_from_labelformat__does_not_annotate_existing_images(
+    db_session: Session,
+) -> None:
+    collection = helpers_resolvers.create_collection(db_session)
+    images = helpers_resolvers.create_images(
+        db_session,
+        collection.collection_id,
+        [
+            ImageStub(path="/images/image.jpg", width=100, height=200),
+        ],
+    )
+    label_input = _get_labelformat_input_obj_det(filename="image.jpg")
+
+    sample_ids = add_images.load_into_dataset_from_labelformat(
+        session=db_session,
+        root_collection_id=collection.collection_id,
+        input_labels=label_input,
+        images_path="/images",
+    )
+
+    assert sample_ids == []
+    samples = image_resolver.get_all_by_collection_id(
+        session=db_session, collection_id=collection.collection_id
+    ).samples
+    assert len(samples) == 1
+    assert samples[0].sample_id == images[0].sample_id
+    assert len(samples[0].sample.annotations) == 0
 
 
 def test_load_into_collection_from_coco_captions(db_session: Session, tmp_path: Path) -> None:
@@ -300,7 +335,7 @@ def test_create_label_map(db_session: Session) -> None:
         filename="image.jpg", category_names=["dog", "cat"]
     )
 
-    label_map_1 = add_images._create_label_map(
+    label_map_1 = labelformat_helpers.create_label_map(
         session=db_session,
         root_collection_id=collection_id,
         input_labels=label_input,
@@ -310,7 +345,7 @@ def test_create_label_map(db_session: Session) -> None:
         filename="image.jpg", category_names=["dog", "cat", "bird"]
     )
 
-    label_map_2 = add_images._create_label_map(
+    label_map_2 = labelformat_helpers.create_label_map(
         session=db_session,
         root_collection_id=collection_id,
         input_labels=label_input_2,
@@ -415,6 +450,50 @@ def test_tag_samples_by_directory_tag_depth_1(
     assert sample_filename_to_tags["root_img.png"] == set()
 
 
+def test_tag_samples_by_directory__file_url_normalization(
+    db_session: Session,
+    tmp_path: Path,
+) -> None:
+    """Tests that tag_depth=1 works correctly with file:// URLs."""
+    # Arrange: Create directory structure with file:// URLs
+    site_1_dir = tmp_path / "site_1"
+    site_1_dir.mkdir()
+    (site_1_dir / "img1.png").touch()
+    (tmp_path / "img0.png").touch()
+
+    collection_table = helpers_resolvers.create_collection(db_session, "test_collection")
+
+    # Create samples with normalized absolute paths (as load_into_dataset_from_paths would)
+    created_images = helpers_resolvers.create_images(
+        db_session=db_session,
+        collection_id=collection_table.collection_id,
+        images=[
+            ImageStub(path=str((tmp_path / "img0.png").absolute())),
+            ImageStub(path=str((site_1_dir / "img1.png").absolute())),
+        ],
+    )
+
+    # Act: Tag using file:// URL (as user might pass)
+    file_url = f"file://{tmp_path}"
+    add_images.tag_samples_by_directory(
+        session=db_session,
+        collection_id=collection_table.collection_id,
+        input_path=file_url,
+        sample_ids=[img.sample_id for img in created_images],
+        tag_depth=1,
+    )
+
+    # Assert: Tags correctly extracted despite file:// URL normalization
+    samples = image_resolver.get_all_by_collection_id(
+        session=db_session, collection_id=collection_table.collection_id
+    ).samples
+    assert len(samples) == 2
+
+    sample_filename_to_tags = {s.file_name: {t.name for t in s.sample.tags} for s in samples}
+    assert sample_filename_to_tags["img0.png"] == set()
+    assert sample_filename_to_tags["img1.png"] == {"site_1"}
+
+
 def _get_labelformat_input_obj_det(
     filename: str = "image.jpg", category_names: list[str] | None = None
 ) -> LabelformatObjectDetectionInput:
@@ -478,3 +557,55 @@ def _get_captions_input(annotations_path: Path) -> None:
         ],
     }
     annotations_path.write_text(json.dumps(coco_caption_dict))
+
+
+def test_load_into_dataset_from_paths__file_url_normalization(
+    db_session: Session, tmp_path: Path
+) -> None:
+    """Test that file:// URLs are normalized so annotations can be matched later.
+
+    Without normalization in load_into_dataset_from_paths, file:// URLs would be stored
+    verbatim (e.g., file:///tmp/image.jpg), but add_annotations_from_labelformat strips
+    file:// and stores absolute paths (e.g., /tmp/image.jpg). This mismatch would cause
+    annotations to fail matching and be reported as missing. This test verifies that both
+    paths are normalized to the same canonical form so lookups succeed.
+    """
+    # Arrange
+    collection = helpers_resolvers.create_collection(db_session)
+    image_path = tmp_path / "image.jpg"
+    PILImage.new("RGB", (100, 200)).save(str(image_path))
+
+    # Act: Load with file:// directory URL
+    file_url = f"file://{tmp_path}"
+    sample_ids = add_images.load_into_dataset_from_paths(
+        session=db_session,
+        root_collection_id=collection.collection_id,
+        image_paths=[file_url + "/image.jpg"],
+    )
+
+    # Assert: Sample was created with normalized path
+    assert len(sample_ids) == 1
+    samples = image_resolver.get_all_by_collection_id(
+        session=db_session, collection_id=collection.collection_id
+    ).samples
+    assert len(samples) == 1
+    # Path should be absolute (file:// stripped and normalized)
+    assert samples[0].file_path_abs == str(image_path.absolute())
+
+    # Act: Now add annotations using the same file:// directory root
+    # (Without path normalization, this would fail to match)
+    helpers_resolvers.create_annotation_label(db_session, collection.collection_id, "dog")
+    label_input = _get_labelformat_input_obj_det(filename="image.jpg")
+
+    missing_paths = add_annotations.add_annotations_from_labelformat(
+        session=db_session,
+        root_collection_id=collection.collection_id,
+        input_labels=label_input,
+        images_root=file_url,  # Using file:// URL
+    )
+
+    # Assert: Annotation was matched (not reported as missing)
+    assert len(missing_paths) == 0, "Annotations should match normalized paths"
+    anns = samples[0].sample.annotations
+    assert len(anns) == 1
+    assert anns[0].annotation_label.annotation_label_name == "dog"
