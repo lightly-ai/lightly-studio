@@ -1,6 +1,6 @@
 import { embedImageFromFileMutation } from '$lib/api/lightly_studio_local/@tanstack/svelte-query.gen';
 import { createMutation } from '@tanstack/svelte-query';
-import { get, writable, type Writable } from 'svelte/store';
+import { get, readonly, writable, type Readable } from 'svelte/store';
 
 type UploadSuccessResult = {
     fileName: string;
@@ -20,11 +20,11 @@ type UseImageUploadParams = {
 
 type UseImageUploadReturn = {
     /** Name of the latest successfully uploaded file, `undefined` when not set. */
-    imageName: Writable<string | undefined>;
+    imageName: Readable<string | undefined>;
     /** Object URL used to render local preview of the selected image, `undefined` when not set. */
-    previewUrl: Writable<string | undefined>;
+    previewUrl: Readable<string | undefined>;
     /** `true` while an upload request is in flight. */
-    isUploading: Writable<boolean>;
+    isUploading: Readable<boolean>;
     /** Validates and uploads an image file to retrieve its embedding. */
     upload: (file: File) => Promise<void>;
     /** Clears current image state and revokes preview object URL if present. */
@@ -111,9 +111,9 @@ export function useImageUpload({
     };
 
     return {
-        imageName,
-        previewUrl,
-        isUploading,
+        imageName: readonly(imageName),
+        previewUrl: readonly(previewUrl),
+        isUploading: readonly(isUploading),
         upload,
         clear
     };
