@@ -133,6 +133,7 @@
 
     async function handleGridImageSearchDrop(event: Event) {
         const { url, fileName } = (event as CustomEvent<GridItemDragData>).detail;
+        debugger;
         try {
             const response = await fetch(url);
             if (!response.ok) {
@@ -437,15 +438,17 @@
                                 {/if}
                             {/snippet}
                             {#if (isImages || isVideos) && hasEmbeddings}
-                                <CollectionSearch
-                                    image={$searchImage}
-                                    isPending={$searchPending}
-                                    initialQueryText={$textEmbedding?.queryText ?? ''}
-                                    onSubmitText={search.setText}
-                                    onSubmitFile={search.setImage}
-                                    onClear={search.clear}
-                                    onError={search.onError}
-                                />
+                                <div class="relative" role="region" data-grid-search-drop-target>
+                                    <CollectionSearch
+                                        image={$searchImage}
+                                        isPending={$searchPending}
+                                        initialQueryText={$textEmbedding?.queryText ?? ''}
+                                        onSubmitText={search.setText}
+                                        onSubmitFile={search.setImage}
+                                        onClear={search.clear}
+                                        onError={search.onError}
+                                    />
+                                </div>
                             {/if}
                         </GridHeader>
                         <Separator class="mb-4 bg-border-hard" />
