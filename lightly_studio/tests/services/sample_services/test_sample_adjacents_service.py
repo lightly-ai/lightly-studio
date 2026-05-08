@@ -70,6 +70,7 @@ def test_get_adjacent_samples__delegates_to_image_resolver(
         collection_id=collection_id,
         filters=filters,
         text_embedding=text_embedding,
+        order_by=None,
     )
 
 

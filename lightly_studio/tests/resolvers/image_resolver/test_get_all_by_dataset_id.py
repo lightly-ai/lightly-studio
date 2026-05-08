@@ -3,6 +3,8 @@ from pydantic_core._pydantic_core import ValidationError
 from sqlmodel import Session
 
 from lightly_studio.api.routes.api.validators import Paginated
+from lightly_studio.core.dataset_query.image_sample_field import ImageSampleField
+from lightly_studio.core.dataset_query.order_by import OrderByField
 from lightly_studio.resolvers import (
     image_resolver,
     tag_resolver,
@@ -653,3 +655,114 @@ def test_get_all_by_collection_id__filters_by_sample_ids(db_session: Session) ->
     result_sample_ids = [sample.sample_id for sample in filtered_result.samples]
     assert result_sample_ids == selected_sample_ids
     assert filtered_result.total_count == len(selected_sample_ids)
+
+
+def test_get_all_by_collection_id__sort_by_file_name_asc(db_session: Session) -> None:
+    collection = create_collection(session=db_session)
+    collection_id = collection.collection_id
+
+    create_image(session=db_session, collection_id=collection_id, file_path_abs="/images/c.png")
+    create_image(session=db_session, collection_id=collection_id, file_path_abs="/images/a.png")
+    create_image(session=db_session, collection_id=collection_id, file_path_abs="/images/b.png")
+
+    result = image_resolver.get_all_by_collection_id(
+        session=db_session,
+        collection_id=collection_id,
+        order_by=[OrderByField(ImageSampleField.file_name)],
+    )
+
+    assert [s.file_name for s in result.samples] == ["a.png", "b.png", "c.png"]
+
+
+def test_get_all_by_collection_id__sort_by_file_name_desc(db_session: Session) -> None:
+    collection = create_collection(session=db_session)
+    collection_id = collection.collection_id
+
+    create_image(session=db_session, collection_id=collection_id, file_path_abs="/images/c.png")
+    create_image(session=db_session, collection_id=collection_id, file_path_abs="/images/a.png")
+    create_image(session=db_session, collection_id=collection_id, file_path_abs="/images/b.png")
+
+    result = image_resolver.get_all_by_collection_id(
+        session=db_session,
+        collection_id=collection_id,
+        order_by=[OrderByField(ImageSampleField.file_name).desc()],
+    )
+
+    assert [s.file_name for s in result.samples] == ["c.png", "b.png", "a.png"]
+
+
+def test_get_all_by_collection_id__with_similarity_and_order_by(db_session: Session) -> None:
+    collection = create_collection(session=db_session)
+    collection_id = collection.collection_id
+
+    embedding_model = create_embedding_model(
+        session=db_session,
+        collection_id=collection_id,
+        embedding_model_name="example_embedding_model",
+        embedding_dimension=2,
+    )
+
+    image_b = create_image(
+        session=db_session, collection_id=collection_id, file_path_abs="/images/b.png"
+    )
+    image_c = create_image(
+        session=db_session, collection_id=collection_id, file_path_abs="/images/c.png"
+    )
+    image_a = create_image(
+        session=db_session, collection_id=collection_id, file_path_abs="/images/a.png"
+    )
+
+    create_sample_embedding(
+        session=db_session,
+        sample_id=image_a.sample_id,
+        embedding=[1.0, 0.0],
+        embedding_model_id=embedding_model.embedding_model_id,
+    )
+    create_sample_embedding(
+        session=db_session,
+        sample_id=image_b.sample_id,
+        embedding=[1.0, 0.0],
+        embedding_model_id=embedding_model.embedding_model_id,
+    )
+    create_sample_embedding(
+        session=db_session,
+        sample_id=image_c.sample_id,
+        embedding=[-1.0, 0.0],
+        embedding_model_id=embedding_model.embedding_model_id,
+    )
+
+    result = image_resolver.get_all_by_collection_id(
+        session=db_session,
+        collection_id=collection_id,
+        text_embedding=[1.0, 0.0],
+        order_by=[OrderByField(ImageSampleField.file_name)],
+    )
+
+    assert len(result.samples) == 3
+    # image_a and image_b are tied by similarity; file_name asc places a before b
+    assert result.samples[0].file_name == "a.png"
+    assert result.samples[1].file_name == "b.png"
+    assert result.samples[2].file_name == "c.png"
+
+
+def test_get_all_by_collection_id__sort_by_width_asc(db_session: Session) -> None:
+    collection = create_collection(session=db_session)
+    collection_id = collection.collection_id
+
+    create_image(
+        session=db_session, collection_id=collection_id, file_path_abs="/a.png", width=300
+    )
+    create_image(
+        session=db_session, collection_id=collection_id, file_path_abs="/b.png", width=100
+    )
+    create_image(
+        session=db_session, collection_id=collection_id, file_path_abs="/c.png", width=200
+    )
+
+    result = image_resolver.get_all_by_collection_id(
+        session=db_session,
+        collection_id=collection_id,
+        order_by=[OrderByField(ImageSampleField.width)],
+    )
+
+    assert [s.width for s in result.samples] == [100, 200, 300]

@@ -9,6 +9,7 @@ from fastapi import APIRouter, Depends, HTTPException, Path, Query
 from pydantic import BaseModel, Field
 
 from lightly_studio.api.routes.api.collection import get_and_validate_collection_id
+from lightly_studio.api.routes.api.sort import SortFieldExpr, sort_field_expr_to_order_by
 from lightly_studio.api.routes.api.status import (
     HTTP_STATUS_NOT_FOUND,
 )
@@ -38,6 +39,7 @@ class ReadImagesRequest(BaseModel):
     pagination: Paginated | None = Field(
         None, description="Pagination parameters for offset and limit"
     )
+    sort_by: list[SortFieldExpr] | None = Field(None, description="Sort expressions for ordering")
 
 
 @image_router.post("/collections/{collection_id}/images/list")
@@ -56,6 +58,9 @@ def read_images(
     Returns:
         A list of filtered samples.
     """
+    order_by = (
+        [sort_field_expr_to_order_by(expr) for expr in body.sort_by] if body.sort_by else None
+    )
     result = image_resolver.get_all_by_collection_id(
         session=session,
         collection_id=collection_id,
@@ -63,6 +68,7 @@ def read_images(
         filters=body.filters,
         text_embedding=body.text_embedding,
         sample_ids=body.sample_ids,
+        order_by=order_by,
     )
     # TODO(Michal, 10/2025): Add SampleView to ImageView and then use a response model
     # instead of manual conversion.
