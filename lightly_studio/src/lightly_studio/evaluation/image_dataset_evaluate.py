@@ -10,6 +10,7 @@ from sqlmodel import Session
 
 from lightly_studio.core.image.image_sample import ImageSample
 from lightly_studio.evaluation.object_detection_metric import BoundingBox, match_image
+from lightly_studio.evaluation.validators import resolve_and_validate_collection
 from lightly_studio.models.annotation.annotation_base import AnnotationBaseTable, AnnotationType
 from lightly_studio.models.evaluation_run import (
     EvaluationRunCreate,
@@ -45,29 +46,33 @@ class ImageDatasetEvaluate:
     and keeps evaluation-specific logic separate from ``ImageDataset``.
     """
 
-    def __init__(self, session: Session, samples: Iterable[ImageSample]) -> None:
+    def __init__(
+        self, session: Session, collection_id: UUID, samples: Iterable[ImageSample]
+    ) -> None:
         """Initialize the evaluator facade.
 
         Args:
             session: Database session used by resolver calls.
-            samples: Dataset samples selected for evaluation.
+            collection_id: ID of the collection being evaluated.
+            samples: Samples selected for evaluation.
         """
         self.session = session
+        self.collection_id = collection_id
         self.samples = samples
 
     def object_detection(
         self,
         name: str,
-        gt_collection_id: UUID,
-        pred_collection_id: UUID,
+        gt_collection_name: str,
+        pred_collection_name: str,
         config: ObjectDetectionEvaluationConfig | None = None,
     ) -> Mapping[str, float]:
         """Create an object-detection evaluation run and persist per-image metrics.
 
         Args:
             name: Display name of the evaluation run.
-            gt_collection_id: Annotation collection ID containing ground truth labels.
-            pred_collection_id: Annotation collection ID containing predictions.
+            gt_collection_name: Name of the annotation collection containing ground truth labels.
+            pred_collection_name: Name of the annotation collection containing predictions.
             config: Optional object-detection evaluation config. If omitted,
                 defaults are used.
 
@@ -75,7 +80,18 @@ class ImageDatasetEvaluate:
             Empty mapping. Per-image metrics are persisted to the database.
         """
         config = config or ObjectDetectionEvaluationConfig()
-
+        gt_collection_id = resolve_and_validate_collection(
+            session=self.session,
+            collection_id=self.collection_id,
+            collection_name=gt_collection_name,
+            task_type=EvaluationTaskType.OBJECT_DETECTION,
+        )
+        pred_collection_id = resolve_and_validate_collection(
+            session=self.session,
+            collection_id=self.collection_id,
+            collection_name=pred_collection_name,
+            task_type=EvaluationTaskType.OBJECT_DETECTION,
+        )
         evaluation_run = evaluation_run_resolver.create(
             session=self.session,
             evaluation_run_input=EvaluationRunCreate(
