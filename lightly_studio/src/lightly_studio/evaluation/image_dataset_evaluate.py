@@ -9,7 +9,7 @@ from pydantic import BaseModel, Field
 from sqlmodel import Session
 
 from lightly_studio.core.image.image_sample import ImageSample
-from lightly_studio.evaluation.validators import resolve_and_validate_collections
+from lightly_studio.evaluation.validators import resolve_and_validate_collection
 from lightly_studio.models.evaluation_run import (
     EvaluationRunCreate,
     EvaluationTaskType,
@@ -73,11 +73,16 @@ class ImageDatasetEvaluate:
             metrics once metric computation is enabled.
         """
         config = config or ObjectDetectionEvaluationConfig()
-        gt_collection_id, pred_collection_id = resolve_and_validate_collections(
+        gt_collection_id = resolve_and_validate_collection(
             session=self.session,
             collection_id=self.collection_id,
-            gt_collection_name=gt_collection_name,
-            pred_collection_name=pred_collection_name,
+            collection_name=gt_collection_name,
+            task_type=EvaluationTaskType.OBJECT_DETECTION,
+        )
+        pred_collection_id = resolve_and_validate_collection(
+            session=self.session,
+            collection_id=self.collection_id,
+            collection_name=pred_collection_name,
             task_type=EvaluationTaskType.OBJECT_DETECTION,
         )
         evaluation_run_resolver.create(

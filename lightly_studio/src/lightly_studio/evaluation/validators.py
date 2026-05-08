@@ -18,70 +18,45 @@ _TASK_TO_ANNOTATION_TYPE: dict[EvaluationTaskType, AnnotationType] = {
 }
 
 
-def resolve_and_validate_collections(
+def resolve_and_validate_collection(
     session: Session,
     collection_id: UUID,
-    gt_collection_name: str,
-    pred_collection_name: str,
+    collection_name: str,
     task_type: EvaluationTaskType,
-) -> tuple[UUID, UUID]:
-    """Resolve collection names to IDs and validate their annotation types.
+) -> UUID:
+    """Resolve a collection name to its ID and validate its annotation type.
 
     Args:
         session: Database session used by resolver calls.
         collection_id: ID of the parent collection.
-        gt_collection_name: Name of the ground-truth annotation collection.
-        pred_collection_name: Name of the prediction annotation collection.
+        collection_name: Name of the annotation collection to resolve.
         task_type: Evaluation task type; determines the expected annotation type.
 
     Returns:
-        Tuple of (gt_collection_id, pred_collection_id).
+        The resolved collection ID.
 
     Raises:
-        ValueError: If task_type is not supported, if either collection does not
-            exist, or if a collection contains annotations of a type other than
-            the type expected for task_type.
+        ValueError: If task_type is not supported, if the collection does not
+            exist, or if it contains annotations of a type other than the type
+            expected for task_type.
     """
     if task_type not in _TASK_TO_ANNOTATION_TYPE:
         raise ValueError(f"Unsupported evaluation task type: {task_type!r}.")
     annotation_type = _TASK_TO_ANNOTATION_TYPE[task_type]
-    gt_collection_id = collection_resolver.get_by_name(
+    resolved_id = collection_resolver.get_by_name(
         session=session,
         parent_collection_id=collection_id,
-        name=gt_collection_name,
+        name=collection_name,
     )
-    if gt_collection_id is None:
-        raise ValueError(f"Collection {gt_collection_name!r} not found.")
-    pred_collection_id = collection_resolver.get_by_name(
-        session=session,
-        parent_collection_id=collection_id,
-        name=pred_collection_name,
-    )
-    if pred_collection_id is None:
-        raise ValueError(f"Collection {pred_collection_name!r} not found.")
-
-    # Validate that gt and pred annotation collections have the correct sample type.
-    _validate_annotation_collection(
-        session=session,
-        collection_id=gt_collection_id,
-    )
-    _validate_annotation_collection(
-        session=session,
-        collection_id=pred_collection_id,
-    )
-
-    # Validate that all annotations in gt and pred collections have the expected annotation type.
+    if resolved_id is None:
+        raise ValueError(f"Collection {collection_name!r} not found.")
+    _validate_annotation_collection(session=session, collection_id=resolved_id)
     _validate_collection_annotation_type(
         session=session,
-        collection_id=gt_collection_id,
+        collection_id=resolved_id,
         expected_type=annotation_type,
     )
-    _validate_collection_annotation_type(
-        session=session,
-        collection_id=pred_collection_id,
-        expected_type=annotation_type,
-    )
-    return gt_collection_id, pred_collection_id
+    return resolved_id
 
 
 def _validate_collection_annotation_type(

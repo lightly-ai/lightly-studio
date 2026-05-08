@@ -11,7 +11,7 @@ from lightly_studio.core.image.image_dataset import ImageDataset
 from lightly_studio.evaluation.validators import (
     _validate_annotation_collection,
     _validate_collection_annotation_type,
-    resolve_and_validate_collections,
+    resolve_and_validate_collection,
 )
 from lightly_studio.models.annotation.annotation_base import AnnotationType
 from lightly_studio.models.collection import SampleType
@@ -132,7 +132,7 @@ def test__validate_annotation_collection__passes_for_annotation_collection(
     _validate_annotation_collection(session=dataset.session, collection_id=annotation_collection_id)
 
 
-def test_resolve_and_validate_collections__passes(
+def test_resolve_and_validate_collection__passes(
     patch_collection: None,  # noqa: ARG001
 ) -> None:
     dataset = ImageDataset.create(name="test_dataset")
@@ -142,65 +142,29 @@ def test_resolve_and_validate_collections__passes(
         sample_type=SampleType.ANNOTATION,
         name="gt",
     )
-    collection_resolver.get_or_create_child_collection(
+    collection_id = resolve_and_validate_collection(
         session=dataset.session,
         collection_id=dataset.collection_id,
-        sample_type=SampleType.ANNOTATION,
-        name="pred",
-    )
-    gt_id, pred_id = resolve_and_validate_collections(
-        session=dataset.session,
-        collection_id=dataset.collection_id,
-        gt_collection_name="gt",
-        pred_collection_name="pred",
+        collection_name="gt",
         task_type=EvaluationTaskType.OBJECT_DETECTION,
     )
-    assert gt_id is not None
-    assert pred_id is not None
-    assert gt_id != pred_id
+    assert collection_id is not None
 
 
-def test_resolve_and_validate_collections__raises_when_gt_not_found(
+def test_resolve_and_validate_collection__raises_when_not_found(
     patch_collection: None,  # noqa: ARG001
 ) -> None:
     dataset = ImageDataset.create(name="test_dataset")
-    collection_resolver.get_or_create_child_collection(
-        session=dataset.session,
-        collection_id=dataset.collection_id,
-        sample_type=SampleType.ANNOTATION,
-        name="pred",
-    )
     with pytest.raises(ValueError, match="'gt'"):
-        resolve_and_validate_collections(
+        resolve_and_validate_collection(
             session=dataset.session,
             collection_id=dataset.collection_id,
-            gt_collection_name="gt",
-            pred_collection_name="pred",
+            collection_name="gt",
             task_type=EvaluationTaskType.OBJECT_DETECTION,
         )
 
 
-def test_resolve_and_validate_collections__raises_when_pred_not_found(
-    patch_collection: None,  # noqa: ARG001
-) -> None:
-    dataset = ImageDataset.create(name="test_dataset")
-    collection_resolver.get_or_create_child_collection(
-        session=dataset.session,
-        collection_id=dataset.collection_id,
-        sample_type=SampleType.ANNOTATION,
-        name="gt",
-    )
-    with pytest.raises(ValueError, match="'pred'"):
-        resolve_and_validate_collections(
-            session=dataset.session,
-            collection_id=dataset.collection_id,
-            gt_collection_name="gt",
-            pred_collection_name="pred",
-            task_type=EvaluationTaskType.OBJECT_DETECTION,
-        )
-
-
-def test_resolve_and_validate_collections__raises_when_gt_has_wrong_sample_type(
+def test_resolve_and_validate_collection__raises_when_wrong_sample_type(
     patch_collection: None,  # noqa: ARG001
 ) -> None:
     dataset = ImageDataset.create(name="test_dataset")
@@ -210,59 +174,25 @@ def test_resolve_and_validate_collections__raises_when_gt_has_wrong_sample_type(
         sample_type=SampleType.IMAGE,
         name="gt",
     )
-    collection_resolver.get_or_create_child_collection(
-        session=dataset.session,
-        collection_id=dataset.collection_id,
-        sample_type=SampleType.ANNOTATION,
-        name="pred",
-    )
     with pytest.raises(ValueError, match="annotation"):
-        resolve_and_validate_collections(
+        resolve_and_validate_collection(
             session=dataset.session,
             collection_id=dataset.collection_id,
-            gt_collection_name="gt",
-            pred_collection_name="pred",
+            collection_name="gt",
             task_type=EvaluationTaskType.OBJECT_DETECTION,
         )
 
 
-def test_resolve_and_validate_collections__raises_when_pred_has_wrong_sample_type(
-    patch_collection: None,  # noqa: ARG001
-) -> None:
-    dataset = ImageDataset.create(name="test_dataset")
-    collection_resolver.get_or_create_child_collection(
-        session=dataset.session,
-        collection_id=dataset.collection_id,
-        sample_type=SampleType.ANNOTATION,
-        name="gt",
-    )
-    collection_resolver.get_or_create_child_collection(
-        session=dataset.session,
-        collection_id=dataset.collection_id,
-        sample_type=SampleType.IMAGE,
-        name="pred",
-    )
-    with pytest.raises(ValueError, match="annotation"):
-        resolve_and_validate_collections(
-            session=dataset.session,
-            collection_id=dataset.collection_id,
-            gt_collection_name="gt",
-            pred_collection_name="pred",
-            task_type=EvaluationTaskType.OBJECT_DETECTION,
-        )
-
-
-def test_resolve_and_validate_collections__raises_on_unsupported_task_type(
+def test_resolve_and_validate_collection__raises_on_unsupported_task_type(
     patch_collection: None,  # noqa: ARG001
     mocker: MockerFixture,
 ) -> None:
     dataset = ImageDataset.create(name="test_dataset")
     unsupported_task_type = mocker.MagicMock(spec=EvaluationTaskType)
     with pytest.raises(ValueError, match="Unsupported evaluation task type"):
-        resolve_and_validate_collections(
+        resolve_and_validate_collection(
             session=dataset.session,
             collection_id=dataset.collection_id,
-            gt_collection_name="gt",
-            pred_collection_name="pred",
+            collection_name="gt",
             task_type=unsupported_task_type,
         )
