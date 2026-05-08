@@ -14,6 +14,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Added a select-all button to select all grid items matching the active filters.
 - Added API endpoints to fetch only sample IDs with optional filters for images, video frames, and annotations (used by the select-all keyboard shortcut).
 - Added `Cmd+A` / `Ctrl+A` keyboard shortcut to select all samples matching the current filters in grid views (images, videos, video frames, annotations).
+- Added `lt_train_script` to the Python API (`lightly_studio.lt_train_script`) to generate a LightlyTrain object detection script from split tags. The helper exports train/val COCO annotation files via `dataset.export(...).to_coco_object_detections(...)` and writes `train_object_detection.py` with the exported paths.
 
 ### Changed
 
