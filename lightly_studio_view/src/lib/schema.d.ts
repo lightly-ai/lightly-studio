@@ -1900,6 +1900,8 @@ export interface components {
             filters?: (components["schemas"]["ImageFilter"] | components["schemas"]["VideoFilter"] | components["schemas"]["VideoFrameAdjacentFilter"] | components["schemas"]["AnnotationsFilter"]) | null;
             /** Text Embedding */
             text_embedding?: number[] | null;
+            /** Sort By */
+            sort_by?: components["schemas"]["SortFieldExpr"][] | null;
         };
         /**
          * AdjacentResultView
@@ -2883,6 +2885,12 @@ export interface components {
             height?: components["schemas"]["FilterDimensions"] | null;
         };
         /**
+         * ImageSortField
+         * @description Native image fields available for sorting.
+         * @enum {string}
+         */
+        ImageSortField: "file_name" | "file_path_abs" | "created_at" | "width" | "height";
+        /**
          * ImageView
          * @description Image class when retrieving.
          */
@@ -3251,6 +3259,11 @@ export interface components {
             sample_ids?: string[] | null;
             /** @description Pagination parameters for offset and limit */
             pagination?: components["schemas"]["Paginated"] | null;
+            /**
+             * Sort By
+             * @description Sort expressions for ordering
+             */
+            sort_by?: components["schemas"]["SortFieldExpr"][] | null;
         };
         /**
          * ReadSamplesRequest
@@ -3617,6 +3630,24 @@ export interface components {
              * Format: date-time
              */
             updated_at: string;
+        };
+        /**
+         * SortDirection
+         * @description Sort direction for a sort field expression.
+         * @enum {string}
+         */
+        SortDirection: "asc" | "desc";
+        /**
+         * SortFieldExpr
+         * @description A sorting expression for a single field.
+         *
+         *     Attributes:
+         *         field_name: The native image field to sort by.
+         *         direction: The sort direction, either ascending or descending.
+         */
+        SortFieldExpr: {
+            field_name: components["schemas"]["ImageSortField"];
+            direction: components["schemas"]["SortDirection"];
         };
         /**
          * StringExpr

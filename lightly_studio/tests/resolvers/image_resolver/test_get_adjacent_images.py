@@ -349,10 +349,6 @@ def test_get_adjacent_images__sort_by_width_desc_with_duplicate_values(db_sessio
     collection = helpers_resolvers.create_collection(session=db_session)
     collection_id = collection.collection_id
 
-    # Insert image_b first so it occupies the "lower" internal row position.
-    # image_a is inserted second — it sorts BEFORE image_b alphabetically but AFTER in
-    # insertion order.  Without a tiebreaker the DB is free to keep insertion order for
-    # tied-width rows, so image_b ends up before image_a.
     image_b = helpers_resolvers.create_image(
         session=db_session,
         collection_id=collection_id,
@@ -372,24 +368,23 @@ def test_get_adjacent_images__sort_by_width_desc_with_duplicate_values(db_sessio
         width=1080,
     )
 
-    # With a stable secondary tiebreaker (file_path_abs ASC), the expected order is:
-    #   [image_a (1920, /a.png), image_b (1920, /b.png), image_c (1080, /c.png)]
-    # So image_a must be the FIRST sample: no previous, and next is image_b.
-    #
-    # Without the tiebreaker the DB returns [image_b, image_a, image_c] (insertion order
-    # for the tie), making image_a the SECOND row — previous_sample_id would be image_b
-    # instead of None.
+    # Both image_a and image_b have width=1920. The secondary tiebreaker is sample_id ASC,
+    # so whichever has the smaller sample_id comes first.
+    first_image, second_image = (
+        (image_a, image_b) if image_a.sample_id < image_b.sample_id else (image_b, image_a)
+    )
+
     result = image_resolver.get_adjacent_images(
         session=db_session,
-        sample_id=image_a.sample_id,
+        sample_id=first_image.sample_id,
         collection_id=collection_id,
         order_by=[OrderByField(ImageSampleField.width).desc()],
     )
 
     assert result is not None
-    assert result.previous_sample_id is None  # image_a is first in stable order
-    assert result.sample_id == image_a.sample_id
-    assert result.next_sample_id == image_b.sample_id
+    assert result.previous_sample_id is None
+    assert result.sample_id == first_image.sample_id
+    assert result.next_sample_id == second_image.sample_id
 
 
 def test_get_adjacent_images__returns_none_when_sample_not_in_filter(db_session: Session) -> None:
