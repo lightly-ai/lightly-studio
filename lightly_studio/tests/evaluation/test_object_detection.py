@@ -2,10 +2,327 @@
 
 from __future__ import annotations
 
+from uuid import uuid4
+
 import numpy as np
 import pytest
 
 from lightly_studio.evaluation import object_detection_metric
+from lightly_studio.evaluation.object_detection_metric import BoundingBox
+
+
+def test_match_with_iou_matrix__wrong_iou_matrix_shape() -> None:
+    pred_id = uuid4()
+    gt_id = uuid4()
+    label_id = uuid4()
+    preds = [
+        BoundingBox(
+            annotation_id=pred_id,
+            x=0,
+            y=0,
+            width=10,
+            height=10,
+            label_id=label_id,
+            confidence=0.9,
+        )
+    ]
+    gts = [
+        BoundingBox(annotation_id=gt_id, x=0, y=0, width=10, height=10, label_id=label_id),
+        BoundingBox(annotation_id=uuid4(), x=20, y=0, width=10, height=10, label_id=label_id),
+    ]
+    iou_matrix = np.array([[1.0]])
+    with pytest.raises(ValueError, match="iou_matrix shape"):
+        object_detection_metric.match_with_iou_matrix(
+            predictions=preds,
+            ground_truths=gts,
+            iou_matrix=iou_matrix,
+            iou_threshold=0.5,
+        )
+
+
+def test_match_with_iou_matrix__no_preds_no_gts() -> None:
+    result = object_detection_metric.match_with_iou_matrix(
+        predictions=[],
+        ground_truths=[],
+        iou_matrix=np.empty((0, 0)),
+        iou_threshold=0.5,
+    )
+    assert result.tp == 0
+    assert result.fp == 0
+    assert result.fn == 0
+
+
+def test_match_with_iou_matrix__no_preds() -> None:
+    gt_id = uuid4()
+    label_id = uuid4()
+    gts = [BoundingBox(annotation_id=gt_id, x=0, y=0, width=10, height=10, label_id=label_id)]
+    result = object_detection_metric.match_with_iou_matrix(
+        predictions=[],
+        ground_truths=gts,
+        iou_matrix=np.empty((0, 1)),
+        iou_threshold=0.5,
+    )
+    assert result.tp == 0
+    assert result.fp == 0
+    assert result.fn == 1
+    assert result.unmatched_gt_ids == [gt_id]
+
+
+def test_match_with_iou_matrix__no_gts() -> None:
+    pred_id = uuid4()
+    label_id = uuid4()
+    preds = [
+        BoundingBox(
+            annotation_id=pred_id,
+            x=0,
+            y=0,
+            width=10,
+            height=10,
+            label_id=label_id,
+            confidence=0.9,
+        )
+    ]
+    result = object_detection_metric.match_with_iou_matrix(
+        predictions=preds,
+        ground_truths=[],
+        iou_matrix=np.empty((1, 0)),
+        iou_threshold=0.5,
+    )
+    assert result.tp == 0
+    assert result.fp == 1
+    assert result.fn == 0
+    assert result.unmatched_prediction_ids == [pred_id]
+
+
+def test_match_with_iou_matrix__greedy_match_by_confidence() -> None:
+    pred_high_id = uuid4()
+    pred_low_id = uuid4()
+    gt_id = uuid4()
+    label_id = uuid4()
+    preds = [
+        BoundingBox(
+            annotation_id=pred_high_id,
+            x=0,
+            y=0,
+            width=10,
+            height=10,
+            label_id=label_id,
+            confidence=0.9,
+        ),
+        BoundingBox(
+            annotation_id=pred_low_id,
+            x=0,
+            y=0,
+            width=10,
+            height=10,
+            label_id=label_id,
+            confidence=0.4,
+        ),
+    ]
+    gts = [BoundingBox(annotation_id=gt_id, x=0, y=0, width=10, height=10, label_id=label_id)]
+    iou_matrix = np.array([[1.0], [1.0]])
+    result = object_detection_metric.match_with_iou_matrix(
+        predictions=preds,
+        ground_truths=gts,
+        iou_matrix=iou_matrix,
+        iou_threshold=0.5,
+    )
+    assert result.tp == 1
+    assert result.fp == 1
+    assert result.fn == 0
+    assert result.matches[0].pred_id == pred_high_id
+    assert result.unmatched_prediction_ids == [pred_low_id]
+
+
+def test_match_with_iou_matrix__multiple_preds_multiple_gts() -> None:
+    pred_high_id = uuid4()
+    pred_mid_id = uuid4()
+    pred_low_id = uuid4()
+    gt_first_id = uuid4()
+    gt_second_id = uuid4()
+    label_id = uuid4()
+    preds = [
+        BoundingBox(
+            annotation_id=pred_high_id,
+            x=0,
+            y=0,
+            width=10,
+            height=10,
+            label_id=label_id,
+            confidence=0.9,
+        ),
+        BoundingBox(
+            annotation_id=pred_mid_id,
+            x=20,
+            y=0,
+            width=10,
+            height=10,
+            label_id=label_id,
+            confidence=0.8,
+        ),
+        BoundingBox(
+            annotation_id=pred_low_id,
+            x=40,
+            y=0,
+            width=10,
+            height=10,
+            label_id=label_id,
+            confidence=0.7,
+        ),
+    ]
+    gts = [
+        BoundingBox(annotation_id=gt_first_id, x=0, y=0, width=10, height=10, label_id=label_id),
+        BoundingBox(annotation_id=gt_second_id, x=20, y=0, width=10, height=10, label_id=label_id),
+    ]
+    iou_matrix = np.array(
+        [
+            [0.5, 0.0],
+            [0.0, 0.5],
+            [0.3, 0.3],
+        ]
+    )
+    result = object_detection_metric.match_with_iou_matrix(
+        predictions=preds,
+        ground_truths=gts,
+        iou_matrix=iou_matrix,
+        iou_threshold=0.5,
+    )
+    assert result.tp == 2
+    assert result.fp == 1
+    assert result.fn == 0
+    assert result.matches[0].pred_id == pred_high_id
+    assert result.matches[1].pred_id == pred_mid_id
+    assert result.matches[0].gt_id == gt_first_id
+    assert result.matches[1].gt_id == gt_second_id
+    assert result.matches[0].iou == pytest.approx(0.5)
+    assert result.matches[1].iou == pytest.approx(0.5)
+    assert result.unmatched_prediction_ids == [pred_low_id]
+
+
+def test_match_with_iou_matrix__equal_confidence_uses_list_order() -> None:
+    """Predictions with equal confidence are matched in list order (first wins)."""
+    pred_first_id = uuid4()
+    pred_second_id = uuid4()
+    gt_id = uuid4()
+    label_id = uuid4()
+    preds = [
+        BoundingBox(
+            annotation_id=pred_first_id,
+            x=0,
+            y=0,
+            width=10,
+            height=10,
+            label_id=label_id,
+            confidence=0.8,
+        ),
+        BoundingBox(
+            annotation_id=pred_second_id,
+            x=0,
+            y=0,
+            width=10,
+            height=10,
+            label_id=label_id,
+            confidence=0.8,
+        ),
+    ]
+    gts = [BoundingBox(annotation_id=gt_id, x=0, y=0, width=10, height=10, label_id=label_id)]
+    iou_matrix = np.array([[1.0], [1.0]])
+    result = object_detection_metric.match_with_iou_matrix(
+        predictions=preds,
+        ground_truths=gts,
+        iou_matrix=iou_matrix,
+        iou_threshold=0.5,
+    )
+    assert result.tp == 1
+    assert result.fp == 1
+    assert result.matches[0].pred_id == pred_first_id
+    assert result.unmatched_prediction_ids == [pred_second_id]
+
+
+def test_match_with_iou_matrix__pred_without_confidence_treated_as_zero() -> None:
+    pred_with_conf_id = uuid4()
+    pred_no_conf_id = uuid4()
+    gt_id = uuid4()
+    label_id = uuid4()
+    preds = [
+        BoundingBox(
+            annotation_id=pred_no_conf_id,
+            x=0,
+            y=0,
+            width=10,
+            height=10,
+            label_id=label_id,
+            confidence=None,
+        ),
+        BoundingBox(
+            annotation_id=pred_with_conf_id,
+            x=0,
+            y=0,
+            width=10,
+            height=10,
+            label_id=label_id,
+            confidence=0.9,
+        ),
+    ]
+    gts = [BoundingBox(annotation_id=gt_id, x=0, y=0, width=10, height=10, label_id=label_id)]
+    iou_matrix = np.array([[1.0], [1.0]])
+    result = object_detection_metric.match_with_iou_matrix(
+        predictions=preds,
+        ground_truths=gts,
+        iou_matrix=iou_matrix,
+        iou_threshold=0.5,
+    )
+    assert result.tp == 1
+    assert result.matches[0].pred_id == pred_with_conf_id
+
+
+def test_match_with_iou_matrix__all_preds_below_threshold() -> None:
+    pred_first_id = uuid4()
+    pred_second_id = uuid4()
+    gt_first_id = uuid4()
+    gt_second_id = uuid4()
+    label_id = uuid4()
+    preds = [
+        BoundingBox(
+            annotation_id=pred_first_id,
+            x=0,
+            y=0,
+            width=10,
+            height=10,
+            label_id=label_id,
+            confidence=0.9,
+        ),
+        BoundingBox(
+            annotation_id=pred_second_id,
+            x=20,
+            y=0,
+            width=10,
+            height=10,
+            label_id=label_id,
+            confidence=0.8,
+        ),
+    ]
+    gts = [
+        BoundingBox(annotation_id=gt_first_id, x=0, y=0, width=10, height=10, label_id=label_id),
+        BoundingBox(annotation_id=gt_second_id, x=20, y=0, width=10, height=10, label_id=label_id),
+    ]
+    iou_matrix = np.array(
+        [
+            [0.4, 0.1],
+            [0.1, 0.3],
+        ]
+    )
+    result = object_detection_metric.match_with_iou_matrix(
+        predictions=preds,
+        ground_truths=gts,
+        iou_matrix=iou_matrix,
+        iou_threshold=0.5,
+    )
+    assert result.tp == 0
+    assert result.fp == 2
+    assert result.fn == 2
+    assert set(result.unmatched_prediction_ids) == {pred_first_id, pred_second_id}
+    assert set(result.unmatched_gt_ids) == {gt_first_id, gt_second_id}
 
 
 def test_compute_iou_matrix__empty_predictions() -> None:
