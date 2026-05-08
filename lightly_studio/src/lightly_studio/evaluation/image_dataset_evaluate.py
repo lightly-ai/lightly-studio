@@ -2,12 +2,13 @@
 
 from __future__ import annotations
 
-from collections.abc import Mapping
+from collections.abc import Iterable, Mapping
 from uuid import UUID
 
 from pydantic import BaseModel, Field
 from sqlmodel import Session
 
+from lightly_studio.core.image.image_sample import ImageSample
 from lightly_studio.models.evaluation_run import (
     EvaluationRunCreate,
     EvaluationTaskType,
@@ -33,13 +34,15 @@ class ImageDatasetEvaluate:
     and keeps evaluation-specific logic separate from ``ImageDataset``.
     """
 
-    def __init__(self, session: Session) -> None:
+    def __init__(self, session: Session, samples: Iterable[ImageSample]) -> None:
         """Initialize the evaluator facade.
 
         Args:
             session: Database session used by resolver calls.
+            samples: Dataset samples selected for evaluation.
         """
         self.session = session
+        self.samples = samples
 
     def object_detection(
         self,
