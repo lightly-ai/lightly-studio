@@ -1,10 +1,7 @@
 import { expect, test } from '../utils';
 import { cocoDataset } from './fixtures';
 
-test.skip('select all images with label filter via keyboard shortcut', async ({
-    page,
-    samplesPage
-}) => {
+test('select all images with label filter via keyboard shortcut', async ({ page, samplesPage }) => {
     // Apply a label filter to reduce the visible samples
     await samplesPage.clickLabel(cocoDataset.labels.dog.name);
     const filteredCount = await samplesPage.getSamples().count();
