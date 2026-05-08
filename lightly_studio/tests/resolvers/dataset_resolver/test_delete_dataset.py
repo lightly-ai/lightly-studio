@@ -8,11 +8,13 @@ from sqlmodel import Session
 from lightly_studio.models.annotation.annotation_base import AnnotationType
 from lightly_studio.models.collection import SampleType
 from lightly_studio.models.evaluation_run import EvaluationRunCreate, EvaluationTaskType
+from lightly_studio.models.evaluation_sample_metric import EvaluationSampleMetricCreate
 from lightly_studio.resolvers import (
     annotation_label_resolver,
     collection_resolver,
     dataset_resolver,
     evaluation_run_resolver,
+    evaluation_sample_metric_resolver,
     metadata_resolver,
     sample_embedding_resolver,
     sample_resolver,
@@ -28,6 +30,7 @@ from tests.helpers_resolvers import (
     create_sample_embedding,
     create_tag,
 )
+from tests.resolvers.evaluation_sample_metric_resolver.helpers import create_run_and_image
 from tests.resolvers.video.helpers import VideoStub, create_video_with_frames
 
 
@@ -239,6 +242,38 @@ def test_delete_dataset__does_not_affect_other_datasets(db_session: Session) -> 
     assert other_samples.samples[0].sample_id == other_sample_id
 
 
+def test_delete_dataset__with_evaluation_sample_metrics(db_session: Session) -> None:
+    # Arrange
+    dataset = create_collection(session=db_session, collection_name="to_delete")
+    run, image = create_run_and_image(db_session, dataset_collection_id=dataset.collection_id)
+    run_id = run.id  # Capture before delete
+    evaluation_sample_metric_resolver.create_many(
+        session=db_session,
+        records=[
+            EvaluationSampleMetricCreate(
+                evaluation_run_id=run_id,
+                sample_id=image.sample_id,
+                metric_name="precision",
+                value=0.9,
+            )
+        ],
+    )
+
+    # Act
+    dataset_resolver.delete_dataset(
+        session=db_session,
+        dataset_id=dataset.dataset_id,
+    )
+
+    # Assert - evaluation run and its metrics deleted
+    assert evaluation_run_resolver.get_by_id(session=db_session, evaluation_id=run_id) is None
+    metrics = evaluation_sample_metric_resolver.get_all_by_evaluation_run_id(
+        session=db_session,
+        evaluation_run_id=run_id,
+    )
+    assert metrics == []
+
+
 def test_delete_dataset__with_evaluation_runs(db_session: Session) -> None:
     # Arrange
     dataset = create_collection(session=db_session, collection_name="to_delete")
@@ -272,6 +307,13 @@ def test_delete_dataset__with_evaluation_runs(db_session: Session) -> None:
         dataset_id=dataset.dataset_id,
     )
 
+    # Assert - evaluation run and its metrics deleted
+    assert evaluation_run_resolver.get_by_id(session=db_session, evaluation_id=run_id) is None
+    metrics = evaluation_sample_metric_resolver.get_all_by_evaluation_run_id(
+        session=db_session,
+        evaluation_run_id=run_id,
+    )
+    assert metrics == []
     # Assert - dataset and evaluation run deleted
     assert (
         collection_resolver.get_by_id(session=db_session, collection_id=dataset_collection_id)
