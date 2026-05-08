@@ -5,9 +5,20 @@ export class AnnotationDetailsPage {
         this.page = page;
     }
 
-    waitForNavigation() {
-        return this.page.waitForSelector('[data-testid="annotation-navigation"]', {
-            state: 'attached'
+    private getCurrentAnnotationId() {
+        const match = this.page.url().match(/\/annotations\/([^/?#]+)/);
+        return match?.[1];
+    }
+
+    async waitForNavigation() {
+        await expect(this.page.getByTestId('annotation-details')).toBeVisible({
+            timeout: 10000
+        });
+        await expect(this.getSampleName()).toBeVisible({
+            timeout: 10000
+        });
+        await expect(this.getAnnotationBox()).toBeVisible({
+            timeout: 10000
         });
     }
 
@@ -56,19 +67,33 @@ export class AnnotationDetailsPage {
     }
 
     async gotoNextAnnotation() {
+        await expect(this.getNextButton()).toBeVisible({ timeout: 10000 });
+        const currentUrl = this.page.url();
         await this.getNextButton().click();
+        await expect(this.page).not.toHaveURL(currentUrl, { timeout: 10000 });
+        await this.waitForNavigation();
     }
 
     async gotoNextAnnotationByKeyboard() {
+        const currentUrl = this.page.url();
         await this.page.keyboard.press('ArrowRight');
+        await expect(this.page).not.toHaveURL(currentUrl, { timeout: 10000 });
+        await this.waitForNavigation();
     }
 
     async gotoPrevAnnotation() {
+        await expect(this.getPrevButton()).toBeVisible({ timeout: 10000 });
+        const currentUrl = this.page.url();
         await this.getPrevButton().click();
+        await expect(this.page).not.toHaveURL(currentUrl, { timeout: 10000 });
+        await this.waitForNavigation();
     }
 
     async gotoPrevAnnotationByKeyboard() {
+        const currentUrl = this.page.url();
         await this.page.keyboard.press('ArrowLeft');
+        await expect(this.page).not.toHaveURL(currentUrl, { timeout: 10000 });
+        await this.waitForNavigation();
     }
 
     getLabel() {
@@ -184,6 +209,13 @@ export class AnnotationDetailsPage {
     }
 
     getAnnotationBox() {
+        const annotationId = this.getCurrentAnnotationId();
+        if (annotationId) {
+            return this.page
+                .locator(`[data-annotation-id="${annotationId}"]`)
+                .getByTestId('annotation_box')
+                .first();
+        }
         return this.page.getByTestId('annotation_box').first();
     }
 
