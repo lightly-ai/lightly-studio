@@ -541,7 +541,9 @@ class ImageDataset(BaseSampleDataset[ImageSample]):
         """
         if query is None:
             query = self.query()
-        return ImageDatasetEvaluate(session=self.session, samples=query)
+        return ImageDatasetEvaluate(
+            session=self.session, collection_id=self.collection_id, samples=query
+        )
 
 
 def _postprocess_created_images(
