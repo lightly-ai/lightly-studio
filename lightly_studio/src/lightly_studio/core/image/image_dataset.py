@@ -30,6 +30,7 @@ from lightly_studio.core.image import add_annotations, add_images
 from lightly_studio.core.image.image_sample import ImageSample
 from lightly_studio.dataset import fsspec_lister
 from lightly_studio.dataset.embedding_manager import EmbeddingManagerProvider
+from lightly_studio.evaluation.image_dataset_evaluate import ImageDatasetEvaluate
 from lightly_studio.export.image_dataset_export import ImageDatasetExport
 from lightly_studio.models.annotation.annotation_base import AnnotationType
 from lightly_studio.models.collection import SampleType
@@ -525,6 +526,23 @@ class ImageDataset(BaseSampleDataset[ImageSample]):
             sample_ids=created_sample_ids,
             tag=split,
             embed=embed,
+        )
+
+    def evaluate(self, query: DatasetQuery | None = None) -> ImageDatasetEvaluate:
+        """Return the evaluation facade for this dataset.
+
+        The returned object exposes task-specific evaluation methods, e.g.
+        ``dataset.evaluate().object_detection(...)``.
+
+        Args:
+            query:
+                The dataset query to evaluate. If None, the default query
+                ``self.query()`` is used.
+        """
+        if query is None:
+            query = self.query()
+        return ImageDatasetEvaluate(
+            session=self.session, collection_id=self.collection_id, samples=query
         )
 
 
