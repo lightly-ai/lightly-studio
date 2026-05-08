@@ -2,6 +2,8 @@ import { expect, test } from '../../utils';
 import type { Page } from '@playwright/test';
 import { cocoDataset } from '../fixtures';
 
+const createAnnotationPath = /\/api\/collections\/[^/]+\/annotations$/;
+
 const getCurrentSampleIdFromUrl = (page: Page): string => {
     const match = page.url().match(/\/images\/([^/]+)$/);
     if (!match?.[1]) {
@@ -19,12 +21,13 @@ const getCollectionIdFromUrl = (page: Page): string => {
 };
 
 const drawSmallBrushStrokeAndGetTargetSampleId = async (page: Page): Promise<string> => {
-    const createAnnotationRequestPromise = page.waitForRequest(
-        (request) =>
+    const createAnnotationRequestPromise = page.waitForRequest((request) => {
+        return (
             request.method() === 'POST' &&
-            request.url().includes('/annotations') &&
+            createAnnotationPath.test(new URL(request.url()).pathname) &&
             !!request.postData()
-    );
+        );
+    });
 
     const drawingArea = page.locator('rect[role="button"][style*="cursor: crosshair"]').first();
     await expect(drawingArea).toBeVisible();
@@ -58,13 +61,13 @@ const assertBrushIsVisuallySelected = async (page: Page) => {
     );
 };
 
-test.skip('brush stays effective across keyboard navigation while creating masks on 3 samples', async ({
+test('brush stays effective across keyboard navigation while creating masks on 3 samples', async ({
     page,
     samplesPage,
     sampleDetailsPage
 }) => {
     // Do not persist new annotations in shared E2E dataset.
-    await page.route('**/annotations', async (route) => {
+    await page.route(createAnnotationPath, async (route) => {
         const request = route.request();
         if (request.method() !== 'POST') {
             await route.continue();
