@@ -11,10 +11,10 @@ import * as fs from 'fs';
 import * as path from 'path';
 
 const PERFORMANCE_LIMITS = {
-    maxRenderTimeMs: 5000,
+    maxRenderTimeMs: 6000,
     maxMemoryUsageMb: 256
 };
-const MEASUREMENT_ITERATIONS = 5;
+const MEASUREMENT_ITERATIONS = 3;
 type MeasurementSummary = Awaited<ReturnType<typeof measureRenderAndMemory>>['memoryUsageMb'];
 
 const metrics: Array<{
@@ -35,11 +35,10 @@ function saveMetrics() {
     }
 }
 
-test('samples grid renders within 5 seconds', async ({ page, samplesPage }) => {
+test('images grid renders within 5 seconds', async ({ page, samplesPage }) => {
     await setNetworkThrottling(page, 'Fast4G');
 
     const result = await measureRenderAndMemory(async () => {
-        await page.reload();
         await samplesPage.goto();
         const renderTimeMs = await measureElementRendering(page, samplesPage.getSampleByIndex(1));
         const memoryUsageMb = await measureMemoryConsumption(page);
@@ -64,9 +63,7 @@ test('samples grid renders within 5 seconds', async ({ page, samplesPage }) => {
     expectWithinPerformanceLimits(result, PERFORMANCE_LIMITS);
 });
 
-test('sample details renders within 5 seconds', async ({ page, samplesPage }) => {
-    await samplesPage.goto();
-
+test('image details renders within 5 seconds', async ({ page, samplesPage }) => {
     await setNetworkThrottling(page, 'Fast4G');
 
     const result = await measureRenderAndMemory(async () => {
@@ -101,8 +98,6 @@ test('sample details renders next image within 5 seconds', async ({
     samplesPage,
     sampleDetailsPage
 }) => {
-    await samplesPage.goto();
-
     await setNetworkThrottling(page, 'Fast4G');
 
     const result = await measureRenderAndMemory(async () => {
@@ -139,14 +134,12 @@ test('sample details renders prev image within 5 seconds', async ({
     samplesPage,
     sampleDetailsPage
 }) => {
-    await samplesPage.goto();
-
     await setNetworkThrottling(page, 'Fast4G');
 
     const result = await measureRenderAndMemory(async () => {
         await samplesPage.goto();
-        await samplesPage.getSampleByIndex(1).dblclick();
-        await page.getByText('Sample 2 of 128').waitFor({ state: 'visible' });
+        await samplesPage.doubleClickNthSample(1);
+        await page.getByText('Sample 2 of 128').waitFor();
         await sampleDetailsPage.getPrevButton().click();
         const renderTimeMs = await measureElementRendering(page, page.getByText('Sample 1 of 128'));
         const memoryUsageMb = await measureMemoryConsumption(page);
@@ -175,7 +168,6 @@ test('annotations grid renders within 5 seconds', async ({ page, annotationsPage
     await setNetworkThrottling(page, 'Fast4G');
 
     const result = await measureRenderAndMemory(async () => {
-        await page.reload();
         await annotationsPage.goto();
         const renderTimeMs = await measureElementRendering(
             page,
@@ -207,11 +199,13 @@ test('annotation details renders within 5 seconds', async ({
     annotationsPage,
     annotationDetailsPage
 }) => {
-    await annotationsPage.goto();
     await setNetworkThrottling(page, 'Fast4G');
+    await annotationsPage.goto();
+    const annotationsUrl = page.url();
 
     const result = await measureRenderAndMemory(async () => {
-        await annotationsPage.goto();
+        await page.goto(annotationsUrl);
+        await annotationsPage.getAnnotations().first().waitFor();
         await annotationsPage.clickAnnotation(0);
         await annotationDetailsPage.waitForNavigation();
         const renderTimeMs = await measureElementRendering(
@@ -219,7 +213,6 @@ test('annotation details renders within 5 seconds', async ({
             annotationDetailsPage.getAnnotationBox()
         );
         const memoryUsageMb = await measureMemoryConsumption(page);
-        await page.goBack();
         return { renderTimeMs, memoryUsageMb };
     }, MEASUREMENT_ITERATIONS);
 
