@@ -6,7 +6,7 @@ import {
     inject
 } from 'langium';
 import type { LangiumParser } from 'langium';
-import { QueryExprTranslationRequest, parseLightlyQuery } from './query-expr-translation.js';
+import { parseLightlyQuery } from './query-expr-translation.js';
 import {
     LightlyQueryGeneratedModule,
     LightlyQueryGeneratedSharedModule
@@ -18,6 +18,8 @@ import type {
     DatetimeExpr,
     TagsContainsExpr,
     ObjectDetectionMatchExpr,
+    ClassificationMatchExpr,
+    SegmentationMaskMatchExpr,
     AndExpr,
     OrExpr,
     NotExpr
@@ -34,12 +36,6 @@ function createParser(): LangiumParser {
 }
 
 const parser = createParser();
-
-describe('QueryExprTranslationRequest', () => {
-    it('has the expected method name', () => {
-        expect(QueryExprTranslationRequest.method).toBe('lightly-query/queryExprTranslation');
-    });
-});
 
 describe('parseLightlyQuery error handling', () => {
     it('returns an error result when the parser reports errors', () => {
@@ -66,6 +62,12 @@ describe('parseLightlyQuery error handling', () => {
         { name: 'string compared to int field', source: 'height == "tall"' },
         { name: 'obj detection without arguments', source: 'object_detection()' },
         { name: 'obj detection unknown field', source: 'object_detection(file_name == "a.jpg")' },
+        { name: 'segmentation without arguments', source: 'segmentation_mask()' },
+        {
+            name: 'segmentation unknown field',
+            source: 'segmentation_mask(file_name == "a.jpg")'
+        },
+        { name: 'classification unknown field', source: 'classification(x == 0)' },
         { name: 'wrong in operator use', source: '"jpg" IN file_name' },
         { name: 'stray punctuation', source: '@@@' }
     ];
@@ -73,6 +75,15 @@ describe('parseLightlyQuery error handling', () => {
     it.each(PARSE_FAILURE_CASES)('reports errors for $name', ({ source }) => {
         const result = parseLightlyQuery(parser, source);
         expect(result.status).toBe('error');
+    });
+
+    it('returns an error result for an invalid datetime literal', () => {
+        const result = parseLightlyQuery(parser, 'created_at == "not-a-date"');
+
+        expect(result).toEqual({
+            status: 'error',
+            errors: [{ message: 'Invalid datetime literal: not-a-date' }]
+        });
     });
 });
 
@@ -117,6 +128,18 @@ const objectDetection = (subexpr: MatchExpr): MatchExpr =>
         type: 'object_detection_match_expr',
         subexpr
     }) satisfies ObjectDetectionMatchExpr & { type: 'object_detection_match_expr' };
+
+const classification = (subexpr: MatchExpr): MatchExpr =>
+    ({
+        type: 'classification_match_expr',
+        subexpr
+    }) satisfies ClassificationMatchExpr & { type: 'classification_match_expr' };
+
+const segmentationMask = (subexpr: MatchExpr): MatchExpr =>
+    ({
+        type: 'segmentation_mask_match_expr',
+        subexpr
+    }) satisfies SegmentationMaskMatchExpr & { type: 'segmentation_mask_match_expr' };
 
 const and = (...children: MatchExpr[]): MatchExpr =>
     ({
@@ -206,6 +229,28 @@ const TRANSLATION_TEST_CASES: TranslationTestCase[] = [
         expected: query(objectDetection(int('object_detection', 'height', '<=', 120)))
     },
 
+    /* Classification expression */
+    {
+        name: 'classification label',
+        source: 'classification(label == "cat")',
+        expected: query(classification(str('classification', 'label', '==', 'cat')))
+    },
+    {
+        name: 'segmentation label',
+        source: 'segmentation_mask(label == "cat")',
+        expected: query(segmentationMask(str('segmentation_mask', 'label', '==', 'cat')))
+    },
+    {
+        name: 'segmentation x inequality',
+        source: 'segmentation_mask(x != 0)',
+        expected: query(segmentationMask(int('segmentation_mask', 'x', '!=', 0)))
+    },
+    {
+        name: 'segmentation width greater than',
+        source: 'segmentation_mask(width > 80)',
+        expected: query(segmentationMask(int('segmentation_mask', 'width', '>', 80)))
+    },
+
     /* Boolean operators */
     {
         name: 'boolean and',
@@ -269,6 +314,19 @@ const TRANSLATION_TEST_CASES: TranslationTestCase[] = [
         source: 'object_detection(NOT label == "background")',
         expected: query(objectDetection(not(str('object_detection', 'label', '==', 'background'))))
     },
+    {
+        name: 'segmentation boolean expression',
+        source: 'segmentation_mask(label == "cat" AND width >= 50 AND height >= 40)',
+        expected: query(
+            segmentationMask(
+                and(
+                    str('segmentation_mask', 'label', '==', 'cat'),
+                    int('segmentation_mask', 'width', '>=', 50),
+                    int('segmentation_mask', 'height', '>=', 40)
+                )
+            )
+        )
+    },
 
     /* Additional syntax features */
     {
@@ -291,6 +349,13 @@ const TRANSLATION_TEST_CASES: TranslationTestCase[] = [
                 objectDetection(str('object_detection', 'label', '==', 'cat'))
             )
         )
+    },
+
+    /* Video queries */
+    {
+        name: 'video height greater than',
+        source: 'video:height > 720',
+        expected: query(int('video', 'height', '>', 720))
     },
 
     /* Complex queries */
@@ -317,8 +382,10 @@ const TRANSLATION_TEST_CASES: TranslationTestCase[] = [
         source: '(file_path_abs != "/datasets/archive/bad.jpg" AND created_at >= "2025-01-01T00:00:00Z") AND ("training" IN tags OR "validation" IN tags) AND object_detection((label == "cat" OR label == "dog") AND NOT (x < 5 OR y < 5))',
         expected: query(
             and(
-                str('image', 'file_path_abs', '!=', '/datasets/archive/bad.jpg'),
-                dt('image', 'created_at', '>=', '2025-01-01T00:00:00Z'),
+                and(
+                    str('image', 'file_path_abs', '!=', '/datasets/archive/bad.jpg'),
+                    dt('image', 'created_at', '>=', '2025-01-01T00:00:00Z')
+                ),
                 or(tagsContains('image', 'training'), tagsContains('image', 'validation')),
                 objectDetection(
                     and(
@@ -339,7 +406,7 @@ const TRANSLATION_TEST_CASES: TranslationTestCase[] = [
     }
 ];
 
-describe.skip('parseLightlyQuery translates example queries', () => {
+describe('parseLightlyQuery translates example queries', () => {
     it.each(TRANSLATION_TEST_CASES)('$name', ({ source, expected }) => {
         const result = parseLightlyQuery(parser, source);
         expect(result).toEqual({ status: 'ok', queryExpr: expected });

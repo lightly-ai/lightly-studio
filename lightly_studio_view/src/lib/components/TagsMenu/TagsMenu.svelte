@@ -206,6 +206,7 @@
         <TagAssignInput
             options={$tags}
             busy={assignBusy || !hasSelection}
+            showSelectionHint={!hasSelection}
             onSelect={handleAssign}
         />
     </div>

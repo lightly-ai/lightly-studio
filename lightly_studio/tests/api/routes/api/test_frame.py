@@ -256,3 +256,23 @@ def test_get_video_frames_count_annotation_views_without_annotations_filter(
     assert annotations[1]["label_name"] == "car"
     assert annotations[1]["total_count"] == 1
     assert annotations[1]["current_count"] == 0
+
+
+def test_get_video_frame_sample_ids(
+    test_client: TestClient,
+    db_session: Session,
+) -> None:
+    collection = create_collection(session=db_session, sample_type=SampleType.VIDEO)
+    video_frames = create_video_with_frames(
+        session=db_session,
+        collection_id=collection.collection_id,
+        video=VideoStub(path="video1.mp4", duration_s=1, fps=2),
+    )
+
+    response = test_client.post(
+        f"/api/collections/{video_frames.video_frames_collection_id}/frame/sample_ids",
+        json={},
+    )
+
+    assert response.status_code == HTTP_STATUS_OK
+    assert set(response.json()) == {str(sample_id) for sample_id in video_frames.frame_sample_ids}

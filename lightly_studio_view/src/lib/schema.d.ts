@@ -432,6 +432,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/collections/{collection_id}/images/sample_ids": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Get Image Sample Ids
+         * @description Retrieve all sample ids of images matching the given filters.
+         */
+        post: operations["get_image_sample_ids"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/collections/{collection_id}/images/annotations/count": {
         parameters: {
             query?: never;
@@ -607,6 +627,26 @@ export interface paths {
          * @description Create a new annotation.
          */
         post: operations["create_annotation"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/collections/{collection_id}/annotations/sample_ids": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Get Annotation Sample Ids
+         * @description Retrieve all sample ids of annotations matching the given filters.
+         */
+        post: operations["get_annotation_sample_ids"];
         delete?: never;
         options?: never;
         head?: never;
@@ -1413,6 +1453,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/collections/{video_frame_collection_id}/frame/sample_ids": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Get Video Frame Sample Ids
+         * @description Retrieve all sample ids of video frames matching the given filters.
+         */
+        post: operations["get_video_frame_sample_ids"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/collections/{video_frame_collection_id}/frame/bounds": {
         parameters: {
             query?: never;
@@ -1699,6 +1759,28 @@ export interface paths {
          *      For the hosted version, this endpoint must be secured with authentication and input validation.
          */
         put: operations["refresh_cloud_credentials"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/version": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Version
+         * @description Get backend runtime version information.
+         *
+         *     Loads from the build-generated version file or returns a not-available placeholder.
+         */
+        get: operations["get_version"];
+        put?: never;
         post?: never;
         delete?: never;
         options?: never;
@@ -3112,6 +3194,14 @@ export interface components {
             match_expr: components["schemas"]["StringExpr"] | components["schemas"]["IntegerExpr"] | components["schemas"]["DatetimeExpr"] | components["schemas"]["OrdinalFloatExpr"] | components["schemas"]["EqualityFloatExpr"] | components["schemas"]["TagsContainsExpr"] | components["schemas"]["ClassificationMatchExpr"] | components["schemas"]["ObjectDetectionMatchExpr"] | components["schemas"]["SegmentationMaskMatchExpr"] | components["schemas"]["AndExpr"] | components["schemas"]["OrExpr"] | components["schemas"]["NotExpr"];
         };
         /**
+         * ReadAnnotationSampleIdsRequest
+         * @description Request body for reading matching annotation sample ids.
+         */
+        ReadAnnotationSampleIdsRequest: {
+            /** @description Filter parameters for annotations */
+            filters?: components["schemas"]["AnnotationsFilter"] | null;
+        };
+        /**
          * ReadCountImageAnnotationsRequest
          * @description Request body for reading image annotation counts.
          */
@@ -3133,6 +3223,14 @@ export interface components {
         ReadGroupsRequest: {
             /** @description Filter parameters for groups */
             filter?: components["schemas"]["GroupFilter"] | null;
+        };
+        /**
+         * ReadImageSampleIdsRequest
+         * @description Request body for reading matching image sample ids.
+         */
+        ReadImageSampleIdsRequest: {
+            /** @description Filter parameters for images */
+            filters?: components["schemas"]["ImageFilter"] | null;
         };
         /**
          * ReadImagesRequest
@@ -3171,6 +3269,14 @@ export interface components {
             filter?: components["schemas"]["VideoFilter"] | null;
         };
         /**
+         * ReadVideoFrameSampleIdsRequest
+         * @description Request body for reading matching video frame sample ids.
+         */
+        ReadVideoFrameSampleIdsRequest: {
+            /** @description Filter parameters for video frames */
+            filter?: components["schemas"]["VideoFrameFilter"] | null;
+        };
+        /**
          * ReadVideoFramesRequest
          * @description Request body for reading videos.
          */
@@ -3207,6 +3313,18 @@ export interface components {
             name: string;
             /** Supported Scopes */
             supported_scopes?: components["schemas"]["OperatorScope"][];
+        };
+        /**
+         * RuntimeVersionInfo
+         * @description Runtime version information returned by the version endpoint.
+         */
+        RuntimeVersionInfo: {
+            /** Version */
+            version: string;
+            /** Git Sha */
+            git_sha: string;
+            /** Is Tagged Commit */
+            is_tagged_commit: boolean;
         };
         /**
          * SampleAnnotationDetailsView
@@ -4663,6 +4781,41 @@ export interface operations {
             };
         };
     };
+    get_image_sample_ids: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                collection_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ReadImageSampleIdsRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": string[];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     count_image_annotations_by_collection: {
         parameters: {
             query?: never;
@@ -5103,6 +5256,41 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["AnnotationView"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_annotation_sample_ids: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                collection_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ReadAnnotationSampleIdsRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": string[];
                 };
             };
             /** @description Validation Error */
@@ -6249,6 +6437,41 @@ export interface operations {
             };
         };
     };
+    get_video_frame_sample_ids: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                video_frame_collection_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ReadVideoFrameSampleIdsRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": string[];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     get_video_frames_fields_bounds: {
         parameters: {
             query?: never;
@@ -6618,6 +6841,26 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_version: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RuntimeVersionInfo"];
                 };
             };
         };

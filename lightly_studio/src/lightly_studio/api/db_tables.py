@@ -7,6 +7,9 @@ from lightly_studio.models.sample import (  # noqa: I001
 from lightly_studio.models.annotation.annotation_base import (
     AnnotationBaseTable,  # noqa: F401, required for SQLModel to work properly
 )
+from lightly_studio.models.annotation_collection_coverage import (
+    AnnotationCollectionCoverageTable,  # noqa: F401, required for SQLModel to work properly
+)
 from lightly_studio.models.annotation_label import (
     AnnotationLabelTable,  # noqa: F401, required for SQLModel to work properly
 )
@@ -36,4 +39,10 @@ from lightly_studio.models.tag import (
 )
 from lightly_studio.models.two_dim_embedding import (
     TwoDimEmbeddingTable,  # noqa: F401, required for SQLModel to work properly
+)
+from lightly_studio.models.evaluation_run import (
+    EvaluationRunTable,  # noqa: F401, required for SQLModel to work properly
+)
+from lightly_studio.models.evaluation_sample_metric import (
+    EvaluationSampleMetricTable,  # noqa: F401, required for SQLModel to work properly
 )
