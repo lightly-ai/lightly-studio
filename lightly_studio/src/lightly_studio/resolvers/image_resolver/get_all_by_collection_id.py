@@ -146,6 +146,7 @@ def _get_all_with_similarity(  # noqa: PLR0913
     if order_by:
         for expr in order_by:
             samples_query = expr.apply(samples_query)
+    samples_query = samples_query.order_by(col(ImageTable.sample_id).asc())
 
     if pagination is not None:
         samples_query = samples_query.offset(pagination.offset).limit(pagination.limit)
@@ -201,6 +202,7 @@ def _get_all_without_similarity(  # noqa: PLR0913
     if order_by:
         for expr in order_by:
             samples_query = expr.apply(samples_query)
+        samples_query = samples_query.order_by(col(ImageTable.sample_id).asc())
     else:
         samples_query = samples_query.order_by(col(ImageTable.file_path_abs).asc())
 

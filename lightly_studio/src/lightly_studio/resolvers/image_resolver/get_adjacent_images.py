@@ -58,10 +58,11 @@ def _base_query(
     ordering_expression: Any | None = None,
     order_by: list[OrderByField] | None = None,
 ) -> Select[Any]:
+    tiebreaker = col(ImageTable.sample_id).asc()
     if ordering_expression is not None:
-        order_col = ordering_expression + [expr.to_column_element() for expr in order_by] if order_by else ordering_expression
+        order_col = ordering_expression + [expr.to_column_element() for expr in order_by] + [tiebreaker] if order_by else ordering_expression + [tiebreaker]
     elif order_by:
-        order_col = [expr.to_column_element() for expr in order_by]
+        order_col = [expr.to_column_element() for expr in order_by] + [tiebreaker]
     else:
         order_col = col(ImageTable.file_path_abs).asc()
 
