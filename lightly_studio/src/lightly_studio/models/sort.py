@@ -1,4 +1,4 @@
-"""Sorting models and translation utilities for API requests."""
+"""Sorting models and translation utilities."""
 
 from __future__ import annotations
 

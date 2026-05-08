@@ -5,7 +5,7 @@ from __future__ import annotations
 import pytest
 from pydantic import ValidationError
 
-from lightly_studio.api.routes.api.sort import (
+from lightly_studio.models.sort import (
     ImageSortField,
     SortDirection,
     SortFieldExpr,

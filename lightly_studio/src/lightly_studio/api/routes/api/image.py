@@ -9,7 +9,6 @@ from fastapi import APIRouter, Depends, HTTPException, Path, Query
 from pydantic import BaseModel, Field
 
 from lightly_studio.api.routes.api.collection import get_and_validate_collection_id
-from lightly_studio.api.routes.api.sort import SortFieldExpr, sort_field_expr_to_order_by
 from lightly_studio.api.routes.api.status import (
     HTTP_STATUS_NOT_FOUND,
 )
@@ -20,6 +19,7 @@ from lightly_studio.models.image import (
     ImageView,
     ImageViewsWithCount,
 )
+from lightly_studio.models.sort import SortFieldExpr, sort_field_expr_to_order_by
 from lightly_studio.resolvers import (
     image_resolver,
 )

@@ -8,9 +8,9 @@ from uuid import UUID
 from pydantic import BaseModel, Field
 from sqlmodel import Session
 
-from lightly_studio.api.routes.api.sort import SortFieldExpr, sort_field_expr_to_order_by
 from lightly_studio.models.adjacents import AdjacentResultView
 from lightly_studio.models.collection import SampleType
+from lightly_studio.models.sort import SortFieldExpr, sort_field_expr_to_order_by
 from lightly_studio.resolvers import (
     annotation_resolver,
     image_resolver,
