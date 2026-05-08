@@ -435,6 +435,21 @@ describe('useSyntaxCompletion', () => {
         });
     });
 
+    it('resolves field scope from cursor context (segmentation_mask)', async () => {
+        const { provideCompletionItems } = await loadAndAttach([
+            { label: 'label', kind: LspCompletionItemKind.Field }
+        ]);
+        const result = await provideCompletionItems(
+            makeModel('segmentation_mask(label == "road" AND width > 10)') as never,
+            { lineNumber: 1, column: 41 } as never
+        );
+
+        expect(result.suggestions[0].detail).toBe('(field) SegmentationMask.label: string');
+        expect(result.suggestions[0].documentation).toEqual({
+            value: 'Class label of the segmentation mask.'
+        });
+    });
+
     it('leaves unknown labels untouched when neither LSP nor schema provides documentation', async () => {
         const { provideCompletionItems } = await loadAndAttach([
             { label: 'totally_unknown', kind: LspCompletionItemKind.Text }

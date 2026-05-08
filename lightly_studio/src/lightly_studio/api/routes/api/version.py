@@ -1,0 +1,65 @@
+"""This module contains the API route for version information."""
+
+from __future__ import annotations
+
+import json
+from pathlib import Path
+
+from fastapi import APIRouter
+from pydantic import BaseModel
+
+version_router = APIRouter(tags=["version"])
+package_root = Path(__file__).resolve().parent.parent.parent.parent
+version_file = package_root / "dist_lightly_studio_view_app" / "version-info.json"
+
+
+class RuntimeVersionInfo(BaseModel):
+    """Runtime version information returned by the version endpoint."""
+
+    version: str
+    git_sha: str
+    is_tagged_commit: bool
+
+
+def _load_version_info_from_file() -> RuntimeVersionInfo | None:
+    """Load runtime version info from build-generated version-info.json."""
+    try:
+        with version_file.open() as f:
+            data = json.load(f)
+    except (FileNotFoundError, OSError, json.JSONDecodeError):
+        return None
+
+    if not isinstance(data, dict):
+        return None
+
+    version = data.get("version")
+    git_sha = data.get("git_sha")
+    is_tagged_commit = data.get("is_tagged_commit")
+    if (
+        not isinstance(version, str)
+        or not isinstance(git_sha, str)
+        or not isinstance(is_tagged_commit, bool)
+    ):
+        return None
+    return RuntimeVersionInfo(
+        version=version,
+        git_sha=git_sha,
+        is_tagged_commit=is_tagged_commit,
+    )
+
+
+@version_router.get("/version")
+def get_version() -> RuntimeVersionInfo:
+    """Get backend runtime version information.
+
+    Loads from the build-generated version file or returns a not-available placeholder.
+    """
+    file_version_info = _load_version_info_from_file()
+    if file_version_info is not None:
+        return file_version_info
+
+    return RuntimeVersionInfo(
+        version="version not available",
+        git_sha="version not available",
+        is_tagged_commit=False,
+    )
