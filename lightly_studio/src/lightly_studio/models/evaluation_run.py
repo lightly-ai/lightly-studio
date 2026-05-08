@@ -19,18 +19,13 @@ class EvaluationTaskType(str, Enum):
     INSTANCE_SEGMENTATION = "instance_segmentation"
 
 
-class EvaluationRunTable(SQLModel, table=True):
-    """One row per evaluation execution."""
+class EvaluationRunBase(SQLModel):
+    """Base model for evaluation runs."""
 
-    __tablename__ = "evaluation_run"
-
-    id: UUID = Field(default_factory=uuid4, primary_key=True)
-
-    dataset_id: UUID = Field(foreign_key="dataset.dataset_id", index=True)
     name: str
     # Foreign keys to the annotation collections containing Ground Truth and predicted annotations.
-    gt_annotation_collection_id: UUID = Field(foreign_key="annotation_collection.id")
-    pred_annotation_collection_id: UUID = Field(foreign_key="annotation_collection.id")
+    gt_annotation_collection_id: UUID = Field(foreign_key="collection.collection_id")
+    pred_annotation_collection_id: UUID = Field(foreign_key="collection.collection_id")
 
     task_type: EvaluationTaskType
 
@@ -40,4 +35,14 @@ class EvaluationRunTable(SQLModel, table=True):
         sa_column=Column(JSON, nullable=False),
     )
 
+
+class EvaluationRunTable(EvaluationRunBase, table=True):
+    """One row per evaluation execution."""
+
+    __tablename__ = "evaluation_run"
+    id: UUID = Field(default_factory=uuid4, primary_key=True)
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+
+
+class EvaluationRunCreate(EvaluationRunBase):
+    """Model for creating a new evaluation run."""

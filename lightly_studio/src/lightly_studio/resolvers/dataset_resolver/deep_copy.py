@@ -28,6 +28,8 @@ from lightly_studio.models.caption import CaptionTable
 from lightly_studio.models.collection import CollectionTable
 from lightly_studio.models.dataset import DatasetTable
 from lightly_studio.models.embedding_model import EmbeddingModelTable
+from lightly_studio.models.evaluation_run import EvaluationRunTable
+from lightly_studio.models.evaluation_sample_metric import EvaluationSampleMetricTable
 from lightly_studio.models.group import GroupTable, SampleGroupLinkTable
 from lightly_studio.models.image import ImageTable
 from lightly_studio.models.metadata import SampleMetadataTable
@@ -54,6 +56,7 @@ class DeepCopyContext:
     object_track_map: dict[UUID, UUID] = field(default_factory=dict)
     annotation_label_map: dict[UUID, UUID] = field(default_factory=dict)
     embedding_model_map: dict[UUID, UUID] = field(default_factory=dict)
+    evaluation_run_map: dict[UUID, UUID] = field(default_factory=dict)
     new_dataset_id: UUID | None = None
 
 
@@ -113,6 +116,7 @@ def deep_copy(
         ctx=ctx,
     )
     _copy_embedding_models(session=session, old_collection_ids=old_collection_ids, ctx=ctx)
+    _copy_evaluation_runs(session=session, old_dataset_id=dataset_id, ctx=ctx)
     _copy_samples(session=session, old_collection_ids=old_collection_ids, ctx=ctx)
     session.flush()
 
@@ -129,6 +133,7 @@ def deep_copy(
     # 5. Copy sample attachments.
     _copy_metadata(session=session, old_sample_ids=old_sample_ids, ctx=ctx)
     _copy_embeddings(session=session, old_sample_ids=old_sample_ids, ctx=ctx)
+    _copy_evaluation_sample_metrics(session=session, ctx=ctx)
     session.flush()
 
     # 6. Copy link tables.
@@ -554,6 +559,65 @@ def _copy_sample_group_links(
                 parent_sample_id=ctx.sample_map[old_link.parent_sample_id],
             )
             session.add(new_link)
+
+
+def _copy_evaluation_runs(
+    session: Session,
+    old_dataset_id: UUID,
+    ctx: DeepCopyContext,
+) -> None:
+    """Copy evaluation runs, remapping both collection FKs."""
+    runs = session.exec(
+        select(EvaluationRunTable)
+        .join(
+            CollectionTable,
+            col(EvaluationRunTable.gt_annotation_collection_id)
+            == col(CollectionTable.collection_id),
+        )
+        .where(col(CollectionTable.dataset_id) == old_dataset_id)
+    ).all()
+
+    for old_run in runs:
+        new_run_id = uuid4()
+        ctx.evaluation_run_map[old_run.id] = new_run_id
+        new_run = _copy_with_updates(
+            old_run,
+            {
+                "id": new_run_id,
+                "gt_annotation_collection_id": ctx.collection_map[
+                    old_run.gt_annotation_collection_id
+                ],
+                "pred_annotation_collection_id": ctx.collection_map[
+                    old_run.pred_annotation_collection_id
+                ],
+            },
+        )
+        session.add(new_run)
+
+
+def _copy_evaluation_sample_metrics(
+    session: Session,
+    ctx: DeepCopyContext,
+) -> None:
+    """Copy evaluation sample metrics, remapping evaluation_run_id and sample_id."""
+    if not ctx.evaluation_run_map:
+        return
+    old_run_ids = list(ctx.evaluation_run_map.keys())
+    metrics = session.exec(
+        select(EvaluationSampleMetricTable).where(
+            col(EvaluationSampleMetricTable.evaluation_run_id).in_(old_run_ids)
+        )
+    ).all()
+
+    for old_metric in metrics:
+        new_metric = _copy_with_updates(
+            old_metric,
+            {
+                "evaluation_run_id": ctx.evaluation_run_map[old_metric.evaluation_run_id],
+                "sample_id": ctx.sample_map[old_metric.sample_id],
+            },
+        )
+        session.add(new_metric)
 
 
 def _copy_annotation_collection_coverage(
