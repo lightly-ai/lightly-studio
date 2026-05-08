@@ -365,7 +365,7 @@ def test_get_adjacent_images__sort_by_width_desc_with_duplicate_values(db_sessio
         file_path_abs="/images/a.png",
         width=1920,
     )
-    image_c = helpers_resolvers.create_image(
+    helpers_resolvers.create_image(
         session=db_session,
         collection_id=collection_id,
         file_path_abs="/images/c.png",

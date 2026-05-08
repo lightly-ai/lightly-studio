@@ -60,7 +60,11 @@ def _base_query(
 ) -> Select[Any]:
     tiebreaker = col(ImageTable.sample_id).asc()
     if ordering_expression is not None:
-        order_col = ordering_expression + [expr.to_column_element() for expr in order_by] + [tiebreaker] if order_by else ordering_expression + [tiebreaker]
+        order_col = (
+            ordering_expression + [expr.to_column_element() for expr in order_by] + [tiebreaker]
+            if order_by
+            else [*ordering_expression, tiebreaker]
+        )
     elif order_by:
         order_col = [expr.to_column_element() for expr in order_by] + [tiebreaker]
     else:
@@ -74,9 +78,7 @@ def _base_query(
             func.lag(col(ImageTable.sample_id))
             .over(order_by=order_col)
             .label("previous_sample_id"),
-            func.lead(col(ImageTable.sample_id))
-            .over(order_by=order_col)
-            .label("next_sample_id"),
+            func.lead(col(ImageTable.sample_id)).over(order_by=order_col).label("next_sample_id"),
             func.row_number().over(order_by=order_col).label("row_number"),
         )
         .select_from(ImageTable)

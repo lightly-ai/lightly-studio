@@ -749,15 +749,9 @@ def test_get_all_by_collection_id__sort_by_width_asc(db_session: Session) -> Non
     collection = create_collection(session=db_session)
     collection_id = collection.collection_id
 
-    create_image(
-        session=db_session, collection_id=collection_id, file_path_abs="/a.png", width=300
-    )
-    create_image(
-        session=db_session, collection_id=collection_id, file_path_abs="/b.png", width=100
-    )
-    create_image(
-        session=db_session, collection_id=collection_id, file_path_abs="/c.png", width=200
-    )
+    create_image(session=db_session, collection_id=collection_id, file_path_abs="/a.png", width=300)
+    create_image(session=db_session, collection_id=collection_id, file_path_abs="/b.png", width=100)
+    create_image(session=db_session, collection_id=collection_id, file_path_abs="/c.png", width=200)
 
     result = image_resolver.get_all_by_collection_id(
         session=db_session,
