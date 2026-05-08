@@ -106,3 +106,10 @@ class CollectionOverviewView(SQLModel):
     sample_type: SampleType
     created_at: datetime
     total_sample_count: int
+
+
+class AnnotationCollectionView(SQLModel):
+    """Slim collection view used for the annotation collections menu."""
+
+    collection_id: UUID
+    name: str

@@ -21,7 +21,7 @@ from lightly_studio.models.annotation.annotation_base import (
     AnnotationViewsWithCount,
     AnnotationWithPayloadAndCountView,
 )
-from lightly_studio.models.collection import CollectionTable, CollectionView
+from lightly_studio.models.collection import AnnotationCollectionView, CollectionTable
 from lightly_studio.resolvers import annotation_resolver, collection_resolver
 from lightly_studio.resolvers.annotation_resolver.get_all import (
     GetAllAnnotationsResult,
@@ -41,7 +41,7 @@ annotations_router.include_router(annotations_module.create_annotation_router)
 
 @annotations_router.get(
     "/annotation_collections",
-    response_model=list[CollectionView],
+    response_model=list[AnnotationCollectionView],
 )
 def read_annotation_collections(
     session: SessionDep,

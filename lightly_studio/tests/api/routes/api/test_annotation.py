@@ -313,13 +313,9 @@ def test_read_annotation_collections(
     )
 
     assert response.status_code == HTTP_STATUS_OK
-    body = response.json()
-    assert len(body) == 1
-    item = body[0]
-    assert UUID(item["collection_id"]) == expected_annotation_collection.collection_id
-    assert UUID(item["parent_collection_id"]) == parent_collection.collection_id
-    assert item["sample_type"] == SampleType.ANNOTATION.value
-    assert item["name"] == expected_annotation_collection.name
-    # CollectionView shape — sanity check the documented fields are present.
-    assert "dataset_id" in item
-    assert "created_at" in item
+    assert response.json() == [
+        {
+            "collection_id": str(expected_annotation_collection.collection_id),
+            "name": expected_annotation_collection.name,
+        }
+    ]
