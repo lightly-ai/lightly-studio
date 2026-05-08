@@ -529,7 +529,6 @@ class ImageDataset(BaseSampleDataset[ImageSample]):
         )
 
     def evaluate(self, query: DatasetQuery | None = None) -> ImageDatasetEvaluate:
-    def evaluate(self, query: DatasetQuery | None = None) -> ImageDatasetEvaluate:
         """Return the evaluation facade for this dataset.
 
         The returned object exposes task-specific evaluation methods, e.g.
@@ -539,18 +538,11 @@ class ImageDataset(BaseSampleDataset[ImageSample]):
             query:
                 The dataset query to evaluate. If None, the default query
                 ``self.query()`` is used.
-
-        Args:
-            query:
-                The dataset query to evaluate. If None, the default query
-                ``self.query()`` is used.
         """
         if query is None:
             query = self.query()
-        if query is None:
-            query = self.query()
         return ImageDatasetEvaluate(
-            session=self.session, samples=query, collection_id=self.collection_id, samples=query
+            session=self.session, collection_id=self.collection_id, samples=query
         )
 
 

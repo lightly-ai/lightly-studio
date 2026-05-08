@@ -9,7 +9,6 @@ from lightly_studio import db_manager
 from lightly_studio.core.dataset_query import ImageSampleField
 from lightly_studio.evaluation.image_dataset_evaluate import ObjectDetectionEvaluationConfig
 from lightly_studio.resolvers import (
-    collection_resolver,
     evaluation_run_resolver,
     evaluation_sample_metric_resolver,
 )
@@ -37,29 +36,15 @@ dataset.add_images_from_path(path=images_path)
 
 # Add two different annotation collections from COCO
 dataset.add_annotations_from_coco(
-    annotations_json="D:/01_work/model_eval/interface/add_together/lightly-studio/lightly_studio/dataset_examples/coco_subset_128_images/instances_train2017.json",
+    annotations_json=gt_annotations_json,
     images_root=images_path,
     name="gt",
 )
 dataset.add_annotations_from_coco(
-    annotations_json="D:/01_work/model_eval/interface/add_together/lightly-studio/lightly_studio/dataset_examples/coco_subset_128_images/predictions_train2017.json",
+    annotations_json=pred_annotations_json,
     images_root=images_path,
     name="pred",
 )
-
-# Resolve annotation collection ids
-gt_collection_id = collection_resolver.get_by_name(
-    session=dataset.session,
-    name="gt",
-    parent_collection_id=dataset.collection_id,
-)
-pred_collection_id = collection_resolver.get_by_name(
-    session=dataset.session,
-    name="pred",
-    parent_collection_id=dataset.collection_id,
-)
-if gt_collection_id is None or pred_collection_id is None:
-    raise ValueError("Could not resolve gt/pred annotation collections.")
 
 # Tag first 10 samples and build a query that only selects tagged samples.
 tag_name = "evaluated_samples"
@@ -70,8 +55,8 @@ evaluation_query = dataset.query().match(ImageSampleField.tags.contains(tag_name
 evaluation_name_1 = "evaluation-example-tagged-samples"
 dataset.evaluate(query=evaluation_query).object_detection(
     name=evaluation_name_1,
-    gt_collection_id=gt_collection_id,
-    pred_collection_id=pred_collection_id,
+    gt_collection_name="gt",
+    pred_collection_name="pred",
     config=ObjectDetectionEvaluationConfig(
         iou_threshold=iou_threshold,
         classwise=classwise,
@@ -80,8 +65,8 @@ dataset.evaluate(query=evaluation_query).object_detection(
 evaluation_name = "evaluation-example-all-samples"
 dataset.evaluate().object_detection(
     name=evaluation_name,
-    gt_collection_id=gt_collection_id,
-    pred_collection_id=pred_collection_id,
+    gt_collection_name="gt",
+    pred_collection_name="pred",
     config=ObjectDetectionEvaluationConfig(
         iou_threshold=iou_threshold,
         classwise=classwise,
