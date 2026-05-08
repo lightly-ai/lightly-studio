@@ -77,6 +77,63 @@ class MatchingResult:
         """Number of false negatives (missed ground truths)."""
         return len(self.unmatched_gt_ids)
 
+    def extend(self, other: MatchingResult) -> None:
+        """Extend this result with another matching result.
+
+        Args:
+            other: Another matching result to merge into this one.
+        """
+        self.matches.extend(other.matches)
+        self.unmatched_prediction_ids.extend(other.unmatched_prediction_ids)
+        self.unmatched_gt_ids.extend(other.unmatched_gt_ids)
+
+
+def match_image(
+    predictions: Sequence[BoundingBox],
+    ground_truths: Sequence[BoundingBox],
+    iou_threshold: float,
+    classwise: bool,
+) -> MatchingResult:
+    """Match predictions to ground truths for a single image.
+
+    Args:
+        predictions: All predicted bounding boxes for the image.
+        ground_truths: All ground truth bounding boxes for the image.
+        iou_threshold: Minimum IoU for a prediction to count as a TP.
+        classwise: If True, predictions and ground truths are only matched within
+            the same class. If False, matching is done globally across all classes.
+
+    Returns:
+        Per-image matching result.
+    """
+    if classwise:
+        all_labels = {b.label_id for b in predictions} | {b.label_id for b in ground_truths}
+        result = MatchingResult()
+        for label in all_labels:
+            class_predictions = [b for b in predictions if b.label_id == label]
+            class_gts = [b for b in ground_truths if b.label_id == label]
+            result.extend(
+                match_with_iou_matrix(
+                    predictions=class_predictions,
+                    ground_truths=class_gts,
+                    iou_matrix=compute_iou_matrix(
+                        pred_corners=to_corner_array(class_predictions),
+                        gt_corners=to_corner_array(class_gts),
+                    ),
+                    iou_threshold=iou_threshold,
+                )
+            )
+        return result
+    return match_with_iou_matrix(
+        predictions=predictions,
+        ground_truths=ground_truths,
+        iou_matrix=compute_iou_matrix(
+            pred_corners=to_corner_array(predictions),
+            gt_corners=to_corner_array(ground_truths),
+        ),
+        iou_threshold=iou_threshold,
+    )
+
 
 def match_with_iou_matrix(
     predictions: Sequence[BoundingBox],
@@ -191,3 +248,20 @@ def compute_iou_matrix(
 
     iou = inter / union
     return np.asarray(np.nan_to_num(iou, nan=0.0), dtype=np.float64)  # (P, G)
+
+
+def to_corner_array(boxes: Sequence[BoundingBox]) -> NDArray[np.int64]:
+    """Convert bounding boxes to [x1, y1, x2, y2] corner format.
+
+    Args:
+        boxes: Bounding boxes in [x, y, width, height] format.
+
+    Returns:
+        (N, 4) array of [x1, y1, x2, y2] corner coordinates.
+    """
+    if not boxes:
+        return np.empty((0, 4), dtype=np.int64)
+    return np.array(
+        [[b.x, b.y, b.x + b.width, b.y + b.height] for b in boxes],
+        dtype=np.int64,
+    )
