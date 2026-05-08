@@ -38,9 +38,12 @@ def resolve_and_validate_collections(
         Tuple of (gt_collection_id, pred_collection_id).
 
     Raises:
-        ValueError: If either collection does not exist or contains annotations
-            of a type other than the type expected for task_type.
+        ValueError: If task_type is not supported, if either collection does not
+            exist, or if a collection contains annotations of a type other than
+            the type expected for task_type.
     """
+    if task_type not in _TASK_TO_ANNOTATION_TYPE:
+        raise ValueError(f"Unsupported evaluation task type: {task_type!r}.")
     annotation_type = _TASK_TO_ANNOTATION_TYPE[task_type]
     gt_collection_id = collection_resolver.get_by_name(
         session=session,
@@ -111,7 +114,7 @@ def _validate_collection_annotation_type(
         )
 
 
-def _validate_annotation_collection(session: Session, collection_id: UUID):
+def _validate_annotation_collection(session: Session, collection_id: UUID) -> None:
     collection = collection_resolver.get_by_id(session=session, collection_id=collection_id)
     if collection is None:
         raise ValueError(f"Collection with id {collection_id} not found.")

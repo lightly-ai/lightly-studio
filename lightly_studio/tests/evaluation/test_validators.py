@@ -5,6 +5,7 @@ from __future__ import annotations
 import uuid
 
 import pytest
+from pytest_mock import MockerFixture
 
 from lightly_studio.core.image.image_dataset import ImageDataset
 from lightly_studio.evaluation.validators import (
@@ -248,4 +249,20 @@ def test_resolve_and_validate_collections__raises_when_pred_has_wrong_sample_typ
             gt_collection_name="gt",
             pred_collection_name="pred",
             task_type=EvaluationTaskType.OBJECT_DETECTION,
+        )
+
+
+def test_resolve_and_validate_collections__raises_on_unsupported_task_type(
+    patch_collection: None,  # noqa: ARG001
+    mocker: MockerFixture,
+) -> None:
+    dataset = ImageDataset.create(name="test_dataset")
+    unsupported_task_type = mocker.MagicMock(spec=EvaluationTaskType)
+    with pytest.raises(ValueError, match="Unsupported evaluation task type"):
+        resolve_and_validate_collections(
+            session=dataset.session,
+            collection_id=dataset.collection_id,
+            gt_collection_name="gt",
+            pred_collection_name="pred",
+            task_type=unsupported_task_type,
         )
