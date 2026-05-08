@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from lightly_studio.core.image.image_dataset import ImageDataset
-from lightly_studio.core.image.image_dataset_evaluate import ObjectDetectionEvaluationConfig
+from lightly_studio.evaluation.image_dataset_evaluate import ObjectDetectionEvaluationConfig
 from lightly_studio.models.collection import SampleType
 from lightly_studio.models.evaluation_run import EvaluationTaskType
 from lightly_studio.resolvers import (

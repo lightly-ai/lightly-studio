@@ -27,10 +27,10 @@ from sqlmodel import Session
 from lightly_studio.core.dataset import BaseSampleDataset
 from lightly_studio.core.dataset_query.dataset_query import DatasetQuery
 from lightly_studio.core.image import add_annotations, add_images
-from lightly_studio.core.image.image_dataset_evaluate import ImageDatasetEvaluate
 from lightly_studio.core.image.image_sample import ImageSample
 from lightly_studio.dataset import fsspec_lister
 from lightly_studio.dataset.embedding_manager import EmbeddingManagerProvider
+from lightly_studio.evaluation.image_dataset_evaluate import ImageDatasetEvaluate
 from lightly_studio.export.image_dataset_export import ImageDatasetExport
 from lightly_studio.models.annotation.annotation_base import AnnotationType
 from lightly_studio.models.collection import SampleType
@@ -527,6 +527,7 @@ class ImageDataset(BaseSampleDataset[ImageSample]):
             tag=split,
             embed=embed,
         )
+
     def evaluate(self) -> ImageDatasetEvaluate:
         """Return the evaluation facade for this dataset.
 
@@ -534,6 +535,7 @@ class ImageDataset(BaseSampleDataset[ImageSample]):
         ``dataset.evaluate().object_detection(...)``.
         """
         return ImageDatasetEvaluate(session=self.session)
+
 
 def _postprocess_created_images(
     session: Session,

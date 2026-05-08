@@ -34,7 +34,11 @@ class ImageDatasetEvaluate:
     """
 
     def __init__(self, session: Session) -> None:
-        """Initialize the evaluator facade with a DB session."""
+        """Initialize the evaluator facade.
+
+        Args:
+            session: Database session used by resolver calls.
+        """
         self.session = session
 
     def object_detection(
