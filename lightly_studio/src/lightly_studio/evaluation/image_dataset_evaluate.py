@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from collections.abc import Iterable, Mapping
+from collections.abc import Iterable
 from uuid import UUID
 
 from pydantic import BaseModel, Field
@@ -18,11 +18,14 @@ from lightly_studio.models.evaluation_run import (
 )
 from lightly_studio.models.evaluation_sample_metric import EvaluationSampleMetricCreate
 from lightly_studio.resolvers import (
+    annotation_collection_coverage_resolver,
     annotation_resolver,
     evaluation_run_resolver,
     evaluation_sample_metric_resolver,
 )
 from lightly_studio.resolvers.annotations.annotations_filter import AnnotationsFilter
+
+SAMPLE_BATCH_SIZE = 32  # Number of samples to process in a single batch
 
 
 class ObjectDetectionEvaluationConfig(BaseModel):
@@ -66,7 +69,7 @@ class ImageDatasetEvaluate:
         gt_collection_name: str,
         pred_collection_name: str,
         config: ObjectDetectionEvaluationConfig | None = None,
-    ) -> Mapping[str, float]:
+    ) -> None:
         """Create an object-detection evaluation run and persist per-image metrics.
 
         Args:
@@ -75,9 +78,6 @@ class ImageDatasetEvaluate:
             pred_collection_name: Name of the annotation collection containing predictions.
             config: Optional object-detection evaluation config. If omitted,
                 defaults are used.
-
-        Returns:
-            Empty mapping. Per-image metrics are persisted to the database.
         """
         config = config or ObjectDetectionEvaluationConfig()
         gt_collection_id = resolve_and_validate_collection(
@@ -109,42 +109,27 @@ class ImageDatasetEvaluate:
         gt_per_sample = self._group_by_parent_sample_id(annotations=gt_annotations)
         pred_per_sample = self._group_by_parent_sample_id(annotations=pred_annotations)
         selected_sample_ids = {sample.sample_id for sample in self.samples}
-
-        metrics_to_persist: list[EvaluationSampleMetricCreate] = []
-        for sample_id in selected_sample_ids:
-            matching_result = match_image(
-                predictions=self._to_bounding_boxes(annotations=pred_per_sample.get(sample_id, [])),
-                ground_truths=self._to_bounding_boxes(annotations=gt_per_sample.get(sample_id, [])),
-                iou_threshold=config.iou_threshold,
-                classwise=config.classwise,
+        gt_covered_sample_ids = set(
+            annotation_collection_coverage_resolver.list_by_collection_id(
+                session=self.session,
+                annotation_collection_id=gt_collection_id,
             )
-            metrics_to_persist.extend(
-                [
-                    EvaluationSampleMetricCreate(
-                        evaluation_run_id=evaluation_run.id,
-                        sample_id=sample_id,
-                        metric_name="tp",
-                        value=float(matching_result.tp),
-                    ),
-                    EvaluationSampleMetricCreate(
-                        evaluation_run_id=evaluation_run.id,
-                        sample_id=sample_id,
-                        metric_name="fp",
-                        value=float(matching_result.fp),
-                    ),
-                    EvaluationSampleMetricCreate(
-                        evaluation_run_id=evaluation_run.id,
-                        sample_id=sample_id,
-                        metric_name="fn",
-                        value=float(matching_result.fn),
-                    ),
-                ]
-            )
-        evaluation_sample_metric_resolver.create_many(
-            session=self.session,
-            records=metrics_to_persist,
         )
-        return {}
+        pred_covered_sample_ids = set(
+            annotation_collection_coverage_resolver.list_by_collection_id(
+                session=self.session,
+                annotation_collection_id=pred_collection_id,
+            )
+        )
+        selected_sample_ids &= gt_covered_sample_ids & pred_covered_sample_ids
+
+        self._create_and_persist_object_detection_metrics_per_sample(
+            evaluation_run_id=evaluation_run.id,
+            selected_sample_ids=selected_sample_ids,
+            pred_per_sample=pred_per_sample,
+            gt_per_sample=gt_per_sample,
+            config=config,
+        )
 
     def _get_object_detection_annotations(self, collection_id: UUID) -> list[AnnotationBaseTable]:
         """Return all object-detection annotations in the collection."""
@@ -187,3 +172,54 @@ class ImageDatasetEvaluate:
                 )
             )
         return boxes
+
+    def _create_and_persist_object_detection_metrics(
+        self,
+        evaluation_run_id: UUID,
+        selected_sample_ids: set[UUID],
+        pred_per_sample: dict[UUID, list[AnnotationBaseTable]],
+        gt_per_sample: dict[UUID, list[AnnotationBaseTable]],
+        config: ObjectDetectionEvaluationConfig,
+    ) -> None:
+        """Create and persist per-sample object-detection metrics."""
+        metrics_to_persist: list[EvaluationSampleMetricCreate] = []
+        for sample_id in selected_sample_ids:
+            matching_result = match_image(
+                predictions=self._to_bounding_boxes(annotations=pred_per_sample.get(sample_id, [])),
+                ground_truths=self._to_bounding_boxes(annotations=gt_per_sample.get(sample_id, [])),
+                iou_threshold=config.iou_threshold,
+                classwise=config.classwise,
+            )
+            metrics_to_persist.extend(
+                [
+                    EvaluationSampleMetricCreate(
+                        evaluation_run_id=evaluation_run_id,
+                        sample_id=sample_id,
+                        metric_name="tp",
+                        value=float(matching_result.tp),
+                    ),
+                    EvaluationSampleMetricCreate(
+                        evaluation_run_id=evaluation_run_id,
+                        sample_id=sample_id,
+                        metric_name="fp",
+                        value=float(matching_result.fp),
+                    ),
+                    EvaluationSampleMetricCreate(
+                        evaluation_run_id=evaluation_run_id,
+                        sample_id=sample_id,
+                        metric_name="fn",
+                        value=float(matching_result.fn),
+                    ),
+                ]
+            )
+            if len(metrics_to_persist) >= SAMPLE_BATCH_SIZE:
+                evaluation_sample_metric_resolver.create_many(
+                    session=self.session,
+                    records=metrics_to_persist,
+                )
+                metrics_to_persist.clear()
+        if metrics_to_persist:
+            evaluation_sample_metric_resolver.create_many(
+                session=self.session,
+                records=metrics_to_persist,
+            )

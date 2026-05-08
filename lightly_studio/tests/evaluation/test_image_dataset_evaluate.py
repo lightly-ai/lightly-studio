@@ -49,7 +49,7 @@ def test_object_detection_evaluation(
     assert len(evaluation_runs) == 1
     assert evaluation_runs[0].name == "run-1"
     assert evaluation_runs[0].task_type == EvaluationTaskType.OBJECT_DETECTION
-    assert evaluation_runs[0].config_json == {"iou_threshold": 0.5}
+    assert evaluation_runs[0].config_json == {"iou_threshold": 0.5, "classwise": True}
 
     sample_metrics = evaluation_sample_metric_resolver.get_all_by_evaluation_run_id(
         session=dataset.session,
@@ -94,3 +94,73 @@ def test_object_detection_evaluation__raises_on_wrong_annotation_type(
             gt_collection_name="gt",
             pred_collection_name="pred",
         )
+
+
+def test_object_detection_evaluation__filters_to_samples_covered_by_both_collections(
+    patch_collection: None,  # noqa: ARG001
+) -> None:
+    """Creates metrics only for samples covered by both GT and prediction collections."""
+    dataset = ImageDataset.create(name="test_dataset")
+    label = create_annotation_label(
+        session=dataset.session,
+        root_collection_id=dataset.collection_id,
+    )
+    image_covered_by_both = create_image(
+        session=dataset.session,
+        collection_id=dataset.collection_id,
+        file_path_abs="/path/to/covered_by_both.png",
+    )
+    create_image(
+        session=dataset.session,
+        collection_id=dataset.collection_id,
+        file_path_abs="/path/to/covered_only_by_gt.png",
+    )
+    create_image(
+        session=dataset.session,
+        collection_id=dataset.collection_id,
+        file_path_abs="/path/to/uncovered.png",
+    )
+    collection_resolver.get_or_create_child_collection(
+        session=dataset.session,
+        collection_id=dataset.collection_id,
+        sample_type=SampleType.ANNOTATION,
+        name="gt",
+    )
+    collection_resolver.get_or_create_child_collection(
+        session=dataset.session,
+        collection_id=dataset.collection_id,
+        sample_type=SampleType.ANNOTATION,
+        name="pred",
+    )
+    create_annotation(
+        session=dataset.session,
+        collection_id=dataset.collection_id,
+        sample_id=image_covered_by_both.sample_id,
+        annotation_label_id=label.annotation_label_id,
+        annotation_collection_name="gt",
+    )
+    create_annotation(
+        session=dataset.session,
+        collection_id=dataset.collection_id,
+        sample_id=image_covered_by_both.sample_id,
+        annotation_label_id=label.annotation_label_id,
+        annotation_collection_name="pred",
+    )
+
+    dataset.evaluate().object_detection(
+        name="run-1",
+        gt_collection_name="gt",
+        pred_collection_name="pred",
+    )
+
+    evaluation_runs = evaluation_run_resolver.get_all_by_dataset_id(
+        session=dataset.session,
+        dataset_id=dataset.dataset_id,
+    )
+    assert len(evaluation_runs) == 1
+    sample_metrics = evaluation_sample_metric_resolver.get_all_by_evaluation_run_id(
+        session=dataset.session,
+        evaluation_run_id=evaluation_runs[0].id,
+    )
+    assert len(sample_metrics) == 3
+    assert {metric.sample_id for metric in sample_metrics} == {image_covered_by_both.sample_id}

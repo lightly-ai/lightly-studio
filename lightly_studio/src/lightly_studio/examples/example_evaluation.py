@@ -88,9 +88,7 @@ metric_list = evaluation_sample_metric_resolver.get_metric_list_by_evaluation_ru
 )
 print("\n=== Evaluation Metric Bounds ===")
 for metric in sorted(metric_list, key=lambda x: x.metric_name):
-    print(
-        f"- {metric.metric_name}: min={metric.min_value:.2f}, max={metric.max_value:.2f}"
-    )
+    print(f"- {metric.metric_name}: min={metric.min_value:.2f}, max={metric.max_value:.2f}")
 
 sample_metrics = evaluation_sample_metric_resolver.get_all_by_evaluation_run_id(
     session=dataset.session,
