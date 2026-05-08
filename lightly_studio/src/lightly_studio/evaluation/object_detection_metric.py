@@ -89,8 +89,8 @@ class MatchingResult:
 
 
 def match_image(
-    predictions: list[BoundingBox],
-    ground_truths: list[BoundingBox],
+    predictions: Sequence[BoundingBox],
+    ground_truths: Sequence[BoundingBox],
     iou_threshold: float,
     classwise: bool,
 ) -> MatchingResult:
