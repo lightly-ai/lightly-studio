@@ -29,12 +29,16 @@ def test_sort_field_expr__valid_directions() -> None:
 
 def test_sort_field_expr__rejects_invalid_field() -> None:
     with pytest.raises(ValidationError):
-        SortFieldExpr(field_name="invalid_field", direction=SortDirection.asc)
+        SortFieldExpr.model_validate(
+            {"field_name": "invalid_field", "direction": SortDirection.asc}
+        )
 
 
 def test_sort_field_expr__rejects_invalid_direction() -> None:
     with pytest.raises(ValidationError):
-        SortFieldExpr(field_name=ImageSortField.file_name, direction="invalid_direction")
+        SortFieldExpr.model_validate(
+            {"field_name": ImageSortField.file_name, "direction": "invalid_direction"}
+        )
 
 
 def test_sort_field_expr_to_order_by__ascending() -> None:

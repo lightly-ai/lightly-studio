@@ -145,7 +145,7 @@ def _get_all_with_similarity(  # noqa: PLR0913
     samples_query = samples_query.order_by(distance_expr)
     if order_by:
         for expr in order_by:
-            samples_query = expr.apply(samples_query)
+            samples_query = samples_query.order_by(expr.to_column_element())
     samples_query = samples_query.order_by(col(ImageTable.sample_id).asc())
 
     if pagination is not None:
