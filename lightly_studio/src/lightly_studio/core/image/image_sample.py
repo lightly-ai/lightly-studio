@@ -42,6 +42,13 @@ class ImageSample(Sample):
         self.inner = inner
         super().__init__(sample_table=inner.sample)
 
+    def __str__(self) -> str:
+        base = super().__str__()
+        return f"{base}\n  file:     {self.file_name}\n  path:     {self.file_path_abs}"
+
+    def __repr__(self) -> str:
+        return self.__str__()
+
     @property
     def width(self) -> int:
         """Image width in pixels."""

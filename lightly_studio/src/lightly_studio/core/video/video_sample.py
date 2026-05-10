@@ -35,6 +35,13 @@ class VideoSample(Sample):
     fps = DBField(col(VideoTable.fps))
     """Video FPS"""
 
+    def __str__(self) -> str:
+        base = super().__str__()
+        return f"{base}\n  file:     {self.file_name}\n  path:     {self.file_path_abs}"
+
+    def __repr__(self) -> str:
+        return self.__str__()
+
     def __init__(self, inner: VideoTable) -> None:
         """Initialize the Sample.
 

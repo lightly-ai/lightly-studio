@@ -21,6 +21,7 @@ from lightly_studio.resolvers import (
     collection_resolver,
     embedding_model_resolver,
     metadata_resolver,
+    sample_resolver,
     tag_resolver,
 )
 
@@ -138,6 +139,36 @@ class Dataset(Generic[T], ABC):
             ValueError: If slice contains unsupported features or conflicts with existing slice.
         """
         return self.query()[key]
+
+    def __str__(self) -> str:
+        """Return a human-readable summary of the dataset."""
+        n_samples = sample_resolver.count_by_collection_id(
+            session=self.session, collection_id=self.collection_id
+        )
+        tags = sorted(
+            t.name
+            for t in tag_resolver.get_all_by_collection_id(
+                session=self.session, collection_id=self.collection_id
+            )
+        )
+        metadata_keys = sorted(
+            info.name
+            for info in metadata_resolver.get_all_metadata_keys_and_schema(
+                session=self.session, collection_id=self.collection_id
+            )
+        )
+        return (
+            f"{type(self).__name__}(name={self.name!r})\n"
+            f"  id:        {self.dataset_id}\n"
+            f"  type:      {self.sample_type().value}\n"
+            f"  n_samples: {n_samples}\n"
+            f"  tags:      {tags}\n"
+            f"  metadata:  {metadata_keys}"
+        )
+
+    def __repr__(self) -> str:
+        """Return a string representation."""
+        return self.__str__()
 
     def compute_typicality_metadata(
         self,
