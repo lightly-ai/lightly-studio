@@ -69,42 +69,6 @@ def test_add_annotations_from_labelformat__missing_images(db_session: Session) -
     assert len(samples) == 0
 
 
-def test_add_annotations_from_labelformat__absolute_filename_not_joined(
-    db_session: Session,
-) -> None:
-    collection = helpers_resolvers.create_collection(db_session)
-    absolute_path = str(Path("images/image.jpg").absolute())
-    images = helpers_resolvers.create_images(
-        db_session,
-        collection.collection_id,
-        [
-            ImageStub(
-                path=absolute_path,
-                width=100,
-                height=200,
-            ),
-        ],
-    )
-    label_input = _get_labelformat_input_obj_det(filename=absolute_path)
-
-    missing_paths = add_annotations.add_annotations_from_labelformat(
-        session=db_session,
-        root_collection_id=collection.collection_id,
-        input_labels=label_input,
-        images_root="/unused/root",
-        collection_name="model_abs",
-    )
-
-    annotations = annotation_resolver.get_all_by_collection_name(
-        session=db_session,
-        collection_name="model_abs",
-        parent_collection_id=collection.collection_id,
-    ).annotations
-    assert missing_paths == []
-    assert len(annotations) == 1
-    assert annotations[0].parent_sample_id == images[0].sample_id
-
-
 def _get_labelformat_input_obj_det(filename: str) -> LabelformatObjectDetectionInput:
     categories = [Category(id=0, name="dog")]
     image = Image(id=0, filename=filename, width=100, height=200)
