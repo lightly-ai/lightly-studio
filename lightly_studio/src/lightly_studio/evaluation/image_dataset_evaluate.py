@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from collections.abc import Iterable, Mapping
+from collections.abc import Iterable
 from uuid import UUID
 
 from pydantic import BaseModel, Field
@@ -173,7 +173,7 @@ class ImageDatasetEvaluate:
             )
         return boxes
 
-    def _create_and_persist_object_detection_metrics(
+    def _create_and_persist_object_detection_metrics_per_sample(
         self,
         evaluation_run_id: UUID,
         selected_sample_ids: set[UUID],

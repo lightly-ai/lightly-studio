@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import posixpath
-import re
 from collections.abc import Mapping
 from pathlib import Path
 from uuid import UUID
@@ -35,7 +34,6 @@ from lightly_studio.type_definitions import PathLike
 # Constants
 SAMPLE_BATCH_SIZE = 32  # Number of samples to process in a single batch
 ALLOWED_YOLO_SPLITS = {"train", "val", "test", "minival"}
-WINDOWS_ABS_PATH_RE = re.compile(r"^[a-zA-Z]:[\\/]")
 
 
 def add_annotations_from_labelformat(  # noqa: PLR0913
@@ -81,10 +79,7 @@ def add_annotations_from_labelformat(  # noqa: PLR0913
         input_labels.get_labels(), desc="Processing annotations", unit=" images"
     ):
         annotation_data: ImageInstanceSegmentation | ImageObjectDetection = image_data  # type: ignore[assignment]
-        file_path_abs = resolve_annotation_path(
-            images_root_abs=images_root_abs,
-            image_filename=str(annotation_data.image.filename),
-        )
+        file_path_abs = posixpath.join(images_root_abs, str(annotation_data.image.filename))
         path_to_anno_data[file_path_abs] = annotation_data
 
         if len(path_to_anno_data) >= SAMPLE_BATCH_SIZE:
@@ -120,23 +115,6 @@ def normalize_images_root(images_root: PathLike) -> str:
     if protocol == "file":
         return str(Path(fsspec.core.strip_protocol(images_root_str)).absolute())
     return images_root_str
-
-
-def resolve_annotation_path(images_root_abs: str, image_filename: str) -> str:
-    """Resolve annotation image filename against dataset root with path normalization."""
-    if is_absolute_path(image_filename):
-        return normalize_images_root(images_root=image_filename)
-
-    protocol, _ = fsspec.core.split_protocol(images_root_abs)
-    if protocol in (None, "file"):
-        return str(Path(images_root_abs) / Path(image_filename))
-
-    return posixpath.join(images_root_abs.rstrip("/"), image_filename.lstrip("/"))
-
-
-def is_absolute_path(path: str) -> bool:
-    """Return True for absolute local paths, UNC paths, and URI-like paths."""
-    return "://" in path or path.startswith(("/", "\\\\")) or bool(WINDOWS_ABS_PATH_RE.match(path))
 
 
 def resolve_yolo_splits(data_yaml: Path, input_split: str | None) -> list[str]:
