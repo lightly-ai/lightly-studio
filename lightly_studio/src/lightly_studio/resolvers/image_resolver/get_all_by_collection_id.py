@@ -12,6 +12,8 @@ from sqlalchemy.orm.interfaces import LoaderOption
 from sqlmodel import Session, col, func, select
 
 from lightly_studio.api.routes.api.validators import Paginated
+from lightly_studio.core.dataset_query.image_sample_field import ImageSampleField
+from lightly_studio.core.dataset_query.order_by import OrderByField
 from lightly_studio.models.annotation.annotation_base import AnnotationBaseTable
 from lightly_studio.models.image import ImageTable
 from lightly_studio.models.sample import SampleTable
@@ -21,6 +23,10 @@ from lightly_studio.resolvers.similarity_utils import (
     distance_to_similarity,
     get_distance_expression,
 )
+
+
+def _file_path_abs_in_order_by(order_by: list[OrderByField]) -> bool:
+    return any(expr.field is ImageSampleField.file_path_abs for expr in order_by)
 
 
 class GetAllSamplesByCollectionIdResult(BaseModel):
@@ -65,6 +71,7 @@ def get_all_by_collection_id(  # noqa: PLR0913
     filters: ImageFilter | None = None,
     text_embedding: list[float] | None = None,
     sample_ids: list[UUID] | None = None,
+    order_by: list[OrderByField] | None = None,
 ) -> GetAllSamplesByCollectionIdResult:
     """Retrieve samples for a specific collection with optional filtering."""
     embedding_model_id, distance_expr = get_distance_expression(
@@ -82,6 +89,7 @@ def get_all_by_collection_id(  # noqa: PLR0913
             pagination=pagination,
             filters=filters,
             sample_ids=sample_ids,
+            order_by=order_by,
         )
     return _get_all_without_similarity(
         session=session,
@@ -89,6 +97,7 @@ def get_all_by_collection_id(  # noqa: PLR0913
         pagination=pagination,
         filters=filters,
         sample_ids=sample_ids,
+        order_by=order_by,
     )
 
 
@@ -100,6 +109,7 @@ def _get_all_with_similarity(  # noqa: PLR0913
     pagination: Paginated | None,
     filters: ImageFilter | None,
     sample_ids: list[UUID] | None,
+    order_by: list[OrderByField] | None = None,
 ) -> GetAllSamplesByCollectionIdResult:
     """Get samples with similarity search - returns (ImageTable, float) tuples."""
     load_options = _get_load_options()
@@ -138,6 +148,11 @@ def _get_all_with_similarity(  # noqa: PLR0913
         total_count_query = total_count_query.where(col(ImageTable.sample_id).in_(sample_ids))
 
     samples_query = samples_query.order_by(distance_expr)
+    if order_by:
+        for expr in order_by:
+            samples_query = samples_query.order_by(expr.to_column_element())
+    if not order_by or not _file_path_abs_in_order_by(order_by):
+        samples_query = samples_query.order_by(col(ImageTable.file_path_abs).asc())
 
     if pagination is not None:
         samples_query = samples_query.offset(pagination.offset).limit(pagination.limit)
@@ -156,12 +171,13 @@ def _get_all_with_similarity(  # noqa: PLR0913
     )
 
 
-def _get_all_without_similarity(
+def _get_all_without_similarity(  # noqa: PLR0913
     session: Session,
     collection_id: UUID,
     pagination: Paginated | None,
     filters: ImageFilter | None,
     sample_ids: list[UUID] | None,
+    order_by: list[OrderByField] | None,
 ) -> GetAllSamplesByCollectionIdResult:
     """Get samples without similarity search - returns ImageTable directly."""
     load_options = _get_load_options()
@@ -189,7 +205,13 @@ def _get_all_without_similarity(
         samples_query = samples_query.where(col(ImageTable.sample_id).in_(sample_ids))
         total_count_query = total_count_query.where(col(ImageTable.sample_id).in_(sample_ids))
 
-    samples_query = samples_query.order_by(col(ImageTable.file_path_abs).asc())
+    if order_by:
+        for expr in order_by:
+            samples_query = expr.apply(samples_query)
+        if not _file_path_abs_in_order_by(order_by):
+            samples_query = samples_query.order_by(col(ImageTable.file_path_abs).asc())
+    else:
+        samples_query = samples_query.order_by(col(ImageTable.file_path_abs).asc())
 
     if pagination is not None:
         samples_query = samples_query.offset(pagination.offset).limit(pagination.limit)
