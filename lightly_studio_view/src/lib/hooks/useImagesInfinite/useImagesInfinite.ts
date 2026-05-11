@@ -100,7 +100,6 @@ const createImagesInfiniteOptions = (params: ImagesInfiniteParams) => {
     });
 };
 
-
 export const buildRequestBody = (
     params: ImagesInfiniteParams,
     pageParam: number
