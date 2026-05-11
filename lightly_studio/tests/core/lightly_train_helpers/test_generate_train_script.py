@@ -1,11 +1,20 @@
 from __future__ import annotations
 
+import json
 from pathlib import Path
 
-from pytest_mock import MockerFixture
+import pytest
 
-from lightly_studio.core.dataset_query.tags_expression import TagsContainsExpression
+from lightly_studio.core.image.image_dataset import ImageDataset
 from lightly_studio.core.lightly_train_helpers import generate_train_script
+from lightly_studio.resolvers import tag_resolver
+from tests.helpers_resolvers import (
+    ImageStub,
+    create_annotation,
+    create_annotation_label,
+    create_images,
+    create_tag,
+)
 
 
 def test_update_train_object_detection_template__renders_required_values() -> None:
@@ -40,16 +49,58 @@ def test_create_train_object_detection_script__writes_file(tmp_path: Path) -> No
     assert '"annotations": "/tmp/val_coco.json"' in output_script_path.read_text(encoding="utf-8")
 
 
-def test_export_coco_for_tag__matches_tag_and_calls_export(mocker: MockerFixture) -> None:
-    dataset = mocker.Mock()
-    query = mocker.Mock()
-    filtered_query = mocker.Mock()
-    exporter = mocker.Mock()
-    output_json_path = Path("/tmp/train_coco.json")
+@pytest.mark.usefixtures("patch_collection")
+def test_export_coco_for_tag__exports_only_matching_tag(tmp_path: Path) -> None:
+    dataset = ImageDataset.create(name="test_dataset")
+    train_image, val_image = create_images(
+        db_session=dataset.session,
+        collection_id=dataset.collection_id,
+        images=[
+            ImageStub(path="train.jpg", width=100, height=100),
+            ImageStub(path="val.jpg", width=200, height=200),
+        ],
+    )
+    label = create_annotation_label(
+        session=dataset.session,
+        root_collection_id=dataset.collection_id,
+        label_name="dog",
+    )
+    create_annotation(
+        session=dataset.session,
+        collection_id=dataset.collection_id,
+        sample_id=train_image.sample_id,
+        annotation_label_id=label.annotation_label_id,
+        annotation_data={"x": 10, "y": 20, "width": 30, "height": 40},
+    )
+    create_annotation(
+        session=dataset.session,
+        collection_id=dataset.collection_id,
+        sample_id=val_image.sample_id,
+        annotation_label_id=label.annotation_label_id,
+        annotation_data={"x": 50, "y": 60, "width": 70, "height": 80},
+    )
+    train_tag = create_tag(
+        session=dataset.session,
+        collection_id=dataset.collection_id,
+        tag_name="train",
+    )
+    val_tag = create_tag(
+        session=dataset.session,
+        collection_id=dataset.collection_id,
+        tag_name="val",
+    )
+    tag_resolver.add_tag_to_sample(
+        session=dataset.session,
+        tag_id=train_tag.tag_id,
+        sample=train_image.sample,
+    )
+    tag_resolver.add_tag_to_sample(
+        session=dataset.session,
+        tag_id=val_tag.tag_id,
+        sample=val_image.sample,
+    )
 
-    dataset.query.return_value = query
-    query.match.return_value = filtered_query
-    dataset.export.return_value = exporter
+    output_json_path = tmp_path / "train_coco.json"
 
     generate_train_script._export_coco_for_tag(
         dataset=dataset,
@@ -57,11 +108,12 @@ def test_export_coco_for_tag__matches_tag_and_calls_export(mocker: MockerFixture
         output_json_path=output_json_path,
     )
 
-    assert query.match.call_count == 1
-    # `match()` is called positionally with a TagsContainsExpression.
-    match_expression = query.match.call_args.args[0]
-    assert isinstance(match_expression, TagsContainsExpression)
-    assert match_expression.tag_name == "train"
-
-    dataset.export.assert_called_once_with(filtered_query)
-    exporter.to_coco_object_detections.assert_called_once_with(output_json=output_json_path)
+    assert json.loads(output_json_path.read_text()) == {
+        "images": [
+            {"id": 0, "file_name": "train.jpg", "width": 100, "height": 100},
+        ],
+        "categories": [{"id": 0, "name": "dog"}],
+        "annotations": [
+            {"image_id": 0, "category_id": 0, "bbox": [10.0, 20.0, 30.0, 40.0]},
+        ],
+    }

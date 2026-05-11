@@ -22,13 +22,13 @@ TRAIN_OBJECT_DETECTION_TEMPLATE_PATH = (
 def update_train_object_detection_template(
     template_values: Mapping[str, Any],
 ) -> str:
-    """Render the object detection training template.
+    """Render the LightlyTrain object detection training template.
 
     Args:
         template_values: Values injected into the Jinja template.
 
     Returns:
-        The rendered training script as a string.
+        The rendered LightlyTrain training script as a string.
     """
     template_text = TRAIN_OBJECT_DETECTION_TEMPLATE_PATH.read_text(encoding="utf-8")
     template = Environment().from_string(template_text)
@@ -39,14 +39,14 @@ def create_train_object_detection_script(
     template_values: Mapping[str, Any],
     output_script_path: str | Path,
 ) -> Path:
-    """Render and persist an object detection training script.
+    """Render and persist a LightlyTrain object detection training script.
 
     Args:
         template_values: Values injected into the template.
         output_script_path: Output path of the generated Python script.
 
     Returns:
-        The path to the generated script file.
+        The path to the generated LightlyTrain script file.
     """
     rendered_script = update_train_object_detection_template(
         template_values=template_values,
