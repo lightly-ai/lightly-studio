@@ -3,16 +3,15 @@ import type { AnnotationCollectionView } from '$lib/api/lightly_studio_local/typ
 import { createQuery, type CreateQueryResult } from '@tanstack/svelte-query';
 
 interface UseAnnotationCollectionsParams {
-    // The ID of the image collection for which to fetch annotation collections.
-    imageCollectionId: string;
+    collectionId: string;
 }
 
 export const useAnnotationCollections = ({
-    imageCollectionId
+    collectionId
 }: UseAnnotationCollectionsParams): CreateQueryResult<AnnotationCollectionView[], Error> => {
     return createQuery(
         readAnnotationCollectionsOptions({
-            path: { collection_id: imageCollectionId }
+            path: { collection_id: collectionId }
         })
     );
 };
