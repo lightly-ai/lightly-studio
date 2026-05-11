@@ -1,12 +1,6 @@
-type AnnotationsFilterInput = {
-    annotation_label_ids?: string[];
-    collection_ids?: string[];
-};
+import type { AnnotationsFilter } from '$lib/api/lightly_studio_local/types.gen';
 
-type AnnotationsFilter = {
-    annotation_label_ids?: string[];
-    collection_ids?: string[];
-};
+type AnnotationsFilterInput = Pick<AnnotationsFilter, 'annotation_label_ids' | 'collection_ids'>;
 
 export const getAnnotationsFilter = (
     filters: AnnotationsFilterInput
@@ -17,6 +11,7 @@ export const getAnnotationsFilter = (
     const collection_ids = filters.collection_ids?.length ? filters.collection_ids : undefined;
     if (!annotation_label_ids && !collection_ids) return undefined;
     return {
+        filter_type: 'annotations',
         ...(annotation_label_ids && { annotation_label_ids }),
         ...(collection_ids && { collection_ids })
     };

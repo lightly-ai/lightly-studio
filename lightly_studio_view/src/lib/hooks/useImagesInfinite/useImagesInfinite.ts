@@ -100,7 +100,6 @@ const createImagesInfiniteOptions = (params: ImagesInfiniteParams) => {
     });
 };
 
-
 export const buildRequestBody = (
     params: ImagesInfiniteParams,
     pageParam: number
@@ -114,10 +113,6 @@ export const buildRequestBody = (
         filters: {
             sample_filter: {
                 query_expr: params.query_expr ?? undefined,
-                annotations_filter: isNormalModeParams(params)
-                    ? { collection_ids: params.filters?.collection_ids }
-                    : undefined,
-
                 metadata_filters: params.metadata_values
                     ? createMetadataFilters(params.metadata_values)
                     : undefined
