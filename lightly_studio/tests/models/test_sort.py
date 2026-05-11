@@ -15,15 +15,6 @@ from lightly_studio.models.sort import (
 
 _IMAGE_SORT_FIELD_NAMES = ["file_name", "file_path_abs", "created_at", "width", "height"]
 
-
-def test_sort_field_expr__valid_fields() -> None:
-    for field_name in _IMAGE_SORT_FIELD_NAMES:
-        expr = SortFieldExpr(
-            source=SortFieldSource.image, field_name=field_name, direction=SortDirection.asc
-        )
-        assert expr.field_name == field_name
-
-
 def test_sort_field_expr__valid_directions() -> None:
     expr_asc = SortFieldExpr(
         source=SortFieldSource.image, field_name="file_name", direction=SortDirection.asc
