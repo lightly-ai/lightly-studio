@@ -1,7 +1,6 @@
 <script lang="ts">
     import { Button } from '$lib/components/ui/button';
     import * as Dialog from '$lib/components/ui/dialog';
-    import { Label } from '$lib/components/ui/label';
     import { Select, SelectContent, SelectItem, SelectTrigger } from '$lib/components/ui/select';
     import { Switch } from '$lib/components/ui/switch';
     import { useSettings } from '$lib/hooks/useSettings';
@@ -14,6 +13,7 @@
     import { shortcutSettings, staticShortcuts } from './settingsDialogConfig';
     import type { ShortcutSettingKey } from './settingsDialogConfig';
     import ShortcutSettingRow from './ShortcutSettingRow/ShortcutSettingRow.svelte';
+    import SettingsFieldRow from './SettingsFieldRow/SettingsFieldRow.svelte';
 
     type SettingsDialogFormState = ReturnType<typeof createSettingsDialogFormState>;
     type RenderingMode = SettingsDialogFormState['gridViewRendering'];
@@ -165,10 +165,7 @@
                     <!-- Grid View Settings -->
                     <div class="space-y-4">
                         <h3 class="text-lg font-medium text-foreground">Display Settings</h3>
-                        <div class="grid grid-cols-2 items-center gap-4">
-                            <Label for="grid-view-rendering" class="text-right text-foreground">
-                                Grid View Rendering
-                            </Label>
+                        <SettingsFieldRow id="grid-view-rendering" label="Grid View Rendering">
                             <div class="relative">
                                 <Select
                                     type="single"
@@ -184,24 +181,21 @@
                                     </SelectContent>
                                 </Select>
                             </div>
-                        </div>
-                        <div class="grid grid-cols-2 items-center gap-4">
-                            <Label for="show-sample-filenames" class="text-right text-foreground">
-                                Show filenames in grid view
-                            </Label>
+                        </SettingsFieldRow>
+                        <SettingsFieldRow
+                            id="show-sample-filenames"
+                            label="Show filenames in grid view"
+                        >
                             <Switch
                                 id="show-sample-filenames"
                                 bind:checked={showSampleFilenames}
                                 disabled={isSaving}
                             />
-                        </div>
-                        <div class="grid grid-cols-2 items-center gap-4">
-                            <Label
-                                for="grid-view-thumbnail-quality"
-                                class="text-right text-foreground"
-                            >
-                                Thumbnail Quality in Grid View
-                            </Label>
+                        </SettingsFieldRow>
+                        <SettingsFieldRow
+                            id="grid-view-thumbnail-quality"
+                            label="Thumbnail Quality in Grid View"
+                        >
                             <div class="relative">
                                 <Select
                                     type="single"
@@ -217,38 +211,32 @@
                                     </SelectContent>
                                 </Select>
                             </div>
-                        </div>
+                        </SettingsFieldRow>
                     </div>
 
-                    <!-- Annotation Text Labels Setting -->
+                    <!-- Annotation Settings -->
                     <div class="space-y-4">
                         <h3 class="text-lg font-medium text-foreground">Annotation Settings</h3>
-                        <div class="grid grid-cols-2 items-center gap-4">
-                            <Label
-                                for="show-bounding-boxes-for-segmentation"
-                                class="text-right text-foreground"
-                            >
-                                Show Bounding Boxes for Segmentation
-                            </Label>
+                        <SettingsFieldRow
+                            id="show-bounding-boxes-for-segmentation"
+                            label="Show Bounding Boxes for Segmentation"
+                        >
                             <Switch
                                 id="show-bounding-boxes-for-segmentation"
                                 bind:checked={showBoundingBoxesForSegmentation}
                                 disabled={isSaving}
                             />
-                        </div>
-                        <div class="grid grid-cols-2 items-center gap-4">
-                            <Label
-                                for="show-annotation-text-labels"
-                                class="text-right text-foreground"
-                            >
-                                Show Annotation Text Labels
-                            </Label>
+                        </SettingsFieldRow>
+                        <SettingsFieldRow
+                            id="show-annotation-text-labels"
+                            label="Show Annotation Text Labels"
+                        >
                             <Switch
                                 id="show-annotation-text-labels"
                                 bind:checked={showAnnotationTextLabels}
                                 disabled={isSaving}
                             />
-                        </div>
+                        </SettingsFieldRow>
                     </div>
                 </div>
 
