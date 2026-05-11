@@ -19,20 +19,20 @@
     let { name, checked, showColorMarker, onCheckedChange }: Props = $props();
 
     // Stable unique ID for pairing the checkbox and its label
-    const nameId = $props.id();
+    const menuItemId = $props.id();
 </script>
 
 <div class="space-y-1" title={name}>
     <div class="flex w-full items-center space-x-2">
         <Checkbox
-            id={`menu-item-${nameId}`}
+            id={`menu-item-${menuItemId}`}
             {checked}
-            aria-labelledby={`menu-item-${nameId}-label`}
+            aria-labelledby={`menu-item-${menuItemId}-label`}
             {onCheckedChange}
         />
         <Label
-            id={`menu-item-${nameId}-label`}
-            for={`menu-item-${nameId}`}
+            id={`menu-item-${menuItemId}-label`}
+            for={`menu-item-${menuItemId}`}
             class="flex min-w-0 flex-1 cursor-pointer items-center space-x-2 text-nowrap peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
         >
             {#if showColorMarker}
