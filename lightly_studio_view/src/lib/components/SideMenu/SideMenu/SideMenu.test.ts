@@ -51,4 +51,13 @@ describe('SideMenu', () => {
         await checkboxes[0].click();
         expect(onChangeSelectedItems).toHaveBeenCalledWith([]);
     });
+
+    it('merges containerProps.class with default classes', () => {
+        render(SideMenu, {
+            ...menuProps,
+            containerProps: { 'data-testid': testId, class: 'custom-class' }
+        });
+        const container = screen.getByTestId(testId);
+        expect(container).toHaveClass('w-full', 'space-y-2', 'overflow-hidden', 'custom-class');
+    });
 });

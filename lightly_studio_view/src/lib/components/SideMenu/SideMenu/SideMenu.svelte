@@ -3,6 +3,7 @@
     import MenuItem from '../MenuItem/MenuItem.svelte';
     import { type MenuItemType } from '../types';
     import type { HTMLAttributes } from 'svelte/elements';
+    import { cn } from '$lib/utils/shadcn';
 
     interface SideMenuProps {
         items: Readable<MenuItemType[]>;
@@ -31,7 +32,7 @@
     };
 </script>
 
-<div {...containerProps} class="w-full space-y-2 overflow-hidden">
+<div {...containerProps} class={cn('w-full space-y-2 overflow-hidden', containerProps?.class)}>
     {#each $items as { id, name } (id)}
         <MenuItem
             {name}
