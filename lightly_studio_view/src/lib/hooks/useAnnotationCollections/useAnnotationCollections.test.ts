@@ -36,7 +36,7 @@ describe('useAnnotationCollections', () => {
             mockStore as unknown as ReturnType<typeof createQuery>
         );
 
-        useAnnotationCollections({ collectionId: 'collection-1' });
+        useAnnotationCollections({ imageCollectionId: 'collection-1' });
 
         expect(createQuery).toHaveBeenCalledWith(
             expect.objectContaining({
@@ -55,7 +55,7 @@ describe('useAnnotationCollections', () => {
             mockStore as unknown as ReturnType<typeof createQuery>
         );
 
-        const result = useAnnotationCollections({ collectionId: 'collection-1' });
+        const result = useAnnotationCollections({ imageCollectionId: 'collection-1' });
 
         expect(get(result).data).toEqual(mockAnnotationCollections);
     });
@@ -66,7 +66,7 @@ describe('useAnnotationCollections', () => {
             mockStore as unknown as ReturnType<typeof createQuery>
         );
 
-        const result = useAnnotationCollections({ collectionId: 'collection-1' });
+        const result = useAnnotationCollections({ imageCollectionId: 'collection-1' });
 
         expect(get(result).isLoading).toBe(true);
         expect(get(result).data).toBeUndefined();
@@ -79,7 +79,7 @@ describe('useAnnotationCollections', () => {
             mockStore as unknown as ReturnType<typeof createQuery>
         );
 
-        const result = useAnnotationCollections({ collectionId: 'collection-1' });
+        const result = useAnnotationCollections({ imageCollectionId: 'collection-1' });
 
         expect(get(result).error).toEqual(mockError);
     });

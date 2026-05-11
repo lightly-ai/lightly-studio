@@ -4,15 +4,15 @@ import { createQuery, type CreateQueryResult } from '@tanstack/svelte-query';
 
 interface UseAnnotationCollectionsParams {
     // The ID of the image collection for which to fetch annotation collections.
-    collectionId: string;
+    imageCollectionId: string;
 }
 
 export const useAnnotationCollections = ({
-    collectionId
+    imageCollectionId
 }: UseAnnotationCollectionsParams): CreateQueryResult<AnnotationCollectionView[], Error> => {
     return createQuery(
         readAnnotationCollectionsOptions({
-            path: { collection_id: collectionId }
+            path: { collection_id: imageCollectionId }
         })
     );
 };
