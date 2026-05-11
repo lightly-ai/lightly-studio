@@ -2,11 +2,11 @@
     import { Checkbox } from '$lib/components/ui/checkbox/index.js';
     import { Label } from '$lib/components/ui/label/index.js';
     import type { ComponentProps } from 'svelte';
-    import { ColorMarker } from '../';
+    import ColorMarker from '../ColorMarker/ColorMarker.svelte';
     import { Typography } from '$lib/components';
 
     interface Props {
-        /** Label text displayed in the menu item; also used as the `title` attribute and checkbox `id`. */
+        /** Label text displayed in the menu item; also used as the `title` attribute. */
         name: string;
         /** Controls the checkbox checked state. */
         checked: boolean;
@@ -18,20 +18,21 @@
 
     let { name, checked, showColorMarker, onCheckedChange }: Props = $props();
 
-    const nameId = $derived(name.replace(/[^a-zA-Z0-9]/g, '-'));
+    // Stable unique ID for pairing the checkbox and its label
+    const menuItemId = $props.id();
 </script>
 
 <div class="space-y-1" title={name}>
     <div class="flex w-full items-center space-x-2">
         <Checkbox
-            id={`menu-item-${nameId}`}
+            id={`menu-item-${menuItemId}`}
             {checked}
-            aria-labelledby={`menu-item-${nameId}-label`}
+            aria-labelledby={`menu-item-${menuItemId}-label`}
             {onCheckedChange}
         />
         <Label
-            id={`menu-item-${nameId}-label`}
-            for={`menu-item-${nameId}`}
+            id={`menu-item-${menuItemId}-label`}
+            for={`menu-item-${menuItemId}`}
             class="flex min-w-0 flex-1 cursor-pointer items-center space-x-2 text-nowrap peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
         >
             {#if showColorMarker}
