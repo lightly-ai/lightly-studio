@@ -15,6 +15,7 @@
     } from '$lib/hooks/useImagesInfinite/useImagesInfinite';
     import { useScrollRestoration } from '$lib/hooks/useScrollRestoration/useScrollRestoration';
     import { useImageFilters } from '$lib/hooks/useImageFilters/useImageFilters';
+    import { useAnnotationCollectionsFilter } from '$lib/hooks/useAnnotationCollectionsFilter/useAnnotationCollectionsFilter';
     import type { ImageView } from '$lib/api/lightly_studio_local';
     import { goto } from '$app/navigation';
     import { omit, isEqual } from 'lodash-es';
@@ -38,6 +39,7 @@
 
     const { selectedAnnotationFilterIdsArray: selectedAnnotationFilterIds } =
         useSelectedAnnotationsFilter();
+    const { selectedCollectionIds } = useAnnotationCollectionsFilter();
 
     const { tagsSelected } = useTags({
         collection_id,
@@ -63,6 +65,7 @@
             annotation_label_ids: $selectedAnnotationFilterIds?.length
                 ? $selectedAnnotationFilterIds
                 : undefined,
+            collection_ids: $selectedCollectionIds.length ? $selectedCollectionIds : undefined,
             tag_ids: $tagsSelected.size > 0 ? Array.from($tagsSelected) : undefined,
             dimensions: $dimensions ?? undefined
         },
