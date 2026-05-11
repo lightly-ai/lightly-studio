@@ -3,11 +3,12 @@
 from __future__ import annotations
 
 from enum import Enum
+from typing import Literal
 
 from pydantic import BaseModel
 
-from lightly_studio.core.dataset_query.image_sample_field import ImageSampleField
 from lightly_studio.core.dataset_query.order_by import OrderByField
+from lightly_studio.core.dataset_query.query_translation import sort_to_order_by
 
 
 class SortDirection(str, Enum):
@@ -17,35 +18,24 @@ class SortDirection(str, Enum):
     desc = "desc"
 
 
-class ImageSortField(str, Enum):
-    """Native image fields available for sorting."""
+class SortFieldSource(str, Enum):
+    """Source of the field to sort by."""
 
-    file_name = "file_name"
-    file_path_abs = "file_path_abs"
-    created_at = "created_at"
-    width = "width"
-    height = "height"
+    image = "image"
 
 
 class SortFieldExpr(BaseModel):
     """A sorting expression for a single field.
 
     Attributes:
-        field_name: The native image field to sort by.
+        source: The source of the field (e.g., "image").
+        field_name: The field to sort by.
         direction: The sort direction, either ascending or descending.
     """
 
-    field_name: ImageSortField
+    source: SortFieldSource
+    field_name: str
     direction: SortDirection
-
-
-_IMAGE_SORT_FIELDS = {
-    ImageSortField.file_name: ImageSampleField.file_name,
-    ImageSortField.file_path_abs: ImageSampleField.file_path_abs,
-    ImageSortField.created_at: ImageSampleField.created_at,
-    ImageSortField.width: ImageSampleField.width,
-    ImageSortField.height: ImageSampleField.height,
-}
 
 
 def sort_field_expr_to_order_by(expr: SortFieldExpr) -> OrderByField:
@@ -57,7 +47,5 @@ def sort_field_expr_to_order_by(expr: SortFieldExpr) -> OrderByField:
     Returns:
         An OrderByField ready to be applied to a database query.
     """
-    order_by = OrderByField(_IMAGE_SORT_FIELDS[expr.field_name])
-    if expr.direction == SortDirection.desc:
-        order_by.desc()
-    return order_by
+    direction: Literal["asc", "desc"] = "asc" if expr.direction == SortDirection.asc else "desc"
+    return sort_to_order_by((expr.source, expr.field_name), direction)

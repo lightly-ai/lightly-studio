@@ -633,6 +633,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/collections/{collection_id}/annotation_collections": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Read Annotation Collections
+         * @description List annotation collections under the given parent collection.
+         */
+        get: operations["read_annotation_collections"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/collections/{collection_id}/annotations/sample_ids": {
         parameters: {
             query?: never;
@@ -1965,6 +1985,19 @@ export interface components {
             parent_sample_id: string;
             /** Object Track Id */
             object_track_id?: string | null;
+        };
+        /**
+         * AnnotationCollectionView
+         * @description Slim collection view used for the annotation collections menu.
+         */
+        AnnotationCollectionView: {
+            /**
+             * Collection Id
+             * Format: uuid
+             */
+            collection_id: string;
+            /** Name */
+            name: string;
         };
         /**
          * AnnotationCreateInput
@@ -3642,10 +3675,16 @@ export interface components {
          * @description A sorting expression for a single field.
          *
          *     Attributes:
-         *         field_name: The native image field to sort by.
+         *         source: The source of the field (e.g., "image").
+         *         field_name: The native field to sort by.
          *         direction: The sort direction, either ascending or descending.
          */
         SortFieldExpr: {
+            /**
+             * Source
+             * @constant
+             */
+            source: "image";
             field_name: components["schemas"]["ImageSortField"];
             direction: components["schemas"]["SortDirection"];
         };
@@ -5287,6 +5326,37 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["AnnotationView"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    read_annotation_collections: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                collection_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AnnotationCollectionView"][];
                 };
             };
             /** @description Validation Error */

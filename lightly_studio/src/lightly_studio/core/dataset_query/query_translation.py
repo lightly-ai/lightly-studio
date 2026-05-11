@@ -7,7 +7,7 @@ from __future__ import annotations
 
 from collections.abc import Mapping
 from datetime import datetime
-from typing import Protocol, TypeVar, Union
+from typing import Literal, Protocol, TypeVar, Union
 
 from typing_extensions import assert_never
 
@@ -16,12 +16,14 @@ from lightly_studio.core.dataset_query.classification_expression import (
     ClassificationField,
     ClassificationQuery,
 )
+from lightly_studio.core.dataset_query.field import Field
 from lightly_studio.core.dataset_query.image_sample_field import ImageSampleField
 from lightly_studio.core.dataset_query.match_expression import MatchExpression
 from lightly_studio.core.dataset_query.object_detection_expression import (
     ObjectDetectionField,
     ObjectDetectionQuery,
 )
+from lightly_studio.core.dataset_query.order_by import OrderByField
 from lightly_studio.core.dataset_query.segmentation_mask_expression import (
     SegmentationMaskField,
     SegmentationMaskQuery,
@@ -120,6 +122,14 @@ _TAGS_FIELDS: dict[tuple[str, str], _TagsAccessor] = {
     ("video", "tags"): VideoSampleField.tags,
 }
 
+_SORT_FIELDS: dict[tuple[str, str], Field] = {
+    ("image", "file_name"): ImageSampleField.file_name,
+    ("image", "file_path_abs"): ImageSampleField.file_path_abs,
+    ("image", "created_at"): ImageSampleField.created_at,
+    ("image", "width"): ImageSampleField.width,
+    ("image", "height"): ImageSampleField.height,
+}
+
 
 def _lookup(
     mapping: Mapping[tuple[str, str], T],
@@ -140,8 +150,29 @@ def _lookup(
 
 
 # ---------------------------------------------------------------------------
-# Public entry point
+# Public entry points
 # ---------------------------------------------------------------------------
+
+
+def sort_to_order_by(key: tuple[str, str], direction: Literal["asc", "desc"]) -> OrderByField:
+    """Translate a (source, field_name) key and direction to an OrderByField.
+
+    Args:
+        key: A (source, field_name) tuple identifying the sort field (e.g., ("image", "width")).
+        direction: Sort direction, either "asc" or "desc".
+
+    Returns:
+        An OrderByField ready to be applied to a database query.
+
+    Raises:
+        QueryExprError: If the key does not correspond to a known sort field.
+    """
+    if key not in _SORT_FIELDS:
+        raise QueryExprError(f"Unknown sort field: {key[0]}.{key[1]}")
+    order_by = OrderByField(_SORT_FIELDS[key])
+    if direction == "desc":
+        order_by.desc()
+    return order_by
 
 
 def to_match_expression(expr: MatchExpr) -> MatchExpression:  # noqa: PLR0911 C901
