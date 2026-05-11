@@ -27,7 +27,11 @@ describe('useAnnotationCollections', () => {
     });
 
     it('calls createQuery with the correct path parameter', () => {
-        const mockStore = writable({ data: mockAnnotationCollections, error: null, isLoading: false });
+        const mockStore = writable({
+            data: mockAnnotationCollections,
+            error: null,
+            isLoading: false
+        });
         vi.mocked(createQuery).mockReturnValue(
             mockStore as unknown as ReturnType<typeof createQuery>
         );
@@ -42,7 +46,11 @@ describe('useAnnotationCollections', () => {
     });
 
     it('returns the query store from createQuery', () => {
-        const mockStore = writable({ data: mockAnnotationCollections, error: null, isLoading: false });
+        const mockStore = writable({
+            data: mockAnnotationCollections,
+            error: null,
+            isLoading: false
+        });
         vi.mocked(createQuery).mockReturnValue(
             mockStore as unknown as ReturnType<typeof createQuery>
         );
