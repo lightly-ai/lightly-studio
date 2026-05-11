@@ -6,7 +6,7 @@
     import { Typography } from '$lib/components';
 
     interface Props {
-        /** Label text displayed in the menu item; also used as the `title` attribute and checkbox `id`. */
+        /** Label text displayed in the menu item; also used as the `title` attribute. */
         name: string;
         /** Controls the checkbox checked state. */
         checked: boolean;
@@ -18,7 +18,7 @@
 
     let { name, checked, showColorMarker, onCheckedChange }: Props = $props();
 
-    // Get a unique ID for the checkbox and label
+    // Stable unique ID for pairing the checkbox and its label
     const nameId = $props.id();
 </script>
 
