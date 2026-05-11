@@ -48,6 +48,7 @@ from lightly_studio.models.query_expr import (
     StringExpr,
     TagsContainsExpr,
 )
+from lightly_studio.models.sort_direction import SortDirection
 
 T = TypeVar("T")
 T_contra = TypeVar("T_contra", contravariant=True)
@@ -154,12 +155,12 @@ def _lookup(
 # ---------------------------------------------------------------------------
 
 
-def sort_to_order_by(key: tuple[str, str], direction: Literal["asc", "desc"]) -> OrderByField:
+def sort_to_order_by(key: tuple[str, str], direction: SortDirection) -> OrderByField:
     """Translate a (source, field_name) key and direction to an OrderByField.
 
     Args:
         key: A (source, field_name) tuple identifying the sort field (e.g., ("image", "width")).
-        direction: Sort direction, either "asc" or "desc".
+        direction: Sort direction.
 
     Returns:
         An OrderByField ready to be applied to a database query.
@@ -170,7 +171,7 @@ def sort_to_order_by(key: tuple[str, str], direction: Literal["asc", "desc"]) ->
     if key not in _SORT_FIELDS:
         raise QueryExprError(f"Unknown sort field: {key[0]}.{key[1]}")
     order_by = OrderByField(_SORT_FIELDS[key])
-    if direction == "desc":
+    if direction == SortDirection.desc:
         order_by.desc()
     return order_by
 
