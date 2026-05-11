@@ -97,17 +97,6 @@ class ImageDatasetEvaluate:
             ),
         )
 
-        gt_annotations = object_detection_metric.get_object_detection_annotations(
-            session=self.session,
-            collection_id=gt_collection_id,
-        )
-        pred_annotations = object_detection_metric.get_object_detection_annotations(
-            session=self.session,
-            collection_id=pred_collection_id,
-        )
-
-        gt_per_sample = self._group_by_parent_sample_id(annotations=gt_annotations)
-        pred_per_sample = self._group_by_parent_sample_id(annotations=pred_annotations)
         selected_sample_ids = {sample.sample_id for sample in self.samples}
         gt_covered_sample_ids = set(
             annotation_collection_coverage_resolver.list_by_collection_id(
@@ -122,6 +111,19 @@ class ImageDatasetEvaluate:
             )
         )
         selected_sample_ids &= gt_covered_sample_ids & pred_covered_sample_ids
+        gt_annotations = object_detection_metric.get_object_detection_annotations(
+            session=self.session,
+            collection_id=gt_collection_id,
+            sample_ids=selected_sample_ids,
+        )
+        pred_annotations = object_detection_metric.get_object_detection_annotations(
+            session=self.session,
+            collection_id=pred_collection_id,
+            sample_ids=selected_sample_ids,
+        )
+
+        gt_per_sample = self._group_by_parent_sample_id(annotations=gt_annotations)
+        pred_per_sample = self._group_by_parent_sample_id(annotations=pred_annotations)
 
         object_detection_metric.create_and_persist_object_detection_metrics_per_sample(
             session=self.session,
