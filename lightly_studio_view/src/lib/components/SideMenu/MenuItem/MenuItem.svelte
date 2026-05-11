@@ -17,19 +17,22 @@
     }
 
     let { name, checked, showColorMarker, onCheckedChange }: Props = $props();
+
+    // Get a unique ID for the checkbox and label
+    const id = Math.random().toString(36);
 </script>
 
 <div class="space-y-1" title={name}>
     <div class="width-full flex items-center space-x-2">
         <Checkbox
-            id={`menu-item-${name}`}
+            id={`menu-item-${id}`}
             {checked}
-            aria-labelledby={`menu-item-${name}-label`}
+            aria-labelledby={`menu-item-${id}-label`}
             {onCheckedChange}
         />
         <Label
-            id={`menu-item-${name}-label`}
-            for={`menu-item-${name}`}
+            id={`menu-item-${id}-label`}
+            for={`menu-item-${id}`}
             class="flex min-w-0 flex-1 cursor-pointer items-center space-x-2 text-nowrap peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
         >
             {#if showColorMarker}
