@@ -18,8 +18,13 @@ from tests.helpers_resolvers import create_annotation, create_annotation_label, 
 def test_object_detection_evaluation(
     patch_collection: None,  # noqa: ARG001
 ) -> None:
-    """Creates an evaluation run for object detection and no sample metrics yet."""
+    """Creates an evaluation run for object detection and persists sample metrics."""
     dataset = ImageDataset.create(name="test_dataset")
+    label = create_annotation_label(
+        session=dataset.session,
+        root_collection_id=dataset.collection_id,
+    )
+    image = create_image(session=dataset.session, collection_id=dataset.collection_id)
     collection_resolver.get_or_create_child_collection(
         session=dataset.session,
         collection_id=dataset.collection_id,
@@ -31,6 +36,40 @@ def test_object_detection_evaluation(
         collection_id=dataset.collection_id,
         sample_type=SampleType.ANNOTATION,
         name="pred",
+    )
+    # This GT box overlaps the first prediction and should count as one TP.
+    create_annotation(
+        session=dataset.session,
+        collection_id=dataset.collection_id,
+        sample_id=image.sample_id,
+        annotation_label_id=label.annotation_label_id,
+        annotation_collection_name="gt",
+    )
+    # This GT box has no matching prediction and should count as one FN.
+    create_annotation(
+        session=dataset.session,
+        collection_id=dataset.collection_id,
+        sample_id=image.sample_id,
+        annotation_label_id=label.annotation_label_id,
+        annotation_data={"x": 100, "y": 100, "width": 20, "height": 20},
+        annotation_collection_name="gt",
+    )
+    # This prediction overlaps the first GT box and should count as one TP.
+    create_annotation(
+        session=dataset.session,
+        collection_id=dataset.collection_id,
+        sample_id=image.sample_id,
+        annotation_label_id=label.annotation_label_id,
+        annotation_collection_name="pred",
+    )
+    # This prediction has no matching GT box and should count as one FP.
+    create_annotation(
+        session=dataset.session,
+        collection_id=dataset.collection_id,
+        sample_id=image.sample_id,
+        annotation_label_id=label.annotation_label_id,
+        annotation_data={"x": 200, "y": 200, "width": 20, "height": 20},
+        annotation_collection_name="pred",
     )
 
     dataset.evaluate().object_detection(
@@ -53,7 +92,11 @@ def test_object_detection_evaluation(
         session=dataset.session,
         evaluation_run_id=evaluation_runs[0].id,
     )
-    assert sample_metrics == []
+    assert {(metric.sample_id, metric.metric_name): metric.value for metric in sample_metrics} == {
+        (image.sample_id, "tp"): 1.0,
+        (image.sample_id, "fp"): 1.0,
+        (image.sample_id, "fn"): 1.0,
+    }
 
 
 def test_object_detection_evaluation__raises_on_wrong_annotation_type(
