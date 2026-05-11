@@ -5,6 +5,8 @@ import {
     normalizeShortcutKey
 } from './settingsDialogState';
 
+type ShortcutKeyboardEvent = Parameters<typeof normalizeShortcutKey>[0];
+
 describe('settingsDialogState', () => {
     it('maps missing settings fields to dialog defaults', () => {
         expect(createSettingsDialogFormState({})).toEqual({
@@ -82,7 +84,7 @@ describe('settingsDialogState', () => {
     });
 });
 
-function createKeyboardEvent(key: string, isCapsLockActive = false) {
+function createKeyboardEvent(key: string, isCapsLockActive = false): ShortcutKeyboardEvent {
     return {
         key,
         getModifierState: (modifierKey: string) => modifierKey === 'CapsLock' && isCapsLockActive

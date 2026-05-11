@@ -2,10 +2,10 @@ import type { components } from '$lib/schema';
 
 type SettingView = components['schemas']['SettingView'];
 
-export type RenderingMode = components['schemas']['GridViewSampleRenderingType'];
-export type ThumbnailQualityMode = components['schemas']['GridViewThumbnailQualityType'];
+type RenderingMode = components['schemas']['GridViewSampleRenderingType'];
+type ThumbnailQualityMode = components['schemas']['GridViewThumbnailQualityType'];
 
-export interface SettingsDialogShortcutState {
+interface SettingsDialogShortcutState {
     hideAnnotations: string;
     goBack: string;
     toggleEditMode: string;
@@ -17,9 +17,7 @@ export interface SettingsDialogShortcutState {
     keyToolbarEraser: string;
 }
 
-export type ShortcutSettingKey = keyof SettingsDialogShortcutState;
-
-export interface SettingsDialogFormState {
+interface SettingsDialogFormState {
     shortcutSettings: SettingsDialogShortcutState;
     gridViewRendering: RenderingMode;
     gridViewThumbnailQuality: ThumbnailQualityMode;

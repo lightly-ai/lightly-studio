@@ -9,11 +9,13 @@
     import {
         createSettingsDialogFormState,
         createSettingsSavePayload,
-        normalizeShortcutKey,
-        type RenderingMode,
-        type ShortcutSettingKey,
-        type ThumbnailQualityMode
+        normalizeShortcutKey
     } from './settingsDialogState';
+
+    type SettingsDialogFormState = ReturnType<typeof createSettingsDialogFormState>;
+    type ShortcutSettingKey = keyof SettingsDialogFormState['shortcutSettings'];
+    type RenderingMode = SettingsDialogFormState['gridViewRendering'];
+    type ThumbnailQualityMode = SettingsDialogFormState['gridViewThumbnailQuality'];
 
     // Get settings from the store
     const { settingsStore, isLoadedStore, saveSettings } = useSettings();
