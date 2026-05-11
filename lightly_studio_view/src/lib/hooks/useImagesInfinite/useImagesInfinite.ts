@@ -114,7 +114,7 @@ export const buildRequestBody = (
             sample_filter: {
                 query_expr: params.query_expr ?? undefined,
                 annotations_filter: isNormalModeParams(params)
-                    ? { collection_ids: params.filters?.collection_ids }
+                    ? getAnnotationsFilter(params.filters ?? {})
                     : undefined,
 
                 metadata_filters: params.metadata_values
