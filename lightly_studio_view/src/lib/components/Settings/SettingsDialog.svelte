@@ -12,8 +12,8 @@
     } from './settingsDialogState';
     import { shortcutSettings, staticShortcuts } from './settingsDialogConfig';
     import type { ShortcutSettingKey } from './settingsDialogConfig';
-    import ShortcutSettingRow from './ShortcutSettingRow/ShortcutSettingRow.svelte';
-    import SettingsFieldRow from './SettingsFieldRow/SettingsFieldRow.svelte';
+    import { ShortcutSettingRow } from './ShortcutSettingRow';
+    import { SettingsFieldRow } from './SettingsFieldRow';
 
     type SettingsDialogFormState = ReturnType<typeof createSettingsDialogFormState>;
     type RenderingMode = SettingsDialogFormState['gridViewRendering'];

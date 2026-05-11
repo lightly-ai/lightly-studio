@@ -1,5 +1,5 @@
 <script lang="ts">
-    import { Label } from '$lib/components/ui/label';
+    import { SettingsFieldRow } from '../SettingsFieldRow';
 
     interface Props {
         id: string;
@@ -13,10 +13,7 @@
     const { id, label, value, isRecording, disabled = false, onStartRecording }: Props = $props();
 </script>
 
-<div class="grid grid-cols-2 items-center gap-4">
-    <Label for={id} class="text-right text-foreground">
-        {label}
-    </Label>
+<SettingsFieldRow {id} {label}>
     <button
         {id}
         type="button"
@@ -30,4 +27,4 @@
             <span>{value}</span>
         {/if}
     </button>
-</div>
+</SettingsFieldRow>
