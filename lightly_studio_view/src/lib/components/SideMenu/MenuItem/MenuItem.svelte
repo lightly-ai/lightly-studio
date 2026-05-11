@@ -19,7 +19,7 @@
     let { name, checked, showColorMarker, onCheckedChange }: Props = $props();
 
     // Get a unique ID for the checkbox and label
-    const nameId = Math.random().toString(36);
+    const nameId = $props.id();
 </script>
 
 <div class="space-y-1" title={name}>
