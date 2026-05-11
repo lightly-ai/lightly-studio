@@ -2,7 +2,7 @@
     import { Checkbox } from '$lib/components/ui/checkbox/index.js';
     import { Label } from '$lib/components/ui/label/index.js';
     import type { ComponentProps } from 'svelte';
-    import { ColorMarker } from '../';
+    import ColorMarker from '../ColorMarker/ColorMarker.svelte';
     import { Typography } from '$lib/components';
 
     interface Props {
