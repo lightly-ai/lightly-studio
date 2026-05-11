@@ -23,7 +23,11 @@ from lightly_studio.core.dataset_query.object_detection_expression import (
     ObjectDetectionField,
     ObjectDetectionQuery,
 )
-from lightly_studio.core.dataset_query.order_by import OrderByField
+from lightly_studio.core.dataset_query.order_by import (
+    OrderByExpression,
+    OrderByField,
+    OrderByMetadataField,
+)
 from lightly_studio.core.dataset_query.segmentation_mask_expression import (
     SegmentationMaskField,
     SegmentationMaskQuery,
@@ -154,22 +158,38 @@ def _lookup(
 # ---------------------------------------------------------------------------
 
 
-def sort_to_order_by(key: tuple[str, str], direction: Literal["asc", "desc"]) -> OrderByField:
-    """Translate a (source, field_name) key and direction to an OrderByField.
+def sort_to_order_by(
+    key: tuple[str, str],
+    direction: Literal["asc", "desc"],
+    cast_to_float: bool = False,
+) -> OrderByExpression:
+    """Translate a (source, field_name) key and direction to an OrderByExpression.
+
+    For ``"metadata"`` source, returns an ``OrderByMetadataField`` that joins the
+    metadata table and extracts the value from the JSON data column.  For all other
+    sources the key must match a known entry in ``_SORT_FIELDS``.
 
     Args:
-        key: A (source, field_name) tuple identifying the sort field (e.g., ("image", "width")).
+        key: A (source, field_name) tuple identifying the sort field (e.g.,
+            ``("image", "width")`` or ``("metadata", "brightness")``).
         direction: Sort direction, either "asc" or "desc".
+        cast_to_float: When True, cast the extracted JSON value to float for
+            correct numeric ordering.  Only used when source is ``"metadata"``.
 
     Returns:
-        An OrderByField ready to be applied to a database query.
+        An OrderByExpression ready to be applied to a database query.
 
     Raises:
         QueryExprError: If the key does not correspond to a known sort field.
     """
-    if key not in _SORT_FIELDS:
+    order_by: OrderByExpression
+    source, field_name = key
+    if source == "metadata":
+        order_by = OrderByMetadataField(field_name, cast_to_float=cast_to_float)
+    elif key in _SORT_FIELDS:
+        order_by = OrderByField(_SORT_FIELDS[key])
+    else:
         raise QueryExprError(f"Unknown sort field: {key[0]}.{key[1]}")
-    order_by = OrderByField(_SORT_FIELDS[key])
     if direction == "desc":
         order_by.desc()
     return order_by

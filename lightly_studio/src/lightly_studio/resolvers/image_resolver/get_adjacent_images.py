@@ -10,9 +10,14 @@ from sqlmodel import Session, col, select
 from sqlmodel.sql.expression import Select
 
 from lightly_studio.core.dataset_query.image_sample_field import ImageSampleField
-from lightly_studio.core.dataset_query.order_by import OrderByField
+from lightly_studio.core.dataset_query.order_by import (
+    OrderByExpression,
+    OrderByField,
+    OrderByMetadataField,
+)
 from lightly_studio.models.adjacents import AdjacentResultView
 from lightly_studio.models.image import ImageTable
+from lightly_studio.models.metadata import SampleMetadataTable
 from lightly_studio.models.sample import SampleTable
 from lightly_studio.resolvers import adjacents, similarity_utils
 from lightly_studio.resolvers.image_filter import ImageFilter
@@ -24,7 +29,7 @@ def get_adjacent_images(  # noqa: PLR0913
     collection_id: UUID,
     filters: ImageFilter | None = None,
     text_embedding: list[float] | None = None,
-    order_by: list[OrderByField] | None = None,
+    order_by: list[OrderByExpression] | None = None,
 ) -> AdjacentResultView | None:
     """Get the adjacent images for a given sample ID."""
     base_query = _base_query(order_by=order_by)
@@ -57,10 +62,11 @@ def get_adjacent_images(  # noqa: PLR0913
 
 def _base_query(
     ordering_expression: Any | None = None,
-    order_by: list[OrderByField] | None = None,
+    order_by: list[OrderByExpression] | None = None,
 ) -> Select[Any]:
     needs_tiebreaker = not order_by or not any(
-        expr.field is ImageSampleField.file_path_abs for expr in order_by
+        isinstance(expr, OrderByField) and expr.field is ImageSampleField.file_path_abs
+        for expr in order_by
     )
     tiebreaker = [col(ImageTable.file_path_abs).asc()] if needs_tiebreaker else []
     if ordering_expression is not None:
@@ -76,7 +82,7 @@ def _base_query(
 
     # Build the base query that orders samples by absolute file path and
     # annotates each row with its previous/next sample_id and row number
-    return (
+    query: Select[Any] = (
         select(
             col(ImageTable.sample_id).label("sample_id"),
             func.lag(col(ImageTable.sample_id))
@@ -88,3 +94,12 @@ def _base_query(
         .select_from(ImageTable)
         .join(ImageTable.sample)
     )
+
+    # to_column_element() references metadata.data, so the table must be joined explicitly.
+    if order_by and any(isinstance(expr, OrderByMetadataField) for expr in order_by):
+        query = query.outerjoin(
+            SampleMetadataTable,
+            SampleMetadataTable.sample_id == col(ImageTable.sample_id),  # type: ignore[arg-type]
+        )
+
+    return query

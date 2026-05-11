@@ -5,6 +5,7 @@ from __future__ import annotations
 import pytest
 from pydantic import ValidationError
 
+from lightly_studio.core.dataset_query.order_by import OrderByMetadataField
 from lightly_studio.errors import QueryExprError
 from lightly_studio.models.sort import (
     SortDirection,
@@ -78,3 +79,32 @@ def test_sort_field_expr_to_order_by__all_fields_map() -> None:
         )
         order_by = sort_field_expr_to_order_by(expr)
         assert order_by is not None
+
+
+def test_sort_field_expr_to_order_by__metadata_ascending() -> None:
+    expr = SortFieldExpr(
+        source=SortFieldSource.metadata, field_name="brightness", direction=SortDirection.asc
+    )
+    order_by = sort_field_expr_to_order_by(expr)
+    assert isinstance(order_by, OrderByMetadataField)
+    assert order_by.field_name == "brightness"
+    assert order_by.ascending is True
+
+
+def test_sort_field_expr_to_order_by__metadata_descending() -> None:
+    expr = SortFieldExpr(
+        source=SortFieldSource.metadata, field_name="score", direction=SortDirection.desc
+    )
+    order_by = sort_field_expr_to_order_by(expr)
+    assert isinstance(order_by, OrderByMetadataField)
+    assert order_by.field_name == "score"
+    assert order_by.ascending is False
+
+
+def test_sort_field_expr_to_order_by__metadata_arbitrary_field() -> None:
+    expr = SortFieldExpr(
+        source=SortFieldSource.metadata, field_name="custom_metric", direction=SortDirection.asc
+    )
+    order_by = sort_field_expr_to_order_by(expr)
+    assert isinstance(order_by, OrderByMetadataField)
+    assert order_by.field_name == "custom_metric"
