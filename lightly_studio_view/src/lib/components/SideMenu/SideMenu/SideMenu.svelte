@@ -27,7 +27,7 @@
         } else {
             selectedItemsIds = [...selectedItemsIds, id];
         }
-        onChangeSelectedItems?.(selectedItemsIds);
+        onChangeSelectedItems(selectedItemsIds);
     };
 </script>
 
