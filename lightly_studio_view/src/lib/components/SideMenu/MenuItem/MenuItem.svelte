@@ -17,19 +17,21 @@
     }
 
     let { name, checked, showColorMarker, onCheckedChange }: Props = $props();
+
+    const nameId = $derived(name.replace(/[^a-zA-Z0-9]/g, '-'));
 </script>
 
 <div class="space-y-1" title={name}>
-    <div class="width-full flex items-center space-x-2">
+    <div class="flex w-full items-center space-x-2">
         <Checkbox
-            id={`menu-item-${name}`}
+            id={`menu-item-${nameId}`}
             {checked}
-            aria-labelledby={`menu-item-${name}-label`}
+            aria-labelledby={`menu-item-${nameId}-label`}
             {onCheckedChange}
         />
         <Label
-            id={`menu-item-${name}-label`}
-            for={`menu-item-${name}`}
+            id={`menu-item-${nameId}-label`}
+            for={`menu-item-${nameId}`}
             class="flex min-w-0 flex-1 cursor-pointer items-center space-x-2 text-nowrap peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
         >
             {#if showColorMarker}
