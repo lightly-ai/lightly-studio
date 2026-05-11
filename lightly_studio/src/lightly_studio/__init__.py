@@ -20,6 +20,7 @@ from lightly_studio.core.start_gui import (
 )
 from lightly_studio.models.collection import SampleType
 from lightly_studio.enterprise import connect
+from lightly_studio.core.lightly_train_helpers.generate_train_script import lt_train_script
 
 
 # TODO (Jonas 08/25): This will be removed as soon as the new interface is used in the examples
@@ -34,6 +35,7 @@ __all__ = [
     "SampleType",
     "VideoDataset",
     "connect",
+    "lt_train_script",
     "start_gui",
     "start_gui_background",
     "stop_gui_background",
