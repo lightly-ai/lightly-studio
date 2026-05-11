@@ -86,28 +86,22 @@ describe('OrderBy', () => {
         ]);
     });
 
-    it('toggles direction from asc to desc', async () => {
+    it('toggles direction between asc and desc on each click', async () => {
         mocks.imageSortByValue = [
             { source: 'image', field_name: 'file_name', direction: SortDirection.ASC }
         ];
         render(OrderBy);
 
         await fireEvent.click(screen.getByTestId('sort-direction-button'));
-
-        expect(mocks.updateSortBy).toHaveBeenCalledWith([
+        expect(mocks.updateSortBy).toHaveBeenLastCalledWith([
             { source: 'image', field_name: 'file_name', direction: SortDirection.DESC }
         ]);
-    });
 
-    it('toggles direction from desc to asc', async () => {
         mocks.imageSortByValue = [
             { source: 'image', field_name: 'file_name', direction: SortDirection.DESC }
         ];
-        render(OrderBy);
-
         await fireEvent.click(screen.getByTestId('sort-direction-button'));
-
-        expect(mocks.updateSortBy).toHaveBeenCalledWith([
+        expect(mocks.updateSortBy).toHaveBeenLastCalledWith([
             { source: 'image', field_name: 'file_name', direction: SortDirection.ASC }
         ]);
     });
