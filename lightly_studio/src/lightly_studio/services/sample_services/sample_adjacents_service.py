@@ -10,6 +10,7 @@ from sqlmodel import Session
 
 from lightly_studio.models.adjacents import AdjacentResultView
 from lightly_studio.models.collection import SampleType
+from lightly_studio.models.sort import SortFieldExpr, sort_field_expr_to_order_by
 from lightly_studio.resolvers import (
     annotation_resolver,
     image_resolver,
@@ -37,6 +38,7 @@ class AdjacentRequest(BaseModel):
         | None
     ) = None
     text_embedding: list[float] | None = None
+    sort_by: list[SortFieldExpr] | None = None
 
 
 def get_adjacent_samples(
@@ -58,12 +60,18 @@ def get_adjacent_samples(
                 "Invalid filter provided. Expected ImageFilter"
                 f" for sample type '{request.sample_type.value}'."
             )
+        order_by = (
+            [sort_field_expr_to_order_by(expr) for expr in request.sort_by]
+            if request.sort_by
+            else None
+        )
         return image_resolver.get_adjacent_images(
             session=session,
             sample_id=sample_id,
             collection_id=request.collection_id,
             filters=request.filters,
             text_embedding=request.text_embedding,
+            order_by=order_by,
         )
     if request.sample_type == SampleType.VIDEO:
         if request.filters is not None and not isinstance(request.filters, VideoFilter):

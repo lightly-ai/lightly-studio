@@ -3,7 +3,9 @@
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
+from typing import Any
 
+from sqlalchemy import ColumnElement
 from sqlmodel.sql.expression import SelectOfScalar
 from typing_extensions import Self, TypeVar
 
@@ -66,6 +68,16 @@ class OrderByField(OrderByExpression):
         """Initialize with field and order direction."""
         super().__init__()
         self.field = field
+
+    def to_column_element(self) -> ColumnElement[Any]:
+        """Return the SQLAlchemy column element with direction applied.
+
+        Returns:
+            A column element ordered ascending or descending.
+        """
+        if self.ascending:
+            return self.field.get_sqlmodel_field().asc()
+        return self.field.get_sqlmodel_field().desc()
 
     def apply(self, query: SelectOfScalar[T]) -> SelectOfScalar[T]:
         """Apply this ordering to a SQLModel Select query.
