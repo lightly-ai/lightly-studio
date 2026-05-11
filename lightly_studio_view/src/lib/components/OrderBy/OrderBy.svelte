@@ -2,6 +2,7 @@
     import { SortDirection } from '$lib/api/lightly_studio_local';
     import type { SortFieldExpr } from '$lib/api/lightly_studio_local';
     import { useImageFilters } from '$lib/hooks/useImageFilters/useImageFilters';
+    import { useMetadataFilters } from '$lib/hooks/useMetadataFilters/useMetadataFilters';
     import * as Popover from '$lib/components/ui/popover/index.js';
     import { Button } from '$lib/components/ui/button';
     import { ArrowDown, ArrowUp } from '@lucide/svelte';
@@ -11,24 +12,39 @@
         source: SortFieldExpr['source'];
         value: SortFieldExpr['field_name'];
         label: string;
+        is_numeric?: boolean;
     };
 
     const SORT_FIELDS: SortField[] = [
-        { source: 'image', value: 'file_name', label: 'File Name' },
-        { source: 'image', value: 'file_path_abs', label: 'File Path' },
-        { source: 'image', value: 'created_at', label: 'Created At' },
-        { source: 'image', value: 'width', label: 'Width' },
-        { source: 'image', value: 'height', label: 'Height' }
+        { source: 'image', value: 'file_name', label: 'file name' },
+        { source: 'image', value: 'file_path_abs', label: 'file path' },
+        { source: 'image', value: 'created_at', label: 'created at' },
+        { source: 'image', value: 'width', label: 'width' },
+        { source: 'image', value: 'height', label: 'height' }
     ];
 
     const { imageSortBy, updateSortBy } = useImageFilters();
+    const { metadataInfo } = useMetadataFilters();
+
+    const metadataSortFields = $derived(
+        ($metadataInfo ?? [])
+            .filter((info) => ['integer', 'float', 'string', 'boolean'].includes(info.type))
+            .map((info) => ({
+                source: 'metadata' as SortFieldExpr['source'],
+                value: info.name,
+                label: `metadata.${info.name}`,
+                is_numeric: info.type === 'integer' || info.type === 'float'
+            }))
+    );
+
+    const allSortFields = $derived([...SORT_FIELDS, ...metadataSortFields]);
 
     const selectedField = $derived($imageSortBy?.[0]?.field_name ?? null);
     const selectedSource = $derived($imageSortBy?.[0]?.source ?? null);
     const selectedDirection = $derived($imageSortBy?.[0]?.direction ?? SortDirection.ASC);
     const selectedLabel = $derived(
-        SORT_FIELDS.find((f) => f.source === selectedSource && f.value === selectedField)?.label ??
-            null
+        allSortFields.find((f) => f.source === selectedSource && f.value === selectedField)
+            ?.label ?? null
     );
 
     let open = $state(false);
@@ -38,7 +54,12 @@
             updateSortBy(null);
         } else {
             updateSortBy([
-                { source: field.source, field_name: field.value, direction: selectedDirection }
+                {
+                    source: field.source,
+                    field_name: field.value,
+                    direction: selectedDirection,
+                    is_numeric: field.is_numeric
+                }
             ]);
         }
         open = false;
@@ -48,7 +69,14 @@
         if (!selectedField || !selectedSource) return;
         const next =
             selectedDirection === SortDirection.ASC ? SortDirection.DESC : SortDirection.ASC;
-        updateSortBy([{ source: selectedSource, field_name: selectedField, direction: next }]);
+        updateSortBy([
+            {
+                source: selectedSource,
+                field_name: selectedField,
+                direction: next,
+                is_numeric: $imageSortBy?.[0]?.is_numeric
+            }
+        ]);
     }
 </script>
 
@@ -65,7 +93,7 @@
             </Button>
         </Popover.Trigger>
         <Popover.Content class="w-40 p-1" align="start">
-            {#each SORT_FIELDS as field}
+            {#each allSortFields as field}
                 <button
                     class={cn(
                         'flex w-full items-center rounded-sm px-2 py-1.5 text-sm hover:bg-accent hover:text-accent-foreground',
