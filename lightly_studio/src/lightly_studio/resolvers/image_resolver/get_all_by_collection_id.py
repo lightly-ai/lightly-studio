@@ -12,6 +12,7 @@ from sqlalchemy.orm.interfaces import LoaderOption
 from sqlmodel import Session, col, func, select
 
 from lightly_studio.api.routes.api.validators import Paginated
+from lightly_studio.core.dataset_query.image_sample_field import ImageSampleField
 from lightly_studio.core.dataset_query.order_by import OrderByField
 from lightly_studio.models.annotation.annotation_base import AnnotationBaseTable
 from lightly_studio.models.image import ImageTable
@@ -22,6 +23,10 @@ from lightly_studio.resolvers.similarity_utils import (
     distance_to_similarity,
     get_distance_expression,
 )
+
+
+def _file_path_abs_in_order_by(order_by: list[OrderByField]) -> bool:
+    return any(expr.field is ImageSampleField.file_path_abs for expr in order_by)
 
 
 class GetAllSamplesByCollectionIdResult(BaseModel):
@@ -146,7 +151,8 @@ def _get_all_with_similarity(  # noqa: PLR0913
     if order_by:
         for expr in order_by:
             samples_query = samples_query.order_by(expr.to_column_element())
-    samples_query = samples_query.order_by(col(ImageTable.sample_id).asc())
+    if not order_by or not _file_path_abs_in_order_by(order_by):
+        samples_query = samples_query.order_by(col(ImageTable.file_path_abs).asc())
 
     if pagination is not None:
         samples_query = samples_query.offset(pagination.offset).limit(pagination.limit)
@@ -202,7 +208,8 @@ def _get_all_without_similarity(  # noqa: PLR0913
     if order_by:
         for expr in order_by:
             samples_query = expr.apply(samples_query)
-        samples_query = samples_query.order_by(col(ImageTable.sample_id).asc())
+        if not _file_path_abs_in_order_by(order_by):
+            samples_query = samples_query.order_by(col(ImageTable.file_path_abs).asc())
     else:
         samples_query = samples_query.order_by(col(ImageTable.file_path_abs).asc())
 

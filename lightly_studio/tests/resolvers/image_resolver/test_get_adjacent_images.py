@@ -368,23 +368,19 @@ def test_get_adjacent_images__sort_by_width_desc_with_duplicate_values(db_sessio
         width=1080,
     )
 
-    # Both image_a and image_b have width=1920. The secondary tiebreaker is sample_id ASC,
-    # so whichever has the smaller sample_id comes first.
-    first_image, second_image = (
-        (image_a, image_b) if image_a.sample_id < image_b.sample_id else (image_b, image_a)
-    )
-
+    # Both image_a and image_b have width=1920. The secondary tiebreaker is file_path_abs ASC,
+    # so a.png comes before b.png.
     result = image_resolver.get_adjacent_images(
         session=db_session,
-        sample_id=first_image.sample_id,
+        sample_id=image_a.sample_id,
         collection_id=collection_id,
         order_by=[OrderByField(ImageSampleField.width).desc()],
     )
 
     assert result is not None
     assert result.previous_sample_id is None
-    assert result.sample_id == first_image.sample_id
-    assert result.next_sample_id == second_image.sample_id
+    assert result.sample_id == image_a.sample_id
+    assert result.next_sample_id == image_b.sample_id
 
 
 def test_get_adjacent_images__returns_none_when_sample_not_in_filter(db_session: Session) -> None:

@@ -9,6 +9,7 @@ from sqlalchemy import func
 from sqlmodel import Session, col, select
 from sqlmodel.sql.expression import Select
 
+from lightly_studio.core.dataset_query.image_sample_field import ImageSampleField
 from lightly_studio.core.dataset_query.order_by import OrderByField
 from lightly_studio.models.adjacents import AdjacentResultView
 from lightly_studio.models.image import ImageTable
@@ -58,15 +59,18 @@ def _base_query(
     ordering_expression: Any | None = None,
     order_by: list[OrderByField] | None = None,
 ) -> Select[Any]:
-    tiebreaker = col(ImageTable.sample_id).asc()
+    needs_tiebreaker = not order_by or not any(
+        expr.field is ImageSampleField.file_path_abs for expr in order_by
+    )
+    tiebreaker = [col(ImageTable.file_path_abs).asc()] if needs_tiebreaker else []
     if ordering_expression is not None:
         order_col = (
-            ordering_expression + [expr.to_column_element() for expr in order_by] + [tiebreaker]
+            ordering_expression + [expr.to_column_element() for expr in order_by] + tiebreaker
             if order_by
-            else [*ordering_expression, tiebreaker]
+            else [*ordering_expression, *tiebreaker]
         )
     elif order_by:
-        order_col = [expr.to_column_element() for expr in order_by] + [tiebreaker]
+        order_col = [expr.to_column_element() for expr in order_by] + tiebreaker
     else:
         order_col = col(ImageTable.file_path_abs).asc()
 
