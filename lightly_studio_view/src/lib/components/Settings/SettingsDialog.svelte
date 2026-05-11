@@ -6,6 +6,14 @@
     import { Switch } from '$lib/components/ui/switch';
     import { useSettings } from '$lib/hooks/useSettings';
     import { useSettingsDialog } from '$lib/hooks/useSettingsDialog/useSettingsDialog';
+    import {
+        createSettingsDialogFormState,
+        createSettingsSavePayload,
+        normalizeShortcutKey,
+        type RenderingMode,
+        type ShortcutSettingKey,
+        type ThumbnailQualityMode
+    } from './settingsDialogState';
 
     // Get settings from the store
     const { settingsStore, isLoadedStore, saveSettings } = useSettings();
@@ -13,53 +21,35 @@
     const { isSettingsDialogOpen, openSettingsDialog, closeSettingsDialog } = useSettingsDialog();
     let isSaving = $state(false);
 
-    // Initialize with default values first
-    let shortcutSettings = $state({
-        hideAnnotations: 'v',
-        goBack: 'Escape',
-        toggleEditMode: 'e',
-        keyToolbarSelection: 's',
-        keyToolbarDrag: $settingsStore.key_toolbar_drag,
-        keyToolbarBoundingBox: $settingsStore.key_toolbar_bounding_box,
-        keyToolbarSegmentationMask: $settingsStore.key_toolbar_segmentation_mask,
-        keyToolbarBrush: $settingsStore.key_toolbar_brush || 'r',
-        keyToolbarEraser: $settingsStore.key_toolbar_eraser || 'x'
-    });
-    type RenderingMode = 'contain' | 'cover';
-    type ThumbnailQualityMode = 'raw' | 'high';
-    let gridViewRendering: RenderingMode = $state('contain');
-    let gridViewThumbnailQuality: ThumbnailQualityMode = $state('raw');
-    let showAnnotationTextLabels = $state<boolean>(false);
-    let showSampleFilenames = $state<boolean>(false);
-    let showBoundingBoxesForSegmentation = $state<boolean>(true);
+    const initialFormState = createSettingsDialogFormState($settingsStore);
+    let shortcutSettings = $state(initialFormState.shortcutSettings);
+    let gridViewRendering: RenderingMode = $state(initialFormState.gridViewRendering);
+    let gridViewThumbnailQuality: ThumbnailQualityMode = $state(
+        initialFormState.gridViewThumbnailQuality
+    );
+    let showAnnotationTextLabels = $state<boolean>(initialFormState.showAnnotationTextLabels);
+    let showSampleFilenames = $state<boolean>(initialFormState.showSampleFilenames);
+    let showBoundingBoxesForSegmentation = $state<boolean>(
+        initialFormState.showBoundingBoxesForSegmentation
+    );
 
     let initialized = false;
 
     // Update local state when store changes
     $effect(() => {
         if ($settingsStore && $isLoadedStore && !initialized) {
-            shortcutSettings = {
-                hideAnnotations: $settingsStore.key_hide_annotations || 'v',
-                goBack: $settingsStore.key_go_back || 'Escape',
-                toggleEditMode: $settingsStore.key_toggle_edit_mode || 'e',
-                keyToolbarSelection: $settingsStore.key_toolbar_selection,
-                keyToolbarDrag: $settingsStore.key_toolbar_drag,
-                keyToolbarBoundingBox: $settingsStore.key_toolbar_bounding_box,
-                keyToolbarSegmentationMask: $settingsStore.key_toolbar_segmentation_mask,
-                keyToolbarBrush: $settingsStore.key_toolbar_brush || 'r',
-                keyToolbarEraser: $settingsStore.key_toolbar_eraser || 'x'
-            };
-            gridViewRendering = $settingsStore.grid_view_sample_rendering || 'contain';
-            gridViewThumbnailQuality = $settingsStore.grid_view_thumbnail_quality || 'raw';
-            showAnnotationTextLabels = $settingsStore.show_annotation_text_labels ?? false;
-            showSampleFilenames = $settingsStore.show_sample_filenames ?? false;
-            showBoundingBoxesForSegmentation =
-                $settingsStore.show_bounding_boxes_for_segmentation ?? true;
+            const formState = createSettingsDialogFormState($settingsStore);
+            shortcutSettings = formState.shortcutSettings;
+            gridViewRendering = formState.gridViewRendering;
+            gridViewThumbnailQuality = formState.gridViewThumbnailQuality;
+            showAnnotationTextLabels = formState.showAnnotationTextLabels;
+            showSampleFilenames = formState.showSampleFilenames;
+            showBoundingBoxesForSegmentation = formState.showBoundingBoxesForSegmentation;
             initialized = true;
         }
     });
 
-    let recordingShortcut: string | null = $state(null);
+    let recordingShortcut: ShortcutSettingKey | null = $state(null);
 
     function setOpen(isOpen: boolean) {
         if (isOpen) {
@@ -89,22 +79,16 @@
         isSaving = true;
 
         try {
-            await saveSettings({
-                key_hide_annotations: shortcutSettings.hideAnnotations,
-                key_go_back: shortcutSettings.goBack,
-                key_toggle_edit_mode: shortcutSettings.toggleEditMode,
-                grid_view_sample_rendering: gridViewRendering,
-                grid_view_thumbnail_quality: gridViewThumbnailQuality,
-                show_annotation_text_labels: showAnnotationTextLabels,
-                show_sample_filenames: showSampleFilenames,
-                show_bounding_boxes_for_segmentation: showBoundingBoxesForSegmentation,
-                key_toolbar_selection: shortcutSettings.keyToolbarSelection,
-                key_toolbar_drag: shortcutSettings.keyToolbarDrag,
-                key_toolbar_bounding_box: shortcutSettings.keyToolbarBoundingBox,
-                key_toolbar_segmentation_mask: shortcutSettings.keyToolbarSegmentationMask,
-                key_toolbar_brush: shortcutSettings.keyToolbarBrush,
-                key_toolbar_eraser: shortcutSettings.keyToolbarEraser
-            });
+            await saveSettings(
+                createSettingsSavePayload({
+                    shortcutSettings,
+                    gridViewRendering,
+                    gridViewThumbnailQuality,
+                    showAnnotationTextLabels,
+                    showSampleFilenames,
+                    showBoundingBoxesForSegmentation
+                })
+            );
 
             setOpen(false);
         } catch (error) {
@@ -115,7 +99,7 @@
     }
 
     // Start recording a keyboard shortcut
-    const startRecording = (shortcutName: string) => {
+    const startRecording = (shortcutName: ShortcutSettingKey) => {
         recordingShortcut = shortcutName;
     };
 
@@ -127,23 +111,7 @@
         event.preventDefault();
         event.stopPropagation();
 
-        // Get the key name
-        let keyName = event.key;
-
-        // Special handling for certain keys
-        if (keyName === ' ') {
-            keyName = 'Space';
-        } else if (keyName.length === 1) {
-            // For single character keys, keep the case as is (respect Caps Lock)
-            // But for letters, prefer lowercase for better matching
-            if (/^[a-zA-Z]$/.test(keyName) && !event.getModifierState('CapsLock')) {
-                keyName = keyName.toLowerCase();
-            }
-        }
-
-        // Update the shortcut setting
-        if (recordingShortcut in shortcutSettings)
-            shortcutSettings[recordingShortcut as keyof typeof shortcutSettings] = keyName;
+        shortcutSettings[recordingShortcut] = normalizeShortcutKey(event);
 
         // Stop recording
         recordingShortcut = null;
