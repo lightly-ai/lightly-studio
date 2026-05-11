@@ -2918,12 +2918,6 @@ export interface components {
             height?: components["schemas"]["FilterDimensions"] | null;
         };
         /**
-         * ImageSortField
-         * @description Native image fields available for sorting.
-         * @enum {string}
-         */
-        ImageSortField: "file_name" | "file_path_abs" | "created_at" | "width" | "height";
-        /**
          * ImageView
          * @description Image class when retrieving.
          */
@@ -3676,18 +3670,21 @@ export interface components {
          *
          *     Attributes:
          *         source: The source of the field (e.g., "image").
-         *         field_name: The native field to sort by.
+         *         field_name: The field to sort by.
          *         direction: The sort direction, either ascending or descending.
          */
         SortFieldExpr: {
-            /**
-             * Source
-             * @constant
-             */
-            source: "image";
-            field_name: components["schemas"]["ImageSortField"];
+            source: components["schemas"]["SortFieldSource"];
+            /** Field Name */
+            field_name: string;
             direction: components["schemas"]["SortDirection"];
         };
+        /**
+         * SortFieldSource
+         * @description Source of the field to sort by.
+         * @enum {string}
+         */
+        SortFieldSource: "image";
         /**
          * StringExpr
          * @description Leaf node for equality comparisons on string sample fields.

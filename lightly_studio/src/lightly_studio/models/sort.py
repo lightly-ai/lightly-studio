@@ -3,19 +3,12 @@
 from __future__ import annotations
 
 from enum import Enum
-from typing import Literal
 
 from pydantic import BaseModel
 
 from lightly_studio.core.dataset_query.order_by import OrderByField
 from lightly_studio.core.dataset_query.query_translation import sort_to_order_by
-
-
-class SortDirection(str, Enum):
-    """Sort direction for a sort field expression."""
-
-    asc = "asc"
-    desc = "desc"
+from lightly_studio.models.sort_direction import SortDirection
 
 
 class SortFieldSource(str, Enum):
@@ -47,5 +40,4 @@ def sort_field_expr_to_order_by(expr: SortFieldExpr) -> OrderByField:
     Returns:
         An OrderByField ready to be applied to a database query.
     """
-    direction: Literal["asc", "desc"] = "asc" if expr.direction == SortDirection.asc else "desc"
-    return sort_to_order_by((expr.source, expr.field_name), direction)
+    return sort_to_order_by((expr.source, expr.field_name), expr.direction)

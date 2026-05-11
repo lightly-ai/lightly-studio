@@ -7,13 +7,14 @@ from pydantic import ValidationError
 
 from lightly_studio.errors import QueryExprError
 from lightly_studio.models.sort import (
-    SortDirection,
     SortFieldExpr,
     SortFieldSource,
     sort_field_expr_to_order_by,
 )
+from lightly_studio.models.sort_direction import SortDirection
 
 _IMAGE_SORT_FIELD_NAMES = ["file_name", "file_path_abs", "created_at", "width", "height"]
+
 
 def test_sort_field_expr__valid_directions() -> None:
     expr_asc = SortFieldExpr(
