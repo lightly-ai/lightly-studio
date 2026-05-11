@@ -9,10 +9,16 @@
         initialSelectedItemsIds?: Readable<string[]>;
         onChangeSelectedItems: (selectedItemsIds: string[]) => void;
         containerProps?: HTMLAttributes<HTMLDivElement>;
+        showColorMarker?: boolean;
     }
 
-    let { items, initialSelectedItemsIds, onChangeSelectedItems, containerProps }: SideMenuProps =
-        $props();
+    let {
+        items,
+        initialSelectedItemsIds,
+        onChangeSelectedItems,
+        containerProps,
+        showColorMarker
+    }: SideMenuProps = $props();
     let selectedItemsIds = $derived($initialSelectedItemsIds || []);
 
     const handleCheckedChange = (id: string) => {
@@ -29,6 +35,7 @@
     {#each $items as { id, name } (id)}
         <MenuItem
             {name}
+            {showColorMarker}
             checked={selectedItemsIds.includes(id)}
             onCheckedChange={() => handleCheckedChange(id)}
         />

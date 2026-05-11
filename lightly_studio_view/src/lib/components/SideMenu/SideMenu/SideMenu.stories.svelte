@@ -1,14 +1,15 @@
 <script module>
     import { defineMeta } from '@storybook/addon-svelte-csf';
-    import SideMenu from '../SideMenu.svelte';
+    import { SideMenu } from '..';
     import { readable } from 'svelte/store';
     import { fn } from 'storybook/test';
 
     const { Story } = defineMeta({
-        title: 'Components/SideMenu',
+        title: 'Components/SideMenu/SideMenu',
         component: SideMenu,
         tags: ['autodocs'],
         argTypes: {
+            items: { control: 'object' },
             onChangeSelectedItems: { action: 'onChangeSelectedItems' }
         }
     });
@@ -26,7 +27,7 @@
     }}
 />
 
-<!-- <Story
+<Story
     name="WithPreselected"
     args={{
         items: readable([
@@ -40,9 +41,23 @@
 />
 
 <Story
+    name="With Color Marker"
+    args={{
+        items: readable([
+            { id: '1', name: 'Annotation Collection A' },
+            { id: '2', name: 'Annotation Collection B' },
+            { id: '3', name: 'Annotation Collection C' }
+        ]),
+        initialSelectedItemsIds: readable(['1', '3']),
+        showColorMarker: true,
+        onChangeSelectedItems: fn()
+    }}
+/>
+
+<Story
     name="Empty"
     args={{
         items: readable([]),
         onChangeSelectedItems: fn()
     }}
-/> -->
+/>
