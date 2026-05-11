@@ -1,13 +1,12 @@
 <script lang="ts">
-    import { type Readable } from 'svelte/store';
     import MenuItem from '../MenuItem/MenuItem.svelte';
     import { type MenuItemType } from '../types';
     import type { HTMLAttributes } from 'svelte/elements';
     import { cn } from '$lib/utils/shadcn';
 
     interface SideMenuProps {
-        items: Readable<MenuItemType[]>;
-        initialSelectedItemsIds?: Readable<string[]>;
+        items: MenuItemType[];
+        initialSelectedItemsIds?: string[];
         onChangeSelectedItems: (selectedItemsIds: string[]) => void;
         containerProps?: HTMLAttributes<HTMLDivElement>;
         showColorMarker?: boolean;
@@ -20,7 +19,7 @@
         containerProps,
         showColorMarker
     }: SideMenuProps = $props();
-    let selectedItemsIds = $derived($initialSelectedItemsIds || []);
+    let selectedItemsIds = $state(initialSelectedItemsIds ?? []);
 
     const handleCheckedChange = (id: string) => {
         if (selectedItemsIds.includes(id)) {
@@ -33,7 +32,7 @@
 </script>
 
 <div {...containerProps} class={cn('w-full space-y-2 overflow-hidden', containerProps?.class)}>
-    {#each $items as { id, name } (id)}
+    {#each items as { id, name } (id)}
         <MenuItem
             {name}
             {showColorMarker}
