@@ -1,18 +1,20 @@
 import { fireEvent, render, screen } from '@testing-library/svelte';
-import { readable } from 'svelte/store';
+import { tick } from 'svelte';
+import { writable } from 'svelte/store';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { SortDirection } from '$lib/api/lightly_studio_local';
 import type { SortFieldExpr } from '$lib/api/lightly_studio_local';
 import OrderBy from './OrderBy.svelte';
 
+const imageSortByStore = writable<SortFieldExpr[] | null>(null);
+
 const mocks = vi.hoisted(() => ({
-    imageSortByValue: null as SortFieldExpr[] | null,
     updateSortBy: vi.fn()
 }));
 
 vi.mock('$lib/hooks/useImageFilters/useImageFilters', () => ({
     useImageFilters: () => ({
-        imageSortBy: readable(mocks.imageSortByValue),
+        imageSortBy: imageSortByStore,
         updateSortBy: mocks.updateSortBy
     })
 }));
@@ -20,7 +22,7 @@ vi.mock('$lib/hooks/useImageFilters/useImageFilters', () => ({
 describe('OrderBy', () => {
     beforeEach(() => {
         vi.clearAllMocks();
-        mocks.imageSortByValue = null;
+        imageSortByStore.set(null);
     });
 
     it('shows placeholder text when no field is selected', () => {
@@ -29,9 +31,9 @@ describe('OrderBy', () => {
     });
 
     it('shows the selected field label in the trigger', () => {
-        mocks.imageSortByValue = [
+        imageSortByStore.set([
             { source: 'image', field_name: 'file_name', direction: SortDirection.ASC }
-        ];
+        ]);
         render(OrderBy);
         expect(screen.getByTestId('sort-by-trigger')).toHaveTextContent('File Name');
     });
@@ -42,9 +44,9 @@ describe('OrderBy', () => {
     });
 
     it('direction button is enabled when a field is selected', () => {
-        mocks.imageSortByValue = [
+        imageSortByStore.set([
             { source: 'image', field_name: 'width', direction: SortDirection.ASC }
-        ];
+        ]);
         render(OrderBy);
         expect(screen.getByTestId('sort-direction-button')).not.toBeDisabled();
     });
@@ -61,9 +63,9 @@ describe('OrderBy', () => {
     });
 
     it('deselects the field when clicking the already selected item', async () => {
-        mocks.imageSortByValue = [
+        imageSortByStore.set([
             { source: 'image', field_name: 'file_name', direction: SortDirection.ASC }
-        ];
+        ]);
         render(OrderBy);
 
         await fireEvent.click(screen.getByTestId('sort-by-trigger'));
@@ -73,9 +75,9 @@ describe('OrderBy', () => {
     });
 
     it('switches to a different field while preserving the current direction', async () => {
-        mocks.imageSortByValue = [
+        imageSortByStore.set([
             { source: 'image', field_name: 'file_name', direction: SortDirection.DESC }
-        ];
+        ]);
         render(OrderBy);
 
         await fireEvent.click(screen.getByTestId('sort-by-trigger'));
@@ -87,9 +89,9 @@ describe('OrderBy', () => {
     });
 
     it('toggles direction between asc and desc on each click', async () => {
-        mocks.imageSortByValue = [
+        imageSortByStore.set([
             { source: 'image', field_name: 'file_name', direction: SortDirection.ASC }
-        ];
+        ]);
         render(OrderBy);
 
         await fireEvent.click(screen.getByTestId('sort-direction-button'));
@@ -97,9 +99,10 @@ describe('OrderBy', () => {
             { source: 'image', field_name: 'file_name', direction: SortDirection.DESC }
         ]);
 
-        mocks.imageSortByValue = [
+        imageSortByStore.set([
             { source: 'image', field_name: 'file_name', direction: SortDirection.DESC }
-        ];
+        ]);
+        await tick();
         await fireEvent.click(screen.getByTestId('sort-direction-button'));
         expect(mocks.updateSortBy).toHaveBeenLastCalledWith([
             { source: 'image', field_name: 'file_name', direction: SortDirection.ASC }
