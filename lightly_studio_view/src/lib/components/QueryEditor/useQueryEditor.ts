@@ -10,6 +10,33 @@ import { useSyntaxDocumentation } from './useLightlyQueryLanguage/useSyntaxDocum
 const LIGHTLY_QUERY_LANGUAGE_ID = 'lightly-query';
 const LIGHTLY_QUERY_THEME_ID = 'lightly-query-theme';
 
+/** Regex source for the STRING terminal in the generated Monarch grammar. */
+const STRING_REGEX_SOURCE = `"([^"\\\\\\n\\r]|\\\\.)*"|'([^'\\\\\\n\\r]|\\\\.)*'`;
+
+/**
+ * Patch the generated Monarch config so that quoted strings use the
+ * `string.quoted` token instead of the generic `string` token.
+ * This lets us style them differently from field-name keywords.
+ */
+const patchStringToken = (
+    config: monaco.languages.IMonarchLanguage
+): monaco.languages.IMonarchLanguage => {
+    const patched = structuredClone(config);
+    const tokenizer = (patched as Record<string, unknown>).tokenizer as
+        | Record<string, Array<{ regex: RegExp; action: { token: string } }>>
+        | undefined;
+    const rules = tokenizer?.initial;
+    if (rules) {
+        for (const rule of rules) {
+            if (rule.regex?.source === STRING_REGEX_SOURCE) {
+                rule.action = { token: 'string.quoted' };
+                break;
+            }
+        }
+    }
+    return patched;
+};
+
 self.MonacoEnvironment = {
     getWorker() {
         return new editorWorker();
@@ -29,14 +56,17 @@ const setupMonaco = () => {
     monaco.languages.register({ id: LIGHTLY_QUERY_LANGUAGE_ID });
     monaco.languages.setMonarchTokensProvider(
         LIGHTLY_QUERY_LANGUAGE_ID,
-        lightlyQueryMonarch as monaco.languages.IMonarchLanguage
+        patchStringToken(lightlyQueryMonarch as monaco.languages.IMonarchLanguage)
     );
     useSyntaxDocumentation({ languageId: LIGHTLY_QUERY_LANGUAGE_ID });
     useSyntaxCompletion({ languageId: LIGHTLY_QUERY_LANGUAGE_ID });
     monaco.editor.defineTheme(LIGHTLY_QUERY_THEME_ID, {
         base: 'vs-dark',
         inherit: true,
-        rules: [],
+        rules: [
+            { token: 'string', foreground: '569cd6' },
+            { token: 'string.quoted', foreground: 'ce9178' }
+        ],
         colors: {}
     });
     monacoSetupDone = true;
