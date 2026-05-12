@@ -59,3 +59,4 @@ export { default as Separator } from '$lib/components/ui/separator/separator.sve
 export { default as CollectionSearch } from '$lib/components/CollectionSearch/CollectionSearch.svelte';
 export { default as CollectionSearchImage } from '$lib/components/CollectionSearch/CollectionSearchImage/CollectionSearchImage.svelte';
 export { default as CollectionSearchInput } from '$lib/components/CollectionSearch/SearchInput/CollectionSearchInput.svelte';
+export { default as OrderBy } from '$lib/components/OrderBy/OrderBy.svelte';

@@ -418,6 +418,24 @@ describe('useSyntaxCompletion', () => {
         expect(labels).toContain('duration_s');
         expect(labels).toContain('file_name');
         expect(labels).not.toContain('created_at');
+        expect(labels).not.toContain('video:');
+    });
+
+    it('filters `video:` even when provided by the LSP completion source', async () => {
+        const { provideCompletionItems } = await loadAndAttach([
+            { label: 'video:', kind: LspCompletionItemKind.Keyword },
+            { label: 'AND', kind: LspCompletionItemKind.Keyword }
+        ]);
+        const result = await provideCompletionItems(
+            makeModel('') as never,
+            { lineNumber: 1, column: 1 } as never
+        );
+
+        const labels = result.suggestions.map((suggestion) =>
+            typeof suggestion.label === 'string' ? suggestion.label : suggestion.label.label
+        );
+        expect(labels).not.toContain('video:');
+        expect(labels).toContain('AND');
     });
 
     it('resolves field scope from cursor context (object_detection)', async () => {

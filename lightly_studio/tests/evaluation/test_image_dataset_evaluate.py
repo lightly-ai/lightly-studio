@@ -21,8 +21,13 @@ from tests.helpers_resolvers import create_annotation, create_annotation_label, 
 def test_object_detection_evaluation(
     patch_collection: None,  # noqa: ARG001
 ) -> None:
-    """Creates an evaluation run for object detection and no sample metrics yet."""
+    """Creates an evaluation run for object detection and persists sample metrics."""
     dataset = ImageDataset.create(name="test_dataset")
+    label = create_annotation_label(
+        session=dataset.session,
+        root_collection_id=dataset.collection_id,
+    )
+    image = create_image(session=dataset.session, collection_id=dataset.collection_id)
     collection_resolver.get_or_create_child_collection(
         session=dataset.session,
         collection_id=dataset.collection_id,
@@ -35,15 +40,47 @@ def test_object_detection_evaluation(
         sample_type=SampleType.ANNOTATION,
         name="pred",
     )
+    # This GT box overlaps the first prediction and should count as one TP.
+    create_annotation(
+        session=dataset.session,
+        collection_id=dataset.collection_id,
+        sample_id=image.sample_id,
+        annotation_label_id=label.annotation_label_id,
+        annotation_collection_name="gt",
+    )
+    # This GT box has no matching prediction and should count as one FN.
+    create_annotation(
+        session=dataset.session,
+        collection_id=dataset.collection_id,
+        sample_id=image.sample_id,
+        annotation_label_id=label.annotation_label_id,
+        annotation_data={"x": 100, "y": 100, "width": 20, "height": 20},
+        annotation_collection_name="gt",
+    )
+    # This prediction overlaps the first GT box and should count as one TP.
+    create_annotation(
+        session=dataset.session,
+        collection_id=dataset.collection_id,
+        sample_id=image.sample_id,
+        annotation_label_id=label.annotation_label_id,
+        annotation_collection_name="pred",
+    )
+    # This prediction has no matching GT box and should count as one FP.
+    create_annotation(
+        session=dataset.session,
+        collection_id=dataset.collection_id,
+        sample_id=image.sample_id,
+        annotation_label_id=label.annotation_label_id,
+        annotation_data={"x": 200, "y": 200, "width": 20, "height": 20},
+        annotation_collection_name="pred",
+    )
 
-    metrics = dataset.evaluate().object_detection(
+    dataset.evaluate().object_detection(
         name="run-1",
         gt_collection_name="gt",
         pred_collection_name="pred",
         config=ObjectDetectionEvaluationConfig(iou_threshold=0.5),
     )
-
-    assert metrics == {}
 
     evaluation_runs = evaluation_run_resolver.get_all_by_dataset_id(
         session=dataset.session,
@@ -52,13 +89,17 @@ def test_object_detection_evaluation(
     assert len(evaluation_runs) == 1
     assert evaluation_runs[0].name == "run-1"
     assert evaluation_runs[0].task_type == EvaluationTaskType.OBJECT_DETECTION
-    assert evaluation_runs[0].config_json == {"iou_threshold": 0.5}
+    assert evaluation_runs[0].config_json == {"iou_threshold": 0.5, "classwise": True}
 
     sample_metrics = evaluation_sample_metric_resolver.get_all_by_evaluation_run_id(
         session=dataset.session,
         evaluation_run_id=evaluation_runs[0].id,
     )
-    assert sample_metrics == []
+    assert {(metric.sample_id, metric.metric_name): metric.value for metric in sample_metrics} == {
+        (image.sample_id, "tp"): 1.0,
+        (image.sample_id, "fp"): 1.0,
+        (image.sample_id, "fn"): 1.0,
+    }
 
 
 def test_object_detection_evaluation__raises_on_wrong_annotation_type(
@@ -99,6 +140,76 @@ def test_object_detection_evaluation__raises_on_wrong_annotation_type(
         )
 
 
+def test_object_detection_evaluation__filters_to_samples_covered_by_both_collections(
+    patch_collection: None,  # noqa: ARG001
+) -> None:
+    """Creates metrics only for samples covered by both GT and prediction collections."""
+    dataset = ImageDataset.create(name="test_dataset")
+    label = create_annotation_label(
+        session=dataset.session,
+        root_collection_id=dataset.collection_id,
+    )
+    image_covered_by_both = create_image(
+        session=dataset.session,
+        collection_id=dataset.collection_id,
+        file_path_abs="/path/to/covered_by_both.png",
+    )
+    create_image(
+        session=dataset.session,
+        collection_id=dataset.collection_id,
+        file_path_abs="/path/to/covered_only_by_gt.png",
+    )
+    create_image(
+        session=dataset.session,
+        collection_id=dataset.collection_id,
+        file_path_abs="/path/to/uncovered.png",
+    )
+    collection_resolver.get_or_create_child_collection(
+        session=dataset.session,
+        collection_id=dataset.collection_id,
+        sample_type=SampleType.ANNOTATION,
+        name="gt",
+    )
+    collection_resolver.get_or_create_child_collection(
+        session=dataset.session,
+        collection_id=dataset.collection_id,
+        sample_type=SampleType.ANNOTATION,
+        name="pred",
+    )
+    create_annotation(
+        session=dataset.session,
+        collection_id=dataset.collection_id,
+        sample_id=image_covered_by_both.sample_id,
+        annotation_label_id=label.annotation_label_id,
+        annotation_collection_name="gt",
+    )
+    create_annotation(
+        session=dataset.session,
+        collection_id=dataset.collection_id,
+        sample_id=image_covered_by_both.sample_id,
+        annotation_label_id=label.annotation_label_id,
+        annotation_collection_name="pred",
+    )
+
+    dataset.evaluate().object_detection(
+        name="run-1",
+        gt_collection_name="gt",
+        pred_collection_name="pred",
+    )
+
+    evaluation_runs = evaluation_run_resolver.get_all_by_dataset_id(
+        session=dataset.session,
+        dataset_id=dataset.dataset_id,
+    )
+    assert len(evaluation_runs) == 1
+    sample_metrics = evaluation_sample_metric_resolver.get_all_by_evaluation_run_id(
+        session=dataset.session,
+        evaluation_run_id=evaluation_runs[0].id,
+    )
+    assert len(sample_metrics) == 3
+    assert {metric.sample_id for metric in sample_metrics} == {image_covered_by_both.sample_id}
+
+
 def test_classification_evaluation(
     patch_collection: None,  # noqa: ARG001
 ) -> None:
@@ -117,14 +228,12 @@ def test_classification_evaluation(
         name="pred",
     )
 
-    metrics = dataset.evaluate().classification(
+    dataset.evaluate().classification(
         name="run-1",
         gt_collection_name="gt",
         pred_collection_name="pred",
         config=ClassificationEvaluationConfig(),
     )
-
-    assert metrics == {}
 
     evaluation_runs = evaluation_run_resolver.get_all_by_dataset_id(
         session=dataset.session,

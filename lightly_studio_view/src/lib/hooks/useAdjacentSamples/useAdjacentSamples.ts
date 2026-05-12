@@ -5,6 +5,7 @@ import type {
     AnnotationsFilter,
     ImageFilter,
     SampleType,
+    SortFieldExpr,
     VideoFilter,
     VideoFrameAdjacentFilter
 } from '$lib/api/lightly_studio_local/types.gen';
@@ -15,6 +16,7 @@ export type AdjacentSamplesRequestBody =
           collection_id: string;
           filters?: ({ filter_type: 'image' } & ImageFilter) | null;
           text_embedding?: number[];
+          sort_by?: SortFieldExpr[] | null;
       }
     | {
           sample_type: Extract<SampleType, 'video'>;
