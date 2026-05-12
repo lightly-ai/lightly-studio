@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from collections.abc import Iterable
+from collections.abc import Iterable, Sequence
 from typing import Any
 from uuid import UUID
 
@@ -12,7 +12,7 @@ from sqlmodel import Session
 from lightly_studio.core.image.image_sample import ImageSample
 from lightly_studio.evaluation import object_detection_metric
 from lightly_studio.evaluation.validators import resolve_and_validate_collection
-from lightly_studio.models.annotation.annotation_base import AnnotationBaseTable
+from lightly_studio.models.annotation.annotation_base import AnnotationBaseTable, AnnotationType
 from lightly_studio.models.evaluation_run import (
     EvaluationRunCreate,
     EvaluationRunTable,
@@ -20,6 +20,7 @@ from lightly_studio.models.evaluation_run import (
 )
 from lightly_studio.resolvers import (
     annotation_collection_coverage_resolver,
+    annotation_resolver,
     evaluation_run_resolver,
 )
 
@@ -107,15 +108,17 @@ class ImageDatasetEvaluate:
         selected_sample_ids &= gt_covered_sample_ids & pred_covered_sample_ids
         # TODO(Horatiu, 05/2026): if the number of annotations per sample is large, we may want
         # to avoid loading them all into memory at once and instead stream them in batches.
-        gt_annotations = object_detection_metric.get_object_detection_annotations(
+        gt_annotations = annotation_resolver.get_all_by_parent_sample_ids(
             session=self.session,
-            collection_id=gt_collection_id,
-            sample_ids=selected_sample_ids,
+            parent_sample_ids=list(selected_sample_ids),
+            annotation_type=AnnotationType.OBJECT_DETECTION,
+            annotation_collection_id=gt_collection_id,
         )
-        pred_annotations = object_detection_metric.get_object_detection_annotations(
+        pred_annotations = annotation_resolver.get_all_by_parent_sample_ids(
             session=self.session,
-            collection_id=pred_collection_id,
-            sample_ids=selected_sample_ids,
+            parent_sample_ids=list(selected_sample_ids),
+            annotation_type=AnnotationType.OBJECT_DETECTION,
+            annotation_collection_id=pred_collection_id,
         )
 
         gt_per_sample = self._group_by_parent_sample_id(annotations=gt_annotations)
@@ -208,7 +211,7 @@ class ImageDatasetEvaluate:
 
     @staticmethod
     def _group_by_parent_sample_id(
-        annotations: list[AnnotationBaseTable],
+        annotations: Sequence[AnnotationBaseTable],
     ) -> dict[UUID, list[AnnotationBaseTable]]:
         """Group annotation rows by their parent image sample id."""
         grouped: dict[UUID, list[AnnotationBaseTable]] = {}
