@@ -22,10 +22,7 @@
         type="button"
         {disabled}
         class="rounded-md border border-input bg-background p-2 text-left text-foreground"
-        onclick={(e) => {
-            e.preventDefault();
-            onStartRecording?.();
-        }}
+        onclick={() => onStartRecording?.()}
     >
         {#if isRecording}
             <span class="italic opacity-70">Press a key...</span>
