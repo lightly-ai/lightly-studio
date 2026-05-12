@@ -417,60 +417,148 @@
                     </Pane>
                 </PaneGroup>
             {:else}
-                <!-- When plot is hidden or not samples view, show normal layout -->
-                <div class="relative flex flex-1 flex-col space-y-4 rounded-[1vw] bg-card p-4 pb-2">
-                    {#if isImages || isAnnotations || isVideos || isVideoFrames || isGroups}
-                        <GridHeader>
-                            {#snippet selectionControls()}
-                                {#if canSelectAll}
-                                    <GridHeaderSelectAllButton
-                                        onclick={selectAllHandle.handleSelectAll}
-                                    />
-                                {/if}
-                            {/snippet}
-                            {#snippet auxControls()}
-                                {#if isImages}
-                                    <OrderBy />
-                                {/if}
+                {#if !isQueryFilterEnabled || !isQueryFilterEditing}
+                    <!-- When plot is hidden or not samples view, show normal layout -->
+                    <div
+                        class="relative flex flex-1 flex-col space-y-4 rounded-[1vw] bg-card p-4 pb-2"
+                    >
+                        {#if isImages || isAnnotations || isVideos || isVideoFrames || isGroups}
+                            <GridHeader>
+                                {#snippet selectionControls()}
+                                    {#if canSelectAll}
+                                        <GridHeaderSelectAllButton
+                                            onclick={selectAllHandle.handleSelectAll}
+                                        />
+                                    {/if}
+                                {/snippet}
+                                {#snippet auxControls()}
+                                    {#if isImages}
+                                        <OrderBy />
+                                    {/if}
+                                    {#if (isImages || isVideos) && hasEmbeddings}
+                                        <Button
+                                            class="flex items-center space-x-1"
+                                            data-testid="toggle-plot-button"
+                                            variant={$showPlot ? 'default' : 'ghost'}
+                                            onclick={() =>
+                                                $showPlot ? setShowPlot(false) : setShowPlot(true)}
+                                        >
+                                            <ChartNetwork class="size-4" />
+                                            <span>Show Embeddings</span>
+                                        </Button>
+                                    {/if}
+                                {/snippet}
                                 {#if (isImages || isVideos) && hasEmbeddings}
-                                    <Button
-                                        class="flex items-center space-x-1"
-                                        data-testid="toggle-plot-button"
-                                        variant={$showPlot ? 'default' : 'ghost'}
-                                        onclick={() =>
-                                            $showPlot ? setShowPlot(false) : setShowPlot(true)}
+                                    <div
+                                        class="relative"
+                                        role="region"
+                                        data-grid-search-drop-target
                                     >
-                                        <ChartNetwork class="size-4" />
-                                        <span>Show Embeddings</span>
-                                    </Button>
+                                        <CollectionSearch
+                                            image={$searchImage}
+                                            isPending={$searchPending}
+                                            initialQueryText={$textEmbedding?.queryText ?? ''}
+                                            onSubmitText={search.setText}
+                                            onSubmitFile={search.setImage}
+                                            onClear={search.clear}
+                                            onError={search.onError}
+                                        />
+                                    </div>
                                 {/if}
-                            {/snippet}
-                            {#if (isImages || isVideos) && hasEmbeddings}
-                                <div class="relative" role="region" data-grid-search-drop-target>
-                                    <CollectionSearch
-                                        image={$searchImage}
-                                        isPending={$searchPending}
-                                        initialQueryText={$textEmbedding?.queryText ?? ''}
-                                        onSubmitText={search.setText}
-                                        onSubmitFile={search.setImage}
-                                        onClear={search.clear}
-                                        onError={search.onError}
-                                    />
-                                </div>
-                            {/if}
-                        </GridHeader>
-                        <Separator class="mb-4 bg-border-hard" />
-                    {/if}
+                            </GridHeader>
+                            <Separator class="mb-4 bg-border-hard" />
+                        {/if}
 
-                    <div class="flex min-h-0 flex-1">
-                        {@render children()}
+                        <div class="flex min-h-0 flex-1">
+                            {@render children()}
+                        </div>
+                        {#if showLeftSidebar}
+                            <SelectionPill
+                                selectedCount={$selectedCount}
+                                onClear={clearSelection}
+                            />
+                        {/if}
                     </div>
-                    {#if showLeftSidebar}
-                        <SelectionPill selectedCount={$selectedCount} onClear={clearSelection} />
-                    {/if}
-                </div>
-                {#if isQueryFilterEnabled && isQueryFilterEditing}
-                    <QueryEditorPanel />
+                {:else}
+                    <PaneGroup direction="horizontal" class="flex-1">
+                        <Pane defaultSize={65} minSize={35} class="flex">
+                            <div
+                                class="relative flex flex-1 flex-col space-y-4 rounded-[1vw] bg-card p-4 pb-2"
+                            >
+                                {#if isImages || isAnnotations || isVideos || isVideoFrames || isGroups}
+                                    <GridHeader>
+                                        {#snippet selectionControls()}
+                                            {#if canSelectAll}
+                                                <GridHeaderSelectAllButton
+                                                    onclick={selectAllHandle.handleSelectAll}
+                                                />
+                                            {/if}
+                                        {/snippet}
+                                        {#snippet auxControls()}
+                                            {#if isImages}
+                                                <OrderBy />
+                                            {/if}
+                                            {#if (isImages || isVideos) && hasEmbeddings}
+                                                <Button
+                                                    class="flex items-center space-x-1"
+                                                    data-testid="toggle-plot-button"
+                                                    variant={$showPlot ? 'default' : 'ghost'}
+                                                    onclick={() =>
+                                                        $showPlot
+                                                            ? setShowPlot(false)
+                                                            : setShowPlot(true)}
+                                                >
+                                                    <ChartNetwork class="size-4" />
+                                                    <span>Show Embeddings</span>
+                                                </Button>
+                                            {/if}
+                                        {/snippet}
+                                        {#if (isImages || isVideos) && hasEmbeddings}
+                                            <div
+                                                class="relative"
+                                                role="region"
+                                                data-grid-search-drop-target
+                                            >
+                                                <CollectionSearch
+                                                    image={$searchImage}
+                                                    isPending={$searchPending}
+                                                    initialQueryText={$textEmbedding?.queryText ??
+                                                        ''}
+                                                    onSubmitText={search.setText}
+                                                    onSubmitFile={search.setImage}
+                                                    onClear={search.clear}
+                                                    onError={search.onError}
+                                                />
+                                            </div>
+                                        {/if}
+                                    </GridHeader>
+                                    <Separator class="mb-4 bg-border-hard" />
+                                {/if}
+
+                                <div class="flex min-h-0 flex-1">
+                                    {@render children()}
+                                </div>
+                                {#if showLeftSidebar}
+                                    <SelectionPill
+                                        selectedCount={$selectedCount}
+                                        onClear={clearSelection}
+                                    />
+                                {/if}
+                            </div>
+                        </Pane>
+
+                        <PaneResizer
+                            class="relative mx-2 flex w-1 cursor-col-resize items-center justify-center"
+                        >
+                            <div class="bg-brand z-10 flex h-7 min-w-5 items-center justify-center">
+                                <GripVertical class="text-diffuse-foreground" />
+                            </div>
+                        </PaneResizer>
+
+                        <Pane defaultSize={35} minSize={25} class="flex min-h-0 flex-col">
+                            <QueryEditorPanel />
+                        </Pane>
+                    </PaneGroup>
                 {/if}
             {/if}
             {#if hasEmbeddings}
