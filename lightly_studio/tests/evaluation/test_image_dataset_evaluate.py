@@ -1,6 +1,9 @@
 from __future__ import annotations
 
+from uuid import UUID
+
 import pytest
+from sqlmodel import Session
 
 from lightly_studio.core.image.image_dataset import ImageDataset
 from lightly_studio.evaluation.image_dataset_evaluate import (
@@ -28,18 +31,7 @@ def test_object_detection_evaluation(
         root_collection_id=dataset.collection_id,
     )
     image = create_image(session=dataset.session, collection_id=dataset.collection_id)
-    collection_resolver.get_or_create_child_collection(
-        session=dataset.session,
-        collection_id=dataset.collection_id,
-        sample_type=SampleType.ANNOTATION,
-        name="gt",
-    )
-    collection_resolver.get_or_create_child_collection(
-        session=dataset.session,
-        collection_id=dataset.collection_id,
-        sample_type=SampleType.ANNOTATION,
-        name="pred",
-    )
+    _create_gt_and_pred_collections(session=dataset.session, collection_id=dataset.collection_id)
     # This GT box overlaps the first prediction and should count as one TP.
     create_annotation(
         session=dataset.session,
@@ -111,18 +103,7 @@ def test_object_detection_evaluation__raises_on_wrong_annotation_type(
         session=dataset.session, root_collection_id=dataset.collection_id
     )
     image = create_image(session=dataset.session, collection_id=dataset.collection_id)
-    collection_resolver.get_or_create_child_collection(
-        session=dataset.session,
-        collection_id=dataset.collection_id,
-        sample_type=SampleType.ANNOTATION,
-        name="gt",
-    )
-    collection_resolver.get_or_create_child_collection(
-        session=dataset.session,
-        collection_id=dataset.collection_id,
-        sample_type=SampleType.ANNOTATION,
-        name="pred",
-    )
+    _create_gt_and_pred_collections(session=dataset.session, collection_id=dataset.collection_id)
     create_annotation(
         session=dataset.session,
         collection_id=dataset.collection_id,
@@ -164,18 +145,7 @@ def test_object_detection_evaluation__filters_to_samples_covered_by_both_collect
         collection_id=dataset.collection_id,
         file_path_abs="/path/to/uncovered.png",
     )
-    collection_resolver.get_or_create_child_collection(
-        session=dataset.session,
-        collection_id=dataset.collection_id,
-        sample_type=SampleType.ANNOTATION,
-        name="gt",
-    )
-    collection_resolver.get_or_create_child_collection(
-        session=dataset.session,
-        collection_id=dataset.collection_id,
-        sample_type=SampleType.ANNOTATION,
-        name="pred",
-    )
+    _create_gt_and_pred_collections(session=dataset.session, collection_id=dataset.collection_id)
     create_annotation(
         session=dataset.session,
         collection_id=dataset.collection_id,
@@ -215,18 +185,7 @@ def test_classification_evaluation(
 ) -> None:
     """Creates an evaluation run for classification and no sample metrics yet."""
     dataset = ImageDataset.create(name="test_dataset")
-    collection_resolver.get_or_create_child_collection(
-        session=dataset.session,
-        collection_id=dataset.collection_id,
-        sample_type=SampleType.ANNOTATION,
-        name="gt",
-    )
-    collection_resolver.get_or_create_child_collection(
-        session=dataset.session,
-        collection_id=dataset.collection_id,
-        sample_type=SampleType.ANNOTATION,
-        name="pred",
-    )
+    _create_gt_and_pred_collections(session=dataset.session, collection_id=dataset.collection_id)
 
     dataset.evaluate().classification(
         name="run-1",
@@ -260,18 +219,7 @@ def test_classification_evaluation__raises_on_wrong_annotation_type(
         session=dataset.session, root_collection_id=dataset.collection_id
     )
     image = create_image(session=dataset.session, collection_id=dataset.collection_id)
-    collection_resolver.get_or_create_child_collection(
-        session=dataset.session,
-        collection_id=dataset.collection_id,
-        sample_type=SampleType.ANNOTATION,
-        name="gt",
-    )
-    collection_resolver.get_or_create_child_collection(
-        session=dataset.session,
-        collection_id=dataset.collection_id,
-        sample_type=SampleType.ANNOTATION,
-        name="pred",
-    )
+    _create_gt_and_pred_collections(session=dataset.session, collection_id=dataset.collection_id)
     create_annotation(
         session=dataset.session,
         collection_id=dataset.collection_id,
@@ -286,4 +234,21 @@ def test_classification_evaluation__raises_on_wrong_annotation_type(
             name="run-1",
             gt_collection_name="gt",
             pred_collection_name="pred",
+        )
+
+
+def _create_gt_and_pred_collections(session: Session, collection_id: UUID) -> None:
+    """Create child 'gt' and 'pred' annotation collections under the parent collection.
+
+    Args:
+        session: Database session used by resolver calls.
+        collection_id: ID of the parent collection under which the child collections
+            are created.
+    """
+    for name in ("gt", "pred"):
+        collection_resolver.get_or_create_child_collection(
+            session=session,
+            collection_id=collection_id,
+            sample_type=SampleType.ANNOTATION,
+            name=name,
         )

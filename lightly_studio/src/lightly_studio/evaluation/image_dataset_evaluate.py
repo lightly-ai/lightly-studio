@@ -169,7 +169,18 @@ class ImageDatasetEvaluate:
     ) -> tuple[UUID, UUID, EvaluationRunTable]:
         """Validate gt + pred collections and persist the evaluation run.
 
-        Returns the resolved gt collection id, pred collection id, and the created run.
+        Args:
+            name: Display name of the evaluation run.
+            gt_collection_name: Name of the annotation collection containing ground
+                truth labels.
+            pred_collection_name: Name of the annotation collection containing
+                predictions.
+            task_type: Evaluation task type; determines the expected annotation type
+                for both collections and is stored on the run.
+            config_json: Task-specific configuration to persist on the run.
+
+        Returns:
+            Tuple of (gt_collection_id, pred_collection_id, evaluation_run).
         """
         gt_collection_id = resolve_and_validate_collection(
             session=self.session,
