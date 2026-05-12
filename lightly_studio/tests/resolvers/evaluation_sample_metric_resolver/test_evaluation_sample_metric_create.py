@@ -5,12 +5,16 @@ from sqlmodel import Session
 from lightly_studio.models.evaluation_sample_metric import EvaluationSampleMetricCreate
 from lightly_studio.resolvers import evaluation_sample_metric_resolver
 from tests.helpers_resolvers import create_collection, create_image
-from tests.resolvers.evaluation_sample_metric_resolver import helpers as evaluation_sample_metric_helpers
+from tests.resolvers.evaluation_sample_metric_resolver import (
+    helpers as evaluation_sample_metric_helpers,
+)
 
 
 def test_create_many(db_session: Session) -> None:
     dataset = create_collection(session=db_session)
-    run, _ = evaluation_sample_metric_helpers.create_run_and_image(session=db_session, dataset_collection_id=dataset.collection_id)
+    run, _ = evaluation_sample_metric_helpers.create_run_and_image(
+        session=db_session, dataset_collection_id=dataset.collection_id
+    )
     image1 = create_image(session=db_session, collection_id=dataset.collection_id)
     image2 = create_image(
         session=db_session,
