@@ -8,15 +8,14 @@ from sqlmodel import Session
 from lightly_studio.models.evaluation_sample_metric import EvaluationSampleMetricTable
 from lightly_studio.resolvers import evaluation_sample_metric_resolver
 from tests.helpers_resolvers import create_collection
-from tests.resolvers.evaluation_sample_metric_resolver.helpers import (
-    create_run_and_image,
-    insert_metrics,
+from tests.resolvers.evaluation_sample_metric_resolver import (
+    helpers as evaluation_sample_metric_helpers,
 )
 
 
 def test_get_all_by_evaluation_run_id(db_session: Session) -> None:
-    run, image = create_run_and_image(session=db_session)
-    insert_metrics(
+    run, image = evaluation_sample_metric_helpers.create_run_and_image(session=db_session)
+    evaluation_sample_metric_helpers.insert_metrics(
         session=db_session,
         evaluation_run_id=run.id,
         sample_id=image.sample_id,
@@ -46,19 +45,19 @@ def test_get_all_by_evaluation_run_id__returns_empty_for_unknown_run(db_session:
 
 def test_get_all_by_evaluation_run_id__excludes_other_runs(db_session: Session) -> None:
     dataset = create_collection(session=db_session)
-    run1, image1 = create_run_and_image(
+    run1, image1 = evaluation_sample_metric_helpers.create_run_and_image(
         session=db_session, dataset_collection_id=dataset.collection_id
     )
-    run2, image2 = create_run_and_image(
+    run2, image2 = evaluation_sample_metric_helpers.create_run_and_image(
         session=db_session, dataset_collection_id=dataset.collection_id
     )
-    insert_metrics(
+    evaluation_sample_metric_helpers.insert_metrics(
         session=db_session,
         evaluation_run_id=run1.id,
         sample_id=image1.sample_id,
         metrics={"ap": 0.9},
     )
-    insert_metrics(
+    evaluation_sample_metric_helpers.insert_metrics(
         session=db_session,
         evaluation_run_id=run2.id,
         sample_id=image2.sample_id,

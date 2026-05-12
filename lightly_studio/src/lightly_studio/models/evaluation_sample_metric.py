@@ -35,6 +35,13 @@ class EvaluationSampleMetricBoundsView(BaseModel):
     max_value: float
 
 
+class EvaluationRunMetricsInfoView(BaseModel):
+    """Metric bounds for all metrics in a single evaluation run."""
+
+    run_name: str
+    metrics: list[EvaluationSampleMetricBoundsView]
+
+
 class EvaluationSampleMetricCreate(SQLModel):
     """Evaluation sample metric payload used when creating new rows."""
 
