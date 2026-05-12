@@ -10,14 +10,6 @@ from pydantic import BaseModel
 from lightly_studio.core.dataset_query.order_by import OrderByExpression
 from lightly_studio.core.dataset_query.query_translation import sort_to_order_by
 
-
-class SortDirection(str, Enum):
-    """Sort direction for a sort field expression."""
-
-    asc = "asc"
-    desc = "desc"
-
-
 class SortFieldSource(str, Enum):
     """Source of the field to sort by."""
 
@@ -52,7 +44,6 @@ def sort_field_expr_to_order_by(expr: SortFieldExpr) -> OrderByExpression:
     Returns:
         An OrderByExpression ready to be applied to a database query.
     """
-    direction: Literal["asc", "desc"] = "asc" if expr.direction == SortDirection.asc else "desc"
     return sort_to_order_by(
-        (expr.source, expr.field_name), direction, cast_to_float=bool(expr.is_numeric)
+        key=(expr.source, expr.field_name), direction=expr.direction, cast_to_float=bool(expr.is_numeric)
     )

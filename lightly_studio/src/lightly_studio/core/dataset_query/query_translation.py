@@ -52,6 +52,7 @@ from lightly_studio.models.query_expr import (
     StringExpr,
     TagsContainsExpr,
 )
+from lightly_studio.models.sort_direction import SortDirection
 
 T = TypeVar("T")
 T_contra = TypeVar("T_contra", contravariant=True)
@@ -160,7 +161,7 @@ def _lookup(
 
 def sort_to_order_by(
     key: tuple[str, str],
-    direction: Literal["asc", "desc"],
+    direction: SortDirection,
     cast_to_float: bool = False,
 ) -> OrderByExpression:
     """Translate a (source, field_name) key and direction to an OrderByExpression.
