@@ -80,7 +80,8 @@
         };
     };
 
-    const { filterParams, updateFilterParams, imageQueryExpression } = useImageFilters();
+    const { filterParams, updateFilterParams, imageQueryExpression, imageSortBy } =
+        useImageFilters();
 
     $effect(() => {
         // Synchronize the global filter parameters with the local samples parameters
@@ -122,7 +123,8 @@
         useImagesInfinite({
             ...$filterParams,
             collection_id: collection_id,
-            query_expr: $imageQueryExpression?.query_expr
+            query_expr: $imageQueryExpression?.query_expr,
+            sort_by: $imageSortBy ?? undefined
         })
     );
     // Derived list of samples from TanStack infinite query
@@ -161,7 +163,8 @@
             `${$dimensions?.min_width}-${$dimensions?.max_width}`,
             `${$dimensions?.min_height}-${$dimensions?.max_height}`,
             JSON.stringify($metadataValues),
-            $textEmbedding?.queryText || ''
+            $textEmbedding?.queryText || '',
+            JSON.stringify($imageSortBy)
         ];
 
         return parts.filter(Boolean).join('|');

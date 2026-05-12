@@ -11,10 +11,11 @@ export const useAdjacentImages = ({
     sampleId: string;
     collectionId: string;
 }) => {
-    const { imageFilter } = useImageFilters();
+    const { imageFilter, imageSortBy } = useImageFilters();
     const { textEmbedding } = useGlobalStorage();
 
     const filter = get(imageFilter);
+    const sortBy = get(imageSortBy);
     return useAdjacentSamples({
         params: {
             sampleId,
@@ -22,7 +23,8 @@ export const useAdjacentImages = ({
                 sample_type: SampleType.IMAGE,
                 collection_id: collectionId,
                 filters: filter ? { ...filter, filter_type: 'image' } : { filter_type: 'image' },
-                text_embedding: get(textEmbedding)?.embedding
+                text_embedding: get(textEmbedding)?.embedding,
+                sort_by: sortBy ?? undefined
             }
         }
     });
