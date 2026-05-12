@@ -35,7 +35,7 @@ from tests.helpers_resolvers import (
     create_image,
     create_sample_embedding,
 )
-from tests.resolvers.evaluation_sample_metric_resolver.helpers import create_run_and_image
+from tests.resolvers.evaluation_sample_metric_resolver import helpers as evaluation_sample_metric_helpers
 
 
 def test_deep_copy__empty_collection(db_session: Session) -> None:
@@ -441,7 +441,7 @@ def test_deep_copy__can_delete_original_after_copy(db_session: Session) -> None:
 def test_deep_copy__with_evaluation_sample_metrics(db_session: Session) -> None:
     # Arrange
     dataset = create_collection(session=db_session, collection_name="original")
-    run, image = create_run_and_image(db_session, dataset_collection_id=dataset.collection_id)
+    run, image = evaluation_sample_metric_helpers.create_run_and_image(db_session, dataset_collection_id=dataset.collection_id)
     evaluation_sample_metric_resolver.create_many(
         session=db_session,
         records=[

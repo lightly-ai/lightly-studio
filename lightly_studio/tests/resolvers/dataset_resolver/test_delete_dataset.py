@@ -30,7 +30,7 @@ from tests.helpers_resolvers import (
     create_sample_embedding,
     create_tag,
 )
-from tests.resolvers.evaluation_sample_metric_resolver.helpers import create_run_and_image
+from tests.resolvers.evaluation_sample_metric_resolver import helpers as evaluation_sample_metric_helpers
 from tests.resolvers.video.helpers import VideoStub, create_video_with_frames
 
 
@@ -245,7 +245,7 @@ def test_delete_dataset__does_not_affect_other_datasets(db_session: Session) -> 
 def test_delete_dataset__with_evaluation_sample_metrics(db_session: Session) -> None:
     # Arrange
     dataset = create_collection(session=db_session, collection_name="to_delete")
-    run, image = create_run_and_image(db_session, dataset_collection_id=dataset.collection_id)
+    run, image = evaluation_sample_metric_helpers.create_run_and_image(db_session, dataset_collection_id=dataset.collection_id)
     run_id = run.id  # Capture before delete
     evaluation_sample_metric_resolver.create_many(
         session=db_session,
