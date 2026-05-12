@@ -35,7 +35,7 @@
             <ul class="my-1 ml-4 list-disc space-y-1">
                 <li>Logical operations: <code>AND</code>, <code>OR</code>, <code>NOT</code></li>
                 <li>
-                    Image fields: <code>file_name</code>, <code>file_name_abs</code>,
+                    Image fields: <code>file_name</code>, <code>file_path_abs</code>,
                     <code>width</code>, <code>height</code>, <code>created_at</code>
                 </li>
                 <li>Tag membership: <code>"tag_name" IN tags</code></li>
