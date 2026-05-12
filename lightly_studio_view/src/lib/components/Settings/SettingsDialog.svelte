@@ -26,7 +26,7 @@
     let isSaving = $state(false);
 
     const initialFormState = createSettingsDialogFormState($settingsStore);
-    let shortcutState = $state(initialFormState.shortcutSettings);
+    let shortcuts = $state(initialFormState.shortcutSettings);
     let gridViewRendering: RenderingMode = $state(initialFormState.gridViewRendering);
     let gridViewThumbnailQuality: ThumbnailQualityMode = $state(
         initialFormState.gridViewThumbnailQuality
@@ -43,7 +43,7 @@
     $effect(() => {
         if ($settingsStore && $isLoadedStore && !initialized) {
             const formState = createSettingsDialogFormState($settingsStore);
-            shortcutState = formState.shortcutSettings;
+            shortcuts = formState.shortcutSettings;
             gridViewRendering = formState.gridViewRendering;
             gridViewThumbnailQuality = formState.gridViewThumbnailQuality;
             showAnnotationTextLabels = formState.showAnnotationTextLabels;
@@ -85,7 +85,7 @@
         try {
             await saveSettings(
                 createSettingsSavePayload({
-                    shortcutSettings: shortcutState,
+                    shortcutSettings: shortcuts,
                     gridViewRendering,
                     gridViewThumbnailQuality,
                     showAnnotationTextLabels,
@@ -115,7 +115,7 @@
         event.preventDefault();
         event.stopPropagation();
 
-        shortcutState[recordingShortcut] = normalizeShortcutKey(event);
+        shortcuts[recordingShortcut] = normalizeShortcutKey(event);
 
         // Stop recording
         recordingShortcut = null;
@@ -146,7 +146,7 @@
                             <ShortcutSettingRow
                                 id={setting.id}
                                 label={setting.label}
-                                value={shortcutState[setting.key]}
+                                value={shortcuts[setting.key]}
                                 isRecording={recordingShortcut === setting.key}
                                 onStartRecording={() => startRecording(setting.key)}
                             />
