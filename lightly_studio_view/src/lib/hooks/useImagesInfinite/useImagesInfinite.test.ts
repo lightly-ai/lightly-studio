@@ -16,7 +16,8 @@ describe('buildRequestBody', () => {
         const result = buildRequestBody(params, 0);
 
         expect(result.filters?.sample_filter?.annotations_filter).toEqual({
-            collection_ids: ['label-1', 'label-2']
+            collection_ids: ['label-1', 'label-2'],
+            filter_type: 'annotations'
         });
     });
 
