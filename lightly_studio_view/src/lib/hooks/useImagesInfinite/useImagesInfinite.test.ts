@@ -32,4 +32,23 @@ describe('buildRequestBody', () => {
 
         expect(result.filters?.sample_filter?.annotations_filter).toBeUndefined();
     });
+
+    it('propagates both annotation_label_ids and collection_ids', () => {
+        const params: ImagesInfiniteParams = {
+            collection_id: 'col-1',
+            mode: 'normal',
+            filters: {
+                annotation_label_ids: ['lbl-1'],
+                collection_ids: ['coll-1']
+            }
+        };
+
+        const result = buildRequestBody(params, 0);
+
+        expect(result.filters?.sample_filter?.annotations_filter).toEqual({
+            annotation_label_ids: ['lbl-1'],
+            collection_ids: ['coll-1'],
+            filter_type: 'annotations'
+        });
+    });
 });
