@@ -62,7 +62,9 @@ export const useQueryEditor = () => {
             model,
             theme: LIGHTLY_QUERY_THEME_ID,
             automaticLayout: true,
-            readOnly: options.readOnly ?? false
+            readOnly: options.readOnly ?? false,
+            minimap: { enabled: false },
+            wordWrap: 'on'
         });
 
         const detachLanguage = language.attach(model);
