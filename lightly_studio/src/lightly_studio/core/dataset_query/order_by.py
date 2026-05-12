@@ -117,7 +117,7 @@ class OrderByMetadataField(OrderByExpression):
             ordering is applied instead of lexicographic ordering.
     """
 
-    def __init__(self, field_name: str, *, cast_to_float: bool = False) -> None:
+    def __init__(self, field_name: str, cast_to_float: bool = False) -> None:
         """Initialize with the metadata field name and optional float cast."""
         super().__init__()
         self.field_name = field_name
