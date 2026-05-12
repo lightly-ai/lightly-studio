@@ -14,7 +14,7 @@ from lightly_studio.models.evaluation_run import (
 )
 from lightly_studio.models.evaluation_sample_metric import EvaluationRunMetricsInfoView
 from lightly_studio.models.image import ImageTable
-from lightly_studio.resolvers import evaluation_resolver, evaluation_run_resolver
+from lightly_studio.resolvers import evaluation_run_resolver, evaluation_sample_metric_resolver
 from tests.helpers_resolvers import create_collection, create_image
 from tests.resolvers.evaluation_sample_metric_resolver.helpers import (
     create_run_and_image,
@@ -50,7 +50,7 @@ def _create_named_run_and_image(
     return run, image
 
 
-def test_get_metrics_info_by_dataset_id(db_session: Session) -> None:
+def test_get_sample_metrics_info_by_dataset_id(db_session: Session) -> None:
     dataset = create_collection(session=db_session)
     run, image1 = create_run_and_image(
         session=db_session, dataset_collection_id=dataset.collection_id
@@ -73,7 +73,7 @@ def test_get_metrics_info_by_dataset_id(db_session: Session) -> None:
         metrics={"precision": 0.6, "recall": 0.8},
     )
 
-    results = evaluation_resolver.get_metrics_info_by_dataset_id(
+    results = evaluation_sample_metric_resolver.get_sample_metrics_info_by_dataset_id(
         session=db_session,
         dataset_id=dataset.dataset_id,
     )
@@ -88,7 +88,7 @@ def test_get_metrics_info_by_dataset_id(db_session: Session) -> None:
     assert bounds["recall"].max_value == pytest.approx(0.8)
 
 
-def test_get_metrics_info_by_dataset_id__multiple_runs(db_session: Session) -> None:
+def test_get_sample_metrics_info_by_dataset_id__multiple_runs(db_session: Session) -> None:
     dataset = create_collection(session=db_session)
     run1, image1 = _create_named_run_and_image(
         session=db_session, dataset_collection_id=dataset.collection_id, name="run_1"
@@ -109,7 +109,7 @@ def test_get_metrics_info_by_dataset_id__multiple_runs(db_session: Session) -> N
         metrics={"ap": 0.5, "ar": 0.4},
     )
 
-    results = evaluation_resolver.get_metrics_info_by_dataset_id(
+    results = evaluation_sample_metric_resolver.get_sample_metrics_info_by_dataset_id(
         session=db_session,
         dataset_id=dataset.dataset_id,
     )
@@ -131,7 +131,9 @@ def test_get_metrics_info_by_dataset_id__multiple_runs(db_session: Session) -> N
     assert run2_bounds["ar"].max_value == pytest.approx(0.4)
 
 
-def test_get_metrics_info_by_dataset_id__excludes_other_datasets(db_session: Session) -> None:
+def test_get_sample_metrics_info_by_dataset_id__excludes_other_datasets(
+    db_session: Session,
+) -> None:
     dataset = create_collection(session=db_session)
     other_dataset = create_collection(session=db_session)
     run, image = create_run_and_image(
@@ -153,7 +155,7 @@ def test_get_metrics_info_by_dataset_id__excludes_other_datasets(db_session: Ses
         metrics={"ap": 0.1},
     )
 
-    results = evaluation_resolver.get_metrics_info_by_dataset_id(
+    results = evaluation_sample_metric_resolver.get_sample_metrics_info_by_dataset_id(
         session=db_session,
         dataset_id=dataset.dataset_id,
     )
@@ -162,8 +164,10 @@ def test_get_metrics_info_by_dataset_id__excludes_other_datasets(db_session: Ses
     assert results[0].run_name == run.name
 
 
-def test_get_metrics_info_by_dataset_id__empty_for_unknown_dataset(db_session: Session) -> None:
-    results = evaluation_resolver.get_metrics_info_by_dataset_id(
+def test_get_sample_metrics_info_by_dataset_id__empty_for_unknown_dataset(
+    db_session: Session,
+) -> None:
+    results = evaluation_sample_metric_resolver.get_sample_metrics_info_by_dataset_id(
         session=db_session,
         dataset_id=uuid.uuid4(),
     )
@@ -171,14 +175,14 @@ def test_get_metrics_info_by_dataset_id__empty_for_unknown_dataset(db_session: S
     assert results == []
 
 
-def test_get_metrics_info_by_dataset_id__empty_for_run_without_metrics(
+def test_get_sample_metrics_info_by_dataset_id__empty_for_run_without_metrics(
     db_session: Session,
 ) -> None:
     dataset = create_collection(session=db_session)
     # Create a run but add no metrics.
     create_run_and_image(session=db_session, dataset_collection_id=dataset.collection_id)
 
-    results = evaluation_resolver.get_metrics_info_by_dataset_id(
+    results = evaluation_sample_metric_resolver.get_sample_metrics_info_by_dataset_id(
         session=db_session,
         dataset_id=dataset.dataset_id,
     )

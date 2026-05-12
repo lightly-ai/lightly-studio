@@ -12,7 +12,7 @@ from lightly_studio.models.evaluation_sample_metric import (
 )
 
 
-def test_get_evaluation_metrics_info(test_client: TestClient, mocker: MockerFixture) -> None:
+def test_get_evaluation_sample_metrics_info(test_client: TestClient, mocker: MockerFixture) -> None:
     dataset_id = uuid4()
     mock_result = [
         EvaluationRunMetricsInfoView(
@@ -34,11 +34,11 @@ def test_get_evaluation_metrics_info(test_client: TestClient, mocker: MockerFixt
         ),
     ]
     mocker.patch(
-        "lightly_studio.api.routes.api.evaluation.evaluation_resolver.get_metrics_info_by_dataset_id",
+        "lightly_studio.api.routes.api.evaluation.evaluation_sample_metric_resolver.get_sample_metrics_info_by_dataset_id",
         return_value=mock_result,
     )
 
-    response = test_client.get(f"/api/datasets/{dataset_id}/evaluation/metrics/info")
+    response = test_client.get(f"/api/datasets/{dataset_id}/evaluation/metrics/sample/info")
 
     assert response.status_code == HTTP_STATUS_OK
     data = response.json()
@@ -57,16 +57,16 @@ def test_get_evaluation_metrics_info(test_client: TestClient, mocker: MockerFixt
     assert data[1]["metrics"][0]["max_value"] == 0.5
 
 
-def test_get_evaluation_metrics_info__empty_response(
+def test_get_evaluation_sample_metrics_info__empty_response(
     test_client: TestClient, mocker: MockerFixture
 ) -> None:
     dataset_id = uuid4()
     mocker.patch(
-        "lightly_studio.api.routes.api.evaluation.evaluation_resolver.get_metrics_info_by_dataset_id",
+        "lightly_studio.api.routes.api.evaluation.evaluation_sample_metric_resolver.get_sample_metrics_info_by_dataset_id",
         return_value=[],
     )
 
-    response = test_client.get(f"/api/datasets/{dataset_id}/evaluation/metrics/info")
+    response = test_client.get(f"/api/datasets/{dataset_id}/evaluation/metrics/sample/info")
 
     assert response.status_code == HTTP_STATUS_OK
     assert response.json() == []

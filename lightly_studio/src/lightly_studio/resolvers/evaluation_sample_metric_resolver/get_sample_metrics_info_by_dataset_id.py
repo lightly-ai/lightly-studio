@@ -16,7 +16,7 @@ from lightly_studio.models.evaluation_sample_metric import (
 )
 
 
-def get_metrics_info_by_dataset_id(
+def get_sample_metrics_info_by_dataset_id(
     session: Session,
     dataset_id: UUID,
 ) -> list[EvaluationRunMetricsInfoView]:
