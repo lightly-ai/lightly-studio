@@ -1,7 +1,11 @@
 // Shared contract for translating a parsed query into the backend QueryExpr.
 // Both sides import this module so the request method and result shape stay
 // in sync.
-import type { EqualityComparisonOperator, QueryExpr } from '$lib/api/lightly_studio_local';
+import type {
+    EqualityComparisonOperator,
+    OrdinalComparisonOperator,
+    QueryExpr
+} from '$lib/api/lightly_studio_local';
 import {
     isBooleanExpression,
     isComparisonExpression,
@@ -159,7 +163,7 @@ function visitComparisonExpression(
                     return {
                         type: 'datetime_expr',
                         field: { table, name: fieldName },
-                        operator: expr.operator,
+                        operator: toOrdinalComparisonOperator(expr.operator),
                         value: parseDatetimeLiteral(right.value)
                     };
                 }
@@ -211,7 +215,7 @@ function visitComparisonExpression(
                     return {
                         type: 'integer_expr',
                         field: { table, name: fieldName },
-                        operator: expr.operator,
+                        operator: toOrdinalComparisonOperator(expr.operator),
                         value: right.value
                     };
                 }
@@ -221,7 +225,7 @@ function visitComparisonExpression(
                     return {
                         type: 'ordinal_float_expr',
                         field: { table, name: fieldName },
-                        operator: expr.operator,
+                        operator: toOrdinalComparisonOperator(expr.operator),
                         value: right.value
                     };
                 }
@@ -238,7 +242,7 @@ function visitComparisonExpression(
                     return {
                         type: 'integer_expr',
                         field: { table, name: fieldName },
-                        operator: expr.operator,
+                        operator: toOrdinalComparisonOperator(expr.operator),
                         value: right.value
                     };
                 }
@@ -248,7 +252,7 @@ function visitComparisonExpression(
                     return {
                         type: 'integer_expr',
                         field: { table, name: fieldName },
-                        operator: expr.operator,
+                        operator: toOrdinalComparisonOperator(expr.operator),
                         value: right.value
                     };
                 }
@@ -258,7 +262,7 @@ function visitComparisonExpression(
                     return {
                         type: 'integer_expr',
                         field: { table, name: fieldName },
-                        operator: expr.operator,
+                        operator: toOrdinalComparisonOperator(expr.operator),
                         value: right.value
                     };
                 }
@@ -312,11 +316,34 @@ function toBooleanExprType(operator: string): 'and' | 'or' {
 }
 
 function toEqualityComparisonOperator(operator: string): EqualityComparisonOperator {
-    if (operator === '==' || operator === '!=') {
+    if (operator === '=') {
+        return '==';
+    }
+
+    if (operator === '!=') {
         return operator;
     }
 
     throw new Error(`Unsupported equality operator: ${operator}`);
+}
+
+function toOrdinalComparisonOperator(operator: string): OrdinalComparisonOperator {
+    if (operator === '=') {
+        return '==';
+    }
+
+    if (
+        operator === '==' ||
+        operator === '!=' ||
+        operator === '<' ||
+        operator === '>' ||
+        operator === '<=' ||
+        operator === '>='
+    ) {
+        return operator;
+    }
+
+    throw new Error(`Unsupported ordinal operator: ${operator}`);
 }
 
 function parseDatetimeLiteral(value: string): Date {

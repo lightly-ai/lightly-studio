@@ -399,7 +399,7 @@ describe('useSyntaxCompletion', () => {
 
         expect(result.suggestions[0].detail).toBe('(field) Video.fps: float');
         expect(result.suggestions[0].documentation).toEqual({
-            value: 'Frames per second. Equality only (`==`, `!=`).'
+            value: 'Frames per second. Equality only (`=`, `!=`).'
         });
     });
 
@@ -458,7 +458,7 @@ describe('useSyntaxCompletion', () => {
             { label: 'label', kind: LspCompletionItemKind.Field }
         ]);
         const result = await provideCompletionItems(
-            makeModel('segmentation_mask(label == "road" AND width > 10)') as never,
+            makeModel('segmentation_mask(label = "road" AND width > 10)') as never,
             { lineNumber: 1, column: 41 } as never
         );
 

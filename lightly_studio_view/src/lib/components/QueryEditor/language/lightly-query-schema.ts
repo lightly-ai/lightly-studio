@@ -44,7 +44,7 @@ export const SCOPES: Record<Scope, ScopeDoc> = {
             {
                 name: 'fps',
                 type: 'float',
-                description: 'Frames per second. Equality only (`==`, `!=`).'
+                description: 'Frames per second. Equality only (`=`, `!=`).'
             },
             { name: 'duration_s', type: 'float', description: 'Duration in seconds.' },
             { name: 'file_name', type: 'string', description: 'Video file name.' },
@@ -113,12 +113,12 @@ export const TOP_LEVEL_KEYWORDS: KeywordDoc[] = [
     {
         name: 'classification',
         description: 'Filter on the image classification annotation.',
-        insertText: 'classification(${1:label == "..."})'
+        insertText: 'classification(${1:label = "..."})'
     },
     {
         name: 'segmentation_mask',
         description: 'Filter on segmentation mask annotations inside an image.',
-        insertText: 'segmentation_mask(${1:label == "..."})'
+        insertText: 'segmentation_mask(${1:label = "..."})'
     }
 ];
 
