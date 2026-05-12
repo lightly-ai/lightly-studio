@@ -8,6 +8,13 @@ from uuid import UUID
 
 import numpy as np
 from numpy.typing import NDArray
+from sqlmodel import Session
+
+from lightly_studio.models.annotation.annotation_base import AnnotationBaseTable, AnnotationType
+from lightly_studio.models.evaluation_sample_metric import EvaluationSampleMetricCreate
+from lightly_studio.resolvers import annotation_resolver, evaluation_sample_metric_resolver
+
+SAMPLE_BATCH_SIZE = 32  # Number of samples to process in a single batch
 
 
 @dataclass
@@ -133,6 +140,79 @@ def match_image(
         ),
         iou_threshold=iou_threshold,
     )
+
+
+def get_object_detection_annotations(
+    session: Session,
+    collection_id: UUID,
+    sample_ids: set[UUID],
+) -> list[AnnotationBaseTable]:
+    """Return object-detection annotations for selected parent samples."""
+    if not sample_ids:
+        return []
+    annotations = annotation_resolver.get_all_by_parent_sample_ids(
+        session=session,
+        parent_sample_ids=list(sample_ids),
+    )
+    return [
+        annotation
+        for annotation in annotations
+        if annotation.sample.collection_id == collection_id
+        and annotation.annotation_type == AnnotationType.OBJECT_DETECTION
+    ]
+
+
+def create_and_persist_object_detection_metrics_per_sample(  # noqa: PLR0913
+    session: Session,
+    evaluation_run_id: UUID,
+    selected_sample_ids: set[UUID],
+    pred_per_sample: dict[UUID, list[AnnotationBaseTable]],
+    gt_per_sample: dict[UUID, list[AnnotationBaseTable]],
+    iou_threshold: float,
+    classwise: bool,
+) -> None:
+    """Create and persist per-sample object-detection metrics."""
+    metrics_to_persist: list[EvaluationSampleMetricCreate] = []
+    for sample_id in selected_sample_ids:
+        matching_result = match_image(
+            predictions=_to_bounding_boxes(annotations=pred_per_sample.get(sample_id, [])),
+            ground_truths=_to_bounding_boxes(annotations=gt_per_sample.get(sample_id, [])),
+            iou_threshold=iou_threshold,
+            classwise=classwise,
+        )
+        metrics_to_persist.extend(
+            [
+                EvaluationSampleMetricCreate(
+                    evaluation_run_id=evaluation_run_id,
+                    sample_id=sample_id,
+                    metric_name="tp",
+                    value=float(matching_result.tp),
+                ),
+                EvaluationSampleMetricCreate(
+                    evaluation_run_id=evaluation_run_id,
+                    sample_id=sample_id,
+                    metric_name="fp",
+                    value=float(matching_result.fp),
+                ),
+                EvaluationSampleMetricCreate(
+                    evaluation_run_id=evaluation_run_id,
+                    sample_id=sample_id,
+                    metric_name="fn",
+                    value=float(matching_result.fn),
+                ),
+            ]
+        )
+        if len(metrics_to_persist) >= SAMPLE_BATCH_SIZE:
+            evaluation_sample_metric_resolver.create_many(
+                session=session,
+                records=metrics_to_persist,
+            )
+            metrics_to_persist.clear()
+    if metrics_to_persist:
+        evaluation_sample_metric_resolver.create_many(
+            session=session,
+            records=metrics_to_persist,
+        )
 
 
 def match_with_iou_matrix(
@@ -265,3 +345,24 @@ def to_corner_array(boxes: Sequence[BoundingBox]) -> NDArray[np.int64]:
         [[b.x, b.y, b.x + b.width, b.y + b.height] for b in boxes],
         dtype=np.int64,
     )
+
+
+def _to_bounding_boxes(annotations: list[AnnotationBaseTable]) -> list[BoundingBox]:
+    """Convert object-detection annotations into matcher-ready bounding boxes."""
+    boxes: list[BoundingBox] = []
+    for annotation in annotations:
+        details = annotation.object_detection_details
+        if details is None:
+            continue
+        boxes.append(
+            BoundingBox(
+                annotation_id=annotation.sample_id,
+                x=details.x,
+                y=details.y,
+                width=details.width,
+                height=details.height,
+                label_id=annotation.annotation_label_id,
+                confidence=annotation.confidence,
+            )
+        )
+    return boxes
