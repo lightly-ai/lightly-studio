@@ -34,11 +34,11 @@
                 </li>
                 <li>Tag membership: <code>"tag_name" IN tags</code></li>
                 <li>
-                    Annotation conditions: <code>segmentation_mask(...)</code>,
-                    <code>object_detection(...)</code>, <code>classification(...)</code>
+                    Annotation conditions: <code>segmentation_mask(…)</code>,
+                    <code>object_detection(…)</code>, <code>classification(…)</code>
                 </li>
             </ul>
-            <p>Tip: Completion hints will show up as you type a space or a left parenthesis.</p>
+            <p>Tip: Completion hints will show as you type a space or a left parenthesis.</p>
         </div>
     </div>
     <QueryEditor height="100%" onSave={handleQueryEditorValueChange} />
