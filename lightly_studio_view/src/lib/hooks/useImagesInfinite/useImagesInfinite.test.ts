@@ -10,13 +10,13 @@ describe('buildRequestBody', () => {
         const params: ImagesInfiniteParams = {
             collection_id: 'col-1',
             mode: 'normal',
-            filters: { collection_ids: ['label-1', 'label-2'] }
+            filters: { collection_ids: ['coll-1', 'coll-2'] }
         };
 
         const result = buildRequestBody(params, 0);
 
         expect(result.filters?.sample_filter?.annotations_filter).toEqual({
-            collection_ids: ['label-1', 'label-2'],
+            collection_ids: ['coll-1', 'coll-2'],
             filter_type: 'annotations'
         });
     });
