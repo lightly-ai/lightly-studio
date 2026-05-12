@@ -1,5 +1,6 @@
 <script lang="ts">
     import { useHideAnnotations } from '$lib/hooks/useHideAnnotations';
+    import { useAnnotationCollectionsFilter } from '$lib/hooks/useAnnotationCollectionsFilter/useAnnotationCollectionsFilter';
     import { useSettings } from '$lib/hooks/useSettings';
     import { onMount, type ComponentProps } from 'svelte';
     import type { AnnotationView } from '$lib/api/lightly_studio_local';
@@ -27,6 +28,7 @@
 
     const { isHidden } = useHideAnnotations();
     const { showBoundingBoxesForSegmentationStore } = useSettings();
+    const { selectedCollectionIds } = useAnnotationCollectionsFilter();
 
     // Normalize backend annotation variants into the smaller canvas render contract.
     const mapToCanvasAnnotation = (
@@ -65,6 +67,11 @@
         const showInstanceSegmentationBoundingBoxes = $showBoundingBoxesForSegmentationStore;
 
         return sample.annotations
+            .filter(
+                (annotation) =>
+                    $selectedCollectionIds.length === 0 ||
+                    $selectedCollectionIds.includes(annotation.annotation_collection_id)
+            )
             .filter((annotation) => annotation.annotation_type !== 'classification')
             .map((annotation) =>
                 mapToCanvasAnnotation(annotation, showInstanceSegmentationBoundingBoxes)

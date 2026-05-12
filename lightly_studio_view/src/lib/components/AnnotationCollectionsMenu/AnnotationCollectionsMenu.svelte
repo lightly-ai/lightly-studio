@@ -16,10 +16,23 @@
     );
 
     const { setSelectedCollectionIds } = useAnnotationCollectionsFilter();
+
+    let initialized = $state(false);
+
+    $effect(() => {
+        if (items.length > 0 && !initialized) {
+            initialized = true;
+            setSelectedCollectionIds(items.map((i) => i.id));
+        }
+    });
 </script>
 
 {#if items.length > 0}
     <Segment title="Collections">
-        <SideMenu {items} onChangeSelectedItems={setSelectedCollectionIds} />
+        <SideMenu
+            {items}
+            initialSelectedItemsIds={items.map((i) => i.id)}
+            onChangeSelectedItems={setSelectedCollectionIds}
+        />
     </Segment>
 {/if}

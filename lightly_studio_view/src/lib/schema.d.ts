@@ -2131,6 +2131,11 @@ export interface components {
              * Format: uuid
              */
             sample_id: string;
+            /**
+             * Annotation Collection Id
+             * Format: uuid
+             */
+            annotation_collection_id: string;
             annotation_type: components["schemas"]["AnnotationType"];
             annotation_label: components["schemas"]["AnnotationLabel"];
             /** Confidence */
