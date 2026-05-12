@@ -111,6 +111,8 @@ class ImageDatasetEvaluate:
             )
         )
         selected_sample_ids &= gt_covered_sample_ids & pred_covered_sample_ids
+        # TODO(Horatiu, 05/2026): if the number of annotations per sample is large, we may want
+        # to avoid loading them all into memory at once and instead stream them in batches.
         gt_annotations = object_detection_metric.get_object_detection_annotations(
             session=self.session,
             collection_id=gt_collection_id,
