@@ -16,7 +16,9 @@ from lightly_studio.models.evaluation_sample_metric import EvaluationRunMetricsI
 from lightly_studio.models.image import ImageTable
 from lightly_studio.resolvers import evaluation_run_resolver, evaluation_sample_metric_resolver
 from tests.helpers_resolvers import create_collection, create_image
-from tests.resolvers.evaluation_sample_metric_resolver import helpers as evaluation_sample_metric_helpers
+from tests.resolvers.evaluation_sample_metric_resolver import (
+    helpers as evaluation_sample_metric_helpers,
+)
 
 
 def _create_named_run_and_image(
@@ -177,7 +179,9 @@ def test_get_sample_metrics_info_by_dataset_id__empty_for_run_without_metrics(
 ) -> None:
     dataset = create_collection(session=db_session)
     # Create a run but add no metrics.
-    evaluation_sample_metric_helpers.create_run_and_image(session=db_session, dataset_collection_id=dataset.collection_id)
+    evaluation_sample_metric_helpers.create_run_and_image(
+        session=db_session, dataset_collection_id=dataset.collection_id
+    )
 
     results = evaluation_sample_metric_resolver.get_sample_metrics_info_by_dataset_id(
         session=db_session,

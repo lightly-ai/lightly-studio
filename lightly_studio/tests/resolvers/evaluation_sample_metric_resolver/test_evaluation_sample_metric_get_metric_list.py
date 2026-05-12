@@ -8,7 +8,9 @@ from sqlmodel import Session
 from lightly_studio.models.evaluation_sample_metric import EvaluationSampleMetricBoundsView
 from lightly_studio.resolvers import evaluation_sample_metric_resolver
 from tests.helpers_resolvers import create_collection, create_image
-from tests.resolvers.evaluation_sample_metric_resolver import helpers as evaluation_sample_metric_helpers
+from tests.resolvers.evaluation_sample_metric_resolver import (
+    helpers as evaluation_sample_metric_helpers,
+)
 
 
 def test_get_metric_list_by_evaluation_run_id(db_session: Session) -> None:
