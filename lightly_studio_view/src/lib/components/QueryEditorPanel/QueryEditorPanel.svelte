@@ -1,6 +1,7 @@
 <script lang="ts">
     import type { ComponentProps } from 'svelte';
     import QueryEditor from '$lib/components/QueryEditor/QueryEditor.svelte';
+    import Typography from '$lib/components/Typography/Typography.svelte';
     import { useImageFilters } from '$lib/hooks/useImageFilters/useImageFilters';
 
     type OnSaveHandler = ComponentProps<typeof QueryEditor>['onSave'];
@@ -21,12 +22,17 @@
     };
 </script>
 
-<div class="flex h-full flex-1 flex-col rounded-[1vw] bg-card p-4">
-    <div class="mb-3">
-        <h2 class="text-lg font-semibold text-foreground">Query Filter</h2>
-        <div class="mt-1 text-sm text-muted-foreground">
+<div class="flex h-full min-w-0 flex-1 flex-col rounded-[1vw] bg-card p-4">
+    <div class="mb-3 min-w-0">
+        <Typography variant="h5" component="h2" className="text-foreground">Query Filter</Typography
+        >
+        <Typography
+            variant="body2"
+            component="div"
+            className="mt-1 min-w-0 break-words text-muted-foreground [&_code]:break-all"
+        >
             <p>Write a query expression to filter your dataset. Available syntax:</p>
-            <ul class="my-1.5 ml-4 list-disc space-y-1.5">
+            <ul class="my-1 ml-4 list-disc space-y-1">
                 <li>Logical operations: <code>AND</code>, <code>OR</code>, <code>NOT</code></li>
                 <li>
                     Image fields: <code>file_name</code>, <code>file_name_abs</code>,
@@ -39,7 +45,7 @@
                 </li>
             </ul>
             <p>Tip: Completion hints will show as you type a space or a left parenthesis.</p>
-        </div>
+        </Typography>
     </div>
     <QueryEditor height="100%" onSave={handleQueryEditorValueChange} />
 </div>
