@@ -11,6 +11,7 @@ import type { DimensionBounds } from '$lib/services/loadDimensionBounds';
 import { createMetadataFilters } from '$lib/hooks/useMetadataFilters/useMetadataFilters';
 import type { MetadataValues } from '$lib/services/types';
 import { GRID_PAGE_SIZE } from '$lib/constants';
+import { getAnnotationsFilter } from './getAnnotationsFilter';
 
 // Define mode-aware parameter types.
 interface ClassifierSamples {
@@ -20,6 +21,7 @@ interface ClassifierSamples {
 
 interface NormalModeFilters {
     annotation_label_ids?: string[];
+    collection_ids?: string[];
     tag_ids?: string[];
     dimensions?: DimensionBounds;
     query_expr?: QueryExpr;
@@ -106,7 +108,10 @@ const createImagesInfiniteOptions = (params: ImagesInfiniteParams) => {
     });
 };
 
-const buildRequestBody = (params: ImagesInfiniteParams, pageParam: number): ReadImagesRequest => {
+export const buildRequestBody = (
+    params: ImagesInfiniteParams,
+    pageParam: number
+): ReadImagesRequest => {
     const baseBody: ReadImagesRequest = {
         pagination: {
             offset: pageParam,
@@ -141,11 +146,7 @@ const buildRequestBody = (params: ImagesInfiniteParams, pageParam: number): Read
                 ...baseBody.filters,
                 sample_filter: {
                     ...(baseBody.filters?.sample_filter ?? {}),
-                    annotations_filter: params.filters.annotation_label_ids?.length
-                        ? {
-                              annotation_label_ids: params.filters.annotation_label_ids
-                          }
-                        : undefined,
+                    annotations_filter: getAnnotationsFilter(params.filters),
                     tag_ids: params.filters.tag_ids?.length ? params.filters.tag_ids : undefined,
                     sample_ids: params.filters.sample_ids?.length
                         ? params.filters.sample_ids
