@@ -36,7 +36,7 @@ describe('getKeywordHover', () => {
     it('returns keyword hover for `video:` when Monaco strips trailing colon', async () => {
         const { getKeywordHover } = await import('./getKeywordHover');
         const model = makeSyntaxDocModel({
-            text: 'video: fps == 30',
+            text: 'video: fps = 30',
             wordAtPosition: { word: 'video', startColumn: 1, endColumn: 6 },
             includeGetValueInRange: true
         });

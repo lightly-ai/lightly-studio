@@ -52,22 +52,22 @@ describe('parseLightlyQuery error handling', () => {
 
     const PARSE_FAILURE_CASES: Array<{ name: string; source: string }> = [
         { name: 'empty input', source: '' },
-        { name: 'unknown field', source: 'x == 1' },
-        { name: 'single equals operator', source: 'height = 400' },
-        { name: 'unterminated string literal', source: 'file_name == "cat' },
+        { name: 'unknown field', source: 'x = 1' },
+        { name: 'double equals operator', source: 'height == 400' },
+        { name: 'unterminated string literal', source: 'file_name = "cat' },
         { name: 'unmatched opening paren', source: '(height > 400' },
         { name: 'unmatched closing paren', source: 'height > 400)' },
         { name: 'trailing boolean operator', source: 'height > 400 AND' },
         { name: 'missing right-hand side', source: 'height >' },
-        { name: 'string compared to int field', source: 'height == "tall"' },
+        { name: 'string compared to int field', source: 'height = "tall"' },
         { name: 'obj detection without arguments', source: 'object_detection()' },
-        { name: 'obj detection unknown field', source: 'object_detection(file_name == "a.jpg")' },
+        { name: 'obj detection unknown field', source: 'object_detection(file_name = "a.jpg")' },
         { name: 'segmentation without arguments', source: 'segmentation_mask()' },
         {
             name: 'segmentation unknown field',
-            source: 'segmentation_mask(file_name == "a.jpg")'
+            source: 'segmentation_mask(file_name = "a.jpg")'
         },
-        { name: 'classification unknown field', source: 'classification(x == 0)' },
+        { name: 'classification unknown field', source: 'classification(x = 0)' },
         { name: 'wrong in operator use', source: '"jpg" IN file_name' },
         { name: 'stray punctuation', source: '@@@' }
     ];
@@ -78,7 +78,7 @@ describe('parseLightlyQuery error handling', () => {
     });
 
     it('returns an error result for an invalid datetime literal', () => {
-        const result = parseLightlyQuery(parser, 'created_at == "not-a-date"');
+        const result = parseLightlyQuery(parser, 'created_at = "not-a-date"');
 
         expect(result).toEqual({
             status: 'error',
@@ -181,7 +181,7 @@ const TRANSLATION_TEST_CASES: TranslationTestCase[] = [
     },
     {
         name: 'image file name equality',
-        source: 'file_name == "cat.jpg"',
+        source: 'file_name = "cat.jpg"',
         expected: query(str('image', 'file_name', '==', 'cat.jpg'))
     },
     {
@@ -205,7 +205,7 @@ const TRANSLATION_TEST_CASES: TranslationTestCase[] = [
     /* Object detection expression */
     {
         name: 'object detection label',
-        source: 'object_detection(label == "cat")',
+        source: 'object_detection(label = "cat")',
         expected: query(objectDetection(str('object_detection', 'label', '==', 'cat')))
     },
     {
@@ -232,12 +232,12 @@ const TRANSLATION_TEST_CASES: TranslationTestCase[] = [
     /* Classification expression */
     {
         name: 'classification label',
-        source: 'classification(label == "cat")',
+        source: 'classification(label = "cat")',
         expected: query(classification(str('classification', 'label', '==', 'cat')))
     },
     {
         name: 'segmentation label',
-        source: 'segmentation_mask(label == "cat")',
+        source: 'segmentation_mask(label = "cat")',
         expected: query(segmentationMask(str('segmentation_mask', 'label', '==', 'cat')))
     },
     {
@@ -259,7 +259,7 @@ const TRANSLATION_TEST_CASES: TranslationTestCase[] = [
     },
     {
         name: 'boolean or',
-        source: 'file_name == "cat.jpg" OR file_name == "dog.jpg"',
+        source: 'file_name = "cat.jpg" OR file_name = "dog.jpg"',
         expected: query(
             or(
                 str('image', 'file_name', '==', 'cat.jpg'),
@@ -286,7 +286,7 @@ const TRANSLATION_TEST_CASES: TranslationTestCase[] = [
     /* Boolean operators in subexpressions */
     {
         name: 'object detection boolean expression',
-        source: 'object_detection(label == "cat" AND width >= 50 AND height >= 40)',
+        source: 'object_detection(label = "cat" AND width >= 50 AND height >= 40)',
         expected: query(
             objectDetection(
                 and(
@@ -299,7 +299,7 @@ const TRANSLATION_TEST_CASES: TranslationTestCase[] = [
     },
     {
         name: 'object detection alternatives',
-        source: 'object_detection(label == "cat" OR label == "dog")',
+        source: 'object_detection(label = "cat" OR label = "dog")',
         expected: query(
             objectDetection(
                 or(
@@ -311,12 +311,12 @@ const TRANSLATION_TEST_CASES: TranslationTestCase[] = [
     },
     {
         name: 'object detection negation',
-        source: 'object_detection(NOT label == "background")',
+        source: 'object_detection(NOT label = "background")',
         expected: query(objectDetection(not(str('object_detection', 'label', '==', 'background'))))
     },
     {
         name: 'segmentation boolean expression',
-        source: 'segmentation_mask(label == "cat" AND width >= 50 AND height >= 40)',
+        source: 'segmentation_mask(label = "cat" AND width >= 50 AND height >= 40)',
         expected: query(
             segmentationMask(
                 and(
@@ -331,7 +331,7 @@ const TRANSLATION_TEST_CASES: TranslationTestCase[] = [
     /* Additional syntax features */
     {
         name: 'single quoted string',
-        source: "file_name == 'frame-0001.jpg'",
+        source: "file_name = 'frame-0001.jpg'",
         expected: query(str('image', 'file_name', '==', 'frame-0001.jpg'))
     },
     {
@@ -341,7 +341,7 @@ const TRANSLATION_TEST_CASES: TranslationTestCase[] = [
     },
     {
         name: 'multiline whitespace',
-        source: 'height > 400\nAND "reviewed" IN tags\nAND object_detection(label == "cat")',
+        source: 'height > 400\nAND "reviewed" IN tags\nAND object_detection(label = "cat")',
         expected: query(
             and(
                 int('image', 'height', '>', 400),
@@ -361,7 +361,7 @@ const TRANSLATION_TEST_CASES: TranslationTestCase[] = [
     /* Complex queries */
     {
         name: 'complex reviewed large cat image',
-        source: 'height > 400 AND width >= 640 AND "reviewed" IN tags AND object_detection(label == "cat" AND width > 80 AND height > 80)',
+        source: 'height > 400 AND width >= 640 AND "reviewed" IN tags AND object_detection(label = "cat" AND width > 80 AND height > 80)',
         expected: query(
             and(
                 int('image', 'height', '>', 400),
@@ -379,7 +379,7 @@ const TRANSLATION_TEST_CASES: TranslationTestCase[] = [
     },
     {
         name: 'complex dataset curation query',
-        source: '(file_path_abs != "/datasets/archive/bad.jpg" AND created_at >= "2025-01-01T00:00:00Z") AND ("training" IN tags OR "validation" IN tags) AND object_detection((label == "cat" OR label == "dog") AND NOT (x < 5 OR y < 5))',
+        source: '(file_path_abs != "/datasets/archive/bad.jpg" AND created_at >= "2025-01-01T00:00:00Z") AND ("training" IN tags OR "validation" IN tags) AND object_detection((label = "cat" OR label = "dog") AND NOT (x < 5 OR y < 5))',
         expected: query(
             and(
                 and(
