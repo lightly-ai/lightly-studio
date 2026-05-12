@@ -166,10 +166,6 @@ def sort_to_order_by(
 ) -> OrderByExpression:
     """Translate a (source, field_name) key and direction to an OrderByExpression.
 
-    For ``"metadata"`` source, returns an ``OrderByMetadataField`` that joins the
-    metadata table and extracts the value from the JSON data column.  For all other
-    sources the key must match a known entry in ``_SORT_FIELDS``.
-
     Args:
         key: A (source, field_name) tuple identifying the sort field (e.g.,
             ``("image", "width")`` or ``("metadata", "brightness")``).
