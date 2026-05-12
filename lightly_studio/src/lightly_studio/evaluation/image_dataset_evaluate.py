@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from collections.abc import Iterable
+from typing import Any
 from uuid import UUID
 
 from pydantic import BaseModel, Field
@@ -14,6 +15,7 @@ from lightly_studio.evaluation.validators import resolve_and_validate_collection
 from lightly_studio.models.annotation.annotation_base import AnnotationBaseTable
 from lightly_studio.models.evaluation_run import (
     EvaluationRunCreate,
+    EvaluationRunTable,
     EvaluationTaskType,
 )
 from lightly_studio.resolvers import (
@@ -81,27 +83,12 @@ class ImageDatasetEvaluate:
                 defaults are used.
         """
         config = config or ObjectDetectionEvaluationConfig()
-        gt_collection_id = resolve_and_validate_collection(
-            session=self.session,
-            collection_id=self.collection_id,
-            collection_name=gt_collection_name,
+        gt_collection_id, pred_collection_id, evaluation_run = self._create_evaluation_run(
+            name=name,
+            gt_collection_name=gt_collection_name,
+            pred_collection_name=pred_collection_name,
             task_type=EvaluationTaskType.OBJECT_DETECTION,
-        )
-        pred_collection_id = resolve_and_validate_collection(
-            session=self.session,
-            collection_id=self.collection_id,
-            collection_name=pred_collection_name,
-            task_type=EvaluationTaskType.OBJECT_DETECTION,
-        )
-        evaluation_run = evaluation_run_resolver.create(
-            session=self.session,
-            evaluation_run_input=EvaluationRunCreate(
-                name=name,
-                gt_annotation_collection_id=gt_collection_id,
-                pred_annotation_collection_id=pred_collection_id,
-                task_type=EvaluationTaskType.OBJECT_DETECTION,
-                config_json=config.model_dump(),
-            ),
+            config_json=config.model_dump(),
         )
 
         selected_sample_ids = {sample.sample_id for sample in self.samples}
@@ -164,28 +151,49 @@ class ImageDatasetEvaluate:
                 defaults are used.
         """
         config = config or ClassificationEvaluationConfig()
+        self._create_evaluation_run(
+            name=name,
+            gt_collection_name=gt_collection_name,
+            pred_collection_name=pred_collection_name,
+            task_type=EvaluationTaskType.CLASSIFICATION,
+            config_json=config.model_dump(),
+        )
+
+    def _create_evaluation_run(
+        self,
+        name: str,
+        gt_collection_name: str,
+        pred_collection_name: str,
+        task_type: EvaluationTaskType,
+        config_json: dict[str, Any],
+    ) -> tuple[UUID, UUID, EvaluationRunTable]:
+        """Validate gt + pred collections and persist the evaluation run.
+
+        Returns the resolved gt collection id, pred collection id, and the created run.
+        """
         gt_collection_id = resolve_and_validate_collection(
             session=self.session,
             collection_id=self.collection_id,
             collection_name=gt_collection_name,
-            task_type=EvaluationTaskType.CLASSIFICATION,
+            task_type=task_type,
         )
         pred_collection_id = resolve_and_validate_collection(
             session=self.session,
             collection_id=self.collection_id,
             collection_name=pred_collection_name,
-            task_type=EvaluationTaskType.CLASSIFICATION,
+            task_type=task_type,
         )
-        evaluation_run_resolver.create(
+        evaluation_run = evaluation_run_resolver.create(
             session=self.session,
             evaluation_run_input=EvaluationRunCreate(
                 name=name,
                 gt_annotation_collection_id=gt_collection_id,
                 pred_annotation_collection_id=pred_collection_id,
-                task_type=EvaluationTaskType.CLASSIFICATION,
-                config_json=config.model_dump(),
+                task_type=task_type,
+                config_json=config_json,
             ),
         )
+        return gt_collection_id, pred_collection_id, evaluation_run
 
     @staticmethod
     def _group_by_parent_sample_id(
