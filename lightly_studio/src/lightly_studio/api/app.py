@@ -30,6 +30,7 @@ from lightly_studio.api.routes.api import (
     collection_tag,
     embeddings2d,
     enterprise,
+    evaluation,
     export,
     features,
     frame,
@@ -148,6 +149,7 @@ api_router.include_router(settings.settings_router)
 api_router.include_router(classifier.classifier_router)
 api_router.include_router(embeddings2d.embeddings2d_router)
 api_router.include_router(features.features_router)
+api_router.include_router(evaluation.evaluation_router)
 api_router.include_router(metadata.metadata_router)
 api_router.include_router(selection.selection_router)
 api_router.include_router(operator.operator_router)
