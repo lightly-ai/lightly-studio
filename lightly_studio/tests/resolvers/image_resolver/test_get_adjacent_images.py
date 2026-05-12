@@ -1,13 +1,20 @@
 from sqlmodel import Session
 
 from lightly_studio.core.dataset_query.image_sample_field import ImageSampleField
-from lightly_studio.core.dataset_query.order_by import OrderByField, OrderByMetadataField
-from lightly_studio.resolvers import image_resolver, metadata_resolver
+from lightly_studio.core.dataset_query.order_by import (
+    OrderByEvaluationMetricField,
+    OrderByField,
+    OrderByMetadataField,
+)
+from lightly_studio.models.collection import SampleType
+from lightly_studio.models.evaluation_run import EvaluationRunCreate, EvaluationTaskType
+from lightly_studio.resolvers import evaluation_run_resolver, image_resolver, metadata_resolver
 from lightly_studio.resolvers.annotations.annotations_filter import AnnotationsFilter
 from lightly_studio.resolvers.image_filter import ImageFilter
 from lightly_studio.resolvers.sample_resolver.sample_filter import SampleFilter
 from tests import helpers_resolvers
 from tests.helpers_resolvers import AnnotationDetails
+from tests.resolvers.evaluation_sample_metric_resolver.helpers import insert_metrics
 
 
 def test_get_adjacent_images__orders_by_path(db_session: Session) -> None:
@@ -440,6 +447,54 @@ def test_get_adjacent_images__sort_by_metadata_field(db_session: Session) -> Non
         sample_id=image_c.sample_id,
         collection_id=collection_id,
         order_by=[OrderByMetadataField("score", cast_to_float=True)],
+    )
+
+    assert result is not None
+    assert result.previous_sample_id == image_b.sample_id
+    assert result.sample_id == image_c.sample_id
+    assert result.next_sample_id == image_a.sample_id
+
+
+def test_get_adjacent_images__sort_by_evaluation_metric(db_session: Session) -> None:
+    collection = helpers_resolvers.create_collection(session=db_session)
+    collection_id = collection.collection_id
+
+    image_a = helpers_resolvers.create_image(
+        session=db_session, collection_id=collection_id, file_path_abs="/images/a.png"
+    )
+    image_b = helpers_resolvers.create_image(
+        session=db_session, collection_id=collection_id, file_path_abs="/images/b.png"
+    )
+    image_c = helpers_resolvers.create_image(
+        session=db_session, collection_id=collection_id, file_path_abs="/images/c.png"
+    )
+
+    gt_collection = helpers_resolvers.create_collection(
+        session=db_session, sample_type=SampleType.ANNOTATION, parent_collection_id=collection_id
+    )
+    pred_collection = helpers_resolvers.create_collection(
+        session=db_session, sample_type=SampleType.ANNOTATION, parent_collection_id=collection_id
+    )
+    run = evaluation_run_resolver.create(
+        session=db_session,
+        evaluation_run_input=EvaluationRunCreate(
+            name="run1",
+            gt_annotation_collection_id=gt_collection.collection_id,
+            pred_annotation_collection_id=pred_collection.collection_id,
+            task_type=EvaluationTaskType.OBJECT_DETECTION,
+        ),
+    )
+
+    # score order: b(1) < c(2) < a(3), so sorted sequence is b, c, a
+    insert_metrics(db_session, run.id, image_a.sample_id, {"score": 3.0})
+    insert_metrics(db_session, run.id, image_b.sample_id, {"score": 1.0})
+    insert_metrics(db_session, run.id, image_c.sample_id, {"score": 2.0})
+
+    result = image_resolver.get_adjacent_images(
+        session=db_session,
+        sample_id=image_c.sample_id,
+        collection_id=collection_id,
+        order_by=[OrderByEvaluationMetricField("run1", "score")],
     )
 
     assert result is not None

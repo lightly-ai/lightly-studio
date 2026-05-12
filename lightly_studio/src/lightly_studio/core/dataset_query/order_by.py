@@ -5,13 +5,15 @@ from __future__ import annotations
 from abc import ABC, abstractmethod
 from typing import Any
 
-from sqlalchemy import ColumnElement
+from sqlalchemy import ColumnElement, and_
 from sqlmodel import col
 from sqlmodel.sql.expression import SelectOfScalar
 from typing_extensions import Self, TypeVar
 
 from lightly_studio import db_json
 from lightly_studio.core.dataset_query.field import Field
+from lightly_studio.models.evaluation_run import EvaluationRunTable
+from lightly_studio.models.evaluation_sample_metric import EvaluationSampleMetricTable
 from lightly_studio.models.image import ImageTable
 from lightly_studio.models.metadata import SampleMetadataTable
 
@@ -162,3 +164,75 @@ class OrderByMetadataField(OrderByExpression):
         if self.ascending:
             return query.order_by(extract_expr.asc())
         return query.order_by(extract_expr.desc())
+
+
+class OrderByEvaluationMetricField(OrderByExpression):
+    """Order by an evaluation metric value from EvaluationSampleMetricTable.
+
+    Two LEFT OUTER JOINs are added automatically: first to EvaluationRunTable
+    (filtering by name) to resolve the run UUID, then to EvaluationSampleMetricTable
+    (filtering by run ID, sample ID, and metric name) to get at most one row per sample.
+    Samples without a metric value still appear in results (sorted last when ascending).
+
+    Args:
+        evaluation_run_name: The name of the evaluation run to sort by.
+        metric_name: The metric name to sort by.
+    """
+
+    def __init__(self, evaluation_run_name: str, metric_name: str) -> None:
+        """Initialize with the evaluation run name and metric name."""
+        super().__init__()
+        self.evaluation_run_name = evaluation_run_name
+        self.metric_name = metric_name
+
+    def to_column_element(self) -> ColumnElement[Any]:
+        """Return the metric value column element with direction applied.
+
+        Returns:
+            A column element ordered ascending or descending.
+        """
+        if self.ascending:
+            return col(EvaluationSampleMetricTable.value).asc()
+        return col(EvaluationSampleMetricTable.value).desc()
+
+    def apply_join(self, query: SelectOfScalar[T]) -> SelectOfScalar[T]:
+        """Perform the two LEFT OUTER JOINs without adding ORDER BY.
+
+        Used by resolvers in the similarity/window-function code path where
+        to_column_element() handles ordering separately.
+
+        Args:
+            query: The SQLModel Select query to modify.
+
+        Returns:
+            The modified query after joining.
+        """
+        query = query.outerjoin(
+            EvaluationRunTable,
+            col(EvaluationRunTable.name) == self.evaluation_run_name,
+        )
+        return query.outerjoin(
+            EvaluationSampleMetricTable,
+            and_(
+                col(EvaluationSampleMetricTable.sample_id) == col(ImageTable.sample_id),
+                col(EvaluationSampleMetricTable.evaluation_run_id) == col(EvaluationRunTable.id),
+                col(EvaluationSampleMetricTable.metric_name) == self.metric_name,
+            ),
+        )
+
+    def apply(self, query: SelectOfScalar[T]) -> SelectOfScalar[T]:
+        """Apply this ordering to a SQLModel Select query.
+
+        Joins EvaluationRunTable and EvaluationSampleMetricTable (left outer joins)
+        and adds an ORDER BY clause on the metric value.
+
+        Args:
+            query: The SQLModel Select query to modify.
+
+        Returns:
+            The modified query after joining and ordering.
+        """
+        query = self.apply_join(query)
+        if self.ascending:
+            return query.order_by(col(EvaluationSampleMetricTable.value).asc())
+        return query.order_by(col(EvaluationSampleMetricTable.value).desc())

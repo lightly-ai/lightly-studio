@@ -11,6 +11,7 @@ from sqlmodel.sql.expression import Select
 
 from lightly_studio.core.dataset_query.image_sample_field import ImageSampleField
 from lightly_studio.core.dataset_query.order_by import (
+    OrderByEvaluationMetricField,
     OrderByExpression,
     OrderByField,
     OrderByMetadataField,
@@ -101,5 +102,10 @@ def _base_query(
             SampleMetadataTable,
             SampleMetadataTable.sample_id == col(ImageTable.sample_id),  # type: ignore[arg-type]
         )
+    # to_column_element() references evaluation_sample_metric.value, so the tables must be joined.
+    if order_by:
+        for expr in order_by:
+            if isinstance(expr, OrderByEvaluationMetricField):
+                query = expr.apply_join(query)  # type: ignore[arg-type,assignment]
 
     return query
