@@ -11,7 +11,6 @@ export const getAnnotationsFilter = (
     const collection_ids = filters.collection_ids?.length ? filters.collection_ids : undefined;
     if (!annotation_label_ids && !collection_ids) return undefined;
     return {
-        filter_type: 'annotations',
         ...(annotation_label_ids && { annotation_label_ids }),
         ...(collection_ids && { collection_ids })
     };

@@ -12,14 +12,11 @@ vi.mock('$lib/hooks/useAnnotationCollections/useAnnotationCollections', () => ({
     useAnnotationCollections: vi.fn(() => readable({ data: mocks.collections }))
 }));
 
-vi.mock(
-    '$lib/hooks/useAnnotationCollectionsFilter/useAnnotationCollectionsFilter',
-    () => ({
-        useAnnotationCollectionsFilter: vi.fn(() => ({
-            setSelectedCollectionIds: mocks.setSelectedCollectionIds
-        }))
-    })
-);
+vi.mock('$lib/hooks/useAnnotationCollectionsFilter/useAnnotationCollectionsFilter', () => ({
+    useAnnotationCollectionsFilter: vi.fn(() => ({
+        setSelectedCollectionIds: mocks.setSelectedCollectionIds
+    }))
+}));
 
 describe('AnnotationCollectionsMenu', () => {
     const defaultProps = { collectionId: 'col-1' };
