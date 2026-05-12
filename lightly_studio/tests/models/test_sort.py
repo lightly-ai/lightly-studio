@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-from lightly_studio.src.lightly_studio.models.sort_direction import SortDirection
 import pytest
 from pydantic import ValidationError
 
@@ -13,6 +12,7 @@ from lightly_studio.models.sort import (
     SortFieldSource,
     sort_field_expr_to_order_by,
 )
+from lightly_studio.models.sort_direction import SortDirection
 
 _IMAGE_SORT_FIELD_NAMES = ["file_name", "file_path_abs", "created_at", "width", "height"]
 

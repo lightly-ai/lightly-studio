@@ -7,7 +7,7 @@ from __future__ import annotations
 
 from collections.abc import Mapping
 from datetime import datetime
-from typing import Literal, Protocol, TypeVar, Union
+from typing import Protocol, TypeVar, Union
 
 from typing_extensions import assert_never
 
