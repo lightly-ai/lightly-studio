@@ -6,8 +6,11 @@
     import { useQueryEditor } from './useQueryEditor';
     import type { QueryExprTranslationResult } from './language/query-expr-translation';
 
-    const LIGHTLY_QUERY_DEFAULT_VALUE = `width > 1920 AND ("reviewed" IN tags)
-AND object_detection(label == "car" and x > 10)`;
+    const LIGHTLY_QUERY_DEFAULT_VALUE = `# Example query
+width < 500
+AND "reviewed" IN tags
+AND object_detection(label = "person" AND x > 10)
+`;
 
     interface QueryEditorProps {
         value?: string;
