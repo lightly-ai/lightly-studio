@@ -25,6 +25,13 @@ function completionLabel(item: monaco.languages.CompletionItem): string {
     return typeof item.label === 'string' ? item.label : item.label.label;
 }
 
+// Keep parsing support for leading `video:` queries, but do not advertise the
+// prefix in autocomplete for now. Filtering here ensures it is removed no
+// matter whether it comes from Langium's LSP completions or our schema fallback.
+function shouldShowSuggestion(item: monaco.languages.CompletionItem): boolean {
+    return completionLabel(item) !== 'video:';
+}
+
 async function getCompletions(
     model: monaco.editor.ITextModel,
     position: monaco.Position
@@ -56,9 +63,9 @@ async function getCompletions(
 
     const scope = detectScopeAt(model.getValue(), model.getOffsetAt(position));
 
-    const lspSuggestions = (result?.items ?? []).map((item) =>
-        lspToMonacoCompletion(item, fallbackRange, scope)
-    );
+    const lspSuggestions = (result?.items ?? [])
+        .map((item) => lspToMonacoCompletion(item, fallbackRange, scope))
+        .filter(shouldShowSuggestion);
 
     // Langium's default provider only emits literal-string keywords from the
     // grammar, so terminal-defined names (width, fps, object_detection, …)
@@ -69,7 +76,7 @@ async function getCompletions(
         (suggestion) => !seen.has(completionLabel(suggestion))
     );
 
-    return { suggestions: [...lspSuggestions, ...schemaSuggestions] };
+    return { suggestions: [...lspSuggestions, ...schemaSuggestions].filter(shouldShowSuggestion) };
 }
 
 /**

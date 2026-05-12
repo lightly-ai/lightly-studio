@@ -6,7 +6,8 @@ import type {
     AnnotationsFilter,
     ImageFilter,
     QueryExpr,
-    SampleFilter
+    SampleFilter,
+    SortFieldExpr
 } from '$lib/api/lightly_studio_local';
 
 const filterParams = writable<ImagesInfiniteParams>({} as ImagesInfiniteParams);
@@ -97,6 +98,8 @@ export interface QueryExpression {
 
 const imageQueryExpression = writable<QueryExpression | null>({} as QueryExpression);
 
+const imageSortBy = writable<SortFieldExpr[] | null>(null);
+
 export const useImageFilters = () => {
     const updateFilterParams = (params: ImagesInfiniteParams) => {
         filterParams.set(params);
@@ -127,12 +130,18 @@ export const useImageFilters = () => {
         filterParams.set(newParams);
     };
 
+    const updateSortBy = (sort: SortFieldExpr[] | null) => {
+        imageSortBy.set(sort);
+    };
+
     return {
         imageQueryExpression,
         filterParams,
         imageFilter,
+        imageSortBy,
         updateFilterParams,
         updateQueryExpr,
-        updateSampleIds
+        updateSampleIds,
+        updateSortBy
     };
 };

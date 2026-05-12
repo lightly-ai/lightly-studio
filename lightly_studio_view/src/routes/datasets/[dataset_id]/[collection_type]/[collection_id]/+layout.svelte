@@ -7,6 +7,7 @@
         Footer,
         GridHeader,
         LabelsMenu,
+        OrderBy,
         SelectionPill,
         TagsMenu
     } from '$lib/components';
@@ -371,6 +372,11 @@
                                         />
                                     {/if}
                                 {/snippet}
+                                {#snippet auxControls()}
+                                    {#if isImages}
+                                        <OrderBy />
+                                    {/if}
+                                {/snippet}
                                 <div class="flex-1" data-grid-search-drop-target>
                                     {#if hasEmbeddings}
                                         <CollectionSearch
@@ -423,6 +429,9 @@
                                 {/if}
                             {/snippet}
                             {#snippet auxControls()}
+                                {#if isImages}
+                                    <OrderBy />
+                                {/if}
                                 {#if (isImages || isVideos) && hasEmbeddings}
                                     <Button
                                         class="flex items-center space-x-1"
