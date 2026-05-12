@@ -103,6 +103,7 @@ def test_read_samples_calls_get_all(mocker: MockerFixture, test_client: TestClie
         pagination=Paginated(offset=0, limit=100),
         text_embedding=json_body["text_embedding"],
         sample_ids=None,
+        order_by=None,
     )
 
 
