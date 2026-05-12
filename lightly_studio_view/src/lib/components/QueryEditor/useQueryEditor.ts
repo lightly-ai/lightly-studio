@@ -64,7 +64,7 @@ export const useQueryEditor = () => {
             automaticLayout: true,
             readOnly: options.readOnly ?? false,
             minimap: { enabled: false },
-            wordWrap: "off"
+            wordWrap: 'on'
         });
 
         const detachLanguage = language.attach(model);
