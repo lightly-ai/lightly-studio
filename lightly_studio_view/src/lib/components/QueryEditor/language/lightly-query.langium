@@ -14,7 +14,7 @@ interface NotExpression extends Expression {
 
 interface ComparisonExpression extends Expression {
   left: Expression;
-  operator: '==' | '!=' | '<' | '>' | '<=' | '>=';
+  operator: '=' | '!=' | '<' | '>' | '<=' | '>=';
   right: Expression;
 }
 
@@ -60,11 +60,11 @@ SampleUnary<isImage> returns Expression:
     | AnnotationQuery;
 
 SampleComparison<isImage> returns ComparisonExpression:
-  SampleIntFieldReference<isImage> {ComparisonExpression.left=current} operator=('==' | '!=' | '<' | '>' | '<=' | '>=') right=IntLiteral
-   | SampleOrdinalFloatFieldReference<isImage> {ComparisonExpression.left=current} operator=('==' | '!=' | '<' | '>' | '<=' | '>=') right=NumericLiteral
-   | SampleEqualityFloatFieldReference<isImage> {ComparisonExpression.left=current} operator=('==' | '!=') right=NumericLiteral
-   | SampleStringFieldReference<isImage> {ComparisonExpression.left=current} operator=('==' | '!=') right=StringLiteral
-   | SampleDateTimeFieldReference<isImage> {ComparisonExpression.left=current} operator=('==' | '!=' | '<' | '>' | '<=' | '>=') right=StringLiteral;
+  SampleIntFieldReference<isImage> {ComparisonExpression.left=current} operator=('=' | '!=' | '<' | '>' | '<=' | '>=') right=IntLiteral
+   | SampleOrdinalFloatFieldReference<isImage> {ComparisonExpression.left=current} operator=('=' | '!=' | '<' | '>' | '<=' | '>=') right=NumericLiteral
+   | SampleEqualityFloatFieldReference<isImage> {ComparisonExpression.left=current} operator=('=' | '!=') right=NumericLiteral
+   | SampleStringFieldReference<isImage> {ComparisonExpression.left=current} operator=('=' | '!=') right=StringLiteral
+   | SampleDateTimeFieldReference<isImage> {ComparisonExpression.left=current} operator=('=' | '!=' | '<' | '>' | '<=' | '>=') right=StringLiteral;
 
 SampleIntFieldReference<isImage> returns FieldReference:
   (<isImage> {FieldReference} member=ImageIntFieldName)
@@ -98,8 +98,8 @@ ObjectDetectionUnary returns Expression:
     | ObjectDetectionComparison;
 
 ObjectDetectionComparison returns ComparisonExpression:
-  ObjectDetectionIntFieldReference {ComparisonExpression.left=current} operator=('==' | '!=' | '<' | '>' | '<=' | '>=') right=IntLiteral
-   | ObjectDetectionStringFieldReference {ComparisonExpression.left=current} operator=('==' | '!=') right=StringLiteral;
+  ObjectDetectionIntFieldReference {ComparisonExpression.left=current} operator=('=' | '!=' | '<' | '>' | '<=' | '>=') right=IntLiteral
+   | ObjectDetectionStringFieldReference {ComparisonExpression.left=current} operator=('=' | '!=') right=StringLiteral;
 
 ObjectDetectionIntFieldReference returns FieldReference:
   {FieldReference} member=ObjectDetectionIntFieldName;
@@ -122,7 +122,7 @@ ClassificationUnary returns Expression:
     | ClassificationComparison;
 
 ClassificationComparison returns ComparisonExpression:
-  ClassificationFieldReference {ComparisonExpression.left=current} operator=('==' | '!=') right=StringLiteral;
+  ClassificationFieldReference {ComparisonExpression.left=current} operator=('=' | '!=') right=StringLiteral;
 
 ClassificationFieldReference returns Expression:
   {FieldReference} member=LABEL;
@@ -142,8 +142,8 @@ SegmentationMaskUnary returns Expression:
     | SegmentationMaskComparison;
 
 SegmentationMaskComparison returns ComparisonExpression:
-  SegmentationMaskIntFieldReference {ComparisonExpression.left=current} operator=('==' | '!=' | '<' | '>' | '<=' | '>=') right=IntLiteral
-   | SegmentationMaskStringFieldReference {ComparisonExpression.left=current} operator=('==' | '!=') right=StringLiteral;
+  SegmentationMaskIntFieldReference {ComparisonExpression.left=current} operator=('=' | '!=' | '<' | '>' | '<=' | '>=') right=IntLiteral
+   | SegmentationMaskStringFieldReference {ComparisonExpression.left=current} operator=('=' | '!=') right=StringLiteral;
 
 SegmentationMaskIntFieldReference returns FieldReference:
   {FieldReference} member=SegmentationMaskIntFieldName;
