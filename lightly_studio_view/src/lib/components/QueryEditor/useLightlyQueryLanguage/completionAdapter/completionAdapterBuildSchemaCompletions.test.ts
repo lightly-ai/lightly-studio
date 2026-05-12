@@ -8,7 +8,7 @@ vi.mock('monaco-editor', () => ({
 }));
 
 describe('buildSchemaCompletions', () => {
-    it('includes scope fields and top-level keywords in image scope', async () => {
+    it('includes scope fields and top-level keywords in image scope except `video:`', async () => {
         const { buildSchemaCompletions } = await import(
             './completionAdapterBuildSchemaCompletions'
         );
@@ -16,7 +16,7 @@ describe('buildSchemaCompletions', () => {
         const items = buildSchemaCompletions('image', range as never);
         const labels = items.map((i) => i.label);
         expect(labels).toContain('width');
-        expect(labels).toContain('video:');
+        expect(labels).not.toContain('video:');
         expect(labels).toContain('object_detection');
         expect(labels).toContain('segmentation_mask');
     });
