@@ -3,7 +3,7 @@ import { client } from '$lib/services/collection';
 import { derived, get, writable } from 'svelte/store';
 import { getSettings } from '$lib/api/lightly_studio_local';
 
-type SettingView = components['schemas']['SettingView'];
+export type SettingView = components['schemas']['SettingView'];
 type UpdateSettingsResult = { success: boolean; error?: string };
 
 // Default settings values
