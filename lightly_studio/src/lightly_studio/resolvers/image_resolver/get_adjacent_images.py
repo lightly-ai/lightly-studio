@@ -70,7 +70,9 @@ def _base_query(
     )
     if needs_tiebreaker:
         file_path_col = col(ImageTable.file_path_abs)
-        tiebreaker_col = file_path_col.asc() if (not order_by or order_by[0].ascending) else file_path_col.desc()
+        tiebreaker_col = (
+            file_path_col.asc() if (not order_by or order_by[0].ascending) else file_path_col.desc()
+        )
         tiebreaker = [tiebreaker_col]
     else:
         tiebreaker = []
