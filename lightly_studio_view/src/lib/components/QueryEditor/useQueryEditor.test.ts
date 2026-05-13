@@ -141,6 +141,18 @@ describe('useQueryEditor', () => {
         );
     });
 
+    it('does not allow scrolling past the last line when content fits', () => {
+        const { mount } = useQueryEditor();
+        const el = document.createElement('div');
+
+        mount(el, { value: '' });
+
+        expect(mocks.editorCreate).toHaveBeenCalledWith(
+            el,
+            expect.objectContaining({ scrollBeyondLastLine: false })
+        );
+    });
+
     it('publishes model changes back through onChange', () => {
         const { mount } = useQueryEditor();
         const el = document.createElement('div');

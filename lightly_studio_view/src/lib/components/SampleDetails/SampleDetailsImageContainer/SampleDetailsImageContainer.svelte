@@ -19,6 +19,7 @@
     import { getBoundingBox } from '$lib/components/SampleAnnotation/utils';
     import { onDestroy, onMount } from 'svelte';
     import { usePendingState } from '../usePendingState';
+    import { useAnnotationCollectionsFilter } from '$lib/hooks/useAnnotationCollectionsFilter/useAnnotationCollectionsFilter';
 
     type SampleDetailsImageContainerProps = {
         sample: {
@@ -57,6 +58,7 @@
 
     const { isEditingMode, imageBrightness, imageContrast } = useGlobalStorage();
     const { isHidden } = useHideAnnotations();
+    const { selectedCollectionIds } = useAnnotationCollectionsFilter();
 
     let resetZoomTransform: (() => void) | undefined = $state();
     let mousePosition = $state<{ x: number; y: number } | null>(null);
@@ -68,6 +70,11 @@
     const actualAnnotationsToShow = $derived.by(() => {
         return sample.annotations
             .filter((annotation) => !hideAnnotationsIds.has(annotation.sample_id))
+            .filter(
+                (annotation) =>
+                    $selectedCollectionIds.length === 0 ||
+                    $selectedCollectionIds.includes(annotation.annotation_collection_id)
+            )
             .sort((a, b) => {
                 if (a.sample_id === annotationLabelContext.annotationId) return 1;
                 if (b.sample_id === annotationLabelContext.annotationId) return -1;

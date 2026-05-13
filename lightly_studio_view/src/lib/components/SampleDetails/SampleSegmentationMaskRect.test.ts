@@ -350,6 +350,7 @@ describe('SampleSegmentationMaskRect', () => {
                             sample_id: 'annotation-1',
                             annotation_type: 'segmentation_mask',
                             annotation_label: { annotation_label_name: 'label-1' },
+                            annotation_collection_id: 'collection-1',
                             created_at: new Date('1970-01-01T00:00:00.000Z'),
                             segmentation_details: {
                                 x: 0,

@@ -11,6 +11,9 @@ from lightly_studio.resolvers.annotation_resolver.get_adjacent_annotations impor
     get_adjacent_annotations,
 )
 from lightly_studio.resolvers.annotation_resolver.get_all import get_all
+from lightly_studio.resolvers.annotation_resolver.get_all_by_collection_id_and_parent_sample_ids import (  # noqa: E501
+    get_all_by_collection_id_and_parent_sample_ids,
+)
 from lightly_studio.resolvers.annotation_resolver.get_all_by_collection_name import (
     get_all_by_collection_name,
 )
@@ -46,6 +49,7 @@ __all__ = [
     "delete_annotations",
     "get_adjacent_annotations",
     "get_all",
+    "get_all_by_collection_id_and_parent_sample_ids",
     "get_all_by_collection_name",
     "get_all_by_object_track_id",
     "get_all_by_parent_sample_ids",
