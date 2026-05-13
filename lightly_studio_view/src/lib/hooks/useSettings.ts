@@ -2,7 +2,6 @@ import type { GridViewSampleRenderingType, SettingView } from '$lib/api/lightly_
 import { derived, get, writable } from 'svelte/store';
 import { getSettings, setSettings } from '$lib/api/lightly_studio_local';
 
-export type { SettingView };
 type UpdateSettingsResult = { success: boolean; error?: string };
 
 // Default settings values
