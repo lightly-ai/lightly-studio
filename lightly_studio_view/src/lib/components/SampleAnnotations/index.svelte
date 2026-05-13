@@ -28,7 +28,7 @@
 
     const { isHidden } = useHideAnnotations();
     const { showBoundingBoxesForSegmentationStore } = useSettings();
-    const { selectedCollectionIds } = useAnnotationCollectionsFilter();
+    const { selectedCollectionIds, collectionIdToName } = useAnnotationCollectionsFilter();
 
     // Normalize backend annotation variants into the smaller canvas render contract.
     const mapToCanvasAnnotation = (
@@ -65,17 +65,28 @@
 
     const annotationsWithVisuals: AnnotationCanvasAnnotation[] = $derived.by(() => {
         const showInstanceSegmentationBoundingBoxes = $showBoundingBoxesForSegmentationStore;
+        const selectedIds = $selectedCollectionIds;
+        const idToName = $collectionIdToName;
 
         return sample.annotations
             .filter(
                 (annotation) =>
-                    $selectedCollectionIds.length === 0 ||
-                    $selectedCollectionIds.includes(annotation.annotation_collection_id)
+                    selectedIds.length === 0 ||
+                    selectedIds.includes(annotation.annotation_collection_id)
             )
             .filter((annotation) => annotation.annotation_type !== 'classification')
-            .map((annotation) =>
-                mapToCanvasAnnotation(annotation, showInstanceSegmentationBoundingBoxes)
-            )
+            .map((annotation) => {
+                const canvas = mapToCanvasAnnotation(
+                    annotation,
+                    showInstanceSegmentationBoundingBoxes
+                );
+                if (!canvas) return null;
+                if (selectedIds.length > 0) {
+                    const collectionName = idToName[annotation.annotation_collection_id];
+                    if (collectionName) return { ...canvas, annotation_label_name: collectionName };
+                }
+                return canvas;
+            })
             .filter((annotation): annotation is AnnotationCanvasAnnotation => annotation != null);
     });
     const objectFitClass = $derived(objectFit === 'cover' ? 'object-cover' : 'object-contain');
