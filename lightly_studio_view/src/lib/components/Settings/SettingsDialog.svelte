@@ -5,124 +5,48 @@
     import { Switch } from '$lib/components/ui/switch';
     import { useSettings } from '$lib/hooks/useSettings';
     import { useSettingsDialog } from '$lib/hooks/useSettingsDialog/useSettingsDialog';
-    import {
-        createSettingsDialogFormState,
-        createSettingsSavePayload,
-        normalizeShortcutKey
-    } from './settingsDialogState';
+    import { SettingsDialogState } from './settingsDialogState.svelte';
     import { shortcutSettings, staticShortcuts } from './settingsDialogConfig';
-    import type { ShortcutSettingKey } from './settingsDialogConfig';
     import { ShortcutSettingRow } from './ShortcutSettingRow';
     import { SettingsFieldRow } from './SettingsFieldRow';
 
-    type SettingsDialogFormState = ReturnType<typeof createSettingsDialogFormState>;
-    type RenderingMode = SettingsDialogFormState['gridViewRendering'];
-    type ThumbnailQualityMode = SettingsDialogFormState['gridViewThumbnailQuality'];
-
-    // Get settings from the store
-    const { settingsStore, isLoadedStore, saveSettings } = useSettings();
-
+    const { settingsStore, saveSettings } = useSettings();
     const { isSettingsDialogOpen, openSettingsDialog, closeSettingsDialog } = useSettingsDialog();
-    let isSaving = $state(false);
 
-    const initialFormState = createSettingsDialogFormState($settingsStore);
-    let shortcuts = $state(initialFormState.shortcutSettings);
-    let gridViewRendering: RenderingMode = $state(initialFormState.gridViewRendering);
-    let gridViewThumbnailQuality: ThumbnailQualityMode = $state(
-        initialFormState.gridViewThumbnailQuality
-    );
-    let showAnnotationTextLabels = $state<boolean>(initialFormState.showAnnotationTextLabels);
-    let showSampleFilenames = $state<boolean>(initialFormState.showSampleFilenames);
-    let showBoundingBoxesForSegmentation = $state<boolean>(
-        initialFormState.showBoundingBoxesForSegmentation
-    );
+    const dialogState = new SettingsDialogState();
 
-    let initialized = false;
-
-    // Update local state when store changes
+    // Hydrate form state each time the dialog opens.
     $effect(() => {
-        if ($settingsStore && $isLoadedStore && !initialized) {
-            const formState = createSettingsDialogFormState($settingsStore);
-            shortcuts = formState.shortcutSettings;
-            gridViewRendering = formState.gridViewRendering;
-            gridViewThumbnailQuality = formState.gridViewThumbnailQuality;
-            showAnnotationTextLabels = formState.showAnnotationTextLabels;
-            showSampleFilenames = formState.showSampleFilenames;
-            showBoundingBoxesForSegmentation = formState.showBoundingBoxesForSegmentation;
-            initialized = true;
+        if ($isSettingsDialogOpen) {
+            dialogState.hydrate($settingsStore);
         }
     });
-
-    let recordingShortcut: ShortcutSettingKey | null = $state(null);
 
     function setOpen(isOpen: boolean) {
         if (isOpen) {
             openSettingsDialog();
         } else {
             closeSettingsDialog();
-            recordingShortcut = null;
+            dialogState.clearRecording();
         }
     }
 
-    function handleGridViewRenderingChange(value: string) {
-        gridViewRendering = value as RenderingMode;
-    }
-
-    function handleGridViewThumbnailQualityChange(value: string) {
-        gridViewThumbnailQuality = value as ThumbnailQualityMode;
-    }
-
-    // Submit handler
-    function handleFormSubmit(event: Event) {
+    async function handleFormSubmit(event: Event) {
         event.preventDefault();
-        submitSettings();
-    }
-
-    // Save settings
-    async function submitSettings() {
-        isSaving = true;
+        dialogState.isSaving = true;
 
         try {
-            await saveSettings(
-                createSettingsSavePayload({
-                    shortcutSettings: shortcuts,
-                    gridViewRendering,
-                    gridViewThumbnailQuality,
-                    showAnnotationTextLabels,
-                    showSampleFilenames,
-                    showBoundingBoxesForSegmentation
-                })
-            );
-
+            await saveSettings(dialogState.getSavePayload());
             setOpen(false);
         } catch (error) {
             console.error('Error saving settings:', error);
         } finally {
-            isSaving = false;
+            dialogState.isSaving = false;
         }
     }
-
-    // Start recording a keyboard shortcut
-    const startRecording = (shortcutName: ShortcutSettingKey) => {
-        recordingShortcut = shortcutName;
-    };
-
-    // Handle keyboard input when recording shortcuts
-    const handleKeyDown = (event: KeyboardEvent) => {
-        if (!recordingShortcut) return;
-
-        // Prevent default and stop propagation to avoid triggering other shortcuts
-        event.preventDefault();
-        event.stopPropagation();
-
-        shortcuts[recordingShortcut] = normalizeShortcutKey(event);
-
-        // Stop recording
-        recordingShortcut = null;
-    };
 </script>
 
-<svelte:window onkeydown={handleKeyDown} />
+<svelte:window onkeydown={(e) => dialogState.handleKeyDown(e)} />
 
 <Dialog.Root open={$isSettingsDialogOpen} onOpenChange={(isOpen) => setOpen(isOpen)}>
     <Dialog.Portal>
@@ -146,9 +70,9 @@
                             <ShortcutSettingRow
                                 id={setting.id}
                                 label={setting.label}
-                                value={shortcuts[setting.key]}
-                                isRecording={recordingShortcut === setting.key}
-                                onStartRecording={() => startRecording(setting.key)}
+                                value={dialogState.shortcuts[setting.key]}
+                                isRecording={dialogState.recordingShortcut === setting.key}
+                                onStartRecording={() => dialogState.startRecording(setting.key)}
                             />
                         {/each}
                         {#each staticShortcuts as setting (setting.id)}
@@ -169,11 +93,15 @@
                             <div class="relative">
                                 <Select
                                     type="single"
-                                    value={gridViewRendering}
-                                    onValueChange={handleGridViewRenderingChange}
+                                    value={dialogState.gridViewRendering}
+                                    onValueChange={(v) =>
+                                        (dialogState.gridViewRendering =
+                                            v as typeof dialogState.gridViewRendering)}
                                 >
                                     <SelectTrigger id="grid-view-rendering">
-                                        {gridViewRendering === 'cover' ? 'Cover' : 'Contain'}
+                                        {dialogState.gridViewRendering === 'cover'
+                                            ? 'Cover'
+                                            : 'Contain'}
                                     </SelectTrigger>
                                     <SelectContent>
                                         <SelectItem value="cover">Cover</SelectItem>
@@ -188,8 +116,8 @@
                         >
                             <Switch
                                 id="show-sample-filenames"
-                                bind:checked={showSampleFilenames}
-                                disabled={isSaving}
+                                bind:checked={dialogState.showSampleFilenames}
+                                disabled={dialogState.isSaving}
                             />
                         </SettingsFieldRow>
                         <SettingsFieldRow
@@ -199,11 +127,15 @@
                             <div class="relative">
                                 <Select
                                     type="single"
-                                    value={gridViewThumbnailQuality}
-                                    onValueChange={handleGridViewThumbnailQualityChange}
+                                    value={dialogState.gridViewThumbnailQuality}
+                                    onValueChange={(v) =>
+                                        (dialogState.gridViewThumbnailQuality =
+                                            v as typeof dialogState.gridViewThumbnailQuality)}
                                 >
                                     <SelectTrigger id="grid-view-thumbnail-quality">
-                                        {gridViewThumbnailQuality === 'high' ? 'High' : 'Original'}
+                                        {dialogState.gridViewThumbnailQuality === 'high'
+                                            ? 'High'
+                                            : 'Original'}
                                     </SelectTrigger>
                                     <SelectContent>
                                         <SelectItem value="raw">Original</SelectItem>
@@ -223,8 +155,8 @@
                         >
                             <Switch
                                 id="show-bounding-boxes-for-segmentation"
-                                bind:checked={showBoundingBoxesForSegmentation}
-                                disabled={isSaving}
+                                bind:checked={dialogState.showBoundingBoxesForSegmentation}
+                                disabled={dialogState.isSaving}
                             />
                         </SettingsFieldRow>
                         <SettingsFieldRow
@@ -233,8 +165,8 @@
                         >
                             <Switch
                                 id="show-annotation-text-labels"
-                                bind:checked={showAnnotationTextLabels}
-                                disabled={isSaving}
+                                bind:checked={dialogState.showAnnotationTextLabels}
+                                disabled={dialogState.isSaving}
                             />
                         </SettingsFieldRow>
                     </div>
@@ -244,8 +176,8 @@
                     <Button variant="outline" type="button" onclick={() => setOpen(false)}>
                         Cancel
                     </Button>
-                    <Button type="submit" disabled={isSaving}>
-                        {isSaving ? 'Saving...' : 'Save Changes'}
+                    <Button type="submit" disabled={dialogState.isSaving}>
+                        {dialogState.isSaving ? 'Saving...' : 'Save Changes'}
                     </Button>
                 </Dialog.Footer>
             </form>
