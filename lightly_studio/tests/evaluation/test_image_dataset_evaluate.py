@@ -186,13 +186,37 @@ def test_object_detection_evaluation__filters_to_samples_covered_by_both_collect
     assert {metric.sample_id for metric in sample_metrics} == {image_covered_by_both.sample_id}
 
 
+@pytest.mark.parametrize(
+    ("gt_label_name", "pred_label_name", "pred_confidence", "expected_is_correct"),
+    [
+        # Confidence values must be exactly representable in float32
+        # (DB column is float32-precision).
+        ("A", "A", 0.5, 1.0),
+        ("A", "B", 0.25, 0.0),
+    ],
+)
 def test_classification_evaluation(
     patch_collection: None,  # noqa: ARG001
+    gt_label_name: str,
+    pred_label_name: str,
+    pred_confidence: float,
+    expected_is_correct: float,
 ) -> None:
-    """Creates an evaluation run for classification and persists sample metrics."""
+    """Persists per-sample classification metrics for matching and mismatching labels."""
     dataset = ImageDataset.create(name="test_dataset")
-    label = create_annotation_label(
-        session=dataset.session, root_collection_id=dataset.collection_id
+    gt_label = create_annotation_label(
+        session=dataset.session,
+        root_collection_id=dataset.collection_id,
+        label_name=gt_label_name,
+    )
+    pred_label = (
+        gt_label
+        if pred_label_name == gt_label_name
+        else create_annotation_label(
+            session=dataset.session,
+            root_collection_id=dataset.collection_id,
+            label_name=pred_label_name,
+        )
     )
     image = create_image(session=dataset.session, collection_id=dataset.collection_id)
     _create_gt_and_pred_collections(session=dataset.session, collection_id=dataset.collection_id)
@@ -200,7 +224,7 @@ def test_classification_evaluation(
         session=dataset.session,
         collection_id=dataset.collection_id,
         sample_id=image.sample_id,
-        annotation_label_id=label.annotation_label_id,
+        annotation_label_id=gt_label.annotation_label_id,
         annotation_type=AnnotationType.CLASSIFICATION,
         annotation_collection_name="gt",
     )
@@ -208,10 +232,9 @@ def test_classification_evaluation(
         session=dataset.session,
         collection_id=dataset.collection_id,
         sample_id=image.sample_id,
-        annotation_label_id=label.annotation_label_id,
+        annotation_label_id=pred_label.annotation_label_id,
         annotation_type=AnnotationType.CLASSIFICATION,
-        # 0.5 is exactly representable in float32 (DB column is float32-precision).
-        annotation_data={"confidence": 0.5},
+        annotation_data={"confidence": pred_confidence},
         annotation_collection_name="pred",
     )
 
@@ -239,127 +262,9 @@ def test_classification_evaluation(
         evaluation_run_id=evaluation_runs[0].id,
     )
     assert {(metric.sample_id, metric.metric_name): metric.value for metric in sample_metrics} == {
-        (image.sample_id, "is_correct"): 1.0,
-        (image.sample_id, "confidence"): 0.5,
+        (image.sample_id, "is_correct"): expected_is_correct,
+        (image.sample_id, "confidence"): pred_confidence,
     }
-
-
-def test_classification_evaluation__incorrect_prediction(
-    patch_collection: None,  # noqa: ARG001
-) -> None:
-    """Persists is_correct=0.0 when the prediction label differs from the ground truth."""
-    dataset = ImageDataset.create(name="test_dataset")
-    gt_label = create_annotation_label(
-        session=dataset.session,
-        root_collection_id=dataset.collection_id,
-        label_name="A",
-    )
-    pred_label = create_annotation_label(
-        session=dataset.session,
-        root_collection_id=dataset.collection_id,
-        label_name="B",
-    )
-    image = create_image(session=dataset.session, collection_id=dataset.collection_id)
-    _create_gt_and_pred_collections(session=dataset.session, collection_id=dataset.collection_id)
-    create_annotation(
-        session=dataset.session,
-        collection_id=dataset.collection_id,
-        sample_id=image.sample_id,
-        annotation_label_id=gt_label.annotation_label_id,
-        annotation_type=AnnotationType.CLASSIFICATION,
-        annotation_collection_name="gt",
-    )
-    create_annotation(
-        session=dataset.session,
-        collection_id=dataset.collection_id,
-        sample_id=image.sample_id,
-        annotation_label_id=pred_label.annotation_label_id,
-        annotation_type=AnnotationType.CLASSIFICATION,
-        annotation_data={"confidence": 0.25},
-        annotation_collection_name="pred",
-    )
-
-    dataset.evaluate().classification(
-        name="run-1",
-        gt_collection_name="gt",
-        pred_collection_name="pred",
-    )
-
-    evaluation_runs = evaluation_run_resolver.get_all_by_dataset_id(
-        session=dataset.session,
-        dataset_id=dataset.dataset_id,
-    )
-    sample_metrics = evaluation_sample_metric_resolver.get_all_by_evaluation_run_id(
-        session=dataset.session,
-        evaluation_run_id=evaluation_runs[0].id,
-    )
-    assert {(metric.sample_id, metric.metric_name): metric.value for metric in sample_metrics} == {
-        (image.sample_id, "is_correct"): 0.0,
-        (image.sample_id, "confidence"): 0.25,
-    }
-
-
-def test_classification_evaluation__filters_to_samples_covered_by_both_collections(
-    patch_collection: None,  # noqa: ARG001
-) -> None:
-    """Creates metrics only for samples covered by both GT and prediction collections."""
-    dataset = ImageDataset.create(name="test_dataset")
-    label = create_annotation_label(
-        session=dataset.session, root_collection_id=dataset.collection_id
-    )
-    image_covered_by_both = create_image(
-        session=dataset.session,
-        collection_id=dataset.collection_id,
-        file_path_abs="/path/to/covered_by_both.png",
-    )
-    create_image(
-        session=dataset.session,
-        collection_id=dataset.collection_id,
-        file_path_abs="/path/to/covered_only_by_gt.png",
-    )
-    create_image(
-        session=dataset.session,
-        collection_id=dataset.collection_id,
-        file_path_abs="/path/to/uncovered.png",
-    )
-    _create_gt_and_pred_collections(session=dataset.session, collection_id=dataset.collection_id)
-    create_annotation(
-        session=dataset.session,
-        collection_id=dataset.collection_id,
-        sample_id=image_covered_by_both.sample_id,
-        annotation_label_id=label.annotation_label_id,
-        annotation_type=AnnotationType.CLASSIFICATION,
-        annotation_collection_name="gt",
-    )
-    create_annotation(
-        session=dataset.session,
-        collection_id=dataset.collection_id,
-        sample_id=image_covered_by_both.sample_id,
-        annotation_label_id=label.annotation_label_id,
-        annotation_type=AnnotationType.CLASSIFICATION,
-        annotation_data={"confidence": 0.9},
-        annotation_collection_name="pred",
-    )
-
-    result = dataset.evaluate().classification(
-        name="run-1",
-        gt_collection_name="gt",
-        pred_collection_name="pred",
-    )
-    assert result.sample_count == 1
-    assert result.gt_annotation_count == 1
-    assert result.pred_annotation_count == 1
-
-    evaluation_runs = evaluation_run_resolver.get_all_by_dataset_id(
-        session=dataset.session,
-        dataset_id=dataset.dataset_id,
-    )
-    sample_metrics = evaluation_sample_metric_resolver.get_all_by_evaluation_run_id(
-        session=dataset.session,
-        evaluation_run_id=evaluation_runs[0].id,
-    )
-    assert len(sample_metrics) == 2
-    assert {metric.sample_id for metric in sample_metrics} == {image_covered_by_both.sample_id}
 
 
 @pytest.mark.parametrize(
@@ -436,7 +341,7 @@ def test_classification_evaluation__raises_on_none_prediction_confidence(
         annotation_collection_name="pred",
     )
 
-    with pytest.raises(ValueError, match="non-None prediction confidence"):
+    with pytest.raises(ValueError, match="Classification evaluation expected a non-None prediction confidence "):
         dataset.evaluate().classification(
             name="run-1",
             gt_collection_name="gt",
