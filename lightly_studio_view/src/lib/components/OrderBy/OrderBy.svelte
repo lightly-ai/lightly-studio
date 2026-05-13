@@ -75,12 +75,14 @@
         if (!selectedField || !selectedSource) return;
         const next =
             selectedDirection === SortDirection.ASC ? SortDirection.DESC : SortDirection.ASC;
-        updateSortBy([{
-            source: selectedSource,
-            field_name: selectedField,
-            direction: next,
-            evaluation_run_id: selectedEvaluationRunIdForSort
-        } as SortFieldExpr]);
+        updateSortBy([
+            {
+                source: selectedSource,
+                field_name: selectedField,
+                direction: next,
+                evaluation_run_id: selectedEvaluationRunIdForSort
+            } as SortFieldExpr
+        ]);
     }
 </script>
 

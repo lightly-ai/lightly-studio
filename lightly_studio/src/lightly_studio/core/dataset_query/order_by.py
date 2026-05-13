@@ -7,7 +7,7 @@ from typing import Any
 from uuid import UUID
 
 from sqlalchemy import ColumnElement
-from sqlmodel import col, func
+from sqlmodel import col
 from sqlmodel.sql.expression import SelectOfScalar
 from typing_extensions import Self, TypeVar
 
@@ -117,7 +117,6 @@ class OrderByMetric(OrderByExpression):
         )
         value = col(EvaluationSampleMetricTable.value)
         # NULLs (images with no metric value) always sort last regardless of direction
-        null_last = func.coalesce(func.cast(value.is_(None), type_=None), 0)
         if self.ascending:
             return query.order_by(
                 value.is_(None).asc(), value.asc()
