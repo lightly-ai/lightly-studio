@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from collections.abc import Iterable
+from typing import Any
 from uuid import UUID
 
 from pydantic import BaseModel, Field
@@ -14,6 +15,7 @@ from lightly_studio.evaluation.validators import resolve_and_validate_collection
 from lightly_studio.models.annotation.annotation_base import AnnotationBaseTable
 from lightly_studio.models.evaluation_run import (
     EvaluationRunCreate,
+    EvaluationRunTable,
     EvaluationTaskType,
 )
 from lightly_studio.resolvers import (
@@ -34,6 +36,27 @@ class ObjectDetectionEvaluationConfig(BaseModel):
 
     iou_threshold: float = Field(default=0.5, ge=0.0, le=1.0)
     classwise: bool = True
+
+
+class ObjectDetectionEvaluationResult(BaseModel):
+    """Summary of the inputs used by an object-detection evaluation.
+
+    Attributes:
+        sample_count: Number of samples included in the evaluation.
+        gt_annotation_count: Number of ground-truth annotations used.
+        pred_annotation_count: Number of prediction annotations used.
+    """
+
+    sample_count: int
+    gt_annotation_count: int
+    pred_annotation_count: int
+
+
+class ClassificationEvaluationConfig(BaseModel):
+    """Configuration for classification evaluation runs.
+
+    Currently has no fields. Placeholder for future task-specific options.
+    """
 
 
 class ImageDatasetEvaluate:
@@ -63,7 +86,7 @@ class ImageDatasetEvaluate:
         gt_collection_name: str,
         pred_collection_name: str,
         config: ObjectDetectionEvaluationConfig | None = None,
-    ) -> None:
+    ) -> ObjectDetectionEvaluationResult:
         """Create an object-detection evaluation run and persist per-image metrics.
 
         Args:
@@ -72,29 +95,17 @@ class ImageDatasetEvaluate:
             pred_collection_name: Name of the annotation collection containing predictions.
             config: Optional object-detection evaluation config. If omitted,
                 defaults are used.
+
+        Returns:
+            Summary of the samples and annotations used by the evaluation.
         """
         config = config or ObjectDetectionEvaluationConfig()
-        gt_collection_id = resolve_and_validate_collection(
-            session=self.session,
-            collection_id=self.collection_id,
-            collection_name=gt_collection_name,
+        gt_collection_id, pred_collection_id, evaluation_run = self._create_evaluation_run(
+            name=name,
+            gt_collection_name=gt_collection_name,
+            pred_collection_name=pred_collection_name,
             task_type=EvaluationTaskType.OBJECT_DETECTION,
-        )
-        pred_collection_id = resolve_and_validate_collection(
-            session=self.session,
-            collection_id=self.collection_id,
-            collection_name=pred_collection_name,
-            task_type=EvaluationTaskType.OBJECT_DETECTION,
-        )
-        evaluation_run = evaluation_run_resolver.create(
-            session=self.session,
-            evaluation_run_input=EvaluationRunCreate(
-                name=name,
-                gt_annotation_collection_id=gt_collection_id,
-                pred_annotation_collection_id=pred_collection_id,
-                task_type=EvaluationTaskType.OBJECT_DETECTION,
-                config_json=config.model_dump(),
-            ),
+            config_json=config.model_dump(),
         )
 
         selected_sample_ids = {sample.sample_id for sample in self.samples}
@@ -136,6 +147,86 @@ class ImageDatasetEvaluate:
             iou_threshold=config.iou_threshold,
             classwise=config.classwise,
         )
+        return ObjectDetectionEvaluationResult(
+            sample_count=len(selected_sample_ids),
+            gt_annotation_count=len(gt_annotations),
+            pred_annotation_count=len(pred_annotations),
+        )
+
+    def classification(
+        self,
+        name: str,
+        gt_collection_name: str,
+        pred_collection_name: str,
+        config: ClassificationEvaluationConfig | None = None,
+    ) -> None:
+        """Create a classification evaluation run.
+
+        For now, this method only persists an ``EvaluationRun`` entry.
+        Metric computation and metric persistence are intentionally deferred.
+
+        Args:
+            name: Display name of the evaluation run.
+            gt_collection_name: Name of the annotation collection containing ground truth labels.
+            pred_collection_name: Name of the annotation collection containing predictions.
+            config: Optional classification evaluation config. If omitted,
+                defaults are used.
+        """
+        config = config or ClassificationEvaluationConfig()
+        self._create_evaluation_run(
+            name=name,
+            gt_collection_name=gt_collection_name,
+            pred_collection_name=pred_collection_name,
+            task_type=EvaluationTaskType.CLASSIFICATION,
+            config_json=config.model_dump(),
+        )
+
+    def _create_evaluation_run(
+        self,
+        name: str,
+        gt_collection_name: str,
+        pred_collection_name: str,
+        task_type: EvaluationTaskType,
+        config_json: dict[str, Any],
+    ) -> tuple[UUID, UUID, EvaluationRunTable]:
+        """Validate gt + pred collections and persist the evaluation run.
+
+        Args:
+            name: Display name of the evaluation run.
+            gt_collection_name: Name of the annotation collection containing ground
+                truth labels.
+            pred_collection_name: Name of the annotation collection containing
+                predictions.
+            task_type: Evaluation task type; determines the expected annotation type
+                for both collections and is stored on the run.
+            config_json: Task-specific configuration to persist on the run.
+
+        Returns:
+            Tuple of (gt_collection_id, pred_collection_id, evaluation_run).
+        """
+        gt_collection_id = resolve_and_validate_collection(
+            session=self.session,
+            collection_id=self.collection_id,
+            collection_name=gt_collection_name,
+            task_type=task_type,
+        )
+        pred_collection_id = resolve_and_validate_collection(
+            session=self.session,
+            collection_id=self.collection_id,
+            collection_name=pred_collection_name,
+            task_type=task_type,
+        )
+        evaluation_run = evaluation_run_resolver.create(
+            session=self.session,
+            evaluation_run_input=EvaluationRunCreate(
+                name=name,
+                gt_annotation_collection_id=gt_collection_id,
+                pred_annotation_collection_id=pred_collection_id,
+                task_type=task_type,
+                config_json=config_json,
+            ),
+        )
+        return gt_collection_id, pred_collection_id, evaluation_run
 
     @staticmethod
     def _group_by_parent_sample_id(

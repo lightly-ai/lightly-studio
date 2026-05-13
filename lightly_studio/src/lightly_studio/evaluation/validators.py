@@ -15,6 +15,7 @@ from lightly_studio.resolvers import collection_resolver
 
 _TASK_TO_ANNOTATION_TYPE: dict[EvaluationTaskType, AnnotationType] = {
     EvaluationTaskType.OBJECT_DETECTION: AnnotationType.OBJECT_DETECTION,
+    EvaluationTaskType.CLASSIFICATION: AnnotationType.CLASSIFICATION,
 }
 
 
