@@ -38,10 +38,15 @@ describe('OrderBy', () => {
 
     it('shows the selected field label in the trigger', () => {
         mocks.imageSortByValue = [
-            { source: 'image', field_name: 'file_name', direction: SortDirection.ASC }
+            {
+                source: 'image',
+                field_name: 'file_name',
+                direction: SortDirection.ASC,
+                is_numeric: false
+            }
         ];
         render(OrderBy);
-        expect(screen.getByTestId('sort-by-trigger')).toHaveTextContent('file name');
+        expect(screen.getByTestId('sort-by-trigger')).toHaveTextContent('File Name');
     });
 
     it('direction button is disabled when no field is selected', () => {
@@ -51,7 +56,12 @@ describe('OrderBy', () => {
 
     it('direction button is enabled when a field is selected', () => {
         mocks.imageSortByValue = [
-            { source: 'image', field_name: 'width', direction: SortDirection.ASC }
+            {
+                source: 'image',
+                field_name: 'width',
+                direction: SortDirection.ASC,
+                is_numeric: false
+            }
         ];
         render(OrderBy);
         expect(screen.getByTestId('sort-direction-button')).not.toBeDisabled();
@@ -68,14 +78,19 @@ describe('OrderBy', () => {
                 source: 'image',
                 field_name: 'file_name',
                 direction: SortDirection.ASC,
-                is_numeric: undefined
+                is_numeric: false
             }
         ]);
     });
 
     it('deselects the field when clicking the already selected item', async () => {
         mocks.imageSortByValue = [
-            { source: 'image', field_name: 'file_name', direction: SortDirection.ASC }
+            {
+                source: 'image',
+                field_name: 'file_name',
+                direction: SortDirection.ASC,
+                is_numeric: false
+            }
         ];
         render(OrderBy);
 
@@ -87,7 +102,12 @@ describe('OrderBy', () => {
 
     it('switches to a different field while preserving the current direction', async () => {
         mocks.imageSortByValue = [
-            { source: 'image', field_name: 'file_name', direction: SortDirection.DESC }
+            {
+                source: 'image',
+                field_name: 'file_name',
+                direction: SortDirection.DESC,
+                is_numeric: false
+            }
         ];
         render(OrderBy);
 
@@ -99,14 +119,19 @@ describe('OrderBy', () => {
                 source: 'image',
                 field_name: 'width',
                 direction: SortDirection.DESC,
-                is_numeric: undefined
+                is_numeric: false
             }
         ]);
     });
 
     it('toggles direction from asc to desc', async () => {
         mocks.imageSortByValue = [
-            { source: 'image', field_name: 'file_name', direction: SortDirection.ASC }
+            {
+                source: 'image',
+                field_name: 'file_name',
+                direction: SortDirection.ASC,
+                is_numeric: false
+            }
         ];
         render(OrderBy);
 
@@ -117,14 +142,19 @@ describe('OrderBy', () => {
                 source: 'image',
                 field_name: 'file_name',
                 direction: SortDirection.DESC,
-                is_numeric: undefined
+                is_numeric: false
             }
         ]);
     });
 
     it('toggles direction from desc to asc', async () => {
         mocks.imageSortByValue = [
-            { source: 'image', field_name: 'file_name', direction: SortDirection.DESC }
+            {
+                source: 'image',
+                field_name: 'file_name',
+                direction: SortDirection.DESC,
+                is_numeric: false
+            }
         ];
         render(OrderBy);
 
@@ -135,7 +165,7 @@ describe('OrderBy', () => {
                 source: 'image',
                 field_name: 'file_name',
                 direction: SortDirection.ASC,
-                is_numeric: undefined
+                is_numeric: false
             }
         ]);
     });

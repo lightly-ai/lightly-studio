@@ -13,9 +13,14 @@ from sqlmodel import Session, col, func, select
 
 from lightly_studio.api.routes.api.validators import Paginated
 from lightly_studio.core.dataset_query.image_sample_field import ImageSampleField
-from lightly_studio.core.dataset_query.order_by import OrderByExpression, OrderByField
+from lightly_studio.core.dataset_query.order_by import (
+    OrderByExpression,
+    OrderByField,
+    OrderByMetadataField,
+)
 from lightly_studio.models.annotation.annotation_base import AnnotationBaseTable
 from lightly_studio.models.image import ImageTable
+from lightly_studio.models.metadata import SampleMetadataTable
 from lightly_studio.models.sample import SampleTable
 from lightly_studio.resolvers.image_filter import ImageFilter
 from lightly_studio.resolvers.similarity_utils import (
@@ -152,6 +157,11 @@ def _get_all_with_similarity(  # noqa: PLR0913
 
     samples_query = samples_query.order_by(distance_expr)
     if order_by:
+        if any(isinstance(expr, OrderByMetadataField) for expr in order_by):
+            samples_query = samples_query.outerjoin(
+                SampleMetadataTable,
+                SampleMetadataTable.sample_id == col(ImageTable.sample_id),  # type: ignore[arg-type]
+            )
         for expr in order_by:
             samples_query = samples_query.order_by(expr.to_column_element())
     if not order_by or not _file_path_abs_in_order_by(order_by):

@@ -1,14 +1,16 @@
 import { render, screen } from '@testing-library/svelte';
 import type { ComponentProps } from 'svelte';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { useCustomLabelColors } from '$lib/hooks/useCustomLabelColors';
 import SampleAnnotation from './SampleAnnotation.svelte';
 
 const BASE_ANNOTATION_FIELDS = {
     parent_sample_id: 'parent-sample-1',
+    annotation_collection_id: 'collection-1',
     created_at: new Date('1970-01-01T00:00:00.000Z')
 } satisfies Pick<
     ComponentProps<typeof SampleAnnotation>['annotation'],
-    'parent_sample_id' | 'created_at'
+    'parent_sample_id' | 'annotation_collection_id' | 'created_at'
 >;
 
 const createSegmentationMaskAnnotation = (): ComponentProps<
@@ -110,5 +112,38 @@ describe('SampleAnnotation', () => {
         });
 
         expect(screen.getByTestId('svg-annotation-text')).toHaveTextContent('car');
+    });
+
+    describe('opacity when custom label color is absent', () => {
+        const { clearCustomColors, setCustomColor } = useCustomLabelColors();
+
+        afterEach(() => {
+            clearCustomColors();
+        });
+
+        it('renders bounding-box fill-opacity as a valid number when the label has no custom color', () => {
+            render(SampleAnnotation, {
+                props: { annotation: createObjectDetectionAnnotation(), imageWidth: 100 }
+            });
+
+            const opacity = Number(
+                screen.getByTestId('annotation_box').getAttribute('fill-opacity')
+            );
+            expect(isNaN(opacity)).toBe(false);
+            expect(opacity).toBe(0.4);
+        });
+
+        it('uses custom alpha for bounding-box fill-opacity when label has a custom color', () => {
+            setCustomColor('car', '#ff0000', 0.8);
+
+            render(SampleAnnotation, {
+                props: { annotation: createObjectDetectionAnnotation(), imageWidth: 100 }
+            });
+
+            const opacity = Number(
+                screen.getByTestId('annotation_box').getAttribute('fill-opacity')
+            );
+            expect(opacity).toBeCloseTo(0.32); // 0.8 * 0.4
+        });
     });
 });

@@ -6,6 +6,9 @@
     import { formatInteger } from '$lib/utils';
     import { type Readable } from 'svelte/store';
     import AnnotationColorLegend from '../AnnotationColorLegend/AnnotationColorLegend.svelte';
+    import { useAnnotationCollectionsFilter } from '$lib/hooks/useAnnotationCollectionsFilter/useAnnotationCollectionsFilter';
+
+    const { selectedCollectionIds } = useAnnotationCollectionsFilter();
 
     let {
         annotationFilterRows,
@@ -33,7 +36,13 @@
                     data-testid="labels-menu-item"
                     class="flex min-w-0 flex-1 cursor-pointer items-center space-x-2 text-nowrap peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
                 >
-                    <AnnotationColorLegend labelName={label_name} className="h-3 w-3" {selected} />
+                    {#if $selectedCollectionIds.length < 2}
+                        <AnnotationColorLegend
+                            labelName={label_name}
+                            className="h-3 w-3"
+                            {selected}
+                        />
+                    {/if}
                     <p
                         class="flex-1 truncate text-base font-normal"
                         data-testid="label-menu-label-name"

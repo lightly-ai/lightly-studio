@@ -46,7 +46,7 @@ class TestOrderByMetadataField:
     def test_apply__default_ascending(self) -> None:
         """Test that default ordering is ascending."""
         query = select(ImageTable)
-        order_by = OrderByMetadataField("brightness")
+        order_by = OrderByMetadataField("brightness", cast_to_float=False)
 
         returned_query = order_by.apply(query)
 
@@ -58,7 +58,7 @@ class TestOrderByMetadataField:
     def test_apply__descending(self) -> None:
         """Test descending ordering via desc() method."""
         query = select(ImageTable)
-        order_by = OrderByMetadataField("brightness").desc()
+        order_by = OrderByMetadataField("brightness", cast_to_float=False).desc()
 
         returned_query = order_by.apply(query)
 
@@ -70,7 +70,7 @@ class TestOrderByMetadataField:
     def test_apply__desc_then_asc(self) -> None:
         """Test that desc().asc() returns to ascending order."""
         query = select(ImageTable)
-        order_by = OrderByMetadataField("brightness").desc().asc()
+        order_by = OrderByMetadataField("brightness", cast_to_float=False).desc().asc()
 
         returned_query = order_by.apply(query)
 

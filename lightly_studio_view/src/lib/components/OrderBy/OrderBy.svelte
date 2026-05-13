@@ -117,6 +117,7 @@
         disabled={!selectedField}
         onclick={toggleDirection}
         data-testid="sort-direction-button"
+        aria-label={selectedDirection === SortDirection.DESC ? 'Sort descending' : 'Sort ascending'}
     >
         {#if selectedDirection === SortDirection.DESC}
             <ArrowDown class="size-4" />

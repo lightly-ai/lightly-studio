@@ -117,10 +117,12 @@ class OrderByMetadataField(OrderByExpression):
             ordering is applied instead of lexicographic ordering.
     """
 
-    def __init__(self, field_name: str, *, cast_to_float: bool = False) -> None:
-        """Initialize with the metadata field name and optional float cast."""
+    def __init__(self, field_name: str, cast_to_float: bool) -> None:
+        """Initialize with the metadata field name and float cast flag."""
         super().__init__()
         self.field_name = field_name
+        # TODO(Leonardo, 05/2026): Rework to avoid requiring callers to pass
+        # cast_to_float explicitly.
         self.cast_to_float = cast_to_float
 
     def to_column_element(self) -> ColumnElement[Any]:

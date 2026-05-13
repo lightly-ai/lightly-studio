@@ -1,11 +1,12 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { writable } from 'svelte/store';
 import { SampleType } from '$lib/api/lightly_studio_local';
-import type { ImageFilter } from '$lib/api/lightly_studio_local/types.gen';
+import type { ImageFilter, SortFieldExpr } from '$lib/api/lightly_studio_local/types.gen';
 import type { TextEmbedding } from '../useGlobalStorage';
 
 const useAdjacentSamplesMock = vi.fn();
 const imageFilterStore = writable<ImageFilter | null>(null);
+const imageSortByStore = writable<SortFieldExpr[] | null>(null);
 const textEmbeddingStore = writable<TextEmbedding | undefined>(undefined);
 
 vi.mock('../useAdjacentSamples/useAdjacentSamples', () => ({
@@ -14,7 +15,8 @@ vi.mock('../useAdjacentSamples/useAdjacentSamples', () => ({
 
 vi.mock('../useImageFilters/useImageFilters', () => ({
     useImageFilters: () => ({
-        imageFilter: imageFilterStore
+        imageFilter: imageFilterStore,
+        imageSortBy: imageSortByStore
     })
 }));
 
@@ -34,6 +36,7 @@ describe('useAdjacentImages', () => {
             filter_type: 'image',
             sample_filter: {}
         });
+        imageSortByStore.set(null);
         textEmbeddingStore.set({ embedding: [0.12, 0.34], queryText: 'cats' });
         useAdjacentSamplesMock.mockReturnValue({ query: 'query-result', refetch: vi.fn() });
     });
@@ -101,5 +104,36 @@ describe('useAdjacentImages', () => {
                 }
             }
         });
+    });
+
+    it('passes sort_by to useAdjacentSamples when imageSortBy is set', () => {
+        const sort: SortFieldExpr[] = [
+            { source: 'image', field_name: 'score', direction: 'desc', is_numeric: false }
+        ];
+        imageSortByStore.set(sort);
+
+        useAdjacentImages({ sampleId: 'sample-123', collectionId: 'collection-1' });
+
+        expect(useAdjacentSamplesMock).toHaveBeenCalledWith(
+            expect.objectContaining({
+                params: expect.objectContaining({
+                    body: expect.objectContaining({ sort_by: sort })
+                })
+            })
+        );
+    });
+
+    it('passes sort_by as undefined when imageSortBy is null', () => {
+        imageSortByStore.set(null);
+
+        useAdjacentImages({ sampleId: 'sample-123', collectionId: 'collection-1' });
+
+        expect(useAdjacentSamplesMock).toHaveBeenCalledWith(
+            expect.objectContaining({
+                params: expect.objectContaining({
+                    body: expect.objectContaining({ sort_by: undefined })
+                })
+            })
+        );
     });
 });

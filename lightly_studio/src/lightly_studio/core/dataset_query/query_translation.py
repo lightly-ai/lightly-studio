@@ -52,6 +52,7 @@ from lightly_studio.models.query_expr import (
     StringExpr,
     TagsContainsExpr,
 )
+from lightly_studio.models.sort_direction import SortDirection
 
 T = TypeVar("T")
 T_contra = TypeVar("T_contra", contravariant=True)
@@ -160,14 +161,10 @@ def _lookup(
 
 def sort_to_order_by(
     key: tuple[str, str],
-    direction: Literal["asc", "desc"],
+    direction: SortDirection,
     cast_to_float: bool = False,
 ) -> OrderByExpression:
     """Translate a (source, field_name) key and direction to an OrderByExpression.
-
-    For ``"metadata"`` source, returns an ``OrderByMetadataField`` that joins the
-    metadata table and extracts the value from the JSON data column.  For all other
-    sources the key must match a known entry in ``_SORT_FIELDS``.
 
     Args:
         key: A (source, field_name) tuple identifying the sort field (e.g.,
@@ -185,7 +182,7 @@ def sort_to_order_by(
     order_by: OrderByExpression
     source, field_name = key
     if source == "metadata":
-        order_by = OrderByMetadataField(field_name, cast_to_float=cast_to_float)
+        order_by = OrderByMetadataField(field_name=field_name, cast_to_float=cast_to_float)
     elif key in _SORT_FIELDS:
         order_by = OrderByField(_SORT_FIELDS[key])
     else:
