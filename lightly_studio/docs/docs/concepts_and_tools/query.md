@@ -18,28 +18,18 @@ The query language is quite simple and resembles WHERE clauses in SQL. We recomm
 # Filter images that are taller than 400 pixels and at least 640 pixels wide.
 height >= 400 AND width >= 640
 
-# If you replace `AND` with `OR`, an image is selected if either of these conditions is true.
-height >= 400 AND width >= 640
+# If you replace AND with OR, an image is selected if either of these conditions is true.
+height >= 400 OR width >= 640
 
 # You can create more complex queries by nesting sub-queries in parentheses.
-# The following matches aither a large image or if its file name is `cover.jpg`.
+# The following matches either a large image or an image whose file name is "cover.jpg".
 (height >= 400 AND width >= 640) OR file_name = "cover.jpg"
 
-# The logical `NOT` operator is also supported
+# The logical NOT operator is also supported.
 NOT (height >= 400 AND width >= 640)
 ```
 
-### Operator precedence
-
-Operators are evaluated in this order:
-
-1. `NOT`
-2. `AND`
-3. `OR`
-
-Use parentheses whenever you want to make grouping explicit.
-
-### Supported image fields
+## Supported image fields
 
 These fields can be used directly in a query:
 
@@ -162,7 +152,7 @@ AND "reviewed" IN tags
 AND object_detection(label = "cat" AND width > 80 AND height > 80)
 ```
 
-### Nested query with grouped sample filters with segmentation constraints
+### Nested query with grouped sample filters and segmentation constraints
 
 ```sql
 (file_path_abs != "/datasets/archive/bad.jpg" AND created_at >= "2025-01-01T00:00:00Z")
@@ -186,7 +176,19 @@ AND (
 )
 ```
 
-## Strings and comments
+## Grammar Notes
+
+### Operator precedence
+
+Operators are evaluated in this order:
+
+1. `NOT`
+2. `AND`
+3. `OR`
+
+Use parentheses whenever you want to make grouping explicit.
+
+### Strings and comments
 
 Strings can use double quotes or single quotes:
 
@@ -201,11 +203,11 @@ Comments start with `#` and continue to the end of the line:
 height >= 400 # keep only large images
 ```
 
-## Keyword casing
+### Keyword casing
 
 The boolean and membership operators are case-insensitive. For example, `AND`, `OR`, `NOT`, and `IN` can also be written in lowercase.
 
-## Notes
+### Miscellaneous
 
 - `created_at` must be a valid datetime string that JavaScript `Date` can parse.
 - `x`, `y` are valid inside `object_detection(...)` and `segmentation_mask(...)`, but not as top-level image fields.
