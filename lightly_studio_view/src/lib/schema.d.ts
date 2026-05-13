@@ -3610,86 +3610,68 @@ export interface components {
          * @description View class for Settings model.
          */
         SettingView: {
-            /**
-             * @description Controls how samples are rendered in the grid view
-             * @default contain
-             */
+            /** @description Controls how samples are rendered in the grid view */
             grid_view_sample_rendering: components["schemas"]["GridViewSampleRenderingType"];
-            /**
-             * @description Controls thumbnail quality for grid-like preview views
-             * @default raw
-             */
+            /** @description Controls thumbnail quality for grid-like preview views */
             grid_view_thumbnail_quality: components["schemas"]["GridViewThumbnailQualityType"];
             /**
              * Key Hide Annotations
              * @description Key to temporarily hide annotations while pressed
-             * @default v
              */
             key_hide_annotations: string;
             /**
              * Key Go Back
              * @description Key to navigate back from detail view to grid view
-             * @default Escape
              */
             key_go_back: string;
             /**
              * Key Toggle Edit Mode
              * @description Key to toggle annotation edit mode
-             * @default e
              */
             key_toggle_edit_mode: string;
             /**
              * Show Annotation Text Labels
              * @description Controls whether to show text labels on annotations
-             * @default false
              */
             show_annotation_text_labels: boolean;
             /**
              * Show Sample Filenames
              * @description Controls whether to show sample filenames in the samples grid view
-             * @default false
              */
             show_sample_filenames: boolean;
             /**
              * Show Bounding Boxes For Segmentation
              * @description Controls whether to show annotation bounding boxes for segmentation
-             * @default true
              */
             show_bounding_boxes_for_segmentation: boolean;
             /**
              * Key Toolbar Selection
              * @description Key to activate the selection tool in the toolbar
-             * @default s
              */
             key_toolbar_selection: string;
             /**
              * Key Toolbar Drag
              * @description Key to activate the drag tool in the toolbar
-             * @default d
              */
             key_toolbar_drag: string;
             /**
              * Key Toolbar Bounding Box
              * @description Key to activate the bounding box tool in the toolbar
-             * @default b
              */
             key_toolbar_bounding_box: string;
             /**
              * Key Toolbar Segmentation Mask
              * @description Key to activate the segmentation mask tool in the toolbar
-             * @default m
              */
             key_toolbar_segmentation_mask: string;
             /**
              * Key Toolbar Brush
              * @description Key to activate brush mode in the segmentation tool
-             * @default r
              */
             key_toolbar_brush: string;
             /**
              * Key Toolbar Eraser
              * @description Key to activate eraser mode in the segmentation tool
-             * @default x
              */
             key_toolbar_eraser: string;
             /**
