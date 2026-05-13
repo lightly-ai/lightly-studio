@@ -182,7 +182,7 @@ def sort_to_order_by(
     order_by: OrderByExpression
     source, field_name = key
     if source == "metadata":
-        order_by = OrderByMetadataField(field_name, cast_to_float=cast_to_float)
+        order_by = OrderByMetadataField(field_name=field_name, cast_to_float=cast_to_float)
     elif key in _SORT_FIELDS:
         order_by = OrderByField(_SORT_FIELDS[key])
     else:
