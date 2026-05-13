@@ -256,6 +256,29 @@ describe('SettingsDialog', () => {
         );
     });
 
+    it('should have unique IDs for all shortcut controls', async () => {
+        render(SettingsDialog);
+        await openDialog();
+
+        const ids = [
+            'hide-annotations',
+            'go-back',
+            'toggle-edit-mode',
+            'toolbar-selection',
+            'toolbar-drag',
+            'toolbar-bounding-box',
+            'toolbar-segmentation-mask',
+            'toolbar-brush-mode',
+            'toolbar-eraser-mode',
+            'change-brush-size'
+        ];
+
+        for (const id of ids) {
+            const elements = document.querySelectorAll(`#${id}`);
+            expect(elements.length, `Expected exactly one element with id="${id}"`).toBe(1);
+        }
+    });
+
     it('should save settings when form is submitted', async () => {
         render(SettingsDialog);
 
@@ -263,8 +286,9 @@ describe('SettingsDialog', () => {
         await openDialog();
 
         // 1. Change keyboard shortcut
-        const hideAnnotationsButton = screen.getByText('v');
-        await fireEvent.click(hideAnnotationsButton);
+        const hideAnnotationsButton = document.getElementById('hide-annotations');
+        expect(hideAnnotationsButton).not.toBeNull();
+        await fireEvent.click(hideAnnotationsButton!);
         await fireEvent.keyDown(window, { key: 'x' });
 
         // 2. Skip the dropdown interaction and directly test the effect of saving

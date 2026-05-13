@@ -40,7 +40,7 @@ describe('getFieldHover', () => {
     it('returns object-detection field hover inside object_detection(...)', async () => {
         const { getFieldHover } = await import('./getFieldHover');
         const model = makeSyntaxDocModel({
-            text: 'object_detection(label == "cat")',
+            text: 'object_detection(label = "cat")',
             wordAtPosition: { word: 'label', startColumn: 18, endColumn: 23 },
             includeGetValue: true,
             includeGetOffsetAt: true
