@@ -26,17 +26,18 @@ def create_and_persist_classification_metrics_per_sample(
 
     Each selected sample must have exactly one ground-truth annotation and
     exactly one prediction annotation in their respective annotation collections,
-    and the prediction must have a non-None confidence. Validation runs in a
-    first pass over all samples before any persistence, so nothing is written
-    on error.
+    and the prediction must have a non-None confidence. All validation runs and
+    metric rows are built before any persistence, so nothing is written on error.
 
     Raises:
         ValueError: If any selected sample has 0 or >1 GT/prediction annotations,
             or if a prediction has a None confidence.
     """
-    # Pass 1: validate all samples up front, before any persistence.
-    gt_by_sample: dict[UUID, AnnotationBaseTable] = {}
-    pred_by_sample: dict[UUID, AnnotationBaseTable] = {}
+    # Pass 1: validate every sample and build all metric rows up front, before
+    # any persistence. Reading ORM attributes here is safe because no commit has
+    # happened yet — pass 2's batch commits would otherwise expire the ORM rows
+    # (expire_on_commit=True) and force lazy reloads on later reads.
+    metrics_to_persist: list[EvaluationSampleMetricCreate] = []
     for sample_id in data.selected_sample_ids:
         gt = _require_single(
             annotations=data.gt_per_sample.get(sample_id, []),
@@ -53,16 +54,6 @@ def create_and_persist_classification_metrics_per_sample(
                 f"Classification evaluation expected a non-None prediction confidence "
                 f"for sample {sample_id}, got None."
             )
-        gt_by_sample[sample_id] = gt
-        pred_by_sample[sample_id] = pred
-
-    # Pass 2: build and persist metrics in batches.
-    metrics_to_persist: list[EvaluationSampleMetricCreate] = []
-    for sample_id in data.selected_sample_ids:
-        gt = gt_by_sample[sample_id]
-        pred = pred_by_sample[sample_id]
-        # pred.confidence is guaranteed non-None by pass 1, but mypy can't see that.
-        assert pred.confidence is not None
         is_correct = 1.0 if pred.annotation_label_id == gt.annotation_label_id else 0.0
         metrics_to_persist.extend(
             [
@@ -81,16 +72,11 @@ def create_and_persist_classification_metrics_per_sample(
             ]
         )
 
-        if len(metrics_to_persist) >= METRIC_BATCH_SIZE:
-            evaluation_sample_metric_resolver.create_many(
-                session=session,
-                records=metrics_to_persist,
-            )
-            metrics_to_persist.clear()
-    if metrics_to_persist:
+    # Pass 2: persist in batches. No ORM reads here, so commits are safe.
+    for batch_start in range(0, len(metrics_to_persist), METRIC_BATCH_SIZE):
         evaluation_sample_metric_resolver.create_many(
             session=session,
-            records=metrics_to_persist,
+            records=metrics_to_persist[batch_start : batch_start + METRIC_BATCH_SIZE],
         )
 
 
