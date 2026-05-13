@@ -240,9 +240,7 @@ def test_classification_evaluation(
         sample_id=image.sample_id,
         annotation_label_id=pred_label.annotation_label_id,
         annotation_type=AnnotationType.CLASSIFICATION,
-        annotation_data=(
-            {"confidence": pred_confidence} if pred_confidence is not None else None
-        ),
+        annotation_data=({"confidence": pred_confidence} if pred_confidence is not None else None),
         annotation_collection_name="pred",
     )
 
