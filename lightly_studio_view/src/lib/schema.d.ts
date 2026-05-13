@@ -3724,22 +3724,27 @@ export interface components {
          * @description A sorting expression for a single field.
          *
          *     Attributes:
-         *         source: The source of the field (e.g., "image").
+         *         source: The source of the field (e.g., "image" or "metadata").
          *         field_name: The field to sort by.
          *         direction: The sort direction, either ascending or descending.
+         *         is_numeric: Whether the field holds numeric values.  When ``True``,
+         *             the extracted value is cast to float for correct numeric ordering.
+         *             Only relevant when ``source`` is ``"metadata"``.
          */
         SortFieldExpr: {
             source: components["schemas"]["SortFieldSource"];
             /** Field Name */
             field_name: string;
             direction: components["schemas"]["SortDirection"];
+            /** Is Numeric */
+            is_numeric: boolean;
         };
         /**
          * SortFieldSource
          * @description Source of the field to sort by.
          * @enum {string}
          */
-        SortFieldSource: "image";
+        SortFieldSource: "image" | "metadata";
         /**
          * StringExpr
          * @description Leaf node for equality comparisons on string sample fields.
