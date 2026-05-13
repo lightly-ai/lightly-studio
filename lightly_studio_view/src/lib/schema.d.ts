@@ -2789,6 +2789,16 @@ export interface components {
             value: number;
         };
         /**
+         * EvaluationRunMetricsInfoView
+         * @description Metric bounds for all metrics in a single evaluation run.
+         */
+        EvaluationRunMetricsInfoView: {
+            /** Run Name */
+            run_name: string;
+            /** Metrics */
+            metrics: components["schemas"]["EvaluationSampleMetricBoundsView"][];
+        };
+        /**
          * EvaluationRunView
          * @description Serialisable view of one evaluation run.
          */
@@ -2822,14 +2832,6 @@ export interface components {
             };
             /** Created At */
             created_at: string;
-         * EvaluationRunMetricsInfoView
-         * @description Metric bounds for all metrics in a single evaluation run.
-         */
-        EvaluationRunMetricsInfoView: {
-            /** Run Name */
-            run_name: string;
-            /** Metrics */
-            metrics: components["schemas"]["EvaluationSampleMetricBoundsView"][];
         };
         /**
          * EvaluationSampleMetricBoundsView

@@ -15,7 +15,10 @@ from lightly_studio.models.annotation.annotation_base import AnnotationBaseTable
 from lightly_studio.models.evaluation_annotation_match import EvaluationAnnotationMatchCreate
 from lightly_studio.models.evaluation_sample_metric import EvaluationSampleMetricCreate
 from lightly_studio.models.sample import SampleTable
-from lightly_studio.resolvers import evaluation_sample_metric_resolver
+from lightly_studio.resolvers import (
+    evaluation_annotation_match_resolver,
+    evaluation_sample_metric_resolver,
+)
 
 SAMPLE_BATCH_SIZE = 32  # Number of samples to process in a single batch
 
@@ -187,6 +190,18 @@ def create_and_persist_object_detection_metrics_per_sample(  # noqa: PLR0913
         for sample_id in selected_sample_ids
     }
 
+    # Build annotation_id -> label_id lookups for match persistence.
+    pred_label_by_id: dict[UUID, UUID] = {
+        b.annotation_id: b.label_id
+        for boxes in pred_boxes_per_sample.values()
+        for b in boxes
+    }
+    gt_label_by_id: dict[UUID, UUID] = {
+        b.annotation_id: b.label_id
+        for boxes in gt_boxes_per_sample.values()
+        for b in boxes
+    }
+
     metrics_to_persist: list[EvaluationSampleMetricCreate] = []
     matches_to_persist: list[EvaluationAnnotationMatchCreate] = []
 
@@ -220,6 +235,43 @@ def create_and_persist_object_detection_metrics_per_sample(  # noqa: PLR0913
                 ),
             ]
         )
+
+        for m in matching_result.matches:
+            matches_to_persist.append(
+                EvaluationAnnotationMatchCreate(
+                    evaluation_run_id=evaluation_run_id,
+                    sample_id=sample_id,
+                    gt_annotation_id=m.gt_id,
+                    pred_annotation_id=m.pred_id,
+                    gt_label_id=gt_label_by_id.get(m.gt_id),
+                    pred_label_id=pred_label_by_id.get(m.pred_id),
+                    iou=m.iou,
+                )
+            )
+        for ann_id in matching_result.unmatched_prediction_ids:
+            matches_to_persist.append(
+                EvaluationAnnotationMatchCreate(
+                    evaluation_run_id=evaluation_run_id,
+                    sample_id=sample_id,
+                    gt_annotation_id=None,
+                    pred_annotation_id=ann_id,
+                    gt_label_id=None,
+                    pred_label_id=pred_label_by_id.get(ann_id),
+                    iou=None,
+                )
+            )
+        for ann_id in matching_result.unmatched_gt_ids:
+            matches_to_persist.append(
+                EvaluationAnnotationMatchCreate(
+                    evaluation_run_id=evaluation_run_id,
+                    sample_id=sample_id,
+                    gt_annotation_id=ann_id,
+                    pred_annotation_id=None,
+                    gt_label_id=gt_label_by_id.get(ann_id),
+                    pred_label_id=None,
+                    iou=None,
+                )
+            )
 
         if len(metrics_to_persist) >= SAMPLE_BATCH_SIZE:
             evaluation_sample_metric_resolver.create_many(

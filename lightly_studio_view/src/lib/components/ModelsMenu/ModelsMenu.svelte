@@ -1,7 +1,6 @@
 <script lang="ts">
     import { useAnnotationCollections } from '$lib/hooks/useAnnotationCollections/useAnnotationCollections';
     import { useGlobalStorage } from '$lib/hooks/useGlobalStorage';
-    import * as Slider from '$lib/components/ui/slider';
     import Segment from '$lib/components/Segment/Segment.svelte';
 
     const { collectionId }: { collectionId: string } = $props();
@@ -51,25 +50,6 @@
                             {col.name}
                         </span>
                     </div>
-                    {#if isActive && overlay}
-                        <div class="flex items-center gap-2 pl-6">
-                            <span class="w-16 shrink-0 text-xs text-muted-foreground">
-                                {overlay.confidenceThreshold.toFixed(2)}
-                            </span>
-                            <Slider.Root
-                                class="flex-1"
-                                type="single"
-                                min={0}
-                                max={1}
-                                step={0.01}
-                                value={overlay.confidenceThreshold}
-                                onValueChange={(v: number) =>
-                                    updateModelOverlay(col.collection_id, {
-                                        confidenceThreshold: v
-                                    })}
-                            />
-                        </div>
-                    {/if}
                 </div>
             {/each}
         </div>
