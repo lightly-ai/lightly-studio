@@ -10,6 +10,7 @@ const baseAnnotation = (id: string): AnnotationView =>
     ({
         sample_id: id,
         parent_sample_id: 'parent-sample-id',
+        annotation_collection_id: 'collection-1',
         annotation_type: 'segmentation_mask',
         annotation_label: {
             annotation_label_name: 'car'

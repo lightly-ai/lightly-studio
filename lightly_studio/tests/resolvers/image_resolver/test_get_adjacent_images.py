@@ -1,8 +1,8 @@
 from sqlmodel import Session
 
 from lightly_studio.core.dataset_query.image_sample_field import ImageSampleField
-from lightly_studio.core.dataset_query.order_by import OrderByField
-from lightly_studio.resolvers import image_resolver
+from lightly_studio.core.dataset_query.order_by import OrderByField, OrderByMetadataField
+from lightly_studio.resolvers import image_resolver, metadata_resolver
 from lightly_studio.resolvers.annotations.annotations_filter import AnnotationsFilter
 from lightly_studio.resolvers.image_filter import ImageFilter
 from lightly_studio.resolvers.sample_resolver.sample_filter import SampleFilter
@@ -410,3 +410,40 @@ def test_get_adjacent_images__returns_none_when_sample_not_in_filter(db_session:
     )
 
     assert result is None
+
+
+def test_get_adjacent_images__sort_by_metadata_field(db_session: Session) -> None:
+    collection = helpers_resolvers.create_collection(session=db_session)
+    collection_id = collection.collection_id
+
+    image_a = helpers_resolvers.create_image(
+        session=db_session, collection_id=collection_id, file_path_abs="/images/a.png"
+    )
+    image_b = helpers_resolvers.create_image(
+        session=db_session, collection_id=collection_id, file_path_abs="/images/b.png"
+    )
+    image_c = helpers_resolvers.create_image(
+        session=db_session, collection_id=collection_id, file_path_abs="/images/c.png"
+    )
+
+    # score order: b(1) < c(2) < a(3), so sorted sequence is b, c, a
+    metadata_resolver.bulk_update_metadata(
+        db_session,
+        [
+            (image_a.sample_id, {"score": 3}),
+            (image_b.sample_id, {"score": 1}),
+            (image_c.sample_id, {"score": 2}),
+        ],
+    )
+
+    result = image_resolver.get_adjacent_images(
+        session=db_session,
+        sample_id=image_c.sample_id,
+        collection_id=collection_id,
+        order_by=[OrderByMetadataField("score", cast_to_float=True)],
+    )
+
+    assert result is not None
+    assert result.previous_sample_id == image_b.sample_id
+    assert result.sample_id == image_c.sample_id
+    assert result.next_sample_id == image_a.sample_id

@@ -22,7 +22,8 @@ describe('useImageFilters', () => {
                 {
                     source: SortFieldSource.IMAGE,
                     field_name: 'score',
-                    direction: SortDirection.DESC
+                    direction: SortDirection.DESC,
+                    is_numeric: false
                 }
             ];
 

@@ -5,6 +5,7 @@ from __future__ import annotations
 import pytest
 from pydantic import ValidationError
 
+from lightly_studio.core.dataset_query.order_by import OrderByMetadataField
 from lightly_studio.errors import QueryExprError
 from lightly_studio.models.sort import (
     SortFieldExpr,
@@ -18,10 +19,16 @@ _IMAGE_SORT_FIELD_NAMES = ["file_name", "file_path_abs", "created_at", "width", 
 
 def test_sort_field_expr__valid_directions() -> None:
     expr_asc = SortFieldExpr(
-        source=SortFieldSource.image, field_name="file_name", direction=SortDirection.asc
+        source=SortFieldSource.image,
+        field_name="file_name",
+        direction=SortDirection.asc,
+        is_numeric=False,
     )
     expr_desc = SortFieldExpr(
-        source=SortFieldSource.image, field_name="file_name", direction=SortDirection.desc
+        source=SortFieldSource.image,
+        field_name="file_name",
+        direction=SortDirection.desc,
+        is_numeric=False,
     )
 
     assert expr_asc.direction == SortDirection.asc
@@ -35,13 +42,17 @@ def test_sort_field_expr__rejects_invalid_direction() -> None:
                 "source": "image",
                 "field_name": "file_name",
                 "direction": "invalid_direction",
+                "is_numeric": False,
             }
         )
 
 
 def test_sort_field_expr_to_order_by__rejects_unknown_field() -> None:
     expr = SortFieldExpr(
-        source=SortFieldSource.image, field_name="invalid_field", direction=SortDirection.asc
+        source=SortFieldSource.image,
+        field_name="invalid_field",
+        direction=SortDirection.asc,
+        is_numeric=False,
     )
     with pytest.raises(QueryExprError):
         sort_field_expr_to_order_by(expr)
@@ -49,7 +60,10 @@ def test_sort_field_expr_to_order_by__rejects_unknown_field() -> None:
 
 def test_sort_field_expr_to_order_by__ascending() -> None:
     expr = SortFieldExpr(
-        source=SortFieldSource.image, field_name="file_name", direction=SortDirection.asc
+        source=SortFieldSource.image,
+        field_name="file_name",
+        direction=SortDirection.asc,
+        is_numeric=False,
     )
     order_by = sort_field_expr_to_order_by(expr)
     assert order_by.ascending is True
@@ -57,7 +71,10 @@ def test_sort_field_expr_to_order_by__ascending() -> None:
 
 def test_sort_field_expr_to_order_by__descending() -> None:
     expr = SortFieldExpr(
-        source=SortFieldSource.image, field_name="width", direction=SortDirection.desc
+        source=SortFieldSource.image,
+        field_name="width",
+        direction=SortDirection.desc,
+        is_numeric=False,
     )
     order_by = sort_field_expr_to_order_by(expr)
     assert order_by.ascending is False
@@ -66,7 +83,63 @@ def test_sort_field_expr_to_order_by__descending() -> None:
 def test_sort_field_expr_to_order_by__all_fields_map() -> None:
     for field_name in _IMAGE_SORT_FIELD_NAMES:
         expr = SortFieldExpr(
-            source=SortFieldSource.image, field_name=field_name, direction=SortDirection.asc
+            source=SortFieldSource.image,
+            field_name=field_name,
+            direction=SortDirection.asc,
+            is_numeric=False,
         )
         order_by = sort_field_expr_to_order_by(expr)
         assert order_by is not None
+
+
+def test_sort_field_expr_to_order_by__metadata_ascending() -> None:
+    expr = SortFieldExpr(
+        source=SortFieldSource.metadata,
+        field_name="brightness",
+        direction=SortDirection.asc,
+        is_numeric=False,
+    )
+    order_by = sort_field_expr_to_order_by(expr)
+    assert isinstance(order_by, OrderByMetadataField)
+    assert order_by.field_name == "brightness"
+    assert order_by.ascending is True
+    assert order_by.cast_to_float is False
+
+
+def test_sort_field_expr_to_order_by__metadata_descending() -> None:
+    expr = SortFieldExpr(
+        source=SortFieldSource.metadata,
+        field_name="score",
+        direction=SortDirection.desc,
+        is_numeric=False,
+    )
+    order_by = sort_field_expr_to_order_by(expr)
+    assert isinstance(order_by, OrderByMetadataField)
+    assert order_by.field_name == "score"
+    assert order_by.ascending is False
+    assert order_by.cast_to_float is False
+
+
+def test_sort_field_expr_to_order_by__metadata_arbitrary_field() -> None:
+    expr = SortFieldExpr(
+        source=SortFieldSource.metadata,
+        field_name="custom_metric",
+        direction=SortDirection.asc,
+        is_numeric=False,
+    )
+    order_by = sort_field_expr_to_order_by(expr)
+    assert isinstance(order_by, OrderByMetadataField)
+    assert order_by.field_name == "custom_metric"
+    assert order_by.cast_to_float is False
+
+
+def test_sort_field_expr_to_order_by__metadata_numeric() -> None:
+    expr = SortFieldExpr(
+        source=SortFieldSource.metadata,
+        field_name="score",
+        direction=SortDirection.asc,
+        is_numeric=True,
+    )
+    order_by = sort_field_expr_to_order_by(expr)
+    assert isinstance(order_by, OrderByMetadataField)
+    assert order_by.cast_to_float is True

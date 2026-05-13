@@ -4,9 +4,10 @@ from sqlmodel import Session
 
 from lightly_studio.api.routes.api.validators import Paginated
 from lightly_studio.core.dataset_query.image_sample_field import ImageSampleField
-from lightly_studio.core.dataset_query.order_by import OrderByField
+from lightly_studio.core.dataset_query.order_by import OrderByField, OrderByMetadataField
 from lightly_studio.resolvers import (
     image_resolver,
+    metadata_resolver,
     tag_resolver,
 )
 from lightly_studio.resolvers.annotations.annotations_filter import AnnotationsFilter
@@ -743,6 +744,38 @@ def test_get_all_by_collection_id__with_similarity_and_order_by(db_session: Sess
     assert result.samples[0].file_name == "a.png"
     assert result.samples[1].file_name == "b.png"
     assert result.samples[2].file_name == "c.png"
+
+
+def test_get_all_by_collection_id__sort_by_metadata_field_asc(db_session: Session) -> None:
+    collection = create_collection(session=db_session)
+    collection_id = collection.collection_id
+
+    image_a = create_image(
+        session=db_session, collection_id=collection_id, file_path_abs="/images/a.png"
+    )
+    image_b = create_image(
+        session=db_session, collection_id=collection_id, file_path_abs="/images/b.png"
+    )
+    image_c = create_image(
+        session=db_session, collection_id=collection_id, file_path_abs="/images/c.png"
+    )
+
+    metadata_resolver.bulk_update_metadata(
+        db_session,
+        [
+            (image_a.sample_id, {"score": 3}),
+            (image_b.sample_id, {"score": 1}),
+            (image_c.sample_id, {"score": 2}),
+        ],
+    )
+
+    result = image_resolver.get_all_by_collection_id(
+        session=db_session,
+        collection_id=collection_id,
+        order_by=[OrderByMetadataField("score", cast_to_float=True)],
+    )
+
+    assert [s.file_name for s in result.samples] == ["b.png", "c.png", "a.png"]
 
 
 def test_get_all_by_collection_id__sort_by_width_asc(db_session: Session) -> None:
