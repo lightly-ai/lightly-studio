@@ -1,6 +1,6 @@
 # Lightly Query Language
 
-This document explains how to write queries in the Studio query editor.
+This document explains how to write queries in the LightlyStudio query editor.
 
 A query helps you find images that match certain rules. For example, you can search for:
 
