@@ -92,7 +92,7 @@
                 {selectedLabel ?? 'Sort by'}
             </Button>
         </Popover.Trigger>
-        <Popover.Content class="w-40 p-1" align="start">
+        <Popover.Content class="min-w-20 p-1" align="start">
             {#each allSortFields as field}
                 <button
                     class={cn(
