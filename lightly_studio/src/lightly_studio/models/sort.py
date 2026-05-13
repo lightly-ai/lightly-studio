@@ -20,7 +20,6 @@ class SortFieldSource(str, Enum):
 
     image = "image"
     metadata = "metadata"
-    evaluation_metric = "evaluation_metric"
 
 
 class SortFieldExpr(BaseModel):
@@ -38,7 +37,7 @@ class SortFieldExpr(BaseModel):
     source: Literal[SortFieldSource.image, SortFieldSource.metadata]
     field_name: str
     direction: SortDirection
-    is_numeric: bool | None = None
+    is_numeric: bool
 
 
 class EvaluationMetricSortExpr(BaseModel):
@@ -55,6 +54,7 @@ class EvaluationMetricSortExpr(BaseModel):
     evaluation_run_name: str
     metric_name: str
     direction: SortDirection
+    is_numeric: bool
 
 
 SortExpr = Annotated[
@@ -75,7 +75,7 @@ def sort_field_expr_to_order_by(expr: SortFieldExpr) -> OrderByExpression:
     return sort_to_order_by(
         key=(expr.source, expr.field_name),
         direction=expr.direction,
-        cast_to_float=bool(expr.is_numeric),
+        cast_to_float=expr.is_numeric,
     )
 
 
