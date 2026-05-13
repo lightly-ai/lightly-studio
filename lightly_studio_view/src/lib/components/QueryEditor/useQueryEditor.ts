@@ -95,7 +95,8 @@ export const useQueryEditor = () => {
             readOnly: options.readOnly ?? false,
             minimap: { enabled: false },
             wordWrap: 'on',
-            fixedOverflowWidgets: true
+            fixedOverflowWidgets: true,
+            scrollBeyondLastLine: false
         });
 
         const detachLanguage = language.attach(model);
