@@ -2,147 +2,22 @@
 
 LightlyStudio has a powerful Python interface. You can not only index datasets but also query and manipulate them using code.
 
-## Dataset
+## Overview
 
-The dataset is the main entity of the python interface. It is used to setup the data,
-start the GUI, run queries and perform selections. It holds the connection to the
-database file. Every dataset writes its metadata, tags, annotations, captions, and embeddings into a DuckDB file named `lightly_studio.db`.
+- **Dataset setup** — [Image Dataset](../dataset_setup/image_dataset.md), [Video Dataset](../dataset_setup/video_dataset.md)
+- **Reuse Datasets and Databases** — [Reuse Datasets](../dataset_setup/reuse_datasets.md) covers the DuckDB file location and `load_or_create` workflow.
+- **Cloud Storage** — [Cloud Storage](../dataset_setup/cloud_storage.md) covers loading images and videos directly from S3, GCS, and Azure.
+- **Search and Filter** — [Search and Filter](../concepts_and_tools/search_and_filter.md) covers the `DatasetQuery` API for filtering, sorting, and slicing.
+- **Sampling** — [Sampling](../concepts_and_tools/sampling.md) covers diverse, metadata-weighted, similarity, class-balancing, and combined sampling strategies.
 
-```py
-import lightly_studio as ls
+The full API reference for each module is available in the navigation sidebar:
+[Dataset](dataset.md), [Sample](sample.md), [DatasetQuery](dataset_query.md), [Selection](selection.md), [Plugin](plugin.md), [Annotation](annotation.md).
 
-# Different loading options:
-dataset = ls.ImageDataset.create()
+## Annotations
 
-# You can load data directly from a folder
-dataset.add_images_from_path(path="local-folder/some-local-data")
-
-# Or you can load more data at a later point (even across sources such as cloud)
-dataset.add_images_from_path(path="local-folder/some-data-not-loaded-yet")
-dataset.add_images_from_path(path="gcs://my-bucket-2/path/to/more-images/")
-
-# You can also load a dataset from an .db file (default uses the `lightly_studio.db` file in the working directory)
-dataset = ls.ImageDataset.load()
-```
-
-To store the DuckDB file elsewhere (for example, on a larger external disk or to maintain isolated projects), configure the database manager before creating/loading any datasets:
-
-```python
-from lightly_studio import db_manager
-
-db_manager.connect(db_file="~/lightly_data/my-db-path.db")
-```
-
-!!! note
-    Within the `.db` file all paths are stored as absolute paths. This allows the software to fetch data for visualization even if you move the .db file around.
-
-
-### Reusing Datasets
-
-Restarting the same Python script will reopen the GUI with the previous state as long as you call `ImageDataset.load` or `ImageDataset.load_or_create` with the same name.
-
-```python title="reuse_dataset.py"
-from __future__ import annotations
-
-import lightly_studio as ls
-
-DATASET_NAME = "sport_shooting"
-IMAGE_DIRS = ["data/primary_images", "data/new_images_later"]
-
-# Everything persists inside lightly_studio.db automatically.
-dataset = ls.ImageDataset.load_or_create(name=DATASET_NAME)
-
-# Only new samples are added by `add_images_from_path`
-for image_dir in IMAGE_DIRS:
-    dataset.add_images_from_path(path=image_dir)
-
-ls.start_gui()
-```
-
-- When you rerun the script later, only new files are indexed. Existing embeddings and annotations remain untouched; embeddings are generated only for the new samples (set `embed=False` to skip).
-- Manual labels created in the GUI, metadata changed via Python, and tags assigned anywhere are all stored in `lightly_studio.db`, so you can stop/start the process at will.
-- External files such as images/videos (.jpg, .png, .mp4 files etc.) remain in their original location; keep them accessible so the GUI can display them when you reopen the dataset.
-
-### Using Cloud Storage
-
-To load images or videos directly from a cloud storage provider (like AWS S3, GCS, etc.), first install the required dependencies:
-
-```shell
-pip install "lightly-studio[cloud-storage]"
-```
-
-This installs [s3fs](https://github.com/fsspec/s3fs) (for S3), [gcsfs](https://github.com/fsspec/gcsfs) (for GCS), and [adlfs](https://github.com/fsspec/adlfs) (for Azure). For other providers, see the [fsspec documentation](https://filesystem-spec.readthedocs.io/en/latest/api.html#other-known-implementations).
-
-**Example: Loading images from S3**
-
-```py
-import lightly_studio as ls
-
-dataset = ls.ImageDataset.create(name="s3_dataset")
-dataset.add_images_from_path(path="s3://my-bucket/images/")
-
-ls.start_gui()
-```
-
-**Example: Loading videos from S3**
-
-```py
-import lightly_studio as ls
-
-dataset = ls.VideoDataset.create(name="s3_video_dataset")
-dataset.add_videos_from_path(path="s3://my-bucket/videos/")
-
-ls.start_gui()
-```
-
-Files remain in the remote storage and are streamed to the UI on demand. Make sure your cloud credentials are configured for the selected provider.
-
-**Current Limitations:**
-
-!!! warning "Cloud Storage Limitation"
-    Cloud storage is supported for raw media folders via `add_images_from_path()` and `add_videos_from_path()`, and for COCO object detection and segmentation mask imports via `add_samples_from_coco()`. Other dataset importers still expect local files.
-
-
-## Sample
-
-Each sample is a single data instance. The dataset stores references to all samples, allowing you to access, read, or update their attributes individually.
-
-```py
-import lightly_studio as ls
-
-dataset = ls.ImageDataset.load_or_create(name="my_dataset")
-dataset.add_images_from_path(path="path/to/images")
-
-# Iterating over the data in the dataset
-for sample in dataset:
-    # Access sample attributes
-    sample.sample_id        # Sample ID (UUID)
-    sample.file_name        # Image file name (str), e.g. "img1.png"
-    sample.file_path_abs    # Full image file path (str), e.g. "full/path/img1.png"
-    sample.tags             # The set of sample tags (set[str]), e.g. {"tag1", "tag2"}
-    sample.metadata         # Dict-like access to custom metadata
-
-    # Adding/removing tags
-    sample.add_tag("needs_review")
-    sample.remove_tag("needs_review")
-```
-
-**Adding metadata to samples**
-
-You can attach custom metadata to samples, for example sensor data from a robotics application:
-
-```py
-for sample in dataset:
-    sample.metadata["camera_id"] = "front_left"
-    sample.metadata["gps_lat"] = 47.3769
-    sample.metadata["gps_lon"] = 8.5417
-    sample.metadata["speed"] = 12.5
-    sample.metadata["weather"] = "sunny"
-```
+You can access annotations of each sample. They can be created in the GUI or imported, e.g. from the COCO format, see the [COCO Segmentation Mask](../index.md#quickstart) example. The [Indexing with Predictions](#indexing-with-predictions) section below shows how to create annotations from Python.
 
 ### Accessing annotations
-
-You can access annotations of each sample. They can be created in the GUI or imported, e.g. from the COCO format, see the [COCO Segmentation Mask](../#quickstart) example. In the next section [Indexing with Predictions](#indexing-with-predictions) an example of creating annotations from Python is provided.
 
 ```py
 from lightly_studio.core.annotation import ObjectDetectionAnnotation
@@ -242,7 +117,7 @@ sample.add_annotation(
 
     There are 4 sequences of identical bits: one 0, two 1s, one 0 and four 1s. The resulting `segmentation_mask` is `[1, 2, 1, 4]`.
 
-## Indexing with Predictions
+### Indexing with Predictions
 
 If you need to index model predictions with confidence scores or work with custom annotation formats, you can leverage the annotation API.
 
@@ -275,178 +150,6 @@ for image_sample in dataset:
 
 !!! note "Embeddings not supported"
     Manual indexing does not generate embeddings. Features like similarity search and embedding plots will not be available for manually indexed samples.
-
-## Dataset Query
-
-You can programmatically filter samples by attributes (e.g., image size, tags), sort them, and select subsets. This is useful for creating training/validation splits, finding specific samples, or exporting filtered data. See the [DatasetQuery](../concepts_and_tools/search_and_filter.md#query-in-python) section on the Search and Filter page for more details and examples.
-
-
-## Selection
-
-LightlyStudio offers a premium feature to perform automatized data selection. Selecting the right subset of your data can save labeling cost and training time while improving model quality.
-
-**Prerequisite:** The selection functionality requires a valid LightlyStudio license key.
-Set the `LIGHTLY_STUDIO_LICENSE_KEY` environment variable before using selection features:
-
-=== "Linux/macOS"
-
-    ```bash
-    export LIGHTLY_STUDIO_LICENSE_KEY="license_key_here"
-    ```
-
-=== "Windows"
-
-    ```powershell
-    $env:LIGHTLY_STUDIO_LICENSE_KEY="license_key_here"
-    ```
-
-You can choose from various and even combined selection strategies:
-
-=== "Diverse"
-
-    Diversity selection can be configured directly from a [DatasetQuery](../concepts_and_tools/search_and_filter.md#query-in-python). The example below showcases a simple case of selecting diverse samples.
-
-    ```py
-    import lightly_studio as ls
-
-    # Load your dataset
-    dataset = ls.ImageDataset.load_or_create()
-    dataset.add_images_from_path(path="/path/to/image_dataset")
-
-    # Select a diverse subset of 10 samples.
-    dataset.query().selection().diverse(
-        n_samples_to_select=10,
-        selection_result_tag_name="diverse_selection",
-    )
-
-    ls.start_gui()
-    ```
-
-=== "Metadata Weighting"
-
-    You can select samples based on the values of a metadata field. The example below showcases a simple case of selecting samples with the highest metadata value (typicality). Typicality is calculated for the given dataset first.
-
-    ```py
-    import lightly_studio as ls
-
-    # Load your dataset
-    dataset = ls.ImageDataset.load_or_create()
-    dataset.add_images_from_path(path="/path/to/image_dataset")
-    # Compute and store 'typicality' metadata.
-    dataset.compute_typicality_metadata(metadata_name="typicality")
-
-    # Select the 5 samples with the highest 'typicality' scores.
-    dataset.query().selection().metadata_weighting(
-        n_samples_to_select=5,
-        selection_result_tag_name="metadata_weighting_selection",
-        metadata_key="typicality",
-    )
-    ```
-
-
-=== "Similarity Weighting"
-
-    You can select samples based on their similarity to a specific subset of your data. The example below shows how to select samples that are most similar to a set of pre-tagged images.
-
-    ```py
-    import lightly_studio as ls
-
-    # Load your dataset
-    dataset = ls.ImageDataset.load_or_create()
-    dataset.add_images_from_path(path="/path/to/image_dataset")
-
-    # First, define a query set by tagging some samples.
-    # For example, let's tag the first 5 samples.
-    dataset[:5].add_tag("my_query_samples")
-
-    # Compute similarity to the tagged samples and store it as
-    # 'similarity_to_query' metadata.
-    dataset.compute_similarity_metadata(
-        query_tag_name="my_query_samples",
-        metadata_name="similarity_to_query"
-    )
-
-    # Select the 10 samples most similar to the query set.
-    dataset.query().selection().metadata_weighting(
-        n_samples_to_select=10,
-        selection_result_tag_name="similar_to_query_selection",
-        metadata_key="similarity_to_query",
-    )
-    ```
-
-
-=== "Class Balancing"
-
-    You can select samples based on the distribution of object classes (annotations). This is useful for fixing class imbalance, e.g., ensuring you have enough "pedestrians" in a driving dataset.
-
-    **Note:** This strategy requires the dataset to have annotations, e.g., loaded via `add_samples_from_coco` or `add_samples_from_yolo`.
-
-    ```py
-    import lightly_studio as ls
-
-    # Load your dataset
-    dataset = ls.ImageDataset.load_or_create()
-
-    # Option 1: Balance classes uniformly (e.g. equal number of cats and dogs)
-    dataset.query().selection().annotation_balancing(
-        n_samples_to_select=50,
-        selection_result_tag_name="balanced_uniform",
-        target_distribution="uniform",
-    )
-
-    # Option 2: Define a specific target distribution (e.g. 20% cat, 80% dog)
-    dataset.query().selection().annotation_balancing(
-        n_samples_to_select=50,
-        selection_result_tag_name="balanced_custom",
-        target_distribution={"cat": 0.2, "dog": 0.8},
-    )
-    ```
-
-=== "Multiple Strategies"
-
-    You can configure multiple strategies, the selection takes into account all of them at the same time, weighted by the `strength` parameter.
-
-    ```py
-    import lightly_studio as ls
-    from lightly_studio.selection.selection_config import (
-        MetadataWeightingStrategy,
-        EmbeddingDiversityStrategy,
-    )
-
-    # Load your dataset
-    dataset = ls.ImageDataset.load_or_create()
-    dataset.add_images_from_path(path="/path/to/image_dataset")
-    # Compute typicality and store it as `typicality` metadata
-    dataset.compute_typicality_metadata(metadata_name="typicality")
-
-    # Select 10 samples by combining typicality and diversity, diversity having double the strength.
-    dataset.query().selection().multi_strategies(
-        n_samples_to_select=10,
-        selection_result_tag_name="multi_strategy_selection",
-        selection_strategies=[
-            MetadataWeightingStrategy(metadata_key="typicality", strength=1.0),
-            EmbeddingDiversityStrategy(embedding_model_name="my_model_name", strength=2.0),
-        ],
-    )
-    ```
-
-**Exporting Selected Samples**
-
-The selected sample paths can be exported via the GUI, or by a script:
-
-```py
-import lightly_studio as ls
-from lightly_studio.core.dataset_query import ImageSampleField
-
-dataset = ls.ImageDataset.load("my-dataset")
-selected_samples = (
-    dataset.match(ImageSampleField.tags.contains("diverse_selection")).to_list()
-)
-
-with open("export.txt", "w") as f:
-    for sample in selected_samples:
-        f.write(f"{sample.file_path_abs}\n")
-```
 
 ## API Reference
 

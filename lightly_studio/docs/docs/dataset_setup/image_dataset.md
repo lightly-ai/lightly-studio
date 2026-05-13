@@ -24,7 +24,7 @@ The `ls.ImageDataset.create()` method call is lightweight and initializes an emp
 
 The `add_images_from_path(...)` method accepts a path to a file or a folder. If the path is a folder,
 it will recursively search for images in it. A remote path like `s3://my-bucket/my-folder` is also
-supported, see [Using Cloud Storage](../api/index.md#using-cloud-storage) for more details.
+supported, see [Using Cloud Storage](cloud_storage.md) for more details.
 
 Added images are automatically embedded so that embedding plot and image search are enabled.
 To skip embedding, pass `embed=False` to the method.

@@ -53,5 +53,5 @@ dataset.add_images_from_path(path="s3://my-bucket/images/")
     ```shell
     pip install "lightly-studio[cloud-storage]"
     ```
-    See [Using Cloud Storage](../../api/index.md#using-cloud-storage) for more details on
+    See [Using Cloud Storage](../../dataset_setup/cloud_storage.md) for more details on
     supported cloud operations.
