@@ -36,7 +36,7 @@
                     data-testid="labels-menu-item"
                     class="flex min-w-0 flex-1 cursor-pointer items-center space-x-2 text-nowrap peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
                 >
-                    {#if !$selectedCollectionIds.length}
+                    {#if $selectedCollectionIds.length < 2}
                         <AnnotationColorLegend
                             labelName={label_name}
                             className="h-3 w-3"

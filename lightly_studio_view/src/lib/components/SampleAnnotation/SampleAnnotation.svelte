@@ -45,7 +45,7 @@
     const label = $derived(annotation.annotation_label.annotation_label_name);
 
     const colorLabel = $derived.by(() => {
-        if ($selectedCollectionIds.length === 0) return label;
+        if ($selectedCollectionIds.length < 2) return label;
         return $collectionIdToName[annotation.annotation_collection_id] ?? label;
     });
 

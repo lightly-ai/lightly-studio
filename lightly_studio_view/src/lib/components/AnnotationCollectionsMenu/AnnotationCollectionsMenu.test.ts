@@ -16,7 +16,8 @@ vi.mock('$lib/hooks/useAnnotationCollections/useAnnotationCollections', () => ({
 vi.mock('$lib/hooks/useAnnotationCollectionsFilter/useAnnotationCollectionsFilter', () => ({
     useAnnotationCollectionsFilter: vi.fn(() => ({
         setSelectedCollectionIds: mocks.setSelectedCollectionIds,
-        setCollectionIdToName: mocks.setCollectionIdToName
+        setCollectionIdToName: mocks.setCollectionIdToName,
+        selectedCollectionIds: readable([] as string[])
     }))
 }));
 

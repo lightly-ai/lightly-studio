@@ -15,7 +15,8 @@
         ($annotationCollectionsQuery.data ?? []).map((c) => ({ id: c.collection_id, name: c.name }))
     );
 
-    const { setSelectedCollectionIds, setCollectionIdToName } = useAnnotationCollectionsFilter();
+    const { setSelectedCollectionIds, setCollectionIdToName, selectedCollectionIds } =
+        useAnnotationCollectionsFilter();
 
     let initialized = $state(false);
 
@@ -27,18 +28,13 @@
                 Object.fromEntries(items.map((i: { id: string; name: string }) => [i.id, i.name]))
             );
         }
-
-        return () => {
-            setSelectedCollectionIds([]);
-            setCollectionIdToName({});
-        };
     });
 </script>
 
 {#if items.length > 0}
     <Segment title="Collections">
         <SideMenu
-            showColorMarker={true}
+            showColorMarker={$selectedCollectionIds.length > 1}
             {items}
             initialSelectedItemsIds={items.map((i) => i.id)}
             onChangeSelectedItems={setSelectedCollectionIds}

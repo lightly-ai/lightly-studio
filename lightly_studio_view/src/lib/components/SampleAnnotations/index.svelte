@@ -81,7 +81,7 @@
                     showInstanceSegmentationBoundingBoxes
                 );
                 if (!canvas) return null;
-                if (selectedIds.length > 0) {
+                if (selectedIds.length > 1) {
                     const collectionName = idToName[annotation.annotation_collection_id];
                     if (collectionName) return { ...canvas, annotation_label_name: collectionName };
                 }
