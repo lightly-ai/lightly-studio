@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from collections.abc import Iterable
+from collections.abc import Iterable, Sequence
 from typing import Any
 from uuid import UUID
 
@@ -12,7 +12,7 @@ from sqlmodel import Session
 from lightly_studio.core.image.image_sample import ImageSample
 from lightly_studio.evaluation import object_detection_metric
 from lightly_studio.evaluation.validators import resolve_and_validate_collection
-from lightly_studio.models.annotation.annotation_base import AnnotationBaseTable
+from lightly_studio.models.annotation.annotation_base import AnnotationBaseTable, AnnotationType
 from lightly_studio.models.evaluation_run import (
     EvaluationRunCreate,
     EvaluationRunTable,
@@ -20,6 +20,7 @@ from lightly_studio.models.evaluation_run import (
 )
 from lightly_studio.resolvers import (
     annotation_collection_coverage_resolver,
+    annotation_resolver,
     evaluation_run_resolver,
 )
 
@@ -36,6 +37,20 @@ class ObjectDetectionEvaluationConfig(BaseModel):
 
     iou_threshold: float = Field(default=0.5, ge=0.0, le=1.0)
     classwise: bool = True
+
+
+class ObjectDetectionEvaluationResult(BaseModel):
+    """Summary of the inputs used by an object-detection evaluation.
+
+    Attributes:
+        sample_count: Number of samples included in the evaluation.
+        gt_annotation_count: Number of ground-truth annotations used.
+        pred_annotation_count: Number of prediction annotations used.
+    """
+
+    sample_count: int
+    gt_annotation_count: int
+    pred_annotation_count: int
 
 
 class ClassificationEvaluationConfig(BaseModel):
@@ -72,7 +87,7 @@ class ImageDatasetEvaluate:
         gt_collection_name: str,
         pred_collection_name: str,
         config: ObjectDetectionEvaluationConfig | None = None,
-    ) -> None:
+    ) -> ObjectDetectionEvaluationResult:
         """Create an object-detection evaluation run and persist per-image metrics.
 
         Args:
@@ -81,6 +96,9 @@ class ImageDatasetEvaluate:
             pred_collection_name: Name of the annotation collection containing predictions.
             config: Optional object-detection evaluation config. If omitted,
                 defaults are used.
+
+        Returns:
+            Summary of the samples and annotations used by the evaluation.
         """
         config = config or ObjectDetectionEvaluationConfig()
         gt_collection_id, pred_collection_id, evaluation_run = self._create_evaluation_run(
@@ -107,15 +125,17 @@ class ImageDatasetEvaluate:
         selected_sample_ids &= gt_covered_sample_ids & pred_covered_sample_ids
         # TODO(Horatiu, 05/2026): if the number of annotations per sample is large, we may want
         # to avoid loading them all into memory at once and instead stream them in batches.
-        gt_annotations = object_detection_metric.get_object_detection_annotations(
+        gt_annotations = annotation_resolver.get_all_by_collection_id_and_parent_sample_ids(
             session=self.session,
-            collection_id=gt_collection_id,
-            sample_ids=selected_sample_ids,
+            parent_sample_ids=list(selected_sample_ids),
+            annotation_collection_id=gt_collection_id,
+            annotation_type=AnnotationType.OBJECT_DETECTION,
         )
-        pred_annotations = object_detection_metric.get_object_detection_annotations(
+        pred_annotations = annotation_resolver.get_all_by_collection_id_and_parent_sample_ids(
             session=self.session,
-            collection_id=pred_collection_id,
-            sample_ids=selected_sample_ids,
+            parent_sample_ids=list(selected_sample_ids),
+            annotation_collection_id=pred_collection_id,
+            annotation_type=AnnotationType.OBJECT_DETECTION,
         )
 
         gt_per_sample = self._group_by_parent_sample_id(annotations=gt_annotations)
@@ -129,6 +149,11 @@ class ImageDatasetEvaluate:
             gt_per_sample=gt_per_sample,
             iou_threshold=config.iou_threshold,
             classwise=config.classwise,
+        )
+        return ObjectDetectionEvaluationResult(
+            sample_count=len(selected_sample_ids),
+            gt_annotation_count=len(gt_annotations),
+            pred_annotation_count=len(pred_annotations),
         )
 
     def classification(
@@ -208,7 +233,7 @@ class ImageDatasetEvaluate:
 
     @staticmethod
     def _group_by_parent_sample_id(
-        annotations: list[AnnotationBaseTable],
+        annotations: Sequence[AnnotationBaseTable],
     ) -> dict[UUID, list[AnnotationBaseTable]]:
         """Group annotation rows by their parent image sample id."""
         grouped: dict[UUID, list[AnnotationBaseTable]] = {}
