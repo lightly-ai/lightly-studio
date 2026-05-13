@@ -15,7 +15,7 @@ vi.mock('$lib/hooks/useSettings', () => {
         grid_view_sample_rendering: 'contain',
         grid_view_thumbnail_quality: 'raw',
         show_annotation_text_labels: false,
-        show_sample_filenames: true,
+        show_sample_filenames: false,
         show_bounding_boxes_for_segmentation: true,
         key_toolbar_selection: 's',
         key_toolbar_drag: 'd',

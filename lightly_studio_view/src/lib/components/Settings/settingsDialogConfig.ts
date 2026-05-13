@@ -2,7 +2,7 @@
  * Configuration for the shortcut settings rows displayed in SettingsDialog.
  *
  * Each entry maps a unique HTML id and user-visible label to a key in the
- * SettingsDialogShortcutState managed by settingsDialogState.ts.
+ * ShortcutState managed by settingsDialogState.ts.
  */
 
 /** Keys of the shortcut state object that can be recorded by the user. */
@@ -22,7 +22,7 @@ export interface ShortcutSettingConfig {
     id: string;
     /** User-visible label text. */
     label: string;
-    /** Key into SettingsDialogShortcutState. */
+    /** Key into ShortcutState. */
     key: ShortcutSettingKey;
 }
 

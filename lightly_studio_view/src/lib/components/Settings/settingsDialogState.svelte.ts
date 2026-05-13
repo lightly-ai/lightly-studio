@@ -1,37 +1,18 @@
-import type { components } from '$lib/schema';
+import type {
+    GridViewSampleRenderingType,
+    GridViewThumbnailQualityType
+} from '$lib/api/lightly_studio_local';
+import type { SettingView } from '$lib/hooks/useSettings';
 import type { ShortcutSettingKey } from './settingsDialogConfig';
 
-type SettingView = components['schemas']['SettingView'];
-type RenderingMode = components['schemas']['GridViewSampleRenderingType'];
-type ThumbnailQualityMode = components['schemas']['GridViewThumbnailQualityType'];
-
-interface SettingsDialogShortcutState {
-    hideAnnotations: string;
-    goBack: string;
-    toggleEditMode: string;
-    keyToolbarSelection: string;
-    keyToolbarDrag: string;
-    keyToolbarBoundingBox: string;
-    keyToolbarSegmentationMask: string;
-    keyToolbarBrush: string;
-    keyToolbarEraser: string;
-}
-
-interface SettingsDialogFormState {
-    shortcutSettings: SettingsDialogShortcutState;
-    gridViewRendering: RenderingMode;
-    gridViewThumbnailQuality: ThumbnailQualityMode;
-    showAnnotationTextLabels: boolean;
-    showSampleFilenames: boolean;
-    showBoundingBoxesForSegmentation: boolean;
-}
+type ShortcutState = Record<ShortcutSettingKey, string>;
 
 interface ShortcutKeyboardEvent {
     key: string;
     getModifierState(key: string): boolean;
 }
 
-export function createSettingsDialogFormState(settings: SettingView): SettingsDialogFormState {
+export function createSettingsDialogFormState(settings: SettingView) {
     return {
         shortcutSettings: {
             hideAnnotations: settings.key_hide_annotations,
@@ -43,7 +24,7 @@ export function createSettingsDialogFormState(settings: SettingView): SettingsDi
             keyToolbarSegmentationMask: settings.key_toolbar_segmentation_mask,
             keyToolbarBrush: settings.key_toolbar_brush,
             keyToolbarEraser: settings.key_toolbar_eraser
-        },
+        } satisfies ShortcutState,
         gridViewRendering: settings.grid_view_sample_rendering,
         gridViewThumbnailQuality: settings.grid_view_thumbnail_quality,
         showAnnotationTextLabels: settings.show_annotation_text_labels,
@@ -53,7 +34,7 @@ export function createSettingsDialogFormState(settings: SettingView): SettingsDi
 }
 
 export function createSettingsSavePayload(
-    formState: SettingsDialogFormState
+    formState: ReturnType<typeof createSettingsDialogFormState>
 ): Partial<SettingView> {
     return {
         key_hide_annotations: formState.shortcutSettings.hideAnnotations,
@@ -89,6 +70,14 @@ export function normalizeShortcutKey(event: ShortcutKeyboardEvent): string {
     return event.key.toLowerCase();
 }
 
+function isGridViewSampleRenderingType(value: string): value is GridViewSampleRenderingType {
+    return value === 'contain' || value === 'cover';
+}
+
+function isGridViewThumbnailQualityType(value: string): value is GridViewThumbnailQualityType {
+    return value === 'raw' || value === 'high';
+}
+
 /**
  * Reactive state machine for the settings dialog.
  *
@@ -99,8 +88,10 @@ export function createSettingsDialogState(initialSettings: SettingView) {
     const initial = createSettingsDialogFormState(initialSettings);
 
     let shortcutState = $state(initial.shortcutSettings);
-    let gridViewRendering: RenderingMode = $state(initial.gridViewRendering);
-    let gridViewThumbnailQuality: ThumbnailQualityMode = $state(initial.gridViewThumbnailQuality);
+    let gridViewRendering: GridViewSampleRenderingType = $state(initial.gridViewRendering);
+    let gridViewThumbnailQuality: GridViewThumbnailQualityType = $state(
+        initial.gridViewThumbnailQuality
+    );
     let showAnnotationTextLabels = $state(initial.showAnnotationTextLabels);
     let showSampleFilenames = $state(initial.showSampleFilenames);
     let showBoundingBoxesForSegmentation = $state(initial.showBoundingBoxesForSegmentation);
@@ -112,20 +103,35 @@ export function createSettingsDialogState(initialSettings: SettingView) {
         isDirty = true;
     }
 
-    function hydrate(settings: SettingView) {
-        const formState = createSettingsDialogFormState(settings);
+    function applyFormState(formState: ReturnType<typeof createSettingsDialogFormState>) {
         shortcutState = formState.shortcutSettings;
         gridViewRendering = formState.gridViewRendering;
         gridViewThumbnailQuality = formState.gridViewThumbnailQuality;
         showAnnotationTextLabels = formState.showAnnotationTextLabels;
         showSampleFilenames = formState.showSampleFilenames;
         showBoundingBoxesForSegmentation = formState.showBoundingBoxesForSegmentation;
+    }
+
+    function hydrate(settings: SettingView) {
+        applyFormState(createSettingsDialogFormState(settings));
         isDirty = false;
     }
 
     function hydrateIfPristine(settings: SettingView) {
         if (isDirty) return;
         hydrate(settings);
+    }
+
+    function setGridViewRendering(value: string) {
+        if (!isGridViewSampleRenderingType(value)) return;
+        gridViewRendering = value;
+        markDirty();
+    }
+
+    function setGridViewThumbnailQuality(value: string) {
+        if (!isGridViewThumbnailQualityType(value)) return;
+        gridViewThumbnailQuality = value;
+        markDirty();
     }
 
     function startRecording(key: ShortcutSettingKey) {
@@ -164,16 +170,8 @@ export function createSettingsDialogState(initialSettings: SettingView) {
         get gridViewRendering() {
             return gridViewRendering;
         },
-        set gridViewRendering(value: RenderingMode) {
-            gridViewRendering = value;
-            markDirty();
-        },
         get gridViewThumbnailQuality() {
             return gridViewThumbnailQuality;
-        },
-        set gridViewThumbnailQuality(value: ThumbnailQualityMode) {
-            gridViewThumbnailQuality = value;
-            markDirty();
         },
         get showAnnotationTextLabels() {
             return showAnnotationTextLabels;
@@ -210,6 +208,8 @@ export function createSettingsDialogState(initialSettings: SettingView) {
         },
         hydrate,
         hydrateIfPristine,
+        setGridViewRendering,
+        setGridViewThumbnailQuality,
         startRecording,
         handleKeyDown,
         onClose,
