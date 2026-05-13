@@ -209,7 +209,9 @@ def _get_all_without_similarity(  # noqa: PLR0913
         for expr in order_by:
             samples_query = expr.apply(samples_query)
         if not _file_path_abs_in_order_by(order_by):
-            samples_query = samples_query.order_by(col(ImageTable.file_path_abs).asc())
+            file_path_col = col(ImageTable.file_path_abs)
+            tiebreaker = file_path_col.asc() if order_by[0].ascending else file_path_col.desc()
+            samples_query = samples_query.order_by(tiebreaker)
     else:
         samples_query = samples_query.order_by(col(ImageTable.file_path_abs).asc())
 
