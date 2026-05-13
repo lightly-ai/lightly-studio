@@ -5,10 +5,11 @@ import SampleAnnotation from './SampleAnnotation.svelte';
 
 const BASE_ANNOTATION_FIELDS = {
     parent_sample_id: 'parent-sample-1',
+    annotation_collection_id: 'collection-1',
     created_at: new Date('1970-01-01T00:00:00.000Z')
 } satisfies Pick<
     ComponentProps<typeof SampleAnnotation>['annotation'],
-    'parent_sample_id' | 'created_at'
+    'parent_sample_id' | 'annotation_collection_id' | 'created_at'
 >;
 
 const createSegmentationMaskAnnotation = (): ComponentProps<
