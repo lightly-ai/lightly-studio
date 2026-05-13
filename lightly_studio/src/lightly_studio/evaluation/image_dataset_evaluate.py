@@ -10,12 +10,8 @@ from pydantic import BaseModel, Field
 from sqlmodel import Session
 
 from lightly_studio.core.image.image_sample import ImageSample
-from lightly_studio.evaluation import object_detection_metric
+from lightly_studio.evaluation import object_detection_metric, validators
 from lightly_studio.evaluation.evaluation_data import EvaluationData
-from lightly_studio.evaluation.validators import (
-    get_annotation_type_for_task,
-    resolve_and_validate_collection,
-)
 from lightly_studio.models.annotation.annotation_base import AnnotationBaseTable
 from lightly_studio.models.evaluation_run import (
     EvaluationRunCreate,
@@ -173,7 +169,7 @@ class ImageDatasetEvaluate:
         Shared across task methods; each per-task wrapper delegates to this helper
         and then calls its task-specific metric module with the returned data.
         """
-        annotation_type = get_annotation_type_for_task(task_type)
+        annotation_type = validators.get_annotation_type_for_task(task_type)
         gt_collection_id, pred_collection_id, evaluation_run = self._create_evaluation_run(
             name=name,
             gt_collection_name=gt_collection_name,
@@ -240,13 +236,13 @@ class ImageDatasetEvaluate:
         Returns:
             Tuple of (gt_collection_id, pred_collection_id, evaluation_run).
         """
-        gt_collection_id = resolve_and_validate_collection(
+        gt_collection_id = validators.resolve_and_validate_collection(
             session=self.session,
             collection_id=self.collection_id,
             collection_name=gt_collection_name,
             task_type=task_type,
         )
-        pred_collection_id = resolve_and_validate_collection(
+        pred_collection_id = validators.resolve_and_validate_collection(
             session=self.session,
             collection_id=self.collection_id,
             collection_name=pred_collection_name,
