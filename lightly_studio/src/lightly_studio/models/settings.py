@@ -27,65 +27,53 @@ class SettingBase(SQLModel):
     """Base class for Settings model."""
 
     grid_view_sample_rendering: GridViewSampleRenderingType = Field(
-        default=GridViewSampleRenderingType.CONTAIN,
         description="Controls how samples are rendered in the grid view",
     )
     grid_view_thumbnail_quality: GridViewThumbnailQualityType = Field(
-        default=GridViewThumbnailQualityType.RAW,
         description="Controls thumbnail quality for grid-like preview views",
     )
 
     # Keyboard shortcuts.
     key_hide_annotations: str = Field(
-        default="v",
         description="Key to temporarily hide annotations while pressed",
     )
     key_go_back: str = Field(
-        default="Escape",
         description="Key to navigate back from detail view to grid view",
     )
     key_toggle_edit_mode: str = Field(
-        default="e",
         description="Key to toggle annotation edit mode",
     )
 
-    # New setting for annotation text visibility.
     show_annotation_text_labels: bool = Field(
-        default=False,
         description="Controls whether to show text labels on annotations",
     )
 
     show_sample_filenames: bool = Field(
-        default=False,
         description="Controls whether to show sample filenames in the samples grid view",
     )
 
     show_bounding_boxes_for_segmentation: bool = Field(
-        default=True,
         description="Controls whether to show annotation bounding boxes for segmentation",
     )
 
     # Toolbar shortcuts
     key_toolbar_selection: str = Field(
-        default="s", description="Key to activate the selection tool in the toolbar"
+        description="Key to activate the selection tool in the toolbar",
     )
-
     key_toolbar_drag: str = Field(
-        default="d", description="Key to activate the drag tool in the toolbar"
+        description="Key to activate the drag tool in the toolbar",
     )
-
     key_toolbar_bounding_box: str = Field(
-        default="b", description="Key to activate the bounding box tool in the toolbar"
+        description="Key to activate the bounding box tool in the toolbar",
     )
-
     key_toolbar_segmentation_mask: str = Field(
-        default="m", description="Key to activate the segmentation mask tool in the toolbar"
+        description="Key to activate the segmentation mask tool in the toolbar",
     )
     key_toolbar_brush: str = Field(
-        default="r", description="Key to activate brush mode in the segmentation tool"
+        description="Key to activate brush mode in the segmentation tool",
     )
     key_toolbar_eraser: str = Field(
-        default="x", description="Key to activate eraser mode in the segmentation tool"
+        description="Key to activate eraser mode in the segmentation tool",
     )
 
 
@@ -105,4 +93,62 @@ class SettingTable(SettingBase, table=True):
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc), index=True)
     updated_at: datetime = Field(
         default_factory=lambda: datetime.now(timezone.utc),
+    )
+
+    # Defaults for DB inserts.
+    grid_view_sample_rendering: GridViewSampleRenderingType = Field(
+        default=GridViewSampleRenderingType.CONTAIN,
+        description="Controls how samples are rendered in the grid view",
+    )
+    grid_view_thumbnail_quality: GridViewThumbnailQualityType = Field(
+        default=GridViewThumbnailQualityType.RAW,
+        description="Controls thumbnail quality for grid-like preview views",
+    )
+    key_hide_annotations: str = Field(
+        default="v",
+        description="Key to temporarily hide annotations while pressed",
+    )
+    key_go_back: str = Field(
+        default="Escape",
+        description="Key to navigate back from detail view to grid view",
+    )
+    key_toggle_edit_mode: str = Field(
+        default="e",
+        description="Key to toggle annotation edit mode",
+    )
+    show_annotation_text_labels: bool = Field(
+        default=False,
+        description="Controls whether to show text labels on annotations",
+    )
+    show_sample_filenames: bool = Field(
+        default=False,
+        description="Controls whether to show sample filenames in the samples grid view",
+    )
+    show_bounding_boxes_for_segmentation: bool = Field(
+        default=True,
+        description="Controls whether to show annotation bounding boxes for segmentation",
+    )
+    key_toolbar_selection: str = Field(
+        default="s",
+        description="Key to activate the selection tool in the toolbar",
+    )
+    key_toolbar_drag: str = Field(
+        default="d",
+        description="Key to activate the drag tool in the toolbar",
+    )
+    key_toolbar_bounding_box: str = Field(
+        default="b",
+        description="Key to activate the bounding box tool in the toolbar",
+    )
+    key_toolbar_segmentation_mask: str = Field(
+        default="m",
+        description="Key to activate the segmentation mask tool in the toolbar",
+    )
+    key_toolbar_brush: str = Field(
+        default="r",
+        description="Key to activate brush mode in the segmentation tool",
+    )
+    key_toolbar_eraser: str = Field(
+        default="x",
+        description="Key to activate eraser mode in the segmentation tool",
     )
