@@ -3732,7 +3732,7 @@ export interface components {
             field_name: string;
             direction: components["schemas"]["SortDirection"];
             /** Is Numeric */
-            is_numeric?: boolean | null;
+            is_numeric: boolean;
         };
         /**
          * SortFieldSource

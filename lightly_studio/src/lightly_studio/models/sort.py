@@ -33,7 +33,7 @@ class SortFieldExpr(BaseModel):
     source: SortFieldSource
     field_name: str
     direction: SortDirection
-    is_numeric: bool | None = None
+    is_numeric: bool
 
 
 def sort_field_expr_to_order_by(expr: SortFieldExpr) -> OrderByExpression:
@@ -48,5 +48,5 @@ def sort_field_expr_to_order_by(expr: SortFieldExpr) -> OrderByExpression:
     return sort_to_order_by(
         key=(expr.source, expr.field_name),
         direction=expr.direction,
-        cast_to_float=bool(expr.is_numeric),
+        cast_to_float=expr.is_numeric,
     )
