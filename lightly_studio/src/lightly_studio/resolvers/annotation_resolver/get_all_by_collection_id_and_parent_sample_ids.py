@@ -17,7 +17,7 @@ def get_all_by_collection_id_and_parent_sample_ids(
     parent_sample_ids: Sequence[UUID],
     annotation_collection_id: UUID,
     annotation_type: AnnotationType,
-) -> Sequence[AnnotationBaseTable]:
+) -> list[AnnotationBaseTable]:
     """Get annotations of a given type from an annotation collection for parent samples.
 
     Eagerly loads the type-specific details relationship so callers can iterate
