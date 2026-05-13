@@ -341,7 +341,9 @@ def test_classification_evaluation__raises_on_none_prediction_confidence(
         annotation_collection_name="pred",
     )
 
-    with pytest.raises(ValueError, match="Classification evaluation expected a non-None prediction confidence "):
+    with pytest.raises(
+        ValueError, match="Classification evaluation expected a non-None prediction confidence "
+    ):
         dataset.evaluate().classification(
             name="run-1",
             gt_collection_name="gt",
