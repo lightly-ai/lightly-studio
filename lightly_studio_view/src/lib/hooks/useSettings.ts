@@ -1,7 +1,4 @@
-import type {
-    GridViewSampleRenderingType,
-    SettingView
-} from '$lib/api/lightly_studio_local';
+import type { GridViewSampleRenderingType, SettingView } from '$lib/api/lightly_studio_local';
 import { derived, get, writable } from 'svelte/store';
 import { getSettings, setSettings } from '$lib/api/lightly_studio_local';
 
