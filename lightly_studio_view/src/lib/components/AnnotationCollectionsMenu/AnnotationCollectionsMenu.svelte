@@ -27,6 +27,11 @@
                 Object.fromEntries(items.map((i: { id: string; name: string }) => [i.id, i.name]))
             );
         }
+
+        return () => {
+            setSelectedCollectionIds([]);
+            setCollectionIdToName({});
+        };
     });
 </script>
 
