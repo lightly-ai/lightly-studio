@@ -44,6 +44,7 @@ def test_set_settings_updates_grid_view_rendering(
         updated_at=current_settings.updated_at,
         key_hide_annotations=current_settings.key_hide_annotations,
         key_go_back=current_settings.key_go_back,
+        key_toggle_edit_mode=current_settings.key_toggle_edit_mode,
         show_annotation_text_labels=current_settings.show_annotation_text_labels,
         show_sample_filenames=False,
         show_bounding_boxes_for_segmentation=False,
