@@ -192,11 +192,6 @@
     });
 </script>
 
-<pre>
-    {JSON.stringify($selectedCollectionIds, null, 2)}
-    
-</pre>
-
 <ZoomableContainer
     width={sample.width}
     height={sample.height}
