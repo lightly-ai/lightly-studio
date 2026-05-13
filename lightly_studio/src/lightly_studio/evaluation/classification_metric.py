@@ -20,18 +20,21 @@ def create_and_persist_classification_metrics_per_sample(
 ) -> None:
     """Create and persist per-sample classification metrics.
 
-    For each selected sample, writes two metric rows: ``is_correct`` (1.0 if the
-    prediction's label matches the ground truth, 0.0 otherwise) and
-    ``confidence`` (the prediction's confidence).
+    For each selected sample, writes a single ``disagreement`` metric row in
+    ``[0, 1]``. Higher values indicate stronger disagreement between the ground
+    truth and the prediction. The score is ``1 - c`` when labels match and
+    ``c`` when they differ, where ``c`` is the prediction's confidence. If the
+    prediction's confidence is ``None`` (e.g. annotator-vs-annotator
+    comparisons), ``c`` defaults to ``1.0``, which degrades the score to a
+    binary 0/1.
 
     Each selected sample must have exactly one ground-truth annotation and
-    exactly one prediction annotation in their respective annotation collections,
-    and the prediction must have a non-None confidence. All validation runs and
-    metric rows are built before any persistence, so nothing is written on error.
+    exactly one prediction annotation in their respective annotation collections.
+    All validation runs and metric rows are built before any persistence, so
+    nothing is written on error.
 
     Raises:
-        ValueError: If any selected sample has 0 or >1 GT/prediction annotations,
-            or if a prediction has a None confidence.
+        ValueError: If any selected sample has 0 or >1 GT/prediction annotations.
     """
     # Pass 1: validate every sample and build all metric rows up front, before
     # any persistence. Reading ORM attributes here is safe because no commit has
@@ -49,27 +52,16 @@ def create_and_persist_classification_metrics_per_sample(
             sample_id=sample_id,
             kind="prediction",
         )
-        if pred.confidence is None:
-            raise ValueError(
-                f"Classification evaluation expected a non-None prediction confidence "
-                f"for sample {sample_id}, got None."
+        confidence = 1.0 if pred.confidence is None else float(pred.confidence)
+        labels_agree = pred.annotation_label_id == gt.annotation_label_id
+        disagreement = (1.0 - confidence) if labels_agree else confidence
+        metrics_to_persist.append(
+            EvaluationSampleMetricCreate(
+                evaluation_run_id=data.evaluation_run_id,
+                sample_id=sample_id,
+                metric_name="disagreement",
+                value=disagreement,
             )
-        is_correct = 1.0 if pred.annotation_label_id == gt.annotation_label_id else 0.0
-        metrics_to_persist.extend(
-            [
-                EvaluationSampleMetricCreate(
-                    evaluation_run_id=data.evaluation_run_id,
-                    sample_id=sample_id,
-                    metric_name="is_correct",
-                    value=is_correct,
-                ),
-                EvaluationSampleMetricCreate(
-                    evaluation_run_id=data.evaluation_run_id,
-                    sample_id=sample_id,
-                    metric_name="confidence",
-                    value=float(pred.confidence),
-                ),
-            ]
         )
 
     # Pass 2: persist in batches. No ORM reads here, so commits are safe.

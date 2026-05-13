@@ -187,22 +187,28 @@ def test_object_detection_evaluation__filters_to_samples_covered_by_both_collect
 
 
 @pytest.mark.parametrize(
-    ("gt_label_name", "pred_label_name", "pred_confidence", "expected_is_correct"),
+    ("gt_label_name", "pred_label_name", "pred_confidence", "expected_disagreement"),
     [
         # Confidence values must be exactly representable in float32
         # (DB column is float32-precision).
-        ("A", "A", 0.5, 1.0),
-        ("A", "B", 0.25, 0.0),
+        # agree, c=0.5 -> 1 - c = 0.5
+        ("A", "A", 0.5, 0.5),
+        # disagree, c=0.25 -> c = 0.25
+        ("A", "B", 0.25, 0.25),
+        # agree, c defaults to 1.0 -> 1 - c = 0.0
+        ("A", "A", None, 0.0),
+        # disagree, c defaults to 1.0 -> c = 1.0
+        ("A", "B", None, 1.0),
     ],
 )
 def test_classification_evaluation(
     patch_collection: None,  # noqa: ARG001
     gt_label_name: str,
     pred_label_name: str,
-    pred_confidence: float,
-    expected_is_correct: float,
+    pred_confidence: float | None,
+    expected_disagreement: float,
 ) -> None:
-    """Persists per-sample classification metrics for matching and mismatching labels."""
+    """Persists per-sample disagreement metric for matching and mismatching labels."""
     dataset = ImageDataset.create(name="test_dataset")
     gt_label = create_annotation_label(
         session=dataset.session,
@@ -234,7 +240,9 @@ def test_classification_evaluation(
         sample_id=image.sample_id,
         annotation_label_id=pred_label.annotation_label_id,
         annotation_type=AnnotationType.CLASSIFICATION,
-        annotation_data={"confidence": pred_confidence},
+        annotation_data=(
+            {"confidence": pred_confidence} if pred_confidence is not None else None
+        ),
         annotation_collection_name="pred",
     )
 
@@ -262,8 +270,7 @@ def test_classification_evaluation(
         evaluation_run_id=evaluation_runs[0].id,
     )
     assert {(metric.sample_id, metric.metric_name): metric.value for metric in sample_metrics} == {
-        (image.sample_id, "is_correct"): expected_is_correct,
-        (image.sample_id, "confidence"): pred_confidence,
+        (image.sample_id, "disagreement"): expected_disagreement,
     }
 
 
@@ -308,43 +315,6 @@ def test_classification_evaluation__raises_on_multiple_annotations(
         )
 
     with pytest.raises(ValueError, match=f"exactly 1 {kind} annotation"):
-        dataset.evaluate().classification(
-            name="run-1",
-            gt_collection_name="gt",
-            pred_collection_name="pred",
-        )
-
-
-def test_classification_evaluation__raises_on_none_prediction_confidence(
-    patch_collection: None,  # noqa: ARG001
-) -> None:
-    """Raises ValueError when a prediction annotation has confidence=None."""
-    dataset = ImageDataset.create(name="test_dataset")
-    label = create_annotation_label(
-        session=dataset.session, root_collection_id=dataset.collection_id
-    )
-    image = create_image(session=dataset.session, collection_id=dataset.collection_id)
-    _create_gt_and_pred_collections(session=dataset.session, collection_id=dataset.collection_id)
-    create_annotation(
-        session=dataset.session,
-        collection_id=dataset.collection_id,
-        sample_id=image.sample_id,
-        annotation_label_id=label.annotation_label_id,
-        annotation_type=AnnotationType.CLASSIFICATION,
-        annotation_collection_name="gt",
-    )
-    create_annotation(
-        session=dataset.session,
-        collection_id=dataset.collection_id,
-        sample_id=image.sample_id,
-        annotation_label_id=label.annotation_label_id,
-        annotation_type=AnnotationType.CLASSIFICATION,
-        annotation_collection_name="pred",
-    )
-
-    with pytest.raises(
-        ValueError, match="Classification evaluation expected a non-None prediction confidence "
-    ):
         dataset.evaluate().classification(
             name="run-1",
             gt_collection_name="gt",
