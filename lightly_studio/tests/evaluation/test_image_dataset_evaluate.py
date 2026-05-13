@@ -67,12 +67,15 @@ def test_object_detection_evaluation(
         annotation_collection_name="pred",
     )
 
-    dataset.evaluate().object_detection(
+    result = dataset.evaluate().object_detection(
         name="run-1",
         gt_collection_name="gt",
         pred_collection_name="pred",
         config=ObjectDetectionEvaluationConfig(iou_threshold=0.5),
     )
+    assert result.sample_count == 1
+    assert result.gt_annotation_count == 2
+    assert result.pred_annotation_count == 2
 
     evaluation_runs = evaluation_run_resolver.get_all_by_dataset_id(
         session=dataset.session,
@@ -161,11 +164,14 @@ def test_object_detection_evaluation__filters_to_samples_covered_by_both_collect
         annotation_collection_name="pred",
     )
 
-    dataset.evaluate().object_detection(
+    result = dataset.evaluate().object_detection(
         name="run-1",
         gt_collection_name="gt",
         pred_collection_name="pred",
     )
+    assert result.sample_count == 1
+    assert result.gt_annotation_count == 1
+    assert result.pred_annotation_count == 1
 
     evaluation_runs = evaluation_run_resolver.get_all_by_dataset_id(
         session=dataset.session,

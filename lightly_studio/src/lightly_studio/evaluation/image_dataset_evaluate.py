@@ -38,6 +38,20 @@ class ObjectDetectionEvaluationConfig(BaseModel):
     classwise: bool = True
 
 
+class ObjectDetectionEvaluationResult(BaseModel):
+    """Summary of the inputs used by an object-detection evaluation.
+
+    Attributes:
+        sample_count: Number of samples included in the evaluation.
+        gt_annotation_count: Number of ground-truth annotations used.
+        pred_annotation_count: Number of prediction annotations used.
+    """
+
+    sample_count: int
+    gt_annotation_count: int
+    pred_annotation_count: int
+
+
 class ClassificationEvaluationConfig(BaseModel):
     """Configuration for classification evaluation runs.
 
@@ -72,7 +86,7 @@ class ImageDatasetEvaluate:
         gt_collection_name: str,
         pred_collection_name: str,
         config: ObjectDetectionEvaluationConfig | None = None,
-    ) -> None:
+    ) -> ObjectDetectionEvaluationResult:
         """Create an object-detection evaluation run and persist per-image metrics.
 
         Args:
@@ -81,6 +95,9 @@ class ImageDatasetEvaluate:
             pred_collection_name: Name of the annotation collection containing predictions.
             config: Optional object-detection evaluation config. If omitted,
                 defaults are used.
+
+        Returns:
+            Summary of the samples and annotations used by the evaluation.
         """
         config = config or ObjectDetectionEvaluationConfig()
         gt_collection_id, pred_collection_id, evaluation_run = self._create_evaluation_run(
@@ -129,6 +146,11 @@ class ImageDatasetEvaluate:
             gt_per_sample=gt_per_sample,
             iou_threshold=config.iou_threshold,
             classwise=config.classwise,
+        )
+        return ObjectDetectionEvaluationResult(
+            sample_count=len(selected_sample_ids),
+            gt_annotation_count=len(gt_annotations),
+            pred_annotation_count=len(pred_annotations),
         )
 
     def classification(
