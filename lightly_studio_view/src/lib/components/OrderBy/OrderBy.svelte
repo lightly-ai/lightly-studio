@@ -58,7 +58,7 @@
                     source: field.source,
                     field_name: field.value,
                     direction: selectedDirection,
-                    is_numeric: field.is_numeric
+                    is_numeric: field.is_numeric ?? false
                 }
             ]);
         }
@@ -74,7 +74,7 @@
                 source: selectedSource,
                 field_name: selectedField,
                 direction: next,
-                is_numeric: $imageSortBy?.[0]?.is_numeric
+                is_numeric: $imageSortBy?.[0]?.is_numeric ?? false
             }
         ]);
     }

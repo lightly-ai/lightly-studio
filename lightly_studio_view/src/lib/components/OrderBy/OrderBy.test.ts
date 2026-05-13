@@ -46,7 +46,7 @@ describe('OrderBy', () => {
             }
         ];
         render(OrderBy);
-        expect(screen.getByTestId('sort-by-trigger')).toHaveTextContent('File Name');
+        expect(screen.getByTestId('sort-by-trigger')).toHaveTextContent('file name');
     });
 
     it('direction button is disabled when no field is selected', () => {
@@ -261,7 +261,12 @@ describe('OrderBy', () => {
     it('shows metadata.[field] label in the trigger when a metadata field is selected', () => {
         mocks.metadataInfoValue = [{ name: 'brightness', type: 'float' }];
         mocks.imageSortByValue = [
-            { source: 'metadata', field_name: 'brightness', direction: SortDirection.ASC }
+            {
+                source: 'metadata',
+                field_name: 'brightness',
+                direction: SortDirection.ASC,
+                is_numeric: true
+            }
         ];
         render(OrderBy);
         expect(screen.getByTestId('sort-by-trigger')).toHaveTextContent('metadata.brightness');
