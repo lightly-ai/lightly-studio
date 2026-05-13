@@ -51,6 +51,7 @@ class ObjectDetectionEvaluationResult(BaseModel):
     gt_annotation_count: int
     pred_annotation_count: int
 
+
 class ClassificationEvaluationConfig(BaseModel):
     """Configuration for classification evaluation runs.
 
