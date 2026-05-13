@@ -186,6 +186,7 @@ def test_sort_expr_discriminated_union__routes_to_sort_field_expr() -> None:
             "source": "image",
             "field_name": "file_name",
             "direction": "asc",
+            "is_numeric": False,
         }
     )
     assert isinstance(expr, SortFieldExpr)

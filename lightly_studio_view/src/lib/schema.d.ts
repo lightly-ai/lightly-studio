@@ -2696,6 +2696,11 @@ export interface components {
             /** Metric Name */
             metric_name: string;
             direction: components["schemas"]["SortDirection"];
+            /**
+             * Is Numeric
+             * @default false
+             */
+            is_numeric: boolean;
         };
         /**
          * EvaluationRunMetricsInfoView
@@ -3745,7 +3750,7 @@ export interface components {
             field_name: string;
             direction: components["schemas"]["SortDirection"];
             /** Is Numeric */
-            is_numeric?: boolean | null;
+            is_numeric: boolean;
         };
         /**
          * StringExpr

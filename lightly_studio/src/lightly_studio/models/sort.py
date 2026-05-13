@@ -20,6 +20,7 @@ class SortFieldSource(str, Enum):
 
     image = "image"
     metadata = "metadata"
+    evaluation_metric = "evaluation_metric"
 
 
 class SortFieldExpr(BaseModel):
@@ -54,7 +55,7 @@ class EvaluationMetricSortExpr(BaseModel):
     evaluation_run_name: str
     metric_name: str
     direction: SortDirection
-    is_numeric: bool
+    is_numeric: bool = False
 
 
 SortExpr = Annotated[
