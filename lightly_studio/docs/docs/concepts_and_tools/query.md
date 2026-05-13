@@ -12,27 +12,20 @@ A query helps you find images that match certain rules. For example, you can sea
 
 ## Query examples
 
-An example of a query filtering images that are taller than 400 pixels and at least 640 pixels wide.
+The query language is quite simple and resembles WHERE clauses in SQL. We recommend learning it from examples.
 
 ```sql
+# Filter images that are taller than 400 pixels and at least 640 pixels wide.
 height >= 400 AND width >= 640
-```
 
-If you replace `AND` with `OR`, an image is selected if either of these conditions is true.
+# If you replace `AND` with `OR`, an image is selected if either of these conditions is true.
+height >= 400 AND width >= 640
 
-### Nesting with parentheses
-
-You can create more complex queries by nesting sub-queries in parentheses. If you want either an image that is large or its file name is `cover.jpg`, use:
-
-```sql
+# You can create more complex queries by nesting sub-queries in parentheses.
+# The following matches aither a large image or if its file name is `cover.jpg`.
 (height >= 400 AND width >= 640) OR file_name = "cover.jpg"
-```
 
-### Negation
-
-The logical `NOT` operator is also supported. The following example filters images that are not large:
-
-```sql
+# The logical `NOT` operator is also supported
 NOT (height >= 400 AND width >= 640)
 ```
 
@@ -122,7 +115,6 @@ Use `object_detection(...)` when you want to match bounding boxes. The following
 Example queries:
 
 ```sql
-object_detection(label = "cat")
 object_detection(x >= 10 AND y < 200)
 object_detection(label = "cat" AND width >= 50 AND height >= 40)
 object_detection(label = "cat" OR label = "dog")
@@ -165,27 +157,16 @@ width >= 640 AND classification(label = "approved")
 ### Large reviewed sample with a matching object detection
 
 ```sql
-height > 400
-AND width >= 640
+height > 400 AND width >= 640
 AND "reviewed" IN tags
 AND object_detection(label = "cat" AND width > 80 AND height > 80)
 ```
 
-### Nested query with grouped sample filters and object detection constraints
+### Nested query with grouped sample filters with segmentation constraints
 
 ```sql
 (file_path_abs != "/datasets/archive/bad.jpg" AND created_at >= "2025-01-01T00:00:00Z")
 AND ("training" IN tags OR "validation" IN tags)
-AND object_detection((label = "cat" OR label = "dog") AND NOT (x < 5 OR y < 5))
-```
-
-### Nested query mixing top-level logic with segmentation constraints
-
-```sql
-(
-    (height > 720 AND width > 1280)
-    OR ("priority" IN tags AND NOT "rejected" IN tags)
-)
 AND segmentation_mask(
     (label = "car" OR label = "truck")
     AND width >= 100
