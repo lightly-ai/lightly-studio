@@ -83,16 +83,16 @@ The query language supports three annotation functions:
 
 Each function contains another query inside the parentheses and matches an image when it has at least one annotation of that type that satisfies the nested query.
 
-## Classification queries
+### Classification queries
 
-Use `classification(...)` when you want to match image-level labels. Examples:
+Use `classification(...)` when you want to match image-level labels. Example queries:
 
 ```sql
 classification(label = "cat")
 classification(label != "background")
 ```
 
-## Object detection queries
+### Object detection queries
 
 Use `object_detection(...)` when you want to match bounding boxes. The following fields are supported:
 
@@ -111,7 +111,7 @@ object_detection(label = "cat" OR label = "dog")
 object_detection(label != "background")
 ```
 
-## Segmentation mask queries
+### Segmentation mask queries
 
 Use `segmentation_mask(...)` when you want to match segmentation annotations.
 
@@ -123,7 +123,7 @@ It is part of the query grammar, uses the same boolean operators as `object_dete
 - `width`
 - `height`
 
-### Examples
+Example queries:
 
 ```sql
 segmentation_mask(label = "cat")
@@ -144,17 +144,13 @@ width >= 640 AND classification(label = "approved")
 
 ## Complex examples
 
-### Large reviewed sample with a matching object detection
-
 ```sql
+# Large reviewed sample with a matching object detection
 height > 400 AND width >= 640
 AND "reviewed" IN tags
 AND object_detection(label = "cat" AND width > 80 AND height > 80)
-```
 
-### Nested query with grouped sample filters and segmentation constraints
-
-```sql
+# Nested query with grouped sample filters and segmentation constraints
 (file_path_abs != "/datasets/archive/bad.jpg" AND created_at >= "2025-01-01T00:00:00Z")
 AND ("training" IN tags OR "validation" IN tags)
 AND segmentation_mask(
@@ -163,11 +159,8 @@ AND segmentation_mask(
     AND height >= 60
     AND NOT (x < 10 OR y < 10)
 )
-```
 
-### Nested query combining multiple annotation functions
-
-```sql
+# Nested query combining multiple annotation functions
 "reviewed" IN tags
 AND classification(label = "urban-scene")
 AND (
