@@ -56,13 +56,15 @@
     const colorText = $derived(getColorByLabel(colorLabel, 1));
 
     const colorStroke = $derived.by(() => {
-        const color = $customLabelColorsStore[colorLabel]?.color ?? getColorByLabel(colorLabel, 1).color;
+        const color =
+            $customLabelColorsStore[colorLabel]?.color ?? getColorByLabel(colorLabel, 1).color;
         if (highlight === 'disabled') return withAlpha(color, 0.1);
         return color;
     });
 
     const colorFill = $derived.by(() => {
-        const color = $customLabelColorsStore[colorLabel]?.color ?? getColorByLabel(colorLabel, 0.4).color;
+        const color =
+            $customLabelColorsStore[colorLabel]?.color ?? getColorByLabel(colorLabel, 0.4).color;
 
         if (highlight === 'disabled') return withAlpha(color, 0.1);
         if (highlight === 'active') return withAlpha(color, 0);

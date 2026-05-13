@@ -23,7 +23,9 @@
         if (items.length > 0 && !initialized) {
             initialized = true;
             setSelectedCollectionIds(items.map((i) => i.id));
-            setCollectionIdToName(Object.fromEntries(items.map((i: { id: string; name: string }) => [i.id, i.name])));
+            setCollectionIdToName(
+                Object.fromEntries(items.map((i: { id: string; name: string }) => [i.id, i.name]))
+            );
         }
     });
 </script>
