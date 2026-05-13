@@ -13,10 +13,21 @@ from lightly_studio.models.evaluation_run import EvaluationTaskType
 from lightly_studio.models.sample import SampleTable
 from lightly_studio.resolvers import collection_resolver
 
-_TASK_TO_ANNOTATION_TYPE: dict[EvaluationTaskType, AnnotationType] = {
+TASK_TO_ANNOTATION_TYPE: dict[EvaluationTaskType, AnnotationType] = {
     EvaluationTaskType.OBJECT_DETECTION: AnnotationType.OBJECT_DETECTION,
     EvaluationTaskType.CLASSIFICATION: AnnotationType.CLASSIFICATION,
 }
+
+
+def get_annotation_type_for_task(task_type: EvaluationTaskType) -> AnnotationType:
+    """Return the annotation type expected for an evaluation task.
+
+    Raises:
+        ValueError: If task_type is not supported.
+    """
+    if task_type not in TASK_TO_ANNOTATION_TYPE:
+        raise ValueError(f"Unsupported evaluation task type: {task_type!r}.")
+    return TASK_TO_ANNOTATION_TYPE[task_type]
 
 
 def resolve_and_validate_collection(
@@ -41,9 +52,7 @@ def resolve_and_validate_collection(
             exist, or if it contains annotations of a type other than the type
             expected for task_type.
     """
-    if task_type not in _TASK_TO_ANNOTATION_TYPE:
-        raise ValueError(f"Unsupported evaluation task type: {task_type!r}.")
-    annotation_type = _TASK_TO_ANNOTATION_TYPE[task_type]
+    annotation_type = get_annotation_type_for_task(task_type)
     resolved_id = collection_resolver.get_by_name(
         session=session,
         parent_collection_id=collection_id,
