@@ -23,6 +23,7 @@ from lightly_studio.models.annotation.annotation_base import (
 )
 from lightly_studio.models.collection import AnnotationCollectionView, CollectionTable
 from lightly_studio.resolvers import annotation_resolver, collection_resolver
+from lightly_studio.evaluation.object_detection_metric import get_object_detection_annotations
 from lightly_studio.resolvers.annotation_resolver.get_all import (
     GetAllAnnotationsResult,
 )
@@ -229,6 +230,25 @@ def delete_annotation(
             status_code=HTTP_STATUS_NOT_FOUND,
             detail="Annotation not found",
         ) from e
+
+
+@annotations_router.get("/annotations/by_parent/{parent_sample_id}")
+def get_annotations_by_parent_sample(
+    session: SessionDep,
+    collection: Annotated[
+        CollectionTable,
+        Path(title="collection Id"),
+        Depends(get_and_validate_collection_id),
+    ],
+    parent_sample_id: Annotated[UUID, Path(title="Parent Sample Id")],
+) -> list[AnnotationView]:
+    """Fetch all annotations in the collection for a given parent (image) sample."""
+    annotations = get_object_detection_annotations(
+        session=session,
+        collection_id=collection.collection_id,
+        sample_ids={parent_sample_id},
+    )
+    return [AnnotationView.from_annotation_table(annotation=a) for a in annotations]
 
 
 @annotations_router.get("/annotations/payload/{sample_id}")

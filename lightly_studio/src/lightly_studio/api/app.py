@@ -30,6 +30,7 @@ from lightly_studio.api.routes.api import (
     collection_tag,
     embeddings2d,
     enterprise,
+    evaluation_run,
     export,
     features,
     frame,
@@ -156,6 +157,7 @@ api_router.include_router(video.video_router)
 api_router.include_router(group.group_router)
 api_router.include_router(enterprise.enterprise_router)
 api_router.include_router(version.version_router)
+api_router.include_router(evaluation_run.evaluation_run_router)
 
 app.include_router(api_router)
 

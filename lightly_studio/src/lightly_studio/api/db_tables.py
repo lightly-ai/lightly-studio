@@ -46,3 +46,6 @@ from lightly_studio.models.evaluation_run import (
 from lightly_studio.models.evaluation_sample_metric import (
     EvaluationSampleMetricTable,  # noqa: F401, required for SQLModel to work properly
 )
+from lightly_studio.models.evaluation_annotation_match import (
+    EvaluationAnnotationMatchTable,  # noqa: F401, required for SQLModel to work properly
+)

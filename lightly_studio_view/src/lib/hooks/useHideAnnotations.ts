@@ -22,8 +22,8 @@ export function useHideAnnotations() {
         });
         unsubscribe();
 
-        if (currentHideKey && event.key === currentHideKey) {
-            isHidden.set(event.type === 'keydown');
+        if (currentHideKey && event.key === currentHideKey && event.type === 'keydown') {
+            isHidden.update((v) => !v);
         }
     };
 

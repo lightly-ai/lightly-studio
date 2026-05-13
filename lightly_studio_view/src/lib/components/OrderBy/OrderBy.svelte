@@ -1,7 +1,11 @@
 <script lang="ts">
     import { SortDirection } from '$lib/api/lightly_studio_local';
-    import type { SortFieldExpr } from '$lib/api/lightly_studio_local';
+    import type { SortFieldExpr as BaseSortFieldExpr } from '$lib/api/lightly_studio_local';
+
+    // Extended with evaluation_run_id for metric-based sort (not yet in generated types).
+    type SortFieldExpr = BaseSortFieldExpr & { evaluation_run_id?: string | null };
     import { useImageFilters } from '$lib/hooks/useImageFilters/useImageFilters';
+    import { useGlobalStorage } from '$lib/hooks/useGlobalStorage';
     import * as Popover from '$lib/components/ui/popover/index.js';
     import { Button } from '$lib/components/ui/button';
     import { ArrowDown, ArrowUp } from '@lucide/svelte';
@@ -11,7 +15,10 @@
         source: SortFieldExpr['source'];
         value: SortFieldExpr['field_name'];
         label: string;
+        evaluationRunId?: string;
     };
+
+    const { selectedEvaluationRunId } = useGlobalStorage();
 
     const SORT_FIELDS: SortField[] = [
         { source: 'image', value: 'file_name', label: 'File Name' },
@@ -21,13 +28,29 @@
         { source: 'image', value: 'height', label: 'Height' }
     ];
 
+    const METRIC_FIELDS: SortField[] = [
+        { source: 'metric' as SortFieldExpr['source'], value: 'tp', label: 'TP' },
+        { source: 'metric' as SortFieldExpr['source'], value: 'fp', label: 'FP' },
+        { source: 'metric' as SortFieldExpr['source'], value: 'fn', label: 'FN' }
+    ];
+
+    const allFields = $derived([
+        ...SORT_FIELDS,
+        ...($selectedEvaluationRunId
+            ? METRIC_FIELDS.map((f) => ({ ...f, evaluationRunId: $selectedEvaluationRunId! }))
+            : [])
+    ]);
+
     const { imageSortBy, updateSortBy } = useImageFilters();
 
     const selectedField = $derived($imageSortBy?.[0]?.field_name ?? null);
     const selectedSource = $derived($imageSortBy?.[0]?.source ?? null);
     const selectedDirection = $derived($imageSortBy?.[0]?.direction ?? SortDirection.ASC);
+    const selectedEvaluationRunIdForSort = $derived(
+        ($imageSortBy?.[0] as SortFieldExpr | undefined)?.evaluation_run_id ?? null
+    );
     const selectedLabel = $derived(
-        SORT_FIELDS.find((f) => f.source === selectedSource && f.value === selectedField)?.label ??
+        allFields.find((f) => f.source === selectedSource && f.value === selectedField)?.label ??
             null
     );
 
@@ -37,9 +60,13 @@
         if (field.value === selectedField && field.source === selectedSource) {
             updateSortBy(null);
         } else {
-            updateSortBy([
-                { source: field.source, field_name: field.value, direction: selectedDirection }
-            ]);
+            const expr: SortFieldExpr = {
+                source: field.source,
+                field_name: field.value,
+                direction: selectedDirection,
+                evaluation_run_id: field.evaluationRunId ?? null
+            } as SortFieldExpr;
+            updateSortBy([expr]);
         }
         open = false;
     }
@@ -48,7 +75,12 @@
         if (!selectedField || !selectedSource) return;
         const next =
             selectedDirection === SortDirection.ASC ? SortDirection.DESC : SortDirection.ASC;
-        updateSortBy([{ source: selectedSource, field_name: selectedField, direction: next }]);
+        updateSortBy([{
+            source: selectedSource,
+            field_name: selectedField,
+            direction: next,
+            evaluation_run_id: selectedEvaluationRunIdForSort
+        } as SortFieldExpr]);
     }
 </script>
 
@@ -65,7 +97,7 @@
             </Button>
         </Popover.Trigger>
         <Popover.Content class="w-40 p-1" align="start">
-            {#each SORT_FIELDS as field}
+            {#each allFields as field}
                 <button
                     class={cn(
                         'flex w-full items-center rounded-sm px-2 py-1.5 text-sm hover:bg-accent hover:text-accent-foreground',

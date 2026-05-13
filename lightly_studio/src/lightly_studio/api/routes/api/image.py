@@ -19,7 +19,7 @@ from lightly_studio.models.image import (
     ImageView,
     ImageViewsWithCount,
 )
-from lightly_studio.models.sort import SortFieldExpr, sort_field_expr_to_order_by
+from lightly_studio.models.sort import SortFieldExpr, SortFieldSource, sort_field_expr_to_order_by
 from lightly_studio.resolvers import (
     image_resolver,
 )

@@ -4,8 +4,10 @@ from __future__ import annotations
 
 from abc import ABC, abstractmethod
 from typing import Any
+from uuid import UUID
 
 from sqlalchemy import ColumnElement
+from sqlmodel import col, func
 from sqlmodel.sql.expression import SelectOfScalar
 from typing_extensions import Self, TypeVar
 
@@ -91,3 +93,35 @@ class OrderByField(OrderByExpression):
         if self.ascending:
             return query.order_by(self.field.get_sqlmodel_field().asc())
         return query.order_by(self.field.get_sqlmodel_field().desc())
+
+
+class OrderByMetric(OrderByExpression):
+    """Order images by a per-sample evaluation metric via a LEFT JOIN on EvaluationSampleMetric.
+
+    Images without a metric value (not covered by the eval run) sort last.
+    """
+
+    def __init__(self, evaluation_run_id: UUID, metric_name: str) -> None:
+        super().__init__()
+        self.evaluation_run_id = evaluation_run_id
+        self.metric_name = metric_name
+
+    def apply(self, query: SelectOfScalar[T]) -> SelectOfScalar[T]:
+        from lightly_studio.models.evaluation_sample_metric import EvaluationSampleMetricTable
+
+        query = query.outerjoin(
+            EvaluationSampleMetricTable,
+            (col(EvaluationSampleMetricTable.sample_id) == col(ImageTable.sample_id))
+            & (col(EvaluationSampleMetricTable.evaluation_run_id) == self.evaluation_run_id)
+            & (col(EvaluationSampleMetricTable.metric_name) == self.metric_name),
+        )
+        value = col(EvaluationSampleMetricTable.value)
+        # NULLs (images with no metric value) always sort last regardless of direction
+        null_last = func.coalesce(func.cast(value.is_(None), type_=None), 0)
+        if self.ascending:
+            return query.order_by(
+                value.is_(None).asc(), value.asc()
+            )
+        return query.order_by(
+            value.is_(None).asc(), value.desc()
+        )

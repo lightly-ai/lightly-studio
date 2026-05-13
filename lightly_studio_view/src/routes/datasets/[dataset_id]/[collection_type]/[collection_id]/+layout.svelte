@@ -13,8 +13,9 @@
     } from '$lib/components';
     import GridHeaderSelectAllButton from '$lib/components/GridHeaderSelectAllButton/GridHeaderSelectAllButton.svelte';
     import QueryEditorPanel from '$lib/components/QueryEditorPanel/QueryEditorPanel.svelte';
+    import ModelsMenu from '$lib/components/ModelsMenu/ModelsMenu.svelte';
     import Separator from '$lib/components/ui/separator/separator.svelte';
-    import { SlidersHorizontal, ChartNetwork, GripVertical } from '@lucide/svelte';
+    import { SlidersHorizontal, ChartNetwork, GripVertical, BarChart2 } from '@lucide/svelte';
     import { onDestroy, onMount } from 'svelte';
     import { toStore } from 'svelte/store';
     import { Header } from '$lib/components';
@@ -60,7 +61,6 @@
         buildVideoAnnotationCountsFilter,
         buildVideoFrameAnnotationCountsFilter
     } from '$lib/utils/buildAnnotationCountsFilters';
-    import EmbeddingSelectionFilterItem from '$lib/components/EmbeddingSelectionFilterItem/EmbeddingSelectionFilterItem.svelte';
     import { useSelectionSummary, useFeatureFlags } from '$lib/hooks';
     import { useSelectAll } from '$lib/hooks/useSelectAll/useSelectAll';
     import { isInputElement } from '$lib/utils';
@@ -92,6 +92,8 @@
         collections,
         showPlot,
         setShowPlot,
+        showEvalPanel,
+        setShowEvalPanel,
         filteredSampleCount,
         filteredAnnotationCount
     } = useGlobalStorage();
@@ -152,7 +154,6 @@
     onMount(() => {
         if (browser) {
             window.addEventListener('keydown', handleKeyEvent);
-            window.addEventListener('keyup', handleKeyEvent);
             window.addEventListener('keydown', handleSelectAllKeydown);
             window.addEventListener(GRID_IMAGE_SEARCH_DROP_EVENT, handleGridImageSearchDrop);
         }
@@ -161,7 +162,6 @@
     onDestroy(() => {
         if (browser) {
             window.removeEventListener('keydown', handleKeyEvent);
-            window.removeEventListener('keyup', handleKeyEvent);
             window.removeEventListener('keydown', handleSelectAllKeydown);
             window.removeEventListener(GRID_IMAGE_SEARCH_DROP_EVENT, handleGridImageSearchDrop);
             shutdownMaskRendererPool();
@@ -332,11 +332,9 @@
                             </div>
                             <Segment title="Filters" icon={SlidersHorizontal}>
                                 <div class="space-y-2">
-                                    <EmbeddingSelectionFilterItem
-                                        {collectionIdStore}
-                                        {isVideos}
-                                        {isImages}
-                                    />
+                                    {#if isImages}
+                                        <ModelsMenu {collectionId} />
+                                    {/if}
                                     <LabelsMenu
                                         {annotationFilterRows}
                                         onToggleAnnotationFilter={toggleAnnotationFilterSelection}
@@ -357,8 +355,8 @@
                 </div>
             {/if}
 
-            {#if (isImages || isVideos) && $showPlot}
-                <!-- When plot is shown, use PaneGroup for the main content + plot -->
+            {#if (isImages || isVideos) && ($showPlot || (isImages && $showEvalPanel))}
+                <!-- When any right panel is shown, use PaneGroup -->
                 <PaneGroup direction="horizontal" class="flex-1">
                     <Pane defaultSize={50} minSize={30} class="flex">
                         <div
@@ -402,22 +400,38 @@
                         </div>
                     </Pane>
 
-                    <PaneResizer
-                        class="relative mx-2 flex w-1 cursor-col-resize items-center justify-center"
-                    >
-                        <div class="bg-brand z-10 flex h-7 min-w-5 items-center justify-center">
-                            <GripVertical class="text-diffuse-foreground" />
-                        </div>
-                    </PaneResizer>
+                    {#if $showPlot}
+                        <PaneResizer
+                            class="relative mx-2 flex w-1 cursor-col-resize items-center justify-center"
+                        >
+                            <div class="bg-brand z-10 flex h-7 min-w-5 items-center justify-center">
+                                <GripVertical class="text-diffuse-foreground" />
+                            </div>
+                        </PaneResizer>
+                        <Pane defaultSize={35} minSize={25} class="flex min-h-0 flex-col">
+                            {#await import('$lib/components/PlotPanel/PlotPanel.svelte') then { default: PlotPanel }}
+                                <PlotPanel />
+                            {/await}
+                        </Pane>
+                    {/if}
 
-                    <Pane defaultSize={50} minSize={30} class="flex min-h-0 flex-col">
-                        {#await import('$lib/components/PlotPanel/PlotPanel.svelte') then { default: PlotPanel }}
-                            <PlotPanel />
-                        {/await}
-                    </Pane>
+                    {#if isImages && $showEvalPanel}
+                        <PaneResizer
+                            class="relative mx-2 flex w-1 cursor-col-resize items-center justify-center"
+                        >
+                            <div class="bg-brand z-10 flex h-7 min-w-5 items-center justify-center">
+                                <GripVertical class="text-diffuse-foreground" />
+                            </div>
+                        </PaneResizer>
+                        <Pane defaultSize={30} minSize={22} class="flex min-h-0 flex-col">
+                            {#await import('$lib/components/EvaluationPanel/EvaluationPanel.svelte') then { default: EvaluationPanel }}
+                                <EvaluationPanel />
+                            {/await}
+                        </Pane>
+                    {/if}
                 </PaneGroup>
             {:else}
-                <!-- When plot is hidden or not samples view, show normal layout -->
+                <!-- When no right panels, show normal layout -->
                 <div class="relative flex flex-1 flex-col space-y-4 rounded-[1vw] bg-card p-4 pb-2">
                     {#if isImages || isAnnotations || isVideos || isVideoFrames || isGroups}
                         <GridHeader>
@@ -442,6 +456,17 @@
                                     >
                                         <ChartNetwork class="size-4" />
                                         <span>Show Embeddings</span>
+                                    </Button>
+                                {/if}
+                                {#if isImages}
+                                    <Button
+                                        class="flex items-center space-x-1"
+                                        data-testid="toggle-eval-panel-button"
+                                        variant={$showEvalPanel ? 'default' : 'ghost'}
+                                        onclick={() => setShowEvalPanel(!$showEvalPanel)}
+                                    >
+                                        <BarChart2 class="size-4" />
+                                        <span>Evaluation</span>
                                     </Button>
                                 {/if}
                             {/snippet}

@@ -13,7 +13,7 @@ from sqlmodel import Session, col, func, select
 
 from lightly_studio.api.routes.api.validators import Paginated
 from lightly_studio.core.dataset_query.image_sample_field import ImageSampleField
-from lightly_studio.core.dataset_query.order_by import OrderByField
+from lightly_studio.core.dataset_query.order_by import OrderByExpression, OrderByField
 from lightly_studio.models.annotation.annotation_base import AnnotationBaseTable
 from lightly_studio.models.image import ImageTable
 from lightly_studio.models.sample import SampleTable
@@ -25,8 +25,11 @@ from lightly_studio.resolvers.similarity_utils import (
 )
 
 
-def _file_path_abs_in_order_by(order_by: list[OrderByField]) -> bool:
-    return any(expr.field is ImageSampleField.file_path_abs for expr in order_by)
+def _file_path_abs_in_order_by(order_by: list[OrderByExpression]) -> bool:
+    return any(
+        isinstance(expr, OrderByField) and expr.field is ImageSampleField.file_path_abs
+        for expr in order_by
+    )
 
 
 class GetAllSamplesByCollectionIdResult(BaseModel):
@@ -71,7 +74,7 @@ def get_all_by_collection_id(  # noqa: PLR0913
     filters: ImageFilter | None = None,
     text_embedding: list[float] | None = None,
     sample_ids: list[UUID] | None = None,
-    order_by: list[OrderByField] | None = None,
+    order_by: list[OrderByExpression] | None = None,
 ) -> GetAllSamplesByCollectionIdResult:
     """Retrieve samples for a specific collection with optional filtering."""
     embedding_model_id, distance_expr = get_distance_expression(
@@ -109,7 +112,7 @@ def _get_all_with_similarity(  # noqa: PLR0913
     pagination: Paginated | None,
     filters: ImageFilter | None,
     sample_ids: list[UUID] | None,
-    order_by: list[OrderByField] | None = None,
+    order_by: list[OrderByExpression] | None = None,
 ) -> GetAllSamplesByCollectionIdResult:
     """Get samples with similarity search - returns (ImageTable, float) tuples."""
     load_options = _get_load_options()

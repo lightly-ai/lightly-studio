@@ -77,6 +77,20 @@ export type TextEmbedding = {
 };
 
 const showPlot = writable<boolean>(false);
+const showEvalPanel = writable<boolean>(false);
+const selectedEvaluationRunId = writable<string | null>(null);
+
+export type ModelOverlay = {
+    collectionId: string;
+    color: string;
+    confidenceThreshold: number;
+    visible: boolean;
+};
+
+const MODEL_OVERLAY_COLORS = ['#3B82F6', '#F97316', '#A855F7', '#EF4444', '#10B981'];
+
+const modelOverlays = writable<ModelOverlay[]>([]);
+
 const rangeSelectionBycollection = writable<Record<string, Point[] | null>>({});
 
 // Rewrite the hook to return values and methods
@@ -305,6 +319,32 @@ export const useGlobalStorage = () => {
         showPlot,
         setShowPlot: (show: boolean) => {
             showPlot.set(show);
+        },
+        showEvalPanel,
+        setShowEvalPanel: (show: boolean) => {
+            showEvalPanel.set(show);
+        },
+        selectedEvaluationRunId,
+        setSelectedEvaluationRunId: (id: string | null) => {
+            selectedEvaluationRunId.set(id);
+        },
+        modelOverlays,
+        addModelOverlay: (collectionId: string) => {
+            modelOverlays.update((overlays) => {
+                if (overlays.some((o) => o.collectionId === collectionId)) return overlays;
+                const color = MODEL_OVERLAY_COLORS[overlays.length % MODEL_OVERLAY_COLORS.length];
+                return [...overlays, { collectionId, color, confidenceThreshold: 0, visible: true }];
+            });
+        },
+        removeModelOverlay: (collectionId: string) => {
+            modelOverlays.update((overlays) =>
+                overlays.filter((o) => o.collectionId !== collectionId)
+            );
+        },
+        updateModelOverlay: (collectionId: string, patch: Partial<ModelOverlay>) => {
+            modelOverlays.update((overlays) =>
+                overlays.map((o) => (o.collectionId === collectionId ? { ...o, ...patch } : o))
+            );
         },
         getRangeSelection,
         setRangeSelectionForCollection: (collectionId: string, selection: Point[] | null) => {

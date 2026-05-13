@@ -1,9 +1,11 @@
 <script lang="ts">
     import type { ImageView } from '$lib/api/lightly_studio_local';
     import { useSettings } from '$lib/hooks/useSettings';
+    import { useGlobalStorage } from '$lib/hooks/useGlobalStorage';
     import { getSimilarityColor } from '$lib/utils';
     import { SampleAnnotations, SampleImage } from '..';
     import type { SampleImageObjectFit } from '../SampleImage/types';
+    import OverlayAnnotations from './OverlayAnnotations.svelte';
 
     const {
         sample,
@@ -18,6 +20,9 @@
     } = $props();
 
     const { gridViewThumbnailQualityStore } = useSettings();
+    const { modelOverlays } = useGlobalStorage();
+
+    const activeOverlays = $derived($modelOverlays.filter((o) => o.visible));
 </script>
 
 <SampleImage
@@ -28,6 +33,18 @@
     thumbnailHeight={sampleSize}
 />
 <SampleAnnotations {sample} {objectFit} />
+
+{#each activeOverlays as overlay (overlay.collectionId)}
+    <OverlayAnnotations
+        sampleId={sample.sample_id}
+        sampleWidth={sample.width}
+        sampleHeight={sample.height}
+        collectionId={overlay.collectionId}
+        color={overlay.color}
+        confidenceThreshold={overlay.confidenceThreshold}
+        {objectFit}
+    />
+{/each}
 
 {#if sample.similarity_score !== undefined && sample.similarity_score !== null}
     <div

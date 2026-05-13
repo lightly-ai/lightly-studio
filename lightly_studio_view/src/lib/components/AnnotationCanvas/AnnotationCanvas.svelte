@@ -44,7 +44,8 @@
         height,
         annotations = [],
         alpha = 0.4,
-        className = ''
+        className = '',
+        overrideColor = null
     }: {
         sampleId: string;
         width: number;
@@ -52,6 +53,7 @@
         annotations?: AnnotationCanvasAnnotation[];
         alpha?: number;
         className?: string;
+        overrideColor?: string | null;
     } = $props();
 
     const { customLabelColorsStore } = useCustomLabelColors();
@@ -109,6 +111,10 @@
         colorAlpha: number,
         customLabelColors: CustomLabelColorMap
     ): [number, number, number, number] => {
+        if (overrideColor) {
+            const [r, g, b] = rgbaParser(overrideColor);
+            return [r, g, b, Math.round(clampAlpha(colorAlpha) * 255)];
+        }
         const customColor = customLabelColors[labelName];
         if (!customColor) {
             return rgbaParser(getColorByLabel(labelName, colorAlpha).color);

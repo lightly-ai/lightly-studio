@@ -717,6 +717,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/collections/{collection_id}/annotations/by_parent/{parent_sample_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Annotations By Parent Sample
+         * @description Fetch all annotations in the collection for a given parent (image) sample.
+         */
+        get: operations["get_annotations_by_parent_sample"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/collections/{collection_id}/annotations/payload/{sample_id}": {
         parameters: {
             query?: never;
@@ -1808,6 +1828,69 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/datasets/{dataset_id}/evaluation_runs": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List Evaluation Runs
+         * @description Return all evaluation runs for a dataset, newest first.
+         *
+         *     The dataset_id path parameter is the root collection_id used in GUI URLs.
+         *     We resolve it to the actual DatasetTable.dataset_id via the collection lookup.
+         */
+        get: operations["list_evaluation_runs"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/evaluation_runs/{run_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Evaluation Run
+         * @description Return a single evaluation run by ID.
+         */
+        get: operations["get_evaluation_run"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/evaluation_runs/{run_id}/confusion_matrix": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Confusion Matrix
+         * @description Return the NxN confusion matrix for an evaluation run.
+         */
+        get: operations["get_confusion_matrix"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/images/sample/{sample_id}": {
         parameters: {
             query?: never;
@@ -2526,6 +2609,41 @@ export interface components {
             metadata_name: string;
         };
         /**
+         * ConfusionMatrixCell
+         * @description One cell of the confusion matrix.
+         */
+        ConfusionMatrixCell: {
+            /** Gt Label Id */
+            gt_label_id: string | null;
+            /** Pred Label Id */
+            pred_label_id: string | null;
+            /** Count */
+            count: number;
+        };
+        /**
+         * ConfusionMatrixLabelView
+         * @description Label id + name pair used in the confusion matrix response.
+         */
+        ConfusionMatrixLabelView: {
+            /**
+             * Label Id
+             * Format: uuid
+             */
+            label_id: string;
+            /** Label Name */
+            label_name: string;
+        };
+        /**
+         * ConfusionMatrixResponse
+         * @description Full confusion matrix with label metadata.
+         */
+        ConfusionMatrixResponse: {
+            /** Cells */
+            cells: components["schemas"]["ConfusionMatrixCell"][];
+            /** Labels */
+            labels: components["schemas"]["ConfusionMatrixLabelView"][];
+        };
+        /**
          * CountAnnotationsView
          * @description Count annotations view.
          */
@@ -2641,6 +2759,41 @@ export interface components {
             operator: components["schemas"]["EqualityComparisonOperator"];
             /** Value */
             value: number;
+        };
+        /**
+         * EvaluationRunView
+         * @description Serialisable view of one evaluation run.
+         */
+        EvaluationRunView: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Name */
+            name: string;
+            /** Task Type */
+            task_type: string;
+            /**
+             * Gt Annotation Collection Id
+             * Format: uuid
+             */
+            gt_annotation_collection_id: string;
+            /**
+             * Pred Annotation Collection Id
+             * Format: uuid
+             */
+            pred_annotation_collection_id: string;
+            /** Gt Collection Name */
+            gt_collection_name: string;
+            /** Pred Collection Name */
+            pred_collection_name: string;
+            /** Config Json */
+            config_json: {
+                [key: string]: unknown;
+            };
+            /** Created At */
+            created_at: string;
         };
         /**
          * ExecuteOperatorRequest
@@ -3669,22 +3822,25 @@ export interface components {
          * @description A sorting expression for a single field.
          *
          *     Attributes:
-         *         source: The source of the field (e.g., "image").
+         *         source: The source of the field (e.g., "image" or "metric").
          *         field_name: The field to sort by.
          *         direction: The sort direction, either ascending or descending.
+         *         evaluation_run_id: Required when source is "metric".
          */
         SortFieldExpr: {
             source: components["schemas"]["SortFieldSource"];
             /** Field Name */
             field_name: string;
             direction: components["schemas"]["SortDirection"];
+            /** Evaluation Run Id */
+            evaluation_run_id?: string | null;
         };
         /**
          * SortFieldSource
          * @description Source of the field to sort by.
          * @enum {string}
          */
-        SortFieldSource: "image";
+        SortFieldSource: "image" | "metric";
         /**
          * StringExpr
          * @description Leaf node for equality comparisons on string sample fields.
@@ -5508,6 +5664,38 @@ export interface operations {
             };
         };
     };
+    get_annotations_by_parent_sample: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                parent_sample_id: string;
+                collection_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AnnotationView"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     get_annotation_with_payload: {
         parameters: {
             query?: never;
@@ -6959,6 +7147,99 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["RuntimeVersionInfo"];
+                };
+            };
+        };
+    };
+    list_evaluation_runs: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                dataset_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EvaluationRunView"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_evaluation_run: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                run_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EvaluationRunView"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_confusion_matrix: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                run_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ConfusionMatrixResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
                 };
             };
         };
