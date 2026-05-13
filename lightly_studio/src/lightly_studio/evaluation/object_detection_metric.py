@@ -8,12 +8,10 @@ from uuid import UUID
 
 import numpy as np
 from numpy.typing import NDArray
-from sqlalchemy.orm import joinedload
-from sqlmodel import Session, col, select
+from sqlmodel import Session
 
-from lightly_studio.models.annotation.annotation_base import AnnotationBaseTable, AnnotationType
+from lightly_studio.models.annotation.annotation_base import AnnotationBaseTable
 from lightly_studio.models.evaluation_sample_metric import EvaluationSampleMetricCreate
-from lightly_studio.models.sample import SampleTable
 from lightly_studio.resolvers import evaluation_sample_metric_resolver
 
 SAMPLE_BATCH_SIZE = 32  # Number of samples to process in a single batch
@@ -142,29 +140,6 @@ def match_image(
         ),
         iou_threshold=iou_threshold,
     )
-
-
-def get_object_detection_annotations(
-    session: Session,
-    collection_id: UUID,
-    sample_ids: set[UUID],
-) -> list[AnnotationBaseTable]:
-    """Return object-detection annotations for selected parent samples."""
-    if not sample_ids:
-        return []
-
-    stmt = (
-        select(AnnotationBaseTable)
-        .join(
-            SampleTable,
-            col(SampleTable.sample_id) == col(AnnotationBaseTable.sample_id),
-        )
-        .where(col(AnnotationBaseTable.parent_sample_id).in_(sample_ids))
-        .where(col(AnnotationBaseTable.annotation_type) == AnnotationType.OBJECT_DETECTION)
-        .where(col(SampleTable.collection_id) == collection_id)
-        .options(joinedload(AnnotationBaseTable.object_detection_details))
-    )
-    return list(session.exec(stmt).all())
 
 
 def create_and_persist_object_detection_metrics_per_sample(  # noqa: PLR0913
