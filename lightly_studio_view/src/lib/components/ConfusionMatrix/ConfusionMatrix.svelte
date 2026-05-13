@@ -95,7 +95,7 @@
                         return `GT: <b>${gt}</b><br/>Pred: <b>${pred}</b><br/>Count: <b>${count}</b>`;
                     }
                 },
-                grid: { left: 130, right: 20, top: 10, bottom: 120 },
+                grid: { left: 160, right: 20, top: 10, bottom: 150 },
                 xAxis: {
                     type: 'category',
                     data: predLabels,
@@ -104,23 +104,17 @@
                         rotate: 45,
                         interval: 0,
                         color: '#9ca3af',
-                        fontSize: 11
+                        fontSize: 13
                     },
                     axisLine: { lineStyle: { color: '#374151' } },
-                    splitArea: {
-                        show: true,
-                        areaStyle: { color: ['transparent', 'rgba(255,255,255,0.02)'] }
-                    }
+                    splitArea: { show: false }
                 },
                 yAxis: {
                     type: 'category',
                     data: gtLabelsReversed,
-                    axisLabel: { interval: 0, color: '#9ca3af', fontSize: 11 },
+                    axisLabel: { interval: 0, color: '#9ca3af', fontSize: 13 },
                     axisLine: { lineStyle: { color: '#374151' } },
-                    splitArea: {
-                        show: true,
-                        areaStyle: { color: ['transparent', 'rgba(255,255,255,0.02)'] }
-                    }
+                    splitArea: { show: false }
                 },
                 dataZoom: [
                     { type: 'inside', xAxisIndex: 0, filterMode: 'empty' },
@@ -157,7 +151,6 @@
                         name: 'FP/FN',
                         data: fpData,
                         label: { show: false },
-
                         emphasis: {
                             itemStyle: { shadowBlur: 8, shadowColor: 'rgba(0,0,0,0.4)' }
                         }
@@ -173,4 +166,8 @@
     });
 </script>
 
-<div bind:this={container} class="w-full" style="height: 480px;"></div>
+<div
+    bind:this={container}
+    class="w-full"
+    style="height: {Math.max(320, allLabelIds.length * 48 + 180)}px;"
+></div>

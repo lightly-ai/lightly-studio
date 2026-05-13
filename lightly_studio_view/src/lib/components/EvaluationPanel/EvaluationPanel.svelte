@@ -1,7 +1,10 @@
 <script lang="ts">
     import { page } from '$app/state';
     import { useGlobalStorage } from '$lib/hooks/useGlobalStorage';
-    import { useEvaluationRuns, useConfusionMatrix } from '$lib/hooks/useEvaluationRuns/useEvaluationRuns';
+    import {
+        useEvaluationRuns,
+        useConfusionMatrix
+    } from '$lib/hooks/useEvaluationRuns/useEvaluationRuns';
     import { Button } from '$lib/components/ui/button';
     import Segment from '$lib/components/Segment/Segment.svelte';
     import ConfusionMatrix from '$lib/components/ConfusionMatrix/ConfusionMatrix.svelte';
@@ -46,26 +49,34 @@
                     <div class="text-xs text-muted-foreground">{selectedRun.task_type}</div>
                 </div>
             </div>
-            <Button variant="ghost" size="icon" onclick={handleClose} class="h-8 w-8 shrink-0">✕</Button>
+            <Button variant="ghost" size="icon" onclick={handleClose} class="h-8 w-8 shrink-0"
+                >✕</Button
+            >
         </div>
 
         <div class="min-h-0 flex-1 space-y-2 overflow-y-auto">
             <Segment title="Config" icon={Settings2}>
-                <div class="space-y-1 text-xs text-muted-foreground">
-                    <div class="flex justify-between">
+                <div class="space-y-1.5 text-sm text-muted-foreground">
+                    <div class="flex justify-between gap-4">
                         <span>GT</span>
-                        <span class="max-w-36 truncate font-mono text-foreground" title={selectedRun.gt_collection_name}>
+                        <span
+                            class="max-w-48 truncate font-mono text-foreground"
+                            title={selectedRun.gt_collection_name}
+                        >
                             {selectedRun.gt_collection_name}
                         </span>
                     </div>
-                    <div class="flex justify-between">
+                    <div class="flex justify-between gap-4">
                         <span>Pred</span>
-                        <span class="max-w-36 truncate font-mono text-foreground" title={selectedRun.pred_collection_name}>
+                        <span
+                            class="max-w-48 truncate font-mono text-foreground"
+                            title={selectedRun.pred_collection_name}
+                        >
                             {selectedRun.pred_collection_name}
                         </span>
                     </div>
                     {#each Object.entries(selectedRun.config_json) as [key, value]}
-                        <div class="flex justify-between">
+                        <div class="flex justify-between gap-4">
                             <span>{key}</span>
                             <span class="font-mono text-foreground">{String(value)}</span>
                         </div>
@@ -106,11 +117,11 @@
                 <div class="space-y-1">
                     {#each runs as run (run.id)}
                         <button
-                            class="w-full rounded-md px-3 py-2 text-left text-sm transition-colors hover:bg-accent"
+                            class="w-full rounded-md px-3 py-2 text-left transition-colors hover:bg-accent"
                             onclick={() => selectRun(run)}
                         >
-                            <div class="truncate font-medium">{run.name}</div>
-                            <div class="text-xs text-muted-foreground">{run.task_type}</div>
+                            <div class="truncate text-base font-medium">{run.name}</div>
+                            <div class="text-sm text-muted-foreground">{run.task_type}</div>
                         </button>
                     {/each}
                 </div>

@@ -5,6 +5,7 @@ from time import perf_counter
 
 from environs import Env
 
+import lightly_studio as ls
 from lightly_studio import db_manager
 from lightly_studio.core.dataset_query import ImageSampleField
 from lightly_studio.core.image.image_dataset import ImageDataset
@@ -16,8 +17,8 @@ from lightly_studio.resolvers import (
 )
 
 DATASET_NAME = "evaluation_example_dataset"
-GT_COLLECTION_NAME = "gt"
-PRED_COLLECTION_NAME = "pred"
+GT_COLLECTION_NAME = "ground_truth"
+PRED_COLLECTION_NAME = "LT-PicoDET"
 
 TAGGED_SAMPLES_EVALUATION_NAME = "evaluation-example-tagged-samples"
 ALL_SAMPLES_EVALUATION_NAME = "evaluation-example-all-samples"
@@ -81,12 +82,12 @@ def main() -> None:
 
     db_manager.connect(cleanup_existing=True)
 
-    images_path = env.path("EXAMPLES_COCO_IMAGES_PATH", "/path/to/your/images")
-    gt_annotations_json = env.path("EXAMPLES_COCO_JSON_PATH", "/path/to/your/gt.json")
-    pred_annotations_json = env.path("EXAMPLES_PRED_ANNOTATIONS_JSON", "/path/to/your/pred.json")
+    images_path = "/Users/jonaswurst/Desktop/objects365_10k_sample/images"
+    gt_annotations_json = "/Users/jonaswurst/Desktop/objects365_10k_sample/annotations.json"
+    pred_annotations_json = "/Users/jonaswurst/Desktop/objects365_10k_sample/predictions.json"
     evaluation_config = ObjectDetectionEvaluationConfig(
         iou_threshold=0.5,
-        classwise=True,
+        classwise=False,
     )
 
     dataset = ImageDataset.create(name=DATASET_NAME)
