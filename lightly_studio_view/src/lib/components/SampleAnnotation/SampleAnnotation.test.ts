@@ -126,7 +126,9 @@ describe('SampleAnnotation', () => {
                 props: { annotation: createObjectDetectionAnnotation(), imageWidth: 100 }
             });
 
-            const opacity = Number(screen.getByTestId('annotation_box').getAttribute('fill-opacity'));
+            const opacity = Number(
+                screen.getByTestId('annotation_box').getAttribute('fill-opacity')
+            );
             expect(isNaN(opacity)).toBe(false);
             expect(opacity).toBe(0.4);
         });
@@ -138,7 +140,9 @@ describe('SampleAnnotation', () => {
                 props: { annotation: createObjectDetectionAnnotation(), imageWidth: 100 }
             });
 
-            const opacity = Number(screen.getByTestId('annotation_box').getAttribute('fill-opacity'));
+            const opacity = Number(
+                screen.getByTestId('annotation_box').getAttribute('fill-opacity')
+            );
             expect(opacity).toBeCloseTo(0.32); // 0.8 * 0.4
         });
     });
