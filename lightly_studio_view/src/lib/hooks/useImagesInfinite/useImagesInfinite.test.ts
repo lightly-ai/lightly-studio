@@ -3,6 +3,7 @@ import { buildRequestBody, type ImagesInfiniteParams } from './useImagesInfinite
 import type { SortFieldExpr } from '$lib/api/lightly_studio_local';
 import type { QueryClient, CreateInfiniteQueryResult } from '@tanstack/svelte-query';
 import * as tanstackQuery from '@tanstack/svelte-query';
+import { useImagesInfinite } from './useImagesInfinite';
 
 const readImagesMock = vi.fn();
 
@@ -13,8 +14,6 @@ vi.mock('$lib/api/lightly_studio_local', () => ({
 vi.mock('$lib/hooks/useMetadataFilters/useMetadataFilters', () => ({
     createMetadataFilters: vi.fn(() => [])
 }));
-
-import { useImagesInfinite } from './useImagesInfinite';
 
 describe('useImagesInfinite', () => {
     const mockInvalidateQueries = vi.fn();
