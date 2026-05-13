@@ -2,9 +2,8 @@ import type {
     GridViewSampleRenderingType,
     SettingView
 } from '$lib/api/lightly_studio_local';
-import { client } from '$lib/services/collection';
 import { derived, get, writable } from 'svelte/store';
-import { getSettings } from '$lib/api/lightly_studio_local';
+import { getSettings, setSettings } from '$lib/api/lightly_studio_local';
 
 export type { SettingView };
 type UpdateSettingsResult = { success: boolean; error?: string };
@@ -100,11 +99,8 @@ const saveSettings = async (
             updated_at: new Date()
         };
 
-        const response = await client.POST('/api/settings', {
-            body: newSettings as never,
-            headers: {
-                'Content-Type': 'application/json'
-            }
+        const response = await setSettings({
+            body: newSettings
         });
 
         if (response.error) {
@@ -115,8 +111,7 @@ const saveSettings = async (
         }
 
         if (response.data) {
-            // openapi-fetch returns string dates; cast to match hey-api's SettingView (Date).
-            settingsStore.set(response.data as unknown as SettingView);
+            settingsStore.set(response.data);
             return { success: true };
         }
 

@@ -1,9 +1,11 @@
-import type { components } from '$lib/schema';
+import type {
+    GridViewSampleRenderingType,
+    GridViewThumbnailQualityType,
+    SettingView
+} from '$lib/api/lightly_studio_local';
 
-type SettingView = components['schemas']['SettingView'];
-
-type RenderingMode = components['schemas']['GridViewSampleRenderingType'];
-type ThumbnailQualityMode = components['schemas']['GridViewThumbnailQualityType'];
+type RenderingMode = GridViewSampleRenderingType;
+type ThumbnailQualityMode = GridViewThumbnailQualityType;
 
 interface SettingsDialogShortcutState {
     hideAnnotations: string;
