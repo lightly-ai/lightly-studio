@@ -164,7 +164,8 @@
             `${$dimensions?.min_height}-${$dimensions?.max_height}`,
             JSON.stringify($metadataValues),
             $textEmbedding?.queryText || '',
-            JSON.stringify($imageSortBy)
+            JSON.stringify($imageSortBy),
+            $selectedCollectionIds.join(',')
         ];
 
         return parts.filter(Boolean).join('|');
