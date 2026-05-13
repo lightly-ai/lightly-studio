@@ -5,7 +5,8 @@ import AnnotationCollectionsMenu from './AnnotationCollectionsMenu.svelte';
 
 const mocks = vi.hoisted(() => ({
     collections: [] as { collection_id: string; name: string }[],
-    setSelectedCollectionIds: vi.fn()
+    setSelectedCollectionIds: vi.fn(),
+    setCollectionIdToName: vi.fn()
 }));
 
 vi.mock('$lib/hooks/useAnnotationCollections/useAnnotationCollections', () => ({
@@ -14,7 +15,8 @@ vi.mock('$lib/hooks/useAnnotationCollections/useAnnotationCollections', () => ({
 
 vi.mock('$lib/hooks/useAnnotationCollectionsFilter/useAnnotationCollectionsFilter', () => ({
     useAnnotationCollectionsFilter: vi.fn(() => ({
-        setSelectedCollectionIds: mocks.setSelectedCollectionIds
+        setSelectedCollectionIds: mocks.setSelectedCollectionIds,
+        setCollectionIdToName: mocks.setCollectionIdToName
     }))
 }));
 
@@ -54,7 +56,6 @@ describe('AnnotationCollectionsMenu', () => {
         render(AnnotationCollectionsMenu, defaultProps);
 
         const checkbox = screen.getAllByRole('checkbox')[0];
-        await checkbox.click();
         await checkbox.click();
 
         expect(mocks.setSelectedCollectionIds).toHaveBeenLastCalledWith([]);
