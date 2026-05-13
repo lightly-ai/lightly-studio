@@ -283,7 +283,8 @@ def test_classification_evaluation__raises_on_multiple_annotations(
     )
     image = create_image(session=dataset.session, collection_id=dataset.collection_id)
     _create_gt_and_pred_collections(session=dataset.session, collection_id=dataset.collection_id)
-    # The other collection has exactly one annotation.
+    # The other collection has exactly one annotation. Confidence only matters
+    # for predictions, so only set it on the pred side.
     other_collection_name = "pred" if collection_name == "gt" else "gt"
     create_annotation(
         session=dataset.session,
@@ -291,7 +292,7 @@ def test_classification_evaluation__raises_on_multiple_annotations(
         sample_id=image.sample_id,
         annotation_label_id=label.annotation_label_id,
         annotation_type=AnnotationType.CLASSIFICATION,
-        annotation_data={"confidence": 0.5},
+        annotation_data={"confidence": 0.5} if other_collection_name == "pred" else None,
         annotation_collection_name=other_collection_name,
     )
     # The target collection has two annotations on the same sample.
@@ -302,7 +303,7 @@ def test_classification_evaluation__raises_on_multiple_annotations(
             sample_id=image.sample_id,
             annotation_label_id=label.annotation_label_id,
             annotation_type=AnnotationType.CLASSIFICATION,
-            annotation_data={"confidence": 0.5},
+            annotation_data={"confidence": 0.5} if collection_name == "pred" else None,
             annotation_collection_name=collection_name,
         )
 
