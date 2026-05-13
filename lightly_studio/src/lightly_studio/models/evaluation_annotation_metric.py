@@ -1,4 +1,4 @@
-"""EvaluationAnnotationResult model — unified annotation pairing and metrics."""
+"""EvaluationAnnotationMetricTable model — unified annotation pairing and metrics."""
 
 from __future__ import annotations
 
