@@ -1,7 +1,6 @@
 <script lang="ts">
     import { Button } from '$lib/components/ui/button';
     import * as Dialog from '$lib/components/ui/dialog';
-    import { Label } from '$lib/components/ui/label';
     import { Select, SelectContent, SelectItem, SelectTrigger } from '$lib/components/ui/select';
     import { Switch } from '$lib/components/ui/switch';
     import { useSettings } from '$lib/hooks/useSettings';
@@ -11,9 +10,12 @@
         createSettingsSavePayload,
         normalizeShortcutKey
     } from './settingsDialogState';
+    import { shortcutSettings, staticShortcuts } from './settingsDialogConfig';
+    import type { ShortcutSettingKey } from './settingsDialogConfig';
+    import { ShortcutSettingRow } from './ShortcutSettingRow';
+    import { SettingsFieldRow } from './SettingsFieldRow';
 
     type SettingsDialogFormState = ReturnType<typeof createSettingsDialogFormState>;
-    type ShortcutSettingKey = keyof SettingsDialogFormState['shortcutSettings'];
     type RenderingMode = SettingsDialogFormState['gridViewRendering'];
     type ThumbnailQualityMode = SettingsDialogFormState['gridViewThumbnailQuality'];
 
@@ -24,7 +26,7 @@
     let isSaving = $state(false);
 
     const initialFormState = createSettingsDialogFormState($settingsStore);
-    let shortcutSettings = $state(initialFormState.shortcutSettings);
+    let shortcuts = $state(initialFormState.shortcutSettings);
     let gridViewRendering: RenderingMode = $state(initialFormState.gridViewRendering);
     let gridViewThumbnailQuality: ThumbnailQualityMode = $state(
         initialFormState.gridViewThumbnailQuality
@@ -41,7 +43,7 @@
     $effect(() => {
         if ($settingsStore && $isLoadedStore && !initialized) {
             const formState = createSettingsDialogFormState($settingsStore);
-            shortcutSettings = formState.shortcutSettings;
+            shortcuts = formState.shortcutSettings;
             gridViewRendering = formState.gridViewRendering;
             gridViewThumbnailQuality = formState.gridViewThumbnailQuality;
             showAnnotationTextLabels = formState.showAnnotationTextLabels;
@@ -83,7 +85,7 @@
         try {
             await saveSettings(
                 createSettingsSavePayload({
-                    shortcutSettings,
+                    shortcutSettings: shortcuts,
                     gridViewRendering,
                     gridViewThumbnailQuality,
                     showAnnotationTextLabels,
@@ -113,7 +115,7 @@
         event.preventDefault();
         event.stopPropagation();
 
-        shortcutSettings[recordingShortcut] = normalizeShortcutKey(event);
+        shortcuts[recordingShortcut] = normalizeShortcutKey(event);
 
         // Stop recording
         recordingShortcut = null;
@@ -140,209 +142,30 @@
                     <!-- Keyboard Shortcuts -->
                     <div class="space-y-4">
                         <h3 class="text-lg font-medium text-foreground">Keyboard Shortcuts</h3>
-                        <div class="grid grid-cols-2 items-center gap-4">
-                            <Label for="hide-annotations" class="text-right text-foreground">
-                                Hide Annotations
-                            </Label>
-                            <button
-                                id="hide-annotations"
-                                type="button"
-                                class="rounded-md border border-input bg-background p-2 text-left text-foreground"
-                                onclick={(e) => {
-                                    e.preventDefault();
-                                    startRecording('hideAnnotations');
-                                }}
-                            >
-                                {#if recordingShortcut === 'hideAnnotations'}
-                                    <span class="italic opacity-70">Press a key...</span>
-                                {:else}
-                                    <span>{shortcutSettings.hideAnnotations}</span>
-                                {/if}
-                            </button>
-                        </div>
-                        <div class="grid grid-cols-2 items-center gap-4">
-                            <Label for="go-back" class="text-right text-foreground">Go Back</Label>
-                            <button
-                                id="go-back"
-                                type="button"
-                                class="rounded-md border border-input bg-background p-2 text-left text-foreground"
-                                onclick={(e) => {
-                                    e.preventDefault();
-                                    startRecording('goBack');
-                                }}
-                            >
-                                {#if recordingShortcut === 'goBack'}
-                                    <span class="italic opacity-70">Press a key...</span>
-                                {:else}
-                                    <span>{shortcutSettings.goBack}</span>
-                                {/if}
-                            </button>
-                        </div>
-                        <div class="grid grid-cols-2 items-center gap-4">
-                            <Label for="toggle-edit-mode" class="text-right text-foreground">
-                                Toggle Edit Mode
-                            </Label>
-                            <button
-                                id="toggle-edit-mode"
-                                type="button"
-                                class="rounded-md border border-input bg-background p-2 text-left text-foreground"
-                                onclick={(e) => {
-                                    e.preventDefault();
-                                    startRecording('toggleEditMode');
-                                }}
-                            >
-                                {#if recordingShortcut === 'toggleEditMode'}
-                                    <span class="italic opacity-70">Press a key...</span>
-                                {:else}
-                                    <span>{shortcutSettings.toggleEditMode}</span>
-                                {/if}
-                            </button>
-                        </div>
-                        <div class="grid grid-cols-2 items-center gap-4">
-                            <Label for="toggle-edit-mode" class="text-right text-foreground">
-                                Toolbar selection
-                            </Label>
-                            <button
-                                id="toggle-edit-mode"
-                                type="button"
-                                class="rounded-md border border-input bg-background p-2 text-left text-foreground"
-                                onclick={(e) => {
-                                    e.preventDefault();
-                                    startRecording('keyToolbarSelection');
-                                }}
-                            >
-                                {#if recordingShortcut === 'keyToolbarSelection'}
-                                    <span class="italic opacity-70">Press a key...</span>
-                                {:else}
-                                    <span>{shortcutSettings.keyToolbarSelection}</span>
-                                {/if}
-                            </button>
-                        </div>
-                        <div class="grid grid-cols-2 items-center gap-4">
-                            <Label for="toggle-edit-mode" class="text-right text-foreground">
-                                Toolbar drag
-                            </Label>
-                            <button
-                                id="toggle-edit-mode"
-                                type="button"
-                                class="rounded-md border border-input bg-background p-2 text-left text-foreground"
-                                onclick={(e) => {
-                                    e.preventDefault();
-                                    startRecording('keyToolbarDrag');
-                                }}
-                            >
-                                {#if recordingShortcut === 'keyToolbarDrag'}
-                                    <span class="italic opacity-70">Press a key...</span>
-                                {:else}
-                                    <span>{shortcutSettings.keyToolbarDrag}</span>
-                                {/if}
-                            </button>
-                        </div>
-                        <div class="grid grid-cols-2 items-center gap-4">
-                            <Label for="toggle-edit-mode" class="text-right text-foreground">
-                                Toolbar bounding box
-                            </Label>
-                            <button
-                                id="toggle-edit-mode"
-                                type="button"
-                                class="rounded-md border border-input bg-background p-2 text-left text-foreground"
-                                onclick={(e) => {
-                                    e.preventDefault();
-                                    startRecording('keyToolbarBoundingBox');
-                                }}
-                            >
-                                {#if recordingShortcut === 'keyToolbarBoundingBox'}
-                                    <span class="italic opacity-70">Press a key...</span>
-                                {:else}
-                                    <span>{shortcutSettings.keyToolbarBoundingBox}</span>
-                                {/if}
-                            </button>
-                        </div>
-                        <div class="grid grid-cols-2 items-center gap-4">
-                            <Label
-                                for="toggle-toolbar-segmentation-mask"
-                                class="text-right text-foreground"
-                            >
-                                Toolbar segmentation mask
-                            </Label>
-                            <button
-                                id="toggle-toolbar-segmentation-mask"
-                                type="button"
-                                class="rounded-md border border-input bg-background p-2 text-left text-foreground"
-                                onclick={(e) => {
-                                    e.preventDefault();
-                                    startRecording('keyToolbarSegmentationMask');
-                                }}
-                            >
-                                {#if recordingShortcut === 'keyToolbarSegmentationMask'}
-                                    <span class="italic opacity-70">Press a key...</span>
-                                {:else}
-                                    <span>{shortcutSettings.keyToolbarSegmentationMask}</span>
-                                {/if}
-                            </button>
-                        </div>
-                        <div class="grid grid-cols-2 items-center gap-4">
-                            <Label for="toolbar-brush-mode" class="text-right text-foreground">
-                                Toolbar brush mode
-                            </Label>
-                            <button
-                                id="toolbar-brush-mode"
-                                type="button"
-                                class="rounded-md border border-input bg-background p-2 text-left text-foreground"
-                                onclick={(e) => {
-                                    e.preventDefault();
-                                    startRecording('keyToolbarBrush');
-                                }}
-                            >
-                                {#if recordingShortcut === 'keyToolbarBrush'}
-                                    <span class="italic opacity-70">Press a key...</span>
-                                {:else}
-                                    <span>{shortcutSettings.keyToolbarBrush}</span>
-                                {/if}
-                            </button>
-                        </div>
-                        <div class="grid grid-cols-2 items-center gap-4">
-                            <Label for="toolbar-eraser-mode" class="text-right text-foreground">
-                                Toolbar eraser mode
-                            </Label>
-                            <button
-                                id="toolbar-eraser-mode"
-                                type="button"
-                                class="rounded-md border border-input bg-background p-2 text-left text-foreground"
-                                onclick={(e) => {
-                                    e.preventDefault();
-                                    startRecording('keyToolbarEraser');
-                                }}
-                            >
-                                {#if recordingShortcut === 'keyToolbarEraser'}
-                                    <span class="italic opacity-70">Press a key...</span>
-                                {:else}
-                                    <span>{shortcutSettings.keyToolbarEraser}</span>
-                                {/if}
-                            </button>
-                        </div>
-                        <div class="grid grid-cols-2 items-center gap-4">
-                            <Label for="change-brush-size" class="text-right text-foreground">
-                                Change brush size
-                            </Label>
-                            <button
-                                id="change-brush-size"
-                                type="button"
+                        {#each shortcutSettings as setting (setting.id)}
+                            <ShortcutSettingRow
+                                id={setting.id}
+                                label={setting.label}
+                                value={shortcuts[setting.key]}
+                                isRecording={recordingShortcut === setting.key}
+                                onStartRecording={() => startRecording(setting.key)}
+                            />
+                        {/each}
+                        {#each staticShortcuts as setting (setting.id)}
+                            <ShortcutSettingRow
+                                id={setting.id}
+                                label={setting.label}
+                                value={setting.displayValue}
+                                isRecording={false}
                                 disabled
-                                class="rounded-md border border-input bg-background p-2 text-left text-foreground"
-                            >
-                                <span>Alt + scroll</span>
-                            </button>
-                        </div>
+                            />
+                        {/each}
                     </div>
 
                     <!-- Grid View Settings -->
                     <div class="space-y-4">
                         <h3 class="text-lg font-medium text-foreground">Display Settings</h3>
-                        <div class="grid grid-cols-2 items-center gap-4">
-                            <Label for="grid-view-rendering" class="text-right text-foreground">
-                                Grid View Rendering
-                            </Label>
+                        <SettingsFieldRow id="grid-view-rendering" label="Grid View Rendering">
                             <div class="relative">
                                 <Select
                                     type="single"
@@ -358,24 +181,21 @@
                                     </SelectContent>
                                 </Select>
                             </div>
-                        </div>
-                        <div class="grid grid-cols-2 items-center gap-4">
-                            <Label for="show-sample-filenames" class="text-right text-foreground">
-                                Show filenames in grid view
-                            </Label>
+                        </SettingsFieldRow>
+                        <SettingsFieldRow
+                            id="show-sample-filenames"
+                            label="Show filenames in grid view"
+                        >
                             <Switch
                                 id="show-sample-filenames"
                                 bind:checked={showSampleFilenames}
                                 disabled={isSaving}
                             />
-                        </div>
-                        <div class="grid grid-cols-2 items-center gap-4">
-                            <Label
-                                for="grid-view-thumbnail-quality"
-                                class="text-right text-foreground"
-                            >
-                                Thumbnail Quality in Grid View
-                            </Label>
+                        </SettingsFieldRow>
+                        <SettingsFieldRow
+                            id="grid-view-thumbnail-quality"
+                            label="Thumbnail Quality in Grid View"
+                        >
                             <div class="relative">
                                 <Select
                                     type="single"
@@ -391,38 +211,32 @@
                                     </SelectContent>
                                 </Select>
                             </div>
-                        </div>
+                        </SettingsFieldRow>
                     </div>
 
-                    <!-- Annotation Text Labels Setting -->
+                    <!-- Annotation Settings -->
                     <div class="space-y-4">
                         <h3 class="text-lg font-medium text-foreground">Annotation Settings</h3>
-                        <div class="grid grid-cols-2 items-center gap-4">
-                            <Label
-                                for="show-bounding-boxes-for-segmentation"
-                                class="text-right text-foreground"
-                            >
-                                Show Bounding Boxes for Segmentation
-                            </Label>
+                        <SettingsFieldRow
+                            id="show-bounding-boxes-for-segmentation"
+                            label="Show Bounding Boxes for Segmentation"
+                        >
                             <Switch
                                 id="show-bounding-boxes-for-segmentation"
                                 bind:checked={showBoundingBoxesForSegmentation}
                                 disabled={isSaving}
                             />
-                        </div>
-                        <div class="grid grid-cols-2 items-center gap-4">
-                            <Label
-                                for="show-annotation-text-labels"
-                                class="text-right text-foreground"
-                            >
-                                Show Annotation Text Labels
-                            </Label>
+                        </SettingsFieldRow>
+                        <SettingsFieldRow
+                            id="show-annotation-text-labels"
+                            label="Show Annotation Text Labels"
+                        >
                             <Switch
                                 id="show-annotation-text-labels"
                                 bind:checked={showAnnotationTextLabels}
                                 disabled={isSaving}
                             />
-                        </div>
+                        </SettingsFieldRow>
                     </div>
                 </div>
 

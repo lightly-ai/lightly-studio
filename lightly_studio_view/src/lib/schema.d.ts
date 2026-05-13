@@ -1272,6 +1272,34 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/datasets/{dataset_id}/evaluation/metrics/sample/info": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Evaluation Sample Metrics Info
+         * @description Get metric bounds for all evaluation runs in a dataset.
+         *
+         *     Args:
+         *         session: The database session.
+         *         dataset_id: The dataset's UUID.
+         *
+         *     Returns:
+         *         List of evaluation run metric info objects, each containing the run name
+         *         and the min/max bounds for every metric in that run.
+         */
+        get: operations["get_evaluation_sample_metrics_info"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/collections/{collection_id}/metadata/info": {
         parameters: {
             query?: never;
@@ -2794,6 +2822,26 @@ export interface components {
             };
             /** Created At */
             created_at: string;
+         * EvaluationRunMetricsInfoView
+         * @description Metric bounds for all metrics in a single evaluation run.
+         */
+        EvaluationRunMetricsInfoView: {
+            /** Run Name */
+            run_name: string;
+            /** Metrics */
+            metrics: components["schemas"]["EvaluationSampleMetricBoundsView"][];
+        };
+        /**
+         * EvaluationSampleMetricBoundsView
+         * @description Min/max value bounds for a single metric across all samples in a run.
+         */
+        EvaluationSampleMetricBoundsView: {
+            /** Metric Name */
+            metric_name: string;
+            /** Min Value */
+            min_value: number;
+            /** Max Value */
+            max_value: number;
         };
         /**
          * ExecuteOperatorRequest
@@ -6460,6 +6508,37 @@ export interface operations {
                 };
                 content: {
                     "application/json": string[];
+                };
+            };
+        };
+    };
+    get_evaluation_sample_metrics_info: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                dataset_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EvaluationRunMetricsInfoView"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
                 };
             };
         };
