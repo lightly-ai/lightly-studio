@@ -1,9 +1,12 @@
-import type { components } from '$lib/schema';
+import type {
+    GridViewSampleRenderingType,
+    SettingView as PartialSettingView
+} from '$lib/api/lightly_studio_local';
 import { client } from '$lib/services/collection';
 import { derived, get, writable } from 'svelte/store';
 import { getSettings } from '$lib/api/lightly_studio_local';
 
-type SettingView = components['schemas']['SettingView'];
+export type SettingView = Required<PartialSettingView>;
 type UpdateSettingsResult = { success: boolean; error?: string };
 
 // Default settings values
@@ -15,10 +18,10 @@ const DEFAULT_SETTINGS: SettingView = {
     key_go_back: 'Escape',
     key_toggle_edit_mode: 'e',
     show_annotation_text_labels: false,
-    show_sample_filenames: true,
+    show_sample_filenames: false,
     show_bounding_boxes_for_segmentation: true,
-    created_at: new Date().toISOString(),
-    updated_at: new Date().toISOString(),
+    created_at: new Date(),
+    updated_at: new Date(),
     key_toolbar_selection: 's',
     key_toolbar_drag: 'd',
     key_toolbar_bounding_box: 'b',
@@ -46,7 +49,7 @@ const showAnnotationTextLabelsStore = derived(
 
 const showSampleFilenamesStore = derived(
     settingsStore,
-    ($settings) => $settings.show_sample_filenames ?? true
+    ($settings) => $settings.show_sample_filenames ?? false
 );
 
 const showBoundingBoxesForSegmentationStore = derived(
@@ -72,7 +75,7 @@ const initSettings = async () => {
     try {
         const { data } = await getSettings();
         if (data) {
-            settingsStore.set(data as unknown as SettingView);
+            settingsStore.set(data as SettingView);
             isLoadedStore.set(true);
         }
     } catch (err) {
@@ -116,13 +119,13 @@ const saveSettings = async (
             show_sample_filenames:
                 updatedSettings.show_sample_filenames !== undefined
                     ? updatedSettings.show_sample_filenames
-                    : (currentSettings.show_sample_filenames ?? true),
+                    : (currentSettings.show_sample_filenames ?? false),
             show_bounding_boxes_for_segmentation:
                 updatedSettings.show_bounding_boxes_for_segmentation !== undefined
                     ? updatedSettings.show_bounding_boxes_for_segmentation
                     : (currentSettings.show_bounding_boxes_for_segmentation ?? true),
-            created_at: currentSettings.created_at || new Date().toISOString(),
-            updated_at: new Date().toISOString(),
+            created_at: currentSettings.created_at || new Date(),
+            updated_at: new Date(),
             key_toolbar_selection:
                 updatedSettings.key_toolbar_selection || currentSettings.key_toolbar_selection,
             key_toolbar_drag: updatedSettings.key_toolbar_drag || currentSettings.key_toolbar_drag,
@@ -140,7 +143,7 @@ const saveSettings = async (
 
         // The API call
         const response = await client.POST('/api/settings', {
-            body: newSettings,
+            body: newSettings as never,
             headers: {
                 'Content-Type': 'application/json'
             }
@@ -158,7 +161,7 @@ const saveSettings = async (
         }
 
         if (response.data) {
-            settingsStore.set(response.data);
+            settingsStore.set(response.data as unknown as SettingView);
             return { success: true };
         }
 
@@ -175,9 +178,7 @@ const saveSettings = async (
 };
 
 // Utility function to update grid view rendering
-const updateGridViewSampleRendering = async (
-    rendering: components['schemas']['GridViewSampleRenderingType']
-) => {
+const updateGridViewSampleRendering = async (rendering: GridViewSampleRenderingType) => {
     return saveSettings({
         grid_view_sample_rendering: rendering
     });
@@ -200,7 +201,7 @@ const updateShowAnnotationTextLabels = async (show: boolean) => {
     // Send to API
     try {
         const response = await client.POST('/api/settings', {
-            body: newSettings,
+            body: newSettings as never,
             headers: {
                 'Content-Type': 'application/json'
             }
@@ -213,7 +214,7 @@ const updateShowAnnotationTextLabels = async (show: boolean) => {
 
         if (response.data) {
             // Update store with the response data
-            settingsStore.set(response.data);
+            settingsStore.set(response.data as unknown as SettingView);
             return { success: true };
         }
 
