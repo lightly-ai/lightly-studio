@@ -1949,7 +1949,7 @@ export interface components {
             /** Text Embedding */
             text_embedding?: number[] | null;
             /** Sort By */
-            sort_by?: components["schemas"]["SortFieldExpr"][] | null;
+            sort_by?: (components["schemas"]["SortFieldExpr"] | components["schemas"]["EvaluationMetricSortExpr"])[] | null;
         };
         /**
          * AdjacentResultView
@@ -2676,6 +2676,33 @@ export interface components {
             value: number;
         };
         /**
+         * EvaluationMetricSortExpr
+         * @description A sorting expression for an evaluation metric field.
+         *
+         *     Attributes:
+         *         source: Always ``"evaluation_metric"`` (discriminator for the union type).
+         *         evaluation_run_name: The name of the evaluation run to sort by.
+         *         metric_name: The metric name to sort by.
+         *         direction: The sort direction, either ascending or descending.
+         */
+        EvaluationMetricSortExpr: {
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            source: "evaluation_metric";
+            /** Evaluation Run Name */
+            evaluation_run_name: string;
+            /** Metric Name */
+            metric_name: string;
+            direction: components["schemas"]["SortDirection"];
+            /**
+             * Is Numeric
+             * @default false
+             */
+            is_numeric: boolean;
+        };
+        /**
          * EvaluationRunMetricsInfoView
          * @description Metric bounds for all metrics in a single evaluation run.
          */
@@ -3345,7 +3372,7 @@ export interface components {
              * Sort By
              * @description Sort expressions for ordering
              */
-            sort_by?: components["schemas"]["SortFieldExpr"][] | null;
+            sort_by?: (components["schemas"]["SortFieldExpr"] | components["schemas"]["EvaluationMetricSortExpr"])[] | null;
         };
         /**
          * ReadSamplesRequest
@@ -3615,86 +3642,68 @@ export interface components {
          * @description View class for Settings model.
          */
         SettingView: {
-            /**
-             * @description Controls how samples are rendered in the grid view
-             * @default contain
-             */
+            /** @description Controls how samples are rendered in the grid view */
             grid_view_sample_rendering: components["schemas"]["GridViewSampleRenderingType"];
-            /**
-             * @description Controls thumbnail quality for grid-like preview views
-             * @default raw
-             */
+            /** @description Controls thumbnail quality for grid-like preview views */
             grid_view_thumbnail_quality: components["schemas"]["GridViewThumbnailQualityType"];
             /**
              * Key Hide Annotations
              * @description Key to temporarily hide annotations while pressed
-             * @default v
              */
             key_hide_annotations: string;
             /**
              * Key Go Back
              * @description Key to navigate back from detail view to grid view
-             * @default Escape
              */
             key_go_back: string;
             /**
              * Key Toggle Edit Mode
              * @description Key to toggle annotation edit mode
-             * @default e
              */
             key_toggle_edit_mode: string;
             /**
              * Show Annotation Text Labels
              * @description Controls whether to show text labels on annotations
-             * @default false
              */
             show_annotation_text_labels: boolean;
             /**
              * Show Sample Filenames
              * @description Controls whether to show sample filenames in the samples grid view
-             * @default false
              */
             show_sample_filenames: boolean;
             /**
              * Show Bounding Boxes For Segmentation
              * @description Controls whether to show annotation bounding boxes for segmentation
-             * @default true
              */
             show_bounding_boxes_for_segmentation: boolean;
             /**
              * Key Toolbar Selection
              * @description Key to activate the selection tool in the toolbar
-             * @default s
              */
             key_toolbar_selection: string;
             /**
              * Key Toolbar Drag
              * @description Key to activate the drag tool in the toolbar
-             * @default d
              */
             key_toolbar_drag: string;
             /**
              * Key Toolbar Bounding Box
              * @description Key to activate the bounding box tool in the toolbar
-             * @default b
              */
             key_toolbar_bounding_box: string;
             /**
              * Key Toolbar Segmentation Mask
              * @description Key to activate the segmentation mask tool in the toolbar
-             * @default m
              */
             key_toolbar_segmentation_mask: string;
             /**
              * Key Toolbar Brush
              * @description Key to activate brush mode in the segmentation tool
-             * @default r
              */
             key_toolbar_brush: string;
             /**
              * Key Toolbar Eraser
              * @description Key to activate eraser mode in the segmentation tool
-             * @default x
              */
             key_toolbar_eraser: string;
             /**
@@ -3732,19 +3741,17 @@ export interface components {
          *             Only relevant when ``source`` is ``"metadata"``.
          */
         SortFieldExpr: {
-            source: components["schemas"]["SortFieldSource"];
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            source: "image" | "metadata";
             /** Field Name */
             field_name: string;
             direction: components["schemas"]["SortDirection"];
             /** Is Numeric */
             is_numeric: boolean;
         };
-        /**
-         * SortFieldSource
-         * @description Source of the field to sort by.
-         * @enum {string}
-         */
-        SortFieldSource: "image" | "metadata";
         /**
          * StringExpr
          * @description Leaf node for equality comparisons on string sample fields.

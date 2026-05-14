@@ -1,7 +1,7 @@
 import { vi, describe, it, expect, beforeEach } from 'vitest';
 import { get } from 'svelte/store';
 import { useFeatureFlags } from './useFeatureFlags';
-import collection from '$lib/services/collection';
+import * as sdkModule from '$lib/api/lightly_studio_local/sdk.gen';
 
 describe('useFeatureFlags', () => {
     beforeEach(() => {
@@ -15,7 +15,11 @@ describe('useFeatureFlags', () => {
 
     it('should update feature flags when API call succeeds', async () => {
         const mockFeatures = ['feature1', 'feature2'];
-        const mockedGet = vi.spyOn(collection, 'GET').mockResolvedValueOnce({ data: mockFeatures });
+        const spy = vi.spyOn(sdkModule, 'getFeatures').mockResolvedValueOnce({
+            data: mockFeatures,
+            request: new Request('http://localhost'),
+            response: new Response()
+        });
 
         const { featureFlags } = useFeatureFlags();
 
@@ -23,12 +27,12 @@ describe('useFeatureFlags', () => {
         await new Promise((resolve) => setTimeout(resolve, 0));
 
         expect(get(featureFlags)).toEqual(mockFeatures);
-        expect(mockedGet).toHaveBeenCalledWith('/api/features');
+        expect(spy).toHaveBeenCalled();
     });
 
     it('should handle API call failure gracefully', async () => {
         const _error: Error = new Error('API Error');
-        const mockedGet = vi.spyOn(collection, 'GET').mockRejectedValueOnce(_error);
+        const spy = vi.spyOn(sdkModule, 'getFeatures').mockRejectedValueOnce(_error);
 
         const { featureFlags, error } = useFeatureFlags();
 
@@ -37,6 +41,6 @@ describe('useFeatureFlags', () => {
 
         expect(get(featureFlags)).toEqual([]);
         expect(get(error)).toEqual(_error);
-        expect(mockedGet).toHaveBeenCalledWith('/api/features');
+        expect(spy).toHaveBeenCalled();
     });
 });

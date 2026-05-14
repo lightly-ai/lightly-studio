@@ -11,6 +11,7 @@ from sqlmodel.sql.expression import Select
 
 from lightly_studio.core.dataset_query.image_sample_field import ImageSampleField
 from lightly_studio.core.dataset_query.order_by import (
+    OrderByEvaluationMetricField,
     OrderByExpression,
     OrderByField,
     OrderByMetadataField,
@@ -32,7 +33,12 @@ def get_adjacent_images(  # noqa: PLR0913
     order_by: list[OrderByExpression] | None = None,
 ) -> AdjacentResultView | None:
     """Get the adjacent images for a given sample ID."""
-    base_query = _base_query(order_by=order_by)
+    metadata_already_joined = (
+        filters is not None
+        and filters.sample_filter is not None
+        and bool(filters.sample_filter.metadata_filters)
+    )
+    base_query = _base_query(order_by=order_by, skip_metadata_join=metadata_already_joined)
     base_query = base_query.where(col(SampleTable.collection_id) == collection_id)
 
     embedding_model_id, distance_expr = similarity_utils.get_distance_expression(
@@ -43,9 +49,11 @@ def get_adjacent_images(  # noqa: PLR0913
 
     if distance_expr is not None and embedding_model_id is not None:
         base_query = similarity_utils.apply_similarity_join(
-            query=_base_query(ordering_expression=[distance_expr], order_by=order_by).where(
-                col(SampleTable.collection_id) == collection_id
-            ),
+            query=_base_query(
+                ordering_expression=[distance_expr],
+                order_by=order_by,
+                skip_metadata_join=metadata_already_joined,
+            ).where(col(SampleTable.collection_id) == collection_id),
             sample_id_column=col(ImageTable.sample_id),
             embedding_model_id=embedding_model_id,
         )
@@ -63,12 +71,20 @@ def get_adjacent_images(  # noqa: PLR0913
 def _base_query(
     ordering_expression: Any | None = None,
     order_by: list[OrderByExpression] | None = None,
+    skip_metadata_join: bool = False,
 ) -> Select[Any]:
     needs_tiebreaker = not order_by or not any(
         isinstance(expr, OrderByField) and expr.field is ImageSampleField.file_path_abs
         for expr in order_by
     )
-    tiebreaker = [col(ImageTable.file_path_abs).asc()] if needs_tiebreaker else []
+    if needs_tiebreaker:
+        file_path_col = col(ImageTable.file_path_abs)
+        tiebreaker_col = (
+            file_path_col.asc() if (not order_by or order_by[0].ascending) else file_path_col.desc()
+        )
+        tiebreaker = [tiebreaker_col]
+    else:
+        tiebreaker = []
     if ordering_expression is not None:
         order_col = (
             ordering_expression + [expr.to_column_element() for expr in order_by] + tiebreaker
@@ -96,10 +112,20 @@ def _base_query(
     )
 
     # to_column_element() references metadata.data, so the table must be joined explicitly.
-    if order_by and any(isinstance(expr, OrderByMetadataField) for expr in order_by):
+    # Skip the join if filters will already join SampleMetadataTable to avoid a duplicate join.
+    if (
+        not skip_metadata_join
+        and order_by
+        and any(isinstance(expr, OrderByMetadataField) for expr in order_by)
+    ):
         query = query.outerjoin(
             SampleMetadataTable,
             SampleMetadataTable.sample_id == col(ImageTable.sample_id),  # type: ignore[arg-type]
         )
+    # to_column_element() references evaluation_sample_metric.value, so the tables must be joined.
+    if order_by:
+        for expr in order_by:
+            if isinstance(expr, OrderByEvaluationMetricField):
+                query = expr.apply_join(query)  # type: ignore[arg-type,assignment]
 
     return query

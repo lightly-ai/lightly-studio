@@ -14,6 +14,7 @@ from sqlmodel import Session, col, func, select
 from lightly_studio.api.routes.api.validators import Paginated
 from lightly_studio.core.dataset_query.image_sample_field import ImageSampleField
 from lightly_studio.core.dataset_query.order_by import (
+    OrderByEvaluationMetricField,
     OrderByExpression,
     OrderByField,
     OrderByMetadataField,
@@ -34,6 +35,15 @@ def _file_path_abs_in_order_by(order_by: list[OrderByExpression]) -> bool:
     return any(
         isinstance(expr, OrderByField) and expr.field is ImageSampleField.file_path_abs
         for expr in order_by
+    )
+
+
+def _has_metadata_join(filters: ImageFilter | None) -> bool:
+    """Return True if filters already join SampleMetadataTable."""
+    return (
+        filters is not None
+        and filters.sample_filter is not None
+        and bool(filters.sample_filter.metadata_filters)
     )
 
 
@@ -157,15 +167,24 @@ def _get_all_with_similarity(  # noqa: PLR0913
 
     samples_query = samples_query.order_by(distance_expr)
     if order_by:
-        if any(isinstance(expr, OrderByMetadataField) for expr in order_by):
+        if any(
+            isinstance(expr, OrderByMetadataField) for expr in order_by
+        ) and not _has_metadata_join(filters):
             samples_query = samples_query.outerjoin(
                 SampleMetadataTable,
                 SampleMetadataTable.sample_id == col(ImageTable.sample_id),  # type: ignore[arg-type]
             )
         for expr in order_by:
+            if isinstance(expr, OrderByEvaluationMetricField):
+                samples_query = expr.apply_join(samples_query)  # type: ignore[arg-type,assignment]
+        for expr in order_by:
             samples_query = samples_query.order_by(expr.to_column_element())
     if not order_by or not _file_path_abs_in_order_by(order_by):
-        samples_query = samples_query.order_by(col(ImageTable.file_path_abs).asc())
+        file_path_col = col(ImageTable.file_path_abs)
+        tiebreaker = (
+            file_path_col.asc() if not order_by or order_by[0].ascending else file_path_col.desc()
+        )
+        samples_query = samples_query.order_by(tiebreaker)
 
     if pagination is not None:
         samples_query = samples_query.offset(pagination.offset).limit(pagination.limit)
@@ -219,10 +238,16 @@ def _get_all_without_similarity(  # noqa: PLR0913
         total_count_query = total_count_query.where(col(ImageTable.sample_id).in_(sample_ids))
 
     if order_by:
+        metadata_already_joined = _has_metadata_join(filters)
         for expr in order_by:
-            samples_query = expr.apply(samples_query)
+            if metadata_already_joined and isinstance(expr, OrderByMetadataField):
+                samples_query = samples_query.order_by(expr.to_column_element())
+            else:
+                samples_query = expr.apply(samples_query)
         if not _file_path_abs_in_order_by(order_by):
-            samples_query = samples_query.order_by(col(ImageTable.file_path_abs).asc())
+            file_path_col = col(ImageTable.file_path_abs)
+            tiebreaker = file_path_col.asc() if order_by[0].ascending else file_path_col.desc()
+            samples_query = samples_query.order_by(tiebreaker)
     else:
         samples_query = samples_query.order_by(col(ImageTable.file_path_abs).asc())
 
