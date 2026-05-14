@@ -11,6 +11,7 @@ from sqlmodel.sql.expression import Select
 
 from lightly_studio.core.dataset_query.image_sample_field import ImageSampleField
 from lightly_studio.core.dataset_query.order_by import (
+    OrderByEvaluationMetricField,
     OrderByExpression,
     OrderByField,
     OrderByMetadataField,
@@ -68,7 +69,14 @@ def _base_query(
         isinstance(expr, OrderByField) and expr.field is ImageSampleField.file_path_abs
         for expr in order_by
     )
-    tiebreaker = [col(ImageTable.file_path_abs).asc()] if needs_tiebreaker else []
+    if needs_tiebreaker:
+        file_path_col = col(ImageTable.file_path_abs)
+        tiebreaker_col = (
+            file_path_col.asc() if (not order_by or order_by[0].ascending) else file_path_col.desc()
+        )
+        tiebreaker = [tiebreaker_col]
+    else:
+        tiebreaker = []
     if ordering_expression is not None:
         order_col = (
             ordering_expression + [expr.to_column_element() for expr in order_by] + tiebreaker
@@ -101,5 +109,10 @@ def _base_query(
             SampleMetadataTable,
             SampleMetadataTable.sample_id == col(ImageTable.sample_id),  # type: ignore[arg-type]
         )
+    # to_column_element() references evaluation_sample_metric.value, so the tables must be joined.
+    if order_by:
+        for expr in order_by:
+            if isinstance(expr, OrderByEvaluationMetricField):
+                query = expr.apply_join(query)  # type: ignore[arg-type,assignment]
 
     return query
