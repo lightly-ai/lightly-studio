@@ -409,6 +409,16 @@
                 {/if}
             {/snippet}
 
+            {#snippet paneResizer()}
+                <PaneResizer
+                    class="relative mx-2 flex w-1 cursor-col-resize items-center justify-center"
+                >
+                    <div class="bg-brand z-10 flex h-7 min-w-5 items-center justify-center">
+                        <GripVertical class="text-diffuse-foreground" />
+                    </div>
+                </PaneResizer>
+            {/snippet}
+
             {#if (isImages || isVideos) && $showPlot}
                 <!-- When plot is shown, use PaneGroup for the main content + plot -->
                 <PaneGroup direction="horizontal" class="flex-1">
@@ -454,13 +464,7 @@
                         </div>
                     </Pane>
 
-                    <PaneResizer
-                        class="relative mx-2 flex w-1 cursor-col-resize items-center justify-center"
-                    >
-                        <div class="bg-brand z-10 flex h-7 min-w-5 items-center justify-center">
-                            <GripVertical class="text-diffuse-foreground" />
-                        </div>
-                    </PaneResizer>
+                    {@render paneResizer()}
 
                     <Pane defaultSize={50} minSize={30} class="flex min-h-0 flex-col">
                         {#await import('$lib/components/PlotPanel/PlotPanel.svelte') then { default: PlotPanel }}
@@ -483,13 +487,7 @@
                         </div>
                     </Pane>
 
-                    <PaneResizer
-                        class="relative mx-2 flex w-1 cursor-col-resize items-center justify-center"
-                    >
-                        <div class="bg-brand z-10 flex h-7 min-w-5 items-center justify-center">
-                            <GripVertical class="text-diffuse-foreground" />
-                        </div>
-                    </PaneResizer>
+                    {@render paneResizer()}
 
                     <Pane defaultSize={35} minSize={25} class="flex min-h-0 flex-col">
                         <QueryEditorPanel />
