@@ -5,6 +5,10 @@ import { vi } from 'vitest';
 type GetImageDimensionsReturn = Awaited<ReturnType<typeof sdk.getImageDimensions>>;
 
 describe('loadDimensionBounds', () => {
+    afterEach(() => {
+        vi.restoreAllMocks();
+    });
+
     it('should return dimension bounds when loaded successfully', async () => {
         const mockData = {
             min_width: 100,
