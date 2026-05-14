@@ -28,6 +28,7 @@ from lightly_studio.models.caption import CaptionTable
 from lightly_studio.models.collection import CollectionTable
 from lightly_studio.models.dataset import DatasetTable
 from lightly_studio.models.embedding_model import EmbeddingModelTable
+from lightly_studio.models.evaluation_annotation_metric import EvaluationAnnotationMetricTable
 from lightly_studio.models.evaluation_run import EvaluationRunTable
 from lightly_studio.models.evaluation_sample_metric import EvaluationSampleMetricTable
 from lightly_studio.models.group import GroupTable, SampleGroupLinkTable
@@ -134,6 +135,7 @@ def deep_copy(
     _copy_metadata(session=session, old_sample_ids=old_sample_ids, ctx=ctx)
     _copy_embeddings(session=session, old_sample_ids=old_sample_ids, ctx=ctx)
     _copy_evaluation_sample_metrics(session=session, ctx=ctx)
+    _copy_evaluation_annotation_metrics(session=session, ctx=ctx)
     session.flush()
 
     # 6. Copy link tables.
@@ -615,6 +617,42 @@ def _copy_evaluation_sample_metrics(
             {
                 "evaluation_run_id": ctx.evaluation_run_map[old_metric.evaluation_run_id],
                 "sample_id": ctx.sample_map[old_metric.sample_id],
+            },
+        )
+        session.add(new_metric)
+
+
+def _copy_evaluation_annotation_metrics(
+    session: Session,
+    ctx: DeepCopyContext,
+) -> None:
+    """Copy evaluation annotation metrics, remapping run, sample, and annotation IDs."""
+    if not ctx.evaluation_run_map:
+        return
+    old_run_ids = list(ctx.evaluation_run_map.keys())
+    metrics = session.exec(
+        select(EvaluationAnnotationMetricTable).where(
+            col(EvaluationAnnotationMetricTable.evaluation_run_id).in_(old_run_ids)
+        )
+    ).all()
+
+    for old_metric in metrics:
+        new_metric = _copy_with_updates(
+            old_metric,
+            {
+                "id": uuid4(),
+                "evaluation_run_id": ctx.evaluation_run_map[old_metric.evaluation_run_id],
+                "sample_id": ctx.sample_map[old_metric.sample_id],
+                "pred_annotation_id": (
+                    ctx.sample_map[old_metric.pred_annotation_id]
+                    if old_metric.pred_annotation_id is not None
+                    else None
+                ),
+                "gt_annotation_id": (
+                    ctx.sample_map[old_metric.gt_annotation_id]
+                    if old_metric.gt_annotation_id is not None
+                    else None
+                ),
             },
         )
         session.add(new_metric)

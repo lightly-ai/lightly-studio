@@ -11,6 +11,7 @@ from lightly_studio.models.annotation.object_detection import ObjectDetectionAnn
 from lightly_studio.models.annotation.object_track import ObjectTrackCreate
 from lightly_studio.models.annotation.segmentation import SegmentationAnnotationTable
 from lightly_studio.models.collection import SampleType
+from lightly_studio.models.evaluation_annotation_metric import EvaluationAnnotationMetricCreate
 from lightly_studio.models.evaluation_run import EvaluationRunCreate, EvaluationTaskType
 from lightly_studio.models.evaluation_sample_metric import EvaluationSampleMetricCreate
 from lightly_studio.resolvers import (
@@ -18,6 +19,7 @@ from lightly_studio.resolvers import (
     collection_resolver,
     dataset_resolver,
     embedding_model_resolver,
+    evaluation_annotation_metric_resolver,
     evaluation_run_resolver,
     evaluation_sample_metric_resolver,
     image_resolver,
@@ -699,3 +701,96 @@ def test_deep_copy__with_evaluation_runs(db_session: Session) -> None:
     assert original_runs[0].id == run.id
     assert original_runs[0].gt_annotation_collection_id == gt_collection.collection_id
     assert original_runs[0].pred_annotation_collection_id == pred_collection.collection_id
+
+
+def test_deep_copy__with_evaluation_annotation_metrics(db_session: Session) -> None:
+    # Arrange
+    dataset = create_collection(session=db_session, collection_name="original")
+    run, image = evaluation_sample_metric_helpers.create_run_and_image(
+        db_session, dataset_collection_id=dataset.collection_id
+    )
+    label = create_annotation_label(session=db_session, root_collection_id=dataset.collection_id)
+    gt_annotation = create_annotation(
+        session=db_session,
+        collection_id=dataset.collection_id,
+        sample_id=image.sample_id,
+        annotation_label_id=label.annotation_label_id,
+    )
+    pred_annotation = create_annotation(
+        session=db_session,
+        collection_id=dataset.collection_id,
+        sample_id=image.sample_id,
+        annotation_label_id=label.annotation_label_id,
+    )
+    evaluation_annotation_metric_resolver.create_many(
+        session=db_session,
+        records=[
+            # TP: both annotation IDs set, with a metric value
+            EvaluationAnnotationMetricCreate(
+                evaluation_run_id=run.id,
+                sample_id=image.sample_id,
+                gt_annotation_id=gt_annotation.sample_id,
+                pred_annotation_id=pred_annotation.sample_id,
+                metric_name="iou",
+                value=0.8,
+            ),
+            # FP: only pred set
+            EvaluationAnnotationMetricCreate(
+                evaluation_run_id=run.id,
+                sample_id=image.sample_id,
+                pred_annotation_id=pred_annotation.sample_id,
+            ),
+        ],
+    )
+
+    # Act
+    copied = dataset_resolver.deep_copy(
+        session=db_session,
+        dataset_id=dataset.dataset_id,
+        copy_name="copied",
+    )
+
+    # Assert - copied dataset has one evaluation run
+    copied_runs = evaluation_run_resolver.get_all_by_dataset_id(
+        session=db_session,
+        dataset_id=copied.dataset_id,
+    )
+    assert len(copied_runs) == 1
+    copied_run = copied_runs[0]
+    assert copied_run.id != run.id
+
+    # Assert - copied run has both annotation metrics
+    copied_metrics = evaluation_annotation_metric_resolver.get_all_by_evaluation_run_id(
+        session=db_session,
+        evaluation_run_id=copied_run.id,
+    )
+    assert len(copied_metrics) == 2
+
+    # Assert - annotation IDs are remapped (not the originals)
+    original_annotation_ids = {gt_annotation.sample_id, pred_annotation.sample_id}
+    copied_annotation_ids = {
+        m.gt_annotation_id for m in copied_metrics if m.gt_annotation_id is not None
+    } | {m.pred_annotation_id for m in copied_metrics if m.pred_annotation_id is not None}
+    assert original_annotation_ids.isdisjoint(copied_annotation_ids)
+
+    # Assert - sample IDs are remapped
+    original_sample_ids = {image.sample_id}
+    copied_sample_ids = {m.sample_id for m in copied_metrics}
+    assert original_sample_ids.isdisjoint(copied_sample_ids)
+
+    # Assert - metric values preserved
+    tp_metric = next(m for m in copied_metrics if m.metric_name == "iou")
+    assert tp_metric.value == pytest.approx(0.8)
+    assert tp_metric.gt_annotation_id is not None
+    assert tp_metric.pred_annotation_id is not None
+
+    fp_metric = next(m for m in copied_metrics if m.metric_name is None)
+    assert fp_metric.gt_annotation_id is None
+    assert fp_metric.pred_annotation_id is not None
+
+    # Assert - original run metrics are untouched
+    original_metrics = evaluation_annotation_metric_resolver.get_all_by_evaluation_run_id(
+        session=db_session,
+        evaluation_run_id=run.id,
+    )
+    assert len(original_metrics) == 2
