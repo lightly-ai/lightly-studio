@@ -369,15 +369,16 @@ def test_get_adjacent_images__sort_by_width_desc_with_duplicate_values(db_sessio
         file_path_abs="/images/a.png",
         width=1920,
     )
-    helpers_resolvers.create_image(
+    image_c = helpers_resolvers.create_image(
         session=db_session,
         collection_id=collection_id,
         file_path_abs="/images/c.png",
         width=1080,
     )
 
-    # Both image_a and image_b have width=1920. The secondary tiebreaker is file_path_abs ASC,
-    # so a.png comes before b.png.
+    # Both image_a and image_b have width=1920. The secondary tiebreaker is file_path_abs DESC
+    # (matching the primary direction), so b.png comes before a.png.
+    # Order: b.png (1920), a.png (1920), c.png (1080)
     result = image_resolver.get_adjacent_images(
         session=db_session,
         sample_id=image_a.sample_id,
@@ -386,9 +387,9 @@ def test_get_adjacent_images__sort_by_width_desc_with_duplicate_values(db_sessio
     )
 
     assert result is not None
-    assert result.previous_sample_id is None
+    assert result.previous_sample_id == image_b.sample_id
     assert result.sample_id == image_a.sample_id
-    assert result.next_sample_id == image_b.sample_id
+    assert result.next_sample_id == image_c.sample_id
 
 
 def test_get_adjacent_images__returns_none_when_sample_not_in_filter(db_session: Session) -> None:

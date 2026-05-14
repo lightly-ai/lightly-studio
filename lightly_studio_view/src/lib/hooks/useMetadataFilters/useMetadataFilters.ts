@@ -1,10 +1,8 @@
 import { getMetadataInfo } from '$lib/api/lightly_studio_local';
+import type { MetadataInfoView, MetadataFilter } from '$lib/api/lightly_studio_local';
 import { get, writable } from 'svelte/store';
-import type { components } from '$lib/schema';
 import { useGlobalStorage } from '$lib/hooks/useGlobalStorage';
 import { validate as validateUUID } from 'uuid';
-
-type MetadataInfo = components['schemas']['MetadataInfoView'];
 type MetadataBounds = Record<string, { min: number; max: number }>;
 type MetadataValues = Record<string, { min: number; max: number }>;
 
@@ -34,7 +32,7 @@ const loadInitialMetadataInfo = async (collection_id: string) => {
     const bounds: MetadataBounds = {};
     const values: MetadataValues = {};
 
-    metadataInfoData.forEach((info: MetadataInfo) => {
+    metadataInfoData.forEach((info: MetadataInfoView) => {
         if (info.type === 'integer' || info.type === 'float') {
             if (info.min != null && info.max != null) {
                 bounds[info.name] = { min: info.min, max: info.max };
@@ -47,8 +45,6 @@ const loadInitialMetadataInfo = async (collection_id: string) => {
     updateMetadataValues(values);
     updateMetadataInfo(metadataInfoData);
 };
-
-type MetadataFilter = components['schemas']['MetadataFilter'];
 
 export const createMetadataFilters = (metadataValues: MetadataValues): MetadataFilter[] => {
     const filters: MetadataFilter[] = [];

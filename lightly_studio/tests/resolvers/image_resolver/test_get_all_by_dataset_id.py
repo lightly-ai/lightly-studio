@@ -889,3 +889,38 @@ def test_get_all_by_collection_id__sort_by_evaluation_metric_desc(db_session: Se
     )
 
     assert [s.file_name for s in result.samples] == ["a.png", "c.png", "b.png"]
+def test_get_all_by_collection_id__sort_by_height_asc_is_reverse_of_desc(
+    db_session: Session,
+) -> None:
+    collection = create_collection(session=db_session)
+    collection_id = collection.collection_id
+
+    # Two images share the same height (200) to test tiebreaker behaviour.
+    create_image(
+        session=db_session, collection_id=collection_id, file_path_abs="/c.png", height=300
+    )
+    create_image(
+        session=db_session, collection_id=collection_id, file_path_abs="/a.png", height=200
+    )
+    create_image(
+        session=db_session, collection_id=collection_id, file_path_abs="/b.png", height=200
+    )
+    create_image(
+        session=db_session, collection_id=collection_id, file_path_abs="/d.png", height=100
+    )
+
+    result_asc = image_resolver.get_all_by_collection_id(
+        session=db_session,
+        collection_id=collection_id,
+        order_by=[OrderByField(ImageSampleField.height)],
+    )
+    result_desc = image_resolver.get_all_by_collection_id(
+        session=db_session,
+        collection_id=collection_id,
+        order_by=[OrderByField(ImageSampleField.height).desc()],
+    )
+
+    asc_paths = [s.file_path_abs for s in result_asc.samples]
+    desc_paths = [s.file_path_abs for s in result_desc.samples]
+
+    assert asc_paths == list(reversed(desc_paths))
