@@ -14,7 +14,7 @@ describe('loadDimensionBounds', () => {
         };
         const mockedFn = vi
             .spyOn(sdk, 'getImageDimensions')
-            .mockResolvedValue({ data: mockData, error: undefined } as GetImageDimensionsReturn);
+            .mockResolvedValue({ data: mockData, error: undefined } as unknown as GetImageDimensionsReturn);
 
         await expect(loadDimensionBounds({ collection_id: '1' })).resolves.toEqual({
             data: mockData,
@@ -35,7 +35,7 @@ describe('loadDimensionBounds', () => {
         };
         const mockedFn = vi
             .spyOn(sdk, 'getImageDimensions')
-            .mockResolvedValue({ data: mockData, error: undefined } as GetImageDimensionsReturn);
+            .mockResolvedValue({ data: mockData, error: undefined } as unknown as GetImageDimensionsReturn);
 
         await loadDimensionBounds({
             collection_id: '1',
