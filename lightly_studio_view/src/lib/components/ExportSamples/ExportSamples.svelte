@@ -46,7 +46,7 @@
         youtube_vis_segmentation: 'YouTube-VIS Video Segmentation Masks'
     };
     const exportTypeTriggerContent = $derived(exportTypeLabels[exportType]);
-    let collectionId = page.params.collection_id;
+    let collectionId = page.params.collection_id!;
 
     //
     // Sample export

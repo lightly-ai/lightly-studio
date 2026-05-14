@@ -4,7 +4,7 @@
     import { formatInteger } from '$lib/utils';
     import { Slider } from '$lib/components/ui/slider/index.js';
     const { videoBounds, videoBoundsValues, updateVideoBoundsValues } = useVideoBounds(
-        page.params.collection_id
+        page.params.collection_id!
     );
 
     const handleChangeWidth = (newValues: number[]) => {

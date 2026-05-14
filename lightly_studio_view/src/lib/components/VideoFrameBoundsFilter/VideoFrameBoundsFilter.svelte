@@ -4,7 +4,7 @@
     import { Slider } from '$lib/components/ui/slider/index.js';
     import { useVideoFramesBounds } from '$lib/hooks/useVideoFramesBounds/useVideoFramesBounds';
     const { videoFramesBounds, videoFramesBoundsValues, updateVideoFramesBoundsValues } =
-        useVideoFramesBounds(page.params.collection_id);
+        useVideoFramesBounds(page.params.collection_id!);
 
     const handleChangeFrameNumber = (newValues: number[]) => {
         if (!$videoFramesBoundsValues) return;

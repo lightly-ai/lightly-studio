@@ -98,7 +98,7 @@ export function useClassifiers(): UseClassifiersReturn {
         try {
             const response = await client.GET('/api/classifiers/get_all_classifiers', {
                 params: {
-                    query: { collection_id: page.params.collection_id }
+                    query: { collection_id: page.params.collection_id! }
                 }
             });
             if (response.data?.classifiers) {
@@ -234,7 +234,7 @@ export function useClassifiers(): UseClassifiersReturn {
                             params: {
                                 path: {
                                     classifier_id: classifier_id,
-                                    collection_id: page.params.collection_id
+                                    collection_id: page.params.collection_id!
                                 }
                             }
                         }

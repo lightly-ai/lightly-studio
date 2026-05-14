@@ -7,8 +7,8 @@
 
     const datasetId = $derived(page.params.dataset_id!);
     const collectionType = $derived(page.params.collection_type!);
-    const collectionId = $derived(page.params.collection_id);
-    const sampleId = $derived(page.params.sample_id);
+    const collectionId = $derived(page.params.collection_id!);
+    const sampleId = $derived(page.params.sample_id!);
 
     const { query: sampleAdjacentQuery } = $derived(
         useAdjacentVideos({

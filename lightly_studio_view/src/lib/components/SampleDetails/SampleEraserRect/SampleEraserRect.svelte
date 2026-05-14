@@ -156,7 +156,7 @@
         refetch();
     };
 
-    const datasetId = $derived(page.params.dataset_id);
+    const datasetId = $derived(page.params.dataset_id!);
     const collectionType = $derived(page.params.collection_type ?? page.data.collectionType);
     const currentAnnotationId = $derived(
         annotationLabelContext.annotationId ?? sample.annotations[0]?.sample_id ?? ''
