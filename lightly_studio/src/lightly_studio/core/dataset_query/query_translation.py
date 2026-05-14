@@ -24,6 +24,7 @@ from lightly_studio.core.dataset_query.object_detection_expression import (
     ObjectDetectionQuery,
 )
 from lightly_studio.core.dataset_query.order_by import (
+    OrderByEvaluationMetricField,
     OrderByExpression,
     OrderByField,
     OrderByMetadataField,
@@ -187,6 +188,30 @@ def sort_to_order_by(
         order_by = OrderByField(_SORT_FIELDS[key])
     else:
         raise QueryExprError(f"Unknown sort field: {key[0]}.{key[1]}")
+    if direction == "desc":
+        order_by.desc()
+    return order_by
+
+
+def evaluation_metric_sort_to_order_by(
+    evaluation_run_name: str,
+    metric_name: str,
+    direction: SortDirection,
+) -> OrderByExpression:
+    """Translate an evaluation run name, metric name, and direction to an OrderByExpression.
+
+    Args:
+        evaluation_run_name: The name of the evaluation run to sort by.
+        metric_name: The metric name to sort by.
+        direction: Sort direction, either "asc" or "desc".
+
+    Returns:
+        An OrderByExpression ready to be applied to a database query.
+    """
+    order_by: OrderByExpression = OrderByEvaluationMetricField(
+        evaluation_run_name=evaluation_run_name,
+        metric_name=metric_name,
+    )
     if direction == "desc":
         order_by.desc()
     return order_by

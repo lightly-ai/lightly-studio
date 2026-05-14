@@ -19,7 +19,7 @@ from lightly_studio.models.image import (
     ImageView,
     ImageViewsWithCount,
 )
-from lightly_studio.models.sort import SortFieldExpr, sort_field_expr_to_order_by
+from lightly_studio.models.sort import SortExpr, sort_expr_to_order_by
 from lightly_studio.resolvers import (
     image_resolver,
 )
@@ -39,7 +39,7 @@ class ReadImagesRequest(BaseModel):
     pagination: Paginated | None = Field(
         None, description="Pagination parameters for offset and limit"
     )
-    sort_by: list[SortFieldExpr] | None = Field(None, description="Sort expressions for ordering")
+    sort_by: list[SortExpr] | None = Field(None, description="Sort expressions for ordering")
 
 
 @image_router.post("/collections/{collection_id}/images/list")
@@ -58,9 +58,7 @@ def read_images(
     Returns:
         A list of filtered samples.
     """
-    order_by = (
-        [sort_field_expr_to_order_by(expr) for expr in body.sort_by] if body.sort_by else None
-    )
+    order_by = [sort_expr_to_order_by(expr) for expr in body.sort_by] if body.sort_by else None
     result = image_resolver.get_all_by_collection_id(
         session=session,
         collection_id=collection_id,
