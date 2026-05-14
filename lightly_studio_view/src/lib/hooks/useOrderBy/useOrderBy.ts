@@ -1,34 +1,11 @@
 import { derived, get } from 'svelte/store';
 import { SortDirection } from '$lib/api/lightly_studio_local';
-import type { SortFieldExpr } from '$lib/api/lightly_studio_local';
 import { useImageFilters } from '$lib/hooks/useImageFilters/useImageFilters';
-import { useMetadataFilters } from '$lib/hooks/useMetadataFilters/useMetadataFilters';
-import { useEvaluationSampleMetricsInfo } from '$lib/hooks/useEvaluationSampleMetricsInfo/useEvaluationSampleMetricsInfo';
+import { useSortFields } from '$lib/hooks/useSortFields/useSortFields';
+import type { ImageSortField, SortField } from '$lib/hooks/useSortFields/useSortFields';
 import type { SortExpr } from '$lib/hooks/useImagesInfinite/useImagesInfinite';
 
-type ImageSortField = {
-    source: SortFieldExpr['source'];
-    value: string;
-    label: string;
-    is_numeric?: boolean;
-};
-
-type EvalSortField = {
-    source: 'evaluation_metric';
-    evaluation_run_name: string;
-    metric_name: string;
-    label: string;
-};
-
-export type SortField = ImageSortField | EvalSortField;
-
-const IMAGE_SORT_FIELDS: ImageSortField[] = [
-    { source: 'image', value: 'file_name', label: 'file name' },
-    { source: 'image', value: 'file_path_abs', label: 'file path' },
-    { source: 'image', value: 'created_at', label: 'created at' },
-    { source: 'image', value: 'width', label: 'width' },
-    { source: 'image', value: 'height', label: 'height' }
-];
+export type { SortField } from '$lib/hooks/useSortFields/useSortFields';
 
 function checkIsFieldSelected(field: SortField, current: SortExpr | undefined): boolean {
     if (!current) return false;
@@ -48,43 +25,7 @@ function checkIsFieldSelected(field: SortField, current: SortExpr | undefined): 
 
 export function useOrderBy({ datasetId }: { datasetId: string }) {
     const { imageSortBy, updateSortBy } = useImageFilters();
-    const { metadataInfo } = useMetadataFilters();
-    const metricsInfo = useEvaluationSampleMetricsInfo({ datasetId });
-
-    const metadataSortFields = derived(metadataInfo, ($metadataInfo) =>
-        ($metadataInfo ?? [])
-            .filter((info) => ['integer', 'float', 'string', 'boolean'].includes(info.type))
-            .map(
-                (info): ImageSortField => ({
-                    source: 'metadata' as SortFieldExpr['source'],
-                    value: info.name,
-                    label: `metadata.${info.name}`,
-                    is_numeric: info.type === 'integer' || info.type === 'float'
-                })
-            )
-    );
-
-    const evalSortFields = derived(metricsInfo, ($metricsInfo) =>
-        ($metricsInfo.data ?? []).flatMap((run) =>
-            run.metrics.map(
-                (metric): EvalSortField => ({
-                    source: 'evaluation_metric',
-                    evaluation_run_name: run.run_name,
-                    metric_name: metric.metric_name,
-                    label: `${run.run_name}_${metric.metric_name}`
-                })
-            )
-        )
-    );
-
-    const allSortFields = derived(
-        [metadataSortFields, evalSortFields],
-        ([$metadataSortFields, $evalSortFields]) => [
-            ...IMAGE_SORT_FIELDS,
-            ...$metadataSortFields,
-            ...$evalSortFields
-        ]
-    );
+    const { allSortFields } = useSortFields({ datasetId });
 
     const selectedDirection = derived(
         imageSortBy,
