@@ -209,7 +209,7 @@ def create_and_persist_object_detection_metrics_per_sample(
                 records=sample_metrics_to_persist,
             )
             sample_metrics_to_persist.clear()
-        if len(annotation_metrics_to_persist) >= SAMPLE_BATCH_SIZE:
+        if len(annotation_metrics_to_persist) >= METRIC_BATCH_SIZE:
             evaluation_annotation_metric_resolver.create_many(
                 session=session,
                 records=annotation_metrics_to_persist,
