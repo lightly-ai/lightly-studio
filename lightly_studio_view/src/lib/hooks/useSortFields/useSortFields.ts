@@ -1,23 +1,33 @@
-import { derived } from 'svelte/store';
+import { derived, type Readable } from 'svelte/store';
 import type { SortFieldExpr } from '$lib/api/lightly_studio_local';
 import { useMetadataFilters } from '$lib/hooks/useMetadataFilters/useMetadataFilters';
 import { useEvaluationSampleMetricsInfo } from '$lib/hooks/useEvaluationSampleMetricsInfo/useEvaluationSampleMetricsInfo';
 
-export type ImageSortField = {
+export interface ImageSortField {
     source: SortFieldExpr['source'];
     value: string;
     label: string;
     is_numeric?: boolean;
-};
+}
 
-export type EvalSortField = {
+export interface EvalSortField {
     source: 'evaluation_metric';
     evaluation_run_name: string;
     metric_name: string;
     label: string;
-};
+}
 
 export type SortField = ImageSortField | EvalSortField;
+
+export interface UseSortFieldsParams {
+    datasetId: string;
+}
+
+export interface UseSortFieldsReturn {
+    metadataSortFields: Readable<ImageSortField[]>;
+    evalSortFields: Readable<EvalSortField[]>;
+    allSortFields: Readable<SortField[]>;
+}
 
 export const IMAGE_SORT_FIELDS: ImageSortField[] = [
     { source: 'image', value: 'file_name', label: 'file name' },
@@ -27,7 +37,7 @@ export const IMAGE_SORT_FIELDS: ImageSortField[] = [
     { source: 'image', value: 'height', label: 'height' }
 ];
 
-export function useSortFields({ datasetId }: { datasetId: string }) {
+export function useSortFields({ datasetId }: UseSortFieldsParams): UseSortFieldsReturn {
     const { metadataInfo } = useMetadataFilters();
     const metricsInfo = useEvaluationSampleMetricsInfo({ datasetId });
 
