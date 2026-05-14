@@ -60,7 +60,7 @@ describe('useAdjacentSamples', () => {
 
         useAdjacentSamples({ params });
 
-        const optionsArg = createQuerySpy.mock.calls[0][0];
+        const optionsArg = createQuerySpy.mock.calls[0][0]();
         const expectedOptions = getAdjacentSamplesOptions({
             path: { sample_id: params.sampleId },
             body: params.body

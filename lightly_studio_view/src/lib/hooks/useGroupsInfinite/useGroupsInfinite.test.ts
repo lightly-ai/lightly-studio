@@ -1,8 +1,11 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { useGroupsInfinite } from './';
 import type { QueryClient, CreateInfiniteQueryResult } from '@tanstack/svelte-query';
 import * as tanstackQuery from '@tanstack/svelte-query';
 import { get } from 'svelte/store';
+import { render } from '@testing-library/svelte';
+import { flushSync } from 'svelte';
+import UseGroupsInfiniteHarness from './UseGroupsInfiniteHarness.svelte';
+import type { useGroupsInfinite } from './';
 
 describe('useGroupsInfinite Hook', () => {
     const mockInvalidateQueries = vi.fn();
@@ -78,20 +81,35 @@ describe('useGroupsInfinite Hook', () => {
         error: null
     };
 
+    const renderHook = (collectionId: string) => {
+        let result: ReturnType<typeof useGroupsInfinite> | undefined;
+
+        render(UseGroupsInfiniteHarness, {
+            collectionId,
+            onReady: (hookResult) => {
+                result = hookResult;
+            }
+        });
+        flushSync();
+
+        if (!result) {
+            throw new Error('useGroupsInfinite harness did not initialize');
+        }
+
+        return result;
+    };
+
     beforeEach(() => {
         vi.resetAllMocks();
 
         vi.spyOn(tanstackQuery, 'useQueryClient').mockReturnValue(mockQueryClient as QueryClient);
-        vi.spyOn(tanstackQuery, 'createInfiniteQuery').mockReturnValue({
-            subscribe: (fn: (value: unknown) => void) => {
-                fn(mockQueryResult);
-                return vi.fn();
-            }
-        } as CreateInfiniteQueryResult<unknown, Error>);
+        vi.spyOn(tanstackQuery, 'createInfiniteQuery').mockReturnValue(
+            mockQueryResult as CreateInfiniteQueryResult<unknown, Error>
+        );
     });
 
     it('should return data, loadMore, query, refresh, and totalCount', () => {
-        const result = useGroupsInfinite('123');
+        const result = renderHook('123');
 
         expect(result.data).toBeDefined();
         expect(result.loadMore).toBeDefined();
@@ -103,7 +121,7 @@ describe('useGroupsInfinite Hook', () => {
     });
 
     it('should call invalidateQueries when refresh is called', () => {
-        const { refresh } = useGroupsInfinite('123');
+        const { refresh } = renderHook('123');
 
         refresh();
 
@@ -115,9 +133,10 @@ describe('useGroupsInfinite Hook', () => {
     it('should call createInfiniteQuery with correct options', () => {
         const createInfiniteQuerySpy = vi.spyOn(tanstackQuery, 'createInfiniteQuery');
 
-        useGroupsInfinite('123');
+        renderHook('123');
 
-        expect(createInfiniteQuerySpy).toHaveBeenCalledWith(
+        const optionsArg = createInfiniteQuerySpy.mock.calls[0][0]();
+        expect(optionsArg).toEqual(
             expect.objectContaining({
                 queryKey: expect.any(Array),
                 getNextPageParam: expect.any(Function)
@@ -126,7 +145,7 @@ describe('useGroupsInfinite Hook', () => {
     });
 
     it('should flatten pages into data store', () => {
-        const { data } = useGroupsInfinite('123');
+        const { data } = renderHook('123');
 
         const groups = get(data);
         expect(groups).toHaveLength(2);
@@ -135,13 +154,13 @@ describe('useGroupsInfinite Hook', () => {
     });
 
     it('should set totalCount from first page', () => {
-        const { totalCount } = useGroupsInfinite('123');
+        const { totalCount } = renderHook('123');
 
         expect(get(totalCount)).toBe(3);
     });
 
     it('should handle groups with group_snapshot', () => {
-        const { data } = useGroupsInfinite('123');
+        const { data } = renderHook('123');
 
         const groups = get(data);
 
@@ -164,20 +183,11 @@ describe('useGroupsInfinite Hook', () => {
             fetchNextPage: mockFetchNextPage
         };
 
-        vi.spyOn(tanstackQuery, 'createInfiniteQuery').mockReturnValue({
-            subscribe: (fn: (value: unknown) => void) => {
-                fn(mockQueryWithNext);
-                return vi.fn();
-            }
-        } as CreateInfiniteQueryResult<unknown, Error>);
+        vi.spyOn(tanstackQuery, 'createInfiniteQuery').mockReturnValue(
+            mockQueryWithNext as CreateInfiniteQueryResult<unknown, Error>
+        );
 
-        const { loadMore, query } = useGroupsInfinite('123');
-
-        // Mock the get(query) to return our mock
-        vi.spyOn(query, 'subscribe').mockImplementation((fn: (value: unknown) => void) => {
-            fn(mockQueryWithNext);
-            return vi.fn();
-        });
+        const { loadMore } = renderHook('123');
 
         loadMore();
 
@@ -193,20 +203,11 @@ describe('useGroupsInfinite Hook', () => {
             fetchNextPage: mockFetchNextPage
         };
 
-        vi.spyOn(tanstackQuery, 'createInfiniteQuery').mockReturnValue({
-            subscribe: (fn: (value: unknown) => void) => {
-                fn(mockQueryFetching);
-                return vi.fn();
-            }
-        } as CreateInfiniteQueryResult<unknown, Error>);
+        vi.spyOn(tanstackQuery, 'createInfiniteQuery').mockReturnValue(
+            mockQueryFetching as CreateInfiniteQueryResult<unknown, Error>
+        );
 
-        const { loadMore, query } = useGroupsInfinite('123');
-
-        // Mock the get(query) to return our mock
-        vi.spyOn(query, 'subscribe').mockImplementation((fn: (value: unknown) => void) => {
-            fn(mockQueryFetching);
-            return vi.fn();
-        });
+        const { loadMore } = renderHook('123');
 
         loadMore();
 
@@ -222,20 +223,11 @@ describe('useGroupsInfinite Hook', () => {
             fetchNextPage: mockFetchNextPage
         };
 
-        vi.spyOn(tanstackQuery, 'createInfiniteQuery').mockReturnValue({
-            subscribe: (fn: (value: unknown) => void) => {
-                fn(mockQueryNoNext);
-                return vi.fn();
-            }
-        } as CreateInfiniteQueryResult<unknown, Error>);
+        vi.spyOn(tanstackQuery, 'createInfiniteQuery').mockReturnValue(
+            mockQueryNoNext as CreateInfiniteQueryResult<unknown, Error>
+        );
 
-        const { loadMore, query } = useGroupsInfinite('123');
-
-        // Mock the get(query) to return our mock
-        vi.spyOn(query, 'subscribe').mockImplementation((fn: (value: unknown) => void) => {
-            fn(mockQueryNoNext);
-            return vi.fn();
-        });
+        const { loadMore } = renderHook('123');
 
         loadMore();
 
@@ -251,14 +243,11 @@ describe('useGroupsInfinite Hook', () => {
             }
         };
 
-        vi.spyOn(tanstackQuery, 'createInfiniteQuery').mockReturnValue({
-            subscribe: (fn: (value: unknown) => void) => {
-                fn(mockQueryMultiPage);
-                return vi.fn();
-            }
-        } as CreateInfiniteQueryResult<unknown, Error>);
+        vi.spyOn(tanstackQuery, 'createInfiniteQuery').mockReturnValue(
+            mockQueryMultiPage as CreateInfiniteQueryResult<unknown, Error>
+        );
 
-        const { data, totalCount } = useGroupsInfinite('123');
+        const { data, totalCount } = renderHook('123');
 
         const groups = get(data);
         expect(groups).toHaveLength(3);
@@ -269,8 +258,8 @@ describe('useGroupsInfinite Hook', () => {
     });
 
     it('should handle different collection_id', () => {
-        const { refresh: refresh1 } = useGroupsInfinite('123');
-        const { refresh: refresh2 } = useGroupsInfinite('456');
+        const { refresh: refresh1 } = renderHook('123');
+        const { refresh: refresh2 } = renderHook('456');
 
         refresh1();
         refresh2();
@@ -279,7 +268,7 @@ describe('useGroupsInfinite Hook', () => {
     });
 
     it('should include sample_count in group data', () => {
-        const { data } = useGroupsInfinite('123');
+        const { data } = renderHook('123');
 
         const groups = get(data);
 
@@ -299,14 +288,11 @@ describe('useGroupsInfinite Hook', () => {
             }
         };
 
-        vi.spyOn(tanstackQuery, 'createInfiniteQuery').mockReturnValue({
-            subscribe: (fn: (value: unknown) => void) => {
-                fn(mockQueryMultiPage);
-                return vi.fn();
-            }
-        } as CreateInfiniteQueryResult<unknown, Error>);
+        vi.spyOn(tanstackQuery, 'createInfiniteQuery').mockReturnValue(
+            mockQueryMultiPage as CreateInfiniteQueryResult<unknown, Error>
+        );
 
-        const { data } = useGroupsInfinite('123');
+        const { data } = renderHook('123');
 
         const groups = get(data);
         expect(groups).toHaveLength(3);
