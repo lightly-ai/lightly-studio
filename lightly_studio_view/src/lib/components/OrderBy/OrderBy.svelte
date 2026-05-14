@@ -93,20 +93,22 @@
             </Button>
         </Popover.Trigger>
         <Popover.Content class="min-w-20 p-1" align="start">
-            {#each allSortFields as field}
-                <button
-                    class={cn(
-                        'flex w-full items-center rounded-sm px-2 py-1.5 text-sm hover:bg-accent hover:text-accent-foreground',
-                        field.value === selectedField &&
-                            field.source === selectedSource &&
-                            'bg-accent text-accent-foreground'
-                    )}
-                    onclick={() => handleFieldClick(field)}
-                    data-testid="sort-field-{field.value}"
-                >
-                    {field.label}
-                </button>
-            {/each}
+            <div class="max-h-64 overflow-y-auto">
+                {#each allSortFields as field}
+                    <button
+                        class={cn(
+                            'flex w-full items-center rounded-sm px-2 py-1.5 text-sm hover:bg-accent hover:text-accent-foreground',
+                            field.value === selectedField &&
+                                field.source === selectedSource &&
+                                'bg-accent text-accent-foreground'
+                        )}
+                        onclick={() => handleFieldClick(field)}
+                        data-testid="sort-field-{field.value}"
+                    >
+                        {field.label}
+                    </button>
+                {/each}
+            </div>
         </Popover.Content>
     </Popover.Root>
 
