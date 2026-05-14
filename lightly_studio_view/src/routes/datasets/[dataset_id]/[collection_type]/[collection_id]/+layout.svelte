@@ -373,7 +373,7 @@
                         {/snippet}
                         {#snippet auxControls()}
                             {#if isImages}
-                                <OrderBy />
+                                <OrderBy datasetId={collection.dataset_id} />
                             {/if}
                             {#if (isImages || isVideos) && hasEmbeddings}
                                 <Button
@@ -440,7 +440,7 @@
                                 {/snippet}
                                 {#snippet auxControls()}
                                     {#if isImages}
-                                        <OrderBy />
+                                        <OrderBy datasetId={collection.dataset_id} />
                                     {/if}
                                 {/snippet}
                                 <div class="flex-1" data-grid-search-drop-target>

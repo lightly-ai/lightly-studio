@@ -12,6 +12,7 @@ export const useEvaluationSampleMetricsInfo = ({
     EvaluationRunMetricsInfoView[],
     Error
 > => {
+    console.log(datasetId);
     return createQuery(
         getEvaluationSampleMetricsInfoOptions({
             path: { dataset_id: datasetId }

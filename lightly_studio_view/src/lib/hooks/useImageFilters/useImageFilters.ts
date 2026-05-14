@@ -1,13 +1,12 @@
 import { derived, get, writable } from 'svelte/store';
 import { createMetadataFilters } from '../useMetadataFilters/useMetadataFilters';
-import type { ImagesInfiniteParams } from '../useImagesInfinite/useImagesInfinite';
+import type { ImagesInfiniteParams, SortExpr } from '../useImagesInfinite/useImagesInfinite';
 import type { DimensionBounds } from '$lib/services/loadDimensionBounds';
 import type {
     AnnotationsFilter,
     ImageFilter,
     QueryExpr,
-    SampleFilter,
-    SortFieldExpr
+    SampleFilter
 } from '$lib/api/lightly_studio_local';
 
 const filterParams = writable<ImagesInfiniteParams>({} as ImagesInfiniteParams);
@@ -98,7 +97,7 @@ export interface QueryExpression {
 
 const imageQueryExpression = writable<QueryExpression | null>({} as QueryExpression);
 
-const imageSortBy = writable<SortFieldExpr[] | null>(null);
+const imageSortBy = writable<SortExpr[] | null>(null);
 
 export const useImageFilters = () => {
     const updateFilterParams = (params: ImagesInfiniteParams) => {
@@ -130,7 +129,7 @@ export const useImageFilters = () => {
         filterParams.set(newParams);
     };
 
-    const updateSortBy = (sort: SortFieldExpr[] | null) => {
+    const updateSortBy = (sort: SortExpr[] | null) => {
         imageSortBy.set(sort);
     };
 

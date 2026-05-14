@@ -2,13 +2,16 @@ import { fireEvent, render, screen } from '@testing-library/svelte';
 import { readable } from 'svelte/store';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { SortDirection } from '$lib/api/lightly_studio_local';
-import type { MetadataInfoView, SortFieldExpr } from '$lib/api/lightly_studio_local';
+import type { MetadataInfoView } from '$lib/api/lightly_studio_local';
+import type { SortExpr } from '$lib/hooks/useImagesInfinite/useImagesInfinite';
+import type { EvaluationRunMetricsInfoView } from '$lib/api/lightly_studio_local/types.gen';
 import OrderBy from './OrderBy.svelte';
 
 const mocks = vi.hoisted(() => ({
-    imageSortByValue: null as SortFieldExpr[] | null,
+    imageSortByValue: null as SortExpr[] | null,
     updateSortBy: vi.fn(),
-    metadataInfoValue: [] as MetadataInfoView[]
+    metadataInfoValue: [] as MetadataInfoView[],
+    metricsData: null as EvaluationRunMetricsInfoView[] | null
 }));
 
 vi.mock('$lib/hooks/useImageFilters/useImageFilters', () => ({
@@ -24,15 +27,20 @@ vi.mock('$lib/hooks/useMetadataFilters/useMetadataFilters', () => ({
     })
 }));
 
+vi.mock('$lib/hooks/useEvaluationSampleMetricsInfo/useEvaluationSampleMetricsInfo', () => ({
+    useEvaluationSampleMetricsInfo: () => readable({ data: mocks.metricsData })
+}));
+
 describe('OrderBy', () => {
     beforeEach(() => {
         vi.clearAllMocks();
         mocks.imageSortByValue = null;
         mocks.metadataInfoValue = [];
+        mocks.metricsData = null;
     });
 
     it('shows placeholder text when no field is selected', () => {
-        render(OrderBy);
+        render(OrderBy, { props: { datasetId: 'ds1' } });
         expect(screen.getByTestId('sort-by-trigger')).toHaveTextContent('Sort by');
     });
 
@@ -45,12 +53,12 @@ describe('OrderBy', () => {
                 is_numeric: false
             }
         ];
-        render(OrderBy);
+        render(OrderBy, { props: { datasetId: 'ds1' } });
         expect(screen.getByTestId('sort-by-trigger')).toHaveTextContent('file name');
     });
 
     it('direction button is disabled when no field is selected', () => {
-        render(OrderBy);
+        render(OrderBy, { props: { datasetId: 'ds1' } });
         expect(screen.getByTestId('sort-direction-button')).toBeDisabled();
     });
 
@@ -63,12 +71,12 @@ describe('OrderBy', () => {
                 is_numeric: false
             }
         ];
-        render(OrderBy);
+        render(OrderBy, { props: { datasetId: 'ds1' } });
         expect(screen.getByTestId('sort-direction-button')).not.toBeDisabled();
     });
 
     it('selects a field and calls updateSortBy with asc direction by default', async () => {
-        render(OrderBy);
+        render(OrderBy, { props: { datasetId: 'ds1' } });
 
         await fireEvent.click(screen.getByTestId('sort-by-trigger'));
         await fireEvent.click(screen.getByTestId('sort-field-file_name'));
@@ -92,7 +100,7 @@ describe('OrderBy', () => {
                 is_numeric: false
             }
         ];
-        render(OrderBy);
+        render(OrderBy, { props: { datasetId: 'ds1' } });
 
         await fireEvent.click(screen.getByTestId('sort-by-trigger'));
         await fireEvent.click(screen.getByTestId('sort-field-file_name'));
@@ -109,7 +117,7 @@ describe('OrderBy', () => {
                 is_numeric: false
             }
         ];
-        render(OrderBy);
+        render(OrderBy, { props: { datasetId: 'ds1' } });
 
         await fireEvent.click(screen.getByTestId('sort-by-trigger'));
         await fireEvent.click(screen.getByTestId('sort-field-width'));
@@ -133,7 +141,7 @@ describe('OrderBy', () => {
                 is_numeric: false
             }
         ];
-        render(OrderBy);
+        render(OrderBy, { props: { datasetId: 'ds1' } });
 
         await fireEvent.click(screen.getByTestId('sort-direction-button'));
 
@@ -156,7 +164,7 @@ describe('OrderBy', () => {
                 is_numeric: false
             }
         ];
-        render(OrderBy);
+        render(OrderBy, { props: { datasetId: 'ds1' } });
 
         await fireEvent.click(screen.getByTestId('sort-direction-button'));
 
@@ -171,7 +179,7 @@ describe('OrderBy', () => {
     });
 
     it('does not call updateSortBy when direction button is clicked with no field selected', async () => {
-        render(OrderBy);
+        render(OrderBy, { props: { datasetId: 'ds1' } });
 
         await fireEvent.click(screen.getByTestId('sort-direction-button'));
 
@@ -179,7 +187,7 @@ describe('OrderBy', () => {
     });
 
     it('lists all sort fields in the dropdown', async () => {
-        render(OrderBy);
+        render(OrderBy, { props: { datasetId: 'ds1' } });
 
         await fireEvent.click(screen.getByTestId('sort-by-trigger'));
 
@@ -197,7 +205,7 @@ describe('OrderBy', () => {
             { name: 'label', type: 'string' },
             { name: 'active', type: 'boolean' }
         ];
-        render(OrderBy);
+        render(OrderBy, { props: { datasetId: 'ds1' } });
 
         await fireEvent.click(screen.getByTestId('sort-by-trigger'));
 
@@ -215,7 +223,7 @@ describe('OrderBy', () => {
             { name: 'nested', type: 'dict' },
             { name: 'score', type: 'float' }
         ];
-        render(OrderBy);
+        render(OrderBy, { props: { datasetId: 'ds1' } });
 
         await fireEvent.click(screen.getByTestId('sort-by-trigger'));
 
@@ -226,7 +234,7 @@ describe('OrderBy', () => {
 
     it('selects a numeric metadata field with is_numeric true', async () => {
         mocks.metadataInfoValue = [{ name: 'score', type: 'float' }];
-        render(OrderBy);
+        render(OrderBy, { props: { datasetId: 'ds1' } });
 
         await fireEvent.click(screen.getByTestId('sort-by-trigger'));
         await fireEvent.click(screen.getByTestId('sort-field-score'));
@@ -243,7 +251,7 @@ describe('OrderBy', () => {
 
     it('selects a string metadata field with is_numeric false', async () => {
         mocks.metadataInfoValue = [{ name: 'category', type: 'string' }];
-        render(OrderBy);
+        render(OrderBy, { props: { datasetId: 'ds1' } });
 
         await fireEvent.click(screen.getByTestId('sort-by-trigger'));
         await fireEvent.click(screen.getByTestId('sort-field-category'));
@@ -268,7 +276,7 @@ describe('OrderBy', () => {
                 is_numeric: true
             }
         ];
-        render(OrderBy);
+        render(OrderBy, { props: { datasetId: 'ds1' } });
         expect(screen.getByTestId('sort-by-trigger')).toHaveTextContent('metadata.brightness');
     });
 
@@ -282,7 +290,7 @@ describe('OrderBy', () => {
                 is_numeric: true
             }
         ];
-        render(OrderBy);
+        render(OrderBy, { props: { datasetId: 'ds1' } });
 
         await fireEvent.click(screen.getByTestId('sort-direction-button'));
 
@@ -292,6 +300,105 @@ describe('OrderBy', () => {
                 field_name: 'score',
                 direction: SortDirection.DESC,
                 is_numeric: true
+            }
+        ]);
+    });
+
+    it('lists evaluation metric fields in the dropdown as [run_name]_[metric_name]', async () => {
+        mocks.metricsData = [
+            {
+                run_name: 'run1',
+                metrics: [
+                    { metric_name: 'precision', min_value: 0, max_value: 1 },
+                    { metric_name: 'recall', min_value: 0, max_value: 1 }
+                ]
+            }
+        ];
+        render(OrderBy, { props: { datasetId: 'ds1' } });
+
+        await fireEvent.click(screen.getByTestId('sort-by-trigger'));
+
+        expect(screen.getByTestId('sort-field-run1-precision')).toHaveTextContent('run1_precision');
+        expect(screen.getByTestId('sort-field-run1-recall')).toHaveTextContent('run1_recall');
+    });
+
+    it('selects an evaluation metric field', async () => {
+        mocks.metricsData = [
+            {
+                run_name: 'run1',
+                metrics: [{ metric_name: 'precision', min_value: 0, max_value: 1 }]
+            }
+        ];
+        render(OrderBy, { props: { datasetId: 'ds1' } });
+
+        await fireEvent.click(screen.getByTestId('sort-by-trigger'));
+        await fireEvent.click(screen.getByTestId('sort-field-run1-precision'));
+
+        expect(mocks.updateSortBy).toHaveBeenCalledWith([
+            {
+                source: 'evaluation_metric',
+                evaluation_run_name: 'run1',
+                metric_name: 'precision',
+                direction: SortDirection.ASC
+            }
+        ]);
+    });
+
+    it('deselects an evaluation metric field when clicking the already selected item', async () => {
+        mocks.metricsData = [
+            {
+                run_name: 'run1',
+                metrics: [{ metric_name: 'precision', min_value: 0, max_value: 1 }]
+            }
+        ];
+        mocks.imageSortByValue = [
+            {
+                source: 'evaluation_metric',
+                evaluation_run_name: 'run1',
+                metric_name: 'precision',
+                direction: SortDirection.ASC
+            }
+        ];
+        render(OrderBy, { props: { datasetId: 'ds1' } });
+
+        await fireEvent.click(screen.getByTestId('sort-by-trigger'));
+        await fireEvent.click(screen.getByTestId('sort-field-run1-precision'));
+
+        expect(mocks.updateSortBy).toHaveBeenCalledWith(null);
+    });
+
+    it('shows [run_name]_[metric_name] label in the trigger when an evaluation metric is selected', () => {
+        mocks.imageSortByValue = [
+            {
+                source: 'evaluation_metric',
+                evaluation_run_name: 'run1',
+                metric_name: 'precision',
+                direction: SortDirection.ASC
+            }
+        ];
+        render(OrderBy, { props: { datasetId: 'ds1' } });
+        expect(screen.getByTestId('sort-by-trigger')).toHaveTextContent('run1_precision');
+    });
+
+    it('toggles direction for an evaluation metric field', async () => {
+        mocks.imageSortByValue = [
+            {
+                source: 'evaluation_metric',
+                evaluation_run_name: 'run1',
+                metric_name: 'precision',
+                direction: SortDirection.ASC
+            }
+        ];
+        render(OrderBy, { props: { datasetId: 'ds1' } });
+
+        await fireEvent.click(screen.getByTestId('sort-direction-button'));
+
+        expect(mocks.updateSortBy).toHaveBeenCalledWith([
+            {
+                source: 'evaluation_metric',
+                evaluation_run_name: 'run1',
+                metric_name: 'precision',
+                direction: SortDirection.DESC
             }
         ]);
     });
