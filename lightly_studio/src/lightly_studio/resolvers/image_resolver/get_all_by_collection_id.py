@@ -14,6 +14,7 @@ from sqlmodel import Session, col, func, select
 from lightly_studio.api.routes.api.validators import Paginated
 from lightly_studio.core.dataset_query.image_sample_field import ImageSampleField
 from lightly_studio.core.dataset_query.order_by import (
+    OrderByEvaluationMetricField,
     OrderByExpression,
     OrderByField,
     OrderByMetadataField,
@@ -163,9 +164,16 @@ def _get_all_with_similarity(  # noqa: PLR0913
                 SampleMetadataTable.sample_id == col(ImageTable.sample_id),  # type: ignore[arg-type]
             )
         for expr in order_by:
+            if isinstance(expr, OrderByEvaluationMetricField):
+                samples_query = expr.apply_join(samples_query)  # type: ignore[arg-type,assignment]
+        for expr in order_by:
             samples_query = samples_query.order_by(expr.to_column_element())
     if not order_by or not _file_path_abs_in_order_by(order_by):
-        samples_query = samples_query.order_by(col(ImageTable.file_path_abs).asc())
+        file_path_col = col(ImageTable.file_path_abs)
+        tiebreaker = (
+            file_path_col.asc() if not order_by or order_by[0].ascending else file_path_col.desc()
+        )
+        samples_query = samples_query.order_by(tiebreaker)
 
     if pagination is not None:
         samples_query = samples_query.offset(pagination.offset).limit(pagination.limit)
@@ -222,7 +230,9 @@ def _get_all_without_similarity(  # noqa: PLR0913
         for expr in order_by:
             samples_query = expr.apply(samples_query)
         if not _file_path_abs_in_order_by(order_by):
-            samples_query = samples_query.order_by(col(ImageTable.file_path_abs).asc())
+            file_path_col = col(ImageTable.file_path_abs)
+            tiebreaker = file_path_col.asc() if order_by[0].ascending else file_path_col.desc()
+            samples_query = samples_query.order_by(tiebreaker)
     else:
         samples_query = samples_query.order_by(col(ImageTable.file_path_abs).asc())
 

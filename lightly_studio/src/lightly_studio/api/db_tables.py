@@ -43,6 +43,9 @@ from lightly_studio.models.two_dim_embedding import (
 from lightly_studio.models.evaluation_run import (
     EvaluationRunTable,  # noqa: F401, required for SQLModel to work properly
 )
+from lightly_studio.models.evaluation_annotation_metric import (
+    EvaluationAnnotationMetricTable,  # noqa: F401, required for SQLModel to work properly
+)
 from lightly_studio.models.evaluation_sample_metric import (
     EvaluationSampleMetricTable,  # noqa: F401, required for SQLModel to work properly
 )
