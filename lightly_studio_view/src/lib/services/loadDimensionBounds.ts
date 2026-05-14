@@ -1,4 +1,4 @@
-import { getImageDimensions } from '$lib/api/lightly_studio_local/sdk.gen';
+import { getImageDimensions } from '$lib/api/lightly_studio_local';
 import type { LoadResult } from './types';
 
 export type DimensionBounds = {
