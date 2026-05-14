@@ -214,6 +214,8 @@ def create_and_persist_object_detection_metrics_per_sample(
                 session=session,
                 records=annotation_metrics_to_persist,
             )
+            annotation_metrics_to_persist.clear()
+
     if sample_metrics_to_persist:
         evaluation_sample_metric_resolver.create_many(
             session=session,
