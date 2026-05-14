@@ -46,7 +46,9 @@
     }
 </script>
 
-<svelte:window onkeydown={(e) => dialogState.handleKeyDown(e)} />
+{#if $isSettingsDialogOpen}
+    <svelte:window onkeydown={(e) => dialogState.handleKeyDown(e)} />
+{/if}
 
 <Dialog.Root open={$isSettingsDialogOpen} onOpenChange={(isOpen) => setOpen(isOpen)}>
     <Dialog.Portal>
