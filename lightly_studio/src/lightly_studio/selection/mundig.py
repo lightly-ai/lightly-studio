@@ -81,6 +81,32 @@ class Mundig:
         self._check_consistent_input_size(weights_ndarray.shape[0])
         self.mundig.add_weighting_strategy(weights=weights_ndarray, strength=strength)
 
+    def add_similarity(
+        self,
+        embeddings: Iterable[Iterable[float]],
+        query_embeddings: Iterable[Iterable[float]],
+        strength: float = 1.0,
+    ) -> None:
+        """Add a similarity-based selection strategy.
+
+        Args:
+            embeddings:
+                Candidate sample embeddings. One embedding per input sample.
+            query_embeddings:
+                Reference embeddings used to compute similarity scores.
+            strength:
+                The strength of the similarity strategy.
+        """
+        embeddings_ndarray = np.array(embeddings, dtype=np.float32)
+        self._check_consistent_input_size(embeddings_ndarray.shape[0])
+        similarity = lightly_mundig.Similarity(
+            key_embeddings=embeddings_ndarray,
+            token=LIGHTLY_STUDIO_LICENSE_KEY,
+        )
+        query_embeddings_ndarray = np.array(query_embeddings, dtype=np.float32)
+        weights = similarity.calculate_similarity(query_embeddings=query_embeddings_ndarray)
+        self.add_weighting(weights=weights, strength=strength)
+
     def add_class_balancing(
         self,
         class_distributions: Iterable[Iterable[float]],

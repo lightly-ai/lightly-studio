@@ -4,6 +4,7 @@ import numpy as np
 import pytest
 from pytest_mock import MockerFixture
 
+from lightly_studio.dataset.env import LIGHTLY_STUDIO_LICENSE_KEY
 from lightly_studio.selection.mundig import Mundig
 
 
@@ -66,6 +67,47 @@ class TestMundig:
         mundig.add_weighting([6, 5, 3])
         selected = mundig.run(n_samples=2)
         assert selected == [1, 2]
+
+    def test_similarity(self, mocker: MockerFixture) -> None:
+        """Test the similarity strategy."""
+        similarity = mocker.Mock()
+        similarity.calculate_similarity.return_value = [0.1, 0.2, 0.3]
+        spy_similarity = mocker.patch(
+            "lightly_studio.selection.mundig.lightly_mundig.Similarity", return_value=similarity
+        )
+
+        mundig = Mundig()
+        spy_add_weighting = mocker.spy(mundig, "add_weighting")
+
+        mundig.add_similarity(
+            embeddings=[[1.0, 1.0], [2.0, 0.0], [3.0, 7.0]],
+            query_embeddings=[[10.0, 5.0], [3.0, 6.0]],
+            strength=0.5,
+        )
+
+        spy_similarity.assert_called_once()
+        assert spy_similarity.call_args.kwargs["token"] == LIGHTLY_STUDIO_LICENSE_KEY
+        np.testing.assert_array_equal(
+            spy_similarity.call_args.kwargs["key_embeddings"],
+            np.array([[1.0, 1.0], [2.0, 0.0], [3.0, 7.0]], dtype=np.float32),
+        )
+        similarity.calculate_similarity.assert_called_once()
+        np.testing.assert_array_equal(
+            similarity.calculate_similarity.call_args.kwargs["query_embeddings"],
+            np.array([[10.0, 5.0], [3.0, 6.0]], dtype=np.float32),
+        )
+        spy_add_weighting.assert_called_once_with(weights=[0.1, 0.2, 0.3], strength=0.5)
+
+    def test_similarity__selects_most_similar_samples(self) -> None:
+        """Test that similarity selects the samples closest to the query."""
+        mundig = Mundig()
+        mundig.add_similarity(
+            embeddings=[[1.0, 0.0], [0.0, 1.0], [0.9, 0.0]],
+            query_embeddings=[[1.0, 0.0]],
+        )
+
+        selected = mundig.run(n_samples=2)
+        assert selected == [0, 2]
 
     def test_multiple__wrong_n_input_samples(self) -> None:
         """Check error is raised if input sample sizes differ."""
