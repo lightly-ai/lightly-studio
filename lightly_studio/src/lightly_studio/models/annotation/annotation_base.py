@@ -97,6 +97,11 @@ class AnnotationBaseTable(SQLModel, table=True):
         sa_relationship_kwargs={"lazy": "joined"},
     )
 
+    @property
+    def annotation_collection_id(self) -> UUID:
+        """Return the collection ID of the annotation sample."""
+        return self.sample.collection_id
+
 
 class AnnotationCreate(ABC, SQLModel):
     """Input model for creating annotations."""
@@ -138,6 +143,7 @@ class AnnotationView(BaseModel):
 
     parent_sample_id: UUID
     sample_id: UUID
+    annotation_collection_id: UUID
     annotation_type: AnnotationType
     annotation_label: AnnotationLabel
     confidence: Optional[float] = None
@@ -156,6 +162,7 @@ class AnnotationView(BaseModel):
         return cls(
             parent_sample_id=annotation.parent_sample_id,
             sample_id=annotation.sample_id,
+            annotation_collection_id=annotation.sample.collection_id,
             annotation_type=annotation.annotation_type,
             confidence=annotation.confidence,
             created_at=annotation.created_at,
