@@ -16,10 +16,12 @@
     const dialogState = new SettingsDialogState();
 
     // Hydrate form state each time the dialog opens.
+    let wasDialogOpen = false;
     $effect(() => {
-        if ($isSettingsDialogOpen) {
+        if ($isSettingsDialogOpen && !wasDialogOpen) {
             dialogState.hydrate($settingsStore);
         }
+        wasDialogOpen = $isSettingsDialogOpen;
     });
 
     function setOpen(isOpen: boolean) {
