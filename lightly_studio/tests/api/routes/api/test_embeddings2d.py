@@ -278,7 +278,7 @@ def test_get_embeddings2d__with_metadata_field_color_by(
     table = ipc.open_stream(pa.BufferReader(response.content)).read_all()
     sample_ids_payload = table.column("sample_id").to_pylist()
     color_category = table.column("color_category").to_numpy(zero_copy_only=False)
-    print(color_category)
+
     sample_id_to_color = dict(zip(sample_ids_payload, color_category))
     assert sample_id_to_color[str(samples[0].sample_id)] == 3  # Paris
     assert sample_id_to_color[str(samples[1].sample_id)] == 2  # London
