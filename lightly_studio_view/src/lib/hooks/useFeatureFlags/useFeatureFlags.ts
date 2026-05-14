@@ -1,4 +1,4 @@
-import { getFeatures } from '$lib/api/lightly_studio_local';
+import { getFeatures } from '$lib/api/lightly_studio_local/sdk.gen';
 import { readonly, writable } from 'svelte/store';
 
 export const useFeatureFlags = () => {
