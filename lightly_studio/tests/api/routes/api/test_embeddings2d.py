@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 import time
 
 import numpy as np
@@ -17,6 +18,7 @@ from lightly_studio.models.collection import SampleType
 from lightly_studio.models.tag import TagCreate
 from lightly_studio.resolvers import image_resolver, sample_resolver, tag_resolver, video_resolver
 from lightly_studio.resolvers.image_filter import ImageFilter
+from lightly_studio.resolvers.metadata_resolver.sample import set_value_for_sample
 from lightly_studio.resolvers.sample_resolver.sample_filter import SampleFilter
 from lightly_studio.resolvers.video_resolver.video_filter import VideoFilter
 from tests.helpers_resolvers import (
@@ -55,6 +57,7 @@ def test_get_embeddings2d__2d(
     assert table.schema.field("x").type == pa.float32()
     assert table.schema.field("y").type == pa.float32()
     assert table.schema.field("fulfils_filter").type == pa.uint8()
+    assert table.schema.field("color_category").type == pa.uint8()
     assert table.schema.field("sample_id").type == pa.string()
 
     x = table.column("x").to_numpy(zero_copy_only=False)
@@ -65,6 +68,10 @@ def test_get_embeddings2d__2d(
     assert y.shape == (n_samples,)
     assert fulfils_filter.shape == (n_samples,)
     np.testing.assert_array_equal(fulfils_filter, np.ones(n_samples, dtype=np.uint8))
+
+    color_category = table.column("color_category").to_numpy(zero_copy_only=False)
+    np.testing.assert_array_equal(color_category, np.ones(n_samples, dtype=np.uint8))
+    assert json.loads(table.schema.metadata[b"color_legend"]) == {}
 
     sample_ids = table.column("sample_id").to_pylist()
     expected_sample_ids = [
@@ -134,6 +141,9 @@ def test_get_embeddings2d__2d__with_tag_filter(
         sample_id for sample_id, fulfils in zip(sample_ids_payload, fulfils_filter) if fulfils == 1
     }
     assert sample_ids_payload_fulfils_filter == {str(s.sample_id) for s in tagged_samples}
+
+    color_category = table.column("color_category").to_numpy(zero_copy_only=False)
+    np.testing.assert_array_equal(color_category, fulfils_filter)
 
     assert spy_sample_resolver.call_args is not None
     assert spy_sample_resolver.call_args.kwargs["filters"] == image_filter
@@ -220,8 +230,326 @@ def test_get_embeddings2d__with_video_filter(
     }
     assert filtered_ids == {str(tagged_video.sample_id)}
 
+    color_category = table.column("color_category").to_numpy(zero_copy_only=False)
+    np.testing.assert_array_equal(color_category, fulfils_filter)
+
     # Verify the resolver was called with the correct filters
     assert spy_video_resolver.call_args.kwargs["filters"] == video_filter
+
+
+def test_get_embeddings2d__with_metadata_field_color_by(
+    test_client: TestClient,
+    db_session: Session,
+) -> None:
+    n_samples = 3
+
+    collection_id = fill_db_with_samples_and_embeddings(
+        session=db_session,
+        n_samples=n_samples,
+        embedding_model_names=["model_a"],
+        embedding_dimension=EMBEDDING_DIMENSION,
+    )
+
+    samples = image_resolver.get_all_by_collection_id(
+        session=db_session,
+        collection_id=collection_id,
+    ).samples
+    assert len(samples) == n_samples
+
+    cities = ["Paris", "London", "Paris"]
+    for sample, city in zip(samples, cities):
+        set_value_for_sample(
+            session=db_session,
+            sample_id=sample.sample_id,
+            key="city",
+            value=city,
+        )
+
+    response = test_client.post(
+        f"/api/collections/{collection_id}/embeddings2d/default",
+        json={
+            "filters": {},
+            "color_by": {"key": "city"},
+        },
+    )
+
+    assert response.status_code == 200
+
+    table = ipc.open_stream(pa.BufferReader(response.content)).read_all()
+    sample_ids_payload = table.column("sample_id").to_pylist()
+    color_category = table.column("color_category").to_numpy(zero_copy_only=False)
+    print(color_category)
+    sample_id_to_color = dict(zip(sample_ids_payload, color_category))
+    assert sample_id_to_color[str(samples[0].sample_id)] == 3  # Paris
+    assert sample_id_to_color[str(samples[1].sample_id)] == 2  # London
+    assert sample_id_to_color[str(samples[2].sample_id)] == 3  # Paris
+
+    legend = json.loads(table.schema.metadata[b"color_legend"])
+    assert legend["1"] == "Unassigned"
+    assert legend["2"] == "London"
+    assert legend["3"] == "Paris"
+
+
+def test_get_embeddings2d__with_boolean_metadata_color_by(
+    test_client: TestClient,
+    db_session: Session,
+) -> None:
+    n_samples = 3
+
+    collection_id = fill_db_with_samples_and_embeddings(
+        session=db_session,
+        n_samples=n_samples,
+        embedding_model_names=["model_a"],
+        embedding_dimension=EMBEDDING_DIMENSION,
+    )
+
+    samples = image_resolver.get_all_by_collection_id(
+        session=db_session,
+        collection_id=collection_id,
+    ).samples
+    assert len(samples) == n_samples
+
+    # Samples[0] and samples[2] -> False, samples[1] -> True.
+    flags = [False, True, False]
+    for sample, flag in zip(samples, flags):
+        set_value_for_sample(
+            session=db_session,
+            sample_id=sample.sample_id,
+            key="is_sunny",
+            value=flag,
+        )
+
+    response = test_client.post(
+        f"/api/collections/{collection_id}/embeddings2d/default",
+        json={
+            "filters": {},
+            "color_by": {"key": "is_sunny"},
+        },
+    )
+
+    assert response.status_code == 200
+
+    table = ipc.open_stream(pa.BufferReader(response.content)).read_all()
+    sample_ids_payload = table.column("sample_id").to_pylist()
+    color_category = table.column("color_category").to_numpy(zero_copy_only=False)
+
+    # False is sorted before True, so False -> cat 2, True -> cat 3.
+    sample_id_to_color = dict(zip(sample_ids_payload, color_category))
+    assert sample_id_to_color[str(samples[0].sample_id)] == 2  # False -> cat 2
+    assert sample_id_to_color[str(samples[1].sample_id)] == 3  # True -> cat 3
+    assert sample_id_to_color[str(samples[2].sample_id)] == 2  # False -> cat 2
+
+    legend = json.loads(table.schema.metadata[b"color_legend"])
+    assert legend["1"] == "Unassigned"
+    assert legend["2"] == "false"
+    assert legend["3"] == "true"
+
+
+def test_get_embeddings2d__with_metadata_field_color_by_and_sample_ids_filter(
+    test_client: TestClient,
+    db_session: Session,
+) -> None:
+    n_samples = 4
+
+    collection_id = fill_db_with_samples_and_embeddings(
+        session=db_session,
+        n_samples=n_samples,
+        embedding_model_names=["model_a"],
+        embedding_dimension=EMBEDDING_DIMENSION,
+    )
+
+    samples = image_resolver.get_all_by_collection_id(
+        session=db_session,
+        collection_id=collection_id,
+    ).samples
+    assert len(samples) == n_samples
+
+    cities = ["Paris", "London", "Rome", "Berlin"]
+    for sample, city in zip(samples, cities):
+        set_value_for_sample(
+            session=db_session,
+            sample_id=sample.sample_id,
+            key="city",
+            value=city,
+        )
+
+    selected_samples = [samples[0], samples[2]]
+    selected_sample_ids = [sample.sample_id for sample in selected_samples]
+
+    image_filter = ImageFilter(
+        sample_filter=SampleFilter(sample_ids=selected_sample_ids),
+    )
+
+    response = test_client.post(
+        f"/api/collections/{collection_id}/embeddings2d/default",
+        json={
+            "filters": image_filter.model_dump(mode="json"),
+            "color_by": {"key": "city"},
+        },
+    )
+
+    assert response.status_code == 200
+
+    table = ipc.open_stream(pa.BufferReader(response.content)).read_all()
+    sample_ids_payload = table.column("sample_id").to_pylist()
+    fulfils_filter = table.column("fulfils_filter").to_numpy(zero_copy_only=False)
+    color_category = table.column("color_category").to_numpy(zero_copy_only=False)
+
+    assert len(sample_ids_payload) == len(fulfils_filter)
+    assert len(sample_ids_payload) == len(color_category)
+
+    sample_id_to_filter = dict(zip(sample_ids_payload, fulfils_filter))
+
+    assert sample_id_to_filter[str(samples[0].sample_id)] == 1
+    assert sample_id_to_filter[str(samples[1].sample_id)] == 0
+    assert sample_id_to_filter[str(samples[2].sample_id)] == 1
+    assert sample_id_to_filter[str(samples[3].sample_id)] == 0
+
+    sample_id_to_color = dict(zip(sample_ids_payload, color_category))
+    assert sample_id_to_color[str(samples[0].sample_id)] == 4  # Paris
+    assert sample_id_to_color[str(samples[1].sample_id)] == 0  # London, filtered
+    assert sample_id_to_color[str(samples[2].sample_id)] == 5  # Rome
+    assert sample_id_to_color[str(samples[3].sample_id)] == 0  # Berlin, filtered
+
+    legend = json.loads(table.schema.metadata[b"color_legend"])
+    assert legend["1"] == "Unassigned"
+    assert legend["2"] == "Berlin"
+    assert legend["3"] == "London"
+    assert legend["4"] == "Paris"
+    assert legend["5"] == "Rome"
+
+
+def test_get_embeddings2d__with_integer_metadata_color_by__few_values(
+    test_client: TestClient,
+    db_session: Session,
+) -> None:
+    """Integer fields with <=50 unique values are treated as direct categories."""
+    n_samples = 3
+
+    collection_id = fill_db_with_samples_and_embeddings(
+        session=db_session,
+        n_samples=n_samples,
+        embedding_model_names=["model_a"],
+        embedding_dimension=EMBEDDING_DIMENSION,
+    )
+
+    samples = image_resolver.get_all_by_collection_id(
+        session=db_session,
+        collection_id=collection_id,
+    ).samples
+    assert len(samples) == n_samples
+
+    scores = [1, 2, 1]
+    for sample, score in zip(samples, scores):
+        set_value_for_sample(
+            session=db_session,
+            sample_id=sample.sample_id,
+            key="score",
+            value=score,
+        )
+
+    response = test_client.post(
+        f"/api/collections/{collection_id}/embeddings2d/default",
+        json={
+            "filters": {},
+            "color_by": {"key": "score"},
+        },
+    )
+
+    assert response.status_code == 200
+
+    table = ipc.open_stream(pa.BufferReader(response.content)).read_all()
+    sample_ids_payload = table.column("sample_id").to_pylist()
+    color_category = table.column("color_category").to_numpy(zero_copy_only=False)
+    # Unique values [1, 2] are sorted, so 1 -> cat 2, 2 -> cat 3.
+    sample_id_to_color = dict(zip(sample_ids_payload, color_category))
+    assert sample_id_to_color[str(samples[0].sample_id)] == 2  # score=1 -> cat 2
+    assert sample_id_to_color[str(samples[1].sample_id)] == 3  # score=2 -> cat 3
+    assert sample_id_to_color[str(samples[2].sample_id)] == 2  # score=1 -> cat 2
+
+    legend = json.loads(table.schema.metadata[b"color_legend"])
+    assert legend["1"] == "Unassigned"
+    assert legend["2"] == "1"
+    assert legend["3"] == "2"
+
+
+def test_get_embeddings2d__with_integer_metadata_color_by__many_values(
+    test_client: TestClient,
+    db_session: Session,
+) -> None:
+    """Integer fields with >50 unique values are grouped into buckets."""
+    n_samples = 55
+
+    collection_id = fill_db_with_samples_and_embeddings(
+        session=db_session,
+        n_samples=n_samples,
+        embedding_model_names=["model_a"],
+        embedding_dimension=EMBEDDING_DIMENSION,
+    )
+
+    samples = image_resolver.get_all_by_collection_id(
+        session=db_session,
+        collection_id=collection_id,
+    ).samples
+    assert len(samples) == n_samples
+
+    # Assign 55 distinct integer values (0..54) to exceed the 50-value threshold.
+    for i, sample in enumerate(samples):
+        set_value_for_sample(
+            session=db_session,
+            sample_id=sample.sample_id,
+            key="count",
+            value=i,
+        )
+
+    response = test_client.post(
+        f"/api/collections/{collection_id}/embeddings2d/default",
+        json={
+            "filters": {},
+            "color_by": {"key": "count"},
+        },
+    )
+
+    assert response.status_code == 200
+
+    table = ipc.open_stream(pa.BufferReader(response.content)).read_all()
+    color_category = table.column("color_category").to_numpy(zero_copy_only=False)
+
+    # All samples must be assigned to a bucket (category >= 2)
+    assert all(cat >= 2 for cat in color_category), "All samples should be assigned to a bucket"
+
+    legend = json.loads(table.schema.metadata[b"color_legend"])
+    assert legend == {
+        "1": "Unassigned",
+        "2": "0-2",
+        "3": "2-4",
+        "4": "4-6",
+        "5": "6-8",
+        "6": "8-10",
+        "7": "10-12",
+        "8": "12-14",
+        "9": "14-16",
+        "10": "16-18",
+        "11": "18-20",
+        "12": "20-22",
+        "13": "22-24",
+        "14": "24-26",
+        "15": "26-28",
+        "16": "28-30",
+        "17": "30-32",
+        "18": "32-34",
+        "19": "34-36",
+        "20": "36-38",
+        "21": "38-40",
+        "22": "40-42",
+        "23": "42-44",
+        "24": "44-46",
+        "25": "46-48",
+        "26": "48-50",
+        "27": "50-52",
+        "28": "52-54",
+        "29": "54-56",
+    }
 
 
 """Benchmark for the /embeddings2d/default endpoint.

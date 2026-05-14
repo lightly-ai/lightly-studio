@@ -2028,6 +2028,14 @@ export interface components {
             name: string;
         };
         /**
+         * AnnotationColorBy
+         * @description Color samples by annotation label.
+         */
+        AnnotationColorBy: {
+            /** Annotation Label Ids */
+            annotation_label_ids: string[];
+        };
+        /**
          * AnnotationCreateInput
          * @description API interface to create annotation.
          *
@@ -2822,6 +2830,8 @@ export interface components {
              * @description Filter parameters identifying matching samples
              */
             filters: components["schemas"]["ImageFilter"] | components["schemas"]["VideoFilter"];
+            /** Color By */
+            color_by?: components["schemas"]["TagColorBy"] | components["schemas"]["MetadataFieldColorBy"] | components["schemas"]["AnnotationColorBy"] | null;
         };
         /**
          * GetNegativeSamplesRequest
@@ -3089,6 +3099,14 @@ export interface components {
              * Format: uuid
              */
             classifier_id: string;
+        };
+        /**
+         * MetadataFieldColorBy
+         * @description Assign a distinct color to each unique value of the selected field.
+         */
+        MetadataFieldColorBy: {
+            /** Key */
+            key: string;
         };
         /**
          * MetadataFilter
@@ -3749,6 +3767,14 @@ export interface components {
             operator: components["schemas"]["EqualityComparisonOperator"];
             /** Value */
             value: string;
+        };
+        /**
+         * TagColorBy
+         * @description Color samples by tag membership.
+         */
+        TagColorBy: {
+            /** Tag Ids */
+            tag_ids: string[];
         };
         /**
          * TagCreateBody
