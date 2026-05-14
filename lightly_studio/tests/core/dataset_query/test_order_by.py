@@ -111,8 +111,8 @@ class TestOrderByEvaluationMetricField:
         ).lower()
         assert "left outer join evaluation_run" in sql
         assert "left outer join evaluation_sample_metric" in sql
-        assert "evaluation_sample_metric.metric_name = 'score'" in sql
-        assert "order by evaluation_sample_metric.value asc" in sql
+        assert "evaluation_sample_metric_1.metric_name = 'score'" in sql
+        assert "order by evaluation_sample_metric_1.value asc" in sql
 
     def test_apply__descending(self) -> None:
         """Test descending ordering via desc() method."""
@@ -124,7 +124,7 @@ class TestOrderByEvaluationMetricField:
         sql = str(
             returned_query.compile(dialect=self.dialect, compile_kwargs={"literal_binds": True})
         ).lower()
-        assert "order by evaluation_sample_metric.value desc" in sql
+        assert "order by evaluation_sample_metric_1.value desc" in sql
 
     def test_apply__desc_then_asc(self) -> None:
         """Test that desc().asc() returns to ascending order."""
@@ -136,7 +136,7 @@ class TestOrderByEvaluationMetricField:
         sql = str(
             returned_query.compile(dialect=self.dialect, compile_kwargs={"literal_binds": True})
         ).lower()
-        assert "order by evaluation_sample_metric.value asc" in sql
+        assert "order by evaluation_sample_metric_1.value asc" in sql
 
     def test_to_column_element__ascending(self) -> None:
         """Test that to_column_element returns only the column element without any JOIN."""
@@ -145,5 +145,5 @@ class TestOrderByEvaluationMetricField:
         col_element = order_by.to_column_element()
 
         sql = str(col_element.compile(compile_kwargs={"literal_binds": True})).lower()
-        assert "evaluation_sample_metric.value asc" in sql
+        assert "evaluation_sample_metric_1.value asc" in sql
         assert "join" not in sql
