@@ -107,7 +107,9 @@ describe('useAdjacentImages', () => {
     });
 
     it('passes sort_by to useAdjacentSamples when imageSortBy is set', () => {
-        const sort: SortFieldExpr[] = [{ source: 'image', field_name: 'score', direction: 'desc' }];
+        const sort: SortFieldExpr[] = [
+            { source: 'image', field_name: 'score', direction: 'desc', is_numeric: false }
+        ];
         imageSortByStore.set(sort);
 
         useAdjacentImages({ sampleId: 'sample-123', collectionId: 'collection-1' });

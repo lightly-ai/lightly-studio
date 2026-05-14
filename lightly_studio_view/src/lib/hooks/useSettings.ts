@@ -1,9 +1,7 @@
-import type { components } from '$lib/schema';
-import { client } from '$lib/services/collection';
+import type { GridViewSampleRenderingType, SettingView } from '$lib/api/lightly_studio_local';
 import { derived, get, writable } from 'svelte/store';
-import { getSettings } from '$lib/api/lightly_studio_local';
+import { getSettings, setSettings } from '$lib/api/lightly_studio_local';
 
-type SettingView = components['schemas']['SettingView'];
 type UpdateSettingsResult = { success: boolean; error?: string };
 
 // Default settings values
@@ -15,10 +13,10 @@ const DEFAULT_SETTINGS: SettingView = {
     key_go_back: 'Escape',
     key_toggle_edit_mode: 'e',
     show_annotation_text_labels: false,
-    show_sample_filenames: true,
+    show_sample_filenames: false,
     show_bounding_boxes_for_segmentation: true,
-    created_at: new Date().toISOString(),
-    updated_at: new Date().toISOString(),
+    created_at: new Date(),
+    updated_at: new Date(),
     key_toolbar_selection: 's',
     key_toolbar_drag: 'd',
     key_toolbar_bounding_box: 'b',
@@ -36,27 +34,27 @@ const isLoadedStore = writable(false);
 // Derived stores for convenience
 const gridViewSampleRenderingStore = derived(
     settingsStore,
-    ($settings) => $settings.grid_view_sample_rendering || 'contain'
+    ($settings) => $settings.grid_view_sample_rendering
 );
 
 const showAnnotationTextLabelsStore = derived(
     settingsStore,
-    ($settings) => $settings.show_annotation_text_labels ?? false
+    ($settings) => $settings.show_annotation_text_labels
 );
 
 const showSampleFilenamesStore = derived(
     settingsStore,
-    ($settings) => $settings.show_sample_filenames ?? true
+    ($settings) => $settings.show_sample_filenames
 );
 
 const showBoundingBoxesForSegmentationStore = derived(
     settingsStore,
-    ($settings) => $settings.show_bounding_boxes_for_segmentation ?? true
+    ($settings) => $settings.show_bounding_boxes_for_segmentation
 );
 
 const gridViewThumbnailQualityStore = derived(
     settingsStore,
-    ($settings) => $settings.grid_view_thumbnail_quality || 'raw'
+    ($settings) => $settings.grid_view_thumbnail_quality
 );
 
 // Initialize settings by loading from API
@@ -72,7 +70,7 @@ const initSettings = async () => {
     try {
         const { data } = await getSettings();
         if (data) {
-            settingsStore.set(data as unknown as SettingView);
+            settingsStore.set(data);
             isLoadedStore.set(true);
         }
     } catch (err) {
@@ -91,69 +89,20 @@ const saveSettings = async (
 
     try {
         const currentSettings = get(settingsStore);
-
-        // Create a fresh, clean settings object
         const newSettings: SettingView = {
-            setting_id: currentSettings.setting_id || '',
-            grid_view_sample_rendering:
-                updatedSettings.grid_view_sample_rendering ||
-                currentSettings.grid_view_sample_rendering ||
-                'contain',
-            grid_view_thumbnail_quality:
-                updatedSettings.grid_view_thumbnail_quality ||
-                currentSettings.grid_view_thumbnail_quality ||
-                'raw',
-            key_hide_annotations:
-                updatedSettings.key_hide_annotations || currentSettings.key_hide_annotations || 'v',
-            key_go_back: updatedSettings.key_go_back || currentSettings.key_go_back || 'Escape',
-            key_toggle_edit_mode:
-                updatedSettings.key_toggle_edit_mode || currentSettings.key_toggle_edit_mode || 'e',
-            // This is important: use the value from updatedSettings if it exists
-            show_annotation_text_labels:
-                updatedSettings.show_annotation_text_labels !== undefined
-                    ? updatedSettings.show_annotation_text_labels
-                    : (currentSettings.show_annotation_text_labels ?? false),
-            show_sample_filenames:
-                updatedSettings.show_sample_filenames !== undefined
-                    ? updatedSettings.show_sample_filenames
-                    : (currentSettings.show_sample_filenames ?? true),
-            show_bounding_boxes_for_segmentation:
-                updatedSettings.show_bounding_boxes_for_segmentation !== undefined
-                    ? updatedSettings.show_bounding_boxes_for_segmentation
-                    : (currentSettings.show_bounding_boxes_for_segmentation ?? true),
-            created_at: currentSettings.created_at || new Date().toISOString(),
-            updated_at: new Date().toISOString(),
-            key_toolbar_selection:
-                updatedSettings.key_toolbar_selection || currentSettings.key_toolbar_selection,
-            key_toolbar_drag: updatedSettings.key_toolbar_drag || currentSettings.key_toolbar_drag,
-            key_toolbar_bounding_box:
-                updatedSettings.key_toolbar_bounding_box ||
-                currentSettings.key_toolbar_bounding_box,
-            key_toolbar_segmentation_mask:
-                updatedSettings.key_toolbar_segmentation_mask ||
-                currentSettings.key_toolbar_segmentation_mask,
-            key_toolbar_brush:
-                updatedSettings.key_toolbar_brush || currentSettings.key_toolbar_brush,
-            key_toolbar_eraser:
-                updatedSettings.key_toolbar_eraser || currentSettings.key_toolbar_eraser
+            ...currentSettings,
+            ...updatedSettings,
+            updated_at: new Date()
         };
 
-        // The API call
-        const response = await client.POST('/api/settings', {
-            body: newSettings,
-            headers: {
-                'Content-Type': 'application/json'
-            }
+        const response = await setSettings({
+            body: newSettings
         });
 
         if (response.error) {
             const errorMsg = JSON.stringify(response.error);
             console.error('Settings API error:', errorMsg);
             errorStore.set(errorMsg);
-
-            // We've already updated the local state, so we'll keep it
-            // even though the API call failed
-
             return { success: false, error: errorMsg };
         }
 
@@ -167,7 +116,6 @@ const saveSettings = async (
         const errorMsg = String(err);
         console.error('Error saving settings:', errorMsg);
         errorStore.set(errorMsg);
-
         return { success: false, error: errorMsg };
     } finally {
         isLoadingStore.set(false);
@@ -175,53 +123,17 @@ const saveSettings = async (
 };
 
 // Utility function to update grid view rendering
-const updateGridViewSampleRendering = async (
-    rendering: components['schemas']['GridViewSampleRenderingType']
-) => {
+const updateGridViewSampleRendering = async (rendering: GridViewSampleRenderingType) => {
     return saveSettings({
         grid_view_sample_rendering: rendering
     });
 };
 
-// Updated function for annotation text labels
+// Utility function to update annotation text labels visibility
 const updateShowAnnotationTextLabels = async (show: boolean) => {
-    // Ensure we're working with a boolean
-    const boolValue = Boolean(show);
-
-    // Get current settings (after the store update in SettingsDialog)
-    const currentSettings = get(settingsStore);
-
-    // Create new settings with the explicit boolean value
-    const newSettings = {
-        ...currentSettings,
-        show_annotation_text_labels: boolValue
-    };
-
-    // Send to API
-    try {
-        const response = await client.POST('/api/settings', {
-            body: newSettings,
-            headers: {
-                'Content-Type': 'application/json'
-            }
-        });
-
-        if (response.error) {
-            console.error('API error saving setting:', response.error);
-            return { success: false, error: JSON.stringify(response.error) };
-        }
-
-        if (response.data) {
-            // Update store with the response data
-            settingsStore.set(response.data);
-            return { success: true };
-        }
-
-        return { success: false, error: 'No data returned from API' };
-    } catch (error) {
-        console.error('Error saving annotation text label setting:', error);
-        return { success: false, error: String(error) };
-    }
+    return saveSettings({
+        show_annotation_text_labels: show
+    });
 };
 
 // Export the settings store and functions

@@ -66,6 +66,11 @@ start-e2e-with-videos: build
 start-e2e-groups: build
 	uv run e2e-tests/index_groups.py
 
+.PHONY: start-e2e-with-predictions
+start-e2e-with-predictions: build
+	@echo "Starting server for e2e tests with predictions..."
+	uv run e2e-tests/index_predictions.py
+
 .PHONY: start-e2e-video-groups
 start-e2e-video-groups: build
 	uv run e2e-tests/index_videos_groups.py

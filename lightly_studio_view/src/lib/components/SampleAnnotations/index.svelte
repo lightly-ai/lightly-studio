@@ -1,5 +1,6 @@
 <script lang="ts">
     import { useHideAnnotations } from '$lib/hooks/useHideAnnotations';
+    import { useAnnotationCollectionsFilter } from '$lib/hooks/useAnnotationCollectionsFilter/useAnnotationCollectionsFilter';
     import { useSettings } from '$lib/hooks/useSettings';
     import { onMount, type ComponentProps } from 'svelte';
     import type { AnnotationView } from '$lib/api/lightly_studio_local';
@@ -27,6 +28,7 @@
 
     const { isHidden } = useHideAnnotations();
     const { showBoundingBoxesForSegmentationStore } = useSettings();
+    const { selectedCollectionIds, collectionIdToName } = useAnnotationCollectionsFilter();
 
     // Normalize backend annotation variants into the smaller canvas render contract.
     const mapToCanvasAnnotation = (
@@ -63,12 +65,28 @@
 
     const annotationsWithVisuals: AnnotationCanvasAnnotation[] = $derived.by(() => {
         const showInstanceSegmentationBoundingBoxes = $showBoundingBoxesForSegmentationStore;
+        const selectedIds = $selectedCollectionIds;
+        const idToName = $collectionIdToName;
 
         return sample.annotations
-            .filter((annotation) => annotation.annotation_type !== 'classification')
-            .map((annotation) =>
-                mapToCanvasAnnotation(annotation, showInstanceSegmentationBoundingBoxes)
+            .filter(
+                (annotation) =>
+                    selectedIds.length === 0 ||
+                    selectedIds.includes(annotation.annotation_collection_id)
             )
+            .filter((annotation) => annotation.annotation_type !== 'classification')
+            .map((annotation) => {
+                const canvas = mapToCanvasAnnotation(
+                    annotation,
+                    showInstanceSegmentationBoundingBoxes
+                );
+                if (!canvas) return null;
+                if (selectedIds.length > 1) {
+                    const collectionName = idToName[annotation.annotation_collection_id];
+                    if (collectionName) return { ...canvas, annotation_label_name: collectionName };
+                }
+                return canvas;
+            })
             .filter((annotation): annotation is AnnotationCanvasAnnotation => annotation != null);
     });
     const objectFitClass = $derived(objectFit === 'cover' ? 'object-cover' : 'object-contain');

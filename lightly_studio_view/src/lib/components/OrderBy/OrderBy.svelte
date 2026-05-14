@@ -38,7 +38,12 @@
             updateSortBy(null);
         } else {
             updateSortBy([
-                { source: field.source, field_name: field.value, direction: selectedDirection }
+                {
+                    source: field.source,
+                    field_name: field.value,
+                    direction: selectedDirection,
+                    is_numeric: false
+                }
             ]);
         }
         open = false;
@@ -48,7 +53,14 @@
         if (!selectedField || !selectedSource) return;
         const next =
             selectedDirection === SortDirection.ASC ? SortDirection.DESC : SortDirection.ASC;
-        updateSortBy([{ source: selectedSource, field_name: selectedField, direction: next }]);
+        updateSortBy([
+            {
+                source: selectedSource,
+                field_name: selectedField,
+                direction: next,
+                is_numeric: false
+            }
+        ]);
     }
 </script>
 
