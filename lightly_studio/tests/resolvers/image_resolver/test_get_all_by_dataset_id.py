@@ -9,10 +9,7 @@ from lightly_studio.core.dataset_query.order_by import (
     OrderByField,
     OrderByMetadataField,
 )
-from lightly_studio.models.collection import SampleType
-from lightly_studio.models.evaluation_run import EvaluationRunCreate, EvaluationTaskType
 from lightly_studio.resolvers import (
-    evaluation_run_resolver,
     image_resolver,
     metadata_resolver,
     tag_resolver,
@@ -35,7 +32,10 @@ from tests.helpers_resolvers import (
     create_sample_embedding,
     create_tag,
 )
-from tests.resolvers.evaluation_sample_metric_resolver.helpers import insert_metrics
+from tests.resolvers.evaluation_sample_metric_resolver.helpers import (
+    create_run_and_image,
+    insert_metrics,
+)
 
 
 def test_get_all_by_collection_id(db_session: Session) -> None:
@@ -807,30 +807,12 @@ def test_get_all_by_collection_id__sort_by_evaluation_metric_asc(db_session: Ses
     collection = create_collection(session=db_session)
     collection_id = collection.collection_id
 
-    image_a = create_image(
-        session=db_session, collection_id=collection_id, file_path_abs="/images/a.png"
-    )
+    run, image_a = create_run_and_image(session=db_session, dataset_collection_id=collection_id)
     image_b = create_image(
         session=db_session, collection_id=collection_id, file_path_abs="/images/b.png"
     )
     image_c = create_image(
         session=db_session, collection_id=collection_id, file_path_abs="/images/c.png"
-    )
-
-    gt_collection = create_collection(
-        session=db_session, sample_type=SampleType.ANNOTATION, parent_collection_id=collection_id
-    )
-    pred_collection = create_collection(
-        session=db_session, sample_type=SampleType.ANNOTATION, parent_collection_id=collection_id
-    )
-    run = evaluation_run_resolver.create(
-        session=db_session,
-        evaluation_run_input=EvaluationRunCreate(
-            name="run1",
-            gt_annotation_collection_id=gt_collection.collection_id,
-            pred_annotation_collection_id=pred_collection.collection_id,
-            task_type=EvaluationTaskType.OBJECT_DETECTION,
-        ),
     )
 
     # score order: b(1) < c(2) < a(3), so ascending sorted sequence is b, c, a
@@ -841,40 +823,26 @@ def test_get_all_by_collection_id__sort_by_evaluation_metric_asc(db_session: Ses
     result = image_resolver.get_all_by_collection_id(
         session=db_session,
         collection_id=collection_id,
-        order_by=[OrderByEvaluationMetricField("run1", "score")],
+        order_by=[OrderByEvaluationMetricField("test_run", "score")],
     )
 
-    assert [s.file_name for s in result.samples] == ["b.png", "c.png", "a.png"]
+    assert [s.sample_id for s in result.samples] == [
+        image_b.sample_id,
+        image_c.sample_id,
+        image_a.sample_id,
+    ]
 
 
 def test_get_all_by_collection_id__sort_by_evaluation_metric_desc(db_session: Session) -> None:
     collection = create_collection(session=db_session)
     collection_id = collection.collection_id
 
-    image_a = create_image(
-        session=db_session, collection_id=collection_id, file_path_abs="/images/a.png"
-    )
+    run, image_a = create_run_and_image(session=db_session, dataset_collection_id=collection_id)
     image_b = create_image(
         session=db_session, collection_id=collection_id, file_path_abs="/images/b.png"
     )
     image_c = create_image(
         session=db_session, collection_id=collection_id, file_path_abs="/images/c.png"
-    )
-
-    gt_collection = create_collection(
-        session=db_session, sample_type=SampleType.ANNOTATION, parent_collection_id=collection_id
-    )
-    pred_collection = create_collection(
-        session=db_session, sample_type=SampleType.ANNOTATION, parent_collection_id=collection_id
-    )
-    run = evaluation_run_resolver.create(
-        session=db_session,
-        evaluation_run_input=EvaluationRunCreate(
-            name="run1",
-            gt_annotation_collection_id=gt_collection.collection_id,
-            pred_annotation_collection_id=pred_collection.collection_id,
-            task_type=EvaluationTaskType.OBJECT_DETECTION,
-        ),
     )
 
     # score order: b(1) < c(2) < a(3), so descending sorted sequence is a, c, b
@@ -885,10 +853,16 @@ def test_get_all_by_collection_id__sort_by_evaluation_metric_desc(db_session: Se
     result = image_resolver.get_all_by_collection_id(
         session=db_session,
         collection_id=collection_id,
-        order_by=[OrderByEvaluationMetricField("run1", "score").desc()],
+        order_by=[OrderByEvaluationMetricField("test_run", "score").desc()],
     )
 
-    assert [s.file_name for s in result.samples] == ["a.png", "c.png", "b.png"]
+    assert [s.sample_id for s in result.samples] == [
+        image_a.sample_id,
+        image_c.sample_id,
+        image_b.sample_id,
+    ]
+
+
 def test_get_all_by_collection_id__sort_by_height_asc_is_reverse_of_desc(
     db_session: Session,
 ) -> None:
