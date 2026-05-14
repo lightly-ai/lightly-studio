@@ -12,8 +12,12 @@ from sqlmodel import Session
 
 from lightly_studio.evaluation.evaluation_data import EvaluationData
 from lightly_studio.models.annotation.annotation_base import AnnotationBaseTable
+from lightly_studio.models.evaluation_annotation_metric import EvaluationAnnotationMetricCreate
 from lightly_studio.models.evaluation_sample_metric import EvaluationSampleMetricCreate
-from lightly_studio.resolvers import evaluation_sample_metric_resolver
+from lightly_studio.resolvers import (
+    evaluation_annotation_metric_resolver,
+    evaluation_sample_metric_resolver,
+)
 
 METRIC_BATCH_SIZE = 32  # Buffer size for evaluation_sample_metric_resolver.create_many
 
@@ -158,8 +162,9 @@ def create_and_persist_object_detection_metrics_per_sample(
         sample_id: _to_bounding_boxes(annotations=data.gt_per_sample.get(sample_id, []))
         for sample_id in data.selected_sample_ids
     }
+    sample_metrics_to_persist: list[EvaluationSampleMetricCreate] = []
+    annotation_metrics_to_persist: list[EvaluationAnnotationMetricCreate] = []
 
-    metrics_to_persist: list[EvaluationSampleMetricCreate] = []
     for sample_id in data.selected_sample_ids:
         matching_result = match_image(
             predictions=pred_boxes_per_sample[sample_id],
@@ -168,7 +173,7 @@ def create_and_persist_object_detection_metrics_per_sample(
             classwise=classwise,
         )
 
-        metrics_to_persist.extend(
+        sample_metrics_to_persist.extend(
             [
                 EvaluationSampleMetricCreate(
                     evaluation_run_id=data.evaluation_run_id,
@@ -191,16 +196,33 @@ def create_and_persist_object_detection_metrics_per_sample(
             ]
         )
 
-        if len(metrics_to_persist) >= METRIC_BATCH_SIZE:
+        annotation_metrics_to_persist.extend(
+            _get_annotation_metric_records(
+                evaluation_run_id=data.evaluation_run_id,
+                sample_id=sample_id,
+                matching_result=matching_result,
+            )
+        )
+        if len(sample_metrics_to_persist) >= METRIC_BATCH_SIZE:
             evaluation_sample_metric_resolver.create_many(
                 session=session,
-                records=metrics_to_persist,
+                records=sample_metrics_to_persist,
             )
-            metrics_to_persist.clear()
-    if metrics_to_persist:
+            sample_metrics_to_persist.clear()
+        if len(annotation_metrics_to_persist) >= SAMPLE_BATCH_SIZE:
+            evaluation_annotation_metric_resolver.create_many(
+                session=session,
+                records=annotation_metrics_to_persist,
+            )
+    if sample_metrics_to_persist:
         evaluation_sample_metric_resolver.create_many(
             session=session,
-            records=metrics_to_persist,
+            records=sample_metrics_to_persist,
+        )
+    if annotation_metrics_to_persist:
+        evaluation_annotation_metric_resolver.create_many(
+            session=session,
+            records=annotation_metrics_to_persist,
         )
 
 
@@ -355,3 +377,39 @@ def _to_bounding_boxes(annotations: list[AnnotationBaseTable]) -> list[BoundingB
             )
         )
     return boxes
+
+
+def _get_annotation_metric_records(
+    evaluation_run_id: UUID,
+    sample_id: UUID,
+    matching_result: MatchingResult,
+) -> list[EvaluationAnnotationMetricCreate]:
+    """Create annotation-level metric records from detection matching output."""
+    records = [
+        EvaluationAnnotationMetricCreate(
+            evaluation_run_id=evaluation_run_id,
+            sample_id=sample_id,
+            pred_annotation_id=match.pred_id,
+            gt_annotation_id=match.gt_id,
+            metric_name="iou",
+            value=match.iou,
+        )
+        for match in matching_result.matches
+    ]
+    records.extend(
+        EvaluationAnnotationMetricCreate(
+            evaluation_run_id=evaluation_run_id,
+            sample_id=sample_id,
+            pred_annotation_id=pred_annotation_id,
+        )
+        for pred_annotation_id in matching_result.unmatched_prediction_ids
+    )
+    records.extend(
+        EvaluationAnnotationMetricCreate(
+            evaluation_run_id=evaluation_run_id,
+            sample_id=sample_id,
+            gt_annotation_id=gt_annotation_id,
+        )
+        for gt_annotation_id in matching_result.unmatched_gt_ids
+    )
+    return records
