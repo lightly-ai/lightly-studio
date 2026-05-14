@@ -17,6 +17,7 @@
 
     const { selectedAnnotations, onSelect, disabled, isLoading, collectionId }: Props = $props();
 
+    // svelte-ignore state_referenced_locally
     const result = useAnnotationLabels({ collectionId });
 
     const items = $derived(getSelectionItems($result.data || []));

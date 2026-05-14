@@ -50,11 +50,15 @@
 
     let temporaryBbox = $state<BoundingBox | null>(null);
     let shouldDisableInteraction = $state(false);
+    // svelte-ignore state_referenced_locally
     const labels = useAnnotationLabels({ collectionId });
+    // svelte-ignore state_referenced_locally
     const { createLabel } = useCreateLabel({ collectionId });
+    // svelte-ignore state_referenced_locally
     const { createAnnotation } = useCreateAnnotation({
         collectionId
     });
+    // svelte-ignore state_referenced_locally
     const { deleteAnnotation } = useDeleteAnnotation({
         collectionId
     });

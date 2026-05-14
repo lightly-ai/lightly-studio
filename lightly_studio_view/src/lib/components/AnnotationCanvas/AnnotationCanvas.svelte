@@ -62,6 +62,7 @@
     let hasOffscreen = false;
     let resizeObserver: ResizeObserver | null = null;
     // Shared workers multiplex multiple canvases
+    // svelte-ignore state_referenced_locally
     const canvasId = `${sampleId}-${createCanvasInstanceSuffix()}`;
 
     type ColorParser = (color: string) => [number, number, number, number];

@@ -25,7 +25,9 @@
 
     let isOpen = $state(false);
     let triggerElement: HTMLElement;
+    // svelte-ignore state_referenced_locally
     let colorValue = $state(initialColor);
+    // svelte-ignore state_referenced_locally
     let alphaValue = $state(initialAlpha);
 
     // Predefined colors for quick selection

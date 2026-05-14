@@ -29,7 +29,9 @@
     const { gridViewThumbnailQualityStore } = useSettings();
 
     // Store collection version for cache busting
+    // svelte-ignore state_referenced_locally
     let collectionVersion = $state(cachedCollectionVersion);
+    // svelte-ignore state_referenced_locally
     let collectionVersionLoaded = $state(!!cachedCollectionVersion);
 
     // Component is loaded when both collection version and image are loaded

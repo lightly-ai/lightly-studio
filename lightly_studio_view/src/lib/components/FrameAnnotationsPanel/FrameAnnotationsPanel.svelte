@@ -37,6 +37,7 @@
     }: Props = $props();
 
     const { isEditingMode } = page.data.globalStorage;
+    // svelte-ignore state_referenced_locally
     const annotationLabels = useAnnotationLabels({ collectionId });
     const items = $derived(getSelectionItems($annotationLabels.data || []));
     const annotations = $derived(

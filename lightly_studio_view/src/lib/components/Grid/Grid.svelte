@@ -48,6 +48,7 @@
         gridProps?: Partial<ComponentProps<typeof VirtualGrid>>;
     } = $props();
 
+    // svelte-ignore state_referenced_locally
     let previousScrollResetKey = scrollResetKey;
     let previousInitialScrollPosition = $state<number | undefined>(undefined);
     let pendingRestoreRaf: number | undefined;

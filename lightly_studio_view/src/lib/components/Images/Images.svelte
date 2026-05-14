@@ -41,12 +41,14 @@
         useSelectedAnnotationsFilter();
     const { selectedCollectionIds } = useAnnotationCollectionsFilter();
 
+    // svelte-ignore state_referenced_locally
     const { tagsSelected } = useTags({
         collection_id,
         kind: ['sample']
     });
 
     const { dimensionsValues: dimensions } = useDimensions();
+    // svelte-ignore state_referenced_locally
     const { metadataValues } = useMetadataFilters(collection_id);
 
     const {
@@ -133,6 +135,7 @@
             ? $infiniteSamples.data.pages.flatMap((page: { data?: ImageView[] }) => page.data ?? [])
             : []
     );
+    // svelte-ignore state_referenced_locally
     const selectedSampleIds = getSelectedSampleIds(collection_id);
     let selectionAnchorSampleId = $state<string | null>(null);
 

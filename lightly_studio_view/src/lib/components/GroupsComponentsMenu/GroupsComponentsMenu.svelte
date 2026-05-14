@@ -19,8 +19,10 @@
         collectionId: string;
     } = $props();
 
+    // svelte-ignore state_referenced_locally
     const { groupComponents } = useGroupComponents({ groupId });
     const components = $derived<GroupComponentView[]>($groupComponents.data ?? []);
+    // svelte-ignore state_referenced_locally
     let selectedComponentId = $state(componentId);
     const selectedIndex = $derived(
         components.findIndex((c) => c.details?.sample_id === selectedComponentId)

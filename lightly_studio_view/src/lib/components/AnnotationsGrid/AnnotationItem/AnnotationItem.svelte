@@ -33,12 +33,14 @@
     const { isHidden } = useHideAnnotations();
     const { customLabelColorsStore } = useCustomLabelColors();
 
+    // svelte-ignore state_referenced_locally
     if (!annotation.object_detection_details && !annotation.segmentation_details) {
         throw new Error(
             'Unsupported annotation: Only annotations with object_detection_details or segmentation_details are supported. Please check the annotation data.'
         );
     }
 
+    // svelte-ignore state_referenced_locally
     const {
         width: annotationWidth,
         height: annotationHeight,
@@ -46,7 +48,7 @@
         y: annotationY
     } = getBoundingBox(annotation);
 
-    const segmentationMask = annotation?.segmentation_details?.segmentation_mask;
+    const segmentationMask = $derived(annotation?.segmentation_details?.segmentation_mask);
     // Calculate values directly without using state
     const scale = $derived(
         Math.min(
@@ -69,7 +71,7 @@
         );
     }
 
-    let labelName = annotation.annotation_label.annotation_label_name;
+    const labelName = $derived(annotation.annotation_label.annotation_label_name);
 
     const colorStroke = $derived.by(
         () => $customLabelColorsStore[labelName]?.color ?? getColorByLabel(labelName, 1).color
@@ -81,7 +83,7 @@
     });
     const opacity = $derived($customLabelColorsStore[labelName]?.alpha ?? 0.4);
 
-    const isRLESegmentation = !!segmentationMask;
+    const isRLESegmentation = $derived(!!segmentationMask);
 
     // Calculate values for use in template
     const xOffset = $derived(getXOffset());
@@ -133,7 +135,7 @@
                     viewBox={`${annotationX} ${annotationY} ${annotationWidth} ${annotationHeight}`}
                 >
                     <SampleAnnotationSegmentationRLE
-                        segmentation={segmentationMask}
+                        segmentation={segmentationMask!}
                         width={sample.width}
                         {colorFill}
                         {opacity}

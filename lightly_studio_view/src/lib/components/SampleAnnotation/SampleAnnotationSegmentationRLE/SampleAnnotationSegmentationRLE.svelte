@@ -17,6 +17,7 @@
         prerenderedHeight?: number;
     } = $props();
 
+    // svelte-ignore state_referenced_locally
     if (!segmentation) {
         throw new Error('Segmentation data is required');
     }

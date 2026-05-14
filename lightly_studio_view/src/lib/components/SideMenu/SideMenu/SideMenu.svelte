@@ -19,6 +19,7 @@
         containerProps,
         showColorMarker
     }: SideMenuProps = $props();
+    // svelte-ignore state_referenced_locally
     let selectedItemsIds = $state(initialSelectedItemsIds ?? []);
 
     const handleCheckedChange = (id: string) => {

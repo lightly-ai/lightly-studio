@@ -104,6 +104,7 @@
         }
     });
 
+    // svelte-ignore state_referenced_locally
     let previousIsOpen = isOpen;
     $effect(() => {
         if (!isOpen && previousIsOpen) {

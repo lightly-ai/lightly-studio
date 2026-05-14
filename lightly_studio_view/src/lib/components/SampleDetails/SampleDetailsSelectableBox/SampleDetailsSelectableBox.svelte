@@ -12,6 +12,7 @@
 
     const { getSelectedSampleIds, toggleSampleSelection } = useGlobalStorage();
 
+    // svelte-ignore state_referenced_locally
     const selectedSampleIds = getSelectedSampleIds(collectionId);
 </script>
 

@@ -80,6 +80,7 @@
     const { isEditingMode, lastAnnotationLabel } = useGlobalStorage();
 
     // Annotation details must use the first annotation from sample.annotations
+    // svelte-ignore state_referenced_locally
     const annotationLabelContext = createAnnotationLabelContext({
         isOnAnnotationDetailsView: isOnAnnotationDetailsView,
         annotationId: isOnAnnotationDetailsView ? sample.annotations![0].sample_id : null

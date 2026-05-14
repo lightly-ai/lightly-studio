@@ -21,6 +21,7 @@
         onCancel: () => void;
     } = $props();
 
+    // svelte-ignore state_referenced_locally
     let renameValue = $state(tag.name);
     let renameInputRef = $state<HTMLInputElement | null>(null);
 

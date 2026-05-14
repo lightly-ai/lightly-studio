@@ -27,15 +27,18 @@
         trackId?: number | null;
     } = $props();
 
+    // svelte-ignore state_referenced_locally
     const result = useAnnotationLabels({ collectionId });
     const { addReversibleAction } = useGlobalStorage();
 
+    // svelte-ignore state_referenced_locally
     const { updateAnnotation, refetch } = useAnnotation({
         collectionId,
         annotationId,
         onUpdate
     });
 
+    // svelte-ignore state_referenced_locally
     const { updateAnnotations: updateAnnotationsRaw } = useUpdateAnnotationsMutation({
         collectionId
     });

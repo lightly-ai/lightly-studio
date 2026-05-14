@@ -16,7 +16,9 @@
     $effect(() => {
         loadById(data.params.sample_id);
     });
+    // svelte-ignore state_referenced_locally
     const frameNumber = data.frameNumber ? parseInt(data.frameNumber) : undefined;
+    // svelte-ignore state_referenced_locally
     const { collection } = useCollectionWithChildren({
         collectionId: data.params.dataset_id
     });

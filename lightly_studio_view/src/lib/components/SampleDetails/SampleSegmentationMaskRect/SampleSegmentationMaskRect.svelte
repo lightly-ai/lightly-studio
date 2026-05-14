@@ -48,6 +48,7 @@
         onFinishBrushPendingChange
     }: SampleSegmentationMaskRectProps = $props();
 
+    // svelte-ignore state_referenced_locally
     const labels = useAnnotationLabels({ collectionId });
     const activeAnnotationId = $derived.by(() => {
         if (annotationLabelContext.annotationId) return annotationLabelContext.annotationId;

@@ -30,10 +30,15 @@
 
     const { isEditingMode, addReversibleAction } = useGlobalStorage();
 
+    // svelte-ignore state_referenced_locally
     const annotationLabels = useAnnotationLabels({ collectionId });
+    // svelte-ignore state_referenced_locally
     const { createAnnotation } = useCreateAnnotation({ collectionId });
+    // svelte-ignore state_referenced_locally
     const { deleteAnnotation } = useDeleteAnnotation({ collectionId });
+    // svelte-ignore state_referenced_locally
     const { createLabel } = useCreateLabel({ collectionId });
+    // svelte-ignore state_referenced_locally
     const { updateAnnotations } = useUpdateAnnotationsMutation({ collectionId });
     const datasetId = $derived(page.params.dataset_id!);
     const { refetch: refetchRootCollection } = $derived.by(() =>

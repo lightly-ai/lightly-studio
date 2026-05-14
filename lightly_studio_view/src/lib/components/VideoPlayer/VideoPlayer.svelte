@@ -60,6 +60,7 @@
         preload: 'metadata'
     };
 
+    // svelte-ignore state_referenced_locally
     const { class: videoClass, ...restVideoProps } = videoProps;
     const mergedVideoProps = { ...defaultVideoProps, ...restVideoProps };
 

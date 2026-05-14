@@ -26,6 +26,7 @@
 
     const { isEditingMode } = page.data.globalStorage;
 
+    // svelte-ignore state_referenced_locally
     const { deleteAnnotation } = useDeleteAnnotation({
         collectionId
     });

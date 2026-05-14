@@ -37,8 +37,8 @@
     const paddingX = 5;
 
     // Adjust styling for prediction labels
-    const labelOpacity = isPrediction ? 0.8 : 1;
-    const labelFontStyle = isPrediction ? 'italic' : 'normal';
+    const labelOpacity = $derived(isPrediction ? 0.8 : 1);
+    const labelFontStyle = $derived(isPrediction ? 'italic' : 'normal');
 </script>
 
 <!-- This is a tricky way to have 'unscaled components, in this case we need to have unscaled text -->
