@@ -6,6 +6,7 @@ from abc import ABC, abstractmethod
 from typing import Any
 
 from sqlalchemy import ColumnElement, and_
+from sqlalchemy.orm import aliased
 from sqlmodel import col
 from sqlmodel.sql.expression import SelectOfScalar
 from typing_extensions import Self, TypeVar
@@ -186,6 +187,11 @@ class OrderByEvaluationMetricField(OrderByExpression):
         super().__init__()
         self.evaluation_run_name = evaluation_run_name
         self.metric_name = metric_name
+        # Per-instance aliases so that multiple OrderByEvaluationMetricField
+        # expressions in the same query each join distinct table aliases and
+        # reference distinct value columns — avoiding ambiguous/duplicate SQL.
+        self._run_alias = aliased(EvaluationRunTable)
+        self._metric_alias = aliased(EvaluationSampleMetricTable)
 
     def to_column_element(self) -> ColumnElement[Any]:
         """Return the metric value column element with direction applied.
@@ -193,9 +199,10 @@ class OrderByEvaluationMetricField(OrderByExpression):
         Returns:
             A column element ordered ascending or descending.
         """
+        value_col = col(self._metric_alias.value)
         if self.ascending:
-            return col(EvaluationSampleMetricTable.value).asc()
-        return col(EvaluationSampleMetricTable.value).desc()
+            return value_col.asc()
+        return value_col.desc()
 
     def apply_join(self, query: SelectOfScalar[T]) -> SelectOfScalar[T]:
         """Perform the two LEFT OUTER JOINs without adding ORDER BY.
@@ -210,15 +217,15 @@ class OrderByEvaluationMetricField(OrderByExpression):
             The modified query after joining.
         """
         query = query.outerjoin(
-            EvaluationRunTable,
-            col(EvaluationRunTable.name) == self.evaluation_run_name,
+            self._run_alias,
+            col(self._run_alias.name) == self.evaluation_run_name,
         )
         return query.outerjoin(
-            EvaluationSampleMetricTable,
+            self._metric_alias,
             and_(
-                col(EvaluationSampleMetricTable.sample_id) == col(ImageTable.sample_id),
-                col(EvaluationSampleMetricTable.evaluation_run_id) == col(EvaluationRunTable.id),
-                col(EvaluationSampleMetricTable.metric_name) == self.metric_name,
+                col(self._metric_alias.sample_id) == col(ImageTable.sample_id),
+                col(self._metric_alias.evaluation_run_id) == col(self._run_alias.id),
+                col(self._metric_alias.metric_name) == self.metric_name,
             ),
         )
 
@@ -235,6 +242,7 @@ class OrderByEvaluationMetricField(OrderByExpression):
             The modified query after joining and ordering.
         """
         query = self.apply_join(query)
+        value_col = col(self._metric_alias.value)
         if self.ascending:
-            return query.order_by(col(EvaluationSampleMetricTable.value).asc())
-        return query.order_by(col(EvaluationSampleMetricTable.value).desc())
+            return query.order_by(value_col.asc())
+        return query.order_by(value_col.desc())
