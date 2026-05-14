@@ -1,4 +1,4 @@
-import { client } from './collection';
+import { getImageDimensions } from '$lib/api/lightly_studio_local/sdk.gen';
 import type { LoadResult } from './types';
 
 export type DimensionBounds = {
@@ -23,14 +23,12 @@ export const loadDimensionBounds = async ({
     };
 
     try {
-        const response = await client.GET('/api/collections/{collection_id}/images/dimensions', {
-            params: {
-                path: {
-                    collection_id
-                },
-                query: {
-                    annotation_label_ids
-                }
+        const response = await getImageDimensions({
+            path: {
+                collection_id
+            },
+            query: {
+                annotation_label_ids
             }
         });
 
