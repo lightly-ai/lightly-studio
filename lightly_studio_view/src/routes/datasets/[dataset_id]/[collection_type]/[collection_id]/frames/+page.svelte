@@ -153,15 +153,15 @@
             }
         }}
         status={{
-            loading: $query.isPending && items.length === 0,
-            error: $query.isError,
-            empty: $query.isSuccess && items.length === 0,
-            success: $query.isSuccess && items.length > 0
+            loading: query.isPending && items.length === 0,
+            error: query.isError,
+            empty: query.isSuccess && items.length === 0,
+            success: query.isSuccess && items.length > 0
         }}
         loader={{
             loadMore,
-            disabled: !$query.hasNextPage || $query.isFetchingNextPage,
-            loading: $query.isFetchingNextPage
+            disabled: !query.hasNextPage || query.isFetchingNextPage,
+            loading: query.isFetchingNextPage
         }}
     >
         {#snippet children({ footer })}

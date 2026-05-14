@@ -11,7 +11,7 @@ export const useFrame = (
         }
     });
     const client = useQueryClient();
-    const videoFrame = createQuery(readFrame);
+    const videoFrame = createQuery(() => readFrame);
     const refetch = () => {
         client.invalidateQueries({ queryKey: readFrame.queryKey });
     };

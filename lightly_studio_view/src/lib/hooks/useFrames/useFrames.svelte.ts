@@ -1,7 +1,7 @@
 import { getAllFramesInfiniteOptions } from '$lib/api/lightly_studio_local/@tanstack/svelte-query.gen';
 
 import { createInfiniteQuery, useQueryClient } from '@tanstack/svelte-query';
-import { get, writable } from 'svelte/store';
+import { writable } from 'svelte/store';
 import type { VideoFrameFilter, VideoFrameView } from '$lib/api/lightly_studio_local/types.gen';
 import { GRID_PAGE_SIZE } from '$lib/constants';
 
@@ -13,10 +13,10 @@ export const useFrames = (video_frame_collection_id: string, filter: VideoFrameF
             filter
         }
     });
-    const query = createInfiniteQuery({
+    const query = createInfiniteQuery(() => ({
         ...readCaptionsOptions,
         getNextPageParam: (lastPage) => lastPage.nextCursor || undefined
-    });
+    }));
     const client = useQueryClient();
     const refresh = () => {
         client.invalidateQueries({ queryKey: readCaptionsOptions.queryKey });
@@ -24,7 +24,7 @@ export const useFrames = (video_frame_collection_id: string, filter: VideoFrameF
 
     const data = writable<VideoFrameView[]>([]);
     const totalCount = writable(0);
-    query.subscribe((query) => {
+    $effect(() => {
         if (query.isSuccess) {
             const frames = query.data.pages.flatMap((page) => page.data);
             data.set(frames);
@@ -33,8 +33,8 @@ export const useFrames = (video_frame_collection_id: string, filter: VideoFrameF
     });
 
     const loadMore = () => {
-        if (get(query).hasNextPage && !get(query).isFetchingNextPage) {
-            get(query).fetchNextPage();
+        if (query.hasNextPage && !query.isFetchingNextPage) {
+            query.fetchNextPage();
         }
     };
 

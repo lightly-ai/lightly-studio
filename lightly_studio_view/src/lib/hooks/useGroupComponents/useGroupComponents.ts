@@ -13,7 +13,7 @@ export const useGroupComponents = ({
         }
     });
     const client = useQueryClient();
-    const groupComponents = createQuery(readGroupComponents);
+    const groupComponents = createQuery(() => readGroupComponents);
     const refetch = () => {
         client.invalidateQueries({ queryKey: readGroupComponents.queryKey });
     };

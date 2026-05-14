@@ -2,7 +2,7 @@ import { readAnnotationLabelsOptions } from '$lib/api/lightly_studio_local/@tans
 import { createQuery } from '@tanstack/svelte-query';
 
 export const useAnnotationLabels = ({ collectionId }: { collectionId: string }) => {
-    return createQuery(
+    return createQuery(() =>
         readAnnotationLabelsOptions({
             path: { collection_id: collectionId }
         })

@@ -12,7 +12,7 @@
 
     const annotationCollectionsQuery = useAnnotationCollections({ collectionId });
     const items = $derived(
-        ($annotationCollectionsQuery.data ?? []).map((c) => ({ id: c.collection_id, name: c.name }))
+        (annotationCollectionsQuery.data ?? []).map((c) => ({ id: c.collection_id, name: c.name }))
     );
 
     const { setSelectedCollectionIds, setCollectionIdToName, selectedCollectionIds } =

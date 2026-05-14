@@ -1,14 +1,14 @@
 import { createInfiniteQuery, useQueryClient } from '@tanstack/svelte-query';
 import { readSamplesInfiniteOptions } from '$lib/api/lightly_studio_local/@tanstack/svelte-query.gen';
-import { get, writable } from 'svelte/store';
+import { writable } from 'svelte/store';
 import type { SampleView } from '$lib/api/lightly_studio_local/types.gen';
 
 export const useSamplesInfinite = (...props: Parameters<typeof readSamplesInfiniteOptions>) => {
     const readSamplesOptions = readSamplesInfiniteOptions(...props);
-    const samplesQuery = createInfiniteQuery({
+    const samplesQuery = createInfiniteQuery(() => ({
         ...readSamplesOptions,
         getNextPageParam: (lastPage) => lastPage.nextCursor || undefined
-    });
+    }));
     const client = useQueryClient();
     const refresh = () => {
         client.invalidateQueries({ queryKey: readSamplesOptions.queryKey });
@@ -16,16 +16,16 @@ export const useSamplesInfinite = (...props: Parameters<typeof readSamplesInfini
 
     const data = writable<SampleView[]>([]);
 
-    samplesQuery.subscribe((query) => {
-        if (query.isSuccess) {
-            const allCaptions = query.data.pages.flatMap((page) => page.data);
+    $effect(() => {
+        if (samplesQuery.isSuccess) {
+            const allCaptions = samplesQuery.data.pages.flatMap((page) => page.data);
             data.set(allCaptions);
         }
     });
 
     const loadMore = () => {
-        if (get(samplesQuery).hasNextPage && !get(samplesQuery).isFetchingNextPage) {
-            get(samplesQuery).fetchNextPage();
+        if (samplesQuery.hasNextPage && !samplesQuery.isFetchingNextPage) {
+            samplesQuery.fetchNextPage();
         }
     };
 

@@ -30,13 +30,8 @@ describe('useImagesInfinite', () => {
 
         vi.spyOn(tanstackQuery, 'useQueryClient').mockReturnValue(mockQueryClient as QueryClient);
         vi.spyOn(tanstackQuery, 'createInfiniteQuery').mockImplementation((options) => {
-            capturedOptions = options;
-            return {
-                subscribe: (fn: (value: unknown) => void) => {
-                    fn({});
-                    return vi.fn();
-                }
-            } as CreateInfiniteQueryResult<unknown, Error>;
+            capturedOptions = options();
+            return {} as CreateInfiniteQueryResult<unknown, Error>;
         });
 
         readImagesMock.mockResolvedValue({ data: { data: [], total_count: 0, nextCursor: null } });

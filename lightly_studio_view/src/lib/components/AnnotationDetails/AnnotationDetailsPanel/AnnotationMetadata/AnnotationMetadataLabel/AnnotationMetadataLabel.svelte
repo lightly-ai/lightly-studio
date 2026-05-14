@@ -40,7 +40,7 @@
         collectionId
     });
 
-    const items = $derived(getSelectionItems($result.data || []));
+    const items = $derived(getSelectionItems(result.data || []));
 
     const value = $derived.by(() => {
         const item = items.find((i) => i.value === currentValue);

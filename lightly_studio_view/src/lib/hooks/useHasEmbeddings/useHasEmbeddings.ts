@@ -6,7 +6,7 @@ export const useHasEmbeddings = ({
 }: {
     collectionId: string;
 }): CreateQueryResult<boolean, Error> => {
-    return createQuery(
+    return createQuery(() =>
         hasEmbeddingsOptions({
             path: { collection_id: collectionId }
         })

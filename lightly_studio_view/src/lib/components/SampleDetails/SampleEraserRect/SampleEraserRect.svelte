@@ -172,7 +172,7 @@
     );
 
     async function deleteAnn() {
-        const labels = $annotationLabels.data;
+        const labels = annotationLabels.data;
 
         const annotation = sample.annotations.find(
             (a) => a.sample_id === annotationLabelContext.annotationId

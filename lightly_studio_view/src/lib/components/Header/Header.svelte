@@ -23,7 +23,7 @@
     const { settingsStore } = useSettings();
 
     const hasEmbeddingsQuery = useHasEmbeddings({ collectionId: collection.collection_id });
-    const hasEmbeddings = $derived(!!$hasEmbeddingsQuery.data);
+    const hasEmbeddings = $derived(!!hasEmbeddingsQuery.data);
 
     const datasetId = $derived(page.params.dataset_id!);
     const { collection: datasetCollection } = $derived.by(() =>
@@ -64,8 +64,8 @@
     <div class="p mb-3 border-b border-border-hard bg-card px-4 py-4 pl-8 text-diffuse-foreground">
         <div class="flex items-center justify-between">
             <div class="flex w-[320px]">
-                {#if $datasetCollection.data && !Array.isArray($datasetCollection.data)}
-                    {@const dataset = $datasetCollection.data}
+                {#if datasetCollection.data}
+                    {@const dataset = datasetCollection.data}
                     <a
                         href="/datasets/{dataset.collection_id}/{dataset.sample_type.toLowerCase()}/{dataset.collection_id}"
                         ><Logo /></a
@@ -75,8 +75,8 @@
                 {/if}
             </div>
             <div class="flex flex-1 justify-start">
-                {#if $datasetCollection.data && !Array.isArray($datasetCollection.data)}
-                    <NavigationMenu collection={$datasetCollection.data} />
+                {#if datasetCollection.data}
+                    <NavigationMenu collection={datasetCollection.data} />
                 {/if}
             </div>
             <div class="flex flex-auto justify-end gap-2">

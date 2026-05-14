@@ -13,7 +13,7 @@
     } = $props();
 
     // Fetch collection details to get parent_collection_id
-    const collectionQuery = createQuery(
+    const collectionQuery = createQuery(() =>
         readCollectionOptions({
             path: { collection_id: collectionId }
         })
@@ -21,7 +21,7 @@
 
     // Determine the parent collection ID to use for fetching samples
     const parentCollectionId = $derived.by(() => {
-        const collection = $collectionQuery.data;
+        const collection = collectionQuery.data;
         if (!collection) return collectionId; // Fallback to collectionId while loading
         // If no parent_collection_id, use the current collection_id
         if (!collection.parent_collection_id) {
@@ -89,12 +89,12 @@
     <Separator class="mb-4 bg-border-hard" />
 
     <div class="h-full w-full flex-1 overflow-hidden" bind:this={viewport} bind:clientWidth>
-        {#if $query.isPending && items.length === 0}
+        {#if query.isPending && items.length === 0}
             <div class="flex h-full w-full items-center justify-center gap-2">
                 <Spinner />
                 <div>Loading samples...</div>
             </div>
-        {:else if $query.isSuccess && items.length > 0}
+        {:else if query.isSuccess && items.length > 0}
             <List
                 itemCount={items.length}
                 {height}
@@ -105,7 +105,7 @@
             >
                 {#snippet item({ index, style })}
                     {#if items[index]}
-                        {#key items[index].sample_id + ($query.dataUpdatedAt ?? 0)}
+                        {#key items[index].sample_id + (query.dataUpdatedAt ?? 0)}
                             <div
                                 {style}
                                 class={`w-full pb-[${GridGap}]`}
@@ -130,10 +130,10 @@
                     {#key items.length}
                         <LazyTrigger
                             onIntersect={loadMore}
-                            disabled={!$query.hasNextPage || $query.isFetchingNextPage}
+                            disabled={!query.hasNextPage || query.isFetchingNextPage}
                         />
                     {/key}
-                    {#if $query.isFetchingNextPage}
+                    {#if query.isFetchingNextPage}
                         <div class="flex justify-center p-4">
                             <Spinner />
                         </div>

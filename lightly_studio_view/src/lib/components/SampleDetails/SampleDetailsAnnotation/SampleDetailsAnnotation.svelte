@@ -44,7 +44,7 @@
     );
     const { setCurrentBoundingBox } = useAnnotationLabelContext();
 
-    let annotation = $derived($annotationResp.data);
+    let annotation = $derived(annotationResp.data);
 
     let selectionBox = $derived(annotation ? getBoundingBox(annotation!) : undefined);
     const showBoundingBox = $derived(

@@ -19,7 +19,7 @@
 
     const result = useAnnotationLabels({ collectionId });
 
-    const items = $derived(getSelectionItems($result.data || []));
+    const items = $derived(getSelectionItems(result.data || []));
 </script>
 
 <Card className="h-full">

@@ -11,12 +11,12 @@ export const useAnnotationsInfinite = (
 ) => {
     const annotationsOptions = readAnnotationsWithPayloadInfiniteOptions(...props);
     const isPending = writable(false);
-    const annotations = createInfiniteQuery({
+    const annotations = createInfiniteQuery(() => ({
         ...annotationsOptions,
         getNextPageParam: (lastPage) => {
             return lastPage.nextCursor || undefined;
         }
-    });
+    }));
     const client = useQueryClient();
     const refresh = () => {
         client.invalidateQueries({ queryKey: annotationsOptions.queryKey });

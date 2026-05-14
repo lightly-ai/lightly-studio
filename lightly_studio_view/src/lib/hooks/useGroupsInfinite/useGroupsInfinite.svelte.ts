@@ -1,6 +1,6 @@
 import { getAllGroupsInfiniteOptions } from '$lib/api/lightly_studio_local/@tanstack/svelte-query.gen';
 import { createInfiniteQuery, useQueryClient } from '@tanstack/svelte-query';
-import { get, writable } from 'svelte/store';
+import { writable } from 'svelte/store';
 import type { GroupView } from '$lib/api/lightly_studio_local/types.gen';
 import { GRID_PAGE_SIZE } from '$lib/constants';
 
@@ -18,66 +18,6 @@ import { GRID_PAGE_SIZE } from '$lib/constants';
  * - `query`: The underlying TanStack Query infinite query object with loading/error states
  * - `loadMore`: Function to load the next page of results
  * - `refresh`: Function to invalidate and refetch all data
- *
- * @example
- * ```svelte
- * <script>
- *   import { useGroupsInfinite } from '$lib/hooks/useGroups/useGroupsInfinite';
- *
- *   const collectionId = 'my-collection-id';
- *   const { data, totalCount, query, loadMore, refresh } = useGroupsInfinite(collectionId);
- * </script>
- *
- * {#if $query.isLoading}
- *   <p>Loading groups...</p>
- * {:else if $query.isError}
- *   <p>Error: {$query.error.message}</p>
- * {:else}
- *   <div>
- *     <h2>Total groups: {$totalCount}</h2>
- *     {#each $data as group}
- *       <div>{group.name}</div>
- *     {/each}
- *
- *     {#if $query.hasNextPage}
- *       <button on:click={loadMore} disabled={$query.isFetchingNextPage}>
- *         {$query.isFetchingNextPage ? 'Loading...' : 'Load More'}
- *       </button>
- *     {/if}
- *
- *     <button on:click={refresh}>Refresh</button>
- *   </div>
- * {/if}
- * ```
- *
- * @example
- * ```svelte
- * <!-- Infinite scroll example -->
- * <script>
- *   import { useGroupsInfinite } from '$lib/hooks/useGroupsInfinite';
- *   import { onMount } from 'svelte';
- *
- *   const { data, query, loadMore } = useGroupsInfinite('collection-123');
- *
- *   onMount(() => {
- *     const handleScroll = () => {
- *       const scrolledToBottom = window.innerHeight + window.scrollY >= document.body.offsetHeight - 100;
- *       if (scrolledToBottom && $query.hasNextPage && !$query.isFetchingNextPage) {
- *         loadMore();
- *       }
- *     };
- *
- *     window.addEventListener('scroll', handleScroll);
- *     return () => window.removeEventListener('scroll', handleScroll);
- *   });
- * </script>
- *
- * <div class="groups-grid">
- *   {#each $data as group}
- *     <GroupItem {group} />
- *   {/each}
- * </div>
- * ```
  */
 export const useGroupsInfinite = (collectionId: string) => {
     const readGroupsOptions = getAllGroupsInfiniteOptions({
@@ -86,10 +26,10 @@ export const useGroupsInfinite = (collectionId: string) => {
         body: {}
     });
 
-    const query = createInfiniteQuery({
+    const query = createInfiniteQuery(() => ({
         ...readGroupsOptions,
         getNextPageParam: (lastPage) => lastPage.nextCursor || undefined
-    });
+    }));
 
     const client = useQueryClient();
     const refresh = () => {
@@ -99,7 +39,7 @@ export const useGroupsInfinite = (collectionId: string) => {
     const data = writable<GroupView[]>([]);
     const totalCount = writable(0);
 
-    query.subscribe((query) => {
+    $effect(() => {
         if (query.isSuccess) {
             const groups = query.data.pages.flatMap((page) => page.data);
             data.set(groups);
@@ -108,9 +48,8 @@ export const useGroupsInfinite = (collectionId: string) => {
     });
 
     const loadMore = () => {
-        const currentQuery = get(query);
-        if (currentQuery.hasNextPage && !currentQuery.isFetchingNextPage) {
-            currentQuery.fetchNextPage();
+        if (query.hasNextPage && !query.isFetchingNextPage) {
+            query.fetchNextPage();
         }
     };
 

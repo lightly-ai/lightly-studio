@@ -17,7 +17,7 @@
     const { collection_id, sampleId } = $derived(data);
     const { refetch, videoFrame } = $derived(useFrame(sampleId));
 
-    const sample = $derived($videoFrame.data);
+    const sample = $derived(videoFrame.data);
 
     const datasetId = $derived(page.params.dataset_id!);
 
@@ -28,11 +28,11 @@
     };
 
     const sampleItem = $derived(
-        $videoFrame.data?.sample
+        videoFrame.data?.sample
             ? {
-                  ...$videoFrame.data?.sample,
-                  width: $videoFrame.data.video.width,
-                  height: $videoFrame.data.video.height
+                  ...videoFrame.data?.sample,
+                  width: videoFrame.data.video.width,
+                  height: videoFrame.data.video.height
               }
             : undefined
     );
@@ -53,10 +53,10 @@
         {/snippet}
 
         {#snippet metadataValue()}
-            {#if $videoFrame.data}
-                <FrameDetailsSegment sample={$videoFrame.data} />
+            {#if videoFrame.data}
+                <FrameDetailsSegment sample={videoFrame.data} />
                 <MetadataSegment
-                    metadata_dict={($videoFrame.data.sample as SampleView).metadata_dict}
+                    metadata_dict={(videoFrame.data.sample as SampleView).metadata_dict}
                 />
                 <ViewVideoButton {datasetId} frame={sample} />
             {/if}

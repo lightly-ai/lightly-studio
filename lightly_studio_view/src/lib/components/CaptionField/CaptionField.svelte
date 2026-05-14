@@ -25,7 +25,7 @@
         })
     );
 
-    const caption = $derived($captionResp.data || captionProp);
+    const caption = $derived(captionResp.data || captionProp);
 
     let captionText = $state('');
     let isSaving = $state(false);

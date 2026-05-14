@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { useVideo } from './useVideo';
+import { useVideo } from './useVideo.svelte';
 import { writable, get } from 'svelte/store';
 import type { VideoView } from '$lib/api/lightly_studio_local/types.gen';
 import { createQuery, useQueryClient } from '@tanstack/svelte-query';

@@ -80,7 +80,7 @@
     };
 
     const handleDeleteAnnotation = async (annotationId: string) => {
-        if (!$annotationLabels.data) return;
+        if (!annotationLabels.data) return;
 
         const annotation = annotations?.find((a) => a.sample_id === annotationId);
         if (!annotation) return;
@@ -89,7 +89,7 @@
             try {
                 addAnnotationDeleteToUndoStack({
                     annotation,
-                    labels: $annotationLabels.data!,
+                    labels: annotationLabels.data!,
                     addReversibleAction,
                     createAnnotation,
                     refetch

@@ -223,7 +223,7 @@
                 await brushApi.finishBrush(
                     updatedMask,
                     targetAnnotation,
-                    $labels.data ?? [],
+                    labels.data ?? [],
                     updateAnnotation,
                     annotationLabelContext.lockedAnnotationIds
                 );

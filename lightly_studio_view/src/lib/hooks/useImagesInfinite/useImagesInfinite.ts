@@ -185,7 +185,7 @@ const isQueryEnabled = (params: ImagesInfiniteParams): boolean => {
 
 export const useImagesInfinite = (params: ImagesInfiniteParams) => {
     const samplesOptions = createImagesInfiniteOptions(params);
-    const samples = createInfiniteQuery(samplesOptions);
+    const samples = createInfiniteQuery(() => samplesOptions);
     const client = useQueryClient();
 
     const refresh = () => {

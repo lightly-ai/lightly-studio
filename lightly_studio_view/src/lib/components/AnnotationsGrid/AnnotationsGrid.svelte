@@ -102,13 +102,9 @@
     }
 
     $effect(() => {
-        const unsubscribe = infiniteAnnotations.subscribe((result) => {
-            if (result.isSuccess && result.data.pages.length > 0) {
-                setfilteredAnnotationCount(result.data.pages[0].total_count);
-            }
-        });
-
-        return unsubscribe;
+        if (infiniteAnnotations.isSuccess && infiniteAnnotations.data.pages.length > 0) {
+            setfilteredAnnotationCount(infiniteAnnotations.data.pages[0].total_count);
+        }
     });
 
     const { user } = useAuth();
@@ -129,7 +125,7 @@
     // Skip the classification annotations
     // because we don't have support for the annotation views
     const annotations: AnnotationWithPayloadView[] = $derived(
-        $infiniteAnnotations.data?.pages.flatMap((page) =>
+        infiniteAnnotations.data?.pages.flatMap((page) =>
             page.data.filter(
                 (annotation) =>
                     annotation.annotation.annotation_type != AnnotationType.CLASSIFICATION
@@ -138,8 +134,8 @@
     );
 
     function handleLoadMore() {
-        if ($infiniteAnnotations.hasNextPage) {
-            $infiniteAnnotations.fetchNextPage();
+        if (infiniteAnnotations.hasNextPage) {
+            infiniteAnnotations.fetchNextPage();
         }
     }
 
@@ -206,7 +202,7 @@
 
     const scrollResetKey = $derived(infiniteLoaderIdentifier);
     const hideSelectedAnnotationsPanel = $derived(
-        $infiniteAnnotations.isFetched && annotations.length === 0
+        infiniteAnnotations.isFetched && annotations.length === 0
     );
 </script>
 
@@ -223,16 +219,16 @@
                 }
             }}
             status={{
-                loading: $infiniteAnnotations.isPending && annotations.length === 0,
-                error: $infiniteAnnotations.isError && annotations.length === 0,
-                empty: $infiniteAnnotations.isFetched && annotations.length === 0,
+                loading: infiniteAnnotations.isPending && annotations.length === 0,
+                error: infiniteAnnotations.isError && annotations.length === 0,
+                empty: infiniteAnnotations.isFetched && annotations.length === 0,
                 success: annotations.length > 0
             }}
             loader={{
                 loadMore: handleLoadMore,
                 disabled:
-                    !$infiniteAnnotations.hasNextPage || $infiniteAnnotations.isFetchingNextPage,
-                loading: $infiniteAnnotations.isFetchingNextPage
+                    !infiniteAnnotations.hasNextPage || infiniteAnnotations.isFetchingNextPage,
+                loading: infiniteAnnotations.isFetchingNextPage
             }}
         >
             {#snippet children({ footer })}
@@ -248,7 +244,7 @@
                     }}
                 >
                     {#snippet gridItem({ index, style, width, height })}
-                        {#key $infiniteAnnotations.dataUpdatedAt}
+                        {#key infiniteAnnotations.dataUpdatedAt}
                             {#if annotations[index]}
                                 <GridItem
                                     {width}

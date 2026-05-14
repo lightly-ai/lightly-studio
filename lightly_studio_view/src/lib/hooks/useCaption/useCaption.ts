@@ -4,7 +4,6 @@ import {
     updateCaptionTextMutation
 } from '$lib/api/lightly_studio_local/@tanstack/svelte-query.gen';
 import { createMutation, createQuery, useQueryClient } from '@tanstack/svelte-query';
-import { get } from 'svelte/store';
 import { toast } from 'svelte-sonner';
 
 export const useCaption = ({ sampleId, onUpdate }: { sampleId: string; onUpdate?: () => void }) => {
@@ -15,12 +14,11 @@ export const useCaption = ({ sampleId, onUpdate }: { sampleId: string; onUpdate?
     });
     const client = useQueryClient();
 
-    const captionMutation = createMutation(updateCaptionTextMutation());
-    captionMutation.subscribe(() => undefined);
+    const captionMutation = createMutation(() => updateCaptionTextMutation());
 
     const mutateCaptionText = (text: string) =>
         new Promise<void>((resolve, reject) => {
-            get(captionMutation).mutate(
+            captionMutation.mutate(
                 {
                     path: {
                         sample_id: sampleId
@@ -34,7 +32,7 @@ export const useCaption = ({ sampleId, onUpdate }: { sampleId: string; onUpdate?
             );
         });
 
-    const caption = createQuery(captionOptions);
+    const caption = createQuery(() => captionOptions);
 
     const refetch = async () => {
         await client.invalidateQueries({ queryKey: captionOptions.queryKey });

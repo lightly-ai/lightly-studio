@@ -13,7 +13,7 @@ export const useImage = ({
         }
     });
     const client = useQueryClient();
-    const image = createQuery(readImage);
+    const image = createQuery(() => readImage);
     const refetch = () => {
         client.invalidateQueries({ queryKey: readImage.queryKey });
     };

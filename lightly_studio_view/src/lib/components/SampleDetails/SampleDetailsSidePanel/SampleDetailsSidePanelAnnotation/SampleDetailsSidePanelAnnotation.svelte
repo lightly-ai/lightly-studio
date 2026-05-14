@@ -68,7 +68,7 @@
     const { isEditingMode } = page.data.globalStorage;
     const collectionId = $derived(page.params.collection_id!);
     const result = $derived(useAnnotationLabels({ collectionId }));
-    const items = $derived(getSelectionItems($result.data || []));
+    const items = $derived(getSelectionItems(result.data || []));
     const { addReversibleAction } = useGlobalStorage();
 
     const annotationId = $derived(annotationProp.sample_id);
@@ -91,7 +91,7 @@
         })
     );
 
-    const annotation = $derived($annotationResp.data || annotationProp);
+    const annotation = $derived(annotationResp.data || annotationProp);
 
     const annotationLabelName = $derived(annotation.annotation_label.annotation_label_name);
 
