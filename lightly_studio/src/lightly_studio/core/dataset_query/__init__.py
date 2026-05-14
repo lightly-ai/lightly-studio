@@ -3,7 +3,12 @@ from .classification_expression import ClassificationField, ClassificationQuery
 from .dataset_query import DatasetQuery
 from .image_sample_field import ImageSampleField
 from .object_detection_expression import ObjectDetectionField, ObjectDetectionQuery
-from .order_by import OrderByExpression, OrderByField
+from .order_by import (
+    OrderByEvaluationMetricField,
+    OrderByExpression,
+    OrderByField,
+    OrderByMetadataField,
+)
 from .segmentation_mask_expression import SegmentationMaskField, SegmentationMaskQuery
 from .video_sample_field import VideoSampleField
 
@@ -17,8 +22,10 @@ __all__ = [
     "ImageSampleField",
     "ObjectDetectionField",
     "ObjectDetectionQuery",
+    "OrderByEvaluationMetricField",
     "OrderByExpression",
     "OrderByField",
+    "OrderByMetadataField",
     "SegmentationMaskField",
     "SegmentationMaskQuery",
     "VideoSampleField",

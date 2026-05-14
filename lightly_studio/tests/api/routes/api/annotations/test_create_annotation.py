@@ -67,6 +67,7 @@ def test_create_annotation_object_detection(
     assert result == AnnotationView(
         annotation_type=AnnotationType.OBJECT_DETECTION,
         sample_id=result.sample_id,
+        annotation_collection_id=result.annotation_collection_id,
         parent_sample_id=UUID(str(parent_sample_id)),
         annotation_label=AnnotationView.AnnotationLabel.model_validate(expected_label),
         created_at=result.created_at,
@@ -131,6 +132,7 @@ def test_create_annotation_segmentation_mask(
     assert result == AnnotationView(
         annotation_type=AnnotationType.SEGMENTATION_MASK,
         sample_id=result.sample_id,
+        annotation_collection_id=result.annotation_collection_id,
         parent_sample_id=UUID(str(parent_sample_id)),
         annotation_label=AnnotationView.AnnotationLabel.model_validate(expected_label),
         created_at=result.created_at,
@@ -186,6 +188,7 @@ def test_create_annotation_classification(
     assert result == AnnotationView(
         annotation_type=AnnotationType.CLASSIFICATION,
         sample_id=result.sample_id,
+        annotation_collection_id=result.annotation_collection_id,
         parent_sample_id=UUID(str(parent_sample_id)),
         annotation_label=AnnotationView.AnnotationLabel.model_validate(expected_label),
         created_at=result.created_at,
@@ -237,6 +240,7 @@ def test_create_annotation_with_collection_name(
     assert result == AnnotationView(
         annotation_type=AnnotationType.CLASSIFICATION,
         sample_id=result.sample_id,
+        annotation_collection_id=result.annotation_collection_id,
         parent_sample_id=UUID(str(parent_sample_id)),
         annotation_label=AnnotationView.AnnotationLabel.model_validate(expected_label),
         created_at=result.created_at,

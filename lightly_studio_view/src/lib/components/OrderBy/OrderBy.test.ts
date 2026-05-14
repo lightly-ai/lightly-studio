@@ -1,28 +1,34 @@
 import { fireEvent, render, screen } from '@testing-library/svelte';
-import { tick } from 'svelte';
-import { writable } from 'svelte/store';
+import { readable } from 'svelte/store';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { SortDirection } from '$lib/api/lightly_studio_local';
-import type { SortFieldExpr } from '$lib/api/lightly_studio_local';
+import type { MetadataInfoView, SortFieldExpr } from '$lib/api/lightly_studio_local';
 import OrderBy from './OrderBy.svelte';
 
-const imageSortByStore = writable<SortFieldExpr[] | null>(null);
-
 const mocks = vi.hoisted(() => ({
-    updateSortBy: vi.fn()
+    imageSortByValue: null as SortFieldExpr[] | null,
+    updateSortBy: vi.fn(),
+    metadataInfoValue: [] as MetadataInfoView[]
 }));
 
 vi.mock('$lib/hooks/useImageFilters/useImageFilters', () => ({
     useImageFilters: () => ({
-        imageSortBy: imageSortByStore,
+        imageSortBy: readable(mocks.imageSortByValue),
         updateSortBy: mocks.updateSortBy
+    })
+}));
+
+vi.mock('$lib/hooks/useMetadataFilters/useMetadataFilters', () => ({
+    useMetadataFilters: () => ({
+        metadataInfo: readable(mocks.metadataInfoValue)
     })
 }));
 
 describe('OrderBy', () => {
     beforeEach(() => {
         vi.clearAllMocks();
-        imageSortByStore.set(null);
+        mocks.imageSortByValue = null;
+        mocks.metadataInfoValue = [];
     });
 
     it('shows placeholder text when no field is selected', () => {
@@ -31,11 +37,16 @@ describe('OrderBy', () => {
     });
 
     it('shows the selected field label in the trigger', () => {
-        imageSortByStore.set([
-            { source: 'image', field_name: 'file_name', direction: SortDirection.ASC }
-        ]);
+        mocks.imageSortByValue = [
+            {
+                source: 'image',
+                field_name: 'file_name',
+                direction: SortDirection.ASC,
+                is_numeric: false
+            }
+        ];
         render(OrderBy);
-        expect(screen.getByTestId('sort-by-trigger')).toHaveTextContent('File Name');
+        expect(screen.getByTestId('sort-by-trigger')).toHaveTextContent('file name');
     });
 
     it('direction button is disabled when no field is selected', () => {
@@ -44,9 +55,14 @@ describe('OrderBy', () => {
     });
 
     it('direction button is enabled when a field is selected', () => {
-        imageSortByStore.set([
-            { source: 'image', field_name: 'width', direction: SortDirection.ASC }
-        ]);
+        mocks.imageSortByValue = [
+            {
+                source: 'image',
+                field_name: 'width',
+                direction: SortDirection.ASC,
+                is_numeric: false
+            }
+        ];
         render(OrderBy);
         expect(screen.getByTestId('sort-direction-button')).not.toBeDisabled();
     });
@@ -58,14 +74,24 @@ describe('OrderBy', () => {
         await fireEvent.click(screen.getByTestId('sort-field-file_name'));
 
         expect(mocks.updateSortBy).toHaveBeenCalledWith([
-            { source: 'image', field_name: 'file_name', direction: SortDirection.ASC }
+            {
+                source: 'image',
+                field_name: 'file_name',
+                direction: SortDirection.ASC,
+                is_numeric: false
+            }
         ]);
     });
 
     it('deselects the field when clicking the already selected item', async () => {
-        imageSortByStore.set([
-            { source: 'image', field_name: 'file_name', direction: SortDirection.ASC }
-        ]);
+        mocks.imageSortByValue = [
+            {
+                source: 'image',
+                field_name: 'file_name',
+                direction: SortDirection.ASC,
+                is_numeric: false
+            }
+        ];
         render(OrderBy);
 
         await fireEvent.click(screen.getByTestId('sort-by-trigger'));
@@ -75,37 +101,72 @@ describe('OrderBy', () => {
     });
 
     it('switches to a different field while preserving the current direction', async () => {
-        imageSortByStore.set([
-            { source: 'image', field_name: 'file_name', direction: SortDirection.DESC }
-        ]);
+        mocks.imageSortByValue = [
+            {
+                source: 'image',
+                field_name: 'file_name',
+                direction: SortDirection.DESC,
+                is_numeric: false
+            }
+        ];
         render(OrderBy);
 
         await fireEvent.click(screen.getByTestId('sort-by-trigger'));
         await fireEvent.click(screen.getByTestId('sort-field-width'));
 
         expect(mocks.updateSortBy).toHaveBeenCalledWith([
-            { source: 'image', field_name: 'width', direction: SortDirection.DESC }
+            {
+                source: 'image',
+                field_name: 'width',
+                direction: SortDirection.DESC,
+                is_numeric: false
+            }
         ]);
     });
 
-    it('toggles direction between asc and desc on each click', async () => {
-        imageSortByStore.set([
-            { source: 'image', field_name: 'file_name', direction: SortDirection.ASC }
-        ]);
+    it('toggles direction from asc to desc', async () => {
+        mocks.imageSortByValue = [
+            {
+                source: 'image',
+                field_name: 'file_name',
+                direction: SortDirection.ASC,
+                is_numeric: false
+            }
+        ];
         render(OrderBy);
 
         await fireEvent.click(screen.getByTestId('sort-direction-button'));
-        expect(mocks.updateSortBy).toHaveBeenLastCalledWith([
-            { source: 'image', field_name: 'file_name', direction: SortDirection.DESC }
-        ]);
 
-        imageSortByStore.set([
-            { source: 'image', field_name: 'file_name', direction: SortDirection.DESC }
+        expect(mocks.updateSortBy).toHaveBeenCalledWith([
+            {
+                source: 'image',
+                field_name: 'file_name',
+                direction: SortDirection.DESC,
+                is_numeric: false
+            }
         ]);
-        await tick();
+    });
+
+    it('toggles direction from desc to asc', async () => {
+        mocks.imageSortByValue = [
+            {
+                source: 'image',
+                field_name: 'file_name',
+                direction: SortDirection.DESC,
+                is_numeric: false
+            }
+        ];
+        render(OrderBy);
+
         await fireEvent.click(screen.getByTestId('sort-direction-button'));
-        expect(mocks.updateSortBy).toHaveBeenLastCalledWith([
-            { source: 'image', field_name: 'file_name', direction: SortDirection.ASC }
+
+        expect(mocks.updateSortBy).toHaveBeenCalledWith([
+            {
+                source: 'image',
+                field_name: 'file_name',
+                direction: SortDirection.ASC,
+                is_numeric: false
+            }
         ]);
     });
 
@@ -122,10 +183,116 @@ describe('OrderBy', () => {
 
         await fireEvent.click(screen.getByTestId('sort-by-trigger'));
 
-        expect(screen.getByTestId('sort-field-file_name')).toHaveTextContent('File Name');
-        expect(screen.getByTestId('sort-field-file_path_abs')).toHaveTextContent('File Path');
-        expect(screen.getByTestId('sort-field-created_at')).toHaveTextContent('Created At');
-        expect(screen.getByTestId('sort-field-width')).toHaveTextContent('Width');
-        expect(screen.getByTestId('sort-field-height')).toHaveTextContent('Height');
+        expect(screen.getByTestId('sort-field-file_name')).toHaveTextContent('file name');
+        expect(screen.getByTestId('sort-field-file_path_abs')).toHaveTextContent('file path');
+        expect(screen.getByTestId('sort-field-created_at')).toHaveTextContent('created at');
+        expect(screen.getByTestId('sort-field-width')).toHaveTextContent('width');
+        expect(screen.getByTestId('sort-field-height')).toHaveTextContent('height');
+    });
+
+    it('lists metadata fields in the dropdown as metadata.[field]', async () => {
+        mocks.metadataInfoValue = [
+            { name: 'brightness', type: 'float' },
+            { name: 'count', type: 'integer' },
+            { name: 'label', type: 'string' },
+            { name: 'active', type: 'boolean' }
+        ];
+        render(OrderBy);
+
+        await fireEvent.click(screen.getByTestId('sort-by-trigger'));
+
+        expect(screen.getByTestId('sort-field-brightness')).toHaveTextContent(
+            'metadata.brightness'
+        );
+        expect(screen.getByTestId('sort-field-count')).toHaveTextContent('metadata.count');
+        expect(screen.getByTestId('sort-field-label')).toHaveTextContent('metadata.label');
+        expect(screen.getByTestId('sort-field-active')).toHaveTextContent('metadata.active');
+    });
+
+    it('excludes list and dict metadata fields from the dropdown', async () => {
+        mocks.metadataInfoValue = [
+            { name: 'tags', type: 'list' },
+            { name: 'nested', type: 'dict' },
+            { name: 'score', type: 'float' }
+        ];
+        render(OrderBy);
+
+        await fireEvent.click(screen.getByTestId('sort-by-trigger'));
+
+        expect(screen.queryByTestId('sort-field-tags')).toBeNull();
+        expect(screen.queryByTestId('sort-field-nested')).toBeNull();
+        expect(screen.getByTestId('sort-field-score')).toHaveTextContent('metadata.score');
+    });
+
+    it('selects a numeric metadata field with is_numeric true', async () => {
+        mocks.metadataInfoValue = [{ name: 'score', type: 'float' }];
+        render(OrderBy);
+
+        await fireEvent.click(screen.getByTestId('sort-by-trigger'));
+        await fireEvent.click(screen.getByTestId('sort-field-score'));
+
+        expect(mocks.updateSortBy).toHaveBeenCalledWith([
+            {
+                source: 'metadata',
+                field_name: 'score',
+                direction: SortDirection.ASC,
+                is_numeric: true
+            }
+        ]);
+    });
+
+    it('selects a string metadata field with is_numeric false', async () => {
+        mocks.metadataInfoValue = [{ name: 'category', type: 'string' }];
+        render(OrderBy);
+
+        await fireEvent.click(screen.getByTestId('sort-by-trigger'));
+        await fireEvent.click(screen.getByTestId('sort-field-category'));
+
+        expect(mocks.updateSortBy).toHaveBeenCalledWith([
+            {
+                source: 'metadata',
+                field_name: 'category',
+                direction: SortDirection.ASC,
+                is_numeric: false
+            }
+        ]);
+    });
+
+    it('shows metadata.[field] label in the trigger when a metadata field is selected', () => {
+        mocks.metadataInfoValue = [{ name: 'brightness', type: 'float' }];
+        mocks.imageSortByValue = [
+            {
+                source: 'metadata',
+                field_name: 'brightness',
+                direction: SortDirection.ASC,
+                is_numeric: true
+            }
+        ];
+        render(OrderBy);
+        expect(screen.getByTestId('sort-by-trigger')).toHaveTextContent('metadata.brightness');
+    });
+
+    it('preserves is_numeric when toggling direction on a metadata field', async () => {
+        mocks.metadataInfoValue = [{ name: 'score', type: 'float' }];
+        mocks.imageSortByValue = [
+            {
+                source: 'metadata',
+                field_name: 'score',
+                direction: SortDirection.ASC,
+                is_numeric: true
+            }
+        ];
+        render(OrderBy);
+
+        await fireEvent.click(screen.getByTestId('sort-direction-button'));
+
+        expect(mocks.updateSortBy).toHaveBeenCalledWith([
+            {
+                source: 'metadata',
+                field_name: 'score',
+                direction: SortDirection.DESC,
+                is_numeric: true
+            }
+        ]);
     });
 });
