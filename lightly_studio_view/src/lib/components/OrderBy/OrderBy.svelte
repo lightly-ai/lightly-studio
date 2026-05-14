@@ -93,7 +93,7 @@
             </Button>
         </Popover.Trigger>
         <Popover.Content class="min-w-20 p-1" align="start">
-            <div class="max-h-64 overflow-y-auto">
+            <div class="max-h-64 overflow-y-auto dark:[color-scheme:dark]">
                 {#each allSortFields as field}
                     <button
                         class={cn(
