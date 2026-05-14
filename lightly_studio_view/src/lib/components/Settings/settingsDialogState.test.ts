@@ -165,7 +165,7 @@ describe('SettingsDialogState', () => {
         expect(state.shortcuts.goBack).toBe('Escape');
     });
 
-    it('returns a complete save payload from current state', () => {
+    it('getSavePayload includes both modified and unmodified fields', () => {
         const state = new SettingsDialogState();
         state.hydrate(TEST_SETTINGS);
         state.shortcuts.hideAnnotations = 'z';
