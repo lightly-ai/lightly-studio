@@ -1,75 +1,24 @@
 import type { InfiniteData } from '@tanstack/svelte-query';
 import { createInfiniteQuery, infiniteQueryOptions, useQueryClient } from '@tanstack/svelte-query';
-import type {
-    EvaluationMetricSortExpr,
-    QueryExpr,
-    ReadImagesError,
-    ReadImagesResponse,
-    SortFieldExpr
-} from '$lib/api/lightly_studio_local';
-
-export type SortExpr = SortFieldExpr | ({ source: 'evaluation_metric' } & EvaluationMetricSortExpr);
+import type { ReadImagesError, ReadImagesResponse } from '$lib/api/lightly_studio_local';
 import { readImages, type ReadImagesRequest } from '$lib/api/lightly_studio_local';
-import type { DimensionBounds } from '$lib/services/loadDimensionBounds';
 import { createMetadataFilters } from '$lib/hooks/useMetadataFilters/useMetadataFilters';
-import type { MetadataValues } from '$lib/services/types';
 import { GRID_PAGE_SIZE } from '$lib/constants';
 import { getAnnotationsFilter } from './getAnnotationsFilter';
+import type {
+    CommonFilters,
+    ImagesInfiniteParams,
+    NormalModeParams,
+    SamplesQueryKey
+} from './types';
 
-// Define mode-aware parameter types.
-interface ClassifierSamples {
-    positiveSampleIds: string[];
-    negativeSampleIds: string[];
-}
-
-interface NormalModeFilters {
-    annotation_label_ids?: string[];
-    collection_ids?: string[];
-    tag_ids?: string[];
-    dimensions?: DimensionBounds;
-    query_expr?: QueryExpr;
-    sample_ids?: string[];
-}
-
-interface CommonFilters {
-    metadata_values?: MetadataValues;
-    text_embedding?: number[];
-}
-
-interface NormalModeParams {
-    mode: 'normal';
-    filters?: NormalModeFilters;
-}
+export type { ImagesInfiniteParams } from './types';
 
 export const isNormalModeParams = (
     params: ImagesInfiniteParams
 ): params is { collection_id: string } & NormalModeParams & CommonFilters => {
     return params.mode === 'normal';
 };
-
-interface ClassifierModeParams {
-    mode: 'classifier';
-    classifierSamples?: ClassifierSamples;
-}
-
-export type ImagesInfiniteParams = {
-    query_expr?: QueryExpr;
-    collection_id: string;
-    sort_by?: SortExpr[] | null;
-} & (NormalModeParams | ClassifierModeParams) &
-    CommonFilters;
-
-type SamplesQueryKey = readonly [
-    string,
-    string,
-    'normal' | 'classifier',
-    NormalModeFilters | ClassifierSamples | undefined,
-    {
-        metadata_values?: MetadataValues;
-        text_embedding?: number[];
-    },
-    SortExpr[] | null | undefined
-];
 
 // Create infinite query options for samples with mode-aware logic.
 const createImagesInfiniteOptions = (params: ImagesInfiniteParams) => {
