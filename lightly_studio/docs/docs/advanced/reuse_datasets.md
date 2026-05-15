@@ -7,15 +7,10 @@ LightlyStudio persists every dataset (metadata, tags, annotations, captions, and
 To store the DuckDB file elsewhere (for example, on a larger external disk or to maintain isolated projects), configure the database manager before creating or loading any datasets:
 
 ```python
-from pathlib import Path
-
 import lightly_studio as ls
 
-ls.db_manager.connect(db_file=str(Path.home() / "lightly_data/my-db-path.db"))
+ls.db_manager.connect(db_file="/data/lightly_studio.db")
 ```
-
-!!! note
-    `db_manager.connect` does not expand `~` — pass an already-resolved path (e.g. via `Path.home()` or `Path(...).expanduser()`).
 
 !!! note
     Within the `.db` file all paths are stored as absolute paths. This allows the software to fetch data for visualization even if you move the `.db` file around.
@@ -77,5 +72,5 @@ A typical workflow is therefore:
 If the DuckDB file lives elsewhere, point at it explicitly:
 
 ```shell
-lightly-studio gui --db-file ~/lightly_data/my-db-path.db
+lightly-studio gui --db-file /data/lightly_studio.db
 ```
