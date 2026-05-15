@@ -754,6 +754,73 @@ def test_get_all_by_collection_id__with_similarity_and_order_by(db_session: Sess
     assert result.samples[2].file_name == "c.png"
 
 
+def test_get_all_by_collection_id__similarity_is_tiebreaker_when_order_by_values_equal(
+    db_session: Session,
+) -> None:
+    collection = create_collection(session=db_session)
+    collection_id = collection.collection_id
+
+    embedding_model = create_embedding_model(
+        session=db_session,
+        collection_id=collection_id,
+        embedding_model_name="example_embedding_model",
+        embedding_dimension=2,
+    )
+
+    # image_a and image_b share the same width but differ in similarity to the query
+    image_a = create_image(
+        session=db_session,
+        collection_id=collection_id,
+        file_path_abs="/images/a.png",
+        width=100,
+    )
+    image_b = create_image(
+        session=db_session,
+        collection_id=collection_id,
+        file_path_abs="/images/b.png",
+        width=100,
+    )
+    image_c = create_image(
+        session=db_session,
+        collection_id=collection_id,
+        file_path_abs="/images/c.png",
+        width=200,
+    )
+
+    create_sample_embedding(
+        session=db_session,
+        sample_id=image_a.sample_id,
+        embedding=[1.0, 0.0],
+        embedding_model_id=embedding_model.embedding_model_id,
+    )
+    create_sample_embedding(
+        session=db_session,
+        sample_id=image_b.sample_id,
+        embedding=[-1.0, 0.0],
+        embedding_model_id=embedding_model.embedding_model_id,
+    )
+    create_sample_embedding(
+        session=db_session,
+        sample_id=image_c.sample_id,
+        embedding=[0.0, 1.0],
+        embedding_model_id=embedding_model.embedding_model_id,
+    )
+
+    result = image_resolver.get_all_by_collection_id(
+        session=db_session,
+        collection_id=collection_id,
+        text_embedding=[1.0, 0.0],
+        order_by=[OrderByField(ImageSampleField.width)],
+    )
+
+    assert len(result.samples) == 3
+    # width is the primary sort: image_a (100) and image_b (100) are tied, image_c (200) is last.
+    # similarity distance breaks the tie: image_a is closest → image_a before image_b.
+    assert result.samples[0].sample_id == image_a.sample_id
+    assert result.samples[1].sample_id == image_b.sample_id
+    assert result.samples[2].sample_id == image_c.sample_id
+
+
 def test_get_all_by_collection_id__sort_by_metadata_field_asc(db_session: Session) -> None:
     collection = create_collection(session=db_session)
     collection_id = collection.collection_id
