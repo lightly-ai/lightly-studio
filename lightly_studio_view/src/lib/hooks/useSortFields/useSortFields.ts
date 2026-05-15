@@ -19,11 +19,11 @@ export interface EvalSortField {
 
 export type SortField = ImageSortField | EvalSortField;
 
-export interface UseSortFieldsParams {
+interface UseSortFieldsParams {
     datasetId: string;
 }
 
-export interface UseSortFieldsReturn {
+interface UseSortFieldsReturn {
     metadataSortFields: Readable<ImageSortField[]>;
     evalSortFields: Readable<EvalSortField[]>;
     allSortFields: Readable<SortField[]>;
