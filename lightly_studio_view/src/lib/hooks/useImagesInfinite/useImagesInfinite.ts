@@ -2,8 +2,9 @@ import type { InfiniteData } from '@tanstack/svelte-query';
 import { createInfiniteQuery, infiniteQueryOptions, useQueryClient } from '@tanstack/svelte-query';
 import type { ReadImagesError, ReadImagesResponse } from '$lib/api/lightly_studio_local';
 import { readImages } from '$lib/api/lightly_studio_local';
-import { buildRequestBody } from './buildRequestBody';
+
 import type { ImagesInfiniteParams, SamplesQueryKey } from './types';
+import { buildRequestBody } from './buildRequestBody';
 
 export type { ImagesInfiniteParams } from './types';
 export { buildRequestBody } from './buildRequestBody';
