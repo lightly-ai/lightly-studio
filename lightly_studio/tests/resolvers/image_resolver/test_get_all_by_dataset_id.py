@@ -4,7 +4,11 @@ from sqlmodel import Session
 
 from lightly_studio.api.routes.api.validators import Paginated
 from lightly_studio.core.dataset_query.image_sample_field import ImageSampleField
-from lightly_studio.core.dataset_query.order_by import OrderByField, OrderByMetadataField
+from lightly_studio.core.dataset_query.order_by import (
+    OrderByEvaluationMetricField,
+    OrderByField,
+    OrderByMetadataField,
+)
 from lightly_studio.resolvers import (
     image_resolver,
     metadata_resolver,
@@ -27,6 +31,10 @@ from tests.helpers_resolvers import (
     create_images,
     create_sample_embedding,
     create_tag,
+)
+from tests.resolvers.evaluation_sample_metric_resolver.helpers import (
+    create_run_and_image,
+    insert_metrics,
 )
 
 
@@ -746,6 +754,73 @@ def test_get_all_by_collection_id__with_similarity_and_order_by(db_session: Sess
     assert result.samples[2].file_name == "c.png"
 
 
+def test_get_all_by_collection_id__similarity_is_tiebreaker_when_order_by_values_equal(
+    db_session: Session,
+) -> None:
+    collection = create_collection(session=db_session)
+    collection_id = collection.collection_id
+
+    embedding_model = create_embedding_model(
+        session=db_session,
+        collection_id=collection_id,
+        embedding_model_name="example_embedding_model",
+        embedding_dimension=2,
+    )
+
+    # image_a and image_b share the same width but differ in similarity to the query
+    image_a = create_image(
+        session=db_session,
+        collection_id=collection_id,
+        file_path_abs="/images/a.png",
+        width=100,
+    )
+    image_b = create_image(
+        session=db_session,
+        collection_id=collection_id,
+        file_path_abs="/images/b.png",
+        width=100,
+    )
+    image_c = create_image(
+        session=db_session,
+        collection_id=collection_id,
+        file_path_abs="/images/c.png",
+        width=200,
+    )
+
+    create_sample_embedding(
+        session=db_session,
+        sample_id=image_a.sample_id,
+        embedding=[1.0, 0.0],
+        embedding_model_id=embedding_model.embedding_model_id,
+    )
+    create_sample_embedding(
+        session=db_session,
+        sample_id=image_b.sample_id,
+        embedding=[-1.0, 0.0],
+        embedding_model_id=embedding_model.embedding_model_id,
+    )
+    create_sample_embedding(
+        session=db_session,
+        sample_id=image_c.sample_id,
+        embedding=[0.0, 1.0],
+        embedding_model_id=embedding_model.embedding_model_id,
+    )
+
+    result = image_resolver.get_all_by_collection_id(
+        session=db_session,
+        collection_id=collection_id,
+        text_embedding=[1.0, 0.0],
+        order_by=[OrderByField(ImageSampleField.width)],
+    )
+
+    assert len(result.samples) == 3
+    # width is the primary sort: image_a (100) and image_b (100) are tied, image_c (200) is last.
+    # similarity distance breaks the tie: image_a is closest → image_a before image_b.
+    assert result.samples[0].sample_id == image_a.sample_id
+    assert result.samples[1].sample_id == image_b.sample_id
+    assert result.samples[2].sample_id == image_c.sample_id
+
+
 def test_get_all_by_collection_id__sort_by_metadata_field_asc(db_session: Session) -> None:
     collection = create_collection(session=db_session)
     collection_id = collection.collection_id
@@ -793,3 +868,100 @@ def test_get_all_by_collection_id__sort_by_width_asc(db_session: Session) -> Non
     )
 
     assert [s.width for s in result.samples] == [100, 200, 300]
+
+
+def test_get_all_by_collection_id__sort_by_evaluation_metric_asc(db_session: Session) -> None:
+    collection = create_collection(session=db_session)
+    collection_id = collection.collection_id
+
+    run, image_a = create_run_and_image(session=db_session, dataset_collection_id=collection_id)
+    image_b = create_image(
+        session=db_session, collection_id=collection_id, file_path_abs="/images/b.png"
+    )
+    image_c = create_image(
+        session=db_session, collection_id=collection_id, file_path_abs="/images/c.png"
+    )
+
+    # score order: b(1) < c(2) < a(3), so ascending sorted sequence is b, c, a
+    insert_metrics(db_session, run.id, image_a.sample_id, {"score": 3.0})
+    insert_metrics(db_session, run.id, image_b.sample_id, {"score": 1.0})
+    insert_metrics(db_session, run.id, image_c.sample_id, {"score": 2.0})
+
+    result = image_resolver.get_all_by_collection_id(
+        session=db_session,
+        collection_id=collection_id,
+        order_by=[OrderByEvaluationMetricField("test_run", "score")],
+    )
+
+    assert [s.sample_id for s in result.samples] == [
+        image_b.sample_id,
+        image_c.sample_id,
+        image_a.sample_id,
+    ]
+
+
+def test_get_all_by_collection_id__sort_by_evaluation_metric_desc(db_session: Session) -> None:
+    collection = create_collection(session=db_session)
+    collection_id = collection.collection_id
+
+    run, image_a = create_run_and_image(session=db_session, dataset_collection_id=collection_id)
+    image_b = create_image(
+        session=db_session, collection_id=collection_id, file_path_abs="/images/b.png"
+    )
+    image_c = create_image(
+        session=db_session, collection_id=collection_id, file_path_abs="/images/c.png"
+    )
+
+    # score order: b(1) < c(2) < a(3), so descending sorted sequence is a, c, b
+    insert_metrics(db_session, run.id, image_a.sample_id, {"score": 3.0})
+    insert_metrics(db_session, run.id, image_b.sample_id, {"score": 1.0})
+    insert_metrics(db_session, run.id, image_c.sample_id, {"score": 2.0})
+
+    result = image_resolver.get_all_by_collection_id(
+        session=db_session,
+        collection_id=collection_id,
+        order_by=[OrderByEvaluationMetricField("test_run", "score").desc()],
+    )
+
+    assert [s.sample_id for s in result.samples] == [
+        image_a.sample_id,
+        image_c.sample_id,
+        image_b.sample_id,
+    ]
+
+
+def test_get_all_by_collection_id__sort_by_height_asc_is_reverse_of_desc(
+    db_session: Session,
+) -> None:
+    collection = create_collection(session=db_session)
+    collection_id = collection.collection_id
+
+    # Two images share the same height (200) to test tiebreaker behaviour.
+    create_image(
+        session=db_session, collection_id=collection_id, file_path_abs="/c.png", height=300
+    )
+    create_image(
+        session=db_session, collection_id=collection_id, file_path_abs="/a.png", height=200
+    )
+    create_image(
+        session=db_session, collection_id=collection_id, file_path_abs="/b.png", height=200
+    )
+    create_image(
+        session=db_session, collection_id=collection_id, file_path_abs="/d.png", height=100
+    )
+
+    result_asc = image_resolver.get_all_by_collection_id(
+        session=db_session,
+        collection_id=collection_id,
+        order_by=[OrderByField(ImageSampleField.height)],
+    )
+    result_desc = image_resolver.get_all_by_collection_id(
+        session=db_session,
+        collection_id=collection_id,
+        order_by=[OrderByField(ImageSampleField.height).desc()],
+    )
+
+    asc_paths = [s.file_path_abs for s in result_asc.samples]
+    desc_paths = [s.file_path_abs for s in result_desc.samples]
+
+    assert asc_paths == list(reversed(desc_paths))
