@@ -30,6 +30,7 @@ from lightly_studio.models.sample_embedding import (
 )
 from lightly_studio.resolvers import (
     annotation_resolver,
+    collection_resolver,
     embedding_model_resolver,
     image_resolver,
     sample_embedding_resolver,
@@ -746,6 +747,22 @@ class TestClassifierManager:
         assert annotations[0].confidence is not None
         assert np.isclose(annotations[0].confidence, 0.1)
 
+        # Predictions must land in a child collection named after the classifier.
+        classifier_collection_id = collection_resolver.get_by_name(
+            session=db_session,
+            name=classifier.few_shot_classifier.name,
+            parent_collection_id=collection_id,
+        )
+        assert classifier_collection_id is not None
+        annotations_in_classifier_collection = annotation_resolver.get_all(
+            session=db_session,
+            filters=AnnotationsFilter(
+                annotation_types=[AnnotationType.CLASSIFICATION],
+                collection_ids=[classifier_collection_id],
+            ),
+        ).annotations
+        assert len(annotations_in_classifier_collection) == 10
+
         # Run the classifier again to check that it does not create duplicates
         # and updates the existing annotations.
         mocker.patch.object(
@@ -784,6 +801,16 @@ class TestClassifierManager:
             annotations_updated[0].annotation_label.annotation_label_name
             == "test_classifier_class1"
         )
+        # Rerun must reuse the same classifier-named collection: the refreshed
+        # annotations still live in the collection captured after the first run.
+        annotations_in_classifier_collection = annotation_resolver.get_all(
+            session=db_session,
+            filters=AnnotationsFilter(
+                annotation_types=[AnnotationType.CLASSIFICATION],
+                collection_ids=[classifier_collection_id],
+            ),
+        ).annotations
+        assert len(annotations_in_classifier_collection) == 10
 
     def test_run_classifier__no_samples_in_database(
         self,
