@@ -1,6 +1,6 @@
+import { exportCollectionToAbsolutePaths } from '$lib/api/lightly_studio_local';
 import type { ExportFilter, LoadResult } from '$lib/services/types';
 import { triggerDownloadBlob } from '$lib/utils';
-import { client } from './collection';
 
 type ExportCollectionResult = LoadResult<Blob | undefined>;
 type ExportCollectionParams = {
@@ -10,7 +10,6 @@ type ExportCollectionParams = {
     excludeFilter?: ExportFilter;
 };
 
-// TODO: properly abstract each endpoint and use the types of client to make the request
 export const exportCollection = async ({
     collection_id,
     filename = '',
@@ -19,12 +18,8 @@ export const exportCollection = async ({
 }: ExportCollectionParams): Promise<ExportCollectionResult> => {
     const result: ExportCollectionResult = { data: undefined, error: undefined };
     try {
-        const response = await client.POST('/api/collections/{collection_id}/export', {
-            params: {
-                path: {
-                    collection_id: collection_id
-                }
-            },
+        const response = await exportCollectionToAbsolutePaths({
+            path: { collection_id },
             body: {
                 include: includeFilter,
                 exclude: excludeFilter
@@ -32,16 +27,16 @@ export const exportCollection = async ({
             headers: {
                 'Access-Control-Expose-Headers': 'Content-Disposition'
             },
-            parseAs: 'blob'
+            parseAs: 'text'
         });
         if (response.error) {
             throw new Error(JSON.stringify(response.error, null, 2));
         }
 
-        if (!response.data) {
+        if (!response.data || typeof response.data !== 'string') {
             throw new Error('No data');
         }
-        result.data = response.data;
+        result.data = new Blob([response.data], { type: 'text/plain' });
 
         // trigger download as a certain filename
         filename =

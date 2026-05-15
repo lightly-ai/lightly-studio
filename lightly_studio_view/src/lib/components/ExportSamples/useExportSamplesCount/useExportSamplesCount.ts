@@ -1,4 +1,4 @@
-import { client } from '$lib/services/collection';
+import { exportCollectionStats } from '$lib/api/lightly_studio_local';
 import type { ExportFilter } from '$lib/services/types';
 import { writable, type Readable } from 'svelte/store';
 
@@ -33,18 +33,13 @@ export function useExportSamplesCount({
     if (hasIncludeFilter || hasExcludeFilter) {
         isLoading.set(true);
 
-        client
-            .POST('/api/collections/{collection_id}/export/stats', {
-                params: {
-                    path: {
-                        collection_id
-                    }
-                },
-                body: {
-                    include: includeFilter,
-                    exclude: excludeFilter
-                }
-            })
+        exportCollectionStats({
+            path: { collection_id },
+            body: {
+                include: includeFilter,
+                exclude: excludeFilter
+            }
+        })
             .then((response) => {
                 if (response?.data) {
                     count.set(response.data);
