@@ -5,20 +5,9 @@ import { readImages, type ReadImagesRequest } from '$lib/api/lightly_studio_loca
 import { createMetadataFilters } from '$lib/hooks/useMetadataFilters/useMetadataFilters';
 import { GRID_PAGE_SIZE } from '$lib/constants';
 import { getAnnotationsFilter } from './getAnnotationsFilter';
-import type {
-    CommonFilters,
-    ImagesInfiniteParams,
-    NormalModeParams,
-    SamplesQueryKey
-} from './types';
+import type { ImagesInfiniteParams, SamplesQueryKey } from './types';
 
 export type { ImagesInfiniteParams } from './types';
-
-export const isNormalModeParams = (
-    params: ImagesInfiniteParams
-): params is { collection_id: string } & NormalModeParams & CommonFilters => {
-    return params.mode === 'normal';
-};
 
 // Create infinite query options for samples with mode-aware logic.
 const createImagesInfiniteOptions = (params: ImagesInfiniteParams) => {

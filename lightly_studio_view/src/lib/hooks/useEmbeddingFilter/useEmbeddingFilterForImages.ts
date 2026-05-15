@@ -1,5 +1,4 @@
 import { derived, type Readable } from 'svelte/store';
-import { isNormalModeParams } from '$lib/hooks/useImagesInfinite/useImagesInfinite';
 import { useImageFilters } from '$lib/hooks/useImageFilters/useImageFilters';
 import { useFilterVisibility } from './useFilterVisibility';
 
@@ -15,7 +14,7 @@ export function useEmbeddingFilterForImages(
             if (!$filterParams?.collection_id || $filterParams.collection_id !== $collectionId) {
                 return [];
             }
-            if (!isNormalModeParams($filterParams)) {
+            if ($filterParams.mode !== 'normal') {
                 return [];
             }
             return $filterParams.filters?.sample_ids ?? [];
