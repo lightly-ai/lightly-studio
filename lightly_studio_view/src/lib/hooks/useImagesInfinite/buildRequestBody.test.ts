@@ -3,8 +3,10 @@ import { buildRequestBody } from './buildRequestBody';
 
 type Params = Parameters<typeof buildRequestBody>[0];
 
+const metadataFilterFixture = { key: 'temp', op: '>=' as const, value: 10 };
+
 vi.mock('$lib/hooks/useMetadataFilters/useMetadataFilters', () => ({
-    createMetadataFilters: vi.fn(() => [{ mocked: true }])
+    createMetadataFilters: vi.fn(() => [metadataFilterFixture])
 }));
 
 describe('buildRequestBody', () => {
@@ -193,7 +195,9 @@ describe('buildRequestBody', () => {
                 },
                 0
             );
-            expect(result.filters?.sample_filter?.metadata_filters).toEqual([{ mocked: true }]);
+            expect(result.filters?.sample_filter?.metadata_filters).toEqual([
+                metadataFilterFixture
+            ]);
         });
     });
 });
