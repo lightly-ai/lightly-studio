@@ -10,7 +10,7 @@ const callQueryFn = (options: Options, ctx: QueryFnContext) => {
     return fn(ctx);
 };
 
-const readImagesMock = vi.fn();
+const { readImagesMock } = vi.hoisted(() => ({ readImagesMock: vi.fn() }));
 
 vi.mock('$lib/api/lightly_studio_local', () => ({
     readImages: (...args: unknown[]) => readImagesMock(...args)
