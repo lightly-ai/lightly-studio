@@ -13,7 +13,7 @@ This installs [s3fs](https://github.com/fsspec/s3fs) (for S3), [gcsfs](https://g
 ```py
 import lightly_studio as ls
 
-dataset = ls.ImageDataset.create(name="s3_dataset")
+dataset = ls.ImageDataset.load_or_create(name="s3_dataset")
 dataset.add_images_from_path(path="s3://my-bucket/images/")
 
 ls.start_gui()
@@ -24,7 +24,7 @@ ls.start_gui()
 ```py
 import lightly_studio as ls
 
-dataset = ls.VideoDataset.create(name="s3_video_dataset")
+dataset = ls.VideoDataset.load_or_create(name="s3_video_dataset")
 dataset.add_videos_from_path(path="s3://my-bucket/videos/")
 
 ls.start_gui()

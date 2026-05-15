@@ -5,8 +5,8 @@ LightlyStudio has a powerful Python interface. You can not only index datasets b
 ## Overview
 
 - **Dataset setup** — [Image Dataset](../dataset_setup/image_dataset.md), [Video Dataset](../dataset_setup/video_dataset.md)
-- **Reuse Datasets and Databases** — [Reuse Datasets](../dataset_setup/reuse_datasets.md) covers the DuckDB file location and `load_or_create` workflow.
-- **Cloud Storage** — [Cloud Storage](../dataset_setup/cloud_storage.md) covers loading images and videos directly from S3, GCS, and Azure.
+- **Reuse Datasets and Databases** — [Reuse Datasets](../advanced/reuse_datasets.md) covers the DuckDB file location and `load_or_create` workflow.
+- **Cloud Storage** — [Cloud Storage](../advanced/cloud_storage.md) covers loading images and videos directly from S3, GCS, and Azure.
 - **Search and Filter** — [Search and Filter](../concepts_and_tools/search_and_filter.md) covers the `DatasetQuery` API for filtering, sorting, and slicing.
 - **Sampling** — [Sampling](../concepts_and_tools/sampling.md) covers diverse, metadata-weighted, similarity, class-balancing, and combined sampling strategies.
 

@@ -35,8 +35,6 @@ nav:
   - Dataset Setup:
     - Image Dataset: dataset_setup/image_dataset.md
     - Video Dataset: dataset_setup/video_dataset.md
-    - Reuse Datasets: dataset_setup/reuse_datasets.md
-    - Cloud Storage: dataset_setup/cloud_storage.md
   - Python API:
     - api/index.md
     - Dataset: api/dataset.md
@@ -58,6 +56,8 @@ nav:
       - Plugins: concepts_and_tools/plugins.md
   - Advanced:
     - Run LightlyStudio from a Notebook: advanced/notebooks.md
+    - Reuse Datasets: advanced/reuse_datasets.md
+    - Cloud Storage: advanced/cloud_storage.md
   - About Us: about-us.md
   - 🏢 Enterprise:
     - enterprise/index.md
