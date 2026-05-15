@@ -165,7 +165,6 @@ def _get_all_with_similarity(  # noqa: PLR0913
         samples_query = samples_query.where(col(ImageTable.sample_id).in_(sample_ids))
         total_count_query = total_count_query.where(col(ImageTable.sample_id).in_(sample_ids))
 
-    samples_query = samples_query.order_by(distance_expr)
     if order_by:
         if any(
             isinstance(expr, OrderByMetadataField) for expr in order_by
@@ -179,6 +178,7 @@ def _get_all_with_similarity(  # noqa: PLR0913
                 samples_query = expr.apply_join(samples_query)  # type: ignore[arg-type,assignment]
         for expr in order_by:
             samples_query = samples_query.order_by(expr.to_column_element())
+    samples_query = samples_query.order_by(distance_expr)
     if not order_by or not _file_path_abs_in_order_by(order_by):
         file_path_col = col(ImageTable.file_path_abs)
         tiebreaker = (
