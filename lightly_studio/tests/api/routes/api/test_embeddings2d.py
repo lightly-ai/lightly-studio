@@ -295,6 +295,51 @@ def test_get_embeddings2d__with_metadata_field_color_by(
     assert legend["3"] == "Paris"
 
 
+def test_get_embeddings2d__with_mixed_type_metadata_color_by(
+    test_client: TestClient,
+    db_session: Session,
+) -> None:
+    """Mixed-type metadata values for the same key return a 400 error."""
+    n_samples = 2
+
+    collection_id = fill_db_with_samples_and_embeddings(
+        session=db_session,
+        n_samples=n_samples,
+        embedding_model_names=["model_a"],
+        embedding_dimension=EMBEDDING_DIMENSION,
+    )
+
+    samples = image_resolver.get_all_by_collection_id(
+        session=db_session,
+        collection_id=collection_id,
+    ).samples
+    assert len(samples) == n_samples
+
+    metadata_resolver.set_value_for_sample(
+        session=db_session,
+        sample_id=samples[0].sample_id,
+        key="score",
+        value="high",
+    )
+    metadata_resolver.set_value_for_sample(
+        session=db_session,
+        sample_id=samples[1].sample_id,
+        key="score",
+        value=42,
+    )
+
+    response = test_client.post(
+        f"/api/collections/{collection_id}/embeddings2d/default",
+        json={
+            "filters": {},
+            "color_by": {"type": "metadata_field", "key": "score"},
+        },
+    )
+
+    assert response.status_code == 400
+    assert "mixed value types" in response.json()["error"]
+
+
 def test_get_embeddings2d__with_boolean_metadata_color_by(
     test_client: TestClient,
     db_session: Session,
@@ -476,6 +521,51 @@ def test_get_embeddings2d__with_integer_metadata_color_by__few_values(
     assert legend["1"] == "Unassigned"
     assert legend["2"] == "1"
     assert legend["3"] == "2"
+
+
+@pytest.mark.parametrize(
+    "value",
+    [
+        {"a": 1},
+        [1, 2, 3],
+        1.5,
+    ],
+)
+def test_get_embeddings2d__with_unsupported_metadata_color_by(
+    value: object,
+    test_client: TestClient,
+    db_session: Session,
+) -> None:
+    """Unsupported metadata value types return a 400 error."""
+    collection_id = fill_db_with_samples_and_embeddings(
+        session=db_session,
+        n_samples=1,
+        embedding_model_names=["model_a"],
+        embedding_dimension=EMBEDDING_DIMENSION,
+    )
+
+    samples = image_resolver.get_all_by_collection_id(
+        session=db_session,
+        collection_id=collection_id,
+    ).samples
+
+    metadata_resolver.set_value_for_sample(
+        session=db_session,
+        sample_id=samples[0].sample_id,
+        key="info",
+        value=value,
+    )
+
+    response = test_client.post(
+        f"/api/collections/{collection_id}/embeddings2d/default",
+        json={
+            "filters": {},
+            "color_by": {"type": "metadata_field", "key": "info"},
+        },
+    )
+
+    assert response.status_code == 400
+    assert "unsupported value type" in response.json()["error"]
 
 
 def test_get_embeddings2d__with_integer_metadata_color_by__many_values(

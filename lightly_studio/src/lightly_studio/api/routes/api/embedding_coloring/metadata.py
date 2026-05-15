@@ -120,12 +120,12 @@ def _collect_key_values(
         val = data.get(key)
         current_type = _get_metadata_value_type(val)
         if current_type is None:
-            continue
+            msg = f"Metadata field '{key}' has unsupported value type {type(val).__name__!r}."
+            raise ValueError(msg)
         if value_type is None:
             value_type = current_type
         elif current_type is not value_type:
-            msg = f"Metadata field '{key}' contains mixed value types."
-            raise ValueError(msg)
+            raise ValueError(f"Metadata field '{key}' contains mixed value types.")
         assert val is not None
         values.add(val)
     return values, value_type

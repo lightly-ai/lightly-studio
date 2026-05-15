@@ -2032,6 +2032,11 @@ export interface components {
          * @description Color samples by annotation label.
          */
         AnnotationColorBy: {
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            type: "annotation";
             /** Annotation Label Ids */
             annotation_label_ids: string[];
         };
@@ -2863,7 +2868,7 @@ export interface components {
              */
             filters: components["schemas"]["ImageFilter"] | components["schemas"]["VideoFilter"];
             /** Color By */
-            color_by?: components["schemas"]["TagColorBy"] | components["schemas"]["MetadataFieldColorBy"] | components["schemas"]["AnnotationColorBy"] | null;
+            color_by?: (components["schemas"]["TagColorBy"] | components["schemas"]["MetadataFieldColorBy"] | components["schemas"]["AnnotationColorBy"]) | null;
         };
         /**
          * GetNegativeSamplesRequest
@@ -3137,6 +3142,11 @@ export interface components {
          * @description Assign a distinct color to each unique value of the selected field.
          */
         MetadataFieldColorBy: {
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            type: "metadata_field";
             /** Key */
             key: string;
         };
@@ -3790,6 +3800,11 @@ export interface components {
          * @description Color samples by tag membership.
          */
         TagColorBy: {
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            type: "tag";
             /** Tag Ids */
             tag_ids: string[];
         };
