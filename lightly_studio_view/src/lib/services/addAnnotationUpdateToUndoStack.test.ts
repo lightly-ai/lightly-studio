@@ -11,6 +11,7 @@ describe('addAnnotationUpdateToUndoStack', () => {
     const annotation = {
         sample_id: 'annotation-id',
         parent_sample_id: 'parent-sample-id',
+        annotation_collection_id: 'collection-1',
         annotation_type: 'segmentation_mask',
         annotation_label: {
             annotation_label_name: 'car'

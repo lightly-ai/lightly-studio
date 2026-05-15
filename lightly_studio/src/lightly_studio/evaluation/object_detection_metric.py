@@ -8,15 +8,14 @@ from uuid import UUID
 
 import numpy as np
 from numpy.typing import NDArray
-from sqlalchemy.orm import joinedload
-from sqlmodel import Session, col, select
+from sqlmodel import Session
 
-from lightly_studio.models.annotation.annotation_base import AnnotationBaseTable, AnnotationType
+from lightly_studio.evaluation.evaluation_data import EvaluationData
+from lightly_studio.models.annotation.annotation_base import AnnotationBaseTable
 from lightly_studio.models.evaluation_sample_metric import EvaluationSampleMetricCreate
-from lightly_studio.models.sample import SampleTable
 from lightly_studio.resolvers import evaluation_sample_metric_resolver
 
-SAMPLE_BATCH_SIZE = 32  # Number of samples to process in a single batch
+METRIC_BATCH_SIZE = 32  # Buffer size for evaluation_sample_metric_resolver.create_many
 
 
 @dataclass
@@ -144,50 +143,24 @@ def match_image(
     )
 
 
-def get_object_detection_annotations(
+def create_and_persist_object_detection_metrics_per_sample(
     session: Session,
-    collection_id: UUID,
-    sample_ids: set[UUID],
-) -> list[AnnotationBaseTable]:
-    """Return object-detection annotations for selected parent samples."""
-    if not sample_ids:
-        return []
-
-    stmt = (
-        select(AnnotationBaseTable)
-        .join(
-            SampleTable,
-            col(SampleTable.sample_id) == col(AnnotationBaseTable.sample_id),
-        )
-        .where(col(AnnotationBaseTable.parent_sample_id).in_(sample_ids))
-        .where(col(AnnotationBaseTable.annotation_type) == AnnotationType.OBJECT_DETECTION)
-        .where(col(SampleTable.collection_id) == collection_id)
-        .options(joinedload(AnnotationBaseTable.object_detection_details))
-    )
-    return list(session.exec(stmt).all())
-
-
-def create_and_persist_object_detection_metrics_per_sample(  # noqa: PLR0913
-    session: Session,
-    evaluation_run_id: UUID,
-    selected_sample_ids: set[UUID],
-    pred_per_sample: dict[UUID, list[AnnotationBaseTable]],
-    gt_per_sample: dict[UUID, list[AnnotationBaseTable]],
+    data: EvaluationData,
     iou_threshold: float,
     classwise: bool,
 ) -> None:
     """Create and persist per-sample object-detection metrics."""
     pred_boxes_per_sample = {
-        sample_id: _to_bounding_boxes(annotations=pred_per_sample.get(sample_id, []))
-        for sample_id in selected_sample_ids
+        sample_id: _to_bounding_boxes(annotations=data.pred_per_sample.get(sample_id, []))
+        for sample_id in data.selected_sample_ids
     }
     gt_boxes_per_sample = {
-        sample_id: _to_bounding_boxes(annotations=gt_per_sample.get(sample_id, []))
-        for sample_id in selected_sample_ids
+        sample_id: _to_bounding_boxes(annotations=data.gt_per_sample.get(sample_id, []))
+        for sample_id in data.selected_sample_ids
     }
 
     metrics_to_persist: list[EvaluationSampleMetricCreate] = []
-    for sample_id in selected_sample_ids:
+    for sample_id in data.selected_sample_ids:
         matching_result = match_image(
             predictions=pred_boxes_per_sample[sample_id],
             ground_truths=gt_boxes_per_sample[sample_id],
@@ -198,19 +171,19 @@ def create_and_persist_object_detection_metrics_per_sample(  # noqa: PLR0913
         metrics_to_persist.extend(
             [
                 EvaluationSampleMetricCreate(
-                    evaluation_run_id=evaluation_run_id,
+                    evaluation_run_id=data.evaluation_run_id,
                     sample_id=sample_id,
                     metric_name="tp",
                     value=float(matching_result.tp),
                 ),
                 EvaluationSampleMetricCreate(
-                    evaluation_run_id=evaluation_run_id,
+                    evaluation_run_id=data.evaluation_run_id,
                     sample_id=sample_id,
                     metric_name="fp",
                     value=float(matching_result.fp),
                 ),
                 EvaluationSampleMetricCreate(
-                    evaluation_run_id=evaluation_run_id,
+                    evaluation_run_id=data.evaluation_run_id,
                     sample_id=sample_id,
                     metric_name="fn",
                     value=float(matching_result.fn),
@@ -218,7 +191,7 @@ def create_and_persist_object_detection_metrics_per_sample(  # noqa: PLR0913
             ]
         )
 
-        if len(metrics_to_persist) >= SAMPLE_BATCH_SIZE:
+        if len(metrics_to_persist) >= METRIC_BATCH_SIZE:
             evaluation_sample_metric_resolver.create_many(
                 session=session,
                 records=metrics_to_persist,
