@@ -2,7 +2,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { get } from 'svelte/store';
 import { useImageFilters } from './useImageFilters';
 import type { SortFieldExpr } from '$lib/api/lightly_studio_local/types.gen';
-import { SortDirection, SortFieldSource } from '$lib/api/lightly_studio_local/types.gen';
+import { SortDirection } from '$lib/api/lightly_studio_local/types.gen';
 
 vi.mock('../useMetadataFilters/useMetadataFilters', () => ({
     createMetadataFilters: vi.fn(() => [])
@@ -20,7 +20,7 @@ describe('useImageFilters', () => {
             const { imageSortBy, updateSortBy } = useImageFilters();
             const sort: SortFieldExpr[] = [
                 {
-                    source: SortFieldSource.IMAGE,
+                    source: 'image',
                     field_name: 'score',
                     direction: SortDirection.DESC,
                     is_numeric: false
