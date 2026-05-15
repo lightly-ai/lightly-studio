@@ -207,19 +207,73 @@ def test_object_detection_evaluation__filters_to_samples_covered_by_both_collect
     assert {metric.sample_id for metric in sample_metrics} == {image_covered_by_both.sample_id}
 
 
+@pytest.mark.parametrize(
+    ("gt_label_name", "pred_label_name", "pred_confidence", "expected_disagreement"),
+    [
+        # Confidence values must be exactly representable in float32
+        # (DB column is float32-precision).
+        # agree, c=0.5 -> 1 - c = 0.5
+        ("A", "A", 0.5, 0.5),
+        # disagree, c=0.25 -> c = 0.25
+        ("A", "B", 0.25, 0.25),
+        # agree, c defaults to 1.0 -> 1 - c = 0.0
+        ("A", "A", None, 0.0),
+        # disagree, c defaults to 1.0 -> c = 1.0
+        ("A", "B", None, 1.0),
+    ],
+)
 def test_classification_evaluation(
     patch_collection: None,  # noqa: ARG001
+    gt_label_name: str,
+    pred_label_name: str,
+    pred_confidence: float | None,
+    expected_disagreement: float,
 ) -> None:
-    """Creates an evaluation run for classification and no sample metrics yet."""
+    """Persists per-sample disagreement metric for matching and mismatching labels."""
     dataset = ImageDataset.create(name="test_dataset")
+    gt_label = create_annotation_label(
+        session=dataset.session,
+        root_collection_id=dataset.collection_id,
+        label_name=gt_label_name,
+    )
+    pred_label = (
+        gt_label
+        if pred_label_name == gt_label_name
+        else create_annotation_label(
+            session=dataset.session,
+            root_collection_id=dataset.collection_id,
+            label_name=pred_label_name,
+        )
+    )
+    image = create_image(session=dataset.session, collection_id=dataset.collection_id)
     _create_gt_and_pred_collections(session=dataset.session, collection_id=dataset.collection_id)
+    create_annotation(
+        session=dataset.session,
+        collection_id=dataset.collection_id,
+        sample_id=image.sample_id,
+        annotation_label_id=gt_label.annotation_label_id,
+        annotation_type=AnnotationType.CLASSIFICATION,
+        annotation_collection_name="gt",
+    )
+    create_annotation(
+        session=dataset.session,
+        collection_id=dataset.collection_id,
+        sample_id=image.sample_id,
+        annotation_label_id=pred_label.annotation_label_id,
+        annotation_type=AnnotationType.CLASSIFICATION,
+        annotation_data=({"confidence": pred_confidence} if pred_confidence is not None else None),
+        annotation_collection_name="pred",
+    )
 
-    dataset.evaluate().classification(
+    result = dataset.evaluate().classification(
         name="run-1",
         gt_collection_name="gt",
         pred_collection_name="pred",
         config=ClassificationEvaluationConfig(),
     )
+    assert result.sample_count == 1
+    assert result.gt_annotation_count == 1
+    assert result.pred_annotation_count == 1
 
     evaluation_runs = evaluation_run_resolver.get_all_by_dataset_id(
         session=dataset.session,
@@ -234,7 +288,57 @@ def test_classification_evaluation(
         session=dataset.session,
         evaluation_run_id=evaluation_runs[0].id,
     )
-    assert sample_metrics == []
+    assert {(metric.sample_id, metric.metric_name): metric.value for metric in sample_metrics} == {
+        (image.sample_id, "disagreement"): expected_disagreement,
+    }
+
+
+@pytest.mark.parametrize(
+    ("collection_name", "kind"),
+    [("gt", "ground truth"), ("pred", "prediction")],
+)
+def test_classification_evaluation__raises_on_multiple_annotations(
+    patch_collection: None,  # noqa: ARG001
+    collection_name: str,
+    kind: str,
+) -> None:
+    """Raises ValueError when a sample has more than one annotation in one collection."""
+    dataset = ImageDataset.create(name="test_dataset")
+    label = create_annotation_label(
+        session=dataset.session, root_collection_id=dataset.collection_id
+    )
+    image = create_image(session=dataset.session, collection_id=dataset.collection_id)
+    _create_gt_and_pred_collections(session=dataset.session, collection_id=dataset.collection_id)
+    # The other collection has exactly one annotation. Confidence only matters
+    # for predictions, so only set it on the pred side.
+    other_collection_name = "pred" if collection_name == "gt" else "gt"
+    create_annotation(
+        session=dataset.session,
+        collection_id=dataset.collection_id,
+        sample_id=image.sample_id,
+        annotation_label_id=label.annotation_label_id,
+        annotation_type=AnnotationType.CLASSIFICATION,
+        annotation_data={"confidence": 0.5} if other_collection_name == "pred" else None,
+        annotation_collection_name=other_collection_name,
+    )
+    # The target collection has two annotations on the same sample.
+    for _ in range(2):
+        create_annotation(
+            session=dataset.session,
+            collection_id=dataset.collection_id,
+            sample_id=image.sample_id,
+            annotation_label_id=label.annotation_label_id,
+            annotation_type=AnnotationType.CLASSIFICATION,
+            annotation_data={"confidence": 0.5} if collection_name == "pred" else None,
+            annotation_collection_name=collection_name,
+        )
+
+    with pytest.raises(ValueError, match=f"exactly 1 {kind} annotation"):
+        dataset.evaluate().classification(
+            name="run-1",
+            gt_collection_name="gt",
+            pred_collection_name="pred",
+        )
 
 
 def test_classification_evaluation__raises_on_wrong_annotation_type(

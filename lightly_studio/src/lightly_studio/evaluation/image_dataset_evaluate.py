@@ -10,7 +10,7 @@ from pydantic import BaseModel, Field
 from sqlmodel import Session
 
 from lightly_studio.core.image.image_sample import ImageSample
-from lightly_studio.evaluation import object_detection_metric, validators
+from lightly_studio.evaluation import classification_metric, object_detection_metric, validators
 from lightly_studio.evaluation.evaluation_data import EvaluationData
 from lightly_studio.models.annotation.annotation_base import AnnotationBaseTable
 from lightly_studio.models.evaluation_run import (
@@ -134,11 +134,8 @@ class ImageDatasetEvaluate:
         gt_collection_name: str,
         pred_collection_name: str,
         config: ClassificationEvaluationConfig | None = None,
-    ) -> None:
-        """Create a classification evaluation run.
-
-        For now, this method only persists an ``EvaluationRun`` entry.
-        Metric computation and metric persistence are intentionally deferred.
+    ) -> EvaluationResult:
+        """Create a classification evaluation run and persist per-image metrics.
 
         Args:
             name: Display name of the evaluation run.
@@ -146,15 +143,23 @@ class ImageDatasetEvaluate:
             pred_collection_name: Name of the annotation collection containing predictions.
             config: Optional classification evaluation config. If omitted,
                 defaults are used.
+
+        Returns:
+            Summary of the samples and annotations used by the evaluation.
         """
         config = config or ClassificationEvaluationConfig()
-        self._create_evaluation_run(
+        data = self._prepare_evaluation_data(
             name=name,
             gt_collection_name=gt_collection_name,
             pred_collection_name=pred_collection_name,
             task_type=EvaluationTaskType.CLASSIFICATION,
             config_json=config.model_dump(),
         )
+        classification_metric.create_and_persist_classification_metrics_per_sample(
+            session=self.session,
+            data=data,
+        )
+        return EvaluationResult.from_evaluation_data(data)
 
     def _prepare_evaluation_data(
         self,

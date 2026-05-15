@@ -10,7 +10,7 @@ from sqlmodel import Session
 
 from lightly_studio.models.adjacents import AdjacentResultView
 from lightly_studio.models.collection import SampleType
-from lightly_studio.models.sort import SortFieldExpr, sort_field_expr_to_order_by
+from lightly_studio.models.sort import SortExpr, sort_expr_to_order_by
 from lightly_studio.resolvers import (
     annotation_resolver,
     image_resolver,
@@ -38,7 +38,7 @@ class AdjacentRequest(BaseModel):
         | None
     ) = None
     text_embedding: list[float] | None = None
-    sort_by: list[SortFieldExpr] | None = None
+    sort_by: list[SortExpr] | None = None
 
 
 def get_adjacent_samples(
@@ -61,9 +61,7 @@ def get_adjacent_samples(
                 f" for sample type '{request.sample_type.value}'."
             )
         order_by = (
-            [sort_field_expr_to_order_by(expr) for expr in request.sort_by]
-            if request.sort_by
-            else None
+            [sort_expr_to_order_by(expr) for expr in request.sort_by] if request.sort_by else None
         )
         return image_resolver.get_adjacent_images(
             session=session,
