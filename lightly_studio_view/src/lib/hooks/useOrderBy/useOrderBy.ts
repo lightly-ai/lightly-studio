@@ -1,9 +1,22 @@
-import { derived, get } from 'svelte/store';
+import { derived, get, type Readable } from 'svelte/store';
 import { SortDirection } from '$lib/api/lightly_studio_local';
 import { useImageFilters } from '$lib/hooks/useImageFilters/useImageFilters';
 import { useSortFields } from '$lib/hooks/useSortFields/useSortFields';
 import type { ImageSortField, SortField } from '$lib/hooks/useSortFields/useSortFields';
-import type { SortExpr } from '../useImagesInfinite/types';
+import type { SortExpr } from '$lib/hooks/useImagesInfinite/types';
+
+interface UseOrderByParams {
+    datasetId: string;
+}
+
+interface UseOrderByReturn {
+    allSortFields: Readable<SortField[]>;
+    selectedDirection: Readable<SortDirection>;
+    selectedLabel: Readable<string | null>;
+    isFieldSelected: Readable<(field: SortField) => boolean>;
+    handleFieldClick: (field: SortField) => void;
+    toggleDirection: () => void;
+}
 
 function checkIsFieldSelected(field: SortField, current: SortExpr | undefined): boolean {
     if (!current) return false;
@@ -21,7 +34,7 @@ function checkIsFieldSelected(field: SortField, current: SortExpr | undefined): 
     );
 }
 
-export function useOrderBy({ datasetId }: { datasetId: string }) {
+export function useOrderBy({ datasetId }: UseOrderByParams): UseOrderByReturn {
     const { imageSortBy, updateSortBy } = useImageFilters();
     const { allSortFields } = useSortFields({ datasetId });
 
