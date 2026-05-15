@@ -10,16 +10,18 @@ export const useSamplesInfinite = (...props: Parameters<typeof readSamplesInfini
         getNextPageParam: (lastPage) => lastPage.nextCursor || undefined
     }));
     const client = useQueryClient();
-    const refresh = () => {
-        client.invalidateQueries({ queryKey: readSamplesOptions.queryKey });
+    const queryKey = readSamplesOptions.queryKey;
+    const refresh = async () => {
+        await client.refetchQueries({ queryKey });
     };
 
     const data = writable<SampleView[]>([]);
 
     $effect(() => {
+        samplesQuery.dataUpdatedAt;
         if (samplesQuery.isSuccess) {
-            const allCaptions = samplesQuery.data.pages.flatMap((page) => page.data);
-            data.set(allCaptions);
+            const allSamples = samplesQuery.data.pages.flatMap((page) => page.data);
+            data.set(allSamples);
         }
     });
 

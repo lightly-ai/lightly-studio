@@ -18,14 +18,14 @@
 
     const sampleId = $derived(captionProp.sample_id);
 
-    const { caption: captionResp, updateCaptionText } = $derived(
+    const { updateCaptionText } = $derived(
         useCaption({
             sampleId,
             onUpdate
         })
     );
 
-    const caption = $derived(captionResp.data || captionProp);
+    const caption = $derived(captionProp);
 
     let captionText = $state('');
     let isSaving = $state(false);

@@ -4,24 +4,13 @@ import { createMutation } from '@tanstack/svelte-query';
 export const useDeleteCaption = () => {
     const mutation = createMutation(() => deleteCaptionMutation());
 
-    const deleteCaption = (sampleId: string) =>
-        new Promise<void>((resolve, reject) => {
-            mutation.mutate(
-                {
-                    path: {
-                        sample_id: sampleId
-                    }
-                },
-                {
-                    onSuccess: () => {
-                        resolve();
-                    },
-                    onError: (error) => {
-                        reject(error);
-                    }
-                }
-            );
+    const deleteCaption = async (sampleId: string): Promise<void> => {
+        await mutation.mutateAsync({
+            path: {
+                sample_id: sampleId
+            }
         });
+    };
 
     return {
         deleteCaption
