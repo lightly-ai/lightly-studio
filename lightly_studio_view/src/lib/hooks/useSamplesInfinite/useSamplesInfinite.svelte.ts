@@ -18,7 +18,8 @@ export const useSamplesInfinite = (...props: Parameters<typeof readSamplesInfini
     const data = writable<SampleView[]>([]);
 
     $effect(() => {
-        samplesQuery.dataUpdatedAt;
+        // Read dataUpdatedAt to track it as a reactive dependency for this $effect.
+        void samplesQuery.dataUpdatedAt;
         if (samplesQuery.isSuccess) {
             const allSamples = samplesQuery.data.pages.flatMap((page) => page.data);
             data.set(allSamples);
