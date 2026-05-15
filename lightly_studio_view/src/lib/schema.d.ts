@@ -1949,7 +1949,7 @@ export interface components {
             /** Text Embedding */
             text_embedding?: number[] | null;
             /** Sort By */
-            sort_by?: components["schemas"]["SortFieldExpr"][] | null;
+            sort_by?: (components["schemas"]["SortFieldExpr"] | components["schemas"]["EvaluationMetricSortExpr"])[] | null;
         };
         /**
          * AdjacentResultView
@@ -2676,6 +2676,33 @@ export interface components {
             value: number;
         };
         /**
+         * EvaluationMetricSortExpr
+         * @description A sorting expression for an evaluation metric field.
+         *
+         *     Attributes:
+         *         source: Always ``"evaluation_metric"`` (discriminator for the union type).
+         *         evaluation_run_name: The name of the evaluation run to sort by.
+         *         metric_name: The metric name to sort by.
+         *         direction: The sort direction, either ascending or descending.
+         */
+        EvaluationMetricSortExpr: {
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            source: "evaluation_metric";
+            /** Evaluation Run Name */
+            evaluation_run_name: string;
+            /** Metric Name */
+            metric_name: string;
+            direction: components["schemas"]["SortDirection"];
+            /**
+             * Is Numeric
+             * @default false
+             */
+            is_numeric: boolean;
+        };
+        /**
          * EvaluationRunMetricsInfoView
          * @description Metric bounds for all metrics in a single evaluation run.
          */
@@ -3345,7 +3372,7 @@ export interface components {
              * Sort By
              * @description Sort expressions for ordering
              */
-            sort_by?: components["schemas"]["SortFieldExpr"][] | null;
+            sort_by?: (components["schemas"]["SortFieldExpr"] | components["schemas"]["EvaluationMetricSortExpr"])[] | null;
         };
         /**
          * ReadSamplesRequest
@@ -3714,19 +3741,17 @@ export interface components {
          *             Only relevant when ``source`` is ``"metadata"``.
          */
         SortFieldExpr: {
-            source: components["schemas"]["SortFieldSource"];
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            source: "image" | "metadata";
             /** Field Name */
             field_name: string;
             direction: components["schemas"]["SortDirection"];
             /** Is Numeric */
             is_numeric: boolean;
         };
-        /**
-         * SortFieldSource
-         * @description Source of the field to sort by.
-         * @enum {string}
-         */
-        SortFieldSource: "image" | "metadata";
         /**
          * StringExpr
          * @description Leaf node for equality comparisons on string sample fields.
