@@ -45,7 +45,7 @@ const createImagesInfiniteOptions = (params: ImagesInfiniteParams) => {
         },
         initialPageParam: 0,
         getNextPageParam: (lastPage) => lastPage.nextCursor ?? undefined,
-        enabled: isQueryEnabled(params)
+        enabled: params.mode !== 'classifier' || Boolean(params.classifierSamples)
     });
 };
 
@@ -111,17 +111,6 @@ export const buildRequestBody = (
     }
 
     return baseBody;
-};
-
-const isQueryEnabled = (params: ImagesInfiniteParams): boolean => {
-    if (params.mode === 'classifier') {
-        // For classifier mode, classifier samples need to exist (even if empty arrays)
-        // This ensures the query runs and can show the empty state
-        return Boolean(params.classifierSamples);
-    }
-
-    // Normal mode is always enabled (return all samples if no filters).
-    return true;
 };
 
 export const useImagesInfinite = (params: ImagesInfiniteParams) => {
