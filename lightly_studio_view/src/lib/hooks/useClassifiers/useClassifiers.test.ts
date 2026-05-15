@@ -8,6 +8,8 @@ import { useClassifierState } from './useClassifierState';
 import * as utils from '$lib/utils';
 import * as sdk from '$lib/api/lightly_studio_local';
 
+type ApiResult<T extends (...args: never[]) => Promise<unknown>> = Awaited<ReturnType<T>>;
+
 vi.mock('$app/state', () => ({
     page: {
         params: { collection_id: 'test-collection-id' } // Mock collection_id in page params
@@ -27,9 +29,7 @@ describe('useClassifiers Hook', () => {
     const setup = () => {
         return vi.spyOn(sdk, 'getAllClassifiers').mockResolvedValueOnce({
             data: { classifiers: mockClassifiers }
-        } as unknown as ReturnType<typeof sdk.getAllClassifiers> extends Promise<infer R>
-            ? R
-            : never);
+        } as unknown as ApiResult<typeof sdk.getAllClassifiers>);
     };
 
     beforeEach(() => {
@@ -131,19 +131,15 @@ describe('useClassifiers Hook', () => {
             const saveSpy = vi
                 .spyOn(sdk, 'saveClassifierToFile')
                 .mockResolvedValueOnce(
-                    mockResponse as unknown as ReturnType<
-                        typeof sdk.saveClassifierToFile
-                    > extends Promise<infer R>
-                        ? R
-                        : never
+                    mockResponse as unknown as ApiResult<typeof sdk.saveClassifierToFile>
                 );
             const downloadSpy = vi.spyOn(utils, 'triggerDownloadBlob').mockImplementation(() => {});
             const { saveClassifier, error } = useClassifiers();
-            await saveClassifier('test-id');
+            await saveClassifier('test-id', 'sklearn');
 
             // Verify SDK call
             expect(saveSpy).toHaveBeenCalledWith({
-                path: { classifier_id: 'test-id' },
+                path: { classifier_id: 'test-id', export_type: 'sklearn' },
                 parseAs: 'blob'
             });
 
@@ -159,7 +155,7 @@ describe('useClassifiers Hook', () => {
             const { saveClassifier, error } = useClassifiers();
 
             // The main hook should catch the error from the utility and set it in its error store
-            await expect(saveClassifier('test-id', 'pkl')).rejects.toThrow(
+            await expect(saveClassifier('test-id', 'lightly')).rejects.toThrow(
                 'Failed to save classifier'
             );
             expect(get(error)).toEqual(testError);
@@ -181,17 +177,11 @@ describe('useClassifiers Hook', () => {
             const loadFromBufferSpy = vi
                 .spyOn(sdk, 'loadClassifierFromBuffer')
                 .mockResolvedValueOnce(
-                    {} as unknown as ReturnType<
-                        typeof sdk.loadClassifierFromBuffer
-                    > extends Promise<infer R>
-                        ? R
-                        : never
+                    {} as unknown as ApiResult<typeof sdk.loadClassifierFromBuffer>
                 );
             const getAllSpy = vi.spyOn(sdk, 'getAllClassifiers').mockResolvedValueOnce({
                 data: { classifiers: mockClassifiers }
-            } as unknown as ReturnType<typeof sdk.getAllClassifiers> extends Promise<infer R>
-                ? R
-                : never);
+            } as unknown as ApiResult<typeof sdk.getAllClassifiers>);
 
             const { loadClassifier, error } = useClassifiers();
             await loadClassifier(mockEvent, 'test-collection-id');
@@ -256,11 +246,7 @@ describe('useClassifiers Hook', () => {
             const getNegSpy = vi
                 .spyOn(sdk, 'getNegativeSamples')
                 .mockResolvedValueOnce(
-                    mockResponse as unknown as ReturnType<
-                        typeof sdk.getNegativeSamples
-                    > extends Promise<infer R>
-                        ? R
-                        : never
+                    mockResponse as unknown as ApiResult<typeof sdk.getNegativeSamples>
                 );
 
             const { prepareSamples } = useClassifiers();
@@ -310,28 +296,16 @@ describe('useClassifiers Hook', () => {
             const createSpy = vi
                 .spyOn(sdk, 'createClassifier')
                 .mockResolvedValueOnce(
-                    mockCreateResponse as unknown as ReturnType<
-                        typeof sdk.createClassifier
-                    > extends Promise<infer R>
-                        ? R
-                        : never
+                    mockCreateResponse as unknown as ApiResult<typeof sdk.createClassifier>
                 );
             const updateAnnotationsSpy = vi
                 .spyOn(sdk, 'updateClassifiersAnnotations')
                 .mockResolvedValueOnce(
-                    {} as unknown as ReturnType<
-                        typeof sdk.updateClassifiersAnnotations
-                    > extends Promise<infer R>
-                        ? R
-                        : never
+                    {} as unknown as ApiResult<typeof sdk.updateClassifiersAnnotations>
                 );
             const trainSpy = vi
                 .spyOn(sdk, 'trainClassifier')
-                .mockResolvedValueOnce(
-                    {} as unknown as ReturnType<typeof sdk.trainClassifier> extends Promise<infer R>
-                        ? R
-                        : never
-                );
+                .mockResolvedValueOnce({} as unknown as ApiResult<typeof sdk.trainClassifier>);
             const mockSamplesResponse = {
                 data: {
                     samples: {
@@ -345,11 +319,7 @@ describe('useClassifiers Hook', () => {
             const samplesToRefineSpy = vi
                 .spyOn(sdk, 'samplesToRefine')
                 .mockResolvedValueOnce(
-                    mockSamplesResponse as unknown as ReturnType<
-                        typeof sdk.samplesToRefine
-                    > extends Promise<infer R>
-                        ? R
-                        : never
+                    mockSamplesResponse as unknown as ApiResult<typeof sdk.samplesToRefine>
                 );
 
             const { createClassifier } = useClassifiers();
@@ -407,11 +377,7 @@ describe('useClassifiers Hook', () => {
             const samplesToRefineSpy = vi
                 .spyOn(sdk, 'samplesToRefine')
                 .mockResolvedValue(
-                    mockGetResponse as unknown as ReturnType<
-                        typeof sdk.samplesToRefine
-                    > extends Promise<infer R>
-                        ? R
-                        : never
+                    mockGetResponse as unknown as ApiResult<typeof sdk.samplesToRefine>
                 );
 
             // Execute test
@@ -449,11 +415,7 @@ describe('useClassifiers Hook', () => {
             const sampleHistorySpy = vi
                 .spyOn(sdk, 'sampleHistory')
                 .mockResolvedValue(
-                    mockSampleHistoryResponse as unknown as ReturnType<
-                        typeof sdk.sampleHistory
-                    > extends Promise<infer R>
-                        ? R
-                        : never
+                    mockSampleHistoryResponse as unknown as ApiResult<typeof sdk.sampleHistory>
                 );
 
             // Execute test
@@ -495,19 +457,11 @@ describe('useClassifiers Hook', () => {
             const updateAnnotationsSpy = vi
                 .spyOn(sdk, 'updateClassifiersAnnotations')
                 .mockResolvedValue(
-                    {} as unknown as ReturnType<
-                        typeof sdk.updateClassifiersAnnotations
-                    > extends Promise<infer R>
-                        ? R
-                        : never
+                    {} as unknown as ApiResult<typeof sdk.updateClassifiersAnnotations>
                 );
             const trainSpy = vi
                 .spyOn(sdk, 'trainClassifier')
-                .mockResolvedValue(
-                    {} as unknown as ReturnType<typeof sdk.trainClassifier> extends Promise<infer R>
-                        ? R
-                        : never
-                );
+                .mockResolvedValue({} as unknown as ApiResult<typeof sdk.trainClassifier>);
 
             const { refineClassifier } = useClassifiers();
             await refineClassifier('classifier-id', 'collection-id', ['positive', 'negative']);
@@ -521,11 +475,7 @@ describe('useClassifiers Hook', () => {
         it('should train classifier successfully', async () => {
             const trainSpy = vi
                 .spyOn(sdk, 'trainClassifier')
-                .mockResolvedValue(
-                    {} as unknown as ReturnType<typeof sdk.trainClassifier> extends Promise<infer R>
-                        ? R
-                        : never
-                );
+                .mockResolvedValue({} as unknown as ApiResult<typeof sdk.trainClassifier>);
 
             const { trainClassifier } = useClassifiers();
             await trainClassifier('classifier-id');
@@ -548,18 +498,10 @@ describe('useClassifiers Hook', () => {
             // Mock API responses
             const commitSpy = vi
                 .spyOn(sdk, 'commitTempClassifier')
-                .mockResolvedValue(
-                    {} as unknown as ReturnType<typeof sdk.commitTempClassifier> extends Promise<
-                        infer R
-                    >
-                        ? R
-                        : never
-                );
+                .mockResolvedValue({} as unknown as ApiResult<typeof sdk.commitTempClassifier>);
             const getAllSpy = vi.spyOn(sdk, 'getAllClassifiers').mockResolvedValue({
                 data: { classifiers: mockClassifiers }
-            } as unknown as ReturnType<typeof sdk.getAllClassifiers> extends Promise<infer R>
-                ? R
-                : never);
+            } as unknown as ApiResult<typeof sdk.getAllClassifiers>);
 
             // Execute test
             const { commitTempClassifier } = useClassifiers();
@@ -589,11 +531,7 @@ describe('useClassifiers Hook', () => {
             const updateSpy = vi
                 .spyOn(sdk, 'updateClassifiersAnnotations')
                 .mockResolvedValue(
-                    {} as unknown as ReturnType<
-                        typeof sdk.updateClassifiersAnnotations
-                    > extends Promise<infer R>
-                        ? R
-                        : never
+                    {} as unknown as ApiResult<typeof sdk.updateClassifiersAnnotations>
                 );
 
             const { updateAnnotations } = useClassifiers();
@@ -635,11 +573,7 @@ describe('useClassifiers Hook', () => {
             const samplesToRefineSpy = vi
                 .spyOn(sdk, 'samplesToRefine')
                 .mockResolvedValue(
-                    mockGetResponse as unknown as ReturnType<
-                        typeof sdk.samplesToRefine
-                    > extends Promise<infer R>
-                        ? R
-                        : never
+                    mockGetResponse as unknown as ApiResult<typeof sdk.samplesToRefine>
                 );
 
             // Execute test with mismatched classes
