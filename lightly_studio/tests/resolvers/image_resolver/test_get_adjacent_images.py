@@ -353,6 +353,74 @@ def test_get_adjacent_images__with_similarity_and_order_by(db_session: Session) 
     assert result.next_sample_id == image_c.sample_id
 
 
+def test_get_adjacent_images__similarity_is_tiebreaker_when_order_by_values_equal(
+    db_session: Session,
+) -> None:
+    collection = helpers_resolvers.create_collection(session=db_session)
+    collection_id = collection.collection_id
+
+    embedding_model = helpers_resolvers.create_embedding_model(
+        session=db_session,
+        collection_id=collection_id,
+        embedding_model_name="embedding-tiebreaker",
+        embedding_dimension=2,
+    )
+
+    # image_a and image_b share the same width but differ in similarity to the query
+    image_a = helpers_resolvers.create_image(
+        session=db_session,
+        collection_id=collection_id,
+        file_path_abs="/images/a.png",
+        width=100,
+    )
+    image_b = helpers_resolvers.create_image(
+        session=db_session,
+        collection_id=collection_id,
+        file_path_abs="/images/b.png",
+        width=100,
+    )
+    image_c = helpers_resolvers.create_image(
+        session=db_session,
+        collection_id=collection_id,
+        file_path_abs="/images/c.png",
+        width=200,
+    )
+
+    helpers_resolvers.create_sample_embedding(
+        session=db_session,
+        sample_id=image_a.sample_id,
+        embedding_model_id=embedding_model.embedding_model_id,
+        embedding=[1.0, 0.0],
+    )
+    helpers_resolvers.create_sample_embedding(
+        session=db_session,
+        sample_id=image_b.sample_id,
+        embedding_model_id=embedding_model.embedding_model_id,
+        embedding=[-1.0, 0.0],
+    )
+    helpers_resolvers.create_sample_embedding(
+        session=db_session,
+        sample_id=image_c.sample_id,
+        embedding_model_id=embedding_model.embedding_model_id,
+        embedding=[0.0, 1.0],
+    )
+
+    # Sorted order: image_a (100, close), image_b (100, far), image_c (200)
+    # image_b's previous is image_a, next is image_c.
+    result = image_resolver.get_adjacent_images(
+        session=db_session,
+        sample_id=image_b.sample_id,
+        collection_id=collection_id,
+        text_embedding=[1.0, 0.0],
+        order_by=[OrderByField(ImageSampleField.width)],
+    )
+
+    assert result is not None
+    assert result.previous_sample_id == image_a.sample_id
+    assert result.sample_id == image_b.sample_id
+    assert result.next_sample_id == image_c.sample_id
+
+
 def test_get_adjacent_images__sort_by_width_desc_with_duplicate_values(db_session: Session) -> None:
     collection = helpers_resolvers.create_collection(session=db_session)
     collection_id = collection.collection_id
