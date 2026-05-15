@@ -768,7 +768,10 @@ def test_deep_copy__with_evaluation_annotation_metrics(db_session: Session) -> N
 
     # Assert - annotation IDs are remapped (not the originals)
     original_annotation_ids = {gt_annotation.sample_id, pred_annotation.sample_id}
-    copied_annotation_ids = ({ m.gt_annotation_id for m in copied_metrics} | { m.pred_annotation_id for m in copied_metrics}) - {None}
+    copied_annotation_ids = (
+        {m.gt_annotation_id for m in copied_metrics}
+        | {m.pred_annotation_id for m in copied_metrics}
+    ) - {None}
     assert original_annotation_ids.isdisjoint(copied_annotation_ids)
 
     # Assert - sample IDs are remapped
