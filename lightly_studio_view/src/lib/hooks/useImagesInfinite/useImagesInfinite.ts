@@ -1,72 +1,13 @@
 import type { InfiniteData } from '@tanstack/svelte-query';
 import { createInfiniteQuery, infiniteQueryOptions, useQueryClient } from '@tanstack/svelte-query';
-import type {
-    QueryExpr,
-    ReadImagesError,
-    ReadImagesResponse,
-    SortFieldExpr
-} from '$lib/api/lightly_studio_local';
+import type { ReadImagesError, ReadImagesResponse } from '$lib/api/lightly_studio_local';
 import { readImages, type ReadImagesRequest } from '$lib/api/lightly_studio_local';
-import type { DimensionBounds } from '$lib/services/loadDimensionBounds';
 import { createMetadataFilters } from '$lib/hooks/useMetadataFilters/useMetadataFilters';
-import type { MetadataValues } from '$lib/services/types';
 import { GRID_PAGE_SIZE } from '$lib/constants';
 import { getAnnotationsFilter } from './getAnnotationsFilter';
+import type { ImagesInfiniteParams, SamplesQueryKey } from './types';
 
-// Define mode-aware parameter types.
-interface ClassifierSamples {
-    positiveSampleIds: string[];
-    negativeSampleIds: string[];
-}
-
-interface NormalModeFilters {
-    annotation_label_ids?: string[];
-    collection_ids?: string[];
-    tag_ids?: string[];
-    dimensions?: DimensionBounds;
-    query_expr?: QueryExpr;
-    sample_ids?: string[];
-}
-
-interface CommonFilters {
-    metadata_values?: MetadataValues;
-    text_embedding?: number[];
-}
-
-interface NormalModeParams {
-    mode: 'normal';
-    filters?: NormalModeFilters;
-}
-
-export const isNormalModeParams = (
-    params: ImagesInfiniteParams
-): params is { collection_id: string } & NormalModeParams & CommonFilters => {
-    return params.mode === 'normal';
-};
-
-interface ClassifierModeParams {
-    mode: 'classifier';
-    classifierSamples?: ClassifierSamples;
-}
-
-export type ImagesInfiniteParams = {
-    query_expr?: QueryExpr;
-    collection_id: string;
-    sort_by?: SortFieldExpr[] | null;
-} & (NormalModeParams | ClassifierModeParams) &
-    CommonFilters;
-
-type SamplesQueryKey = readonly [
-    string,
-    string,
-    'normal' | 'classifier',
-    NormalModeFilters | ClassifierSamples | undefined,
-    {
-        metadata_values?: MetadataValues;
-        text_embedding?: number[];
-    },
-    SortFieldExpr[] | null | undefined
-];
+export type { ImagesInfiniteParams } from './types';
 
 // Create infinite query options for samples with mode-aware logic.
 const createImagesInfiniteOptions = (params: ImagesInfiniteParams) => {
@@ -104,7 +45,7 @@ const createImagesInfiniteOptions = (params: ImagesInfiniteParams) => {
         },
         initialPageParam: 0,
         getNextPageParam: (lastPage) => lastPage.nextCursor ?? undefined,
-        enabled: isQueryEnabled(params)
+        enabled: params.mode !== 'classifier' || Boolean(params.classifierSamples)
     });
 };
 
@@ -170,17 +111,6 @@ export const buildRequestBody = (
     }
 
     return baseBody;
-};
-
-const isQueryEnabled = (params: ImagesInfiniteParams): boolean => {
-    if (params.mode === 'classifier') {
-        // For classifier mode, classifier samples need to exist (even if empty arrays)
-        // This ensures the query runs and can show the empty state
-        return Boolean(params.classifierSamples);
-    }
-
-    // Normal mode is always enabled (return all samples if no filters).
-    return true;
 };
 
 export const useImagesInfinite = (params: ImagesInfiniteParams) => {
