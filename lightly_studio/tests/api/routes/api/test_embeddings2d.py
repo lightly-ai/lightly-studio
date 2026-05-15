@@ -16,9 +16,14 @@ from sqlmodel import Session
 from lightly_studio.dataset.mobileclip_embedding_generator import EMBEDDING_DIMENSION
 from lightly_studio.models.collection import SampleType
 from lightly_studio.models.tag import TagCreate
-from lightly_studio.resolvers import image_resolver, sample_resolver, tag_resolver, video_resolver
+from lightly_studio.resolvers import (
+    image_resolver,
+    metadata_resolver,
+    sample_resolver,
+    tag_resolver,
+    video_resolver,
+)
 from lightly_studio.resolvers.image_filter import ImageFilter
-from lightly_studio.resolvers.metadata_resolver.sample import set_value_for_sample
 from lightly_studio.resolvers.sample_resolver.sample_filter import SampleFilter
 from lightly_studio.resolvers.video_resolver.video_filter import VideoFilter
 from tests.helpers_resolvers import (
@@ -258,7 +263,7 @@ def test_get_embeddings2d__with_metadata_field_color_by(
 
     cities = ["Paris", "London", "Paris"]
     for sample, city in zip(samples, cities):
-        set_value_for_sample(
+        metadata_resolver.set_value_for_sample(
             session=db_session,
             sample_id=sample.sample_id,
             key="city",
@@ -312,7 +317,7 @@ def test_get_embeddings2d__with_boolean_metadata_color_by(
     # Samples[0] and samples[2] -> False, samples[1] -> True.
     flags = [False, True, False]
     for sample, flag in zip(samples, flags):
-        set_value_for_sample(
+        metadata_resolver.set_value_for_sample(
             session=db_session,
             sample_id=sample.sample_id,
             key="is_sunny",
@@ -366,7 +371,7 @@ def test_get_embeddings2d__with_metadata_field_color_by_and_sample_ids_filter(
 
     cities = ["Paris", "London", "Rome", "Berlin"]
     for sample, city in zip(samples, cities):
-        set_value_for_sample(
+        metadata_resolver.set_value_for_sample(
             session=db_session,
             sample_id=sample.sample_id,
             key="city",
@@ -441,7 +446,7 @@ def test_get_embeddings2d__with_integer_metadata_color_by__few_values(
 
     scores = [1, 2, 1]
     for sample, score in zip(samples, scores):
-        set_value_for_sample(
+        metadata_resolver.set_value_for_sample(
             session=db_session,
             sample_id=sample.sample_id,
             key="score",
@@ -495,7 +500,7 @@ def test_get_embeddings2d__with_integer_metadata_color_by__many_values(
 
     # Assign 55 distinct integer values (0..54) to exceed the 50-value threshold.
     for i, sample in enumerate(samples):
-        set_value_for_sample(
+        metadata_resolver.set_value_for_sample(
             session=db_session,
             sample_id=sample.sample_id,
             key="count",

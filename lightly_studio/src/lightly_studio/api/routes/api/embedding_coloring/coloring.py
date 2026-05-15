@@ -8,7 +8,7 @@ from uuid import UUID
 from pydantic import BaseModel, Field
 from sqlmodel import Session
 
-from lightly_studio.api.routes.api.embedding_coloring.metadata import build_metadata_color_maps
+from lightly_studio.api.routes.api.embedding_coloring import metadata
 
 # Categories 0 and 1 are reserved (0 = excluded by filter, 1 = unassigned),
 # so real color categories start at 2.
@@ -57,7 +57,7 @@ def build_color_data(
     if not isinstance(color_by, MetadataFieldColorBy):
         return list(fulfils_filter), {}
 
-    color_categories, legend = build_metadata_color_maps(
+    color_categories, legend = metadata.build_metadata_color_maps(
         session=session,
         collection_id=collection_id,
         key=color_by.key,
