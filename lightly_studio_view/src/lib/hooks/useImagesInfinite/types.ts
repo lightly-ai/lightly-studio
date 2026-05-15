@@ -12,7 +12,6 @@ export interface NormalModeFilters {
     collection_ids?: string[];
     tag_ids?: string[];
     dimensions?: DimensionBounds;
-    query_expr?: QueryExpr;
     sample_ids?: string[];
 }
 
