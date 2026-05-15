@@ -337,7 +337,7 @@ def test_get_embeddings2d__with_mixed_type_metadata_color_by(
     )
 
     assert response.status_code == 400
-    assert "mixed value types" in response.json()["error"]
+    assert "does not match schema type" in response.json()["error"]
 
 
 def test_get_embeddings2d__with_boolean_metadata_color_by(
@@ -565,7 +565,7 @@ def test_get_embeddings2d__with_unsupported_metadata_color_by(
     )
 
     assert response.status_code == 400
-    assert "unsupported value type" in response.json()["error"]
+    assert "unsupported type" in response.json()["error"]
 
 
 def test_get_embeddings2d__with_integer_metadata_color_by__many_values(

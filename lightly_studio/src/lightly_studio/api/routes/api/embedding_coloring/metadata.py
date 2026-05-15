@@ -4,19 +4,23 @@ from __future__ import annotations
 
 import math
 from dataclasses import dataclass
-from typing import Any, Union, cast
+from typing import Any, cast
 from uuid import UUID
 
 from sqlmodel import Session, col, select
 
-from lightly_studio.models.metadata import SampleMetadataTable
+from lightly_studio.models.metadata import (
+    NAME_TO_TYPE_MAP,
+    SampleMetadataTable,
+    validate_type_compatibility,
+)
 from lightly_studio.models.sample import SampleTable
 
 # Integer fields with more distinct values than this are grouped into buckets
 # instead of receiving one category per value.
 _INT_CATEGORY_THRESHOLD = 50
 
-_MetadataValueType = type[Union[str, bool, int]]
+_SUPPORTED_TYPE_NAMES = frozenset({"string", "integer", "boolean"})
 
 
 @dataclass(frozen=True)
@@ -51,8 +55,12 @@ def build_metadata_color_maps(  # noqa: PLR0913
         Tuple of (color_categories, legend) where legend excludes the reserved
         categories (0 = filtered out, 1 = unassigned).
     """
-    sample_to_data = _get_collection_metadata(session=session, collection_id=collection_id)
-    scale = _build_metadata_color_scale(key=key, sample_to_data=sample_to_data, start_cat=start_cat)
+    sample_to_data, metadata_schema = _get_collection_metadata(
+        session=session, collection_id=collection_id
+    )
+    scale = _build_metadata_color_scale(
+        key=key, sample_to_data=sample_to_data, metadata_schema=metadata_schema, start_cat=start_cat
+    )
     color_categories = _assign_sample_categories(
         key=key,
         sample_ids=sample_ids,
@@ -63,8 +71,14 @@ def build_metadata_color_maps(  # noqa: PLR0913
     return color_categories, scale.legend
 
 
-def _get_collection_metadata(session: Session, collection_id: UUID) -> dict[UUID, dict[str, Any]]:
-    """Query all metadata rows for the collection and return a sample_id → data map."""
+def _get_collection_metadata(
+    session: Session, collection_id: UUID
+) -> tuple[dict[UUID, dict[str, Any]], dict[str, str]]:
+    """Query all metadata rows for the collection.
+
+    Returns:
+        Tuple of (sample_id -> data map, merged metadata schema).
+    """
     rows = session.exec(
         select(SampleMetadataTable)
         .select_from(SampleTable)
@@ -74,16 +88,24 @@ def _get_collection_metadata(session: Session, collection_id: UUID) -> dict[UUID
         )
         .where(SampleTable.collection_id == collection_id)
     ).all()
-    return {row.sample_id: row.data for row in rows}
+    merged_schema: dict[str, str] = {}
+    for row in rows:
+        merged_schema |= row.metadata_schema
+
+    return {row.sample_id: row.data for row in rows}, merged_schema
 
 
 def _build_metadata_color_scale(
     key: str,
     sample_to_data: dict[UUID, dict[str, Any]],
+    metadata_schema: dict[str, str],
     start_cat: int,
 ) -> MetadataColorScale:
     """Build a MetadataColorScale for one metadata key across all collection samples."""
-    values, value_type = _collect_key_values(key=key, sample_to_data=sample_to_data)
+    values = _collect_key_values(
+        key=key, sample_to_data=sample_to_data, metadata_schema=metadata_schema
+    )
+    value_type = cast("type[str | bool | int]", NAME_TO_TYPE_MAP[metadata_schema[key]])
     return _build_color_scale(values=values, value_type=value_type, start_cat=start_cat)
 
 
@@ -111,24 +133,26 @@ def _assign_sample_categories(
 
 
 def _collect_key_values(
-    key: str, sample_to_data: dict[UUID, dict[str, Any]]
-) -> tuple[set[str | bool | int], _MetadataValueType | None]:
-    """Collect values for one metadata key and enforce a single stored type."""
+    key: str,
+    sample_to_data: dict[UUID, dict[str, Any]],
+    metadata_schema: dict[str, str],
+) -> set[str | bool | int]:
+    """Collect values for one metadata key, validating against the schema type."""
+    type_name = metadata_schema.get(key)
+    if type_name not in _SUPPORTED_TYPE_NAMES:
+        raise ValueError(
+            f"Metadata field '{key}' has unsupported type {type_name!r}. "
+            "Only 'string', 'integer', and 'boolean' fields can be used for coloring."
+        )
     values: set[str | bool | int] = set()
-    value_type: _MetadataValueType | None = None
     for data in sample_to_data.values():
         val = data.get(key)
-        current_type = _get_metadata_value_type(val)
-        if current_type is None:
-            msg = f"Metadata field '{key}' has unsupported value type {type(val).__name__!r}."
-            raise ValueError(msg)
-        if value_type is None:
-            value_type = current_type
-        elif current_type is not value_type:
-            raise ValueError(f"Metadata field '{key}' contains mixed value types.")
-        assert val is not None
+        if val is None or not validate_type_compatibility(type_name, val):
+            raise ValueError(
+                f"Metadata field '{key}': value {val!r} does not match schema type {type_name!r}."
+            )
         values.add(val)
-    return values, value_type
+    return values
 
 
 def _assign_int_categories(
@@ -159,7 +183,7 @@ def _assign_int_categories(
 
 def _build_color_scale(
     values: set[str | bool | int],
-    value_type: _MetadataValueType | None,
+    value_type: type[str | bool | int] | None,
     start_cat: int,
 ) -> MetadataColorScale:
     """Build a MetadataColorScale for one metadata key based on its stored type."""
@@ -194,17 +218,6 @@ def _build_color_scale(
             value_to_category=int_value_to_category, int_buckets=int_buckets, legend=int_legend
         )
     return MetadataColorScale(value_to_category=value_to_category, int_buckets=[], legend=legend)
-
-
-def _get_metadata_value_type(val: Any) -> _MetadataValueType | None:
-    """Return the supported metadata value type for coloring."""
-    if isinstance(val, str):
-        return str
-    if isinstance(val, bool):
-        return bool
-    if isinstance(val, int):
-        return int
-    return None
 
 
 def _make_int_buckets(int_values: set[int]) -> list[tuple[int, int, str]]:
