@@ -1,9 +1,12 @@
 import { describe, expect, it, vi } from 'vitest';
 import { buildRequestBody } from './buildRequestBody';
-import type { ImagesInfiniteParams } from './types';
+
+type Params = Parameters<typeof buildRequestBody>[0];
+
+const metadataFilterFixture = { key: 'temp', op: '>=' as const, value: 10 };
 
 vi.mock('$lib/hooks/useMetadataFilters/useMetadataFilters', () => ({
-    createMetadataFilters: vi.fn(() => [{ mocked: true }])
+    createMetadataFilters: vi.fn(() => [metadataFilterFixture])
 }));
 
 describe('buildRequestBody', () => {
@@ -24,7 +27,7 @@ describe('buildRequestBody', () => {
         });
 
         it('propagates collection_ids to annotations_filter', () => {
-            const params: ImagesInfiniteParams = {
+            const params: Params = {
                 collection_id: 'col-1',
                 mode: 'normal',
                 filters: { collection_ids: ['coll-1', 'coll-2'] }
@@ -39,7 +42,7 @@ describe('buildRequestBody', () => {
         });
 
         it('omits annotations_filter when collection_ids is empty', () => {
-            const params: ImagesInfiniteParams = {
+            const params: Params = {
                 collection_id: 'col-1',
                 mode: 'normal',
                 filters: { collection_ids: [] }
@@ -51,7 +54,7 @@ describe('buildRequestBody', () => {
         });
 
         it('propagates both annotation_label_ids and collection_ids', () => {
-            const params: ImagesInfiniteParams = {
+            const params: Params = {
                 collection_id: 'col-1',
                 mode: 'normal',
                 filters: { annotation_label_ids: ['lbl-1'], collection_ids: ['coll-1'] }
@@ -192,7 +195,9 @@ describe('buildRequestBody', () => {
                 },
                 0
             );
-            expect(result.filters?.sample_filter?.metadata_filters).toEqual([{ mocked: true }]);
+            expect(result.filters?.sample_filter?.metadata_filters).toEqual([
+                metadataFilterFixture
+            ]);
         });
     });
 });
