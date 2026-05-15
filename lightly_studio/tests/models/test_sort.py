@@ -3,13 +3,19 @@
 from __future__ import annotations
 
 import pytest
-from pydantic import ValidationError
+from pydantic import TypeAdapter, ValidationError
 
-from lightly_studio.core.dataset_query.order_by import OrderByMetadataField
+from lightly_studio.core.dataset_query.order_by import (
+    OrderByEvaluationMetricField,
+    OrderByMetadataField,
+)
 from lightly_studio.errors import QueryExprError
 from lightly_studio.models.sort import (
+    EvaluationMetricSortExpr,
+    SortExpr,
     SortFieldExpr,
     SortFieldSource,
+    sort_expr_to_order_by,
     sort_field_expr_to_order_by,
 )
 from lightly_studio.models.sort_direction import SortDirection
@@ -130,16 +136,58 @@ def test_sort_field_expr_to_order_by__metadata_arbitrary_field() -> None:
     order_by = sort_field_expr_to_order_by(expr)
     assert isinstance(order_by, OrderByMetadataField)
     assert order_by.field_name == "custom_metric"
-    assert order_by.cast_to_float is False
 
 
-def test_sort_field_expr_to_order_by__metadata_numeric() -> None:
-    expr = SortFieldExpr(
-        source=SortFieldSource.metadata,
-        field_name="score",
+def test_sort_expr_to_order_by__evaluation_metric_ascending() -> None:
+    expr = EvaluationMetricSortExpr(
+        evaluation_run_name="run1",
+        metric_name="score",
         direction=SortDirection.asc,
-        is_numeric=True,
     )
-    order_by = sort_field_expr_to_order_by(expr)
-    assert isinstance(order_by, OrderByMetadataField)
-    assert order_by.cast_to_float is True
+    order_by = sort_expr_to_order_by(expr)
+    assert isinstance(order_by, OrderByEvaluationMetricField)
+    assert order_by.evaluation_run_name == "run1"
+    assert order_by.metric_name == "score"
+    assert order_by.ascending is True
+
+
+def test_sort_expr_to_order_by__evaluation_metric_descending() -> None:
+    expr = EvaluationMetricSortExpr(
+        evaluation_run_name="run1",
+        metric_name="precision",
+        direction=SortDirection.desc,
+    )
+    order_by = sort_expr_to_order_by(expr)
+    assert isinstance(order_by, OrderByEvaluationMetricField)
+    assert order_by.evaluation_run_name == "run1"
+    assert order_by.metric_name == "precision"
+    assert order_by.ascending is False
+
+
+def test_sort_expr_discriminated_union__routes_to_evaluation_metric() -> None:
+    adapter: TypeAdapter[SortExpr] = TypeAdapter(SortExpr)
+    expr = adapter.validate_python(
+        {
+            "source": "evaluation_metric",
+            "evaluation_run_name": "run1",
+            "metric_name": "score",
+            "direction": "asc",
+        }
+    )
+    assert isinstance(expr, EvaluationMetricSortExpr)
+    assert expr.evaluation_run_name == "run1"
+    assert expr.metric_name == "score"
+
+
+def test_sort_expr_discriminated_union__routes_to_sort_field_expr() -> None:
+    adapter: TypeAdapter[SortExpr] = TypeAdapter(SortExpr)
+    expr = adapter.validate_python(
+        {
+            "source": "image",
+            "field_name": "file_name",
+            "direction": "asc",
+            "is_numeric": False,
+        }
+    )
+    assert isinstance(expr, SortFieldExpr)
+    assert expr.field_name == "file_name"

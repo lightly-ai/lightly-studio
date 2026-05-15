@@ -1,13 +1,21 @@
 from sqlmodel import Session
 
 from lightly_studio.core.dataset_query.image_sample_field import ImageSampleField
-from lightly_studio.core.dataset_query.order_by import OrderByField, OrderByMetadataField
+from lightly_studio.core.dataset_query.order_by import (
+    OrderByEvaluationMetricField,
+    OrderByField,
+    OrderByMetadataField,
+)
 from lightly_studio.resolvers import image_resolver, metadata_resolver
 from lightly_studio.resolvers.annotations.annotations_filter import AnnotationsFilter
 from lightly_studio.resolvers.image_filter import ImageFilter
 from lightly_studio.resolvers.sample_resolver.sample_filter import SampleFilter
 from tests import helpers_resolvers
 from tests.helpers_resolvers import AnnotationDetails
+from tests.resolvers.evaluation_sample_metric_resolver.helpers import (
+    create_run_and_image,
+    insert_metrics,
+)
 
 
 def test_get_adjacent_images__orders_by_path(db_session: Session) -> None:
@@ -345,6 +353,74 @@ def test_get_adjacent_images__with_similarity_and_order_by(db_session: Session) 
     assert result.next_sample_id == image_c.sample_id
 
 
+def test_get_adjacent_images__similarity_is_tiebreaker_when_order_by_values_equal(
+    db_session: Session,
+) -> None:
+    collection = helpers_resolvers.create_collection(session=db_session)
+    collection_id = collection.collection_id
+
+    embedding_model = helpers_resolvers.create_embedding_model(
+        session=db_session,
+        collection_id=collection_id,
+        embedding_model_name="embedding-tiebreaker",
+        embedding_dimension=2,
+    )
+
+    # image_a and image_b share the same width but differ in similarity to the query
+    image_a = helpers_resolvers.create_image(
+        session=db_session,
+        collection_id=collection_id,
+        file_path_abs="/images/a.png",
+        width=100,
+    )
+    image_b = helpers_resolvers.create_image(
+        session=db_session,
+        collection_id=collection_id,
+        file_path_abs="/images/b.png",
+        width=100,
+    )
+    image_c = helpers_resolvers.create_image(
+        session=db_session,
+        collection_id=collection_id,
+        file_path_abs="/images/c.png",
+        width=200,
+    )
+
+    helpers_resolvers.create_sample_embedding(
+        session=db_session,
+        sample_id=image_a.sample_id,
+        embedding_model_id=embedding_model.embedding_model_id,
+        embedding=[1.0, 0.0],
+    )
+    helpers_resolvers.create_sample_embedding(
+        session=db_session,
+        sample_id=image_b.sample_id,
+        embedding_model_id=embedding_model.embedding_model_id,
+        embedding=[-1.0, 0.0],
+    )
+    helpers_resolvers.create_sample_embedding(
+        session=db_session,
+        sample_id=image_c.sample_id,
+        embedding_model_id=embedding_model.embedding_model_id,
+        embedding=[0.0, 1.0],
+    )
+
+    # Sorted order: image_a (100, close), image_b (100, far), image_c (200)
+    # image_b's previous is image_a, next is image_c.
+    result = image_resolver.get_adjacent_images(
+        session=db_session,
+        sample_id=image_b.sample_id,
+        collection_id=collection_id,
+        text_embedding=[1.0, 0.0],
+        order_by=[OrderByField(ImageSampleField.width)],
+    )
+
+    assert result is not None
+    assert result.previous_sample_id == image_a.sample_id
+    assert result.sample_id == image_b.sample_id
+    assert result.next_sample_id == image_c.sample_id
+
+
 def test_get_adjacent_images__sort_by_width_desc_with_duplicate_values(db_session: Session) -> None:
     collection = helpers_resolvers.create_collection(session=db_session)
     collection_id = collection.collection_id
@@ -361,15 +437,16 @@ def test_get_adjacent_images__sort_by_width_desc_with_duplicate_values(db_sessio
         file_path_abs="/images/a.png",
         width=1920,
     )
-    helpers_resolvers.create_image(
+    image_c = helpers_resolvers.create_image(
         session=db_session,
         collection_id=collection_id,
         file_path_abs="/images/c.png",
         width=1080,
     )
 
-    # Both image_a and image_b have width=1920. The secondary tiebreaker is file_path_abs ASC,
-    # so a.png comes before b.png.
+    # Both image_a and image_b have width=1920. The secondary tiebreaker is file_path_abs DESC
+    # (matching the primary direction), so b.png comes before a.png.
+    # Order: b.png (1920), a.png (1920), c.png (1080)
     result = image_resolver.get_adjacent_images(
         session=db_session,
         sample_id=image_a.sample_id,
@@ -378,9 +455,9 @@ def test_get_adjacent_images__sort_by_width_desc_with_duplicate_values(db_sessio
     )
 
     assert result is not None
-    assert result.previous_sample_id is None
+    assert result.previous_sample_id == image_b.sample_id
     assert result.sample_id == image_a.sample_id
-    assert result.next_sample_id == image_b.sample_id
+    assert result.next_sample_id == image_c.sample_id
 
 
 def test_get_adjacent_images__returns_none_when_sample_not_in_filter(db_session: Session) -> None:
@@ -440,6 +517,36 @@ def test_get_adjacent_images__sort_by_metadata_field(db_session: Session) -> Non
         sample_id=image_c.sample_id,
         collection_id=collection_id,
         order_by=[OrderByMetadataField("score", cast_to_float=True)],
+    )
+
+    assert result is not None
+    assert result.previous_sample_id == image_b.sample_id
+    assert result.sample_id == image_c.sample_id
+    assert result.next_sample_id == image_a.sample_id
+
+
+def test_get_adjacent_images__sort_by_evaluation_metric(db_session: Session) -> None:
+    collection = helpers_resolvers.create_collection(session=db_session)
+    collection_id = collection.collection_id
+
+    run, image_a = create_run_and_image(session=db_session, dataset_collection_id=collection_id)
+    image_b = helpers_resolvers.create_image(
+        session=db_session, collection_id=collection_id, file_path_abs="/images/b.png"
+    )
+    image_c = helpers_resolvers.create_image(
+        session=db_session, collection_id=collection_id, file_path_abs="/images/c.png"
+    )
+
+    # score order: b(1) < c(2) < a(3), so sorted sequence is b, c, a
+    insert_metrics(db_session, run.id, image_a.sample_id, {"score": 3.0})
+    insert_metrics(db_session, run.id, image_b.sample_id, {"score": 1.0})
+    insert_metrics(db_session, run.id, image_c.sample_id, {"score": 2.0})
+
+    result = image_resolver.get_adjacent_images(
+        session=db_session,
+        sample_id=image_c.sample_id,
+        collection_id=collection_id,
+        order_by=[OrderByEvaluationMetricField("test_run", "score")],
     )
 
     assert result is not None

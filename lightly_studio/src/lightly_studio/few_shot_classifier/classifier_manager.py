@@ -508,6 +508,7 @@ class ClassifierManager:
             session=session,
             parent_collection_id=collection_id,
             annotations=classification_annotations,
+            collection_name=classifier.few_shot_classifier.name,
         )
 
     def get_all_classifiers(self, collection_id: UUID) -> list[EmbeddingClassifier]:
