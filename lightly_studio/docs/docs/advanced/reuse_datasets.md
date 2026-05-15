@@ -22,7 +22,7 @@ To wipe the existing database and start over (for example, when iterating on ing
 ```python
 import lightly_studio as ls
 
-ls.db_manager.connect(cleanup_existing=True)
+ls.db_manager.connect(db_file="/data/lightly_studio.db", cleanup_existing=True)
 ```
 
 !!! warning
