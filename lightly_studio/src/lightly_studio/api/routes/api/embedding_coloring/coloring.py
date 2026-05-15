@@ -2,10 +2,10 @@
 
 from __future__ import annotations
 
-from typing import Union
+from typing import Annotated, Literal, Union
 from uuid import UUID
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from sqlmodel import Session
 
 from lightly_studio.api.routes.api.embedding_coloring.metadata import build_metadata_color_maps
@@ -18,22 +18,28 @@ _COLOR_OFFSET = 2
 class TagColorBy(BaseModel):
     """Color samples by tag membership."""
 
+    type: Literal["tag"] = "tag"
     tag_ids: list[UUID]
 
 
 class MetadataFieldColorBy(BaseModel):
     """Assign a distinct color to each unique value of the selected field."""
 
+    type: Literal["metadata_field"] = "metadata_field"
     key: str
 
 
 class AnnotationColorBy(BaseModel):
     """Color samples by annotation label."""
 
+    type: Literal["annotation"] = "annotation"
     annotation_label_ids: list[UUID]
 
 
-ColorBy = Union[TagColorBy, MetadataFieldColorBy, AnnotationColorBy]
+ColorBy = Annotated[
+    Union[TagColorBy, MetadataFieldColorBy, AnnotationColorBy],
+    Field(discriminator="type"),
+]
 
 
 def build_color_data(

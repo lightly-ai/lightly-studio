@@ -269,7 +269,7 @@ def test_get_embeddings2d__with_metadata_field_color_by(
         f"/api/collections/{collection_id}/embeddings2d/default",
         json={
             "filters": {},
-            "color_by": {"key": "city"},
+            "color_by": {"type": "metadata_field", "key": "city"},
         },
     )
 
@@ -323,7 +323,7 @@ def test_get_embeddings2d__with_boolean_metadata_color_by(
         f"/api/collections/{collection_id}/embeddings2d/default",
         json={
             "filters": {},
-            "color_by": {"key": "is_sunny"},
+            "color_by": {"type": "metadata_field", "key": "is_sunny"},
         },
     )
 
@@ -384,7 +384,7 @@ def test_get_embeddings2d__with_metadata_field_color_by_and_sample_ids_filter(
         f"/api/collections/{collection_id}/embeddings2d/default",
         json={
             "filters": image_filter.model_dump(mode="json"),
-            "color_by": {"key": "city"},
+            "color_by": {"type": "metadata_field", "key": "city"},
         },
     )
 
@@ -452,7 +452,7 @@ def test_get_embeddings2d__with_integer_metadata_color_by__few_values(
         f"/api/collections/{collection_id}/embeddings2d/default",
         json={
             "filters": {},
-            "color_by": {"key": "score"},
+            "color_by": {"type": "metadata_field", "key": "score"},
         },
     )
 
@@ -506,7 +506,7 @@ def test_get_embeddings2d__with_integer_metadata_color_by__many_values(
         f"/api/collections/{collection_id}/embeddings2d/default",
         json={
             "filters": {},
-            "color_by": {"key": "count"},
+            "color_by": {"type": "metadata_field", "key": "count"},
         },
     )
 
