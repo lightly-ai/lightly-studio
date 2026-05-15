@@ -26,7 +26,7 @@ ls.db_manager.connect(cleanup_existing=True)
 ```
 
 !!! warning
-    This permanently deletes the existing DuckDB file, including all tags, annotations, captions, and embeddings stored in it.
+    This permanently deletes the existing DuckDB file, including all content inside it.
 
 ## Reuse a dataset across runs
 
