@@ -174,26 +174,11 @@ def create_and_persist_object_detection_metrics_per_sample(
         )
 
         sample_metrics_to_persist.extend(
-            [
-                EvaluationSampleMetricCreate(
-                    evaluation_run_id=data.evaluation_run_id,
-                    sample_id=sample_id,
-                    metric_name="tp",
-                    value=float(matching_result.tp),
-                ),
-                EvaluationSampleMetricCreate(
-                    evaluation_run_id=data.evaluation_run_id,
-                    sample_id=sample_id,
-                    metric_name="fp",
-                    value=float(matching_result.fp),
-                ),
-                EvaluationSampleMetricCreate(
-                    evaluation_run_id=data.evaluation_run_id,
-                    sample_id=sample_id,
-                    metric_name="fn",
-                    value=float(matching_result.fn),
-                ),
-            ]
+            _get_sample_metric_records(
+                evaluation_run_id=data.evaluation_run_id,
+                sample_id=sample_id,
+                matching_result=matching_result,
+            )
         )
 
         annotation_metrics_to_persist.extend(
@@ -379,6 +364,27 @@ def _to_bounding_boxes(annotations: list[AnnotationBaseTable]) -> list[BoundingB
             )
         )
     return boxes
+
+
+def _get_sample_metric_records(
+    evaluation_run_id: UUID,
+    sample_id: UUID,
+    matching_result: MatchingResult,
+) -> list[EvaluationSampleMetricCreate]:
+    """Create sample-level metric records from detection matching output."""
+    return [
+        EvaluationSampleMetricCreate(
+            evaluation_run_id=evaluation_run_id,
+            sample_id=sample_id,
+            metric_name=metric_name,
+            value=float(value),
+        )
+        for metric_name, value in (
+            ("tp", matching_result.tp),
+            ("fp", matching_result.fp),
+            ("fn", matching_result.fn),
+        )
+    ]
 
 
 def _get_annotation_metric_records(
