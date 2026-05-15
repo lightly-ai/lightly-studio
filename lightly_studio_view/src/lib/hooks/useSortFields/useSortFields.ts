@@ -24,8 +24,6 @@ interface UseSortFieldsParams {
 }
 
 interface UseSortFieldsReturn {
-    metadataSortFields: Readable<ImageSortField[]>;
-    evalSortFields: Readable<EvalSortField[]>;
     allSortFields: Readable<SortField[]>;
 }
 
@@ -76,5 +74,5 @@ export function useSortFields({ datasetId }: UseSortFieldsParams): UseSortFields
         ]
     );
 
-    return { metadataSortFields, evalSortFields, allSortFields };
+    return { allSortFields };
 }
