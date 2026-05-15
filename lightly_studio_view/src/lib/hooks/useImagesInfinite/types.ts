@@ -1,4 +1,8 @@
-import type { QueryExpr, SortFieldExpr } from '$lib/api/lightly_studio_local';
+import type {
+    EvaluationMetricSortExpr,
+    QueryExpr,
+    SortFieldExpr
+} from '$lib/api/lightly_studio_local';
 import type { DimensionBounds } from '$lib/services/loadDimensionBounds';
 import type { MetadataValues } from '$lib/services/types';
 
@@ -34,7 +38,7 @@ interface ClassifierModeParams {
 export type ImagesInfiniteParams = {
     query_expr?: QueryExpr;
     collection_id: string;
-    sort_by?: SortFieldExpr[] | null;
+    sort_by?: SortExpr[] | null;
 } & (NormalModeParams | ClassifierModeParams) &
     CommonFilters;
 
@@ -47,5 +51,7 @@ export type SamplesQueryKey = readonly [
         metadata_values?: MetadataValues;
         text_embedding?: number[];
     },
-    SortFieldExpr[] | null | undefined
+    SortExpr[] | null | undefined
 ];
+
+export type SortExpr = SortFieldExpr | ({ source: 'evaluation_metric' } & EvaluationMetricSortExpr);

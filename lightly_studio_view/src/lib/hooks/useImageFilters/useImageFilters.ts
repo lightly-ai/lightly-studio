@@ -1,6 +1,6 @@
 import { derived, get, writable } from 'svelte/store';
 import { createMetadataFilters } from '../useMetadataFilters/useMetadataFilters';
-import type { ImagesInfiniteParams, SortExpr } from '../useImagesInfinite/useImagesInfinite';
+import type { ImagesInfiniteParams } from '../useImagesInfinite/useImagesInfinite';
 import type { DimensionBounds } from '$lib/services/loadDimensionBounds';
 import type {
     AnnotationsFilter,
@@ -8,6 +8,7 @@ import type {
     QueryExpr,
     SampleFilter
 } from '$lib/api/lightly_studio_local';
+import type { SortExpr } from '../useImagesInfinite/types';
 
 const filterParams = writable<ImagesInfiniteParams>({} as ImagesInfiniteParams);
 

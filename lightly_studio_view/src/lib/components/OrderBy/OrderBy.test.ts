@@ -3,9 +3,9 @@ import { readable } from 'svelte/store';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { SortDirection } from '$lib/api/lightly_studio_local';
 import type { MetadataInfoView } from '$lib/api/lightly_studio_local';
-import type { SortExpr } from '$lib/hooks/useImagesInfinite/useImagesInfinite';
 import type { EvaluationRunMetricsInfoView } from '$lib/api/lightly_studio_local/types.gen';
 import OrderBy from './OrderBy.svelte';
+import type { SortExpr } from '$lib/hooks/useImagesInfinite/types';
 
 const mocks = vi.hoisted(() => ({
     imageSortByValue: null as SortExpr[] | null,

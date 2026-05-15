@@ -8,7 +8,7 @@ import type {
     VideoFilter,
     VideoFrameAdjacentFilter
 } from '$lib/api/lightly_studio_local/types.gen';
-import type { SortExpr } from '$lib/hooks/useImagesInfinite/useImagesInfinite';
+import type { SortExpr } from '../useImagesInfinite/types';
 
 export type AdjacentSamplesRequestBody =
     | {

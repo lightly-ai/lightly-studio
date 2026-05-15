@@ -3,7 +3,7 @@ import { SortDirection } from '$lib/api/lightly_studio_local';
 import { useImageFilters } from '$lib/hooks/useImageFilters/useImageFilters';
 import { useSortFields } from '$lib/hooks/useSortFields/useSortFields';
 import type { ImageSortField, SortField } from '$lib/hooks/useSortFields/useSortFields';
-import type { SortExpr } from '$lib/hooks/useImagesInfinite/useImagesInfinite';
+import type { SortExpr } from '../useImagesInfinite/types';
 
 export type { SortField } from '$lib/hooks/useSortFields/useSortFields';
 
