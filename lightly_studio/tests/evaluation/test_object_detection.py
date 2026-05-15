@@ -8,7 +8,12 @@ import numpy as np
 import pytest
 
 from lightly_studio.evaluation import object_detection_metric
-from lightly_studio.evaluation.object_detection_metric import BoundingBox
+from lightly_studio.evaluation.object_detection_metric import (
+    BoundingBox,
+    DetectionMatch,
+    MatchingResult,
+    _get_annotation_metric_records,
+)
 
 
 def test_match_image__no_preds_no_gts() -> None:
@@ -598,3 +603,97 @@ def test_compute_iou_matrix__negative_coordinates() -> None:
     # union = 483 + 100 - 100 = 483, IoU = 100/483
     result = object_detection_metric.compute_iou_matrix(pred_corners=pred, gt_corners=gt)
     assert result[0, 0] == pytest.approx(100.0 / 483.0)
+
+
+def test_get_annotation_metric_records__empty_matching_result() -> None:
+    evaluation_run_id = uuid4()
+    sample_id = uuid4()
+    records = _get_annotation_metric_records(
+        evaluation_run_id=evaluation_run_id,
+        sample_id=sample_id,
+        matching_result=MatchingResult(),
+    )
+    assert records == []
+
+
+def test_get_annotation_metric_records__tp_produces_iou_record() -> None:
+    evaluation_run_id = uuid4()
+    sample_id = uuid4()
+    pred_id = uuid4()
+    gt_id = uuid4()
+    matching_result = MatchingResult(
+        matches=[DetectionMatch(pred_id=pred_id, gt_id=gt_id, iou=0.75)],
+    )
+    records = _get_annotation_metric_records(
+        evaluation_run_id=evaluation_run_id,
+        sample_id=sample_id,
+        matching_result=matching_result,
+    )
+    assert len(records) == 1
+    assert records[0].pred_annotation_id == pred_id
+    assert records[0].gt_annotation_id == gt_id
+    assert records[0].metric_name == "iou"
+    assert records[0].value == pytest.approx(0.75)
+
+
+def test_get_annotation_metric_records__fp_has_only_pred_id() -> None:
+    evaluation_run_id = uuid4()
+    sample_id = uuid4()
+    pred_id = uuid4()
+    matching_result = MatchingResult(unmatched_prediction_ids=[pred_id])
+    records = _get_annotation_metric_records(
+        evaluation_run_id=evaluation_run_id,
+        sample_id=sample_id,
+        matching_result=matching_result,
+    )
+    assert len(records) == 1
+    assert records[0].pred_annotation_id == pred_id
+    assert records[0].gt_annotation_id is None
+    assert records[0].metric_name is None
+    assert records[0].value is None
+
+
+def test_get_annotation_metric_records__fn_has_only_gt_id() -> None:
+    evaluation_run_id = uuid4()
+    sample_id = uuid4()
+    gt_id = uuid4()
+    matching_result = MatchingResult(unmatched_gt_ids=[gt_id])
+    records = _get_annotation_metric_records(
+        evaluation_run_id=evaluation_run_id,
+        sample_id=sample_id,
+        matching_result=matching_result,
+    )
+    assert len(records) == 1
+    assert records[0].pred_annotation_id is None
+    assert records[0].gt_annotation_id == gt_id
+    assert records[0].metric_name is None
+    assert records[0].value is None
+
+
+def test_get_annotation_metric_records__mixed_result() -> None:
+    """TP, FP, and FN each produce exactly one record with correct fields."""
+    evaluation_run_id = uuid4()
+    sample_id = uuid4()
+    pred_tp_id = uuid4()
+    gt_tp_id = uuid4()
+    pred_fp_id = uuid4()
+    gt_fn_id = uuid4()
+    matching_result = MatchingResult(
+        matches=[DetectionMatch(pred_id=pred_tp_id, gt_id=gt_tp_id, iou=0.6)],
+        unmatched_prediction_ids=[pred_fp_id],
+        unmatched_gt_ids=[gt_fn_id],
+    )
+    records = _get_annotation_metric_records(
+        evaluation_run_id=evaluation_run_id,
+        sample_id=sample_id,
+        matching_result=matching_result,
+    )
+    assert len(records) == 3
+    by_type = {(r.pred_annotation_id, r.gt_annotation_id): r for r in records}
+    tp = by_type[(pred_tp_id, gt_tp_id)]
+    assert tp.metric_name == "iou"
+    assert tp.value == pytest.approx(0.6)
+    fp = by_type[(pred_fp_id, None)]
+    assert fp.metric_name is None
+    fn = by_type[(None, gt_fn_id)]
+    assert fn.metric_name is None
