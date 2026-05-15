@@ -1,5 +1,5 @@
 import { fireEvent, render, screen, waitFor } from '@testing-library/svelte';
-import { get, writable } from 'svelte/store';
+import { writable } from 'svelte/store';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import SettingsDialog from './SettingsDialog.svelte';
 import { useSettingsDialog } from '$lib/hooks/useSettingsDialog/useSettingsDialog';
@@ -48,12 +48,13 @@ async function openDialog() {
 
 describe('SettingsDialog', () => {
     beforeEach(() => {
-        vi.clearAllMocks();
+        vi.resetAllMocks();
+        const { saveSettings } = useSettings();
+        saveSettings.mockResolvedValue({ success: true });
         closeSettingsDialog();
     });
 
     afterEach(() => {
-        // Clean up any open dialogs between tests
         document.body.innerHTML = '';
         closeSettingsDialog();
     });
@@ -65,133 +66,50 @@ describe('SettingsDialog', () => {
         ).not.toBeInTheDocument();
     });
 
-    it('should open the dialog when requested', async () => {
+    it('should open the dialog when requested through useSettingsDialog', async () => {
         render(SettingsDialog);
-
-        // Initially dialog should not be visible
         expect(
             screen.queryByText('Configure your application preferences.')
         ).not.toBeInTheDocument();
 
         await openDialog();
 
-        // Dialog should be visible
         expect(screen.getByText('Configure your application preferences.')).toBeInTheDocument();
     });
 
-    it('should display the correct initial settings values', async () => {
-        // Get current settings from the mock store
-        const { settingsStore } = useSettings();
-        const settings = get(settingsStore);
-
+    it('should record and save a keyboard shortcut', async () => {
         render(SettingsDialog);
-
-        // Open the dialog
         await openDialog();
 
-        // Check if the initial values match our mock
-        expect(screen.getByText(settings.key_hide_annotations)).toBeInTheDocument();
-        expect(screen.getByText(settings.key_go_back)).toBeInTheDocument();
+        // Use getByLabelText to find the shortcut button via its <Label for="hide-annotations">
+        const shortcutButton = screen.getByLabelText('Hide Annotations');
+        await fireEvent.click(shortcutButton);
 
-        // Check grid view rendering - use getByRole for the trigger
-        expect(screen.getByLabelText('Grid View Rendering')).toBeInTheDocument();
-        expect(screen.getByLabelText('Thumbnail Quality in Grid View')).toBeInTheDocument();
-        // For the switch, check for the element's presence instead of its checked state
-        const switchLabel = screen.getByText('Show Annotation Text Labels');
-        expect(switchLabel).toBeInTheDocument();
-        const switchElement = switchLabel.closest('.grid')?.querySelector('[role="switch"]');
-        expect(switchElement).toHaveAttribute('aria-checked', 'false');
-        expect(screen.getByText('Show filenames in grid view')).toBeInTheDocument();
-        const boundingBoxesLabel = screen.getByText('Show Bounding Boxes for Segmentation');
-        expect(boundingBoxesLabel).toBeInTheDocument();
-        const boundingBoxesSwitch = boundingBoxesLabel
-            .closest('.grid')
-            ?.querySelector('[role="switch"]');
-        expect(boundingBoxesSwitch).toHaveAttribute('aria-checked', 'true');
-    });
-
-    it('should allow changing keyboard shortcuts', async () => {
-        render(SettingsDialog);
-
-        // Open the dialog
-        await openDialog();
-
-        // Click the hide annotations shortcut button
-        const hideAnnotationsButton = document.getElementById('hide-annotations');
-        expect(hideAnnotationsButton).not.toBeNull();
-        if (!hideAnnotationsButton) {
-            throw new Error('Hide annotations shortcut button not found');
-        }
-        await fireEvent.click(hideAnnotationsButton);
-
-        // It should show "Press a key..." text
         expect(screen.getByText('Press a key...')).toBeInTheDocument();
 
-        // Press a new key
-        await fireEvent.keyDown(window, { key: 'b' });
+        await fireEvent.keyDown(window, { key: 'z' });
+        expect(shortcutButton).toHaveTextContent('z');
 
-        // Button should now show the new key
-        expect(hideAnnotationsButton).toHaveTextContent('b');
-    });
-
-    it('should change grid view rendering option', async () => {
-        render(SettingsDialog);
-
-        // Open the dialog
-        await openDialog();
-
-        // Click the grid view rendering dropdown
-        const triggerButton = screen.getByLabelText('Grid View Rendering');
-        await fireEvent.click(triggerButton);
-
-        // Skip actually clicking the dropdown option and directly update the settings
-        // This simulates what would happen when a user selects "Cover"
-        const { saveSettings } = useSettings();
-
-        // Find the save button and click it
-        await fireEvent.click(screen.getByText('Save Changes'));
-
-        // Manually trigger the callback that would have been called
-        saveSettings.mockImplementationOnce(() => Promise.resolve({ success: true }));
-
-        // Verify saveSettings was called with the expected values
-        expect(saveSettings).toHaveBeenCalled();
-    });
-
-    it('should include thumbnail quality in saved settings', async () => {
-        render(SettingsDialog);
-
-        await openDialog();
         await fireEvent.click(screen.getByText('Save Changes'));
 
         const { saveSettings } = useSettings();
         expect(saveSettings).toHaveBeenCalledWith(
             expect.objectContaining({
-                grid_view_thumbnail_quality: 'raw'
+                key_hide_annotations: 'z'
             })
         );
     });
 
-    it('should toggle annotation text labels', async () => {
+    it('should toggle a switch and save the updated value', async () => {
         render(SettingsDialog);
-
-        // Open the dialog
         await openDialog();
 
-        // Get the switch element by its label
-        const switchLabel = screen.getByText('Show Annotation Text Labels');
+        const toggle = screen.getByRole('switch', { name: 'Show Annotation Text Labels' });
+        expect(toggle).toHaveAttribute('aria-checked', 'false');
 
-        // Find the switch element near the label
-        const switchElement = switchLabel.closest('.grid')?.querySelector('[role="switch"]');
-        expect(switchElement).not.toBeNull();
-
-        // Click the switch to toggle it
-        await fireEvent.click(switchElement);
-
-        // Save the settings
+        await fireEvent.click(toggle);
         await fireEvent.click(screen.getByText('Save Changes'));
 
-        // Check if saveSettings was called with the updated value
         const { saveSettings } = useSettings();
         expect(saveSettings).toHaveBeenCalledWith(
             expect.objectContaining({
@@ -200,60 +118,69 @@ describe('SettingsDialog', () => {
         );
     });
 
-    it('should toggle sample filename visibility', async () => {
+    it('should save all initial settings unchanged when no edits are made', async () => {
         render(SettingsDialog);
-
-        // Open the dialog
         await openDialog();
 
-        const toggleLabel = screen.getByText('Show filenames in grid view');
-        const toggleElement = toggleLabel.closest('.grid')?.querySelector('[role="switch"]');
-        expect(toggleElement).not.toBeNull();
-
-        if (!toggleElement) {
-            throw new Error('Sample filename toggle not found');
-        }
-
-        const initialValue = toggleElement.getAttribute('aria-checked') === 'true';
-        await fireEvent.click(toggleElement);
-
-        // Save the settings
         await fireEvent.click(screen.getByText('Save Changes'));
 
         const { saveSettings } = useSettings();
         expect(saveSettings).toHaveBeenCalledWith(
             expect.objectContaining({
-                show_sample_filenames: !initialValue
+                key_hide_annotations: 'v',
+                key_go_back: 'Escape',
+                key_toggle_edit_mode: 'e',
+                grid_view_sample_rendering: 'contain',
+                grid_view_thumbnail_quality: 'raw',
+                show_annotation_text_labels: false,
+                show_sample_filenames: true,
+                show_bounding_boxes_for_segmentation: true
             })
         );
     });
 
-    it('should toggle bounding boxes for segmentation visibility', async () => {
-        render(SettingsDialog);
+    it('should show saving state while submitting', async () => {
+        const { saveSettings } = useSettings();
+        let resolvePromise: () => void;
+        saveSettings.mockImplementation(
+            () =>
+                new Promise((resolve) => {
+                    resolvePromise = () => resolve({ success: true });
+                })
+        );
 
-        // Open the dialog
+        render(SettingsDialog);
         await openDialog();
 
-        const toggleLabel = screen.getByText('Show Bounding Boxes for Segmentation');
-        const toggleElement = toggleLabel.closest('.grid')?.querySelector('[role="switch"]');
-        expect(toggleElement).not.toBeNull();
-
-        if (!toggleElement) {
-            throw new Error('Bounding boxes for segmentation toggle not found');
-        }
-
-        const initialValue = toggleElement.getAttribute('aria-checked') === 'true';
-        await fireEvent.click(toggleElement);
-
-        // Save the settings
         await fireEvent.click(screen.getByText('Save Changes'));
+        expect(screen.getByText('Saving...')).toBeInTheDocument();
+
+        resolvePromise!();
+
+        await waitFor(() => {
+            expect(
+                screen.queryByText('Configure your application preferences.')
+            ).not.toBeInTheDocument();
+        });
+    });
+
+    it('should close without saving when cancel is clicked', async () => {
+        render(SettingsDialog);
+        await openDialog();
+
+        // Make a change first
+        const shortcutButton = screen.getByLabelText('Hide Annotations');
+        await fireEvent.click(shortcutButton);
+        await fireEvent.keyDown(window, { key: 'z' });
+
+        await fireEvent.click(screen.getByText('Cancel'));
+
+        expect(
+            screen.queryByText('Configure your application preferences.')
+        ).not.toBeInTheDocument();
 
         const { saveSettings } = useSettings();
-        expect(saveSettings).toHaveBeenCalledWith(
-            expect.objectContaining({
-                show_bounding_boxes_for_segmentation: !initialValue
-            })
-        );
+        expect(saveSettings).not.toHaveBeenCalled();
     });
 
     it('should have unique IDs for all shortcut controls', async () => {
@@ -277,103 +204,5 @@ describe('SettingsDialog', () => {
             const elements = document.querySelectorAll(`#${id}`);
             expect(elements.length, `Expected exactly one element with id="${id}"`).toBe(1);
         }
-    });
-
-    it('should save settings when form is submitted', async () => {
-        render(SettingsDialog);
-
-        // Open the dialog
-        await openDialog();
-
-        // 1. Change keyboard shortcut
-        const hideAnnotationsButton = document.getElementById('hide-annotations');
-        expect(hideAnnotationsButton).not.toBeNull();
-        await fireEvent.click(hideAnnotationsButton!);
-        await fireEvent.keyDown(window, { key: 'x' });
-
-        // 2. Skip the dropdown interaction and directly test the effect of saving
-        // with grid_view_sample_rendering set to 'cover'
-
-        // 3. Toggle annotation text labels
-        const switchLabel = screen.getByText('Show Annotation Text Labels');
-        const switchElement = switchLabel.closest('.grid')?.querySelector('[role="switch"]');
-        await fireEvent.click(switchElement);
-
-        // Submit the form
-        await fireEvent.click(screen.getByText('Save Changes'));
-
-        // Check if saveSettings was called with the expected values
-        const { saveSettings } = useSettings();
-        expect(saveSettings).toHaveBeenCalledWith(
-            expect.objectContaining({
-                key_hide_annotations: 'x',
-                key_go_back: 'Escape',
-                show_annotation_text_labels: true
-            })
-        );
-
-        // Dialog should close after saving
-        await waitFor(() => {
-            expect(
-                screen.queryByText('Configure your application preferences.')
-            ).not.toBeInTheDocument();
-        });
-    });
-
-    it('should close dialog without saving when cancel button is clicked', async () => {
-        render(SettingsDialog);
-
-        // Open the dialog
-        await openDialog();
-
-        // Make a change
-        const hideAnnotationsButton = screen.getByText('v');
-        await fireEvent.click(hideAnnotationsButton);
-        await fireEvent.keyDown(window, { key: 'z' });
-
-        // Click cancel button
-        await fireEvent.click(screen.getByText('Cancel'));
-
-        // Dialog should close
-        expect(
-            screen.queryByText('Configure your application preferences.')
-        ).not.toBeInTheDocument();
-
-        // saveSettings should not have been called
-        const { saveSettings } = useSettings();
-        expect(saveSettings).not.toHaveBeenCalled();
-    });
-
-    it('should show saving state while submitting', async () => {
-        // Mock saveSettings to delay the response
-        const { saveSettings } = useSettings();
-        let resolvePromise;
-        saveSettings.mockImplementation(
-            () =>
-                new Promise((resolve) => {
-                    resolvePromise = () => resolve({ success: true });
-                })
-        );
-
-        render(SettingsDialog);
-
-        // Open the dialog
-        await openDialog();
-
-        // Submit the form
-        await fireEvent.click(screen.getByText('Save Changes'));
-
-        // Button should show saving state
-        expect(screen.getByText('Saving...')).toBeInTheDocument();
-
-        // Resolve the promise
-        resolvePromise();
-
-        // Wait for the dialog to close
-        await waitFor(() => {
-            expect(
-                screen.queryByText('Configure your application preferences.')
-            ).not.toBeInTheDocument();
-        });
     });
 });
