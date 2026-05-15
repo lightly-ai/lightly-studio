@@ -80,6 +80,7 @@ export class CaptionUtils {
 
         await captionInput.fill(text);
         await expect(captionInput).toHaveValue(text);
+        await expect(saveButton).toBeEnabled();
         await saveButton.click();
 
         await responsePromise;

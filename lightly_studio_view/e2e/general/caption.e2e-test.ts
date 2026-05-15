@@ -1,7 +1,7 @@
 import { test, expect } from '../utils';
 
 test.describe('captions-page-flow', () => {
-    test.skip('Add a caption in sample details', async ({ samplesPage, sampleDetailsPage }) => {
+    test('Add a caption in sample details', async ({ samplesPage, sampleDetailsPage }) => {
         // Double-click on the first sample to navigate to sample details
         await samplesPage.doubleClickFirstSample();
         await sampleDetailsPage.pageIsReady();
@@ -18,7 +18,7 @@ test.describe('captions-page-flow', () => {
         expect(await sampleDetailsPage.getCaptionCount()).toEqual(1);
     });
 
-    test.skip('Add and edit captions in caption page', async ({ captionsPage }) => {
+    test('Add and edit captions in caption page', async ({ captionsPage }) => {
         // There should be just one sample
         expect(await captionsPage.getGridItemCount()).toEqual(1);
 
@@ -38,24 +38,22 @@ test.describe('captions-page-flow', () => {
     });
 
     test('Delete a caption in caption page', async ({ captionsPage }) => {
-        const page = captionsPage.page;
-
-        // Capture browser console
-        page.on('console', (msg) => {
-            if (msg.text().includes('[refresh]')) {
-                console.log('BROWSER:', msg.text());
-            }
-        });
-
         // Start edit mode and delete the last caption
         await captionsPage.clickEditButton();
-        const initialCount = await captionsPage.getCaptionCount();
-        console.log('Initial caption count:', initialCount);
-        await captionsPage.deleteNthCaption(initialCount - 1);
-        expect(await captionsPage.getCaptionCount()).toEqual(initialCount - 1);
+        await captionsPage.deleteNthCaption(1);
 
-        // Undo
+        // Check the remaining caption
+        expect(await captionsPage.getCaptionCount()).toEqual(1);
+        expect(await captionsPage.getNthCaptionInput(0)).toEqual('caption');
+
+        // Undo the deletion — the caption should be restored
         await captionsPage.undoLastCaptionDelete();
-        expect(await captionsPage.getCaptionCount()).toEqual(initialCount);
+        expect(await captionsPage.getCaptionCount()).toEqual(2);
+
+        // Re-delete both captions to clean up
+        await captionsPage.deleteNthCaption(1);
+        await captionsPage.deleteNthCaption(0);
+        expect(await captionsPage.getCaptionCount()).toEqual(0);
+        expect(await captionsPage.getGridItemCount()).toEqual(0);
     });
 });
