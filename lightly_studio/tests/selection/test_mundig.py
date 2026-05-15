@@ -67,6 +67,17 @@ class TestMundig:
         selected = mundig.run(n_samples=2)
         assert selected == [1, 2]
 
+    def test_similarity__selects_most_similar_samples(self) -> None:
+        """Test that similarity selects the samples closest to the query."""
+        mundig = Mundig()
+        mundig.add_similarity(
+            embeddings=[[1.0, 0.0], [0.0, 1.0], [0.9, 0.0]],
+            query_embeddings=[[1.0, 0.0]],
+        )
+
+        selected = mundig.run(n_samples=2)
+        assert selected == [0, 2]
+
     def test_multiple__wrong_n_input_samples(self) -> None:
         """Check error is raised if input sample sizes differ."""
         mundig = Mundig()
