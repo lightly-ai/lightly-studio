@@ -2,12 +2,10 @@ import type { InfiniteData } from '@tanstack/svelte-query';
 import { infiniteQueryOptions } from '@tanstack/svelte-query';
 import type { ReadImagesError, ReadImagesResponse } from '$lib/api/lightly_studio_local';
 import { readImages } from '$lib/api/lightly_studio_local';
-import { buildRequestBody } from './buildRequestBody';
 import type { ImagesInfiniteParams, SamplesQueryKey } from './types';
+import { buildRequestBody } from './buildRequestBody';
 
-// Create infinite query options for samples with mode-aware logic.
 export const createImagesInfiniteOptions = (params: ImagesInfiniteParams) => {
-    // Build query key with intelligent structure to minimize refetches.
     const queryKey: SamplesQueryKey = [
         'readImagesInfinite',
         params.collection_id,

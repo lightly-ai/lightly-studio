@@ -1,6 +1,6 @@
 import { derived, get, writable } from 'svelte/store';
 import { createMetadataFilters } from '../useMetadataFilters/useMetadataFilters';
-import type { ImagesInfiniteParams } from '../useImagesInfinite/useImagesInfinite';
+import type { ImagesInfiniteParams } from '../useImagesInfinite/types';
 import type { DimensionBounds } from '$lib/services/loadDimensionBounds';
 import type {
     AnnotationsFilter,

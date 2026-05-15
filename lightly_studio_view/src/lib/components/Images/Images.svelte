@@ -8,10 +8,8 @@
     import { routeHelpers } from '$lib/routes';
     import { onMount } from 'svelte';
     import type { Readable } from 'svelte/store';
-    import {
-        useImagesInfinite,
-        type ImagesInfiniteParams
-    } from '$lib/hooks/useImagesInfinite/useImagesInfinite';
+    import { useImagesInfinite } from '$lib/hooks/useImagesInfinite/useImagesInfinite';
+    import type { ImagesInfiniteParams } from '$lib/hooks/useImagesInfinite/types';
     import { useScrollRestoration } from '$lib/hooks/useScrollRestoration/useScrollRestoration';
     import { useImageFilters } from '$lib/hooks/useImageFilters/useImageFilters';
     import { useAnnotationCollectionsFilter } from '$lib/hooks/useAnnotationCollectionsFilter/useAnnotationCollectionsFilter';
