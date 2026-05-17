@@ -15,6 +15,7 @@ from lightly_studio.models.collection import SampleType
 from lightly_studio.models.evaluation_run import EvaluationTaskType
 from lightly_studio.resolvers import (
     collection_resolver,
+    evaluation_annotation_metric_resolver,
     evaluation_run_resolver,
     evaluation_sample_metric_resolver,
 )
@@ -33,7 +34,7 @@ def test_object_detection_evaluation(
     image = create_image(session=dataset.session, collection_id=dataset.collection_id)
     _create_gt_and_pred_collections(session=dataset.session, collection_id=dataset.collection_id)
     # This GT box overlaps the first prediction and should count as one TP.
-    create_annotation(
+    gt_tp = create_annotation(
         session=dataset.session,
         collection_id=dataset.collection_id,
         sample_id=image.sample_id,
@@ -41,7 +42,7 @@ def test_object_detection_evaluation(
         annotation_collection_name="gt",
     )
     # This GT box has no matching prediction and should count as one FN.
-    create_annotation(
+    gt_fn = create_annotation(
         session=dataset.session,
         collection_id=dataset.collection_id,
         sample_id=image.sample_id,
@@ -50,7 +51,7 @@ def test_object_detection_evaluation(
         annotation_collection_name="gt",
     )
     # This prediction overlaps the first GT box and should count as one TP.
-    create_annotation(
+    pred_tp = create_annotation(
         session=dataset.session,
         collection_id=dataset.collection_id,
         sample_id=image.sample_id,
@@ -58,7 +59,7 @@ def test_object_detection_evaluation(
         annotation_collection_name="pred",
     )
     # This prediction has no matching GT box and should count as one FP.
-    create_annotation(
+    pred_fp = create_annotation(
         session=dataset.session,
         collection_id=dataset.collection_id,
         sample_id=image.sample_id,
@@ -95,6 +96,26 @@ def test_object_detection_evaluation(
         (image.sample_id, "fp"): 1.0,
         (image.sample_id, "fn"): 1.0,
     }
+
+    annotation_metrics = evaluation_annotation_metric_resolver.get_all_by_evaluation_run_id(
+        session=dataset.session,
+        evaluation_run_id=evaluation_runs[0].id,
+    )
+    assert len(annotation_metrics) == 3
+    annotation_metrics_by_type = {
+        (m.pred_annotation_id, m.gt_annotation_id): m for m in annotation_metrics
+    }
+    # The TP metric has IoU value
+    tp_metric = annotation_metrics_by_type[(pred_tp.sample_id, gt_tp.sample_id)]
+    assert tp_metric.metric_name == "iou"
+    assert tp_metric.value == pytest.approx(1.0)
+    # The FP and FN metrics have no metric name or value
+    fp_metric = annotation_metrics_by_type[(pred_fp.sample_id, None)]
+    assert fp_metric.metric_name is None
+    assert fp_metric.value is None
+    fn_metric = annotation_metrics_by_type[(None, gt_fn.sample_id)]
+    assert fn_metric.metric_name is None
+    assert fn_metric.value is None
 
 
 def test_object_detection_evaluation__raises_on_wrong_annotation_type(
