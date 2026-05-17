@@ -1,5 +1,6 @@
 import type {
     AnnotationsFilter,
+    EvaluationMetricSortExpr,
     QueryExpr,
     ReadImagesRequest,
     SampleFilter,
