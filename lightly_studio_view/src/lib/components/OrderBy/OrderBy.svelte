@@ -19,7 +19,7 @@
         isFieldSelected,
         handleFieldClick,
         toggleDirection
-    } = useOrderBy({ datasetId });
+    } = $derived(useOrderBy({ datasetId }));
 
     let open = $state(false);
 </script>
