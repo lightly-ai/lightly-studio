@@ -20,6 +20,7 @@ from lightly_studio.models.caption import CaptionTable
 from lightly_studio.models.collection import CollectionTable
 from lightly_studio.models.dataset import DatasetTable
 from lightly_studio.models.embedding_model import EmbeddingModelTable
+from lightly_studio.models.evaluation_annotation_metric import EvaluationAnnotationMetricTable
 from lightly_studio.models.evaluation_run import EvaluationRunTable
 from lightly_studio.models.evaluation_sample_metric import EvaluationSampleMetricTable
 from lightly_studio.models.group import GroupTable, SampleGroupLinkTable
@@ -65,6 +66,7 @@ def delete_dataset(
     _delete_object_detection_annotations(session=session, sample_ids=sample_ids)
     _delete_segmentation_annotations(session=session, sample_ids=sample_ids)
     _delete_evaluation_sample_metrics(session=session, dataset_id=dataset_id)
+    _delete_evaluation_annotation_metrics(session=session, dataset_id=dataset_id)
     session.commit()  # Commit before deleting annotation_base.
 
     # 2. Delete annotation_base and tables that reference sample type tables.
@@ -285,6 +287,24 @@ def _delete_evaluation_sample_metrics(session: Session, dataset_id: UUID) -> Non
     session.exec(
         delete(EvaluationSampleMetricTable).where(
             col(EvaluationSampleMetricTable.evaluation_run_id).in_(run_ids_subquery)
+        )
+    )
+
+
+def _delete_evaluation_annotation_metrics(session: Session, dataset_id: UUID) -> None:
+    """Delete evaluation annotation metrics for the given dataset."""
+    run_ids_subquery = (
+        select(EvaluationRunTable.id)
+        .join(
+            CollectionTable,
+            col(EvaluationRunTable.gt_annotation_collection_id)
+            == col(CollectionTable.collection_id),
+        )
+        .where(col(CollectionTable.dataset_id) == dataset_id)
+    )
+    session.exec(
+        delete(EvaluationAnnotationMetricTable).where(
+            col(EvaluationAnnotationMetricTable.evaluation_run_id).in_(run_ids_subquery)
         )
     )
 

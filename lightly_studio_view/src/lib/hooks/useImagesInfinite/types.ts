@@ -1,6 +1,8 @@
 import type {
-    EvaluationMetricSortExpr,
+    AnnotationsFilter,
     QueryExpr,
+    ReadImagesRequest,
+    SampleFilter,
     SortFieldExpr
 } from '$lib/api/lightly_studio_local';
 import type { DimensionBounds } from '$lib/services/loadDimensionBounds';
@@ -11,47 +13,32 @@ export interface ClassifierSamples {
     negativeSampleIds: string[];
 }
 
-export interface NormalModeFilters {
-    annotation_label_ids?: string[];
-    collection_ids?: string[];
-    tag_ids?: string[];
-    dimensions?: DimensionBounds;
-    query_expr?: QueryExpr;
-    sample_ids?: string[];
-}
-
-export interface CommonFilters {
-    metadata_values?: MetadataValues;
-    text_embedding?: number[];
-}
-
-export interface NormalModeParams {
-    mode: 'normal';
-    filters?: NormalModeFilters;
-}
-
-interface ClassifierModeParams {
-    mode: 'classifier';
-    classifierSamples?: ClassifierSamples;
-}
+export type NormalModeFilters = Pick<AnnotationsFilter, 'annotation_label_ids' | 'collection_ids'> &
+    Pick<SampleFilter, 'tag_ids' | 'sample_ids'> & {
+        dimensions?: DimensionBounds;
+    };
 
 export type ImagesInfiniteParams = {
-    query_expr?: QueryExpr;
     collection_id: string;
-    sort_by?: SortExpr[] | null;
-} & (NormalModeParams | ClassifierModeParams) &
-    CommonFilters;
+    query_expr?: QueryExpr;
+    sort_by?: ReadImagesRequest['sort_by'];
+    text_embedding?: ReadImagesRequest['text_embedding'];
+    metadata_values?: MetadataValues;
+} & (
+    | { mode: 'normal'; filters?: NormalModeFilters }
+    | { mode: 'classifier'; classifierSamples?: ClassifierSamples }
+);
 
 export type SamplesQueryKey = readonly [
+    'readImagesInfinite',
     string,
-    string,
-    'normal' | 'classifier',
+    ImagesInfiniteParams['mode'],
     NormalModeFilters | ClassifierSamples | undefined,
     {
         metadata_values?: MetadataValues;
-        text_embedding?: number[];
+        text_embedding?: ReadImagesRequest['text_embedding'];
     },
-    SortExpr[] | null | undefined
+    ReadImagesRequest['sort_by']
 ];
 
 export type SortExpr = SortFieldExpr | ({ source: 'evaluation_metric' } & EvaluationMetricSortExpr);
