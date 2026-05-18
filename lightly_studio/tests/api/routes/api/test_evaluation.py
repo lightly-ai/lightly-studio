@@ -1,7 +1,8 @@
 from __future__ import annotations
 
 from datetime import datetime, timezone
-from uuid import uuid4
+from typing import Any
+from uuid import UUID, uuid4
 
 from fastapi.testclient import TestClient
 from pytest_mock import MockerFixture
@@ -15,6 +16,24 @@ from lightly_studio.models.evaluation_sample_metric import (
     EvaluationRunMetricsInfoView,
     EvaluationSampleMetricBoundsView,
 )
+
+
+def _make_evaluation_run(
+    *,
+    run_id: UUID,
+    name: str,
+    config_json: dict[str, Any],
+    created_at: datetime,
+) -> EvaluationRunTable:
+    return EvaluationRunTable(
+        id=run_id,
+        name=name,
+        gt_annotation_collection_id=uuid4(),
+        pred_annotation_collection_id=uuid4(),
+        task_type=EvaluationTaskType.OBJECT_DETECTION,
+        config_json=config_json,
+        created_at=created_at,
+    )
 
 
 def test_get_evaluation_sample_metrics_info(test_client: TestClient, mocker: MockerFixture) -> None:
@@ -84,21 +103,15 @@ def test_get_evaluation_runs(test_client: TestClient, mocker: MockerFixture) -> 
     run_1_created_at = datetime(2026, 5, 18, 10, 0, 0, tzinfo=timezone.utc)
     run_2_created_at = datetime(2026, 5, 17, 9, 30, 0, tzinfo=timezone.utc)
     mock_runs = [
-        EvaluationRunTable(
-            id=run_1_id,
+        _make_evaluation_run(
+            run_id=run_1_id,
             name="run_1",
-            gt_annotation_collection_id=uuid4(),
-            pred_annotation_collection_id=uuid4(),
-            task_type=EvaluationTaskType.OBJECT_DETECTION,
             config_json={"iou_threshold": 0.5, "classwise": True},
             created_at=run_1_created_at,
         ),
-        EvaluationRunTable(
-            id=run_2_id,
+        _make_evaluation_run(
+            run_id=run_2_id,
             name="run_2",
-            gt_annotation_collection_id=uuid4(),
-            pred_annotation_collection_id=uuid4(),
-            task_type=EvaluationTaskType.OBJECT_DETECTION,
             config_json={},
             created_at=run_2_created_at,
         ),
