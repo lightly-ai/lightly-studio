@@ -2,22 +2,6 @@
 
 Sampling helps you select representative subsets from your dataset. LightlyStudio provides sampling strategies that leverage embeddings to pick diverse, balanced, or otherwise optimized subsets for labeling, training, or review. Use the GUI for quick, one-off sampling. Use the Python API when you need reusable, configurable, or combined sampling strategies in code.
 
-## Prerequisites
-
-Sampling is a premium feature and requires a valid LightlyStudio license key. Set the `LIGHTLY_STUDIO_LICENSE_KEY` environment variable before using sampling features:
-
-=== "Linux/macOS"
-
-    ```bash
-    export LIGHTLY_STUDIO_LICENSE_KEY="license_key_here"
-    ```
-
-=== "Windows"
-
-    ```powershell
-    $env:LIGHTLY_STUDIO_LICENSE_KEY="license_key_here"
-    ```
-
 ## Sampling in GUI
 
 Open the dialog from the `Menu` button in the top-right corner and select `Selection`. The dialog shows a dropdown with available sampling strategies. Specify the number of samples and the tag name that should be used. [Sampling in Python](#sampling-in-python) supports more sampling strategies than available in the GUI and also lets you learn more about how they work.
