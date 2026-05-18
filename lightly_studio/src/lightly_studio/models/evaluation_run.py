@@ -7,6 +7,7 @@ from enum import Enum
 from typing import Any
 from uuid import UUID, uuid4
 
+from pydantic import BaseModel
 from sqlalchemy import JSON, Column
 from sqlmodel import Field, SQLModel
 
@@ -46,3 +47,12 @@ class EvaluationRunTable(EvaluationRunBase, table=True):
 
 class EvaluationRunCreate(EvaluationRunBase):
     """Model for creating a new evaluation run."""
+
+
+class EvaluationRunView(BaseModel):
+    """API view of an evaluation run."""
+
+    id: UUID
+    name: str
+    evaluation_run_configuration: dict[str, Any]
+    created_at: datetime
