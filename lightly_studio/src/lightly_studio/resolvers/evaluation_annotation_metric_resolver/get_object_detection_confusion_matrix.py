@@ -8,7 +8,6 @@ from uuid import UUID
 
 from sqlmodel import Session
 
-from lightly_studio.models.annotation.annotation_base import AnnotationBaseTable
 from lightly_studio.models.evaluation_annotation_metric import EvaluationAnnotationMetricTable
 from lightly_studio.models.evaluation_confusion_matrix import (
     NO_GROUND_TRUTH_ROW_LABEL,
@@ -23,7 +22,7 @@ from lightly_studio.resolvers.evaluation_annotation_metric_resolver.get_all_by_e
 
 @dataclass
 class _PairAggregation:
-    """Intermediate counts and axis metadata before materializing a dense matrix.
+    """Intermediate counts and axis metadata before materializing a matrix.
 
     Attributes:
         cell_counts: Map from ``(gt_label, pred_label)`` to occurrence count.
@@ -71,14 +70,13 @@ def get_object_detection_confusion_matrix(
             counts=[],
         )
 
-    annotations_by_id, label_name_by_id = _resolve_annotation_labels(
+    label_name_by_annotation_id = _resolve_annotation_labels(
         session=session,
         metrics=metrics,
     )
     agg = _aggregate_pair_counts(
         metrics=metrics,
-        annotations_by_id=annotations_by_id,
-        label_name_by_id=label_name_by_id,
+        label_name_by_annotation_id=label_name_by_annotation_id,
     )
     row_labels, col_labels = _build_axis_labels(agg)
     counts = _materialize_counts(agg.cell_counts, row_labels=row_labels, col_labels=col_labels)
@@ -92,87 +90,71 @@ def get_object_detection_confusion_matrix(
 def _resolve_annotation_labels(
     session: Session,
     metrics: list[EvaluationAnnotationMetricTable],
-) -> tuple[dict[UUID, AnnotationBaseTable], dict[str, str]]:
-    """Batch-load annotations and label names referenced by metric rows.
+) -> dict[UUID, str]:
+    """Resolve every annotation id referenced by metric rows to its label name.
 
     Args:
         session: Active database session.
         metrics: Annotation metric rows for one evaluation run.
 
     Returns:
-        Tuple of (annotation_id -> annotation row, label_id str -> label name).
-    """
-    annotation_ids: list[UUID] = []
-    for row in metrics:
-        if row.pred_annotation_id is not None:
-            annotation_ids.append(row.pred_annotation_id)
-        if row.gt_annotation_id is not None:
-            annotation_ids.append(row.gt_annotation_id)
-
-    annotations_by_id: dict[UUID, AnnotationBaseTable] = {}
-    if annotation_ids:
-        for ann in annotation_resolver.get_by_ids(
-            session=session,
-            annotation_ids=annotation_ids,
-        ):
-            annotations_by_id[ann.sample_id] = ann
-
-    label_ids = [ann.annotation_label_id for ann in annotations_by_id.values()]
-    label_name_by_id: dict[str, str] = {}
-    if label_ids:
-        label_name_by_id = annotation_label_resolver.names_by_ids(
-            session=session,
-            ids=label_ids,
-        )
-    return annotations_by_id, label_name_by_id
-
-
-def _label_for_annotation(
-    annotation_id: UUID,
-    annotations_by_id: dict[UUID, AnnotationBaseTable],
-    label_name_by_id: dict[str, str],
-) -> str:
-    """Resolve a single annotation id to its display label name.
-
-    Args:
-        annotation_id: Child annotation row id (``annotation_base.sample_id``).
-        annotations_by_id: Preloaded annotations keyed by id.
-        label_name_by_id: Map from ``str(annotation_label_id)`` to label name.
-
-    Returns:
-        Label name resolved from the preloaded maps.
+        Map from annotation id (``annotation_base.sample_id``) to label name.
 
     Raises:
-        RuntimeError: If the annotation or its label cannot be resolved. Metric
-            rows reference annotations via FK, so a miss here indicates data
-            corruption that must not be silently bucketed into the matrix.
+        RuntimeError: If an annotation referenced by a metric row, or its label,
+            cannot be found..
     """
-    ann = annotations_by_id.get(annotation_id)
-    if ann is None:
+    annotation_ids: set[UUID] = set()
+    for row in metrics:
+        if row.pred_annotation_id is not None:
+            annotation_ids.add(row.pred_annotation_id)
+        if row.gt_annotation_id is not None:
+            annotation_ids.add(row.gt_annotation_id)
+
+    if not annotation_ids:
+        return {}
+
+    annotations = annotation_resolver.get_by_ids(
+        session=session,
+        annotation_ids=list(annotation_ids),
+    )
+    annotations_by_id = {ann.sample_id: ann for ann in annotations}
+
+    missing_annotation_ids = annotation_ids - annotations_by_id.keys()
+    if missing_annotation_ids:
         raise RuntimeError(
-            f"Annotation {annotation_id} referenced by evaluation metric was not found; "
-            "metric row points at a non-existent annotation."
+            f"Annotations {sorted(missing_annotation_ids)} referenced by evaluation "
+            "metrics were not found; metric rows point at non-existent annotations."
         )
-    label_name = label_name_by_id.get(str(ann.annotation_label_id))
-    if label_name is None:
-        raise RuntimeError(
-            f"Annotation label {ann.annotation_label_id} for annotation {annotation_id} "
-            "was not found; annotation references a non-existent label."
-        )
-    return label_name
+
+    label_name_by_label_id = annotation_label_resolver.names_by_ids(
+        session=session,
+        ids=[ann.annotation_label_id for ann in annotations_by_id.values()],
+    )
+
+    label_name_by_annotation_id: dict[UUID, str] = {}
+    for annotation_id, ann in annotations_by_id.items():
+        label_name = label_name_by_label_id.get(str(ann.annotation_label_id))
+        if label_name is None:
+            raise RuntimeError(
+                f"Annotation label {ann.annotation_label_id} for annotation "
+                f"{annotation_id} was not found; annotation references a "
+                "non-existent label."
+            )
+        label_name_by_annotation_id[annotation_id] = label_name
+
+    return label_name_by_annotation_id
 
 
 def _aggregate_pair_counts(
     metrics: list[EvaluationAnnotationMetricTable],
-    annotations_by_id: dict[UUID, AnnotationBaseTable],
-    label_name_by_id: dict[str, str],
+    label_name_by_annotation_id: dict[UUID, str],
 ) -> _PairAggregation:
     """Count pairing outcomes by ``(gt_label, pred_label)`` including synthetic axes.
 
     Args:
         metrics: Annotation metric rows for one evaluation run.
-        annotations_by_id: Preloaded annotations keyed by id.
-        label_name_by_id: Map from label id string to label name.
+        label_name_by_annotation_id: Pre-resolved label name per annotation id.
 
     Returns:
         Sparse cell counts plus flags and class name sets for axis construction.
@@ -187,35 +169,19 @@ def _aggregate_pair_counts(
         pred_id = row.pred_annotation_id
         gt_id = row.gt_annotation_id
         if pred_id is not None and gt_id is not None:
-            gt_label = _label_for_annotation(
-                gt_id,
-                annotations_by_id=annotations_by_id,
-                label_name_by_id=label_name_by_id,
-            )
-            pred_label = _label_for_annotation(
-                pred_id,
-                annotations_by_id=annotations_by_id,
-                label_name_by_id=label_name_by_id,
-            )
+            gt_label = label_name_by_annotation_id[gt_id]
+            pred_label = label_name_by_annotation_id[pred_id]
             gt_class_names.add(gt_label)
             pred_class_names.add(pred_label)
             cell_counts[(gt_label, pred_label)] += 1
         elif pred_id is not None:
             has_fp = True
-            pred_label = _label_for_annotation(
-                pred_id,
-                annotations_by_id=annotations_by_id,
-                label_name_by_id=label_name_by_id,
-            )
+            pred_label = label_name_by_annotation_id[pred_id]
             pred_class_names.add(pred_label)
             cell_counts[(NO_GROUND_TRUTH_ROW_LABEL, pred_label)] += 1
         elif gt_id is not None:
             has_fn = True
-            gt_label = _label_for_annotation(
-                gt_id,
-                annotations_by_id=annotations_by_id,
-                label_name_by_id=label_name_by_id,
-            )
+            gt_label = label_name_by_annotation_id[gt_id]
             gt_class_names.add(gt_label)
             cell_counts[(gt_label, NO_PREDICTION_COL_LABEL)] += 1
 
@@ -252,7 +218,7 @@ def _materialize_counts(
     row_labels: list[str],
     col_labels: list[str],
 ) -> list[list[int]]:
-    """Scatter sparse ``(gt_label, pred_label)`` counts into a dense 2D integer grid.
+    """Scatter sparse ``(gt_label, pred_label)`` counts into a 2D integer grid.
 
     Args:
         cell_counts: Non-zero cells keyed by label pair.
@@ -268,9 +234,5 @@ def _materialize_counts(
     n_cols = len(col_labels)
     counts = [[0 for _ in range(n_cols)] for _ in range(n_rows)]
     for (gt_label, pred_label), n in cell_counts.items():
-        i = row_index.get(gt_label)
-        j = col_index.get(pred_label)
-        if i is None or j is None:
-            continue
-        counts[i][j] = n
+        counts[row_index[gt_label]][col_index[pred_label]] = n
     return counts

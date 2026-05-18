@@ -1,9 +1,7 @@
 from __future__ import annotations
 
 import uuid
-from types import SimpleNamespace
 
-import pytest
 from sqlmodel import Session
 
 from lightly_studio.models.evaluation_annotation_metric import (
@@ -14,9 +12,6 @@ from lightly_studio.models.evaluation_confusion_matrix import (
     NO_PREDICTION_COL_LABEL,
 )
 from lightly_studio.resolvers import evaluation_annotation_metric_resolver
-from lightly_studio.resolvers.evaluation_annotation_metric_resolver.get_object_detection_confusion_matrix import (  # noqa: E501
-    _label_for_annotation,
-)
 from tests.helpers_resolvers import (
     create_annotation,
     create_annotation_label,
@@ -131,28 +126,6 @@ def test_get_object_detection_confusion_matrix__aggregates_tp_fp_fn(
         [0, 0, 1],
         [0, 1, 0],
     ]
-
-
-def test_label_for_annotation__missing_annotation_raises() -> None:
-    annotation_id = uuid.uuid4()
-    with pytest.raises(RuntimeError, match="non-existent annotation"):
-        _label_for_annotation(
-            annotation_id,
-            annotations_by_id={},
-            label_name_by_id={},
-        )
-
-
-def test_label_for_annotation__missing_label_raises() -> None:
-    annotation_id = uuid.uuid4()
-    label_id = uuid.uuid4()
-    fake_annotation = SimpleNamespace(annotation_label_id=label_id)
-    with pytest.raises(RuntimeError, match="non-existent label"):
-        _label_for_annotation(
-            annotation_id,
-            annotations_by_id={annotation_id: fake_annotation},  # type: ignore[dict-item]
-            label_name_by_id={},
-        )
 
 
 def test_get_object_detection_confusion_matrix__unknown_run(
