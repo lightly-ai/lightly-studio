@@ -11,8 +11,6 @@ from collections.abc import Iterable
 import lightly_mundig  # type: ignore[import-untyped]
 import numpy as np
 
-from lightly_studio.dataset.env import LIGHTLY_STUDIO_LICENSE_KEY
-
 
 class Mundig:
     """Python interface for the Mundig selection algorithm.
@@ -24,12 +22,7 @@ class Mundig:
 
     def __init__(self) -> None:
         """Initialize the Mundig selection interface."""
-        if LIGHTLY_STUDIO_LICENSE_KEY is None:
-            raise ValueError(
-                "LIGHTLY_STUDIO_LICENSE_KEY environment variable is not set. "
-                "Please set it to your LightlyStudio license key."
-            )
-        self.mundig = lightly_mundig.Selection(token=LIGHTLY_STUDIO_LICENSE_KEY)
+        self.mundig = lightly_mundig.Selection()
 
         self.n_input_samples: int | None = None
 
@@ -101,7 +94,6 @@ class Mundig:
         self._check_consistent_input_size(embeddings_ndarray.shape[0])
         similarity = lightly_mundig.Similarity(
             key_embeddings=embeddings_ndarray,
-            token=LIGHTLY_STUDIO_LICENSE_KEY,
         )
         query_embeddings_ndarray = np.array(query_embeddings, dtype=np.float32)
         weights = similarity.calculate_similarity(query_embeddings=query_embeddings_ndarray)
