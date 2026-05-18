@@ -156,8 +156,7 @@ def _build_counts_grid(
     """Scatter SQL group rows into a 2D integer grid aligned with the given axes.
 
     ``NULL`` label names from the SQL LEFT JOINs are mapped to the synthetic
-    FP/FN bucket labels before lookup. Rows where both label names are ``NULL``
-    are skipped defensively; insertion code always sets at least one id.
+    FP/FN bucket labels before lookup.
 
     Args:
         grouped_rows: SQL group rows from :func:`_fetch_pair_counts`.
@@ -171,8 +170,6 @@ def _build_counts_grid(
     col_index = {name: j for j, name in enumerate(col_labels)}
     counts = [[0 for _ in col_labels] for _ in row_labels]
     for gt_name, pred_name, n in grouped_rows:
-        if gt_name is None and pred_name is None:
-            continue
         row_key = gt_name if gt_name is not None else NO_GROUND_TRUTH_ROW_LABEL
         col_key = pred_name if pred_name is not None else NO_PREDICTION_COL_LABEL
         counts[row_index[row_key]][col_index[col_key]] = n
