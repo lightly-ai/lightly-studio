@@ -1,5 +1,5 @@
-import { derived, type Readable } from 'svelte/store';
-import type { SortFieldExpr } from '$lib/api/lightly_studio_local';
+import { derived, writable, type Readable } from 'svelte/store';
+import type { SortFieldExpr, EvaluationRunMetricsInfoView } from '$lib/api/lightly_studio_local';
 import { useMetadataFilters } from '$lib/hooks/useMetadataFilters/useMetadataFilters';
 import { useEvaluationSampleMetricsInfo } from '$lib/hooks/useEvaluationSampleMetricsInfo/useEvaluationSampleMetricsInfo';
 
@@ -35,6 +35,19 @@ export const IMAGE_SORT_FIELDS: ImageSortField[] = [
     { source: 'image', value: 'height', label: 'height' }
 ];
 
+function mapRunsToEvalFields(runs: EvaluationRunMetricsInfoView[]): EvalSortField[] {
+    return runs.flatMap((run) =>
+        run.metrics.map(
+            (metric): EvalSortField => ({
+                source: 'evaluation_metric',
+                evaluation_run_name: run.run_name,
+                metric_name: metric.metric_name,
+                label: `${run.run_name}_${metric.metric_name}`
+            })
+        )
+    );
+}
+
 export function useSortFields({ datasetId }: UseSortFieldsParams): UseSortFieldsReturn {
     const { metadataInfo } = useMetadataFilters();
     const metricsInfo = useEvaluationSampleMetricsInfo({ datasetId });
@@ -52,18 +65,13 @@ export function useSortFields({ datasetId }: UseSortFieldsParams): UseSortFields
             )
     );
 
-    const evalSortFields = derived(metricsInfo, ($metricsInfo) =>
-        ($metricsInfo.data ?? []).flatMap((run) =>
-            run.metrics.map(
-                (metric): EvalSortField => ({
-                    source: 'evaluation_metric',
-                    evaluation_run_name: run.run_name,
-                    metric_name: metric.metric_name,
-                    label: `${run.run_name}_${metric.metric_name}`
-                })
-            )
-        )
-    );
+    // In TanStack v6, query results are reactive objects, not Svelte stores.
+    // Bridge to a writable store via $effect so it integrates with derived().
+    const evalSortFields = writable<EvalSortField[]>([]);
+    $effect(() => {
+        void metricsInfo.dataUpdatedAt;
+        evalSortFields.set(mapRunsToEvalFields(metricsInfo.data ?? []));
+    });
 
     const allSortFields = derived(
         [metadataSortFields, evalSortFields],

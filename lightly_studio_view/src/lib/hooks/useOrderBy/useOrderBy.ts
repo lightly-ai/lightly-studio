@@ -1,8 +1,8 @@
 import { derived, get, type Readable } from 'svelte/store';
 import { SortDirection } from '$lib/api/lightly_studio_local';
 import { useImageFilters } from '$lib/hooks/useImageFilters/useImageFilters';
-import { useSortFields } from '$lib/hooks/useSortFields/useSortFields';
-import type { ImageSortField, SortField } from '$lib/hooks/useSortFields/useSortFields';
+import { useSortFields } from '$lib/hooks/useSortFields/useSortFields.svelte';
+import type { ImageSortField, SortField } from '$lib/hooks/useSortFields/useSortFields.svelte';
 import type { SortExpr } from '$lib/hooks/useImagesInfinite/types';
 
 interface UseOrderByParams {

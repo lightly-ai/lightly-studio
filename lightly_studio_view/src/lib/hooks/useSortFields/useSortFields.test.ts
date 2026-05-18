@@ -2,7 +2,7 @@ import { get, writable } from 'svelte/store';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { MetadataInfoView } from '$lib/api/lightly_studio_local';
 import type { EvaluationRunMetricsInfoView } from '$lib/api/lightly_studio_local/types.gen';
-import { useSortFields } from './useSortFields';
+import { useSortFields } from './useSortFields.svelte';
 
 const metadataInfo = writable<MetadataInfoView[]>([]);
 const metricsInfo = writable<{ data: EvaluationRunMetricsInfoView[] | null }>({ data: null });
