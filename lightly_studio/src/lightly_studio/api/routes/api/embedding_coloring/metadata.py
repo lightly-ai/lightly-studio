@@ -20,7 +20,7 @@ _SUPPORTED_TYPE_NAMES = frozenset({"string", "boolean"})
 class MetadataColorScale:
     """Lookup maps built from metadata fields for per-sample color assignment."""
 
-    value_to_category: dict[str, int]
+    value_to_category: dict[bool, int] | dict[str, int]
     legend: dict[int, str]
 
 
@@ -130,12 +130,12 @@ def _build_color_scale_bool(
     start_cat: int,
 ) -> MetadataColorScale:
     """Build a MetadataColorScale for boolean metadata values."""
-    value_to_category: dict[str, int] = {}
+    value_to_category: dict[bool, int] = {}
     legend: dict[int, str] = {}
     cat = start_cat
     for value in sorted(values):
         label = str(value).lower()
-        value_to_category[str(value)] = cat
+        value_to_category[value] = cat
         legend[cat] = label
         cat += 1
     return MetadataColorScale(value_to_category=value_to_category, legend=legend)
@@ -147,7 +147,4 @@ def _find_metadata_category(
     scale: MetadataColorScale,
 ) -> int | None:
     """Return the color category for the metadata field, or None."""
-    val = sample_to_value.get(sample_id)
-    if isinstance(val, (str, bool)):
-        return scale.value_to_category.get(str(val))
-    return None
+    return scale.value_to_category.get(sample_to_value.get(sample_id))  # type: ignore[arg-type]
