@@ -6,20 +6,26 @@ import type {
 } from '$lib/services/types';
 import { page } from '$app/state';
 import { get, readonly, type Readable, writable } from 'svelte/store';
-import client from '$lib/services/collection';
 import { useGlobalStorage } from '$lib/hooks/useGlobalStorage';
 import { useClassifierState } from './useClassifierState';
 import { useCreateClassifiersPanel } from '$lib/hooks/useClassifiers/useCreateClassifiersPanel';
 import { useRefineClassifiersPanel } from '$lib/hooks/useClassifiers/useRefineClassifiersPanel';
 import { toast } from 'svelte-sonner';
-import type { components } from '$lib/schema';
-import { sampleHistory } from '$lib/api/lightly_studio_local';
+import {
+    getAllClassifiers,
+    createClassifier as createClassifierApi,
+    runClassifierRoute,
+    samplesToRefine,
+    commitTempClassifier as commitTempClassifierApi,
+    sampleHistory
+} from '$lib/api/lightly_studio_local';
+import type {
+    CreateClassifierRequest,
+    CreateClassifierResponse
+} from '$lib/api/lightly_studio_local';
 
 // Import the utility functions
 import { useClassifierUtils } from './useClassifierUtils';
-
-type CreateClassifierRequest = components['schemas']['CreateClassifierRequest'];
-type CreateClassifierResponse = components['schemas']['CreateClassifierResponse'];
 
 interface PrepareSamplesResponse {
     positiveSampleIds: string[];
@@ -96,10 +102,8 @@ export function useClassifiers(): UseClassifiersReturn {
         isLoading.set(true);
 
         try {
-            const response = await client.GET('/api/classifiers/get_all_classifiers', {
-                params: {
-                    query: { collection_id: page.params.collection_id }
-                }
+            const response = await getAllClassifiers({
+                query: { collection_id: page.params.collection_id }
             });
             if (response.data?.classifiers) {
                 // Extract just the classifiers array from the response.
@@ -152,7 +156,7 @@ export function useClassifiers(): UseClassifiersReturn {
                 throw new Error('Collection ID is required');
             }
 
-            const response = await client.POST('/api/classifiers/create', {
+            const response = await createClassifierApi({
                 body: {
                     name: request.name,
                     class_list: request.class_list,
@@ -228,17 +232,12 @@ export function useClassifiers(): UseClassifiersReturn {
                             (class_name) => `${classifier.classifier_name}_${class_name}`
                         ) || [];
 
-                    await client.POST(
-                        '/api/classifiers/{classifier_id}/run_on_collection/{collection_id}',
-                        {
-                            params: {
-                                path: {
-                                    classifier_id: classifier_id,
-                                    collection_id: page.params.collection_id
-                                }
-                            }
+                    await runClassifierRoute({
+                        path: {
+                            classifier_id: classifier_id,
+                            collection_id: page.params.collection_id
                         }
-                    );
+                    });
 
                     // Show toast for each classifier run
                     toast.success(
@@ -263,12 +262,8 @@ export function useClassifiers(): UseClassifiersReturn {
     const commitTempClassifier = async (classifierId: string) => {
         try {
             error.set(null);
-            await client.POST('/api/classifiers/{classifier_id}/commit_temp_classifier', {
-                params: {
-                    path: {
-                        classifier_id: classifierId
-                    }
-                }
+            await commitTempClassifierApi({
+                path: { classifier_id: classifierId }
             });
             // Refresh classifiers list.
             await loadClassifiers();
@@ -292,19 +287,10 @@ export function useClassifiers(): UseClassifiersReturn {
     ) => {
         try {
             error.set(null);
-            const response = await client.GET(
-                '/api/classifiers/{classifier_id}/samples_to_refine',
-                {
-                    params: {
-                        path: {
-                            classifier_id: classifierId
-                        },
-                        query: {
-                            collection_id: collectionId
-                        }
-                    }
-                }
-            );
+            const response = await samplesToRefine({
+                path: { classifier_id: classifierId },
+                query: { collection_id: collectionId }
+            });
 
             // Handle case where no samples are returned
             if (!response.data?.samples) {

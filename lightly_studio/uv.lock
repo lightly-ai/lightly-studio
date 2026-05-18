@@ -2822,15 +2822,13 @@ wheels = [
 
 [[package]]
 name = "lightly-mundig"
-version = "0.1.10"
+version = "0.1.12"
 source = { registry = "https://pypi.org/simple" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/6d/d8/1055db994470c36e86e1e0e3f013fa1c1630c33592e5f0205c541e87b16c/lightly_mundig-0.1.10-cp38-abi3-macosx_10_12_x86_64.whl", hash = "sha256:e93b5dcdd854d22a54d20116daec804c04e31fce43200f6c039c043daee372f6", size = 972215, upload-time = "2026-02-02T15:55:26.636Z" },
-    { url = "https://files.pythonhosted.org/packages/1a/da/1c81257f8b3186592221a3f65f1306d993147255ac948328e26c418fc1d7/lightly_mundig-0.1.10-cp38-abi3-macosx_11_0_arm64.whl", hash = "sha256:5c0656961970fd46506f99ee6580757c33ffdacfc2a4944b1dfe4b82cfa6ddac", size = 914065, upload-time = "2026-02-02T15:22:22.089Z" },
-    { url = "https://files.pythonhosted.org/packages/85/b6/122af09faa34acfc3a01c4ad8570a383cf152d8d56967db26ee339c7efb7/lightly_mundig-0.1.10-cp38-abi3-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:ae68fa05b1f6693e06ea29fc94a8dea6dbd25904379904023076a2f9f7277ad1", size = 4241328, upload-time = "2026-02-02T14:02:36.065Z" },
-    { url = "https://files.pythonhosted.org/packages/16/55/577b32daed5b14ba29a619c85816081a931ea1a75ec9e9325c72680d7b8c/lightly_mundig-0.1.10-cp38-abi3-win_amd64.whl", hash = "sha256:c7034a33c7b9361ee06473be720d62cb9fb671e83ced61b58a6f847f833e34a4", size = 6336582, upload-time = "2026-02-02T14:07:13.803Z" },
-    { url = "https://files.pythonhosted.org/packages/f9/ab/99e680812a7df866ad3be9b2f062d7b0d86a074b3efa78d9d8e7b1e18504/lightly_mundig-0.1.10-pp310-pypy310_pp73-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:dc99c5448f7cbf3f5e77e7ced6e49985ff7f57e2b249dafa3f5d27dfa8ada031", size = 4240904, upload-time = "2026-02-02T14:02:38.605Z" },
-    { url = "https://files.pythonhosted.org/packages/a3/2f/a31ed7bb2611336074a08f2454080c6c81d715d379c2d8d1c85dcfcd4fe5/lightly_mundig-0.1.10-pp311-pypy311_pp73-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:39770cae73987d2eb9a19ad3c35588df82af3b48c180a402d9d9c62d3b045c06", size = 4237466, upload-time = "2026-02-02T14:02:40.588Z" },
+    { url = "https://files.pythonhosted.org/packages/57/c9/464f098938cfa3829be8a81c046052f9086525ceea27831ef7fb343f3f47/lightly_mundig-0.1.12-cp39-abi3-macosx_10_12_x86_64.whl", hash = "sha256:742e705012b6ebb3de2076b8395dfca99a0f5356299284a70d900a570065ddbc", size = 582463, upload-time = "2026-05-18T08:10:30.62Z" },
+    { url = "https://files.pythonhosted.org/packages/03/b9/283b630c7d6f3c01d7d98cf0fa4564b437db2b9b8eb9230ec3f5d8960ff5/lightly_mundig-0.1.12-cp39-abi3-macosx_11_0_arm64.whl", hash = "sha256:66a9e44a94218759ea0144eedd207f9816bc97145d78db17aec35aaec98a217c", size = 540412, upload-time = "2026-05-18T08:12:51.443Z" },
+    { url = "https://files.pythonhosted.org/packages/75/7a/eb2e4d80470b1ec10a3f3ec91ab4b93feff05a331468446335ced7d17cb3/lightly_mundig-0.1.12-cp39-abi3-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:831608560dcc05c8bf7f443773512b8e3b6169591632769d570fce65de017b76", size = 3870550, upload-time = "2026-05-18T08:18:14.039Z" },
+    { url = "https://files.pythonhosted.org/packages/cc/12/25aa077a196c91f3d1411b3d3305da5a69f07ab9a2a09bdc05a1251936de/lightly_mundig-0.1.12-cp39-abi3-win_amd64.whl", hash = "sha256:1a7b5086ac698fece369579616cef95ef32a47dc14e7ef09055d90d12fbf90ab", size = 6192582, upload-time = "2026-05-18T08:19:23.845Z" },
 ]
 
 [[package]]
@@ -2948,7 +2946,7 @@ requires-dist = [
     { name = "jinja2", specifier = ">=3.1.0" },
     { name = "labelformat", specifier = ">=0.1.14" },
     { name = "lightly-edge-sdk", marker = "extra == 'lightly-edge'", specifier = ">=1.0.3.post1", index = "https://europe-west3-python.pkg.dev/boris-250909/lightly-pypi/simple/" },
-    { name = "lightly-mundig", specifier = "==0.1.10" },
+    { name = "lightly-mundig", specifier = "==0.1.12" },
     { name = "open-clip-torch", specifier = ">=2.20.0" },
     { name = "opencv-python-headless", specifier = ">=4.11.0.86" },
     { name = "pandas", specifier = ">=2.2.3,<3.0" },
