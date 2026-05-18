@@ -34,11 +34,21 @@ def build_metadata_color_maps(  # noqa: PLR0913
     fulfils_filter: list[int],
     start_cat: int,
 ) -> tuple[list[int], dict[int, str]]:
-    """Assign a color category to each sample based on a metadata field.
+    """Build color categories and a legend for metadata-based sample coloring.
+
+    The legend excludes the reserved categories (0 = filtered out,
+    1 = unassigned).
+
+    Args:
+        session: Database session.
+        collection_id: ID of the collection whose metadata should be used.
+        key: Metadata field used for coloring.
+        sample_ids: Sample IDs in the order for which to build color categories.
+        fulfils_filter: Per-sample filter flags where 0 means filtered out.
+        start_cat: First category ID available for metadata values.
 
     Returns:
-        Tuple of (color_categories, legend) where legend excludes the reserved
-        categories (0 = filtered out, 1 = unassigned).
+        Tuple of color categories per sample and the legend for metadata values.
     """
     sample_to_data, metadata_schema = _get_collection_metadata(
         session=session, collection_id=collection_id
