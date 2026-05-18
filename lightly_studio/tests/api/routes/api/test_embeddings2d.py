@@ -443,61 +443,13 @@ def test_get_embeddings2d__with_metadata_field_color_by_and_sample_ids_filter(
     assert legend["5"] == "Rome"
 
 
-def test_get_embeddings2d__with_integer_metadata_color_by__few_values(
-    test_client: TestClient,
-    db_session: Session,
-) -> None:
-    """Integer fields with <=50 unique values are treated as direct categories."""
-    n_samples = 3
-
-    collection_id = fill_db_with_samples_and_embeddings(
-        session=db_session,
-        n_samples=n_samples,
-        embedding_model_names=["model_a"],
-        embedding_dimension=EMBEDDING_DIMENSION,
-    )
-
-    samples = image_resolver.get_all_by_collection_id(
-        session=db_session,
-        collection_id=collection_id,
-    ).samples
-    assert len(samples) == n_samples
-
-    scores = [1, 2, 1]
-    for sample, score in zip(samples, scores):
-        sample.sample["score"] = score
-
-    response = test_client.post(
-        f"/api/collections/{collection_id}/embeddings2d/default",
-        json={
-            "filters": {},
-            "color_by": {"type": "metadata_field", "key": "score"},
-        },
-    )
-
-    assert response.status_code == 200
-
-    table = ipc.open_stream(pa.BufferReader(response.content)).read_all()
-    sample_ids_payload = table.column("sample_id").to_pylist()
-    color_category = table.column("color_category").to_numpy(zero_copy_only=False)
-    # Unique values [1, 2] are sorted, so 1 -> cat 2, 2 -> cat 3.
-    sample_id_to_color = dict(zip(sample_ids_payload, color_category))
-    assert sample_id_to_color[str(samples[0].sample_id)] == 2  # score=1 -> cat 2
-    assert sample_id_to_color[str(samples[1].sample_id)] == 3  # score=2 -> cat 3
-    assert sample_id_to_color[str(samples[2].sample_id)] == 2  # score=1 -> cat 2
-
-    legend = json.loads(table.schema.metadata[b"color_legend"])
-    assert legend["1"] == "Unassigned"
-    assert legend["2"] == "1"
-    assert legend["3"] == "2"
-
-
 @pytest.mark.parametrize(
     "value",
     [
         {"a": 1},
         [1, 2, 3],
         1.5,
+        2,
     ],
 )
 def test_get_embeddings2d__with_unsupported_metadata_color_by(
@@ -530,80 +482,6 @@ def test_get_embeddings2d__with_unsupported_metadata_color_by(
 
     assert response.status_code == 400
     assert "unsupported type" in response.json()["error"]
-
-
-def test_get_embeddings2d__with_integer_metadata_color_by__many_values(
-    test_client: TestClient,
-    db_session: Session,
-) -> None:
-    """Integer fields with >50 unique values are grouped into buckets."""
-    n_samples = 55
-
-    collection_id = fill_db_with_samples_and_embeddings(
-        session=db_session,
-        n_samples=n_samples,
-        embedding_model_names=["model_a"],
-        embedding_dimension=EMBEDDING_DIMENSION,
-    )
-
-    samples = image_resolver.get_all_by_collection_id(
-        session=db_session,
-        collection_id=collection_id,
-    ).samples
-    assert len(samples) == n_samples
-
-    # Assign 55 distinct integer values (0..54) to exceed the 50-value threshold.
-    for i, sample in enumerate(samples):
-        sample.sample["count"] = i
-
-    response = test_client.post(
-        f"/api/collections/{collection_id}/embeddings2d/default",
-        json={
-            "filters": {},
-            "color_by": {"type": "metadata_field", "key": "count"},
-        },
-    )
-
-    assert response.status_code == 200
-
-    table = ipc.open_stream(pa.BufferReader(response.content)).read_all()
-    color_category = table.column("color_category").to_numpy(zero_copy_only=False)
-
-    # All samples must be assigned to a bucket (category >= 2)
-    assert all(cat >= 2 for cat in color_category), "All samples should be assigned to a bucket"
-
-    legend = json.loads(table.schema.metadata[b"color_legend"])
-    assert legend == {
-        "1": "Unassigned",
-        "2": "0-2",
-        "3": "2-4",
-        "4": "4-6",
-        "5": "6-8",
-        "6": "8-10",
-        "7": "10-12",
-        "8": "12-14",
-        "9": "14-16",
-        "10": "16-18",
-        "11": "18-20",
-        "12": "20-22",
-        "13": "22-24",
-        "14": "24-26",
-        "15": "26-28",
-        "16": "28-30",
-        "17": "30-32",
-        "18": "32-34",
-        "19": "34-36",
-        "20": "36-38",
-        "21": "38-40",
-        "22": "40-42",
-        "23": "42-44",
-        "24": "44-46",
-        "25": "46-48",
-        "26": "48-50",
-        "27": "50-52",
-        "28": "52-54",
-        "29": "54-56",
-    }
 
 
 """Benchmark for the /embeddings2d/default endpoint.

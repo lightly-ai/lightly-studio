@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import math
 from dataclasses import dataclass
 from typing import Any, cast
 from uuid import UUID
@@ -16,20 +15,7 @@ from lightly_studio.models.metadata import (
 )
 from lightly_studio.models.sample import SampleTable
 
-# Integer fields with more distinct values than this are grouped into buckets
-# instead of receiving one category per value.
-_INT_CATEGORY_THRESHOLD = 50
-
-_SUPPORTED_TYPE_NAMES = frozenset({"string", "integer", "boolean"})
-
-
-@dataclass(frozen=True)
-class IntBucket:
-    """A half-open integer interval [start, end) mapped to a category index."""
-
-    start: int
-    end: int
-    cat: int
+_SUPPORTED_TYPE_NAMES = frozenset({"string", "boolean"})
 
 
 @dataclass(frozen=True)
@@ -37,7 +23,6 @@ class MetadataColorScale:
     """Lookup maps built from metadata fields for per-sample color assignment."""
 
     value_to_category: dict[str, int]
-    int_buckets: list[IntBucket]
     legend: dict[int, str]
 
 
@@ -105,7 +90,7 @@ def _build_metadata_color_scale(
     values = _collect_key_values(
         key=key, sample_to_data=sample_to_data, metadata_schema=metadata_schema
     )
-    value_type = cast("type[str | bool | int]", NAME_TO_TYPE_MAP[metadata_schema[key]])
+    value_type = cast("type[str | bool]", NAME_TO_TYPE_MAP[metadata_schema[key]])
     return _build_color_scale(values=values, value_type=value_type, start_cat=start_cat)
 
 
@@ -136,15 +121,15 @@ def _collect_key_values(
     key: str,
     sample_to_data: dict[UUID, dict[str, Any]],
     metadata_schema: dict[str, str],
-) -> set[str | bool | int]:
+) -> set[str | bool]:
     """Collect values for one metadata key, validating against the schema type."""
     type_name = metadata_schema.get(key)
     if type_name not in _SUPPORTED_TYPE_NAMES:
         raise ValueError(
             f"Metadata field '{key}' has unsupported type {type_name!r}. "
-            "Only 'string', 'integer', and 'boolean' fields can be used for coloring."
+            "Only 'string' and 'boolean' fields can be used for coloring."
         )
-    values: set[str | bool | int] = set()
+    values: set[str | bool] = set()
     for data in sample_to_data.values():
         val = data.get(key)
         if val is None or not validate_type_compatibility(type_name, val):
@@ -155,35 +140,9 @@ def _collect_key_values(
     return values
 
 
-def _assign_int_categories(
-    int_vals: set[int], start_cat: int
-) -> tuple[dict[str, int], list[IntBucket], dict[int, str]]:
-    """Assign categories to integer values, bucketing when there are too many.
-
-    Returns:
-        Tuple of (value_to_category, int_buckets, legend).
-    """
-    value_to_category: dict[str, int] = {}
-    legend: dict[int, str] = {}
-    int_buckets: list[IntBucket] = []
-    cat = start_cat
-    if len(int_vals) <= _INT_CATEGORY_THRESHOLD:
-        for iv in sorted(int_vals):
-            label = str(iv)
-            value_to_category[label] = cat
-            legend[cat] = label
-            cat += 1
-    else:
-        for istart, iend, blabel in _make_int_buckets(int_values=int_vals):
-            int_buckets.append(IntBucket(start=istart, end=iend, cat=cat))
-            legend[cat] = blabel
-            cat += 1
-    return value_to_category, int_buckets, legend
-
-
 def _build_color_scale(
-    values: set[str | bool | int],
-    value_type: type[str | bool | int] | None,
+    values: set[str | bool],
+    value_type: type[str | bool] | None,
     start_cat: int,
 ) -> MetadataColorScale:
     """Build a MetadataColorScale for one metadata key based on its stored type."""
@@ -196,49 +155,15 @@ def _build_color_scale(
             value_to_category[s] = cat
             legend[cat] = s
             cat += 1
-        return MetadataColorScale(
-            value_to_category=value_to_category, int_buckets=[], legend=legend
-        )
-    if value_type is bool:
-        bool_values = cast(set[bool], values)
-        for b in sorted(bool_values):  # False < True
-            label = str(b).lower()
-            value_to_category[str(b)] = cat
-            legend[cat] = label
-            cat += 1
-        return MetadataColorScale(
-            value_to_category=value_to_category, int_buckets=[], legend=legend
-        )
-    if value_type is int:
-        int_values = cast(set[int], values)
-        int_value_to_category, int_buckets, int_legend = _assign_int_categories(
-            int_vals=int_values, start_cat=cat
-        )
-        return MetadataColorScale(
-            value_to_category=int_value_to_category, int_buckets=int_buckets, legend=int_legend
-        )
-    return MetadataColorScale(value_to_category=value_to_category, int_buckets=[], legend=legend)
+        return MetadataColorScale(value_to_category=value_to_category, legend=legend)
 
-
-def _make_int_buckets(int_values: set[int]) -> list[tuple[int, int, str]]:
-    """Create (start_inclusive, end_exclusive, label) bucket tuples for integer values.
-
-    Produces at most _INT_CATEGORY_THRESHOLD buckets with a rounded bucket size.
-    """
-    min_val = min(int_values)
-    max_val = max(int_values)
-    val_range = max_val - min_val + 1
-    raw_size = math.ceil(val_range / _INT_CATEGORY_THRESHOLD)
-    magnitude = 10 ** max(0, math.floor(math.log10(raw_size)))
-    bucket_size = math.ceil(raw_size / magnitude) * magnitude
-
-    buckets: list[tuple[int, int, str]] = []
-    start = (min_val // bucket_size) * bucket_size
-    while start <= max_val:
-        end = start + bucket_size
-        buckets.append((start, end, f"{start}-{end}"))
-        start = end
-    return buckets
+    bool_values = cast(set[bool], values)
+    for b in sorted(bool_values):
+        label = str(b).lower()
+        value_to_category[str(b)] = cat
+        legend[cat] = label
+        cat += 1
+    return MetadataColorScale(value_to_category=value_to_category, legend=legend)
 
 
 def _find_metadata_category(
@@ -251,19 +176,4 @@ def _find_metadata_category(
     val = sample_to_data.get(sample_id, {}).get(key)
     if isinstance(val, (str, bool)):
         return scale.value_to_category.get(str(val))
-    if isinstance(val, int):
-        if scale.int_buckets:
-            return _lookup_in_int_buckets(val=val, scale=scale)
-        return scale.value_to_category.get(str(val))
-    return None
-
-
-def _lookup_in_int_buckets(
-    val: int,
-    scale: MetadataColorScale,
-) -> int | None:
-    """Return the category for an integer value via bucket scan."""
-    for bucket in scale.int_buckets:
-        if bucket.start <= val < bucket.end:
-            return bucket.cat
     return None
