@@ -310,7 +310,7 @@ def test_get_embeddings2d__with_mixed_type_metadata_color_by(
     assert len(samples) == n_samples
 
     samples[0].sample["score"] = "high"
-    samples[1].sample["score"] = 42
+    samples[1].sample["score"] = False
 
     response = test_client.post(
         f"/api/collections/{collection_id}/embeddings2d/default",
