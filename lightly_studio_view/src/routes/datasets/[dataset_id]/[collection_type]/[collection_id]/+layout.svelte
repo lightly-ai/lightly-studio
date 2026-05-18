@@ -338,9 +338,6 @@
                                         {isVideos}
                                         {isImages}
                                     />
-                                    {#if isImages}
-                                        <AnnotationCollectionsMenu {collectionId} />
-                                    {/if}
                                     <LabelsMenu
                                         {annotationFilterRows}
                                         onToggleAnnotationFilter={toggleAnnotationFilterSelection}
