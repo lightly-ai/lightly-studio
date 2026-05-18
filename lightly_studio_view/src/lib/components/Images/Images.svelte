@@ -9,7 +9,6 @@
     import { onMount } from 'svelte';
     import type { Readable } from 'svelte/store';
     import {
-        isNormalModeParams,
         useImagesInfinite,
         type ImagesInfiniteParams
     } from '$lib/hooks/useImagesInfinite/useImagesInfinite';
@@ -76,7 +75,7 @@
     const paramsWithoutSampleIds = (params: ImagesInfiniteParams) => {
         return {
             ...params,
-            filters: isNormalModeParams(params) ? omit(params.filters, ['sample_ids']) : undefined
+            filters: params.mode === 'normal' ? omit(params.filters, ['sample_ids']) : undefined
         };
     };
 
@@ -100,12 +99,12 @@
         let nextParams = baseParams;
 
         let currentSampleIds: string[] = [];
-        if (isNormalModeParams(currentParams) && currentParams.filters?.sample_ids) {
+        if (currentParams.mode === 'normal' && currentParams.filters?.sample_ids) {
             currentSampleIds = currentParams.filters.sample_ids;
         }
 
         // Merge the existing sample selection into the new parameters
-        if (currentSampleIds && currentSampleIds.length > 0 && isNormalModeParams(nextParams)) {
+        if (currentSampleIds && currentSampleIds.length > 0 && nextParams.mode === 'normal') {
             nextParams = {
                 ...nextParams,
                 filters: {
