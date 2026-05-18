@@ -12,6 +12,10 @@
     import { toast } from 'svelte-sonner';
     import { useTags } from '$lib/hooks/useTags/useTags';
     import { useSelectionDialog } from '$lib/hooks/useSelectionDialog/useSelectionDialog';
+    import { useImageFilters } from '$lib/hooks/useImageFilters/useImageFilters';
+    import { useVideoFilters } from '$lib/hooks/useVideoFilters/useVideoFilters';
+    import { useGlobalStorage } from '$lib/hooks/useGlobalStorage';
+    import type { SelectionRequest } from '$lib/api/lightly_studio_local/types.gen';
 
     // Get collection ID from URL params
     const collectionId = $derived(page.params.collection_id!);
@@ -20,6 +24,32 @@
 
     const { isSelectionDialogOpen, openSelectionDialog, closeSelectionDialog } =
         useSelectionDialog();
+
+    const isVideoCollection = $derived(
+        page.data.collection?.sample_type === 'video' ||
+            page.data.collection?.sample_type === 'video_frame'
+    );
+
+    const { imageFilter } = useImageFilters();
+    const { videoFilter } = useVideoFilters();
+    const { filteredSampleCount } = useGlobalStorage();
+
+    const currentFilter = $derived(isVideoCollection ? $videoFilter : $imageFilter);
+    const selectionFilter = $derived<SelectionRequest['filter']>(
+        isVideoCollection
+            ? currentFilter
+                ? {
+                      ...currentFilter,
+                      filter_type: 'video'
+                  }
+                : null
+            : currentFilter
+              ? {
+                    ...currentFilter,
+                    filter_type: 'image'
+                }
+              : null
+    );
 
     // Form state
     let selectionStrategy = $state<'diversity' | 'typicality' | ''>('');
@@ -31,6 +61,16 @@
     // Form validation
     const isFormValid = $derived(
         selectionStrategy !== '' && nSamplesToSelect > 0 && selectionResultTagName.trim().length > 0
+    );
+
+    const notEnoughSamples = $derived(
+        $filteredSampleCount > 0 && nSamplesToSelect > $filteredSampleCount
+    );
+
+    const selectionDescription = $derived(
+        $filteredSampleCount > 0
+            ? `Create a subset of the ${$filteredSampleCount} samples fulfilling the current filters.`
+            : 'Create a subset of the samples fulfilling the current filters.'
     );
 
     function handleFormSubmit(event: Event) {
@@ -72,7 +112,8 @@
                                 strategy_name: 'diversity',
                                 embedding_model_name: null
                             }
-                        ]
+                        ],
+                        filter: selectionFilter ?? undefined
                     }
                 });
 
@@ -115,7 +156,8 @@
                                 strategy_name: 'weights',
                                 metadata_key: 'typicality'
                             }
-                        ]
+                        ],
+                        filter: selectionFilter ?? undefined
                     }
                 });
 
@@ -147,8 +189,7 @@
                 <Dialog.Header>
                     <Dialog.Title class="text-foreground">Create Selection</Dialog.Title>
                     <Dialog.Description class="text-foreground">
-                        Create a subset of the whole collection using the selected strategy. The
-                        selected samples will be tagged with the provided tag name.
+                        {selectionDescription}
                     </Dialog.Description>
                 </Dialog.Header>
 
@@ -211,11 +252,22 @@
                             type="text"
                             bind:value={selectionResultTagName}
                             class="col-span-3"
-                            placeholder="Enter tag name for results"
+                            placeholder="Enter a tag for the sampled subset"
                             required
                             data-testid="selection-dialog-tag-name-input"
                         />
                     </div>
+
+                    <!-- Warning when requesting more samples than available -->
+                    {#if notEnoughSamples}
+                        <p
+                            class="text-sm text-destructive"
+                            data-testid="selection-dialog-not-enough-samples-warning"
+                        >
+                            Only {$filteredSampleCount} samples are available, but {nSamplesToSelect}
+                            were requested.
+                        </p>
+                    {/if}
                 </div>
 
                 <Dialog.Footer>
@@ -230,7 +282,7 @@
                     </Button>
                     <Button
                         type="submit"
-                        disabled={!isFormValid || isSubmitting}
+                        disabled={!isFormValid || isSubmitting || notEnoughSamples}
                         data-testid="selection-dialog-submit"
                     >
                         {isSubmitting ? loadingMessage || 'Creating...' : 'Create Selection'}
