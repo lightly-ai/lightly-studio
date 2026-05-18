@@ -44,8 +44,10 @@ def build_metadata_color_maps(  # noqa: PLR0913
         collection_id: ID of the collection whose metadata should be used.
         key: Metadata field used for coloring.
         sample_ids: Sample IDs in the order for which to build color categories.
-        fulfils_filter: Per-sample filter flags where 0 means filtered out.
-        start_cat: First category ID available for metadata values.
+        fulfils_filter: Per-sample filter flags where 0 means filtered out and 1
+            means the sample fulfils the filter.
+        start_cat: First category ID available for metadata values, usually 2 to
+            reserve, 0 for filtered-out samples and 1 for unassigned samples.
 
     Returns:
         Tuple of color categories per sample and the legend for metadata values.
