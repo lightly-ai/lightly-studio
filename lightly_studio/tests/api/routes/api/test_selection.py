@@ -3,12 +3,13 @@
 from __future__ import annotations
 
 from fastapi.testclient import TestClient
+from pytest_mock import MockerFixture
 from sqlmodel import Session
 
 from lightly_studio.metadata import compute_typicality
 from lightly_studio.models.collection import SampleType
 from lightly_studio.resolvers import image_resolver, tag_resolver, video_resolver
-from lightly_studio.resolvers.image_filter import ImageFilter
+from lightly_studio.resolvers.image_filter import FilterDimensions, ImageFilter
 from lightly_studio.resolvers.sample_resolver.sample_filter import SampleFilter
 from lightly_studio.resolvers.video_resolver.video_filter import VideoFilter
 from tests import helpers_resolvers
@@ -289,7 +290,9 @@ def test_create_combination_selection__metadata_weighting_success_videos(
 
 
 def test_create_combination_selection__image_filter_success(
-    test_client: TestClient, db_session: Session
+    test_client: TestClient,
+    db_session: Session,
+    mocker: MockerFixture,
 ) -> None:
     """Selection succeeds when request fits within the ImageFilter pool."""
     collection = helpers_resolvers.create_collection(
@@ -301,7 +304,7 @@ def test_create_combination_selection__image_filter_success(
         collection_id=collection_id,
         embedding_model_name="test_embedding_model",
     )
-    images = helpers_resolvers.create_samples_with_embeddings(
+    helpers_resolvers.create_samples_with_embeddings(
         session=db_session,
         collection_id=collection_id,
         embedding_model_id=embedding_model.embedding_model_id,
@@ -311,6 +314,7 @@ def test_create_combination_selection__image_filter_success(
             (helpers_resolvers.ImageStub(path="wide2.jpg", width=300), [0.0, 0.0, 1.0]),
         ],
     )
+    spy_sample_resolver = mocker.spy(image_resolver, "get_sample_ids")
 
     response = test_client.post(
         f"/api/collections/{collection_id}/selection",
@@ -325,25 +329,19 @@ def test_create_combination_selection__image_filter_success(
     )
 
     assert response.status_code == 204
-    created_tag = tag_resolver.get_by_name(
-        session=db_session, tag_name="tag1", collection_id=collection_id
-    )
-    assert created_tag is not None
-
-    result = image_resolver.get_all_by_collection_id(
+    spy_sample_resolver.assert_called_once_with(
         session=db_session,
         collection_id=collection_id,
-        filters=ImageFilter(sample_filter=SampleFilter(tag_ids=[created_tag.tag_id])),
+        filters=ImageFilter(
+            width=FilterDimensions(min=200),
+        ),
     )
-    assert len(result.samples) == 2
-    assert {images[1].sample_id, images[2].sample_id} == {
-        sample.sample_id for sample in result.samples
-    }
-    assert {"wide1.jpg", "wide2.jpg"} == {sample.file_name for sample in result.samples}
 
 
 def test_create_combination_selection__video_filter_success(
-    test_client: TestClient, db_session: Session
+    test_client: TestClient,
+    db_session: Session,
+    mocker: MockerFixture,
 ) -> None:
     """Selection succeeds when request fits within the VideoFilter pool."""
     collection = helpers_resolvers.create_collection(
@@ -390,6 +388,7 @@ def test_create_combination_selection__video_filter_success(
         embedding_model_id=embedding_model.embedding_model_id,
         embedding=[0.0, 0.0, 1.0],
     )
+    spy_video_resolver = mocker.spy(video_resolver, "get_sample_ids")
 
     response = test_client.post(
         f"/api/collections/{collection_id}/selection",
@@ -404,21 +403,13 @@ def test_create_combination_selection__video_filter_success(
     )
 
     assert response.status_code == 204
-    created_tag = tag_resolver.get_by_name(
-        session=db_session, tag_name="tag1", collection_id=collection_id
-    )
-    assert created_tag is not None
-
-    result = video_resolver.get_all_by_collection_id(
+    spy_video_resolver.assert_called_once_with(
         session=db_session,
         collection_id=collection_id,
-        filters=VideoFilter(sample_filter=SampleFilter(tag_ids=[created_tag.tag_id])),
+        filters=VideoFilter(
+            width=FilterDimensions(min=200),
+        ),
     )
-    assert len(result.samples) == 2
-    assert {wide_video1.sample_id, wide_video2.sample_id} == {
-        sample.sample_id for sample in result.samples
-    }
-    assert {"wide1.mp4", "wide2.mp4"} == {sample.file_name for sample in result.samples}
 
 
 def test_create_combination_selection__image_collection_rejects_video_filter(
