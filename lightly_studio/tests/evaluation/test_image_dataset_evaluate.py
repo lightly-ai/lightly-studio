@@ -118,6 +118,59 @@ def test_object_detection_evaluation(
     assert fn_metric.value is None
 
 
+def test_object_detection_evaluation__annotation_metrics_not_duplicated_across_batches(
+    patch_collection: None,  # noqa: ARG001
+) -> None:
+    """Batched ``evaluation_annotation_metric`` inserts must clear the buffer after each flush.
+
+    ``METRIC_BATCH_SIZE`` (32) triggers ``create_many``; without ``.clear()`` the same
+    rows are re-inserted on every subsequent flush with new primary keys, inflating counts.
+    """
+    image_count = 50
+    dataset = ImageDataset.create(name="test_dataset_batch_metrics")
+    label = create_annotation_label(
+        session=dataset.session,
+        root_collection_id=dataset.collection_id,
+    )
+    _create_gt_and_pred_collections(session=dataset.session, collection_id=dataset.collection_id)
+    for i in range(image_count):
+        image = create_image(
+            session=dataset.session,
+            collection_id=dataset.collection_id,
+            file_path_abs=f"/path/to/sample{i}.png",
+        )
+        create_annotation(
+            session=dataset.session,
+            collection_id=dataset.collection_id,
+            sample_id=image.sample_id,
+            annotation_label_id=label.annotation_label_id,
+            annotation_collection_name="gt",
+        )
+        create_annotation(
+            session=dataset.session,
+            collection_id=dataset.collection_id,
+            sample_id=image.sample_id,
+            annotation_label_id=label.annotation_label_id,
+            annotation_collection_name="pred",
+        )
+
+    dataset.evaluate().object_detection(
+        name="batch-run",
+        gt_collection_name="gt",
+        pred_collection_name="pred",
+    )
+    runs = evaluation_run_resolver.get_all_by_dataset_id(
+        session=dataset.session,
+        dataset_id=dataset.dataset_id,
+    )
+    run = next(r for r in runs if r.name == "batch-run")
+    rows = evaluation_annotation_metric_resolver.get_all_by_evaluation_run_id(
+        session=dataset.session,
+        evaluation_run_id=run.id,
+    )
+    assert len(rows) == image_count
+
+
 def test_object_detection_evaluation__raises_on_wrong_annotation_type(
     patch_collection: None,  # noqa: ARG001
 ) -> None:
