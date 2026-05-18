@@ -85,7 +85,15 @@ def _get_collection_metadata(
     ).all()
     merged_schema: dict[str, str] = {}
     for row in rows:
-        merged_schema |= row.metadata_schema
+        for key, typ in row.metadata_schema.items():
+            existing_type = merged_schema.get(key)
+            if existing_type is None:
+                merged_schema[key] = typ
+                continue
+            if existing_type != typ:
+                raise ValueError(
+                    f"Metadata field '{key}': value does not match schema type {existing_type!r}."
+                )
 
     return {row.sample_id: row.data for row in rows}, merged_schema
 

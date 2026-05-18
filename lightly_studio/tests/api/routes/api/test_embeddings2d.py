@@ -263,7 +263,7 @@ def test_get_embeddings2d__with_metadata_field_color_by(
     cities = ["Paris", "London", "Paris"]
     for sample, city in zip(samples[:3], cities):
         sample.sample["city"] = city
-    samples[3].sample["whether"] = "rain" # Missing value
+    samples[3].sample["whether"] = "rain"  # Missing value
 
     response = test_client.post(
         f"/api/collections/{collection_id}/embeddings2d/default",
