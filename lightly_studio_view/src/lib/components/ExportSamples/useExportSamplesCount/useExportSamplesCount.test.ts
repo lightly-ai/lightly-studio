@@ -1,7 +1,14 @@
-import { client } from '$lib/services/collection';
 import { get } from 'svelte/store';
 import { describe, expect, it, vi } from 'vitest';
 import { useExportSamplesCount } from './useExportSamplesCount';
+
+const mocks = vi.hoisted(() => ({
+    exportCollectionStats: vi.fn()
+}));
+
+vi.mock('$lib/api/lightly_studio_local', () => ({
+    exportCollectionStats: mocks.exportCollectionStats
+}));
 
 const defaultProps: Parameters<typeof useExportSamplesCount>[0] = {
     collection_id: 'test-collection',
@@ -13,25 +20,21 @@ const defaultProps: Parameters<typeof useExportSamplesCount>[0] = {
 describe('useExportStats', () => {
     beforeEach(vi.resetAllMocks);
 
-    it('should call samples_paths endpoint', () => {
-        const mockedSpy = vi.spyOn(client, 'POST').mockResolvedValueOnce({ data: 0 });
+    it('should call export stats endpoint', () => {
+        mocks.exportCollectionStats.mockResolvedValueOnce({ data: 0 });
         useExportSamplesCount(defaultProps);
-        expect(mockedSpy).toHaveBeenCalledWith('/api/collections/{collection_id}/export/stats', {
+        expect(mocks.exportCollectionStats).toHaveBeenCalledWith({
+            path: { collection_id: 'test-collection' },
             body: {
                 include: defaultProps.includeFilter,
                 exclude: undefined
-            },
-            params: {
-                path: {
-                    collection_id: 'test-collection'
-                }
             }
         });
     });
 
     it('should reflect loading state', async () => {
         const expectedCount = 42;
-        vi.spyOn(client, 'POST').mockResolvedValueOnce({ data: expectedCount });
+        mocks.exportCollectionStats.mockResolvedValueOnce({ data: expectedCount });
         const { isLoading, count, error } = useExportSamplesCount(defaultProps);
 
         // Initial state
@@ -48,11 +51,11 @@ describe('useExportStats', () => {
 
     it('should handle errors', async () => {
         const errorMessage = 'API Error';
-        vi.spyOn(client, 'POST').mockRejectedValueOnce(new Error(errorMessage));
+        mocks.exportCollectionStats.mockRejectedValueOnce(new Error(errorMessage));
 
         const { isLoading, count, error } = useExportSamplesCount(defaultProps);
 
-        // // Wait for error to be displayed
+        // Wait for error state
         await vi.waitFor(() => {
             expect(get(isLoading)).toBe(false);
             expect(get(count)).toBe(0);

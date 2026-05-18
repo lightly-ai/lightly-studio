@@ -56,6 +56,8 @@ nav:
       - Plugins: concepts_and_tools/plugins.md
   - Advanced:
     - Run LightlyStudio from a Notebook: advanced/notebooks.md
+    - Reuse Datasets: advanced/reuse_datasets.md
+    - Cloud Storage: advanced/cloud_storage.md
   - About Us: about-us.md
   - 🏢 Enterprise:
     - enterprise/index.md

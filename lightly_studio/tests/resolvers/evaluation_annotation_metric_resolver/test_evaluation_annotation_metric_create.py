@@ -1,10 +1,9 @@
 from __future__ import annotations
 
-from sqlmodel import Session, select
+from sqlmodel import Session
 
 from lightly_studio.models.evaluation_annotation_metric import (
     EvaluationAnnotationMetricCreate,
-    EvaluationAnnotationMetricTable,
 )
 from lightly_studio.resolvers import evaluation_annotation_metric_resolver
 from tests.helpers_resolvers import (
@@ -65,11 +64,10 @@ def test_create_many(db_session: Session) -> None:
         ],
     )
 
-    results = db_session.exec(
-        select(EvaluationAnnotationMetricTable).where(
-            EvaluationAnnotationMetricTable.evaluation_run_id == run.id
-        )
-    ).all()
+    results = evaluation_annotation_metric_resolver.get_all_by_evaluation_run_id(
+        session=db_session,
+        evaluation_run_id=run.id,
+    )
     assert len(results) == 2
     assert {result.metric_name for result in results} == {"iou", None}
     assert all(result.sample_id == image.sample_id for result in results)
@@ -80,9 +78,8 @@ def test_create_many__empty_list_is_noop(db_session: Session) -> None:
 
     evaluation_annotation_metric_resolver.create_many(session=db_session, records=[])
 
-    results = db_session.exec(
-        select(EvaluationAnnotationMetricTable).where(
-            EvaluationAnnotationMetricTable.evaluation_run_id == run.id
-        )
-    ).all()
+    results = evaluation_annotation_metric_resolver.get_all_by_evaluation_run_id(
+        session=db_session,
+        evaluation_run_id=run.id,
+    )
     assert results == []
