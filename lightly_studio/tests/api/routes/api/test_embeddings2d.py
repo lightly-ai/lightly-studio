@@ -18,7 +18,6 @@ from lightly_studio.models.collection import SampleType
 from lightly_studio.models.tag import TagCreate
 from lightly_studio.resolvers import (
     image_resolver,
-    metadata_resolver,
     sample_resolver,
     tag_resolver,
     video_resolver,
@@ -263,12 +262,7 @@ def test_get_embeddings2d__with_metadata_field_color_by(
 
     cities = ["Paris", "London", "Paris"]
     for sample, city in zip(samples, cities):
-        metadata_resolver.set_value_for_sample(
-            session=db_session,
-            sample_id=sample.sample_id,
-            key="city",
-            value=city,
-        )
+        sample.sample["city"] = city
 
     response = test_client.post(
         f"/api/collections/{collection_id}/embeddings2d/default",
@@ -315,18 +309,8 @@ def test_get_embeddings2d__with_mixed_type_metadata_color_by(
     ).samples
     assert len(samples) == n_samples
 
-    metadata_resolver.set_value_for_sample(
-        session=db_session,
-        sample_id=samples[0].sample_id,
-        key="score",
-        value="high",
-    )
-    metadata_resolver.set_value_for_sample(
-        session=db_session,
-        sample_id=samples[1].sample_id,
-        key="score",
-        value=42,
-    )
+    samples[0].sample["score"] = "high"
+    samples[1].sample["score"] = 42
 
     response = test_client.post(
         f"/api/collections/{collection_id}/embeddings2d/default",
@@ -362,12 +346,7 @@ def test_get_embeddings2d__with_boolean_metadata_color_by(
     # Samples[0] and samples[2] -> False, samples[1] -> True.
     flags = [False, True, False]
     for sample, flag in zip(samples, flags):
-        metadata_resolver.set_value_for_sample(
-            session=db_session,
-            sample_id=sample.sample_id,
-            key="is_sunny",
-            value=flag,
-        )
+        sample.sample["is_sunny"] = flag
 
     response = test_client.post(
         f"/api/collections/{collection_id}/embeddings2d/default",
@@ -416,12 +395,7 @@ def test_get_embeddings2d__with_metadata_field_color_by_and_sample_ids_filter(
 
     cities = ["Paris", "London", "Rome", "Berlin"]
     for sample, city in zip(samples, cities):
-        metadata_resolver.set_value_for_sample(
-            session=db_session,
-            sample_id=sample.sample_id,
-            key="city",
-            value=city,
-        )
+        sample.sample["city"] = city
 
     selected_samples = [samples[0], samples[2]]
     selected_sample_ids = [sample.sample_id for sample in selected_samples]
@@ -491,12 +465,7 @@ def test_get_embeddings2d__with_integer_metadata_color_by__few_values(
 
     scores = [1, 2, 1]
     for sample, score in zip(samples, scores):
-        metadata_resolver.set_value_for_sample(
-            session=db_session,
-            sample_id=sample.sample_id,
-            key="score",
-            value=score,
-        )
+        sample.sample["score"] = score
 
     response = test_client.post(
         f"/api/collections/{collection_id}/embeddings2d/default",
@@ -549,12 +518,7 @@ def test_get_embeddings2d__with_unsupported_metadata_color_by(
         collection_id=collection_id,
     ).samples
 
-    metadata_resolver.set_value_for_sample(
-        session=db_session,
-        sample_id=samples[0].sample_id,
-        key="info",
-        value=value,
-    )
+    samples[0].sample["info"] = value
 
     response = test_client.post(
         f"/api/collections/{collection_id}/embeddings2d/default",
@@ -590,12 +554,7 @@ def test_get_embeddings2d__with_integer_metadata_color_by__many_values(
 
     # Assign 55 distinct integer values (0..54) to exceed the 50-value threshold.
     for i, sample in enumerate(samples):
-        metadata_resolver.set_value_for_sample(
-            session=db_session,
-            sample_id=sample.sample_id,
-            key="count",
-            value=i,
-        )
+        sample.sample["count"] = i
 
     response = test_client.post(
         f"/api/collections/{collection_id}/embeddings2d/default",
