@@ -1,13 +1,14 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { useClassifiers } from './useClassifiers';
 import { get } from 'svelte/store';
-import type { ClassifierInfo, Response } from '$lib/services/types';
-import collection from '$lib/services/collection';
+import type { ClassifierInfo } from '$lib/services/types';
 import { waitFor } from '@testing-library/svelte';
 import { useGlobalStorage } from '../useGlobalStorage';
 import { useClassifierState } from './useClassifierState';
 import * as utils from '$lib/utils';
-import client from '$lib/services/collection';
+import * as sdk from '$lib/api/lightly_studio_local';
+
+type ApiResult<T extends (...args: never[]) => Promise<unknown>> = Awaited<ReturnType<T>>;
 
 vi.mock('$app/state', () => ({
     page: {
@@ -18,14 +19,6 @@ vi.mock('$app/navigation', () => ({
     goto: vi.fn()
 }));
 
-type QueryResult = {
-    data: {
-        classifiers: ClassifierInfo[];
-    } | null;
-    isLoading: boolean;
-    error: Error | null;
-};
-
 const mockClassifiers: ClassifierInfo[] = [
     { classifier_id: '1', classifier_name: 'classifier 1', class_list: ['c1', 'c2'] },
     { classifier_id: '2', classifier_name: 'classifier 2', class_list: ['c3', 'c4'] },
@@ -33,16 +26,10 @@ const mockClassifiers: ClassifierInfo[] = [
 ];
 
 describe('useClassifiers Hook', () => {
-    const setup = (
-        result: QueryResult = {
-            data: {
-                classifiers: mockClassifiers // API returns { classifiers: [...] }
-            },
-            isLoading: false,
-            error: null
-        }
-    ) => {
-        return vi.spyOn(collection, 'GET').mockResolvedValueOnce(result);
+    const setup = () => {
+        return vi.spyOn(sdk, 'getAllClassifiers').mockResolvedValueOnce({
+            data: { classifiers: mockClassifiers }
+        } as unknown as ApiResult<typeof sdk.getAllClassifiers>);
     };
 
     beforeEach(() => {
@@ -84,7 +71,7 @@ describe('useClassifiers Hook', () => {
             const testError = new Error('Test error');
 
             // Mock error state
-            vi.spyOn(collection, 'GET').mockRejectedValueOnce(testError);
+            vi.spyOn(sdk, 'getAllClassifiers').mockRejectedValueOnce(testError);
 
             const { error, classifiers } = useClassifiers();
 
@@ -125,7 +112,7 @@ describe('useClassifiers Hook', () => {
         });
 
         it('should save classifier successfully', async () => {
-            // Mock the POST request
+            // Mock the saveClassifierToFile request
             const mockBlob = new Blob(['test data'], { type: 'application/octet-stream' });
             const mockResponse = {
                 data: mockBlob,
@@ -139,27 +126,22 @@ describe('useClassifiers Hook', () => {
                         }
                     }
                 }
-            } as Response;
+            };
 
-            const postSpy = vi.spyOn(client, 'POST').mockResolvedValueOnce(mockResponse);
-            const downloadSpy = vi.spyOn(utils, 'triggerDownloadBlob').mockImplementation(() => {}); // Update this line
+            const saveSpy = vi
+                .spyOn(sdk, 'saveClassifierToFile')
+                .mockResolvedValueOnce(
+                    mockResponse as unknown as ApiResult<typeof sdk.saveClassifierToFile>
+                );
+            const downloadSpy = vi.spyOn(utils, 'triggerDownloadBlob').mockImplementation(() => {});
             const { saveClassifier, error } = useClassifiers();
-            await saveClassifier('test-id');
+            await saveClassifier('test-id', 'sklearn');
 
-            // Verify POST request
-            expect(postSpy).toHaveBeenCalledWith(
-                '/api/classifiers/{classifier_id}/save_classifier_to_file/{export_type}',
-                {
-                    params: {
-                        path: { classifier_id: 'test-id' }
-                    },
-                    responseType: 'arraybuffer',
-                    headers: {
-                        Accept: 'application/octet-stream'
-                    },
-                    parseAs: 'blob'
-                }
-            );
+            // Verify SDK call
+            expect(saveSpy).toHaveBeenCalledWith({
+                path: { classifier_id: 'test-id', export_type: 'sklearn' },
+                parseAs: 'blob'
+            });
 
             // Verify download triggered
             expect(downloadSpy).toHaveBeenCalledWith('test_classifier.pkl', mockBlob);
@@ -168,12 +150,12 @@ describe('useClassifiers Hook', () => {
 
         it('should handle save classifier error', async () => {
             const testError = new Error('Failed to save classifier');
-            vi.spyOn(client, 'POST').mockRejectedValueOnce(testError);
+            vi.spyOn(sdk, 'saveClassifierToFile').mockRejectedValueOnce(testError);
 
             const { saveClassifier, error } = useClassifiers();
 
             // The main hook should catch the error from the utility and set it in its error store
-            await expect(saveClassifier('test-id', 'pkl')).rejects.toThrow(
+            await expect(saveClassifier('test-id', 'lightly')).rejects.toThrow(
                 'Failed to save classifier'
             );
             expect(get(error)).toEqual(testError);
@@ -191,31 +173,28 @@ describe('useClassifiers Hook', () => {
                 }
             } as unknown as Event;
 
-            // Mock the POST request
-            const postSpy = vi.spyOn(client, 'POST').mockResolvedValueOnce({});
-            const loadSpy = vi.spyOn(collection, 'GET').mockResolvedValueOnce({
+            // Mock the loadClassifierFromBuffer request
+            const loadFromBufferSpy = vi
+                .spyOn(sdk, 'loadClassifierFromBuffer')
+                .mockResolvedValueOnce(
+                    {} as unknown as ApiResult<typeof sdk.loadClassifierFromBuffer>
+                );
+            const getAllSpy = vi.spyOn(sdk, 'getAllClassifiers').mockResolvedValueOnce({
                 data: { classifiers: mockClassifiers }
-            });
+            } as unknown as ApiResult<typeof sdk.getAllClassifiers>);
 
             const { loadClassifier, error } = useClassifiers();
             await loadClassifier(mockEvent, 'test-collection-id');
 
-            // Verify POST request
-            expect(postSpy).toHaveBeenCalledWith('/api/classifiers/load_classifier_from_buffer', {
-                params: {
-                    query: { collection_id: 'test-collection-id' }
-                },
-                body: expect.any(FormData),
-                headers: {
-                    Accept: 'application/json'
-                }
+            // Verify loadClassifierFromBuffer call
+            expect(loadFromBufferSpy).toHaveBeenCalledWith({
+                query: { collection_id: 'test-collection-id' },
+                body: { file: mockFile }
             });
 
-            // Verify classifiers were reloaded with collection_id
-            expect(loadSpy).toHaveBeenCalledWith('/api/classifiers/get_all_classifiers', {
-                params: {
-                    query: { collection_id: 'test-collection-id' }
-                }
+            // Verify classifiers were reloaded
+            expect(getAllSpy).toHaveBeenCalledWith({
+                query: { collection_id: 'test-collection-id' }
             });
 
             // Verify input was reset
@@ -236,7 +215,7 @@ describe('useClassifiers Hook', () => {
             } as unknown as Event;
 
             const testError = new Error('Failed to load classifier');
-            vi.spyOn(client, 'POST').mockRejectedValueOnce(testError);
+            vi.spyOn(sdk, 'loadClassifierFromBuffer').mockRejectedValueOnce(testError);
             const { loadClassifier, error } = useClassifiers();
 
             // The function should throw the error, but we can catch it and check the error store
@@ -264,12 +243,16 @@ describe('useClassifiers Hook', () => {
                 'test-collection-id': new Set(mockPositives)
             }));
 
-            const postSpy = vi.spyOn(client, 'POST').mockResolvedValueOnce(mockResponse);
+            const getNegSpy = vi
+                .spyOn(sdk, 'getNegativeSamples')
+                .mockResolvedValueOnce(
+                    mockResponse as unknown as ApiResult<typeof sdk.getNegativeSamples>
+                );
 
             const { prepareSamples } = useClassifiers();
             const result = await prepareSamples();
 
-            expect(postSpy).toHaveBeenCalledWith('/api/classifiers/get_negative_samples', {
+            expect(getNegSpy).toHaveBeenCalledWith({
                 body: {
                     collection_id: 'test-collection-id',
                     positive_sample_ids: mockPositives
@@ -310,11 +293,19 @@ describe('useClassifiers Hook', () => {
             classifierSelectedSampleIds.set(new Set(['1', '2']));
 
             // Set up all the required spies
-            const postSpy = vi.spyOn(client, 'POST');
-            postSpy
-                .mockResolvedValueOnce(mockCreateResponse) // createClassifier
-                .mockResolvedValueOnce({}) // updateAnnotations
-                .mockResolvedValueOnce({}); // trainClassifier
+            const createSpy = vi
+                .spyOn(sdk, 'createClassifier')
+                .mockResolvedValueOnce(
+                    mockCreateResponse as unknown as ApiResult<typeof sdk.createClassifier>
+                );
+            const updateAnnotationsSpy = vi
+                .spyOn(sdk, 'updateClassifiersAnnotations')
+                .mockResolvedValueOnce(
+                    {} as unknown as ApiResult<typeof sdk.updateClassifiersAnnotations>
+                );
+            const trainSpy = vi
+                .spyOn(sdk, 'trainClassifier')
+                .mockResolvedValueOnce({} as unknown as ApiResult<typeof sdk.trainClassifier>);
             const mockSamplesResponse = {
                 data: {
                     samples: {
@@ -325,12 +316,16 @@ describe('useClassifiers Hook', () => {
                 error: null,
                 response: new globalThis.Response()
             };
-            const getSpy = vi.spyOn(client, 'GET').mockResolvedValueOnce(mockSamplesResponse); // getSamplesToRefine
+            const samplesToRefineSpy = vi
+                .spyOn(sdk, 'samplesToRefine')
+                .mockResolvedValueOnce(
+                    mockSamplesResponse as unknown as ApiResult<typeof sdk.samplesToRefine>
+                );
 
             const { createClassifier } = useClassifiers();
             const result = await createClassifier(mockRequest);
             // Verify the initial classifier creation
-            expect(postSpy).toHaveBeenCalledWith('/api/classifiers/create', {
+            expect(createSpy).toHaveBeenCalledWith({
                 body: {
                     name: mockRequest.name,
                     class_list: mockRequest.class_list,
@@ -339,41 +334,26 @@ describe('useClassifiers Hook', () => {
             });
 
             //Verify annotations were updated
-            expect(postSpy).toHaveBeenCalledWith(
-                '/api/classifiers/{classifier_id}/update_annotations',
-                {
-                    params: {
-                        path: { classifier_id: '12134' }
-                    },
-                    body: {
-                        annotations: {
-                            positive: ['1', '2'],
-                            negative: ['3', '4']
-                        }
+            expect(updateAnnotationsSpy).toHaveBeenCalledWith({
+                path: { classifier_id: '12134' },
+                body: {
+                    annotations: {
+                        positive: ['1', '2'],
+                        negative: ['3', '4']
                     }
                 }
-            );
+            });
 
             // Verify training was triggered
-            expect(postSpy).toHaveBeenCalledWith(
-                '/api/classifiers/{classifier_id}/train_classifier',
-                {
-                    params: {
-                        path: { classifier_id: '12134' }
-                    }
-                }
-            );
+            expect(trainSpy).toHaveBeenCalledWith({
+                path: { classifier_id: '12134' }
+            });
 
             // Verify samples were fetched for refinement
-            expect(getSpy).toHaveBeenCalledWith(
-                '/api/classifiers/{classifier_id}/samples_to_refine',
-                {
-                    params: {
-                        path: { classifier_id: '12134' },
-                        query: { collection_id: 'test-collection-id' }
-                    }
-                }
-            );
+            expect(samplesToRefineSpy).toHaveBeenCalledWith({
+                path: { classifier_id: '12134' },
+                query: { collection_id: 'test-collection-id' }
+            });
 
             // Verify the final result
             expect(result).toEqual(mockCreateResponse.data);
@@ -393,25 +373,22 @@ describe('useClassifiers Hook', () => {
                 error: null
             };
 
-            // Mock the GET request with exact response structure
-            const getSpy = vi
-                .spyOn(client, 'GET')
-                .mockImplementation(() => Promise.resolve(mockGetResponse));
+            // Mock the samplesToRefine request
+            const samplesToRefineSpy = vi
+                .spyOn(sdk, 'samplesToRefine')
+                .mockResolvedValue(
+                    mockGetResponse as unknown as ApiResult<typeof sdk.samplesToRefine>
+                );
 
             // Execute test
             const { getSamplesToRefine } = useClassifiers();
             await getSamplesToRefine('classifier-id', 'collection-id', ['positive', 'negative']);
 
             // Verify API call
-            expect(getSpy).toHaveBeenCalledWith(
-                '/api/classifiers/{classifier_id}/samples_to_refine',
-                {
-                    params: {
-                        path: { classifier_id: 'classifier-id' },
-                        query: { collection_id: 'collection-id' }
-                    }
-                }
-            );
+            expect(samplesToRefineSpy).toHaveBeenCalledWith({
+                path: { classifier_id: 'classifier-id' },
+                query: { collection_id: 'collection-id' }
+            });
 
             // Verify store updates
             const { classifierSamples } = useClassifierState();
@@ -435,10 +412,11 @@ describe('useClassifiers Hook', () => {
             };
 
             // Mock the sampleHistory function
-            const sampleHistoryModule = await import('$lib/api/lightly_studio_local');
             const sampleHistorySpy = vi
-                .spyOn(sampleHistoryModule, 'sampleHistory')
-                .mockResolvedValue(mockSampleHistoryResponse);
+                .spyOn(sdk, 'sampleHistory')
+                .mockResolvedValue(
+                    mockSampleHistoryResponse as unknown as ApiResult<typeof sdk.sampleHistory>
+                );
 
             // Execute test
             const { showClassifierTrainingSamples } = useClassifiers();
@@ -476,26 +454,35 @@ describe('useClassifiers Hook', () => {
                 'collection-id': new Set(['1', '2'])
             }));
 
-            const updateSpy = vi.spyOn(client, 'POST').mockResolvedValue({});
+            const updateAnnotationsSpy = vi
+                .spyOn(sdk, 'updateClassifiersAnnotations')
+                .mockResolvedValue(
+                    {} as unknown as ApiResult<typeof sdk.updateClassifiersAnnotations>
+                );
+            const trainSpy = vi
+                .spyOn(sdk, 'trainClassifier')
+                .mockResolvedValue({} as unknown as ApiResult<typeof sdk.trainClassifier>);
 
             const { refineClassifier } = useClassifiers();
             await refineClassifier('classifier-id', 'collection-id', ['positive', 'negative']);
 
-            expect(updateSpy).toHaveBeenCalledTimes(2); // updateAnnotations and trainClassifier
+            expect(updateAnnotationsSpy).toHaveBeenCalledTimes(1);
+            expect(trainSpy).toHaveBeenCalledTimes(1);
         });
     });
 
     describe('Classifier Training and Committing', () => {
         it('should train classifier successfully', async () => {
-            const trainSpy = vi.spyOn(client, 'POST').mockResolvedValue({});
+            const trainSpy = vi
+                .spyOn(sdk, 'trainClassifier')
+                .mockResolvedValue({} as unknown as ApiResult<typeof sdk.trainClassifier>);
 
             const { trainClassifier } = useClassifiers();
             await trainClassifier('classifier-id');
 
-            expect(trainSpy).toHaveBeenCalledWith(
-                '/api/classifiers/{classifier_id}/train_classifier',
-                expect.any(Object)
-            );
+            expect(trainSpy).toHaveBeenCalledWith({
+                path: { classifier_id: 'classifier-id' }
+            });
         });
 
         it('should commit temporary classifier successfully', async () => {
@@ -509,30 +496,25 @@ describe('useClassifiers Hook', () => {
             }));
 
             // Mock API responses
-            const commitSpy = vi.spyOn(client, 'POST').mockResolvedValue({});
-            const loadSpy = vi.spyOn(client, 'GET').mockResolvedValue({
+            const commitSpy = vi
+                .spyOn(sdk, 'commitTempClassifier')
+                .mockResolvedValue({} as unknown as ApiResult<typeof sdk.commitTempClassifier>);
+            const getAllSpy = vi.spyOn(sdk, 'getAllClassifiers').mockResolvedValue({
                 data: { classifiers: mockClassifiers }
-            });
+            } as unknown as ApiResult<typeof sdk.getAllClassifiers>);
 
             // Execute test
             const { commitTempClassifier } = useClassifiers();
             await commitTempClassifier('test-classifier-id', 'test-collection-id');
 
             // Verify API calls
-            expect(commitSpy).toHaveBeenCalledWith(
-                '/api/classifiers/{classifier_id}/commit_temp_classifier',
-                {
-                    params: {
-                        path: { classifier_id: 'test-classifier-id' }
-                    }
-                }
-            );
+            expect(commitSpy).toHaveBeenCalledWith({
+                path: { classifier_id: 'test-classifier-id' }
+            });
 
-            // Verify classifiers were reloaded with collection_id
-            expect(loadSpy).toHaveBeenCalledWith('/api/classifiers/get_all_classifiers', {
-                params: {
-                    query: { collection_id: 'test-collection-id' }
-                }
+            // Verify classifiers were reloaded
+            expect(getAllSpy).toHaveBeenCalledWith({
+                query: { collection_id: 'test-collection-id' }
             });
         });
     });
@@ -546,22 +528,26 @@ describe('useClassifiers Hook', () => {
                 }
             };
 
-            const updateSpy = vi.spyOn(client, 'POST').mockResolvedValue({});
+            const updateSpy = vi
+                .spyOn(sdk, 'updateClassifiersAnnotations')
+                .mockResolvedValue(
+                    {} as unknown as ApiResult<typeof sdk.updateClassifiersAnnotations>
+                );
 
             const { updateAnnotations } = useClassifiers();
             await updateAnnotations('classifier-id', mockAnnotations);
 
-            expect(updateSpy).toHaveBeenCalledWith(
-                '/api/classifiers/{classifier_id}/update_annotations',
-                expect.any(Object)
-            );
+            expect(updateSpy).toHaveBeenCalledWith({
+                path: { classifier_id: 'classifier-id' },
+                body: mockAnnotations
+            });
         });
     });
 
     describe('Error Handling', () => {
         it('should handle prepare samples error', async () => {
             const testError = new Error('Failed to prepare samples');
-            vi.spyOn(client, 'POST').mockRejectedValueOnce(testError);
+            vi.spyOn(sdk, 'getNegativeSamples').mockRejectedValueOnce(testError);
 
             const { prepareSamples, error } = useClassifiers();
 
@@ -584,23 +570,21 @@ describe('useClassifiers Hook', () => {
             };
 
             // Set up spy
-            const getSpy = vi
-                .spyOn(client, 'GET')
-                .mockImplementation(() => Promise.resolve(mockGetResponse));
+            const samplesToRefineSpy = vi
+                .spyOn(sdk, 'samplesToRefine')
+                .mockResolvedValue(
+                    mockGetResponse as unknown as ApiResult<typeof sdk.samplesToRefine>
+                );
+
             // Execute test with mismatched classes
             const { getSamplesToRefine, error } = useClassifiers();
             await getSamplesToRefine('classifier-id', 'collection-id', ['positive', 'negative']);
 
             // Verify API was called
-            expect(getSpy).toHaveBeenCalledWith(
-                '/api/classifiers/{classifier_id}/samples_to_refine',
-                {
-                    params: {
-                        path: { classifier_id: 'classifier-id' },
-                        query: { collection_id: 'collection-id' }
-                    }
-                }
-            );
+            expect(samplesToRefineSpy).toHaveBeenCalledWith({
+                path: { classifier_id: 'classifier-id' },
+                query: { collection_id: 'collection-id' }
+            });
 
             // Verify error was set with correct message
             expect(get(error)?.message).toBe(
