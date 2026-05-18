@@ -1,12 +1,4 @@
-"""Dense confusion-matrix payloads for object-detection evaluation runs.
-
-Synthetic axis labels ``NO_GROUND_TRUTH_ROW_LABEL`` and ``NO_PREDICTION_COL_LABEL``
-
-mark false-positive and false-negative buckets when aggregating
-
-``evaluation_annotation_metric`` rows into a label-by-label matrix.
-
-"""
+"""Dense confusion-matrix payloads for object-detection evaluation runs."""
 
 from __future__ import annotations
 

@@ -1,4 +1,4 @@
-"""Build a dense object-detection confusion matrix from persisted pairing metrics."""
+"""Build a object-detection confusion matrix from persisted pairing metrics."""
 
 from __future__ import annotations
 
