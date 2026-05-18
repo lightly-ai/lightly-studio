@@ -16,6 +16,8 @@ interface UseOrderByReturn {
     isFieldSelected: Readable<(field: SortField) => boolean>;
     handleFieldClick: (field: SortField) => void;
     toggleDirection: () => void;
+    /** Dispose internal reactive effects. Call on cleanup to prevent leaks. */
+    dispose: () => void;
 }
 
 function checkIsFieldSelected(field: SortField, current: SortExpr | undefined): boolean {
@@ -36,7 +38,7 @@ function checkIsFieldSelected(field: SortField, current: SortExpr | undefined): 
 
 export function useOrderBy({ datasetId }: UseOrderByParams): UseOrderByReturn {
     const { imageSortBy, updateSortBy } = useImageFilters();
-    const { allSortFields } = useSortFields({ datasetId });
+    const { allSortFields, dispose } = useSortFields({ datasetId });
 
     const selectedDirection = derived(
         imageSortBy,
@@ -126,6 +128,7 @@ export function useOrderBy({ datasetId }: UseOrderByParams): UseOrderByReturn {
         selectedLabel,
         isFieldSelected,
         handleFieldClick,
-        toggleDirection
+        toggleDirection,
+        dispose
     };
 }

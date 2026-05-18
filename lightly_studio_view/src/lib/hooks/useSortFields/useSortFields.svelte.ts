@@ -25,6 +25,8 @@ interface UseSortFieldsParams {
 
 interface UseSortFieldsReturn {
     allSortFields: Readable<SortField[]>;
+    /** Dispose the detached $effect.root. Call on cleanup to prevent leaks. */
+    dispose: () => void;
 }
 
 export const IMAGE_SORT_FIELDS: ImageSortField[] = [
@@ -70,7 +72,7 @@ export function useSortFields({ datasetId }: UseSortFieldsParams): UseSortFields
     // $effect.root is used instead of $effect because this hook may be called
     // outside a component context (e.g. in tests).
     const evalSortFields = writable<EvalSortField[]>([]);
-    $effect.root(() => {
+    const disposeEffect = $effect.root(() => {
         $effect(() => {
             void metricsInfo.dataUpdatedAt;
             evalSortFields.set(mapRunsToEvalFields(metricsInfo.data ?? []));
@@ -86,5 +88,5 @@ export function useSortFields({ datasetId }: UseSortFieldsParams): UseSortFields
         ]
     );
 
-    return { allSortFields };
+    return { allSortFields, dispose: disposeEffect };
 }
