@@ -49,10 +49,17 @@ def build_color_data(
     sample_ids: list[UUID],
     fulfils_filter: list[int],
 ) -> tuple[list[int], dict[int, str]]:
-    """Return (color_categories, color_legend).
+    """Build color categories and a legend for embedding coloring.
 
-    Only MetadataFieldColorBy is handled. For other ColorBy variants or None,
-    color_categories equals fulfils_filter and the legend is empty.
+    Args:
+        session: Database session used to resolve metadata values.
+        collection_id: Collection whose samples are being colored.
+        color_by: Coloring configuration to apply to the samples.
+        sample_ids: Sample IDs in the same order as the returned color categories.
+        fulfils_filter: Per-sample filter categories used as the fallback coloring.
+
+    Returns:
+        A tuple of `(color_categories, color_legend)` for the provided samples.
     """
     if not isinstance(color_by, MetadataFieldColorBy):
         return list(fulfils_filter), {}
