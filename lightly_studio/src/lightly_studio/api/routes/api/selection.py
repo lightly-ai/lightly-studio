@@ -11,6 +11,8 @@ from lightly_studio.api.routes.api.collection import get_and_validate_collection
 from lightly_studio.db_manager import SessionDep
 from lightly_studio.models.collection import CollectionTable, SampleType
 from lightly_studio.resolvers import image_resolver, video_resolver
+from lightly_studio.resolvers.image_filter import ImageFilter
+from lightly_studio.resolvers.video_resolver.video_filter import VideoFilter
 from lightly_studio.selection.select_via_db import select_via_database
 from lightly_studio.selection.selection_config import (
     EmbeddingDiversityStrategy,
@@ -25,6 +27,11 @@ Strategy = Annotated[
     Field(discriminator="strategy_name"),
 ]
 
+CollectionFilter = Annotated[
+    Union[ImageFilter, VideoFilter],
+    Field(discriminator="filter_type"),
+]
+
 
 class SelectionRequest(BaseModel):
     """Request model for selection."""
@@ -32,6 +39,7 @@ class SelectionRequest(BaseModel):
     n_samples_to_select: int = Field(gt=0, description="Number of samples to select")
     selection_result_tag_name: str = Field(min_length=1, description="Name for the result tag")
     strategies: list[Strategy]
+    filter: CollectionFilter | None = None
 
 
 @selection_router.post(
@@ -70,13 +78,34 @@ def create_combination_selection(
         )
     # Get all samples in collection as input for selection.
     if collection.sample_type == SampleType.IMAGE:
+        if request.filter is None:
+            image_filter = None
+        elif isinstance(request.filter, ImageFilter):
+            image_filter = request.filter
+        else:
+            raise HTTPException(
+                status_code=400,
+                detail="Invalid filter type for image collection.",
+            )
         all_samples_result = image_resolver.get_sample_ids(
             session=session,
             collection_id=collection.collection_id,
+            filters=image_filter,
         )
     else:
+        if request.filter is None:
+            video_filter = None
+        elif isinstance(request.filter, VideoFilter):
+            video_filter = request.filter
+        else:
+            raise HTTPException(
+                status_code=400,
+                detail="Invalid filter type for video collection.",
+            )
         all_samples_result = video_resolver.get_sample_ids(
-            session=session, collection_id=collection.collection_id
+            session=session,
+            collection_id=collection.collection_id,
+            filters=video_filter,
         )
     input_sample_ids = list(all_samples_result)
     # Validate we have enough samples to select from.
