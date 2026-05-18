@@ -1,29 +1,38 @@
 import { get, writable } from 'svelte/store';
+import { flushSync } from 'svelte';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { MetadataInfoView } from '$lib/api/lightly_studio_local';
 import type { EvaluationRunMetricsInfoView } from '$lib/api/lightly_studio_local/types.gen';
 import { useSortFields } from './useSortFields.svelte';
 
 const metadataInfo = writable<MetadataInfoView[]>([]);
-const metricsInfo = writable<{ data: EvaluationRunMetricsInfoView[] | null }>({ data: null });
+
+// In TanStack v6, useEvaluationSampleMetricsInfo returns a reactive proxy (not a store).
+// Mock it as a plain object with .data and .dataUpdatedAt properties.
+const metricsInfoMock: { data: EvaluationRunMetricsInfoView[] | null; dataUpdatedAt: number } = {
+    data: null,
+    dataUpdatedAt: 0
+};
 
 vi.mock('$lib/hooks/useMetadataFilters/useMetadataFilters', () => ({
     useMetadataFilters: () => ({ metadataInfo })
 }));
 
 vi.mock('$lib/hooks/useEvaluationSampleMetricsInfo/useEvaluationSampleMetricsInfo', () => ({
-    useEvaluationSampleMetricsInfo: () => metricsInfo
+    useEvaluationSampleMetricsInfo: () => metricsInfoMock
 }));
 
 describe('useSortFields', () => {
     beforeEach(() => {
         metadataInfo.set([]);
-        metricsInfo.set({ data: null });
+        metricsInfoMock.data = null;
+        metricsInfoMock.dataUpdatedAt = 0;
     });
 
     describe('allSortFields', () => {
         it('contains the five base image sort fields', () => {
             const { allSortFields } = useSortFields({ datasetId: 'ds1' });
+            flushSync();
             const fields = get(allSortFields);
 
             expect(fields).toEqual(
@@ -45,6 +54,7 @@ describe('useSortFields', () => {
                 { name: 'active', type: 'boolean' }
             ]);
             const { allSortFields } = useSortFields({ datasetId: 'ds1' });
+            flushSync();
             const fields = get(allSortFields);
 
             expect(fields).toEqual(
@@ -84,6 +94,7 @@ describe('useSortFields', () => {
                 { name: 'score', type: 'float' }
             ]);
             const { allSortFields } = useSortFields({ datasetId: 'ds1' });
+            flushSync();
             const fields = get(allSortFields);
 
             expect(fields.map((f) => ('value' in f ? f.value : null))).not.toContain('tags');
@@ -91,18 +102,17 @@ describe('useSortFields', () => {
         });
 
         it('includes evaluation metric fields with run_name_metric_name label', () => {
-            metricsInfo.set({
-                data: [
-                    {
-                        run_name: 'run1',
-                        metrics: [
-                            { metric_name: 'precision', min_value: 0, max_value: 1 },
-                            { metric_name: 'recall', min_value: 0, max_value: 1 }
-                        ]
-                    }
-                ]
-            });
+            metricsInfoMock.data = [
+                {
+                    run_name: 'run1',
+                    metrics: [
+                        { metric_name: 'precision', min_value: 0, max_value: 1 },
+                        { metric_name: 'recall', min_value: 0, max_value: 1 }
+                    ]
+                }
+            ];
             const { allSortFields } = useSortFields({ datasetId: 'ds1' });
+            flushSync();
             const fields = get(allSortFields);
 
             expect(fields).toEqual(
@@ -125,6 +135,7 @@ describe('useSortFields', () => {
 
         it('updates reactively when metadataInfo changes', () => {
             const { allSortFields } = useSortFields({ datasetId: 'ds1' });
+            flushSync();
 
             expect(
                 get(allSortFields).find((f) => 'value' in f && f.value === 'brightness')

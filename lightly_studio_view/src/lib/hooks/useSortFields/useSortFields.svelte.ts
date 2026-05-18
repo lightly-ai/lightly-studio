@@ -66,11 +66,15 @@ export function useSortFields({ datasetId }: UseSortFieldsParams): UseSortFields
     );
 
     // In TanStack v6, query results are reactive objects, not Svelte stores.
-    // Bridge to a writable store via $effect so it integrates with derived().
+    // Bridge to a writable store via $effect.root so it integrates with derived().
+    // $effect.root is used instead of $effect because this hook may be called
+    // outside a component context (e.g. in tests).
     const evalSortFields = writable<EvalSortField[]>([]);
-    $effect(() => {
-        void metricsInfo.dataUpdatedAt;
-        evalSortFields.set(mapRunsToEvalFields(metricsInfo.data ?? []));
+    $effect.root(() => {
+        $effect(() => {
+            void metricsInfo.dataUpdatedAt;
+            evalSortFields.set(mapRunsToEvalFields(metricsInfo.data ?? []));
+        });
     });
 
     const allSortFields = derived(
