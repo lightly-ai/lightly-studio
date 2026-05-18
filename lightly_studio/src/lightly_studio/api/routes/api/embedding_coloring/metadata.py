@@ -111,7 +111,9 @@ def _build_metadata_color_scale(
         key=key, sample_to_data=sample_to_data, metadata_schema=metadata_schema
     )
     value_type = cast("type[str | bool]", NAME_TO_TYPE_MAP[metadata_schema[key]])
-    return _build_color_scale(values=values, value_type=value_type, start_cat=start_cat)
+    if value_type is str:
+        return _build_color_scale_str(values=cast(set[str], values), start_cat=start_cat)
+    return _build_color_scale_bool(values=cast(set[bool], values), start_cat=start_cat)
 
 
 def _assign_sample_categories(
@@ -162,27 +164,32 @@ def _collect_key_values(
     return values
 
 
-def _build_color_scale(
-    values: set[str | bool],
-    value_type: type[str | bool] | None,
+def _build_color_scale_str(
+    values: set[str],
     start_cat: int,
 ) -> MetadataColorScale:
-    """Build a MetadataColorScale for one metadata key based on its stored type."""
+    """Build a MetadataColorScale for string metadata values."""
     value_to_category: dict[str, int] = {}
     legend: dict[int, str] = {}
     cat = start_cat
-    if value_type is str:
-        str_values = cast(set[str], values)
-        for s in sorted(str_values):
-            value_to_category[s] = cat
-            legend[cat] = s
-            cat += 1
-        return MetadataColorScale(value_to_category=value_to_category, legend=legend)
+    for value in sorted(values):
+        value_to_category[value] = cat
+        legend[cat] = value
+        cat += 1
+    return MetadataColorScale(value_to_category=value_to_category, legend=legend)
 
-    bool_values = cast(set[bool], values)
-    for b in sorted(bool_values):
-        label = str(b).lower()
-        value_to_category[str(b)] = cat
+
+def _build_color_scale_bool(
+    values: set[bool],
+    start_cat: int,
+) -> MetadataColorScale:
+    """Build a MetadataColorScale for boolean metadata values."""
+    value_to_category: dict[str, int] = {}
+    legend: dict[int, str] = {}
+    cat = start_cat
+    for value in sorted(values):
+        label = str(value).lower()
+        value_to_category[str(value)] = cat
         legend[cat] = label
         cat += 1
     return MetadataColorScale(value_to_category=value_to_category, legend=legend)
