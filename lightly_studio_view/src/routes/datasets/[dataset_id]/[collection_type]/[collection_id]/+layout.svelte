@@ -25,7 +25,6 @@
     import { useHideAnnotations } from '$lib/hooks/useHideAnnotations';
     import { useAnnotationLabels } from '$lib/hooks/useAnnotationLabels/useAnnotationLabels';
     import { useAnnotationsFilter } from '$lib/hooks/useAnnotationsFilter/useAnnotationsFilter';
-    import AnnotationCollectionsMenu from '$lib/components/AnnotationCollectionsMenu/AnnotationCollectionsMenu.svelte';
     import { useDimensions } from '$lib/hooks/useDimensions/useDimensions';
     import {
         isAnnotationDetailsRoute,
@@ -338,9 +337,6 @@
                                         {isVideos}
                                         {isImages}
                                     />
-                                    {#if isImages}
-                                        <AnnotationCollectionsMenu {collectionId} />
-                                    {/if}
                                     <LabelsMenu
                                         {annotationFilterRows}
                                         onToggleAnnotationFilter={toggleAnnotationFilterSelection}
@@ -373,7 +369,7 @@
                         {/snippet}
                         {#snippet auxControls()}
                             {#if isImages}
-                                <OrderBy />
+                                <OrderBy datasetId={collection.dataset_id} />
                             {/if}
                             {#if (isImages || isVideos) && hasEmbeddings}
                                 <Button
@@ -440,7 +436,7 @@
                                 {/snippet}
                                 {#snippet auxControls()}
                                     {#if isImages}
-                                        <OrderBy />
+                                        <OrderBy datasetId={collection.dataset_id} />
                                     {/if}
                                 {/snippet}
                                 <div class="flex-1" data-grid-search-drop-target>
