@@ -20,6 +20,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Refactored annotation mask rendering to use a shared web worker pool instead of spawning one worker per canvas.
 - Few-shot classifier predictions now land in an annotation collection named after the classifier instead of the generic `annotation` collection, so multi-prediction views can distinguish classifiers. Rerunning a classifier reuses the same collection.
+- Removed the license key requirement for sampling.
 
 ### Deprecated
 

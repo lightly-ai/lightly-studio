@@ -8,7 +8,6 @@ from uuid import UUID
 from lightly_mundig import Similarity  # type: ignore[import-untyped]
 from sqlmodel import Session
 
-from lightly_studio.dataset.env import LIGHTLY_STUDIO_LICENSE_KEY
 from lightly_studio.errors import TagNotFoundError
 from lightly_studio.resolvers import metadata_resolver, sample_embedding_resolver, tag_resolver
 from lightly_studio.resolvers.sample_resolver.sample_filter import SampleFilter
@@ -46,17 +45,11 @@ def compute_similarity_metadata(
     Returns:
         The name of the metadata storing the similarity values.
     """
-    license_key = LIGHTLY_STUDIO_LICENSE_KEY
-    if license_key is None:
-        raise ValueError(
-            "LIGHTLY_STUDIO_LICENSE_KEY environment variable is not set. "
-            "Please set it to your LightlyStudio license key."
-        )
     key_samples = sample_embedding_resolver.get_all_by_collection_id(
         session=session, collection_id=key_collection_id, embedding_model_id=embedding_model_id
     )
     key_embeddings = [sample.embedding for sample in key_samples]
-    similarity = Similarity(key_embeddings=key_embeddings, token=license_key)
+    similarity = Similarity(key_embeddings=key_embeddings)
 
     query_tag = tag_resolver.get_by_id(session=session, tag_id=query_tag_id)
     if query_tag is None:
