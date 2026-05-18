@@ -1,15 +1,37 @@
+import type { SettingView } from '$lib/api/lightly_studio_local';
 import { describe, expect, it } from 'vitest';
 import {
     createSettingsDialogFormState,
     createSettingsSavePayload,
-    normalizeShortcutKey
-} from './settingsDialogState';
+    normalizeShortcutKey,
+    SettingsDialogState
+} from './settingsDialogState.svelte';
 
 type ShortcutKeyboardEvent = Parameters<typeof normalizeShortcutKey>[0];
 
-describe('settingsDialogState', () => {
-    it('maps missing settings fields to dialog defaults', () => {
-        expect(createSettingsDialogFormState({})).toEqual({
+const TEST_SETTINGS: SettingView = {
+    setting_id: '00000000-0000-0000-0000-000000000000',
+    grid_view_sample_rendering: 'contain',
+    grid_view_thumbnail_quality: 'raw',
+    key_hide_annotations: 'v',
+    key_go_back: 'Escape',
+    key_toggle_edit_mode: 'e',
+    show_annotation_text_labels: false,
+    show_sample_filenames: false,
+    show_bounding_boxes_for_segmentation: true,
+    created_at: new Date(),
+    updated_at: new Date(),
+    key_toolbar_selection: 's',
+    key_toolbar_drag: 'd',
+    key_toolbar_bounding_box: 'b',
+    key_toolbar_segmentation_mask: 'm',
+    key_toolbar_brush: 'r',
+    key_toolbar_eraser: 'x'
+};
+
+describe('createSettingsDialogFormState', () => {
+    it('maps all settings fields to form state', () => {
+        expect(createSettingsDialogFormState(TEST_SETTINGS)).toEqual({
             shortcutSettings: {
                 hideAnnotations: 'v',
                 goBack: 'Escape',
@@ -28,7 +50,9 @@ describe('settingsDialogState', () => {
             showBoundingBoxesForSegmentation: true
         });
     });
+});
 
+describe('createSettingsSavePayload', () => {
     it('creates the exact save payload shape', () => {
         expect(
             createSettingsSavePayload({
@@ -66,7 +90,9 @@ describe('settingsDialogState', () => {
             key_toolbar_eraser: 'o'
         });
     });
+});
 
+describe('normalizeShortcutKey', () => {
     it('normalizes space to the Space key name', () => {
         expect(normalizeShortcutKey(createKeyboardEvent(' '))).toBe('Space');
     });
@@ -81,6 +107,80 @@ describe('settingsDialogState', () => {
 
     it('keeps non-letter keys unchanged', () => {
         expect(normalizeShortcutKey(createKeyboardEvent('Escape'))).toBe('Escape');
+    });
+});
+
+describe('SettingsDialogState', () => {
+    it('hydrates form state from settings', () => {
+        const state = new SettingsDialogState();
+        const customSettings: SettingView = {
+            ...TEST_SETTINGS,
+            key_hide_annotations: 'h',
+            grid_view_sample_rendering: 'cover',
+            show_annotation_text_labels: true
+        };
+
+        state.hydrate(customSettings);
+
+        expect(state.shortcuts.hideAnnotations).toBe('h');
+        expect(state.gridViewRendering).toBe('cover');
+        expect(state.showAnnotationTextLabels).toBe(true);
+    });
+
+    it('clears recording state on clearRecording', () => {
+        const state = new SettingsDialogState();
+        state.startRecording('hideAnnotations');
+
+        expect(state.recordingShortcut).toBe('hideAnnotations');
+
+        state.clearRecording();
+
+        expect(state.recordingShortcut).toBeNull();
+    });
+
+    it('records a shortcut and updates only the targeted key', () => {
+        const state = new SettingsDialogState();
+        state.hydrate(TEST_SETTINGS);
+        state.startRecording('goBack');
+
+        const event = new KeyboardEvent('keydown', { key: 'q' });
+        state.handleKeyDown(event);
+
+        expect(state.shortcuts.goBack).toBe('q');
+        // Other shortcuts remain unchanged
+        expect(state.shortcuts.hideAnnotations).toBe('v');
+        expect(state.shortcuts.toggleEditMode).toBe('e');
+        expect(state.recordingShortcut).toBeNull();
+    });
+
+    it('ignores keydown when not recording', () => {
+        const state = new SettingsDialogState();
+        state.hydrate(TEST_SETTINGS);
+
+        const event = new KeyboardEvent('keydown', { key: 'q' });
+        state.handleKeyDown(event);
+
+        // Nothing should change
+        expect(state.shortcuts.hideAnnotations).toBe('v');
+        expect(state.shortcuts.goBack).toBe('Escape');
+    });
+
+    it('getSavePayload includes both modified and unmodified fields', () => {
+        const state = new SettingsDialogState();
+        state.hydrate(TEST_SETTINGS);
+        state.shortcuts.hideAnnotations = 'z';
+        state.showSampleFilenames = true;
+
+        const payload = state.getSavePayload();
+
+        expect(payload).toEqual(
+            expect.objectContaining({
+                key_hide_annotations: 'z',
+                show_sample_filenames: true,
+                key_go_back: 'Escape',
+                grid_view_sample_rendering: 'contain'
+            })
+        );
     });
 });
 
