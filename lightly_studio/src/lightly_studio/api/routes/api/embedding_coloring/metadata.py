@@ -142,7 +142,9 @@ def _collect_key_values(
     values: set[str | bool] = set()
     for data in sample_to_data.values():
         val = data.get(key)
-        if val is None or not validate_type_compatibility(type_name, val):
+        if val is None:
+            continue
+        if not validate_type_compatibility(type_name, val):
             raise ValueError(
                 f"Metadata field '{key}': value {val!r} does not match schema type {type_name!r}."
             )

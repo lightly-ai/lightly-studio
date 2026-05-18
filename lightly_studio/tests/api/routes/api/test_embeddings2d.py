@@ -245,7 +245,7 @@ def test_get_embeddings2d__with_metadata_field_color_by(
     test_client: TestClient,
     db_session: Session,
 ) -> None:
-    n_samples = 3
+    n_samples = 4
 
     collection_id = fill_db_with_samples_and_embeddings(
         session=db_session,
@@ -261,8 +261,9 @@ def test_get_embeddings2d__with_metadata_field_color_by(
     assert len(samples) == n_samples
 
     cities = ["Paris", "London", "Paris"]
-    for sample, city in zip(samples, cities):
+    for sample, city in zip(samples[:3], cities):
         sample.sample["city"] = city
+    samples[3].sample["whether"] = "rain" # Missing value
 
     response = test_client.post(
         f"/api/collections/{collection_id}/embeddings2d/default",
@@ -282,6 +283,7 @@ def test_get_embeddings2d__with_metadata_field_color_by(
     assert sample_id_to_color[str(samples[0].sample_id)] == 3  # Paris
     assert sample_id_to_color[str(samples[1].sample_id)] == 2  # London
     assert sample_id_to_color[str(samples[2].sample_id)] == 3  # Paris
+    assert sample_id_to_color[str(samples[3].sample_id)] == 1  # Unassigned
 
     legend = json.loads(table.schema.metadata[b"color_legend"])
     assert legend["1"] == "Unassigned"
