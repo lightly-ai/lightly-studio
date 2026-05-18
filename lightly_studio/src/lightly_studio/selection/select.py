@@ -13,6 +13,7 @@ from lightly_studio.selection.selection_config import (
     AnnotationClassBalancingStrategy,
     AnnotationClassToTarget,
     EmbeddingDiversityStrategy,
+    EmbeddingSimilarityStrategy,
     MetadataWeightingStrategy,
     SelectionConfig,
     SelectionStrategy,
@@ -71,6 +72,12 @@ class Selection:
         n_samples_to_select=100,
         selection_result_tag_name="balanced selection",
         target_distribution="uniform",
+    )
+    # Select 25 samples similar to a tagged reference set
+    selection.similarity(
+        n_samples_to_select=25,
+        selection_result_tag_name="similar selection",
+        query_tag_name="reference_set",
     )
     ```
 
@@ -150,6 +157,32 @@ class Selection:
                 available model or raises if multiple exist.
         """
         strategy = EmbeddingDiversityStrategy(embedding_model_name=embedding_model_name)
+        self.multi_strategies(
+            n_samples_to_select=n_samples_to_select,
+            selection_result_tag_name=selection_result_tag_name,
+            selection_strategies=[strategy],
+        )
+
+    def similarity(
+        self,
+        n_samples_to_select: int,
+        selection_result_tag_name: str,
+        query_tag_name: str,
+        embedding_model_name: str | None = None,
+    ) -> None:
+        """Select a subset using embedding similarity to a tagged query set.
+
+        Args:
+            n_samples_to_select: Number of samples to select.
+            selection_result_tag_name: Tag name for the selection result.
+            query_tag_name: Tag identifying the reference samples.
+            embedding_model_name: Optional embedding model name. If None, uses the only
+                available model or raises if multiple exist.
+        """
+        strategy = EmbeddingSimilarityStrategy(
+            query_tag_name=query_tag_name,
+            embedding_model_name=embedding_model_name,
+        )
         self.multi_strategies(
             n_samples_to_select=n_samples_to_select,
             selection_result_tag_name=selection_result_tag_name,

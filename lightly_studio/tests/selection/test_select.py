@@ -9,7 +9,9 @@ from lightly_studio.core.dataset_query.dataset_query import DatasetQuery
 from lightly_studio.models.annotation.annotation_base import (
     AnnotationType,
 )
-from lightly_studio.resolvers import collection_resolver, image_resolver
+from lightly_studio.resolvers import collection_resolver, image_resolver, tag_resolver
+from lightly_studio.resolvers.image_filter import ImageFilter
+from lightly_studio.resolvers.sample_resolver.sample_filter import SampleFilter
 from lightly_studio.selection import select as select_file
 from lightly_studio.selection.mundig import Mundig
 from lightly_studio.selection.selection_config import (
@@ -19,7 +21,7 @@ from lightly_studio.selection.selection_config import (
     SelectionConfig,
 )
 from tests import helpers_resolvers
-from tests.helpers_resolvers import AnnotationDetails
+from tests.helpers_resolvers import AnnotationDetails, create_tag
 from tests.selection import helpers_selection
 
 
@@ -135,6 +137,47 @@ class TestSelect:
             ),
             input_sample_ids=expected_sample_ids,
         )
+
+    def test_similarity(self, db_session: Session) -> None:
+        collection_id = helpers_resolvers.fill_db_with_samples_and_embeddings(
+            session=db_session, n_samples=5, embedding_model_names=["embedding_model_1"]
+        )
+        collection_table = collection_resolver.get_by_id(db_session, collection_id)
+        assert collection_table is not None
+        query = DatasetQuery(collection_table, db_session)
+        query_tag = create_tag(
+            session=db_session, collection_id=collection_id, tag_name="query-tag"
+        )
+        all_samples = image_resolver.get_all_by_collection_id(
+            session=db_session, pagination=None, collection_id=collection_id
+        ).samples
+        tag_resolver.add_sample_ids_to_tag_id(
+            session=db_session,
+            tag_id=query_tag.tag_id,
+            sample_ids=[all_samples[0].sample_id, all_samples[1].sample_id],
+        )
+
+        query.selection().similarity(
+            n_samples_to_select=2,
+            selection_result_tag_name="similarity_selection",
+            query_tag_name="query-tag",
+            embedding_model_name="embedding_model_1",
+        )
+
+        tags = tag_resolver.get_all_by_collection_id(db_session, collection_id=collection_id)
+        assert len(tags) == 2
+
+        selection_tag = next(tag for tag in tags if tag.name == "similarity_selection")
+        selected_samples = image_resolver.get_all_by_collection_id(
+            session=db_session,
+            collection_id=collection_id,
+            pagination=None,
+            filters=ImageFilter(sample_filter=SampleFilter(tag_ids=[selection_tag.tag_id])),
+        ).samples
+
+        expected_sample_paths = {"sample_0.jpg", "sample_1.jpg"}
+        actual_sample_paths = {sample.file_path_abs for sample in selected_samples}
+        assert actual_sample_paths == expected_sample_paths
 
     def test_metadata_weighting(self, db_session: Session, mocker: MockerFixture) -> None:
         collection_id = helpers_selection.fill_db_with_samples_and_metadata(
