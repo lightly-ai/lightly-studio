@@ -40,7 +40,9 @@ def get_object_detection_confusion_matrix(
         evaluation_run_id: Evaluation run whose pairing metrics should be aggregated.
 
     Returns:
-        Matrix with sorted class labels and optional synthetic FP/FN row/column.
+        Matrix with sorted class labels followed by the synthetic FP row and FN column;
+        the synthetic axes are always present (with zero counts when unused) unless the
+        run has no pairing metrics at all, in which case all three fields are empty.
     """
     grouped_rows = _fetch_pair_counts(session=session, evaluation_run_id=evaluation_run_id)
     if not grouped_rows:
@@ -125,11 +127,11 @@ def _fetch_pair_counts(
 def _build_axis_labels(
     grouped_rows: list[tuple[str | None, str | None, int]],
 ) -> tuple[list[str], list[str]]:
-    """Build sorted row and column label lists, appending synthetic FP/FN labels when needed.
+    """Build sorted row and column label lists, always appending synthetic FP/FN labels.
 
-    A ``NULL`` ``gt_label`` in any row means at least one FP exists and triggers the
-    synthetic ground-truth row; symmetrically a ``NULL`` ``pred_label`` triggers the
-    synthetic prediction column.
+    The synthetic ground-truth row and prediction column are always included so that
+    consumers can rely on a stable axis shape; their cells are simply zero when no
+    FP or FN pairings exist in ``grouped_rows``.
 
     Args:
         grouped_rows: SQL group rows from :func:`_fetch_pair_counts`.
@@ -138,12 +140,10 @@ def _build_axis_labels(
         ``(row_labels, col_labels)`` ready for dense matrix construction.
     """
     row_labels = sorted({gt_name for gt_name, _, _ in grouped_rows if gt_name is not None})
-    if any(gt_name is None for gt_name, _, _ in grouped_rows):
-        row_labels.append(NO_GROUND_TRUTH_ROW_LABEL)
+    row_labels.append(NO_GROUND_TRUTH_ROW_LABEL)
 
     col_labels = sorted({pred_name for _, pred_name, _ in grouped_rows if pred_name is not None})
-    if any(pred_name is None for _, pred_name, _ in grouped_rows):
-        col_labels.append(NO_PREDICTION_COL_LABEL)
+    col_labels.append(NO_PREDICTION_COL_LABEL)
 
     return row_labels, col_labels
 
