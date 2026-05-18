@@ -34,6 +34,14 @@ class EmbeddingDiversityStrategy(SelectionStrategy):
     embedding_model_name: str | None = None
 
 
+class EmbeddingSimilarityStrategy(SelectionStrategy):
+    """Selection strategy based on embedding similarity to a tagged query set."""
+
+    strategy_name: Literal["similarity"] = "similarity"
+    query_tag_name: str
+    embedding_model_name: str | None = None
+
+
 class MetadataWeightingStrategy(SelectionStrategy):
     """Selection strategy based on metadata weighting."""
 
