@@ -63,6 +63,8 @@
         selectionStrategy !== '' && nSamplesToSelect > 0 && selectionResultTagName.trim().length > 0
     );
 
+    const noSamples = $derived($filteredSampleCount === 0);
+
     const notEnoughSamples = $derived(
         $filteredSampleCount > 0 && nSamplesToSelect > $filteredSampleCount
     );
@@ -75,7 +77,7 @@
 
     function handleFormSubmit(event: Event) {
         event.preventDefault();
-        if (!isFormValid || notEnoughSamples) return;
+        if (!isFormValid || notEnoughSamples || noSamples) return;
 
         submitSelection();
     }
@@ -258,6 +260,16 @@
                         />
                     </div>
 
+                    <!-- Warning when no samples match the current filters -->
+                    {#if noSamples}
+                        <p
+                            class="text-sm text-destructive"
+                            data-testid="selection-dialog-no-samples-warning"
+                        >
+                            No samples match the current filters.
+                        </p>
+                    {/if}
+
                     <!-- Warning when requesting more samples than available -->
                     {#if notEnoughSamples}
                         <p
@@ -282,7 +294,7 @@
                     </Button>
                     <Button
                         type="submit"
-                        disabled={!isFormValid || isSubmitting || notEnoughSamples}
+                        disabled={!isFormValid || isSubmitting || notEnoughSamples || noSamples}
                         data-testid="selection-dialog-submit"
                     >
                         {isSubmitting ? loadingMessage || 'Creating...' : 'Create Selection'}

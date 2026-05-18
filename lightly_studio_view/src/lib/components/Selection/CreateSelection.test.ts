@@ -133,6 +133,18 @@ describe('CreateSelectionDialog', () => {
         ).not.toBeInTheDocument();
     });
 
+    it('shows the no samples warning when filteredSampleCount is 0', () => {
+        render(CreateSelectionDialog);
+
+        expect(screen.getByTestId('selection-dialog-no-samples-warning')).toBeInTheDocument();
+    });
+
+    it('disables the submit button when filteredSampleCount is 0', () => {
+        render(CreateSelectionDialog);
+
+        expect(screen.getByTestId('selection-dialog-submit')).toBeDisabled();
+    });
+
     it('disables the submit button when requested count exceeds available samples', async () => {
         filteredSampleCountStore.set(5);
 
@@ -147,6 +159,7 @@ describe('CreateSelectionDialog', () => {
     it('passes the image filter to the diversity selection API call for image collections', async () => {
         const imageFilter = { filter_type: 'image', sample_filter: { tag_ids: ['tag-1'] } };
         imageFilterStore.set(imageFilter);
+        filteredSampleCountStore.set(100);
 
         render(CreateSelectionDialog);
 
@@ -174,6 +187,7 @@ describe('CreateSelectionDialog', () => {
         pageMock.data.collection.sample_type = 'video';
         const videoFilter = { filter_type: 'video', sample_filter: { tag_ids: ['tag-2'] } };
         videoFilterStore.set(videoFilter);
+        filteredSampleCountStore.set(100);
 
         render(CreateSelectionDialog);
 
