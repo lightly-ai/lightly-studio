@@ -5,6 +5,7 @@ from __future__ import annotations
 import logging
 from collections import Counter, defaultdict
 from collections.abc import Mapping, Sequence
+from dataclasses import dataclass
 from uuid import UUID, uuid4
 
 import numpy as np
@@ -22,10 +23,12 @@ from lightly_studio.resolvers import (
     sample_embedding_resolver,
     tag_resolver,
 )
+from lightly_studio.resolvers.sample_resolver.sample_filter import SampleFilter
 from lightly_studio.selection.mundig import Mundig
 from lightly_studio.selection.selection_config import (
     AnnotationClassBalancingStrategy,
     EmbeddingDiversityStrategy,
+    EmbeddingSimilarityStrategy,
     MetadataWeightingStrategy,
     SelectionConfig,
 )
@@ -33,6 +36,15 @@ from lightly_studio.selection.selection_config import (
 EPSILON = 1e-6
 
 logger = logging.getLogger(__name__)
+
+
+@dataclass(frozen=True)
+class _SelectionContext:
+    """Shared inputs used while resolving selection strategies."""
+
+    collection_id: UUID
+    dataset_id: UUID
+    input_sample_ids: list[UUID]
 
 
 def _aggregate_class_distributions(
@@ -213,60 +225,20 @@ def select_via_database(
         session=session, collection_id=config.collection_id
     )
     dataset_id = root_collection.dataset_id
+    context = _SelectionContext(
+        collection_id=config.collection_id,
+        dataset_id=dataset_id,
+        input_sample_ids=input_sample_ids,
+    )
 
     mundig = Mundig()
     for strat in config.strategies:
-        if isinstance(strat, EmbeddingDiversityStrategy):
-            embedding_model_id = embedding_model_resolver.get_by_name(
-                session=session,
-                collection_id=config.collection_id,
-                embedding_model_name=strat.embedding_model_name,
-            ).embedding_model_id
-            embedding_tables = sample_embedding_resolver.get_by_sample_ids(
-                session=session,
-                sample_ids=input_sample_ids,
-                embedding_model_id=embedding_model_id,
-            )
-            embeddings = [e.embedding for e in embedding_tables]
-            mundig.add_diversity(embeddings=embeddings, strength=strat.strength)
-        elif isinstance(strat, MetadataWeightingStrategy):
-            key = strat.metadata_key
-            weights = []
-            for sample_id in input_sample_ids:
-                weight = metadata_resolver.get_value_for_sample(session, sample_id, key)
-                if not isinstance(weight, (float, int)):
-                    raise ValueError(
-                        f"Metadata {key} is not a number, only numbers can be used as weights"
-                    )
-                weights.append(float(weight))
-            mundig.add_weighting(weights=weights, strength=strat.strength)
-        elif isinstance(strat, AnnotationClassBalancingStrategy):
-            annotations = annotation_resolver.get_all_by_parent_sample_ids(
-                session=session,
-                parent_sample_ids=input_sample_ids,
-            )
-            annotation_label_ids = [a.annotation_label_id for a in annotations]
-            sample_id_to_annotation_label_ids = defaultdict(list)
-            for annotation in annotations:
-                sample_id_to_annotation_label_ids[annotation.parent_sample_id].append(
-                    annotation.annotation_label_id
-                )
-
-            class_distributions, target_values = _get_class_balancing_data(
-                session=session,
-                strat=strat,
-                dataset_id=dataset_id,
-                annotation_label_ids=annotation_label_ids,
-                input_sample_ids=input_sample_ids,
-                sample_id_to_annotation_label_ids=sample_id_to_annotation_label_ids,
-            )
-            mundig.add_class_balancing(
-                class_distributions=class_distributions,
-                target=target_values,
-                strength=strat.strength,
-            )
-        else:
-            raise ValueError(f"Selection strategy of type {type(strat)} is unknown.")
+        _add_strategy_to_mundig(
+            session=session,
+            context=context,
+            strat=strat,
+            mundig=mundig,
+        )
 
     selected_indices = mundig.run(n_samples=n_samples_to_select)
     selected_sample_ids = [input_sample_ids[i] for i in selected_indices]
@@ -282,3 +254,117 @@ def select_via_database(
     tag_resolver.add_sample_ids_to_tag_id(
         session=session, tag_id=tag.tag_id, sample_ids=selected_sample_ids
     )
+
+
+def _get_embeddings_by_sample_ids(
+    session: Session,
+    context: _SelectionContext,
+    embedding_model_name: str | None,
+) -> list[list[float]]:
+    """Resolve sample embeddings for the given model and sample ids."""
+    embedding_model_id = embedding_model_resolver.get_by_name(
+        session=session,
+        collection_id=context.collection_id,
+        embedding_model_name=embedding_model_name,
+    ).embedding_model_id
+    embedding_tables = sample_embedding_resolver.get_by_sample_ids(
+        session=session,
+        sample_ids=list(context.input_sample_ids),
+        embedding_model_id=embedding_model_id,
+    )
+    return [embedding.embedding for embedding in embedding_tables]
+
+
+def _add_strategy_to_mundig(
+    session: Session,
+    context: _SelectionContext,
+    strat: object,
+    mundig: Mundig,
+) -> None:
+    """Resolve one selection strategy and add it to Mundig."""
+    if isinstance(strat, EmbeddingDiversityStrategy):
+        mundig.add_diversity(
+            embeddings=_get_embeddings_by_sample_ids(
+                session=session,
+                context=context,
+                embedding_model_name=strat.embedding_model_name,
+            ),
+            strength=strat.strength,
+        )
+    elif isinstance(strat, EmbeddingSimilarityStrategy):
+        embeddings = _get_embeddings_by_sample_ids(
+            session=session,
+            context=context,
+            embedding_model_name=strat.embedding_model_name,
+        )
+        embedding_model_id = embedding_model_resolver.get_by_name(
+            session=session,
+            collection_id=context.collection_id,
+            embedding_model_name=strat.embedding_model_name,
+        ).embedding_model_id
+        query_tag = tag_resolver.get_by_name(
+            session=session,
+            tag_name=strat.query_tag_name,
+            collection_id=context.collection_id,
+        )
+        if query_tag is None:
+            raise ValueError(f"Query tag with name {strat.query_tag_name} not found.")
+        query_embedding_tables = sample_embedding_resolver.get_all_by_collection_id(
+            session=session,
+            collection_id=context.collection_id,
+            embedding_model_id=embedding_model_id,
+            filters=SampleFilter(tag_ids=[query_tag.tag_id]),
+        )
+        query_embeddings = [embedding.embedding for embedding in query_embedding_tables]
+        if not query_embeddings:
+            raise ValueError(
+                "Query tag "
+                f"{strat.query_tag_name} does not have embeddings for embedding model "
+                f"{strat.embedding_model_name}."
+            )
+        mundig.add_similarity(
+            embeddings=embeddings,
+            query_embeddings=query_embeddings,
+            strength=strat.strength,
+        )
+    elif isinstance(strat, MetadataWeightingStrategy):
+        weights: list[float] = []
+        metadata_key = strat.metadata_key
+        for sample_id in context.input_sample_ids:
+            weight = metadata_resolver.get_value_for_sample(session, sample_id, key=metadata_key)
+            if not isinstance(weight, (float, int)):
+                raise ValueError(
+                    f"Metadata {metadata_key} is not a number, only numbers can be used as weights"
+                )
+            weights.append(float(weight))
+        mundig.add_weighting(
+            weights=weights,
+            strength=strat.strength,
+        )
+    elif isinstance(strat, AnnotationClassBalancingStrategy):
+        annotations = annotation_resolver.get_all_by_parent_sample_ids(
+            session=session,
+            parent_sample_ids=context.input_sample_ids,
+        )
+        annotation_label_ids = [annotation.annotation_label_id for annotation in annotations]
+        sample_id_to_annotation_label_ids = defaultdict(list)
+        for annotation in annotations:
+            sample_id_to_annotation_label_ids[annotation.parent_sample_id].append(
+                annotation.annotation_label_id
+            )
+
+        class_distributions, target_values = _get_class_balancing_data(
+            session=session,
+            strat=strat,
+            dataset_id=context.dataset_id,
+            annotation_label_ids=annotation_label_ids,
+            input_sample_ids=context.input_sample_ids,
+            sample_id_to_annotation_label_ids=sample_id_to_annotation_label_ids,
+        )
+        mundig.add_class_balancing(
+            class_distributions=class_distributions,
+            target=target_values,
+            strength=strat.strength,
+        )
+    else:
+        raise ValueError(f"Selection strategy of type {type(strat)} is unknown.")

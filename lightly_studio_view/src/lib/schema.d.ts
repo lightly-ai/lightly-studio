@@ -1280,6 +1280,33 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/datasets/{dataset_id}/evaluation/runs": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Evaluation Runs
+         * @description Get all evaluation runs for a dataset.
+         *
+         *     Args:
+         *         session: The database session.
+         *         dataset_id: The dataset's UUID.
+         *
+         *     Returns:
+         *         List of evaluation runs, each with id, name, and run configuration.
+         */
+        get: operations["get_evaluation_runs"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/collections/{collection_id}/metadata/info": {
         parameters: {
             query?: never;
@@ -2711,6 +2738,28 @@ export interface components {
             run_name: string;
             /** Metrics */
             metrics: components["schemas"]["EvaluationSampleMetricBoundsView"][];
+        };
+        /**
+         * EvaluationRunView
+         * @description API view of an evaluation run.
+         */
+        EvaluationRunView: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Name */
+            name: string;
+            /** Evaluation Run Configuration */
+            evaluation_run_configuration: {
+                [key: string]: unknown;
+            };
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
         };
         /**
          * EvaluationSampleMetricBoundsView
@@ -6361,6 +6410,37 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["EvaluationRunMetricsInfoView"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_evaluation_runs: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                dataset_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EvaluationRunView"][];
                 };
             };
             /** @description Validation Error */
