@@ -3,6 +3,7 @@ import { SortDirection } from '$lib/api/lightly_studio_local';
 import { useImageFilters } from '$lib/hooks/useImageFilters/useImageFilters';
 import { useSortFields } from '$lib/hooks';
 import type { ImageSortField, SortField } from '$lib/hooks/useSortFields/useSortFields';
+import { formatEvaluationMetricLabel } from '$lib/hooks/useSortFields/useSortFields';
 import type { SortExpr } from '$lib/hooks/useImagesInfinite/types';
 
 interface UseOrderByParams {
@@ -49,7 +50,15 @@ export function useOrderBy({ datasetId }: UseOrderByParams): UseOrderByReturn {
             const current = $imageSortBy?.[0];
             if (!current) return null;
             if (current.source === 'evaluation_metric') {
-                return `${current.evaluation_run_name}_${current.metric_name}`;
+                return (
+                    $allSortFields.find(
+                        (field) =>
+                            field.source === 'evaluation_metric' &&
+                            field.evaluation_run_name === current.evaluation_run_name &&
+                            field.metric_name === current.metric_name
+                    )?.label ??
+                    formatEvaluationMetricLabel(current.evaluation_run_name, current.metric_name)
+                );
             }
             return (
                 $allSortFields

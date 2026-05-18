@@ -90,7 +90,7 @@ describe('useSortFields', () => {
             expect(fields.map((f) => ('value' in f ? f.value : null))).not.toContain('nested');
         });
 
-        it('includes evaluation metric fields with run_name_metric_name label', () => {
+        it('includes evaluation metric fields with dot-formatted labels', () => {
             metricsInfo.set({
                 data: [
                     {
@@ -111,13 +111,13 @@ describe('useSortFields', () => {
                         source: 'evaluation_metric',
                         evaluation_run_name: 'run1',
                         metric_name: 'precision',
-                        label: 'run1_precision'
+                        label: 'run1.precision'
                     }),
                     expect.objectContaining({
                         source: 'evaluation_metric',
                         evaluation_run_name: 'run1',
                         metric_name: 'recall',
-                        label: 'run1_recall'
+                        label: 'run1.recall'
                     })
                 ])
             );

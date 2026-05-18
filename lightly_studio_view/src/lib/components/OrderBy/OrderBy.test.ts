@@ -304,7 +304,7 @@ describe('OrderBy', () => {
         ]);
     });
 
-    it('lists evaluation metric fields in the dropdown as [run_name]_[metric_name]', async () => {
+    it('lists evaluation metric fields in the dropdown as [run_name].[metric_name]', async () => {
         mocks.metricsData = [
             {
                 run_name: 'run1',
@@ -318,8 +318,8 @@ describe('OrderBy', () => {
 
         await fireEvent.click(screen.getByTestId('sort-by-trigger'));
 
-        expect(screen.getByTestId('sort-field-run1-precision')).toHaveTextContent('run1_precision');
-        expect(screen.getByTestId('sort-field-run1-recall')).toHaveTextContent('run1_recall');
+        expect(screen.getByTestId('sort-field-run1-precision')).toHaveTextContent('run1.precision');
+        expect(screen.getByTestId('sort-field-run1-recall')).toHaveTextContent('run1.recall');
     });
 
     it('selects an evaluation metric field', async () => {
@@ -367,7 +367,7 @@ describe('OrderBy', () => {
         expect(mocks.updateSortBy).toHaveBeenCalledWith(null);
     });
 
-    it('shows [run_name]_[metric_name] label in the trigger when an evaluation metric is selected', () => {
+    it('shows a dot-formatted label in the trigger when an evaluation metric is selected', () => {
         mocks.imageSortByValue = [
             {
                 source: 'evaluation_metric',
@@ -377,7 +377,7 @@ describe('OrderBy', () => {
             }
         ];
         render(OrderBy, { props: { datasetId: 'ds1' } });
-        expect(screen.getByTestId('sort-by-trigger')).toHaveTextContent('run1_precision');
+        expect(screen.getByTestId('sort-by-trigger')).toHaveTextContent('run1.precision');
     });
 
     it('toggles direction for an evaluation metric field', async () => {

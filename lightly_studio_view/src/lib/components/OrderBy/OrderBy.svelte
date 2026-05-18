@@ -30,7 +30,7 @@
             <Button
                 variant="outline"
                 size="sm"
-                class="h-8 min-w-20 gap-1 text-xs font-normal"
+                class="h-8 min-w-20 justify-start gap-1 text-left text-xs font-normal"
                 data-testid="sort-by-trigger"
             >
                 {$selectedLabel ?? 'Sort by'}
@@ -41,7 +41,7 @@
                 {#each $allSortFields as field}
                     <button
                         class={cn(
-                            'flex w-full items-center rounded-sm px-2 py-1.5 text-sm hover:bg-accent hover:text-accent-foreground',
+                            'flex w-full items-center justify-start rounded-sm px-2 py-1.5 text-left text-sm hover:bg-accent hover:text-accent-foreground',
                             $isFieldSelected(field) && 'bg-accent text-accent-foreground'
                         )}
                         onclick={() => {
