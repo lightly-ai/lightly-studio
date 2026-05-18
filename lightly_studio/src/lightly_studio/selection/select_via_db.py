@@ -193,21 +193,83 @@ def _get_class_balancing_data(  # noqa: PLR0913
     return class_distributions, target_values
 
 
+def select_via_database(
+    session: Session, config: SelectionConfig, input_sample_ids: list[UUID]
+) -> None:
+    """Run selection using the provided candidate sample ids.
+
+    First resolves the selection config to concrete database values.
+    Then calls Mundig to run the selection with pure values.
+    Finally creates a tag for the selected set.
+    """
+    # Check if the tag name is already used
+    existing_tag = tag_resolver.get_by_name(
+        session=session,
+        tag_name=config.selection_result_tag_name,
+        collection_id=config.collection_id,
+    )
+    if existing_tag:
+        msg = (
+            f"Tag with name {config.selection_result_tag_name} already exists in the "
+            f"collection {config.collection_id}. Please use a different tag name."
+        )
+        raise ValueError(msg)
+
+    n_samples_to_select = min(config.n_samples_to_select, len(input_sample_ids))
+    if n_samples_to_select == 0:
+        logger.warning("No samples available for selection.")
+        return
+
+    # Get root dataset id for balancing strategies
+    root_collection = collection_resolver.get_root_collection(
+        session=session, collection_id=config.collection_id
+    )
+    dataset_id = root_collection.dataset_id
+    context = _SelectionContext(
+        collection_id=config.collection_id,
+        dataset_id=dataset_id,
+        input_sample_ids=input_sample_ids,
+    )
+
+    mundig = Mundig()
+    for strat in config.strategies:
+        _add_strategy_to_mundig(
+            session=session,
+            context=context,
+            strat=strat,
+            mundig=mundig,
+        )
+
+    selected_indices = mundig.run(n_samples=n_samples_to_select)
+    selected_sample_ids = [input_sample_ids[i] for i in selected_indices]
+
+    tag = tag_resolver.create(
+        session=session,
+        tag=TagCreate(
+            collection_id=config.collection_id,
+            name=config.selection_result_tag_name,
+            kind="sample",
+        ),
+    )
+    tag_resolver.add_sample_ids_to_tag_id(
+        session=session, tag_id=tag.tag_id, sample_ids=selected_sample_ids
+    )
+
+
 def _get_embeddings_by_sample_ids(
     session: Session,
-    collection_id: UUID,
-    input_sample_ids: Sequence[UUID],
+    context: _SelectionContext,
     embedding_model_name: str | None,
 ) -> list[list[float]]:
     """Resolve sample embeddings for the given model and sample ids."""
     embedding_model_id = embedding_model_resolver.get_by_name(
         session=session,
-        collection_id=collection_id,
+        collection_id=context.collection_id,
         embedding_model_name=embedding_model_name,
     ).embedding_model_id
     embedding_tables = sample_embedding_resolver.get_by_sample_ids(
         session=session,
-        sample_ids=list(input_sample_ids),
+        sample_ids=list(context.input_sample_ids),
         embedding_model_id=embedding_model_id,
     )
     return [embedding.embedding for embedding in embedding_tables]
@@ -224,8 +286,7 @@ def _add_strategy_to_mundig(
         mundig.add_diversity(
             embeddings=_get_embeddings_by_sample_ids(
                 session=session,
-                collection_id=context.collection_id,
-                input_sample_ids=context.input_sample_ids,
+                context=context,
                 embedding_model_name=strat.embedding_model_name,
             ),
             strength=strat.strength,
@@ -233,8 +294,7 @@ def _add_strategy_to_mundig(
     elif isinstance(strat, EmbeddingSimilarityStrategy):
         embeddings = _get_embeddings_by_sample_ids(
             session=session,
-            collection_id=context.collection_id,
-            input_sample_ids=context.input_sample_ids,
+            context=context,
             embedding_model_name=strat.embedding_model_name,
         )
         embedding_model_id = embedding_model_resolver.get_by_name(
@@ -308,66 +368,3 @@ def _add_strategy_to_mundig(
         )
     else:
         raise ValueError(f"Selection strategy of type {type(strat)} is unknown.")
-
-
-def select_via_database(
-    session: Session, config: SelectionConfig, input_sample_ids: list[UUID]
-) -> None:
-    """Run selection using the provided candidate sample ids.
-
-    First resolves the selection config to concrete database values.
-    Then calls Mundig to run the selection with pure values.
-    Finally creates a tag for the selected set.
-    """
-    # Check if the tag name is already used
-    existing_tag = tag_resolver.get_by_name(
-        session=session,
-        tag_name=config.selection_result_tag_name,
-        collection_id=config.collection_id,
-    )
-    if existing_tag:
-        msg = (
-            f"Tag with name {config.selection_result_tag_name} already exists in the "
-            f"collection {config.collection_id}. Please use a different tag name."
-        )
-        raise ValueError(msg)
-
-    n_samples_to_select = min(config.n_samples_to_select, len(input_sample_ids))
-    if n_samples_to_select == 0:
-        logger.warning("No samples available for selection.")
-        return
-
-    # Get root dataset id for balancing strategies
-    root_collection = collection_resolver.get_root_collection(
-        session=session, collection_id=config.collection_id
-    )
-    dataset_id = root_collection.dataset_id
-    context = _SelectionContext(
-        collection_id=config.collection_id,
-        dataset_id=dataset_id,
-        input_sample_ids=input_sample_ids,
-    )
-
-    mundig = Mundig()
-    for strat in config.strategies:
-        _add_strategy_to_mundig(
-            session=session,
-            context=context,
-            strat=strat,
-            mundig=mundig,
-        )
-
-    selected_indices = mundig.run(n_samples=n_samples_to_select)
-    selected_sample_ids = [input_sample_ids[i] for i in selected_indices]
-
-    tag = tag_resolver.create(
-        session=session,
-        tag=TagCreate(
-            collection_id=config.collection_id,
-            name=config.selection_result_tag_name,
-            kind="sample",
-        ),
-    )
-    tag_resolver.add_sample_ids_to_tag_id(
-        session=session, tag_id=tag.tag_id, sample_ids=selected_sample_ids
-    )
