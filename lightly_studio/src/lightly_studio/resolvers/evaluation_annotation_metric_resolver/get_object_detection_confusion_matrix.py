@@ -2,41 +2,19 @@
 
 from __future__ import annotations
 
-from collections import defaultdict
-from dataclasses import dataclass
 from uuid import UUID
 
-from sqlmodel import Session
+from sqlalchemy.orm import aliased
+from sqlmodel import Session, col, func, select
 
+from lightly_studio.models.annotation.annotation_base import AnnotationBaseTable
+from lightly_studio.models.annotation_label import AnnotationLabelTable
 from lightly_studio.models.evaluation_annotation_metric import EvaluationAnnotationMetricTable
 from lightly_studio.models.evaluation_confusion_matrix import (
     NO_GROUND_TRUTH_ROW_LABEL,
     NO_PREDICTION_COL_LABEL,
     ObjectDetectionConfusionMatrix,
 )
-from lightly_studio.resolvers import annotation_label_resolver, annotation_resolver
-from lightly_studio.resolvers.evaluation_annotation_metric_resolver.get_all_by_evaluation_run_id import (  # noqa: E501
-    get_all_by_evaluation_run_id,
-)
-
-
-@dataclass
-class _PairAggregation:
-    """Intermediate counts and axis metadata before materializing a matrix.
-
-    Attributes:
-        cell_counts: Map from ``(gt_label, pred_label)`` to occurrence count.
-        gt_class_names: Real ground-truth class names seen in metrics (excludes synthetic row).
-        pred_class_names: Real prediction class names seen in metrics (excludes synthetic col).
-        has_fp: Whether any false-positive rows exist (pred-only metrics).
-        has_fn: Whether any false-negative rows exist (gt-only metrics).
-    """
-
-    cell_counts: dict[tuple[str, str], int]
-    gt_class_names: set[str]
-    pred_class_names: set[str]
-    has_fp: bool
-    has_fn: bool
 
 
 def get_object_detection_confusion_matrix(
@@ -45,14 +23,16 @@ def get_object_detection_confusion_matrix(
 ) -> ObjectDetectionConfusionMatrix:
     """Aggregate persisted OD pairing metrics into a label-by-label matrix.
 
-    Loads all ``evaluation_annotation_metric`` rows for ``evaluation_run_id``, resolves
-    annotation and label names, then fills matrix cells as follows:
+    Counts are computed in a single SQL query that joins
+    ``evaluation_annotation_metric`` to ``annotation_base`` and ``annotation_label``
+    twice (once for ground truth, once for prediction) and groups by the resolved
+    label name pair. Rows are then bucketed as follows:
 
     - Both ``pred_annotation_id`` and ``gt_annotation_id`` set: true positive at
       ``[gt_label][pred_label]``.
-    - Only ``pred_annotation_id``: false positive at
+    - Only ``pred_annotation_id`` (``gt_label`` is ``NULL``): false positive at
       ``[NO_GROUND_TRUTH_ROW_LABEL][pred_label]``.
-    - Only ``gt_annotation_id``: false negative at
+    - Only ``gt_annotation_id`` (``pred_label`` is ``NULL``): false negative at
       ``[gt_label][NO_PREDICTION_COL_LABEL]``.
 
     Args:
@@ -62,24 +42,20 @@ def get_object_detection_confusion_matrix(
     Returns:
         Matrix with sorted class labels and optional synthetic FP/FN row/column.
     """
-    metrics = get_all_by_evaluation_run_id(session=session, evaluation_run_id=evaluation_run_id)
-    if not metrics:
+    grouped_rows = _fetch_pair_counts(session=session, evaluation_run_id=evaluation_run_id)
+    if not grouped_rows:
         return ObjectDetectionConfusionMatrix(
             row_labels=[],
             col_labels=[],
             counts=[],
         )
 
-    label_name_by_annotation_id = _resolve_annotation_labels(
-        session=session,
-        metrics=metrics,
+    row_labels, col_labels = _build_axis_labels(grouped_rows=grouped_rows)
+    counts = _build_counts_grid(
+        grouped_rows=grouped_rows,
+        row_labels=row_labels,
+        col_labels=col_labels,
     )
-    agg = _aggregate_pair_counts(
-        metrics=metrics,
-        label_name_by_annotation_id=label_name_by_annotation_id,
-    )
-    row_labels, col_labels = _build_axis_labels(agg)
-    counts = _materialize_counts(agg.cell_counts, row_labels=row_labels, col_labels=col_labels)
     return ObjectDetectionConfusionMatrix(
         row_labels=row_labels,
         col_labels=col_labels,
@@ -87,141 +63,104 @@ def get_object_detection_confusion_matrix(
     )
 
 
-def _resolve_annotation_labels(
+def _fetch_pair_counts(
     session: Session,
-    metrics: list[EvaluationAnnotationMetricTable],
-) -> dict[UUID, str]:
-    """Resolve every annotation id referenced by metric rows to its label name.
+    evaluation_run_id: UUID,
+) -> list[tuple[str | None, str | None, int]]:
+    """Return ``(gt_label, pred_label, count)`` triples grouped in SQL.
+
+    LEFT JOINs the metric table to ``annotation_base`` and ``annotation_label`` for
+    both gt and pred sides so that FP and FN rows surface as ``NULL`` on the missing
+    side. Counting and grouping happen in the database, so the Python side only
+    receives at most one row per ``(gt_label, pred_label)`` pair.
 
     Args:
         session: Active database session.
-        metrics: Annotation metric rows for one evaluation run.
+        evaluation_run_id: Evaluation run whose pairing metrics should be aggregated.
 
     Returns:
-        Map from annotation id (``annotation_base.sample_id``) to label name.
-
-    Raises:
-        RuntimeError: If an annotation referenced by a metric row, or its label,
-            cannot be found..
+        Group rows. ``NULL`` ``gt_label`` denotes the FP bucket; ``NULL`` ``pred_label``
+        denotes the FN bucket.
     """
-    annotation_ids: set[UUID] = set()
-    for row in metrics:
-        if row.pred_annotation_id is not None:
-            annotation_ids.add(row.pred_annotation_id)
-        if row.gt_annotation_id is not None:
-            annotation_ids.add(row.gt_annotation_id)
+    gt_annotation = aliased(AnnotationBaseTable)
+    pred_annotation = aliased(AnnotationBaseTable)
+    gt_label = aliased(AnnotationLabelTable)
+    pred_label = aliased(AnnotationLabelTable)
 
-    if not annotation_ids:
-        return {}
-
-    annotations = annotation_resolver.get_by_ids(
-        session=session,
-        annotation_ids=list(annotation_ids),
-    )
-    annotations_by_id = {ann.sample_id: ann for ann in annotations}
-
-    missing_annotation_ids = annotation_ids - annotations_by_id.keys()
-    if missing_annotation_ids:
-        raise RuntimeError(
-            f"Annotations {sorted(missing_annotation_ids)} referenced by evaluation "
-            "metrics were not found; metric rows point at non-existent annotations."
+    stmt = (
+        select(
+            gt_label.annotation_label_name,
+            pred_label.annotation_label_name,
+            func.count().label("n"),
         )
-
-    label_name_by_label_id = annotation_label_resolver.names_by_ids(
-        session=session,
-        ids=[ann.annotation_label_id for ann in annotations_by_id.values()],
+        .select_from(EvaluationAnnotationMetricTable)
+        .join(
+            gt_annotation,
+            col(EvaluationAnnotationMetricTable.gt_annotation_id) == col(gt_annotation.sample_id),
+            isouter=True,
+        )
+        .join(
+            pred_annotation,
+            col(EvaluationAnnotationMetricTable.pred_annotation_id)
+            == col(pred_annotation.sample_id),
+            isouter=True,
+        )
+        .join(
+            gt_label,
+            col(gt_annotation.annotation_label_id) == col(gt_label.annotation_label_id),
+            isouter=True,
+        )
+        .join(
+            pred_label,
+            col(pred_annotation.annotation_label_id) == col(pred_label.annotation_label_id),
+            isouter=True,
+        )
+        .where(col(EvaluationAnnotationMetricTable.evaluation_run_id) == evaluation_run_id)
+        .group_by(gt_label.annotation_label_name, pred_label.annotation_label_name)
     )
 
-    label_name_by_annotation_id: dict[UUID, str] = {}
-    for annotation_id, ann in annotations_by_id.items():
-        label_name = label_name_by_label_id.get(str(ann.annotation_label_id))
-        if label_name is None:
-            raise RuntimeError(
-                f"Annotation label {ann.annotation_label_id} for annotation "
-                f"{annotation_id} was not found; annotation references a "
-                "non-existent label."
-            )
-        label_name_by_annotation_id[annotation_id] = label_name
-
-    return label_name_by_annotation_id
+    return [(row[0], row[1], row[2]) for row in session.exec(stmt).all()]
 
 
-def _aggregate_pair_counts(
-    metrics: list[EvaluationAnnotationMetricTable],
-    label_name_by_annotation_id: dict[UUID, str],
-) -> _PairAggregation:
-    """Count pairing outcomes by ``(gt_label, pred_label)`` including synthetic axes.
-
-    Args:
-        metrics: Annotation metric rows for one evaluation run.
-        label_name_by_annotation_id: Pre-resolved label name per annotation id.
-
-    Returns:
-        Sparse cell counts plus flags and class name sets for axis construction.
-    """
-    cell_counts: dict[tuple[str, str], int] = defaultdict(int)
-    gt_class_names: set[str] = set()
-    pred_class_names: set[str] = set()
-    has_fp = False
-    has_fn = False
-
-    for row in metrics:
-        pred_id = row.pred_annotation_id
-        gt_id = row.gt_annotation_id
-        if pred_id is not None and gt_id is not None:
-            gt_label = label_name_by_annotation_id[gt_id]
-            pred_label = label_name_by_annotation_id[pred_id]
-            gt_class_names.add(gt_label)
-            pred_class_names.add(pred_label)
-            cell_counts[(gt_label, pred_label)] += 1
-        elif pred_id is not None:
-            has_fp = True
-            pred_label = label_name_by_annotation_id[pred_id]
-            pred_class_names.add(pred_label)
-            cell_counts[(NO_GROUND_TRUTH_ROW_LABEL, pred_label)] += 1
-        elif gt_id is not None:
-            has_fn = True
-            gt_label = label_name_by_annotation_id[gt_id]
-            gt_class_names.add(gt_label)
-            cell_counts[(gt_label, NO_PREDICTION_COL_LABEL)] += 1
-
-    return _PairAggregation(
-        cell_counts=dict(cell_counts),
-        gt_class_names=gt_class_names,
-        pred_class_names=pred_class_names,
-        has_fp=has_fp,
-        has_fn=has_fn,
-    )
-
-
-def _build_axis_labels(agg: _PairAggregation) -> tuple[list[str], list[str]]:
+def _build_axis_labels(
+    grouped_rows: list[tuple[str | None, str | None, int]],
+) -> tuple[list[str], list[str]]:
     """Build sorted row and column label lists, appending synthetic FP/FN labels when needed.
 
+    A ``NULL`` ``gt_label`` in any row means at least one FP exists and triggers the
+    synthetic ground-truth row; symmetrically a ``NULL`` ``pred_label`` triggers the
+    synthetic prediction column.
+
     Args:
-        agg: Sparse aggregation from :func:`_aggregate_pair_counts`.
+        grouped_rows: SQL group rows from :func:`_fetch_pair_counts`.
 
     Returns:
-        ``(row_labels, col_labels)`` ready for dense matrix materialization.
+        ``(row_labels, col_labels)`` ready for dense matrix construction.
     """
-    row_labels = sorted(agg.gt_class_names)
-    if agg.has_fp:
+    row_labels = sorted({gt_name for gt_name, _, _ in grouped_rows if gt_name is not None})
+    if any(gt_name is None for gt_name, _, _ in grouped_rows):
         row_labels.append(NO_GROUND_TRUTH_ROW_LABEL)
 
-    col_labels = sorted(agg.pred_class_names)
-    if agg.has_fn:
+    col_labels = sorted({pred_name for _, pred_name, _ in grouped_rows if pred_name is not None})
+    if any(pred_name is None for _, pred_name, _ in grouped_rows):
         col_labels.append(NO_PREDICTION_COL_LABEL)
+
     return row_labels, col_labels
 
 
-def _materialize_counts(
-    cell_counts: dict[tuple[str, str], int],
+def _build_counts_grid(
+    grouped_rows: list[tuple[str | None, str | None, int]],
     row_labels: list[str],
     col_labels: list[str],
 ) -> list[list[int]]:
-    """Scatter sparse ``(gt_label, pred_label)`` counts into a 2D integer grid.
+    """Scatter SQL group rows into a 2D integer grid aligned with the given axes.
+
+    ``NULL`` label names from the SQL LEFT JOINs are mapped to the synthetic
+    FP/FN bucket labels before lookup. Rows where both label names are ``NULL``
+    are skipped defensively; insertion code always sets at least one id.
 
     Args:
-        cell_counts: Non-zero cells keyed by label pair.
+        grouped_rows: SQL group rows from :func:`_fetch_pair_counts`.
         row_labels: Ground-truth axis order.
         col_labels: Prediction axis order.
 
@@ -230,9 +169,11 @@ def _materialize_counts(
     """
     row_index = {name: i for i, name in enumerate(row_labels)}
     col_index = {name: j for j, name in enumerate(col_labels)}
-    n_rows = len(row_labels)
-    n_cols = len(col_labels)
-    counts = [[0 for _ in range(n_cols)] for _ in range(n_rows)]
-    for (gt_label, pred_label), n in cell_counts.items():
-        counts[row_index[gt_label]][col_index[pred_label]] = n
+    counts = [[0 for _ in col_labels] for _ in row_labels]
+    for gt_name, pred_name, n in grouped_rows:
+        if gt_name is None and pred_name is None:
+            continue
+        row_key = gt_name if gt_name is not None else NO_GROUND_TRUTH_ROW_LABEL
+        col_key = pred_name if pred_name is not None else NO_PREDICTION_COL_LABEL
+        counts[row_index[row_key]][col_index[col_key]] = n
     return counts
