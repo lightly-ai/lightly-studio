@@ -1,6 +1,11 @@
 # Annotations
 
-Annotations in LightlyStudio allow you to view, create, edit, and delete annotation labels on your samples in the GUI via the Python API. Supported annotation types include object detections, segmentations and classifications. You can import annotations from common formats like COCO or YOLO and more.
+Annotations in LightlyStudio allow you to view, create, edit, and delete annotation labels on your
+samples in the GUI or via the [Python API](../api/annotation.md). Supported annotation types
+include object detection, segmentation, and classification. You can import annotations from common
+formats like COCO or YOLO and more. See [Image Dataset](../dataset_setup/image_dataset.md) and
+[Video Dataset](../dataset_setup/video_dataset.md) for the available import workflows and supported
+formats.
 
 ## Annotations in the GUI
 
@@ -19,11 +24,13 @@ Annotations are shown in sample detail view and in dedicated annotation-focused 
   ></iframe>
 </div>
 
-You can add annotations during dataset setup through supported import workflows, through the [Python API](#adding-annotations), or manually in the GUI. For example, image datasets can load annotations from formats such as COCO, YOLO, and Pascal VOC, and video datasets support YouTube-VIS imports. See [Image Dataset](../dataset_setup/image_dataset.md) and [Video Dataset](../dataset_setup/video_dataset.md) for the available import workflows and supported formats.
+
 
 ## Annotations in Python
 
-Use the Python API when you want to inspect annotations programmatically, generate them from model predictions, or import custom annotation outputs.
+Use the Python API when you want to inspect annotations programmatically, generate them from model
+predictions, or import custom annotation outputs. See
+[Annotation API Reference](../api/annotation.md) for the full API surface.
 
 ## Accessing annotations
 
@@ -38,12 +45,16 @@ for sample in dataset:
             print(annotation.x, annotation.y, annotation.width, annotation.height)
 ```
 
-There are 3 annotation types: `ClassificationAnnotation`, `SegmentationMaskAnnotation`, and
-`ObjectDetectionAnnotation`.
+There are 3 annotation types:
+[ClassificationAnnotation](../api/annotation.md#classificationannotation),
+[SegmentationMaskAnnotation](../api/annotation.md#segmentationmaskannotation), and
+[ObjectDetectionAnnotation](../api/annotation.md#objectdetectionannotation).
 
 ## Adding annotations
 
-Add annotations to samples with `add_annotation`. The following example creates an object detection annotation:
+Add annotations to samples with
+[`add_annotation`](../api/sample.md#lightly_studio.core.sample.Sample.add_annotation). The
+following example creates an object detection annotation:
 
 ```python
 from lightly_studio.core.annotation import CreateObjectDetection
@@ -60,9 +71,13 @@ sample.add_annotation(
 )
 ```
 
-There are also `CreateClassification` and `CreateSegmentationMask` classes for the other annotation types.
+There are also [CreateClassification](../api/annotation.md#createclassification) and
+[CreateSegmentationMask](../api/annotation.md#createsegmentationmask) classes for the other
+annotation types.
 
-For segmentation annotations, prefer `from_binary_mask`, which automatically derives the bounding box and mask encoding from a 2D numpy array:
+For segmentation annotations, prefer
+[`from_binary_mask`](../api/annotation.md#lightly_studio.core.annotation.CreateSegmentationMask.from_binary_mask),
+which automatically derives the bounding box and mask encoding from a 2D numpy array:
 
 ```python
 import numpy as np
@@ -84,7 +99,8 @@ sample.add_annotation(
 )
 ```
 
-Alternatively, provide the mask encoding directly with `from_rle_mask`:
+Alternatively, provide the mask encoding directly with
+[`from_rle_mask`](../api/annotation.md#lightly_studio.core.annotation.CreateSegmentationMask.from_rle_mask):
 
 ```python
 from lightly_studio.core.annotation import CreateSegmentationMask
@@ -106,11 +122,15 @@ sample.add_annotation(
 
 ??? note "Binary Mask Format"
 
-    For segmentation annotations (`CreateSegmentationMask`), `segmentation_mask` is expected to be a list of integers representing the binary mask in a row-wise Run-Length Encoding (RLE) format.
+    For segmentation annotations
+    ([`CreateSegmentationMask`](../api/annotation.md#createsegmentationmask)), `segmentation_mask`
+    is expected to be a list of integers representing the binary mask in a row-wise
+    Run-Length Encoding (RLE) format.
 
     !!! tip
-        We recommend using `from_binary_mask` to generate this encoding automatically from a numpy
-        array.
+        We recommend using
+        [`from_binary_mask`](../api/annotation.md#lightly_studio.core.annotation.CreateSegmentationMask.from_binary_mask)
+        to generate this encoding automatically from a numpy array.
 
     The format follows these rules:
 
