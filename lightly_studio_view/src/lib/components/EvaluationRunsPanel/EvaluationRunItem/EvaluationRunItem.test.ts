@@ -20,7 +20,16 @@ describe('EvaluationRunItem', () => {
             props: { run: baseRun, expanded: false, onToggle: vi.fn() }
         });
 
+        const expectedDate = new Intl.DateTimeFormat('en-US', {
+            year: 'numeric',
+            month: 'short',
+            day: 'numeric',
+            hour: '2-digit',
+            minute: '2-digit'
+        }).format(baseRun.created_at);
+
         expect(screen.getByTestId('evaluation-run-name')).toHaveTextContent('Detection eval — v1');
+        expect(screen.getByTestId('evaluation-run-date')).toHaveTextContent(expectedDate);
         expect(screen.getByTestId('evaluation-run-item')).toHaveAttribute('aria-expanded', 'false');
     });
 

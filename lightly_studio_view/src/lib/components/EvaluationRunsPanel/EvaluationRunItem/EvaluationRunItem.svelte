@@ -1,6 +1,6 @@
 <script lang="ts">
     import type { EvaluationRunView } from '$lib/api/lightly_studio_local/types.gen';
-    import Typography from '$lib/components/Typography/Typography.svelte';
+    import { Typography } from '$lib/components';
     import { ChevronDown, ChevronRight } from '@lucide/svelte';
 
     interface Props {
@@ -44,7 +44,11 @@
             >
                 {run.name}
             </Typography>
-            <Typography variant="caption" className="text-muted-foreground">
+            <Typography
+                variant="caption"
+                className="text-muted-foreground"
+                props={{ 'data-testid': 'evaluation-run-date' }}
+            >
                 {dateFormatter.format(run.created_at)}
             </Typography>
         </div>
