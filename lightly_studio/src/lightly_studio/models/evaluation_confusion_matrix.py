@@ -26,9 +26,6 @@ class ObjectDetectionConfusionMatrix(BaseModel):
     ground-truth context (class labels, plus a synthetic row for FPs). Columns follow
     prediction context (class labels, plus a synthetic column for FNs).
 
-    With ``classwise=True`` at evaluation time, most true positives lie on the diagonal;
-    cross-class mistakes appear as separate FP and FN cells rather than off-diagonal TPs.
-
     Attributes:
         row_labels: Ground-truth axis labels (sorted classes, then optional FP row).
         col_labels: Prediction axis labels (sorted classes, then optional FN column).
