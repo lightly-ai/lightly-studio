@@ -3636,6 +3636,8 @@ export interface components {
             selection_result_tag_name: string;
             /** Strategies */
             strategies: (components["schemas"]["EmbeddingDiversityStrategy"] | components["schemas"]["MetadataWeightingStrategy"])[];
+            /** Filter */
+            filter?: (components["schemas"]["ImageFilter"] | components["schemas"]["VideoFilter"]) | null;
         };
         /**
          * SettingView
