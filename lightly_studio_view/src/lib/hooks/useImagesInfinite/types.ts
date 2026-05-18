@@ -1,8 +1,10 @@
 import type {
     AnnotationsFilter,
+    EvaluationMetricSortExpr,
     QueryExpr,
     ReadImagesRequest,
-    SampleFilter
+    SampleFilter,
+    SortFieldExpr
 } from '$lib/api/lightly_studio_local';
 import type { DimensionBounds } from '$lib/services/loadDimensionBounds';
 import type { MetadataValues } from '$lib/services/types';
@@ -39,3 +41,5 @@ export type SamplesQueryKey = readonly [
     },
     ReadImagesRequest['sort_by']
 ];
+
+export type SortExpr = SortFieldExpr | ({ source: 'evaluation_metric' } & EvaluationMetricSortExpr);

@@ -39,9 +39,12 @@
 
     const allSortFields = $derived([...SORT_FIELDS, ...metadataSortFields]);
 
-    const selectedField = $derived($imageSortBy?.[0]?.field_name ?? null);
-    const selectedSource = $derived($imageSortBy?.[0]?.source ?? null);
-    const selectedDirection = $derived($imageSortBy?.[0]?.direction ?? SortDirection.ASC);
+    const currentSort = $derived(
+        $imageSortBy?.[0]?.source !== 'evaluation_metric' ? $imageSortBy?.[0] : null
+    );
+    const selectedField = $derived(currentSort?.field_name ?? null);
+    const selectedSource = $derived(currentSort?.source ?? null);
+    const selectedDirection = $derived(currentSort?.direction ?? SortDirection.ASC);
     const selectedLabel = $derived(
         allSortFields.find((f) => f.source === selectedSource && f.value === selectedField)
             ?.label ?? null
@@ -74,7 +77,7 @@
                 source: selectedSource,
                 field_name: selectedField,
                 direction: next,
-                is_numeric: $imageSortBy?.[0]?.is_numeric ?? false
+                is_numeric: currentSort?.is_numeric ?? false
             }
         ]);
     }
