@@ -308,6 +308,17 @@ class Sample(ABC):
             annotation_id=annotation_id,
         )
 
+    def __str__(self) -> str:
+        """Return a human-readable summary of the sample."""
+        metadata_dict = self._sample_table.metadata_dict
+        metadata_keys = sorted(metadata_dict.metadata_schema.keys()) if metadata_dict else []
+        tags = sorted(self.tags)
+        return f"{type(self).__name__}(id={self.sample_id})\n  tags:     {tags}\n  metadata: {metadata_keys}"
+
+    def __repr__(self) -> str:
+        """Return a string representation."""
+        return self.__str__()
+
 
 class SampleMetadata:
     """Dictionary-like interface for sample metadata."""
