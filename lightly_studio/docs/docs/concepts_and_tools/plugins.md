@@ -219,15 +219,16 @@ class LightlyTrainAutoLabelingODOperator(BaseOperator):
         return [OperatorScope.IMAGE]
 
     def execute(self, *, session, context, parameters):
+        model_name = parameters["Model"]
         try:
-            model = lightly_train.load_model(parameters["Model"])
+            model = lightly_train.load_model(model_name)
         except ValueError as e:
             return OperatorResult(success=False, message=f"Model load failed: {str(e)}")
         
         if (parameters["Threshold"] > 1.0) or (parameters["Threshold"] < 0.0):
             return OperatorResult(success=False, message="Threshold must be in range 0.0 to 1.0")
 
-        collection_name = f"lightly_train_auto_label__{parameters["Model"]}"
+        collection_name = f"lightly_train_auto_label__{model_name}"
         raw_classes = getattr(model, "classes", {})
         label_map = _preload_label_map(session, context.collection_id, list(raw_classes.values()))
 
