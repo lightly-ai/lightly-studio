@@ -75,7 +75,7 @@
 
     function handleFormSubmit(event: Event) {
         event.preventDefault();
-        if (!isFormValid) return;
+        if (!isFormValid || notEnoughSamples) return;
 
         submitSelection();
     }
