@@ -2,6 +2,77 @@
 
 LightlyStudio offers the possibility to extend its functionality by using plugins. Users can define their own plugins or use pre-defined ones.
 
+## Install Plugins from the Plugin Repository
+
+Additional ready-to-use plugins are available in the
+[`lightly-studio-plugins`](https://github.com/lightly-ai/lightly-studio-plugins) repository.
+Each plugin lives in its own subdirectory under `plugins/` and can be installed directly
+from the repository.
+
+#### Example: SAM3 Segmentation Plugin
+
+<video autoplay loop muted playsinline controls style="width: 100%;">
+  <source src="https://storage.googleapis.com/lightly-public/studio/sam3_plugin.mp4" type="video/mp4">
+</video>
+
+The `sam3_segmentation` plugin brings interactive, model-assisted segmentation to
+LightlyStudio using Segment Anything Model 3 (SAM3). Install it with:
+```bash
+pip install "git+https://github.com/lightly-ai/lightly-studio-plugins.git#subdirectory=plugins/sam3_segmentation/"
+```
+!!! info "Prerequisites"
+    This plugin requires access to the SAM3 model on Hugging Face. Read the
+    [sam3_segmentation README](https://github.com/lightly-ai/lightly-studio-plugins/tree/main/plugins/sam3_segmentation)
+    before installing to make sure you have the necessary access and dependencies set up.
+
+Once installed, the SAM3 segmentation plugin appears in the operator menu. Select a
+image or a set of images, trigger the operator, and SAM3 will generate segmentation
+masks directly inside LightlyStudio.
+
+### Installation Pattern
+
+Replace `<plugin_name>` with the folder name of the plugin you want to install:
+
+=== "uv"
+    ```bash
+    uv pip install "git+https://github.com/lightly-ai/lightly-studio-plugins.git#subdirectory=plugins/<plugin_name>/"
+    ```
+
+=== "pip"
+    ```bash
+    pip install "git+https://github.com/lightly-ai/lightly-studio-plugins.git#subdirectory=plugins/<plugin_name>/"
+    ```
+
+Once installed, register the plugin through the Python API as shown in the examples below
+and it will appear in the GUI automatically.
+
+### Uninstalling a Plugin
+
+To remove a plugin, uninstall its package with `uv pip uninstall` or `pip uninstall`,
+using the package name defined in the plugin's `pyproject.toml` (typically matching the
+plugin folder name):
+
+=== "uv"
+    ```bash
+    uv pip uninstall <plugin_package_name>
+    ```
+
+=== "pip"
+    ```bash
+    pip uninstall <plugin_package_name>
+    ```
+
+### Available Plugins
+
+The repository includes a growing collection of powerful plugins: from
+SAM3-powered interactive segmentation (`sam3_segmentation`) and LightlyTrain-based
+auto-labeling (`lightly_train_object_detection`) to automatic bounding box propagation
+across video frames (`bbox_auto_propagation_nano_tracker`).
+
+**[Explore all available plugins on GitHub →](https://github.com/lightly-ai/lightly-studio-plugins)**
+
+## Build Your Own Plugin
+
 The LightlyStudio operator plugin makes it possible to call a python function in the backend through a dialog in the graphical user interface (GUI) alias frontend. After you register an operator through the Python API, the GUI lists it automatically. For operators using the builtin parameter types, the dialog in the GUI is generated and rendered automatically.
 
 ### Operator Plugin
