@@ -7,7 +7,6 @@ from uuid import UUID
 from lightly_mundig import Typicality  # type: ignore[import-untyped]
 from sqlmodel import Session
 
-from lightly_studio.dataset.env import LIGHTLY_STUDIO_LICENSE_KEY
 from lightly_studio.resolvers import (
     metadata_resolver,
     sample_embedding_resolver,
@@ -41,19 +40,12 @@ def compute_typicality_metadata(
             The name of the metadata field to store the typicality values in.
             Defaults to "typicality".
     """
-    license_key = LIGHTLY_STUDIO_LICENSE_KEY
-    if license_key is None:
-        raise ValueError(
-            "LIGHTLY_STUDIO_LICENSE_KEY environment variable is not set. "
-            "Please set it to your LightlyStudio license key."
-        )
-
     samples = sample_embedding_resolver.get_all_by_collection_id(
         session=session, collection_id=collection_id, embedding_model_id=embedding_model_id
     )
 
     embeddings = [sample.embedding for sample in samples]
-    typicality = Typicality(embeddings=embeddings, token=license_key)
+    typicality = Typicality(embeddings=embeddings)
     typicality_values = typicality.calculate_typicality(
         num_nearest_neighbors=DEFAULT_NUM_NEAREST_NEIGHBORS
     )
