@@ -16,6 +16,7 @@
 
     const { setRangeSelectionForCollection } = useGlobalStorage();
 
+    // svelte-ignore state_referenced_locally
     const embeddingFilter = isVideos
         ? useEmbeddingFilterForVideos(collectionIdStore, setRangeSelectionForCollection)
         : useEmbeddingFilterForImages(collectionIdStore, setRangeSelectionForCollection);

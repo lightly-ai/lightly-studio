@@ -49,7 +49,7 @@
         return $collectionIdToName[annotation.annotation_collection_id] ?? label;
     });
 
-    const segmentationMask = annotation?.segmentation_details?.segmentation_mask;
+    const segmentationMask = $derived(annotation?.segmentation_details?.segmentation_mask);
 
     const annotationId = $derived(annotation.sample_id);
 
@@ -84,6 +84,7 @@
         segmentationMask ? 0 : ($customLabelColorsStore[colorLabel]?.alpha ?? 1.0) * 0.4
     );
 
+    // svelte-ignore state_referenced_locally
     let boundingBox = $state<BoundingBox>(getBoundingBox(annotation));
 
     const onResize = (newBbox: BoundingBox) => {

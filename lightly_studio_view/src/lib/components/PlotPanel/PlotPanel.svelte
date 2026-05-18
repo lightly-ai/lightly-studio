@@ -18,7 +18,7 @@
     import { page } from '$app/state';
     import { isVideosRoute } from '$lib/routes';
 
-    const collectionId = page.params.collection_id;
+    const collectionId = page.params.collection_id!;
     const { setShowPlot, getRangeSelection, setRangeSelectionForCollection } = useGlobalStorage();
     const rangeSelection = getRangeSelection(collectionId);
     const setRangeSelection = (selection: Point[] | null) => {

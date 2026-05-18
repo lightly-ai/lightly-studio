@@ -16,6 +16,7 @@
         box: BoundingBox;
     } = $props();
 
+    // svelte-ignore state_referenced_locally
     const { x, y, width, height } = box;
     const handleSelect = () => {
         onSelect(groupId);

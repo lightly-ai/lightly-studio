@@ -22,6 +22,7 @@
     const isVideos = $derived(isVideosRoute(page.route.id));
     const { settingsStore } = useSettings();
 
+    // svelte-ignore state_referenced_locally
     const hasEmbeddingsQuery = useHasEmbeddings({ collectionId: collection.collection_id });
     const hasEmbeddings = $derived(!!$hasEmbeddingsQuery.data);
 

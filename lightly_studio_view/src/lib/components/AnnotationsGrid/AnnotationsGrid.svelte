@@ -84,6 +84,7 @@
         isPending
     } = $derived(useAnnotationsInfinite(queryParams));
 
+    // svelte-ignore state_referenced_locally
     const { updateAnnotations: updateAnnotationsRaw } = useUpdateAnnotationsMutation({
         collectionId: collection_id
     });

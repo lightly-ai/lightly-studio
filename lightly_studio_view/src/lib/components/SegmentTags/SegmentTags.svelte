@@ -21,6 +21,7 @@
 
     let { tags, collectionId, sampleId, onRefetch = () => {} }: Props = $props();
 
+    // svelte-ignore state_referenced_locally
     const { removeTagFromSample } = useRemoveTagFromSample({ collectionId });
 
     async function handleRemoveTag(tagId: string) {
@@ -42,6 +43,7 @@
         useTags({ collection_id: collectionId, kind: [tagKind] })
     );
 
+    // svelte-ignore state_referenced_locally
     const {
         busy: addTagBusy,
         addExisting,

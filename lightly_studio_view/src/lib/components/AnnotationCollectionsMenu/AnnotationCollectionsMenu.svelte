@@ -10,6 +10,7 @@
 
     let { collectionId }: Props = $props();
 
+    // svelte-ignore state_referenced_locally
     const annotationCollectionsQuery = useAnnotationCollections({ collectionId });
     const items = $derived(
         ($annotationCollectionsQuery.data ?? []).map((c) => ({ id: c.collection_id, name: c.name }))

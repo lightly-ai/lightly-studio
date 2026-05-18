@@ -6,6 +6,7 @@
 
     const { data } = $props();
 
+    // svelte-ignore state_referenced_locally
     const {
         sampleSize,
         globalStorage: { textEmbedding }

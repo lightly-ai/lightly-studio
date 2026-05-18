@@ -133,7 +133,7 @@ export function useClassifierUtils(): UseClassifierUtilsReturn {
     };
 
     async function prepareSamples(): Promise<PrepareSamplesResponse> {
-        const collectionId = page.params.collection_id;
+        const collectionId = page.params.collection_id!;
         const selectedSampleIds = getSelectedSampleIds(collectionId);
         const selectedIds = get(selectedSampleIds);
         const positives = Array.from(selectedIds);

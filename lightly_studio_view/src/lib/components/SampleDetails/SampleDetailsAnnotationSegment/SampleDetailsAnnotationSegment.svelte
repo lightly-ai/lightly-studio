@@ -37,10 +37,13 @@
         setLockedAnnotationIds
     } = useAnnotationLabelContext();
 
+    // svelte-ignore state_referenced_locally
     const annotationLabels = useAnnotationLabels({ collectionId });
+    // svelte-ignore state_referenced_locally
     const { createAnnotation } = useCreateAnnotation({
         collectionId
     });
+    // svelte-ignore state_referenced_locally
     const { deleteAnnotation } = useDeleteAnnotation({
         collectionId
     });

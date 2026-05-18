@@ -31,6 +31,7 @@
     let videoEl: HTMLVideoElement | null = $state(null);
     let frameRequestId: number | null = $state(null);
 
+    // svelte-ignore state_referenced_locally
     const {
         currentFrame,
         frames: videoFrames,

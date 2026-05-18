@@ -47,7 +47,7 @@
         ($p) =>
             ({
                 routeId: $p.route.id,
-                collectionId: $p.params.collection_id,
+                collectionId: $p.params.collection_id!,
                 sampleId: $p.params.sampleId || $p.params.sample_id || null,
                 annotationId: $p.params.annotationId || null,
                 sampleType: ($p.params.collection_type as SampleType) ?? null
@@ -56,7 +56,7 @@
 
     const queryClient = useQueryClient();
 
-    const collectionId = $page.params.collection_id;
+    const collectionId = $page.params.collection_id!;
 
     const { tagsSelected } = useTags({ collection_id: collectionId, kind: ['annotation'] });
 
@@ -104,6 +104,7 @@
         }
     });
 
+    // svelte-ignore state_referenced_locally
     let previousIsOpen = isOpen;
     $effect(() => {
         if (!isOpen && previousIsOpen) {

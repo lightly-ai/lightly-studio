@@ -13,6 +13,7 @@
     } = $props();
 
     // Fetch collection details to get parent_collection_id
+    // svelte-ignore state_referenced_locally
     const collectionQuery = createQuery(
         readCollectionOptions({
             path: { collection_id: collectionId }

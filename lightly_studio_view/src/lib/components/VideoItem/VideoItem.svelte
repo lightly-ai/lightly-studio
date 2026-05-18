@@ -38,6 +38,7 @@
     const HOVER_DELAY = 200;
     let isHovering = false;
     // Start it with the initial frame
+    // svelte-ignore state_referenced_locally
     let frames = $state<FrameView[]>(video.frame == null ? [] : [video.frame]);
 
     async function handleMouseEnter() {

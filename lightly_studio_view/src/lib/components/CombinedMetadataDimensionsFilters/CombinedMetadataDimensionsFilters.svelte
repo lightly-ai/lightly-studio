@@ -10,7 +10,7 @@
     import VideoFrameBoundsFilter from '../VideoFrameBoundsFilter/VideoFrameBoundsFilter.svelte';
     import VideoFieldBoundsFilters from '../VideoFieldBoundsFilters/VideoFieldBoundsFilters.svelte';
 
-    const collectionId = page.params.collection_id;
+    const collectionId = page.params.collection_id!;
 
     const {
         isVideos = false,

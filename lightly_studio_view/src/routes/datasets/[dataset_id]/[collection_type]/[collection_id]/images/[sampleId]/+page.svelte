@@ -9,9 +9,9 @@
 
     createSampleDetailsToolbarContext();
 
-    const sampleId = $derived(page.params.sampleId);
+    const sampleId = $derived(page.params.sampleId!);
     const datasetId = $derived(page.params.dataset_id!);
-    const collectionType = $derived(page.params.collection_type);
+    const collectionType = $derived(page.params.collection_type!);
     const collection = page.data.collection;
     const collectionId = $derived(page.params.collection_id!);
 

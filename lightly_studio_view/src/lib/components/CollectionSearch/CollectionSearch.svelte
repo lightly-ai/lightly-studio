@@ -33,10 +33,13 @@
         onError
     }: Props = $props();
 
+    // svelte-ignore state_referenced_locally
     let queryText = $state(initialQueryText);
+    // svelte-ignore state_referenced_locally
     let submittedQueryText = $state(initialQueryText);
     let fileInput = $state<HTMLInputElement | null>(null);
 
+    // svelte-ignore state_referenced_locally
     const { dragOver, handleDragOver, handleDragLeave, handleDrop, handlePaste, handleFileSelect } =
         useFileDrop({
             onFileAccepted: async (file) => {

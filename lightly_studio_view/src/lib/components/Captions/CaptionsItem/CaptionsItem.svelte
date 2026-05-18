@@ -47,6 +47,7 @@
     // For captions page, page.data.collection is the CAPTION collection (sample_type: CAPTION),
     // not the parent collection that contains the actual samples (IMAGE or VIDEO)
     // We need to fetch the collection for the sample's collection_id to get the correct sample type
+    // svelte-ignore state_referenced_locally
     const sampleCollectionQuery = createQuery({
         ...readCollectionOptions({
             path: { collection_id: item.collection_id || '' }
@@ -58,6 +59,7 @@
     const sampleType = $derived(sampleCollection?.sample_type);
 
     // Fetch video data if it's a video sample to get the first frame
+    // svelte-ignore state_referenced_locally
     const videoQuery = createQuery({
         ...getVideoByIdOptions({
             path: { sample_id: item.sample_id }

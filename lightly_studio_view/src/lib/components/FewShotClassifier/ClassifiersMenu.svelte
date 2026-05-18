@@ -29,7 +29,7 @@
     const exportOptions: ClassifierExportType[] = ['sklearn', 'lightly'];
 
     // Subscribe to page params
-    const collectionId = page.params.collection_id;
+    const collectionId = page.params.collection_id!;
 
     const client = useQueryClient();
 
