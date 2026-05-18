@@ -1,7 +1,9 @@
 <script lang="ts">
     import { page } from '$app/state';
+    import { SortDirection } from '$lib/api/lightly_studio_local';
     import {
         createCombinationSelection,
+        computeSimilarityMetadata,
         computeTypicalityMetadata
     } from '$lib/api/lightly_studio_local/sdk.gen';
     import { Button } from '$lib/components/ui/button';
@@ -10,17 +12,17 @@
     import { Label } from '$lib/components/ui/label';
     import * as Select from '$lib/components/ui/select';
     import { toast } from 'svelte-sonner';
+    import { useImageFilters } from '$lib/hooks/useImageFilters/useImageFilters';
     import { useTags } from '$lib/hooks/useTags/useTags';
     import { useSelectionDialog } from '$lib/hooks/useSelectionDialog/useSelectionDialog';
-    import { useImageFilters } from '$lib/hooks/useImageFilters/useImageFilters';
     import { useVideoFilters } from '$lib/hooks/useVideoFilters/useVideoFilters';
     import { useGlobalStorage } from '$lib/hooks/useGlobalStorage';
     import type { SelectionRequest } from '$lib/api/lightly_studio_local/types.gen';
 
     // Get collection ID from URL params
     const collectionId = $derived(page.params.collection_id!);
-
-    const { loadTags } = $derived(useTags({ collection_id: collectionId, kind: ['sample'] }));
+    const { loadTags, tags } = $derived(useTags({ collection_id: collectionId, kind: ['sample'] }));
+    const { updateSortBy } = useImageFilters();
 
     const { isSelectionDialogOpen, openSelectionDialog, closeSelectionDialog } =
         useSelectionDialog();
@@ -52,21 +54,31 @@
     );
 
     // Form state
-    let selectionStrategy = $state<'diversity' | 'typicality' | ''>('');
+    let selectionStrategy = $state<'diversity' | 'typicality' | 'similarity' | ''>('');
     let nSamplesToSelect = $state<number>(10);
+    let queryTagId = $state<string>('');
     let selectionResultTagName = $state<string>('');
     let isSubmitting = $state(false);
     let loadingMessage = $state<string>('');
 
     // Form validation
     const isFormValid = $derived(
-        selectionStrategy !== '' && nSamplesToSelect > 0 && selectionResultTagName.trim().length > 0
+        selectionStrategy !== '' &&
+            (selectionStrategy === 'similarity'
+                ? queryTagId !== ''
+                : nSamplesToSelect > 0 && selectionResultTagName.trim().length > 0)
+    );
+
+    const selectedQueryTagName = $derived(
+        $tags.find((tag) => tag.tag_id === queryTagId)?.name ?? 'Select tag'
     );
 
     const noSamples = $derived($filteredSampleCount === 0);
 
     const notEnoughSamples = $derived(
-        $filteredSampleCount > 0 && nSamplesToSelect > $filteredSampleCount
+        selectionStrategy !== 'similarity' &&
+            $filteredSampleCount > 0 &&
+            nSamplesToSelect > $filteredSampleCount
     );
 
     const selectionDescription = $derived(
@@ -90,6 +102,7 @@
 
         selectionStrategy = '';
         nSamplesToSelect = 10;
+        queryTagId = '';
         selectionResultTagName = '';
     }
 
@@ -170,6 +183,39 @@
                 }
 
                 handleSelectionSuccess();
+            } else if (selectionStrategy === 'similarity') {
+                loadingMessage = 'Computing similarity metadata...';
+                const similarityResponse = await computeSimilarityMetadata({
+                    path: { collection_id: collectionId, query_tag_id: queryTagId },
+                    body: {
+                        embedding_model_name: null,
+                        metadata_name: 'similarity'
+                    }
+                });
+
+                responseError = similarityResponse.error as SelectionError;
+                if (similarityResponse.error) {
+                    toast.error(
+                        'Failed to compute similarity metadata: ' +
+                            (responseError.error || 'Unknown error')
+                    );
+                    return;
+                }
+
+                updateSortBy([
+                    {
+                        source: 'metadata',
+                        field_name: 'similarity',
+                        direction: SortDirection.DESC,
+                        is_numeric: true
+                    }
+                ]);
+                toast.success('Similarity sort applied');
+                closeSelectionDialog();
+                selectionStrategy = '';
+                nSamplesToSelect = 10;
+                queryTagId = '';
+                selectionResultTagName = '';
             }
         } catch (error) {
             toast.error('Failed to create selection: ' + (error as Error).message);
@@ -189,7 +235,7 @@
         <Dialog.Content class="border-border bg-background sm:max-w-[425px]">
             <form onsubmit={handleFormSubmit}>
                 <Dialog.Header>
-                    <Dialog.Title class="text-foreground">Create Selection</Dialog.Title>
+                    <Dialog.Title class="text-foreground">Create Sampling</Dialog.Title>
                     <Dialog.Description class="text-foreground">
                         {selectionDescription}
                     </Dialog.Description>
@@ -208,7 +254,9 @@
                                     ? 'Diversity'
                                     : selectionStrategy === 'typicality'
                                       ? 'Typicality'
-                                      : 'Select strategy'}
+                                      : selectionStrategy === 'similarity'
+                                        ? 'Similarity Search'
+                                        : 'Select strategy'}
                             </Select.Trigger>
                             <Select.Content>
                                 <Select.Group>
@@ -224,41 +272,78 @@
                                         data-testid="selection-strategy-typicality"
                                         >Typicality</Select.Item
                                     >
+                                    <Select.Item
+                                        value="similarity"
+                                        label="Similarity Search"
+                                        data-testid="selection-strategy-similarity"
+                                        >Similarity Search</Select.Item
+                                    >
                                 </Select.Group>
                             </Select.Content>
                         </Select.Root>
                     </div>
 
-                    <!-- Number of Samples Input -->
-                    <div class="grid grid-cols-4 items-center gap-4">
-                        <Label for="n-samples" class="text-right text-foreground">
-                            Number of Samples
-                        </Label>
-                        <Input
-                            id="n-samples"
-                            type="number"
-                            bind:value={nSamplesToSelect}
-                            min="1"
-                            class="col-span-3"
-                            placeholder="Enter number of samples"
-                            required
-                            data-testid="selection-dialog-n-samples-input"
-                        />
-                    </div>
+                    {#if selectionStrategy === 'similarity'}
+                        <div class="grid grid-cols-4 items-center gap-4">
+                            <Label for="query-tag" class="text-right text-foreground">
+                                Query Tag
+                            </Label>
+                            <Select.Root type="single" name="query-tag" bind:value={queryTagId}>
+                                <Select.Trigger
+                                    class="col-span-3"
+                                    data-testid="selection-dialog-query-tag-select"
+                                >
+                                    {selectedQueryTagName}
+                                </Select.Trigger>
+                                <Select.Content>
+                                    <Select.Group>
+                                        {#each $tags as tag (tag.tag_id)}
+                                            <Select.Item
+                                                value={tag.tag_id}
+                                                label={tag.name}
+                                                data-testid={`selection-query-tag-${tag.tag_id}`}
+                                            >
+                                                {tag.name}
+                                            </Select.Item>
+                                        {/each}
+                                    </Select.Group>
+                                </Select.Content>
+                            </Select.Root>
+                        </div>
+                    {:else}
+                        <!-- Number of Samples Input -->
+                        <div class="grid grid-cols-4 items-center gap-4">
+                            <Label for="n-samples" class="text-right text-foreground">
+                                Number of Samples
+                            </Label>
+                            <Input
+                                id="n-samples"
+                                type="number"
+                                bind:value={nSamplesToSelect}
+                                min="1"
+                                class="col-span-3"
+                                placeholder="Enter number of samples"
+                                required
+                                data-testid="selection-dialog-n-samples-input"
+                            />
+                        </div>
 
-                    <!-- Tag Name Input -->
-                    <div class="grid grid-cols-4 items-center gap-4">
-                        <Label for="tag-name" class="text-right text-foreground">Tag Name</Label>
-                        <Input
-                            id="tag-name"
-                            type="text"
-                            bind:value={selectionResultTagName}
-                            class="col-span-3"
-                            placeholder="Enter a tag for the sampled subset"
-                            required
-                            data-testid="selection-dialog-tag-name-input"
-                        />
-                    </div>
+                        <!-- Tag Name Input -->
+                        <div class="grid grid-cols-4 items-center gap-4">
+                            <Label for="tag-name" class="text-right text-foreground">
+                                Tag Name
+                            </Label>
+                            <Input
+                                id="tag-name"
+                                type="text"
+                                bind:value={selectionResultTagName}
+                                class="col-span-3"
+                                placeholder="Enter a tag for the sampled subset"
+                                required
+                                data-testid="selection-dialog-tag-name-input"
+                            />
+                        </div>
+                    {/if}
 
                     <!-- Warning when no samples match the current filters -->
                     {#if noSamples}
@@ -297,7 +382,13 @@
                         disabled={!isFormValid || isSubmitting || notEnoughSamples || noSamples}
                         data-testid="selection-dialog-submit"
                     >
-                        {isSubmitting ? loadingMessage || 'Creating...' : 'Create Selection'}
+                        {#if isSubmitting}
+                            {loadingMessage || 'Creating...'}
+                        {:else if selectionStrategy === 'similarity'}
+                            Apply Similarity Search
+                        {:else}
+                            Create Selection
+                        {/if}
                     </Button>
                 </Dialog.Footer>
             </form>

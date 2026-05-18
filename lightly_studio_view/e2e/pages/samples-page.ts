@@ -133,9 +133,10 @@ export class SamplesPage {
     }
 
     async createSelection(
-        strategy: 'diversity' | 'typicality',
+        strategy: 'diversity' | 'typicality' | 'similarity',
         nSamples: number,
-        tagName: string
+        tagName: string,
+        queryTagId?: string
     ): Promise<void> {
         await this.page.getByTestId('menu-trigger').click();
         await this.page.getByTestId('menu-selection').click();
@@ -143,12 +144,17 @@ export class SamplesPage {
         await this.page.getByTestId('selection-dialog-strategy-select').click();
         await this.page.getByTestId(`selection-strategy-${strategy}`).click();
 
-        const nSamplesInput = this.page.getByTestId('selection-dialog-n-samples-input');
-        await nSamplesInput.clear();
-        await nSamplesInput.fill(nSamples.toString());
+        if (strategy === 'similarity' && queryTagId) {
+            await this.page.getByTestId('selection-dialog-query-tag-select').click();
+            await this.page.getByTestId(`selection-query-tag-${queryTagId}`).click();
+        } else {
+            const nSamplesInput = this.page.getByTestId('selection-dialog-n-samples-input');
+            await nSamplesInput.clear();
+            await nSamplesInput.fill(nSamples.toString());
 
-        const tagNameInput = this.page.getByTestId('selection-dialog-tag-name-input');
-        await tagNameInput.fill(tagName);
+            const tagNameInput = this.page.getByTestId('selection-dialog-tag-name-input');
+            await tagNameInput.fill(tagName);
+        }
 
         await pressButton(this.page, 'selection-dialog-submit');
     }
@@ -159,6 +165,10 @@ export class SamplesPage {
 
     async createTypicalitySelection(nSamples: number, tagName: string): Promise<void> {
         return this.createSelection('typicality', nSamples, tagName);
+    }
+
+    async createSimilaritySelection(queryTagId: string): Promise<void> {
+        return this.createSelection('similarity', 0, '', queryTagId);
     }
 
     async pressTag(tagName: string): Promise<void> {
@@ -215,6 +225,15 @@ export class SamplesPage {
             if (labelText) tagLabelsText.push(labelText);
         }
         return tagLabelsText;
+    }
+
+    async getTagIdByName(tagName: string): Promise<string | null> {
+        const tagLabel = this.page
+            .getByTestId('tags-menu-label')
+            .filter({ hasText: tagName })
+            .first();
+        const input = tagLabel.locator('xpath=ancestor::label[1]//input').first();
+        return input.getAttribute('name');
     }
 
     async getNumSelectedSamples(): Promise<number> {

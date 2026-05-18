@@ -223,6 +223,32 @@ test('Typicality selection creates tag with correct number of samples', async ({
     expect(sampleCount).toBe(nSamples);
 });
 
+test('Similarity search computes metadata and sorts images by similarity', async ({
+    page,
+    samplesPage
+}) => {
+    const timestamp = Date.now();
+    const queryTagName = `similarity_query_${timestamp}`;
+
+    await samplesPage.createDiversitySelection(5, queryTagName);
+    await expect(page.getByText('Selection created successfully')).toBeVisible({ timeout: 10000 });
+
+    const queryTagId = await samplesPage.getTagIdByName(queryTagName);
+    expect(queryTagId).toBeTruthy();
+
+    const similarityPromise = page.waitForResponse(
+        (response) =>
+            response.url().includes(`/metadata/similarity/${queryTagId}`) &&
+            response.status() === 204
+    );
+
+    await samplesPage.createSimilaritySelection(queryTagId!);
+
+    await similarityPromise;
+    await expect(page.getByText('Similarity sort applied')).toBeVisible({ timeout: 10000 });
+    await expect(page.getByTestId('sort-by-trigger')).toHaveText('Similarity');
+});
+
 test('Selection shows error toast when tag already exists', async ({ page, samplesPage }) => {
     // samplesPage fixture automatically navigates and loads samples
 
