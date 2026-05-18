@@ -301,7 +301,7 @@ def test_create_combination_selection__image_filter_success(
         collection_id=collection_id,
         embedding_model_name="test_embedding_model",
     )
-    helpers_resolvers.create_samples_with_embeddings(
+    images = helpers_resolvers.create_samples_with_embeddings(
         session=db_session,
         collection_id=collection_id,
         embedding_model_id=embedding_model.embedding_model_id,
@@ -325,6 +325,21 @@ def test_create_combination_selection__image_filter_success(
     )
 
     assert response.status_code == 204
+    created_tag = tag_resolver.get_by_name(
+        session=db_session, tag_name="tag1", collection_id=collection_id
+    )
+    assert created_tag is not None
+
+    result = image_resolver.get_all_by_collection_id(
+        session=db_session,
+        collection_id=collection_id,
+        filters=ImageFilter(sample_filter=SampleFilter(tag_ids=[created_tag.tag_id])),
+    )
+    assert len(result.samples) == 2
+    assert {images[1].sample_id, images[2].sample_id} == {
+        sample.sample_id for sample in result.samples
+    }
+    assert {"wide1.jpg", "wide2.jpg"} == {sample.file_name for sample in result.samples}
 
 
 def test_create_combination_selection__video_filter_success(
@@ -389,6 +404,21 @@ def test_create_combination_selection__video_filter_success(
     )
 
     assert response.status_code == 204
+    created_tag = tag_resolver.get_by_name(
+        session=db_session, tag_name="tag1", collection_id=collection_id
+    )
+    assert created_tag is not None
+
+    result = video_resolver.get_all_by_collection_id(
+        session=db_session,
+        collection_id=collection_id,
+        filters=VideoFilter(sample_filter=SampleFilter(tag_ids=[created_tag.tag_id])),
+    )
+    assert len(result.samples) == 2
+    assert {wide_video1.sample_id, wide_video2.sample_id} == {
+        sample.sample_id for sample in result.samples
+    }
+    assert {"wide1.mp4", "wide2.mp4"} == {sample.file_name for sample in result.samples}
 
 
 def test_create_combination_selection__image_collection_rejects_video_filter(
