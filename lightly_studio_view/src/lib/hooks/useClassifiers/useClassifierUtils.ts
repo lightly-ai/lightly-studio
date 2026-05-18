@@ -1,9 +1,15 @@
 import type { AnnotatedSamples, ClassifierExportType } from '$lib/services/types';
 import { page } from '$app/state';
 import { get, writable, type Readable } from 'svelte/store';
-import client from '$lib/services/collection';
 import { useGlobalStorage } from '$lib/hooks/useGlobalStorage';
 import { triggerDownloadBlob } from '$lib/utils';
+import {
+    getNegativeSamples,
+    saveClassifierToFile,
+    loadClassifierFromBuffer,
+    updateClassifiersAnnotations,
+    trainClassifier as trainClassifierApi
+} from '$lib/api/lightly_studio_local';
 
 interface PrepareSamplesResponse {
     positiveSampleIds: string[];
@@ -37,19 +43,10 @@ export function useClassifierUtils(): UseClassifierUtilsReturn {
     const saveClassifier = async (classifierId: string, exportType: ClassifierExportType) => {
         try {
             error.set(null);
-            const response = await client.POST(
-                '/api/classifiers/{classifier_id}/save_classifier_to_file/{export_type}',
-                {
-                    params: {
-                        path: { classifier_id: classifierId, export_type: exportType }
-                    },
-                    responseType: 'arraybuffer',
-                    headers: {
-                        Accept: 'application/octet-stream'
-                    },
-                    parseAs: 'blob'
-                }
-            );
+            const response = await saveClassifierToFile({
+                path: { classifier_id: classifierId, export_type: exportType },
+                parseAs: 'blob'
+            });
 
             const contentDisposition = response.response.headers.get('content-disposition');
             const filenameMatch = contentDisposition?.match(/filename="(.+)"/);
@@ -60,7 +57,8 @@ export function useClassifierUtils(): UseClassifierUtilsReturn {
                 return Promise.reject('No data received from the server');
             }
 
-            triggerDownloadBlob(filename, response.data);
+            // parseAs: 'blob' makes data a Blob at runtime, but the type is {} from OpenAPI spec
+            triggerDownloadBlob(filename, response.data as unknown as Blob);
         } catch (err) {
             error.set(err as Error);
             throw err;
@@ -78,17 +76,9 @@ export function useClassifierUtils(): UseClassifierUtilsReturn {
         }
 
         try {
-            const formData = new FormData();
-            formData.append('file', file);
-
-            await client.POST('/api/classifiers/load_classifier_from_buffer', {
-                params: {
-                    query: { collection_id: collectionId }
-                },
-                body: formData as unknown as { file: string },
-                headers: {
-                    Accept: 'application/json'
-                }
+            await loadClassifierFromBuffer({
+                query: { collection_id: collectionId },
+                body: { file }
             });
 
             // Reset the input.
@@ -102,12 +92,8 @@ export function useClassifierUtils(): UseClassifierUtilsReturn {
     const updateAnnotations = async (classifierId: string, annotations: AnnotatedSamples) => {
         try {
             error.set(null);
-            await client.POST('/api/classifiers/{classifier_id}/update_annotations', {
-                params: {
-                    path: {
-                        classifier_id: classifierId
-                    }
-                },
+            await updateClassifiersAnnotations({
+                path: { classifier_id: classifierId },
                 body: annotations
             });
         } catch (err) {
@@ -119,12 +105,8 @@ export function useClassifierUtils(): UseClassifierUtilsReturn {
     const trainClassifier = async (classifierId: string) => {
         try {
             error.set(null);
-            await client.POST('/api/classifiers/{classifier_id}/train_classifier', {
-                params: {
-                    path: {
-                        classifier_id: classifierId
-                    }
-                }
+            await trainClassifierApi({
+                path: { classifier_id: classifierId }
             });
         } catch (err) {
             error.set(err as Error);
@@ -140,7 +122,7 @@ export function useClassifierUtils(): UseClassifierUtilsReturn {
 
         error.set(null);
         try {
-            const response = await client.POST('/api/classifiers/get_negative_samples', {
+            const response = await getNegativeSamples({
                 body: {
                     collection_id: collectionId!.toString(),
                     positive_sample_ids: positives
