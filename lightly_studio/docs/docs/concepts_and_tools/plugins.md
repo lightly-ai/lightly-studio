@@ -9,7 +9,7 @@ Additional ready-to-use plugins are available in the
 Each plugin lives in its own subdirectory under `plugins/` and can be installed directly
 from the repository.
 
-#### Example: SAM3 Segmentation Plugin
+### Example: SAM3 Segmentation Plugin
 
 <video autoplay loop muted playsinline controls style="width: 100%;">
   <source src="https://storage.googleapis.com/lightly-public/studio/sam3_plugin.mp4" type="video/mp4">
@@ -25,7 +25,7 @@ pip install "git+https://github.com/lightly-ai/lightly-studio-plugins.git#subdir
     [sam3_segmentation README](https://github.com/lightly-ai/lightly-studio-plugins/tree/main/plugins/sam3_segmentation)
     before installing to make sure you have the necessary access and dependencies set up.
 
-Once installed, the SAM3 segmentation plugin appears in the operator menu. Select a
+Once installed, the SAM3 segmentation plugin appears in the operator menu. Select an
 image or a set of images, trigger the operator, and SAM3 will generate segmentation
 masks directly inside LightlyStudio.
 
@@ -43,8 +43,7 @@ Replace `<plugin_name>` with the folder name of the plugin you want to install:
     pip install "git+https://github.com/lightly-ai/lightly-studio-plugins.git#subdirectory=plugins/<plugin_name>/"
     ```
 
-Once installed, register the plugin through the Python API as shown in the examples below
-and it will appear in the GUI automatically.
+Once installed, register the plugin through the Python API and it will appear in the GUI automatically.
 
 ### Uninstalling a Plugin
 
@@ -228,6 +227,7 @@ class LightlyTrainAutoLabelingODOperator(BaseOperator):
         if (parameters["Threshold"] > 1.0) or (parameters["Threshold"] < 0.0):
             return OperatorResult(success=False, message="Threshold must be in range 0.0 to 1.0")
 
+        collection_name = f"lightly_train_auto_label__{parameters["Model"]}"
         raw_classes = getattr(model, "classes", {})
         label_map = _preload_label_map(session, context.collection_id, list(raw_classes.values()))
 
@@ -271,6 +271,7 @@ class LightlyTrainAutoLabelingODOperator(BaseOperator):
             session=session,
             parent_collection_id=context.collection_id,
             annotations=annotations_buffer,
+            collection_name=collection_name,
         )
         total_created = len(annotations_buffer)
 
