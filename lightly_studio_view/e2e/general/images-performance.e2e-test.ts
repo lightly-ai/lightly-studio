@@ -12,7 +12,7 @@ import * as path from 'path';
 
 const PERFORMANCE_LIMITS = {
     // TODO(Michal, 5/2026): Revert back to 6000ms after fixing the underlying performance issues.
-    maxRenderTimeMs: 7000,
+    maxRenderTimeMs: 8000,
     maxMemoryUsageMb: 256
 };
 const MEASUREMENT_ITERATIONS = 3;

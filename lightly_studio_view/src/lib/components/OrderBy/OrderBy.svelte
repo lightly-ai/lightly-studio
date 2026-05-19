@@ -18,8 +18,13 @@
         selectedLabel,
         isFieldSelected,
         handleFieldClick,
-        toggleDirection
+        toggleDirection,
+        dispose
     } = $derived(useOrderBy({ datasetId }));
+
+    $effect(() => {
+        return () => dispose();
+    });
 
     let open = $state(false);
 </script>
