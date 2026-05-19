@@ -56,7 +56,7 @@ def _build_metadata_color_scale(
     key: str,
     sample_to_value: dict[UUID, Any],
     metadata_type: str | None,
-) -> DiscreteColorScale:
+) -> DiscreteColorScale[Any]:
     """Build a DiscreteColorScale for one metadata key across all collection samples."""
     if metadata_type == "string":
         str_values: set[str] = set(sample_to_value.values())

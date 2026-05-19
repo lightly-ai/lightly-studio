@@ -18,7 +18,8 @@ class ColorScale(Protocol[T_contra]):
         legend: Mapping from color category integer to a human-readable label.
     """
 
-    legend: dict[int, str]
+    @property
+    def legend(self) -> dict[int, str]: ...
 
     def value_to_category(self, value: T_contra) -> int | None:
         """Return the color category for a value, or None if unmapped."""
@@ -63,7 +64,7 @@ class DiscreteColorScale(Generic[T]):
         """
         lookup: dict[T, int] = {}
         legend: dict[int, str] = {}
-        for i, value in enumerate(sorted(values)):
+        for i, value in enumerate(sorted(values, key=format_fn)):
             cat = start_cat + i
             lookup[value] = cat
             legend[cat] = format_fn(value)
@@ -93,9 +94,8 @@ def assign_color_categories(
         if fulfils_filter[i] == 0:
             cat = 0
         elif sid in sample_to_value:
-            cat = scale.value_to_category(sample_to_value[sid])
-            if cat is None:
-                cat = 1
+            mapped = scale.value_to_category(sample_to_value[sid])
+            cat = mapped if mapped is not None else 1
         else:
             cat = 1
         color_categories.append(cat)
