@@ -112,11 +112,9 @@ def _build_color_scale_str(
     """Build a MetadataColorScale for string metadata values."""
     value_to_category: dict[str, int] = {}
     legend: dict[int, str] = {}
-    cat = start_cat
-    for value in sorted(values):
-        value_to_category[value] = cat
-        legend[cat] = value
-        cat += 1
+    for i, value in enumerate(sorted(values)):
+        value_to_category[value] = start_cat + i
+        legend[start_cat + i] = value
     return MetadataColorScale(value_to_category=value_to_category, legend=legend)
 
 
@@ -127,12 +125,11 @@ def _build_color_scale_bool(
     """Build a MetadataColorScale for boolean metadata values."""
     value_to_category: dict[bool, int] = {}
     legend: dict[int, str] = {}
-    cat = start_cat
-    for value in sorted(values):
+    for i, value in enumerate(sorted(values)):
         label = str(value).lower()
-        value_to_category[value] = cat
-        legend[cat] = label
-        cat += 1
+
+        value_to_category[value] = start_cat + i
+        legend[start_cat + i] = label
     return MetadataColorScale(value_to_category=value_to_category, legend=legend)
 
 
