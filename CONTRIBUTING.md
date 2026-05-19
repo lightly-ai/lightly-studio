@@ -128,7 +128,6 @@ cp .env.example .env
 
 Now edit the `.env` file:
 
-* Request the `LIGHTLY_STUDIO_LICENSE_KEY` from a Lightly developer and set its value in the file.
 * Optionally change the `EXAMPLES_*` paths to point to data on your machine. You can leave the
 defaults to use the cloned dataset examples data.
 

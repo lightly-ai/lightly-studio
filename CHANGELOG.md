@@ -9,17 +9,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
-- Added `ImageDataset.add_annotations_from_coco`, `add_annotations_from_yolo`, and `add_annotations_from_labelformat` methods to attach named annotation collections to images already in the dataset. Re-using the same `name` appends; a new `name` creates a new collection. Enables ingesting ground truth and predictions from multiple sources side-by-side.
-- Added drag-and-drop from the image grid into the image search area.
-- Added a select-all button to select all grid items matching the active filters.
-- Added API endpoints to fetch only sample IDs with optional filters for images, video frames, and annotations (used by the select-all keyboard shortcut).
-- Added `Cmd+A` / `Ctrl+A` keyboard shortcut to select all samples matching the current filters in grid views (images, videos, video frames, annotations).
-- Added `lt_train_script` to the Python API (`lightly_studio.lt_train_script`) to generate a LightlyTrain object detection script from split tags. The helper exports train/val COCO annotation files via `dataset.export(...).to_coco_object_detections(...)` and writes `train_object_detection.py` with the exported paths.
+- Added sort-by support via GUI
 
 ### Changed
-
-- Refactored annotation mask rendering to use a shared web worker pool instead of spawning one worker per canvas.
-- Few-shot classifier predictions now land in an annotation collection named after the classifier instead of the generic `annotation` collection, so multi-prediction views can distinguish classifiers. Rerunning a classifier reuses the same collection.
 
 ### Deprecated
 
@@ -28,6 +20,26 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Fixed
 
 ### Security
+
+## \[0.4.14\] - 2026-05-18
+
+### Added
+
+- Added `ImageDataset.add_annotations_from_coco`, `add_annotations_from_yolo`, and `add_annotations_from_labelformat` methods to attach named annotation collections to images already in the dataset. Re-using the same `name` appends; a new `name` creates a new collection. Enables ingesting ground truth and predictions from multiple sources side-by-side.
+- Added `lt_train_script` to the Python API (`lightly_studio.lt_train_script`) to generate a LightlyTrain object detection script from split tags. The helper exports train/val COCO annotation files via `dataset.export(...).to_coco_object_detections(...)` and writes `train_object_detection.py` with the exported paths.
+- Image samples can be sorted in the grid using image attributes and metadata.
+- Added drag-and-drop from the image grid into the image search area.
+- Added a select-all button to select all grid items matching the active filters.
+- Added `Cmd+A` / `Ctrl+A` keyboard shortcut to select all samples matching the current filters in grid views (images, videos, video frames, annotations).
+- Added API endpoints to fetch only sample IDs with optional filters for images, video frames, and annotations (used by the select-all keyboard shortcut).
+
+
+### Changed
+
+- Refactored annotation mask rendering to use a shared web worker pool instead of spawning one worker per canvas.
+- Few-shot classifier predictions now land in an annotation collection named after the classifier instead of the generic `annotation` collection, so multi-prediction views can distinguish classifiers. Rerunning a classifier reuses the same collection.
+- Removed the license key requirement for sampling.
+
 
 ## \[0.4.13\] - 2026-04-21
 

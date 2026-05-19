@@ -91,7 +91,16 @@ describe('useOrderBy', () => {
             expect(get(selectedLabel)).toBe('metadata.brightness');
         });
 
-        it('returns run_name_metric_name when an evaluation metric is active', () => {
+        it('returns a dot-formatted label when an evaluation metric is active', () => {
+            allSortFields.set([
+                ...IMAGE_SORT_FIELDS,
+                {
+                    source: 'evaluation_metric',
+                    evaluation_run_name: 'run1',
+                    metric_name: 'precision',
+                    label: 'run1.precision'
+                }
+            ]);
             imageSortBy.set([
                 {
                     source: 'evaluation_metric',
@@ -101,7 +110,7 @@ describe('useOrderBy', () => {
                 }
             ]);
             const { selectedLabel } = useOrderBy({ datasetId: 'ds1' });
-            expect(get(selectedLabel)).toBe('run1_precision');
+            expect(get(selectedLabel)).toBe('run1.precision');
         });
     });
 
@@ -146,7 +155,7 @@ describe('useOrderBy', () => {
                     source: 'evaluation_metric',
                     evaluation_run_name: 'run1',
                     metric_name: 'precision',
-                    label: 'run1_precision'
+                    label: 'run1.precision'
                 })
             ).toBe(true);
             expect(
@@ -154,7 +163,7 @@ describe('useOrderBy', () => {
                     source: 'evaluation_metric',
                     evaluation_run_name: 'run1',
                     metric_name: 'recall',
-                    label: 'run1_recall'
+                    label: 'run1.recall'
                 })
             ).toBe(false);
         });
@@ -260,7 +269,7 @@ describe('useOrderBy', () => {
                 source: 'evaluation_metric',
                 evaluation_run_name: 'run1',
                 metric_name: 'precision',
-                label: 'run1_precision'
+                label: 'run1.precision'
             });
 
             expect(updateSortBy).toHaveBeenCalledWith([

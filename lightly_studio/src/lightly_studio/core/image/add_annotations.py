@@ -107,13 +107,20 @@ def add_annotations_from_labelformat(  # noqa: PLR0913
 
 
 def normalize_images_root(images_root: PathLike) -> str:
-    """Return absolute local roots and preserve remote roots."""
+    """Return absolute local roots and preserve remote roots.
+
+    Local paths are returned in posix form (forward slashes) so they can be
+    safely joined with `posixpath.join` and compared across platforms. On
+    Windows, `str(Path(...).absolute())` yields backslashes that, when joined
+    with posix-separated relative paths, produce mixed-separator strings that
+    fail to match what was stored at ingestion time.
+    """
     images_root_str = str(images_root)
     protocol, _ = fsspec.core.split_protocol(images_root_str)
     if protocol is None:
-        return str(Path(images_root_str).absolute())
+        return Path(images_root_str).absolute().as_posix()
     if protocol == "file":
-        return str(Path(fsspec.core.strip_protocol(images_root_str)).absolute())
+        return Path(fsspec.core.strip_protocol(images_root_str)).absolute().as_posix()
     return images_root_str
 
 

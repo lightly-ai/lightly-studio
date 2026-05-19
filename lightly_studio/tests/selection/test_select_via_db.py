@@ -25,6 +25,7 @@ from lightly_studio.selection.select_via_db import (
 from lightly_studio.selection.selection_config import (
     AnnotationClassBalancingStrategy,
     EmbeddingDiversityStrategy,
+    EmbeddingSimilarityStrategy,
     SelectionConfig,
     SelectionStrategy,
 )
@@ -33,6 +34,7 @@ from tests.helpers_resolvers import (
     create_annotation_label,
     create_annotations,
     create_collection,
+    create_tag,
     fill_db_with_samples_and_embeddings,
 )
 
@@ -176,6 +178,56 @@ def test_select_via_database__embedding_diversity__sample_filter_tags(
     assert actual_sample_paths == expected_sample_paths
 
 
+def test_select_via_database__embedding_similarity(
+    db_session: Session,
+) -> None:
+    """Runs selection with an embedding similarity strategy."""
+    collection_id = fill_db_with_samples_and_embeddings(
+        db_session, n_samples=5, embedding_model_names=["embedding_model_1"]
+    )
+    all_samples = image_resolver.get_all_by_collection_id(
+        session=db_session, pagination=None, collection_id=collection_id
+    ).samples
+    query_tag = create_tag(session=db_session, collection_id=collection_id, tag_name="query_tag")
+    tag_resolver.add_sample_ids_to_tag_id(
+        session=db_session,
+        tag_id=query_tag.tag_id,
+        sample_ids=[all_samples[0].sample_id, all_samples[1].sample_id],
+    )
+
+    selection_config = SelectionConfig(
+        collection_id=collection_id,
+        n_samples_to_select=2,
+        selection_result_tag_name="selection_1",
+        strategies=[
+            EmbeddingSimilarityStrategy(
+                query_tag_name="query_tag",
+                embedding_model_name="embedding_model_1",
+            )
+        ],
+    )
+
+    select_via_database(
+        db_session, selection_config, input_sample_ids=_all_sample_ids(db_session, collection_id)
+    )
+
+    tags = tag_resolver.get_all_by_collection_id(db_session, collection_id=collection_id)
+    assert len(tags) == 2
+
+    selection_tag = next(tag for tag in tags if tag.name == "selection_1")
+    samples_in_tag = image_resolver.get_all_by_collection_id(
+        session=db_session,
+        collection_id=collection_id,
+        filters=ImageFilter(sample_filter=SampleFilter(tag_ids=[selection_tag.tag_id])),
+    ).samples
+
+    # Similarity returns the 2 samples that we compared against. Those are the most similar samples
+    # from the dataset.
+    expected_sample_paths = {"sample_0.jpg", "sample_1.jpg"}
+    actual_sample_paths = {sample.file_path_abs for sample in samples_in_tag}
+    assert actual_sample_paths == expected_sample_paths
+
+
 def test_select_via_database__unknown_strategy(
     db_session: Session,
 ) -> None:
@@ -199,6 +251,72 @@ def test_select_via_database__unknown_strategy(
     with pytest.raises(
         ValueError,
         match=expected_error,
+    ):
+        select_via_database(
+            db_session,
+            selection_config,
+            input_sample_ids=_all_sample_ids(db_session, collection_id),
+        )
+
+
+def test_select_via_database__embedding_similarity__missing_query_tag(
+    db_session: Session,
+) -> None:
+    """Runs selection with a missing similarity query tag."""
+    collection_id = fill_db_with_samples_and_embeddings(
+        db_session, n_samples=5, embedding_model_names=["embedding_model_1"]
+    )
+
+    selection_config = SelectionConfig(
+        collection_id=collection_id,
+        n_samples_to_select=2,
+        selection_result_tag_name="selection_1",
+        strategies=[
+            EmbeddingSimilarityStrategy(
+                query_tag_name="missing_query_tag",
+                embedding_model_name="embedding_model_1",
+            )
+        ],
+    )
+
+    with pytest.raises(
+        ValueError,
+        match=r"Query tag with name missing_query_tag not found\.",
+    ):
+        select_via_database(
+            db_session,
+            selection_config,
+            input_sample_ids=_all_sample_ids(db_session, collection_id),
+        )
+
+
+def test_select_via_database__embedding_similarity__query_tag_without_embeddings(
+    db_session: Session,
+) -> None:
+    """Runs selection with a query tag that has no embeddings."""
+    collection_id = fill_db_with_samples_and_embeddings(
+        db_session, n_samples=5, embedding_model_names=["embedding_model_1"]
+    )
+    create_tag(session=db_session, collection_id=collection_id, tag_name="empty_query_tag")
+
+    selection_config = SelectionConfig(
+        collection_id=collection_id,
+        n_samples_to_select=2,
+        selection_result_tag_name="selection_1",
+        strategies=[
+            EmbeddingSimilarityStrategy(
+                query_tag_name="empty_query_tag",
+                embedding_model_name="embedding_model_1",
+            )
+        ],
+    )
+
+    with pytest.raises(
+        ValueError,
+        match=(
+            r"Query tag empty_query_tag does not have embeddings for embedding model "
+            r"embedding_model_1\."
+        ),
     ):
         select_via_database(
             db_session,
