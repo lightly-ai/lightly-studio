@@ -38,6 +38,7 @@
             variant="ghost"
             size="icon"
             onclick={onClose}
+            aria-label="Close evaluation runs panel"
             class="h-8 w-8"
             data-testid="evaluation-runs-close-button"
         >
