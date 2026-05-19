@@ -359,6 +359,7 @@
                         {isImages}
                         {isVideos}
                         {hasEmbeddings}
+                        {datasetId}
                         onSelectAll={selectAllHandle.handleSelectAll}
                         searchImage={$searchImage}
                         searchPending={$searchPending}
@@ -401,6 +402,7 @@
                                 {isImages}
                                 {isVideos}
                                 {hasEmbeddings}
+                                {datasetId}
                                 onSelectAll={selectAllHandle.handleSelectAll}
                                 searchImage={$searchImage}
                                 searchPending={$searchPending}

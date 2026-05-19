@@ -12,6 +12,7 @@
         isImages: boolean;
         isVideos: boolean;
         hasEmbeddings: boolean;
+        datasetId: string;
         onSelectAll: () => Promise<void>;
         searchImage: SearchImage | undefined;
         searchPending: boolean;
@@ -27,6 +28,7 @@
         isImages,
         isVideos,
         hasEmbeddings,
+        datasetId,
         onSelectAll,
         searchImage,
         searchPending,
@@ -51,7 +53,7 @@
     {/snippet}
     {#snippet auxControls()}
         {#if isImages}
-            <OrderBy />
+            <OrderBy {datasetId} />
         {/if}
         {#if canShowPlotToggle}
             <Button

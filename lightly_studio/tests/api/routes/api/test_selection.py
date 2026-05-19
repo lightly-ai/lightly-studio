@@ -3,12 +3,13 @@
 from __future__ import annotations
 
 from fastapi.testclient import TestClient
+from pytest_mock import MockerFixture
 from sqlmodel import Session
 
 from lightly_studio.metadata import compute_typicality
 from lightly_studio.models.collection import SampleType
 from lightly_studio.resolvers import image_resolver, tag_resolver, video_resolver
-from lightly_studio.resolvers.image_filter import ImageFilter
+from lightly_studio.resolvers.image_filter import FilterDimensions, ImageFilter
 from lightly_studio.resolvers.sample_resolver.sample_filter import SampleFilter
 from lightly_studio.resolvers.video_resolver.video_filter import VideoFilter
 from tests import helpers_resolvers
@@ -286,3 +287,176 @@ def test_create_combination_selection__metadata_weighting_success_videos(
     # Same logic as image test: 2nd and 3rd embeddings are most typical.
     assert result.samples[0].file_name == "video2.mp4"
     assert result.samples[1].file_name == "video3.mp4"
+
+
+def test_create_combination_selection__image_filter_success(
+    test_client: TestClient,
+    db_session: Session,
+    mocker: MockerFixture,
+) -> None:
+    """Selection succeeds when request fits within the ImageFilter pool."""
+    collection = helpers_resolvers.create_collection(
+        session=db_session, collection_name="test_collection"
+    )
+    collection_id = collection.collection_id
+    embedding_model = helpers_resolvers.create_embedding_model(
+        session=db_session,
+        collection_id=collection_id,
+        embedding_model_name="test_embedding_model",
+    )
+    helpers_resolvers.create_samples_with_embeddings(
+        session=db_session,
+        collection_id=collection_id,
+        embedding_model_id=embedding_model.embedding_model_id,
+        images_and_embeddings=[
+            (helpers_resolvers.ImageStub(path="narrow.jpg", width=100), [1.0, 0.0, 0.0]),
+            (helpers_resolvers.ImageStub(path="wide1.jpg", width=300), [0.0, 1.0, 0.0]),
+            (helpers_resolvers.ImageStub(path="wide2.jpg", width=300), [0.0, 0.0, 1.0]),
+        ],
+    )
+    spy_sample_resolver = mocker.spy(image_resolver, "get_sample_ids")
+
+    response = test_client.post(
+        f"/api/collections/{collection_id}/selection",
+        json={
+            "n_samples_to_select": 2,
+            "selection_result_tag_name": "tag1",
+            "strategies": [
+                {"strategy_name": "diversity", "embedding_model_name": "test_embedding_model"}
+            ],
+            "filter": {"filter_type": "image", "width": {"min": 200}},
+        },
+    )
+
+    assert response.status_code == 204
+    spy_sample_resolver.assert_called_once_with(
+        session=db_session,
+        collection_id=collection_id,
+        filters=ImageFilter(
+            width=FilterDimensions(min=200),
+        ),
+    )
+
+
+def test_create_combination_selection__video_filter_success(
+    test_client: TestClient,
+    db_session: Session,
+    mocker: MockerFixture,
+) -> None:
+    """Selection succeeds when request fits within the VideoFilter pool."""
+    collection = helpers_resolvers.create_collection(
+        session=db_session,
+        collection_name="test_video_collection",
+        sample_type=SampleType.VIDEO,
+    )
+    collection_id = collection.collection_id
+    embedding_model = helpers_resolvers.create_embedding_model(
+        session=db_session,
+        collection_id=collection_id,
+        embedding_model_name="test_embedding_model",
+    )
+    narrow_video = video_helpers.create_video(
+        session=db_session,
+        collection_id=collection_id,
+        video=video_helpers.VideoStub(path="narrow.mp4", width=100),
+    )
+    wide_video1 = video_helpers.create_video(
+        session=db_session,
+        collection_id=collection_id,
+        video=video_helpers.VideoStub(path="wide1.mp4", width=300),
+    )
+    wide_video2 = video_helpers.create_video(
+        session=db_session,
+        collection_id=collection_id,
+        video=video_helpers.VideoStub(path="wide2.mp4", width=300),
+    )
+    helpers_resolvers.create_sample_embedding(
+        session=db_session,
+        sample_id=narrow_video.sample_id,
+        embedding_model_id=embedding_model.embedding_model_id,
+        embedding=[1.0, 0.0, 0.0],
+    )
+    helpers_resolvers.create_sample_embedding(
+        session=db_session,
+        sample_id=wide_video1.sample_id,
+        embedding_model_id=embedding_model.embedding_model_id,
+        embedding=[0.0, 1.0, 0.0],
+    )
+    helpers_resolvers.create_sample_embedding(
+        session=db_session,
+        sample_id=wide_video2.sample_id,
+        embedding_model_id=embedding_model.embedding_model_id,
+        embedding=[0.0, 0.0, 1.0],
+    )
+    spy_video_resolver = mocker.spy(video_resolver, "get_sample_ids")
+
+    response = test_client.post(
+        f"/api/collections/{collection_id}/selection",
+        json={
+            "n_samples_to_select": 2,
+            "selection_result_tag_name": "tag1",
+            "strategies": [
+                {"strategy_name": "diversity", "embedding_model_name": "test_embedding_model"}
+            ],
+            "filter": {"filter_type": "video", "width": {"min": 200}},
+        },
+    )
+
+    assert response.status_code == 204
+    spy_video_resolver.assert_called_once_with(
+        session=db_session,
+        collection_id=collection_id,
+        filters=VideoFilter(
+            width=FilterDimensions(min=200),
+        ),
+    )
+
+
+def test_create_combination_selection__image_collection_rejects_video_filter(
+    test_client: TestClient, db_session: Session
+) -> None:
+    """Image collections reject video filters."""
+    collection = helpers_resolvers.create_collection(
+        session=db_session, collection_name="test_collection"
+    )
+
+    response = test_client.post(
+        f"/api/collections/{collection.collection_id}/selection",
+        json={
+            "n_samples_to_select": 1,
+            "selection_result_tag_name": "tag1",
+            "strategies": [
+                {"strategy_name": "diversity", "embedding_model_name": "test_embedding_model"}
+            ],
+            "filter": {"filter_type": "video", "width": {"min": 200}},
+        },
+    )
+
+    assert response.status_code == 400
+    assert response.json()["detail"] == "Invalid filter type for image collection."
+
+
+def test_create_combination_selection__video_collection_rejects_image_filter(
+    test_client: TestClient, db_session: Session
+) -> None:
+    """Video collections reject image filters."""
+    collection = helpers_resolvers.create_collection(
+        session=db_session,
+        collection_name="test_video_collection",
+        sample_type=SampleType.VIDEO,
+    )
+
+    response = test_client.post(
+        f"/api/collections/{collection.collection_id}/selection",
+        json={
+            "n_samples_to_select": 1,
+            "selection_result_tag_name": "tag1",
+            "strategies": [
+                {"strategy_name": "diversity", "embedding_model_name": "test_embedding_model"}
+            ],
+            "filter": {"filter_type": "image", "width": {"min": 200}},
+        },
+    )
+
+    assert response.status_code == 400
+    assert response.json()["detail"] == "Invalid filter type for video collection."
