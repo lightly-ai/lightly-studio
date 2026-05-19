@@ -55,7 +55,7 @@ async def serve_image_by_sample_id(
         )
 
     file_path = sample_record.file_path_abs
-
+    session.close()
     try:
         content, content_type = await asyncio.get_running_loop().run_in_executor(
             get_media_executor("image_thumbnail"),
