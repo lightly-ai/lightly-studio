@@ -83,11 +83,9 @@
         onUpdate
     }));
 
-    const { updateAnnotations: updateAnnotationsRaw } = $derived(
-        useUpdateAnnotationsMutation({
-            collectionId
-        })
-    );
+    const { updateAnnotations: updateAnnotationsRaw } = useUpdateAnnotationsMutation({
+        collectionId: page.params.collection_id!
+    });
 
     const annotation = $derived(annotationResp.data || annotationProp);
 

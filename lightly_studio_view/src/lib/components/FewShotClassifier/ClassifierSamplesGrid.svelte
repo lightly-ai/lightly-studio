@@ -111,8 +111,8 @@
                 overScan={5}
             >
                 {#snippet item({ index, style }: { index: number; style: string })}
-                    {#key infiniteSamples.dataUpdatedAt}
-                        {#if displayedSamples[index]}
+                    {#if displayedSamples[index]}
+                        {#key displayedSamples[index].sample_id}
                             <div {style}>
                                 <div
                                     class="relative cursor-pointer overflow-hidden rounded-lg"
@@ -146,8 +146,8 @@
                                     <SampleImage sample={displayedSamples[index]} {objectFit} />
                                 </div>
                             </div>
-                        {/if}
-                    {/key}
+                        {/key}
+                    {/if}
                 {/snippet}
             </Grid>
         {:else}

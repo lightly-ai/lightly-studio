@@ -103,7 +103,7 @@
             >
                 {#snippet item({ index, style })}
                     {#if items[index]}
-                        {#key items[index].sample_id + (query.dataUpdatedAt ?? 0)}
+                        {#key items[index].sample_id}
                             <div
                                 {style}
                                 class={`w-full pb-[${GridGap}]`}

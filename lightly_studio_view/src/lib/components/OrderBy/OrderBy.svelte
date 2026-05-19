@@ -20,7 +20,7 @@
         handleFieldClick,
         toggleDirection,
         dispose
-    } = $derived(useOrderBy({ datasetId }));
+    } = useOrderBy({ datasetId });
 
     $effect(() => {
         return () => dispose();

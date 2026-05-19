@@ -244,8 +244,8 @@
                     }}
                 >
                     {#snippet gridItem({ index, style, width, height })}
-                        {#key infiniteAnnotations.dataUpdatedAt}
-                            {#if annotations[index]}
+                        {#if annotations[index]}
+                            {#key annotations[index].annotation.sample_id}
                                 <GridItem
                                     {width}
                                     {height}
@@ -296,8 +296,8 @@
                                         />
                                     </div>
                                 </GridItem>
-                            {/if}
-                        {/key}
+                            {/key}
+                        {/if}
                     {/snippet}
                     {#snippet footerItem()}
                         {@render footer()}
