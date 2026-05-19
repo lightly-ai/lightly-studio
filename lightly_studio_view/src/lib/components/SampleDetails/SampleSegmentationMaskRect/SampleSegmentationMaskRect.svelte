@@ -48,6 +48,12 @@
         onFinishBrushPendingChange
     }: SampleSegmentationMaskRectProps = $props();
 
+    const {
+        context: annotationLabelContext,
+        setIsDrawing,
+        setAnnotationId
+    } = useAnnotationLabelContext();
+
     const labels = useAnnotationLabels(() => ({ collectionId }));
     const activeAnnotationId = $derived.by(() => {
         if (annotationLabelContext.annotationId) return annotationLabelContext.annotationId;
@@ -83,12 +89,6 @@
             }
         })
     );
-
-    const {
-        context: annotationLabelContext,
-        setIsDrawing,
-        setAnnotationId
-    } = useAnnotationLabelContext();
 
     let baseMask = $state<Uint8Array | null>(null);
     let selectedAnnotation = $state<AnnotationView | null>(null);
