@@ -6,10 +6,14 @@ import '@testing-library/jest-dom';
 vi.mock('$lib/hooks/useGlobalStorage', () => {
     const showPlot = writable<boolean>(false);
     const setShowPlot = vi.fn((value: boolean) => showPlot.set(value));
+    const showEvaluationRuns = writable<boolean>(false);
+    const setShowEvaluationRuns = vi.fn((value: boolean) => showEvaluationRuns.set(value));
     return {
         useGlobalStorage: () => ({
             showPlot,
             setShowPlot,
+            showEvaluationRuns,
+            setShowEvaluationRuns,
             sampleSize: writable({ width: 4, height: 4 }),
             updateSampleSize: vi.fn()
         })
@@ -61,6 +65,8 @@ describe('DatasetGridHeader', () => {
         const storage = useGlobalStorage();
         storage.showPlot.set(false);
         (storage.setShowPlot as ReturnType<typeof vi.fn>).mockClear();
+        storage.showEvaluationRuns.set(false);
+        (storage.setShowEvaluationRuns as ReturnType<typeof vi.fn>).mockClear();
         defaultProps.onSelectAll.mockClear();
     });
 
