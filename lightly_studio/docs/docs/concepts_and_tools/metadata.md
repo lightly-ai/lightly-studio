@@ -141,7 +141,7 @@ for sample in tqdm.tqdm(dataset):
         channel_sums = ImageStat.Stat(rgb).sum  # [sum_R, sum_G, sum_B]
         luminance = ImageStat.Stat(rgb.convert("L")).mean[0]
 
-    total = sum(channel_sums)
+    total = sum(channel_sums) or 1  # avoid divide-by-zero on fully black images
     sample_metadata.append(
         (
             sample.sample_id,
