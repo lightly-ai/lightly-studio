@@ -142,4 +142,7 @@ def _find_metadata_category(
     scale: MetadataColorScale,
 ) -> int | None:
     """Return the color category for the metadata field, or None."""
-    return scale.value_to_category.get(sample_to_value.get(sample_id))  # type: ignore[arg-type]
+    value = sample_to_value.get(sample_id)
+    if value is None:
+        return None
+    return scale.value_to_category.get(value)
