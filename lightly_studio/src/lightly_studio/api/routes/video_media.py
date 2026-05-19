@@ -151,6 +151,7 @@ async def serve_video_by_sample_id(
 
     file_path = sample_record.file_path_abs
     content_type = _get_content_type(file_path)
+    session.close()
 
     # Extract file_path (a string) before returning StreamingResponse.
     # FastAPI's dependency system will close the session when this function returns,
