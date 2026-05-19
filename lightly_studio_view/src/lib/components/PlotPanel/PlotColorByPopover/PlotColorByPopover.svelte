@@ -1,5 +1,5 @@
 <script lang="ts">
-    import { Check, Palette } from '@lucide/svelte';
+    import { Palette } from '@lucide/svelte';
     import * as Popover from '$lib/components/ui/popover';
     import { Button } from '$lib/components/ui/button';
     import { useMetadataFilters } from '$lib/hooks';
@@ -53,12 +53,6 @@
                         )}
                         onclick={() => handleSelect(field.name)}
                     >
-                        <Check
-                            class={cn(
-                                'h-4 w-4 shrink-0',
-                                selectedKey === field.name ? 'opacity-100' : 'opacity-0'
-                            )}
-                        />
                         <span class="truncate">{`metadata.${field.name}`}</span>
                     </button>
                 {/each}
