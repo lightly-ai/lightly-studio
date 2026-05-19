@@ -35,6 +35,10 @@ export const IMAGE_SORT_FIELDS: ImageSortField[] = [
     { source: 'image', value: 'height', label: 'height' }
 ];
 
+export function formatEvaluationMetricLabel(evaluationRunName: string, metricName: string): string {
+    return `${evaluationRunName}.${metricName}`;
+}
+
 export function useSortFields({ datasetId }: UseSortFieldsParams): UseSortFieldsReturn {
     const { metadataInfo } = useMetadataFilters();
     const metricsInfo = useEvaluationSampleMetricsInfo({ datasetId });
@@ -59,7 +63,7 @@ export function useSortFields({ datasetId }: UseSortFieldsParams): UseSortFields
                     source: 'evaluation_metric',
                     evaluation_run_name: run.run_name,
                     metric_name: metric.metric_name,
-                    label: `${run.run_name}_${metric.metric_name}`
+                    label: formatEvaluationMetricLabel(run.run_name, metric.metric_name)
                 })
             )
         )
