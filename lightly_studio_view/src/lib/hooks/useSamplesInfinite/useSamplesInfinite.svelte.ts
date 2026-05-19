@@ -3,15 +3,16 @@ import { readSamplesInfiniteOptions } from '$lib/api/lightly_studio_local/@tanst
 import { writable } from 'svelte/store';
 import type { SampleView } from '$lib/api/lightly_studio_local/types.gen';
 
-export const useSamplesInfinite = (...props: Parameters<typeof readSamplesInfiniteOptions>) => {
-    const readSamplesOptions = readSamplesInfiniteOptions(...props);
+export const useSamplesInfinite = (
+    getProps: () => Parameters<typeof readSamplesInfiniteOptions>[0]
+) => {
     const samplesQuery = createInfiniteQuery(() => ({
-        ...readSamplesOptions,
+        ...readSamplesInfiniteOptions(getProps()),
         getNextPageParam: (lastPage) => lastPage.nextCursor || undefined
     }));
     const client = useQueryClient();
-    const queryKey = readSamplesOptions.queryKey;
     const refresh = async () => {
+        const queryKey = readSamplesInfiniteOptions(getProps()).queryKey;
         await client.refetchQueries({ queryKey });
     };
 

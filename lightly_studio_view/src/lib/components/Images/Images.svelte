@@ -118,14 +118,12 @@
         updateFilterParams(nextParams);
     });
 
-    const { samples: infiniteSamples } = $derived(
-        useImagesInfinite({
-            ...$filterParams,
-            collection_id: collection_id,
-            query_expr: $imageQueryExpression?.query_expr,
-            sort_by: $imageSortBy ?? undefined
-        })
-    );
+    const { samples: infiniteSamples } = useImagesInfinite(() => ({
+        ...$filterParams,
+        collection_id: collection_id,
+        query_expr: $imageQueryExpression?.query_expr,
+        sort_by: $imageSortBy ?? undefined
+    }));
     // Derived list of samples from TanStack infinite query
     const samples: ImageView[] = $derived(
         infiniteSamples && infiniteSamples.data

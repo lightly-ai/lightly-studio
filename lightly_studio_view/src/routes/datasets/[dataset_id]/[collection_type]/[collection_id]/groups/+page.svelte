@@ -12,7 +12,7 @@
     const collectionType = $derived($page.params.collection_type!);
     const datasetId = $derived($page.params.dataset_id!);
 
-    const { data, query, loadMore, totalCount } = $derived(useGroupsInfinite(collectionId));
+    const { data, query, loadMore, totalCount } = useGroupsInfinite(() => collectionId);
     const { setfilteredSampleCount } = useGlobalStorage();
 
     $effect(() => {

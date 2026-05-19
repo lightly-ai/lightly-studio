@@ -83,9 +83,10 @@
     });
 
     const currentFrameFilter = $derived($frameFilter ?? {});
-    const { data, query, loadMore, totalCount } = $derived(
-        useFrames(collectionId, currentFrameFilter)
-    );
+    const { data, query, loadMore, totalCount } = useFrames(() => ({
+        video_frame_collection_id: collectionId,
+        filter: currentFrameFilter
+    }));
     const { setfilteredSampleCount, getSelectedSampleIds, toggleSampleSelection, sampleSize } =
         useGlobalStorage();
     const columnCount = $derived($sampleSize.width);

@@ -5,21 +5,29 @@ import { writable } from 'svelte/store';
 import type { VideoFrameFilter, VideoFrameView } from '$lib/api/lightly_studio_local/types.gen';
 import { GRID_PAGE_SIZE } from '$lib/constants';
 
-export const useFrames = (video_frame_collection_id: string, filter: VideoFrameFilter) => {
-    const readCaptionsOptions = getAllFramesInfiniteOptions({
-        path: { video_frame_collection_id },
-        query: { limit: GRID_PAGE_SIZE },
-        body: {
-            filter
-        }
+export const useFrames = (
+    getParams: () => { video_frame_collection_id: string; filter: VideoFrameFilter }
+) => {
+    const query = createInfiniteQuery(() => {
+        const { video_frame_collection_id, filter } = getParams();
+        return {
+            ...getAllFramesInfiniteOptions({
+                path: { video_frame_collection_id },
+                query: { limit: GRID_PAGE_SIZE },
+                body: { filter }
+            }),
+            getNextPageParam: (lastPage) => lastPage.nextCursor || undefined
+        };
     });
-    const query = createInfiniteQuery(() => ({
-        ...readCaptionsOptions,
-        getNextPageParam: (lastPage) => lastPage.nextCursor || undefined
-    }));
     const client = useQueryClient();
     const refresh = () => {
-        client.invalidateQueries({ queryKey: readCaptionsOptions.queryKey });
+        const { video_frame_collection_id, filter } = getParams();
+        const options = getAllFramesInfiniteOptions({
+            path: { video_frame_collection_id },
+            query: { limit: GRID_PAGE_SIZE },
+            body: { filter }
+        });
+        client.invalidateQueries({ queryKey: options.queryKey });
     };
 
     const data = writable<VideoFrameView[]>([]);

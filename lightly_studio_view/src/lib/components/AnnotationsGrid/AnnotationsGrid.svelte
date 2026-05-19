@@ -82,7 +82,7 @@
         updateAnnotations,
         refresh,
         isPending
-    } = $derived(useAnnotationsInfinite(queryParams));
+    } = useAnnotationsInfinite(() => queryParams);
 
     const { updateAnnotations: updateAnnotationsRaw } = useUpdateAnnotationsMutation({
         collectionId: collection_id

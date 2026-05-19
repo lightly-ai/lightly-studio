@@ -7,25 +7,26 @@ import { writable } from 'svelte/store';
 import { useImageAnnotationCountsQueryKey } from '$lib/hooks/useImageAnnotationCounts/useImageAnnotationCounts';
 
 export const useAnnotationsInfinite = (
-    ...props: Parameters<typeof readAnnotationsWithPayloadInfiniteOptions>
+    getProps: () => Parameters<typeof readAnnotationsWithPayloadInfiniteOptions>[0]
 ) => {
-    const annotationsOptions = readAnnotationsWithPayloadInfiniteOptions(...props);
     const isPending = writable(false);
     const annotations = createInfiniteQuery(() => ({
-        ...annotationsOptions,
+        ...readAnnotationsWithPayloadInfiniteOptions(getProps()),
         getNextPageParam: (lastPage) => {
             return lastPage.nextCursor || undefined;
         }
     }));
     const client = useQueryClient();
     const refresh = () => {
-        client.invalidateQueries({ queryKey: annotationsOptions.queryKey });
+        const options = readAnnotationsWithPayloadInfiniteOptions(getProps());
+        client.invalidateQueries({ queryKey: options.queryKey });
         client.invalidateQueries({
             queryKey: useImageAnnotationCountsQueryKey
         });
     };
 
-    const collection_id = props[0].path.collection_id;
+    // collection_id is stable (from route), evaluate once at construction
+    const collection_id = getProps().path.collection_id;
     const { updateAnnotations } = useUpdateAnnotationsMutation({
         collectionId: collection_id
     });

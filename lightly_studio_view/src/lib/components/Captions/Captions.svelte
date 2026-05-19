@@ -30,12 +30,10 @@
         return collection.parent_collection_id;
     });
 
-    const { data, query, loadMore, refresh } = $derived(
-        useSamplesInfinite({
-            path: { collection_id: parentCollectionId },
-            body: { filters: { has_captions: true } }
-        })
-    );
+    const { data, query, loadMore, refresh } = useSamplesInfinite(() => ({
+        path: { collection_id: parentCollectionId },
+        body: { filters: { has_captions: true } }
+    }));
 
     let viewport: HTMLElement | null = $state(null);
 

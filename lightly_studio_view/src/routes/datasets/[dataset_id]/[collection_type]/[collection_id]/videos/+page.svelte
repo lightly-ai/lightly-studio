@@ -114,9 +114,11 @@
         return buildVideoFilter(paramsWithSelection) ?? {};
     });
 
-    const { data, query, loadMore, totalCount } = $derived(
-        useVideos(collectionId, currentVideoFilter, $textEmbedding?.embedding)
-    );
+    const { data, query, loadMore, totalCount } = useVideos(() => ({
+        collection_id: collectionId,
+        filter: currentVideoFilter,
+        text_embedding: $textEmbedding?.embedding
+    }));
     const { setfilteredSampleCount } = useGlobalStorage();
 
     let items = $derived($data);

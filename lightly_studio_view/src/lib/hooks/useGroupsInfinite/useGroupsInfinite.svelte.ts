@@ -19,21 +19,24 @@ import { GRID_PAGE_SIZE } from '$lib/constants';
  * - `loadMore`: Function to load the next page of results
  * - `refresh`: Function to invalidate and refetch all data
  */
-export const useGroupsInfinite = (collectionId: string) => {
-    const readGroupsOptions = getAllGroupsInfiniteOptions({
-        path: { collection_id: collectionId },
-        query: { limit: GRID_PAGE_SIZE },
-        body: {}
-    });
-
+export const useGroupsInfinite = (getCollectionId: () => string) => {
     const query = createInfiniteQuery(() => ({
-        ...readGroupsOptions,
+        ...getAllGroupsInfiniteOptions({
+            path: { collection_id: getCollectionId() },
+            query: { limit: GRID_PAGE_SIZE },
+            body: {}
+        }),
         getNextPageParam: (lastPage) => lastPage.nextCursor || undefined
     }));
 
     const client = useQueryClient();
     const refresh = () => {
-        client.invalidateQueries({ queryKey: readGroupsOptions.queryKey });
+        const options = getAllGroupsInfiniteOptions({
+            path: { collection_id: getCollectionId() },
+            query: { limit: GRID_PAGE_SIZE },
+            body: {}
+        });
+        client.invalidateQueries({ queryKey: options.queryKey });
     };
 
     const data = writable<GroupView[]>([]);

@@ -43,13 +43,13 @@ describe('useImagesInfinite', () => {
                 { source: 'image', field_name: 'score', direction: 'desc', is_numeric: false }
             ];
 
-            useImagesInfinite({ collection_id: 'coll-1', mode: 'normal', sort_by: sort });
+            useImagesInfinite(() => ({ collection_id: 'coll-1', mode: 'normal', sort_by: sort }));
 
             expect(capturedOptions.queryKey).toContain(sort);
         });
 
         it('includes null in the query key when sort_by is null', () => {
-            useImagesInfinite({ collection_id: 'coll-1', mode: 'normal', sort_by: null });
+            useImagesInfinite(() => ({ collection_id: 'coll-1', mode: 'normal', sort_by: null }));
 
             expect(capturedOptions.queryKey).toContain(null);
         });
@@ -62,10 +62,10 @@ describe('useImagesInfinite', () => {
                 { source: 'image', field_name: 'filename', direction: 'asc', is_numeric: false }
             ];
 
-            useImagesInfinite({ collection_id: 'coll-1', mode: 'normal', sort_by: sort1 });
+            useImagesInfinite(() => ({ collection_id: 'coll-1', mode: 'normal', sort_by: sort1 }));
             const queryKey1 = capturedOptions.queryKey;
 
-            useImagesInfinite({ collection_id: 'coll-1', mode: 'normal', sort_by: sort2 });
+            useImagesInfinite(() => ({ collection_id: 'coll-1', mode: 'normal', sort_by: sort2 }));
             const queryKey2 = capturedOptions.queryKey;
 
             expect(queryKey1).not.toEqual(queryKey2);
@@ -78,7 +78,7 @@ describe('useImagesInfinite', () => {
                 { source: 'image', field_name: 'score', direction: 'desc', is_numeric: false }
             ];
 
-            useImagesInfinite({ collection_id: 'coll-1', mode: 'normal', sort_by: sort });
+            useImagesInfinite(() => ({ collection_id: 'coll-1', mode: 'normal', sort_by: sort }));
 
             await capturedOptions.queryFn({ pageParam: 0, signal: new AbortController().signal });
 
@@ -90,7 +90,7 @@ describe('useImagesInfinite', () => {
         });
 
         it('passes sort_by as undefined to readImages when sort_by is null', async () => {
-            useImagesInfinite({ collection_id: 'coll-1', mode: 'normal', sort_by: null });
+            useImagesInfinite(() => ({ collection_id: 'coll-1', mode: 'normal', sort_by: null }));
 
             await capturedOptions.queryFn({ pageParam: 0, signal: new AbortController().signal });
 
@@ -102,7 +102,7 @@ describe('useImagesInfinite', () => {
         });
 
         it('passes sort_by as undefined to readImages when sort_by is not provided', async () => {
-            useImagesInfinite({ collection_id: 'coll-1', mode: 'normal' });
+            useImagesInfinite(() => ({ collection_id: 'coll-1', mode: 'normal' }));
 
             await capturedOptions.queryFn({ pageParam: 0, signal: new AbortController().signal });
 

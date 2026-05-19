@@ -12,13 +12,11 @@
         useClassifierState();
     const { gridViewSampleRenderingStore } = useSettings();
 
-    const samplesParams = $derived({
+    const { samples: infiniteSamples } = useImagesInfinite(() => ({
         collection_id,
         mode: 'classifier' as const,
         classifierSamples: $classifierSamples || undefined
-    });
-
-    const { samples: infiniteSamples } = $derived(useImagesInfinite(samplesParams));
+    }));
 
     const displayedSamples: ImageView[] = $derived(
         infiniteSamples &&

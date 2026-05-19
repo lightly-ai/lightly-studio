@@ -6,25 +6,32 @@ import type { VideoFilter, VideoView } from '$lib/api/lightly_studio_local/types
 import { GRID_PAGE_SIZE } from '$lib/constants';
 
 export const useVideos = (
-    collection_id: string,
-    filter: VideoFilter,
-    text_embedding?: Array<number>
+    getParams: () => {
+        collection_id: string;
+        filter: VideoFilter;
+        text_embedding?: Array<number>;
+    }
 ) => {
-    const readVideosOptions = getAllVideosInfiniteOptions({
-        path: { collection_id },
-        query: { limit: GRID_PAGE_SIZE },
-        body: {
-            filter,
-            text_embedding
-        }
+    const query = createInfiniteQuery(() => {
+        const { collection_id, filter, text_embedding } = getParams();
+        return {
+            ...getAllVideosInfiniteOptions({
+                path: { collection_id },
+                query: { limit: GRID_PAGE_SIZE },
+                body: { filter, text_embedding }
+            }),
+            getNextPageParam: (lastPage) => lastPage.nextCursor || undefined
+        };
     });
-    const query = createInfiniteQuery(() => ({
-        ...readVideosOptions,
-        getNextPageParam: (lastPage) => lastPage.nextCursor || undefined
-    }));
     const client = useQueryClient();
     const refresh = () => {
-        client.invalidateQueries({ queryKey: readVideosOptions.queryKey });
+        const { collection_id, filter, text_embedding } = getParams();
+        const options = getAllVideosInfiniteOptions({
+            path: { collection_id },
+            query: { limit: GRID_PAGE_SIZE },
+            body: { filter, text_embedding }
+        });
+        client.invalidateQueries({ queryKey: options.queryKey });
     };
 
     const data = writable<VideoView[]>([]);
