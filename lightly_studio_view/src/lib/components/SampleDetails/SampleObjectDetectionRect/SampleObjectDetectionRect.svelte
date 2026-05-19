@@ -50,7 +50,7 @@
 
     let temporaryBbox = $state<BoundingBox | null>(null);
     let shouldDisableInteraction = $state(false);
-    const labels = useAnnotationLabels({ collectionId });
+    const labels = useAnnotationLabels(() => ({ collectionId }));
     const { createLabel } = useCreateLabel({ collectionId });
     const { createAnnotation } = useCreateAnnotation({
         collectionId

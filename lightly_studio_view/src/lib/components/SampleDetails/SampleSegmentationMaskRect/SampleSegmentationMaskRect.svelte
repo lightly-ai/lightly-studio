@@ -48,7 +48,7 @@
         onFinishBrushPendingChange
     }: SampleSegmentationMaskRectProps = $props();
 
-    const labels = useAnnotationLabels({ collectionId });
+    const labels = useAnnotationLabels(() => ({ collectionId }));
     const activeAnnotationId = $derived.by(() => {
         if (annotationLabelContext.annotationId) return annotationLabelContext.annotationId;
 
@@ -58,14 +58,11 @@
 
         return null;
     });
-    const annotationApi = $derived.by(() => {
-        if (!activeAnnotationId) return null;
-
-        return useAnnotation({
-            collectionId,
-            annotationId: activeAnnotationId
-        });
-    });
+    const annotationApi = useAnnotation(() => ({
+        collectionId,
+        annotationId: activeAnnotationId ?? '',
+        enabled: !!activeAnnotationId
+    }));
     const datasetId = $derived(page.params.dataset_id!);
     const { refetch: refetchRootCollection } = $derived.by(() =>
         useCollectionWithChildren({ collectionId: datasetId })
@@ -180,7 +177,7 @@
     });
 
     const updateAnnotation = async (input: AnnotationUpdateInput) => {
-        await annotationApi?.updateAnnotation(input);
+        await annotationApi.updateAnnotation(input);
         refetch();
     };
 

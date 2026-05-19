@@ -37,7 +37,7 @@
         setLockedAnnotationIds
     } = useAnnotationLabelContext();
 
-    const annotationLabels = useAnnotationLabels({ collectionId });
+    const annotationLabels = useAnnotationLabels(() => ({ collectionId }));
     const { createAnnotation } = useCreateAnnotation({
         collectionId
     });

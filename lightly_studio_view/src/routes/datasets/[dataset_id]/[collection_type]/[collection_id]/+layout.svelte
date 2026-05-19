@@ -200,15 +200,15 @@
         setLastGridType(gridType);
     });
 
-    const hasEmbeddingsQuery = $derived(useHasEmbeddings({ collectionId }));
+    const hasEmbeddingsQuery = useHasEmbeddings(() => ({ collectionId }));
     const hasEmbeddings = $derived(!!hasEmbeddingsQuery.data);
 
     const { metadataValues } = $derived.by(() => useMetadataFilters(collectionId));
     const { dimensionsValues } = useDimensions(collectionIdStore);
 
-    const annotationLabelsQuery = $derived(
-        useAnnotationLabels({ collectionId: collectionId ?? '' })
-    );
+    const annotationLabelsQuery = useAnnotationLabels(() => ({
+        collectionId: collectionId ?? ''
+    }));
     const annotationLabelsData = $derived(annotationLabelsQuery?.data);
     const annotationLabelsStore = toStore(() => annotationLabelsData);
 

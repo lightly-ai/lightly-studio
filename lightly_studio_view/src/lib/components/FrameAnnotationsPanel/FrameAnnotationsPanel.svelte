@@ -37,7 +37,7 @@
     }: Props = $props();
 
     const { isEditingMode } = page.data.globalStorage;
-    const annotationLabels = useAnnotationLabels({ collectionId });
+    const annotationLabels = useAnnotationLabels(() => ({ collectionId }));
     const items = $derived(getSelectionItems(annotationLabels.data || []));
     const annotations = $derived(
         sample.sample.annotations

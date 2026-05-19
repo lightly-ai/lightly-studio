@@ -17,7 +17,7 @@
 
     const { selectedAnnotations, onSelect, disabled, isLoading, collectionId }: Props = $props();
 
-    const result = useAnnotationLabels({ collectionId });
+    const result = useAnnotationLabels(() => ({ collectionId }));
 
     const items = $derived(getSelectionItems(result.data || []));
 </script>

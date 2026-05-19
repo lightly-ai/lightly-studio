@@ -30,7 +30,7 @@
 
     const { isEditingMode, addReversibleAction } = useGlobalStorage();
 
-    const annotationLabels = useAnnotationLabels({ collectionId });
+    const annotationLabels = useAnnotationLabels(() => ({ collectionId }));
     const { createAnnotation } = useCreateAnnotation({ collectionId });
     const { deleteAnnotation } = useDeleteAnnotation({ collectionId });
     const { createLabel } = useCreateLabel({ collectionId });

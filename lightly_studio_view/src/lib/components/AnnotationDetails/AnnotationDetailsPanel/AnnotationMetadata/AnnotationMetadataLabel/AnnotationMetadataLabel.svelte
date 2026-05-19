@@ -27,14 +27,14 @@
         trackId?: number | null;
     } = $props();
 
-    const result = useAnnotationLabels({ collectionId });
+    const result = useAnnotationLabels(() => ({ collectionId }));
     const { addReversibleAction } = useGlobalStorage();
 
-    const { updateAnnotation, refetch } = useAnnotation({
+    const { updateAnnotation, refetch } = useAnnotation(() => ({
         collectionId,
         annotationId,
         onUpdate
-    });
+    }));
 
     const { updateAnnotations: updateAnnotationsRaw } = useUpdateAnnotationsMutation({
         collectionId

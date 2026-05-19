@@ -22,7 +22,7 @@
     const isVideos = $derived(isVideosRoute(page.route.id));
     const { settingsStore } = useSettings();
 
-    const hasEmbeddingsQuery = useHasEmbeddings({ collectionId: collection.collection_id });
+    const hasEmbeddingsQuery = useHasEmbeddings(() => ({ collectionId: collection.collection_id }));
     const hasEmbeddings = $derived(!!hasEmbeddingsQuery.data);
 
     const datasetId = $derived(page.params.dataset_id!);

@@ -63,7 +63,7 @@
         };
     });
 
-    const embeddingsData = $derived(useEmbeddings(collectionId, filter));
+    const embeddingsData = useEmbeddings(() => ({ collectionId, filters: filter }));
 
     const categoryColors = ['#9CA3AF', '#F59E0B'];
     const { data: arrowData, error: arrowError } = $derived(

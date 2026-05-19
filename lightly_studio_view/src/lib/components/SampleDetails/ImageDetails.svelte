@@ -36,7 +36,7 @@
         }
     };
 
-    const { image, refetch } = $derived(useImage({ sampleId }));
+    const { image, refetch } = useImage(() => ({ sampleId }));
 
     let sampleURL = $derived(getImageURLById(sampleId));
     const sampleImage = $derived(image.data as ImageView | undefined);

@@ -57,7 +57,7 @@
     const { deleteAnnotation } = useDeleteAnnotation({
         collectionId
     });
-    const annotationLabels = useAnnotationLabels({ collectionId });
+    const annotationLabels = useAnnotationLabels(() => ({ collectionId }));
     const { addReversibleAction } = useGlobalStorage();
     const { createAnnotation } = useCreateAnnotation({
         collectionId
@@ -70,13 +70,11 @@
         })
     );
 
-    const annotationApi = $derived.by(() => {
-        if (!annotationLabelContext.annotationId) return null;
-        return useAnnotation({
-            collectionId,
-            annotationId: annotationLabelContext.annotationId
-        });
-    });
+    const annotationApi = useAnnotation(() => ({
+        collectionId,
+        annotationId: annotationLabelContext.annotationId ?? '',
+        enabled: !!annotationLabelContext.annotationId
+    }));
 
     let baseMask = $state<Uint8Array | null>(null);
     let selectedAnnotation = $state<AnnotationView | null>(null);
@@ -152,7 +150,7 @@
     });
 
     const updateAnnotation = async (input: AnnotationUpdateInput) => {
-        await annotationApi?.updateAnnotation(input);
+        await annotationApi.updateAnnotation(input);
         refetch();
     };
 

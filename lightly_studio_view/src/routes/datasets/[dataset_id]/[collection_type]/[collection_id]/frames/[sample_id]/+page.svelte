@@ -15,7 +15,7 @@
 
     const { data }: { data: PageData } = $props();
     const { collection_id, sampleId } = $derived(data);
-    const { refetch, videoFrame } = $derived(useFrame(sampleId));
+    const { refetch, videoFrame } = useFrame(() => sampleId);
 
     const sample = $derived(videoFrame.data);
 
