@@ -1,8 +1,9 @@
 import { render, screen } from '@testing-library/svelte';
 import userEvent from '@testing-library/user-event';
-import { writable } from 'svelte/store';
+import { get, writable } from 'svelte/store';
 import { beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import PlotColorByPopover from './PlotColorByPopover.svelte';
+import { usePlotColorByType } from './usePlotColorByType/usePlotColorByType';
 
 const metadataInfoStore = writable([
     { name: 'split', type: 'string' },
@@ -34,6 +35,7 @@ describe('PlotColorByPopover', () => {
             { name: 'score', type: 'float' },
             { name: 'object', type: 'object' }
         ]);
+        usePlotColorByType('test-collection-id').clearSelectedColorByType();
     });
 
     it('renders supported metadata fields with metadata prefix and omits unsupported ones', async () => {
@@ -53,9 +55,10 @@ describe('PlotColorByPopover', () => {
         expect(screen.queryByRole('option', { name: 'metadata.object' })).not.toBeInTheDocument();
     });
 
-    it('selecting one field calls onSelectedKeyChange with the key', async () => {
+    it('selecting a metadata field stores metadata as the selected type', async () => {
         const user = userEvent.setup();
         const onSelectedKeyChange = vi.fn();
+        const colorByType = usePlotColorByType('test-collection-id');
 
         render(PlotColorByPopover, {
             collectionId: 'test-collection-id',
@@ -67,11 +70,30 @@ describe('PlotColorByPopover', () => {
         await user.click(screen.getByRole('option', { name: 'metadata.split' }));
 
         expect(onSelectedKeyChange).toHaveBeenCalledWith('split');
+        expect(get(colorByType.selectedColorByType)).toBe('metadata');
     });
 
-    it('clicking the selected field calls onSelectedKeyChange with null', async () => {
+    it('does not render annotations or tags in the popover', async () => {
+        const user = userEvent.setup();
+
+        render(PlotColorByPopover, {
+            collectionId: 'test-collection-id',
+            selectedKey: null,
+            onSelectedKeyChange: vi.fn()
+        });
+
+        await user.click(screen.getByTestId('plot-color-by-button'));
+
+        expect(screen.queryByRole('option', { name: 'annotations' })).not.toBeInTheDocument();
+        expect(screen.queryByRole('option', { name: 'tags' })).not.toBeInTheDocument();
+    });
+
+    it('clicking the selected metadata field clears the selected type', async () => {
         const user = userEvent.setup();
         const onSelectedKeyChange = vi.fn();
+        const colorByType = usePlotColorByType('test-collection-id');
+
+        colorByType.setSelectedColorByType('metadata');
 
         render(PlotColorByPopover, {
             collectionId: 'test-collection-id',
@@ -83,6 +105,7 @@ describe('PlotColorByPopover', () => {
         await user.click(screen.getByRole('option', { name: 'metadata.split' }));
 
         expect(onSelectedKeyChange).toHaveBeenCalledWith(null);
+        expect(get(colorByType.selectedColorByType)).toBeNull();
     });
 
     it('button shows the selected label', () => {
