@@ -11,13 +11,11 @@ formats.
 
 Annotations are shown in sample detail view and in dedicated annotation-focused views in the app. Use `Edit Annotations` to create, update, or delete annotations directly in the GUI.
 
-<div style="text-align: center;">
+<div style="width: 100%; aspect-ratio: 16 / 9; overflow: hidden;">
   <iframe
-    width="560"
-    height="315"
+    style="width: 100%; height: 100%; border: 0;"
     src="https://www.youtube.com/embed/IZTkloqpZ4k"
     title="LightlyStudio annotations workflow"
-    frameborder="0"
     allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
     referrerpolicy="strict-origin-when-cross-origin"
     allowfullscreen
@@ -32,7 +30,7 @@ Use the Python API when you want to inspect annotations programmatically, genera
 predictions, or import custom annotation outputs. See
 [Annotation API Reference](../api/annotation.md) for the full API surface.
 
-## Accessing annotations
+### Accessing annotations
 
 You can access annotations of each sample. They can be created in the GUI or imported, for example from COCO format. See the [COCO Segmentation Mask](../index.md#quickstart) example for one import workflow.
 
@@ -50,7 +48,7 @@ There are 3 annotation types:
 [SegmentationMaskAnnotation](../api/annotation.md#segmentationmaskannotation), and
 [ObjectDetectionAnnotation](../api/annotation.md#objectdetectionannotation).
 
-## Adding annotations
+### Adding annotations
 
 Add annotations to samples with
 [`add_annotation`](../api/sample.md#lightly_studio.core.sample.Sample.add_annotation). The
@@ -148,7 +146,7 @@ sample.add_annotation(
 
     There are 4 sequences of identical bits: one 0, two 1s, one 0, and four 1s. The resulting `segmentation_mask` is `[1, 2, 1, 4]`.
 
-## Indexing with predictions
+### Indexing with predictions
 
 If you need to index model predictions with confidence scores or work with custom annotation formats, you can create annotations directly from Python.
 
