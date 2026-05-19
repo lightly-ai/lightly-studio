@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { getColorByLabel } from '$lib/utils';
 import {
     FILTERED_COLOR,
     getCategoryColors,
@@ -69,5 +70,20 @@ describe('plotColorUtils', () => {
             FILTERED_COLOR,
             FILTERED_COLOR
         ]);
+    });
+
+    it('uses label colors for labeled categories when requested', () => {
+        const legend = new Map([
+            [0, 'none'],
+            [1, 'filtered'],
+            [2, 'labelName']
+        ]);
+
+        const labelColor = getColorByLabel('labelName').color;
+        const defaultColors = getCategoryColors(legend, new Set(), false);
+        const labelColors = getCategoryColors(legend, new Set(), true);
+
+        expect(labelColors).toEqual([NOT_FILTERED_COLOR, FILTERED_COLOR, labelColor]);
+        expect(defaultColors[2]).not.toBe(labelColor);
     });
 });
