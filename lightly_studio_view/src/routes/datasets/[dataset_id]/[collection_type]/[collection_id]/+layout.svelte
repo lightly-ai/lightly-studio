@@ -197,6 +197,7 @@
 
     const hasEmbeddingsQuery = $derived(useHasEmbeddings({ collectionId }));
     const hasEmbeddings = $derived(!!$hasEmbeddingsQuery.data);
+    const hasMediaWithEmbeddings = $derived((isImages || isVideos) && hasEmbeddings);
 
     const { metadataValues } = $derived.by(() => useMetadataFilters(collectionId));
     const { dimensionsValues } = useDimensions(collectionIdStore);
@@ -289,7 +290,7 @@
         return countsData.reduce((sum, item) => sum + Number(item.total_count), 0);
     });
 
-    const showLeftSidebar = $derived(
+    const isCollectionGrid = $derived(
         isImages || isAnnotations || isVideos || isVideoFrames || isGroups
     );
 
@@ -308,7 +309,7 @@
         {@render children()}
     {:else}
         <div class="flex min-h-0 flex-1 space-x-4 px-4">
-            {#if showLeftSidebar}
+            {#if isCollectionGrid}
                 <div class="flex h-full min-h-0 w-80 flex-col">
                     <div class="flex min-h-0 flex-1 flex-col rounded-[1vw] bg-card py-4">
                         <div
@@ -353,12 +354,11 @@
             {/if}
 
             {#snippet mainContent()}
-                {#if isImages || isAnnotations || isVideos || isVideoFrames || isGroups}
+                {#if isCollectionGrid}
                     <DatasetGridHeader
                         {canSelectAll}
                         {isImages}
-                        {isVideos}
-                        {hasEmbeddings}
+                        {hasMediaWithEmbeddings}
                         {datasetId}
                         onSelectAll={selectAllHandle.handleSelectAll}
                         searchImage={$searchImage}
@@ -375,7 +375,7 @@
                 <div class="flex min-h-0 flex-1">
                     {@render children()}
                 </div>
-                {#if showLeftSidebar}
+                {#if isCollectionGrid}
                     <SelectionPill selectedCount={$selectedCount} onClear={clearSelection} />
                 {/if}
             {/snippet}
@@ -400,8 +400,7 @@
                             <DatasetGridHeader
                                 {canSelectAll}
                                 {isImages}
-                                {isVideos}
-                                {hasEmbeddings}
+                                {hasMediaWithEmbeddings}
                                 {datasetId}
                                 onSelectAll={selectAllHandle.handleSelectAll}
                                 searchImage={$searchImage}

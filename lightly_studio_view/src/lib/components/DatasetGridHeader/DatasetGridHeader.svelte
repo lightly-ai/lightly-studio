@@ -7,11 +7,10 @@
 
     type SearchImage = { name: string; previewUrl: string };
 
-    type Props = {
+    interface Props {
         canSelectAll: boolean;
         isImages: boolean;
-        isVideos: boolean;
-        hasEmbeddings: boolean;
+        hasMediaWithEmbeddings: boolean;
         datasetId: string;
         onSelectAll: () => Promise<void>;
         searchImage: SearchImage | undefined;
@@ -21,13 +20,12 @@
         onSubmitFile: (file: File) => void | Promise<void>;
         onSearchClear: () => void;
         onSearchError: (message: string) => void;
-    };
+    }
 
     const {
         canSelectAll,
         isImages,
-        isVideos,
-        hasEmbeddings,
+        hasMediaWithEmbeddings,
         datasetId,
         onSelectAll,
         searchImage,
@@ -40,9 +38,6 @@
     }: Props = $props();
 
     const { showPlot, setShowPlot } = useGlobalStorage();
-
-    const canShowPlotToggle = $derived((isImages || isVideos) && hasEmbeddings);
-    const canShowSearch = $derived((isImages || isVideos) && hasEmbeddings);
 </script>
 
 <GridHeader>
@@ -55,7 +50,7 @@
         {#if isImages}
             <OrderBy {datasetId} />
         {/if}
-        {#if canShowPlotToggle}
+        {#if hasMediaWithEmbeddings}
             <Button
                 class="flex items-center space-x-1"
                 data-testid="toggle-plot-button"
@@ -67,7 +62,7 @@
             </Button>
         {/if}
     {/snippet}
-    {#if canShowSearch}
+    {#if hasMediaWithEmbeddings}
         <div class="relative" role="region" data-grid-search-drop-target>
             <CollectionSearch
                 image={searchImage}
