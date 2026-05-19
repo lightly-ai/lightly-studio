@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from collections.abc import Sequence
 from datetime import datetime, timezone
 from uuid import UUID
 
@@ -203,7 +204,7 @@ def remove_sample_ids_from_tag_id(
     return tag
 
 
-def get_names_by_ids(session: Session, tag_ids: list[UUID]) -> dict[UUID, str]:
+def get_names_by_ids(session: Session, tag_ids: Sequence[UUID]) -> dict[UUID, str]:
     """Return ``{tag_id: name}`` for the requested tags."""
     if not tag_ids:
         return {}
@@ -213,7 +214,7 @@ def get_names_by_ids(session: Session, tag_ids: list[UUID]) -> dict[UUID, str]:
 
 def get_tags_by_sample(
     session: Session,
-    tag_ids: list[UUID],
+    tag_ids: Sequence[UUID],
 ) -> dict[UUID, set[UUID]]:
     """Return ``{sample_id: {tag_id, ...}}`` for the requested tags."""
     if not tag_ids:
@@ -223,6 +224,8 @@ def get_tags_by_sample(
     )
     result: dict[UUID, set[UUID]] = {}
     for sample_id, tag_id in session.exec(stmt).all():
+        assert sample_id is not None
+        assert tag_id is not None
         result.setdefault(sample_id, set()).add(tag_id)
     return result
 

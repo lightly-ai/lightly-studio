@@ -263,32 +263,6 @@ def test_delete_tag__removes_sample_links(db_session: Session) -> None:
     assert image_2.sample.tags == []
 
 
-def test_get_or_create_sample_tag_by_name(db_session: Session) -> None:
-    collection = create_collection(session=db_session)
-    collection_id = collection.collection_id
-
-    # Create an existing tag
-    existing_tag = create_tag(
-        session=db_session, collection_id=collection_id, tag_name="existing_tag"
-    )
-
-    # Case 1: Get existing tag
-    result_tag = tag_resolver.get_or_create_sample_tag_by_name(
-        session=db_session, collection_id=collection_id, tag_name="existing_tag"
-    )
-    assert result_tag.tag_id == existing_tag.tag_id
-    assert result_tag.name == "existing_tag"
-
-    # Case 2: Create new tag
-    new_tag = tag_resolver.get_or_create_sample_tag_by_name(
-        session=db_session, collection_id=collection_id, tag_name="new_tag"
-    )
-    assert new_tag.tag_id != existing_tag.tag_id
-    assert new_tag.name == "new_tag"
-    assert new_tag.collection_id == collection_id
-    assert new_tag.kind == "sample"
-
-
 def test_get_names_by_ids(db_session: Session) -> None:
     collection = create_collection(session=db_session)
     cid = collection.collection_id
@@ -296,9 +270,7 @@ def test_get_names_by_ids(db_session: Session) -> None:
     tag_a = create_tag(session=db_session, collection_id=cid, tag_name="alpha")
     tag_b = create_tag(session=db_session, collection_id=cid, tag_name="beta")
 
-    result = tag_resolver.get_names_by_ids(
-        session=db_session, tag_ids=[tag_a.tag_id, tag_b.tag_id]
-    )
+    result = tag_resolver.get_names_by_ids(session=db_session, tag_ids=[tag_a.tag_id, tag_b.tag_id])
     assert result == {tag_a.tag_id: "alpha", tag_b.tag_id: "beta"}
 
 
@@ -346,6 +318,32 @@ def test_get_tags_by_sample__no_memberships(db_session: Session) -> None:
 
     result = tag_resolver.get_tags_by_sample(session=db_session, tag_ids=[tag.tag_id])
     assert result == {}
+
+
+def test_get_or_create_sample_tag_by_name(db_session: Session) -> None:
+    collection = create_collection(session=db_session)
+    collection_id = collection.collection_id
+
+    # Create an existing tag
+    existing_tag = create_tag(
+        session=db_session, collection_id=collection_id, tag_name="existing_tag"
+    )
+
+    # Case 1: Get existing tag
+    result_tag = tag_resolver.get_or_create_sample_tag_by_name(
+        session=db_session, collection_id=collection_id, tag_name="existing_tag"
+    )
+    assert result_tag.tag_id == existing_tag.tag_id
+    assert result_tag.name == "existing_tag"
+
+    # Case 2: Create new tag
+    new_tag = tag_resolver.get_or_create_sample_tag_by_name(
+        session=db_session, collection_id=collection_id, tag_name="new_tag"
+    )
+    assert new_tag.tag_id != existing_tag.tag_id
+    assert new_tag.name == "new_tag"
+    assert new_tag.collection_id == collection_id
+    assert new_tag.kind == "sample"
 
 
 def test_add_tag_to_sample(db_session: Session) -> None:
