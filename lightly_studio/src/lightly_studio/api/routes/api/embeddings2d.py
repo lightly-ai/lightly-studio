@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import io
+import json
 from typing import Annotated
 from uuid import UUID
 
@@ -12,6 +13,7 @@ from pyarrow import ipc
 from pydantic import BaseModel, Field
 from sqlmodel import select
 
+from lightly_studio.api.routes.api.embedding_coloring import ColorBy, build_color_data
 from lightly_studio.db_manager import SessionDep
 from lightly_studio.models.embedding_model import EmbeddingModelTable
 from lightly_studio.resolvers import image_resolver, twodim_embedding_resolver, video_resolver
@@ -27,6 +29,7 @@ class GetEmbeddings2DRequest(BaseModel):
     filters: ImageFilter | VideoFilter = Field(
         description="Filter parameters identifying matching samples"
     )
+    color_by: ColorBy | None = None
 
 
 @embeddings2d_router.post("/collections/{collection_id}/embeddings2d/default")
@@ -65,13 +68,36 @@ def get_2d_embeddings(
     else:
         fulfils_filter = [1 if sample_id in matching_sample_ids else 0 for sample_id in sample_ids]
 
+    color_by = body.color_by if body else None
+    color_categories, color_legend = build_color_data(
+        session=session,
+        collection_id=collection_id,
+        color_by=color_by,
+        sample_ids=sample_ids,
+        fulfils_filter=fulfils_filter,
+    )
+
+    schema = pa.schema(
+        [
+            pa.field("x", pa.float32()),
+            pa.field("y", pa.float32()),
+            pa.field("fulfils_filter", pa.uint8()),
+            pa.field("color_category", pa.uint8()),
+            pa.field("sample_id", pa.string()),
+        ],
+        metadata={
+            "color_legend": json.dumps({str(k): v for k, v in color_legend.items()}),
+        },
+    )
     table = pa.table(
         {
             "x": pa.array(x_array, type=pa.float32()),
             "y": pa.array(y_array, type=pa.float32()),
             "fulfils_filter": pa.array(fulfils_filter, type=pa.uint8()),
+            "color_category": pa.array(color_categories, type=pa.uint8()),
             "sample_id": pa.array([str(sample_id) for sample_id in sample_ids], type=pa.string()),
-        }
+        },
+        schema=schema,
     )
 
     buffer = io.BytesIO()
