@@ -4,7 +4,6 @@
     import { Button } from '$lib/components/ui/button';
     import { useMetadataFilters } from '$lib/hooks';
     import { cn } from '$lib/utils';
-    import type { components } from '$lib/schema';
     interface Props {
         collectionId: string;
         selectedKey: string | null;
@@ -13,12 +12,11 @@
     type ChildProps = {
         props: Record<string, unknown>;
     };
-    type MetadataInfo = components['schemas']['MetadataInfoView'];
     const supportedTypes = new Set(['string', 'boolean']);
     let { collectionId, selectedKey, onSelectedKeyChange }: Props = $props();
     const { metadataInfo } = useMetadataFilters(collectionId);
     const colorableFields = $derived(
-        ($metadataInfo ?? []).filter((field: MetadataInfo) => supportedTypes.has(field.type))
+        ($metadataInfo ?? []).filter((field) => supportedTypes.has(field.type))
     );
     const buttonLabel = $derived(selectedKey ? `metadata.${selectedKey}` : 'Color by');
     const handleSelect = (key: string) => {
