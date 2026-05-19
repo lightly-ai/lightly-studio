@@ -34,9 +34,6 @@ def build_metadata_color_maps(  # noqa: PLR0913
 ) -> tuple[list[int], dict[int, str]]:
     """Build color categories and a legend for metadata-based sample coloring.
 
-    The legend excludes the reserved categories (0 = filtered out,
-    1 = unassigned).
-
     Args:
         session: Database session.
         collection_id: ID of the collection whose metadata should be used.
@@ -48,7 +45,9 @@ def build_metadata_color_maps(  # noqa: PLR0913
             reserve, 0 for filtered-out samples and 1 for unassigned samples.
 
     Returns:
-        Tuple of color categories per sample and the legend for metadata values.
+        A tuple of `(color_categories, color_legend)` for the provided samples. The
+        length of `color_categories` is the number of samples. The `color_legend` is a mapping
+        from color ID to a human-readable string.
     """
     sample_to_value, metadata_type = sample_metadata_resolver.get_metadata_values_for_key(
         session=session,

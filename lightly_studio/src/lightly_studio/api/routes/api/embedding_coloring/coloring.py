@@ -59,7 +59,9 @@ def build_color_data(
         fulfils_filter: Per-sample filter categories used as the fallback coloring.
 
     Returns:
-        A tuple of `(color_categories, color_legend)` for the provided samples.
+        A tuple of `(color_categories, color_legend)` for the provided samples. The
+        length of `color_categories` is the number of samples. The `color_legend` is a mapping
+        from color ID to a human-readable string.
     """
     if not isinstance(color_by, MetadataFieldColorBy):
         return list(fulfils_filter), {}
