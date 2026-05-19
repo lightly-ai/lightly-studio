@@ -3,18 +3,15 @@
     import { page } from '$app/state';
     import {
         CombinedMetadataDimensionsFilters,
-        CollectionSearch,
+        DatasetGridHeader,
         Footer,
-        GridHeader,
         LabelsMenu,
-        OrderBy,
         SelectionPill,
         TagsMenu
     } from '$lib/components';
-    import GridHeaderSelectAllButton from '$lib/components/GridHeaderSelectAllButton/GridHeaderSelectAllButton.svelte';
     import QueryEditorPanel from '$lib/components/QueryEditorPanel/QueryEditorPanel.svelte';
     import Separator from '$lib/components/ui/separator/separator.svelte';
-    import { SlidersHorizontal, ChartNetwork, GripVertical } from '@lucide/svelte';
+    import { SlidersHorizontal, GripVertical } from '@lucide/svelte';
     import { onDestroy, onMount } from 'svelte';
     import { toStore } from 'svelte/store';
     import { Header } from '$lib/components';
@@ -41,7 +38,6 @@
     import type { GridType } from '$lib/types';
     import { useImageAnnotationCounts } from '$lib/hooks/useImageAnnotationCounts/useImageAnnotationCounts';
     import { useGlobalStorage } from '$lib/hooks/useGlobalStorage.js';
-    import { Button } from '$lib/components/ui/index.js';
     import QueryControl from '$lib/components/QueryControl/QueryControl.svelte';
     import { PaneGroup, Pane, PaneResizer } from 'paneforge';
     import { useVideoAnnotationCounts } from '$lib/hooks/useVideoAnnotationsCount/useVideoAnnotationsCount.js';
@@ -91,7 +87,6 @@
         retrieveParentCollection,
         collections,
         showPlot,
-        setShowPlot,
         filteredSampleCount,
         filteredAnnotationCount
     } = useGlobalStorage();
@@ -359,45 +354,20 @@
 
             {#snippet mainContent()}
                 {#if isImages || isAnnotations || isVideos || isVideoFrames || isGroups}
-                    <GridHeader>
-                        {#snippet selectionControls()}
-                            {#if canSelectAll}
-                                <GridHeaderSelectAllButton
-                                    onclick={selectAllHandle.handleSelectAll}
-                                />
-                            {/if}
-                        {/snippet}
-                        {#snippet auxControls()}
-                            {#if isImages}
-                                <OrderBy />
-                            {/if}
-                            {#if (isImages || isVideos) && hasEmbeddings}
-                                <Button
-                                    class="flex items-center space-x-1"
-                                    data-testid="toggle-plot-button"
-                                    variant={$showPlot ? 'default' : 'ghost'}
-                                    onclick={() =>
-                                        $showPlot ? setShowPlot(false) : setShowPlot(true)}
-                                >
-                                    <ChartNetwork class="size-4" />
-                                    <span>Show Embeddings</span>
-                                </Button>
-                            {/if}
-                        {/snippet}
-                        {#if (isImages || isVideos) && hasEmbeddings}
-                            <div class="relative" role="region" data-grid-search-drop-target>
-                                <CollectionSearch
-                                    image={$searchImage}
-                                    isPending={$searchPending}
-                                    initialQueryText={$textEmbedding?.queryText ?? ''}
-                                    onSubmitText={search.setText}
-                                    onSubmitFile={search.setImage}
-                                    onClear={search.clear}
-                                    onError={search.onError}
-                                />
-                            </div>
-                        {/if}
-                    </GridHeader>
+                    <DatasetGridHeader
+                        {canSelectAll}
+                        {isImages}
+                        {isVideos}
+                        {hasEmbeddings}
+                        onSelectAll={selectAllHandle.handleSelectAll}
+                        searchImage={$searchImage}
+                        searchPending={$searchPending}
+                        initialQueryText={$textEmbedding?.queryText ?? ''}
+                        onSubmitText={search.setText}
+                        onSubmitFile={search.setImage}
+                        onSearchClear={search.clear}
+                        onSearchError={search.onError}
+                    />
                     <Separator class="mb-4 bg-border-hard" />
                 {/if}
 
@@ -426,33 +396,20 @@
                         <div
                             class="relative flex flex-1 flex-col space-y-4 rounded-[1vw] bg-card p-4"
                         >
-                            <GridHeader>
-                                {#snippet selectionControls()}
-                                    {#if canSelectAll}
-                                        <GridHeaderSelectAllButton
-                                            onclick={selectAllHandle.handleSelectAll}
-                                        />
-                                    {/if}
-                                {/snippet}
-                                {#snippet auxControls()}
-                                    {#if isImages}
-                                        <OrderBy />
-                                    {/if}
-                                {/snippet}
-                                <div class="flex-1" data-grid-search-drop-target>
-                                    {#if hasEmbeddings}
-                                        <CollectionSearch
-                                            image={$searchImage}
-                                            isPending={$searchPending}
-                                            initialQueryText={$textEmbedding?.queryText ?? ''}
-                                            onSubmitText={search.setText}
-                                            onSubmitFile={search.setImage}
-                                            onClear={search.clear}
-                                            onError={search.onError}
-                                        />
-                                    {/if}
-                                </div>
-                            </GridHeader>
+                            <DatasetGridHeader
+                                {canSelectAll}
+                                {isImages}
+                                {isVideos}
+                                {hasEmbeddings}
+                                onSelectAll={selectAllHandle.handleSelectAll}
+                                searchImage={$searchImage}
+                                searchPending={$searchPending}
+                                initialQueryText={$textEmbedding?.queryText ?? ''}
+                                onSubmitText={search.setText}
+                                onSubmitFile={search.setImage}
+                                onSearchClear={search.clear}
+                                onSearchError={search.onError}
+                            />
                             <Separator class="mb-4 bg-border-hard" />
                             <div class="flex min-h-0 flex-1 overflow-hidden">
                                 {@render children()}
