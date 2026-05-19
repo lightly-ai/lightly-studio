@@ -9,9 +9,9 @@
         selectedKey: string | null;
         onSelectedKeyChange: (key: string | null) => void;
     }
-    type ChildProps = {
+    interface ChildProps {
         props: Record<string, unknown>;
-    };
+    }
     const supportedTypes = new Set(['string', 'boolean']);
     let { collectionId, selectedKey, onSelectedKeyChange }: Props = $props();
     const { metadataInfo } = useMetadataFilters(collectionId);
