@@ -7,7 +7,12 @@ from uuid import UUID, uuid4
 from fastapi.testclient import TestClient
 from pytest_mock import MockerFixture
 
-from lightly_studio.api.routes.api.status import HTTP_STATUS_OK
+from lightly_studio.api.routes.api.status import HTTP_STATUS_NOT_FOUND, HTTP_STATUS_OK
+from lightly_studio.models.evaluation_confusion_matrix import (
+    NO_GROUND_TRUTH_ROW_LABEL,
+    NO_PREDICTION_COL_LABEL,
+    ObjectDetectionConfusionMatrix,
+)
 from lightly_studio.models.evaluation_run import (
     EvaluationRunTable,
     EvaluationTaskType,
@@ -154,3 +159,87 @@ def test_get_evaluation_runs__empty_response(
 
     assert response.status_code == HTTP_STATUS_OK
     assert response.json() == []
+
+
+def test_get_evaluation_object_detection_confusion_matrix(
+    test_client: TestClient, mocker: MockerFixture
+) -> None:
+    dataset_id = uuid4()
+    evaluation_run_id = uuid4()
+    mock_matrix = ObjectDetectionConfusionMatrix(
+        row_labels=["cat", NO_GROUND_TRUTH_ROW_LABEL],
+        col_labels=["cat", NO_PREDICTION_COL_LABEL],
+        counts=[[2, 0], [0, 1]],
+    )
+    mocker.patch(
+        "lightly_studio.api.routes.api.evaluation.evaluation_run_resolver.get_by_id",
+        return_value=_make_evaluation_run(
+            run_id=evaluation_run_id,
+            name="run_1",
+            config_json={},
+            created_at=datetime(2026, 5, 18, 10, 0, 0, tzinfo=timezone.utc),
+        ),
+    )
+    mocker.patch(
+        "lightly_studio.api.routes.api.evaluation.evaluation_annotation_metric_resolver.get_object_detection_confusion_matrix",
+        return_value=mock_matrix,
+    )
+
+    response = test_client.get(
+        f"/api/datasets/{dataset_id}/evaluation/runs/{evaluation_run_id}/confusion-matrix"
+    )
+
+    assert response.status_code == HTTP_STATUS_OK
+    assert response.json() == {
+        "row_labels": ["cat", NO_GROUND_TRUTH_ROW_LABEL],
+        "col_labels": ["cat", NO_PREDICTION_COL_LABEL],
+        "counts": [[2, 0], [0, 1]],
+    }
+
+
+def test_get_evaluation_object_detection_confusion_matrix__empty_matrix(
+    test_client: TestClient, mocker: MockerFixture
+) -> None:
+    dataset_id = uuid4()
+    evaluation_run_id = uuid4()
+    mocker.patch(
+        "lightly_studio.api.routes.api.evaluation.evaluation_run_resolver.get_by_id",
+        return_value=_make_evaluation_run(
+            run_id=evaluation_run_id,
+            name="run_1",
+            config_json={},
+            created_at=datetime(2026, 5, 18, 10, 0, 0, tzinfo=timezone.utc),
+        ),
+    )
+    mocker.patch(
+        "lightly_studio.api.routes.api.evaluation.evaluation_annotation_metric_resolver.get_object_detection_confusion_matrix",
+        return_value=ObjectDetectionConfusionMatrix(
+            row_labels=[],
+            col_labels=[],
+            counts=[],
+        ),
+    )
+
+    response = test_client.get(
+        f"/api/datasets/{dataset_id}/evaluation/runs/{evaluation_run_id}/confusion-matrix"
+    )
+
+    assert response.status_code == HTTP_STATUS_OK
+    assert response.json() == {"row_labels": [], "col_labels": [], "counts": []}
+
+
+def test_get_evaluation_object_detection_confusion_matrix__run_not_found(
+    test_client: TestClient, mocker: MockerFixture
+) -> None:
+    dataset_id = uuid4()
+    evaluation_run_id = uuid4()
+    mocker.patch(
+        "lightly_studio.api.routes.api.evaluation.evaluation_run_resolver.get_by_id",
+        return_value=None,
+    )
+
+    response = test_client.get(
+        f"/api/datasets/{dataset_id}/evaluation/runs/{evaluation_run_id}/confusion-matrix"
+    )
+
+    assert response.status_code == HTTP_STATUS_NOT_FOUND
