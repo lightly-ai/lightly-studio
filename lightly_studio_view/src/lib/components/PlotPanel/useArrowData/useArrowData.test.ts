@@ -17,10 +17,14 @@ describe('useArrowData', () => {
             x: [1, 2, 3],
             y: [4, 5, 6],
             fulfils_filter: [true, false, true],
+            color_category: [1, 2, 0],
             sample_id: ['a', 'b', 'c']
         };
 
         const mockTable = {
+            schema: {
+                metadata: new Map([['color_legend', '{"1":"Filtered","2":"Train"}']])
+            },
             getChild: vi.fn((col: string) => ({
                 toArray: () => mockData[col as keyof typeof mockData]
             }))
@@ -31,11 +35,17 @@ describe('useArrowData', () => {
         const mockBlob = {
             arrayBuffer: vi.fn().mockResolvedValue(new ArrayBuffer(8))
         } as Blob;
-        const { data, error } = useArrowData({ blobData: mockBlob });
+        const { data, colorLegend, error } = useArrowData({ blobData: mockBlob });
 
         await new Promise((resolve) => setTimeout(resolve, 0));
 
         expect(get(data)).toEqual(mockData);
+        expect(get(colorLegend)).toEqual(
+            new Map([
+                [1, 'Filtered'],
+                [2, 'Train']
+            ])
+        );
         expect(get(error)).toBeUndefined();
     });
 
@@ -104,6 +114,9 @@ describe('useArrowData', () => {
 
     it('handles empty blob', async () => {
         const mockTable = {
+            schema: {
+                metadata: undefined
+            },
             getChild: vi.fn(() => ({
                 toArray: () => []
             }))
@@ -114,7 +127,7 @@ describe('useArrowData', () => {
         const mockBlob = {
             arrayBuffer: vi.fn().mockResolvedValue(new ArrayBuffer(0))
         } as Blob;
-        const { data, error } = useArrowData({ blobData: mockBlob });
+        const { data, colorLegend, error } = useArrowData({ blobData: mockBlob });
 
         await new Promise((resolve) => setTimeout(resolve, 0));
 
@@ -122,8 +135,10 @@ describe('useArrowData', () => {
             x: [],
             y: [],
             fulfils_filter: [],
+            color_category: [],
             sample_id: []
         });
+        expect(get(colorLegend)).toEqual(new Map());
         expect(get(error)).toBeUndefined();
     });
 

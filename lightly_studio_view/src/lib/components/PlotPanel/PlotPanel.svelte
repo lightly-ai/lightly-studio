@@ -13,10 +13,19 @@
     import { useArrowData } from './useArrowData/useArrowData';
     import { usePlotData } from './usePlotData/usePlotData';
     import PlotPanelLegend from './PlotPanelLegend.svelte';
+    import PlotColorByPopover from './PlotColorByPopover/PlotColorByPopover.svelte';
     import { isEqual } from 'lodash-es';
-    import { FILTERED_CATEGORY } from './plotCategories';
+    import { NOT_FILTERED_CATEGORY } from './plotCategories';
+    import {
+        FILTERED_COLOR,
+        getCategoryColors,
+        getCategoryCount,
+        NOT_FILTERED_COLOR
+    } from './plotColorUtils';
     import { page } from '$app/state';
     import { isVideosRoute } from '$lib/routes';
+
+    type ColorBy = Exclude<Parameters<typeof useEmbeddings>[2], undefined>;
 
     const collectionId = page.params.collection_id;
     const { setShowPlot, getRangeSelection, setRangeSelectionForCollection } = useGlobalStorage();
@@ -63,14 +72,23 @@
         };
     });
 
-    const embeddingsData = $derived(useEmbeddings(collectionId, filter));
+    let selectedColorByKey: string | null = $state(null);
+    const colorBy: ColorBy = $derived(
+        selectedColorByKey ? { type: 'metadata_field', key: selectedColorByKey } : null
+    );
 
-    const categoryColors = ['#9CA3AF', '#F59E0B'];
-    const { data: arrowData, error: arrowError } = $derived(
+    const embeddingsData = $derived(useEmbeddings(collectionId, filter, colorBy));
+
+    const {
+        data: arrowData,
+        colorLegend,
+        error: arrowError
+    } = $derived(
         useArrowData({
             blobData: $embeddingsData.data as Blob
         })
     );
+    const filteredLabel = $derived($colorLegend.get(1) ?? 'Filtered');
 
     const hasActiveFilter = $derived(filter !== null || activeSampleIds.length > 0);
 
@@ -82,6 +100,8 @@
             hasActiveFilter: hasActiveFilter
         })
     );
+    const categoryCount = $derived.by(() => getCategoryCount($colorLegend));
+    const categoryColors = $derived.by(() => getCategoryColors($colorLegend));
     const handleMouseUp = () => {
         const hadRangeSelection = $rangeSelection !== null;
         if (!hadRangeSelection) {
@@ -91,8 +111,8 @@
         const filter = isVideos ? $videoFilter : $imageFilter;
         const currentSampleIds = filter?.sample_filter?.sample_ids || [];
         const selectableCount =
-            ($arrowData?.fulfils_filter as Uint8Array | undefined)?.reduce((count, category) => {
-                return category === FILTERED_CATEGORY ? count + 1 : count;
+            ($arrowData?.color_category as Uint8Array | undefined)?.reduce((count, category) => {
+                return category !== NOT_FILTERED_CATEGORY ? count + 1 : count;
             }, 0) ?? null;
 
         if ($selectedSampleIds.length === 0) {
@@ -259,6 +279,7 @@
                         config={embeddingConfig}
                         {width}
                         {height}
+                        {categoryCount}
                         data={$plotData}
                         {categoryColors}
                         tooltip={null}
@@ -268,7 +289,10 @@
                         {viewportState}
                         rangeSelection={$rangeSelection}
                     />
-                    <PlotPanelLegend {categoryColors} />
+                    <PlotPanelLegend
+                        categoryColors={[NOT_FILTERED_COLOR, FILTERED_COLOR]}
+                        {filteredLabel}
+                    />
                 {/if}
             </div>
         {:else}
@@ -282,6 +306,13 @@
             class="mt-1 flex min-w-0 shrink-0 items-center justify-end gap-2 overflow-x-auto text-sm text-muted-foreground"
             data-testid="plot-panel-controls"
         >
+            <PlotColorByPopover
+                {collectionId}
+                selectedKey={selectedColorByKey}
+                onSelectedKeyChange={(key) => {
+                    selectedColorByKey = key;
+                }}
+            />
             <Button
                 variant="outline"
                 size="sm"
