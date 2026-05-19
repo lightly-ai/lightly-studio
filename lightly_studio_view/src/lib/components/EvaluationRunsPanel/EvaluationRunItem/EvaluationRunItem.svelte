@@ -1,23 +1,19 @@
 <script lang="ts">
     import type { EvaluationRunView } from '$lib/api/lightly_studio_local/types.gen';
     import { Typography } from '$lib/components';
+    import { formatDate } from '$lib/utils';
     import { ChevronDown, ChevronRight } from '@lucide/svelte';
 
     interface Props {
+        // The evaluation run to display.
         run: EvaluationRunView;
+        // Whether the details section is expanded.
         expanded: boolean;
+        // Callback to toggle the expanded state.
         onToggle: () => void;
     }
 
     const { run, expanded, onToggle }: Props = $props();
-
-    const dateFormatter = new Intl.DateTimeFormat('en-US', {
-        year: 'numeric',
-        month: 'short',
-        day: 'numeric',
-        hour: '2-digit',
-        minute: '2-digit'
-    });
 
     const formatConfigValue = (value: unknown): string => {
         if (value === null || value === undefined) return '—';
@@ -49,7 +45,7 @@
                 className="text-muted-foreground"
                 props={{ 'data-testid': 'evaluation-run-date' }}
             >
-                {dateFormatter.format(run.created_at)}
+                {formatDate(run.created_at)}
             </Typography>
         </div>
         {#if expanded}
