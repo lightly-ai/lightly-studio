@@ -3,6 +3,7 @@ export * from './groupAnnotationLabels';
 export * from './getColorByLabel';
 export * from './getSimilarityColor';
 export * from './formatter';
+export * from './formatDate';
 export * from './shadcn';
 export * from './isInputElement';
 export * from './isTextInputTarget';
