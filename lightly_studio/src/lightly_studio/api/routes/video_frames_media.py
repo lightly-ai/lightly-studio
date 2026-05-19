@@ -255,6 +255,8 @@ async def stream_frame(
     """
     video_frame = video_frame_resolver.get_by_id(session=session, sample_id=sample_id)
     video_path = video_frame.video.file_path_abs
+    frame_number = video_frame.frame_number
+    rotation_deg = video_frame.rotation_deg
     if (
         transform_query.quality == GridViewThumbnailQualityType.HIGH
         and transform_query.max_width is None
@@ -266,6 +268,7 @@ async def stream_frame(
         max_width=transform_query.max_width,
         max_height=transform_query.max_height,
     )
+    session.close()
 
     # Run CPU-intensive video processing in thread pool to avoid blocking event loop
     try:
@@ -273,8 +276,8 @@ async def stream_frame(
             get_media_executor("video_frame"),
             _process_video_frame,
             video_path,
-            video_frame.frame_number,
-            video_frame.rotation_deg,
+            frame_number,
+            rotation_deg,
             transform,
         )
     except ValueError as exc:
