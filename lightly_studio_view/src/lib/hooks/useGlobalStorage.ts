@@ -77,6 +77,7 @@ export type TextEmbedding = {
 };
 
 const showPlot = writable<boolean>(false);
+const showEvaluationRuns = writable<boolean>(false);
 const rangeSelectionBycollection = writable<Record<string, Point[] | null>>({});
 
 // Rewrite the hook to return values and methods
@@ -305,6 +306,16 @@ export const useGlobalStorage = () => {
         showPlot,
         setShowPlot: (show: boolean) => {
             showPlot.set(show);
+            if (show) {
+                showEvaluationRuns.set(false);
+            }
+        },
+        showEvaluationRuns,
+        setShowEvaluationRuns: (show: boolean) => {
+            showEvaluationRuns.set(show);
+            if (show) {
+                showPlot.set(false);
+            }
         },
         getRangeSelection,
         setRangeSelectionForCollection: (collectionId: string, selection: Point[] | null) => {

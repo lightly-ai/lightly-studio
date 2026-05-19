@@ -63,6 +63,7 @@
     import { shutdownMaskRendererPool } from '$lib/workers/maskRendererPool';
     import { GRID_IMAGE_SEARCH_DROP_EVENT, type GridItemDragData } from '$lib/components/GridItem';
     import { useSearchEmbedding } from '$lib/hooks/useSearchEmbedding/useSearchEmbedding';
+    import { useEvaluationRuns } from '$lib/hooks/useEvaluationRuns/useEvaluationRuns';
     const { data, children } = $props();
     const {
         collection,
@@ -87,9 +88,14 @@
         retrieveParentCollection,
         collections,
         showPlot,
+        showEvaluationRuns,
+        setShowEvaluationRuns,
         filteredSampleCount,
         filteredAnnotationCount
     } = useGlobalStorage();
+
+    const evaluationRunsQuery = $derived(useEvaluationRuns({ datasetId: collection.dataset_id }));
+    const evaluationRuns = $derived($evaluationRunsQuery.data ?? []);
 
     const parentCollection = $derived.by(() =>
         retrieveParentCollection($collections, collectionId)
@@ -297,6 +303,8 @@
     const { featureFlags } = useFeatureFlags();
     const isQueryFilterEnabled = $derived($featureFlags.includes('query_filter'));
     let isQueryFilterEditing = $state(false);
+
+    const isSidePanelOpen = $derived($showPlot || $showEvaluationRuns);
 </script>
 
 <div class="flex-none">
@@ -360,6 +368,7 @@
                         {isImages}
                         {hasMediaWithEmbeddings}
                         {datasetId}
+                        compact={isSidePanelOpen}
                         onSelectAll={selectAllHandle.handleSelectAll}
                         searchImage={$searchImage}
                         searchPending={$searchPending}
@@ -390,7 +399,30 @@
                 </PaneResizer>
             {/snippet}
 
-            {#if (isImages || isVideos) && $showPlot}
+            {#if $showEvaluationRuns}
+                <PaneGroup direction="horizontal" class="flex-1">
+                    <Pane defaultSize={65} minSize={35} class="flex">
+                        <div
+                            class="relative flex flex-1 flex-col space-y-4 rounded-[1vw] bg-card p-4 pb-2"
+                        >
+                            {@render mainContent()}
+                        </div>
+                    </Pane>
+
+                    {@render paneResizer()}
+
+                    <Pane defaultSize={35} minSize={25} class="flex min-h-0 flex-col">
+                        {#await import('$lib/components/EvaluationRunsPanel/EvaluationRunsPanel.svelte') then { default: EvaluationRunsPanel }}
+                            <EvaluationRunsPanel
+                                onClose={() => setShowEvaluationRuns(false)}
+                                {evaluationRuns}
+                                isLoading={$evaluationRunsQuery.isLoading}
+                                error={$evaluationRunsQuery.error?.message}
+                            />
+                        {/await}
+                    </Pane>
+                </PaneGroup>
+            {:else if (isImages || isVideos) && $showPlot}
                 <!-- When plot is shown, use PaneGroup for the main content + plot -->
                 <PaneGroup direction="horizontal" class="flex-1">
                     <Pane defaultSize={50} minSize={30} class="flex">
@@ -402,6 +434,7 @@
                                 {isImages}
                                 {hasMediaWithEmbeddings}
                                 {datasetId}
+                                compact={isSidePanelOpen}
                                 onSelectAll={selectAllHandle.handleSelectAll}
                                 searchImage={$searchImage}
                                 searchPending={$searchPending}
