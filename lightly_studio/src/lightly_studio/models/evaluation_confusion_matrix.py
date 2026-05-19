@@ -1,4 +1,4 @@
-"""Dense confusion-matrix payloads for object-detection evaluation runs."""
+"""Dense confusion-matrix payloads for evaluation runs."""
 
 from __future__ import annotations
 
@@ -11,7 +11,7 @@ NO_GROUND_TRUTH_ROW_LABEL = "(no ground truth)"
 NO_PREDICTION_COL_LABEL = "(no prediction)"
 
 
-class ObjectDetectionConfusionMatrix(BaseModel):
+class ConfusionMatrix(BaseModel):
     """Confusion matrix built from ``evaluation_annotation_metric`` rows.
 
     Each persisted pairing outcome (TP, FP, or FN) increments one cell. Rows follow
