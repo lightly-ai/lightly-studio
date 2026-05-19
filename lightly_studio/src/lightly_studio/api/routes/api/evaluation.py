@@ -7,10 +7,10 @@ from uuid import UUID
 
 from fastapi import APIRouter, HTTPException, Path
 
-from lightly_studio.api.routes.api.status import HTTP_STATUS_NOT_FOUND
+from lightly_studio.api.routes.api.status import HTTP_STATUS_NOT_FOUND, HTTP_STATUS_NOT_IMPLEMENTED
 from lightly_studio.db_manager import SessionDep
-from lightly_studio.models.evaluation_confusion_matrix import ObjectDetectionConfusionMatrix
-from lightly_studio.models.evaluation_run import EvaluationRunView
+from lightly_studio.models.evaluation_confusion_matrix import ConfusionMatrix
+from lightly_studio.models.evaluation_run import EvaluationRunView, EvaluationTaskType
 from lightly_studio.models.evaluation_sample_metric import EvaluationRunMetricsInfoView
 from lightly_studio.resolvers import (
     evaluation_annotation_metric_resolver,
@@ -79,14 +79,14 @@ def get_evaluation_runs(
 
 @evaluation_router.get(
     "/evaluation/runs/{evaluation_run_id}/confusion-matrix",
-    response_model=ObjectDetectionConfusionMatrix,
+    response_model=ConfusionMatrix,
 )
-def get_evaluation_object_detection_confusion_matrix(
+def get_evaluation_confusion_matrix(
     session: SessionDep,
     dataset_id: Annotated[UUID, Path(title="Dataset ID")],  # noqa: ARG001
     evaluation_run_id: Annotated[UUID, Path(title="Evaluation Run ID")],
-) -> ObjectDetectionConfusionMatrix:
-    """Get the object-detection confusion matrix for an evaluation run.
+) -> ConfusionMatrix:
+    """Get the confusion matrix for an evaluation run.
 
     Args:
         session: The database session.
@@ -98,6 +98,7 @@ def get_evaluation_object_detection_confusion_matrix(
 
     Raises:
         HTTPException: 404 if the evaluation run was not found.
+        HTTPException: 501 if the evaluation task type is not supported yet.
     """
     run = evaluation_run_resolver.get_by_id(
         session=session,
@@ -108,7 +109,12 @@ def get_evaluation_object_detection_confusion_matrix(
             status_code=HTTP_STATUS_NOT_FOUND,
             detail=f"Evaluation run {evaluation_run_id} not found.",
         )
-    return evaluation_annotation_metric_resolver.get_object_detection_confusion_matrix(
-        session=session,
-        evaluation_run_id=evaluation_run_id,
+    if run.task_type == EvaluationTaskType.OBJECT_DETECTION:
+        return evaluation_annotation_metric_resolver.get_object_detection_confusion_matrix(
+            session=session,
+            evaluation_run_id=evaluation_run_id,
+        )
+    raise HTTPException(
+        status_code=HTTP_STATUS_NOT_IMPLEMENTED,
+        detail=f"Evaluation task type '{run.task_type.value}' is not supported yet.",
     )
