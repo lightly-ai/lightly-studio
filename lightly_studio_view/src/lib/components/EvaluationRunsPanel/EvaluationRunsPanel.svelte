@@ -1,8 +1,7 @@
 <script lang="ts">
     import { ArrowLeft, X } from '@lucide/svelte';
     import Button from '$lib/components/ui/button/button.svelte';
-    import Spinner from '$lib/components/Spinner/Spinner.svelte';
-    import Typography from '$lib/components/Typography/Typography.svelte';
+    import { Spinner, Typography } from '$lib/components';
 
     import EvaluationRunItem from './EvaluationRunItem/EvaluationRunItem.svelte';
     import { type EvaluationRunView } from '$lib/api/lightly_studio_local';
