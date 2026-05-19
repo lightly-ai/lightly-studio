@@ -9,7 +9,7 @@
     type SearchImage = { name: string; previewUrl: string };
 
     interface Props {
-        compact: boolean;
+        compact?: boolean;
         canSelectAll: boolean;
         isImages: boolean;
         hasMediaWithEmbeddings: boolean;
@@ -25,7 +25,7 @@
     }
 
     const {
-        compact,
+        compact = false,
         canSelectAll,
         isImages,
         hasMediaWithEmbeddings,
