@@ -203,6 +203,30 @@ def remove_sample_ids_from_tag_id(
     return tag
 
 
+def get_names_by_ids(session: Session, tag_ids: list[UUID]) -> dict[UUID, str]:
+    """Return ``{tag_id: name}`` for the requested tags."""
+    if not tag_ids:
+        return {}
+    stmt = select(TagTable.tag_id, TagTable.name).where(col(TagTable.tag_id).in_(tag_ids))
+    return dict(session.exec(stmt).all())
+
+
+def get_tags_by_sample(
+    session: Session,
+    tag_ids: list[UUID],
+) -> dict[UUID, set[UUID]]:
+    """Return ``{sample_id: {tag_id, ...}}`` for the requested tags."""
+    if not tag_ids:
+        return {}
+    stmt = select(SampleTagLinkTable.sample_id, SampleTagLinkTable.tag_id).where(
+        col(SampleTagLinkTable.tag_id).in_(tag_ids)
+    )
+    result: dict[UUID, set[UUID]] = {}
+    for sample_id, tag_id in session.exec(stmt).all():
+        result.setdefault(sample_id, set()).add(tag_id)
+    return result
+
+
 def get_or_create_sample_tag_by_name(
     session: Session,
     collection_id: UUID,
