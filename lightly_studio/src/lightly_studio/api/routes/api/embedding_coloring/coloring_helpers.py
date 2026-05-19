@@ -19,7 +19,9 @@ class ColorScale(Protocol[T_contra]):
     """
 
     @property
-    def legend(self) -> dict[int, str]: ...
+    def legend(self) -> dict[int, str]:
+        """Mapping from color category integer to a human-readable label."""
+        ...
 
     def value_to_category(self, value: T_contra) -> int | None:
         """Return the color category for a value, or None if unmapped."""

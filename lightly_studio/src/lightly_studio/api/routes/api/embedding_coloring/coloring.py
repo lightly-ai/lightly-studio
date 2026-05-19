@@ -10,6 +10,7 @@ from sqlmodel import Session
 
 from lightly_studio.api.routes.api.embedding_coloring import metadata
 
+
 class TagColorBy(BaseModel):
     """Color samples by tag membership."""
 

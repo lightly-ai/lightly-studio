@@ -41,7 +41,7 @@ class TestDiscreteColorScale:
         assert scale.legend == {10: "x", 11: "y"}
 
     def test_from_values__empty(self) -> None:
-        scale = DiscreteColorScale.from_values(values=set())
+        scale = DiscreteColorScale.from_values(values=set[str]())
         assert scale.legend == {}
         assert scale.value_to_category("anything") is None
 
@@ -63,7 +63,7 @@ def test_assign_color_categories() -> None:
         scale=scale,
     )
 
-    assert legend == ["Filtered out", "Unassigned", "cat", "dog"]
+    assert legend == {0: "Filtered out", 1: "Unassigned", 2: "cat", 3: "dog"}
     assert categories == [2, 3]
 
 
@@ -79,7 +79,7 @@ def test_assign_color_categories__missing_and_filtered_out() -> None:
         scale=scale,
     )
 
-    assert legend == ["Filtered out", "Unassigned", "cat"]
+    assert legend == {0: "Filtered out", 1: "Unassigned", 2: "cat"}
     assert categories == [0, 1]
 
 
@@ -102,7 +102,7 @@ def test_assign_color_categories__mixed() -> None:
     )
 
     # Legend includes reserved entries + scale entries
-    assert legend == ["Filtered out", "Unassigned", "London", "Paris"]
+    assert legend == {0: "Filtered out", 1: "Unassigned", 2: "London", 3: "Paris"}
     assert categories == [3, 0, 1, 3]
 
 
@@ -116,7 +116,7 @@ def test_assign_color_categories__empty() -> None:
         scale=scale,
     )
 
-    assert legend == ["Filtered out", "Unassigned"]
+    assert legend == {0: "Filtered out", 1: "Unassigned", 2: "x"}
     assert categories == []
 
 
@@ -125,12 +125,12 @@ def test_assign_color_categories__unmapped_value() -> None:
     sid = uuid4()
     scale = DiscreteColorScale.from_values(values={"known"})
 
-    categories, _ = coloring_helpers.assign_color_categories(
+    categories, legend = coloring_helpers.assign_color_categories(
         sample_ids=[sid],
         fulfils_filter=[1],
         sample_to_value={sid: "unknown"},
         scale=scale,
     )
 
-    assert legend == ["Filtered out", "Unassigned", "known"]
+    assert legend == {0: "Filtered out", 1: "Unassigned", 2: "known"}
     assert categories == [1]

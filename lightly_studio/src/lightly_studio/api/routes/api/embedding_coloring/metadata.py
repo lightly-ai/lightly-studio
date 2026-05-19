@@ -72,4 +72,3 @@ def _build_metadata_color_scale(
         f"Metadata field '{key}' has unsupported type {metadata_type!r}. "
         "Only 'string' and 'boolean' fields can be used for coloring."
     )
-
