@@ -3,7 +3,7 @@
     import GridHeaderSelectAllButton from '$lib/components/GridHeaderSelectAllButton/GridHeaderSelectAllButton.svelte';
     import { Button } from '$lib/components/ui/index.js';
     import { Tooltip } from '$lib/components/ui/tooltip';
-    import { useGlobalStorage } from '$lib/hooks/useGlobalStorage.js';
+    import { useGlobalStorage } from '$lib/hooks';
     import { ChartNetwork, Gauge } from '@lucide/svelte';
 
     type SearchImage = { name: string; previewUrl: string };
