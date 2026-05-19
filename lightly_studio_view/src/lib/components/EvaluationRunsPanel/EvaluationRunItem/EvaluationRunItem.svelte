@@ -84,12 +84,6 @@
                     </dl>
                 {/if}
             </section>
-            <section class="mt-4">
-                <Typography variant="subtitle2" component="h3" className="mb-2">Metrics</Typography>
-                <Typography variant="body2" className="text-muted-foreground">
-                    Metrics not yet available — backend support pending.
-                </Typography>
-            </section>
         </div>
     {/if}
 </li>
