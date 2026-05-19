@@ -1,6 +1,116 @@
-## Plugins
+# Plugins
 
 LightlyStudio offers the possibility to extend its functionality by using plugins. Users can define their own plugins or use pre-defined ones.
+
+LightlyStudio plugins can add workflows such as image segmentation with SAM3, auto-labeling for object detection, and video plugins for tasks like bounding box propagation across frames. This makes it possible to extend LightlyStudio with model-assisted annotation and dataset-specific automation directly inside the UI.
+
+Plugins are shown in the UI based on their scope. The scope tells LightlyStudio which modality and context a plugin supports, for example dataset-level, image, or video frame context. The current view then determines which items the plugin runs on: in grid view, it uses the items matching the active filters; in detail view, it runs on the currently open item.
+
+## LightlyStudio Plugins
+
+Ready-to-use plugins are available in the [`lightly-studio-plugins`](https://github.com/lightly-ai/lightly-studio-plugins) repository. Each plugin lives in its own subdirectory under `plugins/` and can be installed directly from the repository.
+
+### Available Plugins
+
+- [BBox auto propagation nano tracker](https://github.com/lightly-ai/lightly-studio-plugins/tree/main/plugins/bbox_auto_propagation_nano_tracker/)  
+  Propagates boxes from one annotated video frame to other frames in the same video.
+
+    ??? note "Details"
+
+        If triggered from a frame, all bounding box annotations on that frame are
+        propagated. If triggered from an annotation, only the selected annotation is
+        propagated.
+
+        - Scope: video only, within a single video
+        - Entry points: frame or annotation
+        - Controls: forward and backward propagation windows in seconds
+        - Tradeoff: uses OpenCV NanoTracker, which is lightweight and fast on many
+          machines but less robust on difficult motion, occlusion, or scale changes
+        - Maintainer: Lightly
+        - Install:
+          `pip install git+https://github.com/lightly-ai/lightly-studio-plugins.git#subdirectory=plugins/bbox_auto_propagation_nano_tracker/`
+
+- [SAM3 Segmentation](https://github.com/lightly-ai/lightly-studio-plugins/tree/main/plugins/sam3_segmentation/)  
+  Segments all instances matching a text prompt in a single image or across the current view.
+
+    ??? note "Details"
+
+        This is designed for dataset-wide prompt-based labeling workflows with
+        class-like prompts such as `person`, `car`, or `dog`.
+
+        - Scope: single image or images in the current view
+        - Input: text prompt
+        - Output: segmentation masks
+        - Labels: the prompt text is used as the annotation class name
+        - Requirement: Hugging Face access to `facebook/sam3`
+        - Maintainer: Lightly
+        - Install:
+          `pip install git+https://github.com/lightly-ai/lightly-studio-plugins.git#subdirectory=plugins/sam3_segmentation/`
+
+- [LightlyTrain object detection inference](https://github.com/lightly-ai/lightly-studio-plugins/tree/main/plugins/lightly_train_object_detection_inference/)  
+  Runs LightlyTrain object detection inference on one image or the current view for auto-labeling.
+
+    ??? note "Details"
+
+        You can use built-in LightlyTrain models for quick bootstrapping or provide a
+        path to your own LightlyTrain checkpoint.
+
+        - Scope: single image or images in the current view
+        - Input: LightlyTrain model name or local path to a LightlyTrain checkpoint
+        - Output: object detection annotations
+        - Labels: class labels are read from the loaded model and created in the
+          dataset if they do not exist yet
+        - Recommended models:
+          `dinov3/convnext-large-ltdetr-coco` for best performance,
+          `dinov3/vits16-ltdetr-coco` for a speed/quality balance,
+          `picodet-l-coco` for resource-constrained environments
+        - Maintainer: Lightly
+        - Install:
+          `pip install git+https://github.com/lightly-ai/lightly-studio-plugins.git#subdirectory=plugins/lightly_train_object_detection_inference/`
+
+**[Explore all available plugins on GitHub →](https://github.com/lightly-ai/lightly-studio-plugins)**
+
+### Install LightlyStudio Plugins
+
+Replace `<plugin_name>` with the folder name of the plugin you want to install:
+
+=== "uv"
+    ```bash
+    uv pip install "git+https://github.com/lightly-ai/lightly-studio-plugins.git#subdirectory=plugins/<plugin_name>/"
+    ```
+
+=== "pip"
+    ```bash
+    pip install "git+https://github.com/lightly-ai/lightly-studio-plugins.git#subdirectory=plugins/<plugin_name>/"
+    ```
+
+Once installed, register the plugin through the Python API and it will appear in the GUI automatically.
+
+To remove a plugin, uninstall its package with `uv pip uninstall` or `pip uninstall`,
+using the package name defined in the plugin's `pyproject.toml` (typically matching the
+plugin folder name).
+
+### Example: LightlyStudio SAM3 Plugin
+
+<video autoplay loop muted playsinline controls style="width: 100%;">
+  <source src="https://storage.googleapis.com/lightly-public/studio/sam3_plugin.mp4" type="video/mp4">
+</video>
+
+The `sam3_segmentation` plugin brings interactive, model-assisted segmentation to
+LightlyStudio using Segment Anything Model 3 (SAM3). Install it with:
+```bash
+pip install "git+https://github.com/lightly-ai/lightly-studio-plugins.git#subdirectory=plugins/sam3_segmentation/"
+```
+!!! info "Prerequisites"
+    This plugin requires access to the SAM3 model on Hugging Face. Read the
+    [sam3_segmentation README](https://github.com/lightly-ai/lightly-studio-plugins/tree/main/plugins/sam3_segmentation)
+    before installing to make sure you have the necessary access and dependencies set up.
+
+Once installed, the SAM3 segmentation plugin appears in the operator menu. Select an
+image or a set of images, trigger the operator, and SAM3 will generate segmentation
+masks directly inside LightlyStudio.
+
+## Build Your Own Plugin
 
 The LightlyStudio operator plugin makes it possible to call a python function in the backend through a dialog in the graphical user interface (GUI) alias frontend. After you register an operator through the Python API, the GUI lists it automatically. For operators using the builtin parameter types, the dialog in the GUI is generated and rendered automatically.
 
@@ -11,11 +121,16 @@ An operator plugin is defined by the following attributes of the [`BaseOperator`
 - name: The name of the operator that will also be used in the GUI.
 - description: A detailed description of what the operator does.
 - parameters: A list of inputs exposed in the GUI. Supported parameter types are documented under [`Parameter`](../../api/plugin/#parameter)
-- supported_scopes: A list of [`OperatorScopes`](../../api/plugin/#lightly_studio.plugins.operator_context.OperatorScope) the operator can be executed in.
+- supported_scopes: A list of [`OperatorScope`](../../api/plugin/#lightly_studio.plugins.operator_context.OperatorScope) values that determine where the operator should appear in the GUI. In most cases, you will use one of these:
+  - `ROOT` for dataset-level operators
+  - `IMAGE` for image collections
+  - `VIDEO_FRAME` for video frame collections
 - execute: The method that is used to execute the actual action. It will receive the parameters from the GUI.
 
 
 #### Hello World 
+
+![Hello World Plugin](https://storage.googleapis.com/lightly-public/studio/plugin_hello_world.gif){ width="100%" }
 
 An example `Hello World" operator plugin looks like this:
 
@@ -74,9 +189,9 @@ ls.start_gui()
 
 After launching the GUI, the new plugin appears in the menu at the top-right corner.
 
-![Hello World Plugin](https://storage.googleapis.com/lightly-public/studio/plugin_hello_world.gif){ width="100%" }
+#### LightlyStudio Auto-Labeling Plugin
 
-#### LightlyTrain Object Detection
+![LightlyTrain plugin](https://storage.googleapis.com/lightly-public/studio/plugin_LightlyTrain_autoOD.gif){ width="100%" }
 
 In this example we create an auto-labeling operator plugin powered by LightlyTrain, so make sure `lightly-train` is installed via `pip install lightly-train`. Compared to the Hello World example, this operator plugin introduces two inputs: the model name and the confidence threshold used for predictions. These parameters let you choose a pre-trained LightlyTrain model and control how confident detections must be before they are written back to LightlyStudio.
 
@@ -149,14 +264,16 @@ class LightlyTrainAutoLabelingODOperator(BaseOperator):
         return [OperatorScope.IMAGE]
 
     def execute(self, *, session, context, parameters):
+        model_name = parameters["Model"]
         try:
-            model = lightly_train.load_model(parameters["Model"])
+            model = lightly_train.load_model(model_name)
         except ValueError as e:
             return OperatorResult(success=False, message=f"Model load failed: {str(e)}")
         
         if (parameters["Threshold"] > 1.0) or (parameters["Threshold"] < 0.0):
             return OperatorResult(success=False, message="Threshold must be in range 0.0 to 1.0")
 
+        collection_name = f"lightly_train_auto_label__{model_name}"
         raw_classes = getattr(model, "classes", {})
         label_map = _preload_label_map(session, context.collection_id, list(raw_classes.values()))
 
@@ -200,6 +317,7 @@ class LightlyTrainAutoLabelingODOperator(BaseOperator):
             session=session,
             parent_collection_id=context.collection_id,
             annotations=annotations_buffer,
+            collection_name=collection_name,
         )
         total_created = len(annotations_buffer)
 
@@ -225,5 +343,3 @@ operator_registry.register(LightlyTrainAutoLabelingODOperator())
 
 ls.start_gui()
 ```
-
-![LightlyTrain plugin](https://storage.googleapis.com/lightly-public/studio/plugin_LightlyTrain_autoOD.gif){ width="100%" }
