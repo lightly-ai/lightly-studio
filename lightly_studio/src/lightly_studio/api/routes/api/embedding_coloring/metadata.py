@@ -3,17 +3,12 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Any, cast
+from typing import Any
 from uuid import UUID
 
 from sqlmodel import Session
 
-from lightly_studio.models.metadata import (
-    NAME_TO_TYPE_MAP,
-)
 from lightly_studio.resolvers.metadata_resolver import sample as sample_metadata_resolver
-
-_SUPPORTED_TYPE_NAMES = frozenset({"string", "boolean"})
 
 
 @dataclass(frozen=True)
@@ -76,16 +71,17 @@ def _build_metadata_color_scale(
     start_cat: int,
 ) -> MetadataColorScale:
     """Build a MetadataColorScale for one metadata key across all collection samples."""
-    if metadata_type not in _SUPPORTED_TYPE_NAMES:
-        raise ValueError(
-            f"Metadata field '{key}' has unsupported type {metadata_type!r}. "
-            "Only 'string' and 'boolean' fields can be used for coloring."
-        )
-    values = set(sample_to_value.values())
-    value_type = cast("type[str | bool]", NAME_TO_TYPE_MAP[metadata_type])
-    if value_type is str:
-        return _build_color_scale_str(values=cast(set[str], values), start_cat=start_cat)
-    return _build_color_scale_bool(values=cast(set[bool], values), start_cat=start_cat)
+    if metadata_type == "string":
+        str_values: set[str] = set(sample_to_value.values())
+        return _build_color_scale_str(values=str_values, start_cat=start_cat)
+    if metadata_type == "boolean":
+        bool_values: set[bool] = set(sample_to_value.values())
+        return _build_color_scale_bool(values=bool_values, start_cat=start_cat)
+
+    raise ValueError(
+        f"Metadata field '{key}' has unsupported type {metadata_type!r}. "
+        "Only 'string' and 'boolean' fields can be used for coloring."
+    )
 
 
 def _assign_sample_categories(
