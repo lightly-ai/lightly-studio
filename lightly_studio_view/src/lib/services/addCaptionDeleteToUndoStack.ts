@@ -14,11 +14,11 @@ export const addCaptionDeleteToUndoStack = ({
     parentSampleId: string;
     addReversibleAction: (action: ReversibleAction) => void;
     createCaption: (input: CaptionCreateInput) => Promise<CreateCaptionResponse>;
-    refetch: () => void;
+    refetch: () => void | Promise<void>;
 }) => {
     const execute = async () => {
         await createCaption({ parent_sample_id: parentSampleId, text });
-        refetch();
+        await refetch();
     };
 
     addReversibleAction({

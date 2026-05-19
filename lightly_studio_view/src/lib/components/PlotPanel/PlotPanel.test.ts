@@ -14,6 +14,27 @@ const mockSetShowPlot = vi.fn();
 const mockSetRangeSelectionForCollection = vi.fn();
 const mockUpdateSampleIds = vi.fn();
 
+class MockResizeObserver {
+    constructor(private callback: ResizeObserverCallback) {}
+
+    observe(target: Element) {
+        this.callback(
+            [
+                {
+                    target,
+                    contentRect: {
+                        width: 640,
+                        height: 480
+                    } as DOMRectReadOnly
+                } as ResizeObserverEntry
+            ],
+            this as unknown as ResizeObserver
+        );
+    }
+
+    disconnect() {}
+}
+
 vi.mock('$app/state', () => ({
     page: {
         params: { collection_id: 'test-collection-id' },
@@ -69,6 +90,7 @@ vi.mock('$lib/hooks/useGlobalStorage', () => {
 describe('PlotPanel.svelte', () => {
     beforeEach(() => {
         vi.resetAllMocks();
+        vi.stubGlobal('ResizeObserver', MockResizeObserver);
         rangeSelectionStore = writable(null);
         selectedSampleIdsStore = writable([]);
         imageFilterStore = writable({ sample_filter: { sample_ids: [] } });
@@ -77,14 +99,12 @@ describe('PlotPanel.svelte', () => {
 
     it('should display an error message when useEmbeddings returns an error object', async () => {
         const mockError: Error = { name: 'TestError', message: 'Test error from object' };
-        (useEmbeddings as vi.Mock).mockReturnValue(
-            writable({
-                isError: true,
-                error: mockError,
-                isLoading: false,
-                data: null
-            })
-        );
+        (useEmbeddings as vi.Mock).mockReturnValue({
+            isError: true,
+            error: mockError,
+            isLoading: false,
+            data: null
+        });
 
         render(PlotPanel);
 
@@ -100,14 +120,12 @@ describe('PlotPanel.svelte', () => {
             { x: 1, y: 1 },
             { x: 0, y: 1 }
         ]);
-        (useEmbeddings as vi.Mock).mockReturnValue(
-            writable({
-                isError: false,
-                error: null,
-                isLoading: true,
-                data: null
-            })
-        );
+        (useEmbeddings as vi.Mock).mockReturnValue({
+            isError: false,
+            error: null,
+            isLoading: true,
+            data: null
+        });
 
         render(PlotPanel);
         await fireEvent.keyDown(window, { key: 'Escape' });
@@ -124,14 +142,12 @@ describe('PlotPanel.svelte', () => {
             { x: 0, y: 1 }
         ]);
         selectedSampleIdsStore = writable(['sample-1']);
-        (useEmbeddings as vi.Mock).mockReturnValue(
-            writable({
-                isError: false,
-                error: null,
-                isLoading: true,
-                data: null
-            })
-        );
+        (useEmbeddings as vi.Mock).mockReturnValue({
+            isError: false,
+            error: null,
+            isLoading: true,
+            data: null
+        });
 
         render(PlotPanel);
         await fireEvent.mouseUp(window);
@@ -147,14 +163,12 @@ describe('PlotPanel.svelte', () => {
             { x: 1, y: 1 },
             { x: 0, y: 1 }
         ]);
-        (useEmbeddings as vi.Mock).mockReturnValue(
-            writable({
-                isError: false,
-                error: null,
-                isLoading: true,
-                data: null
-            })
-        );
+        (useEmbeddings as vi.Mock).mockReturnValue({
+            isError: false,
+            error: null,
+            isLoading: true,
+            data: null
+        });
 
         render(PlotPanel);
 
@@ -187,14 +201,12 @@ describe('PlotPanel.svelte', () => {
             fulfils_filter: new Uint8Array([1, 1, 0]),
             sample_id: ['sample-1', 'sample-2', 'sample-3']
         });
-        (useEmbeddings as vi.Mock).mockReturnValue(
-            writable({
-                isError: false,
-                error: null,
-                isLoading: true,
-                data: null
-            })
-        );
+        (useEmbeddings as vi.Mock).mockReturnValue({
+            isError: false,
+            error: null,
+            isLoading: true,
+            data: null
+        });
 
         render(PlotPanel);
         await fireEvent.mouseUp(window);

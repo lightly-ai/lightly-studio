@@ -67,8 +67,8 @@
 
     const { isEditingMode } = page.data.globalStorage;
     const collectionId = $derived(page.params.collection_id!);
-    const result = $derived(useAnnotationLabels({ collectionId }));
-    const items = $derived(getSelectionItems($result.data || []));
+    const result = useAnnotationLabels(() => ({ collectionId }));
+    const items = $derived(getSelectionItems(result.data || []));
     const { addReversibleAction } = useGlobalStorage();
 
     const annotationId = $derived(annotationProp.sample_id);
@@ -77,21 +77,17 @@
         annotation: annotationResp,
         updateAnnotation,
         refetch
-    } = $derived(
-        useAnnotation({
-            collectionId,
-            annotationId,
-            onUpdate
-        })
-    );
+    } = useAnnotation(() => ({
+        collectionId,
+        annotationId,
+        onUpdate
+    }));
 
-    const { updateAnnotations: updateAnnotationsRaw } = $derived(
-        useUpdateAnnotationsMutation({
-            collectionId
-        })
-    );
+    const { updateAnnotations: updateAnnotationsRaw } = useUpdateAnnotationsMutation({
+        collectionId: page.params.collection_id!
+    });
 
-    const annotation = $derived($annotationResp.data || annotationProp);
+    const annotation = $derived(annotationResp.data || annotationProp);
 
     const annotationLabelName = $derived(annotation.annotation_label.annotation_label_name);
 

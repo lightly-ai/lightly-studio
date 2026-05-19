@@ -18,13 +18,13 @@
     );
 
     const gotoNextAnnotation = () => {
-        if ($sampleAdjacentQuery.data?.next_sample_id) {
+        if (sampleAdjacentQuery.data?.next_sample_id) {
             goto(
                 routeHelpers.toSampleWithAnnotation({
                     datasetId,
                     collectionType,
                     collectionId,
-                    annotationId: $sampleAdjacentQuery.data?.next_sample_id
+                    annotationId: sampleAdjacentQuery.data?.next_sample_id
                 }),
                 {
                     invalidateAll: true
@@ -34,13 +34,13 @@
     };
 
     const gotoPreviousAnnotation = () => {
-        if ($sampleAdjacentQuery.data?.previous_sample_id) {
+        if (sampleAdjacentQuery.data?.previous_sample_id) {
             goto(
                 routeHelpers.toSampleWithAnnotation({
                     datasetId,
                     collectionType,
                     collectionId,
-                    annotationId: $sampleAdjacentQuery.data?.previous_sample_id
+                    annotationId: sampleAdjacentQuery.data?.previous_sample_id
                 }),
                 {
                     invalidateAll: true
@@ -50,11 +50,11 @@
     };
 </script>
 
-{#if $sampleAdjacentQuery.data}
+{#if sampleAdjacentQuery.data}
     <div data-testid="annotation-navigation">
         <SteppingNavigation
-            hasPrevious={!!$sampleAdjacentQuery.data?.previous_sample_id}
-            hasNext={!!$sampleAdjacentQuery.data?.next_sample_id}
+            hasPrevious={!!sampleAdjacentQuery.data?.previous_sample_id}
+            hasNext={!!sampleAdjacentQuery.data?.next_sample_id}
             onPrevious={gotoPreviousAnnotation}
             onNext={gotoNextAnnotation}
         />

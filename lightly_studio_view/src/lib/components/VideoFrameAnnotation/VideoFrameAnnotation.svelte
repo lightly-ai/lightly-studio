@@ -27,14 +27,12 @@
     const { addReversibleAction } = useGlobalStorage();
     const { showAnnotationTextLabelsStore, showBoundingBoxesForSegmentationStore } = useSettings();
 
-    const { annotation: annotationResp, updateAnnotation } = $derived(
-        useAnnotation({
-            collectionId,
-            annotationId
-        })
-    );
+    const { annotation: annotationResp, updateAnnotation } = useAnnotation(() => ({
+        collectionId,
+        annotationId
+    }));
 
-    let annotation = $derived($annotationResp.data);
+    let annotation = $derived(annotationResp.data);
 
     let selectionBox = $derived(annotation ? getBoundingBox(annotation!) : undefined);
     const showBoundingBox = $derived(

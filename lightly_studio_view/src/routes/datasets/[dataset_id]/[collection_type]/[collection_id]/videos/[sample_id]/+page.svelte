@@ -47,10 +47,10 @@
     {:else}
         <LayoutCard className="p-4">
             <div class="flex h-full w-full flex-col space-y-4">
-                {#if $collection.data}
+                {#if collection.data}
                     <div class="flex w-full items-center">
                         <VideoDetailsBreadcrumb
-                            rootCollection={$collection.data}
+                            rootCollection={collection.data}
                             datasetId={data.params.dataset_id}
                             collectionType={data.params.collection_type}
                             sampleId={data.params.sample_id}

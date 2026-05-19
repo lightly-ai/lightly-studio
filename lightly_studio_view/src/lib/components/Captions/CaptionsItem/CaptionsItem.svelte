@@ -47,23 +47,23 @@
     // For captions page, page.data.collection is the CAPTION collection (sample_type: CAPTION),
     // not the parent collection that contains the actual samples (IMAGE or VIDEO)
     // We need to fetch the collection for the sample's collection_id to get the correct sample type
-    const sampleCollectionQuery = createQuery({
+    const sampleCollectionQuery = createQuery(() => ({
         ...readCollectionOptions({
             path: { collection_id: item.collection_id || '' }
         }),
         enabled: () => !!item.collection_id
-    });
+    }));
 
-    const sampleCollection = $derived($sampleCollectionQuery.data);
+    const sampleCollection = $derived(sampleCollectionQuery.data);
     const sampleType = $derived(sampleCollection?.sample_type);
 
     // Fetch video data if it's a video sample to get the first frame
-    const videoQuery = createQuery({
+    const videoQuery = createQuery(() => ({
         ...getVideoByIdOptions({
             path: { sample_id: item.sample_id }
         }),
         enabled: () => sampleType === SampleType.VIDEO
-    });
+    }));
 
     const { deleteCaption } = useDeleteCaption();
     const { createCaption } = useCreateCaption();
@@ -120,12 +120,12 @@
     <Card className="h-full">
         <CardContent className="h-full flex min-h-0 flex-row items-center dark:[color-scheme:dark]">
             {#if isVideoView(item)}
-                {#if $videoQuery.data}
+                {#if videoQuery.data}
                     <div class="sample-image">
                         <!-- Size will be ignored by sample-image class -->
-                        <VideoItem video={$videoQuery.data} size={200} showAnnotations={false} />
+                        <VideoItem video={videoQuery.data} size={200} showAnnotations={false} />
                     </div>
-                {:else if $videoQuery.isPending}
+                {:else if videoQuery.isPending}
                     <div class="sample-image flex items-center justify-center rounded-lg bg-black">
                         <div class="text-white">Loading...</div>
                     </div>
