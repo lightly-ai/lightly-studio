@@ -2,7 +2,7 @@
     import { Check, Palette } from '@lucide/svelte';
     import * as Popover from '$lib/components/ui/popover';
     import { Button } from '$lib/components/ui/button';
-    import { useMetadataFilters } from '$lib/hooks/useMetadataFilters/useMetadataFilters';
+    import { useMetadataFilters } from '$lib/hooks';
     import { cn } from '$lib/utils';
     import type { components } from '$lib/schema';
     interface Props {

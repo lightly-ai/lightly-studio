@@ -11,7 +11,7 @@ const metadataInfoStore = writable([
     { name: 'object', type: 'object' }
 ]);
 
-vi.mock('$lib/hooks/useMetadataFilters/useMetadataFilters', () => ({
+vi.mock('$lib/hooks/', () => ({
     useMetadataFilters: () => ({
         metadataInfo: metadataInfoStore
     })
