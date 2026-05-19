@@ -1,5 +1,5 @@
 <script lang="ts">
-    import { X } from '@lucide/svelte';
+    import { ArrowLeft, X } from '@lucide/svelte';
     import Button from '$lib/components/ui/button/button.svelte';
     import Spinner from '$lib/components/Spinner/Spinner.svelte';
     import Typography from '$lib/components/Typography/Typography.svelte';
@@ -21,8 +21,15 @@
     const { onClose, evaluationRuns, isLoading = false, error }: Props = $props();
 
     let expandedRunId = $state<string | null>(null);
+    const expandedRun = $derived(
+        expandedRunId ? (evaluationRuns.find((run) => run.id === expandedRunId) ?? null) : null
+    );
+    const visibleRuns = $derived(expandedRun ? [expandedRun] : evaluationRuns);
     const toggleExpand = (runId: string) => {
         expandedRunId = expandedRunId === runId ? null : runId;
+    };
+    const collapseExpanded = () => {
+        expandedRunId = null;
     };
 </script>
 
@@ -31,9 +38,23 @@
     data-testid="evaluation-runs-panel"
 >
     <div class="mb-5 mt-2 flex items-center justify-between">
-        <Typography variant="h5" component="h2" className="text-foreground">
-            Evaluation Runs
-        </Typography>
+        <div class="flex min-w-0 items-center gap-1">
+            {#if expandedRun}
+                <Button
+                    variant="ghost"
+                    size="icon"
+                    onclick={collapseExpanded}
+                    aria-label="Back to all evaluation runs"
+                    class="h-8 w-8"
+                    data-testid="evaluation-runs-back-button"
+                >
+                    <ArrowLeft class="size-4" />
+                </Button>
+            {/if}
+            <Typography variant="h5" component="h2" className="text-foreground">
+                Evaluation Runs
+            </Typography>
+        </div>
         <Button
             variant="ghost"
             size="icon"
@@ -72,7 +93,7 @@
             </div>
         {:else}
             <ul class="flex flex-col gap-2" data-testid="evaluation-runs-list">
-                {#each evaluationRuns as run (run.id)}
+                {#each visibleRuns as run (run.id)}
                     <EvaluationRunItem
                         {run}
                         expanded={expandedRunId === run.id}

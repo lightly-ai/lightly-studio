@@ -68,7 +68,7 @@ describe('EvaluationRunsPanel', () => {
         expect(screen.getByText('Run B')).toBeInTheDocument();
     });
 
-    it('expands only the clicked run and collapses it on a second click', async () => {
+    it('shows only the expanded run and collapses it on a second click', async () => {
         const runs: EvaluationRunView[] = [
             {
                 id: 'run-a',
@@ -85,23 +85,48 @@ describe('EvaluationRunsPanel', () => {
         ];
         renderPanel({ evaluationRuns: runs });
 
-        const [itemA, itemB] = screen.getAllByTestId('evaluation-run-item');
+        const [itemA] = screen.getAllByTestId('evaluation-run-item');
 
         await fireEvent.click(itemA);
-        let details = screen.getAllByTestId('evaluation-run-details');
-        expect(details).toHaveLength(1);
-        expect(itemA).toHaveAttribute('aria-expanded', 'true');
-        expect(itemB).toHaveAttribute('aria-expanded', 'false');
+        const items = screen.getAllByTestId('evaluation-run-item');
+        expect(items).toHaveLength(1);
+        expect(items[0]).toHaveAttribute('aria-expanded', 'true');
+        expect(screen.getAllByTestId('evaluation-run-details')).toHaveLength(1);
+        expect(screen.queryByText('Run B')).not.toBeInTheDocument();
 
-        await fireEvent.click(itemB);
-        details = screen.getAllByTestId('evaluation-run-details');
-        expect(details).toHaveLength(1);
-        expect(itemA).toHaveAttribute('aria-expanded', 'false');
-        expect(itemB).toHaveAttribute('aria-expanded', 'true');
-
-        await fireEvent.click(itemB);
+        await fireEvent.click(items[0]);
         expect(screen.queryByTestId('evaluation-run-details')).not.toBeInTheDocument();
-        expect(itemB).toHaveAttribute('aria-expanded', 'false');
+        expect(screen.getAllByTestId('evaluation-run-item')).toHaveLength(2);
+        expect(screen.getByText('Run B')).toBeInTheDocument();
+    });
+
+    it('renders a back button when a run is expanded and collapses on click', async () => {
+        const runs: EvaluationRunView[] = [
+            {
+                id: 'run-a',
+                name: 'Run A',
+                evaluation_run_configuration: {},
+                created_at: new Date('2026-01-01T00:00:00Z')
+            },
+            {
+                id: 'run-b',
+                name: 'Run B',
+                evaluation_run_configuration: {},
+                created_at: new Date('2026-02-01T00:00:00Z')
+            }
+        ];
+        renderPanel({ evaluationRuns: runs });
+
+        expect(screen.queryByTestId('evaluation-runs-back-button')).not.toBeInTheDocument();
+
+        await fireEvent.click(screen.getAllByTestId('evaluation-run-item')[0]);
+        const backButton = screen.getByTestId('evaluation-runs-back-button');
+        expect(backButton).toBeInTheDocument();
+
+        await fireEvent.click(backButton);
+        expect(screen.queryByTestId('evaluation-runs-back-button')).not.toBeInTheDocument();
+        expect(screen.getAllByTestId('evaluation-run-item')).toHaveLength(2);
+        expect(screen.queryByTestId('evaluation-run-details')).not.toBeInTheDocument();
     });
 
     it('invokes onClose when the close button is clicked', async () => {
