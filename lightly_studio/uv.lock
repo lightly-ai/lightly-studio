@@ -2833,7 +2833,7 @@ wheels = [
 
 [[package]]
 name = "lightly-studio"
-version = "0.4.13"
+version = "0.4.14"
 source = { editable = "." }
 dependencies = [
     { name = "av", version = "15.1.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.10'" },
