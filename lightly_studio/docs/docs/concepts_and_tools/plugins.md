@@ -1,4 +1,4 @@
-## Plugins
+# Plugins
 
 LightlyStudio offers the possibility to extend its functionality by using plugins. Users can define their own plugins or use pre-defined ones.
 
