@@ -486,6 +486,78 @@ def test_get_embeddings2d__with_unsupported_metadata_color_by(
     assert "unsupported type" in response.json()["error"]
 
 
+def test_get_embeddings2d__with_tag_color_by(
+    test_client: TestClient,
+    db_session: Session,
+) -> None:
+    n_samples = 4
+
+    collection_id = fill_db_with_samples_and_embeddings(
+        session=db_session,
+        n_samples=n_samples,
+        embedding_model_names=["model_a"],
+        embedding_dimension=EMBEDDING_DIMENSION,
+    )
+
+    samples = image_resolver.get_all_by_collection_id(
+        session=db_session,
+        collection_id=collection_id,
+    ).samples
+    assert len(samples) == n_samples
+
+    tag1 = tag_resolver.create(
+        db_session,
+        TagCreate(collection_id=collection_id, name="dogs"),
+    )
+    tag2 = tag_resolver.create(
+        db_session,
+        TagCreate(collection_id=collection_id, name="cats"),
+    )
+
+    # samples[0] → tag1 only, samples[1] → tag2 only, samples[2] → both tags,
+    # samples[3] → no tag (unassigned)
+    tag_resolver.add_tag_to_sample(
+        session=db_session, tag_id=tag1.tag_id, sample=samples[0].sample
+    )
+    tag_resolver.add_tag_to_sample(
+        session=db_session, tag_id=tag2.tag_id, sample=samples[1].sample
+    )
+    tag_resolver.add_tag_to_sample(
+        session=db_session, tag_id=tag1.tag_id, sample=samples[2].sample
+    )
+    tag_resolver.add_tag_to_sample(
+        session=db_session, tag_id=tag2.tag_id, sample=samples[2].sample
+    )
+
+    response = test_client.post(
+        f"/api/collections/{collection_id}/embeddings2d/default",
+        json={
+            "filters": {},
+            "color_by": {
+                "type": "tag",
+                "tag_ids": [str(tag1.tag_id), str(tag2.tag_id)],
+            },
+        },
+    )
+
+    assert response.status_code == 200
+
+    table = ipc.open_stream(pa.BufferReader(response.content)).read_all()
+    sample_ids_payload = table.column("sample_id").to_pylist()
+    color_category = table.column("color_category").to_numpy(zero_copy_only=False)
+
+    sample_id_to_color = dict(zip(sample_ids_payload, color_category))
+    assert sample_id_to_color[str(samples[0].sample_id)] == 2  # dogs
+    assert sample_id_to_color[str(samples[1].sample_id)] == 3  # cats
+    assert sample_id_to_color[str(samples[2].sample_id)] == 2  # both → dogs wins
+    assert sample_id_to_color[str(samples[3].sample_id)] == 1  # unassigned
+
+    legend = json.loads(table.schema.metadata[b"color_legend"])
+    assert legend["1"] == "Unassigned"
+    assert legend["2"] == "dogs"
+    assert legend["3"] == "cats"
+
+
 """Benchmark for the /embeddings2d/default endpoint.
 Deactivated by default.
 
