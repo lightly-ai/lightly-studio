@@ -1,6 +1,6 @@
 import { fireEvent, render, screen } from '@testing-library/svelte';
 import userEvent from '@testing-library/user-event';
-import { beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import PlotPanel from './PlotPanel.svelte';
 import { useEmbeddings } from '$lib/hooks/useEmbeddings/useEmbeddings';
 import { writable, type Writable } from 'svelte/store';
@@ -21,6 +21,12 @@ class ResizeObserverMock {
     observe() {}
     disconnect() {}
 }
+
+const originalHasPointerCapture = Element.prototype.hasPointerCapture;
+const originalSetPointerCapture = Element.prototype.setPointerCapture;
+const originalReleasePointerCapture = Element.prototype.releasePointerCapture;
+const originalScrollIntoView = Element.prototype.scrollIntoView;
+const originalResizeObserver = globalThis.ResizeObserver;
 
 vi.stubGlobal('ResizeObserver', ResizeObserverMock);
 
@@ -88,6 +94,14 @@ describe('PlotPanel.svelte', () => {
         Element.prototype.setPointerCapture = vi.fn();
         Element.prototype.releasePointerCapture = vi.fn();
         Element.prototype.scrollIntoView = vi.fn();
+    });
+
+    afterAll(() => {
+        Element.prototype.hasPointerCapture = originalHasPointerCapture;
+        Element.prototype.setPointerCapture = originalSetPointerCapture;
+        Element.prototype.releasePointerCapture = originalReleasePointerCapture;
+        Element.prototype.scrollIntoView = originalScrollIntoView;
+        vi.stubGlobal('ResizeObserver', originalResizeObserver);
     });
 
     beforeEach(() => {
