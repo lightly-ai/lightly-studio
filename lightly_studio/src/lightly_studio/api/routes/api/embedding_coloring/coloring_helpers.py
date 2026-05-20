@@ -69,7 +69,7 @@ class DiscreteColorScale(Generic[T]):
         """
         value_list = list(values)
         assert len(set(value_list)) == len(value_list), "Color legend values must be unique"
-        
+
         lookup: dict[T, int] = {}
         legend: dict[int, str] = {}
         for i, value in enumerate(value_list):
