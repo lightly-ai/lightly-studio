@@ -171,13 +171,16 @@ page.params.sampleId; // no $ prefix needed
 export const useFrames = (
   getParams: () => { video_frame_collection_id: string; filter: VideoFrameFilter }
 ) => {
-  const query = createInfiniteQuery(() => ({
-    ...getAllFramesInfiniteOptions({
-      path: { video_frame_collection_id: getParams().video_frame_collection_id },
-      body: { filter: getParams().filter }
-    }),
-    getNextPageParam: (lastPage) => lastPage.nextCursor || undefined
-  }));
+  const query = createInfiniteQuery(() => {
+    const { video_frame_collection_id, filter } = getParams();
+    return {
+      ...getAllFramesInfiniteOptions({
+        path: { video_frame_collection_id },
+        body: { filter }
+      }),
+      getNextPageParam: (lastPage) => lastPage.nextCursor || undefined
+    };
+  });
   return { query };
 };
 
