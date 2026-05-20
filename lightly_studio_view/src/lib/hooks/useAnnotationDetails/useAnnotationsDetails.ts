@@ -28,7 +28,7 @@ export const useAnnotationDetails = ({
     const { updateAnnotations } = useUpdateAnnotationsMutation({
         collectionId
     });
-    const annotation = createQuery(annotationOptions);
+    const annotation = createQuery(() => annotationOptions);
 
     const refetch = () => {
         client.invalidateQueries({ queryKey: annotationOptions.queryKey });

@@ -83,9 +83,10 @@
     });
 
     const currentFrameFilter = $derived($frameFilter ?? {});
-    const { data, query, loadMore, totalCount } = $derived(
-        useFrames(collectionId, currentFrameFilter)
-    );
+    const { data, query, loadMore, totalCount } = useFrames(() => ({
+        video_frame_collection_id: collectionId,
+        filter: currentFrameFilter
+    }));
     const { setfilteredSampleCount, getSelectedSampleIds, toggleSampleSelection, sampleSize } =
         useGlobalStorage();
     const columnCount = $derived($sampleSize.width);
@@ -153,15 +154,15 @@
             }
         }}
         status={{
-            loading: $query.isPending && items.length === 0,
-            error: $query.isError,
-            empty: $query.isSuccess && items.length === 0,
-            success: $query.isSuccess && items.length > 0
+            loading: query.isPending && items.length === 0,
+            error: query.isError,
+            empty: query.isSuccess && items.length === 0,
+            success: query.isSuccess && items.length > 0
         }}
         loader={{
             loadMore,
-            disabled: !$query.hasNextPage || $query.isFetchingNextPage,
-            loading: $query.isFetchingNextPage
+            disabled: !query.hasNextPage || query.isFetchingNextPage,
+            loading: query.isFetchingNextPage
         }}
     >
         {#snippet children({ footer })}

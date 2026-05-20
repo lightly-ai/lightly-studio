@@ -5,13 +5,13 @@ import type { ImagesInfiniteParams } from './types';
 export type { ImagesInfiniteParams } from './types';
 export { buildRequestBody } from './buildRequestBody';
 
-export const useImagesInfinite = (params: ImagesInfiniteParams) => {
-    const samplesOptions = createImagesInfiniteOptions(params);
-    const samples = createInfiniteQuery(samplesOptions);
+export const useImagesInfinite = (getParams: () => ImagesInfiniteParams) => {
+    const samples = createInfiniteQuery(() => createImagesInfiniteOptions(getParams()));
     const client = useQueryClient();
 
     const refresh = () => {
-        client.invalidateQueries({ queryKey: samplesOptions.queryKey });
+        const options = createImagesInfiniteOptions(getParams());
+        client.invalidateQueries({ queryKey: options.queryKey });
     };
 
     return {

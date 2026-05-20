@@ -1,8 +1,8 @@
 import { get, writable } from 'svelte/store';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { SortDirection } from '$lib/api/lightly_studio_local';
-import type { SortField } from '$lib/hooks/useSortFields/useSortFields';
-import { IMAGE_SORT_FIELDS } from '$lib/hooks/useSortFields/useSortFields';
+import type { SortField } from '$lib/hooks/useSortFields/useSortFields.svelte';
+import { IMAGE_SORT_FIELDS } from '$lib/hooks/useSortFields/useSortFields.svelte';
 import { useOrderBy } from './useOrderBy';
 import type { SortExpr } from '../useImagesInfinite/types';
 
@@ -14,9 +14,9 @@ vi.mock('$lib/hooks/useImageFilters/useImageFilters', () => ({
     useImageFilters: () => ({ imageSortBy, updateSortBy })
 }));
 
-vi.mock('$lib/hooks/useSortFields/useSortFields', async (importOriginal) => {
+vi.mock('$lib/hooks/useSortFields/useSortFields.svelte', async (importOriginal) => {
     const original =
-        await importOriginal<typeof import('$lib/hooks/useSortFields/useSortFields')>();
+        await importOriginal<typeof import('$lib/hooks/useSortFields/useSortFields.svelte')>();
     return {
         ...original,
         useSortFields: () => ({ allSortFields })

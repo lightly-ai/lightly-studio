@@ -1,9 +1,9 @@
 export { useVideoFrames } from '$lib/hooks/useVideoFrames/useVideoFrames';
 export { useVideoFrameAnnotations } from '$lib/hooks/useVideoFrameAnnotations/useVideoFrameAnnotations';
-export { useSamplesInfinite } from '$lib/hooks/useSamplesInfinite/useSamplesInfinite';
+export { useSamplesInfinite } from '$lib/hooks/useSamplesInfinite/useSamplesInfinite.svelte';
 export { useGlobalStorage } from '$lib/hooks/useGlobalStorage';
-export { useGroupsInfinite } from '$lib/hooks/useGroupsInfinite/useGroupsInfinite';
-export { useFrames } from '$lib/hooks/useFrames/useFrames';
+export { useGroupsInfinite } from '$lib/hooks/useGroupsInfinite/useGroupsInfinite.svelte';
+export { useFrames } from '$lib/hooks/useFrames/useFrames.svelte';
 export { useTags } from '$lib/hooks/useTags/useTags';
 export { useVideoFramesBounds } from '$lib/hooks/useVideoFramesBounds/useVideoFramesBounds';
 export { useMetadataFilters } from '$lib/hooks/useMetadataFilters/useMetadataFilters';
@@ -12,7 +12,7 @@ export { useCaptions } from '$lib/hooks/useCaptions/useCaptions';
 export { useRemoveTagFromSample } from '$lib/hooks/useRemoveTagFromSample/useRemoveTagFromSample';
 export { useCollectionWithChildren } from '$lib/hooks/useCollection/useCollection';
 export { useSelectionSummary } from '$lib/hooks/useSelectionSummary/useSelectionSummary';
-export { useVideo } from '$lib/hooks/useVideo/useVideo';
+export { useVideo } from '$lib/hooks/useVideo/useVideo.svelte';
 export { useAddTagToSample } from '$lib/hooks/useAddTagToSample/useAddTagToSample';
 export { useFileDrop } from '$lib/hooks/useFileDrop/useFileDrop';
 export { useImageUpload } from '$lib/hooks/useImageUpload/useImageUpload';
@@ -25,4 +25,4 @@ export { useAnnotationCollections } from '$lib/hooks/useAnnotationCollections/us
 export { useEvaluationSampleMetricsInfo } from '$lib/hooks/useEvaluationSampleMetricsInfo/useEvaluationSampleMetricsInfo';
 export { useEvaluationRuns } from '$lib/hooks/useEvaluationRuns/useEvaluationRuns';
 export { useOrderBy } from '$lib/hooks/useOrderBy/useOrderBy';
-export { useSortFields } from '$lib/hooks/useSortFields/useSortFields';
+export { useSortFields } from '$lib/hooks/useSortFields/useSortFields.svelte';

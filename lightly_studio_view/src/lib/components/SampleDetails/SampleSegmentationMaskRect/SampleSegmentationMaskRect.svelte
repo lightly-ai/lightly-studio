@@ -48,7 +48,13 @@
         onFinishBrushPendingChange
     }: SampleSegmentationMaskRectProps = $props();
 
-    const labels = useAnnotationLabels({ collectionId });
+    const {
+        context: annotationLabelContext,
+        setIsDrawing,
+        setAnnotationId
+    } = useAnnotationLabelContext();
+
+    const labels = useAnnotationLabels(() => ({ collectionId }));
     const activeAnnotationId = $derived.by(() => {
         if (annotationLabelContext.annotationId) return annotationLabelContext.annotationId;
 
@@ -58,14 +64,11 @@
 
         return null;
     });
-    const annotationApi = $derived.by(() => {
-        if (!activeAnnotationId) return null;
-
-        return useAnnotation({
-            collectionId,
-            annotationId: activeAnnotationId
-        });
-    });
+    const annotationApi = useAnnotation(() => ({
+        collectionId,
+        annotationId: activeAnnotationId ?? '',
+        enabled: !!activeAnnotationId
+    }));
     const datasetId = $derived(page.params.dataset_id!);
     const { refetch: refetchRootCollection } = $derived.by(() =>
         useCollectionWithChildren({ collectionId: datasetId })
@@ -86,12 +89,6 @@
             }
         })
     );
-
-    const {
-        context: annotationLabelContext,
-        setIsDrawing,
-        setAnnotationId
-    } = useAnnotationLabelContext();
 
     let baseMask = $state<Uint8Array | null>(null);
     let selectedAnnotation = $state<AnnotationView | null>(null);
@@ -180,7 +177,7 @@
     });
 
     const updateAnnotation = async (input: AnnotationUpdateInput) => {
-        await annotationApi?.updateAnnotation(input);
+        await annotationApi.updateAnnotation(input);
         refetch();
     };
 
@@ -223,7 +220,7 @@
                 await brushApi.finishBrush(
                     updatedMask,
                     targetAnnotation,
-                    $labels.data ?? [],
+                    labels.data ?? [],
                     updateAnnotation,
                     annotationLabelContext.lockedAnnotationIds
                 );

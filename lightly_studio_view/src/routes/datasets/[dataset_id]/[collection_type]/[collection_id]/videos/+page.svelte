@@ -1,5 +1,5 @@
 <script lang="ts">
-    import { useVideos } from '$lib/hooks/useVideos/useVideos';
+    import { useVideos } from '$lib/hooks/useVideos/useVideos.svelte';
     import { page } from '$app/stores';
     import { useGlobalStorage } from '$lib/hooks/useGlobalStorage';
     import VideoItem from '$lib/components/VideoItem/VideoItem.svelte';
@@ -114,9 +114,11 @@
         return buildVideoFilter(paramsWithSelection) ?? {};
     });
 
-    const { data, query, loadMore, totalCount } = $derived(
-        useVideos(collectionId, currentVideoFilter, $textEmbedding?.embedding)
-    );
+    const { data, query, loadMore, totalCount } = useVideos(() => ({
+        collection_id: collectionId,
+        filter: currentVideoFilter,
+        text_embedding: $textEmbedding?.embedding
+    }));
     const { setfilteredSampleCount } = useGlobalStorage();
 
     let items = $derived($data);
@@ -184,15 +186,15 @@
             }
         }}
         status={{
-            loading: $query.isPending && items.length === 0,
-            error: $query.isError,
-            empty: $query.isSuccess && items.length === 0,
-            success: $query.isSuccess && items.length > 0
+            loading: query.isPending && items.length === 0,
+            error: query.isError,
+            empty: query.isSuccess && items.length === 0,
+            success: query.isSuccess && items.length > 0
         }}
         loader={{
             loadMore,
-            disabled: !$query.hasNextPage || $query.isFetchingNextPage,
-            loading: $query.isFetchingNextPage
+            disabled: !query.hasNextPage || query.isFetchingNextPage,
+            loading: query.isFetchingNextPage
         }}
     >
         {#snippet children({ footer })}

@@ -28,17 +28,17 @@
 
 <div class="flex h-full w-full space-x-4 px-4 pb-4" data-testid="annotation-details">
     <div class="h-full w-full space-y-6 rounded-[1vw] bg-card p-4">
-        {#if $annotationDetailsResponse.data && annotationId && collection}
-            {#if $annotationDetailsResponse.data.parent_sample_type == SampleType.VIDEO_FRAME}
+        {#if annotationDetailsResponse.data && annotationId && collection}
+            {#if annotationDetailsResponse.data.parent_sample_type == SampleType.VIDEO_FRAME}
                 <VideoFrameAnnotationDetails
-                    annotationDetails={$annotationDetailsResponse.data}
+                    annotationDetails={annotationDetailsResponse.data}
                     {updateAnnotation}
                     {refetch}
                     {collection}
                 />
-            {:else if $annotationDetailsResponse.data.parent_sample_type == SampleType.IMAGE}
+            {:else if annotationDetailsResponse.data.parent_sample_type == SampleType.IMAGE}
                 <ImageAnnotationDetails
-                    annotationDetails={$annotationDetailsResponse.data}
+                    annotationDetails={annotationDetailsResponse.data}
                     {updateAnnotation}
                     {refetch}
                     {collection}
