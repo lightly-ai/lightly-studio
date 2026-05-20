@@ -23,7 +23,8 @@ vi.mock('$lib/hooks/useOrderBy/useOrderBy', () => ({
         selectedLabel: readable(null),
         isFieldSelected: readable(() => false),
         handleFieldClick: vi.fn(),
-        toggleDirection: vi.fn()
+        toggleDirection: vi.fn(),
+        dispose: vi.fn()
     })
 }));
 
