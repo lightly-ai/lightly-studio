@@ -19,8 +19,8 @@ const SENTINEL_LABELS = new Set<string>([NO_GROUND_TRUTH_ROW_LABEL, NO_PREDICTIO
  * - Y-axis reversed so the first sorted label sits at the top.
  */
 export function buildEchartsOption(matrix: ConfusionMatrix): EChartsCoreOption {
-    const allLabels = unionSorted(matrix.row_labels, matrix.col_labels);
-    const reversedAllLabels = [...allLabels].reverse();
+    const xLabels = matrix.col_labels;
+    const yLabels = [...matrix.row_labels].reverse();
 
     const tpData: [string, string, number][] = [];
     const fpFnData: [string, string, number][] = [];
@@ -52,7 +52,7 @@ export function buildEchartsOption(matrix: ConfusionMatrix): EChartsCoreOption {
         grid: { left: 160, right: 24, top: 16, bottom: 150 },
         xAxis: {
             type: 'category',
-            data: allLabels,
+            data: xLabels,
             position: 'bottom',
             axisLabel: { rotate: 45, interval: 0, color: '#9ca3af', fontSize: 12 },
             axisLine: { lineStyle: { color: '#374151' } },
@@ -60,7 +60,7 @@ export function buildEchartsOption(matrix: ConfusionMatrix): EChartsCoreOption {
         },
         yAxis: {
             type: 'category',
-            data: reversedAllLabels,
+            data: yLabels,
             axisLabel: { interval: 0, color: '#9ca3af', fontSize: 12 },
             axisLine: { lineStyle: { color: '#374151' } },
             splitArea: { show: false }
@@ -102,17 +102,4 @@ export function buildEchartsOption(matrix: ConfusionMatrix): EChartsCoreOption {
             }
         ]
     };
-}
-
-function unionSorted(rows: string[], cols: string[]): string[] {
-    const all = new Set<string>([...rows, ...cols]);
-    const real: string[] = [];
-    const sentinels: string[] = [];
-    for (const label of all) {
-        if (SENTINEL_LABELS.has(label)) sentinels.push(label);
-        else real.push(label);
-    }
-    real.sort();
-    sentinels.sort();
-    return [...real, ...sentinels];
 }
