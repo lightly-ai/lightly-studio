@@ -41,7 +41,7 @@ class TestDiscreteColorScale:
         assert scale.legend == {10: "x", 11: "y"}
 
     def test_from_values__empty(self) -> None:
-        scale = DiscreteColorScale.from_values(values=[])
+        scale = DiscreteColorScale[str].from_values(values=[])
         assert scale.legend == {}
         assert scale.value_to_category("anything") is None
 
