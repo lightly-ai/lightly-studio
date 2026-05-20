@@ -1,16 +1,8 @@
-import {
-    NO_GROUND_TRUTH_ROW_LABEL,
-    NO_PREDICTION_COL_LABEL,
-    type AnnotationPairing,
-    type ConfusionMatrix
-} from './types';
+import { NO_GROUND_TRUTH_ROW_LABEL, NO_PREDICTION_COL_LABEL, type ConfusionMatrix } from './types';
 
 /**
  * Storybook fixtures. The shapes match what the LIG-9514 endpoint returns
  * (sorted real classes, then synthetic FP row / FN column).
- *
- * Pairing fixtures drive the threshold-slider story; the matrix is rebuilt
- * client-side from them via `buildConfusionMatrix`.
  */
 
 const fp = NO_GROUND_TRUTH_ROW_LABEL;
@@ -107,58 +99,6 @@ export const singleClass: ConfusionMatrix = matrix(
         [11, 0]
     ]
 );
-
-/** Coco-like raw pairings for the client-side threshold story. */
-export const cocoLikePairings: AnnotationPairing[] = (() => {
-    const classes = ['bicycle', 'car', 'dog', 'person', 'traffic light'];
-    const rng = mulberry32(7);
-    const out: AnnotationPairing[] = [];
-    for (const cls of classes) {
-        for (let i = 0; i < 60; i++) {
-            const confused = rng() < 0.08;
-            const predCls = confused ? classes[Math.floor(rng() * classes.length)] : cls;
-            out.push({
-                gt_label: cls,
-                pred_label: predCls,
-                confidence: 0.4 + rng() * 0.6,
-                iou: 0.45 + rng() * 0.5
-            });
-        }
-        for (let i = 0; i < 6; i++) {
-            out.push({
-                gt_label: null,
-                pred_label: cls,
-                confidence: 0.2 + rng() * 0.6,
-                iou: null
-            });
-        }
-        for (let i = 0; i < 5; i++) {
-            out.push({
-                gt_label: cls,
-                pred_label: null,
-                confidence: null,
-                iou: null
-            });
-        }
-        for (let i = 0; i < 8; i++) {
-            out.push({
-                gt_label: cls,
-                pred_label: cls,
-                confidence: 0.05 + rng() * 0.18,
-                iou: 0.3 + rng() * 0.6
-            });
-        }
-        for (let i = 0; i < 4; i++) {
-            out.push({
-                gt_label: cls,
-                pred_label: cls,
-                confidence: 0.5 + rng() * 0.4,
-                iou: 0.05 + rng() * 0.35
-            });
-        }
-    }
-    return out;
-})();
 
 function mulberry32(seed: number): () => number {
     let state = seed >>> 0;

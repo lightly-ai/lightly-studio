@@ -30,27 +30,12 @@ if (typeof globalThis.ResizeObserver === 'undefined') {
 
 describe('ConfusionMatrix', () => {
     it('renders the empty state when there are no labels', () => {
-        render(ConfusionMatrix, { props: { data: { kind: 'matrix', matrix: empty } } });
+        render(ConfusionMatrix, { props: { matrix: empty } });
         expect(screen.getByTestId('confusion-matrix-empty')).toBeInTheDocument();
     });
 
     it('renders the chart container for a non-empty matrix', () => {
-        render(ConfusionMatrix, {
-            props: { data: { kind: 'matrix', matrix: small3Classes } }
-        });
-        expect(screen.getByTestId('confusion-matrix')).toBeInTheDocument();
-    });
-
-    it('recomputes the matrix client-side when given pairings', () => {
-        render(ConfusionMatrix, {
-            props: {
-                data: {
-                    kind: 'pairings',
-                    pairings: [{ gt_label: 'car', pred_label: 'car', confidence: 0.9, iou: 0.8 }],
-                    thresholds: { confidence: 0.25, iou: 0.5 }
-                }
-            }
-        });
+        render(ConfusionMatrix, { props: { matrix: small3Classes } });
         expect(screen.getByTestId('confusion-matrix')).toBeInTheDocument();
     });
 });

@@ -9,10 +9,9 @@
         VisualMapComponent
     } from 'echarts/components';
     import { CanvasRenderer } from 'echarts/renderers';
-    import { buildConfusionMatrix } from './buildConfusionMatrix';
     import { buildEchartsOption } from './buildEchartsOption';
     import ConfusionMatrixLegend from './ConfusionMatrixLegend.svelte';
-    import type { ConfusionMatrixDataSource } from './types';
+    import type { ConfusionMatrix } from './types';
 
     echarts.use([
         HeatmapChart,
@@ -24,18 +23,14 @@
     ]);
 
     interface Props {
-        data: ConfusionMatrixDataSource;
+        matrix: ConfusionMatrix;
         showLegend?: boolean;
     }
 
-    const { data, showLegend = false }: Props = $props();
+    const { matrix, showLegend = false }: Props = $props();
 
     let container: HTMLDivElement | undefined = $state();
     let chart: echarts.ECharts | null = $state(null);
-
-    const matrix = $derived(
-        data.kind === 'matrix' ? data.matrix : buildConfusionMatrix(data.pairings, data.thresholds)
-    );
 
     const heightPx = $derived(Math.max(320, matrix.row_labels.length * 48 + 180));
 
