@@ -51,18 +51,14 @@ def build_annotation_color_maps(
         if ann.annotation_label_id in requested:
             sample_to_labels[ann.parent_sample_id].add(ann.annotation_label_id)
 
+    sample_to_value = coloring_helpers.first_match_per_sample(
+        sample_to_candidates=sample_to_labels, priority_order=annotation_label_ids
+    )
+
     scale = DiscreteColorScale.from_values(
         values=annotation_label_ids,
         format_fn=lambda lid: names.get(str(lid), str(lid)),
     )
-
-    # First-match-wins: map each sample to its earliest matching label.
-    sample_to_value: dict[UUID, UUID] = {}
-    for sid, labels in sample_to_labels.items():
-        for lid in annotation_label_ids:
-            if lid in labels:
-                sample_to_value[sid] = lid
-                break
 
     return coloring_helpers.assign_color_categories(
         sample_ids=sample_ids,
