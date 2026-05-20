@@ -9,7 +9,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
-- Added sort-by support via GUI
+- Sample selection respects the current image or video filters.
+- Added sort-by support via GUI.
 
 ### Changed
 
