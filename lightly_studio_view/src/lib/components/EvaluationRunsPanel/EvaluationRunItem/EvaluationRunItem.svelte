@@ -2,7 +2,10 @@
     import type { EvaluationRunView } from '$lib/api/lightly_studio_local/types.gen';
     import { Typography } from '$lib/components';
     import { formatDate } from '$lib/utils';
-    import { ChevronDown, ChevronRight } from '@lucide/svelte';
+    import { ChevronDown } from '@lucide/svelte';
+    import { slide } from 'svelte/transition';
+
+    const duration = 268; // phi
 
     interface Props {
         // The evaluation run to display.
@@ -34,28 +37,31 @@
     >
         <div class="min-w-0 flex-1">
             <Typography
-                variant="subtitle2"
+                variant={expanded ? 'subtitle1' : 'subtitle2'}
                 className="truncate"
                 props={{ 'data-testid': 'evaluation-run-name' }}
             >
                 {run.name}
             </Typography>
             <Typography
-                variant="caption"
+                variant={expanded ? 'caption2' : 'caption'}
                 className="text-muted-foreground"
                 props={{ 'data-testid': 'evaluation-run-date' }}
             >
                 {formatDate(run.created_at)}
             </Typography>
         </div>
-        {#if expanded}
-            <ChevronDown class="size-4 shrink-0" />
-        {:else}
-            <ChevronRight class="size-4 shrink-0" />
-        {/if}
+        <ChevronDown
+            class="size-4 shrink-0 transition-transform duration-{duration}"
+            style={`transform: ${expanded ? 'rotate(0deg)' : 'rotate(-90deg)'}`}
+        />
     </button>
     {#if expanded}
-        <div class="border-t border-border px-3 py-3" data-testid="evaluation-run-details">
+        <div
+            class="border-t border-border px-3 py-3"
+            data-testid="evaluation-run-details"
+            transition:slide={{ duration }}
+        >
             <section>
                 <Typography variant="subtitle2" component="h3" className="mb-2">
                     Configuration
