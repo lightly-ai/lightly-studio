@@ -1,4 +1,4 @@
-"""Build a object-detection confusion matrix from persisted pairing metrics."""
+"""Build a confusion matrix from persisted pairing metrics."""
 
 from __future__ import annotations
 
@@ -13,14 +13,14 @@ from lightly_studio.models.evaluation_annotation_metric import EvaluationAnnotat
 from lightly_studio.models.evaluation_confusion_matrix import (
     NO_GROUND_TRUTH_ROW_LABEL,
     NO_PREDICTION_COL_LABEL,
-    ObjectDetectionConfusionMatrix,
+    ConfusionMatrix,
 )
 
 
 def get_object_detection_confusion_matrix(
     session: Session,
     evaluation_run_id: UUID,
-) -> ObjectDetectionConfusionMatrix:
+) -> ConfusionMatrix:
     """Aggregate persisted OD pairing metrics into a label-by-label matrix.
 
     Counts are computed in a single SQL query that joins
@@ -46,7 +46,7 @@ def get_object_detection_confusion_matrix(
     """
     grouped_rows = _fetch_pair_counts(session=session, evaluation_run_id=evaluation_run_id)
     if not grouped_rows:
-        return ObjectDetectionConfusionMatrix(
+        return ConfusionMatrix(
             row_labels=[],
             col_labels=[],
             counts=[],
@@ -58,7 +58,7 @@ def get_object_detection_confusion_matrix(
         row_labels=row_labels,
         col_labels=col_labels,
     )
-    return ObjectDetectionConfusionMatrix(
+    return ConfusionMatrix(
         row_labels=row_labels,
         col_labels=col_labels,
         counts=counts,
