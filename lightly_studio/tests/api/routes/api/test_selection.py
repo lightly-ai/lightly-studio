@@ -289,6 +289,117 @@ def test_create_combination_selection__metadata_weighting_success_videos(
     assert result.samples[1].file_name == "video3.mp4"
 
 
+def test_create_combination_selection__embedding_similarity_success(
+    test_client: TestClient, db_session: Session
+) -> None:
+    """Similarity selection creates a tag with the most similar samples."""
+    collection_id = helpers_resolvers.fill_db_with_samples_and_embeddings(
+        session=db_session, n_samples=5, embedding_model_names=["embedding_model_1"]
+    )
+    all_samples = image_resolver.get_all_by_collection_id(
+        session=db_session, pagination=None, collection_id=collection_id
+    ).samples
+    query_tag = helpers_resolvers.create_tag(
+        session=db_session, collection_id=collection_id, tag_name="query_tag"
+    )
+    tag_resolver.add_sample_ids_to_tag_id(
+        session=db_session,
+        tag_id=query_tag.tag_id,
+        sample_ids=[all_samples[0].sample_id, all_samples[1].sample_id],
+    )
+
+    response = test_client.post(
+        f"/api/collections/{collection_id}/selection",
+        json={
+            "n_samples_to_select": 2,
+            "selection_result_tag_name": "similarity_selection",
+            "strategies": [
+                {
+                    "strategy_name": "similarity",
+                    "query_tag_name": "query_tag",
+                    "embedding_model_name": "embedding_model_1",
+                }
+            ],
+        },
+    )
+
+    assert response.status_code == 204
+    assert response.text == ""
+
+    created_tag = tag_resolver.get_by_name(
+        session=db_session,
+        tag_name="similarity_selection",
+        collection_id=collection_id,
+    )
+    assert created_tag is not None
+
+    tag_filter = ImageFilter(sample_filter=SampleFilter(tag_ids=[created_tag.tag_id]))
+    result = image_resolver.get_all_by_collection_id(
+        session=db_session, collection_id=collection_id, filters=tag_filter
+    )
+    actual_sample_paths = {sample.file_path_abs for sample in result.samples}
+    assert actual_sample_paths == {"sample_0.jpg", "sample_1.jpg"}
+
+
+def test_create_combination_selection__embedding_similarity_missing_query_tag(
+    test_client: TestClient, db_session: Session
+) -> None:
+    """Similarity selection fails if the query tag does not exist."""
+    collection_id = helpers_resolvers.fill_db_with_samples_and_embeddings(
+        session=db_session, n_samples=5, embedding_model_names=["embedding_model_1"]
+    )
+
+    response = test_client.post(
+        f"/api/collections/{collection_id}/selection",
+        json={
+            "n_samples_to_select": 2,
+            "selection_result_tag_name": "similarity_selection",
+            "strategies": [
+                {
+                    "strategy_name": "similarity",
+                    "query_tag_name": "missing_query_tag",
+                    "embedding_model_name": "embedding_model_1",
+                }
+            ],
+        },
+    )
+
+    assert response.status_code == 400
+    assert response.json()["error"] == "Query tag with name missing_query_tag not found."
+
+
+def test_create_combination_selection__embedding_similarity_query_tag_without_embeddings(
+    test_client: TestClient, db_session: Session
+) -> None:
+    """Similarity selection fails if the query tag has no embeddings."""
+    collection_id = helpers_resolvers.fill_db_with_samples_and_embeddings(
+        session=db_session, n_samples=5, embedding_model_names=["embedding_model_1"]
+    )
+    helpers_resolvers.create_tag(
+        session=db_session, collection_id=collection_id, tag_name="empty_query_tag"
+    )
+
+    response = test_client.post(
+        f"/api/collections/{collection_id}/selection",
+        json={
+            "n_samples_to_select": 2,
+            "selection_result_tag_name": "similarity_selection",
+            "strategies": [
+                {
+                    "strategy_name": "similarity",
+                    "query_tag_name": "empty_query_tag",
+                    "embedding_model_name": "embedding_model_1",
+                }
+            ],
+        },
+    )
+
+    assert response.status_code == 400
+    assert response.json()["error"] == (
+        "Query tag empty_query_tag does not have embeddings for embedding model embedding_model_1."
+    )
+
+
 def test_create_combination_selection__image_filter_success(
     test_client: TestClient,
     db_session: Session,
