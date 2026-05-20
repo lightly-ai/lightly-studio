@@ -76,6 +76,22 @@ describe('plotColorUtils', () => {
         ]);
     });
 
+    it('uses discrete legend colors when label colors are disabled', () => {
+        expect(
+            getLegendEntries(
+                new Map([
+                    [2, 'Train'],
+                    [3, 'Validation']
+                ]),
+                new Set(),
+                false
+            )
+        ).toEqual([
+            { cat: 2, label: 'Train', color: 'hsl(0, 70%, 55%)', hidden: false },
+            { cat: 3, label: 'Validation', color: 'hsl(180, 70%, 55%)', hidden: false }
+        ]);
+    });
+
     it('returns filtered color for hidden categories', () => {
         const legend = new Map([
             [0, ''],

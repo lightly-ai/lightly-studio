@@ -74,7 +74,8 @@ export function getCategoryColors(
 
 export function getLegendEntries(
     colorLegend?: ReadonlyMap<number, string> | null,
-    hiddenCategories: ReadonlySet<number> = new Set()
+    hiddenCategories: ReadonlySet<number> = new Set(),
+    useLabelColors: boolean = true
 ): LegendEntry[] {
     if (!colorLegend || colorLegend.size === 0) {
         return [];
@@ -88,7 +89,7 @@ export function getLegendEntries(
         .map(([category, label]) => ({
             cat: category,
             label,
-            color: getBaseCategoryColor(category, categoryCount, label),
+            color: getBaseCategoryColor(category, categoryCount, useLabelColors ? label : ''),
             hidden: hiddenCategories.has(category)
         }));
 }

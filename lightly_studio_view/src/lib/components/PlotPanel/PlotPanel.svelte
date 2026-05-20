@@ -108,8 +108,13 @@
         })
     );
     const categoryCount = $derived.by(() => getCategoryCount($colorLegend));
-    const categoryColors = $derived.by(() => getCategoryColors($colorLegend, $hiddenCategories));
-    const legendEntries = $derived.by(() => getLegendEntries($colorLegend, $hiddenCategories));
+    const useLabelColors = $derived($selectedColorByType !== 'metadata');
+    const categoryColors = $derived.by(() =>
+        getCategoryColors($colorLegend, $hiddenCategories, useLabelColors)
+    );
+    const legendEntries = $derived.by(() =>
+        getLegendEntries($colorLegend, $hiddenCategories, useLabelColors)
+    );
     const handleMouseUp = () => {
         const hadRangeSelection = $rangeSelection !== null;
         if (!hadRangeSelection) {
