@@ -64,3 +64,24 @@ export function getCategoryColors(
         return getBaseCategoryColor(category, categoryCount, label);
     });
 }
+
+export function getLegendEntries(
+    colorLegend?: ReadonlyMap<number, string> | null,
+    hiddenCategories: ReadonlySet<number> = new Set()
+) {
+    if (!colorLegend || colorLegend.size === 0) {
+        return [];
+    }
+
+    const categoryCount = getCategoryCount(colorLegend);
+
+    return [...colorLegend.entries()]
+        .filter(([category]) => category >= RESERVED_CATEGORY_COUNT)
+        .sort(([leftCategory], [rightCategory]) => leftCategory - rightCategory)
+        .map(([category, label]) => ({
+            cat: category,
+            label,
+            color: getBaseCategoryColor(category, categoryCount, label),
+            hidden: hiddenCategories.has(category)
+        }));
+}
