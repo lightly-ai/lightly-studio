@@ -141,7 +141,6 @@ async def serve_video_by_sample_id(
     Returns:
         StreamingResponse with the video data, supporting partial content.
     """
-    # Get sample record and close session early to avoid blocking
     sample_record = session.get(video.VideoTable, sample_id)
     if not sample_record:
         raise HTTPException(
@@ -151,11 +150,9 @@ async def serve_video_by_sample_id(
 
     file_path = sample_record.file_path_abs
     content_type = _get_content_type(file_path)
-
-    # Extract file_path (a string) before returning StreamingResponse.
-    # FastAPI's dependency system will close the session when this function returns,
-    # which happens immediately after creating the StreamingResponse (before streaming starts).
-    # This ensures the DB connection isn't held during the async streaming operation.
+    # Close the session before file I/O. Video streaming can be slow, and holding a
+    # connection through it can exhaust the Postgres connection pool.
+    session.close()
 
     try:
         fs, fs_path = fsspec.core.url_to_fs(file_path)
