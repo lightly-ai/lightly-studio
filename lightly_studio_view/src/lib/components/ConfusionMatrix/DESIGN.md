@@ -42,26 +42,26 @@ ECharts is ~1MB minified — over the 500KB chunk limit in
 1. **Modular imports only.** Never `import * as echarts from 'echarts'`. Use
    tree-shakeable subpath imports:
 
-   ```ts
-   import * as echarts from 'echarts/core';
-   import { HeatmapChart } from 'echarts/charts';
-   import {
-       TooltipComponent,
-       VisualMapComponent,
-       GridComponent,
-       DataZoomInsideComponent,
-   } from 'echarts/components';
-   import { CanvasRenderer } from 'echarts/renderers';
+    ```ts
+    import * as echarts from 'echarts/core';
+    import { HeatmapChart } from 'echarts/charts';
+    import {
+        TooltipComponent,
+        VisualMapComponent,
+        GridComponent,
+        DataZoomInsideComponent
+    } from 'echarts/components';
+    import { CanvasRenderer } from 'echarts/renderers';
 
-   echarts.use([
-       HeatmapChart,
-       TooltipComponent,
-       VisualMapComponent,
-       GridComponent,
-       DataZoomInsideComponent,
-       CanvasRenderer,
-   ]);
-   ```
+    echarts.use([
+        HeatmapChart,
+        TooltipComponent,
+        VisualMapComponent,
+        GridComponent,
+        DataZoomInsideComponent,
+        CanvasRenderer
+    ]);
+    ```
 
 2. **Dynamic import at the eval-run page.** The eval-run page should
    `await import('$lib/components/ConfusionMatrix')` so the chart only loads
@@ -79,9 +79,9 @@ shape.
 ```ts
 // Endpoint shape, snake_case to match the generated API client.
 export interface ConfusionMatrix {
-    row_labels: string[];  // GT axis; trailing "(no ground truth)" unless empty
-    col_labels: string[];  // Pred axis; trailing "(no prediction)" unless empty
-    counts: number[][];    // counts[i][j] = row_labels[i] (GT) x col_labels[j] (pred)
+    row_labels: string[]; // GT axis; trailing "(no ground truth)" unless empty
+    col_labels: string[]; // Pred axis; trailing "(no prediction)" unless empty
+    counts: number[][]; // counts[i][j] = row_labels[i] (GT) x col_labels[j] (pred)
 }
 
 export const NO_GROUND_TRUTH_ROW_LABEL = '(no ground truth)';
@@ -90,15 +90,15 @@ export const NO_PREDICTION_COL_LABEL = '(no prediction)';
 // Prototype-only: raw per-pairing data drives the client-side threshold story.
 // Not in the shipped endpoint — see "Open question: thresholds" below.
 export interface AnnotationPairing {
-    gt_label: string | null;   // null => false positive bucket
+    gt_label: string | null; // null => false positive bucket
     pred_label: string | null; // null => false negative bucket
     confidence: number | null; // 0..1; null when there is no prediction
-    iou: number | null;        // 0..1; null when there is no overlap
+    iou: number | null; // 0..1; null when there is no overlap
 }
 
 export interface Thresholds {
     confidence: number; // 0..1
-    iou: number;        // 0..1
+    iou: number; // 0..1
 }
 
 export interface ConfusionMatrixProps {
@@ -106,7 +106,7 @@ export interface ConfusionMatrixProps {
         | { kind: 'matrix'; matrix: ConfusionMatrix }
         | { kind: 'pairings'; pairings: AnnotationPairing[]; thresholds: Thresholds };
     normalize?: 'none' | 'row' | 'col'; // default 'row'
-    showPercentInTooltip?: boolean;     // default true
+    showPercentInTooltip?: boolean; // default true
 }
 ```
 
@@ -131,10 +131,10 @@ export interface ConfusionMatrixProps {
 Two heatmap series with independent `visualMap`s — the trick lifted from
 Jonas's prototype:
 
-| Series | Cells                                        | Color ramp                                       |
-| ------ | -------------------------------------------- | ------------------------------------------------ |
-| TP     | `gt_label === pred_label`, both non-null     | green: `rgba(34, 197, 94, 0.15)` → `0.95`        |
-| FP/FN  | everything else (off-diagonal, including FP row and FN col) | red: `rgba(239, 68, 68, 0.15)` → `0.95`          |
+| Series | Cells                                                       | Color ramp                                |
+| ------ | ----------------------------------------------------------- | ----------------------------------------- |
+| TP     | `gt_label === pred_label`, both non-null                    | green: `rgba(34, 197, 94, 0.15)` → `0.95` |
+| FP/FN  | everything else (off-diagonal, including FP row and FN col) | red: `rgba(239, 68, 68, 0.15)` → `0.95`   |
 
 - Color intensity scales with **absolute count**, capped at the matrix max,
   per series. (Using `count` rather than row-% means a single dominant class
@@ -170,13 +170,13 @@ Jonas's prototype:
 
 ## States
 
-| State                                | Render                                                                            |
-| ------------------------------------ | --------------------------------------------------------------------------------- |
-| Loaded with data                     | Heatmap as above.                                                                 |
-| Empty (`row_labels.length === 0`)    | "No pairing metrics for this run." muted-text placeholder, no chart instance.     |
-| Single class                         | 1×1 (well, 2×2 with the sentinels) matrix; tooltip still works.                   |
-| No predictions above threshold       | Every prediction becomes a FN; the FP row is empty, the FN col is hot.            |
-| No ground truth                      | Every prediction becomes a FP; the FP row is hot, the FN col is empty.            |
+| State                             | Render                                                                        |
+| --------------------------------- | ----------------------------------------------------------------------------- |
+| Loaded with data                  | Heatmap as above.                                                             |
+| Empty (`row_labels.length === 0`) | "No pairing metrics for this run." muted-text placeholder, no chart instance. |
+| Single class                      | 1×1 (well, 2×2 with the sentinels) matrix; tooltip still works.               |
+| No predictions above threshold    | Every prediction becomes a FN; the FP row is empty, the FN col is hot.        |
+| No ground truth                   | Every prediction becomes a FP; the FP row is hot, the FN col is empty.        |
 
 The last two are reachable only via the `kind: 'pairings'` story (threshold
 sliders); they can't happen with the shipped endpoint as-is.
