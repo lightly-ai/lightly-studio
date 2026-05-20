@@ -20,7 +20,7 @@
         })
     );
 
-    const sampleAdjacentData = $derived($sampleAdjacentQuery.data);
+    const sampleAdjacentData = $derived(sampleAdjacentQuery.data);
 
     function goToNextFrame() {
         const sampleNext = sampleAdjacentData?.next_sample_id;

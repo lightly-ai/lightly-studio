@@ -1,4 +1,4 @@
-import { getColorByLabel } from '$lib/utils/getColorByLabel';
+import { getColorByLabel } from '$lib/utils';
 
 const HSL_SATURATION = 70;
 const HSL_LIGHTNESS = 55;

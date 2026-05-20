@@ -1,13 +1,9 @@
 import { deleteAnnotationMutation } from '$lib/api/lightly_studio_local/@tanstack/svelte-query.gen';
 import { createMutation, useQueryClient } from '@tanstack/svelte-query';
-import { get } from 'svelte/store';
 import { useImageAnnotationCountsQueryKey } from '$lib/hooks/useImageAnnotationCounts/useImageAnnotationCounts';
 
 export const useDeleteAnnotation = ({ collectionId }: { collectionId: string }) => {
-    const mutation = createMutation(deleteAnnotationMutation());
-
-    // We need to have this subscription to get onSuccess/onError events
-    mutation.subscribe(() => undefined);
+    const mutation = createMutation(() => deleteAnnotationMutation());
 
     const client = useQueryClient();
 
@@ -19,7 +15,7 @@ export const useDeleteAnnotation = ({ collectionId }: { collectionId: string }) 
 
     const deleteAnnotation = (annotationId: string) =>
         new Promise<void>((resolve, reject) => {
-            get(mutation).mutate(
+            mutation.mutate(
                 {
                     path: {
                         collection_id: collectionId,

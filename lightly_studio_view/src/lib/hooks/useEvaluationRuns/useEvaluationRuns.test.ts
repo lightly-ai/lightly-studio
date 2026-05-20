@@ -28,7 +28,7 @@ describe('useEvaluationRuns', () => {
 
         useEvaluationRuns({ datasetId });
 
-        const optionsArg = createQuerySpy.mock.calls[0][0] as CreateQueryOptions;
+        const optionsArg = createQuerySpy.mock.calls[0][0]() as CreateQueryOptions;
         const expectedOptions = getEvaluationRunsOptions({
             path: { dataset_id: datasetId }
         });
@@ -46,7 +46,7 @@ describe('useEvaluationRuns', () => {
 
         useEvaluationRuns({ datasetId });
 
-        const optionsArg = createQuerySpy.mock.calls[0][0] as CreateQueryOptions;
+        const optionsArg = createQuerySpy.mock.calls[0][0]() as CreateQueryOptions;
 
         await (
             optionsArg.queryFn as (ctx: {

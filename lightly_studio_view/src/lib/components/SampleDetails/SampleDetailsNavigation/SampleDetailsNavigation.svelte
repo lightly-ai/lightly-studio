@@ -18,9 +18,9 @@
     );
 
     const nextURL = $derived.by(() => {
-        if ($sampleAdjacentQuery.data?.next_sample_id) {
+        if (sampleAdjacentQuery.data?.next_sample_id) {
             return routeHelpers.toSample({
-                sampleId: $sampleAdjacentQuery.data?.next_sample_id,
+                sampleId: sampleAdjacentQuery.data?.next_sample_id,
                 datasetId,
                 collectionType,
                 collectionId: collectionId
@@ -36,9 +36,9 @@
     };
 
     const prevURL = $derived.by(() => {
-        if ($sampleAdjacentQuery.data?.previous_sample_id) {
+        if (sampleAdjacentQuery.data?.previous_sample_id) {
             return routeHelpers.toSample({
-                sampleId: $sampleAdjacentQuery.data?.previous_sample_id,
+                sampleId: sampleAdjacentQuery.data?.previous_sample_id,
                 datasetId,
                 collectionType,
                 collectionId: collectionId
@@ -65,7 +65,7 @@
     });
 </script>
 
-{#if $sampleAdjacentQuery.data}
+{#if sampleAdjacentQuery.data}
     <SteppingNavigation
         hasNext={nextURL !== null}
         hasPrevious={prevURL !== null}

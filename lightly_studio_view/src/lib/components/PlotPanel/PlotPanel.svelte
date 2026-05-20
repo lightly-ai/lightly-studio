@@ -85,7 +85,7 @@
         error: arrowError
     } = $derived(
         useArrowData({
-            blobData: $embeddingsData.data as Blob
+            blobData: embeddingsData.data as Blob
         })
     );
     const filteredLabel = $derived($colorLegend.get(1) ?? 'Filtered');
@@ -239,8 +239,8 @@
     };
 
     const errorText = $derived.by(() => {
-        if ($embeddingsData.isError) {
-            return $embeddingsData.error?.message ?? 'Unknown error';
+        if (embeddingsData.isError) {
+            return embeddingsData.error?.message ?? 'Unknown error';
         }
         if ($arrowError) {
             return $arrowError;
@@ -263,7 +263,7 @@
         </Button>
     </div>
     <div class="flex min-h-0 flex-1 flex-col space-y-6">
-        {#if $embeddingsData.isLoading}
+        {#if embeddingsData.isLoading}
             <div class="flex items-center justify-center p-8">
                 <div class="text-lg">Loading embeddings data...</div>
             </div>

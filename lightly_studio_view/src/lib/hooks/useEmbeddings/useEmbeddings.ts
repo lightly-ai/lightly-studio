@@ -16,5 +16,5 @@ export function useEmbeddings(
             path: { collection_id: collectionId },
             body: { filters: filters ?? {}, color_by: colorBy }
         })
-    });
+    }));
 }

@@ -118,18 +118,16 @@
         updateFilterParams(nextParams);
     });
 
-    const { samples: infiniteSamples } = $derived(
-        useImagesInfinite({
-            ...$filterParams,
-            collection_id: collection_id,
-            query_expr: $imageQueryExpression?.query_expr,
-            sort_by: $imageSortBy ?? undefined
-        })
-    );
+    const { samples: infiniteSamples } = useImagesInfinite(() => ({
+        ...$filterParams,
+        collection_id: collection_id,
+        query_expr: $imageQueryExpression?.query_expr,
+        sort_by: $imageSortBy ?? undefined
+    }));
     // Derived list of samples from TanStack infinite query
     const samples: ImageView[] = $derived(
-        $infiniteSamples && $infiniteSamples.data
-            ? $infiniteSamples.data.pages.flatMap((page: { data?: ImageView[] }) => page.data ?? [])
+        infiniteSamples && infiniteSamples.data
+            ? infiniteSamples.data.pages.flatMap((page: { data?: ImageView[] }) => page.data ?? [])
             : []
     );
     const selectedSampleIds = getSelectedSampleIds(collection_id);
@@ -185,14 +183,14 @@
 
     // Set total count when data is available
     $effect(() => {
-        if ($infiniteSamples.isSuccess && $infiniteSamples.data?.pages.length > 0) {
-            setfilteredSampleCount($infiniteSamples.data.pages[0].total_count);
+        if (infiniteSamples.isSuccess && infiniteSamples.data?.pages.length > 0) {
+            setfilteredSampleCount(infiniteSamples.data.pages[0].total_count);
         }
     });
 
     function handleLoadMore() {
-        if ($infiniteSamples.hasNextPage && !$infiniteSamples.isFetchingNextPage) {
-            $infiniteSamples.fetchNextPage();
+        if (infiniteSamples.hasNextPage && !infiniteSamples.isFetchingNextPage) {
+            infiniteSamples.fetchNextPage();
         }
     }
 
@@ -254,15 +252,15 @@
         }
     }}
     status={{
-        loading: $infiniteSamples.isPending,
-        error: $infiniteSamples.isError,
-        empty: $infiniteSamples.isSuccess && samples.length === 0,
+        loading: infiniteSamples.isPending,
+        error: infiniteSamples.isError,
+        empty: infiniteSamples.isSuccess && samples.length === 0,
         success: isReady
     }}
     loader={{
         loadMore: handleLoadMore,
-        disabled: !$infiniteSamples.hasNextPage || $infiniteSamples.isFetchingNextPage,
-        loading: $infiniteSamples.isFetchingNextPage
+        disabled: !infiniteSamples.hasNextPage || infiniteSamples.isFetchingNextPage,
+        loading: infiniteSamples.isFetchingNextPage
     }}
     itemCount={samples.length}
 >

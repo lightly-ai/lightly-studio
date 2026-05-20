@@ -53,6 +53,7 @@ export class CaptionUtils {
     }
 
     async undoLastCaptionDelete() {
+        const captionCountBefore = await this.getCaptionCount();
         const responsePromise = this.page.waitForResponse(
             (response) =>
                 response.request().method() === 'POST' &&
@@ -61,7 +62,7 @@ export class CaptionUtils {
         );
         await this.page.getByTestId('header-reverse-action-button').click();
         await responsePromise;
-        await this.page.waitForLoadState('networkidle');
+        await expect(this.getVisibleCaptionFields()).toHaveCount(captionCountBefore + 1);
     }
 
     async updateNthCaption(index: number, text: string) {
@@ -79,6 +80,7 @@ export class CaptionUtils {
 
         await captionInput.fill(text);
         await expect(captionInput).toHaveValue(text);
+        await expect(saveButton).toBeEnabled();
         await saveButton.click();
 
         await responsePromise;

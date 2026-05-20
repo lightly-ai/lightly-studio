@@ -12,7 +12,7 @@
     const collectionType = $derived($page.params.collection_type!);
     const datasetId = $derived($page.params.dataset_id!);
 
-    const { data, query, loadMore, totalCount } = $derived(useGroupsInfinite(collectionId));
+    const { data, query, loadMore, totalCount } = useGroupsInfinite(() => collectionId);
     const { setfilteredSampleCount } = useGlobalStorage();
 
     $effect(() => {
@@ -20,10 +20,10 @@
     });
 
     const groups = $derived($data);
-    const isLoading = $derived($query.isPending && groups.length === 0);
-    const isEmpty = $derived($query.isSuccess && groups.length === 0);
-    const hasNextPage = $derived($query.hasNextPage ?? false);
-    const isFetchingNextPage = $derived($query.isFetchingNextPage);
+    const isLoading = $derived(query.isPending && groups.length === 0);
+    const isEmpty = $derived(query.isSuccess && groups.length === 0);
+    const hasNextPage = $derived(query.hasNextPage ?? false);
+    const isFetchingNextPage = $derived(query.isFetchingNextPage);
 
     const navigateToSampleDetailsByView = (view: GroupView) => {
         if (isVideoView(view.group_preview)) {

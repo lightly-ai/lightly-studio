@@ -1,7 +1,9 @@
-import { fireEvent, render, screen, within } from '@testing-library/svelte';
-import { writable } from 'svelte/store';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { render, screen } from '@testing-library/svelte';
+import userEvent from '@testing-library/user-event';
+import { get, writable } from 'svelte/store';
+import { beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import PlotColorByPopover from './PlotColorByPopover.svelte';
+import { usePlotColorByType } from './usePlotColorByType/usePlotColorByType';
 
 const metadataInfoStore = writable([
     { name: 'split', type: 'string' },
@@ -18,6 +20,13 @@ vi.mock('$lib/hooks/useMetadataFilters/useMetadataFilters', () => ({
 }));
 
 describe('PlotColorByPopover', () => {
+    beforeAll(() => {
+        Element.prototype.hasPointerCapture = vi.fn(() => false);
+        Element.prototype.setPointerCapture = vi.fn();
+        Element.prototype.releasePointerCapture = vi.fn();
+        Element.prototype.scrollIntoView = vi.fn();
+    });
+
     beforeEach(() => {
         metadataInfoStore.set([
             { name: 'split', type: 'string' },
@@ -26,25 +35,30 @@ describe('PlotColorByPopover', () => {
             { name: 'score', type: 'float' },
             { name: 'object', type: 'object' }
         ]);
+        usePlotColorByType('test-collection-id').clearSelectedColorByType();
     });
 
     it('renders supported metadata fields with metadata prefix and omits unsupported ones', async () => {
+        const user = userEvent.setup();
+
         render(PlotColorByPopover, {
             collectionId: 'test-collection-id',
             selectedKey: null,
             onSelectedKeyChange: vi.fn()
         });
 
-        await fireEvent.click(screen.getByTestId('plot-color-by-button'));
+        await user.click(screen.getByTestId('plot-color-by-button'));
 
-        expect(screen.getByText('metadata.split')).toBeInTheDocument();
-        expect(screen.getByText('metadata.is_train')).toBeInTheDocument();
-        expect(screen.queryByText('metadata.score')).not.toBeInTheDocument();
-        expect(screen.queryByText('metadata.object')).not.toBeInTheDocument();
+        expect(screen.getByRole('option', { name: 'metadata.split' })).toBeInTheDocument();
+        expect(screen.getByRole('option', { name: 'metadata.is_train' })).toBeInTheDocument();
+        expect(screen.queryByRole('option', { name: 'metadata.score' })).not.toBeInTheDocument();
+        expect(screen.queryByRole('option', { name: 'metadata.object' })).not.toBeInTheDocument();
     });
 
-    it('selecting one field calls onSelectedKeyChange with the key', async () => {
+    it('selecting a metadata field stores metadata as the selected type', async () => {
+        const user = userEvent.setup();
         const onSelectedKeyChange = vi.fn();
+        const colorByType = usePlotColorByType('test-collection-id');
 
         render(PlotColorByPopover, {
             collectionId: 'test-collection-id',
@@ -52,14 +66,34 @@ describe('PlotColorByPopover', () => {
             onSelectedKeyChange
         });
 
-        await fireEvent.click(screen.getByTestId('plot-color-by-button'));
-        await fireEvent.click(screen.getByText('metadata.split'));
+        await user.click(screen.getByTestId('plot-color-by-button'));
+        await user.click(screen.getByRole('option', { name: 'metadata.split' }));
 
         expect(onSelectedKeyChange).toHaveBeenCalledWith('split');
+        expect(get(colorByType.selectedColorByType)).toBe('metadata');
     });
 
-    it('clicking the selected field calls onSelectedKeyChange with null', async () => {
+    it('does not render annotations or tags in the popover', async () => {
+        const user = userEvent.setup();
+
+        render(PlotColorByPopover, {
+            collectionId: 'test-collection-id',
+            selectedKey: null,
+            onSelectedKeyChange: vi.fn()
+        });
+
+        await user.click(screen.getByTestId('plot-color-by-button'));
+
+        expect(screen.queryByRole('option', { name: 'annotations' })).not.toBeInTheDocument();
+        expect(screen.queryByRole('option', { name: 'tags' })).not.toBeInTheDocument();
+    });
+
+    it('clicking the selected metadata field clears the selected type', async () => {
+        const user = userEvent.setup();
         const onSelectedKeyChange = vi.fn();
+        const colorByType = usePlotColorByType('test-collection-id');
+
+        colorByType.setSelectedColorByType('metadata');
 
         render(PlotColorByPopover, {
             collectionId: 'test-collection-id',
@@ -67,12 +101,11 @@ describe('PlotColorByPopover', () => {
             onSelectedKeyChange
         });
 
-        await fireEvent.click(screen.getByTestId('plot-color-by-button'));
-        await fireEvent.click(
-            within(screen.getByTestId('plot-color-by-options')).getByText('metadata.split')
-        );
+        await user.click(screen.getByTestId('plot-color-by-button'));
+        await user.click(screen.getByRole('option', { name: 'metadata.split' }));
 
         expect(onSelectedKeyChange).toHaveBeenCalledWith(null);
+        expect(get(colorByType.selectedColorByType)).toBeNull();
     });
 
     it('button shows the selected label', () => {
@@ -94,8 +127,8 @@ describe('PlotColorByPopover', () => {
             onSelectedKeyChange: vi.fn()
         });
 
-        await fireEvent.click(screen.getByTestId('plot-color-by-button'));
-
-        expect(screen.getByText('Nothing to color by.')).toBeInTheDocument();
+        expect(screen.getByTestId('plot-color-by-button')).toBeDisabled();
+        expect(screen.getByTestId('plot-color-by-button')).toHaveTextContent('Nothing to color by');
+        expect(screen.queryByTestId('plot-color-by-options')).not.toBeInTheDocument();
     });
 });

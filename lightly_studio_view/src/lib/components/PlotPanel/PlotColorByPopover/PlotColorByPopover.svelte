@@ -1,10 +1,8 @@
 <script lang="ts">
-    import { Check, Palette } from '@lucide/svelte';
-    import * as Popover from '$lib/components/ui/popover';
-    import { Button } from '$lib/components/ui/button';
+    import { Palette } from '@lucide/svelte';
+    import * as Select from '$lib/components/ui/select';
     import { useMetadataFilters } from '$lib/hooks/useMetadataFilters/useMetadataFilters';
-    import { cn } from '$lib/utils';
-    import type { components } from '$lib/schema';
+    import { usePlotColorByType } from './usePlotColorByType/usePlotColorByType';
 
     interface Props {
         collectionId: string;
@@ -12,68 +10,82 @@
         onSelectedKeyChange: (key: string | null) => void;
     }
 
-    type ChildProps = {
-        props: Record<string, unknown>;
-    };
-
-    type MetadataInfo = components['schemas']['MetadataInfoView'];
-
     const supportedTypes = new Set(['string', 'boolean']);
 
     let { collectionId, selectedKey, onSelectedKeyChange }: Props = $props();
 
     const { metadataInfo } = useMetadataFilters(collectionId);
+    const { selectedColorByType, setSelectedColorByType, clearSelectedColorByType } =
+        usePlotColorByType(collectionId);
 
     const colorableFields = $derived(
-        ($metadataInfo ?? []).filter((field: MetadataInfo) => supportedTypes.has(field.type))
+        ($metadataInfo ?? []).filter((field) => supportedTypes.has(field.type))
     );
 
-    const buttonLabel = $derived(selectedKey ? `metadata.${selectedKey}` : 'Color by');
+    const colorByOptions = $derived(
+        colorableFields.map((field) => ({
+            value: field.name,
+            label: `metadata.${field.name}`
+        }))
+    );
 
-    const handleSelect = (key: string) => {
-        onSelectedKeyChange(selectedKey === key ? null : key);
+    const isSelectDisabled = $derived(colorByOptions.length === 0 && !selectedKey);
+    const selectValue = $derived.by(() => {
+        if (selectedKey) {
+            return selectedKey;
+        }
+        return $selectedColorByType ?? '';
+    });
+    const triggerLabel = $derived.by(() => {
+        if (isSelectDisabled) {
+            return 'Nothing to color by';
+        }
+        if (selectedKey) {
+            return `metadata.${selectedKey}`;
+        }
+        if ($selectedColorByType === 'annotation_label') {
+            return 'annotations';
+        }
+        if ($selectedColorByType === 'tags') {
+            return 'tags';
+        }
+        return 'Color by';
+    });
+
+    const handleValueChange = (value: string) => {
+        if (value === '') {
+            clearSelectedColorByType();
+            onSelectedKeyChange(null);
+            return;
+        }
+
+        if (value === 'annotation_label' || value === 'tags') {
+            setSelectedColorByType(value);
+            onSelectedKeyChange(null);
+            return;
+        }
+
+        setSelectedColorByType('metadata');
+        onSelectedKeyChange(value);
     };
 </script>
 
-<Popover.Root>
-    <Popover.Trigger>
-        {#snippet child({ props }: ChildProps)}
-            <Button
-                {...props}
-                variant="outline"
-                size="sm"
-                class="gap-2 px-2.5"
-                data-testid="plot-color-by-button"
-            >
-                <Palette class="h-4 w-4" />
-                <span class="truncate">{buttonLabel}</span>
-            </Button>
-        {/snippet}
-    </Popover.Trigger>
-    <Popover.Content class="w-64 p-1" align="end">
-        {#if colorableFields.length === 0}
-            <div class="px-2 py-3 text-sm text-muted-foreground">Nothing to color by.</div>
-        {:else}
-            <div class="max-h-64 overflow-y-auto" data-testid="plot-color-by-options">
-                {#each colorableFields as field (field.name)}
-                    <button
-                        type="button"
-                        class={cn(
-                            'flex w-full items-center gap-2 rounded-sm px-2 py-1.5 text-left text-sm hover:bg-accent hover:text-accent-foreground',
-                            selectedKey === field.name && 'bg-accent text-accent-foreground'
-                        )}
-                        onclick={() => handleSelect(field.name)}
-                    >
-                        <Check
-                            class={cn(
-                                'h-4 w-4 shrink-0',
-                                selectedKey === field.name ? 'opacity-100' : 'opacity-0'
-                            )}
-                        />
-                        <span class="truncate">{`metadata.${field.name}`}</span>
-                    </button>
-                {/each}
-            </div>
-        {/if}
-    </Popover.Content>
-</Popover.Root>
+<Select.Root type="single" value={selectValue} allowDeselect onValueChange={handleValueChange}>
+    <Select.Trigger
+        class="h-8 w-48 gap-2 px-2.5"
+        data-testid="plot-color-by-button"
+        disabled={isSelectDisabled}
+    >
+        <div class="flex min-w-0 items-center gap-2">
+            <Palette class="h-4 w-4 shrink-0" />
+            <span class="truncate">{triggerLabel}</span>
+        </div>
+    </Select.Trigger>
+    <Select.Content class="max-h-64" data-testid="plot-color-by-options">
+        {#each colorByOptions as option (option.value)}
+            <Select.Item value={option.value} label={option.label}>
+                {option.label}
+            </Select.Item>
+        {/each}
+    </Select.Content>
+</Select.Root>
