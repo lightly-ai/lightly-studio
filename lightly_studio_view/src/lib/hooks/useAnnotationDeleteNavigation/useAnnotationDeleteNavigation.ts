@@ -1,5 +1,4 @@
 import { goto } from '$app/navigation';
-import { get } from 'svelte/store';
 import { routeHelpers } from '$lib/routes';
 import { useAnnotationLabelContext } from '$lib/contexts/SampleDetailsAnnotation.svelte';
 import { useSampleDetailsToolbarContext } from '$lib/contexts/SampleDetailsToolbar.svelte';
@@ -24,7 +23,7 @@ export function useAnnotationDeleteNavigation({
     });
 
     const gotoNextAnnotation = () => {
-        const nextAnnotationId = get(adjacentAnnotationsQuery).data?.next_sample_id;
+        const nextAnnotationId = adjacentAnnotationsQuery.data?.next_sample_id;
 
         if (nextAnnotationId) {
             goto(
