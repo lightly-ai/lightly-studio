@@ -20,7 +20,7 @@
     } = $props();
 
     const { groupComponents } = useGroupComponents({ groupId });
-    const components = $derived<GroupComponentView[]>($groupComponents.data ?? []);
+    const components = $derived<GroupComponentView[]>(groupComponents.data ?? []);
     let selectedComponentId = $state(componentId);
     const selectedIndex = $derived(
         components.findIndex((c) => c.details?.sample_id === selectedComponentId)

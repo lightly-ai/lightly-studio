@@ -31,8 +31,8 @@
         })
     );
 
-    const samplePosition = $derived($sampleAdjacentQuery.data?.current_sample_position ?? 0);
-    const totalCount = $derived($sampleAdjacentQuery.data?.total_count ?? 0);
+    const samplePosition = $derived(sampleAdjacentQuery.data?.current_sample_position ?? 0);
+    const totalCount = $derived(sampleAdjacentQuery.data?.total_count ?? 0);
 </script>
 
 <Breadcrumb class="mb-2" data-testid="sample-details-breadcrumb">

@@ -24,6 +24,7 @@ describe('usePlotData', () => {
         x: new Float32Array([1.0, 2.0, 3.0, 4.0]),
         y: new Float32Array([5.0, 6.0, 7.0, 8.0]),
         fulfils_filter: new Uint8Array([1, 1, 0, 1]),
+        color_category: new Uint8Array([1, 2, 0, 3]),
         sample_id: ['sample1', 'sample2', 'sample3', 'sample4']
     });
 
@@ -38,7 +39,7 @@ describe('usePlotData', () => {
         expect(get(result.selectedSampleIds)).toEqual([]);
     });
 
-    it('should set plot data with original categories when no range selection', () => {
+    it('should set plot data with color categories when no range selection', () => {
         const mockData = createMockArrowData();
 
         const result = usePlotData({
@@ -50,7 +51,7 @@ describe('usePlotData', () => {
         expect(data).toEqual({
             x: mockData.x,
             y: mockData.y,
-            category: mockData.fulfils_filter
+            category: mockData.color_category
         });
         expect(get(result.selectedSampleIds)).toEqual([]);
     });
@@ -72,10 +73,10 @@ describe('usePlotData', () => {
         const data = get(result.data);
         expect(data?.category).toBeInstanceOf(Uint8Array);
 
-        // First two points are in polygon (keep prevValue=1), last two are outside (demoted to 0)
+        // First two points are in polygon (keep previous categories), last two are outside (demoted to 0)
         const categoryArray = Array.from(data?.category as Uint8Array);
         expect(categoryArray[0]).toBe(1); // in polygon, keeps FILTERED_CATEGORY
-        expect(categoryArray[1]).toBe(1); // in polygon, keeps FILTERED_CATEGORY
+        expect(categoryArray[1]).toBe(2); // in polygon, preserves color category
         expect(categoryArray[2]).toBe(0); // outside polygon, demoted to NOT_FILTERED_CATEGORY
         expect(categoryArray[3]).toBe(0); // outside polygon, demoted to NOT_FILTERED_CATEGORY
     });
@@ -95,7 +96,7 @@ describe('usePlotData', () => {
         });
 
         const selectedIds = get(result.selectedSampleIds);
-        // Based on our mock, first two samples should be selected
+        // Based on our mock, first two non-zero categories should be selected
         expect(selectedIds).toEqual(['sample1', 'sample2']);
     });
 
@@ -147,6 +148,36 @@ describe('usePlotData', () => {
         const categoryArray = Array.from(data.category);
         expect(categoryArray).toEqual([1, 1, 0, 0]);
         expect(get(result.selectedSampleIds)).toEqual(['sample1', 'sample2']);
+    });
+
+    it('should keep categories 2 and above selectable during range selection', () => {
+        const mockData = createMockArrowData();
+        const mockSelection: Point[] = [
+            { x: 0, y: 0 },
+            { x: 2, y: 0 },
+            { x: 2, y: 6 },
+            { x: 0, y: 6 }
+        ];
+
+        const result = usePlotData({
+            arrowData: mockData,
+            rangeSelection: mockSelection
+        });
+
+        expect(get(result.selectedSampleIds)).toEqual(['sample1', 'sample2']);
+    });
+
+    it('should preserve highlighted non-zero color categories and demote other samples', () => {
+        const mockData = createMockArrowData();
+
+        const result = usePlotData({
+            arrowData: mockData,
+            rangeSelection: null,
+            highlightedSampleIds: ['sample2', 'sample3']
+        });
+
+        const data = get(result.data) as { category: Uint8Array };
+        expect(Array.from(data.category)).toEqual([0, 2, 0, 0]);
     });
 
     it('should return error store', () => {

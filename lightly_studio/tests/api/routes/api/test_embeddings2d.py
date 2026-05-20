@@ -286,6 +286,7 @@ def test_get_embeddings2d__with_metadata_field_color_by(
     assert sample_id_to_color[str(samples[3].sample_id)] == 1  # Unassigned
 
     legend = json.loads(table.schema.metadata[b"color_legend"])
+    assert legend["0"] == "Filtered out"
     assert legend["1"] == "Unassigned"
     assert legend["2"] == "London"
     assert legend["3"] == "Paris"
@@ -371,6 +372,7 @@ def test_get_embeddings2d__with_boolean_metadata_color_by(
     assert sample_id_to_color[str(samples[2].sample_id)] == 2  # False -> cat 2
 
     legend = json.loads(table.schema.metadata[b"color_legend"])
+    assert legend["0"] == "Filtered out"
     assert legend["1"] == "Unassigned"
     assert legend["2"] == "false"
     assert legend["3"] == "true"
@@ -438,6 +440,7 @@ def test_get_embeddings2d__with_metadata_field_color_by_and_sample_ids_filter(
     assert sample_id_to_color[str(samples[3].sample_id)] == 0  # Berlin, filtered
 
     legend = json.loads(table.schema.metadata[b"color_legend"])
+    assert legend["0"] == "Filtered out"
     assert legend["1"] == "Unassigned"
     assert legend["2"] == "Berlin"
     assert legend["3"] == "London"
@@ -484,6 +487,154 @@ def test_get_embeddings2d__with_unsupported_metadata_color_by(
 
     assert response.status_code == 400
     assert "unsupported type" in response.json()["error"]
+
+
+def test_get_embeddings2d__with_tag_color_by(
+    test_client: TestClient,
+    db_session: Session,
+) -> None:
+    n_samples = 5
+
+    collection_id = fill_db_with_samples_and_embeddings(
+        session=db_session,
+        n_samples=n_samples,
+        embedding_model_names=["model_a"],
+        embedding_dimension=EMBEDDING_DIMENSION,
+    )
+
+    samples = image_resolver.get_all_by_collection_id(
+        session=db_session,
+        collection_id=collection_id,
+    ).samples
+    assert len(samples) == n_samples
+
+    tag_a = tag_resolver.create(
+        session=db_session,
+        tag=TagCreate(collection_id=collection_id, name="alpha", kind="sample"),
+    )
+    tag_b = tag_resolver.create(
+        session=db_session,
+        tag=TagCreate(collection_id=collection_id, name="beta", kind="sample"),
+    )
+
+    # samples[0] in alpha only, samples[1] in beta only,
+    # samples[2] in both (first-match-wins → alpha), samples[3,4] untagged.
+    tag_resolver.add_tag_to_sample(
+        session=db_session, tag_id=tag_a.tag_id, sample=samples[0].sample
+    )
+    tag_resolver.add_tag_to_sample(
+        session=db_session, tag_id=tag_a.tag_id, sample=samples[2].sample
+    )
+    tag_resolver.add_tag_to_sample(
+        session=db_session, tag_id=tag_b.tag_id, sample=samples[1].sample
+    )
+    tag_resolver.add_tag_to_sample(
+        session=db_session, tag_id=tag_b.tag_id, sample=samples[2].sample
+    )
+
+    response = test_client.post(
+        f"/api/collections/{collection_id}/embeddings2d/default",
+        json={
+            "filters": {},
+            "color_by": {
+                "type": "tag",
+                "tag_ids": [str(tag_a.tag_id), str(tag_b.tag_id)],
+            },
+        },
+    )
+
+    assert response.status_code == 200
+
+    table = ipc.open_stream(pa.BufferReader(response.content)).read_all()
+    sample_ids_payload = table.column("sample_id").to_pylist()
+    color_category = table.column("color_category").to_numpy(zero_copy_only=False)
+
+    sample_id_to_color = dict(zip(sample_ids_payload, color_category))
+    assert sample_id_to_color[str(samples[0].sample_id)] == 2  # alpha
+    assert sample_id_to_color[str(samples[1].sample_id)] == 3  # beta
+    assert sample_id_to_color[str(samples[2].sample_id)] == 2  # both → alpha (first match)
+    assert sample_id_to_color[str(samples[3].sample_id)] == 1  # Unassigned
+    assert sample_id_to_color[str(samples[4].sample_id)] == 1  # Unassigned
+
+    legend = json.loads(table.schema.metadata[b"color_legend"])
+    assert legend["0"] == "Filtered out"
+    assert legend["1"] == "Unassigned"
+    assert legend["2"] == "alpha"
+    assert legend["3"] == "beta"
+
+
+def test_get_embeddings2d__with_tag_color_by_and_filter(
+    test_client: TestClient,
+    db_session: Session,
+) -> None:
+    n_samples = 4
+
+    collection_id = fill_db_with_samples_and_embeddings(
+        session=db_session,
+        n_samples=n_samples,
+        embedding_model_names=["model_a"],
+        embedding_dimension=EMBEDDING_DIMENSION,
+    )
+
+    samples = image_resolver.get_all_by_collection_id(
+        session=db_session,
+        collection_id=collection_id,
+    ).samples
+    assert len(samples) == n_samples
+
+    tag_color = tag_resolver.create(
+        session=db_session,
+        tag=TagCreate(collection_id=collection_id, name="color_tag", kind="sample"),
+    )
+    tag_filter = tag_resolver.create(
+        session=db_session,
+        tag=TagCreate(collection_id=collection_id, name="filter_tag", kind="sample"),
+    )
+
+    # All samples get the color tag.
+    for sample in samples:
+        tag_resolver.add_tag_to_sample(
+            session=db_session, tag_id=tag_color.tag_id, sample=sample.sample
+        )
+    # Only first two get the filter tag.
+    tag_resolver.add_tag_to_sample(
+        session=db_session, tag_id=tag_filter.tag_id, sample=samples[0].sample
+    )
+    tag_resolver.add_tag_to_sample(
+        session=db_session, tag_id=tag_filter.tag_id, sample=samples[1].sample
+    )
+
+    image_filter = ImageFilter(
+        sample_filter=SampleFilter(tag_ids=[tag_filter.tag_id]),
+    )
+
+    response = test_client.post(
+        f"/api/collections/{collection_id}/embeddings2d/default",
+        json={
+            "filters": image_filter.model_dump(mode="json"),
+            "color_by": {
+                "type": "tag",
+                "tag_ids": [str(tag_color.tag_id)],
+            },
+        },
+    )
+
+    assert response.status_code == 200
+
+    table = ipc.open_stream(pa.BufferReader(response.content)).read_all()
+    sample_ids_payload = table.column("sample_id").to_pylist()
+    color_category = table.column("color_category").to_numpy(zero_copy_only=False)
+
+    sample_id_to_color = dict(zip(sample_ids_payload, color_category))
+    # First two pass filter and have the color tag → category 2.
+    assert sample_id_to_color[str(samples[0].sample_id)] == 2
+    assert sample_id_to_color[str(samples[1].sample_id)] == 2
+    # Last two are filtered out → category 0.
+    assert sample_id_to_color[str(samples[2].sample_id)] == 0
+    assert sample_id_to_color[str(samples[3].sample_id)] == 0
+
+    legend = json.loads(table.schema.metadata[b"color_legend"])
+    assert legend["2"] == "color_tag"
 
 
 """Benchmark for the /embeddings2d/default endpoint.

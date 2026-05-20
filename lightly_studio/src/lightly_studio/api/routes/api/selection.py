@@ -16,6 +16,7 @@ from lightly_studio.resolvers.video_resolver.video_filter import VideoFilter
 from lightly_studio.selection.select_via_db import select_via_database
 from lightly_studio.selection.selection_config import (
     EmbeddingDiversityStrategy,
+    EmbeddingSimilarityStrategy,
     MetadataWeightingStrategy,
     SelectionConfig,
 )
@@ -23,7 +24,11 @@ from lightly_studio.selection.selection_config import (
 selection_router = APIRouter()
 
 Strategy = Annotated[
-    Union[EmbeddingDiversityStrategy, MetadataWeightingStrategy],
+    Union[
+        EmbeddingDiversityStrategy,
+        EmbeddingSimilarityStrategy,
+        MetadataWeightingStrategy,
+    ],
     Field(discriminator="strategy_name"),
 ]
 
