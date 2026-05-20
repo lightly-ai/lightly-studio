@@ -24,7 +24,7 @@
     } from './plotColorUtils';
     import { page } from '$app/state';
     import { isVideosRoute } from '$lib/routes';
-
+    import { usePlotColorByType } from './PlotColorByPopover/usePlotColorByType/usePlotColorByType';
     type ColorBy = Exclude<Parameters<typeof useEmbeddings>[2], undefined>;
 
     const collectionId = page.params.collection_id;
@@ -73,9 +73,14 @@
     });
 
     let selectedColorByKey: string | null = $state(null);
-    const colorBy: ColorBy = $derived(
-        selectedColorByKey ? { type: 'metadata_field', key: selectedColorByKey } : null
-    );
+    const { selectedColorByType } = usePlotColorByType(collectionId);
+    const colorBy: ColorBy = $derived.by(() => {
+        if ($selectedColorByType === 'metadata' && selectedColorByKey) {
+            return { type: 'metadata_field', key: selectedColorByKey };
+        }
+
+        return null;
+    });
 
     const embeddingsData = $derived(useEmbeddings(collectionId, filter, colorBy));
 

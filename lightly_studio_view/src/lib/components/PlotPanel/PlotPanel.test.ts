@@ -5,6 +5,7 @@ import PlotPanel from './PlotPanel.svelte';
 import { useEmbeddings } from '$lib/hooks/useEmbeddings/useEmbeddings';
 import { writable, type Writable } from 'svelte/store';
 import { tick } from 'svelte';
+import { usePlotColorByType } from './PlotColorByPopover/usePlotColorByType/usePlotColorByType';
 
 let rangeSelectionStore: Writable<Array<{ x: number; y: number }> | null>;
 let selectedSampleIdsStore: Writable<string[]>;
@@ -92,6 +93,7 @@ describe('PlotPanel.svelte', () => {
     beforeEach(() => {
         vi.resetAllMocks();
         vi.stubGlobal('ResizeObserver', ResizeObserverMock);
+        usePlotColorByType('test-collection-id').clearSelectedColorByType();
         rangeSelectionStore = writable(null);
         selectedSampleIdsStore = writable([]);
         imageFilterStore = writable({ sample_filter: { sample_ids: [] } });
