@@ -11,7 +11,7 @@ const mocks = vi.hoisted(() => ({
     imageSortByValue: null as SortExpr[] | null,
     updateSortBy: vi.fn(),
     metadataInfoValue: [] as MetadataInfoView[],
-    metricsData: null as EvaluationRunMetricsInfoView[] | null
+    metricsProxy: { data: null as EvaluationRunMetricsInfoView[] | null, dataUpdatedAt: 0 }
 }));
 
 vi.mock('$lib/hooks/useImageFilters/useImageFilters', () => ({
@@ -28,7 +28,7 @@ vi.mock('$lib/hooks/useMetadataFilters/useMetadataFilters', () => ({
 }));
 
 vi.mock('$lib/hooks/useEvaluationSampleMetricsInfo/useEvaluationSampleMetricsInfo', () => ({
-    useEvaluationSampleMetricsInfo: () => readable({ data: mocks.metricsData })
+    useEvaluationSampleMetricsInfo: () => mocks.metricsProxy
 }));
 
 describe('OrderBy', () => {
@@ -36,7 +36,8 @@ describe('OrderBy', () => {
         vi.clearAllMocks();
         mocks.imageSortByValue = null;
         mocks.metadataInfoValue = [];
-        mocks.metricsData = null;
+        mocks.metricsProxy.data = null;
+        mocks.metricsProxy.dataUpdatedAt = 0;
     });
 
     it('shows placeholder text when no field is selected', () => {
@@ -305,7 +306,7 @@ describe('OrderBy', () => {
     });
 
     it('lists evaluation metric fields in the dropdown as [run_name].[metric_name]', async () => {
-        mocks.metricsData = [
+        mocks.metricsProxy.data = [
             {
                 run_name: 'run1',
                 metrics: [
@@ -323,7 +324,7 @@ describe('OrderBy', () => {
     });
 
     it('selects an evaluation metric field', async () => {
-        mocks.metricsData = [
+        mocks.metricsProxy.data = [
             {
                 run_name: 'run1',
                 metrics: [{ metric_name: 'precision', min_value: 0, max_value: 1 }]
@@ -345,7 +346,7 @@ describe('OrderBy', () => {
     });
 
     it('deselects an evaluation metric field when clicking the already selected item', async () => {
-        mocks.metricsData = [
+        mocks.metricsProxy.data = [
             {
                 run_name: 'run1',
                 metrics: [{ metric_name: 'precision', min_value: 0, max_value: 1 }]

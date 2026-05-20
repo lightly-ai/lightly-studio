@@ -37,6 +37,6 @@
     section="Frames"
     subsection="Frame"
     navigateTo={navigateToFrames}
-    index={$sampleAdjacentQuery?.data?.current_sample_position}
-    totalCount={$sampleAdjacentQuery?.data?.total_count}
+    index={sampleAdjacentQuery?.data?.current_sample_position}
+    totalCount={sampleAdjacentQuery?.data?.total_count}
 />

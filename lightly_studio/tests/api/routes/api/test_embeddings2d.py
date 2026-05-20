@@ -286,6 +286,7 @@ def test_get_embeddings2d__with_metadata_field_color_by(
     assert sample_id_to_color[str(samples[3].sample_id)] == 1  # Unassigned
 
     legend = json.loads(table.schema.metadata[b"color_legend"])
+    assert legend["0"] == "Filtered out"
     assert legend["1"] == "Unassigned"
     assert legend["2"] == "London"
     assert legend["3"] == "Paris"
@@ -371,6 +372,7 @@ def test_get_embeddings2d__with_boolean_metadata_color_by(
     assert sample_id_to_color[str(samples[2].sample_id)] == 2  # False -> cat 2
 
     legend = json.loads(table.schema.metadata[b"color_legend"])
+    assert legend["0"] == "Filtered out"
     assert legend["1"] == "Unassigned"
     assert legend["2"] == "false"
     assert legend["3"] == "true"
@@ -438,6 +440,7 @@ def test_get_embeddings2d__with_metadata_field_color_by_and_sample_ids_filter(
     assert sample_id_to_color[str(samples[3].sample_id)] == 0  # Berlin, filtered
 
     legend = json.loads(table.schema.metadata[b"color_legend"])
+    assert legend["0"] == "Filtered out"
     assert legend["1"] == "Unassigned"
     assert legend["2"] == "Berlin"
     assert legend["3"] == "London"

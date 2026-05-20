@@ -25,7 +25,7 @@ export const useImageAnnotationCounts = ({
     const options = countImageAnnotationsByCollectionOptions(requestOptions);
     const queryKey = useImageAnnotationCountsQueryKey;
 
-    return createQuery({
+    return createQuery(() => ({
         ...options,
         queryKey,
         queryFn: async ({ signal }) => {
@@ -36,5 +36,5 @@ export const useImageAnnotationCounts = ({
             });
             return data;
         }
-    });
+    }));
 };

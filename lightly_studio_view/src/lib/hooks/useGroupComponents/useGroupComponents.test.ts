@@ -2,7 +2,6 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { useGroupComponents } from './useGroupComponents';
 import type { QueryClient, CreateQueryResult } from '@tanstack/svelte-query';
 import * as tanstackQuery from '@tanstack/svelte-query';
-import { get } from 'svelte/store';
 
 describe('useGroupComponents Hook', () => {
     const mockInvalidateQueries = vi.fn();
@@ -52,12 +51,9 @@ describe('useGroupComponents Hook', () => {
         vi.resetAllMocks();
 
         vi.spyOn(tanstackQuery, 'useQueryClient').mockReturnValue(mockQueryClient as QueryClient);
-        vi.spyOn(tanstackQuery, 'createQuery').mockReturnValue({
-            subscribe: (fn: (value: unknown) => void) => {
-                fn(mockQueryResult);
-                return vi.fn();
-            }
-        } as CreateQueryResult<unknown, Error>);
+        vi.spyOn(tanstackQuery, 'createQuery').mockReturnValue(
+            mockQueryResult as unknown as CreateQueryResult<unknown, Error>
+        );
     });
 
     it('should return groupComponents and refetch', () => {
@@ -83,7 +79,8 @@ describe('useGroupComponents Hook', () => {
 
         useGroupComponents({ groupId: 'group123' });
 
-        expect(createQuerySpy).toHaveBeenCalledWith(
+        const optionsArg = createQuerySpy.mock.calls[0][0]();
+        expect(optionsArg).toEqual(
             expect.objectContaining({
                 queryKey: expect.any(Array)
             })
@@ -93,7 +90,7 @@ describe('useGroupComponents Hook', () => {
     it('should return group components data', () => {
         const { groupComponents } = useGroupComponents({ groupId: 'group123' });
 
-        const data = get(groupComponents).data;
+        const data = groupComponents.data;
         expect(data).toHaveLength(2);
         expect(data?.[0].collection.group_component_name).toBe('front');
         expect(data?.[1].collection.group_component_name).toBe('back');
