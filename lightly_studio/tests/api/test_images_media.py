@@ -12,6 +12,7 @@ from pytest_mock import MockerFixture
 from sqlmodel import Session
 
 import lightly_studio.utils.executor as executor_module
+from lightly_studio.api.routes import images
 from lightly_studio.models.collection import SampleType
 from tests.helpers_resolvers import create_collection, create_image
 
@@ -142,10 +143,7 @@ def test_stream_image_closes_session_before_file_read(
         spy_close.assert_called_once()
         return b"\x89PNG\r\n\x1a\n", "image/png"
 
-    mocker.patch(
-        "lightly_studio.api.routes.images._read_and_transform_image",
-        side_effect=fake_read,
-    )
+    mocker.patch.object(images, "_read_and_transform_image", side_effect=fake_read)
 
     image_path = tmp_path / "test_image.png"
     PILImage.new("RGB", (10, 10), color="red").save(image_path)
