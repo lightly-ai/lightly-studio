@@ -1,5 +1,6 @@
-import { fireEvent, render, screen, within } from '@testing-library/svelte';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { fireEvent, render, screen } from '@testing-library/svelte';
+import userEvent from '@testing-library/user-event';
+import { beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import PlotPanel from './PlotPanel.svelte';
 import { useEmbeddings } from '$lib/hooks/useEmbeddings/useEmbeddings';
 import { writable, type Writable } from 'svelte/store';
@@ -81,9 +82,16 @@ vi.mock('$lib/hooks/useGlobalStorage', () => {
 });
 
 describe('PlotPanel.svelte', () => {
+    beforeAll(() => {
+        Element.prototype.hasPointerCapture = vi.fn(() => false);
+        Element.prototype.setPointerCapture = vi.fn();
+        Element.prototype.releasePointerCapture = vi.fn();
+        Element.prototype.scrollIntoView = vi.fn();
+    });
+
     beforeEach(() => {
         vi.resetAllMocks();
-        vi.stubGlobal('ResizeObserver', MockResizeObserver);
+        vi.stubGlobal('ResizeObserver', ResizeObserverMock);
         rangeSelectionStore = writable(null);
         selectedSampleIdsStore = writable([]);
         imageFilterStore = writable({ sample_filter: { sample_ids: [] } });
@@ -214,6 +222,8 @@ describe('PlotPanel.svelte', () => {
     });
 
     it('passes derived colorBy to useEmbeddings when a metadata field is selected', async () => {
+        const user = userEvent.setup();
+
         render(PlotPanel);
 
         expect(useEmbeddings).toHaveBeenLastCalledWith(
@@ -222,10 +232,8 @@ describe('PlotPanel.svelte', () => {
             null
         );
 
-        await fireEvent.click(screen.getByTestId('plot-color-by-button'));
-        await fireEvent.click(
-            within(screen.getByTestId('plot-color-by-options')).getByText('metadata.split')
-        );
+        await user.click(screen.getByTestId('plot-color-by-button'));
+        await user.click(await screen.findByRole('option', { name: 'metadata.split' }));
         await tick();
 
         expect(useEmbeddings).toHaveBeenLastCalledWith('test-collection-id', expect.anything(), {
