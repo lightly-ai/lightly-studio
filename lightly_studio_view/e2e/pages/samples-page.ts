@@ -133,18 +133,33 @@ export class SamplesPage {
     }
 
     async createSelection(
+        strategy: 'diversity' | 'typicality',
+        nSamples: number,
+        tagName: string
+    ): Promise<void>;
+    async createSelection(
+        strategy: 'similarity',
+        nSamples: number,
+        tagName: string,
+        queryTagId: string
+    ): Promise<void>;
+    async createSelection(
         strategy: 'diversity' | 'typicality' | 'similarity',
         nSamples: number,
         tagName: string,
         queryTagId?: string
     ): Promise<void> {
+        if (strategy === 'similarity' && !queryTagId) {
+            throw new Error('queryTagId required for similarity strategy');
+        }
+
         await this.page.getByTestId('menu-trigger').click();
         await this.page.getByTestId('menu-selection').click();
 
         await this.page.getByTestId('selection-dialog-strategy-select').click();
         await this.page.getByTestId(`selection-strategy-${strategy}`).click();
 
-        if (strategy === 'similarity' && queryTagId) {
+        if (strategy === 'similarity') {
             await this.page.getByTestId('selection-dialog-query-tag-select').click();
             await this.page.getByTestId(`selection-query-tag-${queryTagId}`).click();
         } else {

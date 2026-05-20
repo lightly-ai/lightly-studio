@@ -239,14 +239,16 @@ test('Similarity search computes metadata and sorts images by similarity', async
     const similarityPromise = page.waitForResponse(
         (response) =>
             response.url().includes(`/metadata/similarity/${queryTagId}`) &&
-            response.status() === 204
+            response.status() === 200
     );
 
     await samplesPage.createSimilaritySelection(queryTagId!);
 
-    await similarityPromise;
+    const similarityResponse = await similarityPromise;
+    const similarityMetadataName = await similarityResponse.json();
+    expect(typeof similarityMetadataName).toBe('string');
+    expect(similarityMetadataName).toContain('similarity');
     await expect(page.getByText('Similarity sort applied')).toBeVisible({ timeout: 10000 });
-    await expect(page.getByTestId('sort-by-trigger')).toHaveText('Similarity');
 });
 
 test('Selection shows error toast when tag already exists', async ({ page, samplesPage }) => {

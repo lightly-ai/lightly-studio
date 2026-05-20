@@ -1,5 +1,6 @@
 import {
     createCombinationSelection,
+    computeSimilarityMetadata,
     computeTypicalityMetadata
 } from '$lib/api/lightly_studio_local/sdk.gen';
 import { fireEvent, render, screen, waitFor } from '@testing-library/svelte';
@@ -21,6 +22,7 @@ vi.mock('$lib/api/lightly_studio_local/sdk.gen', async () => {
     return {
         ...actual,
         createCombinationSelection: vi.fn(),
+        computeSimilarityMetadata: vi.fn(),
         computeTypicalityMetadata: vi.fn()
     };
 });
@@ -88,6 +90,12 @@ describe('CreateSelectionDialog', () => {
         });
         vi.mocked(computeTypicalityMetadata).mockResolvedValue({
             data: undefined,
+            error: undefined,
+            request: mockRequest,
+            response: mockResponse
+        });
+        vi.mocked(computeSimilarityMetadata).mockResolvedValue({
+            data: 'similarity',
             error: undefined,
             request: mockRequest,
             response: mockResponse
@@ -209,5 +217,19 @@ describe('CreateSelectionDialog', () => {
                 })
             );
         });
+    });
+
+    it('disables similarity search for video collections', async () => {
+        pageMock.data.collection.sample_type = 'video';
+
+        render(CreateSelectionDialog);
+
+        await fireEvent.keyDown(screen.getByTestId('selection-dialog-strategy-select'), {
+            key: 'Enter'
+        });
+
+        expect(await screen.findByTestId('selection-strategy-similarity')).toHaveAttribute(
+            'data-disabled'
+        );
     });
 });

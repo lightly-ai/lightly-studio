@@ -31,6 +31,7 @@
         page.data.collection?.sample_type === 'video' ||
             page.data.collection?.sample_type === 'video_frame'
     );
+    const isSimilaritySupported = $derived(!isVideoCollection);
 
     const { imageFilter } = useImageFilters();
     const { videoFilter } = useVideoFilters();
@@ -184,6 +185,11 @@
 
                 handleSelectionSuccess();
             } else if (selectionStrategy === 'similarity') {
+                if (!isSimilaritySupported) {
+                    toast.error('Similarity search is only available for image collections.');
+                    return;
+                }
+
                 loadingMessage = 'Computing similarity metadata...';
                 const similarityResponse = await computeSimilarityMetadata({
                     path: { collection_id: collectionId, query_tag_id: queryTagId },
@@ -276,6 +282,7 @@
                                         value="similarity"
                                         label="Similarity Search"
                                         data-testid="selection-strategy-similarity"
+                                        disabled={!isSimilaritySupported}
                                         >Similarity Search</Select.Item
                                     >
                                 </Select.Group>
