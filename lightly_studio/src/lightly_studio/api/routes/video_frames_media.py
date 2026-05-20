@@ -268,6 +268,8 @@ async def stream_frame(
         max_width=transform_query.max_width,
         max_height=transform_query.max_height,
     )
+    # Close the session before file I/O. Frame extraction can be slow, and holding a
+    # connection through it can exhaust the Postgres connection pool.
     session.close()
 
     # Run CPU-intensive video processing in thread pool to avoid blocking event loop

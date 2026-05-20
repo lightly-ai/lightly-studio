@@ -55,6 +55,8 @@ async def serve_image_by_sample_id(
         )
 
     file_path = sample_record.file_path_abs
+    # Close the session before file I/O. Image reads can be slow, and holding a
+    # connection through them can exhaust the Postgres connection pool.
     session.close()
 
     try:
