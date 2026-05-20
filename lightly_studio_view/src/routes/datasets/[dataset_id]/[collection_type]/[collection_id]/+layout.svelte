@@ -200,16 +200,16 @@
         setLastGridType(gridType);
     });
 
-    const hasEmbeddingsQuery = $derived(useHasEmbeddings({ collectionId }));
-    const hasEmbeddings = $derived(!!$hasEmbeddingsQuery.data);
+    const hasEmbeddingsQuery = useHasEmbeddings(() => ({ collectionId }));
+    const hasEmbeddings = $derived(!!hasEmbeddingsQuery.data);
 
     const { metadataValues } = $derived.by(() => useMetadataFilters(collectionId));
     const { dimensionsValues } = useDimensions(collectionIdStore);
 
-    const annotationLabelsQuery = $derived(
-        useAnnotationLabels({ collectionId: collectionId ?? '' })
-    );
-    const annotationLabelsData = $derived($annotationLabelsQuery?.data);
+    const annotationLabelsQuery = useAnnotationLabels(() => ({
+        collectionId: collectionId ?? ''
+    }));
+    const annotationLabelsData = $derived(annotationLabelsQuery?.data);
     const annotationLabelsStore = toStore(() => annotationLabelsData);
 
     // Initialize annotation filter hook (must be before annotationCounts to avoid init-order crash)
@@ -280,7 +280,7 @@
     // Feed annotation counts back into the hook for UI-ready filter rows.
     // Only update when data is present to avoid flicker during query refetch.
     $effect(() => {
-        const countsData = $annotationCounts.data;
+        const countsData = annotationCounts.data;
         if (countsData) {
             setAnnotationCounts(
                 countsData as { label_name: string; total_count: number; current_count?: number }[]
@@ -289,9 +289,13 @@
     });
 
     const totalAnnotations = $derived.by(() => {
-        const countsData = $annotationCounts.data;
+        const countsData = annotationCounts.data;
         if (!countsData) return 0;
-        return countsData.reduce((sum, item) => sum + Number(item.total_count), 0);
+        return countsData.reduce(
+            (sum: number, item: { [key: string]: string | number }) =>
+                sum + Number(item.total_count),
+            0
+        );
     });
 
     const showLeftSidebar = $derived(

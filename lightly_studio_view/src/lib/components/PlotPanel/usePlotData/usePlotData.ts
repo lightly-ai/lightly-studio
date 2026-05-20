@@ -47,7 +47,7 @@ export function usePlotData({
     }
 
     let category = hasActiveFilter
-        ? (data.fulfils_filter as Uint8Array)
+        ? (data.color_category as Uint8Array)
         : new Uint8Array((data.x as Float32Array).length).fill(FILTERED_CATEGORY);
     const sampleIds = data.sample_id as string[];
 
@@ -57,7 +57,7 @@ export function usePlotData({
 
         // Collect selected sample ids: in-polygon filtered points have FILTERED_CATEGORY.
         const _ids = category.reduce<string[]>((acc, pointCategory, index) => {
-            if (pointCategory === FILTERED_CATEGORY) {
+            if (pointCategory !== NOT_FILTERED_CATEGORY) {
                 acc.push(sampleIds[index]);
             }
             return acc;
@@ -66,11 +66,11 @@ export function usePlotData({
     } else if (highlightedSampleIds.length > 0) {
         const highlightedSampleIdSet = new Set(highlightedSampleIds);
         category = category.map((pointCategory, index) => {
-            if (pointCategory !== FILTERED_CATEGORY) {
+            if (pointCategory === NOT_FILTERED_CATEGORY) {
                 return pointCategory;
             }
             return highlightedSampleIdSet.has(sampleIds[index])
-                ? FILTERED_CATEGORY
+                ? pointCategory
                 : NOT_FILTERED_CATEGORY;
         });
     }

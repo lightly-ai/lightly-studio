@@ -1,6 +1,5 @@
 import { fireEvent, render } from '@testing-library/svelte';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { readable } from 'svelte/store';
 import SampleDetailsNavigation from './SampleDetailsNavigation.svelte';
 
 const { gotoMock, preloadDataMock, mockPage } = vi.hoisted(() => ({
@@ -33,12 +32,12 @@ vi.mock('$lib/contexts/SampleDetailsAnnotation.svelte', () => ({
 
 vi.mock('$lib/hooks/useAdjacentImages/useAdjacentImages', () => ({
     useAdjacentImages: () => ({
-        query: readable({
+        query: {
             data: {
                 previous_sample_id: 'sample-2',
                 next_sample_id: 'sample-4'
             }
-        })
+        }
     })
 }));
 

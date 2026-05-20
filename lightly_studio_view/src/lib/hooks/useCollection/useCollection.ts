@@ -1,7 +1,6 @@
 import { readCollectionOptions } from '$lib/api/lightly_studio_local/@tanstack/svelte-query.gen';
 import { readCollectionHierarchyOptions } from '$lib/api/lightly_studio_local/@tanstack/svelte-query.gen';
 import { createQuery, useQueryClient } from '@tanstack/svelte-query';
-import { derived } from 'svelte/store';
 import type { CollectionView } from '$lib/api/lightly_studio_local';
 
 /**
@@ -12,7 +11,7 @@ export const useCollection = ({ collectionId }: { collectionId: string }) => {
     const options = readCollectionOptions({ path: { collection_id: collectionId } });
     const client = useQueryClient();
 
-    const collectionQuery = createQuery(options);
+    const collectionQuery = createQuery(() => options);
 
     const refetch = () => {
         client.invalidateQueries({ queryKey: options.queryKey });
@@ -33,28 +32,21 @@ export const useCollectionWithChildren = ({ collectionId }: { collectionId: stri
     const options = readCollectionHierarchyOptions({ path: { collection_id: collectionId } });
     const client = useQueryClient();
 
-    const hierarchyQuery = createQuery(options);
+    const hierarchyQuery = createQuery(() => options);
 
     // readCollectionHierarchy returns an array starting from the root
     // We need to get the first item (root collection) which has all children
-    const collection = derived(hierarchyQuery, ($query) => {
-        if (
-            $query.isSuccess &&
-            $query.data &&
-            Array.isArray($query.data) &&
-            $query.data.length > 0
-        ) {
-            // Return a new query-like object with the root collection
-            return {
-                ...$query,
-                data: $query.data[0] as CollectionView // First item is the root collection with children
-            };
+    const collection = new Proxy(hierarchyQuery, {
+        get(target, property, receiver) {
+            if (property === 'data') {
+                return target.isSuccess && Array.isArray(target.data) && target.data.length > 0
+                    ? (target.data[0] as CollectionView)
+                    : undefined;
+            }
+
+            return Reflect.get(target, property, receiver);
         }
-        return {
-            ...$query,
-            data: undefined
-        };
-    });
+    }) as typeof hierarchyQuery & { data: CollectionView | undefined };
 
     const refetch = () => {
         client.invalidateQueries({ queryKey: options.queryKey });

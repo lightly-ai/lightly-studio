@@ -54,8 +54,11 @@ export const useAdjacentSamples = ({
         body: params.body
     });
 
-    const client = useQueryClient(queryClient);
-    const query = createQuery(options, client);
+    const client = queryClient ?? useQueryClient();
+    const query = createQuery(
+        () => options,
+        () => client
+    );
 
     const refetch = () => {
         client.invalidateQueries({ queryKey: options.queryKey });

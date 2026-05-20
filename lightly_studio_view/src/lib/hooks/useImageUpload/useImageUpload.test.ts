@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { get, writable } from 'svelte/store';
+import { get } from 'svelte/store';
 import { useImageUpload } from '$lib/hooks';
 import { createMutation } from '@tanstack/svelte-query';
 
@@ -13,7 +13,7 @@ vi.mock('$lib/api/lightly_studio_local/@tanstack/svelte-query.gen', () => ({
 }));
 
 vi.mock('@tanstack/svelte-query', () => ({
-    createMutation: vi.fn(() => writable({ mutate: mutateMock }))
+    createMutation: vi.fn(() => ({ mutate: mutateMock }))
 }));
 
 describe('useImageUpload', () => {

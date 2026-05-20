@@ -9,7 +9,7 @@ interface UseEvaluationRunsParams {
 export const useEvaluationRuns = ({
     datasetId
 }: UseEvaluationRunsParams): CreateQueryResult<EvaluationRunView[], Error> => {
-    return createQuery(
+    return createQuery(() =>
         getEvaluationRunsOptions({
             path: { dataset_id: datasetId }
         })

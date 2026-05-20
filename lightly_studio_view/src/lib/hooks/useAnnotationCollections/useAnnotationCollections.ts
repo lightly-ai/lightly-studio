@@ -9,7 +9,7 @@ interface UseAnnotationCollectionsParams {
 export const useAnnotationCollections = ({
     collectionId
 }: UseAnnotationCollectionsParams): CreateQueryResult<AnnotationCollectionView[], Error> => {
-    return createQuery(
+    return createQuery(() =>
         readAnnotationCollectionsOptions({
             path: { collection_id: collectionId }
         })
