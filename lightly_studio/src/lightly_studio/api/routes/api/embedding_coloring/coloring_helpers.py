@@ -58,6 +58,7 @@ class DiscreteColorScale(Generic[T]):
 
         Args:
             values: Values to assign color categories to, in the desired order.
+                Values must be unique.
             start_cat: First category ID to assign. Defaults to 2, reserving
                 0 for filtered-out samples and 1 for unassigned samples.
             format_fn: Function to produce a legend label from a value.
