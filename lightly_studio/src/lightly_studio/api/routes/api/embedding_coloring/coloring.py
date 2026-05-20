@@ -7,6 +7,7 @@ from uuid import UUID
 
 from pydantic import BaseModel, Field
 from sqlmodel import Session
+from typing_extensions import assert_never
 
 from lightly_studio.api.routes.api.embedding_coloring import (
     annotations as annotation_coloring,
@@ -90,4 +91,8 @@ def build_color_data(
             fulfils_filter=fulfils_filter,
         )
 
-    return list(fulfils_filter), {}
+    # Static check that all ColorBy variants are handled above.
+    if color_by is not None:
+        assert_never(color_by)
+
+    return list(fulfils_filter), {0: "Not filtered", 1: "Filtered"}
