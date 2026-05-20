@@ -8,33 +8,44 @@ import { toast } from 'svelte-sonner';
 import { useUpdateAnnotationsMutation } from '../useUpdateAnnotationsMutation/useUpdateAnnotationsMutation';
 import { useImageAnnotationCountsQueryKey } from '../useImageAnnotationCounts/useImageAnnotationCounts';
 
-export const useAnnotation = ({
-    collectionId,
-    annotationId,
-    onUpdate
-}: {
-    collectionId: string;
-    annotationId: string;
-    onUpdate?: () => void;
-}) => {
-    const annotationOptions = getAnnotationOptions({
-        path: {
-            annotation_id: annotationId,
-            collection_id: collectionId
-        }
-    });
+export const useAnnotation = (
+    getParams: () => {
+        collectionId: string;
+        annotationId: string;
+        onUpdate?: () => void;
+        enabled?: boolean;
+    }
+) => {
     const client = useQueryClient();
 
+    // Evaluate collectionId once at construction for mutation setup (stable route param)
     const { updateAnnotations } = useUpdateAnnotationsMutation({
-        collectionId
+        collectionId: getParams().collectionId
     });
-    const annotation = createQuery(annotationOptions);
+
+    const annotation = createQuery(() => ({
+        ...getAnnotationOptions({
+            path: {
+                annotation_id: getParams().annotationId,
+                collection_id: getParams().collectionId
+            }
+        }),
+        enabled: getParams().enabled ?? true
+    }));
 
     const refetch = () => {
-        client.invalidateQueries({ queryKey: annotationOptions.queryKey });
+        const params = getParams();
+        client.invalidateQueries({
+            queryKey: getAnnotationOptions({
+                path: {
+                    annotation_id: params.annotationId,
+                    collection_id: params.collectionId
+                }
+            }).queryKey
+        });
         client.invalidateQueries({
             queryKey: readAnnotationLabelsOptions({
-                path: { collection_id: collectionId }
+                path: { collection_id: params.collectionId }
             }).queryKey
         });
         client.invalidateQueries({
@@ -47,7 +58,7 @@ export const useAnnotation = ({
             await updateAnnotations([input]);
             refetch();
             toast.success('Annotation updated successfully');
-            onUpdate?.();
+            getParams().onUpdate?.();
         } catch (error: unknown) {
             toast.error('Failed to update annotation:' + (error as Error).message);
         }

@@ -9,7 +9,7 @@ export const useVideoAnnotationCounts = ({
     collectionId: string;
     filter: VideoFilter;
 }) =>
-    createQuery(
+    createQuery(() =>
         countVideoFrameAnnotationsByVideoCollectionOptions({
             path: { collection_id: collectionId },
             body: {

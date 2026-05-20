@@ -50,7 +50,7 @@
 
     let temporaryBbox = $state<BoundingBox | null>(null);
     let shouldDisableInteraction = $state(false);
-    const labels = useAnnotationLabels({ collectionId });
+    const labels = useAnnotationLabels(() => ({ collectionId }));
     const { createLabel } = useCreateLabel({ collectionId });
     const { createAnnotation } = useCreateAnnotation({
         collectionId
@@ -170,10 +170,10 @@
 
         try {
             let label =
-                $labels.data?.find(
+                labels.data?.find(
                     (label) =>
                         label.annotation_label_name === annotationLabelContext.annotationLabel
-                ) ?? $labels.data?.find((label) => label.annotation_label_name === 'DEFAULT');
+                ) ?? labels.data?.find((label) => label.annotation_label_name === 'DEFAULT');
 
             // Create an default label if it does not exist yet
             if (!label) {

@@ -38,9 +38,7 @@ export function useImageUpload({
     onSuccess,
     maxSizeMb = 50
 }: UseImageUploadParams): UseImageUploadReturn {
-    const mutation = createMutation(embedImageFromFileMutation());
-    // We need to have this subscription to get onSuccess/onError events
-    mutation.subscribe(() => undefined);
+    const mutation = createMutation(() => embedImageFromFileMutation());
 
     const imageName = writable<string | undefined>(undefined);
     const previewUrl = writable<string | undefined>(undefined);
@@ -72,7 +70,7 @@ export function useImageUpload({
             }
 
             const embedding = await new Promise<number[]>((resolve, reject) => {
-                get(mutation).mutate(
+                mutation.mutate(
                     {
                         path: {
                             collection_id: collectionId
