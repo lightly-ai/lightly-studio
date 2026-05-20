@@ -559,10 +559,12 @@ def test_get_embeddings2d__with_tag_color_by(
     assert sample_id_to_color[str(samples[4].sample_id)] == 1  # Unassigned
 
     legend = json.loads(table.schema.metadata[b"color_legend"])
-    assert legend["0"] == "Filtered out"
-    assert legend["1"] == "Unassigned"
-    assert legend["2"] == "alpha"
-    assert legend["3"] == "beta"
+    assert legend == {
+        "0": "Filtered out",
+        "1": "Unassigned",
+        "2": "alpha",
+        "3": "beta",
+    }
 
 
 def test_get_embeddings2d__with_tag_color_by_and_filter(
@@ -636,7 +638,11 @@ def test_get_embeddings2d__with_tag_color_by_and_filter(
     assert sample_id_to_color[str(samples[3].sample_id)] == 0
 
     legend = json.loads(table.schema.metadata[b"color_legend"])
-    assert legend["2"] == "color_tag"
+    assert legend == {
+        "0": "Filtered out",
+        "1": "Unassigned",
+        "2": "color_tag",
+    }
 
 
 def test_get_embeddings2d__with_annotation_color_by(
@@ -720,10 +726,12 @@ def test_get_embeddings2d__with_annotation_color_by(
     assert sample_id_to_color[str(samples[4].sample_id)] == 1  # Unassigned
 
     legend = json.loads(table.schema.metadata[b"color_legend"])
-    assert legend["0"] == "Filtered out"
-    assert legend["1"] == "Unassigned"
-    assert legend["2"] == "cat"
-    assert legend["3"] == "dog"
+    assert legend == {
+        "0": "Filtered out",
+        "1": "Unassigned",
+        "2": "cat",
+        "3": "dog",
+    }
 
 
 def test_get_embeddings2d__with_annotation_color_by_and_filter(
@@ -790,7 +798,7 @@ def test_get_embeddings2d__with_annotation_color_by_and_filter(
     assert sample_id_to_color[str(samples[3].sample_id)] == 0
 
     legend = json.loads(table.schema.metadata[b"color_legend"])
-    assert legend["2"] == "cat"
+    assert legend == {"0": "Filtered out", "1": "Unassigned", "2": "cat"}
 
 
 """Benchmark for the /embeddings2d/default endpoint.
