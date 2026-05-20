@@ -1,4 +1,6 @@
 <script lang="ts">
+    import { cn } from '$lib/utils';
+
     interface LegendEntry {
         cat: number;
         label: string;
@@ -40,9 +42,10 @@
         {#each legendEntries as entry (entry.cat)}
             <button
                 type="button"
-                class="flex w-full cursor-pointer items-center gap-1.5 rounded text-left transition-opacity hover:opacity-80 {entry.hidden
-                    ? 'opacity-40'
-                    : ''}"
+                class={cn(
+                    'flex w-full cursor-pointer items-center gap-1.5 rounded text-left transition-opacity hover:opacity-80',
+                    entry.hidden && 'opacity-40'
+                )}
                 data-testid={`plot-legend-entry-${entry.cat}`}
                 aria-pressed={entry.hidden}
                 title={entry.hidden ? 'Show category' : 'Hide category'}
