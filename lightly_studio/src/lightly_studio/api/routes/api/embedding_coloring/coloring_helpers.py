@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from collections.abc import Callable, Mapping, Sequence
+from collections.abc import Callable, Iterable, Mapping, Sequence
 from dataclasses import dataclass
 from typing import Generic, Protocol, TypeVar
 from uuid import UUID
@@ -46,16 +46,18 @@ class DiscreteColorScale(Generic[T]):
     @classmethod
     def from_values(
         cls,
-        values: set[T],
+        values: Iterable[T],
         start_cat: int = 2,
         format_fn: Callable[[T], str] = str,
     ) -> DiscreteColorScale[T]:
-        """Build a DiscreteColorScale by assigning a category to each unique value.
+        """Build a DiscreteColorScale by assigning a category to each value.
 
-        Values are sorted before assignment to ensure deterministic ordering.
+        Values are consumed in iteration order — the caller is responsible for
+        providing them in the desired sequence (e.g. sorted alphabetically or
+        in priority order).
 
         Args:
-            values: Unique values to assign color categories to.
+            values: Values to assign color categories to, in the desired order.
             start_cat: First category ID to assign. Defaults to 2, reserving
                 0 for filtered-out samples and 1 for unassigned samples.
             format_fn: Function to produce a legend label from a value.
@@ -66,7 +68,7 @@ class DiscreteColorScale(Generic[T]):
         """
         lookup: dict[T, int] = {}
         legend: dict[int, str] = {}
-        for i, value in enumerate(sorted(values, key=format_fn)):
+        for i, value in enumerate(values):
             cat = start_cat + i
             lookup[value] = cat
             legend[cat] = format_fn(value)

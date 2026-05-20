@@ -59,13 +59,12 @@ def _build_metadata_color_scale(
 ) -> DiscreteColorScale[Any]:
     """Build a DiscreteColorScale for one metadata key across all collection samples."""
     if metadata_type == "string":
-        str_values: set[str] = set(sample_to_value.values())
+        str_values = sorted(set(sample_to_value.values()))
         return DiscreteColorScale.from_values(values=str_values)
     if metadata_type == "boolean":
-        bool_values: set[bool] = set(sample_to_value.values())
         return DiscreteColorScale.from_values(
-            values=bool_values,
-            format_fn=lambda v: str(v).lower(),
+            values=[False, True],
+            format_fn=lambda v: "true" if v else "false",
         )
 
     raise ValueError(
