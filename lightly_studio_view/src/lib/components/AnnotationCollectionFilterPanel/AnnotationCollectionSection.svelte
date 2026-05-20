@@ -9,6 +9,13 @@
     import { Checkbox } from '$lib/components/ui/checkbox/index.js';
     import { Label } from '$lib/components/ui/label/index.js';
     import { useAnnotationCollectionsLabelFilter } from '$lib/hooks/useAnnotationCollectionsLabelFilter/useAnnotationCollectionsLabelFilter';
+    import {
+        Collapsible,
+        CollapsibleContent,
+        CollapsibleTrigger
+    } from '$lib/components/ui/collapsible';
+    import { ChevronDown } from '@lucide/svelte';
+    import { slide } from 'svelte/transition';
 
     interface Props {
         collection: AnnotationCollectionView;
@@ -49,61 +56,82 @@
     const isChecked = $derived(checkState === 'all');
 
     const useCollectionColor = $derived($selectedCollectionIds.length > 1);
+
+    let sectionOpen = $state(false);
+    const duration = 168;
 </script>
 
 {#if labels.length > 0}
-    <div class="space-y-0.5">
-        <!-- Collection header -->
-        <div class="flex items-center space-x-2 py-1">
-            <Checkbox
-                id={`collection-${collection.collection_id}`}
-                checked={isChecked}
-                indeterminate={isIndeterminate}
-                onCheckedChange={() => toggleCollection(collection.collection_id)}
-            />
-            <label
-                for={`collection-${collection.collection_id}`}
-                class="cursor-pointer truncate text-sm font-semibold"
-                title={collection.name}
-            >
-                {collection.name}
-            </label>
-        </div>
-
-        <!-- Label rows -->
-        {#each labels as label (label.annotation_label_id)}
-            {@const labelSelected =
-                $selectedLabels
-                    .get(collection.collection_id)
-                    ?.has(label.annotation_label_id ?? '') ?? false}
-            {@const colorName = useCollectionColor ? collection.name : label.annotation_label_name}
-            <div
-                class="flex items-center space-x-2 py-0.5 pl-6"
-                title={label.annotation_label_name}
-            >
+    <Collapsible bind:open={sectionOpen}>
+        <div class="space-y-0.5">
+            <!-- Collection header -->
+            <div class="flex items-center space-x-2 py-1">
                 <Checkbox
-                    id={`label-${collection.collection_id}-${label.annotation_label_id}`}
-                    checked={labelSelected}
-                    onCheckedChange={() => {
-                        if (label.annotation_label_id) {
-                            toggleLabel(collection.collection_id, label.annotation_label_id);
-                        }
-                    }}
+                    id={`collection-${collection.collection_id}`}
+                    checked={isChecked}
+                    indeterminate={isIndeterminate}
+                    onCheckedChange={() => toggleCollection(collection.collection_id)}
                 />
-                <Label
-                    for={`label-${collection.collection_id}-${label.annotation_label_id}`}
-                    class="flex min-w-0 flex-1 cursor-pointer items-center space-x-2 text-nowrap peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
-                >
-                    <AnnotationColorLegend
-                        labelName={colorName}
-                        className="h-3 w-3"
-                        selected={labelSelected}
+                <CollapsibleTrigger class="flex flex-1 items-center justify-between gap-1 overflow-hidden">
+                    <span
+                        class="truncate text-sm font-semibold"
+                        title={collection.name}
+                    >
+                        {collection.name}
+                    </span>
+                    <ChevronDown
+                        class="h-4 w-4 shrink-0 transition-transform duration-{duration}"
+                        style={`transform: ${sectionOpen ? 'rotate(-180deg)' : 'rotate(0deg)'}`}
                     />
-                    <p class="flex-1 truncate text-base font-normal">
-                        {label.annotation_label_name}
-                    </p>
-                </Label>
+                </CollapsibleTrigger>
             </div>
-        {/each}
-    </div>
+
+            <!-- Label rows -->
+            <CollapsibleContent forceMount>
+                {#if sectionOpen}
+                    <div class="space-y-0.5" transition:slide={{ duration }}>
+                        {#each labels as label (label.annotation_label_id)}
+                            {@const labelSelected =
+                                $selectedLabels
+                                    .get(collection.collection_id)
+                                    ?.has(label.annotation_label_id ?? '') ?? false}
+                            {@const colorName = useCollectionColor
+                                ? collection.name
+                                : label.annotation_label_name}
+                            <div
+                                class="flex items-center space-x-2 py-0.5 pl-6"
+                                title={label.annotation_label_name}
+                            >
+                                <Checkbox
+                                    id={`label-${collection.collection_id}-${label.annotation_label_id}`}
+                                    checked={labelSelected}
+                                    onCheckedChange={() => {
+                                        if (label.annotation_label_id) {
+                                            toggleLabel(
+                                                collection.collection_id,
+                                                label.annotation_label_id
+                                            );
+                                        }
+                                    }}
+                                />
+                                <Label
+                                    for={`label-${collection.collection_id}-${label.annotation_label_id}`}
+                                    class="flex min-w-0 flex-1 cursor-pointer items-center space-x-2 text-nowrap peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+                                >
+                                    <AnnotationColorLegend
+                                        labelName={colorName}
+                                        className="h-3 w-3"
+                                        selected={labelSelected}
+                                    />
+                                    <p class="flex-1 truncate text-base font-normal">
+                                        {label.annotation_label_name}
+                                    </p>
+                                </Label>
+                            </div>
+                        {/each}
+                    </div>
+                {/if}
+            </CollapsibleContent>
+        </div>
+    </Collapsible>
 {/if}
