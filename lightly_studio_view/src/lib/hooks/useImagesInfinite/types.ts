@@ -14,10 +14,12 @@ export interface ClassifierSamples {
     negativeSampleIds: string[];
 }
 
-export type NormalModeFilters = Pick<AnnotationsFilter, 'annotation_label_ids' | 'collection_ids'> &
-    Pick<SampleFilter, 'tag_ids' | 'sample_ids'> & {
-        dimensions?: DimensionBounds;
-    };
+export type NormalModeFilters = Pick<SampleFilter, 'tag_ids' | 'sample_ids'> & {
+    annotations_filter?: AnnotationsFilter;
+    annotation_label_ids?: AnnotationsFilter['annotation_label_ids'];
+    collection_ids?: AnnotationsFilter['collection_ids'];
+    dimensions?: DimensionBounds;
+};
 
 export type ImagesInfiniteParams = {
     collection_id: string;

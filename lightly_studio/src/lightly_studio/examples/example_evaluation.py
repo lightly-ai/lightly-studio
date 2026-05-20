@@ -5,6 +5,7 @@ from time import perf_counter
 
 from environs import Env
 
+import lightly_studio as ls
 from lightly_studio import db_manager
 from lightly_studio.core.dataset_query import ImageSampleField
 from lightly_studio.core.image.image_dataset import ImageDataset
@@ -140,6 +141,7 @@ def main() -> None:
         f"{evaluation_result.pred_annotation_count} prediction annotations"
     )
     print_evaluation_metrics(dataset=dataset, name=ALL_SAMPLES_EVALUATION_NAME)
+    ls.start_gui()
 
 
 if __name__ == "__main__":

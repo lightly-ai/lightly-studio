@@ -6,6 +6,7 @@ from .get_all import (
     get_all,
     get_all_sorted_alphabetically,
 )
+from .get_by_annotation_collection import get_by_annotation_collection
 from .get_by_id import get_by_id
 from .get_by_ids import get_by_ids
 from .get_by_label_name import get_by_label_name
@@ -17,6 +18,7 @@ __all__ = [
     "delete",
     "get_all",
     "get_all_sorted_alphabetically",
+    "get_by_annotation_collection",
     "get_by_id",
     "get_by_ids",
     "get_by_label_name",

@@ -6,11 +6,11 @@
         CollectionSearch,
         Footer,
         GridHeader,
-        LabelsMenu,
         OrderBy,
         SelectionPill,
         TagsMenu
     } from '$lib/components';
+    import AnnotationCollectionFilterPanel from '$lib/components/AnnotationCollectionFilterPanel/AnnotationCollectionFilterPanel.svelte';
     import GridHeaderSelectAllButton from '$lib/components/GridHeaderSelectAllButton/GridHeaderSelectAllButton.svelte';
     import QueryEditorPanel from '$lib/components/QueryEditorPanel/QueryEditorPanel.svelte';
     import Separator from '$lib/components/ui/separator/separator.svelte';
@@ -23,8 +23,7 @@
     import Segment from '$lib/components/Segment/Segment.svelte';
     import { useHasEmbeddings } from '$lib/hooks/useHasEmbeddings/useHasEmbeddings';
     import { useHideAnnotations } from '$lib/hooks/useHideAnnotations';
-    import { useAnnotationLabels } from '$lib/hooks/useAnnotationLabels/useAnnotationLabels';
-    import { useAnnotationsFilter } from '$lib/hooks/useAnnotationsFilter/useAnnotationsFilter';
+    import { useAnnotationCollectionsLabelFilter } from '$lib/hooks/useAnnotationCollectionsLabelFilter/useAnnotationCollectionsLabelFilter';
     import { useDimensions } from '$lib/hooks/useDimensions/useDimensions';
     import {
         isAnnotationDetailsRoute,
@@ -39,17 +38,22 @@
         isVideoDetailsRoute
     } from '$lib/routes';
     import type { GridType } from '$lib/types';
-    import { useImageAnnotationCounts } from '$lib/hooks/useImageAnnotationCounts/useImageAnnotationCounts';
     import { useGlobalStorage } from '$lib/hooks/useGlobalStorage.js';
     import { Button } from '$lib/components/ui/index.js';
     import QueryControl from '$lib/components/QueryControl/QueryControl.svelte';
     import { PaneGroup, Pane, PaneResizer } from 'paneforge';
-    import { useVideoAnnotationCounts } from '$lib/hooks/useVideoAnnotationsCount/useVideoAnnotationsCount.js';
     import {
         createMetadataFilters,
         useMetadataFilters
     } from '$lib/hooks/useMetadataFilters/useMetadataFilters.js';
-    import { useVideoFrameAnnotationCounts } from '$lib/hooks/useVideoFrameAnnotationsCount/useVideoFrameAnnotationsCount.js';
+    import { createQuery } from '@tanstack/svelte-query';
+    import {
+        countImageAnnotationsByCollectionOptions,
+        countImageAnnotationsByCollectionQueryKey,
+        countVideoFrameAnnotationsOptions,
+        countVideoFrameAnnotationsByVideoCollectionOptions
+    } from '$lib/api/lightly_studio_local/@tanstack/svelte-query.gen';
+    import { countImageAnnotationsByCollection } from '$lib/api/lightly_studio_local/sdk.gen';
     import { useVideoFramesBounds } from '$lib/hooks/useVideoFramesBounds/useVideoFramesBounds.js';
     import { useVideoBounds } from '$lib/hooks/useVideosBounds/useVideosBounds.js';
     import { useImageFilters } from '$lib/hooks/useImageFilters/useImageFilters';
@@ -206,21 +210,7 @@
     const { metadataValues } = $derived.by(() => useMetadataFilters(collectionId));
     const { dimensionsValues } = useDimensions(collectionIdStore);
 
-    const annotationLabelsQuery = useAnnotationLabels(() => ({
-        collectionId: collectionId ?? ''
-    }));
-    const annotationLabelsData = $derived(annotationLabelsQuery?.data);
-    const annotationLabelsStore = toStore(() => annotationLabelsData);
-
-    // Initialize annotation filter hook (must be before annotationCounts to avoid init-order crash)
-    const {
-        annotationFilter: annotationFilterStore,
-        annotationFilterRows,
-        toggleAnnotationFilterSelection,
-        setAnnotationCounts
-    } = useAnnotationsFilter({
-        annotationLabels: annotationLabelsStore
-    });
+    const { annotationFilter: annotationFilterStore } = useAnnotationCollectionsLabelFilter();
 
     const metadataFilters = $derived(
         metadataValues ? createMetadataFilters($metadataValues) : undefined
@@ -238,54 +228,77 @@
         $videoFilterFromHook?.sample_filter?.sample_ids ?? []
     );
 
-    const annotationCounts = $derived.by(() => {
-        if (
-            isVideoFrames ||
-            (isAnnotations && parentCollection?.sampleType == SampleType.VIDEO_FRAME)
-        ) {
-            let videoFrameCollectionId = collectionId;
-            if (isAnnotations && parentCollection?.sampleType == SampleType.VIDEO_FRAME) {
-                videoFrameCollectionId = parentCollection?.collectionId ?? collectionId;
-            }
-            return useVideoFrameAnnotationCounts({
-                collectionId: videoFrameCollectionId,
+    const isVideoFrameMode = $derived(
+        isVideoFrames || (isAnnotations && parentCollection?.sampleType == SampleType.VIDEO_FRAME)
+    );
+
+    const videoFrameQueryCollectionId = $derived(
+        isAnnotations && parentCollection?.sampleType == SampleType.VIDEO_FRAME
+            ? (parentCollection?.collectionId ?? collectionId)
+            : collectionId
+    );
+
+    const videoFrameAnnotationCountsQuery = createQuery(() => ({
+        ...countVideoFrameAnnotationsOptions({
+            path: { video_frame_collection_id: videoFrameQueryCollectionId },
+            body: {
                 filter: buildVideoFrameAnnotationCountsFilter({
                     metadataFilters,
                     annotationFilter: $annotationFilterStore,
                     videoFramesBoundsValues: $videoFramesBoundsValues
                 })
-            });
-        } else if (isVideos) {
-            return useVideoAnnotationCounts({
-                collectionId,
+            }
+        }),
+        enabled: isVideoFrameMode
+    }));
+
+    const videoAnnotationCountsQuery = createQuery(() => ({
+        ...countVideoFrameAnnotationsByVideoCollectionOptions({
+            path: { collection_id: collectionId },
+            body: {
                 filter: buildVideoAnnotationCountsFilter({
                     metadataFilters,
                     annotationFilter: $annotationFilterStore,
                     videoBoundsValues: $videoBoundsValues,
                     sampleIds: plotFilterVideoSampleIds
                 })
-            });
-        }
-        return useImageAnnotationCounts({
-            collectionId: datasetId,
-            filter: buildImageFilter({
-                dimensionsValues: $dimensionsValues,
-                annotationFilter: $annotationFilterStore,
-                metadataFilters,
-                sampleIds: isAnnotations ? [] : plotFilterImageSampleIds
-            })
+            }
+        }),
+        enabled: isVideos
+    }));
+
+    const imageAnnotationCountsQuery = createQuery(() => {
+        const filter = buildImageFilter({
+            dimensionsValues: $dimensionsValues,
+            annotationFilter: $annotationFilterStore,
+            metadataFilters,
+            sampleIds: isAnnotations ? [] : plotFilterImageSampleIds
         });
+        const requestOptions = {
+            path: { collection_id: datasetId },
+            ...(filter ? { body: { filter } } : {})
+        };
+        return {
+            ...countImageAnnotationsByCollectionOptions(requestOptions),
+            queryKey: countImageAnnotationsByCollectionQueryKey({
+                path: { collection_id: '__static_value__' }
+            }),
+            queryFn: async ({ signal }: { signal: AbortSignal }) => {
+                const { data } = await countImageAnnotationsByCollection({
+                    ...requestOptions,
+                    signal,
+                    throwOnError: true
+                });
+                return data;
+            },
+            enabled: !isVideoFrameMode && !isVideos
+        };
     });
 
-    // Feed annotation counts back into the hook for UI-ready filter rows.
-    // Only update when data is present to avoid flicker during query refetch.
-    $effect(() => {
-        const countsData = annotationCounts.data;
-        if (countsData) {
-            setAnnotationCounts(
-                countsData as { label_name: string; total_count: number; current_count?: number }[]
-            );
-        }
+    const annotationCounts = $derived.by(() => {
+        if (isVideoFrameMode) return videoFrameAnnotationCountsQuery;
+        if (isVideos) return videoAnnotationCountsQuery;
+        return imageAnnotationCountsQuery;
     });
 
     const totalAnnotations = $derived.by(() => {
@@ -341,10 +354,9 @@
                                         {isVideos}
                                         {isImages}
                                     />
-                                    <LabelsMenu
-                                        {annotationFilterRows}
-                                        onToggleAnnotationFilter={toggleAnnotationFilterSelection}
-                                    />
+                                    {#key collectionId}
+                                        <AnnotationCollectionFilterPanel {collectionId} />
+                                    {/key}
 
                                     {#if isImages || isVideos || isVideoFrames}
                                         {#key collectionId}

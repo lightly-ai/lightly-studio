@@ -6,6 +6,7 @@ from typing import Literal
 from uuid import UUID
 
 from pydantic import BaseModel, Field
+from sqlalchemy import and_, or_
 from sqlalchemy.orm import Mapped, aliased
 from sqlmodel import col, select
 
@@ -13,6 +14,16 @@ from lightly_studio.models.annotation.annotation_base import AnnotationBaseTable
 from lightly_studio.models.sample import SampleTable
 from lightly_studio.models.tag import TagTable
 from lightly_studio.type_definitions import QueryType
+
+
+class CollectionLabelFilter(BaseModel):
+    """Filter for annotations within a specific annotation collection."""
+
+    collection_id: UUID
+    annotation_label_ids: list[UUID] | None = Field(
+        default=None,
+        description="Label IDs to include; None means all labels in the collection",
+    )
 
 
 class AnnotationsFilter(BaseModel):
@@ -28,6 +39,15 @@ class AnnotationsFilter(BaseModel):
         default=None, description="List of annotation label UUIDs"
     )
     tag_ids: list[UUID] | None = Field(default=None, description="List of tag UUIDs")
+    per_collection_label_filters: list[CollectionLabelFilter] | None = Field(
+        default=None,
+        description=(
+            "Per-collection label filters expressed as disjunctive conditions: "
+            "an annotation matches if it belongs to any listed collection with its label "
+            "in the corresponding allowed set. When set, overrides collection_ids and "
+            "annotation_label_ids."
+        ),
+    )
 
     def apply(
         self,
@@ -81,15 +101,27 @@ class AnnotationsFilter(BaseModel):
         Both `apply()` and `apply_to_parent_sample_query()` call this helper so
         the annotation filtering rules live in one place.
         """
-        # Filter by collection
-        if self.collection_ids:
-            query = query.where(col(annotation_sample.collection_id).in_(self.collection_ids))
+        # Per-collection label filter: (collection=A AND label IN [...]) OR (collection=B AND ...)
+        if self.per_collection_label_filters:
+            conditions = []
+            for cf in self.per_collection_label_filters:
+                cond = col(annotation_sample.collection_id) == cf.collection_id
+                if cf.annotation_label_ids is not None:
+                    cond = and_(
+                        cond,
+                        col(AnnotationBaseTable.annotation_label_id).in_(cf.annotation_label_ids),
+                    )
+                conditions.append(cond)
+            query = query.where(or_(*conditions))
+        else:
+            # Fall back to flat filters when per_collection_label_filters is not set
+            if self.collection_ids:
+                query = query.where(col(annotation_sample.collection_id).in_(self.collection_ids))
 
-        # Filter by annotation label
-        if self.annotation_label_ids:
-            query = query.where(
-                col(AnnotationBaseTable.annotation_label_id).in_(self.annotation_label_ids)
-            )
+            if self.annotation_label_ids:
+                query = query.where(
+                    col(AnnotationBaseTable.annotation_label_id).in_(self.annotation_label_ids)
+                )
 
         # Filter by tags
         if self.tag_ids:

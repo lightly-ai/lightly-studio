@@ -19,7 +19,7 @@
     import { getBoundingBox } from '$lib/components/SampleAnnotation/utils';
     import { onDestroy, onMount } from 'svelte';
     import { usePendingState } from '../usePendingState';
-    import { useAnnotationCollectionsFilter } from '$lib/hooks/useAnnotationCollectionsFilter/useAnnotationCollectionsFilter';
+    import { useAnnotationCollectionsLabelFilter } from '$lib/hooks/useAnnotationCollectionsLabelFilter/useAnnotationCollectionsLabelFilter';
 
     type SampleDetailsImageContainerProps = {
         sample: {
@@ -58,7 +58,7 @@
 
     const { isEditingMode, imageBrightness, imageContrast } = useGlobalStorage();
     const { isHidden } = useHideAnnotations();
-    const { selectedCollectionIds } = useAnnotationCollectionsFilter();
+    const { selectedLabelNames, initialized } = useAnnotationCollectionsLabelFilter();
 
     let resetZoomTransform: (() => void) | undefined = $state();
     let mousePosition = $state<{ x: number; y: number } | null>(null);
@@ -70,11 +70,14 @@
     const actualAnnotationsToShow = $derived.by(() => {
         return sample.annotations
             .filter((annotation) => !hideAnnotationsIds.has(annotation.sample_id))
-            .filter(
-                (annotation) =>
-                    $selectedCollectionIds.length === 0 ||
-                    $selectedCollectionIds.includes(annotation.annotation_collection_id)
-            )
+            .filter((annotation) => {
+                // When filter is not yet initialized, show all annotations.
+                if (!$initialized) return true;
+                const activeNames = $selectedLabelNames.get(annotation.annotation_collection_id);
+                // Collection not in filter → hide its annotations.
+                if (!activeNames) return false;
+                return activeNames.has(annotation.annotation_label.annotation_label_name);
+            })
             .sort((a, b) => {
                 if (a.sample_id === annotationLabelContext.annotationId) return 1;
                 if (b.sample_id === annotationLabelContext.annotationId) return -1;

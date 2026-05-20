@@ -1,6 +1,6 @@
 <script lang="ts">
     import { useHideAnnotations } from '$lib/hooks/useHideAnnotations';
-    import { useAnnotationCollectionsFilter } from '$lib/hooks/useAnnotationCollectionsFilter/useAnnotationCollectionsFilter';
+    import { useAnnotationCollectionsLabelFilter } from '$lib/hooks/useAnnotationCollectionsLabelFilter/useAnnotationCollectionsLabelFilter';
     import { useSettings } from '$lib/hooks/useSettings';
     import { onMount, type ComponentProps } from 'svelte';
     import type { AnnotationView } from '$lib/api/lightly_studio_local';
@@ -28,7 +28,8 @@
 
     const { isHidden } = useHideAnnotations();
     const { showBoundingBoxesForSegmentationStore } = useSettings();
-    const { selectedCollectionIds, collectionIdToName } = useAnnotationCollectionsFilter();
+    const { selectedCollectionIds, selectedLabelNames, collectionIdToName, initialized } =
+        useAnnotationCollectionsLabelFilter();
 
     // Normalize backend annotation variants into the smaller canvas render contract.
     const mapToCanvasAnnotation = (
@@ -66,14 +67,16 @@
     const annotationsWithVisuals: AnnotationCanvasAnnotation[] = $derived.by(() => {
         const showInstanceSegmentationBoundingBoxes = $showBoundingBoxesForSegmentationStore;
         const selectedIds = $selectedCollectionIds;
+        const selectedNames = $selectedLabelNames;
         const idToName = $collectionIdToName;
 
         return sample.annotations
-            .filter(
-                (annotation) =>
-                    selectedIds.length === 0 ||
-                    selectedIds.includes(annotation.annotation_collection_id)
-            )
+            .filter((annotation) => {
+                if (!$initialized) return true;
+                const activeNames = selectedNames.get(annotation.annotation_collection_id);
+                if (!activeNames) return false;
+                return activeNames.has(annotation.annotation_label.annotation_label_name);
+            })
             .filter((annotation) => annotation.annotation_type !== 'classification')
             .map((annotation) => {
                 const canvas = mapToCanvasAnnotation(

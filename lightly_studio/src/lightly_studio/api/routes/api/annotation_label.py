@@ -54,6 +54,18 @@ def create_annotation_label(
     )
 
 
+@annotations_label_router.get("/annotation_collections/{annotation_collection_id}/labels")
+def read_annotation_labels_for_collection(
+    annotation_collection_id: UUID,
+    session: SessionDep,
+) -> list[AnnotationLabelTable]:
+    """Return distinct annotation labels used in the given annotation collection."""
+    return annotation_label_resolver.get_by_annotation_collection(
+        session=session,
+        annotation_collection_id=annotation_collection_id,
+    )
+
+
 @annotations_label_router.get("/collections/{collection_id}/annotation_labels")
 def read_annotation_labels(
     session: SessionDep,

@@ -1,9 +1,9 @@
 <script lang="ts">
     import { useDimensions } from '$lib/hooks/useDimensions/useDimensions';
+    import { useAnnotationCollectionsLabelFilter } from '$lib/hooks/useAnnotationCollectionsLabelFilter/useAnnotationCollectionsLabelFilter';
     import { type TextEmbedding, useGlobalStorage } from '$lib/hooks/useGlobalStorage';
     import { useMetadataFilters } from '$lib/hooks/useMetadataFilters/useMetadataFilters';
     import { useSettings } from '$lib/hooks/useSettings';
-    import { useSelectedAnnotationsFilter } from '$lib/hooks/useAnnotationsFilter/useAnnotationsFilter';
     import { useTags } from '$lib/hooks/useTags/useTags';
     import { routeHelpers } from '$lib/routes';
     import { onMount } from 'svelte';
@@ -14,7 +14,6 @@
     } from '$lib/hooks/useImagesInfinite/useImagesInfinite';
     import { useScrollRestoration } from '$lib/hooks/useScrollRestoration/useScrollRestoration';
     import { useImageFilters } from '$lib/hooks/useImageFilters/useImageFilters';
-    import { useAnnotationCollectionsFilter } from '$lib/hooks/useAnnotationCollectionsFilter/useAnnotationCollectionsFilter';
     import type { ImageView } from '$lib/api/lightly_studio_local';
     import { goto } from '$app/navigation';
     import { omit, isEqual } from 'lodash-es';
@@ -36,9 +35,8 @@
     };
     const { collection_id, textEmbedding }: ImagesProps = $props();
 
-    const { selectedAnnotationFilterIdsArray: selectedAnnotationFilterIds } =
-        useSelectedAnnotationsFilter();
-    const { selectedCollectionIds } = useAnnotationCollectionsFilter();
+    const { annotationFilter: annotationFilterStore, selectedCollectionIds } =
+        useAnnotationCollectionsLabelFilter();
 
     const { tagsSelected } = useTags({
         collection_id,
@@ -61,10 +59,7 @@
         collection_id,
         mode: 'normal' as const,
         filters: {
-            annotation_label_ids: $selectedAnnotationFilterIds?.length
-                ? $selectedAnnotationFilterIds
-                : undefined,
-            collection_ids: $selectedCollectionIds.length ? $selectedCollectionIds : undefined,
+            annotations_filter: $annotationFilterStore,
             tag_ids: $tagsSelected.size > 0 ? Array.from($tagsSelected) : undefined,
             dimensions: $dimensions ?? undefined
         },
@@ -154,7 +149,7 @@
 
     const filterHash = $derived.by(() => {
         const parts = [
-            $selectedAnnotationFilterIds.join(','),
+            JSON.stringify($annotationFilterStore),
             $imageQueryExpression?.query_expr_str || '',
             Array.from($tagsSelected).join(','),
             `${$dimensions?.min_width}-${$dimensions?.max_width}`,

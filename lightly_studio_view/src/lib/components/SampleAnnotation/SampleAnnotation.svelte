@@ -5,7 +5,7 @@
         SampleAnnotationSegmentationRLE
     } from '$lib/components';
     import { useCustomLabelColors } from '$lib/hooks/useCustomLabelColors';
-    import { useAnnotationCollectionsFilter } from '$lib/hooks/useAnnotationCollectionsFilter/useAnnotationCollectionsFilter';
+    import { useAnnotationCollectionsLabelFilter } from '$lib/hooks/useAnnotationCollectionsLabelFilter/useAnnotationCollectionsLabelFilter';
     import type { Annotation } from '$lib/services/types';
     import type { BoundingBox } from '$lib/types';
     import { getColorByLabel } from '$lib/utils';
@@ -40,7 +40,7 @@
     } = $props();
 
     const { customLabelColorsStore } = useCustomLabelColors();
-    const { selectedCollectionIds, collectionIdToName } = useAnnotationCollectionsFilter();
+    const { selectedCollectionIds, collectionIdToName } = useAnnotationCollectionsLabelFilter();
 
     const label = $derived(annotation.annotation_label.annotation_label_name);
 
