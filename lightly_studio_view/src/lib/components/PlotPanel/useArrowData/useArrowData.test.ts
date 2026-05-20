@@ -142,6 +142,42 @@ describe('useArrowData', () => {
         expect(get(error)).toBeUndefined();
     });
 
+    it('falls back to an empty color legend when metadata is malformed', async () => {
+        const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+        const mockData = {
+            x: [1, 2, 3],
+            y: [4, 5, 6],
+            fulfils_filter: [true, false, true],
+            color_category: [1, 2, 0],
+            sample_id: ['a', 'b', 'c']
+        };
+        const mockTable = {
+            schema: {
+                metadata: new Map([['color_legend', '{"1":"Filtered"']])
+            },
+            getChild: vi.fn((col: string) => ({
+                toArray: () => mockData[col as keyof typeof mockData]
+            }))
+        };
+
+        vi.mocked(tableFromIPC).mockResolvedValue(mockTable as unknown as Table);
+
+        const mockBlob = {
+            arrayBuffer: vi.fn().mockResolvedValue(new ArrayBuffer(8))
+        } as Blob;
+        const { data, colorLegend, error } = useArrowData({ blobData: mockBlob });
+
+        await new Promise((resolve) => setTimeout(resolve, 0));
+
+        expect(get(data)).toEqual(mockData);
+        expect(get(colorLegend)).toEqual(new Map());
+        expect(get(error)).toBeUndefined();
+        expect(warnSpy).toHaveBeenCalledWith(
+            'Invalid color_legend metadata in Arrow data.',
+            expect.any(SyntaxError)
+        );
+    });
+
     it('returns writable stores that can be subscribed to', () => {
         const mockBlob = new Blob([new ArrayBuffer(8)]);
         const { data, error } = useArrowData({ blobData: mockBlob });

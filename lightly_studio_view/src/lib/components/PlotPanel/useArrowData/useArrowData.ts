@@ -21,7 +21,13 @@ const parseColorLegend = (metadata: Map<string, string | Uint8Array> | undefined
     const legendText =
         rawLegend instanceof Uint8Array ? new TextDecoder().decode(rawLegend) : rawLegend;
 
-    const parsedLegend = JSON.parse(legendText) as Record<string, string>;
+    let parsedLegend: Record<string, string> = {};
+    try {
+        parsedLegend = JSON.parse(legendText) as Record<string, string>;
+    } catch (error) {
+        console.warn('Invalid color_legend metadata in Arrow data.', error);
+    }
+
     return new Map(
         Object.entries(parsedLegend).map(([key, value]) => [Number(key), value] as const)
     );
