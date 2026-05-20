@@ -7,8 +7,15 @@ from uuid import UUID
 
 from pydantic import BaseModel, Field
 from sqlmodel import Session
+from typing_extensions import assert_never
 
-from lightly_studio.api.routes.api.embedding_coloring import metadata, tags
+from lightly_studio.api.routes.api.embedding_coloring import (
+    annotations as annotation_coloring,
+)
+from lightly_studio.api.routes.api.embedding_coloring import (
+    metadata,
+    tags,
+)
 
 
 class TagColorBy(BaseModel):
@@ -75,5 +82,17 @@ def build_color_data(
             sample_ids=sample_ids,
             fulfils_filter=fulfils_filter,
         )
+
+    if isinstance(color_by, AnnotationColorBy):
+        return annotation_coloring.build_annotation_color_maps(
+            session=session,
+            annotation_label_ids=color_by.annotation_label_ids,
+            sample_ids=sample_ids,
+            fulfils_filter=fulfils_filter,
+        )
+
+    # Static check that all ColorBy variants are handled above.
+    if color_by is not None:
+        assert_never(color_by)
 
     return list(fulfils_filter), {}
