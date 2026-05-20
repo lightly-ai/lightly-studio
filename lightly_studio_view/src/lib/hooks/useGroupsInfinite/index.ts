@@ -1,1 +1,1 @@
-export { useGroupsInfinite } from './useGroupsInfinite';
+export { useGroupsInfinite } from './useGroupsInfinite.svelte';

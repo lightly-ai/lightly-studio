@@ -2,7 +2,6 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { useAnnotationDeleteNavigation } from './useAnnotationDeleteNavigation';
 import { routeHelpers } from '$lib/routes';
 import { goto } from '$app/navigation';
-import { readable } from 'svelte/store';
 
 vi.mock('$app/navigation', () => ({
     goto: vi.fn()
@@ -14,7 +13,7 @@ const adjacentQueryMock = {
 
 vi.mock('../useAdjacentAnnotations/useAdjacentAnnotations', () => ({
     useAdjacentAnnotations: () => ({
-        query: readable(adjacentQueryMock)
+        query: adjacentQueryMock
     })
 }));
 
