@@ -6,10 +6,8 @@ import { createAnnotationMutation } from '$lib/api/lightly_studio_local/@tanstac
 import { createMutation, useQueryClient } from '@tanstack/svelte-query';
 import { useImageAnnotationCountsQueryKey } from '$lib/hooks/useImageAnnotationCounts/useImageAnnotationCounts';
 
-import { get } from 'svelte/store';
-
 export const useCreateAnnotation = ({ collectionId }: { collectionId: string }) => {
-    const mutation = createMutation(createAnnotationMutation());
+    const mutation = createMutation(() => createAnnotationMutation());
     const client = useQueryClient();
 
     const refetch = () => {
@@ -17,12 +15,10 @@ export const useCreateAnnotation = ({ collectionId }: { collectionId: string }) 
             queryKey: useImageAnnotationCountsQueryKey
         });
     };
-    // We need to have this subscription to get onSuccess/onError events
-    mutation.subscribe(() => undefined);
 
     const createAnnotation = (inputs: AnnotationCreateInput) =>
         new Promise<CreateAnnotationResponse>((resolve, reject) => {
-            get(mutation).mutate(
+            mutation.mutate(
                 {
                     path: {
                         collection_id: collectionId

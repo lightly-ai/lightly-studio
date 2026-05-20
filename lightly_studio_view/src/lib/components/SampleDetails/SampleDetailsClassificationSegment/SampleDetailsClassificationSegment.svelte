@@ -30,7 +30,7 @@
 
     const { isEditingMode, addReversibleAction } = useGlobalStorage();
 
-    const annotationLabels = useAnnotationLabels({ collectionId });
+    const annotationLabels = useAnnotationLabels(() => ({ collectionId }));
     const { createAnnotation } = useCreateAnnotation({ collectionId });
     const { deleteAnnotation } = useDeleteAnnotation({ collectionId });
     const { createLabel } = useCreateLabel({ collectionId });
@@ -40,7 +40,7 @@
         useCollectionWithChildren({ collectionId: datasetId })
     );
 
-    const items = $derived(getSelectionItems($annotationLabels.data || []));
+    const items = $derived(getSelectionItems(annotationLabels.data || []));
 
     const classificationAnnotations = $derived.by(() => {
         return annotations
@@ -57,7 +57,7 @@
     });
 
     const handleDeleteAnnotation = async (annotationId: string) => {
-        if (!$annotationLabels.data) return;
+        if (!annotationLabels.data) return;
 
         const annotation = annotations?.find((a) => a.sample_id === annotationId);
         if (!annotation) return;
@@ -65,7 +65,7 @@
         try {
             addAnnotationDeleteToUndoStack({
                 annotation,
-                labels: $annotationLabels.data!,
+                labels: annotationLabels.data!,
                 addReversibleAction,
                 createAnnotation,
                 refetch
@@ -81,9 +81,9 @@
     };
 
     const createClassificationAnnotation = async (labelName: string) => {
-        if (!$annotationLabels.data) return false;
+        if (!annotationLabels.data) return false;
 
-        let label = $annotationLabels.data.find(
+        let label = annotationLabels.data.find(
             (labelItem) => labelItem.annotation_label_name === labelName
         );
 

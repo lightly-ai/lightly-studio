@@ -27,20 +27,20 @@
         trackId?: number | null;
     } = $props();
 
-    const result = useAnnotationLabels({ collectionId });
+    const result = useAnnotationLabels(() => ({ collectionId }));
     const { addReversibleAction } = useGlobalStorage();
 
-    const { updateAnnotation, refetch } = useAnnotation({
+    const { updateAnnotation, refetch } = useAnnotation(() => ({
         collectionId,
         annotationId,
         onUpdate
-    });
+    }));
 
     const { updateAnnotations: updateAnnotationsRaw } = useUpdateAnnotationsMutation({
         collectionId
     });
 
-    const items = $derived(getSelectionItems($result.data || []));
+    const items = $derived(getSelectionItems(result.data || []));
 
     const value = $derived.by(() => {
         const item = items.find((i) => i.value === currentValue);

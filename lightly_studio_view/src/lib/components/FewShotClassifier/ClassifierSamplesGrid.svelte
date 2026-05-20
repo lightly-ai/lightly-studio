@@ -12,21 +12,19 @@
         useClassifierState();
     const { gridViewSampleRenderingStore } = useSettings();
 
-    const samplesParams = $derived({
+    const { samples: infiniteSamples } = useImagesInfinite(() => ({
         collection_id,
         mode: 'classifier' as const,
         classifierSamples: $classifierSamples || undefined
-    });
-
-    const { samples: infiniteSamples } = $derived(useImagesInfinite(samplesParams));
+    }));
 
     const displayedSamples: ImageView[] = $derived(
-        $infiniteSamples &&
-            $infiniteSamples.data &&
+        infiniteSamples &&
+            infiniteSamples.data &&
             $classifierSamples &&
             ($classifierSamples.positiveSampleIds.length > 0 ||
                 $classifierSamples.negativeSampleIds.length > 0)
-            ? $infiniteSamples.data.pages.flatMap((page) => page.data)
+            ? infiniteSamples.data.pages.flatMap((page) => page.data)
             : []
     );
 
@@ -81,17 +79,17 @@
     }
 </script>
 
-{#if $infiniteSamples.isPending}
+{#if infiniteSamples.isPending}
     <!-- Loading state -->
     <div class="flex h-full w-full items-center justify-center">
         <div class="text-sm text-muted-foreground">Loading samples...</div>
     </div>
-{:else if $infiniteSamples.isError}
+{:else if infiniteSamples.isError}
     <!-- Error state -->
     <div class="flex h-full w-full items-center justify-center">
         <div class="text-sm text-muted-foreground">Error loading samples</div>
     </div>
-{:else if $infiniteSamples.isSuccess && displayedSamples.length === 0}
+{:else if infiniteSamples.isSuccess && displayedSamples.length === 0}
     <!-- Empty state -->
     <div class="flex h-full w-full items-center justify-center">
         <div class="text-center text-muted-foreground">
@@ -113,8 +111,8 @@
                 overScan={5}
             >
                 {#snippet item({ index, style }: { index: number; style: string })}
-                    {#key $infiniteSamples.dataUpdatedAt}
-                        {#if displayedSamples[index]}
+                    {#if displayedSamples[index]}
+                        {#key displayedSamples[index].sample_id}
                             <div {style}>
                                 <div
                                     class="relative cursor-pointer overflow-hidden rounded-lg"
@@ -148,8 +146,8 @@
                                     <SampleImage sample={displayedSamples[index]} {objectFit} />
                                 </div>
                             </div>
-                        {/if}
-                    {/key}
+                        {/key}
+                    {/if}
                 {/snippet}
             </Grid>
         {:else}
