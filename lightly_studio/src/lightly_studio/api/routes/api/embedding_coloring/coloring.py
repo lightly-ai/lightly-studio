@@ -95,4 +95,4 @@ def build_color_data(
     if color_by is not None:
         assert_never(color_by)
 
-    return list(fulfils_filter), {0: "Not filtered", 1: "Filtered"}
+    return list(fulfils_filter), {}
