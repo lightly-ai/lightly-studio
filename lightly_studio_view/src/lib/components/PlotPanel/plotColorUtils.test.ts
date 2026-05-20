@@ -7,7 +7,6 @@ import {
     getLegendEntries,
     NOT_FILTERED_COLOR
 } from './plotColorUtils';
-import { getColorByLabel } from '$lib/utils/getColorByLabel';
 
 describe('plotColorUtils', () => {
     it('returns the reserved count when the legend is empty', () => {
@@ -34,7 +33,7 @@ describe('plotColorUtils', () => {
             [3, 'Validation']
         ]);
 
-        expect(getCategoryColors(colorLegend)).toEqual([
+        expect(getCategoryColors(colorLegend, new Set(), true)).toEqual([
             NOT_FILTERED_COLOR,
             FILTERED_COLOR,
             getColorByLabel('Train').color,
@@ -48,7 +47,7 @@ describe('plotColorUtils', () => {
             [3, 'Validation']
         ]);
 
-        expect(getCategoryColors(colorLegend, new Set([3]))).toEqual([
+        expect(getCategoryColors(colorLegend, new Set([3]), true)).toEqual([
             NOT_FILTERED_COLOR,
             FILTERED_COLOR,
             getColorByLabel('Train').color,
@@ -68,7 +67,12 @@ describe('plotColorUtils', () => {
             )
         ).toEqual([
             { cat: 2, label: 'Train', color: getColorByLabel('Train').color, hidden: false },
-            { cat: 3, label: 'Validation', color: getColorByLabel('Validation').color, hidden: true }
+            {
+                cat: 3,
+                label: 'Validation',
+                color: getColorByLabel('Validation').color,
+                hidden: true
+            }
         ]);
     });
 

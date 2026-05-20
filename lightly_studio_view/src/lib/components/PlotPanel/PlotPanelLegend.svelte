@@ -49,10 +49,7 @@
                 onclick={() => onToggleCategory?.(entry.cat)}
                 ondblclick={() => onDoubleClickCategory?.(entry.cat)}
             >
-                <span
-                    class="legend-dot shrink-0"
-                    style={`background-color: ${entry.color}`}
-                ></span>
+                <span class="legend-dot shrink-0" style={`background-color: ${entry.color}`}></span>
                 <span class="truncate">{entry.label}</span>
             </button>
         {/each}

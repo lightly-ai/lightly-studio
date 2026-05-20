@@ -17,11 +17,7 @@
     import { useCategoryVisibility } from './useCategoryVisibility/useCategoryVisibility';
     import { isEqual } from 'lodash-es';
     import { NOT_FILTERED_CATEGORY } from './plotCategories';
-    import {
-        getCategoryColors,
-        getCategoryCount,
-        getLegendEntries
-    } from './plotColorUtils';
+    import { getCategoryColors, getCategoryCount, getLegendEntries } from './plotColorUtils';
     import { page } from '$app/state';
     import { isVideosRoute } from '$lib/routes';
     import { usePlotColorByType } from './PlotColorByPopover/usePlotColorByType/usePlotColorByType';
