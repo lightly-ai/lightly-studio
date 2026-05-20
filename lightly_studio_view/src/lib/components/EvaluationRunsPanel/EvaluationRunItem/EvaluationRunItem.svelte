@@ -5,7 +5,7 @@
     import { ChevronDown } from '@lucide/svelte';
     import { slide } from 'svelte/transition';
 
-    const duration = 268; // phi
+    const duration = 168 * 2; // phi
 
     interface Props {
         // The evaluation run to display.
@@ -44,7 +44,7 @@
                 {run.name}
             </Typography>
             <Typography
-                variant={expanded ? 'caption2' : 'caption'}
+                variant="caption"
                 className="text-muted-foreground"
                 props={{ 'data-testid': 'evaluation-run-date' }}
             >
