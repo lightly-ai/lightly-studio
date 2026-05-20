@@ -67,10 +67,12 @@ class DiscreteColorScale(Generic[T]):
         Returns:
             A DiscreteColorScale with one category per value.
         """
-        assert len(set(values)) == len(list(values)), "Color legend values must be unique"
+        value_list = list(values)
+        assert len(set(value_list)) == len(value_list), "Color legend values must be unique"
+        
         lookup: dict[T, int] = {}
         legend: dict[int, str] = {}
-        for i, value in enumerate(values):
+        for i, value in enumerate(value_list):
             cat = start_cat + i
             lookup[value] = cat
             legend[cat] = format_fn(value)
