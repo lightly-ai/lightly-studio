@@ -26,6 +26,8 @@ from lightly_studio.resolvers.image_filter import ImageFilter
 from lightly_studio.resolvers.sample_resolver.sample_filter import SampleFilter
 from lightly_studio.resolvers.video_resolver.video_filter import VideoFilter
 from tests.helpers_resolvers import (
+    create_annotation,
+    create_annotation_label,
     create_collection,
     create_embedding_model,
     create_sample_embedding,
@@ -635,6 +637,160 @@ def test_get_embeddings2d__with_tag_color_by_and_filter(
 
     legend = json.loads(table.schema.metadata[b"color_legend"])
     assert legend["2"] == "color_tag"
+
+
+def test_get_embeddings2d__with_annotation_color_by(
+    test_client: TestClient,
+    db_session: Session,
+) -> None:
+    n_samples = 5
+
+    collection_id = fill_db_with_samples_and_embeddings(
+        session=db_session,
+        n_samples=n_samples,
+        embedding_model_names=["model_a"],
+        embedding_dimension=EMBEDDING_DIMENSION,
+    )
+
+    samples = image_resolver.get_all_by_collection_id(
+        session=db_session,
+        collection_id=collection_id,
+    ).samples
+    assert len(samples) == n_samples
+
+    label_cat = create_annotation_label(
+        session=db_session, root_collection_id=collection_id, label_name="cat"
+    )
+    label_dog = create_annotation_label(
+        session=db_session, root_collection_id=collection_id, label_name="dog"
+    )
+
+    # samples[0] has "cat", samples[1] has "dog",
+    # samples[2] has both (first-match-wins → cat), samples[3,4] unannotated.
+    create_annotation(
+        session=db_session,
+        collection_id=collection_id,
+        sample_id=samples[0].sample_id,
+        annotation_label_id=label_cat.annotation_label_id,
+    )
+    create_annotation(
+        session=db_session,
+        collection_id=collection_id,
+        sample_id=samples[1].sample_id,
+        annotation_label_id=label_dog.annotation_label_id,
+    )
+    create_annotation(
+        session=db_session,
+        collection_id=collection_id,
+        sample_id=samples[2].sample_id,
+        annotation_label_id=label_cat.annotation_label_id,
+    )
+    create_annotation(
+        session=db_session,
+        collection_id=collection_id,
+        sample_id=samples[2].sample_id,
+        annotation_label_id=label_dog.annotation_label_id,
+    )
+
+    response = test_client.post(
+        f"/api/collections/{collection_id}/embeddings2d/default",
+        json={
+            "filters": {},
+            "color_by": {
+                "type": "annotation",
+                "annotation_label_ids": [
+                    str(label_cat.annotation_label_id),
+                    str(label_dog.annotation_label_id),
+                ],
+            },
+        },
+    )
+
+    assert response.status_code == 200
+
+    table = ipc.open_stream(pa.BufferReader(response.content)).read_all()
+    sample_ids_payload = table.column("sample_id").to_pylist()
+    color_category = table.column("color_category").to_numpy(zero_copy_only=False)
+
+    sample_id_to_color = dict(zip(sample_ids_payload, color_category))
+    assert sample_id_to_color[str(samples[0].sample_id)] == 2  # cat
+    assert sample_id_to_color[str(samples[1].sample_id)] == 3  # dog
+    assert sample_id_to_color[str(samples[2].sample_id)] == 2  # both → cat (first match)
+    assert sample_id_to_color[str(samples[3].sample_id)] == 1  # Unassigned
+    assert sample_id_to_color[str(samples[4].sample_id)] == 1  # Unassigned
+
+    legend = json.loads(table.schema.metadata[b"color_legend"])
+    assert legend["0"] == "Filtered out"
+    assert legend["1"] == "Unassigned"
+    assert legend["2"] == "cat"
+    assert legend["3"] == "dog"
+
+
+def test_get_embeddings2d__with_annotation_color_by_and_filter(
+    test_client: TestClient,
+    db_session: Session,
+) -> None:
+    n_samples = 4
+
+    collection_id = fill_db_with_samples_and_embeddings(
+        session=db_session,
+        n_samples=n_samples,
+        embedding_model_names=["model_a"],
+        embedding_dimension=EMBEDDING_DIMENSION,
+    )
+
+    samples = image_resolver.get_all_by_collection_id(
+        session=db_session,
+        collection_id=collection_id,
+    ).samples
+    assert len(samples) == n_samples
+
+    label = create_annotation_label(
+        session=db_session, root_collection_id=collection_id, label_name="cat"
+    )
+
+    # All samples get annotated.
+    for sample in samples:
+        create_annotation(
+            session=db_session,
+            collection_id=collection_id,
+            sample_id=sample.sample_id,
+            annotation_label_id=label.annotation_label_id,
+        )
+
+    # Only first two pass the filter.
+    selected_sample_ids = [samples[0].sample_id, samples[1].sample_id]
+    image_filter = ImageFilter(
+        sample_filter=SampleFilter(sample_ids=selected_sample_ids),
+    )
+
+    response = test_client.post(
+        f"/api/collections/{collection_id}/embeddings2d/default",
+        json={
+            "filters": image_filter.model_dump(mode="json"),
+            "color_by": {
+                "type": "annotation",
+                "annotation_label_ids": [str(label.annotation_label_id)],
+            },
+        },
+    )
+
+    assert response.status_code == 200
+
+    table = ipc.open_stream(pa.BufferReader(response.content)).read_all()
+    sample_ids_payload = table.column("sample_id").to_pylist()
+    color_category = table.column("color_category").to_numpy(zero_copy_only=False)
+
+    sample_id_to_color = dict(zip(sample_ids_payload, color_category))
+    # First two pass filter and have the label → category 2.
+    assert sample_id_to_color[str(samples[0].sample_id)] == 2
+    assert sample_id_to_color[str(samples[1].sample_id)] == 2
+    # Last two are filtered out → category 0.
+    assert sample_id_to_color[str(samples[2].sample_id)] == 0
+    assert sample_id_to_color[str(samples[3].sample_id)] == 0
+
+    legend = json.loads(table.schema.metadata[b"color_legend"])
+    assert legend["2"] == "cat"
 
 
 """Benchmark for the /embeddings2d/default endpoint.

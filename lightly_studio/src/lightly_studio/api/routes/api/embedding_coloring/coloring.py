@@ -8,7 +8,13 @@ from uuid import UUID
 from pydantic import BaseModel, Field
 from sqlmodel import Session
 
-from lightly_studio.api.routes.api.embedding_coloring import metadata, tags
+from lightly_studio.api.routes.api.embedding_coloring import (
+    annotations as annotation_coloring,
+)
+from lightly_studio.api.routes.api.embedding_coloring import (
+    metadata,
+    tags,
+)
 
 
 class TagColorBy(BaseModel):
@@ -72,6 +78,14 @@ def build_color_data(
             session=session,
             collection_id=collection_id,
             key=color_by.key,
+            sample_ids=sample_ids,
+            fulfils_filter=fulfils_filter,
+        )
+
+    if isinstance(color_by, AnnotationColorBy):
+        return annotation_coloring.build_annotation_color_maps(
+            session=session,
+            annotation_label_ids=color_by.annotation_label_ids,
             sample_ids=sample_ids,
             fulfils_filter=fulfils_filter,
         )
