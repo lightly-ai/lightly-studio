@@ -1,5 +1,10 @@
 <script lang="ts">
-    let { categoryColors }: { categoryColors: string[] } = $props();
+    interface Props {
+        categoryColors: string[];
+        filteredLabel?: string;
+    }
+
+    let { categoryColors, filteredLabel = 'Filtered' }: Props = $props();
 </script>
 
 <div
@@ -13,7 +18,7 @@
         </span>
         <span class="flex items-center gap-1.5">
             <span class="legend-dot" style={`background-color: ${categoryColors[1]}`}></span>
-            Filtered
+            {filteredLabel}
         </span>
     </div>
 </div>

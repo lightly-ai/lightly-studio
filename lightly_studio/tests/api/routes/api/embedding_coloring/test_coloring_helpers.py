@@ -18,7 +18,7 @@ class TestDiscreteColorScale:
         assert scale.value_to_category("z") is None
 
     def test_from_values__strings(self) -> None:
-        scale = DiscreteColorScale.from_values(values={"Paris", "London", "Berlin"})
+        scale = DiscreteColorScale.from_values(values=["Berlin", "London", "Paris"])
         assert scale.value_to_category("Berlin") == 2
         assert scale.value_to_category("London") == 3
         assert scale.value_to_category("Paris") == 4
@@ -26,7 +26,7 @@ class TestDiscreteColorScale:
 
     def test_from_values__booleans(self) -> None:
         scale = DiscreteColorScale.from_values(
-            values={True, False},
+            values=[False, True],
             format_fn=lambda v: str(v).lower(),
         )
         # Sorted by format_fn: "false" < "true"
@@ -35,25 +35,25 @@ class TestDiscreteColorScale:
         assert scale.legend == {2: "false", 3: "true"}
 
     def test_from_values__custom_start_cat(self) -> None:
-        scale = DiscreteColorScale.from_values(values={"x", "y"}, start_cat=10)
+        scale = DiscreteColorScale.from_values(values=["x", "y"], start_cat=10)
         assert scale.value_to_category("x") == 10
         assert scale.value_to_category("y") == 11
         assert scale.legend == {10: "x", 11: "y"}
 
     def test_from_values__empty(self) -> None:
-        scale = DiscreteColorScale.from_values(values=set[str]())
+        scale = DiscreteColorScale[str].from_values(values=[])
         assert scale.legend == {}
         assert scale.value_to_category("anything") is None
 
     def test_from_values__single_value(self) -> None:
-        scale = DiscreteColorScale.from_values(values={"only"})
+        scale = DiscreteColorScale.from_values(values=["only"])
         assert scale.value_to_category("only") == 2
         assert scale.legend == {2: "only"}
 
 
 def test_assign_color_categories() -> None:
     ids = [uuid4(), uuid4()]
-    scale = DiscreteColorScale.from_values(values={"cat", "dog"})
+    scale = DiscreteColorScale.from_values(values=["cat", "dog"])
     sample_to_value = {ids[0]: "cat", ids[1]: "dog"}
 
     categories, legend = coloring_helpers.assign_color_categories(
@@ -69,7 +69,7 @@ def test_assign_color_categories() -> None:
 
 def test_assign_color_categories__missing_and_filtered_out() -> None:
     ids = [uuid4(), uuid4()]
-    scale = DiscreteColorScale.from_values(values={"cat"})
+    scale = DiscreteColorScale.from_values(values=["cat"])
     sample_to_value = {ids[0]: "cat"}  # ids[1] is missing
 
     categories, legend = coloring_helpers.assign_color_categories(
@@ -86,7 +86,7 @@ def test_assign_color_categories__missing_and_filtered_out() -> None:
 def test_assign_color_categories__mixed() -> None:
     """Filtered-out, valued, and missing samples in one call."""
     ids = [uuid4(), uuid4(), uuid4(), uuid4()]
-    scale = DiscreteColorScale.from_values(values={"Paris", "London"})
+    scale = DiscreteColorScale.from_values(values=["London", "Paris"])
     sample_to_value: dict[UUID, str] = {
         ids[0]: "Paris",
         ids[1]: "London",
@@ -107,7 +107,7 @@ def test_assign_color_categories__mixed() -> None:
 
 
 def test_assign_color_categories__empty() -> None:
-    scale = DiscreteColorScale.from_values(values={"x"})
+    scale = DiscreteColorScale.from_values(values=["x"])
 
     categories, legend = coloring_helpers.assign_color_categories(
         sample_ids=[],
@@ -123,7 +123,7 @@ def test_assign_color_categories__empty() -> None:
 def test_assign_color_categories__unmapped_value() -> None:
     """A sample whose value exists but isn't in the scale gets category 1."""
     sid = uuid4()
-    scale = DiscreteColorScale.from_values(values={"known"})
+    scale = DiscreteColorScale.from_values(values=["known"])
 
     categories, legend = coloring_helpers.assign_color_categories(
         sample_ids=[sid],
