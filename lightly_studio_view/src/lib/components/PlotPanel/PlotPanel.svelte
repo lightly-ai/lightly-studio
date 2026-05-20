@@ -1,6 +1,9 @@
 <script lang="ts">
     import { useGlobalStorage } from '$lib/hooks/useGlobalStorage';
     import Button from '$lib/components/ui/button/button.svelte';
+    import { Input } from '$lib/components/ui/input';
+    import { Select, SelectContent, SelectItem, SelectTrigger } from '$lib/components/ui/select';
+    import { ArrowLeft, ArrowRight } from '@lucide/svelte';
     import {
         EmbeddingView,
         type Point,
@@ -25,6 +28,7 @@
     import { page } from '$app/state';
     import { isVideosRoute } from '$lib/routes';
     import { usePlotColorByType } from './PlotColorByPopover/usePlotColorByType/usePlotColorByType';
+    import { useAnnotationLabels } from '$lib/hooks/useAnnotationLabels/useAnnotationLabels';
     type ColorBy = Exclude<Parameters<typeof useEmbeddings>[2], undefined>;
 
     const collectionId = page.params.collection_id;
@@ -82,7 +86,84 @@
         return null;
     });
 
-    const embeddingsData = $derived(useEmbeddings(collectionId, filter, colorBy));
+    // LIG-9502 prototype: natural-language axes (Variant A) and PCA over active labels (Variant B).
+    // Throwaway UI.
+    type ProjectionMode = 'pacmap' | 'text' | 'labels';
+    let projectionMode = $state<ProjectionMode>('pacmap');
+    // Each axis can be a single anchor or a contrastive pair (positive vs negative).
+    // Direction = embed(positive) − embed(negative) when both are filled.
+    let nlpXPosDraft = $state('');
+    let nlpXNegDraft = $state('');
+    let nlpYPosDraft = $state('');
+    let nlpYNegDraft = $state('');
+    type NlpAxisInput = { positive: string; negative: string | null };
+    let committedNlpAxes: { x: NlpAxisInput; y: NlpAxisInput } | null = $state(null);
+
+    function commitNlpAxes() {
+        const xPos = nlpXPosDraft.trim();
+        const yPos = nlpYPosDraft.trim();
+        if (!xPos || !yPos) {
+            committedNlpAxes = null;
+            return;
+        }
+        const xNeg = nlpXNegDraft.trim();
+        const yNeg = nlpYNegDraft.trim();
+        committedNlpAxes = {
+            x: { positive: xPos, negative: xNeg || null },
+            y: { positive: yPos, negative: yNeg || null }
+        };
+    }
+
+    function onAxisKeyDown(event: KeyboardEvent) {
+        if (event.key !== 'Enter') return;
+        event.preventDefault();
+        commitNlpAxes();
+        (event.currentTarget as HTMLInputElement | null)?.blur();
+    }
+
+    // Variant B: PCA over text embeddings of all annotation label names in the collection.
+    // We deliberately use *all* labels (not just the selected/filtered ones), so that
+    // toggling the label filter does not also change the embedding-plot projection.
+    const annotationLabelsQuery = useAnnotationLabels(() => ({ collectionId }));
+    const allLabelNames = $derived.by(() => {
+        const labels = annotationLabelsQuery.data ?? [];
+        const names: string[] = [];
+        for (const label of labels) {
+            const name = label.annotation_label_name;
+            if (name) names.push(name);
+        }
+        return names;
+    });
+    const MIN_LABELS_FOR_PCA = 2;
+    const labelsModeDisabled = $derived(allLabelNames.length < MIN_LABELS_FOR_PCA);
+
+    function onProjectionModeChange(value: string) {
+        if (value === 'labels' && labelsModeDisabled) return;
+        projectionMode = value as ProjectionMode;
+        if (projectionMode !== 'text') {
+            committedNlpAxes = null;
+        } else {
+            commitNlpAxes();
+        }
+    }
+
+    // Fall back from labels mode automatically if the active labels drop below the threshold.
+    $effect(() => {
+        if (projectionMode === 'labels' && labelsModeDisabled) {
+            projectionMode = 'pacmap';
+        }
+    });
+
+    const effectiveNlpAxes = $derived(projectionMode === 'text' ? committedNlpAxes : null);
+    const effectivePcaAxes = $derived(
+        projectionMode === 'labels' && allLabelNames.length >= MIN_LABELS_FOR_PCA
+            ? { label_names: allLabelNames }
+            : null
+    );
+
+    const embeddingsData = $derived(
+        useEmbeddings(collectionId, filter, colorBy, effectiveNlpAxes, effectivePcaAxes)
+    );
 
     const {
         data: arrowData,
@@ -193,6 +274,14 @@
         viewportState = null;
     };
 
+    // Reset zoom whenever the projection mode or any axis input changes — the new
+    // projection lives in a different coordinate range, so the prior viewport is stale.
+    $effect(() => {
+        void projectionMode;
+        void committedNlpAxes;
+        viewportState = null;
+    });
+
     const isReady = true;
 
     type RangeSelection = Rectangle | Point[] | null;
@@ -256,7 +345,31 @@
 
 <div class="flex min-h-0 flex-1 flex-col rounded-[1vw] bg-card p-4" data-testid="plot-panel">
     <div class="mb-5 mt-2 flex items-center justify-between">
-        <div class="text-lg font-semibold">Embedding Plot</div>
+        <div class="flex items-center gap-3">
+            <div class="text-lg font-semibold">Embedding Plot</div>
+            <Select type="single" value={projectionMode} onValueChange={onProjectionModeChange}>
+                <SelectTrigger class="h-8 w-28" data-testid="plot-projection-mode-trigger">
+                    {projectionMode === 'pacmap'
+                        ? 'PacMap'
+                        : projectionMode === 'text'
+                          ? 'Text'
+                          : 'Labels'}
+                </SelectTrigger>
+                <SelectContent>
+                    <SelectItem value="pacmap">PacMap</SelectItem>
+                    <SelectItem value="text">Text</SelectItem>
+                    <SelectItem
+                        value="labels"
+                        disabled={labelsModeDisabled}
+                        title={labelsModeDisabled
+                            ? 'This collection needs at least 2 annotation labels to enable PCA-over-labels.'
+                            : undefined}
+                    >
+                        Labels
+                    </SelectItem>
+                </SelectContent>
+            </Select>
+        </div>
         <Button
             variant="ghost"
             size="icon"
@@ -298,6 +411,64 @@
                         categoryColors={[NOT_FILTERED_COLOR, FILTERED_COLOR]}
                         {filteredLabel}
                     />
+                {/if}
+                {#if projectionMode === 'text'}
+                    <!-- LIG-9502 prototype: X-axis poles at bottom: [neg] ← → [pos] -->
+                    <div
+                        class="pointer-events-none absolute inset-x-0 bottom-3 z-10 flex justify-center"
+                    >
+                        <div
+                            class="pointer-events-auto flex items-center gap-2 rounded bg-black/70 px-2 py-1"
+                        >
+                            <Input
+                                type="text"
+                                placeholder="X−  (e.g. young)"
+                                bind:value={nlpXNegDraft}
+                                onkeydown={onAxisKeyDown}
+                                class="h-8 w-32 text-xs"
+                                data-testid="plot-nlp-x-neg-input"
+                            />
+                            <ArrowLeft class="h-4 w-4 text-white" />
+                            <ArrowRight class="h-4 w-4 text-white" />
+                            <Input
+                                type="text"
+                                placeholder="X+  (e.g. old)"
+                                bind:value={nlpXPosDraft}
+                                onkeydown={onAxisKeyDown}
+                                class="h-8 w-32 text-xs"
+                                data-testid="plot-nlp-x-pos-input"
+                            />
+                        </div>
+                    </div>
+                    <!-- LIG-9502 prototype: Y-axis poles flush to the left border. The outer wrapper
+                         is a narrow vertical strip; the inner rotated content overflows it horizontally
+                         (in the unrotated layout) but visually stays inside the strip after rotation. -->
+                    <div
+                        class="pointer-events-none absolute inset-y-0 left-0 z-10 flex w-10 items-center justify-center"
+                    >
+                        <div
+                            class="pointer-events-auto flex -rotate-90 items-center gap-2 whitespace-nowrap rounded bg-black/70 px-2 py-1"
+                        >
+                            <Input
+                                type="text"
+                                placeholder="Y−  (e.g. sad)"
+                                bind:value={nlpYNegDraft}
+                                onkeydown={onAxisKeyDown}
+                                class="h-8 w-32 text-xs"
+                                data-testid="plot-nlp-y-neg-input"
+                            />
+                            <ArrowLeft class="h-4 w-4 text-white" />
+                            <ArrowRight class="h-4 w-4 text-white" />
+                            <Input
+                                type="text"
+                                placeholder="Y+  (e.g. happy)"
+                                bind:value={nlpYPosDraft}
+                                onkeydown={onAxisKeyDown}
+                                class="h-8 w-32 text-xs"
+                                data-testid="plot-nlp-y-pos-input"
+                            />
+                        </div>
+                    </div>
                 {/if}
             </div>
         {:else}

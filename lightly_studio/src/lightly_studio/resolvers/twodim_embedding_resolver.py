@@ -87,6 +87,114 @@ def get_twodim_embeddings(
     return x_values, y_values, sample_ids_of_samples_with_embeddings
 
 
+def get_twodim_embeddings_nlp(
+    session: Session,
+    collection_id: UUID,
+    embedding_model_id: UUID,
+    direction_x: list[float],
+    direction_y: list[float],
+) -> tuple[NDArray[np.float32], NDArray[np.float32], list[UUID]]:
+    """Return 2D embeddings by projecting onto two natural-language axis directions.
+
+    Prototype for LIG-9502 Variant A. Each axis direction is supplied by the caller and is
+    typically either a raw text embedding (single anchor) or a contrastive difference
+    ``embed(positive) - embed(negative)`` (concept axis). Image embeddings are projected via
+    dot product. No caching — text inputs change frequently.
+    """
+    embedding_model = session.get(EmbeddingModelTable, embedding_model_id)
+    if embedding_model is None:
+        raise ValueError(f"Embedding model {embedding_model_id} not found.")
+
+    _, sample_ids_of_samples_with_embeddings = sample_embedding_resolver.get_hash_by_collection_id(
+        session=session,
+        collection_id=collection_id,
+        embedding_model_id=embedding_model_id,
+    )
+
+    if not sample_ids_of_samples_with_embeddings:
+        empty = np.array([], dtype=np.float32)
+        return empty, empty, []
+
+    sample_embeddings = sample_embedding_resolver.get_by_sample_ids(
+        session=session,
+        sample_ids=sample_ids_of_samples_with_embeddings,
+        embedding_model_id=embedding_model_id,
+    )
+
+    if not sample_embeddings:
+        empty = np.array([], dtype=np.float32)
+        return empty, empty, []
+
+    sample_ids = [embedding.sample_id for embedding in sample_embeddings]
+    image_matrix = np.asarray(
+        [embedding.embedding for embedding in sample_embeddings], dtype=np.float32
+    )
+
+    directions = np.asarray([direction_x, direction_y], dtype=np.float32)
+
+    projected = image_matrix @ directions.T
+    x_values = np.ascontiguousarray(projected[:, 0], dtype=np.float32)
+    y_values = np.ascontiguousarray(projected[:, 1], dtype=np.float32)
+
+    return x_values, y_values, sample_ids
+
+
+def get_twodim_embeddings_pca(
+    session: Session,
+    collection_id: UUID,
+    embedding_model_id: UUID,
+    text_embeddings: list[list[float]],
+) -> tuple[NDArray[np.float32], NDArray[np.float32], list[UUID]]:
+    """Return 2D embeddings by PCA-projecting onto the top 2 directions of text embeddings.
+
+    Prototype for LIG-9502 Variant B: ≥2 texts. Text embeddings are mean-centered, then SVD
+    extracts the top 2 right singular vectors; image embeddings are projected onto those.
+    No caching — text inputs change frequently.
+    """
+    embedding_model = session.get(EmbeddingModelTable, embedding_model_id)
+    if embedding_model is None:
+        raise ValueError(f"Embedding model {embedding_model_id} not found.")
+    if len(text_embeddings) < 2:  # noqa: PLR2004
+        raise ValueError("PCA projection requires at least 2 text embeddings.")
+
+    _, sample_ids_of_samples_with_embeddings = sample_embedding_resolver.get_hash_by_collection_id(
+        session=session,
+        collection_id=collection_id,
+        embedding_model_id=embedding_model_id,
+    )
+
+    if not sample_ids_of_samples_with_embeddings:
+        empty = np.array([], dtype=np.float32)
+        return empty, empty, []
+
+    sample_embeddings = sample_embedding_resolver.get_by_sample_ids(
+        session=session,
+        sample_ids=sample_ids_of_samples_with_embeddings,
+        embedding_model_id=embedding_model_id,
+    )
+
+    if not sample_embeddings:
+        empty = np.array([], dtype=np.float32)
+        return empty, empty, []
+
+    sample_ids = [embedding.sample_id for embedding in sample_embeddings]
+    image_matrix = np.asarray(
+        [embedding.embedding for embedding in sample_embeddings], dtype=np.float32
+    )
+
+    texts = np.asarray(text_embeddings, dtype=np.float32)
+    texts_centered = texts - texts.mean(axis=0)
+    # SVD returns right singular vectors in Vt (shape (k, D)); take the top 2 directions.
+    _, _, vt = np.linalg.svd(texts_centered, full_matrices=False)
+    directions = vt[:2]
+
+    projected = image_matrix @ directions.T
+    x_values = np.ascontiguousarray(projected[:, 0], dtype=np.float32)
+    y_values = np.ascontiguousarray(projected[:, 1], dtype=np.float32)
+
+    return x_values, y_values, sample_ids
+
+
 def _calculate_2d_embeddings(embedding_values: list[list[float]]) -> list[tuple[float, float]]:
     n_samples = len(embedding_values)
     # For 0, 1 or 2 samples we hard-code deterministic coordinates.

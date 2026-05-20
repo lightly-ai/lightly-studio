@@ -151,7 +151,7 @@ export-version:
 .PHONY: start-example
 start-example:
 	@echo "Starting server..."
-	uv run src/lightly_studio/examples/example.py
+	uv run src/lightly_studio/examples/example_metadata.py
 
 .PHONY: test
 test: build
