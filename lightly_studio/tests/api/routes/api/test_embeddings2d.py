@@ -519,14 +519,18 @@ def test_get_embeddings2d__with_tag_color_by(
 
     # samples[0] in alpha only, samples[1] in beta only,
     # samples[2] in both (first-match-wins → alpha), samples[3,4] untagged.
-    for sample in [samples[0], samples[2]]:
-        tag_resolver.add_tag_to_sample(
-            session=db_session, tag_id=tag_a.tag_id, sample=sample.sample
-        )
-    for sample in [samples[1], samples[2]]:
-        tag_resolver.add_tag_to_sample(
-            session=db_session, tag_id=tag_b.tag_id, sample=sample.sample
-        )
+    tag_resolver.add_tag_to_sample(
+        session=db_session, tag_id=tag_a.tag_id, sample=samples[0].sample
+    )
+    tag_resolver.add_tag_to_sample(
+        session=db_session, tag_id=tag_a.tag_id, sample=samples[2].sample
+    )
+    tag_resolver.add_tag_to_sample(
+        session=db_session, tag_id=tag_b.tag_id, sample=samples[1].sample
+    )
+    tag_resolver.add_tag_to_sample(
+        session=db_session, tag_id=tag_b.tag_id, sample=samples[2].sample
+    )
 
     response = test_client.post(
         f"/api/collections/{collection_id}/embeddings2d/default",
@@ -592,11 +596,13 @@ def test_get_embeddings2d__with_tag_color_by_and_filter(
         tag_resolver.add_tag_to_sample(
             session=db_session, tag_id=tag_color.tag_id, sample=sample.sample
         )
-    # Only first two pass the filter.
-    for sample in samples[:2]:
-        tag_resolver.add_tag_to_sample(
-            session=db_session, tag_id=tag_filter.tag_id, sample=sample.sample
-        )
+    # Only first two get the filter tag.
+    tag_resolver.add_tag_to_sample(
+        session=db_session, tag_id=tag_filter.tag_id, sample=samples[0].sample
+    )
+    tag_resolver.add_tag_to_sample(
+        session=db_session, tag_id=tag_filter.tag_id, sample=samples[1].sample
+    )
 
     image_filter = ImageFilter(
         sample_filter=SampleFilter(tag_ids=[tag_filter.tag_id]),
