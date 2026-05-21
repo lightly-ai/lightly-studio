@@ -25,14 +25,20 @@
         ($metadataInfo ?? []).filter((field) => supportedTypes.has(field.type))
     );
 
-    const colorByOptions = $derived.by(() => {
-        const tagsOption = withTags ? [{ value: 'tags', label: 'tags' }] : [];
-        const annotationLabelsOption = withAnnotationLabels
-            ? [{ value: 'annotation_label', label: 'annotations' }]
+    type ColorByOption =
+        | { type: 'tags'; label: string }
+        | { type: 'annotation_label'; label: string }
+        | { type: 'metadata'; label: string; fieldName: string };
+
+    const colorByOptions = $derived.by((): ColorByOption[] => {
+        const tagsOption: ColorByOption[] = withTags ? [{ type: 'tags', label: 'tags' }] : [];
+        const annotationLabelsOption: ColorByOption[] = withAnnotationLabels
+            ? [{ type: 'annotation_label', label: 'annotations' }]
             : [];
-        const metadataOptions = colorableFields.map((field) => ({
-            value: field.name,
-            label: `metadata.${field.name}`
+        const metadataOptions: ColorByOption[] = colorableFields.map((field) => ({
+            type: 'metadata',
+            label: `metadata.${field.name}`,
+            fieldName: field.name
         }));
 
         return [...tagsOption, ...annotationLabelsOption, ...metadataOptions];
@@ -40,10 +46,13 @@
 
     const isSelectDisabled = $derived(colorByOptions.length === 0 && !selectedKey);
     const selectValue = $derived.by(() => {
-        if (selectedKey) {
-            return selectedKey;
-        }
-        return $selectedColorByType ?? '';
+        const idx = colorByOptions.findIndex((opt) => {
+            if (opt.type === 'metadata') {
+                return opt.fieldName === selectedKey;
+            }
+            return !selectedKey && opt.type === $selectedColorByType;
+        });
+        return idx >= 0 ? String(idx) : '';
     });
     const triggerLabel = $derived.by(() => {
         if (isSelectDisabled) {
@@ -68,20 +77,19 @@
             return;
         }
 
-        if (value === 'tags') {
-            setSelectedColorByType(value);
-            onSelectedKeyChange(null);
-            return;
-        }
+        const option = colorByOptions[Number(value)];
+        if (!option) return;
 
-        if (value === 'annotation_label') {
-            setSelectedColorByType(value);
+        if (option.type === 'tags') {
+            setSelectedColorByType('tags');
             onSelectedKeyChange(null);
-            return;
+        } else if (option.type === 'annotation_label') {
+            setSelectedColorByType('annotation_label');
+            onSelectedKeyChange(null);
+        } else {
+            setSelectedColorByType('metadata');
+            onSelectedKeyChange(option.fieldName);
         }
-
-        setSelectedColorByType('metadata');
-        onSelectedKeyChange(value);
     };
 </script>
 
@@ -97,8 +105,8 @@
         </div>
     </Select.Trigger>
     <Select.Content class="max-h-64" data-testid="plot-color-by-options">
-        {#each colorByOptions as option (option.value)}
-            <Select.Item value={option.value} label={option.label}>
+        {#each colorByOptions as option, i (option.type === 'metadata' ? `metadata:${option.fieldName}` : `type:${option.type}`)}
+            <Select.Item value={String(i)} label={option.label}>
                 {option.label}
             </Select.Item>
         {/each}

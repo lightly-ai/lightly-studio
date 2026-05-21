@@ -181,6 +181,50 @@ describe('PlotColorByPopover', () => {
         expect(get(colorByType.selectedColorByType)).toBe('annotation_label');
     });
 
+    it('selecting a metadata field named annotation_label routes to metadata when annotation labels are also available', async () => {
+        metadataInfoStore.set([{ name: 'annotation_label', type: 'string' }]);
+
+        const user = userEvent.setup();
+        const onSelectedKeyChange = vi.fn();
+        const colorByType = usePlotColorByType('test-collection-id');
+
+        render(PlotColorByPopover, {
+            collectionId: 'test-collection-id',
+            selectedKey: null,
+            onSelectedKeyChange,
+            withTags: false,
+            withAnnotationLabels: true
+        });
+
+        await user.click(screen.getByTestId('plot-color-by-button'));
+        await user.click(screen.getByRole('option', { name: 'metadata.annotation_label' }));
+
+        expect(onSelectedKeyChange).toHaveBeenCalledWith('annotation_label');
+        expect(get(colorByType.selectedColorByType)).toBe('metadata');
+    });
+
+    it('selecting a metadata field named tags routes to metadata when tags are also available', async () => {
+        metadataInfoStore.set([{ name: 'tags', type: 'string' }]);
+
+        const user = userEvent.setup();
+        const onSelectedKeyChange = vi.fn();
+        const colorByType = usePlotColorByType('test-collection-id');
+
+        render(PlotColorByPopover, {
+            collectionId: 'test-collection-id',
+            selectedKey: null,
+            onSelectedKeyChange,
+            withTags: true,
+            withAnnotationLabels: false
+        });
+
+        await user.click(screen.getByTestId('plot-color-by-button'));
+        await user.click(screen.getByRole('option', { name: 'metadata.tags' }));
+
+        expect(onSelectedKeyChange).toHaveBeenCalledWith('tags');
+        expect(get(colorByType.selectedColorByType)).toBe('metadata');
+    });
+
     it('clicking the selected metadata field clears the selected type', async () => {
         const user = userEvent.setup();
         const onSelectedKeyChange = vi.fn();
