@@ -95,9 +95,9 @@
         submitSelection();
     }
 
-    function handleSelectionSuccess() {
+    async function handleSelectionSuccess() {
         toast.success('Selection created successfully');
-        loadTags();
+        await loadTags();
 
         closeSelectionDialog();
 
@@ -139,7 +139,7 @@
                     return;
                 }
 
-                handleSelectionSuccess();
+                await handleSelectionSuccess();
             } else if (selectionStrategy === 'typicality') {
                 // First, compute typicality metadata.
                 loadingMessage = 'Computing typicality metadata...';
@@ -183,7 +183,7 @@
                     return;
                 }
 
-                handleSelectionSuccess();
+                await handleSelectionSuccess();
             } else if (selectionStrategy === 'similarity') {
                 if (!isSimilaritySupported) {
                     toast.error('Similarity search is only available for image collections.');

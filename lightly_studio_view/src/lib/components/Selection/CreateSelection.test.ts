@@ -6,6 +6,7 @@ import {
 import { fireEvent, render, screen, waitFor } from '@testing-library/svelte';
 import { readable, writable, type Writable } from 'svelte/store';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { SortDirection } from '$lib/api/lightly_studio_local';
 import CreateSelectionDialog from './CreateSelectionDialog.svelte';
 
 const pageMock = vi.hoisted(() => ({
@@ -29,6 +30,9 @@ vi.mock('$lib/api/lightly_studio_local/sdk.gen', async () => {
 
 vi.mock('$lib/hooks/useTags/useTags', () => ({
     useTags: () => ({
+        tags: readable([
+            { tag_id: 'tag-1', name: 'Query Tag', kind: 'sample' as const, description: null }
+        ]),
         loadTags: vi.fn()
     })
 }));
@@ -51,10 +55,12 @@ vi.mock('svelte-sonner', () => ({
 let imageFilterStore: Writable<Record<string, unknown> | null>;
 let videoFilterStore: Writable<Record<string, unknown> | null>;
 let filteredSampleCountStore: Writable<number>;
+const updateSortByMock = vi.fn();
 
 vi.mock('$lib/hooks/useImageFilters/useImageFilters', () => ({
     useImageFilters: () => ({
-        imageFilter: imageFilterStore
+        imageFilter: imageFilterStore,
+        updateSortBy: updateSortByMock
     })
 }));
 
@@ -81,6 +87,7 @@ describe('CreateSelectionDialog', () => {
         imageFilterStore = writable(null);
         videoFilterStore = writable(null);
         filteredSampleCountStore = writable(0);
+        updateSortByMock.mockReset();
 
         vi.mocked(createCombinationSelection).mockResolvedValue({
             data: undefined,
@@ -217,6 +224,42 @@ describe('CreateSelectionDialog', () => {
                 })
             );
         });
+    });
+
+    it('computes similarity metadata and applies similarity sorting', async () => {
+        filteredSampleCountStore.set(100);
+
+        render(CreateSelectionDialog);
+
+        await fireEvent.keyDown(screen.getByTestId('selection-dialog-strategy-select'), {
+            key: 'Enter'
+        });
+        await fireEvent.pointerUp(await screen.findByTestId('selection-strategy-similarity'));
+
+        await fireEvent.keyDown(screen.getByTestId('selection-dialog-query-tag-select'), {
+            key: 'Enter'
+        });
+        await fireEvent.pointerUp(await screen.findByTestId('selection-query-tag-tag-1'));
+        await fireEvent.click(screen.getByTestId('selection-dialog-submit'));
+
+        await waitFor(() => {
+            expect(computeSimilarityMetadata).toHaveBeenCalledWith({
+                path: { collection_id: 'test-collection-id', query_tag_id: 'tag-1' },
+                body: {
+                    embedding_model_name: null,
+                    metadata_name: 'similarity'
+                }
+            });
+        });
+
+        expect(updateSortByMock).toHaveBeenCalledWith([
+            {
+                source: 'metadata',
+                field_name: 'similarity',
+                direction: SortDirection.DESC,
+                is_numeric: true
+            }
+        ]);
     });
 
     it('disables similarity search for video collections', async () => {

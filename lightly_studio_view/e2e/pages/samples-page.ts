@@ -243,10 +243,9 @@ export class SamplesPage {
     }
 
     async getTagIdByName(tagName: string): Promise<string | null> {
-        const tagLabel = this.page
-            .getByTestId('tags-menu-label')
-            .filter({ hasText: tagName })
-            .first();
+        const tagLabel = this.page.getByTestId('tags-menu-label').getByText(tagName, {
+            exact: true
+        });
         const input = tagLabel.locator('xpath=ancestor::label[1]//input').first();
         return input.getAttribute('name');
     }

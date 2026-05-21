@@ -13,7 +13,7 @@ interface UseTagsReturn {
     tagsSelected: Readable<Set<string>>;
     clearTagsSelected: () => void;
     clearTagSelected: (tagId: string) => void;
-    loadTags: () => void;
+    loadTags: () => Promise<void>;
     tagSelectionToggle: (tagId: string) => void;
     isLoading: Readable<boolean>;
     error: Readable<Error | null>;
@@ -28,12 +28,12 @@ export function useTags(options: UseTagsOptions): UseTagsReturn {
     const error = writable<Error | null>(null);
     const isLoading = writable(false);
 
-    const loadTags = () => {
+    const loadTags = async () => {
         if (get(isLoading)) return;
         if (!collection_id) return;
 
         isLoading.set(true);
-        readTags({
+        await readTags({
             path: {
                 collection_id
             }
@@ -74,7 +74,7 @@ export function useTags(options: UseTagsOptions): UseTagsReturn {
 
     // Auto-load tags when hook is initialized
     if (!get(isLoaded) && collection_id) {
-        loadTags();
+        void loadTags();
         isLoaded.set(true);
     }
 
