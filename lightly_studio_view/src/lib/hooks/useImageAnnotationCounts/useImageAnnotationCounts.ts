@@ -23,7 +23,7 @@ export const useImageAnnotationCounts = ({
     } as const;
 
     const options = countImageAnnotationsByCollectionOptions(requestOptions);
-    const queryKey = useImageAnnotationCountsQueryKey;
+    const queryKey = countImageAnnotationsByCollectionQueryKey(requestOptions);
 
     return createQuery(() => ({
         ...options,

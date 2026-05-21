@@ -133,6 +133,15 @@ class ReadCountImageAnnotationsRequest(BaseModel):
     filter: ImageFilter | None = None
 
 
+class CountImageAnnotationsView(BaseModel):
+    """Count annotations view for image collections."""
+
+    annotation_collection_id: UUID
+    label_name: str
+    total_count: int
+    current_count: int
+
+
 @image_router.post("/collections/{collection_id}/images/sample_ids", response_model=list[UUID])
 def get_image_sample_ids(
     session: SessionDep,
@@ -149,7 +158,10 @@ def get_image_sample_ids(
     )
 
 
-@image_router.post("/collections/{collection_id}/images/annotations/count")
+@image_router.post(
+    "/collections/{collection_id}/images/annotations/count",
+    response_model=list[CountImageAnnotationsView],
+)
 def count_image_annotations_by_collection(
     collection: Annotated[
         CollectionTable,
@@ -158,7 +170,7 @@ def count_image_annotations_by_collection(
     ],
     session: SessionDep,
     body: ReadCountImageAnnotationsRequest | None = None,
-) -> list[dict[str, str | int]]:
+) -> list[CountImageAnnotationsView]:
     """Get image annotation counts for a specific collection."""
     image_filter = body.filter if body and body.filter else None
     counts = image_resolver.count_image_annotations_by_collection(
@@ -168,10 +180,11 @@ def count_image_annotations_by_collection(
     )
 
     return [
-        {
-            "label_name": label_name,
-            "current_count": current_count,
-            "total_count": total_count,
-        }
-        for label_name, current_count, total_count in counts
+        CountImageAnnotationsView(
+            annotation_collection_id=annotation_collection_id,
+            label_name=label_name,
+            current_count=current_count,
+            total_count=total_count,
+        )
+        for annotation_collection_id, label_name, current_count, total_count in counts
     ]

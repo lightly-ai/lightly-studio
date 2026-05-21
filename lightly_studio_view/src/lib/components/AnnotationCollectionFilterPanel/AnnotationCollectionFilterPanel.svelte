@@ -1,16 +1,20 @@
 <script lang="ts">
     import Segment from '$lib/components/Segment/Segment.svelte';
+    import type {
+        AnnotationLabelTable,
+        CountAnnotationsView
+    } from '$lib/api/lightly_studio_local/types.gen';
     import { useAnnotationCollections } from '$lib/hooks/useAnnotationCollections/useAnnotationCollections';
     import { useAnnotationCollectionsLabelFilter } from '$lib/hooks/useAnnotationCollectionsLabelFilter/useAnnotationCollectionsLabelFilter';
-    import type { AnnotationLabelTable } from '$lib/api/lightly_studio_local/types.gen';
     import { onMount } from 'svelte';
     import AnnotationCollectionSection from './AnnotationCollectionSection.svelte';
 
     interface Props {
         collectionId: string;
+        countsByCollectionLabelKey: Map<string, CountAnnotationsView>;
     }
 
-    let { collectionId }: Props = $props();
+    let { collectionId, countsByCollectionLabelKey }: Props = $props();
 
     const collectionsQuery = useAnnotationCollections({ collectionId });
     const { initializeAll, initialized, reset } = useAnnotationCollectionsLabelFilter();
@@ -73,7 +77,11 @@
     <Segment title="Annotation Filters">
         <div class="space-y-2">
             {#each collections as collection (collection.collection_id)}
-                <AnnotationCollectionSection {collection} onLabelsLoaded={handleLabelsLoaded} />
+                <AnnotationCollectionSection
+                    {collection}
+                    {countsByCollectionLabelKey}
+                    onLabelsLoaded={handleLabelsLoaded}
+                />
             {/each}
         </div>
     </Segment>

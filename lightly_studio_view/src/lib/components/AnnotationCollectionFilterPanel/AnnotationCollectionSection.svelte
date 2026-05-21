@@ -3,12 +3,14 @@
     import { readAnnotationLabelsForCollectionOptions } from '$lib/api/lightly_studio_local/@tanstack/svelte-query.gen';
     import type {
         AnnotationCollectionView,
-        AnnotationLabelTable
+        AnnotationLabelTable,
+        CountAnnotationsView
     } from '$lib/api/lightly_studio_local/types.gen';
     import AnnotationColorLegend from '$lib/components/AnnotationColorLegend/AnnotationColorLegend.svelte';
     import { Checkbox } from '$lib/components/ui/checkbox/index.js';
     import { Label } from '$lib/components/ui/label/index.js';
     import { useAnnotationCollectionsLabelFilter } from '$lib/hooks/useAnnotationCollectionsLabelFilter/useAnnotationCollectionsLabelFilter';
+    import { formatInteger } from '$lib/utils';
     import {
         Collapsible,
         CollapsibleContent,
@@ -19,10 +21,14 @@
 
     interface Props {
         collection: AnnotationCollectionView;
+        countsByCollectionLabelKey: Map<string, CountAnnotationsView>;
         onLabelsLoaded: (annotationCollectionId: string, labels: AnnotationLabelTable[]) => void;
     }
 
-    let { collection, onLabelsLoaded }: Props = $props();
+    let { collection, countsByCollectionLabelKey, onLabelsLoaded }: Props = $props();
+
+    const getCountKey = (annotationCollectionId: string, labelName: string) =>
+        `${annotationCollectionId}:${labelName}`;
 
     const labelsQuery = createQuery(() =>
         readAnnotationLabelsForCollectionOptions({
@@ -56,6 +62,23 @@
     const isChecked = $derived(checkState === 'all');
 
     const useCollectionColor = $derived($selectedCollectionIds.length > 1);
+    const collectionCounts = $derived.by(() =>
+        labels.reduce(
+            (summary, label) => {
+                const count = countsByCollectionLabelKey.get(
+                    getCountKey(collection.collection_id, label.annotation_label_name)
+                );
+                if (!count) {
+                    return summary;
+                }
+                return {
+                    current: summary.current + count.current_count,
+                    total: summary.total + count.total_count
+                };
+            },
+            { current: 0, total: 0 }
+        )
+    );
 
     let sectionOpen = $state(false);
     const duration = 168;
@@ -79,10 +102,18 @@
                     >
                         {collection.name}
                     </span>
-                    <ChevronDown
-                        class="h-4 w-4 shrink-0 transition-transform duration-{duration}"
-                        style={`transform: ${sectionOpen ? 'rotate(-180deg)' : 'rotate(0deg)'}`}
-                    />
+                    <div class="flex items-center gap-2">
+                        {#if collectionCounts.total > 0}
+                            <span class="text-sm font-normal text-diffuse-foreground">
+                                {formatInteger(collectionCounts.current)} of
+                                {formatInteger(collectionCounts.total)}
+                            </span>
+                        {/if}
+                        <ChevronDown
+                            class="h-4 w-4 shrink-0 transition-transform duration-{duration}"
+                            style={`transform: ${sectionOpen ? 'rotate(-180deg)' : 'rotate(0deg)'}`}
+                        />
+                    </div>
                 </CollapsibleTrigger>
             </div>
 
@@ -95,6 +126,9 @@
                                 $selectedLabels
                                     .get(collection.collection_id)
                                     ?.has(label.annotation_label_id ?? '') ?? false}
+                            {@const labelCounts = countsByCollectionLabelKey.get(
+                                getCountKey(collection.collection_id, label.annotation_label_name)
+                            )}
                             {@const colorName = useCollectionColor
                                 ? collection.name
                                 : label.annotation_label_name}
@@ -126,6 +160,12 @@
                                     <p class="flex-1 truncate text-base font-normal">
                                         {label.annotation_label_name}
                                     </p>
+                                    {#if labelCounts}
+                                        <span class="text-sm text-diffuse-foreground">
+                                            {formatInteger(labelCounts.current_count)} of
+                                            {formatInteger(labelCounts.total_count)}
+                                        </span>
+                                    {/if}
                                 </Label>
                             </div>
                         {/each}

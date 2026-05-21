@@ -280,9 +280,7 @@
         };
         return {
             ...countImageAnnotationsByCollectionOptions(requestOptions),
-            queryKey: countImageAnnotationsByCollectionQueryKey({
-                path: { collection_id: '__static_value__' }
-            }),
+            queryKey: countImageAnnotationsByCollectionQueryKey(requestOptions),
             queryFn: async ({ signal }: { signal: AbortSignal }) => {
                 const { data } = await countImageAnnotationsByCollection({
                     ...requestOptions,
@@ -300,6 +298,14 @@
         if (isVideos) return videoAnnotationCountsQuery;
         return imageAnnotationCountsQuery;
     });
+    const annotationCountsByCollectionLabelKey = $derived(
+        new Map(
+            (annotationCounts.data ?? []).map((count) => [
+                `${count.annotation_collection_id}:${count.label_name}`,
+                count
+            ])
+        )
+    );
 
     const totalAnnotations = $derived.by(() => {
         const countsData = annotationCounts.data;
@@ -355,7 +361,10 @@
                                         {isImages}
                                     />
                                     {#key collectionId}
-                                        <AnnotationCollectionFilterPanel {collectionId} />
+                                        <AnnotationCollectionFilterPanel
+                                            {collectionId}
+                                            countsByCollectionLabelKey={annotationCountsByCollectionLabelKey}
+                                        />
                                     {/key}
 
                                     {#if isImages || isVideos || isVideoFrames}
