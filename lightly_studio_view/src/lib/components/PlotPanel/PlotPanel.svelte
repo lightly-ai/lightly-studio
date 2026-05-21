@@ -327,6 +327,7 @@
         >
             <PlotColorByPopover
                 {collectionId}
+                withTags={$tags.length > 0}
                 selectedKey={$selectedColorByKey}
                 onSelectedKeyChange={(key) => {
                     setSelectedColorByKey(key);

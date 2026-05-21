@@ -2,21 +2,20 @@
     import { Palette } from '@lucide/svelte';
     import * as Select from '$lib/components/ui/select';
     import { useMetadataFilters } from '$lib/hooks/useMetadataFilters/useMetadataFilters';
-    import { useTags } from '$lib/hooks/useTags/useTags';
     import { usePlotColorByType } from './usePlotColorByType/usePlotColorByType';
 
     interface Props {
         collectionId: string;
         selectedKey: string | null;
         onSelectedKeyChange: (key: string | null) => void;
+        withTags: boolean;
     }
 
     const supportedTypes = new Set(['string', 'boolean']);
 
-    let { collectionId, selectedKey, onSelectedKeyChange }: Props = $props();
+    let { collectionId, selectedKey, onSelectedKeyChange, withTags }: Props = $props();
 
     const { metadataInfo } = useMetadataFilters(collectionId);
-    const { tags } = useTags({ collection_id: collectionId, kind: ['sample'] });
     const { selectedColorByType, setSelectedColorByType, clearSelectedColorByType } =
         usePlotColorByType(collectionId);
 
@@ -25,7 +24,7 @@
     );
 
     const colorByOptions = $derived.by(() => {
-        const tagsOption = $tags.length > 0 ? [{ value: 'tags', label: 'tags' }] : [];
+        const tagsOption = withTags ? [{ value: 'tags', label: 'tags' }] : [];
         const metadataOptions = colorableFields.map((field) => ({
             value: field.name,
             label: `metadata.${field.name}`
