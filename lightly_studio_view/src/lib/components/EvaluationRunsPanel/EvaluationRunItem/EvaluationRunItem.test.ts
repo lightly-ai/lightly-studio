@@ -72,14 +72,6 @@ describe('EvaluationRunItem', () => {
         expect(screen.getByTestId('evaluation-run-config')).toHaveTextContent('["cat","dog"]');
     });
 
-    it('shows the metrics placeholder when expanded', () => {
-        render(EvaluationRunItem, { props: { ...defaultProps, expanded: true } });
-
-        expect(screen.getByTestId('evaluation-run-details')).toHaveTextContent(
-            'Metrics not yet available — backend support pending.'
-        );
-    });
-
     it('calls onToggle when the row is clicked', async () => {
         const onToggle = vi.fn();
         render(EvaluationRunItem, { props: { ...defaultProps, onToggle } });

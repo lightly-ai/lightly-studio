@@ -42,6 +42,7 @@ export { default as VideoPreview } from '$lib/components/VideoPreview/VideoPrevi
 export { default as VideoPlayer } from '$lib/components/VideoPlayer/VideoPlayer.svelte';
 export { default as VideoSampleMetadata } from '$lib/components/VideoSampleMetadata/VideoSampleMetadata.svelte';
 export { default as GridHeader } from '$lib/components/GridHeader/GridHeader.svelte';
+export { default as DatasetGridHeader } from '$lib/components/DatasetGridHeader/DatasetGridHeader.svelte';
 export { default as CaptionsItem } from '$lib/components/Captions/CaptionsItem/CaptionsItem.svelte';
 export { default as Typography } from '$lib/components/Typography/Typography.svelte';
 export { default as GroupsGrid } from '$lib/components/GroupsGrid/GroupsGrid.svelte';
