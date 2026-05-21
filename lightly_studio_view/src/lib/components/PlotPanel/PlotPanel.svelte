@@ -76,7 +76,12 @@
     const annotationLabelsQuery = useAnnotationLabels(() => ({ collectionId }));
     const annotationLabels = writable<{ annotation_label_id: string }[]>([]);
     $effect(() => {
-        annotationLabels.set(annotationLabelsQuery.data ?? []);
+        annotationLabels.set(
+            (annotationLabelsQuery.data ?? []).filter(
+                (l): l is { annotation_label_id: string } & typeof l =>
+                    l.annotation_label_id !== undefined
+            )
+        );
     });
     const { colorBy, selectedColorByKey, setSelectedColorByKey } = usePlotColorBy({
         selectedColorByType,
