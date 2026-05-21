@@ -6,10 +6,15 @@ import '@testing-library/jest-dom';
 vi.mock('$lib/hooks/useGlobalStorage', () => {
     const showPlot = writable<boolean>(false);
     const setShowPlot = vi.fn((value: boolean) => showPlot.set(value));
+
+    const showEvaluationRuns = writable<boolean>(false);
+    const setShowEvaluationRuns = vi.fn((value: boolean) => showEvaluationRuns.set(value));
     return {
         useGlobalStorage: () => ({
             showPlot,
             setShowPlot,
+            showEvaluationRuns,
+            setShowEvaluationRuns,
             sampleSize: writable({ width: 4, height: 4 }),
             updateSampleSize: vi.fn()
         })
@@ -43,6 +48,7 @@ import DatasetGridHeader from './DatasetGridHeader.svelte';
 import { useGlobalStorage } from '$lib/hooks/useGlobalStorage';
 
 const defaultProps = {
+    compact: false,
     canSelectAll: false,
     isImages: false,
     hasMediaWithEmbeddings: false,
@@ -62,6 +68,8 @@ describe('DatasetGridHeader', () => {
         const storage = useGlobalStorage();
         storage.showPlot.set(false);
         (storage.setShowPlot as ReturnType<typeof vi.fn>).mockClear();
+        storage.showEvaluationRuns.set(false);
+        (storage.setShowEvaluationRuns as ReturnType<typeof vi.fn>).mockClear();
         defaultProps.onSelectAll.mockClear();
     });
 
@@ -140,5 +148,51 @@ describe('DatasetGridHeader', () => {
         });
 
         expect(container.querySelector('[data-grid-search-drop-target]')).not.toBeInTheDocument();
+    });
+
+    it('shows the evaluation runs toggle for image collections', () => {
+        render(DatasetGridHeader, {
+            props: { ...defaultProps, isImages: true }
+        });
+
+        expect(screen.getByTestId('toggle-evaluation-runs-button')).toBeInTheDocument();
+        expect(screen.getByText('Evaluation Runs')).toBeInTheDocument();
+    });
+
+    it('hides the evaluation runs toggle for non-image collections', () => {
+        render(DatasetGridHeader, { props: { ...defaultProps, isImages: false } });
+
+        expect(screen.queryByTestId('toggle-evaluation-runs-button')).not.toBeInTheDocument();
+    });
+
+    it('toggles the evaluation runs store when the button is clicked', async () => {
+        const { setShowEvaluationRuns } = useGlobalStorage();
+
+        render(DatasetGridHeader, {
+            props: { ...defaultProps, isImages: true }
+        });
+
+        const toggle = screen.getByTestId('toggle-evaluation-runs-button');
+        await fireEvent.click(toggle);
+        expect(setShowEvaluationRuns).toHaveBeenLastCalledWith(true);
+
+        await fireEvent.click(toggle);
+        expect(setShowEvaluationRuns).toHaveBeenLastCalledWith(false);
+    });
+
+    it('hides the embeddings and evaluation runs labels in compact mode', () => {
+        render(DatasetGridHeader, {
+            props: {
+                ...defaultProps,
+                compact: true,
+                isImages: true,
+                hasMediaWithEmbeddings: true
+            }
+        });
+
+        expect(screen.getByTestId('toggle-plot-button')).toBeInTheDocument();
+        expect(screen.queryByText('Show Embeddings')).not.toBeInTheDocument();
+        expect(screen.getByTestId('toggle-evaluation-runs-button')).toBeInTheDocument();
+        expect(screen.queryByText('Evaluation Runs')).not.toBeInTheDocument();
     });
 });
