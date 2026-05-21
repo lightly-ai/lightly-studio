@@ -2806,21 +2806,6 @@ wheels = [
 ]
 
 [[package]]
-name = "lightly-edge-sdk"
-version = "1.0.3.post1"
-source = { registry = "https://europe-west3-python.pkg.dev/boris-250909/lightly-pypi/simple/" }
-dependencies = [
-    { name = "pillow", version = "11.3.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.10'" },
-    { name = "pillow", version = "12.1.1", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.10'" },
-]
-wheels = [
-    { url = "https://europe-west3-python.pkg.dev/boris-250909/lightly-pypi/lightly-edge-sdk/lightly_edge_sdk-1.0.3.post1-cp38-abi3-macosx_10_12_x86_64.whl", hash = "sha256:cd210895977cac9d1aaf82b67380ba6194ef9f55b845daa5b98a1d7c7085c166" },
-    { url = "https://europe-west3-python.pkg.dev/boris-250909/lightly-pypi/lightly-edge-sdk/lightly_edge_sdk-1.0.3.post1-cp38-abi3-macosx_11_0_arm64.whl", hash = "sha256:95b5000ba77476e75bb2b8ae770a89d625cbeccf024af8c23dd98dc605127437" },
-    { url = "https://europe-west3-python.pkg.dev/boris-250909/lightly-pypi/lightly-edge-sdk/lightly_edge_sdk-1.0.3.post1-cp38-abi3-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:5b6d1529eeb86a2b3f0616ecb9bcfe0c60b0f0330cc9e046319a37751a4772ca" },
-    { url = "https://europe-west3-python.pkg.dev/boris-250909/lightly-pypi/lightly-edge-sdk/lightly_edge_sdk-1.0.3.post1-cp38-abi3-win_amd64.whl", hash = "sha256:701887e816edfbb50c88e1ecdafff5defc9f418fafab49f83a3dba45387e6063" },
-]
-
-[[package]]
 name = "lightly-mundig"
 version = "0.1.12"
 source = { registry = "https://pypi.org/simple" }
@@ -2891,9 +2876,6 @@ cloud-storage = [
     { name = "s3fs", version = "2025.10.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.10'" },
     { name = "s3fs", version = "2026.2.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.10'" },
 ]
-lightly-edge = [
-    { name = "lightly-edge-sdk" },
-]
 
 [package.dev-dependencies]
 dev = [
@@ -2945,7 +2927,6 @@ requires-dist = [
     { name = "gcsfs", marker = "extra == 'cloud-storage'", specifier = ">=2023.1.0" },
     { name = "jinja2", specifier = ">=3.1.0" },
     { name = "labelformat", specifier = ">=0.1.14" },
-    { name = "lightly-edge-sdk", marker = "extra == 'lightly-edge'", specifier = ">=1.0.3.post1", index = "https://europe-west3-python.pkg.dev/boris-250909/lightly-pypi/simple/" },
     { name = "lightly-mundig", specifier = "==0.1.12" },
     { name = "open-clip-torch", specifier = ">=2.20.0" },
     { name = "opencv-python-headless", specifier = ">=4.11.0.86" },
@@ -2967,7 +2948,7 @@ requires-dist = [
     { name = "uvicorn", specifier = ">=0.32.1" },
     { name = "xxhash", specifier = ">=3.5.0" },
 ]
-provides-extras = ["lightly-edge", "cloud-storage"]
+provides-extras = ["cloud-storage"]
 
 [package.metadata.requires-dev]
 dev = [

@@ -69,9 +69,6 @@ dependencies = [
 lightly-studio = "lightly_studio.cli:main"
 
 [project.optional-dependencies]
-lightly-edge = [
-    "lightly-edge-sdk>=1.0.3.post1",
-]
 cloud-storage = [
     "s3fs>=2023.1.0",
     "gcsfs>=2023.1.0",
@@ -154,9 +151,6 @@ packages = ["src/lightly_studio"]
 
 [tool.hatch.metadata]
 allow-direct-references = true
-
-[tool.uv.sources]
-lightly-edge-sdk = { index = "lightly-pypi" }
 
 [tool.uv]
 keyring-provider = "subprocess"

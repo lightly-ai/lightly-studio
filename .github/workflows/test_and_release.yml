@@ -24,7 +24,7 @@ jobs:
         with:
           submodules: recursive
 
-      # Authenticate to download lightly-edge-sdk.
+      # Authenticate to download dev versions of lightly-mundig.
       - name: Authenticate with GCP
         uses: 'google-github-actions/auth@v2'
         with:
@@ -129,7 +129,7 @@ jobs:
         with:
           submodules: recursive
 
-      # Authenticate to download lightly-edge-sdk.
+      # Authenticate to download dev versions of lightly-mundig.
       - name: Authenticate with GCP
         uses: 'google-github-actions/auth@v2'
         with:

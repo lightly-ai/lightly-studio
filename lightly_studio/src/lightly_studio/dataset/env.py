@@ -13,7 +13,6 @@ LIGHTLY_STUDIO_EMBEDDINGS_MODEL_TYPE: str = env.str(
 LIGHTLY_STUDIO_MODEL_CACHE_DIR: Path = env.path(
     "LIGHTLY_STUDIO_MODEL_CACHE_DIR", Path.home() / ".cache" / "lightly-studio"
 )
-LIGHTLY_STUDIO_EDGE_MODEL_FILE_PATH: str = env.str("EDGE_MODEL_PATH", "./lightly_model.tar")
 LIGHTLY_STUDIO_PROTOCOL: str = env.str("LIGHTLY_STUDIO_PROTOCOL", "http")
 LIGHTLY_STUDIO_PORT: int = env.int("LIGHTLY_STUDIO_PORT", 8001)
 LIGHTLY_STUDIO_HOST: str = env.str("LIGHTLY_STUDIO_HOST", "localhost")

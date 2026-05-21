@@ -25,10 +25,7 @@ Annotations are shown in sample detail view and in dedicated annotation-focused 
 ## Annotations in Python
 
 Use the Python API when you want to inspect annotations programmatically, generate them from model
-predictions, or import custom annotation outputs. In LightlyStudio, predictions are handled like
-annotations and can be added through the same APIs. For prediction annotations, you can
-additionally provide an optional `confidence` value. See
-[Annotation API Reference](../api/annotation.md) for the full API surface.
+predictions, or import custom annotation outputs. Predictions and human annotations are treated as the same concept in LightlyStudio. Any functions for annotations can also process predictions. Predictions can additionally have an optional `confidence` value. See [Annotation API Reference](../api/annotation.md) for the full API surface.
 
 ### Annotation sets
 
@@ -37,6 +34,8 @@ example ground truth, predictions from one model run, or annotations from differ
 
 This lets you keep multiple annotation sources for the same samples separate. In the GUI, you can
 inspect sets individually, visualize multiple sets together, and compare sets via evaluation runs.
+
+
 
 ### Adding annotations
 
