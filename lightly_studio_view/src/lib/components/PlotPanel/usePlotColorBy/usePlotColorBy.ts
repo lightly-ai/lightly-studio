@@ -23,13 +23,13 @@ export function usePlotColorBy({
 
     const colorBy = derived(
         [selectedColorByType, selectedColorByKey, tags],
-        ([$selectedColorByType, $selectedColorByKey, $tags]) => {
+        ([$selectedColorByType, $selectedColorByKey, $tags]): ColorBy => {
             if ($selectedColorByType === 'metadata' && $selectedColorByKey) {
-                return { type: 'metadata_field' as const, key: $selectedColorByKey };
+                return { type: 'metadata_field', key: $selectedColorByKey };
             }
 
             if ($selectedColorByType === 'tags') {
-                return { type: 'tag' as const, tag_ids: $tags.map((tag) => tag.tag_id) };
+                return { type: 'tag', tag_ids: $tags.map((tag) => tag.tag_id) };
             }
 
             return null;
