@@ -37,19 +37,14 @@ def build_tag_color_maps(
     """
     names = tag_resolver.get_names_by_ids(session=session, tag_ids=tag_ids)
     sample_to_tags = tag_resolver.get_tags_by_sample(session=session, tag_ids=tag_ids)
+    sample_to_value = coloring_helpers.first_match_per_sample(
+        sample_to_candidates=sample_to_tags, priority_order=tag_ids
+    )
 
     scale = DiscreteColorScale.from_values(
         values=tag_ids,
         format_fn=lambda tid: names.get(tid, str(tid)),
     )
-
-    # First-match-wins: map each sample to its earliest matching tag.
-    sample_to_value: dict[UUID, UUID] = {}
-    for sid, sample_tags in sample_to_tags.items():
-        for tid in tag_ids:
-            if tid in sample_tags:
-                sample_to_value[sid] = tid
-                break
 
     return coloring_helpers.assign_color_categories(
         sample_ids=sample_ids,

@@ -110,3 +110,29 @@ def assign_color_categories(
 
     legend = {0: "Filtered out", 1: "Unassigned", **scale.legend}
     return color_categories, legend
+
+
+def first_match_per_sample(
+    sample_to_candidates: Mapping[UUID, Iterable[T]],
+    priority_order: Sequence[T],
+) -> dict[UUID, T]:
+    """Map each sample to the first matching value from a priority-ordered list.
+
+    Samples with no match are omitted from the result.
+
+    Args:
+        sample_to_candidates: Mapping from sample ID to the set (or any
+            iterable) of candidate values the sample carries.
+        priority_order: Values in priority order — the first match wins.
+
+    Returns:
+        A mapping from sample ID to the winning value.
+    """
+    result: dict[UUID, T] = {}
+    for sid, candidates in sample_to_candidates.items():
+        candidate_set = candidates if isinstance(candidates, set) else set(candidates)
+        for value in priority_order:
+            if value in candidate_set:
+                result[sid] = value
+                break
+    return result
