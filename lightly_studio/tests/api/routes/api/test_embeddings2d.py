@@ -431,7 +431,6 @@ def test_get_embeddings2d__with_integer_metadata_color_by(
     assert legend["4"] == "30"
 
 
-
 def test_get_embeddings2d__with_integer_metadata_color_by__buckets_when_more_than_50_unique_values(
     test_client: TestClient,
     db_session: Session,
@@ -478,9 +477,9 @@ def test_get_embeddings2d__with_integer_metadata_color_by__buckets_when_more_tha
 
     # score=0 and score=1 share bucket "0-1" -> same category.
     sample_id_to_color = dict(zip(sample_ids_payload, color_category))
-    assert sample_id_to_color[str(samples[0].sample_id)] == 2   # score=0 -> bucket "0-1"
-    assert sample_id_to_color[str(samples[1].sample_id)] == 2   # score=1 -> bucket "0-1"
-    assert sample_id_to_color[str(samples[2].sample_id)] == 3   # score=2 -> bucket "2-3"
+    assert sample_id_to_color[str(samples[0].sample_id)] == 2  # score=0 -> bucket "0-1"
+    assert sample_id_to_color[str(samples[1].sample_id)] == 2  # score=1 -> bucket "0-1"
+    assert sample_id_to_color[str(samples[2].sample_id)] == 3  # score=2 -> bucket "2-3"
     assert sample_id_to_color[str(samples[99].sample_id)] == 51  # score=99 -> bucket "98-99"
 
 

@@ -112,9 +112,7 @@ def _build_integer_color_scale(
     def _label(bucket_start: int) -> str:
         return f"{bucket_start}-{bucket_start + bucket_width - 1}"
 
-    legend: dict[int, str] = {
-        2 + i: _label(min_val + i * bucket_width) for i in range(num_buckets)
-    }
+    legend: dict[int, str] = {2 + i: _label(min_val + i * bucket_width) for i in range(num_buckets)}
     lookup: dict[int, int] = {v: 2 + _bucket_idx(v) for v in unique_values}
 
     return DiscreteColorScale(_lookup=lookup, legend=legend)
