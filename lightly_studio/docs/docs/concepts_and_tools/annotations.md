@@ -22,8 +22,6 @@ Annotations are shown in sample detail view and in dedicated annotation-focused 
   ></iframe>
 </div>
 
-
-
 ## Annotations in Python
 
 Use the Python API when you want to inspect annotations programmatically, generate them from model
@@ -140,7 +138,7 @@ If you already have masks in RLE form, use
 You can access annotations of each sample after creating them in the GUI, importing them from a
 dataset format such as COCO or YOLO, or adding them programmatically from Python.
 
-```py
+```python
 from lightly_studio.core.annotation import ObjectDetectionAnnotation
 
 for sample in dataset:
