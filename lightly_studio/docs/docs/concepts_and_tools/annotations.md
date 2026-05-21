@@ -27,30 +27,33 @@ Annotations are shown in sample detail view and in dedicated annotation-focused 
 ## Annotations in Python
 
 Use the Python API when you want to inspect annotations programmatically, generate them from model
-predictions, or import custom annotation outputs. See
+predictions, or import custom annotation outputs. In LightlyStudio, predictions are handled like
+annotations and can be added through the same APIs. For prediction annotations, you can
+additionally provide an optional `confidence` value. See
 [Annotation API Reference](../api/annotation.md) for the full API surface.
-
-### Accessing annotations
-
-You can access annotations of each sample. They can be created in the GUI or imported, for example from COCO format. See the [COCO Segmentation Mask](../index.md#quickstart) example for one import workflow.
-
-```py
-from lightly_studio.core.annotation import ObjectDetectionAnnotation
-
-for sample in dataset:
-    for annotation in sample.annotations:
-        if isinstance(annotation, ObjectDetectionAnnotation):
-            print(annotation.x, annotation.y, annotation.width, annotation.height)
-```
-
-There are 3 annotation types:
-[ClassificationAnnotation](../api/annotation.md#classificationannotation),
-[SegmentationMaskAnnotation](../api/annotation.md#segmentationmaskannotation), and
-[ObjectDetectionAnnotation](../api/annotation.md#objectdetectionannotation).
 
 ### Adding annotations
 
-Add annotations to samples with
+For most workflows, the easiest way to add annotations is to import them from supported formats such as COCO and YOLO, either while adding samples to the dataset or later by attaching annotations to already indexed samples:
+
+```python
+# Add images and annotations together.
+dataset.add_samples_from_coco(
+    annotations_json="/path/to/instances.json",
+    images_path="/path/to/images",
+)
+
+# Add annotations to images that are already indexed.
+dataset.add_annotations_from_coco(
+    annotations_json="/path/to/predictions.json",
+    images_root="/path/to/images",
+)
+```
+
+See [ImageDataset](../api/dataset.md#imagedataset) and
+[VideoDataset](../api/dataset.md#videodataset) for the full import workflows and supported
+formats. Predictions can be added the same way as other annotations, including optional confidence
+scores. If you need to create annotations directly from Python, add them to samples with
 [`add_annotation`](../api/sample.md#lightly_studio.core.sample.Sample.add_annotation). The
 following example creates an object detection annotation:
 
@@ -97,38 +100,15 @@ sample.add_annotation(
 )
 ```
 
-Alternatively, provide the mask encoding directly with
-[`from_rle_mask`](../api/annotation.md#lightly_studio.core.annotation.CreateSegmentationMask.from_rle_mask):
+If you already have masks in RLE form, use
+[`from_rle_mask`](../api/annotation.md#lightly_studio.core.annotation.CreateSegmentationMask.from_rle_mask).
 
-```python
-from lightly_studio.core.annotation import CreateSegmentationMask
-
-# E.g., for a 2x4 mask:
-# [[0, 1, 1, 0],
-#  [1, 1, 1, 1]]
-# A row-wise Run-Length Encoding (RLE) mask is: [1, 2, 1, 4]
-sample.add_annotation(
-    CreateSegmentationMask.from_rle_mask(
-        label="car",
-        segmentation_mask=[1, 2, 1, 4],
-        # `sample` could be ImageSample or another 2D sample, such as a video frame
-        sample_2d=sample,
-        confidence=0.85,  # optional
-    )
-)
-```
-
-??? note "Binary Mask Format"
+??? note "RLE mask format details"
 
     For segmentation annotations
     ([`CreateSegmentationMask`](../api/annotation.md#createsegmentationmask)), `segmentation_mask`
     is expected to be a list of integers representing the binary mask in a row-wise
     Run-Length Encoding (RLE) format.
-
-    !!! tip
-        We recommend using
-        [`from_binary_mask`](../api/annotation.md#lightly_studio.core.annotation.CreateSegmentationMask.from_binary_mask)
-        to generate this encoding automatically from a numpy array.
 
     The format follows these rules:
 
@@ -137,47 +117,41 @@ sample.add_annotation(
     - If the mask starts with a 1 (foreground), the first number must be 0.
     - Subsequent numbers represent alternating counts of 1s and 0s.
 
-    For example, consider a 2x4 mask:
+    Example 2x4 mask:
     ```
     [[0, 1, 1, 0],
      [1, 1, 1, 1]]
     ```
-    Flattened row-wise: `[0, 1, 1, 0, 1, 1, 1, 1]`.
 
-    There are 4 sequences of identical bits: one 0, two 1s, one 0, and four 1s. The resulting `segmentation_mask` is `[1, 2, 1, 4]`.
+    Flattened row-wise, this becomes:
+    ```
+    [0, 1, 1, 0, 1, 1, 1, 1]
+    ```
 
-### Indexing with predictions
+    The resulting `segmentation_mask` is:
+    ```
+    [1, 2, 1, 4]
+    ```
 
-If you need to index model predictions with confidence scores or work with custom annotation formats, you can create annotations directly from Python.
+### Accessing annotations
+
+You can access annotations of each sample after creating them in the GUI, importing them from a
+dataset format such as COCO or YOLO, or adding them programmatically from Python.
 
 ```py
-import lightly_studio as ls
-from lightly_studio.core.annotation import CreateObjectDetection
+from lightly_studio.core.annotation import ObjectDetectionAnnotation
 
-dataset = ls.ImageDataset.create()
-dataset.add_images_from_path(path="./path/to/image_folder")
-
-# Your model predictions (e.g., from a detector)
-predictions = {
-    "img1.jpg": {"x": 100, "y": 150, "w": 200, "h": 300, "conf": 0.95},
-    "img2.jpg": {"x": 50, "y": 80, "w": 120, "h": 250, "conf": 0.87},
-}
-
-for image_sample in dataset:
-    pred = predictions[image_sample.file_name]
-    image_sample.add_annotation(
-        CreateObjectDetection(
-            label="person",
-            confidence=pred["conf"],  # Optional, must be between 0.0 and 1.0
-            x=pred["x"],
-            y=pred["y"],
-            width=pred["w"],
-            height=pred["h"],
-        )
-    )
+for sample in dataset:
+    for annotation in sample.annotations:
+        if isinstance(annotation, ObjectDetectionAnnotation):
+            print(annotation.x, annotation.y, annotation.width, annotation.height)
 ```
 
-!!! note "Embeddings not supported"
-    Manual indexing does not generate embeddings. Features like similarity search and embedding plots are not available for manually indexed samples.
+There are 3 annotation types:
+[ClassificationAnnotation](../api/annotation.md#classificationannotation),
+[SegmentationMaskAnnotation](../api/annotation.md#segmentationmaskannotation), and
+[ObjectDetectionAnnotation](../api/annotation.md#objectdetectionannotation).
 
-See [Annotation](../api/annotation.md) for the full annotation API reference and [Search and Filter](search_and_filter.md) for annotation-based querying.
+See [Annotation](../api/annotation.md) for the full annotation API reference, [Search and Filter](search_and_filter.md) for annotation-based querying, and 
+for end-to-end dataset setup examples see [Image Dataset](../dataset_setup/image_dataset.md)
+and [Video Dataset](../dataset_setup/video_dataset.md).
