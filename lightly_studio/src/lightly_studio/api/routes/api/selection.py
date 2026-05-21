@@ -15,6 +15,7 @@ from lightly_studio.resolvers.image_filter import ImageFilter
 from lightly_studio.resolvers.video_resolver.video_filter import VideoFilter
 from lightly_studio.selection.select_via_db import select_via_database
 from lightly_studio.selection.selection_config import (
+    AnnotationClassBalancingStrategy,
     EmbeddingDiversityStrategy,
     EmbeddingSimilarityStrategy,
     MetadataWeightingStrategy,
@@ -25,6 +26,7 @@ selection_router = APIRouter()
 
 Strategy = Annotated[
     Union[
+        AnnotationClassBalancingStrategy,
         EmbeddingDiversityStrategy,
         EmbeddingSimilarityStrategy,
         MetadataWeightingStrategy,

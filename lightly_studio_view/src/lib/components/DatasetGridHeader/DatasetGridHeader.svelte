@@ -2,12 +2,14 @@
     import { CollectionSearch, GridHeader, OrderBy } from '$lib/components';
     import GridHeaderSelectAllButton from '$lib/components/GridHeaderSelectAllButton/GridHeaderSelectAllButton.svelte';
     import { Button } from '$lib/components/ui/index.js';
-    import { useGlobalStorage } from '$lib/hooks/useGlobalStorage.js';
-    import { ChartNetwork } from '@lucide/svelte';
+    import { Tooltip } from '$lib/components/ui/tooltip';
+    import { useGlobalStorage } from '$lib/hooks';
+    import { ChartNetwork, Gauge } from '@lucide/svelte';
 
     type SearchImage = { name: string; previewUrl: string };
 
     interface Props {
+        compact?: boolean;
         canSelectAll: boolean;
         isImages: boolean;
         hasMediaWithEmbeddings: boolean;
@@ -23,6 +25,7 @@
     }
 
     const {
+        compact = false,
         canSelectAll,
         isImages,
         hasMediaWithEmbeddings,
@@ -37,7 +40,7 @@
         onSearchError
     }: Props = $props();
 
-    const { showPlot, setShowPlot } = useGlobalStorage();
+    const { showPlot, setShowPlot, showEvaluationRuns, setShowEvaluationRuns } = useGlobalStorage();
 </script>
 
 <GridHeader>
@@ -51,15 +54,40 @@
             <OrderBy {datasetId} />
         {/if}
         {#if hasMediaWithEmbeddings}
-            <Button
-                class="flex items-center space-x-1"
-                data-testid="toggle-plot-button"
-                variant={$showPlot ? 'default' : 'ghost'}
-                onclick={() => setShowPlot(!$showPlot)}
+            <Tooltip
+                content={$showPlot ? 'Hide Embeddings plot' : 'Show Embeddings plot'}
+                position="bottom"
             >
-                <ChartNetwork class="size-4" />
-                <span>Show Embeddings</span>
-            </Button>
+                <Button
+                    class="flex items-center space-x-1"
+                    data-testid="toggle-plot-button"
+                    variant={$showPlot ? 'default' : 'ghost'}
+                    onclick={() => setShowPlot(!$showPlot)}
+                >
+                    <ChartNetwork class="size-4" />
+                    {#if !compact}
+                        <span>Show Embeddings</span>
+                    {/if}
+                </Button>
+            </Tooltip>
+        {/if}
+        {#if isImages}
+            <Tooltip
+                content={$showEvaluationRuns ? 'Hide Evaluation Runs' : 'Show Evaluation Runs'}
+                position="bottom"
+            >
+                <Button
+                    class="flex items-center space-x-1"
+                    data-testid="toggle-evaluation-runs-button"
+                    variant={$showEvaluationRuns ? 'default' : 'ghost'}
+                    onclick={() => setShowEvaluationRuns(!$showEvaluationRuns)}
+                >
+                    <Gauge class="size-4" />
+                    {#if !compact}
+                        <span>Evaluation Runs</span>
+                    {/if}
+                </Button>
+            </Tooltip>
         {/if}
     {/snippet}
     {#if hasMediaWithEmbeddings}
