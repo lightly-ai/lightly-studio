@@ -8,6 +8,13 @@ import { readable, writable, type Writable } from 'svelte/store';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import CreateSelectionDialog from './CreateSelectionDialog.svelte';
 
+type MockTag = {
+    tag_id: string;
+    name: string;
+    description: string | null;
+    kind: 'sample';
+};
+
 const pageMock = vi.hoisted(() => ({
     params: { collection_id: 'test-collection-id' },
     data: { collection: { sample_type: 'image' as string } }
@@ -27,7 +34,7 @@ vi.mock('$lib/api/lightly_studio_local/sdk.gen', async () => {
     };
 });
 
-let tagsStore: Writable<unknown[]>;
+let tagsStore: Writable<MockTag[]>;
 const loadTagsMock = vi.fn();
 const setTagSelectedMock = vi.fn();
 
@@ -340,6 +347,25 @@ describe('CreateSelectionDialog', () => {
 
         expect(await screen.findByTestId('selection-strategy-similarity')).toHaveAttribute(
             'data-disabled'
+        );
+    });
+
+    it('shows an empty state when no sample tags are available for similarity', async () => {
+        tagsStore = writable([]);
+        filteredSampleCountStore.set(100);
+
+        render(CreateSelectionDialog);
+
+        await fireEvent.keyDown(screen.getByTestId('selection-dialog-strategy-select'), {
+            key: 'Enter'
+        });
+        await fireEvent.pointerUp(await screen.findByTestId('selection-strategy-similarity'));
+        await fireEvent.keyDown(screen.getByTestId('selection-dialog-query-tag-select'), {
+            key: 'Enter'
+        });
+
+        expect(await screen.findByTestId('selection-dialog-no-query-tags')).toHaveTextContent(
+            'No sample tags available.'
         );
     });
 });

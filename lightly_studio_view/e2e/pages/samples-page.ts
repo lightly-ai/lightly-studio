@@ -1,6 +1,8 @@
 import { expect, type Page } from '@playwright/test';
 import { pressButton, waitForRequestsToSettle } from '../utils';
 
+type SelectionStrategy = 'diversity' | 'typicality' | 'similarity';
+
 export class SamplesPage {
     constructor(public readonly page: Page) {
         this.page = page;
@@ -133,18 +135,7 @@ export class SamplesPage {
     }
 
     async createSelection(
-        strategy: 'diversity' | 'typicality',
-        nSamples: number,
-        tagName: string
-    ): Promise<void>;
-    async createSelection(
-        strategy: 'similarity',
-        nSamples: number,
-        tagName: string,
-        queryTagId: string
-    ): Promise<void>;
-    async createSelection(
-        strategy: 'diversity' | 'typicality' | 'similarity',
+        strategy: SelectionStrategy,
         nSamples: number,
         tagName: string,
         queryTagId?: string
