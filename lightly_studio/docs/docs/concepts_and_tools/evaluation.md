@@ -6,6 +6,8 @@ task types are object detection and classification.
 
 ## Evaluation in the GUI
 
+PLACEHOLDER GIF OR VIDEO 
+
 Evaluation results are accessible in the **Evaluation** panel of the GUI once a run has been
 created via the [Python API](#evaluation-in-python).
 
