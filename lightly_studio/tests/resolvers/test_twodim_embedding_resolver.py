@@ -35,7 +35,7 @@ def test_get_twodim_embeddings__no_samples(
         embedding_dimension=3,
     )
 
-    x_values, y_values, sample_ids = twodim_embedding_resolver.get_twodim_embeddings(
+    x_values, y_values, sample_ids, _ = twodim_embedding_resolver.get_twodim_embeddings(
         session=db_session,
         collection_id=collection.collection_id,
         embedding_model_id=embedding_model.embedding_model_id,
@@ -63,7 +63,7 @@ def test_get_twodim_embeddings__no_samples_with_embeddings(
         file_path_abs="sample_missing_embedding.jpg",
     )
 
-    x_values, y_values, sample_ids = twodim_embedding_resolver.get_twodim_embeddings(
+    x_values, y_values, sample_ids, _ = twodim_embedding_resolver.get_twodim_embeddings(
         session=db_session,
         collection_id=collection.collection_id,
         embedding_model_id=embedding_model.embedding_model_id,
@@ -100,7 +100,7 @@ def test_get_twodim_embeddings__cache_hit(
     calculate_spy = mocker.spy(twodim_embedding_resolver, "_calculate_2d_embeddings")
 
     # First call - should call _calculate_2d_embeddings.
-    x_first, y_first, sample_ids_first_call = twodim_embedding_resolver.get_twodim_embeddings(
+    x_first, y_first, sample_ids_first_call, _ = twodim_embedding_resolver.get_twodim_embeddings(
         session=db_session,
         collection_id=collection.collection_id,
         embedding_model_id=embedding_model.embedding_model_id,
@@ -112,7 +112,7 @@ def test_get_twodim_embeddings__cache_hit(
     assert len(sample_ids_first_call) == 2
 
     # Second call - should use cache, not call _calculate_2d_embeddings again.
-    x_second, y_second, sample_ids_second_call = twodim_embedding_resolver.get_twodim_embeddings(
+    x_second, y_second, sample_ids_second_call, _ = twodim_embedding_resolver.get_twodim_embeddings(
         session=db_session,
         collection_id=collection.collection_id,
         embedding_model_id=embedding_model.embedding_model_id,
@@ -129,7 +129,7 @@ def test_get_twodim_embeddings__cache_hit(
         collection_id=collection.collection_id,
         file_path_abs="sample_3.jpg",
     )
-    x_third, y_third, sample_ids_third_call = twodim_embedding_resolver.get_twodim_embeddings(
+    x_third, y_third, sample_ids_third_call, _ = twodim_embedding_resolver.get_twodim_embeddings(
         session=db_session,
         collection_id=collection.collection_id,
         embedding_model_id=embedding_model.embedding_model_id,
@@ -169,7 +169,7 @@ def test_get_twodim_embeddings__recomputes_when_samples_change(
     calculate_spy = mocker.spy(twodim_embedding_resolver, "_calculate_2d_embeddings")
 
     # First call - should call _calculate_2d_embeddings.
-    x_first, y_first, sample_ids_first = twodim_embedding_resolver.get_twodim_embeddings(
+    x_first, y_first, sample_ids_first, _ = twodim_embedding_resolver.get_twodim_embeddings(
         session=db_session,
         collection_id=collection.collection_id,
         embedding_model_id=embedding_model.embedding_model_id,
@@ -194,7 +194,7 @@ def test_get_twodim_embeddings__recomputes_when_samples_change(
     )
 
     # Second call - should recompute since samples changed.
-    x_second, y_second, sample_ids_second = twodim_embedding_resolver.get_twodim_embeddings(
+    x_second, y_second, sample_ids_second, _ = twodim_embedding_resolver.get_twodim_embeddings(
         session=db_session,
         collection_id=collection.collection_id,
         embedding_model_id=embedding_model.embedding_model_id,

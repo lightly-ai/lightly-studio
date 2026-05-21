@@ -18,20 +18,27 @@ def get_twodim_embeddings(
     session: Session,
     collection_id: UUID,
     embedding_model_id: UUID,
-) -> tuple[NDArray[np.float32], NDArray[np.float32], list[UUID]]:
+    reference_embeddings: list[list[float]] | None = None,
+) -> tuple[NDArray[np.float32], NDArray[np.float32], list[UUID], list[tuple[float, float]]]:
     """Return cached 2D embeddings together with their sample identifiers.
 
     Uses a cache to avoid recomputing the 2D embeddings. The cache key combines the sorted
     sample identifiers with a deterministic 64-bit hash over the stored high-dimensional
     embeddings.
 
+    If ``reference_embeddings`` is provided, also returns 2D centroids for each one. The
+    centroids are not cached — on a 2D-projection cache hit we still load the high-dim
+    embeddings to compute them (the expensive PacMap step is what the cache saves).
+
     Args:
         session: Database session.
         collection_id: Collection identifier.
         embedding_model_id: Embedding model identifier.
+        reference_embeddings: Optional list of high-dim reference embeddings to project
+            into the plot as marker centroids.
 
     Returns:
-        Tuple of (x coordinates, y coordinates, ordered sample IDs).
+        Tuple of (x coordinates, y coordinates, ordered sample IDs, reference centroids).
     """
     embedding_model = session.get(EmbeddingModelTable, embedding_model_id)
     if embedding_model is None:
@@ -48,14 +55,36 @@ def get_twodim_embeddings(
 
     if not sample_ids_of_samples_with_embeddings:
         empty = np.array([], dtype=np.float32)
-        return empty, empty, []
+        return empty, empty, [], []
 
-    # If there is a cached entry, return it.
+    # If there is a cached entry, return it (optionally with freshly-computed centroids).
     cached = session.get(TwoDimEmbeddingTable, cache_key)
     if cached is not None:
         x_values = np.array(cached.x, dtype=np.float32)
         y_values = np.array(cached.y, dtype=np.float32)
-        return x_values, y_values, sample_ids_of_samples_with_embeddings
+        centroids: list[tuple[float, float]] = []
+        if reference_embeddings:
+            sample_embeddings = sample_embedding_resolver.get_by_sample_ids(
+                session=session,
+                sample_ids=sample_ids_of_samples_with_embeddings,
+                embedding_model_id=embedding_model_id,
+            )
+            if sample_embeddings:
+                # Re-derive ordered IDs from the loaded embeddings to match cache ordering.
+                sample_ids_of_samples_with_embeddings = [
+                    embedding.sample_id for embedding in sample_embeddings
+                ]
+                image_matrix = np.asarray(
+                    [embedding.embedding for embedding in sample_embeddings],
+                    dtype=np.float32,
+                )
+                centroids = _compute_reference_centroids(
+                    image_matrix=image_matrix,
+                    x_values=x_values,
+                    y_values=y_values,
+                    reference_embeddings=reference_embeddings,
+                )
+        return x_values, y_values, sample_ids_of_samples_with_embeddings, centroids
 
     # No cached entry found - load the high-dimensional embeddings.
     # The order is defined by sample_ids_of_samples_with_embeddings.
@@ -68,7 +97,7 @@ def get_twodim_embeddings(
     # If there are no embeddings, return empty arrays.
     if not sample_embeddings:
         empty = np.array([], dtype=np.float32)
-        return empty, empty, []
+        return empty, empty, [], []
 
     # Compute the 2D embedding from the high-dimensional embeddings.
     # The order is now defined by sample_embeddings. They are the ordered subset of the
@@ -84,22 +113,68 @@ def get_twodim_embeddings(
     session.add(cache_entry)
     session.commit()
 
-    return x_values, y_values, sample_ids_of_samples_with_embeddings
+    image_matrix = np.asarray(embedding_values, dtype=np.float32)
+    centroids = _compute_reference_centroids(
+        image_matrix=image_matrix,
+        x_values=x_values,
+        y_values=y_values,
+        reference_embeddings=reference_embeddings or [],
+    )
+
+    return x_values, y_values, sample_ids_of_samples_with_embeddings, centroids
 
 
-def get_twodim_embeddings_nlp(
+REFERENCE_TOP_K_MAX = 20
+REFERENCE_TOP_K_FRACTION = 20  # 1/20 = 5% of samples
+
+
+def _compute_reference_centroids(
+    image_matrix: NDArray[np.float32],
+    x_values: NDArray[np.float32],
+    y_values: NDArray[np.float32],
+    reference_embeddings: list[list[float]],
+) -> list[tuple[float, float]]:
+    """Return 2D centroids for each reference embedding.
+
+    For each reference, take the top-K most cosine-similar samples in the original
+    high-dim space and return the mean of their already-computed 2D projections.
+    K is adaptive: ``min(5% of samples, 20)`` with a floor of 1.
+    """
+    n_samples = image_matrix.shape[0]
+    if not reference_embeddings or n_samples == 0:
+        return []
+    refs = np.asarray(reference_embeddings, dtype=np.float32)
+    image_norms = np.maximum(np.linalg.norm(image_matrix, axis=1), 1e-9)
+    ref_norms = np.maximum(np.linalg.norm(refs, axis=1), 1e-9)
+    sims = (refs @ image_matrix.T) / np.outer(ref_norms, image_norms)
+    k = max(1, min(REFERENCE_TOP_K_MAX, n_samples // REFERENCE_TOP_K_FRACTION))
+    centroids: list[tuple[float, float]] = []
+    for ref_idx in range(refs.shape[0]):
+        top_idx = np.argpartition(-sims[ref_idx], k - 1)[:k]
+        centroids.append((float(x_values[top_idx].mean()), float(y_values[top_idx].mean())))
+    return centroids
+
+
+def get_twodim_embeddings_nlp(  # noqa: PLR0913
     session: Session,
     collection_id: UUID,
     embedding_model_id: UUID,
     direction_x: list[float],
     direction_y: list[float],
-) -> tuple[NDArray[np.float32], NDArray[np.float32], list[UUID]]:
+    reference_embeddings: list[list[float]] | None = None,
+) -> tuple[NDArray[np.float32], NDArray[np.float32], list[UUID], list[tuple[float, float]]]:
     """Return 2D embeddings by projecting onto two natural-language axis directions.
 
     Prototype for LIG-9502 Variant A. Each axis direction is supplied by the caller and is
     typically either a raw text embedding (single anchor) or a contrastive difference
     ``embed(positive) - embed(negative)`` (concept axis). Image embeddings are projected via
     dot product. No caching — text inputs change frequently.
+
+    If ``reference_embeddings`` is provided, also returns 2D centroids for each one: for
+    each reference, take the top-K most cosine-similar sample embeddings (in the original
+    high-dimensional space) and return the mean of their already-computed 2D projections.
+    Used to place "reference" markers inside the data cloud at the location where each
+    concept actually manifests in the data.
     """
     embedding_model = session.get(EmbeddingModelTable, embedding_model_id)
     if embedding_model is None:
@@ -113,7 +188,7 @@ def get_twodim_embeddings_nlp(
 
     if not sample_ids_of_samples_with_embeddings:
         empty = np.array([], dtype=np.float32)
-        return empty, empty, []
+        return empty, empty, [], []
 
     sample_embeddings = sample_embedding_resolver.get_by_sample_ids(
         session=session,
@@ -123,7 +198,7 @@ def get_twodim_embeddings_nlp(
 
     if not sample_embeddings:
         empty = np.array([], dtype=np.float32)
-        return empty, empty, []
+        return empty, empty, [], []
 
     sample_ids = [embedding.sample_id for embedding in sample_embeddings]
     image_matrix = np.asarray(
@@ -136,7 +211,14 @@ def get_twodim_embeddings_nlp(
     x_values = np.ascontiguousarray(projected[:, 0], dtype=np.float32)
     y_values = np.ascontiguousarray(projected[:, 1], dtype=np.float32)
 
-    return x_values, y_values, sample_ids
+    centroids = _compute_reference_centroids(
+        image_matrix=image_matrix,
+        x_values=x_values,
+        y_values=y_values,
+        reference_embeddings=reference_embeddings or [],
+    )
+
+    return x_values, y_values, sample_ids, centroids
 
 
 def get_twodim_embeddings_pca(
@@ -144,12 +226,17 @@ def get_twodim_embeddings_pca(
     collection_id: UUID,
     embedding_model_id: UUID,
     text_embeddings: list[list[float]],
-) -> tuple[NDArray[np.float32], NDArray[np.float32], list[UUID]]:
+) -> tuple[NDArray[np.float32], NDArray[np.float32], list[UUID], list[tuple[float, float]]]:
     """Return 2D embeddings by PCA-projecting onto the top 2 directions of text embeddings.
 
     Prototype for LIG-9502 Variant B: ≥2 texts. Text embeddings are mean-centered, then SVD
     extracts the top 2 right singular vectors; image embeddings are projected onto those.
     No caching — text inputs change frequently.
+
+    Also returns 2D centroids for each input ``text_embeddings`` entry: for each label,
+    take the top-K most cosine-similar samples in the original high-dim space and return
+    the mean of their 2D projections. Used to place a reference marker inside the data
+    cloud for each label name.
     """
     embedding_model = session.get(EmbeddingModelTable, embedding_model_id)
     if embedding_model is None:
@@ -165,7 +252,7 @@ def get_twodim_embeddings_pca(
 
     if not sample_ids_of_samples_with_embeddings:
         empty = np.array([], dtype=np.float32)
-        return empty, empty, []
+        return empty, empty, [], []
 
     sample_embeddings = sample_embedding_resolver.get_by_sample_ids(
         session=session,
@@ -175,7 +262,7 @@ def get_twodim_embeddings_pca(
 
     if not sample_embeddings:
         empty = np.array([], dtype=np.float32)
-        return empty, empty, []
+        return empty, empty, [], []
 
     sample_ids = [embedding.sample_id for embedding in sample_embeddings]
     image_matrix = np.asarray(
@@ -192,7 +279,14 @@ def get_twodim_embeddings_pca(
     x_values = np.ascontiguousarray(projected[:, 0], dtype=np.float32)
     y_values = np.ascontiguousarray(projected[:, 1], dtype=np.float32)
 
-    return x_values, y_values, sample_ids
+    centroids = _compute_reference_centroids(
+        image_matrix=image_matrix,
+        x_values=x_values,
+        y_values=y_values,
+        reference_embeddings=text_embeddings,
+    )
+
+    return x_values, y_values, sample_ids, centroids
 
 
 def _calculate_2d_embeddings(embedding_values: list[list[float]]) -> list[tuple[float, float]]:

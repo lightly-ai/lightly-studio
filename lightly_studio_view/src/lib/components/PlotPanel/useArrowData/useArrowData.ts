@@ -6,20 +6,29 @@ type TableColumn = (typeof dataColumns)[number];
 
 export type ArrowData = Record<TableColumn, unknown>;
 
+export type ReferencePoint = { x: number; y: number; label: string };
+
 type UseArrowDataReturn = {
     data: Writable<ArrowData>;
     colorLegend: Writable<Map<number, string>>;
+    referencePoints: Writable<ReferencePoint[]>;
     error: Writable<string | undefined>;
 };
 
+const decodeMetadata = (
+    metadata: Map<string, string | Uint8Array> | undefined,
+    key: string
+): string | undefined => {
+    const raw = metadata?.get(key);
+    if (!raw) return undefined;
+    return raw instanceof Uint8Array ? new TextDecoder().decode(raw) : raw;
+};
+
 const parseColorLegend = (metadata: Map<string, string | Uint8Array> | undefined) => {
-    const rawLegend = metadata?.get('color_legend');
-    if (!rawLegend) {
+    const legendText = decodeMetadata(metadata, 'color_legend');
+    if (!legendText) {
         return new Map<number, string>();
     }
-
-    const legendText =
-        rawLegend instanceof Uint8Array ? new TextDecoder().decode(rawLegend) : rawLegend;
 
     let parsedLegend: Record<string, string> = {};
     try {
@@ -31,6 +40,20 @@ const parseColorLegend = (metadata: Map<string, string | Uint8Array> | undefined
     return new Map(
         Object.entries(parsedLegend).map(([key, value]) => [Number(key), value] as const)
     );
+};
+
+const parseReferencePoints = (
+    metadata: Map<string, string | Uint8Array> | undefined
+): ReferencePoint[] => {
+    const text = decodeMetadata(metadata, 'reference_points');
+    if (!text) return [];
+    try {
+        const parsed = JSON.parse(text) as ReferencePoint[];
+        return Array.isArray(parsed) ? parsed : [];
+    } catch (error) {
+        console.warn('Invalid reference_points metadata in Arrow data.', error);
+        return [];
+    }
 };
 
 /**
@@ -46,6 +69,7 @@ export function useArrowData({ blobData }: { blobData: Blob }): UseArrowDataRetu
 
     const data = writable<ArrowData>();
     const colorLegend = writable<Map<number, string>>(new Map());
+    const referencePoints = writable<ReferencePoint[]>([]);
 
     const readData = async () => {
         try {
@@ -65,11 +89,12 @@ export function useArrowData({ blobData }: { blobData: Blob }): UseArrowDataRetu
             }
             data.set(Object.fromEntries(columnData) as Record<TableColumn, unknown>);
             colorLegend.set(parseColorLegend(table.schema?.metadata));
+            referencePoints.set(parseReferencePoints(table.schema?.metadata));
         } catch (e) {
             error.set(`Error reading Arrow data: ${String(e)}`);
         }
     };
 
     readData();
-    return { data, colorLegend, error };
+    return { data, colorLegend, referencePoints, error };
 }

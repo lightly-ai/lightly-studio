@@ -160,14 +160,26 @@
             ? { label_names: allLabelNames }
             : null
     );
+    // PacMap mode also shows label centroid markers when the collection has labels.
+    const effectiveReferenceLabelNames = $derived(
+        projectionMode === 'pacmap' && allLabelNames.length > 0 ? allLabelNames : null
+    );
 
     const embeddingsData = $derived(
-        useEmbeddings(collectionId, filter, colorBy, effectiveNlpAxes, effectivePcaAxes)
+        useEmbeddings(
+            collectionId,
+            filter,
+            colorBy,
+            effectiveNlpAxes,
+            effectivePcaAxes,
+            effectiveReferenceLabelNames
+        )
     );
 
     const {
         data: arrowData,
         colorLegend,
+        referencePoints,
         error: arrowError
     } = $derived(
         useArrowData({
@@ -332,6 +344,50 @@
         viewportState = state;
     };
 
+    // Autofit center+scale that mirrors embedding-atlas's defaultViewportState math
+    // (median + 3·σ of the data). Used when viewportState is null so reference markers
+    // track the same auto-framing embedding-atlas applies internally.
+    const autofit = $derived.by((): ViewportState | null => {
+        const xs = $arrowData?.x as Float32Array | undefined;
+        const ys = $arrowData?.y as Float32Array | undefined;
+        if (!xs || !ys || xs.length === 0) return null;
+        const median = (arr: Float32Array): number => {
+            const copy = Float32Array.from(arr);
+            copy.sort();
+            return copy[Math.floor(copy.length / 2)];
+        };
+        const meanStd = (arr: Float32Array): { mean: number; std: number } => {
+            let sum = 0;
+            for (let i = 0; i < arr.length; i++) sum += arr[i];
+            const mean = sum / arr.length;
+            let sq = 0;
+            for (let i = 0; i < arr.length; i++) sq += (arr[i] - mean) * (arr[i] - mean);
+            return { mean, std: Math.sqrt(sq / arr.length) };
+        };
+        const xStd = meanStd(xs).std;
+        const yStd = meanStd(ys).std;
+        const scale = 0.95 / (Math.max(xStd, yStd, 1e-3) * 3);
+        return { x: median(xs), y: median(ys), scale };
+    });
+
+    // Map (data_x, data_y) to (screen_x, screen_y) mirroring embedding-atlas's transform:
+    // the shorter plot axis maps 1 normalized unit to scale; the longer axis is boosted
+    // by the aspect ratio so the visible window matches the plot's rectangle.
+    const projectedReferences = $derived.by(() => {
+        const refs = $referencePoints;
+        if (!refs.length) return [];
+        const vp = viewportState ?? autofit;
+        if (!vp || width === 0 || height === 0) return [];
+        const isTall = width < height;
+        const aX = isTall ? vp.scale * (height / width) : vp.scale;
+        const aY = isTall ? vp.scale : vp.scale * (width / height);
+        return refs.map((ref) => ({
+            label: ref.label,
+            left: width / 2 + (ref.x - vp.x) * aX * (width / 2),
+            top: height / 2 - (ref.y - vp.y) * aY * (height / 2)
+        }));
+    });
+
     const errorText = $derived.by(() => {
         if (embeddingsData.isError) {
             return embeddingsData.error?.message ?? 'Unknown error';
@@ -411,6 +467,31 @@
                         categoryColors={[NOT_FILTERED_COLOR, FILTERED_COLOR]}
                         {filteredLabel}
                     />
+                {/if}
+                {#if projectedReferences.length > 0}
+                    <!-- LIG-9502 prototype: reference markers. The outer div is a zero-size anchor
+                         positioned exactly at the data point; the dot is centered on the anchor and
+                         the label hangs to its right so labels of different widths don't shift the
+                         visible rectangle corners. -->
+                    <div class="pointer-events-none absolute inset-0 z-20">
+                        {#each projectedReferences as ref (ref.label)}
+                            <div
+                                class="absolute"
+                                style="left: {ref.left}px; top: {ref.top}px;"
+                                data-testid="plot-reference-marker"
+                            >
+                                <div
+                                    class="absolute h-2 w-2 -translate-x-1/2 -translate-y-1/2 rounded-full border border-black bg-amber-400"
+                                ></div>
+                                <span
+                                    class="absolute left-2 top-0 -translate-y-1/2 whitespace-nowrap text-xs font-medium text-white"
+                                    style="text-shadow: 0 0 2px #000, 0 0 2px #000;"
+                                >
+                                    {ref.label}
+                                </span>
+                            </div>
+                        {/each}
+                    </div>
                 {/if}
                 {#if projectionMode === 'text'}
                     <!-- LIG-9502 prototype: X-axis poles at bottom: [neg] ← → [pos] -->

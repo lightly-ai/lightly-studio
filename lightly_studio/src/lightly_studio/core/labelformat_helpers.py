@@ -50,7 +50,10 @@ def get_segmentation_annotation_create(
     """
     segmentation_rle: None | list[int] = None
     if isinstance(segmentation, MultiPolygon):
-        box = segmentation.bounding_box().to_format(BoundingBoxFormat.XYWH)
+        if len(segmentation.polygons) == 0:
+            box = BoundingBox(xmin=0, ymin=0, xmax=0, ymax=0).to_format(BoundingBoxFormat.XYWH)
+        else:
+            box = segmentation.bounding_box().to_format(BoundingBoxFormat.XYWH)
     elif isinstance(segmentation, BinaryMaskSegmentation):
         box = segmentation.bounding_box.to_format(BoundingBoxFormat.XYWH)
         segmentation_rle = segmentation.get_rle()

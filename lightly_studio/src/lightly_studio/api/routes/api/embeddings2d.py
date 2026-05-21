@@ -68,6 +68,7 @@ class GetEmbeddings2DRequest(BaseModel):
     color_by: ColorBy | None = None
     nlp_axes: NlpAxes | None = None
     pca_axes: PcaAxes | None = None
+    reference_label_names: list[str] | None = None
 
 
 @embeddings2d_router.post("/collections/{collection_id}/embeddings2d/default")
@@ -87,26 +88,49 @@ def get_2d_embeddings(
     if embedding_model is None:
         raise ValueError("No embedding model configured.")
 
+    reference_points: list[dict[str, float | str]] = []
     if body.nlp_axes is not None:
-        direction_x = _build_text_axis_direction(
+        direction_x, x_words = _project_text_axis(
             axis=body.nlp_axes.x,
             collection_id=collection_id,
             embedding_model_id=embedding_model.embedding_model_id,
             embedding_manager=embedding_manager,
         )
-        direction_y = _build_text_axis_direction(
+        direction_y, y_words = _project_text_axis(
             axis=body.nlp_axes.y,
             collection_id=collection_id,
             embedding_model_id=embedding_model.embedding_model_id,
             embedding_manager=embedding_manager,
         )
-        x_array, y_array, sample_ids = twodim_embedding_resolver.get_twodim_embeddings_nlp(
-            session=session,
-            collection_id=collection_id,
-            embedding_model_id=embedding_model.embedding_model_id,
-            direction_x=direction_x,
-            direction_y=direction_y,
+        # Reference labels: cartesian product of axis anchor words (e.g. "young male",
+        # "young female", "old male", "old female"). Each is embedded as its own text and
+        # placed at the centroid of its top-K most cosine-similar samples in the original
+        # high-dim space. This puts markers inside the data cloud showing where each
+        # concept actually manifests in your data.
+        reference_labels = [f"{x_word} {y_word}" for x_word in x_words for y_word in y_words]
+        reference_embeddings = [
+            embedding_manager.embed_text(
+                collection_id=collection_id,
+                text_query=TextEmbedQuery(
+                    text=label, embedding_model_id=embedding_model.embedding_model_id
+                ),
+            )
+            for label in reference_labels
+        ]
+        x_array, y_array, sample_ids, centroids = (
+            twodim_embedding_resolver.get_twodim_embeddings_nlp(
+                session=session,
+                collection_id=collection_id,
+                embedding_model_id=embedding_model.embedding_model_id,
+                direction_x=direction_x,
+                direction_y=direction_y,
+                reference_embeddings=reference_embeddings,
+            )
         )
+        reference_points = [
+            {"x": cx, "y": cy, "label": label}
+            for (cx, cy), label in zip(centroids, reference_labels)
+        ]
     elif body.pca_axes is not None and len(body.pca_axes.label_names) >= 2:  # noqa: PLR2004
         text_embeddings = [
             embedding_manager.embed_text(
@@ -118,18 +142,40 @@ def get_2d_embeddings(
             )
             for label_name in body.pca_axes.label_names
         ]
-        x_array, y_array, sample_ids = twodim_embedding_resolver.get_twodim_embeddings_pca(
-            session=session,
-            collection_id=collection_id,
-            embedding_model_id=embedding_model.embedding_model_id,
-            text_embeddings=text_embeddings,
+        x_array, y_array, sample_ids, centroids = (
+            twodim_embedding_resolver.get_twodim_embeddings_pca(
+                session=session,
+                collection_id=collection_id,
+                embedding_model_id=embedding_model.embedding_model_id,
+                text_embeddings=text_embeddings,
+            )
         )
+        reference_points = [
+            {"x": cx, "y": cy, "label": label_name}
+            for (cx, cy), label_name in zip(centroids, body.pca_axes.label_names)
+        ]
     else:
-        x_array, y_array, sample_ids = twodim_embedding_resolver.get_twodim_embeddings(
+        pacmap_reference_labels = body.reference_label_names or []
+        pacmap_reference_embeddings = [
+            embedding_manager.embed_text(
+                collection_id=collection_id,
+                text_query=TextEmbedQuery(
+                    text=label_name,
+                    embedding_model_id=embedding_model.embedding_model_id,
+                ),
+            )
+            for label_name in pacmap_reference_labels
+        ]
+        x_array, y_array, sample_ids, centroids = twodim_embedding_resolver.get_twodim_embeddings(
             session=session,
             collection_id=collection_id,
             embedding_model_id=embedding_model.embedding_model_id,
+            reference_embeddings=pacmap_reference_embeddings,
         )
+        reference_points = [
+            {"x": cx, "y": cy, "label": label_name}
+            for (cx, cy), label_name in zip(centroids, pacmap_reference_labels)
+        ]
 
     matching_sample_ids: set[UUID] | None = None
     filters = body.filters if body else None
@@ -164,6 +210,7 @@ def get_2d_embeddings(
         ],
         metadata={
             "color_legend": json.dumps({str(k): v for k, v in color_legend.items()}),
+            "reference_points": json.dumps(reference_points),
         },
     )
     table = pa.table(
@@ -193,29 +240,41 @@ def get_2d_embeddings(
     )
 
 
-def _build_text_axis_direction(
+def _project_text_axis(
     axis: TextAxis,
     collection_id: UUID,
     embedding_model_id: UUID,
     embedding_manager: EmbeddingManager,
-) -> list[float]:
-    """Compute the axis direction vector for a TextAxis.
+) -> tuple[list[float], list[str]]:
+    """Embed a TextAxis and return its direction vector and its anchor words.
 
-    Returns ``embed(positive) - embed(negative)`` if a non-empty negative anchor is
-    provided; otherwise returns ``embed(positive)``.
+    The direction is ``embed(positive) - embed(negative)`` when a non-empty negative anchor
+    is provided, otherwise just ``embed(positive)``. The returned word list has one entry
+    for a single-anchor axis and two (negative, positive) for a contrastive axis — used to
+    build reference-marker labels via the cartesian product of the two axes.
     """
-    positive = embedding_manager.embed_text(
-        collection_id=collection_id,
-        text_query=TextEmbedQuery(text=axis.positive, embedding_model_id=embedding_model_id),
+    positive = np.asarray(
+        embedding_manager.embed_text(
+            collection_id=collection_id,
+            text_query=TextEmbedQuery(text=axis.positive, embedding_model_id=embedding_model_id),
+        )
     )
     negative_text = (axis.negative or "").strip()
     if not negative_text:
-        return positive
-    negative = embedding_manager.embed_text(
-        collection_id=collection_id,
-        text_query=TextEmbedQuery(text=negative_text, embedding_model_id=embedding_model_id),
-    )
-    return [float(value) for value in (np.asarray(positive) - np.asarray(negative)).tolist()]
+        direction = positive
+        words = [axis.positive]
+    else:
+        negative = np.asarray(
+            embedding_manager.embed_text(
+                collection_id=collection_id,
+                text_query=TextEmbedQuery(
+                    text=negative_text, embedding_model_id=embedding_model_id
+                ),
+            )
+        )
+        direction = positive - negative
+        words = [negative_text, axis.positive]
+    return [float(v) for v in direction.tolist()], words
 
 
 def _get_matching_sample_ids(
