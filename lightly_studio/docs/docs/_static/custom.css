@@ -196,6 +196,7 @@ code.doc-symbol-module {
 
 /* Rounded corners for images and videos in the main docs content */
 .md-content .md-typeset img,
-.md-content .md-typeset video {
+.md-content .md-typeset video,
+.md-content .md-typeset iframe {
   border-radius: 8px;
 }
