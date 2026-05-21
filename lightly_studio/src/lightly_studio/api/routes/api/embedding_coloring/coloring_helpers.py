@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import math
 from collections.abc import Callable, Iterable, Mapping, Sequence
 from dataclasses import dataclass
 from typing import Generic, Protocol, TypeVar
@@ -97,6 +98,59 @@ class DiscreteColorScale(Generic[T]):
             A DiscreteColorScale backed by the provided lookup and legend.
         """
         return cls(_lookup=lookup, legend=legend)
+
+    @classmethod
+    def from_integers(
+        cls,
+        values: Iterable[int],
+        start_cat: int = 2,
+        max_categories: int = 50,
+    ) -> DiscreteColorScale[int]:
+        """Build a color scale for integer values.
+
+        When the number of unique values is at most ``max_categories``, each
+        unique value gets its own category. Otherwise the range [min, max] is
+        split into at most ``max_categories`` equal-width buckets and each value
+        is mapped to the bucket that contains it.
+
+        In both cases categories are ordered numerically (smallest value first).
+
+        Args:
+            values: Integer values to build the scale from. Need not be unique.
+            start_cat: First category ID to assign. Defaults to 2, reserving
+                0 for filtered-out samples and 1 for unassigned samples.
+            max_categories: Maximum number of distinct color categories before
+                bucketing is applied. Defaults to 50.
+
+        Returns:
+            A DiscreteColorScale mapping each integer to a color category.
+        """
+        unique_values = sorted(set(values))
+
+        if len(unique_values) <= max_categories:
+            return DiscreteColorScale.from_values(values=unique_values, start_cat=start_cat)
+
+        min_val = unique_values[0]
+        max_val = unique_values[-1]
+        value_range = max_val - min_val
+        raw_width = value_range / max_categories
+        magnitude = 10 ** math.floor(math.log10(raw_width)) if raw_width >= 1 else 1
+        bucket_width = math.ceil(raw_width / magnitude) * magnitude
+
+        num_buckets = math.ceil((value_range + 1) / bucket_width)
+
+        def _bucket_idx(value: int) -> int:
+            return min((value - min_val) // bucket_width, num_buckets - 1)
+
+        def _label(bucket_start: int) -> str:
+            return f"{bucket_start}-{bucket_start + bucket_width - 1}"
+
+        legend: dict[int, str] = {
+            start_cat + i: _label(min_val + i * bucket_width) for i in range(num_buckets)
+        }
+        lookup: dict[int, int] = {v: start_cat + _bucket_idx(v) for v in unique_values}
+
+        return DiscreteColorScale.from_lookup(lookup=lookup, legend=legend)
 
 
 def assign_color_categories(
