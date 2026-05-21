@@ -104,7 +104,7 @@ def _build_integer_color_scale(
     magnitude = 10 ** math.floor(math.log10(raw_width)) if raw_width >= 1 else 1
     bucket_width = math.ceil(raw_width / magnitude) * magnitude
 
-    num_buckets = math.ceil(value_range / bucket_width)
+    num_buckets = math.ceil((value_range + 1) / bucket_width)
 
     def _bucket_idx(value: int) -> int:
         return min((value - min_val) // bucket_width, num_buckets - 1)
