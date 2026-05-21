@@ -75,7 +75,7 @@
             <div class="flex flex-1 items-center justify-center p-8">
                 <Typography variant="body2" className="text-red-500">
                     Error loading evaluation runs:
-                    {error ?? 'Unknown error'}
+                    {error}
                 </Typography>
             </div>
         {:else if evaluationRuns.length === 0}
