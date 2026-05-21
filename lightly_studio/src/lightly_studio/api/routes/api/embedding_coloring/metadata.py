@@ -115,4 +115,4 @@ def _build_integer_color_scale(
     legend: dict[int, str] = {2 + i: _label(min_val + i * bucket_width) for i in range(num_buckets)}
     lookup: dict[int, int] = {v: 2 + _bucket_idx(v) for v in unique_values}
 
-    return DiscreteColorScale(_lookup=lookup, legend=legend)
+    return DiscreteColorScale.from_lookup(lookup=lookup, legend=legend)
