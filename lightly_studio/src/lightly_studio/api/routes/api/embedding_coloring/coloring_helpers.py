@@ -150,7 +150,7 @@ class DiscreteColorScale(Generic[T]):
         }
         lookup: dict[int, int] = {v: start_cat + _bucket_idx(v) for v in unique_values}
 
-        return cls.from_lookup(lookup=lookup, legend=legend)
+        return DiscreteColorScale.from_lookup(lookup=lookup, legend=legend)
 
 
 def assign_color_categories(
