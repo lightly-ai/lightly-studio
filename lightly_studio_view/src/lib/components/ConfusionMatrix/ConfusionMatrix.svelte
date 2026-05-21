@@ -9,7 +9,7 @@
         VisualMapComponent
     } from 'echarts/components';
     import { CanvasRenderer } from 'echarts/renderers';
-    import { buildEchartsOption } from './buildEchartsOption';
+    import { buildEchartsOption, unifyLabels } from './buildEchartsOption';
     import ConfusionMatrixLegend from './ConfusionMatrixLegend.svelte';
     import type { ConfusionMatrix } from './types';
 
@@ -32,7 +32,8 @@
     let container: HTMLDivElement | undefined = $state();
     let chart: echarts.ECharts | null = $state(null);
 
-    const heightPx = $derived(Math.max(320, matrix.row_labels.length * 48 + 180));
+    const rowCount = $derived(unifyLabels(matrix.row_labels, matrix.col_labels).length);
+    const heightPx = $derived(Math.max(320, rowCount * 48 + 180));
 
     const maxCount = $derived(
         Math.max(1, ...matrix.counts.flatMap((row) => row).filter((n) => n > 0))

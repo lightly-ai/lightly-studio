@@ -95,7 +95,7 @@ export function buildEchartsOption(matrix: ConfusionMatrix): EChartsCoreOption {
     };
 }
 
-function unifyLabels(rowLabels: string[], colLabels: string[]): string[] {
+export function unifyLabels(rowLabels: string[], colLabels: string[]): string[] {
     const seen = new Set<string>();
     const unified: string[] = [];
     for (const label of rowLabels) {
