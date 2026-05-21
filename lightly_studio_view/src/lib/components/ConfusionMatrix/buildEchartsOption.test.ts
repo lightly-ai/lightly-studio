@@ -116,7 +116,9 @@ describe('buildEchartsOption', () => {
         };
         const option = build(matrix);
         expect(option.series[0].data).toEqual([]);
-        expect(option.series[1].data).toEqual([[NO_GROUND_TRUTH_ROW_LABEL, NO_GROUND_TRUTH_ROW_LABEL, 9]]);
+        expect(option.series[1].data).toEqual([
+            [NO_GROUND_TRUTH_ROW_LABEL, NO_GROUND_TRUTH_ROW_LABEL, 9]
+        ]);
     });
 
     it('sets both visualMaps to share the same max count, with min fixed at 1', () => {
