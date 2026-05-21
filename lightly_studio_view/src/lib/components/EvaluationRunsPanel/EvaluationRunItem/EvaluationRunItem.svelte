@@ -5,7 +5,7 @@
     import { ChevronDown } from '@lucide/svelte';
     import { slide } from 'svelte/transition';
 
-    const duration = 168 * 2; // phi
+    const duration = 300; // in ms
 
     interface Props {
         // The evaluation run to display.
