@@ -27,13 +27,13 @@ Annotations are shown in sample detail view and in dedicated annotation-focused 
 Use the Python API when you want to inspect annotations programmatically, generate them from model
 predictions, or import custom annotation outputs. Predictions and human annotations are treated as the same concept in LightlyStudio. Any functions for annotations can also process predictions. Predictions can additionally have an optional `confidence` value. See [Annotation API Reference](../api/annotation.md) for the full API surface.
 
-### Annotation sets
+### Annotation collections
 
-Every annotation belongs to an annotation set. Annotation sets group related annotations, for
+Every annotation belongs to an annotation collection. Annotation collections group related annotations, for
 example ground truth, predictions from one model run, or annotations from different annotators.
 
 This lets you keep multiple annotation sources for the same samples separate. In the GUI, you can
-inspect sets individually, visualize multiple sets together, and compare sets via evaluation runs.
+inspect collections individually, visualize multiple collections together, and compare collections via evaluation runs.
 
 
 
@@ -58,15 +58,15 @@ dataset.add_annotations_from_coco(
 ```
 
 When images are already in the dataset, the dataset-level `add_annotations_from_*` helpers import
-annotations into a named annotation set. This named-set workflow is currently supported for image
+annotations into a named annotation collection. This named-collection workflow is currently supported for image
 datasets via
 [`add_annotations_from_coco`](../api/dataset.md#lightly_studio.ImageDataset),
 [`add_annotations_from_yolo`](../api/dataset.md#lightly_studio.ImageDataset), and
 [`add_annotations_from_labelformat`](../api/dataset.md#lightly_studio.ImageDataset).
-All of these helpers take a `name` argument, which becomes the annotation set name.
+All of these helpers take a `name` argument, which becomes the annotation collection name.
 
-Reusing the same `name` appends annotations to the existing set. Using a new `name` creates a new
-set.
+Reusing the same `name` appends annotations to the existing collection. Using a new `name` creates a new
+collection.
 
 ```python
 import lightly_studio as ls

@@ -188,13 +188,13 @@ class ImageDataset(BaseSampleDataset[ImageSample]):
         """Attach annotations from a labelformat input to images already in the dataset.
 
         Images are matched by relative path under ``images_root``. Annotations are grouped
-        into an annotation set identified by ``name``; reusing the same name appends to
-        that set.
+        under an annotation collection identified by ``name``; reusing the same name appends to
+        that collection.
 
         Args:
             input_labels: Labelformat input object (e.g. ``COCOObjectDetectionInput``).
             images_root: Root path used to construct absolute image paths for matching.
-            name: Name of the annotation set.
+            name: Name of the annotation collection.
         """
         missing = add_annotations.add_annotations_from_labelformat(
             session=self.session,
@@ -217,7 +217,7 @@ class ImageDataset(BaseSampleDataset[ImageSample]):
         Args:
             annotations_json: Path to the COCO annotations JSON file.
             images_root: Root path used for matching image filenames.
-            name: Name of the annotation set.
+            name: Name of the annotation collection.
             annotation_type: ``OBJECT_DETECTION`` or ``SEGMENTATION_MASK``.
         """
         label_input: COCOObjectDetectionInput | COCOInstanceSegmentationInput
@@ -241,7 +241,7 @@ class ImageDataset(BaseSampleDataset[ImageSample]):
 
         Args:
             data_yaml: Path to the YOLO ``data.yaml`` file.
-            name: Name of the annotation set.
+            name: Name of the annotation collection.
             input_split: Specific split (e.g. ``"train"``). ``None`` loads all splits.
         """
         data_yaml = Path(data_yaml).absolute()

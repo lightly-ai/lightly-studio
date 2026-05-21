@@ -48,15 +48,15 @@ def add_annotations_from_labelformat(  # noqa: PLR0913
 
     This function processes annotations for images that are already present in the database,
     identified by matching their relative paths. It is useful for adding multiple annotation
-    sets to the same set of images.
+    collections to the same set of images.
 
     Args:
         session: The database session.
         root_collection_id: The ID of the root collection containing the images.
         input_labels: The labelformat input containing images and annotations.
         images_root: The root path used to construct file_path_abs values for matching.
-        collection_name: Optional name for the annotation set. If None, a default name
-            is used. Reusing the same name will append to existing annotations in that set.
+        collection_name: Optional name for the annotation collection. If None, a default name
+            is used. Reusing the same name will append to existing annotations in that collection.
         restrict_to_sample_ids: When provided, only annotate images whose resolved sample ID
             is in this set. Used internally to restrict to newly-created images in the
             combined image+annotation path.
@@ -159,7 +159,7 @@ def _process_annotation_batch(  # noqa: PLR0913
         root_collection_id: The ID of the root collection.
         path_to_anno_data: Mapping from file path to annotation data.
         label_map: Mapping from labelformat category ID to annotation label UUID.
-        collection_name: Optional name for the annotation set.
+        collection_name: Optional name for the annotation collection.
         restrict_to_sample_ids: If provided, only process samples in this set.
 
     Returns:
