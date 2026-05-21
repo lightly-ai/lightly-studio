@@ -12,10 +12,19 @@ const metadataInfoStore = writable([
     { name: 'score', type: 'float' },
     { name: 'object', type: 'object' }
 ]);
+const tagsStore = writable([
+    { tag_id: 'tag-a', name: 'alpha', kind: 'sample' },
+    { tag_id: 'tag-b', name: 'beta', kind: 'sample' }
+]);
 
 vi.mock('$lib/hooks/useMetadataFilters/useMetadataFilters', () => ({
     useMetadataFilters: () => ({
         metadataInfo: metadataInfoStore
+    })
+}));
+vi.mock('$lib/hooks/useTags/useTags', () => ({
+    useTags: () => ({
+        tags: tagsStore
     })
 }));
 
@@ -34,6 +43,10 @@ describe('PlotColorByPopover', () => {
             { name: 'is_train', type: 'boolean' },
             { name: 'score', type: 'float' },
             { name: 'object', type: 'object' }
+        ]);
+        tagsStore.set([
+            { tag_id: 'tag-a', name: 'alpha', kind: 'sample' },
+            { tag_id: 'tag-b', name: 'beta', kind: 'sample' }
         ]);
         usePlotColorByType('test-collection-id').clearSelectedColorByType();
     });
@@ -73,7 +86,7 @@ describe('PlotColorByPopover', () => {
         expect(get(colorByType.selectedColorByType)).toBe('metadata');
     });
 
-    it('does not render annotations or tags in the popover', async () => {
+    it('renders a tags option when sample tags exist', async () => {
         const user = userEvent.setup();
 
         render(PlotColorByPopover, {
@@ -84,8 +97,25 @@ describe('PlotColorByPopover', () => {
 
         await user.click(screen.getByTestId('plot-color-by-button'));
 
-        expect(screen.queryByRole('option', { name: 'annotations' })).not.toBeInTheDocument();
-        expect(screen.queryByRole('option', { name: 'tags' })).not.toBeInTheDocument();
+        expect(screen.getByRole('option', { name: 'tags' })).toBeInTheDocument();
+    });
+
+    it('selecting tags stores tags as the selected type', async () => {
+        const user = userEvent.setup();
+        const onSelectedKeyChange = vi.fn();
+        const colorByType = usePlotColorByType('test-collection-id');
+
+        render(PlotColorByPopover, {
+            collectionId: 'test-collection-id',
+            selectedKey: null,
+            onSelectedKeyChange
+        });
+
+        await user.click(screen.getByTestId('plot-color-by-button'));
+        await user.click(screen.getByRole('option', { name: 'tags' }));
+
+        expect(onSelectedKeyChange).toHaveBeenCalledWith(null);
+        expect(get(colorByType.selectedColorByType)).toBe('tags');
     });
 
     it('clicking the selected metadata field clears the selected type', async () => {
@@ -118,8 +148,21 @@ describe('PlotColorByPopover', () => {
         expect(screen.getByTestId('plot-color-by-button')).toHaveTextContent('metadata.split');
     });
 
+    it('button shows tags when tags are selected', () => {
+        usePlotColorByType('test-collection-id').setSelectedColorByType('tags');
+
+        render(PlotColorByPopover, {
+            collectionId: 'test-collection-id',
+            selectedKey: null,
+            onSelectedKeyChange: vi.fn()
+        });
+
+        expect(screen.getByTestId('plot-color-by-button')).toHaveTextContent('tags');
+    });
+
     it('shows the empty state when no supported metadata fields exist', async () => {
         metadataInfoStore.set([{ name: 'payload', type: 'object' }]);
+        tagsStore.set([]);
 
         render(PlotColorByPopover, {
             collectionId: 'test-collection-id',
