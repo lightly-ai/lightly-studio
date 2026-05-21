@@ -22,6 +22,7 @@
     import { useHideAnnotations } from '$lib/hooks/useHideAnnotations';
     import { useAnnotationLabels } from '$lib/hooks/useAnnotationLabels/useAnnotationLabels';
     import { useAnnotationsFilter } from '$lib/hooks/useAnnotationsFilter/useAnnotationsFilter';
+    import AnnotationCollectionsMenu from '$lib/components/AnnotationCollectionsMenu/AnnotationCollectionsMenu.svelte';
     import { useDimensions } from '$lib/hooks/useDimensions/useDimensions';
     import {
         isAnnotationDetailsRoute,
@@ -345,6 +346,9 @@
                                         {isVideos}
                                         {isImages}
                                     />
+                                    {#if isImages}
+                                        <AnnotationCollectionsMenu {collectionId} />
+                                    {/if}
                                     <LabelsMenu
                                         {annotationFilterRows}
                                         onToggleAnnotationFilter={toggleAnnotationFilterSelection}
