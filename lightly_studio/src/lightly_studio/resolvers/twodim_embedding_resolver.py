@@ -226,6 +226,7 @@ def get_twodim_embeddings_pca(
     collection_id: UUID,
     embedding_model_id: UUID,
     text_embeddings: list[list[float]],
+    reference_embeddings: list[list[float]] | None = None,
 ) -> tuple[NDArray[np.float32], NDArray[np.float32], list[UUID], list[tuple[float, float]]]:
     """Return 2D embeddings by PCA-projecting onto the top 2 directions of text embeddings.
 
@@ -233,10 +234,9 @@ def get_twodim_embeddings_pca(
     extracts the top 2 right singular vectors; image embeddings are projected onto those.
     No caching — text inputs change frequently.
 
-    Also returns 2D centroids for each input ``text_embeddings`` entry: for each label,
-    take the top-K most cosine-similar samples in the original high-dim space and return
-    the mean of their 2D projections. Used to place a reference marker inside the data
-    cloud for each label name.
+    If ``reference_embeddings`` is provided, also returns 2D centroids for each one: for
+    each reference, take the top-K most cosine-similar samples in the original high-dim
+    space and return the mean of their 2D projections.
     """
     embedding_model = session.get(EmbeddingModelTable, embedding_model_id)
     if embedding_model is None:
@@ -283,7 +283,7 @@ def get_twodim_embeddings_pca(
         image_matrix=image_matrix,
         x_values=x_values,
         y_values=y_values,
-        reference_embeddings=text_embeddings,
+        reference_embeddings=reference_embeddings or [],
     )
 
     return x_values, y_values, sample_ids, centroids

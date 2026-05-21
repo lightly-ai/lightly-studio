@@ -6,7 +6,12 @@ type TableColumn = (typeof dataColumns)[number];
 
 export type ArrowData = Record<TableColumn, unknown>;
 
-export type ReferencePoint = { x: number; y: number; label: string };
+export type ReferencePoint = {
+    x: number;
+    y: number;
+    label: string;
+    kind: 'axis' | 'label';
+};
 
 type UseArrowDataReturn = {
     data: Writable<ArrowData>;
@@ -48,8 +53,16 @@ const parseReferencePoints = (
     const text = decodeMetadata(metadata, 'reference_points');
     if (!text) return [];
     try {
-        const parsed = JSON.parse(text) as ReferencePoint[];
-        return Array.isArray(parsed) ? parsed : [];
+        const parsed = JSON.parse(text) as Array<Partial<ReferencePoint>>;
+        if (!Array.isArray(parsed)) return [];
+        return parsed.map(
+            (p): ReferencePoint => ({
+                x: typeof p.x === 'number' ? p.x : 0,
+                y: typeof p.y === 'number' ? p.y : 0,
+                label: typeof p.label === 'string' ? p.label : '',
+                kind: p.kind === 'axis' ? 'axis' : 'label'
+            })
+        );
     } catch (error) {
         console.warn('Invalid reference_points metadata in Arrow data.', error);
         return [];

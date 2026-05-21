@@ -3,6 +3,7 @@
     import Button from '$lib/components/ui/button/button.svelte';
     import { Input } from '$lib/components/ui/input';
     import { Select, SelectContent, SelectItem, SelectTrigger } from '$lib/components/ui/select';
+    import { Checkbox } from '$lib/components/ui/checkbox';
     import { ArrowLeft, ArrowRight } from '@lucide/svelte';
     import {
         EmbeddingView,
@@ -160,9 +161,12 @@
             ? { label_names: allLabelNames }
             : null
     );
-    // PacMap mode also shows label centroid markers when the collection has labels.
+    // Independent toggle for the label-marker overlay (centroid of top-K samples per
+    // annotation label). Works in any projection mode; in Text mode coexists with the
+    // axis-anchor markers, distinguished by color.
+    let showLabelMarkers = $state(true);
     const effectiveReferenceLabelNames = $derived(
-        projectionMode === 'pacmap' && allLabelNames.length > 0 ? allLabelNames : null
+        showLabelMarkers && allLabelNames.length > 0 ? allLabelNames : null
     );
 
     const embeddingsData = $derived(
@@ -383,6 +387,7 @@
         const aY = isTall ? vp.scale : vp.scale * (width / height);
         return refs.map((ref) => ({
             label: ref.label,
+            kind: ref.kind,
             left: width / 2 + (ref.x - vp.x) * aX * (width / 2),
             top: height / 2 - (ref.y - vp.y) * aY * (height / 2)
         }));
@@ -425,6 +430,32 @@
                     </SelectItem>
                 </SelectContent>
             </Select>
+            <div class="flex items-center gap-2 text-sm">
+                <Checkbox
+                    checked={showLabelMarkers}
+                    onCheckedChange={(v) => (showLabelMarkers = v === true)}
+                    disabled={allLabelNames.length === 0}
+                    data-testid="plot-show-label-markers"
+                />
+                <span
+                    class="select-none {allLabelNames.length === 0
+                        ? 'cursor-not-allowed opacity-50'
+                        : 'cursor-pointer'}"
+                    role="button"
+                    tabindex={allLabelNames.length === 0 ? -1 : 0}
+                    onclick={() => {
+                        if (allLabelNames.length > 0) showLabelMarkers = !showLabelMarkers;
+                    }}
+                    onkeydown={(e) => {
+                        if ((e.key === 'Enter' || e.key === ' ') && allLabelNames.length > 0) {
+                            e.preventDefault();
+                            showLabelMarkers = !showLabelMarkers;
+                        }
+                    }}
+                >
+                    Show label markers
+                </span>
+            </div>
         </div>
         <Button
             variant="ghost"
@@ -472,19 +503,27 @@
                     <!-- LIG-9502 prototype: reference markers. The outer div is a zero-size anchor
                          positioned exactly at the data point; the dot is centered on the anchor and
                          the label hangs to its right so labels of different widths don't shift the
-                         visible rectangle corners. -->
+                         visible rectangle corners. Axis markers (Text mode anchors) are amber;
+                         label markers (top-K-similar centroids per annotation label) are cyan. -->
                     <div class="pointer-events-none absolute inset-0 z-20">
-                        {#each projectedReferences as ref (ref.label)}
+                        {#each projectedReferences as ref (ref.kind + '|' + ref.label)}
                             <div
                                 class="absolute"
                                 style="left: {ref.left}px; top: {ref.top}px;"
                                 data-testid="plot-reference-marker"
+                                data-marker-kind={ref.kind}
                             >
                                 <div
-                                    class="absolute h-2 w-2 -translate-x-1/2 -translate-y-1/2 rounded-full border border-black bg-amber-400"
+                                    class="absolute -translate-x-1/2 -translate-y-1/2 rounded-full border border-black {ref.kind ===
+                                    'axis'
+                                        ? 'h-6 w-6 bg-green-500'
+                                        : 'h-2 w-2 bg-cyan-400'}"
                                 ></div>
                                 <span
-                                    class="absolute left-2 top-0 -translate-y-1/2 whitespace-nowrap text-xs font-medium text-white"
+                                    class="absolute top-0 -translate-y-1/2 whitespace-nowrap text-xs font-medium text-white {ref.kind ===
+                                    'axis'
+                                        ? 'left-4'
+                                        : 'left-2'}"
                                     style="text-shadow: 0 0 2px #000, 0 0 2px #000;"
                                 >
                                     {ref.label}

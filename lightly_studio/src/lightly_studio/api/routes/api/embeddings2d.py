@@ -88,7 +88,18 @@ def get_2d_embeddings(
     if embedding_model is None:
         raise ValueError("No embedding model configured.")
 
-    reference_points: list[dict[str, float | str]] = []
+    def _embed(text: str) -> list[float]:
+        return embedding_manager.embed_text(
+            collection_id=collection_id,
+            text_query=TextEmbedQuery(
+                text=text, embedding_model_id=embedding_model.embedding_model_id
+            ),
+        )
+
+    label_marker_names = body.reference_label_names or []
+    label_marker_embeddings = [_embed(name) for name in label_marker_names]
+
+    reference_points: list[dict[str, object]] = []
     if body.nlp_axes is not None:
         direction_x, x_words = _project_text_axis(
             axis=body.nlp_axes.x,
@@ -102,21 +113,12 @@ def get_2d_embeddings(
             embedding_model_id=embedding_model.embedding_model_id,
             embedding_manager=embedding_manager,
         )
-        # Reference labels: cartesian product of axis anchor words (e.g. "young male",
-        # "young female", "old male", "old female"). Each is embedded as its own text and
-        # placed at the centroid of its top-K most cosine-similar samples in the original
-        # high-dim space. This puts markers inside the data cloud showing where each
-        # concept actually manifests in your data.
-        reference_labels = [f"{x_word} {y_word}" for x_word in x_words for y_word in y_words]
-        reference_embeddings = [
-            embedding_manager.embed_text(
-                collection_id=collection_id,
-                text_query=TextEmbedQuery(
-                    text=label, embedding_model_id=embedding_model.embedding_model_id
-                ),
-            )
-            for label in reference_labels
-        ]
+        # Axis markers: cartesian product of axis anchor words (e.g. "young male").
+        axis_marker_labels = [f"{x_word} {y_word}" for x_word in x_words for y_word in y_words]
+        axis_marker_embeddings = [_embed(label) for label in axis_marker_labels]
+        # Pack axis + label markers into a single reference_embeddings list so the resolver
+        # returns both sets of centroids in one pass.
+        combined_embeddings = axis_marker_embeddings + label_marker_embeddings
         x_array, y_array, sample_ids, centroids = (
             twodim_embedding_resolver.get_twodim_embeddings_nlp(
                 session=session,
@@ -124,57 +126,42 @@ def get_2d_embeddings(
                 embedding_model_id=embedding_model.embedding_model_id,
                 direction_x=direction_x,
                 direction_y=direction_y,
-                reference_embeddings=reference_embeddings,
+                reference_embeddings=combined_embeddings,
             )
         )
+        n_axis = len(axis_marker_labels)
         reference_points = [
-            {"x": cx, "y": cy, "label": label}
-            for (cx, cy), label in zip(centroids, reference_labels)
+            {"x": cx, "y": cy, "label": label, "kind": "axis"}
+            for (cx, cy), label in zip(centroids[:n_axis], axis_marker_labels)
+        ] + [
+            {"x": cx, "y": cy, "label": label, "kind": "label"}
+            for (cx, cy), label in zip(centroids[n_axis:], label_marker_names)
         ]
     elif body.pca_axes is not None and len(body.pca_axes.label_names) >= 2:  # noqa: PLR2004
-        text_embeddings = [
-            embedding_manager.embed_text(
-                collection_id=collection_id,
-                text_query=TextEmbedQuery(
-                    text=label_name,
-                    embedding_model_id=embedding_model.embedding_model_id,
-                ),
-            )
-            for label_name in body.pca_axes.label_names
-        ]
+        text_embeddings = [_embed(label_name) for label_name in body.pca_axes.label_names]
         x_array, y_array, sample_ids, centroids = (
             twodim_embedding_resolver.get_twodim_embeddings_pca(
                 session=session,
                 collection_id=collection_id,
                 embedding_model_id=embedding_model.embedding_model_id,
                 text_embeddings=text_embeddings,
+                reference_embeddings=label_marker_embeddings,
             )
         )
         reference_points = [
-            {"x": cx, "y": cy, "label": label_name}
-            for (cx, cy), label_name in zip(centroids, body.pca_axes.label_names)
+            {"x": cx, "y": cy, "label": label, "kind": "label"}
+            for (cx, cy), label in zip(centroids, label_marker_names)
         ]
     else:
-        pacmap_reference_labels = body.reference_label_names or []
-        pacmap_reference_embeddings = [
-            embedding_manager.embed_text(
-                collection_id=collection_id,
-                text_query=TextEmbedQuery(
-                    text=label_name,
-                    embedding_model_id=embedding_model.embedding_model_id,
-                ),
-            )
-            for label_name in pacmap_reference_labels
-        ]
         x_array, y_array, sample_ids, centroids = twodim_embedding_resolver.get_twodim_embeddings(
             session=session,
             collection_id=collection_id,
             embedding_model_id=embedding_model.embedding_model_id,
-            reference_embeddings=pacmap_reference_embeddings,
+            reference_embeddings=label_marker_embeddings,
         )
         reference_points = [
-            {"x": cx, "y": cy, "label": label_name}
-            for (cx, cy), label_name in zip(centroids, pacmap_reference_labels)
+            {"x": cx, "y": cy, "label": label, "kind": "label"}
+            for (cx, cy), label in zip(centroids, label_marker_names)
         ]
 
     matching_sample_ids: set[UUID] | None = None
