@@ -1,8 +1,7 @@
 import { NO_GROUND_TRUTH_ROW_LABEL, NO_PREDICTION_COL_LABEL, type ConfusionMatrix } from './types';
 
 /**
- * Storybook fixtures. The shapes match what the LIG-9514 endpoint returns
- * (sorted real classes, then synthetic FP row / FN column).
+ * Storybook fixtures. The shapes match what the endpoint endpoint returns
  */
 
 const fp = NO_GROUND_TRUTH_ROW_LABEL;
