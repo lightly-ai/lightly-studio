@@ -1,18 +1,34 @@
 import { fireEvent, render, screen } from '@testing-library/svelte';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import userEvent from '@testing-library/user-event';
+import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import PlotPanel from './PlotPanel.svelte';
 import { useEmbeddings } from '$lib/hooks/useEmbeddings/useEmbeddings';
 import { writable, type Writable } from 'svelte/store';
 import { tick } from 'svelte';
+import { usePlotColorByType } from './PlotColorByPopover/usePlotColorByType/usePlotColorByType';
 
 let rangeSelectionStore: Writable<Array<{ x: number; y: number }> | null>;
 let selectedSampleIdsStore: Writable<string[]>;
 let imageFilterStore: Writable<Record<string, unknown>>;
 let arrowDataStore: Writable<Record<string, unknown> | undefined>;
+let metadataInfoStore: Writable<Array<{ name: string; type: string }>>;
 
 const mockSetShowPlot = vi.fn();
 const mockSetRangeSelectionForCollection = vi.fn();
 const mockUpdateSampleIds = vi.fn();
+
+class ResizeObserverMock {
+    observe() {}
+    disconnect() {}
+}
+
+const originalHasPointerCapture = Element.prototype.hasPointerCapture;
+const originalSetPointerCapture = Element.prototype.setPointerCapture;
+const originalReleasePointerCapture = Element.prototype.releasePointerCapture;
+const originalScrollIntoView = Element.prototype.scrollIntoView;
+const originalResizeObserver = globalThis.ResizeObserver;
+
+vi.stubGlobal('ResizeObserver', ResizeObserverMock);
 
 vi.mock('$app/state', () => ({
     page: {
@@ -31,6 +47,7 @@ vi.mock('$lib/hooks/useEmbeddings/useEmbeddings');
 vi.mock('./useArrowData/useArrowData', () => ({
     useArrowData: () => ({
         data: arrowDataStore,
+        colorLegend: writable(new Map([[1, 'Filtered']])),
         error: writable(null)
     })
 }));
@@ -55,6 +72,11 @@ vi.mock('$lib/hooks/useImageFilters/useImageFilters', () => ({
         updateSampleIds: mockUpdateSampleIds
     })
 }));
+vi.mock('$lib/hooks/useMetadataFilters/useMetadataFilters', () => ({
+    useMetadataFilters: () => ({
+        metadataInfo: metadataInfoStore
+    })
+}));
 
 vi.mock('$lib/hooks/useGlobalStorage', () => {
     return {
@@ -67,24 +89,48 @@ vi.mock('$lib/hooks/useGlobalStorage', () => {
 });
 
 describe('PlotPanel.svelte', () => {
+    beforeAll(() => {
+        Element.prototype.hasPointerCapture = vi.fn(() => false);
+        Element.prototype.setPointerCapture = vi.fn();
+        Element.prototype.releasePointerCapture = vi.fn();
+        Element.prototype.scrollIntoView = vi.fn();
+    });
+
+    afterAll(() => {
+        Element.prototype.hasPointerCapture = originalHasPointerCapture;
+        Element.prototype.setPointerCapture = originalSetPointerCapture;
+        Element.prototype.releasePointerCapture = originalReleasePointerCapture;
+        Element.prototype.scrollIntoView = originalScrollIntoView;
+        vi.stubGlobal('ResizeObserver', originalResizeObserver);
+    });
+
     beforeEach(() => {
         vi.resetAllMocks();
+        vi.stubGlobal('ResizeObserver', ResizeObserverMock);
+        usePlotColorByType('test-collection-id').clearSelectedColorByType();
         rangeSelectionStore = writable(null);
         selectedSampleIdsStore = writable([]);
         imageFilterStore = writable({ sample_filter: { sample_ids: [] } });
         arrowDataStore = writable(undefined);
+        metadataInfoStore = writable([{ name: 'split', type: 'string' }]);
+        (useEmbeddings as vi.Mock).mockReturnValue(
+            writable({
+                isError: false,
+                error: null,
+                isLoading: false,
+                data: new Blob()
+            })
+        );
     });
 
     it('should display an error message when useEmbeddings returns an error object', async () => {
         const mockError: Error = { name: 'TestError', message: 'Test error from object' };
-        (useEmbeddings as vi.Mock).mockReturnValue(
-            writable({
-                isError: true,
-                error: mockError,
-                isLoading: false,
-                data: null
-            })
-        );
+        (useEmbeddings as vi.Mock).mockReturnValue({
+            isError: true,
+            error: mockError,
+            isLoading: false,
+            data: null
+        });
 
         render(PlotPanel);
 
@@ -100,14 +146,12 @@ describe('PlotPanel.svelte', () => {
             { x: 1, y: 1 },
             { x: 0, y: 1 }
         ]);
-        (useEmbeddings as vi.Mock).mockReturnValue(
-            writable({
-                isError: false,
-                error: null,
-                isLoading: true,
-                data: null
-            })
-        );
+        (useEmbeddings as vi.Mock).mockReturnValue({
+            isError: false,
+            error: null,
+            isLoading: true,
+            data: null
+        });
 
         render(PlotPanel);
         await fireEvent.keyDown(window, { key: 'Escape' });
@@ -124,14 +168,12 @@ describe('PlotPanel.svelte', () => {
             { x: 0, y: 1 }
         ]);
         selectedSampleIdsStore = writable(['sample-1']);
-        (useEmbeddings as vi.Mock).mockReturnValue(
-            writable({
-                isError: false,
-                error: null,
-                isLoading: true,
-                data: null
-            })
-        );
+        (useEmbeddings as vi.Mock).mockReturnValue({
+            isError: false,
+            error: null,
+            isLoading: true,
+            data: null
+        });
 
         render(PlotPanel);
         await fireEvent.mouseUp(window);
@@ -147,14 +189,12 @@ describe('PlotPanel.svelte', () => {
             { x: 1, y: 1 },
             { x: 0, y: 1 }
         ]);
-        (useEmbeddings as vi.Mock).mockReturnValue(
-            writable({
-                isError: false,
-                error: null,
-                isLoading: true,
-                data: null
-            })
-        );
+        (useEmbeddings as vi.Mock).mockReturnValue({
+            isError: false,
+            error: null,
+            isLoading: true,
+            data: null
+        });
 
         render(PlotPanel);
 
@@ -185,16 +225,9 @@ describe('PlotPanel.svelte', () => {
             x: new Float32Array([1, 2, 3]),
             y: new Float32Array([1, 2, 3]),
             fulfils_filter: new Uint8Array([1, 1, 0]),
+            color_category: new Uint8Array([1, 1, 0]),
             sample_id: ['sample-1', 'sample-2', 'sample-3']
         });
-        (useEmbeddings as vi.Mock).mockReturnValue(
-            writable({
-                isError: false,
-                error: null,
-                isLoading: true,
-                data: null
-            })
-        );
 
         render(PlotPanel);
         await fireEvent.mouseUp(window);
@@ -202,5 +235,26 @@ describe('PlotPanel.svelte', () => {
         expect(mockUpdateSampleIds).toHaveBeenCalledWith([]);
         expect(mockUpdateSampleIds).not.toHaveBeenCalledWith(['sample-1', 'sample-2']);
         expect(mockSetRangeSelectionForCollection).toHaveBeenCalledWith('test-collection-id', null);
+    });
+
+    it('passes derived colorBy to useEmbeddings when a metadata field is selected', async () => {
+        const user = userEvent.setup();
+
+        render(PlotPanel);
+
+        expect(useEmbeddings).toHaveBeenLastCalledWith(
+            'test-collection-id',
+            expect.anything(),
+            null
+        );
+
+        await user.click(screen.getByTestId('plot-color-by-button'));
+        await user.click(await screen.findByRole('option', { name: 'metadata.split' }));
+        await tick();
+
+        expect(useEmbeddings).toHaveBeenLastCalledWith('test-collection-id', expect.anything(), {
+            type: 'metadata_field',
+            key: 'split'
+        });
     });
 });

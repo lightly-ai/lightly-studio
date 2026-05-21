@@ -15,6 +15,7 @@ from lightly_studio.api.routes.video_frames_media import (
     _CAP_CACHE_SIZE,
     _get_cached_capture,
 )
+from lightly_studio.db_manager import DatabaseEngine
 from lightly_studio.models.collection import SampleType
 from tests.helpers_resolvers import create_collection
 from tests.resolvers.video.helpers import VideoStub, create_video_file, create_video_with_frames
@@ -265,40 +266,40 @@ def test_get_media_executor_has_workers() -> None:
 
 
 def test_stream_frame_multiple_frames_same_video(
-    test_client: TestClient,
-    db_session: Session,
+    streaming_media_test_client: TestClient,
+    _db_engine: DatabaseEngine,  # noqa: PT019
     tmp_path: Path,
 ) -> None:
     """Test streaming multiple frames from the same video uses caching."""
-    collection = create_collection(session=db_session, sample_type=SampleType.VIDEO)
-    collection_id = collection.collection_id
+    frame_ids = []
+    with _db_engine.session() as session:
+        collection = create_collection(session=session, sample_type=SampleType.VIDEO)
+        collection_id = collection.collection_id
 
-    video_path = create_video_file(
-        output_path=tmp_path / "test_video.mp4",
-        width=320,
-        height=240,
-        num_frames=5,
-        fps=1,
-    )
-
-    video_with_frames = create_video_with_frames(
-        session=db_session,
-        collection_id=collection_id,
-        video=VideoStub(
-            path=str(video_path),
+        video_path = create_video_file(
+            output_path=tmp_path / "test_video.mp4",
             width=320,
             height=240,
-            duration_s=5.0,
-            fps=1.0,
-        ),
-    )
+            num_frames=5,
+            fps=1,
+        )
 
-    # Request multiple frames from the same video
-    frame_ids = video_with_frames.frame_sample_ids[:3]
+        video_with_frames = create_video_with_frames(
+            session=session,
+            collection_id=collection_id,
+            video=VideoStub(
+                path=str(video_path),
+                width=320,
+                height=240,
+                duration_s=5.0,
+                fps=1.0,
+            ),
+        )
+        frame_ids = video_with_frames.frame_sample_ids[:3]
 
     responses = []
     for frame_id in frame_ids:
-        response = test_client.get(
+        response = streaming_media_test_client.get(
             f"/frames/media/{frame_id}",
             params={"quality": "high", "max_width": 80, "max_height": 80},
         )

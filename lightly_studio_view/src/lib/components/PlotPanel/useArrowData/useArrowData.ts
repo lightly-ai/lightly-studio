@@ -1,14 +1,36 @@
 import { tableFromIPC } from 'apache-arrow';
 import { writable, type Writable } from 'svelte/store';
 
-const dataColumns = ['x', 'y', 'fulfils_filter', 'sample_id'] as const;
+const dataColumns = ['x', 'y', 'fulfils_filter', 'color_category', 'sample_id'] as const;
 type TableColumn = (typeof dataColumns)[number];
 
 export type ArrowData = Record<TableColumn, unknown>;
 
 type UseArrowDataReturn = {
     data: Writable<ArrowData>;
+    colorLegend: Writable<Map<number, string>>;
     error: Writable<string | undefined>;
+};
+
+const parseColorLegend = (metadata: Map<string, string | Uint8Array> | undefined) => {
+    const rawLegend = metadata?.get('color_legend');
+    if (!rawLegend) {
+        return new Map<number, string>();
+    }
+
+    const legendText =
+        rawLegend instanceof Uint8Array ? new TextDecoder().decode(rawLegend) : rawLegend;
+
+    let parsedLegend: Record<string, string> = {};
+    try {
+        parsedLegend = JSON.parse(legendText) as Record<string, string>;
+    } catch (error) {
+        console.warn('Invalid color_legend metadata in Arrow data.', error);
+    }
+
+    return new Map(
+        Object.entries(parsedLegend).map(([key, value]) => [Number(key), value] as const)
+    );
 };
 
 /**
@@ -23,6 +45,7 @@ export function useArrowData({ blobData }: { blobData: Blob }): UseArrowDataRetu
     const error = writable<string | undefined>();
 
     const data = writable<ArrowData>();
+    const colorLegend = writable<Map<number, string>>(new Map());
 
     const readData = async () => {
         try {
@@ -41,11 +64,12 @@ export function useArrowData({ blobData }: { blobData: Blob }): UseArrowDataRetu
                 columnData.set(col, table.getChild(col)?.toArray());
             }
             data.set(Object.fromEntries(columnData) as Record<TableColumn, unknown>);
+            colorLegend.set(parseColorLegend(table.schema?.metadata));
         } catch (e) {
             error.set(`Error reading Arrow data: ${String(e)}`);
         }
     };
 
     readData();
-    return { data, error };
+    return { data, colorLegend, error };
 }

@@ -17,7 +17,7 @@
         })
     );
 
-    const sampleAdjacentData = $derived($sampleAdjacentQuery.data);
+    const sampleAdjacentData = $derived(sampleAdjacentQuery.data);
 
     function goToNextVideo() {
         if (!sampleAdjacentData) return null;

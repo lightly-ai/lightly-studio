@@ -16,8 +16,8 @@ export function useEmbedText({ collectionId, queryText, embeddingModelId }: UseE
             embedding_model_id: embeddingModelId
         }
     });
-    return createQuery({
+    return createQuery(() => ({
         ...options,
         enabled: Boolean(queryText)
-    });
+    }));
 }

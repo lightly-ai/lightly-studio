@@ -1,8 +1,11 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { useVideo } from './useVideo';
-import { writable, get } from 'svelte/store';
+import { get } from 'svelte/store';
 import type { VideoView } from '$lib/api/lightly_studio_local/types.gen';
 import { createQuery, useQueryClient } from '@tanstack/svelte-query';
+import { render } from '@testing-library/svelte';
+import { flushSync } from 'svelte';
+import UseVideoHarness from './UseVideoHarness.svelte';
+import type { useVideo } from './useVideo.svelte';
 
 vi.mock('$lib/api/lightly_studio_local/@tanstack/svelte-query.gen', () => ({
     getVideoByIdOptions: vi.fn((config) => ({
@@ -30,15 +33,44 @@ describe('useVideo', () => {
         invalidateQueries: vi.fn()
     };
 
+    const defaultQueryResult = {
+        data: undefined as VideoView | undefined,
+        error: null as Error | null,
+        isLoading: false
+    };
+
+    let mockQueryResult = { ...defaultQueryResult };
+
+    const renderHook = () => {
+        let result: ReturnType<typeof useVideo> | undefined;
+
+        render(UseVideoHarness, {
+            onReady: (hookResult) => {
+                result = hookResult;
+            }
+        });
+        flushSync();
+
+        if (!result) {
+            throw new Error('useVideo harness did not initialize');
+        }
+
+        return result;
+    };
+
     beforeEach(() => {
         vi.clearAllMocks();
+        mockQueryResult = { ...defaultQueryResult };
+        vi.mocked(createQuery).mockReturnValue(
+            mockQueryResult as unknown as ReturnType<typeof createQuery>
+        );
         vi.mocked(useQueryClient).mockReturnValue(
             mockQueryClient as unknown as ReturnType<typeof useQueryClient>
         );
     });
 
     it('should initialize with undefined data, null error, and false isLoading', () => {
-        const { data, error, isLoading } = useVideo();
+        const { data, error, isLoading } = renderHook();
 
         expect(get(data)).toBeUndefined();
         expect(get(error)).toBeNull();
@@ -46,20 +78,14 @@ describe('useVideo', () => {
     });
 
     it('should load video data by sample_id', () => {
-        const mockQueryStore = writable({
-            data: mockVideoData,
-            error: null,
-            isLoading: false
-        });
-        vi.mocked(createQuery).mockReturnValue(
-            mockQueryStore as unknown as ReturnType<typeof createQuery>
-        );
+        mockQueryResult.data = mockVideoData;
 
-        const { data, error, isLoading, loadById } = useVideo();
+        const { data, error, isLoading, loadById } = renderHook();
 
-        loadById('video-1');
+        flushSync(() => loadById('video-1'));
 
-        expect(createQuery).toHaveBeenCalledWith(
+        expect(createQuery).toHaveBeenCalledWith(expect.any(Function));
+        expect(vi.mocked(createQuery).mock.calls[0][0]()).toEqual(
             expect.objectContaining({
                 path: {
                     sample_id: 'video-1'
@@ -72,52 +98,29 @@ describe('useVideo', () => {
     });
 
     it('should cache video and only refetch when different video is requested', () => {
-        const mockQueryStore1 = writable({
-            data: mockVideoData,
-            error: null,
-            isLoading: false
-        });
-        const mockQueryStore2 = writable({
-            data: { ...mockVideoData, sample_id: 'video-2' },
-            error: null,
-            isLoading: false
-        });
+        const { loadById, data } = renderHook();
 
-        vi.mocked(createQuery)
-            .mockReturnValueOnce(mockQueryStore1 as unknown as ReturnType<typeof createQuery>)
-            .mockReturnValueOnce(mockQueryStore2 as unknown as ReturnType<typeof createQuery>);
-
-        const { loadById, data } = useVideo();
-
-        // First load
-        loadById('video-1');
+        mockQueryResult.data = mockVideoData;
+        flushSync(() => loadById('video-1'));
         expect(createQuery).toHaveBeenCalledTimes(1);
         expect(get(data)?.sample_id).toBe('video-1');
 
-        // Try loading same video again - should not refetch
-        loadById('video-1');
+        flushSync(() => loadById('video-1'));
         expect(createQuery).toHaveBeenCalledTimes(1);
 
-        // Load different video - should refetch
-        loadById('video-2');
-        expect(createQuery).toHaveBeenCalledTimes(2);
+        mockQueryResult.data = { ...mockVideoData, sample_id: 'video-2' };
+        flushSync(() => loadById('video-2'));
+        expect(createQuery).toHaveBeenCalledTimes(1);
         expect(get(data)?.sample_id).toBe('video-2');
     });
 
     it('should expose error when query fails', () => {
         const mockError = new Error('Failed to load video');
-        const mockQueryStore = writable({
-            data: undefined,
-            error: mockError,
-            isLoading: false
-        });
-        vi.mocked(createQuery).mockReturnValue(
-            mockQueryStore as unknown as ReturnType<typeof createQuery>
-        );
+        mockQueryResult.error = mockError;
 
-        const { data, error, isLoading, loadById } = useVideo();
+        const { data, error, isLoading, loadById } = renderHook();
 
-        loadById('video-1');
+        flushSync(() => loadById('video-1'));
 
         expect(get(data)).toBeUndefined();
         expect(get(error)).toEqual(mockError);
@@ -125,18 +128,11 @@ describe('useVideo', () => {
     });
 
     it('should expose refetch function that invalidates queries', () => {
-        const mockQueryStore = writable({
-            data: mockVideoData,
-            error: null,
-            isLoading: false
-        });
-        vi.mocked(createQuery).mockReturnValue(
-            mockQueryStore as unknown as ReturnType<typeof createQuery>
-        );
+        mockQueryResult.data = mockVideoData;
 
-        const { loadById, refetch } = useVideo();
+        const { loadById, refetch } = renderHook();
 
-        loadById('video-1');
+        flushSync(() => loadById('video-1'));
 
         const refetchFn = get(refetch);
         refetchFn();
@@ -147,20 +143,9 @@ describe('useVideo', () => {
     });
 
     it('should notify subscribers when query state changes', () => {
-        const mockQueryStore = writable<{
-            data: VideoView | undefined;
-            error: Error | null;
-            isLoading: boolean;
-        }>({
-            data: undefined,
-            error: null,
-            isLoading: true
-        });
-        vi.mocked(createQuery).mockReturnValue(
-            mockQueryStore as unknown as ReturnType<typeof createQuery>
-        );
+        mockQueryResult.isLoading = true;
 
-        const { data, error, isLoading, loadById } = useVideo();
+        const { data, error, isLoading, loadById } = renderHook();
 
         const dataValues: (VideoView | undefined)[] = [];
         const errorValues: (Error | null)[] = [];
@@ -170,14 +155,11 @@ describe('useVideo', () => {
         const unsubError = error.subscribe((value) => errorValues.push(value));
         const unsubLoading = isLoading.subscribe((value) => loadingValues.push(value));
 
-        loadById('video-1');
+        flushSync(() => loadById('video-1'));
 
-        // Simulate query completion
-        mockQueryStore.set({
-            data: mockVideoData,
-            error: null,
-            isLoading: false
-        });
+        mockQueryResult.data = mockVideoData;
+        mockQueryResult.isLoading = false;
+        flushSync(() => loadById('video-2'));
 
         expect(dataValues[dataValues.length - 1]).toEqual(mockVideoData);
         expect(errorValues[errorValues.length - 1]).toBeNull();

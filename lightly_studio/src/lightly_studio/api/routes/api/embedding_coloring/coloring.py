@@ -7,12 +7,15 @@ from uuid import UUID
 
 from pydantic import BaseModel, Field
 from sqlmodel import Session
+from typing_extensions import assert_never
 
-from lightly_studio.api.routes.api.embedding_coloring import metadata
-
-# Categories 0 and 1 are reserved (0 = excluded by filter, 1 = unassigned),
-# so real color categories start at 2.
-_COLOR_OFFSET = 2
+from lightly_studio.api.routes.api.embedding_coloring import (
+    annotations as annotation_coloring,
+)
+from lightly_studio.api.routes.api.embedding_coloring import (
+    metadata,
+    tags,
+)
 
 
 class TagColorBy(BaseModel):
@@ -63,16 +66,33 @@ def build_color_data(
         length of `color_categories` is the number of samples. The `color_legend` is a mapping
         from color ID to a human-readable string.
     """
-    if not isinstance(color_by, MetadataFieldColorBy):
-        return list(fulfils_filter), {}
+    if isinstance(color_by, TagColorBy):
+        return tags.build_tag_color_maps(
+            session=session,
+            tag_ids=color_by.tag_ids,
+            sample_ids=sample_ids,
+            fulfils_filter=fulfils_filter,
+        )
 
-    color_categories, legend = metadata.build_metadata_color_maps(
-        session=session,
-        collection_id=collection_id,
-        key=color_by.key,
-        sample_ids=sample_ids,
-        fulfils_filter=fulfils_filter,
-        start_cat=_COLOR_OFFSET,
-    )
-    legend[1] = "Unassigned"
-    return color_categories, legend
+    if isinstance(color_by, MetadataFieldColorBy):
+        return metadata.build_metadata_color_maps(
+            session=session,
+            collection_id=collection_id,
+            key=color_by.key,
+            sample_ids=sample_ids,
+            fulfils_filter=fulfils_filter,
+        )
+
+    if isinstance(color_by, AnnotationColorBy):
+        return annotation_coloring.build_annotation_color_maps(
+            session=session,
+            annotation_label_ids=color_by.annotation_label_ids,
+            sample_ids=sample_ids,
+            fulfils_filter=fulfils_filter,
+        )
+
+    # Static check that all ColorBy variants are handled above.
+    if color_by is not None:
+        assert_never(color_by)
+
+    return list(fulfils_filter), {}
