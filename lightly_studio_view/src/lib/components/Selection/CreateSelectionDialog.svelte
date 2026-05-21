@@ -2,6 +2,7 @@
     import { page } from '$app/state';
     import {
         createCombinationSelection,
+        computeSimilarityMetadata,
         computeTypicalityMetadata
     } from '$lib/api/lightly_studio_local/sdk.gen';
     import { Button } from '$lib/components/ui/button';
@@ -20,7 +21,9 @@
     // Get collection ID from URL params
     const collectionId = $derived(page.params.collection_id!);
 
-    const { loadTags } = $derived(useTags({ collection_id: collectionId, kind: ['sample'] }));
+    const { loadTags, tags, setTagSelected } = $derived(
+        useTags({ collection_id: collectionId, kind: ['sample'] })
+    );
 
     const { isSelectionDialogOpen, openSelectionDialog, closeSelectionDialog } =
         useSelectionDialog();
@@ -52,15 +55,30 @@
     );
 
     // Form state
-    let selectionStrategy = $state<'diversity' | 'typicality' | ''>('');
+    let selectionStrategy = $state<'diversity' | 'typicality' | 'similarity' | ''>('');
     let nSamplesToSelect = $state<number>(10);
+    let queryTagId = $state('');
     let selectionResultTagName = $state<string>('');
     let isSubmitting = $state(false);
     let loadingMessage = $state<string>('');
 
+    const STRATEGY_LABELS: Record<string, string> = {
+        diversity: 'Diversity',
+        typicality: 'Typicality',
+        similarity: 'Similarity'
+    };
+
     // Form validation
     const isFormValid = $derived(
-        selectionStrategy !== '' && nSamplesToSelect > 0 && selectionResultTagName.trim().length > 0
+        selectionStrategy !== '' &&
+            (selectionStrategy === 'similarity' ? queryTagId !== '' : true) &&
+            nSamplesToSelect > 0 &&
+            selectionResultTagName.trim().length > 0
+    );
+
+    const isSimilaritySupported = $derived(!isVideoCollection);
+    const selectedQueryTagName = $derived(
+        $tags.find((tag) => tag.tag_id === queryTagId)?.name ?? 'Select tag'
     );
 
     const noSamples = $derived($filteredSampleCount === 0);
@@ -82,15 +100,49 @@
         submitSelection();
     }
 
-    function handleSelectionSuccess() {
-        toast.success('Selection created successfully');
-        loadTags();
-
-        closeSelectionDialog();
-
+    function resetForm() {
         selectionStrategy = '';
         nSamplesToSelect = 10;
+        queryTagId = '';
         selectionResultTagName = '';
+    }
+
+    async function handleSelectionSuccess() {
+        const createdTagName = selectionResultTagName;
+        toast.success('Selection created successfully');
+        await loadTags();
+
+        // Select the newly created tag
+        const newTag = $tags.find((tag) => tag.name === createdTagName);
+        if (newTag) {
+            setTagSelected(newTag.tag_id, true);
+        }
+
+        closeSelectionDialog();
+        resetForm();
+    }
+
+    async function performSelection(strategies: SelectionRequest['strategies']) {
+        loadingMessage = 'Creating selection...';
+        const response = await createCombinationSelection({
+            path: { collection_id: collectionId },
+            body: {
+                n_samples_to_select: nSamplesToSelect,
+                selection_result_tag_name: selectionResultTagName,
+                strategies,
+                filter: selectionFilter ?? undefined
+            }
+        });
+
+        if (response.error) {
+            toast.error(
+                (response.error as { error?: string }).error || 'Failed to create selection'
+            );
+            return false;
+        }
+
+        await handleSelectionSuccess();
+        return true;
     }
 
     async function submitSelection() {
@@ -100,34 +152,15 @@
             error: string;
         };
 
-        let responseError: SelectionError | null = null;
-
         try {
             if (selectionStrategy === 'diversity') {
-                const response = await createCombinationSelection({
-                    path: { collection_id: collectionId },
-                    body: {
-                        n_samples_to_select: nSamplesToSelect,
-                        selection_result_tag_name: selectionResultTagName,
-                        strategies: [
-                            {
-                                strategy_name: 'diversity',
-                                embedding_model_name: null
-                            }
-                        ],
-                        filter: selectionFilter ?? undefined
+                await performSelection([
+                    {
+                        strategy_name: 'diversity',
+                        embedding_model_name: null
                     }
-                });
-
-                responseError = response.error as SelectionError;
-                if (responseError) {
-                    toast.error(String(responseError.error) || 'Failed to create selection');
-                    return;
-                }
-
-                handleSelectionSuccess();
+                ]);
             } else if (selectionStrategy === 'typicality') {
-                // First, compute typicality metadata.
                 loadingMessage = 'Computing typicality metadata...';
                 const typicalityResponse = await computeTypicalityMetadata({
                     path: { collection_id: collectionId },
@@ -137,39 +170,49 @@
                     }
                 });
 
-                responseError = typicalityResponse.error as SelectionError;
                 if (typicalityResponse.error) {
                     toast.error(
                         'Failed to compute typicality metadata: ' +
-                            (responseError.error || 'Unknown error')
+                            ((typicalityResponse.error as SelectionError).error || 'Unknown error')
                     );
                     return;
                 }
 
-                // Then create selection with weighting strategy.
-                loadingMessage = 'Creating selection...';
-                const selectionResponse = await createCombinationSelection({
-                    path: { collection_id: collectionId },
-                    body: {
-                        n_samples_to_select: nSamplesToSelect,
-                        selection_result_tag_name: selectionResultTagName,
-                        strategies: [
-                            {
-                                strategy_name: 'weights',
-                                metadata_key: 'typicality'
-                            }
-                        ],
-                        filter: selectionFilter ?? undefined
+                await performSelection([
+                    {
+                        strategy_name: 'weights',
+                        metadata_key: 'typicality'
                     }
-                });
-
-                responseError = selectionResponse.error as SelectionError;
-                if (responseError) {
-                    toast.error(responseError.error || 'Failed to create selection');
+                ]);
+            } else if (selectionStrategy === 'similarity') {
+                if (!isSimilaritySupported) {
+                    toast.error('Similarity is only available for image collections.');
                     return;
                 }
 
-                handleSelectionSuccess();
+                loadingMessage = 'Computing similarity metadata...';
+                const response = await computeSimilarityMetadata({
+                    path: { collection_id: collectionId, query_tag_id: queryTagId },
+                    body: {
+                        embedding_model_name: null,
+                        metadata_name: 'similarity'
+                    }
+                });
+
+                if (response.error) {
+                    toast.error(
+                        'Failed to compute similarity metadata: ' +
+                            ((response.error as SelectionError).error || 'Unknown error')
+                    );
+                    return;
+                }
+
+                await performSelection([
+                    {
+                        strategy_name: 'weights',
+                        metadata_key: 'similarity'
+                    }
+                ]);
             }
         } catch (error) {
             toast.error('Failed to create selection: ' + (error as Error).message);
@@ -204,11 +247,7 @@
                                 class="col-span-3"
                                 data-testid="selection-dialog-strategy-select"
                             >
-                                {selectionStrategy === 'diversity'
-                                    ? 'Diversity'
-                                    : selectionStrategy === 'typicality'
-                                      ? 'Typicality'
-                                      : 'Select strategy'}
+                                {STRATEGY_LABELS[selectionStrategy] ?? 'Select strategy'}
                             </Select.Trigger>
                             <Select.Content>
                                 <Select.Group>
@@ -224,10 +263,45 @@
                                         data-testid="selection-strategy-typicality"
                                         >Typicality</Select.Item
                                     >
+                                    <Select.Item
+                                        value="similarity"
+                                        label="Similarity"
+                                        data-testid="selection-strategy-similarity"
+                                        disabled={!isSimilaritySupported}>Similarity</Select.Item
+                                    >
                                 </Select.Group>
                             </Select.Content>
                         </Select.Root>
                     </div>
+
+                    {#if selectionStrategy === 'similarity'}
+                        <div class="grid grid-cols-4 items-center gap-4">
+                            <Label for="query-tag" class="text-right text-foreground">
+                                Query Tag
+                            </Label>
+                            <Select.Root type="single" name="query-tag" bind:value={queryTagId}>
+                                <Select.Trigger
+                                    class="col-span-3"
+                                    data-testid="selection-dialog-query-tag-select"
+                                >
+                                    {selectedQueryTagName}
+                                </Select.Trigger>
+                                <Select.Content>
+                                    <Select.Group>
+                                        {#each $tags as tag (tag.tag_id)}
+                                            <Select.Item
+                                                value={tag.tag_id}
+                                                label={tag.name}
+                                                data-testid={`selection-query-tag-${tag.tag_id}`}
+                                            >
+                                                {tag.name}
+                                            </Select.Item>
+                                        {/each}
+                                    </Select.Group>
+                                </Select.Content>
+                            </Select.Root>
+                        </div>
+                    {/if}
 
                     <!-- Number of Samples Input -->
                     <div class="grid grid-cols-4 items-center gap-4">

@@ -136,19 +136,40 @@ export class SamplesPage {
         strategy: 'diversity' | 'typicality',
         nSamples: number,
         tagName: string
+    ): Promise<void>;
+    async createSelection(
+        strategy: 'similarity',
+        nSamples: number,
+        tagName: string,
+        queryTagId: string
+    ): Promise<void>;
+    async createSelection(
+        strategy: 'diversity' | 'typicality' | 'similarity',
+        nSamples: number,
+        tagName: string,
+        queryTagId?: string
     ): Promise<void> {
+        if (strategy === 'similarity' && !queryTagId) {
+            throw new Error('queryTagId required for similarity strategy');
+        }
+
         await this.page.getByTestId('menu-trigger').click();
         await this.page.getByTestId('menu-selection').click();
 
         await this.page.getByTestId('selection-dialog-strategy-select').click();
         await this.page.getByTestId(`selection-strategy-${strategy}`).click();
 
-        const nSamplesInput = this.page.getByTestId('selection-dialog-n-samples-input');
-        await nSamplesInput.clear();
-        await nSamplesInput.fill(nSamples.toString());
+        if (strategy === 'similarity') {
+            await this.page.getByTestId('selection-dialog-query-tag-select').click();
+            await this.page.getByTestId(`selection-query-tag-${queryTagId}`).click();
+        } else {
+            const nSamplesInput = this.page.getByTestId('selection-dialog-n-samples-input');
+            await nSamplesInput.clear();
+            await nSamplesInput.fill(nSamples.toString());
 
-        const tagNameInput = this.page.getByTestId('selection-dialog-tag-name-input');
-        await tagNameInput.fill(tagName);
+            const tagNameInput = this.page.getByTestId('selection-dialog-tag-name-input');
+            await tagNameInput.fill(tagName);
+        }
 
         await pressButton(this.page, 'selection-dialog-submit');
     }
@@ -164,15 +185,19 @@ export class SamplesPage {
     async pressTag(tagName: string): Promise<void> {
         await expect(this.page.getByTestId('sample-grid-item').first()).toBeVisible();
 
-        const tagLabels = this.page.getByTestId('tags-menu-label');
-        const labelCount = await tagLabels.count();
-        for (let i = 0; i < labelCount; i++) {
-            const labelText = await tagLabels.nth(i).textContent();
-            if (labelText === tagName) {
-                await tagLabels.nth(i).click();
-                break;
-            }
-        }
+        const tagLabel = this.page.getByTestId('tags-menu-label').getByText(tagName, {
+            exact: true
+        });
+        await expect(tagLabel).toBeVisible();
+
+        const listResponsePromise = this.page.waitForResponse(
+            (response) => response.url().includes('/images/list') && response.status() === 200,
+            { timeout: 15000 }
+        );
+
+        await tagLabel.click();
+        await listResponsePromise;
+        await waitForRequestsToSettle(this.page, '/images/list');
 
         await this.getSamples().first().waitFor({
             state: 'attached',
@@ -215,6 +240,13 @@ export class SamplesPage {
             if (labelText) tagLabelsText.push(labelText);
         }
         return tagLabelsText;
+    }
+
+    async getTagIdByName(tagName: string): Promise<string | null> {
+        const tagLabel = this.page.getByTestId('tags-menu-label').getByText(tagName, {
+            exact: true
+        });
+        return tagLabel.getAttribute('for');
     }
 
     async getNumSelectedSamples(): Promise<number> {
