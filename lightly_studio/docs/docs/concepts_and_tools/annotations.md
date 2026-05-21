@@ -36,8 +36,6 @@ example ground truth, predictions from one model run, or annotations from differ
 This lets you keep multiple annotation sources for the same samples separate. In the GUI, you can
 inspect collections individually, visualize multiple collections together, and compare collections via evaluation runs.
 
-
-
 ### Adding annotations
 
 For most workflows, the easiest way to add annotations is to import them from supported formats such as COCO and YOLO, either while adding samples to the dataset or later by attaching annotations to already indexed samples:
