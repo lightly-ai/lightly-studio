@@ -1,6 +1,6 @@
 import { derived, readonly, writable, type Readable } from 'svelte/store';
 
-type PlotColorByType = 'annotation_label' | 'tags' | 'metadata';
+export type PlotColorByType = 'annotation_label' | 'tags' | 'metadata';
 
 interface UsePlotColorByTypeReturn {
     selectedColorByType: Readable<PlotColorByType | null>;

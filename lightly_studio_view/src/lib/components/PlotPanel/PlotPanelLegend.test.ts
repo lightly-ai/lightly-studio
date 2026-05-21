@@ -2,6 +2,7 @@ import { fireEvent, render, screen } from '@testing-library/svelte';
 import { describe, expect, it, vi } from 'vitest';
 import PlotPanelLegend from './PlotPanelLegend.svelte';
 import { FILTERED_COLOR, NOT_FILTERED_COLOR } from './plotColorUtils';
+import { getColorByLabel } from '$lib/utils';
 
 describe('PlotPanelLegend', () => {
     it('renders the fixed entries and the custom legend list', () => {
@@ -44,5 +45,26 @@ describe('PlotPanelLegend', () => {
         await fireEvent.dblClick(screen.getByTestId('plot-legend-entry-2'));
 
         expect(onDoubleClickCategory).toHaveBeenCalledWith(2);
+    });
+
+    it('renders tag legend entries with getColorByLabel colors', () => {
+        const reviewBatch1Color = getColorByLabel('review-batch-1').color;
+        const reviewBatch2Color = getColorByLabel('review-batch-2').color;
+
+        render(PlotPanelLegend, {
+            categoryColors: [
+                NOT_FILTERED_COLOR,
+                FILTERED_COLOR,
+                reviewBatch1Color,
+                reviewBatch2Color
+            ],
+            legendEntries: [
+                { cat: 2, label: 'review-batch-1', color: reviewBatch1Color, hidden: false },
+                { cat: 3, label: 'review-batch-2', color: reviewBatch2Color, hidden: false }
+            ]
+        });
+
+        expect(screen.getByRole('button', { name: 'review-batch-1' })).toBeInTheDocument();
+        expect(screen.getByRole('button', { name: 'review-batch-2' })).toBeInTheDocument();
     });
 });

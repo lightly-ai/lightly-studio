@@ -21,7 +21,8 @@
     import { page } from '$app/state';
     import { isVideosRoute } from '$lib/routes';
     import { usePlotColorByType } from './PlotColorByPopover/usePlotColorByType/usePlotColorByType';
-    type ColorBy = Exclude<Parameters<typeof useEmbeddings>[2], undefined>;
+    import { useTags } from '$lib/hooks/useTags/useTags';
+    import { usePlotColorBy } from './usePlotColorBy/usePlotColorBy';
 
     const collectionId = page.params.collection_id;
     const { setShowPlot, getRangeSelection, setRangeSelectionForCollection } = useGlobalStorage();
@@ -68,17 +69,14 @@
         };
     });
 
-    let selectedColorByKey: string | null = $state(null);
     const { selectedColorByType } = usePlotColorByType(collectionId);
-    const colorBy: ColorBy = $derived.by(() => {
-        if ($selectedColorByType === 'metadata' && selectedColorByKey) {
-            return { type: 'metadata_field', key: selectedColorByKey };
-        }
-
-        return null;
+    const { tags } = useTags({ collection_id: collectionId, kind: ['sample'] });
+    const { colorBy, selectedColorByKey, setSelectedColorByKey } = usePlotColorBy({
+        selectedColorByType,
+        tags
     });
 
-    const embeddingsData = $derived(useEmbeddings(collectionId, filter, colorBy));
+    const embeddingsData = $derived(useEmbeddings(collectionId, filter, $colorBy));
 
     const {
         data: arrowData,
@@ -329,9 +327,10 @@
         >
             <PlotColorByPopover
                 {collectionId}
-                selectedKey={selectedColorByKey}
+                withTags={$tags.length > 0}
+                selectedKey={$selectedColorByKey}
                 onSelectedKeyChange={(key) => {
-                    selectedColorByKey = key;
+                    setSelectedColorByKey(key);
                     resetCategoryVisibility();
                 }}
             />
