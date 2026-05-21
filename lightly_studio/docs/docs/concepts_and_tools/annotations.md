@@ -152,6 +152,4 @@ There are 3 annotation types:
 [SegmentationMaskAnnotation](../api/annotation.md#segmentationmaskannotation), and
 [ObjectDetectionAnnotation](../api/annotation.md#objectdetectionannotation).
 
-See [Annotation](../api/annotation.md) for the full annotation API reference, [Search and Filter](search_and_filter.md) for annotation-based querying, and 
-for end-to-end dataset setup examples see [Image Dataset](../dataset_setup/image_dataset.md)
-and [Video Dataset](../dataset_setup/video_dataset.md).
+See [Annotation](../api/annotation.md) for the full annotation API reference and [Search and Filter](search_and_filter.md) for annotation-based querying. For end-to-end dataset setup examples, see [Image Dataset](../dataset_setup/image_dataset.md) and [Video Dataset](../dataset_setup/video_dataset.md).
