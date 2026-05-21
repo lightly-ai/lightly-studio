@@ -9,8 +9,8 @@ import fsspec
 from fastapi import APIRouter, Header, HTTPException, Request
 from fastapi.responses import StreamingResponse
 
+from lightly_studio import db_manager
 from lightly_studio.api.routes.api import status
-from lightly_studio.db_manager import SessionDep
 from lightly_studio.models import video
 
 app_router = APIRouter(prefix="/videos/media")
@@ -120,7 +120,6 @@ async def _stream_full_file(
 @app_router.get("/{sample_id}")
 async def serve_video_by_sample_id(
     sample_id: str,
-    session: SessionDep,
     request: Request,
     range_header: str | None = Header(None, alias="range"),
 ) -> StreamingResponse:
@@ -134,25 +133,25 @@ async def serve_video_by_sample_id(
 
     Args:
         sample_id: The ID of the video sample.
-        session: Database session dependency (closed when function returns, before streaming).
         request: FastAPI request object.
         range_header: The HTTP Range header value.
 
     Returns:
         StreamingResponse with the video data, supporting partial content.
     """
-    sample_record = session.get(video.VideoTable, sample_id)
-    if not sample_record:
-        raise HTTPException(
-            status_code=status.HTTP_STATUS_NOT_FOUND,
-            detail=f"Video sample not found: {sample_id}",
-        )
+    # Avoid SessionDep here: its sync-generator dependency churns Starlette
+    # threadpool slots under load. Manage the session inline and close it
+    # before any file I/O.
+    with db_manager.session() as sess:
+        sample_record = sess.get(video.VideoTable, sample_id)
+        if not sample_record:
+            raise HTTPException(
+                status_code=status.HTTP_STATUS_NOT_FOUND,
+                detail=f"Video sample not found: {sample_id}",
+            )
+        file_path = sample_record.file_path_abs
 
-    file_path = sample_record.file_path_abs
     content_type = _get_content_type(file_path)
-    # Close the session before file I/O. Video streaming can be slow, and holding a
-    # connection through it can exhaust the Postgres connection pool.
-    session.close()
 
     try:
         fs, fs_path = fsspec.core.url_to_fs(file_path)
