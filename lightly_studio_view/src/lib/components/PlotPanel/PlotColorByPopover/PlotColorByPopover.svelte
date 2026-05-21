@@ -33,7 +33,6 @@
         return [...tagsOption, ...metadataOptions];
     });
 
-    const isSelectDisabled = $derived(colorByOptions.length === 0 && !selectedKey);
     const selectValue = $derived.by(() => {
         if (selectedKey) {
             return selectedKey;
@@ -41,9 +40,6 @@
         return $selectedColorByType ?? '';
     });
     const triggerLabel = $derived.by(() => {
-        if (isSelectDisabled) {
-            return 'Nothing to color by';
-        }
         if (selectedKey) {
             return `metadata.${selectedKey}`;
         }
@@ -75,17 +71,16 @@
 </script>
 
 <Select.Root type="single" value={selectValue} allowDeselect onValueChange={handleValueChange}>
-    <Select.Trigger
-        class="h-8 w-48 gap-2 px-2.5"
-        data-testid="plot-color-by-button"
-        disabled={isSelectDisabled}
-    >
+    <Select.Trigger class="h-8 w-48 gap-2 px-2.5" data-testid="plot-color-by-button">
         <div class="flex min-w-0 items-center gap-2">
             <Palette class="h-4 w-4 shrink-0" />
             <span class="truncate">{triggerLabel}</span>
         </div>
     </Select.Trigger>
     <Select.Content class="max-h-64" data-testid="plot-color-by-options">
+        {#if colorByOptions.length === 0}
+            <p class="px-2 py-1.5 text-sm text-muted-foreground">Nothing to color by</p>
+        {/if}
         {#each colorByOptions as option (option.value)}
             <Select.Item value={option.value} label={option.label}>
                 {option.label}
