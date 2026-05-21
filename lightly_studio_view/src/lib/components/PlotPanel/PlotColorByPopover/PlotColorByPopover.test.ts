@@ -45,7 +45,8 @@ describe('PlotColorByPopover', () => {
             collectionId: 'test-collection-id',
             selectedKey: null,
             onSelectedKeyChange: vi.fn(),
-            withTags: false
+            withTags: false,
+            withAnnotationLabels: false
         });
 
         await user.click(screen.getByTestId('plot-color-by-button'));
@@ -65,7 +66,8 @@ describe('PlotColorByPopover', () => {
             collectionId: 'test-collection-id',
             selectedKey: null,
             onSelectedKeyChange,
-            withTags: false
+            withTags: false,
+            withAnnotationLabels: false
         });
 
         await user.click(screen.getByTestId('plot-color-by-button'));
@@ -82,7 +84,8 @@ describe('PlotColorByPopover', () => {
             collectionId: 'test-collection-id',
             selectedKey: null,
             onSelectedKeyChange: vi.fn(),
-            withTags: true
+            withTags: true,
+            withAnnotationLabels: false
         });
 
         await user.click(screen.getByTestId('plot-color-by-button'));
@@ -97,7 +100,8 @@ describe('PlotColorByPopover', () => {
             collectionId: 'test-collection-id',
             selectedKey: null,
             onSelectedKeyChange: vi.fn(),
-            withTags: false
+            withTags: false,
+            withAnnotationLabels: false
         });
 
         await user.click(screen.getByTestId('plot-color-by-button'));
@@ -114,7 +118,8 @@ describe('PlotColorByPopover', () => {
             collectionId: 'test-collection-id',
             selectedKey: null,
             onSelectedKeyChange,
-            withTags: true
+            withTags: true,
+            withAnnotationLabels: false
         });
 
         await user.click(screen.getByTestId('plot-color-by-button'));
@@ -122,6 +127,58 @@ describe('PlotColorByPopover', () => {
 
         expect(onSelectedKeyChange).toHaveBeenCalledWith(null);
         expect(get(colorByType.selectedColorByType)).toBe('tags');
+    });
+
+    it('renders an annotations option when withAnnotationLabels is true', async () => {
+        const user = userEvent.setup();
+
+        render(PlotColorByPopover, {
+            collectionId: 'test-collection-id',
+            selectedKey: null,
+            onSelectedKeyChange: vi.fn(),
+            withTags: false,
+            withAnnotationLabels: true
+        });
+
+        await user.click(screen.getByTestId('plot-color-by-button'));
+
+        expect(screen.getByRole('option', { name: 'annotations' })).toBeInTheDocument();
+    });
+
+    it('does not render an annotations option when withAnnotationLabels is false', async () => {
+        const user = userEvent.setup();
+
+        render(PlotColorByPopover, {
+            collectionId: 'test-collection-id',
+            selectedKey: null,
+            onSelectedKeyChange: vi.fn(),
+            withTags: false,
+            withAnnotationLabels: false
+        });
+
+        await user.click(screen.getByTestId('plot-color-by-button'));
+
+        expect(screen.queryByRole('option', { name: 'annotations' })).not.toBeInTheDocument();
+    });
+
+    it('selecting annotations stores annotation_label as the selected type', async () => {
+        const user = userEvent.setup();
+        const onSelectedKeyChange = vi.fn();
+        const colorByType = usePlotColorByType('test-collection-id');
+
+        render(PlotColorByPopover, {
+            collectionId: 'test-collection-id',
+            selectedKey: null,
+            onSelectedKeyChange,
+            withTags: false,
+            withAnnotationLabels: true
+        });
+
+        await user.click(screen.getByTestId('plot-color-by-button'));
+        await user.click(screen.getByRole('option', { name: 'annotations' }));
+
+        expect(onSelectedKeyChange).toHaveBeenCalledWith(null);
+        expect(get(colorByType.selectedColorByType)).toBe('annotation_label');
     });
 
     it('clicking the selected metadata field clears the selected type', async () => {
@@ -135,7 +192,8 @@ describe('PlotColorByPopover', () => {
             collectionId: 'test-collection-id',
             selectedKey: 'split',
             onSelectedKeyChange,
-            withTags: false
+            withTags: false,
+            withAnnotationLabels: false
         });
 
         await user.click(screen.getByTestId('plot-color-by-button'));
@@ -150,7 +208,8 @@ describe('PlotColorByPopover', () => {
             collectionId: 'test-collection-id',
             selectedKey: 'split',
             onSelectedKeyChange: vi.fn(),
-            withTags: false
+            withTags: false,
+            withAnnotationLabels: false
         });
 
         expect(screen.getByTestId('plot-color-by-button')).toHaveTextContent('metadata.split');
@@ -163,10 +222,25 @@ describe('PlotColorByPopover', () => {
             collectionId: 'test-collection-id',
             selectedKey: null,
             onSelectedKeyChange: vi.fn(),
-            withTags: true
+            withTags: true,
+            withAnnotationLabels: false
         });
 
         expect(screen.getByTestId('plot-color-by-button')).toHaveTextContent('tags');
+    });
+
+    it('button shows annotations when annotation_label is selected', () => {
+        usePlotColorByType('test-collection-id').setSelectedColorByType('annotation_label');
+
+        render(PlotColorByPopover, {
+            collectionId: 'test-collection-id',
+            selectedKey: null,
+            onSelectedKeyChange: vi.fn(),
+            withTags: false,
+            withAnnotationLabels: true
+        });
+
+        expect(screen.getByTestId('plot-color-by-button')).toHaveTextContent('annotations');
     });
 
     it('shows the empty state when no supported metadata fields exist and withTags is false', async () => {
@@ -176,7 +250,8 @@ describe('PlotColorByPopover', () => {
             collectionId: 'test-collection-id',
             selectedKey: null,
             onSelectedKeyChange: vi.fn(),
-            withTags: false
+            withTags: false,
+            withAnnotationLabels: false
         });
 
         expect(screen.getByTestId('plot-color-by-button')).toBeDisabled();

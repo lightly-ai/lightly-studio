@@ -9,11 +9,13 @@
         selectedKey: string | null;
         onSelectedKeyChange: (key: string | null) => void;
         withTags: boolean;
+        withAnnotationLabels: boolean;
     }
 
     const supportedTypes = new Set(['string', 'boolean']);
 
-    let { collectionId, selectedKey, onSelectedKeyChange, withTags }: Props = $props();
+    let { collectionId, selectedKey, onSelectedKeyChange, withTags, withAnnotationLabels }: Props =
+        $props();
 
     const { metadataInfo } = useMetadataFilters(collectionId);
     const { selectedColorByType, setSelectedColorByType, clearSelectedColorByType } =
@@ -25,12 +27,15 @@
 
     const colorByOptions = $derived.by(() => {
         const tagsOption = withTags ? [{ value: 'tags', label: 'tags' }] : [];
+        const annotationLabelsOption = withAnnotationLabels
+            ? [{ value: 'annotation_label', label: 'annotations' }]
+            : [];
         const metadataOptions = colorableFields.map((field) => ({
             value: field.name,
             label: `metadata.${field.name}`
         }));
 
-        return [...tagsOption, ...metadataOptions];
+        return [...tagsOption, ...annotationLabelsOption, ...metadataOptions];
     });
 
     const isSelectDisabled = $derived(colorByOptions.length === 0 && !selectedKey);
@@ -64,6 +69,12 @@
         }
 
         if (value === 'tags') {
+            setSelectedColorByType(value);
+            onSelectedKeyChange(null);
+            return;
+        }
+
+        if (value === 'annotation_label') {
             setSelectedColorByType(value);
             onSelectedKeyChange(null);
             return;
