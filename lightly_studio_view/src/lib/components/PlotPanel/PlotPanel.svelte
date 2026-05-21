@@ -14,14 +14,10 @@
     import { usePlotData } from './usePlotData/usePlotData';
     import PlotPanelLegend from './PlotPanelLegend.svelte';
     import PlotColorByPopover from './PlotColorByPopover/PlotColorByPopover.svelte';
+    import { useCategoryVisibility } from './useCategoryVisibility/useCategoryVisibility';
     import { isEqual } from 'lodash-es';
     import { NOT_FILTERED_CATEGORY } from './plotCategories';
-    import {
-        FILTERED_COLOR,
-        getCategoryColors,
-        getCategoryCount,
-        NOT_FILTERED_COLOR
-    } from './plotColorUtils';
+    import { getCategoryColors, getCategoryCount, getLegendEntries } from './plotColorUtils';
     import { page } from '$app/state';
     import { isVideosRoute } from '$lib/routes';
     import { usePlotColorByType } from './PlotColorByPopover/usePlotColorByType/usePlotColorByType';
@@ -94,6 +90,12 @@
         })
     );
     const filteredLabel = $derived($colorLegend.get(1) ?? 'Filtered');
+    const {
+        hiddenCategories,
+        toggleCategoryVisibility,
+        focusCategoryVisibility,
+        resetCategoryVisibility
+    } = useCategoryVisibility();
 
     const hasActiveFilter = $derived(filter !== null || activeSampleIds.length > 0);
 
@@ -106,7 +108,13 @@
         })
     );
     const categoryCount = $derived.by(() => getCategoryCount($colorLegend));
-    const categoryColors = $derived.by(() => getCategoryColors($colorLegend));
+    const useLabelColors = $derived($selectedColorByType !== 'metadata');
+    const categoryColors = $derived.by(() =>
+        getCategoryColors($colorLegend, $hiddenCategories, useLabelColors)
+    );
+    const legendEntries = $derived.by(() =>
+        getLegendEntries($colorLegend, $hiddenCategories, useLabelColors)
+    );
     const handleMouseUp = () => {
         const hadRangeSelection = $rangeSelection !== null;
         if (!hadRangeSelection) {
@@ -295,8 +303,16 @@
                         rangeSelection={$rangeSelection}
                     />
                     <PlotPanelLegend
-                        categoryColors={[NOT_FILTERED_COLOR, FILTERED_COLOR]}
+                        {categoryColors}
                         {filteredLabel}
+                        {legendEntries}
+                        onToggleCategory={toggleCategoryVisibility}
+                        onDoubleClickCategory={(category) => {
+                            focusCategoryVisibility(
+                                legendEntries.map((entry) => entry.cat),
+                                category
+                            );
+                        }}
                     />
                 {/if}
             </div>
@@ -316,6 +332,7 @@
                 selectedKey={selectedColorByKey}
                 onSelectedKeyChange={(key) => {
                     selectedColorByKey = key;
+                    resetCategoryVisibility();
                 }}
             />
             <Button
