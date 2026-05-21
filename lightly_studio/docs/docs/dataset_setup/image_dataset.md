@@ -353,8 +353,8 @@ GUI displays only a single dataset.
 
 When images are already in the dataset, the `add_annotations_from_*` methods attach
 annotations without re-loading the images. Each call stores its annotations under a named
-collection, so multiple sources such as ground truth, model predictions, or annotator-specific labels can
-be queried and compared independently. Re-running with the same `name` appends to that collection;
+collection, so multiple sources (e.g. ground truth and model predictions) can be queried
+and compared independently. Re-running with the same `name` appends to that collection;
 a new `name` creates a new collection.
 
 ```python title="Attach annotations from multiple sources"

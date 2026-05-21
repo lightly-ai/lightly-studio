@@ -188,8 +188,8 @@ class ImageDataset(BaseSampleDataset[ImageSample]):
         """Attach annotations from a labelformat input to images already in the dataset.
 
         Images are matched by relative path under ``images_root``. Annotations are grouped
-        under an annotation collection identified by ``name``; reusing the same name appends to
-        that collection.
+        under an annotation collection identified by ``name``; reusing the same name
+        appends to that collection.
 
         Args:
             input_labels: Labelformat input object (e.g. ``COCOObjectDetectionInput``).
