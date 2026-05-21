@@ -44,9 +44,11 @@ dataset.add_samples_from_coco(
 )
 
 # Add annotations to images that are already indexed.
+# Prediction confidence is loaded from the JSON `score` field.
 dataset.add_annotations_from_coco(
     annotations_json="/path/to/predictions.json",
     images_root="/path/to/images",
+    name="predictions",
 )
 ```
 
