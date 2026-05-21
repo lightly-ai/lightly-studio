@@ -5,19 +5,9 @@ const TP_COLOR_RAMP: [string, string] = ['rgba(34,197,94,0.15)', 'rgba(34,197,94
 const FP_FN_COLOR_RAMP: [string, string] = ['rgba(239,68,68,0.15)', 'rgba(239,68,68,0.95)'];
 const SENTINEL_LABELS = new Set<string>([NO_GROUND_TRUTH_ROW_LABEL, NO_PREDICTION_COL_LABEL]);
 
-/**
- * Build the ECharts option object for a confusion matrix. Pulled out of
- * the component for testability and to keep the .svelte file under the
- * 100-line guideline.
- *
- * Encoding follows the proto on `jonas-model-eval-cvpr-proto`:
- * - Unified label set on both axes so the diagonal aligns.
- * - Two heatmap series with independent `visualMap`s: TP cells get a green
- *   ramp, FP/FN cells get a red ramp. The diagonal pops without any
- *   explicit cell-border decoration.
- * - Color intensity scales with absolute count, capped at the matrix max.
- * - Y-axis reversed so the first sorted label sits at the top.
- */
+// TP and FP/FN are split into two series with separate visualMaps so each
+// can use its own color ramp (ECharts can't color cells in a single heatmap
+// series along two scales).
 export function buildEchartsOption(matrix: ConfusionMatrix): EChartsCoreOption {
     const unifiedLabels = unifyLabels(matrix.row_labels, matrix.col_labels);
     const xLabels = unifiedLabels;
