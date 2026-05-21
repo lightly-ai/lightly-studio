@@ -25,7 +25,8 @@ Annotations are shown in sample detail view and in dedicated annotation-focused 
 ## Annotations in Python
 
 Use the Python API when you want to inspect annotations programmatically, generate them from model
-predictions, or import custom annotation outputs. Predictions and human annotations are treated as the same concept in LightlyStudio. Any functions for annotations can also process predictions. Predictions can additionally have an optional `confidence` value. See [Annotation API Reference](../api/annotation.md) for the full API surface.
+predictions, or import custom annotation outputs. Predictions and human annotations are treated as the same concept in LightlyStudio. Any functions for annotations can also process predictions. Predictions can additionally have an optional `confidence` value. See
+[Annotation API Reference](../api/annotation.md) for the full API surface.
 
 ### Annotation collections
 
