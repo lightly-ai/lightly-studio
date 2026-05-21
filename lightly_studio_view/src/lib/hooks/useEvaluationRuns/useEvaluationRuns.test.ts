@@ -26,7 +26,7 @@ describe('useEvaluationRuns', () => {
         const datasetId = 'dataset-1';
         const createQuerySpy = vi.spyOn(tanstackQuery, 'createQuery');
 
-        useEvaluationRuns({ datasetId });
+        useEvaluationRuns(() => ({ datasetId }));
 
         const optionsArg = createQuerySpy.mock.calls[0][0]() as CreateQueryOptions;
         const expectedOptions = getEvaluationRunsOptions({
@@ -44,7 +44,7 @@ describe('useEvaluationRuns', () => {
             [] as unknown as Awaited<ReturnType<typeof getEvaluationRuns>>
         );
 
-        useEvaluationRuns({ datasetId });
+        useEvaluationRuns(() => ({ datasetId }));
 
         const optionsArg = createQuerySpy.mock.calls[0][0]() as CreateQueryOptions;
 
@@ -68,7 +68,7 @@ describe('useEvaluationRuns', () => {
     });
 
     it('returns the result of createQuery', () => {
-        const result = useEvaluationRuns({ datasetId: 'dataset-3' });
+        const result = useEvaluationRuns(() => ({ datasetId: 'dataset-3' }));
 
         expect(result).toMatchObject({ data: [], isSuccess: true });
     });
