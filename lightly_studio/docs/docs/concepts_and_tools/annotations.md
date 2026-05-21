@@ -30,6 +30,14 @@ annotations and can be added through the same APIs. For prediction annotations, 
 additionally provide an optional `confidence` value. See
 [Annotation API Reference](../api/annotation.md) for the full API surface.
 
+### Annotation sets
+
+Every annotation belongs to an annotation set. Annotation sets group related annotations, for
+example ground truth, predictions from one model run, or annotations from different annotators.
+
+This lets you keep multiple annotation sources for the same samples separate. In the GUI, you can
+inspect sets individually, visualize multiple sets together, and compare sets via evaluation runs.
+
 ### Adding annotations
 
 For most workflows, the easiest way to add annotations is to import them from supported formats such as COCO and YOLO, either while adding samples to the dataset or later by attaching annotations to already indexed samples:
@@ -49,6 +57,46 @@ dataset.add_annotations_from_coco(
     name="predictions",
 )
 ```
+
+When images are already in the dataset, the dataset-level `add_annotations_from_*` helpers import
+annotations into a named annotation set. This named-set workflow is currently supported for image
+datasets via
+[`add_annotations_from_coco`](../api/dataset.md#lightly_studio.ImageDataset),
+[`add_annotations_from_yolo`](../api/dataset.md#lightly_studio.ImageDataset), and
+[`add_annotations_from_labelformat`](../api/dataset.md#lightly_studio.ImageDataset).
+All of these helpers take a `name` argument, which becomes the annotation set name.
+
+Reusing the same `name` appends annotations to the existing set. Using a new `name` creates a new
+set.
+
+```python
+import lightly_studio as ls
+
+dataset = ls.ImageDataset.create()
+dataset.add_images_from_path(path="./path/to/images")
+
+dataset.add_annotations_from_coco(
+    annotations_json="./ground_truth.json",
+    images_root="./path/to/images",
+    name="ground_truth",
+)
+
+dataset.add_annotations_from_coco(
+    annotations_json="./predictions_model_a.json",
+    images_root="./path/to/images",
+    name="model_a",
+)
+
+dataset.add_annotations_from_yolo(
+    data_yaml="./yolo_dataset/data.yaml",
+    name="annotator_b",
+)
+```
+
+This is the recommended way to keep multiple annotation sources separate in the same dataset. If
+your predictions are already stored in COCO format, `add_annotations_from_coco(...)` also supports
+loading them. For prediction files, LightlyStudio looks for a `score` field in each COCO
+annotation object and stores it as annotation confidence.
 
 See [ImageDataset](../api/dataset.md#imagedataset) and
 [VideoDataset](../api/dataset.md#videodataset) for the full import workflows and supported
@@ -152,6 +200,4 @@ There are 3 annotation types:
 [SegmentationMaskAnnotation](../api/annotation.md#segmentationmaskannotation), and
 [ObjectDetectionAnnotation](../api/annotation.md#objectdetectionannotation).
 
-See [Annotation](../api/annotation.md) for the full annotation API reference, [Search and Filter](search_and_filter.md) for annotation-based querying, and 
-for end-to-end dataset setup examples see [Image Dataset](../dataset_setup/image_dataset.md)
-and [Video Dataset](../dataset_setup/video_dataset.md).
+See [Annotation](../api/annotation.md) for the full annotation API reference and [Search and Filter](search_and_filter.md) for annotation-based querying. For end-to-end dataset setup examples, see [Image Dataset](../dataset_setup/image_dataset.md) and [Video Dataset](../dataset_setup/video_dataset.md).

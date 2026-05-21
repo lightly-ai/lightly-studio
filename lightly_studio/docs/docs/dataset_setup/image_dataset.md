@@ -352,10 +352,10 @@ GUI displays only a single dataset.
 ### Adding Annotations to Existing Images
 
 When images are already in the dataset, the `add_annotations_from_*` methods attach
-annotations without re-loading the images. Each call stores its annotations under a named
-collection, so multiple sources (e.g. ground truth and model predictions) can be queried
-and compared independently. Re-running with the same `name` appends to that collection;
-a new `name` creates a new collection.
+annotations without re-loading the images. Each call stores its annotations in a named annotation
+set, so multiple sources such as ground truth, model predictions, or annotator-specific labels can
+be queried and compared independently. Re-running with the same `name` appends to that set; a new
+`name` creates a new set.
 
 ```python title="Attach annotations from multiple sources"
 import lightly_studio as ls
@@ -381,6 +381,9 @@ dataset.add_annotations_from_coco(
     name="model_A",
 )
 ```
+
+If the input is a COCO prediction file, LightlyStudio reads the `score` field of each annotation
+and stores it as annotation confidence.
 
 See the [API reference](../api/dataset.md#lightly_studio.ImageDataset) for `add_annotations_from_coco`, `add_annotations_from_yolo`, and `add_annotations_from_labelformat`.
 
