@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from collections.abc import Callable, Mapping, Sequence
+from collections.abc import Callable, Iterable, Mapping, Sequence
 from dataclasses import dataclass
 from typing import Generic, Protocol, TypeVar
 from uuid import UUID
@@ -46,16 +46,19 @@ class DiscreteColorScale(Generic[T]):
     @classmethod
     def from_values(
         cls,
-        values: set[T],
+        values: Iterable[T],
         start_cat: int = 2,
         format_fn: Callable[[T], str] = str,
     ) -> DiscreteColorScale[T]:
-        """Build a DiscreteColorScale by assigning a category to each unique value.
+        """Build a DiscreteColorScale by assigning a category to each value.
 
-        Values are sorted before assignment to ensure deterministic ordering.
+        Values are consumed in iteration order — the caller is responsible for
+        providing them in the desired sequence (e.g. sorted alphabetically or
+        in priority order).
 
         Args:
-            values: Unique values to assign color categories to.
+            values: Values to assign color categories to, in the desired order.
+                Values must be unique.
             start_cat: First category ID to assign. Defaults to 2, reserving
                 0 for filtered-out samples and 1 for unassigned samples.
             format_fn: Function to produce a legend label from a value.
@@ -64,9 +67,12 @@ class DiscreteColorScale(Generic[T]):
         Returns:
             A DiscreteColorScale with one category per value.
         """
+        value_list = list(values)
+        assert len(set(value_list)) == len(value_list), "Color legend values must be unique"
+
         lookup: dict[T, int] = {}
         legend: dict[int, str] = {}
-        for i, value in enumerate(sorted(values, key=format_fn)):
+        for i, value in enumerate(value_list):
             cat = start_cat + i
             lookup[value] = cat
             legend[cat] = format_fn(value)
@@ -104,3 +110,29 @@ def assign_color_categories(
 
     legend = {0: "Filtered out", 1: "Unassigned", **scale.legend}
     return color_categories, legend
+
+
+def first_match_per_sample(
+    sample_to_candidates: Mapping[UUID, Iterable[T]],
+    priority_order: Sequence[T],
+) -> dict[UUID, T]:
+    """Map each sample to the first matching value from a priority-ordered list.
+
+    Samples with no match are omitted from the result.
+
+    Args:
+        sample_to_candidates: Mapping from sample ID to the set (or any
+            iterable) of candidate values the sample carries.
+        priority_order: Values in priority order — the first match wins.
+
+    Returns:
+        A mapping from sample ID to the winning value.
+    """
+    result: dict[UUID, T] = {}
+    for sid, candidates in sample_to_candidates.items():
+        candidate_set = candidates if isinstance(candidates, set) else set(candidates)
+        for value in priority_order:
+            if value in candidate_set:
+                result[sid] = value
+                break
+    return result

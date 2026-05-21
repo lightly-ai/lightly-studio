@@ -148,6 +148,29 @@ def test_client(db_session: Session) -> Generator[TestClient, None, None]:
 
 
 @pytest.fixture
+def streaming_media_test_client(
+    _db_engine: DatabaseEngine,
+) -> Generator[TestClient, None, None]:
+    """Test client that yields a new ``Session`` per HTTP request (production-like).
+
+    Use for tests that hit routes which call ``session.close()`` after reading the
+    DB and then perform more requests: a shared ``db_session`` override would be
+    permanently closed on the first response.
+    """
+    client = TestClient(app)
+
+    def get_session_override() -> Generator[Session, None, None]:
+        with _db_engine.session() as session:
+            yield session
+
+    app.dependency_overrides[db_manager._session_dependency] = get_session_override
+
+    yield client
+
+    app.dependency_overrides.clear()
+
+
+@pytest.fixture
 def collection(db_session: Session) -> CollectionTable:
     """Create a test collection."""
     collection_input = CollectionCreate(name="test_collection", sample_type=SampleType.IMAGE)
