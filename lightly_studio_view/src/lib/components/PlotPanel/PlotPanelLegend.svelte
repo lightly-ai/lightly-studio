@@ -40,7 +40,7 @@
     {#if legendEntries.length > 0}
         <span class="my-0.5 w-full shrink-0 border-t border-white/10"></span>
         <div class="flex w-full flex-col gap-1 overflow-y-auto dark:[color-scheme:dark]">
-            {#each legendEntries as entry (entry.cat)}
+            {#each legendEntries.toSorted( (a, b) => a.label.localeCompare(b.label) ) as entry (entry.cat)}
                 <button
                     type="button"
                     class={cn(
