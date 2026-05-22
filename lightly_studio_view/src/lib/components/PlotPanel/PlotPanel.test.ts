@@ -87,6 +87,9 @@ vi.mock('$lib/hooks/useTags/useTags', () => ({
         tags: tagsStore
     })
 }));
+vi.mock('$lib/hooks/useAnnotationLabels/useAnnotationLabels', () => ({
+    useAnnotationLabels: () => ({ data: [] })
+}));
 
 vi.mock('$lib/hooks/useGlobalStorage', () => {
     return {
