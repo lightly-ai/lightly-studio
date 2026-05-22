@@ -23,6 +23,8 @@
     import { usePlotColorByType } from './PlotColorByPopover/usePlotColorByType/usePlotColorByType';
     import { useTags } from '$lib/hooks/useTags/useTags';
     import { usePlotColorBy } from './usePlotColorBy/usePlotColorBy';
+    import { useAnnotationLabels } from '$lib/hooks/useAnnotationLabels/useAnnotationLabels';
+    import { writable } from 'svelte/store';
 
     const collectionId = page.params.collection_id;
     const { setShowPlot, getRangeSelection, setRangeSelectionForCollection } = useGlobalStorage();
@@ -71,9 +73,20 @@
 
     const { selectedColorByType } = usePlotColorByType(collectionId);
     const { tags } = useTags({ collection_id: collectionId, kind: ['sample'] });
+    const annotationLabelsQuery = useAnnotationLabels(() => ({ collectionId }));
+    const annotationLabels = writable<{ annotation_label_id: string }[]>([]);
+    $effect(() => {
+        annotationLabels.set(
+            (annotationLabelsQuery.data ?? []).filter(
+                (l): l is { annotation_label_id: string } & typeof l =>
+                    l.annotation_label_id !== undefined
+            )
+        );
+    });
     const { colorBy, selectedColorByKey, setSelectedColorByKey } = usePlotColorBy({
         selectedColorByType,
-        tags
+        tags,
+        annotationLabels
     });
 
     const embeddingsData = $derived(useEmbeddings(collectionId, filter, $colorBy));
@@ -328,6 +341,7 @@
             <PlotColorByPopover
                 {collectionId}
                 withTags={$tags.length > 0}
+                withAnnotationLabels={$annotationLabels.length > 0}
                 selectedKey={$selectedColorByKey}
                 onSelectedKeyChange={(key) => {
                     setSelectedColorByKey(key);
