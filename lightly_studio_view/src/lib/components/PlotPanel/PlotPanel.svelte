@@ -26,7 +26,6 @@
     import { isVideosRoute } from '$lib/routes';
     import { usePlotColorByType } from './PlotColorByPopover/usePlotColorByType/usePlotColorByType';
     import { useAnnotationLabels } from '$lib/hooks/useAnnotationLabels/useAnnotationLabels';
-    type ColorBy = Exclude<Parameters<typeof useEmbeddings>[2], undefined>;
     import { useTags } from '$lib/hooks/useTags/useTags';
     import { usePlotColorBy } from './usePlotColorBy/usePlotColorBy';
 
@@ -168,13 +167,12 @@
         useEmbeddings(
             collectionId,
             filter,
-            colorBy,
+            $colorBy,
             effectiveNlpAxes,
             effectivePcaAxes,
             effectiveReferenceLabelNames
         )
     );
-    const embeddingsData = $derived(useEmbeddings(collectionId, filter, $colorBy));
 
     const {
         data: arrowData,

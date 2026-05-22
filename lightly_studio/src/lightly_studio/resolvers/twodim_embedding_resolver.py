@@ -64,20 +64,13 @@ def get_twodim_embeddings(
         y_values = np.array(cached.y, dtype=np.float32)
         centroids: list[tuple[float, float]] = []
         if reference_embeddings:
-            sample_embeddings = sample_embedding_resolver.get_by_sample_ids(
+            ordered_ids, image_matrix = _load_image_matrix(
                 session=session,
-                sample_ids=sample_ids_of_samples_with_embeddings,
+                collection_id=collection_id,
                 embedding_model_id=embedding_model_id,
             )
-            if sample_embeddings:
-                # Re-derive ordered IDs from the loaded embeddings to match cache ordering.
-                sample_ids_of_samples_with_embeddings = [
-                    embedding.sample_id for embedding in sample_embeddings
-                ]
-                image_matrix = np.asarray(
-                    [embedding.embedding for embedding in sample_embeddings],
-                    dtype=np.float32,
-                )
+            if image_matrix.shape[0] > 0:
+                sample_ids_of_samples_with_embeddings = ordered_ids
                 centroids = _compute_reference_centroids(
                     image_matrix=image_matrix,
                     x_values=x_values,
@@ -86,25 +79,18 @@ def get_twodim_embeddings(
                 )
         return x_values, y_values, sample_ids_of_samples_with_embeddings, centroids
 
-    # No cached entry found - load the high-dimensional embeddings.
-    # The order is defined by sample_ids_of_samples_with_embeddings.
-    sample_embeddings = sample_embedding_resolver.get_by_sample_ids(
+    # No cached 2D entry — load the high-dimensional embeddings (cached in-process) and
+    # compute the PacMap projection.
+    sample_ids_of_samples_with_embeddings, image_matrix = _load_image_matrix(
         session=session,
-        sample_ids=sample_ids_of_samples_with_embeddings,
+        collection_id=collection_id,
         embedding_model_id=embedding_model_id,
     )
-
-    # If there are no embeddings, return empty arrays.
-    if not sample_embeddings:
+    if image_matrix.shape[0] == 0:
         empty = np.array([], dtype=np.float32)
         return empty, empty, [], []
 
-    # Compute the 2D embedding from the high-dimensional embeddings.
-    # The order is now defined by sample_embeddings. They are the ordered subset of the
-    # sample_ids_of_samples_with_embeddings that have embeddings.
-    sample_ids_of_samples_with_embeddings = [embedding.sample_id for embedding in sample_embeddings]
-    embedding_values = [embedding.embedding for embedding in sample_embeddings]
-    planar_embeddings = _calculate_2d_embeddings(embedding_values)
+    planar_embeddings = _calculate_2d_embeddings(image_matrix.tolist())
     embeddings_2d = np.asarray(planar_embeddings, dtype=np.float32)
     x_values, y_values = embeddings_2d[:, 0], embeddings_2d[:, 1]
 
@@ -113,7 +99,6 @@ def get_twodim_embeddings(
     session.add(cache_entry)
     session.commit()
 
-    image_matrix = np.asarray(embedding_values, dtype=np.float32)
     centroids = _compute_reference_centroids(
         image_matrix=image_matrix,
         x_values=x_values,
@@ -126,6 +111,49 @@ def get_twodim_embeddings(
 
 REFERENCE_TOP_K_MAX = 20
 REFERENCE_TOP_K_FRACTION = 20  # 1/20 = 5% of samples
+
+
+# Scrappy in-process cache of high-dim image embeddings. Demo-only — assumes the underlying
+# embeddings do not change for the lifetime of the process. Restart the server to refresh.
+_image_matrix_cache: dict[tuple[UUID, UUID], tuple[list[UUID], NDArray[np.float32]]] = {}
+
+
+def _load_image_matrix(
+    session: Session,
+    collection_id: UUID,
+    embedding_model_id: UUID,
+) -> tuple[list[UUID], NDArray[np.float32]]:
+    """Return (ordered sample_ids, image_matrix) for a collection, cached in memory."""
+    key = (collection_id, embedding_model_id)
+    cached = _image_matrix_cache.get(key)
+    if cached is not None:
+        return cached
+
+    empty_matrix: NDArray[np.float32] = np.zeros((0, 0), dtype=np.float32)
+    _, sample_ids_with_embeddings = sample_embedding_resolver.get_hash_by_collection_id(
+        session=session,
+        collection_id=collection_id,
+        embedding_model_id=embedding_model_id,
+    )
+    if not sample_ids_with_embeddings:
+        _image_matrix_cache[key] = ([], empty_matrix)
+        return _image_matrix_cache[key]
+
+    sample_embeddings = sample_embedding_resolver.get_by_sample_ids(
+        session=session,
+        sample_ids=sample_ids_with_embeddings,
+        embedding_model_id=embedding_model_id,
+    )
+    if not sample_embeddings:
+        _image_matrix_cache[key] = ([], empty_matrix)
+        return _image_matrix_cache[key]
+
+    ordered_ids = [embedding.sample_id for embedding in sample_embeddings]
+    image_matrix = np.asarray(
+        [embedding.embedding for embedding in sample_embeddings], dtype=np.float32
+    )
+    _image_matrix_cache[key] = (ordered_ids, image_matrix)
+    return _image_matrix_cache[key]
 
 
 def _compute_reference_centroids(
@@ -180,33 +208,16 @@ def get_twodim_embeddings_nlp(  # noqa: PLR0913
     if embedding_model is None:
         raise ValueError(f"Embedding model {embedding_model_id} not found.")
 
-    _, sample_ids_of_samples_with_embeddings = sample_embedding_resolver.get_hash_by_collection_id(
+    sample_ids, image_matrix = _load_image_matrix(
         session=session,
         collection_id=collection_id,
         embedding_model_id=embedding_model_id,
     )
-
-    if not sample_ids_of_samples_with_embeddings:
+    if image_matrix.shape[0] == 0:
         empty = np.array([], dtype=np.float32)
         return empty, empty, [], []
-
-    sample_embeddings = sample_embedding_resolver.get_by_sample_ids(
-        session=session,
-        sample_ids=sample_ids_of_samples_with_embeddings,
-        embedding_model_id=embedding_model_id,
-    )
-
-    if not sample_embeddings:
-        empty = np.array([], dtype=np.float32)
-        return empty, empty, [], []
-
-    sample_ids = [embedding.sample_id for embedding in sample_embeddings]
-    image_matrix = np.asarray(
-        [embedding.embedding for embedding in sample_embeddings], dtype=np.float32
-    )
 
     directions = np.asarray([direction_x, direction_y], dtype=np.float32)
-
     projected = image_matrix @ directions.T
     x_values = np.ascontiguousarray(projected[:, 0], dtype=np.float32)
     y_values = np.ascontiguousarray(projected[:, 1], dtype=np.float32)
@@ -244,30 +255,14 @@ def get_twodim_embeddings_pca(
     if len(text_embeddings) < 2:  # noqa: PLR2004
         raise ValueError("PCA projection requires at least 2 text embeddings.")
 
-    _, sample_ids_of_samples_with_embeddings = sample_embedding_resolver.get_hash_by_collection_id(
+    sample_ids, image_matrix = _load_image_matrix(
         session=session,
         collection_id=collection_id,
         embedding_model_id=embedding_model_id,
     )
-
-    if not sample_ids_of_samples_with_embeddings:
+    if image_matrix.shape[0] == 0:
         empty = np.array([], dtype=np.float32)
         return empty, empty, [], []
-
-    sample_embeddings = sample_embedding_resolver.get_by_sample_ids(
-        session=session,
-        sample_ids=sample_ids_of_samples_with_embeddings,
-        embedding_model_id=embedding_model_id,
-    )
-
-    if not sample_embeddings:
-        empty = np.array([], dtype=np.float32)
-        return empty, empty, [], []
-
-    sample_ids = [embedding.sample_id for embedding in sample_embeddings]
-    image_matrix = np.asarray(
-        [embedding.embedding for embedding in sample_embeddings], dtype=np.float32
-    )
 
     texts = np.asarray(text_embeddings, dtype=np.float32)
     texts_centered = texts - texts.mean(axis=0)
