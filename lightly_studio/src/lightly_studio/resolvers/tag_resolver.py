@@ -8,7 +8,7 @@ from uuid import UUID
 
 import sqlmodel
 from sqlalchemy.exc import IntegrityError
-from sqlmodel import Session, col, select
+from sqlmodel import Session, col, func, select
 
 from lightly_studio.models.sample import SampleTable, SampleTagLinkTable
 from lightly_studio.models.tag import TagCreate, TagTable
@@ -251,3 +251,41 @@ def get_or_create_sample_tag_by_name(
 
     new_tag = TagCreate(name=tag_name, collection_id=collection_id, kind="sample")
     return create(session=session, tag=new_tag)
+
+
+def get_most_used_by_collection_id(
+    session: Session,
+    collection_id: UUID,
+    limit: int = 30,
+) -> dict[UUID, str]:
+    """Return the most used tags in a collection.
+
+    Tags are ordered by descending number of sample assignments. Ties are
+    resolved deterministically by creation time and tag ID.
+
+    Args:
+        session: Database session for executing queries.
+        collection_id: The collection whose tags should be returned.
+        limit: Maximum number of tags to return.
+
+    Returns:
+        A mapping of tag ID to tag name for the most used tags in the collection.
+    """
+    usage_count = func.count(col(SampleTagLinkTable.sample_id))
+    query = (
+        select(TagTable.tag_id, TagTable.name, usage_count)
+        .where(TagTable.collection_id == collection_id)
+        .outerjoin(SampleTagLinkTable, col(SampleTagLinkTable.tag_id) == col(TagTable.tag_id))
+        .group_by(
+            col(TagTable.tag_id),
+            col(TagTable.name),
+            col(TagTable.created_at),
+        )
+        .order_by(
+            usage_count.desc(),
+            col(TagTable.created_at).asc(),
+            col(TagTable.tag_id).asc(),
+        )
+        .limit(limit)
+    )
+    return {tag_id: tag_name for tag_id, tag_name, _ in session.exec(query).all()}
