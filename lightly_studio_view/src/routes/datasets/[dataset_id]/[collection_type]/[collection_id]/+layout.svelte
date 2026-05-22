@@ -375,7 +375,7 @@
                         {canSelectAll}
                         {isImages}
                         {hasMediaWithEmbeddings}
-                        {datasetId}
+                        collectionDatasetId={collection?.dataset_id}
                         compact={isSidePanelOpen}
                         onSelectAll={selectAllHandle.handleSelectAll}
                         searchImage={$searchImage}
@@ -441,7 +441,7 @@
                                 {canSelectAll}
                                 {isImages}
                                 {hasMediaWithEmbeddings}
-                                {datasetId}
+                                collectionDatasetId={collection?.dataset_id}
                                 compact={isSidePanelOpen}
                                 onSelectAll={selectAllHandle.handleSelectAll}
                                 searchImage={$searchImage}
