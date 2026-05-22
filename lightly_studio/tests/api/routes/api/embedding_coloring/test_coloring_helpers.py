@@ -134,3 +134,22 @@ def test_assign_color_categories__unmapped_value() -> None:
 
     assert legend == {0: "Filtered out", 1: "Unassigned", 2: "known"}
     assert categories == [1]
+
+
+def test_first_match_per_sample() -> None:
+    """First match wins per priority order; unmatched samples are omitted."""
+    a, b, c = uuid4(), uuid4(), uuid4()
+    label_x, label_y, label_z = uuid4(), uuid4(), uuid4()
+
+    sample_to_candidates: dict[UUID, set[UUID]] = {
+        a: {label_y, label_x},  # Has both; label_x is first in priority
+        b: {label_z},  # label_z is not in priority list
+        c: {label_y},  # Matches label_y
+    }
+    priority_order = [label_x, label_y]
+
+    result = coloring_helpers.first_match_per_sample(
+        sample_to_candidates=sample_to_candidates, priority_order=priority_order
+    )
+
+    assert result == {a: label_x, c: label_y}

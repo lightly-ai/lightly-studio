@@ -2,13 +2,21 @@
 
 from __future__ import annotations
 
+from collections import Counter
+
 from fastapi.testclient import TestClient
 from pytest_mock import MockerFixture
 from sqlmodel import Session
 
 from lightly_studio.metadata import compute_typicality
 from lightly_studio.models.collection import SampleType
-from lightly_studio.resolvers import image_resolver, tag_resolver, video_resolver
+from lightly_studio.resolvers import (
+    annotation_label_resolver,
+    annotation_resolver,
+    image_resolver,
+    tag_resolver,
+    video_resolver,
+)
 from lightly_studio.resolvers.image_filter import FilterDimensions, ImageFilter
 from lightly_studio.resolvers.sample_resolver.sample_filter import SampleFilter
 from lightly_studio.resolvers.video_resolver.video_filter import VideoFilter
@@ -398,6 +406,100 @@ def test_create_combination_selection__embedding_similarity_query_tag_without_em
     assert response.json()["error"] == (
         "Query tag empty_query_tag does not have embeddings for embedding model embedding_model_1."
     )
+
+
+def test_create_combination_selection__annotation_class_balancing_success(
+    test_client: TestClient, db_session: Session
+) -> None:
+    """Class balancing selection returns an even class distribution."""
+    collection = helpers_resolvers.create_collection(
+        session=db_session, collection_name="annotation_balancing_collection"
+    )
+    class_a = helpers_resolvers.create_annotation_label(
+        session=db_session,
+        root_collection_id=collection.collection_id,
+        label_name="class_a",
+    )
+    class_b = helpers_resolvers.create_annotation_label(
+        session=db_session,
+        root_collection_id=collection.collection_id,
+        label_name="class_b",
+    )
+    images = helpers_resolvers.create_images(
+        db_session=db_session,
+        collection_id=collection.collection_id,
+        images=[
+            ImageStub(path="sample_a_1.jpg"),
+            ImageStub(path="sample_a_2.jpg"),
+            ImageStub(path="sample_b_1.jpg"),
+            ImageStub(path="sample_b_2.jpg"),
+        ],
+    )
+    helpers_resolvers.create_annotations(
+        session=db_session,
+        collection_id=collection.collection_id,
+        annotations=[
+            helpers_resolvers.AnnotationDetails(
+                sample_id=images[0].sample_id,
+                annotation_label_id=class_a.annotation_label_id,
+            ),
+            helpers_resolvers.AnnotationDetails(
+                sample_id=images[1].sample_id,
+                annotation_label_id=class_a.annotation_label_id,
+            ),
+            helpers_resolvers.AnnotationDetails(
+                sample_id=images[2].sample_id,
+                annotation_label_id=class_b.annotation_label_id,
+            ),
+            helpers_resolvers.AnnotationDetails(
+                sample_id=images[3].sample_id,
+                annotation_label_id=class_b.annotation_label_id,
+            ),
+        ],
+    )
+
+    response = test_client.post(
+        f"/api/collections/{collection.collection_id}/selection",
+        json={
+            "n_samples_to_select": 2,
+            "selection_result_tag_name": "balanced_selection",
+            "strategies": [
+                {
+                    "strategy_name": "balance",
+                    "target_distribution": "uniform",
+                }
+            ],
+        },
+    )
+
+    assert response.status_code == 204
+    assert response.text == ""
+
+    created_tag = tag_resolver.get_by_name(
+        session=db_session,
+        tag_name="balanced_selection",
+        collection_id=collection.collection_id,
+    )
+    assert created_tag is not None
+
+    tag_filter = ImageFilter(sample_filter=SampleFilter(tag_ids=[created_tag.tag_id]))
+    result = image_resolver.get_all_by_collection_id(
+        session=db_session, collection_id=collection.collection_id, filters=tag_filter
+    )
+    assert len(result.samples) == 2
+    selected_annotations = annotation_resolver.get_all_by_parent_sample_ids(
+        session=db_session,
+        parent_sample_ids=[sample.sample_id for sample in result.samples],
+    )
+    selected_label_names = annotation_label_resolver.names_by_ids(
+        session=db_session,
+        ids=[annotation.annotation_label_id for annotation in selected_annotations],
+    )
+    selected_class_frequencies = Counter(
+        selected_label_names[str(annotation.annotation_label_id)]
+        for annotation in selected_annotations
+    )
+    assert selected_class_frequencies == {"class_a": 1, "class_b": 1}
 
 
 def test_create_combination_selection__image_filter_success(
