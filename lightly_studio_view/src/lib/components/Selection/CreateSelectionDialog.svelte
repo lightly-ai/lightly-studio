@@ -5,20 +5,27 @@
         computeSimilarityMetadata,
         computeTypicalityMetadata
     } from '$lib/api/lightly_studio_local/sdk.gen';
+    import type { SelectionRequest } from '$lib/api/lightly_studio_local/types.gen';
+    import AddStrategyButton from '$lib/components/Selection/AddStrategyButton/AddStrategyButton.svelte';
+    import StrategyCard from '$lib/components/Selection/StrategyCard/StrategyCard.svelte';
+    import {
+        isStrategyInstanceValid,
+        type StrategyInstance
+    } from '$lib/components/Selection/useStrategyBuilder/useStrategyBuilder';
+    import { useStrategyBuilder } from '$lib/components/Selection/useStrategyBuilder/useStrategyBuilder';
     import { Button } from '$lib/components/ui/button';
     import * as Dialog from '$lib/components/ui/dialog';
     import { Input } from '$lib/components/ui/input';
     import { Label } from '$lib/components/ui/label';
-    import * as Select from '$lib/components/ui/select';
-    import { toast } from 'svelte-sonner';
-    import { useTags } from '$lib/hooks/useTags/useTags';
-    import { useSelectionDialog } from '$lib/hooks/useSelectionDialog/useSelectionDialog';
-    import { useImageFilters } from '$lib/hooks/useImageFilters/useImageFilters';
-    import { useVideoFilters } from '$lib/hooks/useVideoFilters/useVideoFilters';
+    import { useAnnotationLabels } from '$lib/hooks/useAnnotationLabels/useAnnotationLabels';
     import { useGlobalStorage } from '$lib/hooks/useGlobalStorage';
-    import type { SelectionRequest } from '$lib/api/lightly_studio_local/types.gen';
+    import { useImageFilters } from '$lib/hooks/useImageFilters/useImageFilters';
+    import { useMetadataFilters } from '$lib/hooks/useMetadataFilters/useMetadataFilters';
+    import { useSelectionDialog } from '$lib/hooks/useSelectionDialog/useSelectionDialog';
+    import { useTags } from '$lib/hooks/useTags/useTags';
+    import { useVideoFilters } from '$lib/hooks/useVideoFilters/useVideoFilters';
+    import { toast } from 'svelte-sonner';
 
-    // Get collection ID from URL params
     const collectionId = $derived(page.params.collection_id!);
 
     const { loadTags, tags, setTagSelected } = $derived(
@@ -36,6 +43,16 @@
     const { imageFilter } = useImageFilters();
     const { videoFilter } = useVideoFilters();
     const { filteredSampleCount } = useGlobalStorage();
+    const { metadataInfo } = $derived(useMetadataFilters(collectionId));
+    const hasMetadataFields = $derived($metadataInfo.length > 0);
+
+    const annotationLabelsQuery = $derived(
+        useAnnotationLabels(() => ({ collectionId }))
+    );
+    const annotationLabels = $derived(
+        (annotationLabelsQuery.data ?? []).map((label) => label.annotation_label_name)
+    );
+    const hasAnnotationLabels = $derived(annotationLabels.length > 0);
 
     const currentFilter = $derived(isVideoCollection ? $videoFilter : $imageFilter);
     const selectionFilter = $derived<SelectionRequest['filter']>(
@@ -54,35 +71,29 @@
               : null
     );
 
-    // Form state
-    let selectionStrategy = $state<'diversity' | 'typicality' | 'similarity' | ''>('');
+    const {
+        instances,
+        addStrategy,
+        duplicateStrategy,
+        removeStrategy,
+        resetStrategies,
+        toggleExpand,
+        updateParams
+    } = useStrategyBuilder();
+
     let nSamplesToSelect = $state<number>(10);
-    let queryTagId = $state('');
-    let selectionResultTagName = $state<string>('');
+    let selectionResultTagName = $state('');
     let isSubmitting = $state(false);
-    let loadingMessage = $state<string>('');
+    let loadingMessage = $state('');
 
-    const STRATEGY_LABELS: Record<string, string> = {
-        diversity: 'Diversity',
-        typicality: 'Typicality',
-        similarity: 'Similarity'
-    };
-
-    // Form validation
     const isFormValid = $derived(
-        selectionStrategy !== '' &&
-            (selectionStrategy === 'similarity' ? queryTagId !== '' : true) &&
+        $instances.length > 0 &&
+            $instances.every((instance) => isStrategyInstanceValid(instance)) &&
             nSamplesToSelect > 0 &&
             selectionResultTagName.trim().length > 0
     );
 
-    const isSimilaritySupported = $derived(!isVideoCollection);
-    const selectedQueryTagName = $derived(
-        $tags.find((tag) => tag.tag_id === queryTagId)?.name ?? 'Select tag'
-    );
-
     const noSamples = $derived($filteredSampleCount === 0);
-
     const notEnoughSamples = $derived(
         $filteredSampleCount > 0 && nSamplesToSelect > $filteredSampleCount
     );
@@ -93,17 +104,22 @@
             : 'Create a subset of the samples fulfilling the current filters.'
     );
 
+    type SelectionError = {
+        error?: string;
+    };
+
     function handleFormSubmit(event: Event) {
         event.preventDefault();
-        if (!isFormValid || notEnoughSamples || noSamples) return;
+        if (!isFormValid || notEnoughSamples || noSamples) {
+            return;
+        }
 
-        submitSelection();
+        void submitSelection();
     }
 
     function resetForm() {
-        selectionStrategy = '';
+        resetStrategies();
         nSamplesToSelect = 10;
-        queryTagId = '';
         selectionResultTagName = '';
     }
 
@@ -112,7 +128,6 @@
         toast.success('Selection created successfully');
         await loadTags();
 
-        // Select the newly created tag
         const newTag = $tags.find((tag) => tag.name === createdTagName);
         if (newTag) {
             setTagSelected(newTag.tag_id, true);
@@ -122,8 +137,109 @@
         resetForm();
     }
 
+    function getMetadataKey(instance: StrategyInstance): string {
+        if (instance.type === 'typicality') {
+            return `typicality-${instance.id}`;
+        }
+
+        if (instance.type === 'similarity') {
+            return `similarity-${instance.id}`;
+        }
+
+        if (instance.type === 'metadata_weighting') {
+            return instance.params.metadata_key;
+        }
+
+        return '';
+    }
+
+    async function computeStrategyMetadata(instance: StrategyInstance): Promise<boolean> {
+        if (instance.type === 'typicality') {
+            loadingMessage = 'Computing typicality metadata...';
+            const response = await computeTypicalityMetadata({
+                path: { collection_id: collectionId },
+                body: {
+                    embedding_model_name: null,
+                    metadata_name: getMetadataKey(instance)
+                }
+            });
+
+            if (response.error) {
+                toast.error(
+                    'Failed to compute typicality metadata: ' +
+                        ((response.error as SelectionError).error ?? 'Unknown error')
+                );
+                return false;
+            }
+        }
+
+        if (instance.type === 'similarity') {
+            if (isVideoCollection) {
+                toast.error('Similarity is only available for image collections.');
+                return false;
+            }
+
+            loadingMessage = 'Computing similarity metadata...';
+            const response = await computeSimilarityMetadata({
+                path: {
+                    collection_id: collectionId,
+                    query_tag_id: instance.params.query_tag_id
+                },
+                body: {
+                    embedding_model_name: instance.params.embedding_model_name || null,
+                    metadata_name: getMetadataKey(instance)
+                }
+            });
+
+            if (response.error) {
+                toast.error(
+                    'Failed to compute similarity metadata: ' +
+                        ((response.error as SelectionError).error ?? 'Unknown error')
+                );
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    function toApiStrategy(instance: StrategyInstance): SelectionRequest['strategies'][number] {
+        if (instance.type === 'diversity') {
+            return {
+                strategy_name: 'diversity',
+                embedding_model_name: instance.params.embedding_model_name || null,
+                strength: instance.params.strength
+            };
+        }
+
+        if (instance.type === 'typicality' || instance.type === 'similarity') {
+            return {
+                strategy_name: 'weights',
+                metadata_key: getMetadataKey(instance),
+                strength: instance.params.strength
+            };
+        }
+
+        if (instance.type === 'metadata_weighting') {
+            return {
+                strategy_name: 'weights',
+                metadata_key: instance.params.metadata_key,
+                strength: instance.params.strength
+            };
+        }
+
+        return {
+            strategy_name: 'balance',
+            target_distribution: Object.fromEntries(
+                instance.params.target_distribution.map((row) => [row.class_name, row.weight])
+            ),
+            strength: instance.params.strength
+        };
+    }
+
     async function performSelection(strategies: SelectionRequest['strategies']) {
         loadingMessage = 'Creating selection...';
+
         const response = await createCombinationSelection({
             path: { collection_id: collectionId },
             body: {
@@ -135,9 +251,7 @@
         });
 
         if (response.error) {
-            toast.error(
-                (response.error as { error?: string }).error || 'Failed to create selection'
-            );
+            toast.error((response.error as SelectionError).error ?? 'Failed to create selection');
             return false;
         }
 
@@ -148,72 +262,15 @@
     async function submitSelection() {
         isSubmitting = true;
 
-        type SelectionError = {
-            error: string;
-        };
-
         try {
-            if (selectionStrategy === 'diversity') {
-                await performSelection([
-                    {
-                        strategy_name: 'diversity',
-                        embedding_model_name: null
-                    }
-                ]);
-            } else if (selectionStrategy === 'typicality') {
-                loadingMessage = 'Computing typicality metadata...';
-                const typicalityResponse = await computeTypicalityMetadata({
-                    path: { collection_id: collectionId },
-                    body: {
-                        embedding_model_name: null,
-                        metadata_name: 'typicality'
-                    }
-                });
-
-                if (typicalityResponse.error) {
-                    toast.error(
-                        'Failed to compute typicality metadata: ' +
-                            ((typicalityResponse.error as SelectionError).error || 'Unknown error')
-                    );
+            for (const instance of $instances) {
+                const isSuccessful = await computeStrategyMetadata(instance);
+                if (!isSuccessful) {
                     return;
                 }
-
-                await performSelection([
-                    {
-                        strategy_name: 'weights',
-                        metadata_key: 'typicality'
-                    }
-                ]);
-            } else if (selectionStrategy === 'similarity') {
-                if (!isSimilaritySupported) {
-                    toast.error('Similarity is only available for image collections.');
-                    return;
-                }
-
-                loadingMessage = 'Computing similarity metadata...';
-                const response = await computeSimilarityMetadata({
-                    path: { collection_id: collectionId, query_tag_id: queryTagId },
-                    body: {
-                        embedding_model_name: null,
-                        metadata_name: 'similarity'
-                    }
-                });
-
-                if (response.error) {
-                    toast.error(
-                        'Failed to compute similarity metadata: ' +
-                            ((response.error as SelectionError).error || 'Unknown error')
-                    );
-                    return;
-                }
-
-                await performSelection([
-                    {
-                        strategy_name: 'weights',
-                        metadata_key: 'similarity'
-                    }
-                ]);
             }
+
+            await performSelection($instances.map((instance) => toApiStrategy(instance)));
         } catch (error) {
             toast.error('Failed to create selection: ' + (error as Error).message);
         } finally {
@@ -229,7 +286,7 @@
 >
     <Dialog.Portal>
         <Dialog.Overlay />
-        <Dialog.Content class="border-border bg-background sm:max-w-[425px]">
+        <Dialog.Content class="border-border bg-background sm:max-w-[560px]">
             <form onsubmit={handleFormSubmit}>
                 <Dialog.Header>
                     <Dialog.Title class="text-foreground">Create Selection</Dialog.Title>
@@ -238,112 +295,59 @@
                     </Dialog.Description>
                 </Dialog.Header>
 
+                <div class="max-h-[60vh] overflow-y-auto dark:[color-scheme:dark]">
                 <div class="grid gap-4 py-4">
-                    <!-- Strategy Selection -->
-                    <div class="grid grid-cols-4 items-center gap-4">
-                        <Label for="strategy" class="text-right text-foreground">Strategy</Label>
-                        <Select.Root type="single" name="strategy" bind:value={selectionStrategy}>
-                            <Select.Trigger
-                                class="col-span-3"
-                                data-testid="selection-dialog-strategy-select"
-                            >
-                                {STRATEGY_LABELS[selectionStrategy] ?? 'Select strategy'}
-                            </Select.Trigger>
-                            <Select.Content>
-                                <Select.Group>
-                                    <Select.Item
-                                        value="diversity"
-                                        label="Diversity"
-                                        data-testid="selection-strategy-diversity"
-                                        >Diversity</Select.Item
-                                    >
-                                    <Select.Item
-                                        value="typicality"
-                                        label="Typicality"
-                                        data-testid="selection-strategy-typicality"
-                                        >Typicality</Select.Item
-                                    >
-                                    <Select.Item
-                                        value="similarity"
-                                        label="Similarity"
-                                        data-testid="selection-strategy-similarity"
-                                        disabled={!isSimilaritySupported}>Similarity</Select.Item
-                                    >
-                                </Select.Group>
-                            </Select.Content>
-                        </Select.Root>
+                    <div class="w-full">
+                        <AddStrategyButton
+                            isSimilarityDisabled={isVideoCollection || $tags.length === 0}
+                            isMetadataWeightingDisabled={!hasMetadataFields}
+                            isClassBalancingDisabled={!hasAnnotationLabels}
+                            onAdd={addStrategy}
+                        />
                     </div>
 
-                    {#if selectionStrategy === 'similarity'}
-                        <div class="grid grid-cols-4 items-center gap-4">
-                            <Label for="query-tag" class="text-right text-foreground">
-                                Query Tag
-                            </Label>
-                            <Select.Root type="single" name="query-tag" bind:value={queryTagId}>
-                                <Select.Trigger
-                                    class="col-span-3"
-                                    data-testid="selection-dialog-query-tag-select"
-                                >
-                                    {selectedQueryTagName}
-                                </Select.Trigger>
-                                <Select.Content>
-                                    <Select.Group>
-                                        {#if $tags.length === 0}
-                                            <div
-                                                class="py-1.5 pl-8 pr-2 text-sm italic text-muted-foreground"
-                                                data-testid="selection-dialog-no-query-tags"
-                                            >
-                                                No sample tags available.
-                                            </div>
-                                        {:else}
-                                            {#each $tags as tag (tag.tag_id)}
-                                                <Select.Item
-                                                    value={tag.tag_id}
-                                                    label={tag.name}
-                                                    data-testid={`selection-query-tag-${tag.tag_id}`}
-                                                >
-                                                    {tag.name}
-                                                </Select.Item>
-                                            {/each}
-                                        {/if}
-                                    </Select.Group>
-                                </Select.Content>
-                            </Select.Root>
-                        </div>
+                    {#if $instances.length > 0}
+                    <div class="grid gap-3">
+                        <Label class="text-foreground">Strategies</Label>
+                        {#each $instances as instance (instance.id)}
+                            <StrategyCard
+                                {instance}
+                                tags={$tags}
+                                {annotationLabels}
+                                onRemove={() => removeStrategy(instance.id)}
+                                onDuplicate={() => duplicateStrategy(instance.id)}
+                                onUpdate={(params) => updateParams(instance.id, params)}
+                                onToggleExpand={() => toggleExpand(instance.id)}
+                            />
+                        {/each}
+                    </div>
                     {/if}
 
-                    <!-- Number of Samples Input -->
-                    <div class="grid grid-cols-4 items-center gap-4">
-                        <Label for="n-samples" class="text-right text-foreground">
-                            Number of Samples
-                        </Label>
+                    <div class="grid gap-2">
+                        <Label for="n-samples" class="text-foreground">Number of Samples</Label>
                         <Input
                             id="n-samples"
                             type="number"
                             bind:value={nSamplesToSelect}
                             min="1"
-                            class="col-span-3"
                             placeholder="Enter number of samples"
                             required
                             data-testid="selection-dialog-n-samples-input"
                         />
                     </div>
 
-                    <!-- Tag Name Input -->
-                    <div class="grid grid-cols-4 items-center gap-4">
-                        <Label for="tag-name" class="text-right text-foreground">Tag Name</Label>
+                    <div class="grid gap-2">
+                        <Label for="tag-name" class="text-foreground">Tag Name</Label>
                         <Input
                             id="tag-name"
                             type="text"
                             bind:value={selectionResultTagName}
-                            class="col-span-3"
                             placeholder="Enter a tag for the sampled subset"
                             required
                             data-testid="selection-dialog-tag-name-input"
                         />
                     </div>
 
-                    <!-- Warning when no samples match the current filters -->
                     {#if noSamples}
                         <p
                             class="text-sm text-destructive"
@@ -353,7 +357,6 @@
                         </p>
                     {/if}
 
-                    <!-- Warning when requesting more samples than available -->
                     {#if notEnoughSamples}
                         <p
                             class="text-sm text-destructive"
@@ -364,8 +367,9 @@
                         </p>
                     {/if}
                 </div>
+                </div>
 
-                <Dialog.Footer>
+                <Dialog.Footer class="mt-4">
                     <Button
                         variant="outline"
                         type="button"

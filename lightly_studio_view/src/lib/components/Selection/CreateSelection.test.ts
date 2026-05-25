@@ -1,7 +1,7 @@
 import {
-    createCombinationSelection,
     computeSimilarityMetadata,
-    computeTypicalityMetadata
+    computeTypicalityMetadata,
+    createCombinationSelection
 } from '$lib/api/lightly_studio_local/sdk.gen';
 import { fireEvent, render, screen, waitFor } from '@testing-library/svelte';
 import { readable, writable, type Writable } from 'svelte/store';
@@ -64,12 +64,10 @@ vi.mock('svelte-sonner', () => ({
 let imageFilterStore: Writable<Record<string, unknown> | null>;
 let videoFilterStore: Writable<Record<string, unknown> | null>;
 let filteredSampleCountStore: Writable<number>;
-const updateSortByMock = vi.fn();
 
 vi.mock('$lib/hooks/useImageFilters/useImageFilters', () => ({
     useImageFilters: () => ({
-        imageFilter: imageFilterStore,
-        updateSortBy: updateSortByMock
+        imageFilter: imageFilterStore
     })
 }));
 
@@ -88,20 +86,35 @@ vi.mock('$lib/hooks/useGlobalStorage', () => ({
 const mockRequest = new Request('http://localhost');
 const mockResponse = new Response(null, { status: 200 });
 
+async function addStrategy(type: string) {
+    await fireEvent.click(screen.getByTestId('add-strategy-button'));
+    await fireEvent.click(await screen.findByTestId(`add-strategy-${type}`));
+}
+
+async function selectSimilarityQueryTag(tagId: string) {
+    await fireEvent.keyDown(screen.getByTestId('similarity-query-tag-select'), {
+        key: 'Enter'
+    });
+    await fireEvent.pointerUp(await screen.findByTestId(`similarity-query-tag-${tagId}`));
+}
+
 describe('CreateSelectionDialog', () => {
     beforeEach(() => {
         vi.clearAllMocks();
+        vi.spyOn(crypto, 'randomUUID')
+            .mockReturnValueOnce('00000000-0000-0000-0000-000000000001')
+            .mockReturnValueOnce('00000000-0000-0000-0000-000000000002')
+            .mockReturnValueOnce('00000000-0000-0000-0000-000000000003')
+            .mockReturnValueOnce('00000000-0000-0000-0000-000000000004')
+            .mockReturnValue('00000000-0000-0000-0000-000000000005');
         Element.prototype.scrollIntoView = vi.fn();
         pageMock.data.collection.sample_type = 'image';
         imageFilterStore = writable(null);
         videoFilterStore = writable(null);
         filteredSampleCountStore = writable(0);
         tagsStore = writable([
-            { tag_id: 'tag-1', name: 'Query Tag', description: null, kind: 'sample' as const }
+            { tag_id: 'tag-1', name: 'Query Tag', description: null, kind: 'sample' }
         ]);
-        updateSortByMock.mockReset();
-        loadTagsMock.mockReset();
-        setTagSelectedMock.mockReset();
 
         loadTagsMock.mockImplementation(async () => {
             tagsStore.set([
@@ -158,14 +171,11 @@ describe('CreateSelectionDialog', () => {
         filteredSampleCountStore.set(5);
 
         render(CreateSelectionDialog);
+        await addStrategy('diversity');
 
-        await fireEvent.keyDown(screen.getByTestId('selection-dialog-strategy-select'), {
-            key: 'Enter'
+        await fireEvent.input(screen.getByTestId('selection-dialog-n-samples-input'), {
+            target: { value: '10' }
         });
-        await fireEvent.pointerUp(await screen.findByTestId('selection-strategy-diversity'));
-
-        const input = screen.getByTestId('selection-dialog-n-samples-input');
-        await fireEvent.input(input, { target: { value: '10' } });
 
         expect(
             screen.getByTestId('selection-dialog-not-enough-samples-warning')
@@ -174,11 +184,7 @@ describe('CreateSelectionDialog', () => {
 
     it('does not show the not enough samples warning when filteredSampleCount is 0', async () => {
         render(CreateSelectionDialog);
-
-        await fireEvent.keyDown(screen.getByTestId('selection-dialog-strategy-select'), {
-            key: 'Enter'
-        });
-        await fireEvent.pointerUp(await screen.findByTestId('selection-strategy-diversity'));
+        await addStrategy('diversity');
 
         expect(
             screen.queryByTestId('selection-dialog-not-enough-samples-warning')
@@ -187,22 +193,14 @@ describe('CreateSelectionDialog', () => {
 
     it('shows the no samples warning when filteredSampleCount is 0', async () => {
         render(CreateSelectionDialog);
-
-        await fireEvent.keyDown(screen.getByTestId('selection-dialog-strategy-select'), {
-            key: 'Enter'
-        });
-        await fireEvent.pointerUp(await screen.findByTestId('selection-strategy-diversity'));
+        await addStrategy('diversity');
 
         expect(screen.getByTestId('selection-dialog-no-samples-warning')).toBeInTheDocument();
     });
 
     it('disables the submit button when filteredSampleCount is 0', async () => {
         render(CreateSelectionDialog);
-
-        await fireEvent.keyDown(screen.getByTestId('selection-dialog-strategy-select'), {
-            key: 'Enter'
-        });
-        await fireEvent.pointerUp(await screen.findByTestId('selection-strategy-diversity'));
+        await addStrategy('diversity');
 
         expect(screen.getByTestId('selection-dialog-submit')).toBeDisabled();
     });
@@ -211,29 +209,23 @@ describe('CreateSelectionDialog', () => {
         filteredSampleCountStore.set(5);
 
         render(CreateSelectionDialog);
+        await addStrategy('diversity');
 
-        await fireEvent.keyDown(screen.getByTestId('selection-dialog-strategy-select'), {
-            key: 'Enter'
+        await fireEvent.input(screen.getByTestId('selection-dialog-n-samples-input'), {
+            target: { value: '10' }
         });
-        await fireEvent.pointerUp(await screen.findByTestId('selection-strategy-diversity'));
-
-        const input = screen.getByTestId('selection-dialog-n-samples-input');
-        await fireEvent.input(input, { target: { value: '10' } });
 
         expect(screen.getByTestId('selection-dialog-submit')).toBeDisabled();
     });
 
-    it('passes the image filter to the diversity selection API call for image collections', async () => {
+    it('passes the image filter to the selection API call for image collections', async () => {
         const imageFilter = { filter_type: 'image', sample_filter: { tag_ids: ['tag-1'] } };
         imageFilterStore.set(imageFilter);
         filteredSampleCountStore.set(100);
 
         render(CreateSelectionDialog);
+        await addStrategy('diversity');
 
-        await fireEvent.keyDown(screen.getByTestId('selection-dialog-strategy-select'), {
-            key: 'Enter'
-        });
-        await fireEvent.pointerUp(await screen.findByTestId('selection-strategy-diversity'));
         await fireEvent.input(screen.getByTestId('selection-dialog-tag-name-input'), {
             target: { value: 'my-tag' }
         });
@@ -254,18 +246,15 @@ describe('CreateSelectionDialog', () => {
         });
     });
 
-    it('passes the video filter to the diversity selection API call for video collections', async () => {
+    it('passes the video filter to the selection API call for video collections', async () => {
         pageMock.data.collection.sample_type = 'video';
         const videoFilter = { filter_type: 'video', sample_filter: { tag_ids: ['tag-2'] } };
         videoFilterStore.set(videoFilter);
         filteredSampleCountStore.set(100);
 
         render(CreateSelectionDialog);
+        await addStrategy('diversity');
 
-        await fireEvent.keyDown(screen.getByTestId('selection-dialog-strategy-select'), {
-            key: 'Enter'
-        });
-        await fireEvent.pointerUp(await screen.findByTestId('selection-strategy-diversity'));
         await fireEvent.input(screen.getByTestId('selection-dialog-tag-name-input'), {
             target: { value: 'my-tag' }
         });
@@ -282,19 +271,12 @@ describe('CreateSelectionDialog', () => {
         });
     });
 
-    it('computes similarity metadata, applies similarity sorting, and creates selection', async () => {
+    it('computes similarity metadata and creates selection with the generated metadata key', async () => {
         filteredSampleCountStore.set(100);
 
         render(CreateSelectionDialog);
-
-        await fireEvent.keyDown(screen.getByTestId('selection-dialog-strategy-select'), {
-            key: 'Enter'
-        });
-        await fireEvent.pointerUp(await screen.findByTestId('selection-strategy-similarity'));
-        await fireEvent.keyDown(screen.getByTestId('selection-dialog-query-tag-select'), {
-            key: 'Enter'
-        });
-        await fireEvent.pointerUp(await screen.findByTestId('selection-query-tag-tag-1'));
+        await addStrategy('similarity');
+        await selectSimilarityQueryTag('tag-1');
 
         await fireEvent.input(screen.getByTestId('selection-dialog-tag-name-input'), {
             target: { value: 'similarity-tag' }
@@ -310,7 +292,7 @@ describe('CreateSelectionDialog', () => {
                 path: { collection_id: 'test-collection-id', query_tag_id: 'tag-1' },
                 body: {
                     embedding_model_name: null,
-                    metadata_name: 'similarity'
+                    metadata_name: 'similarity-00000000-0000-0000-0000-000000000001'
                 }
             });
         });
@@ -324,7 +306,8 @@ describe('CreateSelectionDialog', () => {
                     strategies: [
                         {
                             strategy_name: 'weights',
-                            metadata_key: 'similarity'
+                            metadata_key: 'similarity-00000000-0000-0000-0000-000000000001',
+                            strength: 1
                         }
                     ]
                 })
@@ -336,18 +319,55 @@ describe('CreateSelectionDialog', () => {
         });
     });
 
+    it('shows a combination summary and submits multiple strategies', async () => {
+        filteredSampleCountStore.set(100);
+
+        render(CreateSelectionDialog);
+        await addStrategy('diversity');
+        await addStrategy('metadata_weighting');
+
+        await fireEvent.input(screen.getByTestId('strategy-metadata-key-input'), {
+            target: { value: 'weather' }
+        });
+        await fireEvent.input(screen.getByTestId('selection-dialog-tag-name-input'), {
+            target: { value: 'my-tag' }
+        });
+
+        expect(screen.getByTestId('selection-summary')).toHaveTextContent(
+            'Selection will combine 2 strategies: Diversity, Metadata Weighting · weather.'
+        );
+
+        await fireEvent.click(screen.getByTestId('selection-dialog-submit'));
+
+        await waitFor(() => {
+            expect(createCombinationSelection).toHaveBeenCalledWith({
+                path: { collection_id: 'test-collection-id' },
+                body: expect.objectContaining({
+                    selection_result_tag_name: 'my-tag',
+                    strategies: [
+                        {
+                            strategy_name: 'diversity',
+                            embedding_model_name: null,
+                            strength: 1
+                        },
+                        {
+                            strategy_name: 'weights',
+                            metadata_key: 'weather',
+                            strength: 1
+                        }
+                    ]
+                })
+            });
+        });
+    });
+
     it('disables similarity for video collections', async () => {
         pageMock.data.collection.sample_type = 'video';
 
         render(CreateSelectionDialog);
+        await fireEvent.click(screen.getByTestId('add-strategy-button'));
 
-        await fireEvent.keyDown(screen.getByTestId('selection-dialog-strategy-select'), {
-            key: 'Enter'
-        });
-
-        expect(await screen.findByTestId('selection-strategy-similarity')).toHaveAttribute(
-            'data-disabled'
-        );
+        expect(await screen.findByTestId('add-strategy-similarity')).toBeDisabled();
     });
 
     it('shows an empty state when no sample tags are available for similarity', async () => {
@@ -355,16 +375,12 @@ describe('CreateSelectionDialog', () => {
         filteredSampleCountStore.set(100);
 
         render(CreateSelectionDialog);
-
-        await fireEvent.keyDown(screen.getByTestId('selection-dialog-strategy-select'), {
-            key: 'Enter'
-        });
-        await fireEvent.pointerUp(await screen.findByTestId('selection-strategy-similarity'));
-        await fireEvent.keyDown(screen.getByTestId('selection-dialog-query-tag-select'), {
+        await addStrategy('similarity');
+        await fireEvent.keyDown(screen.getByTestId('similarity-query-tag-select'), {
             key: 'Enter'
         });
 
-        expect(await screen.findByTestId('selection-dialog-no-query-tags')).toHaveTextContent(
+        expect(await screen.findByTestId('similarity-no-query-tags')).toHaveTextContent(
             'No sample tags available.'
         );
     });
