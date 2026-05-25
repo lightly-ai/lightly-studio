@@ -14,18 +14,17 @@
     import { usePlotData } from './usePlotData/usePlotData';
     import PlotPanelLegend from './PlotPanelLegend.svelte';
     import PlotColorByPopover from './PlotColorByPopover/PlotColorByPopover.svelte';
+    import { useCategoryVisibility } from './useCategoryVisibility/useCategoryVisibility';
     import { isEqual } from 'lodash-es';
     import { NOT_FILTERED_CATEGORY } from './plotCategories';
-    import {
-        FILTERED_COLOR,
-        getCategoryColors,
-        getCategoryCount,
-        NOT_FILTERED_COLOR
-    } from './plotColorUtils';
+    import { getCategoryColors, getCategoryCount, getLegendEntries } from './plotColorUtils';
     import { page } from '$app/state';
     import { isVideosRoute } from '$lib/routes';
     import { usePlotColorByType } from './PlotColorByPopover/usePlotColorByType/usePlotColorByType';
-    type ColorBy = Exclude<Parameters<typeof useEmbeddings>[2], undefined>;
+    import { useTags } from '$lib/hooks/useTags/useTags';
+    import { usePlotColorBy } from './usePlotColorBy/usePlotColorBy';
+    import { useAnnotationLabels } from '$lib/hooks/useAnnotationLabels/useAnnotationLabels';
+    import { writable } from 'svelte/store';
 
     const collectionId = page.params.collection_id;
     const { setShowPlot, getRangeSelection, setRangeSelectionForCollection } = useGlobalStorage();
@@ -72,17 +71,25 @@
         };
     });
 
-    let selectedColorByKey: string | null = $state(null);
     const { selectedColorByType } = usePlotColorByType(collectionId);
-    const colorBy: ColorBy = $derived.by(() => {
-        if ($selectedColorByType === 'metadata' && selectedColorByKey) {
-            return { type: 'metadata_field', key: selectedColorByKey };
-        }
-
-        return null;
+    const { tags } = useTags({ collection_id: collectionId, kind: ['sample'] });
+    const annotationLabelsQuery = useAnnotationLabels(() => ({ collectionId }));
+    const annotationLabels = writable<{ annotation_label_id: string }[]>([]);
+    $effect(() => {
+        annotationLabels.set(
+            (annotationLabelsQuery.data ?? []).filter(
+                (l): l is { annotation_label_id: string } & typeof l =>
+                    l.annotation_label_id !== undefined
+            )
+        );
+    });
+    const { colorBy, selectedColorByKey, setSelectedColorByKey } = usePlotColorBy({
+        selectedColorByType,
+        tags,
+        annotationLabels
     });
 
-    const embeddingsData = $derived(useEmbeddings(collectionId, filter, colorBy));
+    const embeddingsData = $derived(useEmbeddings(collectionId, filter, $colorBy));
 
     const {
         data: arrowData,
@@ -94,6 +101,12 @@
         })
     );
     const filteredLabel = $derived($colorLegend.get(1) ?? 'Filtered');
+    const {
+        hiddenCategories,
+        toggleCategoryVisibility,
+        focusCategoryVisibility,
+        resetCategoryVisibility
+    } = useCategoryVisibility();
 
     const hasActiveFilter = $derived(filter !== null || activeSampleIds.length > 0);
 
@@ -106,7 +119,13 @@
         })
     );
     const categoryCount = $derived.by(() => getCategoryCount($colorLegend));
-    const categoryColors = $derived.by(() => getCategoryColors($colorLegend));
+    const useLabelColors = $derived($selectedColorByType !== 'metadata');
+    const categoryColors = $derived.by(() =>
+        getCategoryColors($colorLegend, $hiddenCategories, useLabelColors)
+    );
+    const legendEntries = $derived.by(() =>
+        getLegendEntries($colorLegend, $hiddenCategories, useLabelColors)
+    );
     const handleMouseUp = () => {
         const hadRangeSelection = $rangeSelection !== null;
         if (!hadRangeSelection) {
@@ -295,8 +314,16 @@
                         rangeSelection={$rangeSelection}
                     />
                     <PlotPanelLegend
-                        categoryColors={[NOT_FILTERED_COLOR, FILTERED_COLOR]}
+                        {categoryColors}
                         {filteredLabel}
+                        {legendEntries}
+                        onToggleCategory={toggleCategoryVisibility}
+                        onDoubleClickCategory={(category) => {
+                            focusCategoryVisibility(
+                                legendEntries.map((entry) => entry.cat),
+                                category
+                            );
+                        }}
                     />
                 {/if}
             </div>
@@ -313,9 +340,12 @@
         >
             <PlotColorByPopover
                 {collectionId}
-                selectedKey={selectedColorByKey}
+                withTags={$tags.length > 0}
+                withAnnotationLabels={$annotationLabels.length > 0}
+                selectedKey={$selectedColorByKey}
                 onSelectedKeyChange={(key) => {
-                    selectedColorByKey = key;
+                    setSelectedColorByKey(key);
+                    resetCategoryVisibility();
                 }}
             />
             <Button

@@ -20,6 +20,13 @@ export default defineConfig({
                     if (id.includes('node_modules/d3-')) {
                         return 'vendor-d3';
                     }
+                    // Split echarts (and its zrender rendering engine)
+                    if (
+                        id.includes('node_modules/echarts') ||
+                        id.includes('node_modules/zrender')
+                    ) {
+                        return 'vendor-echarts';
+                    }
                     // Split tanstack query
                     if (id.includes('node_modules/@tanstack')) {
                         return 'vendor-tanstack';

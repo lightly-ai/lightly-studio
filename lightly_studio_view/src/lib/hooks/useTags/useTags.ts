@@ -13,7 +13,8 @@ interface UseTagsReturn {
     tagsSelected: Readable<Set<string>>;
     clearTagsSelected: () => void;
     clearTagSelected: (tagId: string) => void;
-    loadTags: () => void;
+    setTagSelected: (tagId: string, isSelected: boolean) => void;
+    loadTags: () => Promise<void>;
     tagSelectionToggle: (tagId: string) => void;
     isLoading: Readable<boolean>;
     error: Readable<Error | null>;
@@ -27,13 +28,14 @@ export function useTags(options: UseTagsOptions): UseTagsReturn {
     const isLoaded = writable(false);
     const error = writable<Error | null>(null);
     const isLoading = writable(false);
+    let currentLoadPromise: Promise<void> | null = null;
 
-    const loadTags = () => {
-        if (get(isLoading)) return;
+    const loadTags = async () => {
+        if (get(isLoading)) return currentLoadPromise ?? Promise.resolve();
         if (!collection_id) return;
 
         isLoading.set(true);
-        readTags({
+        currentLoadPromise = readTags({
             path: {
                 collection_id
             }
@@ -69,12 +71,15 @@ export function useTags(options: UseTagsOptions): UseTagsReturn {
             })
             .finally(() => {
                 isLoading.set(false);
+                currentLoadPromise = null;
             });
+
+        return currentLoadPromise;
     };
 
     // Auto-load tags when hook is initialized
     if (!get(isLoaded) && collection_id) {
-        loadTags();
+        void loadTags();
         isLoaded.set(true);
     }
 
@@ -130,11 +135,27 @@ export function useTags(options: UseTagsOptions): UseTagsReturn {
         });
     };
 
+    const setTagSelected = (tagId: string, isSelected: boolean) => {
+        tagsSelectedByCollection.update((selectedByCollection) => {
+            const selected = new Set(selectedByCollection[collection_id] ?? []);
+            if (isSelected) {
+                selected.add(tagId);
+            } else {
+                selected.delete(tagId);
+            }
+            return {
+                ...selectedByCollection,
+                [collection_id]: selected
+            };
+        });
+    };
+
     return {
         tags: readonly(tags),
         loadTags,
         tagsSelected: readonly(tagsSelectedForCollection),
         tagSelectionToggle,
+        setTagSelected,
         clearTagsSelected,
         clearTagSelected,
         isLoading: readonly(isLoading),

@@ -7,6 +7,13 @@ const RESERVED_CATEGORY_COUNT = 2;
 export const NOT_FILTERED_COLOR = '#9CA3AF';
 export const FILTERED_COLOR = '#F59E0B';
 
+interface LegendEntry {
+    cat: number;
+    label: string;
+    color: string;
+    hidden: boolean;
+}
+
 function getMaxCategoryFromLegend(colorLegend?: ReadonlyMap<number, string> | null): number {
     if (!colorLegend || colorLegend.size === 0) {
         return RESERVED_CATEGORY_COUNT - 1;
@@ -63,4 +70,26 @@ export function getCategoryColors(
         const label = useLabelColors ? (colorLegend?.get(category) ?? '') : '';
         return getBaseCategoryColor(category, categoryCount, label);
     });
+}
+
+export function getLegendEntries(
+    colorLegend?: ReadonlyMap<number, string> | null,
+    hiddenCategories: ReadonlySet<number> = new Set(),
+    useLabelColors: boolean = true
+): LegendEntry[] {
+    if (!colorLegend || colorLegend.size === 0) {
+        return [];
+    }
+
+    const categoryCount = getCategoryCount(colorLegend);
+
+    return [...colorLegend.entries()]
+        .filter(([category]) => category >= RESERVED_CATEGORY_COUNT)
+        .sort(([leftCategory], [rightCategory]) => leftCategory - rightCategory)
+        .map(([category, label]) => ({
+            cat: category,
+            label,
+            color: getBaseCategoryColor(category, categoryCount, useLabelColors ? label : ''),
+            hidden: hiddenCategories.has(category)
+        }));
 }

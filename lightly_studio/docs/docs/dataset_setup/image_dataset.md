@@ -382,6 +382,9 @@ dataset.add_annotations_from_coco(
 )
 ```
 
+If the input is a COCO prediction file, LightlyStudio reads the `score` field of each annotation
+and stores it as annotation confidence.
+
 See the [API reference](../api/dataset.md#lightly_studio.ImageDataset) for `add_annotations_from_coco`, `add_annotations_from_yolo`, and `add_annotations_from_labelformat`.
 
 ## Image Dataset in the GUI
