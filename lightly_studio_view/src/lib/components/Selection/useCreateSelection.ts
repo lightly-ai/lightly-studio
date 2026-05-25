@@ -70,6 +70,7 @@ export function useCreateSelection(params: UseCreateSelectionParams) {
     }
 
     async function submit(submitParams: SubmitParams): Promise<boolean> {
+        if (get(_isSubmitting)) return false;
         const {
             selectionStrategy,
             nSamplesToSelect,
