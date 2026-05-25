@@ -11,6 +11,8 @@ from pydantic import BaseModel
 from sqlalchemy import JSON, Column
 from sqlmodel import Field, SQLModel
 
+from lightly_studio.models.db_enum import str_enum_column
+
 
 class EvaluationTaskType(str, Enum):
     """Supported evaluation task types."""
@@ -28,7 +30,7 @@ class EvaluationRunBase(SQLModel):
     gt_annotation_collection_id: UUID = Field(foreign_key="collection.collection_id")
     pred_annotation_collection_id: UUID = Field(foreign_key="collection.collection_id")
 
-    task_type: EvaluationTaskType
+    task_type: EvaluationTaskType = Field(sa_column=str_enum_column(EvaluationTaskType))
 
     # Example config: {"iou_threshold": 0.5, "confidence_threshold": 0.0}.
     config_json: dict[str, Any] = Field(

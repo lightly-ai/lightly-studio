@@ -21,6 +21,7 @@ from lightly_studio.models.annotation.segmentation import (
     SegmentationAnnotationView,
 )
 from lightly_studio.models.collection import SampleType
+from lightly_studio.models.db_enum import str_enum_column
 from lightly_studio.models.sample import SampleTable
 from lightly_studio.models.video import VideoFrameTable
 
@@ -53,7 +54,7 @@ class AnnotationBaseTable(SQLModel, table=True):
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc), index=True)
 
     sample_id: UUID = Field(foreign_key="sample.sample_id", primary_key=True)
-    annotation_type: AnnotationType
+    annotation_type: AnnotationType = Field(sa_column=str_enum_column(AnnotationType))
     annotation_label_id: UUID = Field(foreign_key="annotation_label.annotation_label_id")
 
     confidence: Optional[float] = None

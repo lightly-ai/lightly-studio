@@ -2,12 +2,13 @@
 
 Revision ID: fa45898e4138
 Revises:
-Create Date: 2026-05-25 14:50:57.397791
+Create Date: 2026-05-25 21:39:22.390929
 
 """
 
+from __future__ import annotations
+
 from collections.abc import Sequence
-from typing import Union
 
 import sqlalchemy as sa
 from alembic import op
@@ -16,9 +17,9 @@ from sqlmodel.sql.sqltypes import AutoString
 
 # revision identifiers, used by Alembic.
 revision: str = "fa45898e4138"
-down_revision: Union[str, Sequence[str], None] = None
-branch_labels: Union[str, Sequence[str], None] = None
-depends_on: Union[str, Sequence[str], None] = None
+down_revision: str | Sequence[str] | None = None
+branch_labels: str | Sequence[str] | None = None
+depends_on: str | Sequence[str] | None = None
 
 
 def upgrade() -> None:
@@ -32,8 +33,16 @@ def upgrade() -> None:
     )
     op.create_table(
         "setting",
-        sa.Column("grid_view_sample_rendering", sa.String(length=7), nullable=False),
-        sa.Column("grid_view_thumbnail_quality", sa.String(length=4), nullable=False),
+        sa.Column(
+            "grid_view_sample_rendering",
+            sa.Enum("cover", "contain", name="gridviewsamplerenderingtype", native_enum=False),
+            nullable=False,
+        ),
+        sa.Column(
+            "grid_view_thumbnail_quality",
+            sa.Enum("raw", "high", name="gridviewthumbnailqualitytype", native_enum=False),
+            nullable=False,
+        ),
         sa.Column("key_hide_annotations", AutoString(), nullable=False),
         sa.Column("key_go_back", AutoString(), nullable=False),
         sa.Column("key_toggle_edit_mode", AutoString(), nullable=False),
@@ -94,7 +103,20 @@ def upgrade() -> None:
         "collection",
         sa.Column("name", AutoString(), nullable=False),
         sa.Column("parent_collection_id", sa.Uuid(), nullable=True),
-        sa.Column("sample_type", sa.String(length=11), nullable=False),
+        sa.Column(
+            "sample_type",
+            sa.Enum(
+                "video",
+                "video_frame",
+                "image",
+                "annotation",
+                "caption",
+                "group",
+                name="sampletype",
+                native_enum=False,
+            ),
+            nullable=False,
+        ),
         sa.Column("group_component_name", AutoString(), nullable=True),
         sa.Column("group_component_index", sa.Integer(), nullable=True),
         sa.Column("collection_id", sa.Uuid(), nullable=False),
@@ -155,7 +177,17 @@ def upgrade() -> None:
         sa.Column("name", AutoString(), nullable=False),
         sa.Column("gt_annotation_collection_id", sa.Uuid(), nullable=False),
         sa.Column("pred_annotation_collection_id", sa.Uuid(), nullable=False),
-        sa.Column("task_type", sa.String(length=21), nullable=False),
+        sa.Column(
+            "task_type",
+            sa.Enum(
+                "object_detection",
+                "classification",
+                "instance_segmentation",
+                name="evaluationtasktype",
+                native_enum=False,
+            ),
+            nullable=False,
+        ),
         sa.Column("config_json", sa.JSON(), nullable=False),
         sa.Column("id", sa.Uuid(), nullable=False),
         sa.Column("created_at", sa.DateTime(), nullable=False),
@@ -186,7 +218,17 @@ def upgrade() -> None:
         "annotation_base",
         sa.Column("created_at", sa.DateTime(), nullable=False),
         sa.Column("sample_id", sa.Uuid(), nullable=False),
-        sa.Column("annotation_type", sa.String(length=17), nullable=False),
+        sa.Column(
+            "annotation_type",
+            sa.Enum(
+                "classification",
+                "segmentation_mask",
+                "object_detection",
+                name="annotationtype",
+                native_enum=False,
+            ),
+            nullable=False,
+        ),
         sa.Column("annotation_label_id", sa.Uuid(), nullable=False),
         sa.Column("confidence", sa.Float(), nullable=True),
         sa.Column("parent_sample_id", sa.Uuid(), nullable=False),
@@ -270,6 +312,15 @@ def upgrade() -> None:
         "evaluation_sample_metric",
         ["sample_id"],
         unique=False,
+    )
+    op.create_table(
+        "group",
+        sa.Column("sample_id", sa.Uuid(), nullable=False),
+        sa.ForeignKeyConstraint(
+            ["sample_id"],
+            ["sample.sample_id"],
+        ),
+        sa.PrimaryKeyConstraint("sample_id"),
     )
     op.create_table(
         "image",
@@ -417,6 +468,20 @@ def upgrade() -> None:
         sa.PrimaryKeyConstraint("sample_id"),
     )
     op.create_table(
+        "samplegrouplinktable",
+        sa.Column("sample_id", sa.Uuid(), nullable=False),
+        sa.Column("parent_sample_id", sa.Uuid(), nullable=False),
+        sa.ForeignKeyConstraint(
+            ["parent_sample_id"],
+            ["group.sample_id"],
+        ),
+        sa.ForeignKeyConstraint(
+            ["sample_id"],
+            ["sample.sample_id"],
+        ),
+        sa.PrimaryKeyConstraint("sample_id"),
+    )
+    op.create_table(
         "segmentation_annotation",
         sa.Column("sample_id", sa.Uuid(), nullable=False),
         sa.Column("x", sa.Integer(), nullable=False),
@@ -427,29 +492,6 @@ def upgrade() -> None:
         sa.ForeignKeyConstraint(
             ["sample_id"],
             ["annotation_base.sample_id"],
-        ),
-        sa.PrimaryKeyConstraint("sample_id"),
-    )
-    op.create_table(
-        "group",
-        sa.Column("sample_id", sa.Uuid(), nullable=False),
-        sa.ForeignKeyConstraint(
-            ["sample_id"],
-            ["sample.sample_id"],
-        ),
-        sa.PrimaryKeyConstraint("sample_id"),
-    )
-    op.create_table(
-        "samplegrouplinktable",
-        sa.Column("sample_id", sa.Uuid(), nullable=False),
-        sa.Column("parent_sample_id", sa.Uuid(), nullable=False),
-        sa.ForeignKeyConstraint(
-            ["sample_id"],
-            ["sample.sample_id"],
-        ),
-        sa.ForeignKeyConstraint(
-            ["parent_sample_id"],
-            ["group.sample_id"],
         ),
         sa.PrimaryKeyConstraint("sample_id"),
     )
