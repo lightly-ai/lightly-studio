@@ -2,11 +2,12 @@ import { describe, expect, it } from 'vitest';
 import { getColorByLabel } from '$lib/utils';
 import {
     FILTERED_COLOR,
-    FILTERED_COLOR_MUTED,
     getCategoryColors,
     getCategoryCount,
     getLegendEntries,
-    NOT_FILTERED_COLOR
+    hasColorByCategories,
+    NOT_FILTERED_COLOR,
+    UNASSIGNED_COLOR
 } from './plotColorUtils';
 
 describe('plotColorUtils', () => {
@@ -34,25 +35,25 @@ describe('plotColorUtils', () => {
             [3, 'Validation']
         ]);
 
-        expect(getCategoryColors(colorLegend, new Set(), true)).toEqual([
+        expect(getCategoryColors(colorLegend, new Set(), true, true)).toEqual([
             NOT_FILTERED_COLOR,
-            FILTERED_COLOR_MUTED,
+            UNASSIGNED_COLOR,
             getColorByLabel('Train').color,
             getColorByLabel('Validation').color
         ]);
     });
 
-    it('renders hidden categories with the filtered color', () => {
+    it('renders hidden categories with the unassigned color when colorBy categories exist', () => {
         const colorLegend = new Map([
             [2, 'Train'],
             [3, 'Validation']
         ]);
 
-        expect(getCategoryColors(colorLegend, new Set([3]), true)).toEqual([
+        expect(getCategoryColors(colorLegend, new Set([3]), true, true)).toEqual([
             NOT_FILTERED_COLOR,
-            FILTERED_COLOR_MUTED,
+            UNASSIGNED_COLOR,
             getColorByLabel('Train').color,
-            FILTERED_COLOR_MUTED
+            UNASSIGNED_COLOR
         ]);
     });
 
@@ -93,34 +94,44 @@ describe('plotColorUtils', () => {
         ]);
     });
 
-    it('returns filtered color for hidden categories', () => {
+    it('returns unassigned color for hidden categories when colorBy categories exist', () => {
         const legend = new Map([
             [0, ''],
             [1, ''],
             [2, '']
         ]);
         const hiddenCategories = new Set([0, 2]);
-        expect(getCategoryColors(legend, hiddenCategories)).toEqual([
-            FILTERED_COLOR_MUTED,
-            FILTERED_COLOR_MUTED,
-            FILTERED_COLOR_MUTED
+        expect(getCategoryColors(legend, hiddenCategories, false, true)).toEqual([
+            UNASSIGNED_COLOR,
+            UNASSIGNED_COLOR,
+            UNASSIGNED_COLOR
         ]);
     });
 
-    it('uses muted filtered color for category 1 when colorBy is active', () => {
+    it('detects colorBy categories from the legend', () => {
         const withColorBy = new Map([
             [2, 'Train'],
             [3, 'Validation']
         ]);
-        expect(getCategoryColors(withColorBy)[1]).toBe(FILTERED_COLOR_MUTED);
+        expect(hasColorByCategories(withColorBy)).toBe(true);
 
         const withoutColorBy = new Map([
             [0, ''],
             [1, '']
         ]);
-        expect(getCategoryColors(withoutColorBy)[1]).toBe(FILTERED_COLOR);
+        expect(hasColorByCategories(withoutColorBy)).toBe(false);
 
-        expect(getCategoryColors(undefined)[1]).toBe(FILTERED_COLOR);
+        expect(hasColorByCategories(undefined)).toBe(false);
+    });
+
+    it('uses unassigned color for category 1 when colorBy categories exist', () => {
+        const colorLegend = new Map([
+            [2, 'Train'],
+            [3, 'Validation']
+        ]);
+
+        expect(getCategoryColors(colorLegend, new Set(), false, true)[1]).toBe(UNASSIGNED_COLOR);
+        expect(getCategoryColors(colorLegend)[1]).toBe(FILTERED_COLOR);
     });
 
     it('uses label colors for labeled categories when requested', () => {
@@ -132,9 +143,9 @@ describe('plotColorUtils', () => {
 
         const labelColor = getColorByLabel('labelName').color;
         const defaultColors = getCategoryColors(legend, new Set(), false);
-        const labelColors = getCategoryColors(legend, new Set(), true);
+        const labelColors = getCategoryColors(legend, new Set(), true, true);
 
-        expect(labelColors).toEqual([NOT_FILTERED_COLOR, FILTERED_COLOR_MUTED, labelColor]);
+        expect(labelColors).toEqual([NOT_FILTERED_COLOR, UNASSIGNED_COLOR, labelColor]);
         expect(defaultColors[2]).not.toBe(labelColor);
     });
 });
