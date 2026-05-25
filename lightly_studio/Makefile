@@ -125,26 +125,21 @@ start-e2e-postgres-groups: build
 start-e2e-postgres-video-groups: build
 	LIGHTLY_STUDIO_DATABASE_URL=$(POSTGRES_URL) uv run e2e-tests/index_videos_groups.py
 
-# Minimal webapp dist so imports succeed without a full lightly_studio_view build.
-.PHONY: mock-webapp-dist
-mock-webapp-dist:
-ifeq ($(OS),Windows_NT)
-	@powershell -Command "New-Item -ItemType Directory -Path src\lightly_studio\dist_lightly_studio_view_app -Force -ErrorAction SilentlyContinue | Out-Null"
-	@powershell -Command "New-Item -ItemType File -Path src\lightly_studio\dist_lightly_studio_view_app\index.html -Force | Out-Null"
-else
-	mkdir -p src/lightly_studio/dist_lightly_studio_view_app
-	touch src/lightly_studio/dist_lightly_studio_view_app/index.html
-endif
-
 # Note: we just mock dist_lightly_studio_view_app folder to avoid failing exporting the schema
 # because we need to have schema before building the frontend app
 .PHONY: export-schema
-export-schema: mock-webapp-dist
+export-schema:
+ifeq ($(OS),Windows_NT)
+	@powershell -Command "if (-not (Test-Path src\lightly_studio\dist_lightly_studio_view_app)) { New-Item -ItemType Directory -Path src\lightly_studio\dist_lightly_studio_view_app | Out-Null }"
+	@powershell -Command "New-Item -ItemType File -Path src\lightly_studio\dist_lightly_studio_view_app\index.html -Force | Out-Null"
 	@echo "Exporting schema for API..."
 	uv run src/lightly_studio/export_schema.py
-ifeq ($(OS),Windows_NT)
 	@powershell -Command "Remove-Item -Path src\lightly_studio\dist_lightly_studio_view_app -Recurse -Force -ErrorAction SilentlyContinue"
 else
+	mkdir -p src/lightly_studio/dist_lightly_studio_view_app
+	touch src/lightly_studio/dist_lightly_studio_view_app/index.html
+	@echo "Exporting schema for API..."
+	uv run src/lightly_studio/export_schema.py
 	rm -rf src/lightly_studio/dist_lightly_studio_view_app
 endif
 
@@ -169,7 +164,7 @@ test-ci:
 	uv run pytest
 
 .PHONY: test-postgres
-test-postgres: mock-webapp-dist
+test-postgres: build
 	@echo "Running tests against Postgres..."
 	uv run pytest --postgres
 
