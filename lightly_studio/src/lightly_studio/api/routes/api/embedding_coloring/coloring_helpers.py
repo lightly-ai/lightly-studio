@@ -143,6 +143,8 @@ class DiscreteColorScale(Generic[T]):
             return min((value - min_val) // bucket_width, num_buckets - 1)
 
         def _label(bucket_start: int) -> str:
+            if bucket_width == 1:
+                return str(bucket_start)
             return f"{bucket_start}-{bucket_start + bucket_width - 1}"
 
         legend: dict[int, str] = {

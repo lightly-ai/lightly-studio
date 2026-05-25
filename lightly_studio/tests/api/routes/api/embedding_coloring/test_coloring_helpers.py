@@ -92,6 +92,13 @@ class TestDiscreteColorScale:
         assert scale.value_to_category(300) == 3
         assert scale.legend == {2: "0-199", 3: "200-399"}
 
+    def test_from_integers__bucketing_width_one(self) -> None:
+        scale = DiscreteColorScale.from_integers(values=[0, 1, 2], max_categories=2)
+        assert scale.value_to_category(0) == 2
+        assert scale.value_to_category(1) == 3
+        assert scale.value_to_category(2) == 4
+        assert scale.legend == {2: "0", 3: "1", 4: "2"}
+
 
 def test_assign_color_categories() -> None:
     ids = [uuid4(), uuid4()]
