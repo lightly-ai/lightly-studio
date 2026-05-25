@@ -12,6 +12,7 @@ type SelectionError = { error: string };
 
 interface UseCreateSelectionParams {
     collectionId: string;
+    isSimilaritySupported: boolean;
     tags: Readable<TagView[]>;
     setTagSelected: (tagId: string, isSelected: boolean) => void;
     loadTags: () => Promise<void>;
@@ -27,7 +28,14 @@ interface SubmitParams {
 }
 
 export function useCreateSelection(params: UseCreateSelectionParams) {
-    const { collectionId, tags, setTagSelected, loadTags, closeSelectionDialog } = params;
+    const {
+        collectionId,
+        isSimilaritySupported,
+        tags,
+        setTagSelected,
+        loadTags,
+        closeSelectionDialog
+    } = params;
     const _isSubmitting = writable(false);
     const _loadingMessage = writable('');
 
@@ -105,6 +113,11 @@ export function useCreateSelection(params: UseCreateSelectionParams) {
             }
 
             if (selectionStrategy === 'similarity') {
+                if (!isSimilaritySupported) {
+                    toast.error('Similarity is only available for image collections.');
+                    return false;
+                }
+
                 _loadingMessage.set('Computing similarity metadata...');
                 const simResponse = await computeSimilarityMetadata({
                     path: { collection_id: collectionId, query_tag_id: queryTagId },

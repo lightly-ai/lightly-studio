@@ -44,6 +44,7 @@ describe('useCreateSelection', () => {
 
         const { submit } = useCreateSelection({
             collectionId: 'col-1',
+            isSimilaritySupported: true,
             tags: tagsStore,
             setTagSelected,
             loadTags,
@@ -82,6 +83,7 @@ describe('useCreateSelection', () => {
 
         const { submit } = useCreateSelection({
             collectionId: 'col-1',
+            isSimilaritySupported: true,
             tags: tagsStore,
             setTagSelected,
             loadTags,
@@ -121,6 +123,7 @@ describe('useCreateSelection', () => {
 
         const { submit } = useCreateSelection({
             collectionId: 'col-1',
+            isSimilaritySupported: true,
             tags: tagsStore,
             setTagSelected,
             loadTags,
@@ -150,6 +153,36 @@ describe('useCreateSelection', () => {
         });
     });
 
+    it('submit with similarity when isSimilaritySupported is false toasts error and returns false without calling API', async () => {
+        const loadTags = vi.fn().mockResolvedValue(undefined);
+        const setTagSelected = vi.fn();
+        const closeSelectionDialog = vi.fn();
+        const tagsStore = writable([]);
+
+        const { submit } = useCreateSelection({
+            collectionId: 'col-1',
+            isSimilaritySupported: false,
+            tags: tagsStore,
+            setTagSelected,
+            loadTags,
+            closeSelectionDialog
+        });
+        const result = await submit({
+            selectionStrategy: 'similarity',
+            nSamplesToSelect: 8,
+            selectionResultTagName: 'sim-tag',
+            queryTagId: 'query-tag-id',
+            selectionFilter: null
+        });
+
+        expect(result).toBe(false);
+        expect(toast.error).toHaveBeenCalledWith(
+            'Similarity is only available for image collections.'
+        );
+        expect(computeSimilarityMetadata).not.toHaveBeenCalled();
+        expect(createCombinationSelection).not.toHaveBeenCalled();
+    });
+
     it('API error in computeTypicalityMetadata toasts error and returns false without calling selection', async () => {
         vi.mocked(computeTypicalityMetadata).mockResolvedValue({
             data: null,
@@ -162,6 +195,7 @@ describe('useCreateSelection', () => {
 
         const { submit } = useCreateSelection({
             collectionId: 'col-1',
+            isSimilaritySupported: true,
             tags: tagsStore,
             setTagSelected,
             loadTags,
@@ -194,6 +228,7 @@ describe('useCreateSelection', () => {
 
         const { submit } = useCreateSelection({
             collectionId: 'col-1',
+            isSimilaritySupported: true,
             tags: tagsStore,
             setTagSelected,
             loadTags,
@@ -226,6 +261,7 @@ describe('useCreateSelection', () => {
 
         const { submit } = useCreateSelection({
             collectionId: 'col-1',
+            isSimilaritySupported: true,
             tags: tagsStore,
             setTagSelected,
             loadTags,
@@ -252,6 +288,7 @@ describe('useCreateSelection', () => {
 
         const hook = useCreateSelection({
             collectionId: 'col-1',
+            isSimilaritySupported: true,
             tags: tagsStore,
             setTagSelected,
             loadTags,
@@ -286,6 +323,7 @@ describe('useCreateSelection', () => {
 
         const hook = useCreateSelection({
             collectionId: 'col-1',
+            isSimilaritySupported: true,
             tags: tagsStore,
             setTagSelected,
             loadTags,
