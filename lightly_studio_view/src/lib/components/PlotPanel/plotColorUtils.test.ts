@@ -5,7 +5,6 @@ import {
     getCategoryColors,
     getCategoryCount,
     getLegendEntries,
-    hasColorByCategories,
     NOT_FILTERED_COLOR,
     UNASSIGNED_COLOR
 } from './plotColorUtils';
@@ -43,7 +42,7 @@ describe('plotColorUtils', () => {
         ]);
     });
 
-    it('renders hidden categories with the unassigned color when colorBy categories exist', () => {
+    it('renders hidden categories with the unassigned color when colorBy is active', () => {
         const colorLegend = new Map([
             [2, 'Train'],
             [3, 'Validation']
@@ -94,7 +93,7 @@ describe('plotColorUtils', () => {
         ]);
     });
 
-    it('returns unassigned color for hidden categories when colorBy categories exist', () => {
+    it('returns unassigned color for hidden categories when colorBy is active', () => {
         const legend = new Map([
             [0, ''],
             [1, ''],
@@ -108,23 +107,7 @@ describe('plotColorUtils', () => {
         ]);
     });
 
-    it('detects colorBy categories from the legend', () => {
-        const withColorBy = new Map([
-            [2, 'Train'],
-            [3, 'Validation']
-        ]);
-        expect(hasColorByCategories(withColorBy)).toBe(true);
-
-        const withoutColorBy = new Map([
-            [0, ''],
-            [1, '']
-        ]);
-        expect(hasColorByCategories(withoutColorBy)).toBe(false);
-
-        expect(hasColorByCategories(undefined)).toBe(false);
-    });
-
-    it('uses unassigned color for category 1 when colorBy categories exist', () => {
+    it('uses unassigned color for category 1 when colorBy is active', () => {
         const colorLegend = new Map([
             [2, 'Train'],
             [3, 'Validation']

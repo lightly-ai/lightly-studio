@@ -17,12 +17,7 @@
     import { useCategoryVisibility } from './useCategoryVisibility/useCategoryVisibility';
     import { isEqual } from 'lodash-es';
     import { NOT_FILTERED_CATEGORY } from './plotCategories';
-    import {
-        getCategoryColors,
-        getCategoryCount,
-        getLegendEntries,
-        hasColorByCategories
-    } from './plotColorUtils';
+    import { getCategoryColors, getCategoryCount, getLegendEntries } from './plotColorUtils';
     import { page } from '$app/state';
     import { isVideosRoute } from '$lib/routes';
     import { usePlotColorByType } from './PlotColorByPopover/usePlotColorByType/usePlotColorByType';
@@ -125,14 +120,8 @@
     );
     const categoryCount = $derived.by(() => getCategoryCount($colorLegend));
     const useLabelColors = $derived($selectedColorByType !== 'metadata');
-    const colorLegendHasColorByCategories = $derived.by(() => hasColorByCategories($colorLegend));
     const categoryColors = $derived.by(() =>
-        getCategoryColors(
-            $colorLegend,
-            $hiddenCategories,
-            useLabelColors,
-            colorLegendHasColorByCategories
-        )
+        getCategoryColors($colorLegend, $hiddenCategories, useLabelColors, $colorBy !== null)
     );
     const legendEntries = $derived.by(() =>
         getLegendEntries($colorLegend, $hiddenCategories, useLabelColors)
