@@ -164,7 +164,7 @@ def test_postgres_cleanup_existing__recreates_schema_at_head(
     postgres_url: str | None,
     patch_engine_singleton: None,  # noqa: ARG001
 ) -> None:
-    """cleanup_existing drops schema and re-initializes with create_all + stamp head."""
+    """cleanup_existing drops schema and re-initializes with upgrade head."""
     if postgres_url is None:
         pytest.skip("Requires --postgres")
 

@@ -68,15 +68,17 @@ Schema changes for PostgreSQL use [Alembic](https://alembic.sqlalchemy.org/). Mi
 
 **Startup** (Postgres only):
 
-| Database state | On connect |
-|----------------|------------|
-| Empty | `create_all` from current models, then `stamp head` |
-| Tables exist, no `alembic_version` (pre-Alembic) | `stamp head` once |
-| `alembic_version` present | `upgrade head` (pending revisions only) |
+| Database state | On connect | What runs |
+|----------------|------------|-----------|
+| Empty (no `alembic_version`, no app tables) | `upgrade head` | All revision scripts from the start (e.g. baseline → `head`) |
+| Tables exist, no `alembic_version` (pre-Alembic) | `stamp head` | No migration SQL; records `head` only |
+| `alembic_version` present | `upgrade head` | Pending revisions from current version → `head` |
 
-Fresh installs get the current model shape without replaying the full migration chain. Upgrades from an older on-prem release (for example product v5 → v10) run only the pending revisions between the stored `alembic_version` and `head`. The `alembic_version` table stores the current revision id, not the product version string.
+Empty and tracked databases both build schema via Alembic `upgrade head`, not `SQLModel.metadata.create_all()`. The difference is scope: a fresh database replays the full chain; a tracked database applies only migrations not yet in `alembic_version`.
 
-`cleanup_existing=True` on Postgres drops all tables (including `alembic_version`), then runs the empty-database startup path again.
+The `alembic_version` table stores the current revision id, not the product version string. Map product releases (e.g. v5 → v10) to revision ids in release notes.
+
+`cleanup_existing=True` on Postgres drops all tables (including `alembic_version`), then runs `upgrade head` on the empty database.
 
 **Local Postgres** (required for autogenerate and migration checks):
 

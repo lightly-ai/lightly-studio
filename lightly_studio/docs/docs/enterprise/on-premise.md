@@ -19,9 +19,8 @@ storage, and security. You can run it fully offline or air-gapped if needed.
 
 On startup, the Studio backend applies PostgreSQL schema changes automatically:
 
-- **New deployments** get the current schema from application models, then Alembic records `head` without replaying historical migration SQL.
-- **Upgrades** from a release that already uses Alembic run pending revisions in order (`upgrade head`) using the revision chain shipped in the container image.
-- **First upgrade after Alembic is introduced** on an existing database that was created with the older `create_all`-only path: the backend **stamps** `head` once (no full replay). Verify schema compatibility before production rollout;
+- **New deployments** on an empty database run `upgrade head`; schema comes from the Alembic revision chain shipped in the container image.
+- **Upgrades** from a release that already uses Alembic run pending revisions in order (`upgrade head`) using the same revision chain.
 
 Product version labels (for example v5 → v10) map to Alembic revision ids in release notes; the `alembic_version` table stores the current revision id, not the product version string.
 
