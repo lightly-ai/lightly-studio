@@ -1,4 +1,3 @@
-# mypy: ignore-errors
 """Baseline schema for PostgreSQL.
 
 Revision ID: fa45898e4138
@@ -11,9 +10,9 @@ from collections.abc import Sequence
 from typing import Union
 
 import sqlalchemy as sa
-import sqlmodel
 from alembic import op
 from pgvector.sqlalchemy import Vector
+from sqlmodel.sql.sqltypes import AutoString
 
 # revision identifiers, used by Alembic.
 revision: str = "fa45898e4138"
@@ -35,20 +34,18 @@ def upgrade() -> None:
         "setting",
         sa.Column("grid_view_sample_rendering", sa.String(length=7), nullable=False),
         sa.Column("grid_view_thumbnail_quality", sa.String(length=4), nullable=False),
-        sa.Column("key_hide_annotations", sqlmodel.sql.sqltypes.AutoString(), nullable=False),
-        sa.Column("key_go_back", sqlmodel.sql.sqltypes.AutoString(), nullable=False),
-        sa.Column("key_toggle_edit_mode", sqlmodel.sql.sqltypes.AutoString(), nullable=False),
+        sa.Column("key_hide_annotations", AutoString(), nullable=False),
+        sa.Column("key_go_back", AutoString(), nullable=False),
+        sa.Column("key_toggle_edit_mode", AutoString(), nullable=False),
         sa.Column("show_annotation_text_labels", sa.Boolean(), nullable=False),
         sa.Column("show_sample_filenames", sa.Boolean(), nullable=False),
         sa.Column("show_bounding_boxes_for_segmentation", sa.Boolean(), nullable=False),
-        sa.Column("key_toolbar_selection", sqlmodel.sql.sqltypes.AutoString(), nullable=False),
-        sa.Column("key_toolbar_drag", sqlmodel.sql.sqltypes.AutoString(), nullable=False),
-        sa.Column("key_toolbar_bounding_box", sqlmodel.sql.sqltypes.AutoString(), nullable=False),
-        sa.Column(
-            "key_toolbar_segmentation_mask", sqlmodel.sql.sqltypes.AutoString(), nullable=False
-        ),
-        sa.Column("key_toolbar_brush", sqlmodel.sql.sqltypes.AutoString(), nullable=False),
-        sa.Column("key_toolbar_eraser", sqlmodel.sql.sqltypes.AutoString(), nullable=False),
+        sa.Column("key_toolbar_selection", AutoString(), nullable=False),
+        sa.Column("key_toolbar_drag", AutoString(), nullable=False),
+        sa.Column("key_toolbar_bounding_box", AutoString(), nullable=False),
+        sa.Column("key_toolbar_segmentation_mask", AutoString(), nullable=False),
+        sa.Column("key_toolbar_brush", AutoString(), nullable=False),
+        sa.Column("key_toolbar_eraser", AutoString(), nullable=False),
         sa.Column("setting_id", sa.Uuid(), nullable=False),
         sa.Column("created_at", sa.DateTime(), nullable=False),
         sa.Column("updated_at", sa.DateTime(), nullable=False),
@@ -57,7 +54,7 @@ def upgrade() -> None:
     op.create_index(op.f("ix_setting_created_at"), "setting", ["created_at"], unique=False)
     op.create_table(
         "tag",
-        sa.Column("name", sqlmodel.sql.sqltypes.AutoString(), nullable=False),
+        sa.Column("name", AutoString(), nullable=False),
         sa.Column("tag_id", sa.Uuid(), nullable=False),
         sa.Column("collection_id", sa.Uuid(), nullable=False),
         sa.Column("kind", sa.String(), nullable=False),
@@ -69,7 +66,7 @@ def upgrade() -> None:
     op.create_index(op.f("ix_tag_created_at"), "tag", ["created_at"], unique=False)
     op.create_table(
         "two_dim_embeddings",
-        sa.Column("hash", sqlmodel.sql.sqltypes.AutoString(), nullable=False),
+        sa.Column("hash", AutoString(), nullable=False),
         sa.Column("x", sa.ARRAY(sa.Float()), nullable=True),
         sa.Column("y", sa.ARRAY(sa.Float()), nullable=True),
         sa.PrimaryKeyConstraint("hash"),
@@ -77,9 +74,9 @@ def upgrade() -> None:
     op.create_table(
         "annotation_label",
         sa.Column("dataset_id", sa.Uuid(), nullable=False),
-        sa.Column("annotation_label_name", sqlmodel.sql.sqltypes.AutoString(), nullable=False),
+        sa.Column("annotation_label_name", AutoString(), nullable=False),
         sa.Column("annotation_label_id", sa.Uuid(), nullable=False),
-        sa.Column("created_at", sqlmodel.sql.sqltypes.AutoString(), nullable=False),
+        sa.Column("created_at", AutoString(), nullable=False),
         sa.ForeignKeyConstraint(
             ["dataset_id"],
             ["dataset.dataset_id"],
@@ -95,10 +92,10 @@ def upgrade() -> None:
     )
     op.create_table(
         "collection",
-        sa.Column("name", sqlmodel.sql.sqltypes.AutoString(), nullable=False),
+        sa.Column("name", AutoString(), nullable=False),
         sa.Column("parent_collection_id", sa.Uuid(), nullable=True),
         sa.Column("sample_type", sa.String(length=11), nullable=False),
-        sa.Column("group_component_name", sqlmodel.sql.sqltypes.AutoString(), nullable=True),
+        sa.Column("group_component_name", AutoString(), nullable=True),
         sa.Column("group_component_index", sa.Integer(), nullable=True),
         sa.Column("collection_id", sa.Uuid(), nullable=False),
         sa.Column("dataset_id", sa.Uuid(), nullable=False),
@@ -137,7 +134,7 @@ def upgrade() -> None:
     )
     op.create_table(
         "embedding_model",
-        sa.Column("name", sqlmodel.sql.sqltypes.AutoString(), nullable=False),
+        sa.Column("name", AutoString(), nullable=False),
         sa.Column("parameter_count_in_mb", sa.Integer(), nullable=True),
         sa.Column("embedding_model_hash", sa.VARCHAR(length=128), nullable=True),
         sa.Column("embedding_dimension", sa.Integer(), nullable=False),
@@ -155,7 +152,7 @@ def upgrade() -> None:
     )
     op.create_table(
         "evaluation_run",
-        sa.Column("name", sqlmodel.sql.sqltypes.AutoString(), nullable=False),
+        sa.Column("name", AutoString(), nullable=False),
         sa.Column("gt_annotation_collection_id", sa.Uuid(), nullable=False),
         sa.Column("pred_annotation_collection_id", sa.Uuid(), nullable=False),
         sa.Column("task_type", sa.String(length=21), nullable=False),
@@ -234,7 +231,7 @@ def upgrade() -> None:
         sa.Column("sample_id", sa.Uuid(), nullable=False),
         sa.Column("parent_sample_id", sa.Uuid(), nullable=False),
         sa.Column("created_at", sa.DateTime(), nullable=False),
-        sa.Column("text", sqlmodel.sql.sqltypes.AutoString(), nullable=False),
+        sa.Column("text", AutoString(), nullable=False),
         sa.ForeignKeyConstraint(
             ["parent_sample_id"],
             ["sample.sample_id"],
@@ -250,7 +247,7 @@ def upgrade() -> None:
         "evaluation_sample_metric",
         sa.Column("evaluation_run_id", sa.Uuid(), nullable=False),
         sa.Column("sample_id", sa.Uuid(), nullable=False),
-        sa.Column("metric_name", sqlmodel.sql.sqltypes.AutoString(), nullable=False),
+        sa.Column("metric_name", AutoString(), nullable=False),
         sa.Column("value", sa.Float(), nullable=False),
         sa.ForeignKeyConstraint(
             ["evaluation_run_id"],
@@ -276,10 +273,10 @@ def upgrade() -> None:
     )
     op.create_table(
         "image",
-        sa.Column("file_name", sqlmodel.sql.sqltypes.AutoString(), nullable=False),
+        sa.Column("file_name", AutoString(), nullable=False),
         sa.Column("width", sa.Integer(), nullable=False),
         sa.Column("height", sa.Integer(), nullable=False),
-        sa.Column("file_path_abs", sqlmodel.sql.sqltypes.AutoString(), nullable=False),
+        sa.Column("file_path_abs", AutoString(), nullable=False),
         sa.Column("sample_id", sa.Uuid(), nullable=False),
         sa.Column("created_at", sa.DateTime(), nullable=False),
         sa.Column("updated_at", sa.DateTime(), nullable=False),
@@ -340,8 +337,8 @@ def upgrade() -> None:
         sa.Column("height", sa.Integer(), nullable=False),
         sa.Column("duration_s", sa.Float(), nullable=True),
         sa.Column("fps", sa.Float(), nullable=False),
-        sa.Column("file_name", sqlmodel.sql.sqltypes.AutoString(), nullable=False),
-        sa.Column("file_path_abs", sqlmodel.sql.sqltypes.AutoString(), nullable=False),
+        sa.Column("file_name", AutoString(), nullable=False),
+        sa.Column("file_path_abs", AutoString(), nullable=False),
         sa.Column("sample_id", sa.Uuid(), nullable=False),
         sa.ForeignKeyConstraint(
             ["sample_id"],
@@ -356,7 +353,7 @@ def upgrade() -> None:
         sa.Column("sample_id", sa.Uuid(), nullable=False),
         sa.Column("pred_annotation_id", sa.Uuid(), nullable=True),
         sa.Column("gt_annotation_id", sa.Uuid(), nullable=True),
-        sa.Column("metric_name", sqlmodel.sql.sqltypes.AutoString(), nullable=True),
+        sa.Column("metric_name", AutoString(), nullable=True),
         sa.Column("value", sa.Float(), nullable=True),
         sa.ForeignKeyConstraint(
             ["evaluation_run_id"],
@@ -434,6 +431,29 @@ def upgrade() -> None:
         sa.PrimaryKeyConstraint("sample_id"),
     )
     op.create_table(
+        "group",
+        sa.Column("sample_id", sa.Uuid(), nullable=False),
+        sa.ForeignKeyConstraint(
+            ["sample_id"],
+            ["sample.sample_id"],
+        ),
+        sa.PrimaryKeyConstraint("sample_id"),
+    )
+    op.create_table(
+        "samplegrouplinktable",
+        sa.Column("sample_id", sa.Uuid(), nullable=False),
+        sa.Column("parent_sample_id", sa.Uuid(), nullable=False),
+        sa.ForeignKeyConstraint(
+            ["sample_id"],
+            ["sample.sample_id"],
+        ),
+        sa.ForeignKeyConstraint(
+            ["parent_sample_id"],
+            ["group.sample_id"],
+        ),
+        sa.PrimaryKeyConstraint("sample_id"),
+    )
+    op.create_table(
         "video_frame",
         sa.Column("frame_number", sa.Integer(), nullable=False),
         sa.Column("frame_timestamp_pts", sa.Integer(), nullable=False),
@@ -455,67 +475,5 @@ def upgrade() -> None:
 
 
 def downgrade() -> None:
-    """Downgrade schema."""
-    # ### commands auto generated by Alembic - please adjust! ###
-    op.drop_table("video_frame")
-    op.drop_table("segmentation_annotation")
-    op.drop_table("object_detection_annotation")
-    op.drop_index(
-        op.f("ix_evaluation_annotation_metric_sample_id"), table_name="evaluation_annotation_metric"
-    )
-    op.drop_index(
-        op.f("ix_evaluation_annotation_metric_pred_annotation_id"),
-        table_name="evaluation_annotation_metric",
-    )
-    op.drop_index(
-        op.f("ix_evaluation_annotation_metric_metric_name"),
-        table_name="evaluation_annotation_metric",
-    )
-    op.drop_index(
-        op.f("ix_evaluation_annotation_metric_gt_annotation_id"),
-        table_name="evaluation_annotation_metric",
-    )
-    op.drop_index(
-        op.f("ix_evaluation_annotation_metric_evaluation_run_id"),
-        table_name="evaluation_annotation_metric",
-    )
-    op.drop_table("evaluation_annotation_metric")
-    op.drop_table("video")
-    op.drop_table("sampletaglinktable")
-    op.drop_table("sample_embedding")
-    op.drop_table("metadata")
-    op.drop_index(op.f("ix_image_created_at"), table_name="image")
-    op.drop_table("image")
-    op.drop_index(
-        op.f("ix_evaluation_sample_metric_sample_id"), table_name="evaluation_sample_metric"
-    )
-    op.drop_index(
-        op.f("ix_evaluation_sample_metric_evaluation_run_id"), table_name="evaluation_sample_metric"
-    )
-    op.drop_table("evaluation_sample_metric")
-    op.drop_index(op.f("ix_caption_created_at"), table_name="caption")
-    op.drop_table("caption")
-    op.drop_table("annotation_collection_coverage")
-    op.drop_index(op.f("ix_annotation_base_created_at"), table_name="annotation_base")
-    op.drop_table("annotation_base")
-    op.drop_index(op.f("ix_sample_created_at"), table_name="sample")
-    op.drop_table("sample")
-    op.drop_table("evaluation_run")
-    op.drop_index(op.f("ix_embedding_model_created_at"), table_name="embedding_model")
-    op.drop_table("embedding_model")
-    op.drop_table("object_track")
-    op.drop_index(op.f("ix_collection_parent_collection_id"), table_name="collection")
-    op.drop_index(op.f("ix_collection_name"), table_name="collection")
-    op.drop_index(op.f("ix_collection_dataset_id"), table_name="collection")
-    op.drop_index(op.f("ix_collection_created_at"), table_name="collection")
-    op.drop_table("collection")
-    op.drop_index(op.f("ix_annotation_label_dataset_id"), table_name="annotation_label")
-    op.drop_index(op.f("ix_annotation_label_created_at"), table_name="annotation_label")
-    op.drop_table("annotation_label")
-    op.drop_table("two_dim_embeddings")
-    op.drop_index(op.f("ix_tag_created_at"), table_name="tag")
-    op.drop_table("tag")
-    op.drop_index(op.f("ix_setting_created_at"), table_name="setting")
-    op.drop_table("setting")
-    op.drop_table("dataset")
-    # ### end Alembic commands ###
+    """Baseline has no prior revision; downgrading is not supported."""
+    raise NotImplementedError("Cannot downgrade below the initial schema revision.")
