@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { getColorByLabel } from '$lib/utils';
 import {
     FILTERED_COLOR,
+    FILTERED_COLOR_MUTED,
     getCategoryColors,
     getCategoryCount,
     getLegendEntries,
@@ -35,7 +36,7 @@ describe('plotColorUtils', () => {
 
         expect(getCategoryColors(colorLegend, new Set(), true)).toEqual([
             NOT_FILTERED_COLOR,
-            FILTERED_COLOR,
+            FILTERED_COLOR_MUTED,
             getColorByLabel('Train').color,
             getColorByLabel('Validation').color
         ]);
@@ -49,9 +50,9 @@ describe('plotColorUtils', () => {
 
         expect(getCategoryColors(colorLegend, new Set([3]), true)).toEqual([
             NOT_FILTERED_COLOR,
-            FILTERED_COLOR,
+            FILTERED_COLOR_MUTED,
             getColorByLabel('Train').color,
-            FILTERED_COLOR
+            FILTERED_COLOR_MUTED
         ]);
     });
 
@@ -100,10 +101,26 @@ describe('plotColorUtils', () => {
         ]);
         const hiddenCategories = new Set([0, 2]);
         expect(getCategoryColors(legend, hiddenCategories)).toEqual([
-            FILTERED_COLOR,
-            FILTERED_COLOR,
-            FILTERED_COLOR
+            FILTERED_COLOR_MUTED,
+            FILTERED_COLOR_MUTED,
+            FILTERED_COLOR_MUTED
         ]);
+    });
+
+    it('uses muted filtered color for category 1 when colorBy is active', () => {
+        const withColorBy = new Map([
+            [2, 'Train'],
+            [3, 'Validation']
+        ]);
+        expect(getCategoryColors(withColorBy)[1]).toBe(FILTERED_COLOR_MUTED);
+
+        const withoutColorBy = new Map([
+            [0, ''],
+            [1, '']
+        ]);
+        expect(getCategoryColors(withoutColorBy)[1]).toBe(FILTERED_COLOR);
+
+        expect(getCategoryColors(undefined)[1]).toBe(FILTERED_COLOR);
     });
 
     it('uses label colors for labeled categories when requested', () => {
@@ -117,7 +134,7 @@ describe('plotColorUtils', () => {
         const defaultColors = getCategoryColors(legend, new Set(), false);
         const labelColors = getCategoryColors(legend, new Set(), true);
 
-        expect(labelColors).toEqual([NOT_FILTERED_COLOR, FILTERED_COLOR, labelColor]);
+        expect(labelColors).toEqual([NOT_FILTERED_COLOR, FILTERED_COLOR_MUTED, labelColor]);
         expect(defaultColors[2]).not.toBe(labelColor);
     });
 });
