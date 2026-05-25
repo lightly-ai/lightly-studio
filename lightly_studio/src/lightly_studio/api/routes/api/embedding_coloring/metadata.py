@@ -66,8 +66,10 @@ def _build_metadata_color_scale(
             values=[False, True],
             format_fn=lambda v: "true" if v else "false",
         )
+    if metadata_type == "integer":
+        return DiscreteColorScale.from_integers(values=(int(v) for v in sample_to_value.values()))
 
     raise ValueError(
         f"Metadata field '{key}' has unsupported type {metadata_type!r}. "
-        "Only 'string' and 'boolean' fields can be used for coloring."
+        "Only 'string', 'boolean', and 'integer' fields can be used for coloring."
     )
