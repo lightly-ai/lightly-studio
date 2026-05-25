@@ -1,7 +1,7 @@
 """PostgreSQL schema migrations via Alembic.
 
-Fresh DBs use create_all + stamp head; legacy DBs stamp head;
-tracked DBs upgrade to head.
+Empty and tracked DBs run ``upgrade head``; legacy DBs (tables, no
+``alembic_version``) are stamped to head without applying revisions.
 """
 
 from __future__ import annotations
@@ -30,17 +30,9 @@ def run_migrations(engine: Engine, engine_url: str) -> None:
     """
     config = get_alembic_config(engine_url=engine_url)
 
-    if _alembic_version_table_exists(engine=engine):
-        logging.info("Applying pending Alembic migrations (upgrade head).")
-        _run_alembic_command(
-            engine=engine,
-            config=config,
-            fn=command.upgrade,
-            revision="head",
-        )
-        return
-
-    if _has_application_tables(engine=engine):
+    if _has_application_tables(engine=engine) and not _alembic_version_table_exists(
+        engine=engine,
+    ):
         logging.info("Adopting pre-Alembic database schema (stamp head).")
         logging.warning(
             "Database has application tables but no alembic_version row. "
@@ -55,12 +47,15 @@ def run_migrations(engine: Engine, engine_url: str) -> None:
         )
         return
 
-    logging.info("Initializing empty PostgreSQL database (create_all, stamp head).")
-    SQLModel.metadata.create_all(bind=engine)
+    if _alembic_version_table_exists(engine=engine):
+        logging.info("Applying pending Alembic migrations (upgrade head).")
+    else:
+        logging.info("Initializing empty PostgreSQL database (upgrade head).")
+
     _run_alembic_command(
         engine=engine,
         config=config,
-        fn=command.stamp,
+        fn=command.upgrade,
         revision="head",
     )
 
