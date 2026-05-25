@@ -168,6 +168,55 @@ test-postgres: build
 	@echo "Running tests against Postgres..."
 	uv run pytest --postgres
 
+.PHONY: migration-upgrade migration-revision migration-stamp migration-downgrade migration-check
+
+migration-upgrade: start-postgres
+	@echo "Applying Alembic migrations (upgrade head)..."
+ifeq ($(OS),Windows_NT)
+	@powershell -Command "$$env:LIGHTLY_STUDIO_DATABASE_URL='$(POSTGRES_URL)'; uv run alembic -c alembic.ini upgrade head"
+else
+	LIGHTLY_STUDIO_DATABASE_URL=$(POSTGRES_URL) uv run alembic -c alembic.ini upgrade head
+endif
+
+migration-stamp: start-postgres
+	@echo "Stamping Alembic version to head (dev only)..."
+ifeq ($(OS),Windows_NT)
+	@powershell -Command "$$env:LIGHTLY_STUDIO_DATABASE_URL='$(POSTGRES_URL)'; uv run alembic -c alembic.ini stamp head"
+else
+	LIGHTLY_STUDIO_DATABASE_URL=$(POSTGRES_URL) uv run alembic -c alembic.ini stamp head
+endif
+
+migration-downgrade: start-postgres
+	@echo "Downgrading Alembic by one revision (dev only)..."
+ifeq ($(OS),Windows_NT)
+	@powershell -Command "$$env:LIGHTLY_STUDIO_DATABASE_URL='$(POSTGRES_URL)'; uv run alembic -c alembic.ini downgrade -1"
+else
+	LIGHTLY_STUDIO_DATABASE_URL=$(POSTGRES_URL) uv run alembic -c alembic.ini downgrade -1
+endif
+
+migration-revision: start-postgres
+ifndef MSG
+	$(error MSG is required. Example: make migration-revision MSG=add_column)
+endif
+	@echo "Autogenerating Alembic revision..."
+ifeq ($(OS),Windows_NT)
+	@powershell -Command "$$env:LIGHTLY_STUDIO_DATABASE_URL='$(POSTGRES_URL)'; uv run alembic -c alembic.ini revision --autogenerate -m '$(MSG)'"
+else
+	LIGHTLY_STUDIO_DATABASE_URL=$(POSTGRES_URL) uv run alembic -c alembic.ini revision --autogenerate -m "$(MSG)"
+endif
+
+migration-check: start-postgres
+	@echo "Checking Alembic migration chain on empty Postgres..."
+ifeq ($(OS),Windows_NT)
+	@powershell -Command "docker exec $(POSTGRES_CONTAINER_NAME) psql -U $(POSTGRES_USER) -d $(POSTGRES_DB) -c \"DROP SCHEMA public CASCADE; CREATE SCHEMA public; GRANT ALL ON SCHEMA public TO $(POSTGRES_USER); GRANT ALL ON SCHEMA public TO public;\""
+	@powershell -Command "$$env:LIGHTLY_STUDIO_DATABASE_URL='$(POSTGRES_URL)'; uv run alembic -c alembic.ini upgrade head"
+	@powershell -Command "$$env:LIGHTLY_STUDIO_DATABASE_URL='$(POSTGRES_URL)'; uv run alembic -c alembic.ini check"
+else
+	docker exec $(POSTGRES_CONTAINER_NAME) psql -U $(POSTGRES_USER) -d $(POSTGRES_DB) -c "DROP SCHEMA public CASCADE; CREATE SCHEMA public; GRANT ALL ON SCHEMA public TO $(POSTGRES_USER); GRANT ALL ON SCHEMA public TO public;"
+	LIGHTLY_STUDIO_DATABASE_URL=$(POSTGRES_URL) uv run alembic -c alembic.ini upgrade head
+	LIGHTLY_STUDIO_DATABASE_URL=$(POSTGRES_URL) uv run alembic -c alembic.ini check
+endif
+
 .PHONY: check-uv-lock
 check-uv-lock:
 	@echo "Ensuring uv.lock is up to date..."

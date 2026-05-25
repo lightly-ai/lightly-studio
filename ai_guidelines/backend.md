@@ -58,6 +58,56 @@ Thin endpoints may call resolvers directly. Services are mainly for cross-entity
 - The app lifespan also initializes and shuts down plugins, then closes the database engine cleanly.
 - Python API classes in `core/` use a long-lived `db_manager.persistent_session()`. Currently this is a design limitation, causing issues with DuckDB's single-writer model.
 
+### DuckDB
+
+Schema is created with `SQLModel.metadata.create_all()` on startup. No Alembic.
+
+### PostgreSQL and Alembic
+
+Schema changes for PostgreSQL use [Alembic](https://alembic.sqlalchemy.org/). Migration scripts live in `src/lightly_studio/migrations/versions/`; configuration in `alembic.ini` and `migrations/env.py`. Runtime logic is in `db_migrations.run_migrations()`.
+
+**Startup** (Postgres only):
+
+| Database state | On connect |
+|----------------|------------|
+| Empty | `create_all` from current models, then `stamp head` |
+| Tables exist, no `alembic_version` (pre-Alembic) | `stamp head` once |
+| `alembic_version` present | `upgrade head` (pending revisions only) |
+
+Fresh installs get the current model shape without replaying the full migration chain. Upgrades from an older on-prem release (for example product v5 → v10) run only the pending revisions between the stored `alembic_version` and `head`. The `alembic_version` table stores the current revision id, not the product version string.
+
+`cleanup_existing=True` on Postgres drops all tables (including `alembic_version`), then runs the empty-database startup path again.
+
+**Local Postgres** (required for autogenerate and migration checks):
+
+```bash
+cd lightly_studio
+make start-postgres
+```
+
+Set `LIGHTLY_STUDIO_DATABASE_URL` to the dev URL (the Makefile uses `postgresql://lightly:lightly@localhost:5433/lightly_studio` via `POSTGRES_URL`).
+
+Makefile targets: `migration-upgrade`, `migration-revision` (requires `MSG=...`), `migration-stamp`, `migration-downgrade` (dev only), `migration-check` (empty DB: `upgrade head` + `alembic check`).
+
+**Adding a schema change** (append a new revision; do not edit the baseline):
+
+1. Ensure the database reflects the **previous** Alembic head (`make migration-upgrade` on your branch before editing models).
+2. Change SQLModel tables in code.
+3. Run `make migration-revision MSG=short_description`.
+4. Review the generated file under `src/lightly_studio/migrations/versions/`, commit the model change and the new revision together.
+
+**Validation:**
+
+```bash
+cd lightly_studio
+make static-checks
+make test
+make migration-check
+make test-postgres
+```
+
+Enterprise on-prem: the Studio backend applies migrations automatically on startup; first adoption on a legacy `create_all` database stamps `head` once. See `docs/docs/enterprise/on-premise.md`.
+
 ## Build and generated artifacts
 
 - The Python package is built from `lightly_studio/pyproject.toml` with `uv build`.

@@ -15,6 +15,16 @@ storage, and security. You can run it fully offline or air-gapped if needed.
 - `Datasets Database` stores enterprise dataset metadata in PostgreSQL.
 - `Users Database` stores user accounts in SQLite on the `auth_data` volume.
 
+### Datasets database migrations
+
+On startup, the Studio backend applies PostgreSQL schema changes automatically:
+
+- **New deployments** get the current schema from application models, then Alembic records `head` without replaying historical migration SQL.
+- **Upgrades** from a release that already uses Alembic run pending revisions in order (`upgrade head`) using the revision chain shipped in the container image.
+- **First upgrade after Alembic is introduced** on an existing database that was created with the older `create_all`-only path: the backend **stamps** `head` once (no full replay). Verify schema compatibility before production rollout;
+
+Product version labels (for example v5 → v10) map to Alembic revision ids in release notes; the `alembic_version` table stores the current revision id, not the product version string.
+
 For the user-facing security and architecture overview, see [Security and Architecture](security.md).
 
 For on-premise local disk or NAS/shared mounts used with `ls.connect()`, see

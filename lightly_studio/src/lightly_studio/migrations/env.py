@@ -41,7 +41,10 @@ def _ensure_script_location() -> None:
 
 
 def _configure_database_url() -> None:
-    """Set sqlalchemy.url on the Alembic config from LIGHTLY_STUDIO_DATABASE_URL."""
+    """Set sqlalchemy.url on the Alembic config when not already provided."""
+    if config.get_main_option(name="sqlalchemy.url"):
+        return
+
     if LIGHTLY_STUDIO_DATABASE_URL is None:
         raise RuntimeError("LIGHTLY_STUDIO_DATABASE_URL must be set for Alembic migrations.")
 
@@ -69,7 +72,7 @@ def _configure_context(connection: Connection) -> None:
     context.configure(
         connection=connection,
         target_metadata=target_metadata,
-        compare_type=True,
+        compare_type=False,
         render_item=_render_item,
     )
 
@@ -96,7 +99,7 @@ def run_migrations() -> None:
         context.configure(
             connection=connection,
             target_metadata=target_metadata,
-            compare_type=True,
+            compare_type=False,
             render_item=_render_item,
         )
 
