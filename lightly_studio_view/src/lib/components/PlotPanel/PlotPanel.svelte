@@ -121,7 +121,7 @@
     const categoryCount = $derived.by(() => getCategoryCount($colorLegend));
     const useLabelColors = $derived($selectedColorByType !== 'metadata');
     const categoryColors = $derived.by(() =>
-        getCategoryColors($colorLegend, $hiddenCategories, useLabelColors)
+        getCategoryColors($colorLegend, $hiddenCategories, useLabelColors, $colorBy !== null)
     );
     const legendEntries = $derived.by(() =>
         getLegendEntries($colorLegend, $hiddenCategories, useLabelColors)
