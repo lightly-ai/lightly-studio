@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import copy
+from collections.abc import Iterable
 from dataclasses import dataclass, field
 from typing import Any, TypeVar
 from uuid import UUID, uuid4
@@ -59,6 +60,9 @@ class DeepCopyContext:
     embedding_model_map: dict[UUID, UUID] = field(default_factory=dict)
     evaluation_run_map: dict[UUID, UUID] = field(default_factory=dict)
     new_dataset_id: UUID | None = None
+    # If set, restricts which samples (and their dependents) are copied.
+    # Sample-level entities that reference a sample outside this set are skipped.
+    sample_id_filter: set[UUID] | None = None
 
 
 def deep_copy(
@@ -79,9 +83,93 @@ def deep_copy(
     Returns:
         The newly created root collection.
     """
+    return _deep_copy_impl(
+        session=session,
+        dataset_id=dataset_id,
+        copy_name=copy_name,
+        sample_id_filter=None,
+    )
+
+
+def deep_copy_subset(
+    session: Session,
+    dataset_id: UUID,
+    copy_name: str,
+    sample_ids: Iterable[UUID],
+) -> CollectionTable:
+    """Deep copy a dataset, restricted to the given samples.
+
+    The full collection hierarchy and dataset-level entities (tags, labels, embedding
+    models, object tracks, evaluation runs) are always copied.
+
+    Sample-level rows are copied only for samples in ``sample_ids`` and for their
+    dependents (annotations, video frames, and captions whose ``parent_sample_id`` is
+    in the set). Pass parent samples (images / videos / frames) and their
+    annotations/captions/frames are pulled in automatically.
+
+    Sample IDs that do not exist in the dataset are ignored.
+
+    Args:
+        session: Database session.
+        dataset_id: Dataset ID to copy from.
+        copy_name: Name for the new dataset.
+        sample_ids: Sample IDs from the original dataset to include in the copy.
+
+    Returns:
+        The newly created root collection.
+    """
+    initial = set(sample_ids)
+    expanded = _expand_sample_id_filter(session=session, sample_ids=initial)
+    return _deep_copy_impl(
+        session=session,
+        dataset_id=dataset_id,
+        copy_name=copy_name,
+        sample_id_filter=expanded,
+    )
+
+
+def _expand_sample_id_filter(session: Session, sample_ids: set[UUID]) -> set[UUID]:
+    """Expand a sample-id set to include dependents that are themselves samples.
+
+    Annotations, video frames, and captions each have their own ``SampleTable`` row
+    that references a parent sample via ``parent_sample_id``. When the caller asks
+    for parent samples, we transitively pull in those child sample rows so that the
+    sample-level filter passes them through to the copy.
+    """
+    if not sample_ids:
+        return sample_ids
+    expanded: set[UUID] = set(sample_ids)
+    ann_ids = session.exec(
+        select(AnnotationBaseTable.sample_id).where(
+            col(AnnotationBaseTable.parent_sample_id).in_(sample_ids)
+        )
+    ).all()
+    expanded.update(ann_ids)
+    frame_ids = session.exec(
+        select(VideoFrameTable.sample_id).where(
+            col(VideoFrameTable.parent_sample_id).in_(sample_ids)
+        )
+    ).all()
+    expanded.update(frame_ids)
+    # Captions added in case a frame parent was just added above.
+    caption_ids = session.exec(
+        select(CaptionTable.sample_id).where(
+            col(CaptionTable.parent_sample_id).in_(expanded)
+        )
+    ).all()
+    expanded.update(caption_ids)
+    return expanded
+
+
+def _deep_copy_impl(
+    session: Session,
+    dataset_id: UUID,
+    copy_name: str,
+    sample_id_filter: set[UUID] | None,
+) -> CollectionTable:
     # If this fails, a new table was added. Update deep_copy to handle it, then update this count.
     table_coverage_utils.verify_table_coverage()
-    ctx = DeepCopyContext()
+    ctx = DeepCopyContext(sample_id_filter=sample_id_filter)
 
     # 1. Create new dataset entry.
     new_dataset_id = uuid4()
@@ -205,9 +293,10 @@ def _copy_samples(
 ) -> None:
     """Copy all samples, remapping collection_id to new collections."""
     # TODO (Mihnea, 01/2026): Handle large collections with batching if needed.
-    samples = session.exec(
-        select(SampleTable).where(col(SampleTable.collection_id).in_(old_collection_ids))
-    ).all()
+    stmt = select(SampleTable).where(col(SampleTable.collection_id).in_(old_collection_ids))
+    if ctx.sample_id_filter is not None:
+        stmt = stmt.where(col(SampleTable.sample_id).in_(ctx.sample_id_filter))
+    samples = session.exec(stmt).all()
 
     for old_sample in samples:
         new_id = uuid4()
@@ -323,6 +412,9 @@ def _copy_video_frames(
     ).all()
 
     for old_frame in frames:
+        # Skip frames whose parent video is not in the copied subset.
+        if old_frame.parent_sample_id not in ctx.sample_map:
+            continue
         new_frame = _copy_with_updates(
             old_frame,
             {
@@ -380,6 +472,9 @@ def _copy_captions(
     ).all()
 
     for old_caption in captions:
+        # Skip captions whose parent sample is not in the copied subset.
+        if old_caption.parent_sample_id not in ctx.sample_map:
+            continue
         new_caption = _copy_with_updates(
             old_caption,
             {
@@ -425,6 +520,9 @@ def _copy_annotations(
     ).all()
 
     for old_ann in annotations:
+        # Skip annotations whose parent sample is not in the copied subset.
+        if old_ann.parent_sample_id not in ctx.sample_map:
+            continue
         new_sample_id = ctx.sample_map[old_ann.sample_id]
         new_object_track_id = (
             ctx.object_track_map[old_ann.object_track_id]
@@ -612,6 +710,9 @@ def _copy_evaluation_sample_metrics(
     ).all()
 
     for old_metric in metrics:
+        # Skip metrics for samples that were filtered out of the subset copy.
+        if old_metric.sample_id not in ctx.sample_map:
+            continue
         new_metric = _copy_with_updates(
             old_metric,
             {
@@ -637,22 +738,29 @@ def _copy_evaluation_annotation_metrics(
     ).all()
 
     for old_metric in metrics:
+        # Skip metrics for samples that were filtered out of the subset copy.
+        if old_metric.sample_id not in ctx.sample_map:
+            continue
+        # If either annotation reference points to an excluded sample, null it
+        # rather than dropping the whole metric.
+        new_pred_id = (
+            ctx.sample_map.get(old_metric.pred_annotation_id)
+            if old_metric.pred_annotation_id is not None
+            else None
+        )
+        new_gt_id = (
+            ctx.sample_map.get(old_metric.gt_annotation_id)
+            if old_metric.gt_annotation_id is not None
+            else None
+        )
         new_metric = _copy_with_updates(
             old_metric,
             {
                 "id": uuid4(),
                 "evaluation_run_id": ctx.evaluation_run_map[old_metric.evaluation_run_id],
                 "sample_id": ctx.sample_map[old_metric.sample_id],
-                "pred_annotation_id": (
-                    ctx.sample_map[old_metric.pred_annotation_id]
-                    if old_metric.pred_annotation_id is not None
-                    else None
-                ),
-                "gt_annotation_id": (
-                    ctx.sample_map[old_metric.gt_annotation_id]
-                    if old_metric.gt_annotation_id is not None
-                    else None
-                ),
+                "pred_annotation_id": new_pred_id,
+                "gt_annotation_id": new_gt_id,
             },
         )
         session.add(new_metric)
@@ -673,6 +781,9 @@ def _copy_annotation_collection_coverage(
     ).all()
 
     for old_row in rows:
+        # Skip coverage rows whose parent sample is not in the copied subset.
+        if old_row.parent_sample_id not in ctx.sample_map:
+            continue
         new_row = AnnotationCollectionCoverageTable(
             annotation_collection_id=ctx.collection_map[old_row.annotation_collection_id],
             parent_sample_id=ctx.sample_map[old_row.parent_sample_id],
