@@ -86,7 +86,7 @@ def _configure_context(connection: Connection) -> None:
     context.configure(
         connection=connection,
         target_metadata=target_metadata,
-        compare_type=False,
+        compare_type=True,
         render_item=_render_item,
     )
 
@@ -113,7 +113,7 @@ def run_migrations() -> None:
         context.configure(
             connection=connection,
             target_metadata=target_metadata,
-            compare_type=False,
+            compare_type=True,
             render_item=_render_item,
         )
 

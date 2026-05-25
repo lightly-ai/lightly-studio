@@ -204,7 +204,8 @@ else
 	LIGHTLY_STUDIO_DATABASE_URL=$(POSTGRES_URL) uv run alembic -c alembic.ini downgrade -1
 endif
 
-migration-revision: start-postgres mock-webapp-dist
+# Autogenerate requires the database schema to match the current Alembic head.
+migration-revision: migration-upgrade
 ifndef MSG
 	$(error MSG is required. Example: make migration-revision MSG=add_column)
 endif
