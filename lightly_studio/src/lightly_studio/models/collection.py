@@ -8,8 +8,6 @@ from uuid import UUID, uuid4
 from sqlalchemy import UniqueConstraint
 from sqlmodel import Field, Relationship, SQLModel
 
-from lightly_studio.models.db_enum import enum_column
-
 
 class SampleType(str, Enum):
     """The type of samples in the collection."""
@@ -31,7 +29,7 @@ class CollectionBase(SQLModel):
         foreign_key="collection.collection_id",
         index=True,
     )
-    sample_type: SampleType = Field(sa_column=enum_column(SampleType))
+    sample_type: SampleType
 
     # Group-specific fields
     group_component_name: Optional[str] = None

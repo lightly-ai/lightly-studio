@@ -8,8 +8,6 @@ from uuid import UUID, uuid4
 
 from sqlmodel import Field, SQLModel
 
-from lightly_studio.models.db_enum import enum_column
-
 
 class GridViewSampleRenderingType(str, Enum):
     """Defines how samples are rendered in the grid view."""
@@ -29,11 +27,9 @@ class SettingBase(SQLModel):
     """Base class for Settings model."""
 
     grid_view_sample_rendering: GridViewSampleRenderingType = Field(
-        sa_column=enum_column(GridViewSampleRenderingType),
         description="Controls how samples are rendered in the grid view",
     )
     grid_view_thumbnail_quality: GridViewThumbnailQualityType = Field(
-        sa_column=enum_column(GridViewThumbnailQualityType),
         description="Controls thumbnail quality for grid-like preview views",
     )
 
@@ -86,11 +82,9 @@ class SettingDefaults(SettingBase):
 
     grid_view_sample_rendering: GridViewSampleRenderingType = Field(
         default=GridViewSampleRenderingType.CONTAIN,
-        sa_column=enum_column(GridViewSampleRenderingType),
     )
     grid_view_thumbnail_quality: GridViewThumbnailQualityType = Field(
         default=GridViewThumbnailQualityType.RAW,
-        sa_column=enum_column(GridViewThumbnailQualityType),
     )
     key_hide_annotations: str = Field(
         default="v",

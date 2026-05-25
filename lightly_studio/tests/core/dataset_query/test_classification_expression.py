@@ -25,7 +25,7 @@ class TestClassificationExpressions:
         sql = str(query.compile(compile_kwargs={"literal_binds": True}))
         assert "EXISTS (SELECT 1" in sql
         assert "FROM annotation_base" in sql
-        assert f"annotation_type = '{AnnotationType.CLASSIFICATION.value}'" in sql
+        assert "annotation_type = 'CLASSIFICATION'" in sql
         assert "annotation_label.annotation_label_name = 'cat'" in sql
 
     def test_annotation_classification__filters_matching_samples(self, db_session: Session) -> None:

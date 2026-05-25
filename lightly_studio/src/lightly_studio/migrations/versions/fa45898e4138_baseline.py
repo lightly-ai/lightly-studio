@@ -2,7 +2,7 @@
 
 Revision ID: fa45898e4138
 Revises:
-Create Date: 2026-05-25 22:13:26.164140
+Create Date: 2026-05-25 22:53:00.964497
 
 """
 
@@ -35,12 +35,12 @@ def upgrade() -> None:
         "setting",
         sa.Column(
             "grid_view_sample_rendering",
-            sa.Enum("cover", "contain", name="gridviewsamplerenderingtype"),
+            sa.Enum("COVER", "CONTAIN", name="gridviewsamplerenderingtype"),
             nullable=False,
         ),
         sa.Column(
             "grid_view_thumbnail_quality",
-            sa.Enum("raw", "high", name="gridviewthumbnailqualitytype"),
+            sa.Enum("RAW", "HIGH", name="gridviewthumbnailqualitytype"),
             nullable=False,
         ),
         sa.Column("key_hide_annotations", AutoString(), nullable=False),
@@ -106,7 +106,7 @@ def upgrade() -> None:
         sa.Column(
             "sample_type",
             sa.Enum(
-                "video", "video_frame", "image", "annotation", "caption", "group", name="sampletype"
+                "VIDEO", "VIDEO_FRAME", "IMAGE", "ANNOTATION", "CAPTION", "GROUP", name="sampletype"
             ),
             nullable=False,
         ),
@@ -173,9 +173,9 @@ def upgrade() -> None:
         sa.Column(
             "task_type",
             sa.Enum(
-                "object_detection",
-                "classification",
-                "instance_segmentation",
+                "OBJECT_DETECTION",
+                "CLASSIFICATION",
+                "INSTANCE_SEGMENTATION",
                 name="evaluationtasktype",
             ),
             nullable=False,
@@ -213,7 +213,7 @@ def upgrade() -> None:
         sa.Column(
             "annotation_type",
             sa.Enum(
-                "classification", "segmentation_mask", "object_detection", name="annotationtype"
+                "CLASSIFICATION", "SEGMENTATION_MASK", "OBJECT_DETECTION", name="annotationtype"
             ),
             nullable=False,
         ),
