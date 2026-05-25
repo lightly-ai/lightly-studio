@@ -76,6 +76,7 @@
         }
     } = $derived(data);
 
+    // The dataset ID actually contains the collection ID.
     const datasetId = $derived(page.params.dataset_id!);
     const collectionId = $derived(page.params.collection_id!);
     const collectionIdStore = toStore(() => collectionId);
