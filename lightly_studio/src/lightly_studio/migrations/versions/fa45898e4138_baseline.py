@@ -2,7 +2,7 @@
 
 Revision ID: fa45898e4138
 Revises:
-Create Date: 2026-05-25 21:39:22.390929
+Create Date: 2026-05-25 22:13:26.164140
 
 """
 
@@ -35,12 +35,12 @@ def upgrade() -> None:
         "setting",
         sa.Column(
             "grid_view_sample_rendering",
-            sa.Enum("cover", "contain", name="gridviewsamplerenderingtype", native_enum=False),
+            sa.Enum("cover", "contain", name="gridviewsamplerenderingtype"),
             nullable=False,
         ),
         sa.Column(
             "grid_view_thumbnail_quality",
-            sa.Enum("raw", "high", name="gridviewthumbnailqualitytype", native_enum=False),
+            sa.Enum("raw", "high", name="gridviewthumbnailqualitytype"),
             nullable=False,
         ),
         sa.Column("key_hide_annotations", AutoString(), nullable=False),
@@ -106,14 +106,7 @@ def upgrade() -> None:
         sa.Column(
             "sample_type",
             sa.Enum(
-                "video",
-                "video_frame",
-                "image",
-                "annotation",
-                "caption",
-                "group",
-                name="sampletype",
-                native_enum=False,
+                "video", "video_frame", "image", "annotation", "caption", "group", name="sampletype"
             ),
             nullable=False,
         ),
@@ -184,7 +177,6 @@ def upgrade() -> None:
                 "classification",
                 "instance_segmentation",
                 name="evaluationtasktype",
-                native_enum=False,
             ),
             nullable=False,
         ),
@@ -221,11 +213,7 @@ def upgrade() -> None:
         sa.Column(
             "annotation_type",
             sa.Enum(
-                "classification",
-                "segmentation_mask",
-                "object_detection",
-                name="annotationtype",
-                native_enum=False,
+                "classification", "segmentation_mask", "object_detection", name="annotationtype"
             ),
             nullable=False,
         ),
