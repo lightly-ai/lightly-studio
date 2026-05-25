@@ -1,4 +1,4 @@
-"""Helpers for persisting ``str, Enum`` types as VARCHAR values in the database."""
+"""Helpers for persisting ``str, Enum`` types as native database enum types."""
 
 from __future__ import annotations
 
@@ -16,19 +16,19 @@ def enum_values(enum_cls: type[E]) -> list[str]:
     return [member.value for member in enum_cls]
 
 
-def enum_value_max_length(enum_cls: type[E]) -> int:
-    """Return the length of the longest enum value string."""
-    return max(len(member.value) for member in enum_cls)
+def enum_type_name(enum_cls: type[E]) -> str:
+    """Return the PostgreSQL enum type name for a str enum class."""
+    return enum_cls.__name__.lower()
 
 
-def str_enum_column(enum_cls: type[E], *, nullable: bool = False) -> Column[Any]:
-    """SQLAlchemy column that stores str enum members by ``.value`` in VARCHAR."""
+def enum_column(enum_cls: type[E], nullable: bool = False) -> Column[Any]:
+    """SQLAlchemy column that stores str enum members by ``.value`` in a DB enum type."""
     return Column(
         SAEnum(
             enum_cls,
-            native_enum=False,
+            native_enum=True,
             values_callable=enum_values,
-            length=enum_value_max_length(enum_cls),
+            name=enum_type_name(enum_cls),
         ),
         nullable=nullable,
     )
