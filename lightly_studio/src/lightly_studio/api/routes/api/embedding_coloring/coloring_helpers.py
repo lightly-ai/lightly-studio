@@ -80,26 +80,6 @@ class DiscreteColorScale(Generic[T]):
         return cls(_lookup=lookup, legend=legend)
 
     @classmethod
-    def from_lookup(
-        cls,
-        lookup: dict[T, int],
-        legend: dict[int, str],
-    ) -> DiscreteColorScale[T]:
-        """Build a DiscreteColorScale from a pre-computed lookup and legend.
-
-        Use this when multiple values map to the same category (e.g. buckets),
-        which ``from_values`` cannot express.
-
-        Args:
-            lookup: Mapping from value to color category integer.
-            legend: Mapping from color category integer to a human-readable label.
-
-        Returns:
-            A DiscreteColorScale backed by the provided lookup and legend.
-        """
-        return cls(_lookup=lookup, legend=legend)
-
-    @classmethod
     def from_integers(
         cls,
         values: Iterable[int],
@@ -152,7 +132,7 @@ class DiscreteColorScale(Generic[T]):
         }
         lookup: dict[int, int] = {v: start_cat + _bucket_idx(v) for v in unique_values}
 
-        return DiscreteColorScale.from_lookup(lookup=lookup, legend=legend)
+        return DiscreteColorScale[int](_lookup=lookup, legend=legend)
 
 
 def assign_color_categories(
