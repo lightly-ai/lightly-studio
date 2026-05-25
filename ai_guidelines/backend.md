@@ -93,10 +93,11 @@ Makefile targets: `migration-upgrade`, `migration-revision` (requires `MSG=...`)
 
 **Adding a schema change** (append a new revision; do not edit the baseline):
 
-1. Ensure the database reflects the **previous** Alembic head (`make migration-upgrade` on your branch before editing models).
-2. Change SQLModel tables in code.
-3. Run `make migration-revision MSG=short_description`.
-4. Review the generated file under `src/lightly_studio/migrations/versions/`, commit the model change and the new revision together.
+1. Change SQLModel tables in code (on a branch where migration files already define the **previous** head).
+2. Run `make migration-revision MSG=short_description` (runs `migration-upgrade` first so the dev database matches the current head, then autogenerates the delta).
+3. Review the generated file under `src/lightly_studio/migrations/versions/`, commit the model change and the new revision together.
+
+Use a quoted `MSG` when it contains spaces, e.g. `make migration-revision MSG="updated db"`.
 
 **Validation:**
 
