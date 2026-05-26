@@ -53,7 +53,7 @@ class ImageDatasetExport:
                 defaults to "coco_export.json" in the current working directory.
 
         Raises:
-            ValueError: If the annotation task with the given name does not exist.
+            ValueError: If the annotation collection with the given name does not exist.
         """
         if output_json is None:
             output_json = DEFAULT_EXPORT_FILENAME

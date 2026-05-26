@@ -12,6 +12,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Sample selection respects the current image or video filters.
 - Added sort-by support via GUI.
 - Added similarity selection option.
+- Added option to select annotation collection for class balancing.
 
 ### Changed
 
