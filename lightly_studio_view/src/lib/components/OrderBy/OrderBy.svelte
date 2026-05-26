@@ -29,16 +29,16 @@
     let open = $state(false);
 </script>
 
-<div class="flex items-center gap-1">
+<div class="flex items-center rounded-md">
     <Popover.Root bind:open>
         <Popover.Trigger>
             <Button
-                variant="outline"
+                variant="ghost"
                 size="sm"
-                class="h-8 min-w-20 justify-start gap-1 text-left text-xs font-normal"
+                class="h-8 min-w-0 max-w-28 rounded-r-none px-2 text-left text-xs font-semibold"
                 data-testid="sort-by-trigger"
             >
-                {$selectedLabel ?? 'Sort by'}
+                <span class="min-w-0 truncate">{$selectedLabel}</span>
             </Button>
         </Popover.Trigger>
         <Popover.Content class="min-w-20 p-1" align="start">
@@ -65,10 +65,9 @@
     </Popover.Root>
 
     <Button
-        variant={$selectedLabel ? 'secondary' : 'ghost'}
+        variant="ghost"
         size="icon"
-        class="h-8 w-8"
-        disabled={!$selectedLabel}
+        class="h-8 w-6 rounded-l-none px-0"
         onclick={toggleDirection}
         data-testid="sort-direction-button"
         aria-label={$selectedDirection === SortDirection.DESC
@@ -76,9 +75,9 @@
             : 'Sort ascending'}
     >
         {#if $selectedDirection === SortDirection.DESC}
-            <ArrowDown class="size-4" />
+            <ArrowDown class="size-3.5" />
         {:else}
-            <ArrowUp class="size-4" />
+            <ArrowUp class="size-3.5" />
         {/if}
     </Button>
 </div>

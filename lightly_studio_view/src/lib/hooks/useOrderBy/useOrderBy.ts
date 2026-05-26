@@ -9,6 +9,13 @@ import {
 } from '$lib/hooks/useSortFields/useSortFields.svelte';
 import type { SortExpr } from '$lib/hooks/useImagesInfinite/types';
 
+const DEFAULT_IMAGE_SORT_FIELD = {
+    source: 'image' as const,
+    field_name: 'file_path_abs',
+    direction: SortDirection.ASC,
+    is_numeric: false
+};
+
 interface UseOrderByParams {
     datasetId: string;
 }
@@ -19,6 +26,7 @@ interface UseOrderByReturn {
     selectedLabel: Readable<string | null>;
     isFieldSelected: Readable<(field: SortField) => boolean>;
     handleFieldClick: (field: SortField) => void;
+    setDirection: (direction: SortDirection) => void;
     toggleDirection: () => void;
     /** Dispose internal reactive effects. Call on cleanup to prevent leaks. */
     dispose: () => void;
@@ -46,14 +54,13 @@ export function useOrderBy({ datasetId }: UseOrderByParams): UseOrderByReturn {
 
     const selectedDirection = derived(
         imageSortBy,
-        ($imageSortBy) => $imageSortBy?.[0]?.direction ?? SortDirection.ASC
+        ($imageSortBy) => $imageSortBy?.[0]?.direction ?? DEFAULT_IMAGE_SORT_FIELD.direction
     );
 
     const selectedLabel = derived(
         [imageSortBy, allSortFields],
         ([$imageSortBy, $allSortFields]) => {
-            const current = $imageSortBy?.[0];
-            if (!current) return null;
+            const current = $imageSortBy?.[0] ?? DEFAULT_IMAGE_SORT_FIELD;
             if (current.source === 'evaluation_metric') {
                 return (
                     $allSortFields.find(
@@ -80,13 +87,13 @@ export function useOrderBy({ datasetId }: UseOrderByParams): UseOrderByReturn {
         imageSortBy,
         ($imageSortBy) =>
             (field: SortField): boolean =>
-                checkIsFieldSelected(field, $imageSortBy?.[0])
+                checkIsFieldSelected(field, $imageSortBy?.[0] ?? DEFAULT_IMAGE_SORT_FIELD)
     );
 
     function handleFieldClick(field: SortField) {
-        const current = get(imageSortBy)?.[0];
+        const current = get(imageSortBy)?.[0] ?? DEFAULT_IMAGE_SORT_FIELD;
         if (checkIsFieldSelected(field, current)) {
-            updateSortBy(null);
+            return;
         } else if (field.source === 'evaluation_metric') {
             updateSortBy([
                 {
@@ -108,18 +115,15 @@ export function useOrderBy({ datasetId }: UseOrderByParams): UseOrderByReturn {
         }
     }
 
-    function toggleDirection() {
-        const current = get(imageSortBy)?.[0];
-        if (!current) return;
-        const next =
-            get(selectedDirection) === SortDirection.ASC ? SortDirection.DESC : SortDirection.ASC;
+    function setDirection(direction: SortDirection) {
+        const current = get(imageSortBy)?.[0] ?? DEFAULT_IMAGE_SORT_FIELD;
         if (current.source === 'evaluation_metric') {
             updateSortBy([
                 {
                     source: 'evaluation_metric',
                     evaluation_run_name: current.evaluation_run_name,
                     metric_name: current.metric_name,
-                    direction: next
+                    direction
                 }
             ]);
         } else {
@@ -127,11 +131,17 @@ export function useOrderBy({ datasetId }: UseOrderByParams): UseOrderByReturn {
                 {
                     source: current.source,
                     field_name: current.field_name,
-                    direction: next,
+                    direction,
                     is_numeric: current.is_numeric
                 }
             ]);
         }
+    }
+
+    function toggleDirection() {
+        const next =
+            get(selectedDirection) === SortDirection.ASC ? SortDirection.DESC : SortDirection.ASC;
+        setDirection(next);
     }
 
     return {
@@ -140,6 +150,7 @@ export function useOrderBy({ datasetId }: UseOrderByParams): UseOrderByReturn {
         selectedLabel,
         isFieldSelected,
         handleFieldClick,
+        setDirection,
         toggleDirection,
         dispose
     };

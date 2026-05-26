@@ -40,9 +40,9 @@ describe('OrderBy', () => {
         mocks.metricsProxy.dataUpdatedAt = 0;
     });
 
-    it('shows placeholder text when no field is selected', () => {
+    it('shows the default sort field when no explicit field is selected', () => {
         render(OrderBy, { props: { datasetId: 'ds1' } });
-        expect(screen.getByTestId('sort-by-trigger')).toHaveTextContent('Sort by');
+        expect(screen.getByTestId('sort-by-trigger')).toHaveTextContent('file path');
     });
 
     it('shows the selected field label in the trigger', () => {
@@ -58,22 +58,19 @@ describe('OrderBy', () => {
         expect(screen.getByTestId('sort-by-trigger')).toHaveTextContent('file name');
     });
 
-    it('direction button is disabled when no field is selected', () => {
+    it('toggles the default sort direction from the arrow button', async () => {
         render(OrderBy, { props: { datasetId: 'ds1' } });
-        expect(screen.getByTestId('sort-direction-button')).toBeDisabled();
-    });
 
-    it('direction button is enabled when a field is selected', () => {
-        mocks.imageSortByValue = [
+        await fireEvent.click(screen.getByTestId('sort-direction-button'));
+
+        expect(mocks.updateSortBy).toHaveBeenCalledWith([
             {
                 source: 'image',
-                field_name: 'width',
-                direction: SortDirection.ASC,
+                field_name: 'file_path_abs',
+                direction: SortDirection.DESC,
                 is_numeric: false
             }
-        ];
-        render(OrderBy, { props: { datasetId: 'ds1' } });
-        expect(screen.getByTestId('sort-direction-button')).not.toBeDisabled();
+        ]);
     });
 
     it('selects a field and calls updateSortBy with asc direction by default', async () => {
@@ -92,7 +89,7 @@ describe('OrderBy', () => {
         ]);
     });
 
-    it('deselects the field when clicking the already selected item', async () => {
+    it('does not update sorting when clicking the already selected item', async () => {
         mocks.imageSortByValue = [
             {
                 source: 'image',
@@ -106,7 +103,7 @@ describe('OrderBy', () => {
         await fireEvent.click(screen.getByTestId('sort-by-trigger'));
         await fireEvent.click(screen.getByTestId('sort-field-file_name'));
 
-        expect(mocks.updateSortBy).toHaveBeenCalledWith(null);
+        expect(mocks.updateSortBy).not.toHaveBeenCalled();
     });
 
     it('switches to a different field while preserving the current direction', async () => {
@@ -179,12 +176,19 @@ describe('OrderBy', () => {
         ]);
     });
 
-    it('does not call updateSortBy when direction button is clicked with no field selected', async () => {
+    it('sets descending direction for the default sort', async () => {
         render(OrderBy, { props: { datasetId: 'ds1' } });
 
         await fireEvent.click(screen.getByTestId('sort-direction-button'));
 
-        expect(mocks.updateSortBy).not.toHaveBeenCalled();
+        expect(mocks.updateSortBy).toHaveBeenCalledWith([
+            {
+                source: 'image',
+                field_name: 'file_path_abs',
+                direction: SortDirection.DESC,
+                is_numeric: false
+            }
+        ]);
     });
 
     it('lists all sort fields in the dropdown', async () => {
@@ -345,7 +349,7 @@ describe('OrderBy', () => {
         ]);
     });
 
-    it('deselects an evaluation metric field when clicking the already selected item', async () => {
+    it('does not update sorting when clicking the already selected evaluation metric', async () => {
         mocks.metricsProxy.data = [
             {
                 run_name: 'run1',
@@ -365,7 +369,7 @@ describe('OrderBy', () => {
         await fireEvent.click(screen.getByTestId('sort-by-trigger'));
         await fireEvent.click(screen.getByTestId('sort-field-run1-precision'));
 
-        expect(mocks.updateSortBy).toHaveBeenCalledWith(null);
+        expect(mocks.updateSortBy).not.toHaveBeenCalled();
     });
 
     it('shows a dot-formatted label in the trigger when an evaluation metric is selected', () => {

@@ -51,9 +51,9 @@ describe('useOrderBy', () => {
     });
 
     describe('selectedLabel', () => {
-        it('returns null when no sort is active', () => {
+        it('returns the default sort label when no explicit sort is active', () => {
             const { selectedLabel } = useOrderBy({ datasetId: 'ds1' });
-            expect(get(selectedLabel)).toBeNull();
+            expect(get(selectedLabel)).toBe('file path');
         });
 
         it('returns the label for an active image sort field', () => {
@@ -115,10 +115,13 @@ describe('useOrderBy', () => {
     });
 
     describe('isFieldSelected', () => {
-        it('returns false for any field when no sort is active', () => {
+        it('returns true for the default sort field when no explicit sort is active', () => {
             const { isFieldSelected } = useOrderBy({ datasetId: 'ds1' });
             const check = get(isFieldSelected);
 
+            expect(check({ source: 'image', value: 'file_path_abs', label: 'file path' })).toBe(
+                true
+            );
             expect(check({ source: 'image', value: 'file_name', label: 'file name' })).toBe(false);
         });
 
@@ -203,7 +206,7 @@ describe('useOrderBy', () => {
             ]);
         });
 
-        it('deselects the field when clicking the already selected field', () => {
+        it('does not update sorting when clicking the already selected field', () => {
             imageSortBy.set([
                 {
                     source: 'image',
@@ -216,7 +219,7 @@ describe('useOrderBy', () => {
 
             handleFieldClick({ source: 'image', value: 'file_name', label: 'file name' });
 
-            expect(updateSortBy).toHaveBeenCalledWith(null);
+            expect(updateSortBy).not.toHaveBeenCalled();
         });
 
         it('switches to a different field while preserving the current direction', () => {
@@ -284,12 +287,19 @@ describe('useOrderBy', () => {
     });
 
     describe('toggleDirection', () => {
-        it('does nothing when no sort is active', () => {
+        it('toggles the default sort direction when no explicit sort is active', () => {
             const { toggleDirection } = useOrderBy({ datasetId: 'ds1' });
 
             toggleDirection();
 
-            expect(updateSortBy).not.toHaveBeenCalled();
+            expect(updateSortBy).toHaveBeenCalledWith([
+                {
+                    source: 'image',
+                    field_name: 'file_path_abs',
+                    direction: SortDirection.DESC,
+                    is_numeric: false
+                }
+            ]);
         });
 
         it('toggles direction for an image field', () => {
