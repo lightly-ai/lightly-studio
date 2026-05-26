@@ -40,9 +40,9 @@ def get_object_detection_confusion_matrix(
         evaluation_run_id: Evaluation run whose pairing metrics should be aggregated.
 
     Returns:
-        Matrix with sorted class labels followed by the synthetic FP row and FN column;
-        the synthetic axes are always present (with zero counts when unused) unless the
-        run has no pairing metrics at all, in which case all three fields are empty.
+        Matrix with sorted class labels and the synthetic FP row / FN column included
+        only when the run has at least one FP or FN respectively. Runs with no pairing
+        metrics return empty axes and counts.
     """
     grouped_rows = _fetch_pair_counts(session=session, evaluation_run_id=evaluation_run_id)
     if not grouped_rows:
@@ -127,11 +127,11 @@ def _fetch_pair_counts(
 def _build_axis_labels(
     grouped_rows: list[tuple[str | None, str | None, int]],
 ) -> tuple[list[str], list[str]]:
-    """Build sorted row and column label lists, always appending synthetic FP/FN labels.
+    """Build sorted row and column label lists, appending synthetic FP/FN labels when used.
 
-    The synthetic ground-truth row and prediction column are always included so that
-    consumers can rely on a stable axis shape; their cells are simply zero when no
-    FP or FN pairings exist in ``grouped_rows``.
+    The synthetic ground-truth row is appended only when at least one FP exists
+    (``gt_label`` ``NULL`` in ``grouped_rows``); the synthetic prediction column is
+    appended only when at least one FN exists (``pred_label`` ``NULL``).
 
     Args:
         grouped_rows: SQL group rows from :func:`_fetch_pair_counts`.
@@ -139,11 +139,16 @@ def _build_axis_labels(
     Returns:
         ``(row_labels, col_labels)`` ready for dense matrix construction.
     """
+    has_fp = any(gt_name is None for gt_name, _, _ in grouped_rows)
+    has_fn = any(pred_name is None for _, pred_name, _ in grouped_rows)
+
     row_labels = sorted({gt_name for gt_name, _, _ in grouped_rows if gt_name is not None})
-    row_labels.append(NO_GROUND_TRUTH_ROW_LABEL)
+    if has_fp:
+        row_labels.append(NO_GROUND_TRUTH_ROW_LABEL)
 
     col_labels = sorted({pred_name for _, pred_name, _ in grouped_rows if pred_name is not None})
-    col_labels.append(NO_PREDICTION_COL_LABEL)
+    if has_fn:
+        col_labels.append(NO_PREDICTION_COL_LABEL)
 
     return row_labels, col_labels
 
