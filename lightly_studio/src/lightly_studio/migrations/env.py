@@ -9,7 +9,7 @@ import re
 from pathlib import Path
 
 from alembic import context
-from sqlalchemy import engine_from_config, pool
+from sqlalchemy import engine, pool
 from sqlmodel import SQLModel
 
 # Register all SQLModel tables so autogenerate sees the full schema.
@@ -49,7 +49,7 @@ target_metadata = SQLModel.metadata
 _configure_database_url()
 
 # NullPool: one connection per CLI run, not a long-lived pool.
-connectable = engine_from_config(
+connectable = engine.engine_from_config(
     config.get_section(config.config_ini_section, {}),
     prefix="sqlalchemy.",
     poolclass=pool.NullPool,
