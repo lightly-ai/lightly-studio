@@ -11,7 +11,7 @@
     } from '$lib/components';
     import QueryEditorPanel from '$lib/components/QueryEditorPanel/QueryEditorPanel.svelte';
     import Separator from '$lib/components/ui/separator/separator.svelte';
-    import { GripVertical } from '@lucide/svelte';
+    import { GripVertical, SlidersHorizontal } from '@lucide/svelte';
     import { onDestroy, onMount } from 'svelte';
     import { toStore } from 'svelte/store';
     import { Header } from '$lib/components';
@@ -328,7 +328,10 @@
                         <div
                             class="min-h-0 flex-1 space-y-2 overflow-y-auto px-4 pb-2 dark:[color-scheme:dark]"
                         >
-                            <h2 class="py-2 text-lg font-semibold">Filters</h2>
+                            <h2 class="flex items-center space-x-2 py-2 text-lg font-semibold">
+                                <SlidersHorizontal class="size-5" />
+                                <span>Filters</span>
+                            </h2>
 
                             {#if isQueryFilterEnabled}
                                 <QueryControl
