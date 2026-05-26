@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import re
 from uuid import UUID, uuid4
 
 import numpy as np
@@ -697,7 +698,6 @@ def test_select_via_database_with_annotation_class_balancing_target_over_1(
 def test_select_via_database_with_annotation_class_balancing_uniform(
     db_session: Session,
 ) -> None:
-    """Runs selection with a simple annotation class balancing strategy."""
     collection_id = fill_db_with_samples_and_embeddings(
         db_session, n_samples=3, embedding_model_names=[]
     )
@@ -769,6 +769,146 @@ def test_select_via_database_with_annotation_class_balancing_uniform(
     selected_sample_ids = [sample.sample_id for sample in samples_in_tag]
     # Pick the first and last samples, because they resemble the uniform distribution the best.
     assert selected_sample_ids == [sample_ids[0], sample_ids[2]]
+
+
+def test_select_via_database__annotation_class_balancing__annotation_source(
+    db_session: Session,
+) -> None:
+    collection_id = fill_db_with_samples_and_embeddings(
+        db_session, n_samples=3, embedding_model_names=[]
+    )
+    sample_ids = _all_sample_ids(db_session, collection_id)
+
+    label_cat = create_annotation_label(
+        session=db_session, root_collection_id=collection_id, label_name="cat"
+    )
+    label_dog = create_annotation_label(
+        session=db_session, root_collection_id=collection_id, label_name="dog"
+    )
+    label_bird = create_annotation_label(
+        session=db_session, root_collection_id=collection_id, label_name="bird"
+    )
+
+    annotation_source_a_annotations = create_annotations(
+        session=db_session,
+        collection_id=collection_id,
+        collection_name="source-a",
+        annotations=[
+            AnnotationDetails(
+                sample_id=sample_ids[0],
+                annotation_label_id=label_cat.annotation_label_id,
+            ),
+            AnnotationDetails(
+                sample_id=sample_ids[1],
+                annotation_label_id=label_dog.annotation_label_id,
+            ),
+            AnnotationDetails(
+                sample_id=sample_ids[2],
+                annotation_label_id=label_cat.annotation_label_id,
+            ),
+        ],
+    )
+    # Source B
+    create_annotations(
+        session=db_session,
+        collection_id=collection_id,
+        collection_name="source-b",
+        annotations=[
+            AnnotationDetails(
+                sample_id=sample_ids[2],
+                annotation_label_id=label_bird.annotation_label_id,
+            ),
+        ],
+    )
+
+    annotation_source_id = annotation_source_a_annotations[0].sample.collection_id
+    config = SelectionConfig(
+        n_samples_to_select=2,
+        collection_id=collection_id,
+        selection_result_tag_name="selection-tag",
+        strategies=[
+            AnnotationClassBalancingStrategy(
+                target_distribution="uniform",
+                annotation_source_id=annotation_source_id,
+            )
+        ],
+    )
+
+    select_via_database(
+        session=db_session,
+        config=config,
+        input_sample_ids=sample_ids,
+    )
+
+    tags = tag_resolver.get_all_by_collection_id(db_session, collection_id=collection_id)
+    assert len(tags) == 1
+
+    selection_tag = tags[0]
+    samples_in_tag = image_resolver.get_all_by_collection_id(
+        session=db_session,
+        collection_id=collection_id,
+        filters=ImageFilter(sample_filter=SampleFilter(tag_ids=[selection_tag.tag_id])),
+    ).samples
+
+    expected_sample_paths = {"sample_0.jpg", "sample_1.jpg"}
+    actual_sample_paths = {sample.file_path_abs for sample in samples_in_tag}
+    assert actual_sample_paths == expected_sample_paths
+
+
+def test_select_via_database__annotation_class_balancing__annotation_source_without_labels(
+    db_session: Session,
+) -> None:
+    """Raises a controlled error when the annotation source has no labels for the inputs."""
+    collection_id = fill_db_with_samples_and_embeddings(
+        db_session, n_samples=3, embedding_model_names=[]
+    )
+    sample_ids = _all_sample_ids(db_session, collection_id)
+
+    label_cat = create_annotation_label(
+        session=db_session, root_collection_id=collection_id, label_name="cat"
+    )
+
+    annotations = create_annotations(
+        session=db_session,
+        collection_id=collection_id,
+        collection_name="source-a",
+        annotations=[
+            AnnotationDetails(
+                sample_id=sample_ids[0],
+                annotation_label_id=label_cat.annotation_label_id,
+            ),
+            AnnotationDetails(
+                sample_id=sample_ids[1],
+                annotation_label_id=label_cat.annotation_label_id,
+            ),
+        ],
+    )
+    annotation_source_id = annotations[0].sample.collection_id
+
+    config = SelectionConfig(
+        n_samples_to_select=1,
+        collection_id=collection_id,
+        selection_result_tag_name="selection-tag",
+        strategies=[
+            AnnotationClassBalancingStrategy(
+                target_distribution="uniform",
+                annotation_source_id=annotation_source_id,
+            )
+        ],
+    )
+
+    with pytest.raises(
+        ValueError,
+        match=re.escape(
+            "Annotation source with the given ID does not contain annotations "
+            "for the selected samples."
+        ),
+    ):
+        select_via_database(
+            session=db_session,
+            config=config,
+            input_sample_ids=[sample_ids[2]],
+        )
 
 
 def test_select_via_database_with_annotation_class_balancing_input(
