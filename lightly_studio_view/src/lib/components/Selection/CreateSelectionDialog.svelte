@@ -4,7 +4,6 @@
     import * as Dialog from '$lib/components/ui/dialog';
     import { Input } from '$lib/components/ui/input';
     import { Label } from '$lib/components/ui/label';
-    import * as Select from '$lib/components/ui/select';
     import { useTags } from '$lib/hooks/useTags/useTags';
     import { useSelectionDialog } from '$lib/hooks/useSelectionDialog/useSelectionDialog';
     import { useImageFilters } from '$lib/hooks/useImageFilters/useImageFilters';
@@ -12,7 +11,10 @@
     import { useGlobalStorage } from '$lib/hooks/useGlobalStorage';
     import { useCreateSelection } from '$lib/hooks/useCreateSelection/useCreateSelection';
     import type { SelectionRequest } from '$lib/api/lightly_studio_local/types.gen';
-    import { BALANCING_MODE_LABELS, type BalancingMode } from './balancingMode';
+    import { type BalancingMode } from './balancingMode';
+    import ClassBalancingForm from './ClassBalancingForm/ClassBalancingForm.svelte';
+    import SimilarityForm from './SimilarityForm/SimilarityForm.svelte';
+    import StrategySelect from './StrategySelect/StrategySelect.svelte';
 
     // Get collection ID from URL params
     const collectionId = $derived(page.params.collection_id!);
@@ -59,13 +61,6 @@
     let queryTagId = $state('');
     let selectionResultTagName = $state<string>('');
 
-    const STRATEGY_LABELS: Record<string, string> = {
-        diversity: 'Diversity',
-        typicality: 'Typicality',
-        similarity: 'Similarity',
-        class_balancing: 'Class Balancing'
-    };
-
     // Form validation
     const isFormValid = $derived(
         selectionStrategy !== '' &&
@@ -75,9 +70,6 @@
     );
 
     const isSimilaritySupported = $derived(!isVideoCollection);
-    const selectedQueryTagName = $derived(
-        $tags.find((tag) => tag.tag_id === queryTagId)?.name ?? 'Select tag'
-    );
 
     const noSamples = $derived($filteredSampleCount === 0);
 
@@ -146,122 +138,25 @@
                 </Dialog.Header>
 
                 <div class="grid gap-4 py-4">
-                    <!-- Strategy Selection -->
-                    <div class="grid grid-cols-4 items-center gap-4">
-                        <Label for="strategy" class="text-right text-foreground">Strategy</Label>
-                        <Select.Root type="single" name="strategy" bind:value={selectionStrategy}>
-                            <Select.Trigger
-                                class="col-span-3"
-                                data-testid="selection-dialog-strategy-select"
-                            >
-                                {STRATEGY_LABELS[selectionStrategy] ?? 'Select strategy'}
-                            </Select.Trigger>
-                            <Select.Content>
-                                <Select.Group>
-                                    <Select.Item
-                                        value="diversity"
-                                        label="Diversity"
-                                        data-testid="selection-strategy-diversity"
-                                        >Diversity</Select.Item
-                                    >
-                                    <Select.Item
-                                        value="typicality"
-                                        label="Typicality"
-                                        data-testid="selection-strategy-typicality"
-                                        >Typicality</Select.Item
-                                    >
-                                    <Select.Item
-                                        value="class_balancing"
-                                        label="Class Balancing"
-                                        data-testid="selection-strategy-class-balancing"
-                                        >Class Balancing</Select.Item
-                                    >
-                                    <Select.Item
-                                        value="similarity"
-                                        label="Similarity"
-                                        data-testid="selection-strategy-similarity"
-                                        disabled={!isSimilaritySupported}>Similarity</Select.Item
-                                    >
-                                </Select.Group>
-                            </Select.Content>
-                        </Select.Root>
-                    </div>
+                    <StrategySelect
+                        value={selectionStrategy}
+                        {isSimilaritySupported}
+                        onValueChange={(v) => (selectionStrategy = v)}
+                    />
 
                     {#if selectionStrategy === 'class_balancing'}
-                        <div class="grid grid-cols-4 items-center gap-4">
-                            <Label for="balancing-mode" class="text-right text-foreground">
-                                Balancing Mode
-                            </Label>
-                            <Select.Root
-                                type="single"
-                                name="balancing-mode"
-                                bind:value={balancingMode}
-                            >
-                                <Select.Trigger
-                                    class="col-span-3"
-                                    data-testid="selection-dialog-balancing-mode-select"
-                                >
-                                    {BALANCING_MODE_LABELS[balancingMode]}
-                                </Select.Trigger>
-                                <Select.Content>
-                                    <Select.Group>
-                                        <Select.Item
-                                            value="uniform"
-                                            label="Uniform"
-                                            data-testid="selection-balancing-mode-uniform"
-                                            >Uniform</Select.Item
-                                        >
-                                        <Select.Item value="dictionary" label="Dictionary" disabled
-                                            >Dictionary (Coming soon)</Select.Item
-                                        >
-                                        <Select.Item
-                                            value="input"
-                                            label="Input"
-                                            data-testid="selection-balancing-mode-input"
-                                            disabled>Input (Coming soon)</Select.Item
-                                        >
-                                    </Select.Group>
-                                </Select.Content>
-                            </Select.Root>
-                        </div>
+                        <ClassBalancingForm
+                            {balancingMode}
+                            onBalancingModeChange={(mode) => (balancingMode = mode)}
+                        />
                     {/if}
 
                     {#if selectionStrategy === 'similarity'}
-                        <div class="grid grid-cols-4 items-center gap-4">
-                            <Label for="query-tag" class="text-right text-foreground">
-                                Query Tag
-                            </Label>
-                            <Select.Root type="single" name="query-tag" bind:value={queryTagId}>
-                                <Select.Trigger
-                                    class="col-span-3"
-                                    data-testid="selection-dialog-query-tag-select"
-                                >
-                                    {selectedQueryTagName}
-                                </Select.Trigger>
-                                <Select.Content>
-                                    <Select.Group>
-                                        {#if $tags.length === 0}
-                                            <div
-                                                class="py-1.5 pl-8 pr-2 text-sm italic text-muted-foreground"
-                                                data-testid="selection-dialog-no-query-tags"
-                                            >
-                                                No sample tags available.
-                                            </div>
-                                        {:else}
-                                            {#each $tags as tag (tag.tag_id)}
-                                                <Select.Item
-                                                    value={tag.tag_id}
-                                                    label={tag.name}
-                                                    data-testid={`selection-query-tag-${tag.tag_id}`}
-                                                >
-                                                    {tag.name}
-                                                </Select.Item>
-                                            {/each}
-                                        {/if}
-                                    </Select.Group>
-                                </Select.Content>
-                            </Select.Root>
-                        </div>
+                        <SimilarityForm
+                            {queryTagId}
+                            tags={$tags}
+                            onQueryTagChange={(tagId) => (queryTagId = tagId)}
+                        />
                     {/if}
 
                     <!-- Number of Samples Input -->
