@@ -1,6 +1,9 @@
 <script lang="ts">
+    import { page } from '$app/state';
     import type { EvaluationRunView } from '$lib/api/lightly_studio_local/types.gen';
-    import { Typography } from '$lib/components';
+    import { Spinner, Typography } from '$lib/components';
+    import { ConfusionMatrix } from '$lib/components/ConfusionMatrix';
+    import { useEvaluationConfusionMatrix } from '$lib/hooks';
     import { formatDate } from '$lib/utils';
     import { ChevronDown } from '@lucide/svelte';
     import { slide } from 'svelte/transition';
@@ -18,6 +21,8 @@
 
     const { run, expanded, onToggle }: Props = $props();
 
+    const datasetId = $derived(page.params.dataset_id!);
+
     const formatConfigValue = (value: unknown): string => {
         if (value === null || value === undefined) return '—';
         if (typeof value === 'object') return JSON.stringify(value);
@@ -25,6 +30,12 @@
     };
 
     const configEntries = $derived(Object.entries(run.evaluation_run_configuration ?? {}));
+
+    const confusionMatrixQuery = useEvaluationConfusionMatrix(() => ({
+        datasetId,
+        evaluationRunId: run.id,
+        enabled: expanded
+    }));
 </script>
 
 <li class="rounded-md border border-border bg-background">
@@ -56,12 +67,14 @@
             style={`transform: ${expanded ? 'rotate(0deg)' : 'rotate(-90deg)'}`}
         />
     </button>
+
     {#if expanded}
         <div
-            class="border-t border-border px-3 py-3"
+            class="space-y-5 border-t border-border px-3 py-3"
             data-testid="evaluation-run-details"
             transition:slide={{ duration }}
         >
+            <!-- Configuration -->
             <section>
                 <Typography variant="subtitle2" component="h3" className="mb-2">
                     Configuration
@@ -88,6 +101,31 @@
                             </Typography>
                         {/each}
                     </dl>
+                {/if}
+            </section>
+
+            <!-- Confusion Matrix -->
+            <section data-testid="evaluation-run-confusion-matrix">
+                <Typography variant="subtitle2" component="h3" className="mb-3">
+                    Confusion Matrix
+                </Typography>
+
+                <!-- Matrix display -->
+                {#if confusionMatrixQuery.isLoading}
+                    <div
+                        class="flex items-center justify-center py-8"
+                        data-testid="confusion-matrix-loading"
+                    >
+                        <Spinner size="medium" align="center" />
+                    </div>
+                {:else if confusionMatrixQuery.isError}
+                    <div class="py-4 text-center" data-testid="confusion-matrix-error">
+                        <Typography variant="body2" className="text-red-500">
+                            {confusionMatrixQuery.error?.message ?? 'Failed to load confusion matrix.'}
+                        </Typography>
+                    </div>
+                {:else if confusionMatrixQuery.data}
+                    <ConfusionMatrix matrix={confusionMatrixQuery.data} showLegend />
                 {/if}
             </section>
         </div>
