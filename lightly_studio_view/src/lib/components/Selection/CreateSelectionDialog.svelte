@@ -57,7 +57,7 @@
 
     // Form state
     let selectionStrategy = $state<
-        'diversity' | 'typicality' | 'similarity' | 'class_distribution' | ''
+        'diversity' | 'typicality' | 'similarity' | 'class_balancing' | ''
     >('');
     let balancingMode = $state<BalancingMode>('uniform');
     let nSamplesToSelect = $state<number>(10);
@@ -70,7 +70,7 @@
         diversity: 'Diversity',
         typicality: 'Typicality',
         similarity: 'Similarity',
-        class_distribution: 'Class Balancing'
+        class_balancing: 'Class Balancing'
     };
 
     // Form validation
@@ -165,7 +165,7 @@
                         embedding_model_name: null
                     }
                 ]);
-            } else if (selectionStrategy === 'class_distribution') {
+            } else if (selectionStrategy === 'class_balancing') {
                 await performSelection([
                     {
                         strategy_name: 'balance',
@@ -276,9 +276,9 @@
                                         >Typicality</Select.Item
                                     >
                                     <Select.Item
-                                        value="class_distribution"
+                                        value="class_balancing"
                                         label="Class Balancing"
-                                        data-testid="selection-strategy-class-distribution"
+                                        data-testid="selection-strategy-class-balancing"
                                         >Class Balancing</Select.Item
                                     >
                                     <Select.Item
@@ -292,7 +292,7 @@
                         </Select.Root>
                     </div>
 
-                    {#if selectionStrategy === 'class_distribution'}
+                    {#if selectionStrategy === 'class_balancing'}
                         <div class="grid grid-cols-4 items-center gap-4">
                             <Label for="balancing-mode" class="text-right text-foreground">
                                 Balancing Mode

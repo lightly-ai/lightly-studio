@@ -344,9 +344,7 @@ describe('CreateSelectionDialog', () => {
         await fireEvent.keyDown(screen.getByTestId('selection-dialog-strategy-select'), {
             key: 'Enter'
         });
-        await fireEvent.pointerUp(
-            await screen.findByTestId('selection-strategy-class-distribution')
-        );
+        await fireEvent.pointerUp(await screen.findByTestId('selection-strategy-class-balancing'));
 
         await fireEvent.keyDown(screen.getByTestId('selection-dialog-balancing-mode-select'), {
             key: 'Enter'
@@ -386,9 +384,7 @@ describe('CreateSelectionDialog', () => {
         await fireEvent.keyDown(screen.getByTestId('selection-dialog-strategy-select'), {
             key: 'Enter'
         });
-        await fireEvent.pointerUp(
-            await screen.findByTestId('selection-strategy-class-distribution')
-        );
+        await fireEvent.pointerUp(await screen.findByTestId('selection-strategy-class-balancing'));
 
         await fireEvent.keyDown(screen.getByTestId('selection-dialog-balancing-mode-select'), {
             key: 'Enter'
