@@ -1,7 +1,7 @@
 <script lang="ts">
     import { Label } from '$lib/components/ui/label';
     import * as Select from '$lib/components/ui/select';
-    import { BALANCING_MODE_LABELS, type BalancingMode } from '../balancingMode';
+    import { BALANCING_MODE_LABELS, type BalancingMode } from '$lib/components/Selection/balancingMode';
 
     interface Props {
         balancingMode: BalancingMode;
