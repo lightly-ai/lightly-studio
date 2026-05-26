@@ -17,6 +17,7 @@
     import { useVideoFilters } from '$lib/hooks/useVideoFilters/useVideoFilters';
     import { useGlobalStorage } from '$lib/hooks/useGlobalStorage';
     import type { SelectionRequest } from '$lib/api/lightly_studio_local/types.gen';
+    import { BALANCING_MODE_LABELS, type BalancingMode } from './balancingMode';
 
     // Get collection ID from URL params
     const collectionId = $derived(page.params.collection_id!);
@@ -58,7 +59,7 @@
     let selectionStrategy = $state<
         'diversity' | 'typicality' | 'similarity' | 'class_distribution' | ''
     >('');
-    let balancingMode = $state<'uniform' | 'dictionary'>('uniform');
+    let balancingMode = $state<BalancingMode>('uniform');
     let nSamplesToSelect = $state<number>(10);
     let queryTagId = $state('');
     let selectionResultTagName = $state<string>('');
@@ -168,7 +169,7 @@
                 await performSelection([
                     {
                         strategy_name: 'balance',
-                        target_distribution: balancingMode === 'uniform' ? 'uniform' : 'input'
+                        target_distribution: balancingMode
                     }
                 ]);
             } else if (selectionStrategy === 'typicality') {
@@ -305,18 +306,24 @@
                                     class="col-span-3"
                                     data-testid="selection-dialog-balancing-mode-select"
                                 >
-                                    {balancingMode === 'uniform' ? 'Uniform' : 'Dictionary'}
+                                    {BALANCING_MODE_LABELS[balancingMode]}
                                 </Select.Trigger>
                                 <Select.Content>
                                     <Select.Group>
-                                        <Select.Item value="uniform" label="Uniform"
+                                        <Select.Item
+                                            value="uniform"
+                                            label="Uniform"
+                                            data-testid="selection-balancing-mode-uniform"
                                             >Uniform</Select.Item
                                         >
                                         <Select.Item value="dictionary" label="Dictionary" disabled
                                             >Dictionary (Coming soon)</Select.Item
                                         >
-                                        <Select.Item value="input" label="Input" disabled
-                                            >Input (Coming soon)</Select.Item
+                                        <Select.Item
+                                            value="input"
+                                            label="Input"
+                                            data-testid="selection-balancing-mode-input"
+                                            disabled>Input (Coming soon)</Select.Item
                                         >
                                     </Select.Group>
                                 </Select.Content>
