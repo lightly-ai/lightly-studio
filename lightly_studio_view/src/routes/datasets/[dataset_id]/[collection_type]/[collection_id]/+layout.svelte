@@ -11,13 +11,13 @@
     } from '$lib/components';
     import QueryEditorPanel from '$lib/components/QueryEditorPanel/QueryEditorPanel.svelte';
     import Separator from '$lib/components/ui/separator/separator.svelte';
-    import { SlidersHorizontal, GripVertical } from '@lucide/svelte';
+    import { GripVertical } from '@lucide/svelte';
     import { onDestroy, onMount } from 'svelte';
     import { toStore } from 'svelte/store';
     import { Header } from '$lib/components';
     import MenuDialogHost from '$lib/components/Header/MenuDialogHost.svelte';
 
-    import Segment from '$lib/components/Segment/Segment.svelte';
+    // Segment import removed – "Filters" is now a static heading
     import { useHasEmbeddings } from '$lib/hooks/useHasEmbeddings/useHasEmbeddings';
     import { useHideAnnotations } from '$lib/hooks/useHideAnnotations';
     import { useAnnotationLabels } from '$lib/hooks/useAnnotationLabels/useAnnotationLabels';
@@ -328,6 +328,8 @@
                         <div
                             class="min-h-0 flex-1 space-y-2 overflow-y-auto px-4 pb-2 dark:[color-scheme:dark]"
                         >
+                            <h2 class="py-2 text-lg font-semibold">Filters</h2>
+
                             {#if isQueryFilterEnabled}
                                 <QueryControl
                                     onToggle={() => {
@@ -339,31 +341,28 @@
                             <div>
                                 <TagsMenu collection_id={collectionId} {gridType} />
                             </div>
-                            <Segment title="Filters" icon={SlidersHorizontal}>
-                                <div class="space-y-2">
-                                    <EmbeddingSelectionFilterItem
-                                        {collectionIdStore}
-                                        {isVideos}
-                                        {isImages}
-                                    />
-                                    {#if isImages}
-                                        <AnnotationCollectionsMenu {collectionId} />
-                                    {/if}
-                                    <LabelsMenu
-                                        {annotationFilterRows}
-                                        onToggleAnnotationFilter={toggleAnnotationFilterSelection}
-                                    />
 
-                                    {#if isImages || isVideos || isVideoFrames}
-                                        {#key collectionId}
-                                            <CombinedMetadataDimensionsFilters
-                                                {isVideos}
-                                                {isVideoFrames}
-                                            />
-                                        {/key}
-                                    {/if}
-                                </div>
-                            </Segment>
+                            <EmbeddingSelectionFilterItem
+                                {collectionIdStore}
+                                {isVideos}
+                                {isImages}
+                            />
+                            {#if isImages}
+                                <AnnotationCollectionsMenu {collectionId} />
+                            {/if}
+                            <LabelsMenu
+                                {annotationFilterRows}
+                                onToggleAnnotationFilter={toggleAnnotationFilterSelection}
+                            />
+
+                            {#if isImages || isVideos || isVideoFrames}
+                                {#key collectionId}
+                                    <CombinedMetadataDimensionsFilters
+                                        {isVideos}
+                                        {isVideoFrames}
+                                    />
+                                {/key}
+                            {/if}
                         </div>
                     </div>
                 </div>
