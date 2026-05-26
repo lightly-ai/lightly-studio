@@ -336,6 +336,64 @@ describe('CreateSelectionDialog', () => {
         });
     });
 
+    it('submits class balancing selections with uniform target distribution', async () => {
+        filteredSampleCountStore.set(100);
+
+        render(CreateSelectionDialog);
+
+        await fireEvent.keyDown(screen.getByTestId('selection-dialog-strategy-select'), {
+            key: 'Enter'
+        });
+        await fireEvent.pointerUp(await screen.findByTestId('selection-strategy-class-balancing'));
+
+        await fireEvent.keyDown(screen.getByTestId('selection-dialog-balancing-mode-select'), {
+            key: 'Enter'
+        });
+        await fireEvent.pointerUp(await screen.findByTestId('selection-balancing-mode-uniform'));
+
+        await fireEvent.input(screen.getByTestId('selection-dialog-tag-name-input'), {
+            target: { value: 'my-tag' }
+        });
+        await fireEvent.click(screen.getByTestId('selection-dialog-submit'));
+
+        await waitFor(() => {
+            expect(createCombinationSelection).toHaveBeenCalledWith(
+                expect.objectContaining({
+                    body: expect.objectContaining({
+                        strategies: [
+                            {
+                                strategy_name: 'balance',
+                                target_distribution: 'uniform'
+                            }
+                        ]
+                    })
+                })
+            );
+        });
+
+        await waitFor(() => {
+            expect(setTagSelectedMock).toHaveBeenCalledWith('new-tag-id', true);
+        });
+    });
+
+    it('shows input balancing mode as disabled and coming soon', async () => {
+        filteredSampleCountStore.set(100);
+
+        render(CreateSelectionDialog);
+
+        await fireEvent.keyDown(screen.getByTestId('selection-dialog-strategy-select'), {
+            key: 'Enter'
+        });
+        await fireEvent.pointerUp(await screen.findByTestId('selection-strategy-class-balancing'));
+
+        await fireEvent.keyDown(screen.getByTestId('selection-dialog-balancing-mode-select'), {
+            key: 'Enter'
+        });
+        const inputMode = await screen.findByTestId('selection-balancing-mode-input');
+        expect(inputMode).toHaveAttribute('data-disabled');
+        expect(inputMode).toHaveTextContent('Input (Coming soon)');
+    });
+
     it('disables similarity for video collections', async () => {
         pageMock.data.collection.sample_type = 'video';
 
