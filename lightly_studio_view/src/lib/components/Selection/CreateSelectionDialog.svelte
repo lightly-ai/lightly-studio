@@ -10,7 +10,7 @@
     import { useImageFilters } from '$lib/hooks/useImageFilters/useImageFilters';
     import { useVideoFilters } from '$lib/hooks/useVideoFilters/useVideoFilters';
     import { useGlobalStorage } from '$lib/hooks/useGlobalStorage';
-    import { useCreateSelection } from '$lib/hooks/useCreateSelection/useCreateSelection';
+    import { useCreateSelection } from '$lib/hooks/useCreateSelection';
     import type { SelectionRequest } from '$lib/api/lightly_studio_local/types.gen';
     import { BALANCING_MODE_LABELS, type BalancingMode } from './balancingMode';
 
@@ -91,22 +91,26 @@
             : 'Create a subset of the samples fulfilling the current filters.'
     );
 
-    const { isSubmitting, loadingMessage, submit } = $derived(
-        useCreateSelection({
-            collectionId,
-            isSimilaritySupported,
-            tags,
-            setTagSelected,
-            loadTags,
-            closeSelectionDialog
-        })
-    );
+    const { isSubmitting, loadingMessage, submit } = useCreateSelection({
+        get tags() {
+            return tags;
+        },
+        get setTagSelected() {
+            return setTagSelected;
+        },
+        get loadTags() {
+            return loadTags;
+        },
+        closeSelectionDialog
+    });
 
     async function handleFormSubmit(event: Event) {
         event.preventDefault();
         if (!isFormValid || notEnoughSamples || noSamples) return;
 
         const success = await submit({
+            collectionId,
+            isSimilaritySupported,
             selectionStrategy: selectionStrategy as
                 | 'diversity'
                 | 'typicality'
