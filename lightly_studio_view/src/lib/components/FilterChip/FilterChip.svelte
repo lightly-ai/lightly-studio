@@ -26,7 +26,7 @@
     }: Props = $props();
 </script>
 
-<div class="rounded-md border border-amber-500/35 bg-amber-500/10 px-2 py-1.5" data-testid={testId}>
+<div class="rounded-md border border-[#3c3c3c] bg-muted px-2 py-1.5" data-testid={testId}>
     <div class="flex items-center gap-2">
         <Checkbox {checked} aria-label={checkboxLabel} {onCheckedChange} />
         {#if onclick}
