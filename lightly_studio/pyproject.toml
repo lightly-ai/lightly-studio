@@ -18,6 +18,7 @@ classifiers = [
 ]
 
 dependencies = [
+    "alembic>=1.14.0,<2.0",
     "duckdb-engine>=0.15.0,<0.17",
     "duckdb>=1.2.2,<1.6",
     # Pandas 3.0 requires Python 3.11 and higher, we have to stay at 2.2 or 2.3.
@@ -165,6 +166,12 @@ explicit = true
 artifacts = [
     "src/lightly_studio/**/*",
 ]
+
+[tool.hatch.build.targets.wheel.force-include]
+"alembic.ini" = "lightly_studio/alembic.ini"
+
+[tool.hatch.build.targets.sdist.force-include]
+"alembic.ini" = "alembic.ini"
 
 [tool.ruff]
 extend-exclude = [
