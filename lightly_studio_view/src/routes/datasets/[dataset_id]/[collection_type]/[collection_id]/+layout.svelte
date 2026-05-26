@@ -490,7 +490,7 @@
                     {@render paneResizer()}
 
                     <Pane defaultSize={35} minSize={25} class="flex min-h-0 flex-col">
-                        <QueryEditorPanel />
+                        <QueryEditorPanel onClose={() => (isQueryFilterEditing = false)} />
                     </Pane>
                 </PaneGroup>
             {/if}
