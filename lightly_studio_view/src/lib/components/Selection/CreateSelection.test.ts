@@ -354,7 +354,7 @@ describe('CreateSelectionDialog', () => {
         await fireEvent.pointerUp(await screen.findByTestId('selection-balancing-mode-uniform'));
 
         await fireEvent.input(screen.getByTestId('selection-dialog-tag-name-input'), {
-            target: { value: 'class-dist-tag' }
+            target: { value: 'my-tag' }
         });
         await fireEvent.click(screen.getByTestId('selection-dialog-submit'));
 
@@ -371,6 +371,10 @@ describe('CreateSelectionDialog', () => {
                     })
                 })
             );
+        });
+
+        await waitFor(() => {
+            expect(setTagSelectedMock).toHaveBeenCalledWith('new-tag-id', true);
         });
     });
 
