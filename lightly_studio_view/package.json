@@ -10,6 +10,7 @@
     "dev": "vite dev --host 0.0.0.0 --port 5173",
     "prebuild": "npm run generate-language && npm run generate-api-client",
     "build": "vite build",
+    "build-dirty": "npm run generate-api-client && vite build",
     "preview": "vite preview",
     "check": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json",
     "check:watch": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json --watch",
