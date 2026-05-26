@@ -69,9 +69,13 @@ AND object_detection(label = "person" AND x > 10)
     const canApply = $derived(draftValue !== lastAppliedValue);
 </script>
 
+<!-- Prevent keypresses from triggering global shortcuts (e.g. 'E' toggling edit mode) -->
+<!-- svelte-ignore a11y_no_static_element_interactions -->
 <div
     class="flex w-full flex-col overflow-hidden rounded-lg border border-[#3c3c3c] bg-[#1e1e1e]"
     style={`height: ${height}`}
+    onkeydown={(e) => e.stopPropagation()}
+    onkeyup={(e) => e.stopPropagation()}
 >
     <div class="min-h-0 flex-1" bind:this={containerEl}></div>
     {#if onSave}
