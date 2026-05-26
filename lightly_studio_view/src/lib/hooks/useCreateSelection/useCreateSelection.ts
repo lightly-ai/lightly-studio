@@ -7,7 +7,7 @@ import { get, readonly, writable, type Readable } from 'svelte/store';
 import { toast } from 'svelte-sonner';
 import type { TagView } from '$lib/services/types';
 import type { SelectionRequest } from '$lib/api/lightly_studio_local/types.gen';
-import type { BalancingMode } from './balancingMode';
+import type { BalancingMode } from '$lib/components/Selection/balancingMode';
 
 type SelectionError = { error: string };
 
