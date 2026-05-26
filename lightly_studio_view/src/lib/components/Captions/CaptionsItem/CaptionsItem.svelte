@@ -104,10 +104,12 @@
     };
 
     function isImageView(sample: SampleView | ImageSample): sample is ImageSample {
+        void sample;
         return sampleType === SampleType.IMAGE;
     }
 
     function isVideoView(sample: SampleView | VideoView): sample is VideoView {
+        void sample;
         return sampleType === SampleType.VIDEO;
     }
 
