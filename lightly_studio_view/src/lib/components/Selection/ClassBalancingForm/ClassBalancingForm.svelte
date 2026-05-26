@@ -1,7 +1,10 @@
 <script lang="ts">
     import { Label } from '$lib/components/ui/label';
     import * as Select from '$lib/components/ui/select';
-    import { BALANCING_MODE_LABELS, type BalancingMode } from '$lib/components/Selection/balancingMode';
+    import {
+        BALANCING_MODE_LABELS,
+        type BalancingMode
+    } from '$lib/components/Selection/balancingMode';
 
     interface Props {
         balancingMode: BalancingMode;
@@ -19,7 +22,11 @@
         value={balancingMode}
         onValueChange={(v) => onBalancingModeChange(v as BalancingMode)}
     >
-        <Select.Trigger class="col-span-3" data-testid="selection-dialog-balancing-mode-select">
+        <Select.Trigger
+            id="balancing-mode"
+            class="col-span-3"
+            data-testid="selection-dialog-balancing-mode-select"
+        >
             {BALANCING_MODE_LABELS[balancingMode]}
         </Select.Trigger>
         <Select.Content>
