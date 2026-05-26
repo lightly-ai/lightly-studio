@@ -4,7 +4,7 @@
     import { HeatmapChart } from 'echarts/charts';
     import { GridComponent, TooltipComponent, VisualMapComponent } from 'echarts/components';
     import { CanvasRenderer } from 'echarts/renderers';
-    import { buildEchartsOption, unifyLabels } from './buildEchartsOption';
+    import { buildEchartsOption } from './buildEchartsOption';
     import ConfusionMatrixLegend from './ConfusionMatrixLegend.svelte';
     import type { ConfusionMatrix } from './types';
 
@@ -26,8 +26,7 @@
     let container: HTMLDivElement | undefined = $state();
     let chart: echarts.ECharts | null = $state(null);
 
-    const rowCount = $derived(unifyLabels(matrix.row_labels, matrix.col_labels).length);
-    const heightPx = $derived(Math.max(320, rowCount * 18 + 210));
+    const heightPx = $derived(Math.max(320, matrix.row_labels.length * 18 + 210));
 
     const maxCount = $derived(
         Math.max(1, ...matrix.counts.flatMap((row) => row).filter((n) => n > 0))

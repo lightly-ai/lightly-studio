@@ -9,9 +9,8 @@ const SENTINEL_LABELS = new Set<string>([NO_GROUND_TRUTH_ROW_LABEL, NO_PREDICTIO
 // can use its own color ramp (ECharts can't color cells in a single heatmap
 // series along two scales).
 export function buildEchartsOption(matrix: ConfusionMatrix): EChartsCoreOption {
-    const unifiedLabels = unifyLabels(matrix.row_labels, matrix.col_labels);
-    const xLabels = unifiedLabels;
-    const yLabels = [...unifiedLabels].reverse();
+    const xLabels = matrix.col_labels;
+    const yLabels = [...matrix.row_labels].reverse();
 
     const tpData: [string, string, number][] = [];
     const fpFnData: [string, string, number][] = [];
@@ -98,22 +97,4 @@ export function buildEchartsOption(matrix: ConfusionMatrix): EChartsCoreOption {
             }
         ]
     };
-}
-
-export function unifyLabels(rowLabels: string[], colLabels: string[]): string[] {
-    const seen = new Set<string>();
-    const unified: string[] = [];
-    for (const label of rowLabels) {
-        if (!seen.has(label)) {
-            seen.add(label);
-            unified.push(label);
-        }
-    }
-    for (const label of colLabels) {
-        if (!seen.has(label)) {
-            seen.add(label);
-            unified.push(label);
-        }
-    }
-    return unified;
 }
