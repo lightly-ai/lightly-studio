@@ -20,12 +20,11 @@ vi.mock('$lib/components', () => {
     const createMockComponent = (name: string) => {
         function MockComponent() {
             renderedComponents.push(name);
-            // @ts-expect-error - Svelte component interface
-            this.$set = () => {};
-            // @ts-expect-error - Svelte component interface
-            this.$on = () => {};
-            // @ts-expect-error - Svelte component interface
-            this.$destroy = () => {};
+            return {
+                $set: () => {},
+                $on: () => {},
+                $destroy: () => {}
+            };
         }
         // Make function work with both `new` and direct calls
         MockComponent.prototype.constructor = MockComponent;
@@ -45,12 +44,11 @@ vi.mock('$lib/components', () => {
 vi.mock('$lib/components/VideoDetailsBreadcrumb/VideoDetailsBreadcrumb.svelte', () => ({
     default: function MockVideoDetailsBreadcrumb() {
         renderedComponents.push('VideoDetailsBreadcrumb');
-        // @ts-expect-error - Svelte component interface
-        this.$set = () => {};
-        // @ts-expect-error - Svelte component interface
-        this.$on = () => {};
-        // @ts-expect-error - Svelte component interface
-        this.$destroy = () => {};
+        return {
+            $set: () => {},
+            $on: () => {},
+            $destroy: () => {}
+        };
     }
 }));
 
