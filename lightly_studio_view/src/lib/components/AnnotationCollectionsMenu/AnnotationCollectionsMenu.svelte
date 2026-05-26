@@ -32,7 +32,7 @@
 </script>
 
 {#if items.length > 0}
-    <Segment title="Collections">
+    <Segment title="Label Sources">
         <SideMenu
             showColorMarker={$selectedCollectionIds.length > 1}
             {items}
