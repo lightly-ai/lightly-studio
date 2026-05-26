@@ -55,6 +55,7 @@ describe('useCreateSelection', () => {
             nSamplesToSelect: 5,
             selectionResultTagName: 'my-tag',
             queryTagId: '',
+            balancingMode: 'uniform',
             selectionFilter: null
         });
 
@@ -94,6 +95,7 @@ describe('useCreateSelection', () => {
             nSamplesToSelect: 10,
             selectionResultTagName: 'result-tag',
             queryTagId: '',
+            balancingMode: 'uniform',
             selectionFilter: null
         });
 
@@ -134,6 +136,7 @@ describe('useCreateSelection', () => {
             nSamplesToSelect: 8,
             selectionResultTagName: 'sim-tag',
             queryTagId: 'query-tag-id',
+            balancingMode: 'uniform',
             selectionFilter: null
         });
 
@@ -172,6 +175,7 @@ describe('useCreateSelection', () => {
             nSamplesToSelect: 8,
             selectionResultTagName: 'sim-tag',
             queryTagId: 'query-tag-id',
+            balancingMode: 'uniform',
             selectionFilter: null
         });
 
@@ -206,6 +210,7 @@ describe('useCreateSelection', () => {
             nSamplesToSelect: 10,
             selectionResultTagName: 'result-tag',
             queryTagId: '',
+            balancingMode: 'uniform',
             selectionFilter: null
         });
 
@@ -239,6 +244,7 @@ describe('useCreateSelection', () => {
             nSamplesToSelect: 8,
             selectionResultTagName: 'sim-tag',
             queryTagId: 'query-tag-id',
+            balancingMode: 'uniform',
             selectionFilter: null
         });
 
@@ -272,6 +278,7 @@ describe('useCreateSelection', () => {
             nSamplesToSelect: 5,
             selectionResultTagName: 'my-tag',
             queryTagId: '',
+            balancingMode: 'uniform',
             selectionFilter: null
         });
 
@@ -308,6 +315,7 @@ describe('useCreateSelection', () => {
             nSamplesToSelect: 5,
             selectionResultTagName: 'my-tag',
             queryTagId: '',
+            balancingMode: 'uniform',
             selectionFilter: null
         });
 
@@ -345,11 +353,118 @@ describe('useCreateSelection', () => {
             nSamplesToSelect: 10,
             selectionResultTagName: 'result-tag',
             queryTagId: '',
+            balancingMode: 'uniform',
             selectionFilter: null
         });
 
         expect(messages[0]).toBe('Computing typicality metadata...');
         expect(messages[1]).toBe('Creating selection...');
         expect(get(hook.loadingMessage)).toBe('');
+    });
+
+    it('submit with class_balancing and uniform mode calls createCombinationSelection with balance strategy', async () => {
+        vi.mocked(createCombinationSelection).mockResolvedValue({ data: {}, error: null } as never);
+        const loadTags = vi.fn().mockResolvedValue(undefined);
+        const setTagSelected = vi.fn();
+        const closeSelectionDialog = vi.fn();
+        const tagsStore = writable([]);
+
+        const { submit } = useCreateSelection({
+            collectionId: 'col-1',
+            isSimilaritySupported: true,
+            tags: tagsStore,
+            setTagSelected,
+            loadTags,
+            closeSelectionDialog
+        });
+        const result = await submit({
+            selectionStrategy: 'class_balancing',
+            nSamplesToSelect: 20,
+            selectionResultTagName: 'balanced-tag',
+            queryTagId: '',
+            balancingMode: 'uniform',
+            selectionFilter: null
+        });
+
+        expect(result).toBe(true);
+        expect(createCombinationSelection).toHaveBeenCalledWith({
+            path: { collection_id: 'col-1' },
+            body: {
+                n_samples_to_select: 20,
+                selection_result_tag_name: 'balanced-tag',
+                strategies: [{ strategy_name: 'balance', target_distribution: 'uniform' }],
+                filter: undefined
+            }
+        });
+        expect(computeTypicalityMetadata).not.toHaveBeenCalled();
+        expect(computeSimilarityMetadata).not.toHaveBeenCalled();
+    });
+
+    it('submit with class_balancing and input mode passes input as target_distribution', async () => {
+        vi.mocked(createCombinationSelection).mockResolvedValue({ data: {}, error: null } as never);
+        const loadTags = vi.fn().mockResolvedValue(undefined);
+        const setTagSelected = vi.fn();
+        const closeSelectionDialog = vi.fn();
+        const tagsStore = writable([]);
+
+        const { submit } = useCreateSelection({
+            collectionId: 'col-1',
+            isSimilaritySupported: true,
+            tags: tagsStore,
+            setTagSelected,
+            loadTags,
+            closeSelectionDialog
+        });
+        const result = await submit({
+            selectionStrategy: 'class_balancing',
+            nSamplesToSelect: 15,
+            selectionResultTagName: 'balanced-tag',
+            queryTagId: '',
+            balancingMode: 'input',
+            selectionFilter: null
+        });
+
+        expect(result).toBe(true);
+        expect(createCombinationSelection).toHaveBeenCalledWith({
+            path: { collection_id: 'col-1' },
+            body: {
+                n_samples_to_select: 15,
+                selection_result_tag_name: 'balanced-tag',
+                strategies: [{ strategy_name: 'balance', target_distribution: 'input' }],
+                filter: undefined
+            }
+        });
+    });
+
+    it('API error in createCombinationSelection for class_balancing toasts error and returns false', async () => {
+        vi.mocked(createCombinationSelection).mockResolvedValue({
+            data: null,
+            error: { error: 'balance failed' }
+        } as never);
+        const loadTags = vi.fn().mockResolvedValue(undefined);
+        const setTagSelected = vi.fn();
+        const closeSelectionDialog = vi.fn();
+        const tagsStore = writable([]);
+
+        const { submit } = useCreateSelection({
+            collectionId: 'col-1',
+            isSimilaritySupported: true,
+            tags: tagsStore,
+            setTagSelected,
+            loadTags,
+            closeSelectionDialog
+        });
+        const result = await submit({
+            selectionStrategy: 'class_balancing',
+            nSamplesToSelect: 20,
+            selectionResultTagName: 'balanced-tag',
+            queryTagId: '',
+            balancingMode: 'uniform',
+            selectionFilter: null
+        });
+
+        expect(result).toBe(false);
+        expect(toast.error).toHaveBeenCalledWith('balance failed');
+        expect(closeSelectionDialog).not.toHaveBeenCalled();
     });
 });

@@ -7,6 +7,7 @@ import { get, readonly, writable, type Readable } from 'svelte/store';
 import { toast } from 'svelte-sonner';
 import type { TagView } from '$lib/services/types';
 import type { SelectionRequest } from '$lib/api/lightly_studio_local/types.gen';
+import type { BalancingMode } from './balancingMode';
 
 type SelectionError = { error: string };
 
@@ -20,10 +21,11 @@ interface UseCreateSelectionParams {
 }
 
 interface SubmitParams {
-    selectionStrategy: 'diversity' | 'typicality' | 'similarity';
+    selectionStrategy: 'diversity' | 'typicality' | 'similarity' | 'class_balancing';
     nSamplesToSelect: number;
     selectionResultTagName: string;
     queryTagId: string;
+    balancingMode: BalancingMode;
     selectionFilter: SelectionRequest['filter'];
 }
 
@@ -76,11 +78,21 @@ export function useCreateSelection(params: UseCreateSelectionParams) {
             nSamplesToSelect,
             selectionResultTagName,
             queryTagId,
+            balancingMode,
             selectionFilter
         } = submitParams;
         _isSubmitting.set(true);
 
         try {
+            if (selectionStrategy === 'class_balancing') {
+                return await performSelection(
+                    [{ strategy_name: 'balance', target_distribution: balancingMode }],
+                    selectionFilter,
+                    nSamplesToSelect,
+                    selectionResultTagName
+                );
+            }
+
             if (selectionStrategy === 'diversity') {
                 return await performSelection(
                     [{ strategy_name: 'diversity', embedding_model_name: null }],
