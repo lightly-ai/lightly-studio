@@ -76,6 +76,7 @@
         }
     } = $derived(data);
 
+    // The dataset ID actually contains the collection ID.
     const datasetId = $derived(page.params.dataset_id!);
     const collectionId = $derived(page.params.collection_id!);
     const collectionIdStore = toStore(() => collectionId);
@@ -375,7 +376,7 @@
                         {canSelectAll}
                         {isImages}
                         {hasMediaWithEmbeddings}
-                        {datasetId}
+                        collectionDatasetId={collection.dataset_id}
                         compact={isSidePanelOpen}
                         onSelectAll={selectAllHandle.handleSelectAll}
                         searchImage={$searchImage}
@@ -441,7 +442,7 @@
                                 {canSelectAll}
                                 {isImages}
                                 {hasMediaWithEmbeddings}
-                                {datasetId}
+                                collectionDatasetId={collection.dataset_id}
                                 compact={isSidePanelOpen}
                                 onSelectAll={selectAllHandle.handleSelectAll}
                                 searchImage={$searchImage}
@@ -489,7 +490,7 @@
                     {@render paneResizer()}
 
                     <Pane defaultSize={35} minSize={25} class="flex min-h-0 flex-col">
-                        <QueryEditorPanel />
+                        <QueryEditorPanel onClose={() => (isQueryFilterEditing = false)} />
                     </Pane>
                 </PaneGroup>
             {/if}
