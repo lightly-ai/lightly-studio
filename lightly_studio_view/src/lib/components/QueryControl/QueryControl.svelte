@@ -7,7 +7,7 @@
         useImageFilters,
         type QueryExpression
     } from '$lib/hooks/useImageFilters/useImageFilters';
-    import { Filter, Pencil } from '@lucide/svelte';
+    import { Pencil } from '@lucide/svelte';
 
     interface Props {
         onToggle: () => void;
@@ -28,7 +28,7 @@
 </script>
 
 {#if isEnabled}
-    <Segment title="Query" icon={Filter}>
+    <Segment title="Query">
         {#if lastQueryExpression}
             <div
                 class="group flex items-center gap-2 rounded-md border border-border/60 bg-muted/30 p-2 transition-colors hover:bg-muted/50"
