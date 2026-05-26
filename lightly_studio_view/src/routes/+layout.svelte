@@ -7,6 +7,7 @@
     import '../app.css';
     import { Toaster } from 'svelte-sonner';
     import { client } from '$lib/api/lightly_studio_local/client.gen';
+    import RunningExecutionsPanel from '$lib/components/Operator/RunningExecutionsPanel.svelte';
 
     interface ApiErrorWithStatus {
         error?: string;
@@ -53,5 +54,6 @@
     <div class="flex h-full w-full flex-col">
         {@render children()}
         <Toaster richColors />
+        <RunningExecutionsPanel />
     </div>
 </QueryClientProvider>

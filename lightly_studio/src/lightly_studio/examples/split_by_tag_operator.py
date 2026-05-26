@@ -7,6 +7,11 @@ Triggered from the GUI on an existing dataset, this operator can:
 
 If ``tag`` is empty, a fresh empty dataset is created and only the ``samples_path``
 images are loaded into it.
+
+All DB work uses only the session passed into ``execute()`` so the operator is safe
+to run from a background worker thread. The high-level ``lightly_studio`` API
+(``ImageDataset.create`` / ``add_images_from_path``) is avoided because it touches
+the process-global persistent session, which is not thread-safe.
 """
 
 from __future__ import annotations
@@ -14,9 +19,12 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Any
 
+from lightly_studio.core.image.image_dataset import _generate_embeddings_image
 from sqlmodel import Session
 
-import lightly_studio as ls
+from lightly_studio.core.image import add_images
+from lightly_studio.dataset import fsspec_lister
+from lightly_studio.models.collection import CollectionCreate, CollectionTable, SampleType
 from lightly_studio.plugins.base_operator import BaseOperator, OperatorResult
 from lightly_studio.plugins.operator_context import ExecutionContext, OperatorScope
 from lightly_studio.plugins.parameter import BaseParameter, BoolParameter, StringParameter
@@ -102,6 +110,7 @@ class SplitByTagOperator(BaseOperator):
             )
 
         copied_count = 0
+        new_root: CollectionTable
         if tag_name:
             result = self._copy_tagged_subset(
                 session=session,
@@ -112,17 +121,26 @@ class SplitByTagOperator(BaseOperator):
             )
             if isinstance(result, OperatorResult):
                 return result
-            copied_count = result
+            new_root, copied_count = result
         else:
-            # No tag: create a fresh empty dataset to be filled from the folder.
-            ls.ImageDataset.create(name=new_name)
+            new_root = collection_resolver.create(
+                session=session,
+                collection=CollectionCreate(name=new_name, sample_type=SampleType.IMAGE),
+            )
 
         added_count = 0
         if samples_path:
-            new_dataset = ls.ImageDataset.load(name=new_name)
-            samples_before = len(list(new_dataset))
-            new_dataset.add_images_from_path(path=samples_path)
-            added_count = len(list(new_dataset)) - samples_before
+            image_paths = list(fsspec_lister.iter_files_from_path(path=samples_path))
+            created_sample_ids = add_images.load_into_dataset_from_paths(
+                session=session,
+                root_collection_id=new_root.collection_id,
+                image_paths=image_paths,
+            )
+            _generate_embeddings_image(
+                session=session,
+                sample_ids=created_sample_ids,
+                collection_id=new_root.collection_id,)
+            added_count = len(created_sample_ids)
 
         mode_suffix = " (samples-only)" if tag_name and samples_only else ""
         path_suffix = f", added {added_count} from '{samples_path}'" if samples_path else ""
@@ -142,8 +160,7 @@ class SplitByTagOperator(BaseOperator):
         new_name: str,
         tag_name: str,
         samples_only: bool,
-    ) -> OperatorResult | int:
-        """Run the tag-driven copy. Returns the number of copied samples or an error."""
+    ) -> OperatorResult | tuple[CollectionTable, int]:
         source_collection = collection_resolver.get_by_id(
             session=session, collection_id=context.collection_id
         )
@@ -170,17 +187,17 @@ class SplitByTagOperator(BaseOperator):
 
         sample_ids = [s.sample_id for s in tagged.samples]
         if samples_only:
-            dataset_resolver.copy_images_subset(
+            new_root = dataset_resolver.copy_images_subset(
                 session=session,
                 dataset_id=source_collection.dataset_id,
                 copy_name=new_name,
                 sample_ids=sample_ids,
             )
         else:
-            dataset_resolver.deep_copy_subset(
+            new_root = dataset_resolver.deep_copy_subset(
                 session=session,
                 dataset_id=source_collection.dataset_id,
                 copy_name=new_name,
                 sample_ids=sample_ids,
             )
-        return len(sample_ids)
+        return new_root, len(sample_ids)
