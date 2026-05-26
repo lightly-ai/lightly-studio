@@ -2,7 +2,6 @@
     import type { GridType } from '$lib/types';
     import Segment from '$lib/components/Segment/Segment.svelte';
     import { Checkbox } from '$lib/components';
-    // Tags icon removed
     import type { TagView } from '$lib/services/types';
     import { useTags } from '$lib/hooks/useTags/useTags.js';
     import { useGlobalStorage } from '$lib/hooks/useGlobalStorage';
