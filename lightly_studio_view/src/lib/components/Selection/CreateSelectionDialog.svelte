@@ -70,7 +70,7 @@
         diversity: 'Diversity',
         typicality: 'Typicality',
         similarity: 'Similarity',
-        class_distribution: 'Class Distribution'
+        class_distribution: 'Class Balancing'
     };
 
     // Form validation
@@ -277,9 +277,9 @@
                                     >
                                     <Select.Item
                                         value="class_distribution"
-                                        label="Class Distribution"
+                                        label="Class Balancing"
                                         data-testid="selection-strategy-class-distribution"
-                                        >Class Distribution</Select.Item
+                                        >Class Balancing</Select.Item
                                     >
                                     <Select.Item
                                         value="similarity"

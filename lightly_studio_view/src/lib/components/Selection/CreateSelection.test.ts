@@ -336,7 +336,7 @@ describe('CreateSelectionDialog', () => {
         });
     });
 
-    it('submits class distribution selections with uniform target distribution', async () => {
+    it('submits class balancing selections with uniform target distribution', async () => {
         filteredSampleCountStore.set(100);
 
         render(CreateSelectionDialog);
