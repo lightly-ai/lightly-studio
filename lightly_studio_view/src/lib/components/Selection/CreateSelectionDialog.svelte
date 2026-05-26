@@ -1,21 +1,16 @@
 <script lang="ts">
     import { page } from '$app/state';
-    import {
-        createCombinationSelection,
-        computeSimilarityMetadata,
-        computeTypicalityMetadata
-    } from '$lib/api/lightly_studio_local/sdk.gen';
     import { Button } from '$lib/components/ui/button';
     import * as Dialog from '$lib/components/ui/dialog';
     import { Input } from '$lib/components/ui/input';
     import { Label } from '$lib/components/ui/label';
     import * as Select from '$lib/components/ui/select';
-    import { toast } from 'svelte-sonner';
     import { useTags } from '$lib/hooks/useTags/useTags';
     import { useSelectionDialog } from '$lib/hooks/useSelectionDialog/useSelectionDialog';
     import { useImageFilters } from '$lib/hooks/useImageFilters/useImageFilters';
     import { useVideoFilters } from '$lib/hooks/useVideoFilters/useVideoFilters';
     import { useGlobalStorage } from '$lib/hooks/useGlobalStorage';
+    import { useCreateSelection } from '$lib/hooks/useCreateSelection/useCreateSelection';
     import type { SelectionRequest } from '$lib/api/lightly_studio_local/types.gen';
     import { BALANCING_MODE_LABELS, type BalancingMode } from './balancingMode';
 
@@ -63,8 +58,6 @@
     let nSamplesToSelect = $state<number>(10);
     let queryTagId = $state('');
     let selectionResultTagName = $state<string>('');
-    let isSubmitting = $state(false);
-    let loadingMessage = $state<string>('');
 
     const STRATEGY_LABELS: Record<string, string> = {
         diversity: 'Diversity',
@@ -98,11 +91,35 @@
             : 'Create a subset of the samples fulfilling the current filters.'
     );
 
-    function handleFormSubmit(event: Event) {
+    const { isSubmitting, loadingMessage, submit } = $derived(
+        useCreateSelection({
+            collectionId,
+            isSimilaritySupported,
+            tags,
+            setTagSelected,
+            loadTags,
+            closeSelectionDialog
+        })
+    );
+
+    async function handleFormSubmit(event: Event) {
         event.preventDefault();
         if (!isFormValid || notEnoughSamples || noSamples) return;
 
-        submitSelection();
+        const success = await submit({
+            selectionStrategy: selectionStrategy as
+                | 'diversity'
+                | 'typicality'
+                | 'similarity'
+                | 'class_balancing',
+            nSamplesToSelect,
+            selectionResultTagName,
+            queryTagId,
+            balancingMode,
+            selectionFilter
+        });
+
+        if (success) resetForm();
     }
 
     function resetForm() {
@@ -110,128 +127,6 @@
         nSamplesToSelect = 10;
         queryTagId = '';
         selectionResultTagName = '';
-    }
-
-    async function handleSelectionSuccess() {
-        const createdTagName = selectionResultTagName;
-        toast.success('Selection created successfully');
-        await loadTags();
-
-        // Select the newly created tag
-        const newTag = $tags.find((tag) => tag.name === createdTagName);
-        if (newTag) {
-            setTagSelected(newTag.tag_id, true);
-        }
-
-        closeSelectionDialog();
-        resetForm();
-    }
-
-    async function performSelection(strategies: SelectionRequest['strategies']) {
-        loadingMessage = 'Creating selection...';
-        const response = await createCombinationSelection({
-            path: { collection_id: collectionId },
-            body: {
-                n_samples_to_select: nSamplesToSelect,
-                selection_result_tag_name: selectionResultTagName,
-                strategies,
-                filter: selectionFilter ?? undefined
-            }
-        });
-
-        if (response.error) {
-            toast.error(
-                (response.error as { error?: string }).error || 'Failed to create selection'
-            );
-            return false;
-        }
-
-        await handleSelectionSuccess();
-        return true;
-    }
-
-    async function submitSelection() {
-        isSubmitting = true;
-
-        type SelectionError = {
-            error: string;
-        };
-
-        try {
-            if (selectionStrategy === 'diversity') {
-                await performSelection([
-                    {
-                        strategy_name: 'diversity',
-                        embedding_model_name: null
-                    }
-                ]);
-            } else if (selectionStrategy === 'class_balancing') {
-                await performSelection([
-                    {
-                        strategy_name: 'balance',
-                        target_distribution: balancingMode
-                    }
-                ]);
-            } else if (selectionStrategy === 'typicality') {
-                loadingMessage = 'Computing typicality metadata...';
-                const typicalityResponse = await computeTypicalityMetadata({
-                    path: { collection_id: collectionId },
-                    body: {
-                        embedding_model_name: null,
-                        metadata_name: 'typicality'
-                    }
-                });
-
-                if (typicalityResponse.error) {
-                    toast.error(
-                        'Failed to compute typicality metadata: ' +
-                            ((typicalityResponse.error as SelectionError).error || 'Unknown error')
-                    );
-                    return;
-                }
-
-                await performSelection([
-                    {
-                        strategy_name: 'weights',
-                        metadata_key: 'typicality'
-                    }
-                ]);
-            } else if (selectionStrategy === 'similarity') {
-                if (!isSimilaritySupported) {
-                    toast.error('Similarity is only available for image collections.');
-                    return;
-                }
-
-                loadingMessage = 'Computing similarity metadata...';
-                const response = await computeSimilarityMetadata({
-                    path: { collection_id: collectionId, query_tag_id: queryTagId },
-                    body: {
-                        embedding_model_name: null,
-                        metadata_name: 'similarity'
-                    }
-                });
-
-                if (response.error) {
-                    toast.error(
-                        'Failed to compute similarity metadata: ' +
-                            ((response.error as SelectionError).error || 'Unknown error')
-                    );
-                    return;
-                }
-
-                await performSelection([
-                    {
-                        strategy_name: 'weights',
-                        metadata_key: 'similarity'
-                    }
-                ]);
-            }
-        } catch (error) {
-            toast.error('Failed to create selection: ' + (error as Error).message);
-        } finally {
-            isSubmitting = false;
-            loadingMessage = '';
-        }
     }
 </script>
 
@@ -427,17 +322,17 @@
                         variant="outline"
                         type="button"
                         onclick={closeSelectionDialog}
-                        disabled={isSubmitting}
+                        disabled={$isSubmitting}
                         data-testid="selection-dialog-cancel"
                     >
                         Cancel
                     </Button>
                     <Button
                         type="submit"
-                        disabled={!isFormValid || isSubmitting || notEnoughSamples || noSamples}
+                        disabled={!isFormValid || $isSubmitting || notEnoughSamples || noSamples}
                         data-testid="selection-dialog-submit"
                     >
-                        {isSubmitting ? loadingMessage || 'Creating...' : 'Create Selection'}
+                        {$isSubmitting ? $loadingMessage || 'Creating...' : 'Create Selection'}
                     </Button>
                 </Dialog.Footer>
             </form>
