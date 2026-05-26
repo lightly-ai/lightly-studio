@@ -10,6 +10,11 @@ type MockTag = {
     kind: 'sample';
 };
 
+type MockAnnotationCollection = {
+    collection_id: string;
+    name: string;
+};
+
 const pageMock = vi.hoisted(() => ({
     params: { collection_id: 'test-collection-id' },
     data: { collection: { sample_type: 'image' as string } }
@@ -20,6 +25,7 @@ vi.mock('$app/state', () => ({
 }));
 
 let tagsStore: Writable<MockTag[]>;
+let annotationCollectionsData: MockAnnotationCollection[];
 const loadTagsMock = vi.fn();
 const setTagSelectedMock = vi.fn();
 
@@ -28,6 +34,12 @@ vi.mock('$lib/hooks/useTags/useTags', () => ({
         tags: tagsStore,
         loadTags: loadTagsMock,
         setTagSelected: setTagSelectedMock
+    })
+}));
+
+vi.mock('$lib/hooks/useAnnotationCollections/useAnnotationCollections', () => ({
+    useAnnotationCollections: () => ({
+        data: annotationCollectionsData
     })
 }));
 
@@ -86,6 +98,10 @@ describe('CreateSamplingDialog', () => {
         tagsStore = writable([
             { tag_id: 'tag-1', name: 'Query Tag', description: null, kind: 'sample' as const }
         ]);
+        annotationCollectionsData = [
+            { collection_id: 'annotation-source-1', name: 'Source 1' },
+            { collection_id: 'annotation-source-2', name: 'Source 2' }
+        ];
         submitMock.mockResolvedValue(undefined);
     });
 
@@ -335,6 +351,39 @@ describe('CreateSamplingDialog', () => {
                 expect.objectContaining({
                     samplingStrategy: 'class_balancing',
                     balancingMode: 'uniform'
+                })
+            );
+        });
+    });
+
+    it('passes the selected annotation source to class balancing sampling', async () => {
+        filteredSampleCountStore.set(100);
+
+        render(CreateSamplingDialog);
+
+        await fireEvent.keyDown(screen.getByTestId('sampling-dialog-strategy-select'), {
+            key: 'Enter'
+        });
+        await fireEvent.pointerUp(await screen.findByTestId('sampling-strategy-class-balancing'));
+
+        await fireEvent.keyDown(screen.getByTestId('sampling-dialog-annotation-source-select'), {
+            key: 'Enter'
+        });
+        await fireEvent.pointerUp(
+            await screen.findByTestId('sampling-annotation-source-annotation-source-2')
+        );
+
+        await fireEvent.input(screen.getByTestId('sampling-dialog-tag-name-input'), {
+            target: { value: 'source-filtered-tag' }
+        });
+        await fireEvent.click(screen.getByTestId('sampling-dialog-submit'));
+
+        await waitFor(() => {
+            expect(submitMock).toHaveBeenCalledWith(
+                expect.objectContaining({
+                    samplingStrategy: 'class_balancing',
+                    balancingMode: 'uniform',
+                    annotationSourceId: 'annotation-source-2'
                 })
             );
         });
