@@ -4,6 +4,16 @@ import type { EvaluationRunView } from '$lib/api/lightly_studio_local/types.gen'
 import { formatDate } from '$lib/utils';
 import EvaluationRunItem from './EvaluationRunItem.svelte';
 
+vi.mock(
+    './EvaluationRunConfusionMatrixSection/EvaluationRunConfusionMatrixSection.svelte',
+    async () => {
+        const module = await import(
+            './EvaluationRunConfusionMatrixSection/EvaluationRunConfusionMatrixSection.mock.svelte'
+        );
+        return { default: module.default };
+    }
+);
+
 const baseRun: EvaluationRunView = {
     id: 'run-1',
     name: 'Detection eval — v1',
