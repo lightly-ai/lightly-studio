@@ -43,14 +43,14 @@ describe('useCreateSelection', () => {
         ]);
 
         const { submit } = useCreateSelection({
-            collectionId: 'col-1',
-            isSimilaritySupported: true,
             tags: tagsStore,
             setTagSelected,
             loadTags,
             closeSelectionDialog
         });
         const result = await submit({
+            collectionId: 'col-1',
+            isSimilaritySupported: true,
             selectionStrategy: 'diversity',
             nSamplesToSelect: 5,
             selectionResultTagName: 'my-tag',
@@ -83,14 +83,14 @@ describe('useCreateSelection', () => {
         const tagsStore = writable([]);
 
         const { submit } = useCreateSelection({
-            collectionId: 'col-1',
-            isSimilaritySupported: true,
             tags: tagsStore,
             setTagSelected,
             loadTags,
             closeSelectionDialog
         });
         const result = await submit({
+            collectionId: 'col-1',
+            isSimilaritySupported: true,
             selectionStrategy: 'typicality',
             nSamplesToSelect: 10,
             selectionResultTagName: 'result-tag',
@@ -124,14 +124,14 @@ describe('useCreateSelection', () => {
         const tagsStore = writable([]);
 
         const { submit } = useCreateSelection({
-            collectionId: 'col-1',
-            isSimilaritySupported: true,
             tags: tagsStore,
             setTagSelected,
             loadTags,
             closeSelectionDialog
         });
         const result = await submit({
+            collectionId: 'col-1',
+            isSimilaritySupported: true,
             selectionStrategy: 'similarity',
             nSamplesToSelect: 8,
             selectionResultTagName: 'sim-tag',
@@ -163,14 +163,14 @@ describe('useCreateSelection', () => {
         const tagsStore = writable([]);
 
         const { submit } = useCreateSelection({
-            collectionId: 'col-1',
-            isSimilaritySupported: false,
             tags: tagsStore,
             setTagSelected,
             loadTags,
             closeSelectionDialog
         });
         const result = await submit({
+            collectionId: 'col-1',
+            isSimilaritySupported: false,
             selectionStrategy: 'similarity',
             nSamplesToSelect: 8,
             selectionResultTagName: 'sim-tag',
@@ -198,14 +198,14 @@ describe('useCreateSelection', () => {
         const tagsStore = writable([]);
 
         const { submit } = useCreateSelection({
-            collectionId: 'col-1',
-            isSimilaritySupported: true,
             tags: tagsStore,
             setTagSelected,
             loadTags,
             closeSelectionDialog
         });
         const result = await submit({
+            collectionId: 'col-1',
+            isSimilaritySupported: true,
             selectionStrategy: 'typicality',
             nSamplesToSelect: 10,
             selectionResultTagName: 'result-tag',
@@ -232,14 +232,14 @@ describe('useCreateSelection', () => {
         const tagsStore = writable([]);
 
         const { submit } = useCreateSelection({
-            collectionId: 'col-1',
-            isSimilaritySupported: true,
             tags: tagsStore,
             setTagSelected,
             loadTags,
             closeSelectionDialog
         });
         const result = await submit({
+            collectionId: 'col-1',
+            isSimilaritySupported: true,
             selectionStrategy: 'similarity',
             nSamplesToSelect: 8,
             selectionResultTagName: 'sim-tag',
@@ -266,14 +266,14 @@ describe('useCreateSelection', () => {
         const tagsStore = writable([]);
 
         const { submit } = useCreateSelection({
-            collectionId: 'col-1',
-            isSimilaritySupported: true,
             tags: tagsStore,
             setTagSelected,
             loadTags,
             closeSelectionDialog
         });
         const result = await submit({
+            collectionId: 'col-1',
+            isSimilaritySupported: true,
             selectionStrategy: 'diversity',
             nSamplesToSelect: 5,
             selectionResultTagName: 'my-tag',
@@ -294,8 +294,6 @@ describe('useCreateSelection', () => {
         const tagsStore = writable([]);
 
         const hook = useCreateSelection({
-            collectionId: 'col-1',
-            isSimilaritySupported: true,
             tags: tagsStore,
             setTagSelected,
             loadTags,
@@ -311,6 +309,8 @@ describe('useCreateSelection', () => {
         expect(get(hook.isSubmitting)).toBe(false);
 
         await hook.submit({
+            collectionId: 'col-1',
+            isSimilaritySupported: true,
             selectionStrategy: 'diversity',
             nSamplesToSelect: 5,
             selectionResultTagName: 'my-tag',
@@ -330,8 +330,6 @@ describe('useCreateSelection', () => {
         const tagsStore = writable([]);
 
         const hook = useCreateSelection({
-            collectionId: 'col-1',
-            isSimilaritySupported: true,
             tags: tagsStore,
             setTagSelected,
             loadTags,
@@ -349,6 +347,8 @@ describe('useCreateSelection', () => {
         });
 
         await hook.submit({
+            collectionId: 'col-1',
+            isSimilaritySupported: true,
             selectionStrategy: 'typicality',
             nSamplesToSelect: 10,
             selectionResultTagName: 'result-tag',
@@ -370,14 +370,14 @@ describe('useCreateSelection', () => {
         const tagsStore = writable([]);
 
         const { submit } = useCreateSelection({
-            collectionId: 'col-1',
-            isSimilaritySupported: true,
             tags: tagsStore,
             setTagSelected,
             loadTags,
             closeSelectionDialog
         });
         const result = await submit({
+            collectionId: 'col-1',
+            isSimilaritySupported: true,
             selectionStrategy: 'class_balancing',
             nSamplesToSelect: 20,
             selectionResultTagName: 'balanced-tag',
@@ -408,14 +408,14 @@ describe('useCreateSelection', () => {
         const tagsStore = writable([]);
 
         const { submit } = useCreateSelection({
-            collectionId: 'col-1',
-            isSimilaritySupported: true,
             tags: tagsStore,
             setTagSelected,
             loadTags,
             closeSelectionDialog
         });
         const result = await submit({
+            collectionId: 'col-1',
+            isSimilaritySupported: true,
             selectionStrategy: 'class_balancing',
             nSamplesToSelect: 15,
             selectionResultTagName: 'balanced-tag',
@@ -447,14 +447,14 @@ describe('useCreateSelection', () => {
         const tagsStore = writable([]);
 
         const { submit } = useCreateSelection({
-            collectionId: 'col-1',
-            isSimilaritySupported: true,
             tags: tagsStore,
             setTagSelected,
             loadTags,
             closeSelectionDialog
         });
         const result = await submit({
+            collectionId: 'col-1',
+            isSimilaritySupported: true,
             selectionStrategy: 'class_balancing',
             nSamplesToSelect: 20,
             selectionResultTagName: 'balanced-tag',

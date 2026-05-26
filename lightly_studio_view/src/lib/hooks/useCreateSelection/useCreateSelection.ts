@@ -16,8 +16,6 @@ function extractError(error: unknown, fallback: string): string {
 }
 
 interface UseCreateSelectionParams {
-    collectionId: string;
-    isSimilaritySupported: boolean;
     tags: Readable<TagView[]>;
     setTagSelected: (tagId: string, isSelected: boolean) => void;
     loadTags: () => Promise<void>;
@@ -25,6 +23,8 @@ interface UseCreateSelectionParams {
 }
 
 interface SubmitParams {
+    collectionId: string;
+    isSimilaritySupported: boolean;
     selectionStrategy: 'diversity' | 'typicality' | 'similarity' | 'class_balancing';
     nSamplesToSelect: number;
     selectionResultTagName: string;
@@ -34,18 +34,11 @@ interface SubmitParams {
 }
 
 export function useCreateSelection(params: UseCreateSelectionParams) {
-    const {
-        collectionId,
-        isSimilaritySupported,
-        tags,
-        setTagSelected,
-        loadTags,
-        closeSelectionDialog
-    } = params;
     const _isSubmitting = writable(false);
     const _loadingMessage = writable('');
 
     async function performSelection(
+        collectionId: string,
         strategies: SelectionRequest['strategies'],
         selectionFilter: SelectionRequest['filter'],
         n: number,
@@ -68,16 +61,18 @@ export function useCreateSelection(params: UseCreateSelectionParams) {
         }
 
         toast.success('Selection created successfully');
-        await loadTags();
-        const newTag = get(tags).find((tag) => tag.name === tagName);
-        if (newTag) setTagSelected(newTag.tag_id, true);
-        closeSelectionDialog();
+        await params.loadTags();
+        const newTag = get(params.tags).find((tag) => tag.name === tagName);
+        if (newTag) params.setTagSelected(newTag.tag_id, true);
+        params.closeSelectionDialog();
         return true;
     }
 
     async function submit(submitParams: SubmitParams): Promise<boolean | undefined> {
         if (get(_isSubmitting)) return;
         const {
+            collectionId,
+            isSimilaritySupported,
             selectionStrategy,
             nSamplesToSelect,
             selectionResultTagName,
@@ -90,6 +85,7 @@ export function useCreateSelection(params: UseCreateSelectionParams) {
         try {
             if (selectionStrategy === 'class_balancing') {
                 return await performSelection(
+                    collectionId,
                     [{ strategy_name: 'balance', target_distribution: balancingMode }],
                     selectionFilter,
                     nSamplesToSelect,
@@ -99,6 +95,7 @@ export function useCreateSelection(params: UseCreateSelectionParams) {
 
             if (selectionStrategy === 'diversity') {
                 return await performSelection(
+                    collectionId,
                     [{ strategy_name: 'diversity', embedding_model_name: null }],
                     selectionFilter,
                     nSamplesToSelect,
@@ -122,6 +119,7 @@ export function useCreateSelection(params: UseCreateSelectionParams) {
                 }
 
                 return await performSelection(
+                    collectionId,
                     [{ strategy_name: 'weights', metadata_key: 'typicality' }],
                     selectionFilter,
                     nSamplesToSelect,
@@ -150,6 +148,7 @@ export function useCreateSelection(params: UseCreateSelectionParams) {
                 }
 
                 return await performSelection(
+                    collectionId,
                     [{ strategy_name: 'weights', metadata_key: 'similarity' }],
                     selectionFilter,
                     nSamplesToSelect,
