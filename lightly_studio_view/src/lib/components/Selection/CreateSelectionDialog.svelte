@@ -55,7 +55,10 @@
     );
 
     // Form state
-    let selectionStrategy = $state<'diversity' | 'typicality' | 'similarity' | ''>('');
+    let selectionStrategy = $state<
+        'diversity' | 'typicality' | 'similarity' | 'class_distribution' | ''
+    >('');
+    let balancingMode = $state<'uniform' | 'dictionary'>('uniform');
     let nSamplesToSelect = $state<number>(10);
     let queryTagId = $state('');
     let selectionResultTagName = $state<string>('');
@@ -65,7 +68,8 @@
     const STRATEGY_LABELS: Record<string, string> = {
         diversity: 'Diversity',
         typicality: 'Typicality',
-        similarity: 'Similarity'
+        similarity: 'Similarity',
+        class_distribution: 'Class Distribution'
     };
 
     // Form validation
@@ -158,6 +162,13 @@
                     {
                         strategy_name: 'diversity',
                         embedding_model_name: null
+                    }
+                ]);
+            } else if (selectionStrategy === 'class_distribution') {
+                await performSelection([
+                    {
+                        strategy_name: 'balance',
+                        target_distribution: balancingMode === 'uniform' ? 'uniform' : 'input'
                     }
                 ]);
             } else if (selectionStrategy === 'typicality') {
@@ -264,6 +275,12 @@
                                         >Typicality</Select.Item
                                     >
                                     <Select.Item
+                                        value="class_distribution"
+                                        label="Class Distribution"
+                                        data-testid="selection-strategy-class-distribution"
+                                        >Class Distribution</Select.Item
+                                    >
+                                    <Select.Item
                                         value="similarity"
                                         label="Similarity"
                                         data-testid="selection-strategy-similarity"
@@ -273,6 +290,39 @@
                             </Select.Content>
                         </Select.Root>
                     </div>
+
+                    {#if selectionStrategy === 'class_distribution'}
+                        <div class="grid grid-cols-4 items-center gap-4">
+                            <Label for="balancing-mode" class="text-right text-foreground">
+                                Balancing Mode
+                            </Label>
+                            <Select.Root
+                                type="single"
+                                name="balancing-mode"
+                                bind:value={balancingMode}
+                            >
+                                <Select.Trigger
+                                    class="col-span-3"
+                                    data-testid="selection-dialog-balancing-mode-select"
+                                >
+                                    {balancingMode === 'uniform' ? 'Uniform' : 'Dictionary'}
+                                </Select.Trigger>
+                                <Select.Content>
+                                    <Select.Group>
+                                        <Select.Item value="uniform" label="Uniform"
+                                            >Uniform</Select.Item
+                                        >
+                                        <Select.Item value="dictionary" label="Dictionary" disabled
+                                            >Dictionary (Coming soon)</Select.Item
+                                        >
+                                        <Select.Item value="input" label="Input" disabled
+                                            >Input (Coming soon)</Select.Item
+                                        >
+                                    </Select.Group>
+                                </Select.Content>
+                            </Select.Root>
+                        </div>
+                    {/if}
 
                     {#if selectionStrategy === 'similarity'}
                         <div class="grid grid-cols-4 items-center gap-4">
