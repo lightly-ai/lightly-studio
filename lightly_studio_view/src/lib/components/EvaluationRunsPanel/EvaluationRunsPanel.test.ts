@@ -6,9 +6,8 @@ import EvaluationRunsPanel from './EvaluationRunsPanel.svelte';
 vi.mock(
     './EvaluationRunItem/EvaluationRunConfusionMatrixSection/EvaluationRunConfusionMatrixSection.svelte',
     async () => {
-        const module = await import(
-            './EvaluationRunItem/EvaluationRunConfusionMatrixSection/EvaluationRunConfusionMatrixSection.mock.svelte'
-        );
+        const module =
+            await import('./EvaluationRunItem/EvaluationRunConfusionMatrixSection/EvaluationRunConfusionMatrixSection.mock.svelte');
         return { default: module.default };
     }
 );
