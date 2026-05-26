@@ -19,7 +19,7 @@
     } = $props();
 </script>
 
-<Segment title="Labels">
+<Segment title="Label Classes">
     <div class="width-full space-y-2 overflow-hidden">
         {#each $annotationFilterRows as { label_name, current_count, total_count, selected } (label_name)}
             <div class="width-full flex items-center space-x-2" title={label_name}>

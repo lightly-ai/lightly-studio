@@ -52,7 +52,7 @@ const defaultProps = {
     canSelectAll: false,
     isImages: false,
     hasMediaWithEmbeddings: false,
-    datasetId: 'dataset-1',
+    collectionDatasetId: 'dataset-1',
     onSelectAll: vi.fn().mockResolvedValue(undefined),
     searchImage: undefined,
     searchPending: false,
