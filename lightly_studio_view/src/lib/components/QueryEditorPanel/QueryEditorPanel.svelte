@@ -2,7 +2,7 @@
     import type { ComponentProps } from 'svelte';
     import { X } from '@lucide/svelte';
     import QueryEditor from '$lib/components/QueryEditor/QueryEditor.svelte';
-    import Button from '$lib/components/ui/button/button.svelte';
+    import { Button } from '$lib/components/ui/button';
     import Typography from '$lib/components/Typography/Typography.svelte';
     import { useImageFilters } from '$lib/hooks/useImageFilters/useImageFilters';
 
