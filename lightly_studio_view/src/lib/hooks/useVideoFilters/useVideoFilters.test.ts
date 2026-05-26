@@ -112,9 +112,8 @@ describe('useVideoFilters', () => {
         });
 
         it('includes metadata_filters in sample_filter when createMetadataFilters returns filters', async () => {
-            const { createMetadataFilters } = await import(
-                '../useMetadataFilters/useMetadataFilters'
-            );
+            const { createMetadataFilters } =
+                await import('../useMetadataFilters/useMetadataFilters');
             vi.mocked(createMetadataFilters).mockReturnValueOnce([
                 { key: 'temp', value: 10, op: '>=' as const }
             ]);

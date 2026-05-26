@@ -1,0 +1,45 @@
+import { fireEvent, render, screen } from '@testing-library/svelte';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+import ClassBalancingForm from './ClassBalancingForm.svelte';
+
+describe('ClassBalancingForm', () => {
+    beforeEach(() => {
+        Element.prototype.scrollIntoView = vi.fn();
+    });
+
+    it('shows the current balancing mode label', () => {
+        render(ClassBalancingForm, {
+            props: { balancingMode: 'uniform', onBalancingModeChange: vi.fn() }
+        });
+
+        expect(screen.getByTestId('selection-dialog-balancing-mode-select')).toHaveTextContent(
+            'Uniform'
+        );
+    });
+
+    it('shows the uniform option in the dropdown', async () => {
+        render(ClassBalancingForm, {
+            props: { balancingMode: 'uniform', onBalancingModeChange: vi.fn() }
+        });
+
+        await fireEvent.keyDown(screen.getByTestId('selection-dialog-balancing-mode-select'), {
+            key: 'Enter'
+        });
+
+        expect(await screen.findByTestId('selection-balancing-mode-uniform')).toBeInTheDocument();
+    });
+
+    it('shows input balancing mode as disabled and coming soon', async () => {
+        render(ClassBalancingForm, {
+            props: { balancingMode: 'uniform', onBalancingModeChange: vi.fn() }
+        });
+
+        await fireEvent.keyDown(screen.getByTestId('selection-dialog-balancing-mode-select'), {
+            key: 'Enter'
+        });
+
+        const inputOption = await screen.findByTestId('selection-balancing-mode-input');
+        expect(inputOption).toHaveAttribute('data-disabled');
+        expect(inputOption).toHaveTextContent('Input (Coming soon)');
+    });
+});
