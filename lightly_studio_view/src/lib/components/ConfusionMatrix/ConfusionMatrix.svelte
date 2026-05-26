@@ -33,7 +33,7 @@
     let chart: echarts.ECharts | null = $state(null);
 
     const rowCount = $derived(unifyLabels(matrix.row_labels, matrix.col_labels).length);
-    const heightPx = $derived(Math.max(320, rowCount * 48 + 180));
+    const heightPx = $derived(Math.max(320, rowCount * 18 + 180));
 
     const maxCount = $derived(
         Math.max(1, ...matrix.counts.flatMap((row) => row).filter((n) => n > 0))
