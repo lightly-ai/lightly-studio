@@ -50,9 +50,11 @@ AND object_detection(label = "person" AND x > 10)
             return;
         }
         onSave?.(draftValue, translationResult);
+        lastAppliedValue = draftValue;
     }
 
     let draftValue = $state(value);
+    let lastAppliedValue = $state<string | null>(null);
 
     onMount(() => {
         if (!containerEl) return;
@@ -64,7 +66,7 @@ AND object_detection(label = "person" AND x > 10)
             }
         });
     });
-    const isModified = $derived(value !== draftValue);
+    const canApply = $derived(draftValue !== lastAppliedValue);
 </script>
 
 <div
@@ -76,7 +78,7 @@ AND object_detection(label = "person" AND x > 10)
         <div
             class="flex items-center justify-end gap-2 border-b border-[#3c3c3c] bg-[#252526] px-4 py-2"
         >
-            <Button type="button" disabled={readOnly || !isModified} onclick={handleSave}
+            <Button type="button" disabled={readOnly || !canApply} onclick={handleSave}
                 >Apply</Button
             >
         </div>
