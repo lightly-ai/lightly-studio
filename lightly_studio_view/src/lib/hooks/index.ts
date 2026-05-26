@@ -26,3 +26,4 @@ export { useEvaluationSampleMetricsInfo } from '$lib/hooks/useEvaluationSampleMe
 export { useEvaluationRuns } from '$lib/hooks/useEvaluationRuns/useEvaluationRuns';
 export { useOrderBy } from '$lib/hooks/useOrderBy/useOrderBy';
 export { useSortFields } from '$lib/hooks/useSortFields/useSortFields.svelte';
+export { useCreateSelection } from '$lib/hooks/useCreateSelection/useCreateSelection';
