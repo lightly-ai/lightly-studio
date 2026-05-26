@@ -10,12 +10,18 @@
         onValueChange: (value: Strategy) => void;
     }
 
-    const STRATEGY_LABELS: Record<string, string> = {
-        diversity: 'Diversity',
-        typicality: 'Typicality',
-        similarity: 'Similarity',
-        class_balancing: 'Class Balancing'
-    };
+    const STRATEGIES: { value: Strategy; label: string; testId: string }[] = [
+        { value: 'diversity', label: 'Diversity', testId: 'selection-strategy-diversity' },
+        { value: 'typicality', label: 'Typicality', testId: 'selection-strategy-typicality' },
+        {
+            value: 'class_balancing',
+            label: 'Class Balancing',
+            testId: 'selection-strategy-class-balancing'
+        },
+        { value: 'similarity', label: 'Similarity', testId: 'selection-strategy-similarity' }
+    ];
+
+    const STRATEGY_LABELS = Object.fromEntries(STRATEGIES.map((s) => [s.value, s.label]));
 
     let { value, isSimilaritySupported, onValueChange }: Props = $props();
 </script>
@@ -33,27 +39,15 @@
         </Select.Trigger>
         <Select.Content>
             <Select.Group>
-                <Select.Item
-                    value="diversity"
-                    label="Diversity"
-                    data-testid="selection-strategy-diversity">Diversity</Select.Item
-                >
-                <Select.Item
-                    value="typicality"
-                    label="Typicality"
-                    data-testid="selection-strategy-typicality">Typicality</Select.Item
-                >
-                <Select.Item
-                    value="class_balancing"
-                    label="Class Balancing"
-                    data-testid="selection-strategy-class-balancing">Class Balancing</Select.Item
-                >
-                <Select.Item
-                    value="similarity"
-                    label="Similarity"
-                    data-testid="selection-strategy-similarity"
-                    disabled={!isSimilaritySupported}>Similarity</Select.Item
-                >
+                {#each STRATEGIES as strategy}
+                    <Select.Item
+                        value={strategy.value}
+                        label={strategy.label}
+                        data-testid={strategy.testId}
+                        disabled={strategy.value === 'similarity' && !isSimilaritySupported}
+                        >{strategy.label}</Select.Item
+                    >
+                {/each}
             </Select.Group>
         </Select.Content>
     </Select.Root>
