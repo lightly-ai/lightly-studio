@@ -50,6 +50,55 @@ class TestDiscreteColorScale:
         assert scale.value_to_category("only") == 2
         assert scale.legend == {2: "only"}
 
+    def test_from_integers__few_values(self) -> None:
+        scale = DiscreteColorScale.from_integers(values=[3, 1, 2])
+        assert scale.value_to_category(1) == 2
+        assert scale.value_to_category(2) == 3
+        assert scale.value_to_category(3) == 4
+        assert scale.legend == {2: "1", 3: "2", 4: "3"}
+
+    def test_from_integers__empty(self) -> None:
+        scale = DiscreteColorScale.from_integers(values=[])
+        assert scale.legend == {}
+        assert scale.value_to_category(0) is None
+
+    def test_from_integers__duplicates_deduplicated(self) -> None:
+        scale = DiscreteColorScale.from_integers(values=[5, 5, 3, 3, 1])
+        assert scale.value_to_category(1) == 2
+        assert scale.value_to_category(3) == 3
+        assert scale.value_to_category(5) == 4
+        assert scale.legend == {2: "1", 3: "3", 4: "5"}
+
+    def test_from_integers__custom_start_cat(self) -> None:
+        scale = DiscreteColorScale.from_integers(values=[10, 20], start_cat=5)
+        assert scale.value_to_category(10) == 5
+        assert scale.value_to_category(20) == 6
+        assert scale.legend == {5: "10", 6: "20"}
+
+    def test_from_integers__exactly_max_categories_no_bucketing(self) -> None:
+        scale = DiscreteColorScale.from_integers(values=[1, 2, 3], max_categories=3)
+        assert scale.value_to_category(1) == 2
+        assert scale.value_to_category(2) == 3
+        assert scale.value_to_category(3) == 4
+        assert scale.legend == {2: "1", 3: "2", 4: "3"}
+
+    def test_from_integers__bucketing(self) -> None:
+        # value_range=300, raw_width=150, magnitude=100, bucket_width=200
+        # -> 2 buckets: [0, 199] and [200, 399]
+        scale = DiscreteColorScale.from_integers(values=[0, 100, 200, 300], max_categories=2)
+        assert scale.value_to_category(0) == 2
+        assert scale.value_to_category(100) == 2
+        assert scale.value_to_category(200) == 3
+        assert scale.value_to_category(300) == 3
+        assert scale.legend == {2: "0-199", 3: "200-399"}
+
+    def test_from_integers__bucketing_width_one(self) -> None:
+        scale = DiscreteColorScale.from_integers(values=[0, 1, 2], max_categories=2)
+        assert scale.value_to_category(0) == 2
+        assert scale.value_to_category(1) == 3
+        assert scale.value_to_category(2) == 4
+        assert scale.legend == {2: "0", 3: "1", 4: "2"}
+
 
 def test_assign_color_categories() -> None:
     ids = [uuid4(), uuid4()]
