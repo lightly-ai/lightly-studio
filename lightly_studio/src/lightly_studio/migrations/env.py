@@ -12,7 +12,7 @@ from typing import Any, Literal, cast
 
 from alembic import context
 from alembic.autogenerate.api import AutogenContext
-from sqlalchemy import pool, text
+from sqlalchemy import engine, pool, text
 from sqlalchemy.engine import Connection
 from sqlmodel import SQLModel
 
