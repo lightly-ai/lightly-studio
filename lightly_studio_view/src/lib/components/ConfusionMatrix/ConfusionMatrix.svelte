@@ -3,7 +3,6 @@
     import * as echarts from 'echarts/core';
     import { HeatmapChart } from 'echarts/charts';
     import {
-        DataZoomInsideComponent,
         GridComponent,
         TooltipComponent,
         VisualMapComponent
@@ -18,7 +17,6 @@
         TooltipComponent,
         VisualMapComponent,
         GridComponent,
-        DataZoomInsideComponent,
         CanvasRenderer
     ]);
 

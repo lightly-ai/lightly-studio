@@ -56,10 +56,6 @@ export function buildEchartsOption(matrix: ConfusionMatrix): EChartsCoreOption {
             axisLine: { lineStyle: { color: '#374151' } },
             splitArea: { show: false }
         },
-        dataZoom: [
-            { type: 'inside', xAxisIndex: 0, filterMode: 'empty' },
-            { type: 'inside', yAxisIndex: 0, filterMode: 'empty' }
-        ],
         visualMap: [
             {
                 seriesIndex: 0,
