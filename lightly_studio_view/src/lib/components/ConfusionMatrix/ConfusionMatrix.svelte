@@ -2,11 +2,7 @@
     import { onDestroy } from 'svelte';
     import * as echarts from 'echarts/core';
     import { HeatmapChart } from 'echarts/charts';
-    import {
-        GridComponent,
-        TooltipComponent,
-        VisualMapComponent
-    } from 'echarts/components';
+    import { GridComponent, TooltipComponent, VisualMapComponent } from 'echarts/components';
     import { CanvasRenderer } from 'echarts/renderers';
     import { buildEchartsOption, unifyLabels } from './buildEchartsOption';
     import ConfusionMatrixLegend from './ConfusionMatrixLegend.svelte';
