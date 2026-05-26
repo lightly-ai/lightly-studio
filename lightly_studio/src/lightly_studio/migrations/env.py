@@ -12,7 +12,7 @@ from typing import Any, Literal, cast
 
 from alembic import context
 from alembic.autogenerate.api import AutogenContext
-from sqlalchemy import engine_from_config, pool, text
+from sqlalchemy import pool, text
 from sqlalchemy.engine import Connection
 from sqlmodel import SQLModel
 
@@ -101,7 +101,7 @@ def run_migrations() -> None:
         _configure_context(connection=cast(Connection, shared_connection))
         return
 
-    connectable = engine_from_config(
+    connectable = engine.engine_from_config(
         config.get_section(config.config_ini_section, {}),
         prefix="sqlalchemy.",
         poolclass=pool.NullPool,
