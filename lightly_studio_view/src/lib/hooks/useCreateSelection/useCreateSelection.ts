@@ -11,6 +11,10 @@ import type { BalancingMode } from '$lib/components/Selection/balancingMode';
 
 type SelectionError = { error: string };
 
+function extractError(error: unknown, fallback: string): string {
+    return (error as SelectionError)?.error || fallback;
+}
+
 interface UseCreateSelectionParams {
     collectionId: string;
     isSimilaritySupported: boolean;
@@ -59,7 +63,7 @@ export function useCreateSelection(params: UseCreateSelectionParams) {
         });
 
         if (response.error) {
-            toast.error((response.error as SelectionError).error || 'Failed to create selection');
+            toast.error(extractError(response.error, 'Failed to create selection'));
             return false;
         }
 
@@ -71,8 +75,8 @@ export function useCreateSelection(params: UseCreateSelectionParams) {
         return true;
     }
 
-    async function submit(submitParams: SubmitParams): Promise<boolean> {
-        if (get(_isSubmitting)) return false;
+    async function submit(submitParams: SubmitParams): Promise<boolean | undefined> {
+        if (get(_isSubmitting)) return;
         const {
             selectionStrategy,
             nSamplesToSelect,
@@ -112,7 +116,7 @@ export function useCreateSelection(params: UseCreateSelectionParams) {
                 if (typicalityResponse.error) {
                     toast.error(
                         'Failed to compute typicality metadata: ' +
-                            ((typicalityResponse.error as SelectionError).error || 'Unknown error')
+                            extractError(typicalityResponse.error, 'Unknown error')
                     );
                     return false;
                 }
@@ -140,7 +144,7 @@ export function useCreateSelection(params: UseCreateSelectionParams) {
                 if (simResponse.error) {
                     toast.error(
                         'Failed to compute similarity metadata: ' +
-                            ((simResponse.error as SelectionError).error || 'Unknown error')
+                            extractError(simResponse.error, 'Unknown error')
                     );
                     return false;
                 }
@@ -155,6 +159,9 @@ export function useCreateSelection(params: UseCreateSelectionParams) {
 
             return false;
         } catch (error) {
+            // API functions return { data, error } and don't throw, so this
+            // only fires for unexpected runtime bugs in the hook itself.
+            console.error('Unexpected error in useCreateSelection.submit:', error);
             toast.error('Failed to create selection: ' + (error as Error).message);
             return false;
         } finally {
