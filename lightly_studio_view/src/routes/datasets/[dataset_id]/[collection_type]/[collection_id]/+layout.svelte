@@ -360,10 +360,7 @@
 
                             {#if isImages || isVideos || isVideoFrames}
                                 {#key collectionId}
-                                    <CombinedMetadataDimensionsFilters
-                                        {isVideos}
-                                        {isVideoFrames}
-                                    />
+                                    <CombinedMetadataDimensionsFilters {isVideos} {isVideoFrames} />
                                 {/key}
                             {/if}
                         </div>
