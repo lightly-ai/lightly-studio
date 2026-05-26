@@ -34,7 +34,11 @@
         {value}
         onValueChange={(v) => onValueChange(v as Strategy)}
     >
-        <Select.Trigger class="col-span-3" data-testid="selection-dialog-strategy-select">
+        <Select.Trigger
+            id="strategy"
+            class="col-span-3"
+            data-testid="selection-dialog-strategy-select"
+        >
             {STRATEGY_LABELS[value] ?? 'Select strategy'}
         </Select.Trigger>
         <Select.Content>
