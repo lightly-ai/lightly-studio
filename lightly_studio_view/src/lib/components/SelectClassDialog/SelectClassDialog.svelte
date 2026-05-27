@@ -14,6 +14,9 @@
     let { open = $bindable(false), labels, onConfirm, onCancel }: Props = $props();
 
     let selectedItem = $state<ListItem | undefined>(undefined);
+    // Track close origin so the onOpenChange(false) that fires when we set
+    // open = false from handleConfirm does not also invoke onCancel.
+    let closedByConfirm = false;
 
     const items = $derived<ListItem[]>(
         [...new Set(labels)].sort((a, b) => a.localeCompare(b)).map((l) => ({ value: l, label: l }))
@@ -21,6 +24,7 @@
 
     const handleConfirm = () => {
         if (selectedItem) {
+            closedByConfirm = true;
             onConfirm(selectedItem.value);
             open = false;
             selectedItem = undefined;
@@ -34,7 +38,12 @@
     };
 
     const handleOpenChange = (isOpen: boolean) => {
-        if (!isOpen) handleCancel();
+        if (isOpen) return;
+        if (closedByConfirm) {
+            closedByConfirm = false;
+            return;
+        }
+        handleCancel();
     };
 </script>
 
