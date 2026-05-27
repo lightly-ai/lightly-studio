@@ -57,7 +57,7 @@
         buildVideoFrameAnnotationCountsFilter
     } from '$lib/utils/buildAnnotationCountsFilters';
     import EmbeddingSelectionFilterItem from '$lib/components/EmbeddingSelectionFilterItem/EmbeddingSelectionFilterItem.svelte';
-    import { useSelectionSummary, useFeatureFlags } from '$lib/hooks';
+    import { useSelectionSummary } from '$lib/hooks';
     import { useSelectAll } from '$lib/hooks/useSelectAll/useSelectAll';
     import { isInputElement } from '$lib/utils';
     import { shutdownMaskRendererPool } from '$lib/workers/maskRendererPool';
@@ -305,8 +305,6 @@
         isImages || isAnnotations || isVideos || isVideoFrames || isGroups
     );
 
-    const { featureFlags } = useFeatureFlags();
-    const isQueryFilterEnabled = $derived($featureFlags.includes('query_filter'));
     let isQueryFilterEditing = $state(false);
 
     const isSidePanelOpen = $derived($showPlot || $showEvaluationRuns);
@@ -333,13 +331,11 @@
                                 <span>Filters</span>
                             </h2>
 
-                            {#if isQueryFilterEnabled}
-                                <QueryControl
-                                    onOpen={() => {
-                                        isQueryFilterEditing = true;
-                                    }}
-                                />
-                            {/if}
+                            <QueryControl
+                                onOpen={() => {
+                                    isQueryFilterEditing = true;
+                                }}
+                            />
 
                             <div>
                                 <TagsMenu collection_id={collectionId} {gridType} />
@@ -470,7 +466,7 @@
                         {/await}
                     </Pane>
                 </PaneGroup>
-            {:else if !isQueryFilterEnabled || !isQueryFilterEditing}
+            {:else if !isQueryFilterEditing}
                 <!-- When plot is hidden or not samples view, show normal layout -->
                 <div class="relative flex flex-1 flex-col space-y-4 rounded-[1vw] bg-card p-4 pb-2">
                     {@render mainContent()}
