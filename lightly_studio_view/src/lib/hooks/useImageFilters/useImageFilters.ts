@@ -98,7 +98,12 @@ export interface QueryExpression {
 
 const imageQueryExpression = writable<QueryExpression | null>({} as QueryExpression);
 
-const imageSortBy = writable<SortExpr[] | null>(null);
+const imageSortBy = writable<SortExpr[] | null>([{
+    source: 'image',
+    field_name: 'file_path_abs',
+    direction: 'asc',
+    is_numeric: false
+}]);
 
 export const useImageFilters = () => {
     const updateFilterParams = (params: ImagesInfiniteParams) => {
