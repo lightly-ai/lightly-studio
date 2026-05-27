@@ -12,7 +12,6 @@ from sqlmodel import SQLModel
 
 from lightly_studio import db_migrations, db_url
 from lightly_studio.db_manager import DatabaseEngine
-from lightly_studio.db_migrations import get_head_revision
 
 _POSTGRES_URL = "postgresql://localhost/db"
 
@@ -115,7 +114,7 @@ def test_postgres_fresh_database__upgrade_head(
 
     engine = DatabaseEngine(engine_url=postgres_url, single_threaded=True)
     try:
-        head_revision = get_head_revision()
+        head_revision = db_migrations.get_head_revision()
 
         inspector = db_migrations._get_inspector(engine=engine._engine)
         assert inspector.has_table(table_name="collection")
