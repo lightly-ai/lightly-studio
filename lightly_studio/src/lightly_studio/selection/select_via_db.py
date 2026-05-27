@@ -10,8 +10,8 @@ from uuid import UUID, uuid4
 
 import numpy as np
 import sqlalchemy
-import sqlmodel
 from numpy.typing import NDArray
+from sqlmodel import Session, col, select
 
 from lightly_studio.models.annotation.annotation_base import AnnotationBaseTable
 from lightly_studio.models.sample import SampleTable
@@ -88,7 +88,7 @@ def _aggregate_class_distributions(
 
 
 def _process_explicit_target_distribution(
-    session: sqlmodel.Session,
+    session: Session,
     dataset_id: UUID,
     target_distribution: dict[str, float],
     annotation_label_ids: Sequence[UUID],
@@ -141,14 +141,31 @@ def _process_explicit_target_distribution(
 
 
 def _get_class_balancing_data(  # noqa: PLR0913
-    session: sqlmodel.Session,
+    session: Session,
     strat: AnnotationClassBalancingStrategy,
     dataset_id: UUID,
-    annotation_label_ids: Sequence[UUID],
     input_sample_ids: Sequence[UUID],
-    sample_id_to_annotation_label_ids: Mapping[UUID, list[UUID]],
+    annotation_label_ids: Sequence[UUID] | None = None,
+    sample_id_to_annotation_label_ids: Mapping[UUID, list[UUID]] | None = None,
 ) -> tuple[NDArray[np.float32], list[float]]:
     """Helper function to get class balancing data."""
+    annotations = _get_annotations_for_class_balancing(
+        session=session,
+        parent_sample_ids=input_sample_ids,
+        annotation_source_id=strat.annotation_source_id,
+    )
+    if strat.annotation_source_id is not None and not annotations:
+        raise ValueError(
+            "Annotation source with the given ID does not contain annotations "
+            "for the selected samples."
+        )
+    annotation_label_ids = [annotation.annotation_label_id for annotation in annotations]
+    sample_id_to_annotation_label_ids = defaultdict(list)
+    for annotation in annotations:
+        sample_id_to_annotation_label_ids[annotation.parent_sample_id].append(
+            annotation.annotation_label_id
+        )
+
     if strat.target_distribution == "uniform":
         target_keys_set = set(annotation_label_ids)
         target_keys = list(target_keys_set)
@@ -196,7 +213,7 @@ def _get_class_balancing_data(  # noqa: PLR0913
 
 
 def select_via_database(
-    session: sqlmodel.Session, config: SelectionConfig, input_sample_ids: list[UUID]
+    session: Session, config: SelectionConfig, input_sample_ids: list[UUID]
 ) -> None:
     """Run selection using the provided candidate sample ids.
 
@@ -259,7 +276,7 @@ def select_via_database(
 
 
 def _get_embeddings_by_sample_ids(
-    session: sqlmodel.Session,
+    session: Session,
     context: _SelectionContext,
     embedding_model_name: str | None,
 ) -> list[list[float]]:
@@ -278,7 +295,7 @@ def _get_embeddings_by_sample_ids(
 
 
 def _get_annotations_for_class_balancing(
-    session: sqlmodel.Session,
+    session: Session,
     parent_sample_ids: Sequence[UUID],
     annotation_source_id: UUID | None,
 ) -> list[AnnotationBaseTable]:
@@ -292,58 +309,19 @@ def _get_annotations_for_class_balancing(
         )
 
     annotations_statement = (
-        sqlmodel.select(AnnotationBaseTable)
+        select(AnnotationBaseTable)
         .join(
             SampleTable,
-            sqlmodel.col(SampleTable.sample_id) == sqlmodel.col(AnnotationBaseTable.sample_id),
+            col(SampleTable.sample_id) == col(AnnotationBaseTable.sample_id),
         )
-        .where(sqlmodel.col(AnnotationBaseTable.parent_sample_id).in_(parent_sample_ids))
-        .where(sqlmodel.col(SampleTable.collection_id) == annotation_source_id)
+        .where(col(AnnotationBaseTable.parent_sample_id).in_(parent_sample_ids))
+        .where(col(SampleTable.collection_id) == annotation_source_id)
     )
     return list(session.exec(annotations_statement).all())
 
 
-def _add_annotation_class_balancing_to_mundig(
-    session: sqlmodel.Session,
-    context: _SelectionContext,
-    strat: AnnotationClassBalancingStrategy,
-    mundig: Mundig,
-) -> None:
-    """Resolve annotation class balancing and add it to Mundig."""
-    annotations = _get_annotations_for_class_balancing(
-        session=session,
-        parent_sample_ids=context.input_sample_ids,
-        annotation_source_id=strat.annotation_source_id,
-    )
-    if strat.annotation_source_id is not None and not annotations:
-        raise ValueError(
-            "Annotation source with the given ID does not contain annotations "
-            "for the selected samples."
-        )
-    annotation_label_ids = [annotation.annotation_label_id for annotation in annotations]
-    sample_id_to_annotation_label_ids = defaultdict(list)
-    for annotation in annotations:
-        sample_id_to_annotation_label_ids[annotation.parent_sample_id].append(
-            annotation.annotation_label_id
-        )
-
-    class_distributions, target_values = _get_class_balancing_data(
-        session=session,
-        strat=strat,
-        dataset_id=context.dataset_id,
-        annotation_label_ids=annotation_label_ids,
-        input_sample_ids=context.input_sample_ids,
-        sample_id_to_annotation_label_ids=sample_id_to_annotation_label_ids,
-    )
-    mundig.add_class_balancing(
-        class_distributions=class_distributions,
-        target=target_values,
-        strength=strat.strength,
-    )
-
-
 def _add_strategy_to_mundig(
-    session: sqlmodel.Session,
+    session: Session,
     context: _SelectionContext,
     strat: object,
     mundig: Mundig,
@@ -409,11 +387,16 @@ def _add_strategy_to_mundig(
             strength=strat.strength,
         )
     elif isinstance(strat, AnnotationClassBalancingStrategy):
-        _add_annotation_class_balancing_to_mundig(
+        class_distributions, target_values = _get_class_balancing_data(
             session=session,
-            context=context,
             strat=strat,
-            mundig=mundig,
+            dataset_id=context.dataset_id,
+            input_sample_ids=context.input_sample_ids,
+        )
+        mundig.add_class_balancing(
+            class_distributions=class_distributions,
+            target=target_values,
+            strength=strat.strength,
         )
     else:
         raise ValueError(f"Selection strategy of type {type(strat)} is unknown.")

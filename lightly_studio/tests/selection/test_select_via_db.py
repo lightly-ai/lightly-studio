@@ -773,6 +773,7 @@ def test_select_via_database_with_annotation_class_balancing_uniform(
 
 def test_select_via_database__annotation_class_balancing__annotation_source(
     db_session: Session,
+    mocker: MockerFixture,
 ) -> None:
     collection_id = fill_db_with_samples_and_embeddings(
         db_session, n_samples=3, embedding_model_names=[]
@@ -822,6 +823,7 @@ def test_select_via_database__annotation_class_balancing__annotation_source(
     )
 
     annotation_source_id = annotation_source_a_annotations[0].sample.collection_id
+    add_class_balancing_spy = mocker.spy(Mundig, "add_class_balancing")
     config = SelectionConfig(
         n_samples_to_select=2,
         collection_id=collection_id,
@@ -840,19 +842,17 @@ def test_select_via_database__annotation_class_balancing__annotation_source(
         input_sample_ids=sample_ids,
     )
 
-    tags = tag_resolver.get_all_by_collection_id(db_session, collection_id=collection_id)
-    assert len(tags) == 1
+    add_class_balancing_spy.assert_called_once()
+    class_distributions = add_class_balancing_spy.call_args.kwargs["class_distributions"]
+    target = add_class_balancing_spy.call_args.kwargs["target"]
 
-    selection_tag = tags[0]
-    samples_in_tag = image_resolver.get_all_by_collection_id(
-        session=db_session,
-        collection_id=collection_id,
-        filters=ImageFilter(sample_filter=SampleFilter(tag_ids=[selection_tag.tag_id])),
-    ).samples
-
-    expected_sample_paths = {"sample_0.jpg", "sample_1.jpg"}
-    actual_sample_paths = {sample.file_path_abs for sample in samples_in_tag}
-    assert actual_sample_paths == expected_sample_paths
+    # Columns are the source-A labels [cat, dog], and source B's bird label is excluded.
+    assert class_distributions.shape == (3, 2)
+    assert {tuple(class_distributions[:, idx]) for idx in range(class_distributions.shape[1])} == {
+        (1.0, 0.0, 1.0),
+        (0.0, 1.0, 0.0),
+    }
+    assert target == pytest.approx([0.5, 0.5], abs=1e-9)
 
 
 def test_select_via_database__annotation_class_balancing__annotation_source_without_labels(
