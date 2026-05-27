@@ -58,6 +58,7 @@ nav:
     - Run LightlyStudio from a Notebook: advanced/notebooks.md
     - Reuse Datasets: advanced/reuse_datasets.md
     - Cloud Storage: advanced/cloud_storage.md
+    - Lightly Query Language: advanced/lightly_query_language.md
   - About Us: about-us.md
   - 🏢 Enterprise:
     - enterprise/index.md
