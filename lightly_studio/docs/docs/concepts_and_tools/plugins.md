@@ -41,7 +41,7 @@ Ready-to-use plugins are available in the [`lightly-studio-plugins`](https://git
         - Scope: single image or images in the current view
         - Input: text prompt
         - Output: segmentation masks
-        - Labels: the prompt text is used as the annotation class name
+        - Annotation class: the prompt text is used as the annotation class name
         - Requirement: Hugging Face access to `facebook/sam3`
         - Maintainer: Lightly
         - Install:

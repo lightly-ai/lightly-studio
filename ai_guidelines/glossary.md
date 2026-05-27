@@ -11,6 +11,8 @@ Add new topics as their own `##` section below.
 
 ## Annotations
 
+> **Migration in progress (LIG-9649):** the rename lands across several PRs. Until they all merge, a few public surfaces still use the old terms and are temporarily exempt — the query-DSL field `label` (→ `class_name`) and the `add_annotations_from_*` `name` argument with its "annotation collection" docstrings (→ `annotation_source`).
+
 | Concept | Term | Python identifier | Avoid |
 |---|---|---|---|
 | A classification, object-detection box, or segmentation mask attached to a sample | **annotation** | — | label, annotation label |
