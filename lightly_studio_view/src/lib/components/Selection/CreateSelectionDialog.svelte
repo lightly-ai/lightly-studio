@@ -1,22 +1,18 @@
 <script lang="ts">
     import { page } from '$app/state';
-    import {
-        createCombinationSelection,
-        computeSimilarityMetadata,
-        computeTypicalityMetadata
-    } from '$lib/api/lightly_studio_local/sdk.gen';
     import { Button } from '$lib/components/ui/button';
     import * as Dialog from '$lib/components/ui/dialog';
     import { Input } from '$lib/components/ui/input';
     import { Label } from '$lib/components/ui/label';
     import * as Select from '$lib/components/ui/select';
-    import { toast } from 'svelte-sonner';
     import { useTags } from '$lib/hooks/useTags/useTags';
     import { useSelectionDialog } from '$lib/hooks/useSelectionDialog/useSelectionDialog';
     import { useImageFilters } from '$lib/hooks/useImageFilters/useImageFilters';
     import { useVideoFilters } from '$lib/hooks/useVideoFilters/useVideoFilters';
     import { useGlobalStorage } from '$lib/hooks/useGlobalStorage';
+    import { useCreateSelection } from '$lib/hooks/useCreateSelection';
     import type { SelectionRequest } from '$lib/api/lightly_studio_local/types.gen';
+    import { BALANCING_MODE_LABELS, type BalancingMode } from './balancingMode';
 
     // Get collection ID from URL params
     const collectionId = $derived(page.params.collection_id!);
@@ -55,17 +51,19 @@
     );
 
     // Form state
-    let selectionStrategy = $state<'diversity' | 'typicality' | 'similarity' | ''>('');
+    let selectionStrategy = $state<
+        'diversity' | 'typicality' | 'similarity' | 'class_balancing' | ''
+    >('');
+    let balancingMode = $state<BalancingMode>('uniform');
     let nSamplesToSelect = $state<number>(10);
     let queryTagId = $state('');
     let selectionResultTagName = $state<string>('');
-    let isSubmitting = $state(false);
-    let loadingMessage = $state<string>('');
 
     const STRATEGY_LABELS: Record<string, string> = {
         diversity: 'Diversity',
         typicality: 'Typicality',
-        similarity: 'Similarity'
+        similarity: 'Similarity',
+        class_balancing: 'Class Balancing'
     };
 
     // Form validation
@@ -93,11 +91,39 @@
             : 'Create a subset of the samples fulfilling the current filters.'
     );
 
-    function handleFormSubmit(event: Event) {
+    const { isSubmitting, loadingMessage, submit } = useCreateSelection({
+        get tags() {
+            return tags;
+        },
+        get setTagSelected() {
+            return setTagSelected;
+        },
+        get loadTags() {
+            return loadTags;
+        },
+        closeSelectionDialog
+    });
+
+    async function handleFormSubmit(event: Event) {
         event.preventDefault();
         if (!isFormValid || notEnoughSamples || noSamples) return;
 
-        submitSelection();
+        const success = await submit({
+            collectionId,
+            isSimilaritySupported,
+            selectionStrategy: selectionStrategy as
+                | 'diversity'
+                | 'typicality'
+                | 'similarity'
+                | 'class_balancing',
+            nSamplesToSelect,
+            selectionResultTagName,
+            queryTagId,
+            balancingMode,
+            selectionFilter
+        });
+
+        if (success) resetForm();
     }
 
     function resetForm() {
@@ -105,121 +131,6 @@
         nSamplesToSelect = 10;
         queryTagId = '';
         selectionResultTagName = '';
-    }
-
-    async function handleSelectionSuccess() {
-        const createdTagName = selectionResultTagName;
-        toast.success('Selection created successfully');
-        await loadTags();
-
-        // Select the newly created tag
-        const newTag = $tags.find((tag) => tag.name === createdTagName);
-        if (newTag) {
-            setTagSelected(newTag.tag_id, true);
-        }
-
-        closeSelectionDialog();
-        resetForm();
-    }
-
-    async function performSelection(strategies: SelectionRequest['strategies']) {
-        loadingMessage = 'Creating selection...';
-        const response = await createCombinationSelection({
-            path: { collection_id: collectionId },
-            body: {
-                n_samples_to_select: nSamplesToSelect,
-                selection_result_tag_name: selectionResultTagName,
-                strategies,
-                filter: selectionFilter ?? undefined
-            }
-        });
-
-        if (response.error) {
-            toast.error(
-                (response.error as { error?: string }).error || 'Failed to create selection'
-            );
-            return false;
-        }
-
-        await handleSelectionSuccess();
-        return true;
-    }
-
-    async function submitSelection() {
-        isSubmitting = true;
-
-        type SelectionError = {
-            error: string;
-        };
-
-        try {
-            if (selectionStrategy === 'diversity') {
-                await performSelection([
-                    {
-                        strategy_name: 'diversity',
-                        embedding_model_name: null
-                    }
-                ]);
-            } else if (selectionStrategy === 'typicality') {
-                loadingMessage = 'Computing typicality metadata...';
-                const typicalityResponse = await computeTypicalityMetadata({
-                    path: { collection_id: collectionId },
-                    body: {
-                        embedding_model_name: null,
-                        metadata_name: 'typicality'
-                    }
-                });
-
-                if (typicalityResponse.error) {
-                    toast.error(
-                        'Failed to compute typicality metadata: ' +
-                            ((typicalityResponse.error as SelectionError).error || 'Unknown error')
-                    );
-                    return;
-                }
-
-                await performSelection([
-                    {
-                        strategy_name: 'weights',
-                        metadata_key: 'typicality'
-                    }
-                ]);
-            } else if (selectionStrategy === 'similarity') {
-                if (!isSimilaritySupported) {
-                    toast.error('Similarity is only available for image collections.');
-                    return;
-                }
-
-                loadingMessage = 'Computing similarity metadata...';
-                const response = await computeSimilarityMetadata({
-                    path: { collection_id: collectionId, query_tag_id: queryTagId },
-                    body: {
-                        embedding_model_name: null,
-                        metadata_name: 'similarity'
-                    }
-                });
-
-                if (response.error) {
-                    toast.error(
-                        'Failed to compute similarity metadata: ' +
-                            ((response.error as SelectionError).error || 'Unknown error')
-                    );
-                    return;
-                }
-
-                await performSelection([
-                    {
-                        strategy_name: 'weights',
-                        metadata_key: 'similarity'
-                    }
-                ]);
-            }
-        } catch (error) {
-            toast.error('Failed to create selection: ' + (error as Error).message);
-        } finally {
-            isSubmitting = false;
-            loadingMessage = '';
-        }
     }
 </script>
 
@@ -264,6 +175,12 @@
                                         >Typicality</Select.Item
                                     >
                                     <Select.Item
+                                        value="class_balancing"
+                                        label="Class Balancing"
+                                        data-testid="selection-strategy-class-balancing"
+                                        >Class Balancing</Select.Item
+                                    >
+                                    <Select.Item
                                         value="similarity"
                                         label="Similarity"
                                         data-testid="selection-strategy-similarity"
@@ -273,6 +190,45 @@
                             </Select.Content>
                         </Select.Root>
                     </div>
+
+                    {#if selectionStrategy === 'class_balancing'}
+                        <div class="grid grid-cols-4 items-center gap-4">
+                            <Label for="balancing-mode" class="text-right text-foreground">
+                                Balancing Mode
+                            </Label>
+                            <Select.Root
+                                type="single"
+                                name="balancing-mode"
+                                bind:value={balancingMode}
+                            >
+                                <Select.Trigger
+                                    class="col-span-3"
+                                    data-testid="selection-dialog-balancing-mode-select"
+                                >
+                                    {BALANCING_MODE_LABELS[balancingMode]}
+                                </Select.Trigger>
+                                <Select.Content>
+                                    <Select.Group>
+                                        <Select.Item
+                                            value="uniform"
+                                            label="Uniform"
+                                            data-testid="selection-balancing-mode-uniform"
+                                            >Uniform</Select.Item
+                                        >
+                                        <Select.Item value="dictionary" label="Dictionary" disabled
+                                            >Dictionary (Coming soon)</Select.Item
+                                        >
+                                        <Select.Item
+                                            value="input"
+                                            label="Input"
+                                            data-testid="selection-balancing-mode-input"
+                                            disabled>Input (Coming soon)</Select.Item
+                                        >
+                                    </Select.Group>
+                                </Select.Content>
+                            </Select.Root>
+                        </div>
+                    {/if}
 
                     {#if selectionStrategy === 'similarity'}
                         <div class="grid grid-cols-4 items-center gap-4">
@@ -370,17 +326,17 @@
                         variant="outline"
                         type="button"
                         onclick={closeSelectionDialog}
-                        disabled={isSubmitting}
+                        disabled={$isSubmitting}
                         data-testid="selection-dialog-cancel"
                     >
                         Cancel
                     </Button>
                     <Button
                         type="submit"
-                        disabled={!isFormValid || isSubmitting || notEnoughSamples || noSamples}
+                        disabled={!isFormValid || $isSubmitting || notEnoughSamples || noSamples}
                         data-testid="selection-dialog-submit"
                     >
-                        {isSubmitting ? loadingMessage || 'Creating...' : 'Create Selection'}
+                        {$isSubmitting ? $loadingMessage || 'Creating...' : 'Create Selection'}
                     </Button>
                 </Dialog.Footer>
             </form>

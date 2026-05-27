@@ -20,11 +20,13 @@ AND object_detection(label = "person" AND x > 10)
     }
 
     let {
-        value = $bindable(LIGHTLY_QUERY_DEFAULT_VALUE),
+        value: valueProp,
         height = '320px',
         readOnly = false,
         onSave
     }: QueryEditorProps = $props();
+
+    const initialValue = valueProp ?? LIGHTLY_QUERY_DEFAULT_VALUE;
 
     let containerEl: HTMLDivElement | null = null;
 
@@ -50,33 +52,39 @@ AND object_detection(label = "person" AND x > 10)
             return;
         }
         onSave?.(draftValue, translationResult);
+        lastAppliedValue = draftValue;
     }
 
-    let draftValue = $state(value);
+    let draftValue = $state(initialValue);
+    let lastAppliedValue = $state<string | null>(valueProp ?? null);
 
     onMount(() => {
         if (!containerEl) return;
         return mount(containerEl, {
-            value,
+            value: initialValue,
             readOnly,
             onChange: (next) => {
                 draftValue = next;
             }
         });
     });
-    const isModified = $derived(value !== draftValue);
+    const canApply = $derived(draftValue !== lastAppliedValue);
 </script>
 
+<!-- Prevent keypresses from triggering global shortcuts (e.g. 'E' toggling edit mode) -->
+<!-- svelte-ignore a11y_no_static_element_interactions -->
 <div
     class="flex w-full flex-col overflow-hidden rounded-lg border border-[#3c3c3c] bg-[#1e1e1e]"
     style={`height: ${height}`}
+    onkeydown={(e) => e.stopPropagation()}
+    onkeyup={(e) => e.stopPropagation()}
 >
     <div class="min-h-0 flex-1" bind:this={containerEl}></div>
     {#if onSave}
         <div
             class="flex items-center justify-end gap-2 border-b border-[#3c3c3c] bg-[#252526] px-4 py-2"
         >
-            <Button type="button" disabled={readOnly || !isModified} onclick={handleSave}
+            <Button type="button" disabled={readOnly || !canApply} onclick={handleSave}
                 >Apply</Button
             >
         </div>

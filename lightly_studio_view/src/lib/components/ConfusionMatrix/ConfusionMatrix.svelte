@@ -2,14 +2,9 @@
     import { onDestroy } from 'svelte';
     import * as echarts from 'echarts/core';
     import { HeatmapChart } from 'echarts/charts';
-    import {
-        DataZoomInsideComponent,
-        GridComponent,
-        TooltipComponent,
-        VisualMapComponent
-    } from 'echarts/components';
+    import { GridComponent, TooltipComponent, VisualMapComponent } from 'echarts/components';
     import { CanvasRenderer } from 'echarts/renderers';
-    import { buildEchartsOption, unifyLabels } from './buildEchartsOption';
+    import { buildEchartsOption } from './buildEchartsOption';
     import ConfusionMatrixLegend from './ConfusionMatrixLegend.svelte';
     import type { ConfusionMatrix } from './types';
 
@@ -18,7 +13,6 @@
         TooltipComponent,
         VisualMapComponent,
         GridComponent,
-        DataZoomInsideComponent,
         CanvasRenderer
     ]);
 
@@ -32,8 +26,9 @@
     let container: HTMLDivElement | undefined = $state();
     let chart: echarts.ECharts | null = $state(null);
 
-    const rowCount = $derived(unifyLabels(matrix.row_labels, matrix.col_labels).length);
-    const heightPx = $derived(Math.max(320, rowCount * 48 + 180));
+    // 320px floor keeps small matrices readable; 18px per row + 210px for axis/grid margins
+    // (top 16 + bottom 180 from buildEchartsOption + slack) scales taller matrices to fit labels.
+    const heightPx = $derived(Math.max(320, matrix.row_labels.length * 18 + 210));
 
     const maxCount = $derived(
         Math.max(1, ...matrix.counts.flatMap((row) => row).filter((n) => n > 0))
