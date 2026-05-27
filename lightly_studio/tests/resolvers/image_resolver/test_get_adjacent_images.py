@@ -353,7 +353,7 @@ def test_get_adjacent_images__with_similarity_and_order_by(db_session: Session) 
     assert result.next_sample_id == image_c.sample_id
 
 
-def test_get_adjacent_images__similarity_is_tiebreaker_when_order_by_values_equal(
+def test_get_adjacent_images__distance_is_primary_over_order_by(
     db_session: Session,
 ) -> None:
     collection = helpers_resolvers.create_collection(session=db_session)
@@ -405,8 +405,9 @@ def test_get_adjacent_images__similarity_is_tiebreaker_when_order_by_values_equa
         embedding=[0.0, 1.0],
     )
 
-    # Sorted order: image_a (100, close), image_b (100, far), image_c (200)
-    # image_b's previous is image_a, next is image_c.
+    # Distance is primary: image_a (d=0), image_c (d=1), image_b (d=2).
+    # order_by width does not override distance ordering.
+    # image_b's previous is image_c, next is None.
     result = image_resolver.get_adjacent_images(
         session=db_session,
         sample_id=image_b.sample_id,
@@ -416,9 +417,78 @@ def test_get_adjacent_images__similarity_is_tiebreaker_when_order_by_values_equa
     )
 
     assert result is not None
-    assert result.previous_sample_id == image_a.sample_id
+    assert result.previous_sample_id == image_c.sample_id
     assert result.sample_id == image_b.sample_id
-    assert result.next_sample_id == image_c.sample_id
+    assert result.next_sample_id is None
+
+
+def test_get_adjacent_images__order_by_is_tiebreaker_when_distances_equal(
+    db_session: Session,
+) -> None:
+    collection = helpers_resolvers.create_collection(session=db_session)
+    collection_id = collection.collection_id
+
+    embedding_model = helpers_resolvers.create_embedding_model(
+        session=db_session,
+        collection_id=collection_id,
+        embedding_model_name="embedding-equal-distances",
+        embedding_dimension=2,
+    )
+
+    # All images have identical embeddings -> equal distances to any query
+    image_a = helpers_resolvers.create_image(
+        session=db_session,
+        collection_id=collection_id,
+        file_path_abs="/images/a.png",
+        width=300,
+    )
+    image_b = helpers_resolvers.create_image(
+        session=db_session,
+        collection_id=collection_id,
+        file_path_abs="/images/b.png",
+        width=100,
+    )
+    image_c = helpers_resolvers.create_image(
+        session=db_session,
+        collection_id=collection_id,
+        file_path_abs="/images/c.png",
+        width=200,
+    )
+
+    helpers_resolvers.create_sample_embedding(
+        session=db_session,
+        sample_id=image_a.sample_id,
+        embedding_model_id=embedding_model.embedding_model_id,
+        embedding=[1.0, 0.0],
+    )
+    helpers_resolvers.create_sample_embedding(
+        session=db_session,
+        sample_id=image_b.sample_id,
+        embedding_model_id=embedding_model.embedding_model_id,
+        embedding=[1.0, 0.0],
+    )
+    helpers_resolvers.create_sample_embedding(
+        session=db_session,
+        sample_id=image_c.sample_id,
+        embedding_model_id=embedding_model.embedding_model_id,
+        embedding=[1.0, 0.0],
+    )
+
+    # Distances are equal, so order_by width (asc) breaks the tie:
+    # image_b (100), image_c (200), image_a (300).
+    # image_c's previous is image_b, next is image_a.
+    result = image_resolver.get_adjacent_images(
+        session=db_session,
+        sample_id=image_c.sample_id,
+        collection_id=collection_id,
+        text_embedding=[1.0, 0.0],
+        order_by=[OrderByField(ImageSampleField.width)],
+    )
+
+    assert result is not None
+    assert result.previous_sample_id == image_b.sample_id
+    assert result.sample_id == image_c.sample_id
+    assert result.next_sample_id == image_a.sample_id
 
 
 def test_get_adjacent_images__sort_by_width_desc_with_duplicate_values(db_session: Session) -> None:

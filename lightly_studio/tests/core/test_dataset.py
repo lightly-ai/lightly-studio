@@ -353,7 +353,7 @@ class TestDataset:
         assert len(samples) == 1
         annotations = samples[0].annotations
         assert len(annotations) == 1
-        assert annotations[0].label == "zebra"
+        assert annotations[0].class_name == "zebra"
         assert annotations[0].confidence is None
         assert isinstance(annotations[0], ObjectDetectionAnnotation)
 
