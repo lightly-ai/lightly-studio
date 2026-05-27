@@ -6,6 +6,7 @@ const RESERVED_CATEGORY_COUNT = 2;
 
 export const NOT_FILTERED_COLOR = '#9CA3AF';
 export const FILTERED_COLOR = '#F59E0B';
+export const UNASSIGNED_COLOR = '#CAAC78';
 
 interface LegendEntry {
     cat: number;
@@ -36,13 +37,18 @@ function getDiscreteCategoryColor(category: number, categoryCount: number): stri
     return getDiscreteHslColor(category - RESERVED_CATEGORY_COUNT, totalColoredCategories);
 }
 
-function getBaseCategoryColor(category: number, categoryCount: number, label: string): string {
+function getBaseCategoryColor(
+    category: number,
+    categoryCount: number,
+    label: string,
+    isColorByActive: boolean = false
+): string {
     if (category === 0) {
         return NOT_FILTERED_COLOR;
     }
 
     if (category === 1) {
-        return FILTERED_COLOR;
+        return isColorByActive ? UNASSIGNED_COLOR : FILTERED_COLOR;
     }
 
     if (label) {
@@ -59,16 +65,17 @@ export function getCategoryCount(colorLegend?: ReadonlyMap<number, string> | nul
 export function getCategoryColors(
     colorLegend?: ReadonlyMap<number, string> | null,
     hiddenCategories: ReadonlySet<number> = new Set(),
-    useLabelColors: boolean = false
+    useLabelColors: boolean = false,
+    isColorByActive: boolean = false
 ): string[] {
     const categoryCount = getCategoryCount(colorLegend);
     return Array.from({ length: categoryCount }, (_, category) => {
         if (hiddenCategories.has(category)) {
-            return FILTERED_COLOR;
+            return isColorByActive ? UNASSIGNED_COLOR : FILTERED_COLOR;
         }
 
         const label = useLabelColors ? (colorLegend?.get(category) ?? '') : '';
-        return getBaseCategoryColor(category, categoryCount, label);
+        return getBaseCategoryColor(category, categoryCount, label, isColorByActive);
     });
 }
 
