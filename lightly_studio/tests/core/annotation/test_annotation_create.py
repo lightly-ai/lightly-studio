@@ -21,12 +21,12 @@ def test_create_segmentation_mask_from_binary_mask() -> None:
     mask[2:5, 0:2] = 1
 
     result = CreateSegmentationMask.from_binary_mask(
-        label="cat",
+        class_name="cat",
         binary_mask=mask,
         confidence=0.9,
     )
 
-    assert result.label == "cat"
+    assert result.class_name == "cat"
     assert result.confidence == pytest.approx(0.9)
     assert result.x == 0
     assert result.y == 2
@@ -46,13 +46,13 @@ def test_create_segmentation_mask_from_rle_mask() -> None:
     image_sample = MockImageSample(width=10, height=10)
 
     result = CreateSegmentationMask.from_rle_mask(
-        label="cat",
+        class_name="cat",
         segmentation_mask=rle_mask,
         sample_2d=image_sample,
         confidence=0.9,
     )
 
-    assert result.label == "cat"
+    assert result.class_name == "cat"
     assert result.confidence == pytest.approx(0.9)
     assert result.x == 0
     assert result.y == 2
@@ -68,12 +68,12 @@ def test_create_segmentation_mask_from_binary_mask_square() -> None:
     mask[2:4, 3:5] = 1
 
     result = CreateSegmentationMask.from_binary_mask(
-        label="cat",
+        class_name="cat",
         binary_mask=mask,
         confidence=0.9,
     )
 
-    assert result.label == "cat"
+    assert result.class_name == "cat"
     assert result.confidence == pytest.approx(0.9)
     assert result.x == 3
     assert result.y == 2
@@ -91,7 +91,7 @@ def test_create_segmentation_mask_from_binary_mask_square() -> None:
 def test_create_segmentation_mask_from_binary_mask_empty() -> None:
     mask = np.zeros((10, 10), dtype=np.int_)
     result = CreateSegmentationMask.from_binary_mask(
-        label="empty",
+        class_name="empty",
         binary_mask=mask,
     )
 
@@ -108,13 +108,13 @@ def test_create_segmentation_mask_from_rle_mask_square() -> None:
     image_sample = MockImageSample(width=10, height=10)
 
     result = CreateSegmentationMask.from_rle_mask(
-        label="cat",
+        class_name="cat",
         segmentation_mask=rle_mask,
         sample_2d=image_sample,
         confidence=0.9,
     )
 
-    assert result.label == "cat"
+    assert result.class_name == "cat"
     assert result.confidence == pytest.approx(0.9)
     assert result.x == 3
     assert result.y == 2

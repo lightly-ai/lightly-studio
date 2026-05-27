@@ -19,7 +19,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
 
-from lightly_studio.db_manager import SessionDep
+from lightly_studio import db_manager
 from lightly_studio.models.settings import GridViewThumbnailQualityType
 from lightly_studio.resolvers import video_frame_resolver
 from lightly_studio.utils.executor import get_media_executor
@@ -243,20 +243,22 @@ def _resize_frame(
 @frames_router.get("/{sample_id}")
 async def stream_frame(
     sample_id: UUID,
-    session: SessionDep,
     transform_query: Annotated[FrameTransformQuery, Depends(FrameTransformQuery)],
 ) -> StreamingResponse:
     """Serve a single video frame as PNG/JPEG using StreamingResponse.
 
     Args:
         sample_id: The UUID of the video frame sample.
-        session: Database session dependency.
         transform_query: Transport-level query parameters for frame encoding.
     """
-    video_frame = video_frame_resolver.get_by_id(session=session, sample_id=sample_id)
-    video_path = video_frame.video.file_path_abs
-    frame_number = video_frame.frame_number
-    rotation_deg = video_frame.rotation_deg
+    # Avoid SessionDep here: FastAPI runs its sync-generator dependency on
+    # Starlette's threadpool, exhausting threadpool slots under load. Manage
+    # the session inline and close it before frame extraction.
+    with db_manager.session() as sess:
+        video_frame = video_frame_resolver.get_by_id(session=sess, sample_id=sample_id)
+        video_path = video_frame.video.file_path_abs
+        frame_number = video_frame.frame_number
+        rotation_deg = video_frame.rotation_deg
     if (
         transform_query.quality == GridViewThumbnailQualityType.HIGH
         and transform_query.max_width is None
@@ -268,9 +270,6 @@ async def stream_frame(
         max_width=transform_query.max_width,
         max_height=transform_query.max_height,
     )
-    # Close the session before file I/O. Frame extraction can be slow, and holding a
-    # connection through it can exhaust the Postgres connection pool.
-    session.close()
 
     # Run CPU-intensive video processing in thread pool to avoid blocking event loop
     try:

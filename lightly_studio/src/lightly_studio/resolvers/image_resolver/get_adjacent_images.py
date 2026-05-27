@@ -87,7 +87,7 @@ def _base_query(
         tiebreaker = []
     if ordering_expression is not None:
         order_col = (
-            [expr.to_column_element() for expr in order_by] + ordering_expression + tiebreaker
+            ordering_expression + [expr.to_column_element() for expr in order_by] + tiebreaker
             if order_by
             else [*ordering_expression, *tiebreaker]
         )

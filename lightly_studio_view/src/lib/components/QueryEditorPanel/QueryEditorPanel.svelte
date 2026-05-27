@@ -14,7 +14,7 @@
     type OnSaveHandler = ComponentProps<typeof QueryEditor>['onSave'];
 
     const { onClose }: Props = $props();
-    const { updateQueryExpr } = useImageFilters();
+    const { imageQueryExpression, updateQueryExpr } = useImageFilters();
 
     const handleQueryEditorValueChange: OnSaveHandler = (value, parsed) => {
         if (!parsed) {
@@ -65,8 +65,12 @@
                     <code>object_detection(…)</code>, <code>classification(…)</code>
                 </li>
             </ul>
-            <p>Tip: Completion hints will show as you type a space or a left parenthesis.</p>
+            <p>Tip: Completion hints will appear as you type a space or a left parenthesis.</p>
         </Typography>
     </div>
-    <QueryEditor height="100%" onSave={handleQueryEditorValueChange} />
+    <QueryEditor
+        height="100%"
+        value={$imageQueryExpression?.query_expr_str}
+        onSave={handleQueryEditorValueChange}
+    />
 </div>

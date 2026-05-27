@@ -104,12 +104,12 @@ class TestImageDataset:
         )  # Embeddings should be generated
 
         # First sample
-        annotations = sorted(samples[0].annotations, key=lambda ann: ann.label)
+        annotations = sorted(samples[0].annotations, key=lambda ann: ann.class_name)
 
         # Verify the first annotation
         ann = annotations[0]
         assert isinstance(ann, SegmentationMaskAnnotation)
-        assert ann.label == "bg"
+        assert ann.class_name == "bg"
         assert ann.x == 0
         assert ann.y == 0
         assert ann.width == 4
@@ -119,7 +119,7 @@ class TestImageDataset:
         # Verify the second annotation
         ann = annotations[1]
         assert isinstance(ann, SegmentationMaskAnnotation)
-        assert ann.label == "cat"
+        assert ann.class_name == "cat"
         assert ann.x == 0
         assert ann.y == 0
         assert ann.width == 2
@@ -129,7 +129,7 @@ class TestImageDataset:
         # Verify the third annotation
         ann = annotations[2]
         assert isinstance(ann, SegmentationMaskAnnotation)
-        assert ann.label == "dog"
+        assert ann.class_name == "dog"
         assert ann.x == 2
         assert ann.y == 1
         assert ann.width == 2
@@ -140,7 +140,7 @@ class TestImageDataset:
         assert len(samples[1].annotations) == 1
         ann = samples[1].annotations[0]
         assert isinstance(ann, SegmentationMaskAnnotation)
-        assert ann.label == "bg"
+        assert ann.class_name == "bg"
         assert ann.x == 0
         assert ann.y == 0
         assert ann.width == 3

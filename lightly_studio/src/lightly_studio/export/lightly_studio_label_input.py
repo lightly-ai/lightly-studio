@@ -37,7 +37,7 @@ class LightlyStudioInputBase:
 
         Args:
             session: The SQLModel session to use for database access. Used only in the
-                constructor to fetch the labels for the given annotation task.
+                constructor to fetch the labels for the given annotation source.
             dataset_id: The dataset ID for label retrieval.
             samples: Dataset samples.
         """

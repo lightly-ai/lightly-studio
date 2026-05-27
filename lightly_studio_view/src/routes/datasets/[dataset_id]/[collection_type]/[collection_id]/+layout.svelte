@@ -335,8 +335,8 @@
 
                             {#if isQueryFilterEnabled}
                                 <QueryControl
-                                    onToggle={() => {
-                                        isQueryFilterEditing = !isQueryFilterEditing;
+                                    onOpen={() => {
+                                        isQueryFilterEditing = true;
                                     }}
                                 />
                             {/if}
