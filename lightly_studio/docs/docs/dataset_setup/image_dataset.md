@@ -75,7 +75,7 @@ standard formats. See [API reference](../api/dataset.md#lightly_studio.ImageData
     └── data.yaml
     ```
 
-    Each annotation file contains YOLO format annotations (one per line):
+    Each label file contains YOLO format annotations (one per line):
 
     ```
     <class> <x_center> <y_center> <width> <height>
