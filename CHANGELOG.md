@@ -12,8 +12,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Sample selection respects the current image or video filters.
 - Added sort-by support via GUI.
 - Added similarity selection option.
+- Show confusion matrix in evaluation results for object detection.
+- Added option to select annotation source for class balancing.
 
 ### Changed
+
+- Renamed the annotation class argument `label` to `class_name` in the Python SDK (the `Create*` annotation classes and the `Annotation.class_name` property). Breaking change.
 
 ### Deprecated
 
