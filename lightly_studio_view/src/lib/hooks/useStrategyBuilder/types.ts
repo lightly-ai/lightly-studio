@@ -5,6 +5,56 @@ export type StrategyType =
     | 'metadata_weighting'
     | 'class_balancing';
 
+export interface DiversityParams {
+    strength: number;
+}
+
+export interface TypicalityParams {
+    strength: number;
+}
+
+export interface SimilarityParams {
+    query_tag_id: string;
+    strength: number;
+}
+
+export interface MetadataWeightingParams {
+    metadata_key: string;
+    strength: number;
+}
+
+export interface ClassBalancingTargetRow {
+    class_name: string;
+    weight: number;
+}
+
+export type ClassBalancingAnnotationSource = 'uniform' | 'input' | 'dictionary';
+
+export interface ClassBalancingParams {
+    annotation_source: ClassBalancingAnnotationSource;
+    target_distribution: ClassBalancingTargetRow[];
+    strength: number;
+}
+
+interface StrategyParamsByType {
+    diversity: DiversityParams;
+    typicality: TypicalityParams;
+    similarity: SimilarityParams;
+    metadata_weighting: MetadataWeightingParams;
+    class_balancing: ClassBalancingParams;
+}
+
+export type StrategyInstance = {
+    [K in StrategyType]: {
+        id: string;
+        type: K;
+        params: StrategyParamsByType[K];
+        isExpanded: boolean;
+    };
+}[StrategyType];
+
+export type StrategyParams = StrategyInstance['params'];
+
 export const STRATEGY_OPTIONS: { type: StrategyType; label: string; description: string }[] = [
     {
         type: 'diversity',
