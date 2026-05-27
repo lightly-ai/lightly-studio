@@ -10,6 +10,7 @@ from sqlalchemy import ColumnElement
 from sqlalchemy.orm import joinedload, selectinload
 from sqlalchemy.orm.interfaces import LoaderOption
 from sqlmodel import Session, col, func, select
+from sqlmodel.sql.expression import Select
 
 from lightly_studio.api.routes.api.validators import Paginated
 from lightly_studio.core.dataset_query.image_sample_field import ImageSampleField
@@ -119,6 +120,25 @@ def get_all_by_collection_id(  # noqa: PLR0913
     )
 
 
+def _apply_similarity_joins_for_order_by(
+    samples_query: Select[tuple[ImageTable, float]],
+    order_by: list[OrderByExpression],
+    filters: ImageFilter | None,
+) -> Select[tuple[ImageTable, float]]:
+    """Apply necessary joins to samples_query based on order_by expressions."""
+    if any(isinstance(expr, OrderByMetadataField) for expr in order_by) and not _has_metadata_join(
+        filters
+    ):
+        samples_query = samples_query.outerjoin(
+            SampleMetadataTable,
+            SampleMetadataTable.sample_id == col(ImageTable.sample_id),  # type: ignore[arg-type]
+        )
+    for expr in order_by:
+        if isinstance(expr, OrderByEvaluationMetricField):
+            samples_query = expr.apply_join(samples_query)  # type: ignore[arg-type,assignment]
+    return samples_query
+
+
 def _get_all_with_similarity(  # noqa: PLR0913
     session: Session,
     collection_id: UUID,
@@ -166,19 +186,11 @@ def _get_all_with_similarity(  # noqa: PLR0913
         total_count_query = total_count_query.where(col(ImageTable.sample_id).in_(sample_ids))
 
     if order_by:
-        if any(
-            isinstance(expr, OrderByMetadataField) for expr in order_by
-        ) and not _has_metadata_join(filters):
-            samples_query = samples_query.outerjoin(
-                SampleMetadataTable,
-                SampleMetadataTable.sample_id == col(ImageTable.sample_id),  # type: ignore[arg-type]
-            )
-        for expr in order_by:
-            if isinstance(expr, OrderByEvaluationMetricField):
-                samples_query = expr.apply_join(samples_query)  # type: ignore[arg-type,assignment]
+        samples_query = _apply_similarity_joins_for_order_by(samples_query, order_by, filters)
+    samples_query = samples_query.order_by(distance_expr)
+    if order_by:
         for expr in order_by:
             samples_query = samples_query.order_by(expr.to_column_element())
-    samples_query = samples_query.order_by(distance_expr)
     if not order_by or not _file_path_abs_in_order_by(order_by):
         file_path_col = col(ImageTable.file_path_abs)
         tiebreaker = (
