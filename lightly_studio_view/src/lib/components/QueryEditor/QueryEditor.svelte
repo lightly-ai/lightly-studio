@@ -20,11 +20,13 @@ AND object_detection(label = "person" AND x > 10)
     }
 
     let {
-        value = $bindable(LIGHTLY_QUERY_DEFAULT_VALUE),
+        value: valueProp,
         height = '320px',
         readOnly = false,
         onSave
     }: QueryEditorProps = $props();
+
+    const initialValue = valueProp ?? LIGHTLY_QUERY_DEFAULT_VALUE;
 
     let containerEl: HTMLDivElement | null = null;
 
@@ -53,13 +55,13 @@ AND object_detection(label = "person" AND x > 10)
         lastAppliedValue = draftValue;
     }
 
-    let draftValue = $state(value);
-    let lastAppliedValue = $state<string | null>(value ?? null);
+    let draftValue = $state(initialValue);
+    let lastAppliedValue = $state<string | null>(valueProp ?? null);
 
     onMount(() => {
         if (!containerEl) return;
         return mount(containerEl, {
-            value,
+            value: initialValue,
             readOnly,
             onChange: (next) => {
                 draftValue = next;
