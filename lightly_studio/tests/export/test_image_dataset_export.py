@@ -205,7 +205,7 @@ class TestImageDatasetExport:
         samples = list(dataset)
         samples[0].add_annotation(
             CreateSegmentationMask.from_rle_mask(
-                label="dog",
+                class_name="dog",
                 sample_2d=samples[0],
                 segmentation_mask=[2, 3, 7, 2, 86],
             )
@@ -296,7 +296,7 @@ class TestImageDatasetExport:
         samples = list(dataset)
         samples[0].add_annotation(
             CreateSegmentationMask.from_rle_mask(
-                label="dog",
+                class_name="dog",
                 sample_2d=samples[0],
                 segmentation_mask=[1, 1, 4],
             )
@@ -334,7 +334,7 @@ class TestImageDatasetExport:
         samples = list(dataset)
         samples[0].add_annotation(
             CreateSegmentationMask.from_rle_mask(
-                label="dog",
+                class_name="dog",
                 sample_2d=samples[0],
                 segmentation_mask=[1, 1, 4],
             )
@@ -383,14 +383,14 @@ class TestImageDatasetExport:
         samples = list(dataset)
         samples[0].add_annotation(
             CreateSegmentationMask.from_rle_mask(
-                label="dog",
+                class_name="dog",
                 sample_2d=samples[0],
                 segmentation_mask=[1, 1, 4],
             )
         )
         samples[0].add_annotation(
             CreateSegmentationMask.from_rle_mask(
-                label="background",
+                class_name="background",
                 sample_2d=samples[0],
                 segmentation_mask=[4, 1, 1],
             )
@@ -431,14 +431,14 @@ class TestImageDatasetExport:
         samples = list(dataset)
         samples[0].add_annotation(
             CreateSegmentationMask.from_rle_mask(
-                label="cat",
+                class_name="cat",
                 sample_2d=samples[0],
                 segmentation_mask=[1, 1, 4],
             )
         )
         samples[0].add_annotation(
             CreateSegmentationMask.from_rle_mask(
-                label="dog",
+                class_name="dog",
                 sample_2d=samples[0],
                 segmentation_mask=[4, 1, 1],
             )
@@ -478,14 +478,14 @@ class TestImageDatasetExport:
         samples = list(dataset)
         samples[0].add_annotation(
             CreateSegmentationMask.from_rle_mask(
-                label="dog",
+                class_name="dog",
                 sample_2d=samples[0],
                 segmentation_mask=[1, 1, 4],
             )
         )
         samples[0].add_annotation(
             CreateSegmentationMask.from_rle_mask(
-                label="dog",
+                class_name="dog",
                 sample_2d=samples[0],
                 segmentation_mask=[4, 1, 1],
             )
@@ -529,14 +529,14 @@ class TestImageDatasetExport:
 
         sample_by_name["image0.jpg"].add_annotation(
             CreateSegmentationMask.from_rle_mask(
-                label="dog",
+                class_name="dog",
                 sample_2d=sample_by_name["image0.jpg"],
                 segmentation_mask=[1, 1, 4],
             )
         )
         sample_by_name["image1.jpg"].add_annotation(
             CreateSegmentationMask.from_rle_mask(
-                label="dog",
+                class_name="dog",
                 sample_2d=sample_by_name["image1.jpg"],
                 segmentation_mask=[4, 1, 1],
             )

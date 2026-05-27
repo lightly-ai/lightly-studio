@@ -114,7 +114,7 @@ describe('DatasetGridHeader', () => {
         });
 
         expect(screen.getByTestId('toggle-plot-button')).toBeInTheDocument();
-        expect(screen.getByText('Show Embeddings')).toBeInTheDocument();
+        expect(screen.getByText('Embeddings')).toBeInTheDocument();
     });
 
     it('hides the embeddings toggle when media has no embeddings', () => {
@@ -162,7 +162,7 @@ describe('DatasetGridHeader', () => {
         });
 
         expect(screen.getByTestId('toggle-evaluation-runs-button')).toBeInTheDocument();
-        expect(screen.getByText('Evaluation Runs')).toBeInTheDocument();
+        expect(screen.getByText('Evaluation')).toBeInTheDocument();
     });
 
     it('hides the evaluation runs toggle for non-image collections', () => {
@@ -197,8 +197,8 @@ describe('DatasetGridHeader', () => {
         });
 
         expect(screen.getByTestId('toggle-plot-button')).toBeInTheDocument();
-        expect(screen.queryByText('Show Embeddings')).not.toBeInTheDocument();
+        expect(screen.queryByText('Embeddings')).not.toBeInTheDocument();
         expect(screen.getByTestId('toggle-evaluation-runs-button')).toBeInTheDocument();
-        expect(screen.queryByText('Evaluation Runs')).not.toBeInTheDocument();
+        expect(screen.queryByText('Evaluation')).not.toBeInTheDocument();
     });
 });
