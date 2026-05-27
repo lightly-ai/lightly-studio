@@ -104,7 +104,7 @@ describe('SettingsDialog', () => {
         render(SettingsDialog);
         await openDialog();
 
-        const toggle = screen.getByRole('switch', { name: 'Show Annotation Text Labels' });
+        const toggle = screen.getByRole('switch', { name: 'Show Annotation Class Names' });
         expect(toggle).toHaveAttribute('aria-checked', 'false');
 
         await fireEvent.click(toggle);
