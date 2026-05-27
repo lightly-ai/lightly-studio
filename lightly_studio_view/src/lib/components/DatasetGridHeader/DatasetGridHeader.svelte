@@ -66,7 +66,7 @@
                 >
                     <ChartNetwork class="size-4" />
                     {#if !compact}
-                        <span>Show Embeddings</span>
+                        <span>Embeddings</span>
                     {/if}
                 </Button>
             </Tooltip>
@@ -84,7 +84,7 @@
                 >
                     <Gauge class="size-4" />
                     {#if !compact}
-                        <span>Evaluation Runs</span>
+                        <span>Evaluation</span>
                     {/if}
                 </Button>
             </Tooltip>
