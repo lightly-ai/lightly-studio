@@ -4,6 +4,7 @@
     import { Input } from '$lib/components/ui/input';
     import * as Select from '$lib/components/ui/select';
     import { useMetadataFilters } from '$lib/hooks/useMetadataFilters/useMetadataFilters';
+    import FieldTooltip from '../../FieldTooltip.svelte';
     import type {
         MetadataWeightingParams,
         StrategyParams
@@ -22,7 +23,10 @@
 
 <div class="grid gap-3" data-testid="metadata-weighting-form">
     <div class="grid gap-2">
-        <Label for="metadata-weighting-key">Metadata Key</Label>
+        <div class="flex items-center gap-1.5">
+            <Label for="metadata-weighting-key">Metadata Key</Label>
+            <FieldTooltip content="A numeric metadata field already indexed on this collection. Samples with higher values are weighted more heavily." />
+        </div>
         {#if $metadataInfo.length > 0}
             <Select.Root
                 type="single"
@@ -55,7 +59,10 @@
         {/if}
     </div>
     <div class="grid gap-2">
-        <Label for="metadata-weighting-strength">Strength</Label>
+        <div class="flex items-center gap-1.5">
+            <Label for="metadata-weighting-strength">Strength</Label>
+            <FieldTooltip content="Relative weight of this strategy in the combination. A strength of 2 gives this strategy twice the influence of one with strength 1. Must be a positive number." />
+        </div>
         <Input
             id="metadata-weighting-strength"
             type="number"

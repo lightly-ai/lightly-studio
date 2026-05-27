@@ -1,6 +1,7 @@
 <script lang="ts">
     import { Input } from '$lib/components/ui/input';
     import { Label } from '$lib/components/ui/label';
+    import FieldTooltip from '../../FieldTooltip.svelte';
     import type {
         StrategyParams,
         TypicalityParams
@@ -15,7 +16,10 @@
 </script>
 
 <div class="grid gap-2" data-testid="typicality-form">
-    <Label for="typicality-strength">Strength</Label>
+    <div class="flex items-center gap-1.5">
+        <Label for="typicality-strength">Strength</Label>
+        <FieldTooltip content="Relative weight of this strategy in the combination. A strength of 2 gives this strategy twice the influence of one with strength 1. Must be a positive number." />
+    </div>
     <Input
         id="typicality-strength"
         type="number"

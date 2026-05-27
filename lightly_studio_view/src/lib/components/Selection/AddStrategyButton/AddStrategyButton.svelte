@@ -6,25 +6,26 @@
     import { STRATEGY_OPTIONS, type StrategyType } from '../useStrategyBuilder/useStrategyBuilder';
 
     interface Props {
-        isSimilarityDisabled?: boolean;
-        isMetadataWeightingDisabled?: boolean;
-        isClassBalancingDisabled?: boolean;
+        similarityDisabledReason?: string;
+        metadataWeightingDisabledReason?: string;
+        classBalancingDisabledReason?: string;
         onAdd: (type: StrategyType) => void;
     }
 
     let {
-        isSimilarityDisabled = false,
-        isMetadataWeightingDisabled = false,
-        isClassBalancingDisabled = false,
+        similarityDisabledReason,
+        metadataWeightingDisabledReason,
+        classBalancingDisabledReason,
         onAdd
     }: Props = $props();
     let open = $state(false);
+    let hoveredType = $state<StrategyType | null>(null);
 
-    function isDisabled(type: StrategyType): boolean {
-        if (type === 'similarity') return isSimilarityDisabled;
-        if (type === 'metadata_weighting') return isMetadataWeightingDisabled;
-        if (type === 'class_balancing') return isClassBalancingDisabled;
-        return false;
+    function getDisabledReason(type: StrategyType): string | undefined {
+        if (type === 'similarity') return similarityDisabledReason;
+        if (type === 'metadata_weighting') return metadataWeightingDisabledReason;
+        if (type === 'class_balancing') return classBalancingDisabledReason;
+        return undefined;
     }
 </script>
 
@@ -38,21 +39,48 @@
     <Popover.Content class="w-56 p-1" align="start">
         <div class="flex flex-col gap-1">
             {#each STRATEGY_OPTIONS as strategy (strategy.type)}
-                <button
-                    type="button"
-                    class={cn(
-                        'rounded-sm px-2 py-1.5 text-left text-sm hover:bg-accent hover:text-accent-foreground',
-                        isDisabled(strategy.type) && 'cursor-not-allowed opacity-50'
-                    )}
-                    disabled={isDisabled(strategy.type)}
-                    onclick={() => {
-                        onAdd(strategy.type);
-                        open = false;
-                    }}
-                    data-testid={`add-strategy-${strategy.type}`}
+                {@const disabledReason = getDisabledReason(strategy.type)}
+                <div
+                    class="relative w-full"
+                    onmouseenter={() => (hoveredType = strategy.type)}
+                    onmouseleave={() => (hoveredType = null)}
                 >
-                    {strategy.label}
-                </button>
+                    {#if disabledReason}
+                        <button
+                            type="button"
+                            class={cn(
+                                'w-full rounded-sm px-2 py-1.5 text-left text-sm cursor-not-allowed opacity-50'
+                            )}
+                            disabled
+                            data-testid={`add-strategy-${strategy.type}`}
+                        >
+                            {strategy.label}
+                        </button>
+                    {:else}
+                        <button
+                            type="button"
+                            class="w-full rounded-sm px-2 py-1.5 text-left text-sm hover:bg-accent hover:text-accent-foreground"
+                            onclick={() => {
+                                onAdd(strategy.type);
+                                open = false;
+                            }}
+                            data-testid={`add-strategy-${strategy.type}`}
+                        >
+                            {strategy.label}
+                        </button>
+                    {/if}
+                    {#if hoveredType === strategy.type}
+                        <div
+                            class="absolute left-full top-1/2 z-[9999] ml-2 w-max max-w-[200px] -translate-y-1/2 rounded-md bg-popover px-3 py-1.5 text-xs text-popover-foreground shadow-md"
+                            role="tooltip"
+                        >
+                            <p>{strategy.description}</p>
+                            {#if disabledReason}
+                                <p class="mt-1.5 border-t border-border pt-1.5 text-destructive">{disabledReason}</p>
+                            {/if}
+                        </div>
+                    {/if}
+                </div>
             {/each}
         </div>
     </Popover.Content>

@@ -1,10 +1,13 @@
 <script lang="ts">
-    import { Trash2 } from '@lucide/svelte';
+    import { ChevronDown, Trash2 } from '@lucide/svelte';
     import { Button } from '$lib/components/ui/button';
     import { Input } from '$lib/components/ui/input';
     import { Label } from '$lib/components/ui/label';
+    import * as Popover from '$lib/components/ui/popover';
     import * as Select from '$lib/components/ui/select';
+    import FieldTooltip from '../../FieldTooltip.svelte';
     import type {
+        ClassBalancingAnnotationSource,
         ClassBalancingTargetRow,
         ClassBalancingParams,
         StrategyParams
@@ -17,6 +20,35 @@
     }
 
     let { params, annotationLabels, onUpdate }: Props = $props();
+
+    const ANNOTATION_SOURCE_OPTIONS: {
+        value: ClassBalancingAnnotationSource;
+        label: string;
+        tooltip: string;
+    }[] = [
+        {
+            value: 'uniform',
+            label: 'Uniform',
+            tooltip: 'Equal share for every class present in the dataset.'
+        },
+        {
+            value: 'input',
+            label: 'Input',
+            tooltip: 'Mirrors the class distribution of the candidate input set.'
+        },
+        {
+            value: 'dictionary',
+            label: 'Dictionary',
+            tooltip: 'Define a specific target distribution (e.g. 20% cat, 80% dog).'
+        }
+    ];
+
+    let annotationSourceOpen = $state(false);
+    let hoveredAnnotationSource = $state<ClassBalancingAnnotationSource | null>(null);
+
+    let selectedAnnotationSourceLabel = $derived(
+        ANNOTATION_SOURCE_OPTIONS.find((o) => o.value === params.annotation_source)!.label
+    );
 
     function updateRows(rows: ClassBalancingTargetRow[]) {
         onUpdate({ target_distribution: rows });
@@ -41,7 +73,64 @@
 
 <div class="grid gap-3" data-testid="class-balancing-form">
     <div class="grid gap-2">
-        <Label for="class-balancing-strength">Strength</Label>
+        <div class="flex items-center gap-1.5">
+            <Label>Annotation source</Label>
+            <FieldTooltip
+                content="Where class labels come from. Choose how the target distribution is defined."
+            />
+        </div>
+        <Popover.Root bind:open={annotationSourceOpen}>
+            <Popover.Trigger class="w-full">
+                <button
+                    type="button"
+                    class="flex h-9 w-full items-center justify-between rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-sm ring-offset-background focus:outline-none focus:ring-1 focus:ring-ring"
+                    data-testid="class-balancing-annotation-source"
+                >
+                    {selectedAnnotationSourceLabel}
+                    <ChevronDown class="size-4 opacity-50" />
+                </button>
+            </Popover.Trigger>
+            <Popover.Content class="w-40 p-1" align="start">
+                <div class="flex flex-col gap-1">
+                    {#each ANNOTATION_SOURCE_OPTIONS as option (option.value)}
+                        <div
+                            class="relative"
+                            onmouseenter={() => (hoveredAnnotationSource = option.value)}
+                            onmouseleave={() => (hoveredAnnotationSource = null)}
+                        >
+                            <button
+                                type="button"
+                                class="w-full rounded-sm px-2 py-1.5 text-left text-sm hover:bg-accent hover:text-accent-foreground"
+                                onclick={() => {
+                                    onUpdate({
+                                        annotation_source: option.value
+                                    });
+                                    annotationSourceOpen = false;
+                                }}
+                                data-testid={`class-balancing-annotation-source-${option.value}`}
+                            >
+                                {option.label}
+                            </button>
+                            {#if hoveredAnnotationSource === option.value}
+                                <div
+                                    class="absolute left-full top-1/2 z-[9999] ml-2 w-max max-w-[200px] -translate-y-1/2 rounded-md bg-popover px-3 py-1.5 text-xs text-popover-foreground shadow-md"
+                                    role="tooltip"
+                                >
+                                    {option.tooltip}
+                                </div>
+                            {/if}
+                        </div>
+                    {/each}
+                </div>
+            </Popover.Content>
+        </Popover.Root>
+    </div>
+
+    <div class="grid gap-2">
+        <div class="flex items-center gap-1.5">
+            <Label for="class-balancing-strength">Strength</Label>
+            <FieldTooltip content="Relative weight of this strategy in the combination. A strength of 2 gives this strategy twice the influence of one with strength 1. Must be a positive number." />
+        </div>
         <Input
             id="class-balancing-strength"
             type="number"
@@ -54,9 +143,13 @@
         />
     </div>
 
+    {#if params.annotation_source === 'dictionary'}
     <div class="grid gap-2">
         <div class="flex items-center justify-between">
-            <Label>Target Distribution</Label>
+            <div class="flex items-center gap-1.5">
+                <Label>Target Distribution</Label>
+                <FieldTooltip content="Relative proportion of this class in the selected output. A class with weight 2 is selected twice as often as one with weight 1." />
+            </div>
             <Button
                 type="button"
                 variant="outline"
@@ -125,4 +218,5 @@
             </div>
         {/each}
     </div>
+    {/if}
 </div>

@@ -142,7 +142,7 @@ describe('StrategyCard', () => {
             {
                 id: 'balancing',
                 type: 'class_balancing',
-                params: { target_distribution: [], strength: 1 },
+                params: { annotation_source: 'uniform', target_distribution: [], strength: 1 },
                 isExpanded: true
             }
         ];

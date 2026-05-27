@@ -33,7 +33,10 @@ export interface ClassBalancingTargetRow {
     weight: number;
 }
 
+export type ClassBalancingAnnotationSource = 'uniform' | 'input' | 'dictionary';
+
 export interface ClassBalancingParams {
+    annotation_source: ClassBalancingAnnotationSource;
     target_distribution: ClassBalancingTargetRow[];
     strength: number;
 }
@@ -58,12 +61,37 @@ export type StrategyInstance = {
 export type StrategyParams = StrategyInstance['params'];
 export type StrategySummaryTag = Pick<TagView, 'tag_id' | 'name'>;
 
-export const STRATEGY_OPTIONS: { type: StrategyType; label: string }[] = [
-    { type: 'diversity', label: 'Diversity' },
-    { type: 'typicality', label: 'Typicality' },
-    { type: 'similarity', label: 'Similarity' },
-    { type: 'metadata_weighting', label: 'Metadata Weighting' },
-    { type: 'class_balancing', label: 'Class Balancing' }
+export const STRATEGY_OPTIONS: { type: StrategyType; label: string; description: string }[] = [
+    {
+        type: 'diversity',
+        label: 'Diversity',
+        description:
+            'Selects samples spread across the embedding space. Use to reduce redundancy and build varied training sets.'
+    },
+    {
+        type: 'typicality',
+        label: 'Typicality',
+        description:
+            'Selects samples closest to the center of each cluster. Use to find the most representative examples in the collection.'
+    },
+    {
+        type: 'similarity',
+        label: 'Similarity',
+        description:
+            'Selects samples most similar to a reference tag. Use to find more examples like ones you have already identified.'
+    },
+    {
+        type: 'metadata_weighting',
+        label: 'Metadata Weighting',
+        description:
+            'Weights selection by a numeric metadata field. Use to prioritize samples with a specific measured property such as sharpness or confidence.'
+    },
+    {
+        type: 'class_balancing',
+        label: 'Class Balancing',
+        description:
+            'Selects samples to match a target class distribution. Use to train with balanced or custom class proportions.'
+    }
 ];
 
 export const STRATEGY_LABELS: Record<StrategyType, string> = Object.fromEntries(
@@ -75,7 +103,7 @@ export const STRATEGY_DEFAULTS: { [K in StrategyType]: StrategyParamsByType[K] }
     typicality: { strength: 1 },
     similarity: { query_tag_id: '', embedding_model_name: '', strength: 1 },
     metadata_weighting: { metadata_key: '', strength: 1 },
-    class_balancing: { target_distribution: [], strength: 1 }
+    class_balancing: { annotation_source: 'uniform', target_distribution: [], strength: 1 }
 };
 
 function createId(): string {
@@ -201,6 +229,9 @@ export function isStrategyInstanceValid(instance: StrategyInstance): boolean {
     }
 
     if (instance.type === 'class_balancing') {
+        if (instance.params.annotation_source !== 'dictionary') {
+            return true;
+        }
         return (
             instance.params.target_distribution.length > 0 &&
             instance.params.target_distribution.every(

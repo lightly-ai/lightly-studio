@@ -2,6 +2,7 @@
     import { Input } from '$lib/components/ui/input';
     import { Label } from '$lib/components/ui/label';
     import * as Select from '$lib/components/ui/select';
+    import FieldTooltip from '../../FieldTooltip.svelte';
     import type {
         SimilarityParams,
         StrategyParams,
@@ -23,7 +24,10 @@
 
 <div class="grid gap-3" data-testid="similarity-form">
     <div class="grid gap-2">
-        <Label for="similarity-query-tag">Query Tag</Label>
+        <div class="flex items-center gap-1.5">
+            <Label for="similarity-query-tag">Query Tag</Label>
+            <FieldTooltip content="Samples in this tag serve as the similarity reference. The strategy selects samples most similar to them." />
+        </div>
         <Select.Root
             type="single"
             name="similarity-query-tag"
@@ -59,7 +63,10 @@
     </div>
 
     <div class="grid gap-2">
-        <Label for="similarity-embedding-model">Embedding Model</Label>
+        <div class="flex items-center gap-1.5">
+            <Label for="similarity-embedding-model">Embedding Model</Label>
+            <FieldTooltip content="The model used to compute distances between samples. Leave blank to use the collection's default." />
+        </div>
         <Input
             id="similarity-embedding-model"
             value={params.embedding_model_name}
@@ -71,7 +78,10 @@
     </div>
 
     <div class="grid gap-2">
-        <Label for="similarity-strength">Strength</Label>
+        <div class="flex items-center gap-1.5">
+            <Label for="similarity-strength">Strength</Label>
+            <FieldTooltip content="Relative weight of this strategy in the combination. A strength of 2 gives this strategy twice the influence of one with strength 1. Must be a positive number." />
+        </div>
         <Input
             id="similarity-strength"
             type="number"

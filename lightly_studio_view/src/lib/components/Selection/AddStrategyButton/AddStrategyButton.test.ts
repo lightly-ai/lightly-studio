@@ -28,10 +28,10 @@ describe('AddStrategyButton', () => {
         expect(onAdd).toHaveBeenCalledWith('metadata_weighting');
     });
 
-    it('disables the similarity option when requested', async () => {
+    it('disables the similarity option when a reason is provided', async () => {
         render(AddStrategyButton, {
             props: {
-                isSimilarityDisabled: true,
+                similarityDisabledReason: 'Not available for video collections. Similarity selection requires image embeddings.',
                 onAdd: vi.fn()
             }
         });
@@ -39,5 +39,21 @@ describe('AddStrategyButton', () => {
         await fireEvent.click(screen.getByTestId('add-strategy-button'));
 
         expect(await screen.findByTestId('add-strategy-similarity')).toBeDisabled();
+    });
+
+    it('shows a tooltip with the disabled reason when hovering a disabled strategy', async () => {
+        render(AddStrategyButton, {
+            props: {
+                similarityDisabledReason: 'Not available for video collections. Similarity selection requires image embeddings.',
+                onAdd: vi.fn()
+            }
+        });
+
+        await fireEvent.click(screen.getByTestId('add-strategy-button'));
+        await fireEvent.mouseEnter((await screen.findByTestId('add-strategy-similarity')).parentElement!);
+
+        expect(await screen.findByRole('tooltip')).toHaveTextContent(
+            'Not available for video collections. Similarity selection requires image embeddings.'
+        );
     });
 });

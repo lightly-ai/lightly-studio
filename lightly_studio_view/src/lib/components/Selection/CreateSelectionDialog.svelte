@@ -6,7 +6,9 @@
         computeTypicalityMetadata
     } from '$lib/api/lightly_studio_local/sdk.gen';
     import type { SelectionRequest } from '$lib/api/lightly_studio_local/types.gen';
+    import { Info } from '@lucide/svelte';
     import AddStrategyButton from '$lib/components/Selection/AddStrategyButton/AddStrategyButton.svelte';
+    import FieldTooltip from '$lib/components/Selection/FieldTooltip.svelte';
     import StrategyCard from '$lib/components/Selection/StrategyCard/StrategyCard.svelte';
     import {
         isStrategyInstanceValid,
@@ -299,9 +301,17 @@
                 <div class="grid gap-4 py-4">
                     <div class="w-full">
                         <AddStrategyButton
-                            isSimilarityDisabled={isVideoCollection || $tags.length === 0}
-                            isMetadataWeightingDisabled={!hasMetadataFields}
-                            isClassBalancingDisabled={!hasAnnotationLabels}
+                            similarityDisabledReason={isVideoCollection
+                                ? 'Not available for video collections. Similarity selection requires image embeddings.'
+                                : $tags.length === 0
+                                  ? 'No sample tags in this collection. Create a sample tag first to use as the similarity reference.'
+                                  : undefined}
+                            metadataWeightingDisabledReason={!hasMetadataFields
+                                ? 'No numeric metadata fields found. Index metadata on your samples to enable this strategy.'
+                                : undefined}
+                            classBalancingDisabledReason={!hasAnnotationLabels
+                                ? 'No annotation labels found. Add annotations to your samples to enable this strategy.'
+                                : undefined}
                             onAdd={addStrategy}
                         />
                     </div>
@@ -320,11 +330,18 @@
                                 onToggleExpand={() => toggleExpand(instance.id)}
                             />
                         {/each}
+                        <span class="flex items-center gap-1 text-xs text-muted-foreground">
+                            <Info class="size-3 shrink-0" />
+                            Strategies are scored and combined simultaneously using their strength weights — the order shown here does not affect the result.
+                        </span>
                     </div>
                     {/if}
 
                     <div class="grid gap-2">
-                        <Label for="n-samples" class="text-foreground">Number of Samples</Label>
+                        <div class="flex items-center gap-1.5">
+                            <Label for="n-samples" class="text-foreground">Number of Samples</Label>
+                            <FieldTooltip content="How many samples will be written to the output tag. Cannot exceed the number of samples matching the current filters." />
+                        </div>
                         <Input
                             id="n-samples"
                             type="number"
@@ -337,7 +354,10 @@
                     </div>
 
                     <div class="grid gap-2">
-                        <Label for="tag-name" class="text-foreground">Tag Name</Label>
+                        <div class="flex items-center gap-1.5">
+                            <Label for="tag-name" class="text-foreground">Tag Name</Label>
+                            <FieldTooltip content="A new sample tag will be created with this name to store the selection result." />
+                        </div>
                         <Input
                             id="tag-name"
                             type="text"
@@ -370,6 +390,13 @@
                 </div>
 
                 <Dialog.Footer class="mt-4">
+                    <a
+                        href="#"
+                        class="mr-auto self-center text-xs text-muted-foreground underline-offset-4 hover:underline"
+                        data-testid="selection-dialog-docs-link"
+                    >
+                        Learn more about combination selection →
+                    </a>
                     <Button
                         variant="outline"
                         type="button"
