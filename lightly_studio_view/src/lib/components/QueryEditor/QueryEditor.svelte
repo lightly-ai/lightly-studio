@@ -54,7 +54,7 @@ AND object_detection(label = "person" AND x > 10)
     }
 
     let draftValue = $state(value);
-    let lastAppliedValue = $state<string | null>(null);
+    let lastAppliedValue = $state<string | null>(value ?? null);
 
     onMount(() => {
         if (!containerEl) return;
