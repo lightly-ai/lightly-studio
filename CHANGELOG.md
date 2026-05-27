@@ -17,6 +17,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- Renamed the annotation class argument `label` to `class_name` in the Python SDK (the `Create*` annotation classes and the `Annotation.class_name` property). Breaking change.
+
 ### Deprecated
 
 ### Removed

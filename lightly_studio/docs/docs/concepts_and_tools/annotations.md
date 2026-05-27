@@ -113,7 +113,7 @@ from lightly_studio.core.annotation import CreateObjectDetection
 
 sample.add_annotation(
     CreateObjectDetection(
-        label="car",
+        class_name="car",
         confidence=0.9,  # optional
         x=10,
         y=20,
@@ -144,7 +144,7 @@ mask = np.array([
 
 sample.add_annotation(
     CreateSegmentationMask.from_binary_mask(
-        label="car",
+        class_name="car",
         binary_mask=mask,
         confidence=0.85,  # optional
     )
