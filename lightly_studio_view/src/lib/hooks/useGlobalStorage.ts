@@ -76,8 +76,11 @@ export type TextEmbedding = {
     queryText: string;
 };
 
-const showPlot = writable<boolean>(false);
-const showEvaluationRuns = writable<boolean>(false);
+export type PanelType = 'none' | 'plot' | 'evaluationRuns' | 'queryEditor';
+
+const activePanel = writable<PanelType>('none');
+const showPlot = derived(activePanel, ($p) => $p === 'plot');
+const showEvaluationRuns = derived(activePanel, ($p) => $p === 'evaluationRuns');
 const rangeSelectionBycollection = writable<Record<string, Point[] | null>>({});
 
 // Rewrite the hook to return values and methods
@@ -303,20 +306,12 @@ export const useGlobalStorage = () => {
 
         isEditingMode,
         setIsEditingMode,
+        activePanel,
+        setActivePanel: (panel: PanelType) => activePanel.set(panel),
         showPlot,
-        setShowPlot: (show: boolean) => {
-            showPlot.set(show);
-            if (show) {
-                showEvaluationRuns.set(false);
-            }
-        },
+        setShowPlot: (show: boolean) => activePanel.set(show ? 'plot' : 'none'),
         showEvaluationRuns,
-        setShowEvaluationRuns: (show: boolean) => {
-            showEvaluationRuns.set(show);
-            if (show) {
-                showPlot.set(false);
-            }
-        },
+        setShowEvaluationRuns: (show: boolean) => activePanel.set(show ? 'evaluationRuns' : 'none'),
         getRangeSelection,
         setRangeSelectionForCollection: (collectionId: string, selection: Point[] | null) => {
             rangeSelectionBycollection.update((state) => ({
