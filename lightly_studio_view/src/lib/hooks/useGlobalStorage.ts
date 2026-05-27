@@ -309,9 +309,13 @@ export const useGlobalStorage = () => {
         activePanel,
         setActivePanel: (panel: PanelType) => activePanel.set(panel),
         showPlot,
-        setShowPlot: (show: boolean) => activePanel.set(show ? 'plot' : 'none'),
+        setShowPlot: (show: boolean) =>
+            activePanel.update((p) => (show ? 'plot' : p === 'plot' ? 'none' : p)),
         showEvaluationRuns,
-        setShowEvaluationRuns: (show: boolean) => activePanel.set(show ? 'evaluationRuns' : 'none'),
+        setShowEvaluationRuns: (show: boolean) =>
+            activePanel.update((p) =>
+                show ? 'evaluationRuns' : p === 'evaluationRuns' ? 'none' : p
+            ),
         getRangeSelection,
         setRangeSelectionForCollection: (collectionId: string, selection: Point[] | null) => {
             rangeSelectionBycollection.update((state) => ({

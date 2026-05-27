@@ -7,9 +7,13 @@ vi.mock('$lib/hooks/useGlobalStorage', () => {
     const activePanel = writable<string>('none');
     const showPlot = derived(activePanel, ($p) => $p === 'plot');
     const showEvaluationRuns = derived(activePanel, ($p) => $p === 'evaluationRuns');
-    const setShowPlot = vi.fn((value: boolean) => activePanel.set(value ? 'plot' : 'none'));
+    const setShowPlot = vi.fn((value: boolean) =>
+        activePanel.update((p: string) => (value ? 'plot' : p === 'plot' ? 'none' : p))
+    );
     const setShowEvaluationRuns = vi.fn((value: boolean) =>
-        activePanel.set(value ? 'evaluationRuns' : 'none')
+        activePanel.update((p: string) =>
+            value ? 'evaluationRuns' : p === 'evaluationRuns' ? 'none' : p
+        )
     );
     return {
         useGlobalStorage: () => ({
