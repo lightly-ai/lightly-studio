@@ -251,9 +251,9 @@ async def stream_frame(
         sample_id: The UUID of the video frame sample.
         transform_query: Transport-level query parameters for frame encoding.
     """
-    # Avoid SessionDep here: its sync-generator dependency churns Starlette
-    # threadpool slots under load. Manage the session inline and close it
-    # before frame extraction.
+    # Avoid SessionDep here: FastAPI runs its sync-generator dependency on
+    # Starlette's threadpool, exhausting threadpool slots under load. Manage
+    # the session inline and close it before frame extraction.
     with db_manager.session() as sess:
         video_frame = video_frame_resolver.get_by_id(session=sess, sample_id=sample_id)
         video_path = video_frame.video.file_path_abs

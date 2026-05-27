@@ -44,9 +44,9 @@ async def serve_image_by_sample_id(
     Raises:
         HTTPException: If the sample is not found or the file is not accessible.
     """
-    # Avoid SessionDep here: its sync-generator dependency churns Starlette
-    # threadpool slots under load. Manage the session inline and close it
-    # before file I/O.
+    # Avoid SessionDep here: FastAPI runs its sync-generator dependency on
+    # Starlette's threadpool, exhausting threadpool slots under load. Manage
+    # the session inline and close it before file I/O.
     with db_manager.session() as sess:
         sample_record = sess.get(image.ImageTable, sample_id)
         if not sample_record:

@@ -139,9 +139,9 @@ async def serve_video_by_sample_id(
     Returns:
         StreamingResponse with the video data, supporting partial content.
     """
-    # Avoid SessionDep here: its sync-generator dependency churns Starlette
-    # threadpool slots under load. Manage the session inline and close it
-    # before any file I/O.
+    # Avoid SessionDep here: FastAPI runs its sync-generator dependency on
+    # Starlette's threadpool, exhausting threadpool slots under load. Manage
+    # the session inline and close it before any file I/O.
     with db_manager.session() as sess:
         sample_record = sess.get(video.VideoTable, sample_id)
         if not sample_record:
