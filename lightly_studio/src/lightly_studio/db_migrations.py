@@ -35,7 +35,7 @@ def run_migrations(engine: Engine, engine_url: str) -> None:
     ):
         logging.info("Adopting pre-Alembic database schema (stamp head).")
         logging.warning(
-            "Database has application tables but no alembic_version row. "
+            "Database has application tables but no alembic_version table. "
             "Stamped head without running migrations; verify schema matches revision "
             "fa45898e4138 before relying on Alembic upgrades."
         )

@@ -4,6 +4,7 @@
     import { formatDate } from '$lib/utils';
     import { ChevronDown } from '@lucide/svelte';
     import { slide } from 'svelte/transition';
+    import EvaluationRunConfusionMatrixSection from './EvaluationRunConfusionMatrixSection/EvaluationRunConfusionMatrixSection.svelte';
 
     const duration = 300; // in ms
 
@@ -56,12 +57,14 @@
             style={`transform: ${expanded ? 'rotate(0deg)' : 'rotate(-90deg)'}`}
         />
     </button>
+
     {#if expanded}
         <div
-            class="border-t border-border px-3 py-3"
+            class="space-y-5 border-t border-border px-3 py-3"
             data-testid="evaluation-run-details"
             transition:slide={{ duration }}
         >
+            <!-- Configuration -->
             <section>
                 <Typography variant="subtitle2" component="h3" className="mb-2">
                     Configuration
@@ -90,6 +93,8 @@
                     </dl>
                 {/if}
             </section>
+
+            <EvaluationRunConfusionMatrixSection evaluationRunId={run.id} />
         </div>
     {/if}
 </li>

@@ -83,6 +83,7 @@ def _render_item(
 def _configure_context(connection: Connection) -> None:
     """Configure Alembic and run migrations on the given connection."""
     connection.execute(statement=text("CREATE EXTENSION IF NOT EXISTS vector"))
+    connection.commit()
     context.configure(
         connection=connection,
         target_metadata=target_metadata,

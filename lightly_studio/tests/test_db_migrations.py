@@ -13,7 +13,6 @@ from sqlmodel import SQLModel
 
 from lightly_studio import db_manager, db_migrations, db_url
 from lightly_studio.db_manager import DatabaseEngine
-from lightly_studio.db_migrations import get_head_revision
 from lightly_studio.models.collection import CollectionCreate, CollectionTable, SampleType
 from lightly_studio.resolvers import collection_resolver
 
@@ -104,11 +103,13 @@ def _reset_postgres_database(engine_url: str) -> None:
     """Drop application tables and Alembic version tracking."""
     normalized_url = db_url.ensure_psycopg3_driver(engine_url=engine_url)
     raw_engine = create_engine(normalized_url)
-    SQLModel.metadata.drop_all(bind=raw_engine)
-    with raw_engine.connect() as conn:
-        conn.execute(statement=text("DROP TABLE IF EXISTS alembic_version"))
-        conn.commit()
-    raw_engine.dispose()
+    try:
+        SQLModel.metadata.drop_all(bind=raw_engine)
+        with raw_engine.connect() as conn:
+            conn.execute(statement=text("DROP TABLE IF EXISTS alembic_version"))
+            conn.commit()
+    finally:
+        raw_engine.dispose()
 
 
 def test_postgres_fresh_database__upgrade_head(
@@ -209,7 +210,7 @@ def test_postgres_upgrade_head_on_empty_database(
         alembic_cfg.attributes["connection"] = connection
         command.upgrade(alembic_cfg, revision="head")
 
-    head_revision = get_head_revision()
+    head_revision = db_migrations.get_head_revision()
     inspector = db_migrations._get_inspector(engine=raw_engine)
     assert inspector.has_table(table_name="collection")
     assert inspector.has_table(table_name="alembic_version")
