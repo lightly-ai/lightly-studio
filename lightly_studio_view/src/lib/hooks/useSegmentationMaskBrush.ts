@@ -138,15 +138,19 @@ export function useSegmentationMaskBrush({
             }
         }
 
-        let label =
-            labels?.find(
-                (l) => l.annotation_label_name === annotationLabelContext.annotationLabel
-            ) ?? labels?.find((l) => l.annotation_label_name === 'DEFAULT');
+        if (!annotationLabelContext.annotationLabel) {
+            toast.error('Please select a class before creating an annotation');
+            return;
+        }
+
+        let label = labels?.find(
+            (l) => l.annotation_label_name === annotationLabelContext.annotationLabel
+        );
 
         if (!label) {
             label = await createLabel({
                 dataset_id: datasetId,
-                annotation_label_name: 'DEFAULT'
+                annotation_label_name: annotationLabelContext.annotationLabel
             });
         }
 

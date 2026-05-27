@@ -169,17 +169,20 @@
         const pendingOperation = startCreateBoundingBoxPending();
 
         try {
-            let label =
-                labels.data?.find(
-                    (label) =>
-                        label.annotation_label_name === annotationLabelContext.annotationLabel
-                ) ?? labels.data?.find((label) => label.annotation_label_name === 'DEFAULT');
+            if (!annotationLabelContext.annotationLabel) {
+                toast.error('Please select a class before creating an annotation');
+                return;
+            }
 
-            // Create an default label if it does not exist yet
+            let label = labels.data?.find(
+                (label) => label.annotation_label_name === annotationLabelContext.annotationLabel
+            );
+
+            // Create label if it does not exist yet
             if (!label) {
                 label = await createLabel({
                     dataset_id: datasetId,
-                    annotation_label_name: 'DEFAULT'
+                    annotation_label_name: annotationLabelContext.annotationLabel
                 });
             }
 
