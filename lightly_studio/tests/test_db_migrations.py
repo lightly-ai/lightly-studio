@@ -122,7 +122,7 @@ def test_postgres_fresh_database__upgrade_head(
     _reset_postgres_database(engine_url=postgres_url)
 
     engine = DatabaseEngine(engine_url=postgres_url, single_threaded=True)
-    head_revision = get_head_revision()
+    head_revision = db_migrations.get_head_revision()
 
     inspector = db_migrations._get_inspector(engine=engine._engine)
     assert inspector.has_table(table_name="collection")
@@ -151,7 +151,7 @@ def test_postgres_legacy_database__stamp_on_startup(
     raw_engine.dispose()
 
     engine = DatabaseEngine(engine_url=postgres_url, single_threaded=True)
-    head_revision = get_head_revision()
+    head_revision = db_migrations.get_head_revision()
 
     with engine.session() as session:
         version = session.execute(
@@ -170,7 +170,7 @@ def test_postgres_cleanup_existing__recreates_schema_at_head(
         pytest.skip("Requires --postgres")
 
     _reset_postgres_database(engine_url=postgres_url)
-    head_revision = get_head_revision()
+    head_revision = db_migrations.get_head_revision()
 
     db_manager.connect(db_url=postgres_url, cleanup_existing=False)
     with db_manager.session() as session:
