@@ -1,4 +1,4 @@
-"""API routes for exporting collection annotation tasks."""
+"""API routes for exporting collection annotations."""
 
 from __future__ import annotations
 
