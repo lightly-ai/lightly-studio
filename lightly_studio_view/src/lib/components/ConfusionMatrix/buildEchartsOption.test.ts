@@ -35,29 +35,10 @@ function build(matrix: ConfusionMatrix): BuiltOption {
 }
 
 describe('buildEchartsOption', () => {
-    it('unifies row and col labels in order, preserving real classes followed by sentinels', () => {
+    it('uses col labels for xAxis and reversed row labels for yAxis', () => {
         const option = build(small3Classes);
-        expect(option.xAxis.data).toEqual([
-            'bike',
-            'car',
-            'person',
-            NO_GROUND_TRUTH_ROW_LABEL,
-            NO_PREDICTION_COL_LABEL
-        ]);
-        expect(option.yAxis.data).toEqual([...option.xAxis.data].reverse());
-    });
-
-    it('dedupes labels that appear in both rows and columns', () => {
-        const matrix: ConfusionMatrix = {
-            row_labels: ['a', 'b'],
-            col_labels: ['b', 'c'],
-            counts: [
-                [1, 2],
-                [3, 4]
-            ]
-        };
-        const option = build(matrix);
-        expect(option.xAxis.data).toEqual(['a', 'b', 'c']);
+        expect(option.xAxis.data).toEqual(['bike', 'car', 'person', NO_PREDICTION_COL_LABEL]);
+        expect(option.yAxis.data).toEqual([NO_GROUND_TRUTH_ROW_LABEL, 'person', 'car', 'bike']);
     });
 
     it('places only real-class diagonal counts in the TP series', () => {

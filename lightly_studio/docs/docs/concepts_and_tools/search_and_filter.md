@@ -1,6 +1,6 @@
 # Search and Filter
 
-Search helps you find visually or semantically similar samples from a text or image. Filters narrow down the samples currently shown in the view by tags, labels, dimensions, and other numeric metadata.
+Search helps you find visually or semantically similar samples from a text or image. Filters narrow down the samples currently shown in the view by tags, annotations, dimensions, and other numeric metadata.
 Use the GUI for similarity search and quick filtering. 
 Use DatasetQuery in Python when you need reusable filtering, sorting, and slicing in code.
 
@@ -29,7 +29,7 @@ The screen recording below shows the search both by text query "dog" and by past
 The left sidebar combines the most common ways to narrow down the visible samples:
 
 - `Tags`: Click one or more tags to focus on the subset you care about, such as `labeled` or `unlabeled`.
-- `Labels`: Click one or more labels to show items with those annotations.
+- `Annotation classes`: Click one or more annotation classes to show items with those annotations.
 - `Dimensions`: Use `Width` and `Height` to constrain the visible item size.
 - `Metadata`: If numeric metadata fields are available, they appear as additional sliders in the same area.
 

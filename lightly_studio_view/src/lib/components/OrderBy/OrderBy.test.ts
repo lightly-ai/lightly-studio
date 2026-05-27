@@ -1,6 +1,7 @@
 import { fireEvent, render, screen } from '@testing-library/svelte';
+import userEvent from '@testing-library/user-event';
 import { readable } from 'svelte/store';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import { SortDirection } from '$lib/api/lightly_studio_local';
 import type { MetadataInfoView } from '$lib/api/lightly_studio_local';
 import type { EvaluationRunMetricsInfoView } from '$lib/api/lightly_studio_local/types.gen';
@@ -32,6 +33,13 @@ vi.mock('$lib/hooks/useEvaluationSampleMetricsInfo/useEvaluationSampleMetricsInf
 }));
 
 describe('OrderBy', () => {
+    beforeAll(() => {
+        Element.prototype.hasPointerCapture = vi.fn(() => false);
+        Element.prototype.setPointerCapture = vi.fn();
+        Element.prototype.releasePointerCapture = vi.fn();
+        Element.prototype.scrollIntoView = vi.fn();
+    });
+
     beforeEach(() => {
         vi.clearAllMocks();
         mocks.imageSortByValue = null;
@@ -77,10 +85,11 @@ describe('OrderBy', () => {
     });
 
     it('selects a field and calls updateSortBy with asc direction by default', async () => {
+        const user = userEvent.setup();
         render(OrderBy, { props: { datasetId: 'ds1' } });
 
-        await fireEvent.click(screen.getByTestId('sort-by-trigger'));
-        await fireEvent.click(screen.getByTestId('sort-field-file_name'));
+        await user.click(screen.getByTestId('sort-by-trigger'));
+        await user.click(screen.getByTestId('sort-field-file_name'));
 
         expect(mocks.updateSortBy).toHaveBeenCalledWith([
             {
@@ -93,6 +102,7 @@ describe('OrderBy', () => {
     });
 
     it('deselects the field when clicking the already selected item', async () => {
+        const user = userEvent.setup();
         mocks.imageSortByValue = [
             {
                 source: 'image',
@@ -103,13 +113,14 @@ describe('OrderBy', () => {
         ];
         render(OrderBy, { props: { datasetId: 'ds1' } });
 
-        await fireEvent.click(screen.getByTestId('sort-by-trigger'));
-        await fireEvent.click(screen.getByTestId('sort-field-file_name'));
+        await user.click(screen.getByTestId('sort-by-trigger'));
+        await user.click(screen.getByTestId('sort-field-file_name'));
 
         expect(mocks.updateSortBy).toHaveBeenCalledWith(null);
     });
 
     it('switches to a different field while preserving the current direction', async () => {
+        const user = userEvent.setup();
         mocks.imageSortByValue = [
             {
                 source: 'image',
@@ -120,8 +131,8 @@ describe('OrderBy', () => {
         ];
         render(OrderBy, { props: { datasetId: 'ds1' } });
 
-        await fireEvent.click(screen.getByTestId('sort-by-trigger'));
-        await fireEvent.click(screen.getByTestId('sort-field-width'));
+        await user.click(screen.getByTestId('sort-by-trigger'));
+        await user.click(screen.getByTestId('sort-field-width'));
 
         expect(mocks.updateSortBy).toHaveBeenCalledWith([
             {
@@ -188,9 +199,10 @@ describe('OrderBy', () => {
     });
 
     it('lists all sort fields in the dropdown', async () => {
+        const user = userEvent.setup();
         render(OrderBy, { props: { datasetId: 'ds1' } });
 
-        await fireEvent.click(screen.getByTestId('sort-by-trigger'));
+        await user.click(screen.getByTestId('sort-by-trigger'));
 
         expect(screen.getByTestId('sort-field-file_name')).toHaveTextContent('file name');
         expect(screen.getByTestId('sort-field-file_path_abs')).toHaveTextContent('file path');
@@ -200,6 +212,7 @@ describe('OrderBy', () => {
     });
 
     it('lists metadata fields in the dropdown as metadata.[field]', async () => {
+        const user = userEvent.setup();
         mocks.metadataInfoValue = [
             { name: 'brightness', type: 'float' },
             { name: 'count', type: 'integer' },
@@ -208,7 +221,7 @@ describe('OrderBy', () => {
         ];
         render(OrderBy, { props: { datasetId: 'ds1' } });
 
-        await fireEvent.click(screen.getByTestId('sort-by-trigger'));
+        await user.click(screen.getByTestId('sort-by-trigger'));
 
         expect(screen.getByTestId('sort-field-brightness')).toHaveTextContent(
             'metadata.brightness'
@@ -219,6 +232,7 @@ describe('OrderBy', () => {
     });
 
     it('excludes list and dict metadata fields from the dropdown', async () => {
+        const user = userEvent.setup();
         mocks.metadataInfoValue = [
             { name: 'tags', type: 'list' },
             { name: 'nested', type: 'dict' },
@@ -226,7 +240,7 @@ describe('OrderBy', () => {
         ];
         render(OrderBy, { props: { datasetId: 'ds1' } });
 
-        await fireEvent.click(screen.getByTestId('sort-by-trigger'));
+        await user.click(screen.getByTestId('sort-by-trigger'));
 
         expect(screen.queryByTestId('sort-field-tags')).toBeNull();
         expect(screen.queryByTestId('sort-field-nested')).toBeNull();
@@ -234,11 +248,12 @@ describe('OrderBy', () => {
     });
 
     it('selects a numeric metadata field with is_numeric true', async () => {
+        const user = userEvent.setup();
         mocks.metadataInfoValue = [{ name: 'score', type: 'float' }];
         render(OrderBy, { props: { datasetId: 'ds1' } });
 
-        await fireEvent.click(screen.getByTestId('sort-by-trigger'));
-        await fireEvent.click(screen.getByTestId('sort-field-score'));
+        await user.click(screen.getByTestId('sort-by-trigger'));
+        await user.click(screen.getByTestId('sort-field-score'));
 
         expect(mocks.updateSortBy).toHaveBeenCalledWith([
             {
@@ -251,11 +266,12 @@ describe('OrderBy', () => {
     });
 
     it('selects a string metadata field with is_numeric false', async () => {
+        const user = userEvent.setup();
         mocks.metadataInfoValue = [{ name: 'category', type: 'string' }];
         render(OrderBy, { props: { datasetId: 'ds1' } });
 
-        await fireEvent.click(screen.getByTestId('sort-by-trigger'));
-        await fireEvent.click(screen.getByTestId('sort-field-category'));
+        await user.click(screen.getByTestId('sort-by-trigger'));
+        await user.click(screen.getByTestId('sort-field-category'));
 
         expect(mocks.updateSortBy).toHaveBeenCalledWith([
             {
@@ -306,6 +322,7 @@ describe('OrderBy', () => {
     });
 
     it('lists evaluation metric fields in the dropdown as [run_name].[metric_name]', async () => {
+        const user = userEvent.setup();
         mocks.metricsProxy.data = [
             {
                 run_name: 'run1',
@@ -317,13 +334,14 @@ describe('OrderBy', () => {
         ];
         render(OrderBy, { props: { datasetId: 'ds1' } });
 
-        await fireEvent.click(screen.getByTestId('sort-by-trigger'));
+        await user.click(screen.getByTestId('sort-by-trigger'));
 
         expect(screen.getByTestId('sort-field-run1-precision')).toHaveTextContent('run1.precision');
         expect(screen.getByTestId('sort-field-run1-recall')).toHaveTextContent('run1.recall');
     });
 
     it('selects an evaluation metric field', async () => {
+        const user = userEvent.setup();
         mocks.metricsProxy.data = [
             {
                 run_name: 'run1',
@@ -332,8 +350,8 @@ describe('OrderBy', () => {
         ];
         render(OrderBy, { props: { datasetId: 'ds1' } });
 
-        await fireEvent.click(screen.getByTestId('sort-by-trigger'));
-        await fireEvent.click(screen.getByTestId('sort-field-run1-precision'));
+        await user.click(screen.getByTestId('sort-by-trigger'));
+        await user.click(screen.getByTestId('sort-field-run1-precision'));
 
         expect(mocks.updateSortBy).toHaveBeenCalledWith([
             {
@@ -346,6 +364,7 @@ describe('OrderBy', () => {
     });
 
     it('deselects an evaluation metric field when clicking the already selected item', async () => {
+        const user = userEvent.setup();
         mocks.metricsProxy.data = [
             {
                 run_name: 'run1',
@@ -362,8 +381,8 @@ describe('OrderBy', () => {
         ];
         render(OrderBy, { props: { datasetId: 'ds1' } });
 
-        await fireEvent.click(screen.getByTestId('sort-by-trigger'));
-        await fireEvent.click(screen.getByTestId('sort-field-run1-precision'));
+        await user.click(screen.getByTestId('sort-by-trigger'));
+        await user.click(screen.getByTestId('sort-field-run1-precision'));
 
         expect(mocks.updateSortBy).toHaveBeenCalledWith(null);
     });

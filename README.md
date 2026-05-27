@@ -237,7 +237,7 @@ pip install "lightly-studio[cloud-storage]"
 This installs the necessary libraries: s3fs (for S3), gcsfs (for GCS), and adlfs (for Azure).
 Our tool uses the fsspec library, which also supports other file systems. If you need a different provider (like FTP, SSH, etc.), you can find the required library in the [fsspec documentation](https://filesystem-spec.readthedocs.io/en/latest/api.html#other-known-implementations) and install it manually (e.g., pip install sftpfs).
 
-**Current Support Limitations for Annotations (Labels):** Cloud-hosted annotations are currently supported for COCO object detection and segmentation mask; other dataset importers still expect local files.
+**Current Support Limitations for Annotations:** Cloud-hosted annotations are currently supported for COCO object detection and segmentation mask; other dataset importers still expect local files.
 
 ### Dataset
 
