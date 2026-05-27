@@ -13,7 +13,7 @@
         canSelectAll: boolean;
         isImages: boolean;
         hasMediaWithEmbeddings: boolean;
-        datasetId: string;
+        collectionDatasetId: string;
         onSelectAll: () => Promise<void>;
         searchImage: SearchImage | undefined;
         searchPending: boolean;
@@ -29,7 +29,6 @@
         canSelectAll,
         isImages,
         hasMediaWithEmbeddings,
-        datasetId,
         onSelectAll,
         searchImage,
         searchPending,
@@ -37,7 +36,8 @@
         onSubmitText,
         onSubmitFile,
         onSearchClear,
-        onSearchError
+        onSearchError,
+        collectionDatasetId
     }: Props = $props();
 
     const { showPlot, setShowPlot, showEvaluationRuns, setShowEvaluationRuns } = useGlobalStorage();
@@ -51,7 +51,7 @@
     {/snippet}
     {#snippet auxControls()}
         {#if isImages}
-            <OrderBy {datasetId} />
+            <OrderBy datasetId={collectionDatasetId} />
         {/if}
         {#if hasMediaWithEmbeddings}
             <Tooltip
@@ -66,7 +66,7 @@
                 >
                     <ChartNetwork class="size-4" />
                     {#if !compact}
-                        <span>Show Embeddings</span>
+                        <span>Embeddings</span>
                     {/if}
                 </Button>
             </Tooltip>
@@ -84,7 +84,7 @@
                 >
                     <Gauge class="size-4" />
                     {#if !compact}
-                        <span>Evaluation Runs</span>
+                        <span>Evaluation</span>
                     {/if}
                 </Button>
             </Tooltip>

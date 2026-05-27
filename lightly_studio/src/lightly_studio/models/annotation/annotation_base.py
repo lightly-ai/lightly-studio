@@ -38,7 +38,7 @@ else:
 
 
 class AnnotationType(str, Enum):
-    """The type of annotation task."""
+    """The type of annotations."""
 
     CLASSIFICATION = "classification"
     SEGMENTATION_MASK = "segmentation_mask"

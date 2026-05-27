@@ -1,6 +1,6 @@
 <script lang="ts">
-    import { Checkbox } from '$lib/components/ui/checkbox';
-    import { X } from '@lucide/svelte';
+    import FilterChip from '$lib/components/FilterChip/FilterChip.svelte';
+    import Segment from '$lib/components/Segment/Segment.svelte';
     import { useEmbeddingFilterForImages } from '$lib/hooks/useEmbeddingFilter/useEmbeddingFilterForImages';
     import { useEmbeddingFilterForVideos } from '$lib/hooks/useEmbeddingFilter/useEmbeddingFilterForVideos';
     import { useGlobalStorage } from '$lib/hooks/useGlobalStorage';
@@ -38,32 +38,21 @@
 </script>
 
 {#if hasPlotFilterContext}
-    <div
-        class="rounded-md border border-amber-500/35 bg-amber-500/10 px-2 py-1.5"
-        data-testid="embedding-selection-filter-chip"
-    >
-        <div class="flex items-center gap-2">
-            <Checkbox
-                checked={isPlotFilterApplied}
-                aria-label="Embedding plot filter"
-                onCheckedChange={(nextChecked) =>
-                    setEmbeddingFilterVisibility(nextChecked === true)}
-            />
-            <div class="min-w-0 flex-1">
-                <div class="truncate text-sm font-medium">Embedding Plot Filter</div>
+    <Segment title="Embeddings">
+        <FilterChip
+            checked={isPlotFilterApplied}
+            title="Embedding Plot Filter"
+            checkboxLabel="Embedding plot filter"
+            testId="embedding-selection-filter-chip"
+            onCheckedChange={(nextChecked) => setEmbeddingFilterVisibility(nextChecked === true)}
+            onClear={clearFilter}
+        >
+            {#snippet subtitle()}
                 <div class="text-xs text-muted-foreground">
                     {plotFilterCount}
                     {plotFilterCount === 1 ? plotFilterItemLabel : `${plotFilterItemLabel}s`}
                 </div>
-            </div>
-            <button
-                class="text-muted-foreground hover:text-foreground"
-                onclick={clearFilter}
-                title="Clear embedding plot filter"
-                aria-label="Clear embedding plot filter"
-            >
-                <X class="size-4" />
-            </button>
-        </div>
-    </div>
+            {/snippet}
+        </FilterChip>
+    </Segment>
 {/if}
