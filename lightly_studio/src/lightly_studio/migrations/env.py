@@ -108,17 +108,7 @@ def run_migrations() -> None:
     )
 
     with connectable.connect() as connection:
-        connection.execute(statement=text("CREATE EXTENSION IF NOT EXISTS vector"))
-        connection.commit()
-        context.configure(
-            connection=connection,
-            target_metadata=target_metadata,
-            compare_type=True,
-            render_item=_render_item,
-        )
-
-        with context.begin_transaction():
-            context.run_migrations()
+        _configure_context(connection=connection)
 
 
 _ensure_script_location()

@@ -69,9 +69,7 @@ def get_head_revision() -> str:
     Raises:
         RuntimeError: If no head revision is defined in the migrations package.
     """
-    alembic_config = Config(str(_find_alembic_ini()))
-    _ensure_script_location(config=alembic_config)
-    script = ScriptDirectory.from_config(config=alembic_config)
+    script = ScriptDirectory.from_config(config=_base_config())
     head = script.get_current_head()
     if head is None:
         raise RuntimeError("No Alembic head revision found in migrations/scripts.")
@@ -87,9 +85,15 @@ def get_alembic_config(engine_url: str) -> Config:
     Returns:
         Alembic Config with sqlalchemy.url and script_location set.
     """
-    alembic_config = Config(str(_find_alembic_ini()))
+    alembic_config = _base_config()
     url = db_url.ensure_psycopg3_driver(engine_url=engine_url)
     alembic_config.set_main_option(name="sqlalchemy.url", value=url)
+    return alembic_config
+
+
+def _base_config() -> Config:
+    """Load alembic.ini and point it at the migrations package."""
+    alembic_config = Config(str(_find_alembic_ini()))
     _ensure_script_location(config=alembic_config)
     return alembic_config
 
