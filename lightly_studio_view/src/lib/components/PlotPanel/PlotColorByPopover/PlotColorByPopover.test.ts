@@ -44,7 +44,9 @@ describe('PlotColorByPopover', () => {
         render(PlotColorByPopover, {
             collectionId: 'test-collection-id',
             selectedKey: null,
-            onSelectedKeyChange: vi.fn()
+            onSelectedKeyChange: vi.fn(),
+            withTags: false,
+            withAnnotationLabels: false
         });
 
         await user.click(screen.getByTestId('plot-color-by-button'));
@@ -63,7 +65,9 @@ describe('PlotColorByPopover', () => {
         render(PlotColorByPopover, {
             collectionId: 'test-collection-id',
             selectedKey: null,
-            onSelectedKeyChange
+            onSelectedKeyChange,
+            withTags: false,
+            withAnnotationLabels: false
         });
 
         await user.click(screen.getByTestId('plot-color-by-button'));
@@ -73,19 +77,152 @@ describe('PlotColorByPopover', () => {
         expect(get(colorByType.selectedColorByType)).toBe('metadata');
     });
 
-    it('does not render annotations or tags in the popover', async () => {
+    it('renders a tags option when withTags is true', async () => {
         const user = userEvent.setup();
 
         render(PlotColorByPopover, {
             collectionId: 'test-collection-id',
             selectedKey: null,
-            onSelectedKeyChange: vi.fn()
+            onSelectedKeyChange: vi.fn(),
+            withTags: true,
+            withAnnotationLabels: false
+        });
+
+        await user.click(screen.getByTestId('plot-color-by-button'));
+
+        expect(screen.getByRole('option', { name: 'tags' })).toBeInTheDocument();
+    });
+
+    it('does not render a tags option when withTags is false', async () => {
+        const user = userEvent.setup();
+
+        render(PlotColorByPopover, {
+            collectionId: 'test-collection-id',
+            selectedKey: null,
+            onSelectedKeyChange: vi.fn(),
+            withTags: false,
+            withAnnotationLabels: false
+        });
+
+        await user.click(screen.getByTestId('plot-color-by-button'));
+
+        expect(screen.queryByRole('option', { name: 'tags' })).not.toBeInTheDocument();
+    });
+
+    it('selecting tags stores tags as the selected type', async () => {
+        const user = userEvent.setup();
+        const onSelectedKeyChange = vi.fn();
+        const colorByType = usePlotColorByType('test-collection-id');
+
+        render(PlotColorByPopover, {
+            collectionId: 'test-collection-id',
+            selectedKey: null,
+            onSelectedKeyChange,
+            withTags: true,
+            withAnnotationLabels: false
+        });
+
+        await user.click(screen.getByTestId('plot-color-by-button'));
+        await user.click(screen.getByRole('option', { name: 'tags' }));
+
+        expect(onSelectedKeyChange).toHaveBeenCalledWith(null);
+        expect(get(colorByType.selectedColorByType)).toBe('tags');
+    });
+
+    it('renders an annotations option when withAnnotationLabels is true', async () => {
+        const user = userEvent.setup();
+
+        render(PlotColorByPopover, {
+            collectionId: 'test-collection-id',
+            selectedKey: null,
+            onSelectedKeyChange: vi.fn(),
+            withTags: false,
+            withAnnotationLabels: true
+        });
+
+        await user.click(screen.getByTestId('plot-color-by-button'));
+
+        expect(screen.getByRole('option', { name: 'annotations' })).toBeInTheDocument();
+    });
+
+    it('does not render an annotations option when withAnnotationLabels is false', async () => {
+        const user = userEvent.setup();
+
+        render(PlotColorByPopover, {
+            collectionId: 'test-collection-id',
+            selectedKey: null,
+            onSelectedKeyChange: vi.fn(),
+            withTags: false,
+            withAnnotationLabels: false
         });
 
         await user.click(screen.getByTestId('plot-color-by-button'));
 
         expect(screen.queryByRole('option', { name: 'annotations' })).not.toBeInTheDocument();
-        expect(screen.queryByRole('option', { name: 'tags' })).not.toBeInTheDocument();
+    });
+
+    it('selecting annotations stores annotation_label as the selected type', async () => {
+        const user = userEvent.setup();
+        const onSelectedKeyChange = vi.fn();
+        const colorByType = usePlotColorByType('test-collection-id');
+
+        render(PlotColorByPopover, {
+            collectionId: 'test-collection-id',
+            selectedKey: null,
+            onSelectedKeyChange,
+            withTags: false,
+            withAnnotationLabels: true
+        });
+
+        await user.click(screen.getByTestId('plot-color-by-button'));
+        await user.click(screen.getByRole('option', { name: 'annotations' }));
+
+        expect(onSelectedKeyChange).toHaveBeenCalledWith(null);
+        expect(get(colorByType.selectedColorByType)).toBe('annotation_label');
+    });
+
+    it('selecting a metadata field named annotation_label routes to metadata when annotation labels are also available', async () => {
+        metadataInfoStore.set([{ name: 'annotation_label', type: 'string' }]);
+
+        const user = userEvent.setup();
+        const onSelectedKeyChange = vi.fn();
+        const colorByType = usePlotColorByType('test-collection-id');
+
+        render(PlotColorByPopover, {
+            collectionId: 'test-collection-id',
+            selectedKey: null,
+            onSelectedKeyChange,
+            withTags: false,
+            withAnnotationLabels: true
+        });
+
+        await user.click(screen.getByTestId('plot-color-by-button'));
+        await user.click(screen.getByRole('option', { name: 'metadata.annotation_label' }));
+
+        expect(onSelectedKeyChange).toHaveBeenCalledWith('annotation_label');
+        expect(get(colorByType.selectedColorByType)).toBe('metadata');
+    });
+
+    it('selecting a metadata field named tags routes to metadata when tags are also available', async () => {
+        metadataInfoStore.set([{ name: 'tags', type: 'string' }]);
+
+        const user = userEvent.setup();
+        const onSelectedKeyChange = vi.fn();
+        const colorByType = usePlotColorByType('test-collection-id');
+
+        render(PlotColorByPopover, {
+            collectionId: 'test-collection-id',
+            selectedKey: null,
+            onSelectedKeyChange,
+            withTags: true,
+            withAnnotationLabels: false
+        });
+
+        await user.click(screen.getByTestId('plot-color-by-button'));
+        await user.click(screen.getByRole('option', { name: 'metadata.tags' }));
+
+        expect(onSelectedKeyChange).toHaveBeenCalledWith('tags');
+        expect(get(colorByType.selectedColorByType)).toBe('metadata');
     });
 
     it('clicking the selected metadata field clears the selected type', async () => {
@@ -98,7 +235,9 @@ describe('PlotColorByPopover', () => {
         render(PlotColorByPopover, {
             collectionId: 'test-collection-id',
             selectedKey: 'split',
-            onSelectedKeyChange
+            onSelectedKeyChange,
+            withTags: false,
+            withAnnotationLabels: false
         });
 
         await user.click(screen.getByTestId('plot-color-by-button'));
@@ -112,19 +251,51 @@ describe('PlotColorByPopover', () => {
         render(PlotColorByPopover, {
             collectionId: 'test-collection-id',
             selectedKey: 'split',
-            onSelectedKeyChange: vi.fn()
+            onSelectedKeyChange: vi.fn(),
+            withTags: false,
+            withAnnotationLabels: false
         });
 
         expect(screen.getByTestId('plot-color-by-button')).toHaveTextContent('metadata.split');
     });
 
-    it('shows the empty state when no supported metadata fields exist', async () => {
+    it('button shows tags when tags are selected', () => {
+        usePlotColorByType('test-collection-id').setSelectedColorByType('tags');
+
+        render(PlotColorByPopover, {
+            collectionId: 'test-collection-id',
+            selectedKey: null,
+            onSelectedKeyChange: vi.fn(),
+            withTags: true,
+            withAnnotationLabels: false
+        });
+
+        expect(screen.getByTestId('plot-color-by-button')).toHaveTextContent('tags');
+    });
+
+    it('button shows annotations when annotation_label is selected', () => {
+        usePlotColorByType('test-collection-id').setSelectedColorByType('annotation_label');
+
+        render(PlotColorByPopover, {
+            collectionId: 'test-collection-id',
+            selectedKey: null,
+            onSelectedKeyChange: vi.fn(),
+            withTags: false,
+            withAnnotationLabels: true
+        });
+
+        expect(screen.getByTestId('plot-color-by-button')).toHaveTextContent('annotations');
+    });
+
+    it('shows the empty state when no supported metadata fields exist and withTags is false', async () => {
         metadataInfoStore.set([{ name: 'payload', type: 'object' }]);
 
         render(PlotColorByPopover, {
             collectionId: 'test-collection-id',
             selectedKey: null,
-            onSelectedKeyChange: vi.fn()
+            onSelectedKeyChange: vi.fn(),
+            withTags: false,
+            withAnnotationLabels: false
         });
 
         expect(screen.getByTestId('plot-color-by-button')).toBeDisabled();
