@@ -821,6 +821,73 @@ def test_get_all_by_collection_id__distance_is_primary_over_order_by(
     assert result.samples[2].sample_id == image_b.sample_id
 
 
+def test_get_all_by_collection_id__order_by_is_tiebreaker_when_distances_equal(
+    db_session: Session,
+) -> None:
+    collection = create_collection(session=db_session)
+    collection_id = collection.collection_id
+
+    embedding_model = create_embedding_model(
+        session=db_session,
+        collection_id=collection_id,
+        embedding_model_name="example_embedding_model",
+        embedding_dimension=2,
+    )
+
+    # All images have the same distance to the query embedding
+    image_a = create_image(
+        session=db_session,
+        collection_id=collection_id,
+        file_path_abs="/images/a.png",
+        width=300,
+    )
+    image_b = create_image(
+        session=db_session,
+        collection_id=collection_id,
+        file_path_abs="/images/b.png",
+        width=100,
+    )
+    image_c = create_image(
+        session=db_session,
+        collection_id=collection_id,
+        file_path_abs="/images/c.png",
+        width=200,
+    )
+
+    # All embeddings are identical -> equal distances to any query
+    create_sample_embedding(
+        session=db_session,
+        sample_id=image_a.sample_id,
+        embedding=[1.0, 0.0],
+        embedding_model_id=embedding_model.embedding_model_id,
+    )
+    create_sample_embedding(
+        session=db_session,
+        sample_id=image_b.sample_id,
+        embedding=[1.0, 0.0],
+        embedding_model_id=embedding_model.embedding_model_id,
+    )
+    create_sample_embedding(
+        session=db_session,
+        sample_id=image_c.sample_id,
+        embedding=[1.0, 0.0],
+        embedding_model_id=embedding_model.embedding_model_id,
+    )
+
+    result = image_resolver.get_all_by_collection_id(
+        session=db_session,
+        collection_id=collection_id,
+        text_embedding=[1.0, 0.0],
+        order_by=[OrderByField(ImageSampleField.width)],
+    )
+
+    assert len(result.samples) == 3
+    # Distances are equal, so order_by width (asc) breaks the tie.
+    assert result.samples[0].sample_id == image_b.sample_id  # width=100
+    assert result.samples[1].sample_id == image_c.sample_id  # width=200
+    assert result.samples[2].sample_id == image_a.sample_id  # width=300
+
+
 def test_get_all_by_collection_id__sort_by_metadata_field_asc(db_session: Session) -> None:
     collection = create_collection(session=db_session)
     collection_id = collection.collection_id
