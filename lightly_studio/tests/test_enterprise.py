@@ -160,6 +160,17 @@ def test_connect__server_not_configured_503(
     patch_db_connect.assert_not_called()
 
 
+def test_connect__ssl_error(mocker: MockerFixture, patch_db_connect: MockType) -> None:
+    mocker.patch.object(
+        requests, "get", side_effect=requests.exceptions.SSLError("certificate verify failed")
+    )
+
+    with pytest.raises(ConnectionError, match="SSL error connecting to"):
+        enterprise.connect(api_url="https://host:8100", token="tok")
+
+    patch_db_connect.assert_not_called()
+
+
 def test_connect__connection_error(mocker: MockerFixture, patch_db_connect: MockType) -> None:
     mocker.patch.object(requests, "get", side_effect=requests.ConnectionError("refused"))
 
