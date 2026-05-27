@@ -11,8 +11,10 @@ from uuid import UUID, uuid4
 import numpy as np
 import sqlalchemy
 from numpy.typing import NDArray
-from sqlmodel import Session
+from sqlmodel import Session, col, select
 
+from lightly_studio.models.annotation.annotation_base import AnnotationBaseTable
+from lightly_studio.models.sample import SampleTable
 from lightly_studio.models.tag import TagCreate
 from lightly_studio.resolvers import (
     annotation_label_resolver,
@@ -138,18 +140,38 @@ def _process_explicit_target_distribution(
     return label_id_to_target, unused_label_ids, remaining_ratio
 
 
-def _get_class_balancing_data(  # noqa: PLR0913
+def _get_class_balancing_data(  # noqa: C901
     session: Session,
     strat: AnnotationClassBalancingStrategy,
     dataset_id: UUID,
-    annotation_label_ids: Sequence[UUID],
     input_sample_ids: Sequence[UUID],
-    sample_id_to_annotation_label_ids: Mapping[UUID, list[UUID]],
+    annotation_label_ids: Sequence[UUID] | None = None,
 ) -> tuple[NDArray[np.float32], list[float]]:
     """Helper function to get class balancing data."""
+    annotations = _get_annotations_for_class_balancing(
+        session=session,
+        parent_sample_ids=input_sample_ids,
+        annotation_source_id=strat.annotation_source_id,
+    )
+    if strat.annotation_source_id is not None and not annotations:
+        raise ValueError(
+            "Annotation source with the given ID does not contain annotations "
+            "for the selected samples."
+        )
+
+    if annotation_label_ids is None:
+        annotation_label_ids = [annotation.annotation_label_id for annotation in annotations]
+    sample_id_to_annotation_label_ids = defaultdict(list)
+    for annotation in annotations:
+        sample_id_to_annotation_label_ids[annotation.parent_sample_id].append(
+            annotation.annotation_label_id
+        )
+
     if strat.target_distribution == "uniform":
-        target_keys_set = set(annotation_label_ids)
-        target_keys = list(target_keys_set)
+        # Keep first-seen order so the distribution columns stay stable and line up with values.
+        target_keys = list(dict.fromkeys(annotation_label_ids))
+        if not target_keys:
+            return np.zeros((len(input_sample_ids), 0), dtype=np.float32), []
         target_values = [1.0 / len(target_keys)] * len(target_keys)
     elif strat.target_distribution == "input":
         # Count the number of times each label appears in the input
@@ -275,6 +297,32 @@ def _get_embeddings_by_sample_ids(
     return [embedding.embedding for embedding in embedding_tables]
 
 
+def _get_annotations_for_class_balancing(
+    session: Session,
+    parent_sample_ids: Sequence[UUID],
+    annotation_source_id: UUID | None,
+) -> list[AnnotationBaseTable]:
+    """Resolve annotations that should contribute to class balancing."""
+    if annotation_source_id is None:
+        return list(
+            annotation_resolver.get_all_by_parent_sample_ids(
+                session=session,
+                parent_sample_ids=parent_sample_ids,
+            )
+        )
+
+    annotations_statement = (
+        select(AnnotationBaseTable)
+        .join(
+            SampleTable,
+            col(SampleTable.sample_id) == col(AnnotationBaseTable.sample_id),
+        )
+        .where(col(AnnotationBaseTable.parent_sample_id).in_(parent_sample_ids))
+        .where(col(SampleTable.collection_id) == annotation_source_id)
+    )
+    return list(session.exec(annotations_statement).all())
+
+
 def _add_strategy_to_mundig(
     session: Session,
     context: _SelectionContext,
@@ -342,24 +390,11 @@ def _add_strategy_to_mundig(
             strength=strat.strength,
         )
     elif isinstance(strat, AnnotationClassBalancingStrategy):
-        annotations = annotation_resolver.get_all_by_parent_sample_ids(
-            session=session,
-            parent_sample_ids=context.input_sample_ids,
-        )
-        annotation_label_ids = [annotation.annotation_label_id for annotation in annotations]
-        sample_id_to_annotation_label_ids = defaultdict(list)
-        for annotation in annotations:
-            sample_id_to_annotation_label_ids[annotation.parent_sample_id].append(
-                annotation.annotation_label_id
-            )
-
         class_distributions, target_values = _get_class_balancing_data(
             session=session,
             strat=strat,
             dataset_id=context.dataset_id,
-            annotation_label_ids=annotation_label_ids,
             input_sample_ids=context.input_sample_ids,
-            sample_id_to_annotation_label_ids=sample_id_to_annotation_label_ids,
         )
         mundig.add_class_balancing(
             class_distributions=class_distributions,
