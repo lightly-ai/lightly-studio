@@ -41,6 +41,7 @@
             </div>
         {/if}
         <button
+            type="button"
             class="text-muted-foreground hover:text-foreground"
             onclick={onClear}
             title="Clear {title.toLowerCase()}"
