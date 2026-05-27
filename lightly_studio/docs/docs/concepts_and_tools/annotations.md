@@ -1,11 +1,16 @@
 # Annotations
 
-Annotations in LightlyStudio allow you to view, create, edit, and delete annotation labels on your
+Annotations in LightlyStudio allow you to view, create, edit, and delete annotations on your
 samples in the GUI or via the [Python API](../api/annotation.md). Supported annotation types
 include object detection, segmentation, and classification. You can import annotations from common
 formats like COCO or YOLO and more. See [Image Dataset](../dataset_setup/image_dataset.md) and
 [Video Dataset](../dataset_setup/video_dataset.md) for the available import workflows and supported
 formats.
+
+!!! info "Terminology"
+    - **Annotation** — a classification, object-detection box, or segmentation mask attached to a sample.
+    - **Annotation class** — the category of an annotation, e.g. `"dog"` or `"cat"`.
+    - **Annotation source** — a named group of annotations from one origin, e.g. ground truth, a model's predictions, or an annotator.
 
 ## Annotations in the GUI
 
@@ -28,13 +33,13 @@ Use the Python API when you want to inspect annotations programmatically, genera
 predictions, or import custom annotation outputs. Predictions and human annotations are treated as the same concept in LightlyStudio. Any functions for annotations can also process predictions. Predictions can additionally have an optional `confidence` value. See
 [Annotation API Reference](../api/annotation.md) for the full API surface.
 
-### Annotation collections
+### Annotation sources
 
-Every annotation belongs to an annotation collection. Annotation collections group related annotations, for
+Every annotation belongs to an annotation source. Annotation sources group related annotations, for
 example ground truth, predictions from one model run, or annotations from different annotators.
 
 This lets you keep multiple annotation sources for the same samples separate. In the GUI, you can
-inspect collections individually, visualize multiple collections together, and compare collections via evaluation runs.
+inspect individual annotation sources, visualize multiple sources together, and compare them via evaluation runs.
 
 ### Adding annotations
 
@@ -57,15 +62,15 @@ dataset.add_annotations_from_coco(
 ```
 
 When images are already in the dataset, the dataset-level `add_annotations_from_*` helpers import
-annotations into a named annotation collection. This named-collection workflow is currently supported for image
+annotations into a named annotation source. This named-source workflow is currently supported for image
 datasets via
 [`add_annotations_from_coco`](../api/dataset.md#lightly_studio.ImageDataset),
 [`add_annotations_from_yolo`](../api/dataset.md#lightly_studio.ImageDataset), and
 [`add_annotations_from_labelformat`](../api/dataset.md#lightly_studio.ImageDataset).
-All of these helpers take a `name` argument, which becomes the annotation collection name.
+All of these helpers take a `name` argument, which becomes the annotation source.
 
-Reusing the same `name` appends annotations to the existing collection. Using a new `name` creates a new
-collection.
+Reusing the same `name` appends annotations to the existing annotation source. Using a new `name` creates a new
+annotation source.
 
 ```python
 import lightly_studio as ls
