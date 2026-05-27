@@ -12,7 +12,7 @@ from typing import Any, Literal, cast
 
 from alembic import context
 from alembic.autogenerate.api import AutogenContext
-from sqlalchemy import engine_from_config, pool, text
+from sqlalchemy import engine, pool, text
 from sqlalchemy.engine import Connection
 from sqlmodel import SQLModel
 
@@ -101,24 +101,14 @@ def run_migrations() -> None:
         _configure_context(connection=cast(Connection, shared_connection))
         return
 
-    connectable = engine_from_config(
+    connectable = engine.engine_from_config(
         config.get_section(config.config_ini_section, {}),
         prefix="sqlalchemy.",
         poolclass=pool.NullPool,
     )
 
     with connectable.connect() as connection:
-        connection.execute(statement=text("CREATE EXTENSION IF NOT EXISTS vector"))
-        connection.commit()
-        context.configure(
-            connection=connection,
-            target_metadata=target_metadata,
-            compare_type=True,
-            render_item=_render_item,
-        )
-
-        with context.begin_transaction():
-            context.run_migrations()
+        _configure_context(connection=connection)
 
 
 _ensure_script_location()
