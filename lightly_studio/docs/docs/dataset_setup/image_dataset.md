@@ -473,7 +473,7 @@ print(image.metadata["my_key"])
 from lightly_studio.core.annotation import CreateObjectDetection
 image.add_annotation(
     CreateObjectDetection(
-        label="dog",
+        class_name="dog",
         x=10,
         y=20,
         width=30,
@@ -482,7 +482,7 @@ image.add_annotation(
     )
 )
 for annotation in image.annotations:
-    print(annotation.label)
+    print(annotation.class_name)
 ```
 
 <!-- TODO(Michal, 03/2026)
