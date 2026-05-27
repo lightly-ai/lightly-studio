@@ -19,10 +19,10 @@
         rootCollection: Collection;
     } = $props();
 
+    // Get datasetId and collectionType from URL params
     const datasetId = $derived(page.params.dataset_id!);
     const collectionType = $derived(page.params.collection_type!);
     const collectionId = $derived(page.params.collection_id!);
-    const datasetSampleType = $derived(page.data.datasetSampleType);
 
     const { query: sampleAdjacentQuery } = $derived(
         useAdjacentAnnotations({
