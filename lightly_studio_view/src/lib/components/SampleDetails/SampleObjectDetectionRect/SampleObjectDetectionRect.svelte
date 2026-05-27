@@ -17,6 +17,7 @@
     import { usePendingOperations } from '$lib/hooks/usePendingOperations/usePendingOperations';
     import ResizableRectangle from '$lib/components/ResizableRectangle/ResizableRectangle.svelte';
     import { useAnnotationLabelContext } from '$lib/contexts/SampleDetailsAnnotation.svelte';
+    import SelectClassDialog from '$lib/components/SelectClassDialog/SelectClassDialog.svelte';
     import { getBoundingBox } from '$lib/components/SampleAnnotation/utils';
     import type { PendingChange } from '../pendingChange';
 
@@ -51,6 +52,30 @@
     let temporaryBbox = $state<BoundingBox | null>(null);
     let shouldDisableInteraction = $state(false);
     const labels = useAnnotationLabels(() => ({ collectionId }));
+
+    // --- Select-class dialog ---
+    let showSelectClassDialog = $state(false);
+    let resolveRequestLabel: ((label: string | null) => void) | null = null;
+
+    const requestLabel = (): Promise<string | null> => {
+        showSelectClassDialog = true;
+        return new Promise<string | null>((resolve) => {
+            resolveRequestLabel = resolve;
+        });
+    };
+
+    const handleClassSelected = (label: string) => {
+        showSelectClassDialog = false;
+        resolveRequestLabel?.(label);
+        resolveRequestLabel = null;
+    };
+
+    const handleClassDialogCancel = () => {
+        showSelectClassDialog = false;
+        resolveRequestLabel?.(null);
+        resolveRequestLabel = null;
+    };
+    // ---
     const { createLabel } = useCreateLabel({ collectionId });
     const { createAnnotation } = useCreateAnnotation({
         collectionId
@@ -169,20 +194,22 @@
         const pendingOperation = startCreateBoundingBoxPending();
 
         try {
-            if (!annotationLabelContext.annotationLabel) {
-                toast.error('Please select a class before creating an annotation');
-                return;
+            let selectedLabelName = annotationLabelContext.annotationLabel;
+            if (!selectedLabelName) {
+                selectedLabelName = await requestLabel();
+                if (!selectedLabelName) return;
+                setAnnotationLabel(selectedLabelName);
             }
 
             let label = labels.data?.find(
-                (label) => label.annotation_label_name === annotationLabelContext.annotationLabel
+                (label) => label.annotation_label_name === selectedLabelName
             );
 
             // Create label if it does not exist yet
             if (!label) {
                 label = await createLabel({
                     dataset_id: datasetId,
-                    annotation_label_name: annotationLabelContext.annotationLabel
+                    annotation_label_name: selectedLabelName
                 });
             }
 
@@ -232,7 +259,8 @@
         setLastCreatedAnnotationId,
         setAnnotationId,
         setIsDrawing,
-        setCurrentBoundingBox
+        setCurrentBoundingBox,
+        setAnnotationLabel
     } = useAnnotationLabelContext();
 
     const interactionPointerEvents = $derived(shouldDisableInteraction ? 'none' : 'all');
@@ -337,4 +365,11 @@
     cursor={'crosshair'}
     pointerEvents={interactionPointerEvents}
     {sample}
+/>
+
+<SelectClassDialog
+    bind:open={showSelectClassDialog}
+    labels={labels.data?.map((l) => l.annotation_label_name ?? '').filter(Boolean) ?? []}
+    onConfirm={handleClassSelected}
+    onCancel={handleClassDialogCancel}
 />

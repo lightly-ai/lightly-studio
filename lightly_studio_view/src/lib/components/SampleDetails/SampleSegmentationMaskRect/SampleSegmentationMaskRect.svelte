@@ -17,6 +17,7 @@
     import { page } from '$app/state';
     import type { PendingChange } from '../pendingChange';
     import SampleAnnotationRect from '../SampleAnnotationRect/SampleAnnotationRect.svelte';
+    import SelectClassDialog from '$lib/components/SelectClassDialog/SelectClassDialog.svelte';
 
     type SampleSegmentationMaskRectProps = {
         sample: {
@@ -73,6 +74,31 @@
     const { refetch: refetchRootCollection } = $derived.by(() =>
         useCollectionWithChildren({ collectionId: datasetId })
     );
+
+    // --- Select-class dialog ---
+    let showSelectClassDialog = $state(false);
+    let resolveRequestLabel: ((label: string | null) => void) | null = null;
+
+    const requestLabel = (): Promise<string | null> => {
+        showSelectClassDialog = true;
+        return new Promise<string | null>((resolve) => {
+            resolveRequestLabel = resolve;
+        });
+    };
+
+    const handleClassSelected = (label: string) => {
+        showSelectClassDialog = false;
+        resolveRequestLabel?.(label);
+        resolveRequestLabel = null;
+    };
+
+    const handleClassDialogCancel = () => {
+        showSelectClassDialog = false;
+        resolveRequestLabel?.(null);
+        resolveRequestLabel = null;
+    };
+    // ---
+
     const brushApi = $derived.by(() =>
         useSegmentationMaskBrush({
             collectionId,
@@ -81,6 +107,7 @@
             sample,
             annotations: sample.annotations,
             refetch,
+            requestLabel,
             onAnnotationCreated: () => {
                 // Only refresh root collection if there were no annotations before
                 if (sample.annotations.length === 0) {
@@ -347,6 +374,13 @@
             isDrawing: Boolean(annotationLabelContext.isDrawing)
         });
     }}
+/>
+
+<SelectClassDialog
+    bind:open={showSelectClassDialog}
+    labels={labels.data?.map((l) => l.annotation_label_name ?? '').filter(Boolean) ?? []}
+    onConfirm={handleClassSelected}
+    onCancel={handleClassDialogCancel}
 />
 
 <style>
