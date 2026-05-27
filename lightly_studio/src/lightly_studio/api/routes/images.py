@@ -12,8 +12,8 @@ from fastapi import APIRouter, HTTPException, Query
 from fastapi.responses import StreamingResponse
 from PIL import Image, ImageOps, UnidentifiedImageError
 
+from lightly_studio import db_manager
 from lightly_studio.api.routes.api import status
-from lightly_studio.db_manager import SessionDep
 from lightly_studio.models import image
 from lightly_studio.models.settings import GridViewThumbnailQualityType
 from lightly_studio.utils.executor import get_media_executor
@@ -26,7 +26,6 @@ JPEG_QUALITY = 75
 @app_router.get("/sample/{sample_id}")
 async def serve_image_by_sample_id(
     sample_id: str,
-    session: SessionDep,
     quality: GridViewThumbnailQualityType = GridViewThumbnailQualityType.RAW,
     max_width: int | None = Query(default=None, ge=1, le=4096),
     max_height: int | None = Query(default=None, ge=1, le=4096),
@@ -35,7 +34,6 @@ async def serve_image_by_sample_id(
 
     Args:
         sample_id: The ID of the sample.
-        session: Database session.
         quality: Thumbnail quality mode. Use 'high' for compressed JPEG output.
         max_width: Maximum width in pixels for high quality mode.
         max_height: Maximum height in pixels for high quality mode.
@@ -46,18 +44,17 @@ async def serve_image_by_sample_id(
     Raises:
         HTTPException: If the sample is not found or the file is not accessible.
     """
-    # Retrieve the sample from the database.
-    sample_record = session.get(image.ImageTable, sample_id)
-    if not sample_record:
-        raise HTTPException(
-            status_code=status.HTTP_STATUS_NOT_FOUND,
-            detail=f"Sample not found: {sample_id}",
-        )
-
-    file_path = sample_record.file_path_abs
-    # Close the session before file I/O. Image reads can be slow, and holding a
-    # connection through them can exhaust the Postgres connection pool.
-    session.close()
+    # Avoid SessionDep here: FastAPI runs its sync-generator dependency on
+    # Starlette's threadpool, exhausting threadpool slots under load. Manage
+    # the session inline and close it before file I/O.
+    with db_manager.session() as sess:
+        sample_record = sess.get(image.ImageTable, sample_id)
+        if not sample_record:
+            raise HTTPException(
+                status_code=status.HTTP_STATUS_NOT_FOUND,
+                detail=f"Sample not found: {sample_id}",
+            )
+        file_path = sample_record.file_path_abs
 
     try:
         content, content_type = await asyncio.get_running_loop().run_in_executor(
