@@ -1,27 +1,25 @@
 # Glossary and Naming
 
-These terms are canonical across all **user-facing** surfaces: the GUI, the docs, and the public Python API
-(names, arguments, docstrings, and error messages). Use them consistently and avoid the forbidden alternatives.
+Canonical terminology for LightlyStudio. Use the **Term** in every user-facing surface — the GUI, the
+docs, and the public Python API (names, arguments, docstrings, and error messages). The **Avoid** column
+lists wording that must not appear in those surfaces.
 
-| Concept | Term to use | Python identifier | Do **not** call it |
+Internal implementation names (database tables and columns, resolvers, REST JSON fields, and the
+generated frontend client) are exempt and keep their existing spelling — do not rename them mechanically.
+
+Add new topics as their own `##` section below.
+
+## Annotations
+
+| Concept | Term | Python identifier | Avoid |
 |---|---|---|---|
-| A single piece of data attached to a sample: a classification, an object-detection bounding box, or a segmentation mask. | **annotation** | — | "label", "annotation label" |
-| The category of an annotation, e.g. `"dog"`, `"cat"`. | **annotation class** | `class_name` | "label", "label class", "annotation label" |
-| The named origin that groups annotations from one provider, e.g. ground truth, a model's predictions, or an annotator. | **annotation source** | `annotation_source` | "annotation collection", "collection", a bare "name", "collection name" |
+| A classification, object-detection box, or segmentation mask attached to a sample | **annotation** | — | label, annotation label |
+| The category of an annotation, e.g. `"dog"`, `"cat"` | **annotation class** | `class_name` | label, label class, annotation label |
+| The named origin grouping annotations, e.g. ground truth, a model's predictions, or an annotator | **annotation source** | `annotation_source` | annotation collection, collection, bare "name", collection name, label source |
 
-## Forbidden user-facing terms
+**Labeling** — the process of a human creating annotations — stays as-is (e.g. "labeling workflow",
+"auto-labeling"). Only the *noun* "label" is replaced by "annotation" / "annotation class".
 
-Do not use any of these in the GUI, docs, public Python API, or error messages: **"label"**, **"annotation label"**,
-**"label class"**, **"label source"**, **"annotation collection"**, or **"collection name"** (when referring to an
-annotation source).
-
-## Exempt (internal) names
-
-Internal implementation names are intentionally exempt and keep their existing spelling. Do **not** mechanically
-rename them:
-
-- Database tables/columns, e.g. `annotation_label`, `annotation_label_name`, `annotation_label_id`,
-  `annotation_collection_id`, `annotation_collection_coverage`, and `collection.name`.
-- Resolvers and internal helpers, e.g. `annotation_label_resolver`, `annotation_collection_coverage_resolver`,
-  and the `collection_name` parameter of internal `add_annotations` helpers.
-- REST endpoint paths and JSON field names, and the generated frontend API client (`*.gen.ts`).
+Exempt internal names for this topic: `annotation_label`, `annotation_label_name`, `annotation_label_id`,
+`annotation_collection_id`, `annotation_collection_coverage`, `collection.name`, the `*_resolver` modules,
+and the `collection_name` parameter of internal `add_annotations` helpers.

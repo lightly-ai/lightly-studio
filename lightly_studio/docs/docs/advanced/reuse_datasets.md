@@ -67,7 +67,7 @@ lightly-studio gui
 A typical workflow is therefore:
 
 1. Run your Python script once to populate the database.
-2. Call `lightly-studio gui` as often as you want to browse, annotate, and curate.
+2. Call `lightly-studio gui` as often as you want to browse, label, and curate.
 
 If the DuckDB file lives elsewhere, point at it explicitly:
 
