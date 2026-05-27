@@ -132,6 +132,8 @@ describe('useSegmentationMaskBrush', () => {
     it('shows toast error when bounding box is invalid', async () => {
         vi.mocked(computeBoundingBoxFromMask).mockReturnValue(null);
 
+        annotationLabelContext.annotationLabel = 'car';
+
         const refetch = vi.fn();
 
         const { finishBrush } = useSegmentationMaskBrush({
@@ -280,6 +282,7 @@ describe('useSegmentationMaskBrush', () => {
         expect(toast.error).toHaveBeenCalledWith(
             'Please select a class before creating an annotation'
         );
+        expect(applySegmentationMaskConstraints).not.toHaveBeenCalled();
         expect(createLabel).not.toHaveBeenCalled();
         expect(createAnnotation).not.toHaveBeenCalled();
         expect(refetch).not.toHaveBeenCalled();

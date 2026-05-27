@@ -75,6 +75,12 @@ export function useSegmentationMaskBrush({
             return;
         }
 
+        const annotationLabelName = annotationLabelContext.annotationLabel;
+        if (!selectedAnnotation && !annotationLabelName) {
+            toast.error('Please select a class before creating an annotation');
+            return;
+        }
+
         const overriddenAnnotations = await applySegmentationMaskConstraints({
             workingMask,
             skipId: selectedAnnotation?.sample_id,
@@ -138,19 +144,12 @@ export function useSegmentationMaskBrush({
             }
         }
 
-        if (!annotationLabelContext.annotationLabel) {
-            toast.error('Please select a class before creating an annotation');
-            return;
-        }
-
-        let label = labels?.find(
-            (l) => l.annotation_label_name === annotationLabelContext.annotationLabel
-        );
+        let label = labels?.find((l) => l.annotation_label_name === annotationLabelName);
 
         if (!label) {
             label = await createLabel({
                 dataset_id: datasetId,
-                annotation_label_name: annotationLabelContext.annotationLabel
+                annotation_label_name: annotationLabelName!
             });
         }
 
