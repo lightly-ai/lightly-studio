@@ -25,6 +25,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- Fixed hovering over breadcrumb links on detail pages (annotations, video frames) triggering unwanted navigation.
+
 ### Security
 
 ## \[0.4.14\] - 2026-05-18
