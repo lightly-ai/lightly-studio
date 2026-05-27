@@ -65,11 +65,11 @@
     </Select.Root>
 
     <Button
-        variant={$selectedLabel ? 'secondary' : 'ghost'}
+        variant="ghost"
         size="icon"
-        class="h-8 w-8"
         disabled={!$selectedLabel}
         onclick={toggleDirection}
+        class="size-auto p-0 hover:bg-transparent [&>svg]:text-foreground [&>svg]:hover:text-muted-foreground"
         data-testid="sort-direction-button"
         aria-label={$selectedDirection === SortDirection.DESC
             ? 'Sort descending'
