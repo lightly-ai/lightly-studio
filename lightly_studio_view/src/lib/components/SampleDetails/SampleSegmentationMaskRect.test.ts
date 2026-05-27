@@ -386,12 +386,11 @@ describe('SampleSegmentationMaskRect', () => {
     it('returns the same in-flight promise for concurrent requestLabel calls', async () => {
         let capturedRequestLabel: (() => Promise<string | null>) | undefined;
 
-        useSegmentationMaskBrushMock.mockImplementation(
-            (params: { requestLabel?: () => Promise<string | null> }) => {
-                capturedRequestLabel = params.requestLabel;
-                return { finishBrush: vi.fn() };
-            }
-        );
+        useSegmentationMaskBrushMock.mockImplementation((params) => {
+            capturedRequestLabel = (params as { requestLabel?: () => Promise<string | null> })
+                .requestLabel;
+            return { finishBrush: vi.fn() };
+        });
 
         const { container } = render(SampleSegmentationMaskRect, {
             props: {
