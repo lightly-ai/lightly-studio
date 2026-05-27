@@ -16,9 +16,7 @@
     let selectedItem = $state<ListItem | undefined>(undefined);
 
     const items = $derived<ListItem[]>(
-        [...new Set(labels)]
-            .sort((a, b) => a.localeCompare(b))
-            .map((l) => ({ value: l, label: l }))
+        [...new Set(labels)].sort((a, b) => a.localeCompare(b)).map((l) => ({ value: l, label: l }))
     );
 
     const handleConfirm = () => {
