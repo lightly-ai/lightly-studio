@@ -178,10 +178,8 @@ test('Diversity selection creates tag with correct number of samples', async ({
     const tagNames = await samplesPage.getTagNames();
     expect(tagNames).toContain(selectionTagName);
 
-    // Filter by the new tag and verify the correct number of samples.
-    await samplesPage.pressTag(selectionTagName);
-    const sampleCount = await samplesPage.getSamples().count();
-    expect(sampleCount).toBe(nSamples);
+    // The newly created selection tag is already applied, so the grid should show the subset.
+    await expect(samplesPage.getSamples()).toHaveCount(nSamples, { timeout: 10000 });
 });
 
 test('Typicality selection creates tag with correct number of samples', async ({
@@ -217,10 +215,8 @@ test('Typicality selection creates tag with correct number of samples', async ({
     const tagNames = await samplesPage.getTagNames();
     expect(tagNames).toContain(selectionTagName);
 
-    // Filter by the new tag and verify the correct number of samples.
-    await samplesPage.pressTag(selectionTagName);
-    const sampleCount = await samplesPage.getSamples().count();
-    expect(sampleCount).toBe(nSamples);
+    // The newly created selection tag is already applied, so the grid should show the subset.
+    await expect(samplesPage.getSamples()).toHaveCount(nSamples, { timeout: 10000 });
 });
 
 test('Selection shows error toast when tag already exists', async ({ page, samplesPage }) => {
