@@ -77,26 +77,32 @@
 
     // --- Select-class dialog ---
     let showSelectClassDialog = $state(false);
+    let pendingLabelRequest: Promise<string | null> | null = null;
     let resolveRequestLabel: ((label: string | null) => void) | null = null;
 
     const requestLabel = (): Promise<string | null> => {
+        // Single-flight: concurrent callers share the in-flight dialog promise so
+        // that resolveRequestLabel is never overwritten and earlier callers cannot
+        // be stranded waiting on a promise that will never settle.
+        if (pendingLabelRequest) return pendingLabelRequest;
+
         showSelectClassDialog = true;
-        return new Promise<string | null>((resolve) => {
+        pendingLabelRequest = new Promise<string | null>((resolve) => {
             resolveRequestLabel = resolve;
         });
+        return pendingLabelRequest;
     };
 
-    const handleClassSelected = (label: string) => {
+    const settleRequestLabel = (label: string | null) => {
         showSelectClassDialog = false;
         resolveRequestLabel?.(label);
         resolveRequestLabel = null;
+        pendingLabelRequest = null;
     };
 
-    const handleClassDialogCancel = () => {
-        showSelectClassDialog = false;
-        resolveRequestLabel?.(null);
-        resolveRequestLabel = null;
-    };
+    const handleClassSelected = (label: string) => settleRequestLabel(label);
+
+    const handleClassDialogCancel = () => settleRequestLabel(null);
     // ---
 
     const brushApi = $derived.by(() =>
