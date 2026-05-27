@@ -1,4 +1,4 @@
-"""Test selection API endpoints."""
+"""Test sampling API endpoints."""
 
 from __future__ import annotations
 
@@ -8,6 +8,7 @@ from fastapi.testclient import TestClient
 from pytest_mock import MockerFixture
 from sqlmodel import Session
 
+from lightly_studio.api.routes.api import sampling as sampling_api
 from lightly_studio.metadata import compute_typicality
 from lightly_studio.models.collection import SampleType
 from lightly_studio.resolvers import (
@@ -20,22 +21,23 @@ from lightly_studio.resolvers import (
 from lightly_studio.resolvers.image_filter import FilterDimensions, ImageFilter
 from lightly_studio.resolvers.sample_resolver.sample_filter import SampleFilter
 from lightly_studio.resolvers.video_resolver.video_filter import VideoFilter
+from lightly_studio.sampling.sampling_config import EmbeddingDiversityStrategy
 from tests import helpers_resolvers
 from tests.helpers_resolvers import ImageStub
 from tests.resolvers.video import helpers as video_helpers
 
 
-def test_create_combination_selection__diversity_success(
+def test_create_combination_sampling__diversity_success(
     test_client: TestClient, db_session: Session
 ) -> None:
-    """Test successful diversity selection."""
+    """Test successful diversity sampling."""
     collection_id = helpers_resolvers.fill_db_with_samples_and_embeddings(
         session=db_session, n_samples=10, embedding_model_names=["test_embedding_model"]
     )
 
     request_data = {
         "n_samples_to_select": 3,
-        "selection_result_tag_name": "test_combination_selection",
+        "sampling_result_tag_name": "test_combination_sampling",
         "strategies": [
             {
                 "strategy_name": "diversity",
@@ -52,7 +54,7 @@ def test_create_combination_selection__diversity_success(
 
     # Verify tag was created with correct samples
     created_tag = tag_resolver.get_by_name(
-        session=db_session, tag_name="test_combination_selection", collection_id=collection_id
+        session=db_session, tag_name="test_combination_sampling", collection_id=collection_id
     )
     assert created_tag is not None
 
@@ -64,17 +66,47 @@ def test_create_combination_selection__diversity_success(
     assert len(result.samples) == 3
 
 
-def test_create_combination_selection__diversity_success_videos(
+def test_create_combination_selection__passes_request_to_sampling(
+    db_session: Session, mocker: MockerFixture
+) -> None:
+    """Test selection endpoint passes the request payload to sampling."""
+    collection = helpers_resolvers.create_collection(
+        session=db_session,
+        collection_name="legacy-selection-test",
+    )
+    spy = mocker.patch.object(sampling_api, "sampling_via_database")
+    mocker.patch.object(image_resolver, "get_sample_ids", return_value=["a", "b", "c"])
+
+    sampling_api.create_combination_selection(
+        session=db_session,
+        collection=collection,
+        request=sampling_api.SamplingRequest(
+            n_samples_to_select=3,
+            sampling_result_tag_name="selection_tag",
+            strategies=[
+                EmbeddingDiversityStrategy(
+                    strategy_name="diversity",
+                    embedding_model_name="test_embedding_model",
+                )
+            ],
+        ),
+    )
+
+    config = spy.call_args.kwargs["config"]
+    assert config.sampling_result_tag_name == "selection_tag"
+
+
+def test_create_combination_sampling__diversity_success_videos(
     test_client: TestClient, db_session: Session
 ) -> None:
-    """Test successful diversity selection on a video collection."""
+    """Test successful diversity sampling on a video collection."""
     collection_id = helpers_resolvers.fill_db_with_video_samples_and_embeddings(
         session=db_session, n_samples=10, embedding_model_names=["test_embedding_model"]
     )
 
     request_data = {
         "n_samples_to_select": 3,
-        "selection_result_tag_name": "test_combination_selection",
+        "sampling_result_tag_name": "test_combination_sampling",
         "strategies": [
             {
                 "strategy_name": "diversity",
@@ -89,7 +121,7 @@ def test_create_combination_selection__diversity_success_videos(
     assert response.text == ""
 
     created_tag = tag_resolver.get_by_name(
-        session=db_session, tag_name="test_combination_selection", collection_id=collection_id
+        session=db_session, tag_name="test_combination_sampling", collection_id=collection_id
     )
     assert created_tag is not None
 
@@ -100,17 +132,17 @@ def test_create_combination_selection__diversity_success_videos(
     assert len(result.samples) == 3
 
 
-def test_create_combination_selection__insufficient_samples(
+def test_create_combination_sampling__insufficient_samples(
     test_client: TestClient, db_session: Session
 ) -> None:
-    """Test diversity selection when requesting more samples than available."""
+    """Test diversity sampling when requesting more samples than available."""
     collection_id = helpers_resolvers.fill_db_with_samples_and_embeddings(
         session=db_session, n_samples=2, embedding_model_names=["test_embedding_model"]
     )
 
     request_data = {
         "n_samples_to_select": 5,
-        "selection_result_tag_name": "test_selection",
+        "sampling_result_tag_name": "test_sampling",
         "strategies": [
             {
                 "strategy_name": "diversity",
@@ -126,17 +158,17 @@ def test_create_combination_selection__insufficient_samples(
     assert "has only 2 samples" in response.json()["detail"]
 
 
-def test_create_combination_selection__duplicate_tag_name(
+def test_create_combination_sampling__duplicate_tag_name(
     test_client: TestClient, db_session: Session
 ) -> None:
-    """Test diversity selection when tag name already exists."""
+    """Test diversity sampling when tag name already exists."""
     collection_id = helpers_resolvers.fill_db_with_samples_and_embeddings(
         session=db_session, n_samples=5, embedding_model_names=["test_embedding_model"]
     )
 
     request_data = {
         "n_samples_to_select": 3,
-        "selection_result_tag_name": "duplicate_tag",
+        "sampling_result_tag_name": "duplicate_tag",
         "strategies": [
             {
                 "strategy_name": "diversity",
@@ -155,10 +187,10 @@ def test_create_combination_selection__duplicate_tag_name(
     assert "already exists" in response.json()["error"]
 
 
-def test_create_combination_selection__metadata_weighting_success(
+def test_create_combination_sampling__metadata_weighting_success(
     test_client: TestClient, db_session: Session
 ) -> None:
-    """Test successful diversity selection."""
+    """Test successful diversity sampling."""
     collection = helpers_resolvers.create_collection(
         session=db_session, collection_name="test_collection"
     )
@@ -189,7 +221,7 @@ def test_create_combination_selection__metadata_weighting_success(
 
     request_data = {
         "n_samples_to_select": 2,
-        "selection_result_tag_name": "test_combination_selection",
+        "sampling_result_tag_name": "test_combination_sampling",
         "strategies": [
             {"strategy_name": "weights", "metadata_key": "typicality"},
             {
@@ -208,7 +240,7 @@ def test_create_combination_selection__metadata_weighting_success(
 
     # Verify tag was created with correct samples
     created_tag = tag_resolver.get_by_name(
-        session=db_session, tag_name="test_combination_selection", collection_id=collection_id
+        session=db_session, tag_name="test_combination_sampling", collection_id=collection_id
     )
     assert created_tag is not None
 
@@ -224,10 +256,10 @@ def test_create_combination_selection__metadata_weighting_success(
     assert result.samples[1].file_name == "image3.jpg"
 
 
-def test_create_combination_selection__metadata_weighting_success_videos(
+def test_create_combination_sampling__metadata_weighting_success_videos(
     test_client: TestClient, db_session: Session
 ) -> None:
-    """Test successful metadata weighting + diversity selection on a video collection."""
+    """Test successful metadata weighting + diversity sampling on a video collection."""
     collection = helpers_resolvers.create_collection(
         session=db_session,
         collection_name="test_video_collection",
@@ -266,7 +298,7 @@ def test_create_combination_selection__metadata_weighting_success_videos(
 
     request_data = {
         "n_samples_to_select": 2,
-        "selection_result_tag_name": "test_combination_selection",
+        "sampling_result_tag_name": "test_combination_sampling",
         "strategies": [
             {"strategy_name": "weights", "metadata_key": "typicality"},
             {
@@ -283,7 +315,7 @@ def test_create_combination_selection__metadata_weighting_success_videos(
     assert response.text == ""
 
     created_tag = tag_resolver.get_by_name(
-        session=db_session, tag_name="test_combination_selection", collection_id=collection_id
+        session=db_session, tag_name="test_combination_sampling", collection_id=collection_id
     )
     assert created_tag is not None
 
@@ -297,10 +329,10 @@ def test_create_combination_selection__metadata_weighting_success_videos(
     assert result.samples[1].file_name == "video3.mp4"
 
 
-def test_create_combination_selection__embedding_similarity_success(
+def test_create_combination_sampling__embedding_similarity_success(
     test_client: TestClient, db_session: Session
 ) -> None:
-    """Similarity selection creates a tag with the most similar samples."""
+    """Similarity sampling creates a tag with the most similar samples."""
     collection_id = helpers_resolvers.fill_db_with_samples_and_embeddings(
         session=db_session, n_samples=5, embedding_model_names=["embedding_model_1"]
     )
@@ -320,7 +352,7 @@ def test_create_combination_selection__embedding_similarity_success(
         f"/api/collections/{collection_id}/selection",
         json={
             "n_samples_to_select": 2,
-            "selection_result_tag_name": "similarity_selection",
+            "sampling_result_tag_name": "similarity_sampling",
             "strategies": [
                 {
                     "strategy_name": "similarity",
@@ -336,7 +368,7 @@ def test_create_combination_selection__embedding_similarity_success(
 
     created_tag = tag_resolver.get_by_name(
         session=db_session,
-        tag_name="similarity_selection",
+        tag_name="similarity_sampling",
         collection_id=collection_id,
     )
     assert created_tag is not None
@@ -349,10 +381,10 @@ def test_create_combination_selection__embedding_similarity_success(
     assert actual_sample_paths == {"sample_0.jpg", "sample_1.jpg"}
 
 
-def test_create_combination_selection__embedding_similarity_missing_query_tag(
+def test_create_combination_sampling__embedding_similarity_missing_query_tag(
     test_client: TestClient, db_session: Session
 ) -> None:
-    """Similarity selection fails if the query tag does not exist."""
+    """Similarity sampling fails if the query tag does not exist."""
     collection_id = helpers_resolvers.fill_db_with_samples_and_embeddings(
         session=db_session, n_samples=5, embedding_model_names=["embedding_model_1"]
     )
@@ -361,7 +393,7 @@ def test_create_combination_selection__embedding_similarity_missing_query_tag(
         f"/api/collections/{collection_id}/selection",
         json={
             "n_samples_to_select": 2,
-            "selection_result_tag_name": "similarity_selection",
+            "sampling_result_tag_name": "similarity_sampling",
             "strategies": [
                 {
                     "strategy_name": "similarity",
@@ -376,10 +408,10 @@ def test_create_combination_selection__embedding_similarity_missing_query_tag(
     assert response.json()["error"] == "Query tag with name missing_query_tag not found."
 
 
-def test_create_combination_selection__embedding_similarity_query_tag_without_embeddings(
+def test_create_combination_sampling__embedding_similarity_query_tag_without_embeddings(
     test_client: TestClient, db_session: Session
 ) -> None:
-    """Similarity selection fails if the query tag has no embeddings."""
+    """Similarity sampling fails if the query tag has no embeddings."""
     collection_id = helpers_resolvers.fill_db_with_samples_and_embeddings(
         session=db_session, n_samples=5, embedding_model_names=["embedding_model_1"]
     )
@@ -391,7 +423,7 @@ def test_create_combination_selection__embedding_similarity_query_tag_without_em
         f"/api/collections/{collection_id}/selection",
         json={
             "n_samples_to_select": 2,
-            "selection_result_tag_name": "similarity_selection",
+            "sampling_result_tag_name": "similarity_sampling",
             "strategies": [
                 {
                     "strategy_name": "similarity",
@@ -408,10 +440,10 @@ def test_create_combination_selection__embedding_similarity_query_tag_without_em
     )
 
 
-def test_create_combination_selection__annotation_class_balancing_success(
+def test_create_combination_sampling__annotation_class_balancing_success(
     test_client: TestClient, db_session: Session
 ) -> None:
-    """Class balancing selection returns an even class distribution."""
+    """Class balancing sampling returns an even class distribution."""
     collection = helpers_resolvers.create_collection(
         session=db_session, collection_name="annotation_balancing_collection"
     )
@@ -462,7 +494,7 @@ def test_create_combination_selection__annotation_class_balancing_success(
         f"/api/collections/{collection.collection_id}/selection",
         json={
             "n_samples_to_select": 2,
-            "selection_result_tag_name": "balanced_selection",
+            "sampling_result_tag_name": "balanced_sampling",
             "strategies": [
                 {
                     "strategy_name": "balance",
@@ -477,7 +509,7 @@ def test_create_combination_selection__annotation_class_balancing_success(
 
     created_tag = tag_resolver.get_by_name(
         session=db_session,
-        tag_name="balanced_selection",
+        tag_name="balanced_sampling",
         collection_id=collection.collection_id,
     )
     assert created_tag is not None
@@ -502,12 +534,12 @@ def test_create_combination_selection__annotation_class_balancing_success(
     assert selected_class_frequencies == {"class_a": 1, "class_b": 1}
 
 
-def test_create_combination_selection__image_filter_success(
+def test_create_combination_sampling__image_filter_success(
     test_client: TestClient,
     db_session: Session,
     mocker: MockerFixture,
 ) -> None:
-    """Selection succeeds when request fits within the ImageFilter pool."""
+    """Sampling succeeds when request fits within the ImageFilter pool."""
     collection = helpers_resolvers.create_collection(
         session=db_session, collection_name="test_collection"
     )
@@ -533,7 +565,7 @@ def test_create_combination_selection__image_filter_success(
         f"/api/collections/{collection_id}/selection",
         json={
             "n_samples_to_select": 2,
-            "selection_result_tag_name": "tag1",
+            "sampling_result_tag_name": "tag1",
             "strategies": [
                 {"strategy_name": "diversity", "embedding_model_name": "test_embedding_model"}
             ],
@@ -551,12 +583,12 @@ def test_create_combination_selection__image_filter_success(
     )
 
 
-def test_create_combination_selection__video_filter_success(
+def test_create_combination_sampling__video_filter_success(
     test_client: TestClient,
     db_session: Session,
     mocker: MockerFixture,
 ) -> None:
-    """Selection succeeds when request fits within the VideoFilter pool."""
+    """Sampling succeeds when request fits within the VideoFilter pool."""
     collection = helpers_resolvers.create_collection(
         session=db_session,
         collection_name="test_video_collection",
@@ -607,7 +639,7 @@ def test_create_combination_selection__video_filter_success(
         f"/api/collections/{collection_id}/selection",
         json={
             "n_samples_to_select": 2,
-            "selection_result_tag_name": "tag1",
+            "sampling_result_tag_name": "tag1",
             "strategies": [
                 {"strategy_name": "diversity", "embedding_model_name": "test_embedding_model"}
             ],
@@ -625,7 +657,7 @@ def test_create_combination_selection__video_filter_success(
     )
 
 
-def test_create_combination_selection__image_collection_rejects_video_filter(
+def test_create_combination_sampling__image_collection_rejects_video_filter(
     test_client: TestClient, db_session: Session
 ) -> None:
     """Image collections reject video filters."""
@@ -637,7 +669,7 @@ def test_create_combination_selection__image_collection_rejects_video_filter(
         f"/api/collections/{collection.collection_id}/selection",
         json={
             "n_samples_to_select": 1,
-            "selection_result_tag_name": "tag1",
+            "sampling_result_tag_name": "tag1",
             "strategies": [
                 {"strategy_name": "diversity", "embedding_model_name": "test_embedding_model"}
             ],
@@ -649,7 +681,7 @@ def test_create_combination_selection__image_collection_rejects_video_filter(
     assert response.json()["detail"] == "Invalid filter type for image collection."
 
 
-def test_create_combination_selection__video_collection_rejects_image_filter(
+def test_create_combination_sampling__video_collection_rejects_image_filter(
     test_client: TestClient, db_session: Session
 ) -> None:
     """Video collections reject image filters."""
@@ -663,7 +695,7 @@ def test_create_combination_selection__video_collection_rejects_image_filter(
         f"/api/collections/{collection.collection_id}/selection",
         json={
             "n_samples_to_select": 1,
-            "selection_result_tag_name": "tag1",
+            "sampling_result_tag_name": "tag1",
             "strategies": [
                 {"strategy_name": "diversity", "embedding_model_name": "test_embedding_model"}
             ],

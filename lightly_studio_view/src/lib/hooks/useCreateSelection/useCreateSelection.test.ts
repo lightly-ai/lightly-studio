@@ -64,7 +64,7 @@ describe('useCreateSelection', () => {
             path: { collection_id: 'col-1' },
             body: {
                 n_samples_to_select: 5,
-                selection_result_tag_name: 'my-tag',
+                sampling_result_tag_name: 'my-tag',
                 strategies: [{ strategy_name: 'diversity', embedding_model_name: null }],
                 filter: undefined
             }
@@ -108,7 +108,7 @@ describe('useCreateSelection', () => {
             path: { collection_id: 'col-1' },
             body: {
                 n_samples_to_select: 10,
-                selection_result_tag_name: 'result-tag',
+                sampling_result_tag_name: 'result-tag',
                 strategies: [{ strategy_name: 'weights', metadata_key: 'typicality' }],
                 filter: undefined
             }
@@ -149,7 +149,7 @@ describe('useCreateSelection', () => {
             path: { collection_id: 'col-1' },
             body: {
                 n_samples_to_select: 8,
-                selection_result_tag_name: 'sim-tag',
+                sampling_result_tag_name: 'sim-tag',
                 strategies: [{ strategy_name: 'weights', metadata_key: 'similarity' }],
                 filter: undefined
             }
@@ -391,7 +391,7 @@ describe('useCreateSelection', () => {
             path: { collection_id: 'col-1' },
             body: {
                 n_samples_to_select: 20,
-                selection_result_tag_name: 'balanced-tag',
+                sampling_result_tag_name: 'balanced-tag',
                 strategies: [{ strategy_name: 'balance', target_distribution: 'uniform' }],
                 filter: undefined
             }
@@ -429,7 +429,7 @@ describe('useCreateSelection', () => {
             path: { collection_id: 'col-1' },
             body: {
                 n_samples_to_select: 15,
-                selection_result_tag_name: 'balanced-tag',
+                sampling_result_tag_name: 'balanced-tag',
                 strategies: [{ strategy_name: 'balance', target_distribution: 'input' }],
                 filter: undefined
             }

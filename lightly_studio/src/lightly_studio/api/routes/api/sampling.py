@@ -1,4 +1,4 @@
-"""This module contains the API routes for managing selections."""
+"""This module contains the API routes for sampling."""
 
 from __future__ import annotations
 
@@ -13,16 +13,16 @@ from lightly_studio.models.collection import CollectionTable, SampleType
 from lightly_studio.resolvers import image_resolver, video_resolver
 from lightly_studio.resolvers.image_filter import ImageFilter
 from lightly_studio.resolvers.video_resolver.video_filter import VideoFilter
-from lightly_studio.selection.select_via_db import select_via_database
-from lightly_studio.selection.selection_config import (
+from lightly_studio.sampling.sampling_config import (
     AnnotationClassBalancingStrategy,
     EmbeddingDiversityStrategy,
     EmbeddingSimilarityStrategy,
     MetadataWeightingStrategy,
-    SelectionConfig,
+    SamplingConfig,
 )
+from lightly_studio.sampling.sampling_via_db import sampling_via_database
 
-selection_router = APIRouter()
+sampling_router = APIRouter()
 
 Strategy = Annotated[
     Union[
@@ -40,16 +40,17 @@ CollectionFilter = Annotated[
 ]
 
 
-class SelectionRequest(BaseModel):
-    """Request model for selection."""
+class SamplingRequest(BaseModel):
+    """Request model for sampling."""
 
     n_samples_to_select: int = Field(gt=0, description="Number of samples to select")
-    selection_result_tag_name: str = Field(min_length=1, description="Name for the result tag")
+    sampling_result_tag_name: str = Field(min_length=1, description="Name for the result tag")
     strategies: list[Strategy]
     filter: CollectionFilter | None = None
 
 
-@selection_router.post(
+# TODO(lukas 5/2026): rename to /sampling
+@sampling_router.post(
     "/collections/{collection_id}/selection",
     status_code=204,
     response_model=None,
@@ -60,30 +61,30 @@ def create_combination_selection(
         CollectionTable,
         Depends(get_and_validate_collection_id),
     ],
-    request: SelectionRequest,
+    request: SamplingRequest,
 ) -> None:
-    """Create a combination selection on the collection.
+    """Create a combination sampling on the collection.
 
-    This endpoint performs combination selection using embeddings and metadata.
+    This endpoint performs combination sampling using embeddings and metadata.
     The selected samples are tagged with the specified tag name.
 
     Args:
         session: Database session dependency.
-        collection: collection to perform selection on.
-        request: Selection parameters including sample count and tag name.
+        collection: collection to perform sampling on.
+        request: Sampling parameters including sample count and tag name.
 
     Returns:
         None (204 No Content on success).
 
     Raises:
-        HTTPException: 400 if selection fails due to invalid parameters or other errors.
+        HTTPException: 400 if sampling fails due to invalid parameters or other errors.
     """
     if collection.sample_type not in (SampleType.IMAGE, SampleType.VIDEO):
         raise HTTPException(
             status_code=400,
-            detail="Selection is only supported for image and video collections.",
+            detail="Sampling is only supported for image and video collections.",
         )
-    # Get all samples in collection as input for selection.
+    # Get all samples in collection as input for sampling.
     if collection.sample_type == SampleType.IMAGE:
         if request.filter is None:
             image_filter = None
@@ -122,12 +123,12 @@ def create_combination_selection(
             detail=f"collection has only {len(input_sample_ids)} samples, "
             f"cannot select {request.n_samples_to_select}",
         )
-    # Create SelectionConfig with diversity strategy.
-    config = SelectionConfig(
+    # Create SamplingConfig with diversity strategy.
+    config = SamplingConfig(
         collection_id=collection.collection_id,
         n_samples_to_select=request.n_samples_to_select,
-        selection_result_tag_name=request.selection_result_tag_name,
+        sampling_result_tag_name=request.sampling_result_tag_name,
         strategies=request.strategies,
     )
-    # Perform selection via database.
-    select_via_database(session=session, config=config, input_sample_ids=input_sample_ids)
+    # Perform sampling via database.
+    sampling_via_database(session=session, config=config, input_sample_ids=input_sample_ids)

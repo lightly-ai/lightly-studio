@@ -10,7 +10,7 @@
     import { useVideoFilters } from '$lib/hooks/useVideoFilters/useVideoFilters';
     import { useGlobalStorage } from '$lib/hooks/useGlobalStorage';
     import { useCreateSelection } from '$lib/hooks/useCreateSelection';
-    import type { SelectionRequest } from '$lib/api/lightly_studio_local/types.gen';
+    import type { SamplingRequest } from '$lib/api/lightly_studio_local/types.gen';
     import { type BalancingMode } from '$lib/components/Selection/balancingMode';
     import StrategySelect from '$lib/components/Selection/StrategySelect/StrategySelect.svelte';
     import ClassBalancingForm from '$lib/components/Selection/ClassBalancingForm/ClassBalancingForm.svelte';
@@ -36,7 +36,7 @@
     const { filteredSampleCount } = useGlobalStorage();
 
     const currentFilter = $derived(isVideoCollection ? $videoFilter : $imageFilter);
-    const selectionFilter = $derived<SelectionRequest['filter']>(
+    const selectionFilter = $derived<SamplingRequest['filter']>(
         isVideoCollection
             ? currentFilter
                 ? {
