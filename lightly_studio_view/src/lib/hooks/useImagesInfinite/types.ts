@@ -38,6 +38,7 @@ export type SamplesQueryKey = readonly [
     {
         metadata_values?: MetadataValues;
         text_embedding?: ReadImagesRequest['text_embedding'];
+        query_expr?: QueryExpr;
     },
     ReadImagesRequest['sort_by']
 ];
