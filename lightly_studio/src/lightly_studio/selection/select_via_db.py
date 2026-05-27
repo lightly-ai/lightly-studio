@@ -159,16 +159,26 @@ def _get_class_balancing_data(  # noqa: PLR0913
             "Annotation source with the given ID does not contain annotations "
             "for the selected samples."
         )
-    annotation_label_ids = [annotation.annotation_label_id for annotation in annotations]
-    sample_id_to_annotation_label_ids = defaultdict(list)
-    for annotation in annotations:
-        sample_id_to_annotation_label_ids[annotation.parent_sample_id].append(
-            annotation.annotation_label_id
-        )
+
+    if annotation_label_ids is None:
+        annotation_label_ids = [annotation.annotation_label_id for annotation in annotations]
+    if sample_id_to_annotation_label_ids is None:
+        sample_id_to_annotation_label_ids = defaultdict(list)
+        for annotation in annotations:
+            sample_id_to_annotation_label_ids[annotation.parent_sample_id].append(
+                annotation.annotation_label_id
+            )
+    else:
+        sample_id_to_annotation_label_ids = {
+            sample_id: list(label_ids)
+            for sample_id, label_ids in sample_id_to_annotation_label_ids.items()
+        }
 
     if strat.target_distribution == "uniform":
-        target_keys_set = set(annotation_label_ids)
-        target_keys = list(target_keys_set)
+        # Keep first-seen order so the distribution columns stay stable and line up with values.
+        target_keys = list(dict.fromkeys(annotation_label_ids))
+        if not target_keys:
+            return np.zeros((len(input_sample_ids), 0), dtype=np.float32), []
         target_values = [1.0 / len(target_keys)] * len(target_keys)
     elif strat.target_distribution == "input":
         # Count the number of times each label appears in the input
