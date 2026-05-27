@@ -20,7 +20,6 @@ from lightly_studio.resolvers.sample_resolver.sample_filter import SampleFilter
 from lightly_studio.selection.mundig import Mundig
 from lightly_studio.selection.select_via_db import (
     _aggregate_class_distributions,
-    _get_class_balancing_data,
     select_via_database,
 )
 from lightly_studio.selection.selection_config import (
@@ -34,7 +33,6 @@ from tests.helpers_resolvers import (
     AnnotationDetails,
     create_annotation_label,
     create_annotations,
-    create_collection,
     create_tag,
     fill_db_with_samples_and_embeddings,
 )
@@ -1022,131 +1020,6 @@ def test_aggregate_class_distributions() -> None:
         dtype=np.float32,
     )
     np.testing.assert_array_equal(class_distributions, expected_distributions)
-
-
-def test_get_class_balancing_data_input(db_session: Session) -> None:
-    """Test the 'input' distribution logic."""
-    dataset_id = UUID("00000000-0000-0000-0000-000000000000")
-    label_id_cat = UUID("00000000-0000-0000-0000-000000000001")
-    label_id_dog = UUID("00000000-0000-0000-0000-000000000002")
-    sample_id_1 = UUID("11111111-1111-1111-1111-111111111111")
-    sample_id_2 = UUID("22222222-2222-2222-2222-222222222222")
-
-    # The order of target keys depends on the insertion order in this list.
-    # 'cat' appears first, 'dog' appears second.
-    # Target Keys: [cat, dog]
-    all_annotation_labels = [label_id_cat, label_id_cat, label_id_dog]
-    input_sample_ids = [sample_id_1, sample_id_2]
-
-    sample_id_to_annotation_label_ids = {
-        sample_id_1: [label_id_cat],
-        sample_id_2: [label_id_cat, label_id_dog],
-    }
-
-    strat = AnnotationClassBalancingStrategy(target_distribution="input")
-
-    class_dist, target_vals = _get_class_balancing_data(
-        session=db_session,
-        strat=strat,
-        dataset_id=dataset_id,
-        annotation_label_ids=all_annotation_labels,
-        input_sample_ids=input_sample_ids,
-        sample_id_to_annotation_label_ids=sample_id_to_annotation_label_ids,
-    )
-
-    expected_vals = [2, 1]
-    assert target_vals == expected_vals
-
-    # Columns: [Cat, Dog]
-    # Row 0 (Sample 1): 1 Cat, 0 Dog
-    # Row 1 (Sample 2): 1 Cat, 1 Dog
-    expected_dist = np.array([[1.0, 0.0], [1.0, 1.0]])
-    np.testing.assert_array_equal(class_dist, expected_dist)
-
-
-def test_get_class_balancing_data_uniform(db_session: Session) -> None:
-    """Test the 'uniform' distribution logic."""
-    dataset_id = UUID("00000000-0000-0000-0000-000000000000")
-    label_id_cat = UUID("00000000-0000-0000-0000-000000000001")
-    label_id_dog = UUID("00000000-0000-0000-0000-000000000002")
-    sample_id_1 = UUID("11111111-1111-1111-1111-111111111111")
-    sample_id_2 = UUID("22222222-2222-2222-2222-222222222222")
-
-    all_annotation_labels = [label_id_cat, label_id_cat, label_id_dog]
-    input_sample_ids = [sample_id_1, sample_id_2]
-
-    sample_id_to_annotation_label_ids = {
-        sample_id_1: [label_id_cat],
-        sample_id_2: [label_id_cat, label_id_dog],
-    }
-
-    strat = AnnotationClassBalancingStrategy(target_distribution="uniform")
-
-    class_dist, target_vals = _get_class_balancing_data(
-        session=db_session,
-        strat=strat,
-        dataset_id=dataset_id,
-        annotation_label_ids=all_annotation_labels,
-        input_sample_ids=input_sample_ids,
-        sample_id_to_annotation_label_ids=sample_id_to_annotation_label_ids,
-    )
-
-    assert len(target_vals) == 2
-    assert target_vals == pytest.approx([0.5, 0.5], abs=1e-9)
-
-    expected_col_cat = np.array([1.0, 1.0], dtype=np.float32)
-    expected_col_dog = np.array([0.0, 1.0], dtype=np.float32)
-
-    np.testing.assert_array_equal(class_dist[:, 0], expected_col_cat)
-    np.testing.assert_array_equal(class_dist[:, 1], expected_col_dog)
-
-
-def test_get_class_balancing_data_target(db_session: Session) -> None:
-    """Test the 'target' (dict) distribution logic."""
-    collection = create_collection(session=db_session)
-    collection_id = collection.collection_id
-    label_cat_obj = create_annotation_label(
-        session=db_session, root_collection_id=collection_id, label_name="cat"
-    )
-    label_dog_obj = create_annotation_label(
-        session=db_session, root_collection_id=collection_id, label_name="dog"
-    )
-
-    label_id_cat = label_cat_obj.annotation_label_id
-    label_id_dog = label_dog_obj.annotation_label_id
-
-    sample_id_1 = UUID("11111111-1111-1111-1111-111111111111")
-    sample_id_2 = UUID("22222222-2222-2222-2222-222222222222")
-
-    all_annotation_labels = [label_id_cat, label_id_cat, label_id_dog]
-    input_sample_ids = [sample_id_1, sample_id_2]
-
-    sample_id_to_annotation_label_ids = {
-        sample_id_1: [label_id_cat],
-        sample_id_2: [label_id_cat, label_id_dog],
-    }
-
-    distribution_dict = {
-        "dog": 0.7,
-        "cat": 0.3,
-    }
-
-    strat = AnnotationClassBalancingStrategy(target_distribution=distribution_dict)
-
-    class_dist, target_vals = _get_class_balancing_data(
-        session=db_session,
-        strat=strat,
-        dataset_id=collection.dataset_id,
-        annotation_label_ids=all_annotation_labels,
-        input_sample_ids=input_sample_ids,
-        sample_id_to_annotation_label_ids=sample_id_to_annotation_label_ids,
-    )
-
-    expected_vals = [0.7, 0.3]
-    assert target_vals == pytest.approx(expected_vals, abs=1e-9)
-
-    expected_dist = np.array([[0.0, 1.0], [1.0, 1.0]])
-    np.testing.assert_array_equal(class_dist, expected_dist)
 
 
 def _all_sample_ids(session: Session, collection_id: UUID) -> list[UUID]:
