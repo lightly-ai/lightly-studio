@@ -69,17 +69,15 @@
                 </div>
                 {#if addAnnotationEnabled}
                     <label class="flex w-full flex-col gap-3 text-muted-foreground">
-                        <div class="text-sm">
-                            Select or create an annotation class for a new annotation.
-                        </div>
+                        <div class="text-sm">Select or create a class for a new annotation.</div>
                         <SelectList
                             {items}
                             selectedItem={items.find((i) => i.value === addAnnotationLabel?.value)}
                             name="annotation-label"
-                            label="Choose or create an annotation class"
+                            label="Choose or create a class"
                             className="w-full"
                             contentClassName="w-full"
-                            placeholder="Select or create an annotation class"
+                            placeholder="Select or create a class"
                             onSelect={(item) => {
                                 addAnnotationLabel = item;
                             }}

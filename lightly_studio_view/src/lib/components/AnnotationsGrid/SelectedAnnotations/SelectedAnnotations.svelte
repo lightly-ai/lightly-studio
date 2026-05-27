@@ -35,8 +35,8 @@
                     <SelectList
                         {items}
                         name="annotation-label"
-                        placeholder="Select or create an annotation class"
-                        label="Select an annotation class"
+                        placeholder="Select or create a class"
+                        label="Select a class"
                         {onSelect}
                         {isLoading}
                         {disabled}
