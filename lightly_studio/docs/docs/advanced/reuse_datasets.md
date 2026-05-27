@@ -51,7 +51,7 @@ ls.start_gui()
 ```
 
 - When you rerun the script later, only new files are indexed. Existing embeddings and annotations remain untouched. Embeddings are generated only for the new samples.
-- Manual labels created in the GUI, metadata changed via Python, and tags assigned anywhere are all stored in `lightly_studio.db`, so you can stop/start the process at will.
+- Manual annotations created in the GUI, metadata changed via Python, and tags assigned anywhere are all stored in `lightly_studio.db`, so you can stop/start the process at will.
 - External files such as images/videos (`.jpg`, `.png`, `.mp4` files etc.) remain in their original location; keep them accessible so the GUI can display them when you reopen the dataset.
 
 For dataset-type-specific loading examples, see [Image Dataset · From a Pre-Existing Dataset](../dataset_setup/image_dataset.md#from-a-pre-existing-dataset) and [Video Dataset · From a Pre-Existing Dataset](../dataset_setup/video_dataset.md#from-a-pre-existing-dataset).
@@ -67,7 +67,7 @@ lightly-studio gui
 A typical workflow is therefore:
 
 1. Run your Python script once to populate the database.
-2. Call `lightly-studio gui` as often as you want to browse, label, and curate.
+2. Call `lightly-studio gui` as often as you want to browse, annotate, and curate.
 
 If the DuckDB file lives elsewhere, point at it explicitly:
 

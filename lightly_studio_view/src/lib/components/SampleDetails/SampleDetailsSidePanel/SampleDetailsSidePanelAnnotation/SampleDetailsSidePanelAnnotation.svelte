@@ -146,7 +146,7 @@
                                         {items}
                                         selectedItem={items.find((i) => i.value === value?.value)}
                                         name="annotation-label"
-                                        placeholder="Select or create a label"
+                                        placeholder="Select or create an annotation class"
                                         className="w-full min-w-0"
                                         contentClassName="w-full min-w-0"
                                         onSelect={async (item) => {

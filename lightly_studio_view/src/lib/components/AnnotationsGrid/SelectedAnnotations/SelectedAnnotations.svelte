@@ -30,13 +30,13 @@
             <Segment title={`Selected annotations: ${selectedAnnotations.length}`}>
                 <div class="flex flex-col space-y-4">
                     <div class="text-md mb-2">
-                        You can edit labels for multiple annotations at once.
+                        You can edit annotation classes for multiple annotations at once.
                     </div>
                     <SelectList
                         {items}
                         name="annotation-label"
-                        placeholder="Select or create a label"
-                        label="Select a label"
+                        placeholder="Select or create an annotation class"
+                        label="Select an annotation class"
                         {onSelect}
                         {isLoading}
                         {disabled}

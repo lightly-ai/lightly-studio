@@ -9,6 +9,7 @@ Guidelines are stored in the `ai_guidelines` folder.
 - [Frontend](./ai_guidelines/frontend.md): Architecture overview. We use TypeScript with SvelteKit.
 - [Backend](./ai_guidelines/backend.md): Architecture overview. We use Python with FastAPI and SQLModel.
 - [Python](./ai_guidelines/python.md): Python-specific style guidelines.
+- [Glossary](./ai_guidelines/glossary.md): Canonical user-facing naming for annotation, annotation class, and annotation source.
 - [Contributing](./CONTRIBUTING.md): Contribution guidelines, including development setup and testing instructions.
 
 ## Validation

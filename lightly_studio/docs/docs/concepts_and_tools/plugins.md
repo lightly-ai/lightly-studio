@@ -58,7 +58,7 @@ Ready-to-use plugins are available in the [`lightly-studio-plugins`](https://git
         - Scope: single image or images in the current view
         - Input: LightlyTrain model name or local path to a LightlyTrain checkpoint
         - Output: object detection annotations
-        - Labels: class labels are read from the loaded model and created in the
+        - Annotation classes: annotation classes are read from the loaded model and created in the
           dataset if they do not exist yet
         - Recommended models:
           `dinov3/convnext-large-ltdetr-coco` for best performance,
