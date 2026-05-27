@@ -333,7 +333,7 @@
 
                             {#if isQueryFilterEnabled}
                                 <QueryControl
-                                    onToggle={() => {
+                                    onOpen={() => {
                                         setActivePanel(
                                             $activePanel === 'queryEditor' ? 'none' : 'queryEditor'
                                         );
