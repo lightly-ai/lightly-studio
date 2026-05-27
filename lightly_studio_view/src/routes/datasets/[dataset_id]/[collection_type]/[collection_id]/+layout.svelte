@@ -429,7 +429,7 @@
                         {/await}
                     </Pane>
                 </PaneGroup>
-            {:else if $activePanel === 'plot' && (isImages || isVideos)}
+            {:else if $activePanel === 'embeddingPlot' && (isImages || isVideos)}
                 <!-- When plot is shown, use PaneGroup for the main content + plot -->
                 <PaneGroup direction="horizontal" class="flex-1">
                     <Pane defaultSize={50} minSize={30} class="flex">
