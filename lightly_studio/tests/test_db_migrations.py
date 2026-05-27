@@ -95,11 +95,13 @@ def _reset_postgres_database(engine_url: str) -> None:
     """Drop application tables and Alembic version tracking."""
     normalized_url = db_url.ensure_psycopg3_driver(engine_url=engine_url)
     raw_engine = create_engine(normalized_url)
-    SQLModel.metadata.drop_all(bind=raw_engine)
-    with raw_engine.connect() as conn:
-        conn.execute(statement=text("DROP TABLE IF EXISTS alembic_version"))
-        conn.commit()
-    raw_engine.dispose()
+    try:
+        SQLModel.metadata.drop_all(bind=raw_engine)
+        with raw_engine.connect() as conn:
+            conn.execute(statement=text("DROP TABLE IF EXISTS alembic_version"))
+            conn.commit()
+    finally:
+        raw_engine.dispose()
 
 
 def test_postgres_fresh_database__upgrade_head(
@@ -112,15 +114,17 @@ def test_postgres_fresh_database__upgrade_head(
     _reset_postgres_database(engine_url=postgres_url)
 
     engine = DatabaseEngine(engine_url=postgres_url, single_threaded=True)
-    head_revision = get_head_revision()
+    try:
+        head_revision = get_head_revision()
 
-    inspector = db_migrations._get_inspector(engine=engine._engine)
-    assert inspector.has_table(table_name="collection")
-    assert inspector.has_table(table_name="alembic_version")
+        inspector = db_migrations._get_inspector(engine=engine._engine)
+        assert inspector.has_table(table_name="collection")
+        assert inspector.has_table(table_name="alembic_version")
 
-    with engine.session() as session:
-        version = session.execute(
-            statement=text("SELECT version_num FROM alembic_version"),
-        ).scalar_one()
-    assert version == head_revision
-    engine.close()
+        with engine.session() as session:
+            version = session.execute(
+                statement=text("SELECT version_num FROM alembic_version"),
+            ).scalar_one()
+        assert version == head_revision
+    finally:
+        engine.close()
