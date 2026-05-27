@@ -754,7 +754,7 @@ def test_get_all_by_collection_id__with_similarity_and_order_by(db_session: Sess
     assert result.samples[2].file_name == "c.png"
 
 
-def test_get_all_by_collection_id__similarity_is_tiebreaker_when_order_by_values_equal(
+def test_get_all_by_collection_id__distance_is_primary_over_order_by(
     db_session: Session,
 ) -> None:
     collection = create_collection(session=db_session)
@@ -814,11 +814,11 @@ def test_get_all_by_collection_id__similarity_is_tiebreaker_when_order_by_values
     )
 
     assert len(result.samples) == 3
-    # width is the primary sort: image_a (100) and image_b (100) are tied, image_c (200) is last.
-    # similarity distance breaks the tie: image_a is closest → image_a before image_b.
+    # distance is the primary sort: image_a (d=0), image_c (d=1), image_b (d=2).
+    # order_by width does not override distance ordering.
     assert result.samples[0].sample_id == image_a.sample_id
-    assert result.samples[1].sample_id == image_b.sample_id
-    assert result.samples[2].sample_id == image_c.sample_id
+    assert result.samples[1].sample_id == image_c.sample_id
+    assert result.samples[2].sample_id == image_b.sample_id
 
 
 def test_get_all_by_collection_id__sort_by_metadata_field_asc(db_session: Session) -> None:

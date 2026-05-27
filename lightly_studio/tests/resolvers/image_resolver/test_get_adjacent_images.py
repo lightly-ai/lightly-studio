@@ -353,7 +353,7 @@ def test_get_adjacent_images__with_similarity_and_order_by(db_session: Session) 
     assert result.next_sample_id == image_c.sample_id
 
 
-def test_get_adjacent_images__similarity_is_tiebreaker_when_order_by_values_equal(
+def test_get_adjacent_images__distance_is_primary_over_order_by(
     db_session: Session,
 ) -> None:
     collection = helpers_resolvers.create_collection(session=db_session)
@@ -405,8 +405,9 @@ def test_get_adjacent_images__similarity_is_tiebreaker_when_order_by_values_equa
         embedding=[0.0, 1.0],
     )
 
-    # Sorted order: image_a (100, close), image_b (100, far), image_c (200)
-    # image_b's previous is image_a, next is image_c.
+    # Distance is primary: image_a (d=0), image_c (d=1), image_b (d=2).
+    # order_by width does not override distance ordering.
+    # image_b's previous is image_c, next is None.
     result = image_resolver.get_adjacent_images(
         session=db_session,
         sample_id=image_b.sample_id,
@@ -416,9 +417,9 @@ def test_get_adjacent_images__similarity_is_tiebreaker_when_order_by_values_equa
     )
 
     assert result is not None
-    assert result.previous_sample_id == image_a.sample_id
+    assert result.previous_sample_id == image_c.sample_id
     assert result.sample_id == image_b.sample_id
-    assert result.next_sample_id == image_c.sample_id
+    assert result.next_sample_id is None
 
 
 def test_get_adjacent_images__sort_by_width_desc_with_duplicate_values(db_session: Session) -> None:
