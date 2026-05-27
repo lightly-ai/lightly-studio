@@ -66,7 +66,7 @@
         </Button>
     </div>
 
-    <div class="flex min-h-0 flex-1 flex-col overflow-y-auto">
+    <div class="flex min-h-0 flex-1 flex-col overflow-y-auto dark:[color-scheme:dark]">
         {#if isLoading}
             <div class="flex flex-1 items-center justify-center p-8">
                 <Spinner size="medium" align="center" />
