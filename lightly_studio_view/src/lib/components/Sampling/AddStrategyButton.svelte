@@ -58,7 +58,7 @@
 >
     <Select.Trigger class="w-full" data-testid="add-strategy-button">
         <Plus class="mr-2 size-4" />
-        Add strategy
+        <span class="mr-2">Add strategy</span>
     </Select.Trigger>
     <Select.Content>
         {#each STRATEGY_OPTIONS as strategy (strategy.type)}
