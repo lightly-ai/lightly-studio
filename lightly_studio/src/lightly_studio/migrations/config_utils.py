@@ -43,7 +43,7 @@ def configure_database_url(config: Config, engine_url: str | None) -> None:
     if database_url_configured(config=config):
         return
     if engine_url is None:
-        raise RuntimeError("LIGHTLY_STUDIO_DATABASE_URL must be set for Alembic CLI migrations ")
+        raise RuntimeError("LIGHTLY_STUDIO_DATABASE_URL must be set for Alembic CLI migrations.")
     config.set_main_option(
         name="sqlalchemy.url",
         value=db_url.ensure_psycopg3_driver(engine_url=engine_url),
