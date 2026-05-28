@@ -57,7 +57,7 @@
         buildVideoFrameAnnotationCountsFilter
     } from '$lib/utils/buildAnnotationCountsFilters';
     import EmbeddingSelectionFilterItem from '$lib/components/EmbeddingSelectionFilterItem/EmbeddingSelectionFilterItem.svelte';
-    import { useSelectionSummary, useFeatureFlags } from '$lib/hooks';
+    import { useSelectionSummary } from '$lib/hooks';
     import { useSelectAll } from '$lib/hooks/useSelectAll/useSelectAll';
     import { isInputElement } from '$lib/utils';
     import { shutdownMaskRendererPool } from '$lib/workers/maskRendererPool';
@@ -304,9 +304,6 @@
         isImages || isAnnotations || isVideos || isVideoFrames || isGroups
     );
 
-    const { featureFlags } = useFeatureFlags();
-    const isQueryFilterEnabled = $derived($featureFlags.includes('query_filter'));
-
     const isSidePanelOpen = $derived($activePanel !== 'none');
 </script>
 
@@ -331,7 +328,7 @@
                                 <span>Filters</span>
                             </h2>
 
-                            {#if isQueryFilterEnabled}
+                            {#if isImages}
                                 <QueryControl
                                     onOpen={() => {
                                         setActivePanel(
@@ -470,7 +467,7 @@
                         {/await}
                     </Pane>
                 </PaneGroup>
-            {:else if $activePanel === 'queryEditor' && isQueryFilterEnabled}
+            {:else if $activePanel === 'queryEditor' && isImages}
                 <PaneGroup direction="horizontal" class="flex-1">
                     <Pane defaultSize={65} minSize={35} class="flex">
                         <div
