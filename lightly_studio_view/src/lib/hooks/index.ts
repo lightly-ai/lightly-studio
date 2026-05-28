@@ -36,3 +36,4 @@ export { useAnnotationLabelContext } from '$lib/contexts/SampleDetailsAnnotation
 export { useAnnotation } from '$lib/hooks/useAnnotation/useAnnotation';
 export { useAnnotationLabels } from '$lib/hooks/useAnnotationLabels/useAnnotationLabels';
 export { useSegmentationMaskPreview } from '$lib/hooks/useSegmentationMaskPreview';
+export { useCreateSampling } from '$lib/hooks/useCreateSampling/useCreateSampling';

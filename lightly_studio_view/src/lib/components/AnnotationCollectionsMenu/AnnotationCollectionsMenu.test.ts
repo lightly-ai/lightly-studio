@@ -27,11 +27,25 @@ describe('AnnotationCollectionsMenu', () => {
     it('renders nothing when there are no collections', () => {
         mocks.collections = [];
         render(AnnotationCollectionsMenu, defaultProps);
-        expect(screen.queryByText('Collections')).not.toBeInTheDocument();
+        expect(screen.queryByText('Annotation Sources')).not.toBeInTheDocument();
         expect(screen.queryByRole('checkbox')).not.toBeInTheDocument();
     });
 
-    it('renders a menu item for each collection', () => {
+    it('renders nothing when there is only one collection', () => {
+        mocks.collections = [{ collection_id: 'c1', name: 'Ground Truth' }];
+        render(AnnotationCollectionsMenu, defaultProps);
+        expect(screen.queryByText('Annotation Sources')).not.toBeInTheDocument();
+        expect(screen.queryByRole('checkbox')).not.toBeInTheDocument();
+    });
+
+    it('does not initialize the annotation source filter when there is only one collection', () => {
+        mocks.collections = [{ collection_id: 'c1', name: 'Ground Truth' }];
+        render(AnnotationCollectionsMenu, defaultProps);
+        expect(mocks.setSelectedCollectionIds).not.toHaveBeenCalled();
+        expect(mocks.setCollectionIdToName).not.toHaveBeenCalled();
+    });
+
+    it('renders a menu item for each collection when there are two or more', () => {
         mocks.collections = [
             { collection_id: 'c1', name: 'Dogs' },
             { collection_id: 'c2', name: 'Cats' }
@@ -43,21 +57,28 @@ describe('AnnotationCollectionsMenu', () => {
         expect(screen.getAllByRole('checkbox')).toHaveLength(2);
     });
 
-    it('calls setSelectedCollectionIds with the checked id when a collection is selected', async () => {
-        mocks.collections = [{ collection_id: 'c1', name: 'Dogs' }];
+    it('calls setSelectedCollectionIds with the remaining ids when a collection is deselected', async () => {
+        mocks.collections = [
+            { collection_id: 'c1', name: 'Dogs' },
+            { collection_id: 'c2', name: 'Cats' }
+        ];
         render(AnnotationCollectionsMenu, defaultProps);
 
         await screen.getAllByRole('checkbox')[0].click();
 
-        expect(mocks.setSelectedCollectionIds).toHaveBeenCalledWith(['c1']);
+        expect(mocks.setSelectedCollectionIds).toHaveBeenLastCalledWith(['c2']);
     });
 
-    it('calls setSelectedCollectionIds with empty array when a collection is deselected', async () => {
-        mocks.collections = [{ collection_id: 'c1', name: 'Dogs' }];
+    it('calls setSelectedCollectionIds with empty array when all collections are deselected', async () => {
+        mocks.collections = [
+            { collection_id: 'c1', name: 'Dogs' },
+            { collection_id: 'c2', name: 'Cats' }
+        ];
         render(AnnotationCollectionsMenu, defaultProps);
 
-        const checkbox = screen.getAllByRole('checkbox')[0];
-        await checkbox.click();
+        const [first, second] = screen.getAllByRole('checkbox');
+        await first.click();
+        await second.click();
 
         expect(mocks.setSelectedCollectionIds).toHaveBeenLastCalledWith([]);
     });
