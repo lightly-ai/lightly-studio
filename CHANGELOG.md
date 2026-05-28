@@ -20,12 +20,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Renamed the annotation class field `label` to `class_name` across the Python SDK and query language. Breaking change.
 - Renamed the `collection name` and `name` argument to `annotation_source`. Breaking change.
+- Renamed selection to sampling. Breaking change.
 
 ### Deprecated
 
 ### Removed
 
 ### Fixed
+
+- Fixed hovering over breadcrumb links on detail pages (annotations, video frames) triggering unwanted navigation.
 
 ### Security
 

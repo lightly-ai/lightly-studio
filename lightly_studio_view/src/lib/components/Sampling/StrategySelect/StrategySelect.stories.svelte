@@ -4,7 +4,7 @@
     import StrategySelect from './StrategySelect.svelte';
 
     const { Story } = defineMeta({
-        title: 'Components/Selection/StrategySelect',
+        title: 'Components/Sampling/StrategySelect',
         component: StrategySelect,
         tags: ['autodocs'],
         argTypes: {

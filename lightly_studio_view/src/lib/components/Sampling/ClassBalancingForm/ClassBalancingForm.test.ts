@@ -12,7 +12,7 @@ describe('ClassBalancingForm', () => {
             props: { balancingMode: 'uniform', onBalancingModeChange: vi.fn() }
         });
 
-        expect(screen.getByTestId('selection-dialog-balancing-mode-select')).toHaveTextContent(
+        expect(screen.getByTestId('sampling-dialog-balancing-mode-select')).toHaveTextContent(
             'Uniform'
         );
     });
@@ -22,11 +22,11 @@ describe('ClassBalancingForm', () => {
             props: { balancingMode: 'uniform', onBalancingModeChange: vi.fn() }
         });
 
-        await fireEvent.keyDown(screen.getByTestId('selection-dialog-balancing-mode-select'), {
+        await fireEvent.keyDown(screen.getByTestId('sampling-dialog-balancing-mode-select'), {
             key: 'Enter'
         });
 
-        expect(await screen.findByTestId('selection-balancing-mode-uniform')).toBeInTheDocument();
+        expect(await screen.findByTestId('sampling-balancing-mode-uniform')).toBeInTheDocument();
     });
 
     it('shows input balancing mode as disabled and coming soon', async () => {
@@ -34,11 +34,11 @@ describe('ClassBalancingForm', () => {
             props: { balancingMode: 'uniform', onBalancingModeChange: vi.fn() }
         });
 
-        await fireEvent.keyDown(screen.getByTestId('selection-dialog-balancing-mode-select'), {
+        await fireEvent.keyDown(screen.getByTestId('sampling-dialog-balancing-mode-select'), {
             key: 'Enter'
         });
 
-        const inputOption = await screen.findByTestId('selection-balancing-mode-input');
+        const inputOption = await screen.findByTestId('sampling-balancing-mode-input');
         expect(inputOption).toHaveAttribute('data-disabled');
         expect(inputOption).toHaveTextContent('Input (Coming soon)');
     });
