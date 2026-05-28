@@ -59,9 +59,11 @@
                 position="bottom"
             >
                 <Button
-                    class="flex items-center space-x-1"
+                    class="flex items-center gap-1.5"
                     data-testid="toggle-plot-button"
-                    variant={$showPlot ? 'default' : 'ghost'}
+                    variant="toolbar"
+                    size="toolbar"
+                    aria-pressed={$showPlot}
                     onclick={() => setShowPlot(!$showPlot)}
                 >
                     <ChartNetwork class="size-4" />
@@ -77,9 +79,11 @@
                 position="bottom"
             >
                 <Button
-                    class="flex items-center space-x-1"
+                    class="flex items-center gap-1.5"
                     data-testid="toggle-evaluation-runs-button"
-                    variant={$showEvaluationRuns ? 'default' : 'ghost'}
+                    variant="toolbar"
+                    size="toolbar"
+                    aria-pressed={$showEvaluationRuns}
                     onclick={() => setShowEvaluationRuns(!$showEvaluationRuns)}
                 >
                     <Gauge class="size-4" />

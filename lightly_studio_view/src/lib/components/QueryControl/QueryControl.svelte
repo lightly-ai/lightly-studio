@@ -60,9 +60,9 @@
             </FilterChip>
         {:else}
             <Button
-                variant="outline"
+                variant="sidebar-action"
                 size="sm"
-                class="w-full justify-start gap-2 text-muted-foreground"
+                class="w-full justify-start gap-2 text-xs font-medium"
                 onclick={onOpen}
             >
                 <Pencil class="h-3.5 w-3.5" />

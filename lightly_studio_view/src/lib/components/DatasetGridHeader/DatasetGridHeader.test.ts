@@ -107,7 +107,9 @@ describe('DatasetGridHeader', () => {
             props: { ...defaultProps, isImages: true, hasMediaWithEmbeddings: true }
         });
 
-        expect(screen.getByTestId('toggle-plot-button')).toBeInTheDocument();
+        const toggle = screen.getByTestId('toggle-plot-button');
+        expect(toggle).toBeInTheDocument();
+        expect(toggle).toHaveAttribute('aria-pressed', 'false');
         expect(screen.getByText('Embeddings')).toBeInTheDocument();
     });
 
@@ -129,9 +131,11 @@ describe('DatasetGridHeader', () => {
         const toggle = screen.getByTestId('toggle-plot-button');
         await fireEvent.click(toggle);
         expect(setShowPlot).toHaveBeenLastCalledWith(true);
+        expect(toggle).toHaveAttribute('aria-pressed', 'true');
 
         await fireEvent.click(toggle);
         expect(setShowPlot).toHaveBeenLastCalledWith(false);
+        expect(toggle).toHaveAttribute('aria-pressed', 'false');
     });
 
     it('renders the search region when media has embeddings', () => {
@@ -155,7 +159,9 @@ describe('DatasetGridHeader', () => {
             props: { ...defaultProps, isImages: true }
         });
 
-        expect(screen.getByTestId('toggle-evaluation-runs-button')).toBeInTheDocument();
+        const toggle = screen.getByTestId('toggle-evaluation-runs-button');
+        expect(toggle).toBeInTheDocument();
+        expect(toggle).toHaveAttribute('aria-pressed', 'false');
         expect(screen.getByText('Evaluation')).toBeInTheDocument();
     });
 
@@ -175,9 +181,11 @@ describe('DatasetGridHeader', () => {
         const toggle = screen.getByTestId('toggle-evaluation-runs-button');
         await fireEvent.click(toggle);
         expect(setShowEvaluationRuns).toHaveBeenLastCalledWith(true);
+        expect(toggle).toHaveAttribute('aria-pressed', 'true');
 
         await fireEvent.click(toggle);
         expect(setShowEvaluationRuns).toHaveBeenLastCalledWith(false);
+        expect(toggle).toHaveAttribute('aria-pressed', 'false');
     });
 
     it('hides the embeddings and evaluation runs labels in compact mode', () => {

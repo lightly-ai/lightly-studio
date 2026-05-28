@@ -44,7 +44,7 @@
 <div class="flex items-center gap-1">
     <Select.Root type="single" value={selectValue} allowDeselect onValueChange={handleValueChange}>
         <Select.Trigger
-            class="h-8 w-[100px] min-w-20 gap-1 px-2.5 text-xs font-normal"
+            class="h-8 w-[104px] min-w-20 gap-1 border-border-hard bg-transparent px-2.5 text-xs font-medium text-diffuse-foreground hover:border-diffuse-foreground/40 hover:bg-muted hover:text-foreground"
             data-testid="sort-by-trigger"
         >
             <span class="truncate">{$selectedLabel ?? 'Sort by'}</span>
@@ -65,11 +65,11 @@
     </Select.Root>
 
     <Button
-        variant="ghost"
-        size="icon"
+        variant="toolbar"
+        size="toolbar"
         disabled={!$selectedLabel}
         onclick={toggleDirection}
-        class="size-auto p-0 hover:bg-transparent [&>svg]:text-foreground [&>svg]:hover:text-muted-foreground"
+        class="w-8 px-0"
         data-testid="sort-direction-button"
         aria-label={$selectedDirection === SortDirection.DESC
             ? 'Sort descending'

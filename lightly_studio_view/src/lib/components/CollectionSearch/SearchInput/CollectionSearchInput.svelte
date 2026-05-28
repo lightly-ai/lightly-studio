@@ -48,7 +48,10 @@
     <Search class="absolute left-2 top-[50%] h-4 w-4 translate-y-[-50%] text-muted-foreground" />
     <Input
         placeholder="Search samples by description or image"
-        class={cn('pl-8 pr-8', showOutline && 'ring-2 ring-primary')}
+        class={cn(
+            'h-9 border-input bg-background pl-8 pr-16 text-sm',
+            showOutline && 'ring-2 ring-primary'
+        )}
         bind:value
         data-testid="text-embedding-search-input"
         {...inputProps}
@@ -56,7 +59,7 @@
     />
     {#if value}
         <button
-            class="absolute right-8 top-[50%] translate-y-[-50%] text-muted-foreground hover:text-foreground"
+            class="absolute right-9 top-[50%] flex size-6 translate-y-[-50%] items-center justify-center rounded text-muted-foreground hover:bg-muted hover:text-foreground"
             onclick={handleClear}
             title="Clear search"
             data-testid="search-clear-button"
@@ -66,7 +69,7 @@
         </button>
     {/if}
     <button
-        class="absolute right-2 top-[50%] translate-y-[-50%] text-muted-foreground hover:text-foreground disabled:opacity-50"
+        class="absolute right-2 top-[50%] flex size-6 translate-y-[-50%] items-center justify-center rounded text-muted-foreground hover:bg-muted hover:text-foreground disabled:cursor-not-allowed disabled:opacity-50"
         onclick={onUploadClick}
         title="Upload image for search"
         type="button"

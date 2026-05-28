@@ -85,8 +85,8 @@
                     {#if $isEditingMode}
                         <Button
                             data-testid="header-reverse-action-button"
-                            variant="outline"
-                            class="nav-button flex items-center space-x-2"
+                            variant="toolbar-outline"
+                            class="nav-button flex items-center gap-2"
                             title={$reversibleActions[0]
                                 ? $reversibleActions[0].description
                                 : 'No action to undo'}
@@ -98,9 +98,10 @@
                         </Button>
                         <Button
                             data-testid="header-editing-mode-button"
-                            class="nav-button flex items-center space-x-2"
+                            class="nav-button flex items-center gap-2"
                             onclick={() => setIsEditingMode(false)}
                             title="Finish Editing"
+                            aria-pressed="true"
                         >
                             <Check class="size-4" />
                             <span>Finish Editing</span>
@@ -108,10 +109,11 @@
                     {:else}
                         <Button
                             data-testid="header-editing-mode-button"
-                            variant="outline"
-                            class="nav-button flex items-center space-x-2"
+                            variant="toolbar-outline"
+                            class="nav-button flex items-center gap-2"
                             onclick={() => setIsEditingMode(true)}
                             title="Edit Annotations"
+                            aria-pressed="false"
                         >
                             <Pencil class="size-4" />
                             <span>Edit Annotations</span>

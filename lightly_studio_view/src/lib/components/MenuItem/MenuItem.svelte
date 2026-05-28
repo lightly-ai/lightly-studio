@@ -20,9 +20,13 @@
     role={'button'}
 >
     <Button
-        variant="ghost"
-        class={cn('flex items-center justify-between', item.isSelected && 'bg-accent')}
+        variant="toolbar"
+        class={cn(
+            'flex items-center justify-between',
+            item.isSelected && 'bg-muted text-foreground'
+        )}
         href={item.href}
+        aria-current={item.isSelected ? 'page' : undefined}
         data-testid={`navigation-menu-${item.title.toLowerCase()}`}
     >
         <div class="flex items-center gap-2">
@@ -47,12 +51,13 @@
             <div class="w-full min-w-[200px] rounded-md border bg-popover p-1 shadow-md">
                 {#each siblings as sibling (sibling.id)}
                     <Button
-                        variant="ghost"
+                        variant="toolbar"
                         class={cn(
                             'flex w-full items-center justify-start gap-2',
-                            sibling.isSelected && 'bg-accent'
+                            sibling.isSelected && 'bg-muted text-foreground'
                         )}
                         href={sibling.href}
+                        aria-current={sibling.isSelected ? 'page' : undefined}
                         data-testid={`navigation-dropdown-${sibling.title.toLowerCase()}`}
                     >
                         {#if sibling.icon}

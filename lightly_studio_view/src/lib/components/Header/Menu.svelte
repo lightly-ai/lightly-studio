@@ -121,8 +121,8 @@
     <Popover bind:open={isMenuOpen}>
         <PopoverTrigger>
             <Button
-                variant="ghost"
-                class="nav-button flex items-center space-x-2"
+                variant="toolbar"
+                class="nav-button flex items-center gap-2"
                 data-testid="menu-trigger"
             >
                 <span>Menu</span>

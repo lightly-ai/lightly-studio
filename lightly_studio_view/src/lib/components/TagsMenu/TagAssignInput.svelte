@@ -83,7 +83,7 @@
             oninput={handleInput}
             onfocus={handleFocus}
             onblur={handleBlur}
-            class="h-8 text-xs disabled:opacity-60"
+            class="h-8 border-input bg-background text-xs disabled:cursor-not-allowed disabled:opacity-60"
             disabled={busy}
         />
     </div>

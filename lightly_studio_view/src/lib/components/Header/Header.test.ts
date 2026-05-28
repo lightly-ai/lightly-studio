@@ -124,6 +124,7 @@ describe('Header', () => {
 
             expect(editButton).toBeInTheDocument();
             expect(editButton).toHaveTextContent('Edit Annotations');
+            expect(editButton).toHaveAttribute('aria-pressed', 'false');
         });
 
         it('renders Finish Editing button when in editing mode', () => {
@@ -136,6 +137,7 @@ describe('Header', () => {
             const doneButton = screen.getByTestId('header-editing-mode-button');
             expect(doneButton).toBeInTheDocument();
             expect(doneButton).toHaveTextContent('Finish Editing');
+            expect(doneButton).toHaveAttribute('aria-pressed', 'true');
         });
 
         it('calls setIsEditingMode with true when isEditingMode is false', () => {
