@@ -15,7 +15,6 @@ from alembic.config import Config
 from alembic.script import ScriptDirectory
 from sqlalchemy import inspect
 from sqlalchemy.engine import Engine, Inspector
-from sqlmodel import SQLModel
 
 import lightly_studio.api.db_tables  # noqa: F401
 from lightly_studio import db_url
@@ -109,9 +108,3 @@ def _alembic_version_table_exists(engine: Engine) -> bool:
     """Return whether the Alembic version tracking table is present."""
     return bool(_get_inspector(engine=engine).has_table(table_name="alembic_version"))
 
-
-def _has_application_tables(engine: Engine) -> bool:
-    """Return whether any SQLModel application table exists in the database."""
-    existing_tables = set(_get_inspector(engine=engine).get_table_names())
-    application_tables = set(SQLModel.metadata.tables.keys())
-    return bool(existing_tables & application_tables)

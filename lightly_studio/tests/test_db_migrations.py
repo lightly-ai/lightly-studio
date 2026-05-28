@@ -62,26 +62,6 @@ def test_run_migrations__fresh_database(
     )
 
 
-def test_run_migrations__legacy_database(
-    mocker: MockerFixture,
-    engine: Engine,
-) -> None:
-    """Pre-Alembic DB with tables is migrated using upgrade head."""
-    alembic_cfg = Config()
-    mocker.patch.object(db_migrations, "get_alembic_config", return_value=alembic_cfg)
-    mocker.patch.object(db_migrations, "_alembic_version_table_exists", return_value=False)
-    mock_run_command = mocker.patch.object(db_migrations, "_run_alembic_command")
-
-    db_migrations.run_migrations(engine=engine, engine_url=_POSTGRES_URL)
-
-    mock_run_command.assert_called_once_with(
-        engine=engine,
-        config=alembic_cfg,
-        fn=command.upgrade,
-        revision="head",
-    )
-
-
 def _reset_postgres_database(engine_url: str) -> None:
     """Drop application tables and Alembic version tracking."""
     normalized_url = db_url.ensure_psycopg3_driver(engine_url=engine_url)
@@ -99,9 +79,6 @@ def test_postgres_fresh_database__upgrade_head(
     postgres_url: str | None,
 ) -> None:
     """Fresh Postgres gets schema from Alembic upgrade and alembic_version at head."""
-    if postgres_url is None:
-        pytest.skip("Requires --postgres")
-
     _reset_postgres_database(engine_url=postgres_url)
 
     engine = DatabaseEngine(engine_url=postgres_url, single_threaded=True)
