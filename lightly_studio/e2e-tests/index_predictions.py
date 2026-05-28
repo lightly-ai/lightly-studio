@@ -19,7 +19,7 @@ db_manager.connect(db_file="lightly_studio.db", cleanup_existing=True)
 dataset = ls.ImageDataset.create(name="evaluation_example_dataset")
 dataset.add_images_from_path(path="dataset_examples/coco_subset_128_images/images")
 
-# Add two different annotation collections from COCO
+# Add predictions from two different annotation sources.
 dataset.add_annotations_from_coco(
     annotations_json="dataset_examples/coco_subset_128_images/instances_train2017.json",
     images_root="dataset_examples/coco_subset_128_images/images",

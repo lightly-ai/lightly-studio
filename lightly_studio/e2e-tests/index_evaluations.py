@@ -23,7 +23,7 @@ db_manager.connect(db_file="lightly_studio.db", cleanup_existing=True)
 dataset = ls.ImageDataset.create(name=DATASET_NAME)
 dataset.add_images_from_path(path=IMAGES_PATH)
 
-# Add ground truth and prediction annotation collections
+# Add predictions from two different annotation sources.
 dataset.add_annotations_from_coco(
     annotations_json=GT_ANNOTATIONS_JSON,
     images_root=IMAGES_PATH,
