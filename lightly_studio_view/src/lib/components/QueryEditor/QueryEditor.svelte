@@ -9,7 +9,7 @@
     const LIGHTLY_QUERY_DEFAULT_VALUE = `# Example query
 width < 500
 AND "reviewed" IN tags
-AND object_detection(label = "person" AND x > 10)
+AND object_detection(class_name = "person" AND x > 10)
 `;
 
     interface QueryEditorProps {

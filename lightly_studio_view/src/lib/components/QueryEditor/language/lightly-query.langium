@@ -125,7 +125,7 @@ ClassificationComparison returns ComparisonExpression:
   ClassificationFieldReference {ComparisonExpression.left=current} operator=('=' | '!=') right=StringLiteral;
 
 ClassificationFieldReference returns Expression:
-  {FieldReference} member=LABEL;
+  {FieldReference} member=CLASS_NAME;
 
 SegmentationMask returns Expression:
   SegmentationMaskOr;
@@ -161,7 +161,7 @@ TagInExpression returns Expression:
 
 terminal HEIGHT returns string: /\bheight\b/;
 terminal WIDTH returns string: /\bwidth\b/;
-terminal LABEL returns string: /\blabel\b/;
+terminal CLASS_NAME returns string: /\bclass_name\b/;
 terminal X_COORD returns string: /\bx\b/;
 terminal Y_COORD returns string: /\by\b/;
 
@@ -190,13 +190,13 @@ ObjectDetectionIntFieldName returns string:
   HEIGHT | WIDTH | X_COORD | Y_COORD;
 
 ObjectDetectionStringFieldName returns string:
-  LABEL;
+  CLASS_NAME;
 
 SegmentationMaskIntFieldName returns string:
   HEIGHT | WIDTH | X_COORD | Y_COORD;
 
 SegmentationMaskStringFieldName returns string:
-  LABEL;
+  CLASS_NAME;
 
 NumericLiteral returns Expression:
   IntLiteral | FloatLiteral;

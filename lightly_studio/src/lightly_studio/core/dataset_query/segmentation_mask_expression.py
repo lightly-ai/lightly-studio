@@ -41,7 +41,7 @@ class SegmentationMaskField:
         column=col(SegmentationAnnotationTable.y),
         relationship=AnnotationBaseTable.segmentation_details,
     )
-    label = ForeignComparableField(
+    class_name = ForeignComparableField(
         column=col(AnnotationLabelTable.annotation_label_name),
         relationship=AnnotationBaseTable.annotation_label,
     )
