@@ -2,8 +2,7 @@
 
 Search helps you find visually or semantically similar samples from a text or image. Filters narrow down the samples currently shown in the view by tags, annotations, dimensions, and other numeric metadata.
 
-For more complex filtering, use the query feature — either in the GUI
-in the query editor, or in Python when you need reusable filtering, sorting, and slicing.
+For more complex filtering, use the query feature — either in the GUI query editor or in Python when you need reusable filtering, sorting, and slicing.
 
 ## Search in GUI
 
