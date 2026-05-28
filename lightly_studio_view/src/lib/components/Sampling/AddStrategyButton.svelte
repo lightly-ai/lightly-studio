@@ -67,8 +67,7 @@
                 onmouseenter={(e) =>
                     handleMouseEnter(strategy.type, e.currentTarget as HTMLElement)}
                 onmouseleave={handleMouseLeave}
-                onfocusin={(e) =>
-                    handleMouseEnter(strategy.type, e.currentTarget as HTMLElement)}
+                onfocusin={(e) => handleMouseEnter(strategy.type, e.currentTarget as HTMLElement)}
                 onfocusout={handleMouseLeave}
             >
                 <Select.Item
