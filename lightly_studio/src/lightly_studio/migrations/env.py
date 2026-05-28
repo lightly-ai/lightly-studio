@@ -9,6 +9,7 @@ from logging.config import fileConfig
 from pathlib import Path
 from typing import Any, Literal, cast
 
+import alembic_postgresql_enum  # noqa: F401
 from alembic import context
 from alembic.autogenerate.api import AutogenContext
 from sqlalchemy import engine, pool
