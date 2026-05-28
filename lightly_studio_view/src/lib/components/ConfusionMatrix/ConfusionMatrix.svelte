@@ -27,7 +27,8 @@
     let chart: echarts.ECharts | null = $state(null);
 
     // 320px floor keeps small matrices readable; 18px per row + 210px for axis/grid margins
-    // (top 16 + bottom 180 from buildEchartsOption + slack) scales taller matrices to fit labels.
+    // (top 0 + bottom 100 from buildEchartsOption + slack for rotated x-axis labels) scales
+    // taller matrices to fit labels.
     const heightPx = $derived(Math.max(320, matrix.row_labels.length * 18 + 210));
 
     const maxCount = $derived(

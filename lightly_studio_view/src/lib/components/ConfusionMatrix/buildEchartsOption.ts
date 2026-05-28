@@ -40,7 +40,7 @@ export function buildEchartsOption(matrix: ConfusionMatrix): EChartsCoreOption {
                 return `GT: <b>${gt}</b><br/>Pred: <b>${pred}</b><br/>Count: <b>${count}</b>`;
             }
         },
-        grid: { left: 0, right: 0, top: 0, bottom: 100 },
+        grid: { left: 0, right: 0, top: 0, bottom: 100, containLabel: true },
         xAxis: {
             type: 'category',
             data: xLabels,
@@ -49,7 +49,14 @@ export function buildEchartsOption(matrix: ConfusionMatrix): EChartsCoreOption {
             nameLocation: 'middle',
             nameGap,
             nameTextStyle: { color: '#9ca3af', fontSize: 13, fontWeight: 'bold' },
-            axisLabel: { rotate: 45, interval: 0, color: '#9ca3af', fontSize: 12 },
+            axisLabel: {
+                rotate: 45,
+                interval: 0,
+                color: '#9ca3af',
+                fontSize: 12,
+                alignMinLabel: 'left',
+                alignMaxLabel: 'right'
+            },
             axisLine: { lineStyle: { color: '#374151' } },
             splitArea: { show: false }
         },
