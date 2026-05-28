@@ -14,7 +14,6 @@ from __future__ import annotations
 
 import atexit
 import logging
-import re
 from collections.abc import Generator
 from contextlib import contextmanager
 from enum import Enum
@@ -28,6 +27,7 @@ from sqlalchemy.engine import Engine
 from sqlmodel import Session, SQLModel, create_engine
 
 import lightly_studio.api.db_tables  # noqa: F401, required for SQLModel to work properly
+from lightly_studio import db_migrations, db_url
 from lightly_studio.dataset.env import LIGHTLY_STUDIO_DATABASE_URL
 
 
@@ -76,9 +76,12 @@ class DatabaseEngine:
 
         # Ensure the psycopg3 driver is used for Postgres connections.
         if self._backend == DatabaseBackend.POSTGRESQL:
-            self._engine_url = _ensure_psycopg3_driver(engine_url=self._engine_url)
+            self._engine_url = db_url.ensure_psycopg3_driver(engine_url=self._engine_url)
 
-        db_exists = _database_exists(engine_url=self._engine_url, backend=self._backend)
+        db_exists = _database_exists(
+            engine_url=self._engine_url,
+            backend=self._backend,
+        )
         if must_exist and not db_exists:
             raise FileNotFoundError(f"Database does not exist at {self._engine_url}.")
 
@@ -101,17 +104,14 @@ class DatabaseEngine:
         # For DuckDB, create_engine will create the database file if it does not exist.
         # For Postgres, we need to create the database.
         if self._backend == DatabaseBackend.POSTGRESQL:
-            if not db_exists:
-                sqlalchemy_utils.create_database(self._engine_url)
-            with self._engine.connect() as conn:
-                conn.execute(text("CREATE EXTENSION IF NOT EXISTS vector"))
-                conn.commit()
-
-        if cleanup_existing and self._backend == DatabaseBackend.POSTGRESQL:
-            SQLModel.metadata.drop_all(bind=self._engine)
-            logging.info("Dropped all tables in PostgreSQL database.")
-
-        SQLModel.metadata.create_all(self._engine)
+            _initialize_postgres_schema(
+                engine=self._engine,
+                engine_url=self._engine_url,
+                db_exists=db_exists,
+                cleanup_existing=cleanup_existing,
+            )
+        else:
+            SQLModel.metadata.create_all(self._engine)
 
     @contextmanager
     def session(self) -> Generator[Session, None, None]:
@@ -258,6 +258,29 @@ def get_backend() -> DatabaseBackend:
     return get_engine().backend
 
 
+def _initialize_postgres_schema(
+    engine: Engine,
+    engine_url: str,
+    db_exists: bool,
+    cleanup_existing: bool,
+) -> None:
+    """Create the database if needed, enable pgvector, and run Alembic migrations."""
+    if not db_exists:
+        sqlalchemy_utils.create_database(url=engine_url)
+    with engine.connect() as conn:
+        conn.execute(statement=text("CREATE EXTENSION IF NOT EXISTS vector"))
+        conn.commit()
+
+    if cleanup_existing:
+        SQLModel.metadata.drop_all(bind=engine)
+        with engine.connect() as conn:
+            conn.execute(statement=text("DROP TABLE IF EXISTS alembic_version"))
+            conn.commit()
+        logging.info("Dropped all tables in PostgreSQL database.")
+
+    db_migrations.run_migrations(engine=engine, engine_url=engine_url)
+
+
 def _detect_backend_from_url(engine_url: str) -> DatabaseBackend:
     """Detect the database backend from the engine URL.
 
@@ -278,23 +301,6 @@ def _detect_backend_from_url(engine_url: str) -> DatabaseBackend:
         f"Unsupported database URL scheme: {engine_url}. "
         f"Supported schemes: duckdb://, postgresql://, postgres://"
     )
-
-
-def _ensure_psycopg3_driver(engine_url: str) -> str:
-    """Ensure the psycopg3 driver is specified in a PostgreSQL URL.
-
-    SQLAlchemy defaults to psycopg2 for ``postgresql://`` URLs. This rewrites
-    the URL to use ``postgresql+psycopg://`` so that the psycopg3 driver is
-    selected instead.
-
-    Args:
-        engine_url: The database engine URL.
-
-    Returns:
-        The URL with the psycopg3 driver specified.
-    """
-    # Only rewrite if no explicit driver is specified.
-    return re.sub(r"^(postgresql|postgres)://", "postgresql+psycopg://", engine_url)
 
 
 def _database_exists(engine_url: str, backend: DatabaseBackend) -> bool:
