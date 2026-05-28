@@ -50,12 +50,6 @@ type Pages = {
     videosPage: VideosPage;
     videoFramesPage: VideoFramesPage;
     videoFrameDetailsPage: VideoFrameDetailsPage;
-    /**
-     * Like samplesPage but does NOT auto-navigate.
-     * Use this when tests need to share in-page state (e.g. Svelte stores)
-     * across multiple test functions via a single goto() call.
-     */
-    imagesPage: SamplesPage;
 };
 
 export const test = base.extend<Pages>({
@@ -126,10 +120,6 @@ export const test = base.extend<Pages>({
     videoFrameDetailsPage: async ({ page }, use) => {
         const videoFrameDetailsPage = new VideoFrameDetailsPage(page);
         await use(videoFrameDetailsPage);
-    },
-
-    imagesPage: async ({ page }, use) => {
-        await use(new SamplesPage(page));
     }
 });
 
