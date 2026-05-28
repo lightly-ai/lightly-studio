@@ -53,7 +53,7 @@ dataset.query().sampling().diverse(
 )
 ```
 
-If your dataset has multiple embedding models, pass `embedding_model_name` to specify which one to use. See [`Sampling.diverse`](../api/sampling.md#lightly_studio.sampling.sampling.Sampling.diverse) for the full API reference.
+If your dataset has multiple embedding models, pass `embedding_model_name` to specify which one to use. See [`Sampling.diverse`](../api/sampling.md#lightly_studio.sampling.sample.Sampling.diverse) for the full API reference.
 
 #### Metadata Weighting
 
@@ -80,7 +80,7 @@ dataset.query().sampling().metadata_weighting(
 )
 ```
 
-See [`Sampling.metadata_weighting`](../api/sampling.md#lightly_studio.sampling.sampling.Sampling.metadata_weighting) for the full API reference.
+See [`Sampling.metadata_weighting`](../api/sampling.md#lightly_studio.sampling.sample.Sampling.metadata_weighting) for the full API reference.
 
 #### Typicality Sampling and Outlier Sampling
 
