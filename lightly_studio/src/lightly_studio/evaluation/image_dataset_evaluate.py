@@ -47,7 +47,7 @@ class EvaluationResult(BaseModel):
 
     Attributes:
         sample_count: Number of samples included in the evaluation.
-        gt_annotation_count: Number of ground-truth annotations used.
+        gt_annotation_count: Number of ground truth annotations used.
         pred_annotation_count: Number of prediction annotations used.
     """
 
@@ -104,7 +104,7 @@ class ImageDatasetEvaluate:
 
         Args:
             name: Display name of the evaluation run.
-            gt_annotation_source: Name of the annotation source containing ground-truth annotations.
+            gt_annotation_source: Name of the annotation source containing ground truth annotations.
             pred_annotation_source: Name of the annotation source containing predictions.
             config: Optional object-detection evaluation config. If omitted,
                 defaults are used.
@@ -139,7 +139,7 @@ class ImageDatasetEvaluate:
 
         Args:
             name: Display name of the evaluation run.
-            gt_annotation_source: Name of the annotation source containing ground-truth annotations.
+            gt_annotation_source: Name of the annotation source containing ground truth annotations.
             pred_annotation_source: Name of the annotation source containing predictions.
             config: Optional classification evaluation config. If omitted,
                 defaults are used.
@@ -231,7 +231,7 @@ class ImageDatasetEvaluate:
         Args:
             name: Display name of the evaluation run.
             gt_annotation_source: Name of the annotation source containing
-                ground-truth annotations.
+                ground truth annotations.
             pred_annotation_source: Name of the annotation source containing
                 predictions.
             task_type: Evaluation task type; determines the expected annotation type
