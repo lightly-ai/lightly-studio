@@ -371,14 +371,14 @@ dataset.add_images_from_path(path=images_path)
 dataset.add_annotations_from_coco(
     annotations_json=f"{dataset_path}/coco_subset_128_images/instances_train2017.json",
     images_root=images_path,
-    name="ground_truth",
+    annotation_source="ground_truth",
 )
 
 # Attach predictions from a model (paths are illustrative).
 dataset.add_annotations_from_coco(
     annotations_json="/path/to/model_A_predictions.json",
     images_root=images_path,
-    name="model_A",
+    annotation_source="model_A",
 )
 ```
 

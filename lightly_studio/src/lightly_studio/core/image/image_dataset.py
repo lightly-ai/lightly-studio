@@ -183,33 +183,33 @@ class ImageDataset(BaseSampleDataset[ImageSample]):
         self,
         input_labels: ObjectDetectionInput | InstanceSegmentationInput,
         images_root: PathLike,
-        name: str,
+        annotation_source: str,
     ) -> None:
         """Attach annotations from a labelformat input to images already in the dataset.
 
         Images are matched by relative path under ``images_root``. Annotations are grouped
-        under an annotation collection identified by ``name``; reusing the same name
-        appends to that collection.
+        under an annotation source identified by ``annotation_source``; reusing the same
+        name appends to that source.
 
         Args:
             input_labels: Labelformat input object (e.g. ``COCOObjectDetectionInput``).
             images_root: Root path used to construct absolute image paths for matching.
-            name: Name of the annotation collection.
+            annotation_source: Name of the annotation source.
         """
         missing = add_annotations.add_annotations_from_labelformat(
             session=self.session,
             root_collection_id=self.collection_id,
             input_labels=input_labels,
             images_root=images_root,
-            collection_name=name,
+            collection_name=annotation_source,
         )
-        _log_missing_images(name=name, missing_paths=missing)
+        _log_missing_images(name=annotation_source, missing_paths=missing)
 
     def add_annotations_from_coco(
         self,
         annotations_json: PathLike,
         images_root: PathLike,
-        name: str,
+        annotation_source: str,
         annotation_type: AnnotationType = AnnotationType.OBJECT_DETECTION,
     ) -> None:
         """Attach COCO annotations to images already in the dataset.
@@ -217,7 +217,7 @@ class ImageDataset(BaseSampleDataset[ImageSample]):
         Args:
             annotations_json: Path to the COCO annotations JSON file.
             images_root: Root path used for matching image filenames.
-            name: Name of the annotation collection.
+            annotation_source: Name of the annotation source.
             annotation_type: ``OBJECT_DETECTION`` or ``SEGMENTATION_MASK``.
         """
         label_input: COCOObjectDetectionInput | COCOInstanceSegmentationInput
@@ -228,20 +228,20 @@ class ImageDataset(BaseSampleDataset[ImageSample]):
         else:
             raise ValueError(f"Invalid annotation type: {annotation_type}")
         self.add_annotations_from_labelformat(
-            input_labels=label_input, images_root=images_root, name=name
+            input_labels=label_input, images_root=images_root, annotation_source=annotation_source
         )
 
     def add_annotations_from_yolo(
         self,
         data_yaml: PathLike,
-        name: str,
+        annotation_source: str,
         input_split: str | None = None,
     ) -> None:
         """Attach YOLO annotations to images already in the dataset.
 
         Args:
             data_yaml: Path to the YOLO ``data.yaml`` file.
-            name: Name of the annotation collection.
+            annotation_source: Name of the annotation source.
             input_split: Specific split (e.g. ``"train"``). ``None`` loads all splits.
         """
         data_yaml = Path(data_yaml).absolute()
@@ -255,9 +255,9 @@ class ImageDataset(BaseSampleDataset[ImageSample]):
                 root_collection_id=self.collection_id,
                 input_labels=label_input,
                 images_root=label_input._images_dir(),  # noqa: SLF001
-                collection_name=name,
+                collection_name=annotation_source,
             )
-        _log_missing_images(name=name, missing_paths=missing)
+        _log_missing_images(name=annotation_source, missing_paths=missing)
 
     def add_samples_from_labelformat(
         self,

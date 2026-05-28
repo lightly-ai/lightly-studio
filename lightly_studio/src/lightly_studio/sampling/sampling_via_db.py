@@ -60,16 +60,16 @@ def _aggregate_class_distributions(
         input_sample_ids:
             A list of sample IDs for which to aggregate the class distributions.
         sample_id_to_annotation_label_ids:
-            A dictionary mapping sample IDs to a list of their annotation label IDs.
+            A dictionary mapping sample IDs to a list of their annotation class IDs.
         target_annotation_ids:
-            A list of annotation label IDs that are considered for the distribution.
+            A list of annotation class IDs that are considered for the distribution.
             The order of these IDs determines the order of the columns in the output.
 
     Returns:
         A numpy array of shape (n_samples, n_labels) where n_samples is the
         number of input samples and n_labels is the number of target annotation
-        labels. Each row in the array represents the class distribution for a
-        sample, where the values are the counts of each target annotation label.
+        classes. Each row in the array represents the class distribution for a
+        sample, where the values are the counts of each target annotation class.
     """
     n_samples = len(input_sample_ids)
     n_labels = len(target_annotation_ids)
@@ -97,21 +97,21 @@ def _process_explicit_target_distribution(
 
     Args:
         session: The SQLAlchemy session.
-        dataset_id: The dataset ID to look for annotation labels.
+        dataset_id: The dataset ID to look for annotation classes.
         target_distribution:
-            A dictionary mapping annotation label names to their target proportions.
+            A dictionary mapping annotation class names to their target proportions.
         annotation_label_ids:
-            A sequence of all annotation label IDs to consider for class balancing.
+            A sequence of all annotation class IDs to consider for class balancing.
 
     Returns:
         Tuple of:
-            A dictionary mapping annotation label IDs to their effective target proportions.
+            A dictionary mapping annotation class IDs to their effective target proportions.
             The set of unused label IDs
             The target value remaining to 1.0.
 
     Raises:
         NotImplementedError: If multiple labels with the same name are found.
-        ValueError: If an annotation label name does not exist or if targets sum
+        ValueError: If an annotation class name does not exist or if targets sum
             to less than 1.0 and all classes are used.
     """
     label_id_to_target: dict[UUID, float] = {}
@@ -128,7 +128,7 @@ def _process_explicit_target_distribution(
                 "Multiple labels with the same name not supported yet."
             ) from e
         if annotation_label is None:
-            raise ValueError(f"Annotation label with this name does not exist: {label_name}")
+            raise ValueError(f"Annotation class with this name does not exist: {label_name}")
         label_id_to_target[annotation_label.annotation_label_id] = target
         total_targets += target
 

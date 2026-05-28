@@ -69,7 +69,7 @@ class TestDataset:
         dataset.add_annotations_from_coco(
             annotations_json=annotations_path,
             images_root=images_path,
-            name="ground_truth",
+            annotation_source="ground_truth",
         )
 
         result = annotation_resolver.get_all_by_collection_name(
@@ -104,10 +104,10 @@ class TestDataset:
         second_path.write_text(json.dumps(_coco_dict_with(["image2.jpg"])))
 
         dataset.add_annotations_from_coco(
-            annotations_json=first_path, images_root=images_path, name="gt"
+            annotations_json=first_path, images_root=images_path, annotation_source="gt"
         )
         dataset.add_annotations_from_coco(
-            annotations_json=second_path, images_root=images_path, name="gt"
+            annotations_json=second_path, images_root=images_path, annotation_source="gt"
         )
 
         result = annotation_resolver.get_all_by_collection_name(
@@ -127,10 +127,10 @@ class TestDataset:
         annotations_path.write_text(json.dumps(_coco_dict_with(["image1.jpg"])))
 
         dataset.add_annotations_from_coco(
-            annotations_json=annotations_path, images_root=images_path, name="gt"
+            annotations_json=annotations_path, images_root=images_path, annotation_source="gt"
         )
         dataset.add_annotations_from_coco(
-            annotations_json=annotations_path, images_root=images_path, name="model_A"
+            annotations_json=annotations_path, images_root=images_path, annotation_source="model_A"
         )
 
         gt_result = annotation_resolver.get_all_by_collection_name(
@@ -161,7 +161,7 @@ class TestDataset:
 
         with caplog.at_level(logging.WARNING):
             dataset.add_annotations_from_coco(
-                annotations_json=annotations_path, images_root=images_path, name="gt"
+                annotations_json=annotations_path, images_root=images_path, annotation_source="gt"
             )
 
         warnings = [r for r in caplog.records if r.levelno == logging.WARNING]
@@ -189,7 +189,7 @@ class TestDataset:
         dataset.add_annotations_from_coco(
             annotations_json=annotations_path,
             images_root=images_path,
-            name="seg",
+            annotation_source="seg",
             annotation_type=AnnotationType.SEGMENTATION_MASK,
         )
 
@@ -220,7 +220,7 @@ class TestDataset:
 
         dataset = ImageDataset.create(name="test_dataset")
         dataset.add_images_from_path(path=images_path, embed=False)
-        dataset.add_annotations_from_yolo(data_yaml=yaml_path, name="model_A", input_split="train")
+        dataset.add_annotations_from_yolo(data_yaml=yaml_path, annotation_source="model_A", input_split="train")
 
         result = annotation_resolver.get_all_by_collection_name(
             session=dataset.session,
