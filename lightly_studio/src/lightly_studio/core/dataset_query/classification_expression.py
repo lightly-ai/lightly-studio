@@ -21,7 +21,7 @@ from lightly_studio.models.sample import SampleTable
 class ClassificationField:
     """Providing access to predefined classification fields for queries."""
 
-    label = ForeignComparableField(
+    class_name = ForeignComparableField(
         column=col(AnnotationLabelTable.annotation_label_name),
         relationship=AnnotationBaseTable.annotation_label,
     )

@@ -17,7 +17,7 @@ describe('enrichWithSchemaDocs', () => {
     it('enriches known field with scope/type metadata when docs are missing', async () => {
         const { enrichWithSchemaDocs } = await import('./completionAdapterEnrichWithSchemaDocs');
         const result = enrichWithSchemaDocs({ label: 'fps' } as never, 'video');
-        expect(result.detail).toBe('(field) Video.fps: float');
+        expect(result.detail).toBe('Video.fps: float');
         expect(result.documentation).toEqual({
             value: 'Frames per second. Equality only (`=`, `!=`).'
         });
