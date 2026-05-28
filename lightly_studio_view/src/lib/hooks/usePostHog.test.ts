@@ -11,13 +11,19 @@ vi.mock('$env/static/public', () => ({
     PUBLIC_POSTHOG_HOST: 'https://eu.i.posthog.com'
 }));
 
+vi.mock('$lib/version.json', () => ({
+    version: '1.2.3'
+}));
+
 const mockInit = vi.fn();
 const mockCapture = vi.fn();
+const mockRegister = vi.fn();
 
 vi.mock('posthog-js', () => ({
     default: {
         init: (...args: unknown[]) => mockInit(...args),
-        capture: (...args: unknown[]) => mockCapture(...args)
+        capture: (...args: unknown[]) => mockCapture(...args),
+        register: (...args: unknown[]) => mockRegister(...args)
     }
 }));
 
@@ -25,6 +31,7 @@ describe('usePostHog', () => {
     beforeEach(() => {
         mockInit.mockClear();
         mockCapture.mockClear();
+        mockRegister.mockClear();
     });
 
     it('should initialize PostHog with correct configuration', () => {
@@ -38,6 +45,7 @@ describe('usePostHog', () => {
             capture_pageleave: true,
             capture_exceptions: true
         });
+        expect(mockRegister).toHaveBeenCalledWith({ app_version: '1.2.3' });
     });
 
     it('should track events after initialization', () => {
