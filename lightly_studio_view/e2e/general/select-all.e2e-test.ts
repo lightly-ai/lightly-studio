@@ -45,3 +45,50 @@ test('select all images with label filter via keyboard shortcut', async ({ page,
     // All samples should be selected (use selection pill since not all items are rendered)
     await expect(page.getByText(`${cocoDataset.totalSamples} selected`)).toBeVisible();
 });
+
+test('select all images respects annotation source filter', async ({ page, samplesPage }) => {
+    await expect(samplesPage.getSamples().first()).toBeVisible();
+
+    const sourceCheckboxes = page
+        .getByText('Annotation Sources', { exact: true })
+        .locator('xpath=ancestor::button/following-sibling::*[1]//button[@role="checkbox"]');
+
+    await expect(sourceCheckboxes.first()).toBeVisible({ timeout: 10000 });
+    test.skip(
+        (await sourceCheckboxes.count()) < 2,
+        'requires at least two annotation sources in the E2E dataset'
+    );
+
+    const listResponsePromise = page.waitForResponse(
+        (response) =>
+            response.url().includes('/images/list') &&
+            response.request().method() === 'POST' &&
+            response.status() === 200,
+        { timeout: 10000 }
+    );
+
+    await sourceCheckboxes.first().click();
+    const listResponse = await listResponsePromise;
+    const listRequestBody = listResponse.request().postDataJSON();
+    const expectedCollectionIds =
+        listRequestBody.filters?.sample_filter?.annotations_filter?.collection_ids;
+
+    expect(expectedCollectionIds?.length).toBeGreaterThan(0);
+
+    await page.click('body');
+    const sampleIdsResponsePromise = page.waitForResponse(
+        (response) =>
+            response.url().includes('/images/sample_ids') &&
+            response.request().method() === 'POST' &&
+            response.status() === 200,
+        { timeout: 10000 }
+    );
+    await page.keyboard.press('Control+a');
+    const sampleIdsResponse = await sampleIdsResponsePromise;
+    const sampleIdsRequestBody = sampleIdsResponse.request().postDataJSON();
+
+    expect(sampleIdsRequestBody.filters?.sample_filter?.annotations_filter?.collection_ids).toEqual(
+        expectedCollectionIds
+    );
+    await expect(page.getByText(/\d+ selected/)).toBeVisible();
+});
