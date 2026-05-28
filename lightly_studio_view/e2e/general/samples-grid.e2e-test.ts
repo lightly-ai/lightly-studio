@@ -219,6 +219,46 @@ test('Typicality sampling creates tag with correct number of samples', async ({
     await expect(samplesPage.getSamples()).toHaveCount(nSamples, { timeout: 10000 });
 });
 
+test('Similarity sampling creates tag with correct number of samples', async ({
+    page,
+    samplesPage
+}) => {
+    const timestamp = Date.now();
+    const queryTagName = `similarity_query_tag_${timestamp}`;
+    const samplingTagName = `similarity_sampling_${timestamp}`;
+    const nSamples = 5;
+
+    await samplesPage.getSampleByIndex(0).click();
+    await samplesPage.createTag(queryTagName);
+
+    const queryTagId = await samplesPage.getTagIdByName(queryTagName);
+    expect(queryTagId).toBeTruthy();
+
+    const similarityPromise = page.waitForResponse(
+        (response) => response.url().includes('/metadata/similarity') && response.status() === 204
+    );
+    const samplingPromise = page.waitForResponse(
+        (response) => response.url().includes('/sampling') && response.status() === 204
+    );
+
+    await samplesPage.createSampling(
+        'similarity',
+        nSamples,
+        samplingTagName,
+        queryTagId ?? undefined
+    );
+
+    await similarityPromise;
+    await samplingPromise;
+
+    await expect(page.getByText('Sampling created successfully')).toBeVisible({ timeout: 10000 });
+
+    const tagNames = await samplesPage.getTagNames();
+    expect(tagNames).toContain(samplingTagName);
+
+    await expect(samplesPage.getSamples()).toHaveCount(nSamples, { timeout: 10000 });
+});
+
 test('Sampling shows error toast when tag already exists', async ({ page, samplesPage }) => {
     // samplesPage fixture automatically navigates and loads samples
 

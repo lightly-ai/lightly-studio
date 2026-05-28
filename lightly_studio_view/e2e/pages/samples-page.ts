@@ -153,14 +153,14 @@ export class SamplesPage {
         if (strategy === 'similarity') {
             await this.page.getByTestId('sampling-dialog-query-tag-select').click();
             await this.page.getByTestId(`sampling-query-tag-${queryTagId}`).click();
-        } else {
-            const nSamplesInput = this.page.getByTestId('sampling-dialog-n-samples-input');
-            await nSamplesInput.clear();
-            await nSamplesInput.fill(nSamples.toString());
-
-            const tagNameInput = this.page.getByTestId('sampling-dialog-tag-name-input');
-            await tagNameInput.fill(tagName);
         }
+
+        const nSamplesInput = this.page.getByTestId('sampling-dialog-n-samples-input');
+        await nSamplesInput.clear();
+        await nSamplesInput.fill(nSamples.toString());
+
+        const tagNameInput = this.page.getByTestId('sampling-dialog-tag-name-input');
+        await tagNameInput.fill(tagName);
 
         await pressButton(this.page, 'sampling-dialog-submit');
     }
