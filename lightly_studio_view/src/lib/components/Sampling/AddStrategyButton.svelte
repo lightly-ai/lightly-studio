@@ -19,6 +19,8 @@
 
     let hoveredType = $state<StrategyType | null>(null);
     let tooltipRect = $state<DOMRect | null>(null);
+    // wrapper element refs used to position the tooltip on keyboard highlight
+    let itemRefs: Partial<Record<StrategyType, HTMLElement>> = {};
 
     function getDisabledReason(type: StrategyType): string | undefined {
         if (type === 'similarity') return similarityDisabledReason;
@@ -64,11 +66,10 @@
             <div
                 class="w-full"
                 role="none"
+                bind:this={itemRefs[strategy.type]}
                 onmouseenter={(e) =>
                     handleMouseEnter(strategy.type, e.currentTarget as HTMLElement)}
                 onmouseleave={handleMouseLeave}
-                onfocusin={(e) => handleMouseEnter(strategy.type, e.currentTarget as HTMLElement)}
-                onfocusout={handleMouseLeave}
             >
                 <Select.Item
                     value={strategy.type}
@@ -76,6 +77,14 @@
                     disabled={!!disabledReason}
                     data-testid={`add-strategy-${strategy.type}`}
                     aria-describedby="strategy-desc-{strategy.type}"
+                    onHighlight={() => {
+                        const el = itemRefs[strategy.type];
+                        if (el) handleMouseEnter(strategy.type, el);
+                    }}
+                    onUnhighlight={() => {
+                        // guard against bits-ui firing onUnhighlight after onHighlight of another item
+                        if (hoveredType === strategy.type) handleMouseLeave();
+                    }}
                 />
                 <span id="strategy-desc-{strategy.type}" class="sr-only">
                     {strategy.description}{#if disabledReason}: {disabledReason}{/if}
