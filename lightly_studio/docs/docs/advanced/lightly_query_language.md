@@ -73,7 +73,7 @@ NOT "rejected" IN tags
 
 ## Annotation match functions
 
-Annotations are classifications or shapes attached to an image.
+An annotation is a classification, bounding box, or segmentation mask attached to an image.
 
 The query language supports three annotation functions:
 
