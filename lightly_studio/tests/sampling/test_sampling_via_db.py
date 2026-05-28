@@ -528,7 +528,7 @@ def test_sampling_via_database_with_annotation_class_balancing_missing_class(
         ],
     )
 
-    with pytest.raises(ValueError, match="Annotation label with this name does not exist: cat"):
+    with pytest.raises(ValueError, match="Annotation class with this name does not exist: cat"):
         sampling_via_database(
             session=db_session,
             config=config,
