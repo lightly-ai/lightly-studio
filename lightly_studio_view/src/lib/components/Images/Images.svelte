@@ -38,7 +38,6 @@
 
     const { selectedAnnotationFilterIdsArray: selectedAnnotationFilterIds } =
         useSelectedAnnotationsFilter();
-    const { selectedCollectionIds } = useAnnotationCollectionsFilter();
 
     const { tagsSelected } = useTags({
         collection_id,
