@@ -64,7 +64,6 @@
             annotation_label_ids: $selectedAnnotationFilterIds?.length
                 ? $selectedAnnotationFilterIds
                 : undefined,
-            collection_ids: $selectedCollectionIds.length ? $selectedCollectionIds : undefined,
             tag_ids: $tagsSelected.size > 0 ? Array.from($tagsSelected) : undefined,
             dimensions: $dimensions ?? undefined
         },
@@ -161,8 +160,7 @@
             `${$dimensions?.min_height}-${$dimensions?.max_height}`,
             JSON.stringify($metadataValues),
             $textEmbedding?.queryText || '',
-            JSON.stringify($imageSortBy),
-            $selectedCollectionIds.join(',')
+            JSON.stringify($imageSortBy)
         ];
 
         return parts.filter(Boolean).join('|');
