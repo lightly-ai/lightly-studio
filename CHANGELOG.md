@@ -17,8 +17,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
-- Renamed the annotation class argument `label` to `class_name` in the Python SDK (the `Create*` annotation classes and the `Annotation.class_name` property). Breaking change.
-- Renamed the query-language annotation-class field `label` to `class_name` (e.g. `object_detection(class_name = "cat")`), in both the Python query API and the GUI query editor. Breaking change.
+- Renamed the annotation-class field `label` to `class_name` across the Python SDK and query language. Breaking change.
 
 ### Deprecated
 
