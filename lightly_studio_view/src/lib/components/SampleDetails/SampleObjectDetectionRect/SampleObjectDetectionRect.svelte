@@ -17,6 +17,7 @@
     import { usePendingOperations } from '$lib/hooks/usePendingOperations/usePendingOperations';
     import ResizableRectangle from '$lib/components/ResizableRectangle/ResizableRectangle.svelte';
     import { useAnnotationLabelContext } from '$lib/contexts/SampleDetailsAnnotation.svelte';
+    import SelectClassDialog from '$lib/components/SelectClassDialog/SelectClassDialog.svelte';
     import { getBoundingBox } from '$lib/components/SampleAnnotation/utils';
     import type { PendingChange } from '../pendingChange';
 
@@ -51,6 +52,36 @@
     let temporaryBbox = $state<BoundingBox | null>(null);
     let shouldDisableInteraction = $state(false);
     const labels = useAnnotationLabels(() => ({ collectionId }));
+
+    // --- Select-class dialog ---
+    let showSelectClassDialog = $state(false);
+    let pendingLabelRequest: Promise<string | null> | null = null;
+    let resolveRequestLabel: ((label: string | null) => void) | null = null;
+
+    const requestLabel = (): Promise<string | null> => {
+        // Single-flight: concurrent callers share the in-flight dialog promise so
+        // that resolveRequestLabel is never overwritten and earlier callers cannot
+        // be stranded waiting on a promise that will never settle.
+        if (pendingLabelRequest) return pendingLabelRequest;
+
+        showSelectClassDialog = true;
+        pendingLabelRequest = new Promise<string | null>((resolve) => {
+            resolveRequestLabel = resolve;
+        });
+        return pendingLabelRequest;
+    };
+
+    const settleRequestLabel = (label: string | null) => {
+        showSelectClassDialog = false;
+        resolveRequestLabel?.(label);
+        resolveRequestLabel = null;
+        pendingLabelRequest = null;
+    };
+
+    const handleClassSelected = (label: string) => settleRequestLabel(label);
+
+    const handleClassDialogCancel = () => settleRequestLabel(null);
+    // ---
     const { createLabel } = useCreateLabel({ collectionId });
     const { createAnnotation } = useCreateAnnotation({
         collectionId
@@ -169,17 +200,22 @@
         const pendingOperation = startCreateBoundingBoxPending();
 
         try {
-            let label =
-                labels.data?.find(
-                    (label) =>
-                        label.annotation_label_name === annotationLabelContext.annotationLabel
-                ) ?? labels.data?.find((label) => label.annotation_label_name === 'DEFAULT');
+            let selectedLabelName = annotationLabelContext.annotationLabel;
+            if (!selectedLabelName) {
+                selectedLabelName = await requestLabel();
+                if (!selectedLabelName) return;
+                setAnnotationLabel(selectedLabelName);
+            }
 
-            // Create an default label if it does not exist yet
+            let label = labels.data?.find(
+                (label) => label.annotation_label_name === selectedLabelName
+            );
+
+            // Create label if it does not exist yet
             if (!label) {
                 label = await createLabel({
                     dataset_id: datasetId,
-                    annotation_label_name: 'DEFAULT'
+                    annotation_label_name: selectedLabelName
                 });
             }
 
@@ -229,7 +265,8 @@
         setLastCreatedAnnotationId,
         setAnnotationId,
         setIsDrawing,
-        setCurrentBoundingBox
+        setCurrentBoundingBox,
+        setAnnotationLabel
     } = useAnnotationLabelContext();
 
     const interactionPointerEvents = $derived(shouldDisableInteraction ? 'none' : 'all');
@@ -309,6 +346,7 @@
 
     onDestroy(() => {
         resetCreateBoundingBoxPending();
+        settleRequestLabel(null);
         detachSvgListeners?.();
     });
 
@@ -334,4 +372,11 @@
     cursor={'crosshair'}
     pointerEvents={interactionPointerEvents}
     {sample}
+/>
+
+<SelectClassDialog
+    bind:open={showSelectClassDialog}
+    labels={labels.data?.map((l) => l.annotation_label_name ?? '').filter(Boolean) ?? []}
+    onConfirm={handleClassSelected}
+    onCancel={handleClassDialogCancel}
 />
