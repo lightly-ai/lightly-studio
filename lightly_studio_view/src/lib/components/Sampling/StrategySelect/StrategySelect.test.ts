@@ -12,7 +12,7 @@ describe('StrategySelect', () => {
             props: { value: '', isSimilaritySupported: true, onValueChange: vi.fn() }
         });
 
-        expect(screen.getByTestId('selection-dialog-strategy-select')).toHaveTextContent(
+        expect(screen.getByTestId('sampling-dialog-strategy-select')).toHaveTextContent(
             'Select strategy'
         );
     });
@@ -22,7 +22,7 @@ describe('StrategySelect', () => {
             props: { value: 'diversity', isSimilaritySupported: true, onValueChange: vi.fn() }
         });
 
-        expect(screen.getByTestId('selection-dialog-strategy-select')).toHaveTextContent(
+        expect(screen.getByTestId('sampling-dialog-strategy-select')).toHaveTextContent(
             'Diversity'
         );
     });
@@ -33,10 +33,10 @@ describe('StrategySelect', () => {
             props: { value: '', isSimilaritySupported: true, onValueChange }
         });
 
-        await fireEvent.keyDown(screen.getByTestId('selection-dialog-strategy-select'), {
+        await fireEvent.keyDown(screen.getByTestId('sampling-dialog-strategy-select'), {
             key: 'Enter'
         });
-        await fireEvent.pointerUp(await screen.findByTestId('selection-strategy-typicality'));
+        await fireEvent.pointerUp(await screen.findByTestId('sampling-strategy-typicality'));
 
         expect(onValueChange).toHaveBeenCalledWith('typicality');
     });
@@ -46,11 +46,11 @@ describe('StrategySelect', () => {
             props: { value: '', isSimilaritySupported: false, onValueChange: vi.fn() }
         });
 
-        await fireEvent.keyDown(screen.getByTestId('selection-dialog-strategy-select'), {
+        await fireEvent.keyDown(screen.getByTestId('sampling-dialog-strategy-select'), {
             key: 'Enter'
         });
 
-        expect(await screen.findByTestId('selection-strategy-similarity')).toHaveAttribute(
+        expect(await screen.findByTestId('sampling-strategy-similarity')).toHaveAttribute(
             'data-disabled'
         );
     });
@@ -60,11 +60,11 @@ describe('StrategySelect', () => {
             props: { value: '', isSimilaritySupported: true, onValueChange: vi.fn() }
         });
 
-        await fireEvent.keyDown(screen.getByTestId('selection-dialog-strategy-select'), {
+        await fireEvent.keyDown(screen.getByTestId('sampling-dialog-strategy-select'), {
             key: 'Enter'
         });
 
-        expect(await screen.findByTestId('selection-strategy-similarity')).not.toHaveAttribute(
+        expect(await screen.findByTestId('sampling-strategy-similarity')).not.toHaveAttribute(
             'data-disabled'
         );
     });

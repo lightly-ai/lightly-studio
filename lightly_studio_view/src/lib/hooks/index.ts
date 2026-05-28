@@ -27,4 +27,4 @@ export { useEvaluationRuns } from '$lib/hooks/useEvaluationRuns/useEvaluationRun
 export { useEvaluationConfusionMatrix } from '$lib/hooks/useEvaluationConfusionMatrix/useEvaluationConfusionMatrix.svelte';
 export { useOrderBy } from '$lib/hooks/useOrderBy/useOrderBy';
 export { useSortFields } from '$lib/hooks/useSortFields/useSortFields.svelte';
-export { useCreateSelection } from '$lib/hooks/useCreateSelection/useCreateSelection';
+export { useCreateSampling } from '$lib/hooks/useCreateSampling/useCreateSampling';

@@ -4,7 +4,7 @@
     import SimilarityForm from './SimilarityForm.svelte';
 
     const { Story } = defineMeta({
-        title: 'Components/Selection/SimilarityForm',
+        title: 'Components/Sampling/SimilarityForm',
         component: SimilarityForm,
         tags: ['autodocs']
     });
