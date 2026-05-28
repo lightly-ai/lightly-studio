@@ -28,3 +28,11 @@ export { useEvaluationConfusionMatrix } from '$lib/hooks/useEvaluationConfusionM
 export { useOrderBy } from '$lib/hooks/useOrderBy/useOrderBy';
 export { useSortFields } from '$lib/hooks/useSortFields/useSortFields.svelte';
 export { useCreateSelection } from '$lib/hooks/useCreateSelection/useCreateSelection';
+export { useSelectClassDialog } from '$lib/hooks/useSelectClassDialog/useSelectClassDialog';
+export { usePendingOperations } from '$lib/hooks/usePendingOperations/usePendingOperations';
+export { useSegmentationMaskBrush } from '$lib/hooks/useSegmentationMaskBrush';
+
+export { useAnnotationLabelContext } from '$lib/contexts/SampleDetailsAnnotation.svelte';
+export { useAnnotation } from '$lib/hooks/useAnnotation/useAnnotation';
+export { useAnnotationLabels } from '$lib/hooks/useAnnotationLabels/useAnnotationLabels';
+export { useSegmentationMaskPreview } from '$lib/hooks/useSegmentationMaskPreview';

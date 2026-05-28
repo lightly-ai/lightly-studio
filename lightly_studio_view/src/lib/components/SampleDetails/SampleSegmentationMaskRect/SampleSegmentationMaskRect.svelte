@@ -7,14 +7,16 @@
         withAlpha
     } from '$lib/components/SampleAnnotation/utils';
     import parseColor from '$lib/components/SampleAnnotation/SampleAnnotationSegmentationRLE/calculateBinaryMaskFromRLE/parseColor';
-    import { useAnnotationLabelContext } from '$lib/contexts/SampleDetailsAnnotation.svelte';
-    import { useAnnotation } from '$lib/hooks/useAnnotation/useAnnotation';
-    import { useAnnotationLabels } from '$lib/hooks/useAnnotationLabels/useAnnotationLabels';
-    import { useSegmentationMaskBrush } from '$lib/hooks/useSegmentationMaskBrush';
-    import { useSegmentationMaskPreview } from '$lib/hooks/useSegmentationMaskPreview';
-    import { useSelectClassDialog } from '$lib/hooks/useSelectClassDialog/useSelectClassDialog';
-    import { usePendingOperations } from '$lib/hooks/usePendingOperations/usePendingOperations';
-    import { useCollectionWithChildren } from '$lib/hooks/useCollection/useCollection';
+    import {
+        useSelectClassDialog,
+        usePendingOperations,
+        useCollectionWithChildren,
+        useSegmentationMaskBrush,
+        useSegmentationMaskPreview,
+        useAnnotationLabels,
+        useAnnotation,
+        useAnnotationLabelContext
+    } from '$lib/hooks';
     import { page } from '$app/state';
     import type { PendingChange } from '../pendingChange';
     import SampleAnnotationRect from '../SampleAnnotationRect/SampleAnnotationRect.svelte';
