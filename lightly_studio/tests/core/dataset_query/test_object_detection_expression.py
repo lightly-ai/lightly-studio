@@ -153,10 +153,10 @@ class TestObjectDetectionExpressions:
             .where(ObjectDetectionQuery.match(ObjectDetectionField.class_name == "label1").get())
         )
         results = db_session.exec(query).all()
-        # There are two annotations with this label but only one of the right type.
+        # There are two annotations with this annotation class but only one of the right type.
         assert [image.sample_id for image in results] == [image1.sample_id]
 
-        # Repeat almost the same query but now without label filtering. Just an empty
+        # Repeat almost the same query but now without annotation class filtering. Just an empty
         # ObjectDetectionQuery.match().
         query = (
             select(ImageTable)

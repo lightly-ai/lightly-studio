@@ -204,7 +204,7 @@ const TRANSLATION_TEST_CASES: TranslationTestCase[] = [
 
     /* Object detection expression */
     {
-        name: 'object detection label',
+        name: 'object detection class_name',
         source: 'object_detection(class_name = "cat")',
         expected: query(objectDetection(str('object_detection', 'class_name', '==', 'cat')))
     },
@@ -231,12 +231,12 @@ const TRANSLATION_TEST_CASES: TranslationTestCase[] = [
 
     /* Classification expression */
     {
-        name: 'classification label',
+        name: 'classification class_name',
         source: 'classification(class_name = "cat")',
         expected: query(classification(str('classification', 'class_name', '==', 'cat')))
     },
     {
-        name: 'segmentation label',
+        name: 'segmentation class_name',
         source: 'segmentation_mask(class_name = "cat")',
         expected: query(segmentationMask(str('segmentation_mask', 'class_name', '==', 'cat')))
     },
