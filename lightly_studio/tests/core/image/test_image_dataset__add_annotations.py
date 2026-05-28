@@ -220,7 +220,9 @@ class TestDataset:
 
         dataset = ImageDataset.create(name="test_dataset")
         dataset.add_images_from_path(path=images_path, embed=False)
-        dataset.add_annotations_from_yolo(data_yaml=yaml_path, annotation_source="model_A", input_split="train")
+        dataset.add_annotations_from_yolo(
+            data_yaml=yaml_path, annotation_source="model_A", input_split="train"
+        )
 
         result = annotation_resolver.get_all_by_collection_name(
             session=dataset.session,
