@@ -40,7 +40,6 @@ def test_run_migrations__upgrade_when_alembic_version_exists(
     mocker.patch.object(db_migrations, "get_alembic_config", return_value=alembic_cfg)
     mocker.patch.object(db_migrations, "_alembic_version_table_exists", return_value=True)
     mock_run_command = mocker.patch.object(db_migrations, "_run_alembic_command")
-    mock_create_all = mocker.patch.object(SQLModel.metadata, "create_all")
 
     db_migrations.run_migrations(engine=engine, engine_url=_POSTGRES_URL)
 
@@ -50,7 +49,6 @@ def test_run_migrations__upgrade_when_alembic_version_exists(
         fn=command.upgrade,
         revision="head",
     )
-    mock_create_all.assert_not_called()
 
 
 def test_run_migrations__fresh_database(
@@ -61,13 +59,10 @@ def test_run_migrations__fresh_database(
     alembic_cfg = Config()
     mocker.patch.object(db_migrations, "get_alembic_config", return_value=alembic_cfg)
     mocker.patch.object(db_migrations, "_alembic_version_table_exists", return_value=False)
-    mocker.patch.object(db_migrations, "_has_application_tables", return_value=False)
     mock_run_command = mocker.patch.object(db_migrations, "_run_alembic_command")
-    mock_create_all = mocker.patch.object(SQLModel.metadata, "create_all")
 
     db_migrations.run_migrations(engine=engine, engine_url=_POSTGRES_URL)
 
-    mock_create_all.assert_not_called()
     mock_run_command.assert_called_once_with(
         engine=engine,
         config=alembic_cfg,
@@ -80,23 +75,20 @@ def test_run_migrations__legacy_database(
     mocker: MockerFixture,
     engine: Engine,
 ) -> None:
-    """Pre-Alembic DB with tables is stamped head without create_all or upgrade."""
+    """Pre-Alembic DB with tables is migrated using upgrade head."""
     alembic_cfg = Config()
     mocker.patch.object(db_migrations, "get_alembic_config", return_value=alembic_cfg)
     mocker.patch.object(db_migrations, "_alembic_version_table_exists", return_value=False)
-    mocker.patch.object(db_migrations, "_has_application_tables", return_value=True)
     mock_run_command = mocker.patch.object(db_migrations, "_run_alembic_command")
-    mock_create_all = mocker.patch.object(SQLModel.metadata, "create_all")
 
     db_migrations.run_migrations(engine=engine, engine_url=_POSTGRES_URL)
 
     mock_run_command.assert_called_once_with(
         engine=engine,
         config=alembic_cfg,
-        fn=command.stamp,
+        fn=command.upgrade,
         revision="head",
     )
-    mock_create_all.assert_not_called()
 
 
 def _reset_postgres_database(engine_url: str) -> None:

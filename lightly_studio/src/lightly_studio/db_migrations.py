@@ -94,7 +94,8 @@ def _run_alembic_command(
 
     Shares the connection with env.py via Config.attributes.
     """
-    with engine.begin() as connection:
+    # Alembic's env.py controls migration transaction boundaries.
+    with engine.connect() as connection:
         config.attributes["connection"] = connection
         fn(config, revision=revision)
 
