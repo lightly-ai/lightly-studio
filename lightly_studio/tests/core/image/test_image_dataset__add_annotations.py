@@ -92,7 +92,7 @@ class TestDataset:
         )
         assert covered == {s.sample_id for s in dataset}
 
-    def test_add_annotations_from_coco__same_name_appends(
+    def test_add_annotations_from_coco__same_annotation_source_appends(
         self,
         patch_collection: None,  # noqa: ARG002
         tmp_path: Path,
@@ -117,7 +117,7 @@ class TestDataset:
         )
         assert len(result.annotations) == 2
 
-    def test_add_annotations_from_coco__different_names_separate_collections(
+    def test_add_annotations_from_coco__different_annotation_sources_separate_collections(
         self,
         patch_collection: None,  # noqa: ARG002
         tmp_path: Path,

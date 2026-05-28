@@ -203,7 +203,7 @@ class ImageDataset(BaseSampleDataset[ImageSample]):
             images_root=images_root,
             collection_name=annotation_source,
         )
-        _log_missing_images(name=annotation_source, missing_paths=missing)
+        _log_missing_images(annotation_source=annotation_source, missing_paths=missing)
 
     def add_annotations_from_coco(
         self,
@@ -257,7 +257,7 @@ class ImageDataset(BaseSampleDataset[ImageSample]):
                 images_root=label_input._images_dir(),  # noqa: SLF001
                 collection_name=annotation_source,
             )
-        _log_missing_images(name=annotation_source, missing_paths=missing)
+        _log_missing_images(annotation_source=annotation_source, missing_paths=missing)
 
     def add_samples_from_labelformat(
         self,
@@ -621,14 +621,14 @@ def _generate_embeddings_image(
     )
 
 
-def _log_missing_images(name: str, missing_paths: list[str]) -> None:
+def _log_missing_images(annotation_source: str, missing_paths: list[str]) -> None:
     """Emit a single warning summarising images skipped due to no DB match."""
     if not missing_paths:
         return
     logger.warning(
-        "Annotation collection '%s': skipped %d annotation(s) because no matching "
+        "Annotation source '%s': skipped %d annotation(s) because no matching "
         "image was found in the dataset. First %d unmatched path(s): %s",
-        name,
+        annotation_source,
         len(missing_paths),
         min(5, len(missing_paths)),
         missing_paths[:5],

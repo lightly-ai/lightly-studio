@@ -106,11 +106,11 @@ def _process_explicit_target_distribution(
     Returns:
         Tuple of:
             A dictionary mapping annotation class IDs to their effective target proportions.
-            The set of unused label IDs
+            The set of unused annotation class IDs
             The target value remaining to 1.0.
 
     Raises:
-        NotImplementedError: If multiple labels with the same name are found.
+        NotImplementedError: If multiple annotation classes with the same name are found.
         ValueError: If an annotation class name does not exist or if targets sum
             to less than 1.0 and all classes are used.
     """
@@ -125,7 +125,7 @@ def _process_explicit_target_distribution(
             )
         except sqlalchemy.exc.MultipleResultsFound as e:
             raise NotImplementedError(
-                "Multiple labels with the same name not supported yet."
+                "Multiple annotation classes with the same name not supported yet."
             ) from e
         if annotation_label is None:
             raise ValueError(f"Annotation class with this name does not exist: {label_name}")

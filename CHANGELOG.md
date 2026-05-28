@@ -19,7 +19,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 
 - Renamed the annotation class field `label` to `class_name` across the Python SDK and query language. Breaking change.
-- Renamed the `collection name` and `name` argument to `annotation_source`. Breaking change.
+- Renamed the `collection_name` and `name` arguments to `annotation_source`. Breaking change.
 - Renamed selection to sampling. Breaking change.
 
 ### Deprecated
@@ -36,7 +36,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
-- Added `ImageDataset.add_annotations_from_coco`, `add_annotations_from_yolo`, and `add_annotations_from_labelformat` methods to attach named annotation collections to images already in the dataset. Re-using the same `annotation_source` appends; a new `annotation_source` creates a new collection. Enables ingesting ground truth and predictions from multiple sources side-by-side.
+- Added `ImageDataset.add_annotations_from_coco`, `add_annotations_from_yolo`, and `add_annotations_from_labelformat` methods to attach named annotation collections to images already in the dataset. Re-using the same `annotation_source` appends; a new `annotation_source` creates a new annotation source. Enables ingesting ground truth and predictions from multiple sources side-by-side.
 - Added `lt_train_script` to the Python API (`lightly_studio.lt_train_script`) to generate a LightlyTrain object detection script from split tags. The helper exports train/val COCO annotation files via `dataset.export(...).to_coco_object_detections(...)` and writes `train_object_detection.py` with the exported paths.
 - Image samples can be sorted in the grid using image attributes and metadata.
 - Added drag-and-drop from the image grid into the image search area.
