@@ -20,7 +20,7 @@ from tests.helpers_resolvers import (
 class TestClassificationExpressions:
     def test_annotation_classification_label__sql(self) -> None:
         query = select(ImageTable).where(
-            ClassificationQuery.match(ClassificationField.label == "cat").get()
+            ClassificationQuery.match(ClassificationField.class_name == "cat").get()
         )
         sql = str(query.compile(compile_kwargs={"literal_binds": True}))
         assert "EXISTS (SELECT 1" in sql
@@ -63,7 +63,7 @@ class TestClassificationExpressions:
             select(ImageTable)
             .join(ImageTable.sample)
             .where(SampleTable.collection_id == collection_id)
-            .where(ClassificationQuery.match(ClassificationField.label == "label1").get())
+            .where(ClassificationQuery.match(ClassificationField.class_name == "label1").get())
         )
         results = db_session.exec(query).all()
         assert [image.sample_id for image in results] == [image1.sample_id]

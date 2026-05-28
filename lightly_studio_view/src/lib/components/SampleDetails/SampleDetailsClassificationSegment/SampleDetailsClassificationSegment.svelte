@@ -194,7 +194,7 @@
                                         (i) => i.value === getLabelValue(annotation)?.value
                                     )}
                                     name="classification-label"
-                                    placeholder="Select or create a label"
+                                    placeholder="Select or create a class"
                                     className="w-full min-w-0"
                                     contentClassName="w-full min-w-0"
                                     onSelect={async (item) => {
@@ -246,7 +246,7 @@
                                 <SelectList
                                     {items}
                                     name="classification-label"
-                                    placeholder="Select or create a label"
+                                    placeholder="Select or create a class"
                                     className="w-full min-w-0"
                                     contentClassName="w-full min-w-0"
                                     onSelect={async (item) => {

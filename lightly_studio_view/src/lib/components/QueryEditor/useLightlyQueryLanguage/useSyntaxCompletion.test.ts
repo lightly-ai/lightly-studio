@@ -397,7 +397,7 @@ describe('useSyntaxCompletion', () => {
             { lineNumber: 1, column: 11 } as never
         );
 
-        expect(result.suggestions[0].detail).toBe('(field) Video.fps: float');
+        expect(result.suggestions[0].detail).toBe('Video.fps: float');
         expect(result.suggestions[0].documentation).toEqual({
             value: 'Frames per second. Equality only (`=`, `!=`).'
         });
@@ -440,31 +440,31 @@ describe('useSyntaxCompletion', () => {
 
     it('resolves field scope from cursor context (object_detection)', async () => {
         const { provideCompletionItems } = await loadAndAttach([
-            { label: 'label', kind: LspCompletionItemKind.Field }
+            { label: 'class_name', kind: LspCompletionItemKind.Field }
         ]);
         const result = await provideCompletionItems(
-            makeModel('object_detection(label') as never,
-            { lineNumber: 1, column: 23 } as never
+            makeModel('object_detection(class_name') as never,
+            { lineNumber: 1, column: 28 } as never
         );
 
-        expect(result.suggestions[0].detail).toBe('(field) ObjectDetection.label: string');
+        expect(result.suggestions[0].detail).toBe('ObjectDetection.class_name: string');
         expect(result.suggestions[0].documentation).toEqual({
-            value: 'Class label of the detection.'
+            value: 'Annotation class of the detection.'
         });
     });
 
     it('resolves field scope from cursor context (segmentation_mask)', async () => {
         const { provideCompletionItems } = await loadAndAttach([
-            { label: 'label', kind: LspCompletionItemKind.Field }
+            { label: 'class_name', kind: LspCompletionItemKind.Field }
         ]);
         const result = await provideCompletionItems(
-            makeModel('segmentation_mask(label = "road" AND width > 10)') as never,
-            { lineNumber: 1, column: 41 } as never
+            makeModel('segmentation_mask(class_name = "road" AND width > 10)') as never,
+            { lineNumber: 1, column: 46 } as never
         );
 
-        expect(result.suggestions[0].detail).toBe('(field) SegmentationMask.label: string');
+        expect(result.suggestions[0].detail).toBe('SegmentationMask.class_name: string');
         expect(result.suggestions[0].documentation).toEqual({
-            value: 'Class label of the segmentation mask.'
+            value: 'Annotation class of the segmentation mask.'
         });
     });
 

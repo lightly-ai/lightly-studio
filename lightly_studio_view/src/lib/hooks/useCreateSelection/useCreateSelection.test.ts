@@ -1,5 +1,5 @@
 import {
-    createCombinationSelection,
+    createSampling,
     computeSimilarityMetadata,
     computeTypicalityMetadata
 } from '$lib/api/lightly_studio_local/sdk.gen';
@@ -8,7 +8,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { useCreateSelection } from './useCreateSelection';
 
 vi.mock('$lib/api/lightly_studio_local/sdk.gen', () => ({
-    createCombinationSelection: vi.fn(),
+    createSampling: vi.fn(),
     computeSimilarityMetadata: vi.fn(),
     computeTypicalityMetadata: vi.fn()
 }));
@@ -27,8 +27,8 @@ describe('useCreateSelection', () => {
         vi.clearAllMocks();
     });
 
-    it('submit with diversity calls createCombinationSelection with correct args and resolves success', async () => {
-        vi.mocked(createCombinationSelection).mockResolvedValue({ data: {}, error: null } as never);
+    it('submit with diversity calls createSampling with correct args and resolves success', async () => {
+        vi.mocked(createSampling).mockResolvedValue({ data: {}, error: null } as never);
         const loadTags = vi.fn().mockResolvedValue(undefined);
         const setTagSelected = vi.fn();
         const closeSelectionDialog = vi.fn();
@@ -60,11 +60,11 @@ describe('useCreateSelection', () => {
         });
 
         expect(result).toBe(true);
-        expect(createCombinationSelection).toHaveBeenCalledWith({
+        expect(createSampling).toHaveBeenCalledWith({
             path: { collection_id: 'col-1' },
             body: {
                 n_samples_to_select: 5,
-                selection_result_tag_name: 'my-tag',
+                sampling_result_tag_name: 'my-tag',
                 strategies: [{ strategy_name: 'diversity', embedding_model_name: null }],
                 filter: undefined
             }
@@ -74,9 +74,9 @@ describe('useCreateSelection', () => {
         expect(closeSelectionDialog).toHaveBeenCalled();
     });
 
-    it('submit with typicality calls computeTypicalityMetadata first, then createCombinationSelection', async () => {
+    it('submit with typicality calls computeTypicalityMetadata first, then createSampling', async () => {
         vi.mocked(computeTypicalityMetadata).mockResolvedValue({ data: {}, error: null } as never);
-        vi.mocked(createCombinationSelection).mockResolvedValue({ data: {}, error: null } as never);
+        vi.mocked(createSampling).mockResolvedValue({ data: {}, error: null } as never);
         const loadTags = vi.fn().mockResolvedValue(undefined);
         const setTagSelected = vi.fn();
         const closeSelectionDialog = vi.fn();
@@ -104,20 +104,20 @@ describe('useCreateSelection', () => {
             path: { collection_id: 'col-1' },
             body: { embedding_model_name: null, metadata_name: 'typicality' }
         });
-        expect(createCombinationSelection).toHaveBeenCalledWith({
+        expect(createSampling).toHaveBeenCalledWith({
             path: { collection_id: 'col-1' },
             body: {
                 n_samples_to_select: 10,
-                selection_result_tag_name: 'result-tag',
+                sampling_result_tag_name: 'result-tag',
                 strategies: [{ strategy_name: 'weights', metadata_key: 'typicality' }],
                 filter: undefined
             }
         });
     });
 
-    it('submit with similarity calls computeSimilarityMetadata first, then createCombinationSelection', async () => {
+    it('submit with similarity calls computeSimilarityMetadata first, then createSampling', async () => {
         vi.mocked(computeSimilarityMetadata).mockResolvedValue({ data: {}, error: null } as never);
-        vi.mocked(createCombinationSelection).mockResolvedValue({ data: {}, error: null } as never);
+        vi.mocked(createSampling).mockResolvedValue({ data: {}, error: null } as never);
         const loadTags = vi.fn().mockResolvedValue(undefined);
         const setTagSelected = vi.fn();
         const closeSelectionDialog = vi.fn();
@@ -145,11 +145,11 @@ describe('useCreateSelection', () => {
             path: { collection_id: 'col-1', query_tag_id: 'query-tag-id' },
             body: { embedding_model_name: null, metadata_name: 'similarity' }
         });
-        expect(createCombinationSelection).toHaveBeenCalledWith({
+        expect(createSampling).toHaveBeenCalledWith({
             path: { collection_id: 'col-1' },
             body: {
                 n_samples_to_select: 8,
-                selection_result_tag_name: 'sim-tag',
+                sampling_result_tag_name: 'sim-tag',
                 strategies: [{ strategy_name: 'weights', metadata_key: 'similarity' }],
                 filter: undefined
             }
@@ -184,7 +184,7 @@ describe('useCreateSelection', () => {
             'Similarity is only available for image collections.'
         );
         expect(computeSimilarityMetadata).not.toHaveBeenCalled();
-        expect(createCombinationSelection).not.toHaveBeenCalled();
+        expect(createSampling).not.toHaveBeenCalled();
     });
 
     it('API error in computeTypicalityMetadata toasts error and returns false without calling selection', async () => {
@@ -218,7 +218,7 @@ describe('useCreateSelection', () => {
         expect(toast.error).toHaveBeenCalledWith(
             'Failed to compute typicality metadata: typicality failed'
         );
-        expect(createCombinationSelection).not.toHaveBeenCalled();
+        expect(createSampling).not.toHaveBeenCalled();
     });
 
     it('API error in computeSimilarityMetadata toasts error and returns false without calling selection', async () => {
@@ -252,11 +252,11 @@ describe('useCreateSelection', () => {
         expect(toast.error).toHaveBeenCalledWith(
             'Failed to compute similarity metadata: similarity failed'
         );
-        expect(createCombinationSelection).not.toHaveBeenCalled();
+        expect(createSampling).not.toHaveBeenCalled();
     });
 
-    it('API error in createCombinationSelection toasts error and returns false', async () => {
-        vi.mocked(createCombinationSelection).mockResolvedValue({
+    it('API error in createSampling toasts error and returns false', async () => {
+        vi.mocked(createSampling).mockResolvedValue({
             data: null,
             error: { error: 'selection failed' }
         } as never);
@@ -301,7 +301,7 @@ describe('useCreateSelection', () => {
         });
 
         let submittingDuringCall = false;
-        vi.mocked(createCombinationSelection).mockImplementation(async () => {
+        vi.mocked(createSampling).mockImplementation(async () => {
             submittingDuringCall = get(hook.isSubmitting);
             return { data: {}, error: null } as never;
         });
@@ -341,7 +341,7 @@ describe('useCreateSelection', () => {
             messages.push(get(hook.loadingMessage));
             return { data: {}, error: null } as never;
         });
-        vi.mocked(createCombinationSelection).mockImplementation(async () => {
+        vi.mocked(createSampling).mockImplementation(async () => {
             messages.push(get(hook.loadingMessage));
             return { data: {}, error: null } as never;
         });
@@ -362,8 +362,8 @@ describe('useCreateSelection', () => {
         expect(get(hook.loadingMessage)).toBe('');
     });
 
-    it('submit with class_balancing and uniform mode calls createCombinationSelection with balance strategy', async () => {
-        vi.mocked(createCombinationSelection).mockResolvedValue({ data: {}, error: null } as never);
+    it('submit with class_balancing and uniform mode calls createSampling with balance strategy', async () => {
+        vi.mocked(createSampling).mockResolvedValue({ data: {}, error: null } as never);
         const loadTags = vi.fn().mockResolvedValue(undefined);
         const setTagSelected = vi.fn();
         const closeSelectionDialog = vi.fn();
@@ -387,11 +387,11 @@ describe('useCreateSelection', () => {
         });
 
         expect(result).toBe(true);
-        expect(createCombinationSelection).toHaveBeenCalledWith({
+        expect(createSampling).toHaveBeenCalledWith({
             path: { collection_id: 'col-1' },
             body: {
                 n_samples_to_select: 20,
-                selection_result_tag_name: 'balanced-tag',
+                sampling_result_tag_name: 'balanced-tag',
                 strategies: [{ strategy_name: 'balance', target_distribution: 'uniform' }],
                 filter: undefined
             }
@@ -401,7 +401,7 @@ describe('useCreateSelection', () => {
     });
 
     it('submit with class_balancing and input mode passes input as target_distribution', async () => {
-        vi.mocked(createCombinationSelection).mockResolvedValue({ data: {}, error: null } as never);
+        vi.mocked(createSampling).mockResolvedValue({ data: {}, error: null } as never);
         const loadTags = vi.fn().mockResolvedValue(undefined);
         const setTagSelected = vi.fn();
         const closeSelectionDialog = vi.fn();
@@ -425,19 +425,19 @@ describe('useCreateSelection', () => {
         });
 
         expect(result).toBe(true);
-        expect(createCombinationSelection).toHaveBeenCalledWith({
+        expect(createSampling).toHaveBeenCalledWith({
             path: { collection_id: 'col-1' },
             body: {
                 n_samples_to_select: 15,
-                selection_result_tag_name: 'balanced-tag',
+                sampling_result_tag_name: 'balanced-tag',
                 strategies: [{ strategy_name: 'balance', target_distribution: 'input' }],
                 filter: undefined
             }
         });
     });
 
-    it('API error in createCombinationSelection for class_balancing toasts error and returns false', async () => {
-        vi.mocked(createCombinationSelection).mockResolvedValue({
+    it('API error in createSampling for class_balancing toasts error and returns false', async () => {
+        vi.mocked(createSampling).mockResolvedValue({
             data: null,
             error: { error: 'balance failed' }
         } as never);
