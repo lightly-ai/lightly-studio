@@ -12,6 +12,7 @@
     import { useAnnotationLabels } from '$lib/hooks/useAnnotationLabels/useAnnotationLabels';
     import { useSegmentationMaskBrush } from '$lib/hooks/useSegmentationMaskBrush';
     import { useSegmentationMaskPreview } from '$lib/hooks/useSegmentationMaskPreview';
+    import { useSelectClassDialog } from '$lib/hooks/useSelectClassDialog/useSelectClassDialog';
     import { usePendingOperations } from '$lib/hooks/usePendingOperations/usePendingOperations';
     import { useCollectionWithChildren } from '$lib/hooks/useCollection/useCollection';
     import { page } from '$app/state';
@@ -75,35 +76,12 @@
         useCollectionWithChildren({ collectionId: datasetId })
     );
 
-    // --- Select-class dialog ---
-    let showSelectClassDialog = $state(false);
-    let pendingLabelRequest: Promise<string | null> | null = null;
-    let resolveRequestLabel: ((label: string | null) => void) | null = null;
-
-    const requestLabel = (): Promise<string | null> => {
-        // Single-flight: concurrent callers share the in-flight dialog promise so
-        // that resolveRequestLabel is never overwritten and earlier callers cannot
-        // be stranded waiting on a promise that will never settle.
-        if (pendingLabelRequest) return pendingLabelRequest;
-
-        showSelectClassDialog = true;
-        pendingLabelRequest = new Promise<string | null>((resolve) => {
-            resolveRequestLabel = resolve;
-        });
-        return pendingLabelRequest;
-    };
-
-    const settleRequestLabel = (label: string | null) => {
-        showSelectClassDialog = false;
-        resolveRequestLabel?.(label);
-        resolveRequestLabel = null;
-        pendingLabelRequest = null;
-    };
-
-    const handleClassSelected = (label: string) => settleRequestLabel(label);
-
-    const handleClassDialogCancel = () => settleRequestLabel(null);
-    // ---
+    const {
+        open: selectClassDialogOpen,
+        requestLabel,
+        handleConfirm: handleSelectClassDialogConfirm,
+        handleCancel: handleSelectClassDialogCancel
+    } = useSelectClassDialog();
 
     const brushApi = $derived.by(() =>
         useSegmentationMaskBrush({
@@ -383,10 +361,10 @@
 />
 
 <SelectClassDialog
-    bind:open={showSelectClassDialog}
+    bind:open={$selectClassDialogOpen}
     labels={labels.data?.map((l) => l.annotation_label_name ?? '').filter(Boolean) ?? []}
-    onConfirm={handleClassSelected}
-    onCancel={handleClassDialogCancel}
+    onConfirm={handleSelectClassDialogConfirm}
+    onCancel={handleSelectClassDialogCancel}
 />
 
 <style>
