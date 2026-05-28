@@ -7,64 +7,64 @@ import { get, readonly, writable, type Readable } from 'svelte/store';
 import { toast } from 'svelte-sonner';
 import type { TagView } from '$lib/services/types';
 import type { SamplingRequest } from '$lib/api/lightly_studio_local/types.gen';
-import type { BalancingMode } from '$lib/components/Selection/balancingMode';
+import type { BalancingMode } from '$lib/components/Sampling/balancingMode';
 
-type SelectionError = { error: string };
+type SamplingError = { error: string };
 
 function extractError(error: unknown, fallback: string): string {
-    return (error as SelectionError)?.error || fallback;
+    return (error as SamplingError)?.error || fallback;
 }
 
-interface UseCreateSelectionParams {
+interface UseCreateSamplingParams {
     tags: Readable<TagView[]>;
     setTagSelected: (tagId: string, isSelected: boolean) => void;
     loadTags: () => Promise<void>;
-    closeSelectionDialog: () => void;
+    closeSamplingDialog: () => void;
 }
 
 interface SubmitParams {
     collectionId: string;
     isSimilaritySupported: boolean;
-    selectionStrategy: 'diversity' | 'typicality' | 'similarity' | 'class_balancing';
+    samplingStrategy: 'diversity' | 'typicality' | 'similarity' | 'class_balancing';
     nSamplesToSelect: number;
-    selectionResultTagName: string;
+    samplingResultTagName: string;
     queryTagId: string;
     balancingMode: BalancingMode;
-    selectionFilter: SamplingRequest['filter'];
+    samplingFilter: SamplingRequest['filter'];
 }
 
-export function useCreateSelection(params: UseCreateSelectionParams) {
+export function useCreateSampling(params: UseCreateSamplingParams) {
     const _isSubmitting = writable(false);
     const _loadingMessage = writable('');
 
-    async function performSelection(
+    async function performSampling(
         collectionId: string,
         strategies: SamplingRequest['strategies'],
-        selectionFilter: SamplingRequest['filter'],
+        samplingFilter: SamplingRequest['filter'],
         n: number,
         tagName: string
     ): Promise<boolean> {
-        _loadingMessage.set('Creating selection...');
+        _loadingMessage.set('Creating sampling...');
         const response = await createSampling({
             path: { collection_id: collectionId },
             body: {
                 n_samples_to_select: n,
                 sampling_result_tag_name: tagName,
                 strategies,
-                filter: selectionFilter ?? undefined
+                filter: samplingFilter ?? undefined
             }
         });
 
         if (response.error) {
-            toast.error(extractError(response.error, 'Failed to create selection'));
+            toast.error(extractError(response.error, 'Failed to create sampling'));
             return false;
         }
 
-        toast.success('Selection created successfully');
+        toast.success('Sampling created successfully');
         await params.loadTags();
         const newTag = get(params.tags).find((tag) => tag.name === tagName);
         if (newTag) params.setTagSelected(newTag.tag_id, true);
-        params.closeSelectionDialog();
+        params.closeSamplingDialog();
         return true;
     }
 
@@ -73,37 +73,37 @@ export function useCreateSelection(params: UseCreateSelectionParams) {
         const {
             collectionId,
             isSimilaritySupported,
-            selectionStrategy,
+            samplingStrategy,
             nSamplesToSelect,
-            selectionResultTagName,
+            samplingResultTagName,
             queryTagId,
             balancingMode,
-            selectionFilter
+            samplingFilter
         } = submitParams;
         _isSubmitting.set(true);
 
         try {
-            if (selectionStrategy === 'class_balancing') {
-                return await performSelection(
+            if (samplingStrategy === 'class_balancing') {
+                return await performSampling(
                     collectionId,
                     [{ strategy_name: 'balance', target_distribution: balancingMode }],
-                    selectionFilter,
+                    samplingFilter,
                     nSamplesToSelect,
-                    selectionResultTagName
+                    samplingResultTagName
                 );
             }
 
-            if (selectionStrategy === 'diversity') {
-                return await performSelection(
+            if (samplingStrategy === 'diversity') {
+                return await performSampling(
                     collectionId,
                     [{ strategy_name: 'diversity', embedding_model_name: null }],
-                    selectionFilter,
+                    samplingFilter,
                     nSamplesToSelect,
-                    selectionResultTagName
+                    samplingResultTagName
                 );
             }
 
-            if (selectionStrategy === 'typicality') {
+            if (samplingStrategy === 'typicality') {
                 _loadingMessage.set('Computing typicality metadata...');
                 const typicalityResponse = await computeTypicalityMetadata({
                     path: { collection_id: collectionId },
@@ -118,16 +118,16 @@ export function useCreateSelection(params: UseCreateSelectionParams) {
                     return false;
                 }
 
-                return await performSelection(
+                return await performSampling(
                     collectionId,
                     [{ strategy_name: 'weights', metadata_key: 'typicality' }],
-                    selectionFilter,
+                    samplingFilter,
                     nSamplesToSelect,
-                    selectionResultTagName
+                    samplingResultTagName
                 );
             }
 
-            if (selectionStrategy === 'similarity') {
+            if (samplingStrategy === 'similarity') {
                 if (!isSimilaritySupported) {
                     toast.error('Similarity is only available for image collections.');
                     return false;
@@ -147,12 +147,12 @@ export function useCreateSelection(params: UseCreateSelectionParams) {
                     return false;
                 }
 
-                return await performSelection(
+                return await performSampling(
                     collectionId,
                     [{ strategy_name: 'weights', metadata_key: 'similarity' }],
-                    selectionFilter,
+                    samplingFilter,
                     nSamplesToSelect,
-                    selectionResultTagName
+                    samplingResultTagName
                 );
             }
 
@@ -160,8 +160,8 @@ export function useCreateSelection(params: UseCreateSelectionParams) {
         } catch (error) {
             // API functions return { data, error } and don't throw, so this
             // only fires for unexpected runtime bugs in the hook itself.
-            console.error('Unexpected error in useCreateSelection.submit:', error);
-            toast.error('Failed to create selection: ' + (error as Error).message);
+            console.error('Unexpected error in useCreateSampling.submit:', error);
+            toast.error('Failed to create sampling: ' + (error as Error).message);
             return false;
         } finally {
             _isSubmitting.set(false);

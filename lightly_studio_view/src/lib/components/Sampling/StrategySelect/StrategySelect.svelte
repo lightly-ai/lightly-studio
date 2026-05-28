@@ -11,14 +11,14 @@
     }
 
     const STRATEGIES: { value: Strategy; label: string; testId: string }[] = [
-        { value: 'diversity', label: 'Diversity', testId: 'selection-strategy-diversity' },
-        { value: 'typicality', label: 'Typicality', testId: 'selection-strategy-typicality' },
+        { value: 'diversity', label: 'Diversity', testId: 'sampling-strategy-diversity' },
+        { value: 'typicality', label: 'Typicality', testId: 'sampling-strategy-typicality' },
         {
             value: 'class_balancing',
             label: 'Class Balancing',
-            testId: 'selection-strategy-class-balancing'
+            testId: 'sampling-strategy-class-balancing'
         },
-        { value: 'similarity', label: 'Similarity', testId: 'selection-strategy-similarity' }
+        { value: 'similarity', label: 'Similarity', testId: 'sampling-strategy-similarity' }
     ];
 
     const STRATEGY_LABELS = Object.fromEntries(STRATEGIES.map((s) => [s.value, s.label]));
@@ -37,7 +37,7 @@
         <Select.Trigger
             id="strategy"
             class="col-span-3"
-            data-testid="selection-dialog-strategy-select"
+            data-testid="sampling-dialog-strategy-select"
         >
             {STRATEGY_LABELS[value] ?? 'Select strategy'}
         </Select.Trigger>
