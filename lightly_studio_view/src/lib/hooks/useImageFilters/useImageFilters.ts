@@ -1,14 +1,10 @@
 import { derived, get, writable } from 'svelte/store';
 import { createMetadataFilters } from '../useMetadataFilters/useMetadataFilters';
 import type { ImagesInfiniteParams } from '../useImagesInfinite/useImagesInfinite';
+import { getAnnotationsFilter } from '../useImagesInfinite/getAnnotationsFilter';
 import type { DimensionBounds } from '$lib/services/loadDimensionBounds';
 import { SortDirection } from '$lib/api/lightly_studio_local';
-import type {
-    AnnotationsFilter,
-    ImageFilter,
-    QueryExpr,
-    SampleFilter
-} from '$lib/api/lightly_studio_local';
+import type { ImageFilter, QueryExpr, SampleFilter } from '$lib/api/lightly_studio_local';
 import type { SortExpr } from '../useImagesInfinite/types';
 
 const filterParams = writable<ImagesInfiniteParams>({} as ImagesInfiniteParams);
@@ -65,12 +61,12 @@ const imageFilter = derived(filterParams, ($filterParams): ImageFilter | null =>
         sampleFilter.sample_ids = sampleIds;
     }
 
-    const annotationLabelIds = $filterParams.filters?.annotation_label_ids;
-    if (annotationLabelIds && annotationLabelIds.length > 0) {
-        sampleFilter.annotations_filter = {
-            filter_type: 'annotations',
-            annotation_label_ids: annotationLabelIds
-        } satisfies AnnotationsFilter;
+    const annotationsFilter = getAnnotationsFilter({
+        annotation_label_ids: $filterParams.filters?.annotation_label_ids,
+        collection_ids: $filterParams.filters?.collection_ids
+    });
+    if (annotationsFilter) {
+        sampleFilter.annotations_filter = annotationsFilter;
     }
 
     const tagIds = $filterParams.filters?.tag_ids;
