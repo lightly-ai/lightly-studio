@@ -14,11 +14,12 @@ from lightly_studio.plugins.parameter import BaseParameter
 
 
 class OperatorStatus(str, Enum):
-    """Lifecycle status of an operator."""
+    """Lifecycle status of an operator (or, per-execution, the run state)."""
 
     PENDING = "pending"
     STARTING = "starting"
     READY = "ready"
+    RUNNING = "running"
     STOPPING = "stopping"
     STOPPED = "stopped"
     ERROR = "error"

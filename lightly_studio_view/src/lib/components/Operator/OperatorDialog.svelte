@@ -9,6 +9,7 @@
         getOperatorParameters,
         type RegisteredOperatorMetadata
     } from '$lib/api/lightly_studio_local';
+    import { listExecutionsQueryKey } from '$lib/api/lightly_studio_local/@tanstack/svelte-query.gen';
     import { toast } from 'svelte-sonner';
     import type { Operator } from '$lib/hooks/useOperators/useOperators';
     import { createOperatorFromMetadata } from '$lib/hooks/useOperators/useOperators';
@@ -40,7 +41,6 @@
     let parameters = $state<ParameterValues>({});
     let isExecuting = $state(false);
     let executionError = $state<string | undefined>(undefined);
-    let executionSuccess = $state<string | undefined>(undefined);
 
     const pageContext = storeDerived(
         page,
@@ -67,7 +67,6 @@
 
     function resetExecutionState() {
         executionError = undefined;
-        executionSuccess = undefined;
         isExecuting = false;
     }
 
@@ -124,7 +123,6 @@
 
         isExecuting = true;
         executionError = undefined;
-        executionSuccess = undefined;
 
         try {
             const response = await executeOperator({
@@ -143,18 +141,17 @@
             }
             if (!response.data) throw new Error('Operator execution returned no result.');
 
-            if (response.data.success) {
-                executionSuccess = response.data.message || 'Execution succeeded.';
-                toast.success('Operator executed', { description: executionSuccess });
-                queryClient.invalidateQueries();
-            } else {
-                executionError = response.data.message || 'Execution failed.';
-                toast.error('Operator execution failed', { description: executionError });
-            }
+            // Dispatch is async: the run continues in the background and is tracked
+            // by the running-executions panel. Close the dialog immediately.
+            toast.info('Operator started', {
+                description: `${response.data.operator_name} is running in the background.`
+            });
+            queryClient.invalidateQueries({ queryKey: listExecutionsQueryKey() });
+            onOpenChange(false);
         } catch (error) {
             const message = error instanceof Error ? error.message : String(error);
             executionError = message;
-            toast.error('Operator execution failed', { description: message });
+            toast.error('Failed to start operator', { description: message });
         } finally {
             isExecuting = false;
         }
@@ -237,20 +234,13 @@
                 {#if executionError}
                     <div class="text-sm text-destructive">Error: {executionError}</div>
                 {/if}
-                {#if executionSuccess}
-                    <div class="text-sm text-emerald-600">{executionSuccess}</div>
-                {/if}
             </div>
 
             <Dialog.Footer class="flex justify-end space-x-2">
-                <Button variant="outline" onclick={() => onOpenChange(false)}>
-                    {executionSuccess ? 'Close' : 'Cancel'}
+                <Button variant="outline" onclick={() => onOpenChange(false)}>Cancel</Button>
+                <Button onclick={handleExecute} disabled={!isFormValid || isExecuting}>
+                    {isExecuting ? 'Starting…' : 'Execute'}
                 </Button>
-                {#if !executionSuccess}
-                    <Button onclick={handleExecute} disabled={!isFormValid || isExecuting}>
-                        {isExecuting ? 'Executing...' : 'Execute'}
-                    </Button>
-                {/if}
             </Dialog.Footer>
         {:else}
             <div class="p-4">
