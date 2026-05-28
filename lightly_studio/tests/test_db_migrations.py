@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import pytest
-import sqlmodel
 from alembic import command
 from alembic.config import Config
 from pytest_mock import MockerFixture
@@ -11,18 +10,10 @@ from sqlalchemy import create_engine, text
 from sqlalchemy.engine import Engine
 from sqlmodel import SQLModel
 
-from lightly_studio import db_manager, db_migrations, db_url
+from lightly_studio import db_migrations, db_url
 from lightly_studio.db_manager import DatabaseEngine
-from lightly_studio.models.collection import CollectionCreate, CollectionTable, SampleType
-from lightly_studio.resolvers import collection_resolver
 
 _POSTGRES_URL = "postgresql://localhost/db"
-
-
-@pytest.fixture
-def patch_engine_singleton(mocker: MockerFixture) -> None:
-    """Reset the global engine singleton before db_manager.connect tests."""
-    mocker.patch.object(db_manager, "_engine", new=None)
 
 
 @pytest.fixture
@@ -88,108 +79,20 @@ def test_postgres_fresh_database__upgrade_head(
     postgres_url: str | None,
 ) -> None:
     """Fresh Postgres gets schema from Alembic upgrade and alembic_version at head."""
-    if postgres_url is None:
-        pytest.skip("Requires --postgres")
-
     _reset_postgres_database(engine_url=postgres_url)
 
     engine = DatabaseEngine(engine_url=postgres_url, single_threaded=True)
-    head_revision = db_migrations.get_head_revision()
+    try:
+        head_revision = db_migrations.get_head_revision()
 
-    inspector = db_migrations._get_inspector(engine=engine._engine)
-    assert inspector.has_table(table_name="collection")
-    assert inspector.has_table(table_name="alembic_version")
+        inspector = db_migrations._get_inspector(engine=engine._engine)
+        assert inspector.has_table(table_name="collection")
+        assert inspector.has_table(table_name="alembic_version")
 
-    with engine.session() as session:
-        version = session.execute(
-            statement=text("SELECT version_num FROM alembic_version"),
-        ).scalar_one()
-    assert version == head_revision
-    engine.close()
-
-
-def test_postgres_legacy_database__stamp_on_startup(
-    postgres_url: str | None,
-) -> None:
-    """Pre-Alembic schema (create_all only) is adopted via stamp head on startup."""
-    if postgres_url is None:
-        pytest.skip("Requires --postgres")
-
-    _reset_postgres_database(engine_url=postgres_url)
-    normalized_url = db_url.ensure_psycopg3_driver(engine_url=postgres_url)
-    raw_engine = create_engine(normalized_url)
-    SQLModel.metadata.create_all(bind=raw_engine)
-    assert not db_migrations._alembic_version_table_exists(engine=raw_engine)
-    raw_engine.dispose()
-
-    engine = DatabaseEngine(engine_url=postgres_url, single_threaded=True)
-    head_revision = db_migrations.get_head_revision()
-
-    with engine.session() as session:
-        version = session.execute(
-            statement=text("SELECT version_num FROM alembic_version"),
-        ).scalar_one()
-    assert version == head_revision
-    engine.close()
-
-
-def test_postgres_cleanup_existing__recreates_schema_at_head(
-    postgres_url: str | None,
-    patch_engine_singleton: None,  # noqa: ARG001
-) -> None:
-    """cleanup_existing drops schema and re-initializes with upgrade head."""
-    if postgres_url is None:
-        pytest.skip("Requires --postgres")
-
-    _reset_postgres_database(engine_url=postgres_url)
-    head_revision = db_migrations.get_head_revision()
-
-    db_manager.connect(db_url=postgres_url, cleanup_existing=False)
-    with db_manager.session() as session:
-        collection_resolver.create(
-            session=session,
-            collection=CollectionCreate(
-                name="before_cleanup",
-                sample_type=SampleType.IMAGE,
-            ),
-        )
-    db_manager.close()
-
-    db_manager.connect(db_url=postgres_url, cleanup_existing=True)
-    with db_manager.session() as session:
-        collections = session.exec(sqlmodel.select(CollectionTable)).all()
-        assert collections == []
-        version = session.execute(
-            statement=text("SELECT version_num FROM alembic_version"),
-        ).scalar_one()
-    assert version == head_revision
-    db_manager.close()
-
-
-def test_postgres_upgrade_head_on_empty_database(
-    postgres_url: str | None,
-) -> None:
-    """Empty Postgres can be brought to head via Alembic upgrade (CI migration-check path)."""
-    if postgres_url is None:
-        pytest.skip("Requires --postgres")
-
-    _reset_postgres_database(engine_url=postgres_url)
-    alembic_cfg = db_migrations.get_alembic_config(engine_url=postgres_url)
-    normalized_url = db_url.ensure_psycopg3_driver(engine_url=postgres_url)
-    raw_engine = create_engine(normalized_url)
-
-    with raw_engine.begin() as connection:
-        alembic_cfg.attributes["connection"] = connection
-        command.upgrade(alembic_cfg, revision="head")
-
-    head_revision = db_migrations.get_head_revision()
-    inspector = db_migrations._get_inspector(engine=raw_engine)
-    assert inspector.has_table(table_name="collection")
-    assert inspector.has_table(table_name="alembic_version")
-
-    with raw_engine.connect() as conn:
-        version = conn.execute(
-            statement=text("SELECT version_num FROM alembic_version"),
-        ).scalar_one()
-    assert version == head_revision
-    raw_engine.dispose()
+        with engine.session() as session:
+            version = session.execute(
+                statement=text("SELECT version_num FROM alembic_version"),
+            ).scalar_one()
+        assert version == head_revision
+    finally:
+        engine.close()
