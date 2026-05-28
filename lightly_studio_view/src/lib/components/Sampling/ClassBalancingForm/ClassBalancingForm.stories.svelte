@@ -4,7 +4,7 @@
     import ClassBalancingForm from './ClassBalancingForm.svelte';
 
     const { Story } = defineMeta({
-        title: 'Components/Selection/ClassBalancingForm',
+        title: 'Components/Sampling/ClassBalancingForm',
         component: ClassBalancingForm,
         tags: ['autodocs'],
         argTypes: {

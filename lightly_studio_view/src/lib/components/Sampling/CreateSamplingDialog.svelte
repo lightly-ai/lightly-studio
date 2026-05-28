@@ -5,16 +5,16 @@
     import { Input } from '$lib/components/ui/input';
     import { Label } from '$lib/components/ui/label';
     import { useTags } from '$lib/hooks/useTags/useTags';
-    import { useSelectionDialog } from '$lib/hooks/useSelectionDialog/useSelectionDialog';
+    import { useSamplingDialog } from '$lib/hooks/useSamplingDialog/useSamplingDialog';
     import { useImageFilters } from '$lib/hooks/useImageFilters/useImageFilters';
     import { useVideoFilters } from '$lib/hooks/useVideoFilters/useVideoFilters';
     import { useGlobalStorage } from '$lib/hooks/useGlobalStorage';
-    import { useCreateSelection } from '$lib/hooks/useCreateSelection';
+    import { useCreateSampling } from '$lib/hooks/useCreateSampling';
     import type { SamplingRequest } from '$lib/api/lightly_studio_local/types.gen';
-    import { type BalancingMode } from '$lib/components/Selection/balancingMode';
-    import StrategySelect from '$lib/components/Selection/StrategySelect/StrategySelect.svelte';
-    import ClassBalancingForm from '$lib/components/Selection/ClassBalancingForm/ClassBalancingForm.svelte';
-    import SimilarityForm from '$lib/components/Selection/SimilarityForm/SimilarityForm.svelte';
+    import { type BalancingMode } from '$lib/components/Sampling/balancingMode';
+    import StrategySelect from '$lib/components/Sampling/StrategySelect/StrategySelect.svelte';
+    import ClassBalancingForm from '$lib/components/Sampling/ClassBalancingForm/ClassBalancingForm.svelte';
+    import SimilarityForm from '$lib/components/Sampling/SimilarityForm/SimilarityForm.svelte';
 
     // Get collection ID from URL params
     const collectionId = $derived(page.params.collection_id!);
@@ -23,8 +23,7 @@
         useTags({ collection_id: collectionId, kind: ['sample'] })
     );
 
-    const { isSelectionDialogOpen, openSelectionDialog, closeSelectionDialog } =
-        useSelectionDialog();
+    const { isSamplingDialogOpen, openSamplingDialog, closeSamplingDialog } = useSamplingDialog();
 
     const isVideoCollection = $derived(
         page.data.collection?.sample_type === 'video' ||
@@ -36,7 +35,7 @@
     const { filteredSampleCount } = useGlobalStorage();
 
     const currentFilter = $derived(isVideoCollection ? $videoFilter : $imageFilter);
-    const selectionFilter = $derived<SamplingRequest['filter']>(
+    const samplingFilter = $derived<SamplingRequest['filter']>(
         isVideoCollection
             ? currentFilter
                 ? {
@@ -53,20 +52,20 @@
     );
 
     // Form state
-    let selectionStrategy = $state<
+    let samplingStrategy = $state<
         'diversity' | 'typicality' | 'similarity' | 'class_balancing' | ''
     >('');
     let balancingMode = $state<BalancingMode>('uniform');
     let nSamplesToSelect = $state<number>(10);
     let queryTagId = $state('');
-    let selectionResultTagName = $state<string>('');
+    let samplingResultTagName = $state<string>('');
 
     // Form validation
     const isFormValid = $derived(
-        selectionStrategy !== '' &&
-            (selectionStrategy === 'similarity' ? queryTagId !== '' : true) &&
+        samplingStrategy !== '' &&
+            (samplingStrategy === 'similarity' ? queryTagId !== '' : true) &&
             nSamplesToSelect > 0 &&
-            selectionResultTagName.trim().length > 0
+            samplingResultTagName.trim().length > 0
     );
 
     const isSimilaritySupported = $derived(!isVideoCollection);
@@ -77,13 +76,13 @@
         $filteredSampleCount > 0 && nSamplesToSelect > $filteredSampleCount
     );
 
-    const selectionDescription = $derived(
+    const samplingDescription = $derived(
         $filteredSampleCount > 0
             ? `Create a subset of the ${$filteredSampleCount} samples fulfilling the current filters.`
             : 'Create a subset of the samples fulfilling the current filters.'
     );
 
-    const { isSubmitting, loadingMessage, submit } = useCreateSelection({
+    const { isSubmitting, loadingMessage, submit } = useCreateSampling({
         get tags() {
             return tags;
         },
@@ -93,7 +92,7 @@
         get loadTags() {
             return loadTags;
         },
-        closeSelectionDialog
+        closeSamplingDialog
     });
 
     async function handleFormSubmit(event: Event) {
@@ -103,60 +102,60 @@
         const success = await submit({
             collectionId,
             isSimilaritySupported,
-            selectionStrategy: selectionStrategy as
+            samplingStrategy: samplingStrategy as
                 | 'diversity'
                 | 'typicality'
                 | 'similarity'
                 | 'class_balancing',
             nSamplesToSelect,
-            selectionResultTagName,
+            samplingResultTagName,
             queryTagId,
             balancingMode,
-            selectionFilter
+            samplingFilter
         });
 
         if (success) resetForm();
     }
 
     function resetForm() {
-        selectionStrategy = '';
+        samplingStrategy = '';
         nSamplesToSelect = 10;
         queryTagId = '';
-        selectionResultTagName = '';
+        samplingResultTagName = '';
     }
 </script>
 
 <Dialog.Root
-    open={$isSelectionDialogOpen}
-    onOpenChange={(open) => (open ? openSelectionDialog() : closeSelectionDialog())}
+    open={$isSamplingDialogOpen}
+    onOpenChange={(open) => (open ? openSamplingDialog() : closeSamplingDialog())}
 >
     <Dialog.Portal>
         <Dialog.Overlay />
         <Dialog.Content class="border-border bg-background sm:max-w-[425px]">
             <form onsubmit={handleFormSubmit}>
                 <Dialog.Header>
-                    <Dialog.Title class="text-foreground">Create Selection</Dialog.Title>
+                    <Dialog.Title class="text-foreground">Create Sampling</Dialog.Title>
                     <Dialog.Description class="text-foreground">
-                        {selectionDescription}
+                        {samplingDescription}
                     </Dialog.Description>
                 </Dialog.Header>
 
                 <div class="grid gap-4 py-4">
-                    <!-- Strategy Selection -->
+                    <!-- Sampling strategy -->
                     <StrategySelect
-                        value={selectionStrategy}
+                        value={samplingStrategy}
                         {isSimilaritySupported}
-                        onValueChange={(v) => (selectionStrategy = v)}
+                        onValueChange={(v) => (samplingStrategy = v)}
                     />
 
-                    {#if selectionStrategy === 'class_balancing'}
+                    {#if samplingStrategy === 'class_balancing'}
                         <ClassBalancingForm
                             {balancingMode}
                             onBalancingModeChange={(mode) => (balancingMode = mode)}
                         />
                     {/if}
 
-                    {#if selectionStrategy === 'similarity'}
+                    {#if samplingStrategy === 'similarity'}
                         <SimilarityForm
                             {queryTagId}
                             tags={$tags}
@@ -177,7 +176,7 @@
                             class="col-span-3"
                             placeholder="Enter number of samples"
                             required
-                            data-testid="selection-dialog-n-samples-input"
+                            data-testid="sampling-dialog-n-samples-input"
                         />
                     </div>
 
@@ -187,11 +186,11 @@
                         <Input
                             id="tag-name"
                             type="text"
-                            bind:value={selectionResultTagName}
+                            bind:value={samplingResultTagName}
                             class="col-span-3"
                             placeholder="Enter a tag for the sampled subset"
                             required
-                            data-testid="selection-dialog-tag-name-input"
+                            data-testid="sampling-dialog-tag-name-input"
                         />
                     </div>
 
@@ -199,7 +198,7 @@
                     {#if noSamples}
                         <p
                             class="text-sm text-destructive"
-                            data-testid="selection-dialog-no-samples-warning"
+                            data-testid="sampling-dialog-no-samples-warning"
                         >
                             No samples match the current filters.
                         </p>
@@ -209,7 +208,7 @@
                     {#if notEnoughSamples}
                         <p
                             class="text-sm text-destructive"
-                            data-testid="selection-dialog-not-enough-samples-warning"
+                            data-testid="sampling-dialog-not-enough-samples-warning"
                         >
                             Only {$filteredSampleCount} samples are available, but {nSamplesToSelect}
                             were requested.
@@ -221,18 +220,18 @@
                     <Button
                         variant="outline"
                         type="button"
-                        onclick={closeSelectionDialog}
+                        onclick={closeSamplingDialog}
                         disabled={$isSubmitting}
-                        data-testid="selection-dialog-cancel"
+                        data-testid="sampling-dialog-cancel"
                     >
                         Cancel
                     </Button>
                     <Button
                         type="submit"
                         disabled={!isFormValid || $isSubmitting || notEnoughSamples || noSamples}
-                        data-testid="selection-dialog-submit"
+                        data-testid="sampling-dialog-submit"
                     >
-                        {$isSubmitting ? $loadingMessage || 'Creating...' : 'Create Selection'}
+                        {$isSubmitting ? $loadingMessage || 'Creating...' : 'Create Sampling'}
                     </Button>
                 </Dialog.Footer>
             </form>
