@@ -1,11 +1,4 @@
-export type StrategyType =
-    | 'diversity'
-    | 'typicality'
-    | 'similarity'
-    | 'metadata_weighting'
-    | 'class_balancing';
-
-export const STRATEGY_OPTIONS: { type: StrategyType; label: string; description: string }[] = [
+export const STRATEGY_OPTIONS = [
     {
         type: 'diversity',
         label: 'Diversity',
@@ -37,3 +30,5 @@ export const STRATEGY_OPTIONS: { type: StrategyType; label: string; description:
             'Selects samples to reach a target class distribution using annotation labels. Use to fix class imbalance or enforce custom class proportions.'
     }
 ];
+
+export type StrategyType = (typeof STRATEGY_OPTIONS)[number]['type'];
