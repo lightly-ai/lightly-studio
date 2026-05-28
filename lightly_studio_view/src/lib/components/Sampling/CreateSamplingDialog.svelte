@@ -122,6 +122,7 @@
 
     function resetForm() {
         samplingStrategy = '';
+        balancingMode = 'uniform';
         nSamplesToSelect = 10;
         queryTagId = '';
         annotationSourceId = '';

@@ -45,9 +45,8 @@
                     value="input"
                     label="Input"
                     data-testid="sampling-balancing-mode-input"
-                    disabled
                 >
-                    Input (Coming soon)
+                    Input
                 </Select.Item>
             </Select.Group>
         </Select.Content>

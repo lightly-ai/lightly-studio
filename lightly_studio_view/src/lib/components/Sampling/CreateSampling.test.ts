@@ -387,7 +387,7 @@ describe('CreateSamplingDialog', () => {
         });
     });
 
-    it('shows input balancing mode as disabled and coming soon', async () => {
+    it('shows input balancing mode as enabled', async () => {
         filteredSampleCountStore.set(100);
 
         render(CreateSamplingDialog);
@@ -401,8 +401,8 @@ describe('CreateSamplingDialog', () => {
             key: 'Enter'
         });
         const inputMode = await screen.findByTestId('sampling-balancing-mode-input');
-        expect(inputMode).toHaveAttribute('data-disabled');
-        expect(inputMode).toHaveTextContent('Input (Coming soon)');
+        expect(inputMode).not.toHaveAttribute('data-disabled');
+        expect(inputMode).toHaveTextContent('Input');
     });
 
     it('disables similarity for video collections', async () => {
@@ -458,6 +458,44 @@ describe('CreateSamplingDialog', () => {
         });
         expect(screen.getByTestId('sampling-dialog-strategy-select')).toHaveTextContent(
             'Select strategy'
+        );
+    });
+
+    it('resets the balancing mode to uniform after a successful submission in class-balancing', async () => {
+        submitMock.mockResolvedValue(true);
+        filteredSampleCountStore.set(100);
+
+        render(CreateSamplingDialog);
+
+        await fireEvent.keyDown(screen.getByTestId('sampling-dialog-strategy-select'), {
+            key: 'Enter'
+        });
+        await fireEvent.pointerUp(await screen.findByTestId('sampling-strategy-class-balancing'));
+
+        await fireEvent.keyDown(screen.getByTestId('sampling-dialog-balancing-mode-select'), {
+            key: 'Enter'
+        });
+        await fireEvent.pointerUp(await screen.findByTestId('sampling-balancing-mode-input'));
+
+        await fireEvent.input(screen.getByTestId('sampling-dialog-tag-name-input'), {
+            target: { value: 'my-tag' }
+        });
+        await fireEvent.click(screen.getByTestId('sampling-dialog-submit'));
+
+        await waitFor(() => {
+            expect(screen.getByTestId('sampling-dialog-tag-name-input')).toHaveValue('');
+        });
+        expect(screen.getByTestId('sampling-dialog-strategy-select')).toHaveTextContent(
+            'Select strategy'
+        );
+
+        // Re-open and select class balancing again to verify it is reset to Uniform
+        await fireEvent.keyDown(screen.getByTestId('sampling-dialog-strategy-select'), {
+            key: 'Enter'
+        });
+        await fireEvent.pointerUp(await screen.findByTestId('sampling-strategy-class-balancing'));
+        expect(screen.getByTestId('sampling-dialog-balancing-mode-select')).toHaveTextContent(
+            'Uniform'
         );
     });
 

@@ -41,13 +41,14 @@ describe('ClassBalancingForm', () => {
         expect(await screen.findByTestId('sampling-balancing-mode-uniform')).toBeInTheDocument();
     });
 
-    it('shows input balancing mode as disabled and coming soon', async () => {
+    it('shows input balancing mode as enabled', async () => {
+        const onBalancingModeChange = vi.fn();
         render(ClassBalancingForm, {
             props: {
                 balancingMode: 'uniform',
                 annotationCollections: [],
                 annotationSourceId: '',
-                onBalancingModeChange: vi.fn(),
+                onBalancingModeChange,
                 onAnnotationSourceChange: vi.fn()
             }
         });
@@ -57,7 +58,11 @@ describe('ClassBalancingForm', () => {
         });
 
         const inputOption = await screen.findByTestId('sampling-balancing-mode-input');
-        expect(inputOption).toHaveAttribute('data-disabled');
-        expect(inputOption).toHaveTextContent('Input (Coming soon)');
+        expect(inputOption).not.toHaveAttribute('data-disabled');
+        expect(inputOption).toHaveTextContent('Input');
+
+        await fireEvent.pointerUp(inputOption);
+
+        expect(onBalancingModeChange).toHaveBeenCalledWith('input');
     });
 });

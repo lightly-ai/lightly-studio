@@ -30,8 +30,13 @@
 
 <BalancingModeSelect {balancingMode} {onBalancingModeChange} />
 
-<AnnotationSourceSelect
-    {sourceOptions}
-    selectedSource={annotationSourceId}
-    onSelect={onAnnotationSourceChange}
-/>
+<div class="grid grid-cols-4 items-center gap-4">
+    <span class="text-right text-foreground">Annotation Source</span>
+    <div class="col-span-3">
+        <AnnotationSourceSelect
+            {sourceOptions}
+            selectedSource={annotationSourceId}
+            onSelect={onAnnotationSourceChange}
+        />
+    </div>
+</div>
