@@ -304,8 +304,6 @@
         isImages || isAnnotations || isVideos || isVideoFrames || isGroups
     );
 
-    let isQueryFilterEditing = $state(false);
-
     const isSidePanelOpen = $derived($activePanel !== 'none');
 </script>
 
@@ -332,7 +330,9 @@
 
                             <QueryControl
                                 onOpen={() => {
-                                    isQueryFilterEditing = true;
+                                    setActivePanel(
+                                        $activePanel === 'queryEditor' ? 'none' : 'queryEditor'
+                                    );
                                 }}
                             />
 
@@ -465,12 +465,7 @@
                         {/await}
                     </Pane>
                 </PaneGroup>
-            {:else if !isQueryFilterEditing}
-                <!-- When plot is hidden or not samples view, show normal layout -->
-                <div class="relative flex flex-1 flex-col space-y-4 rounded-[1vw] bg-card p-4 pb-2">
-                    {@render mainContent()}
-                </div>
-            {:else}
+            {:else if $activePanel === 'queryEditor'}
                 <PaneGroup direction="horizontal" class="flex-1">
                     <Pane defaultSize={65} minSize={35} class="flex">
                         <div
