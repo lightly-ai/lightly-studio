@@ -328,13 +328,15 @@
                                 <span>Filters</span>
                             </h2>
 
-                            <QueryControl
-                                onOpen={() => {
-                                    setActivePanel(
-                                        $activePanel === 'queryEditor' ? 'none' : 'queryEditor'
-                                    );
-                                }}
-                            />
+                            {#if isImages}
+                                <QueryControl
+                                    onOpen={() => {
+                                        setActivePanel(
+                                            $activePanel === 'queryEditor' ? 'none' : 'queryEditor'
+                                        );
+                                    }}
+                                />
+                            {/if}
 
                             <div>
                                 <TagsMenu collection_id={collectionId} {gridType} />
@@ -465,7 +467,7 @@
                         {/await}
                     </Pane>
                 </PaneGroup>
-            {:else if $activePanel === 'queryEditor'}
+            {:else if $activePanel === 'queryEditor' && isImages}
                 <PaneGroup direction="horizontal" class="flex-1">
                     <Pane defaultSize={65} minSize={35} class="flex">
                         <div
