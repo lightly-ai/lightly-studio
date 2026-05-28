@@ -397,7 +397,7 @@ describe('useSyntaxCompletion', () => {
             { lineNumber: 1, column: 11 } as never
         );
 
-        expect(result.suggestions[0].detail).toBe('(field) Video.fps: float');
+        expect(result.suggestions[0].detail).toBe('Video.fps: float');
         expect(result.suggestions[0].documentation).toEqual({
             value: 'Frames per second. Equality only (`=`, `!=`).'
         });
@@ -447,7 +447,7 @@ describe('useSyntaxCompletion', () => {
             { lineNumber: 1, column: 28 } as never
         );
 
-        expect(result.suggestions[0].detail).toBe('(field) ObjectDetection.class_name: string');
+        expect(result.suggestions[0].detail).toBe('ObjectDetection.class_name: string');
         expect(result.suggestions[0].documentation).toEqual({
             value: 'Annotation class of the detection.'
         });
@@ -462,7 +462,7 @@ describe('useSyntaxCompletion', () => {
             { lineNumber: 1, column: 46 } as never
         );
 
-        expect(result.suggestions[0].detail).toBe('(field) SegmentationMask.class_name: string');
+        expect(result.suggestions[0].detail).toBe('SegmentationMask.class_name: string');
         expect(result.suggestions[0].documentation).toEqual({
             value: 'Annotation class of the segmentation mask.'
         });
