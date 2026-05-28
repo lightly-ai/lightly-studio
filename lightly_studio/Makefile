@@ -197,9 +197,9 @@ else
 	@touch src/lightly_studio/dist_lightly_studio_view_app/index.html
 endif
 
-.PHONY: migration-upgrade migration-revision migration-stamp migration-downgrade migration-check
+.PHONY: migration-upgrade-postgresql migration-revision-postgresql migration-stamp-postgresql migration-downgrade-postgresql migration-check-postgresql
 
-migration-upgrade: start-postgres mock-webapp-dist
+migration-upgrade-postgresql: start-postgres mock-webapp-dist
 	@echo "Applying Alembic migrations (upgrade head)..."
 ifeq ($(OS),Windows_NT)
 	@powershell -Command "$$env:LIGHTLY_STUDIO_DATABASE_URL='$(POSTGRES_URL)'; uv run alembic -c alembic.ini upgrade head"
@@ -207,7 +207,7 @@ else
 	LIGHTLY_STUDIO_DATABASE_URL=$(POSTGRES_URL) uv run alembic -c alembic.ini upgrade head
 endif
 
-migration-stamp: start-postgres mock-webapp-dist
+migration-stamp-postgresql: start-postgres mock-webapp-dist
 	@echo "Stamping Alembic version to head (dev only)..."
 ifeq ($(OS),Windows_NT)
 	@powershell -Command "$$env:LIGHTLY_STUDIO_DATABASE_URL='$(POSTGRES_URL)'; uv run alembic -c alembic.ini stamp head"
@@ -215,7 +215,7 @@ else
 	LIGHTLY_STUDIO_DATABASE_URL=$(POSTGRES_URL) uv run alembic -c alembic.ini stamp head
 endif
 
-migration-downgrade: start-postgres mock-webapp-dist
+migration-downgrade-postgresql: start-postgres mock-webapp-dist
 	@echo "Downgrading Alembic by one revision (dev only)..."
 ifeq ($(OS),Windows_NT)
 	@powershell -Command "$$env:LIGHTLY_STUDIO_DATABASE_URL='$(POSTGRES_URL)'; uv run alembic -c alembic.ini downgrade -1"
@@ -224,9 +224,9 @@ else
 endif
 
 # Autogenerate requires the database schema to match the current Alembic head.
-migration-revision: migration-upgrade
+migration-revision-postgresql: migration-upgrade-postgresql
 ifndef MSG
-	$(error MSG is required. Example: make migration-revision MSG=add_column)
+	$(error MSG is required. Example: make migration-revision-postgresql MSG=add_column)
 endif
 	@echo "Autogenerating Alembic revision..."
 ifeq ($(OS),Windows_NT)
@@ -235,7 +235,7 @@ else
 	LIGHTLY_STUDIO_DATABASE_URL=$(POSTGRES_URL) uv run alembic -c alembic.ini revision --autogenerate -m "$(MSG)"
 endif
 
-migration-check: start-postgres mock-webapp-dist
+migration-check-postgresql: start-postgres mock-webapp-dist
 	@echo "Checking Alembic migration chain on empty Postgres..."
 ifeq ($(OS),Windows_NT)
 	@powershell -Command "docker exec $(POSTGRES_CONTAINER_NAME) psql -U $(POSTGRES_USER) -d $(POSTGRES_DB) -c \"DROP SCHEMA public CASCADE; CREATE SCHEMA public; GRANT ALL ON SCHEMA public TO $(POSTGRES_USER); GRANT ALL ON SCHEMA public TO public;\""

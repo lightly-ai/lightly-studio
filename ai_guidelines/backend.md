@@ -71,7 +71,6 @@ Schema changes for PostgreSQL use [Alembic](https://alembic.sqlalchemy.org/). Mi
 | Database state | On connect | What runs |
 |----------------|------------|-----------|
 | Empty (no `alembic_version`, no app tables) | `upgrade head` | All revision scripts from the start (e.g. baseline → `head`) |
-| Tables exist, no `alembic_version` (pre-Alembic) | `stamp head` | No migration SQL; records `head` only |
 | `alembic_version` present | `upgrade head` | Pending revisions from current version → `head` |
 
 Empty and tracked databases both build schema via Alembic `upgrade head`, not `SQLModel.metadata.create_all()`. The difference is scope: a fresh database replays the full chain; a tracked database applies only migrations not yet in `alembic_version`.
@@ -89,15 +88,15 @@ make start-postgres
 
 Set `LIGHTLY_STUDIO_DATABASE_URL` to the dev URL (the Makefile uses `postgresql://lightly:lightly@localhost:5433/lightly_studio` via `POSTGRES_URL`).
 
-Makefile targets: `migration-upgrade`, `migration-revision` (requires `MSG=...`), `migration-stamp`, `migration-downgrade` (dev only), `migration-check` (empty DB: `upgrade head` + `alembic check`).
+Makefile targets: `migration-upgrade-postgresql`, `migration-revision-postgresql` (requires `MSG=...`), `migration-stamp-postgresql`, `migration-downgrade-postgresql` (dev only), `migration-check-postgresql` (empty DB: `upgrade head` + `alembic check`).
 
 **Adding a schema change** (append a new revision; do not edit the baseline):
 
 1. Change SQLModel tables in code (on a branch where migration files already define the **previous** head).
-2. Run `make migration-revision MSG=short_description` (runs `migration-upgrade` first so the dev database matches the current head, then autogenerates the delta).
+2. Run `make migration-revision-postgresql MSG=short_description` (runs `migration-upgrade-postgresql` first so the dev database matches the current head, then autogenerates the delta).
 3. Review the generated file under `src/lightly_studio/migrations/versions/`, commit the model change and the new revision together.
 
-Use a quoted `MSG` when it contains spaces, e.g. `make migration-revision MSG="updated db"`.
+Use a quoted `MSG` when it contains spaces, e.g. `make migration-revision-postgresql MSG="updated db"`.
 
 **Validation:**
 
@@ -105,7 +104,7 @@ Use a quoted `MSG` when it contains spaces, e.g. `make migration-revision MSG="u
 cd lightly_studio
 make static-checks
 make test
-make migration-check
+make migration-check-postgresql
 make test-postgres
 ```
 

@@ -158,7 +158,7 @@ jobs:
         working-directory: lightly_studio
         env:
           UV_PYTHON: ${{ matrix.python }}
-        run: make migration-check
+        run: make migration-check-postgresql
 
       - name: Run Tests for LightlyStudio
         working-directory: lightly_studio
