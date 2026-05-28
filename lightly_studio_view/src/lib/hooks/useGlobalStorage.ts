@@ -76,10 +76,10 @@ export type TextEmbedding = {
     queryText: string;
 };
 
-export type PanelType = 'none' | 'plot' | 'evaluationRuns' | 'queryEditor';
+export type PanelType = 'none' | 'embeddingPlot' | 'evaluationRuns' | 'queryEditor';
 
 const activePanel = writable<PanelType>('none');
-const showPlot = derived(activePanel, ($p) => $p === 'plot');
+const showEmbeddingPlot = derived(activePanel, ($p) => $p === 'embeddingPlot');
 const showEvaluationRuns = derived(activePanel, ($p) => $p === 'evaluationRuns');
 
 /** Toggle a panel on or off, leaving unrelated panels untouched. */
@@ -314,8 +314,9 @@ export const useGlobalStorage = () => {
         setIsEditingMode,
         activePanel,
         setActivePanel: (panel: PanelType) => activePanel.set(panel),
-        showPlot,
-        setShowPlot: (show: boolean) => activePanel.update((p) => togglePanel(p, 'plot', show)),
+        showEmbeddingPlot,
+        setShowEmbeddingPlot: (show: boolean) =>
+            activePanel.update((p) => togglePanel(p, 'embeddingPlot', show)),
         showEvaluationRuns,
         setShowEvaluationRuns: (show: boolean) =>
             activePanel.update((p) => togglePanel(p, 'evaluationRuns', show)),

@@ -18,7 +18,7 @@ const tagsStore = writable([
     { tag_id: 'tag-b', name: 'beta', kind: 'sample' }
 ]);
 
-const mockSetShowPlot = vi.fn();
+const mockSetShowEmbeddingPlot = vi.fn();
 const mockSetRangeSelectionForCollection = vi.fn();
 const mockUpdateSampleIds = vi.fn();
 
@@ -94,7 +94,7 @@ vi.mock('$lib/hooks/useAnnotationLabels/useAnnotationLabels', () => ({
 vi.mock('$lib/hooks/useGlobalStorage', () => {
     return {
         useGlobalStorage: () => ({
-            setShowPlot: mockSetShowPlot,
+            setShowEmbeddingPlot: mockSetShowEmbeddingPlot,
             getRangeSelection: vi.fn(() => rangeSelectionStore),
             setRangeSelectionForCollection: mockSetRangeSelectionForCollection
         })
