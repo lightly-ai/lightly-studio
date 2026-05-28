@@ -5,7 +5,7 @@ import {
 } from '$lib/api/lightly_studio_local/sdk.gen';
 import { get, writable } from 'svelte/store';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { useCreateSelection } from './useCreateSelection';
+import { useCreateSampling } from './useCreateSampling';
 
 vi.mock('$lib/api/lightly_studio_local/sdk.gen', () => ({
     createSampling: vi.fn(),
@@ -22,7 +22,7 @@ vi.mock('svelte-sonner', () => ({
 
 const { toast } = await import('svelte-sonner');
 
-describe('useCreateSelection', () => {
+describe('useCreateSampling', () => {
     beforeEach(() => {
         vi.clearAllMocks();
     });
@@ -31,7 +31,7 @@ describe('useCreateSelection', () => {
         vi.mocked(createSampling).mockResolvedValue({ data: {}, error: null } as never);
         const loadTags = vi.fn().mockResolvedValue(undefined);
         const setTagSelected = vi.fn();
-        const closeSelectionDialog = vi.fn();
+        const closeSamplingDialog = vi.fn();
         const tagsStore = writable([
             {
                 tag_id: 'tag-1',
@@ -42,21 +42,21 @@ describe('useCreateSelection', () => {
             }
         ]);
 
-        const { submit } = useCreateSelection({
+        const { submit } = useCreateSampling({
             tags: tagsStore,
             setTagSelected,
             loadTags,
-            closeSelectionDialog
+            closeSamplingDialog
         });
         const result = await submit({
             collectionId: 'col-1',
             isSimilaritySupported: true,
-            selectionStrategy: 'diversity',
+            samplingStrategy: 'diversity',
             nSamplesToSelect: 5,
-            selectionResultTagName: 'my-tag',
+            samplingResultTagName: 'my-tag',
             queryTagId: '',
             balancingMode: 'uniform',
-            selectionFilter: null
+            samplingFilter: null
         });
 
         expect(result).toBe(true);
@@ -71,7 +71,7 @@ describe('useCreateSelection', () => {
         });
         expect(loadTags).toHaveBeenCalled();
         expect(setTagSelected).toHaveBeenCalledWith('tag-1', true);
-        expect(closeSelectionDialog).toHaveBeenCalled();
+        expect(closeSamplingDialog).toHaveBeenCalled();
     });
 
     it('submit with typicality calls computeTypicalityMetadata first, then createSampling', async () => {
@@ -79,24 +79,24 @@ describe('useCreateSelection', () => {
         vi.mocked(createSampling).mockResolvedValue({ data: {}, error: null } as never);
         const loadTags = vi.fn().mockResolvedValue(undefined);
         const setTagSelected = vi.fn();
-        const closeSelectionDialog = vi.fn();
+        const closeSamplingDialog = vi.fn();
         const tagsStore = writable([]);
 
-        const { submit } = useCreateSelection({
+        const { submit } = useCreateSampling({
             tags: tagsStore,
             setTagSelected,
             loadTags,
-            closeSelectionDialog
+            closeSamplingDialog
         });
         const result = await submit({
             collectionId: 'col-1',
             isSimilaritySupported: true,
-            selectionStrategy: 'typicality',
+            samplingStrategy: 'typicality',
             nSamplesToSelect: 10,
-            selectionResultTagName: 'result-tag',
+            samplingResultTagName: 'result-tag',
             queryTagId: '',
             balancingMode: 'uniform',
-            selectionFilter: null
+            samplingFilter: null
         });
 
         expect(result).toBe(true);
@@ -120,24 +120,24 @@ describe('useCreateSelection', () => {
         vi.mocked(createSampling).mockResolvedValue({ data: {}, error: null } as never);
         const loadTags = vi.fn().mockResolvedValue(undefined);
         const setTagSelected = vi.fn();
-        const closeSelectionDialog = vi.fn();
+        const closeSamplingDialog = vi.fn();
         const tagsStore = writable([]);
 
-        const { submit } = useCreateSelection({
+        const { submit } = useCreateSampling({
             tags: tagsStore,
             setTagSelected,
             loadTags,
-            closeSelectionDialog
+            closeSamplingDialog
         });
         const result = await submit({
             collectionId: 'col-1',
             isSimilaritySupported: true,
-            selectionStrategy: 'similarity',
+            samplingStrategy: 'similarity',
             nSamplesToSelect: 8,
-            selectionResultTagName: 'sim-tag',
+            samplingResultTagName: 'sim-tag',
             queryTagId: 'query-tag-id',
             balancingMode: 'uniform',
-            selectionFilter: null
+            samplingFilter: null
         });
 
         expect(result).toBe(true);
@@ -159,24 +159,24 @@ describe('useCreateSelection', () => {
     it('submit with similarity when isSimilaritySupported is false toasts error and returns false without calling API', async () => {
         const loadTags = vi.fn().mockResolvedValue(undefined);
         const setTagSelected = vi.fn();
-        const closeSelectionDialog = vi.fn();
+        const closeSamplingDialog = vi.fn();
         const tagsStore = writable([]);
 
-        const { submit } = useCreateSelection({
+        const { submit } = useCreateSampling({
             tags: tagsStore,
             setTagSelected,
             loadTags,
-            closeSelectionDialog
+            closeSamplingDialog
         });
         const result = await submit({
             collectionId: 'col-1',
             isSimilaritySupported: false,
-            selectionStrategy: 'similarity',
+            samplingStrategy: 'similarity',
             nSamplesToSelect: 8,
-            selectionResultTagName: 'sim-tag',
+            samplingResultTagName: 'sim-tag',
             queryTagId: 'query-tag-id',
             balancingMode: 'uniform',
-            selectionFilter: null
+            samplingFilter: null
         });
 
         expect(result).toBe(false);
@@ -187,31 +187,31 @@ describe('useCreateSelection', () => {
         expect(createSampling).not.toHaveBeenCalled();
     });
 
-    it('API error in computeTypicalityMetadata toasts error and returns false without calling selection', async () => {
+    it('API error in computeTypicalityMetadata toasts error and returns false without calling sampling', async () => {
         vi.mocked(computeTypicalityMetadata).mockResolvedValue({
             data: null,
             error: { error: 'typicality failed' }
         } as never);
         const loadTags = vi.fn().mockResolvedValue(undefined);
         const setTagSelected = vi.fn();
-        const closeSelectionDialog = vi.fn();
+        const closeSamplingDialog = vi.fn();
         const tagsStore = writable([]);
 
-        const { submit } = useCreateSelection({
+        const { submit } = useCreateSampling({
             tags: tagsStore,
             setTagSelected,
             loadTags,
-            closeSelectionDialog
+            closeSamplingDialog
         });
         const result = await submit({
             collectionId: 'col-1',
             isSimilaritySupported: true,
-            selectionStrategy: 'typicality',
+            samplingStrategy: 'typicality',
             nSamplesToSelect: 10,
-            selectionResultTagName: 'result-tag',
+            samplingResultTagName: 'result-tag',
             queryTagId: '',
             balancingMode: 'uniform',
-            selectionFilter: null
+            samplingFilter: null
         });
 
         expect(result).toBe(false);
@@ -221,31 +221,31 @@ describe('useCreateSelection', () => {
         expect(createSampling).not.toHaveBeenCalled();
     });
 
-    it('API error in computeSimilarityMetadata toasts error and returns false without calling selection', async () => {
+    it('API error in computeSimilarityMetadata toasts error and returns false without calling sampling', async () => {
         vi.mocked(computeSimilarityMetadata).mockResolvedValue({
             data: null,
             error: { error: 'similarity failed' }
         } as never);
         const loadTags = vi.fn().mockResolvedValue(undefined);
         const setTagSelected = vi.fn();
-        const closeSelectionDialog = vi.fn();
+        const closeSamplingDialog = vi.fn();
         const tagsStore = writable([]);
 
-        const { submit } = useCreateSelection({
+        const { submit } = useCreateSampling({
             tags: tagsStore,
             setTagSelected,
             loadTags,
-            closeSelectionDialog
+            closeSamplingDialog
         });
         const result = await submit({
             collectionId: 'col-1',
             isSimilaritySupported: true,
-            selectionStrategy: 'similarity',
+            samplingStrategy: 'similarity',
             nSamplesToSelect: 8,
-            selectionResultTagName: 'sim-tag',
+            samplingResultTagName: 'sim-tag',
             queryTagId: 'query-tag-id',
             balancingMode: 'uniform',
-            selectionFilter: null
+            samplingFilter: null
         });
 
         expect(result).toBe(false);
@@ -258,46 +258,46 @@ describe('useCreateSelection', () => {
     it('API error in createSampling toasts error and returns false', async () => {
         vi.mocked(createSampling).mockResolvedValue({
             data: null,
-            error: { error: 'selection failed' }
+            error: { error: 'sampling failed' }
         } as never);
         const loadTags = vi.fn().mockResolvedValue(undefined);
         const setTagSelected = vi.fn();
-        const closeSelectionDialog = vi.fn();
+        const closeSamplingDialog = vi.fn();
         const tagsStore = writable([]);
 
-        const { submit } = useCreateSelection({
+        const { submit } = useCreateSampling({
             tags: tagsStore,
             setTagSelected,
             loadTags,
-            closeSelectionDialog
+            closeSamplingDialog
         });
         const result = await submit({
             collectionId: 'col-1',
             isSimilaritySupported: true,
-            selectionStrategy: 'diversity',
+            samplingStrategy: 'diversity',
             nSamplesToSelect: 5,
-            selectionResultTagName: 'my-tag',
+            samplingResultTagName: 'my-tag',
             queryTagId: '',
             balancingMode: 'uniform',
-            selectionFilter: null
+            samplingFilter: null
         });
 
         expect(result).toBe(false);
-        expect(toast.error).toHaveBeenCalledWith('selection failed');
-        expect(closeSelectionDialog).not.toHaveBeenCalled();
+        expect(toast.error).toHaveBeenCalledWith('sampling failed');
+        expect(closeSamplingDialog).not.toHaveBeenCalled();
     });
 
     it('isSubmitting is true during submit and false after', async () => {
         const loadTags = vi.fn().mockResolvedValue(undefined);
         const setTagSelected = vi.fn();
-        const closeSelectionDialog = vi.fn();
+        const closeSamplingDialog = vi.fn();
         const tagsStore = writable([]);
 
-        const hook = useCreateSelection({
+        const hook = useCreateSampling({
             tags: tagsStore,
             setTagSelected,
             loadTags,
-            closeSelectionDialog
+            closeSamplingDialog
         });
 
         let submittingDuringCall = false;
@@ -311,12 +311,12 @@ describe('useCreateSelection', () => {
         await hook.submit({
             collectionId: 'col-1',
             isSimilaritySupported: true,
-            selectionStrategy: 'diversity',
+            samplingStrategy: 'diversity',
             nSamplesToSelect: 5,
-            selectionResultTagName: 'my-tag',
+            samplingResultTagName: 'my-tag',
             queryTagId: '',
             balancingMode: 'uniform',
-            selectionFilter: null
+            samplingFilter: null
         });
 
         expect(submittingDuringCall).toBe(true);
@@ -326,14 +326,14 @@ describe('useCreateSelection', () => {
     it('loadingMessage reflects the current step', async () => {
         const loadTags = vi.fn().mockResolvedValue(undefined);
         const setTagSelected = vi.fn();
-        const closeSelectionDialog = vi.fn();
+        const closeSamplingDialog = vi.fn();
         const tagsStore = writable([]);
 
-        const hook = useCreateSelection({
+        const hook = useCreateSampling({
             tags: tagsStore,
             setTagSelected,
             loadTags,
-            closeSelectionDialog
+            closeSamplingDialog
         });
 
         const messages: string[] = [];
@@ -349,16 +349,16 @@ describe('useCreateSelection', () => {
         await hook.submit({
             collectionId: 'col-1',
             isSimilaritySupported: true,
-            selectionStrategy: 'typicality',
+            samplingStrategy: 'typicality',
             nSamplesToSelect: 10,
-            selectionResultTagName: 'result-tag',
+            samplingResultTagName: 'result-tag',
             queryTagId: '',
             balancingMode: 'uniform',
-            selectionFilter: null
+            samplingFilter: null
         });
 
         expect(messages[0]).toBe('Computing typicality metadata...');
-        expect(messages[1]).toBe('Creating selection...');
+        expect(messages[1]).toBe('Creating sampling...');
         expect(get(hook.loadingMessage)).toBe('');
     });
 
@@ -366,24 +366,24 @@ describe('useCreateSelection', () => {
         vi.mocked(createSampling).mockResolvedValue({ data: {}, error: null } as never);
         const loadTags = vi.fn().mockResolvedValue(undefined);
         const setTagSelected = vi.fn();
-        const closeSelectionDialog = vi.fn();
+        const closeSamplingDialog = vi.fn();
         const tagsStore = writable([]);
 
-        const { submit } = useCreateSelection({
+        const { submit } = useCreateSampling({
             tags: tagsStore,
             setTagSelected,
             loadTags,
-            closeSelectionDialog
+            closeSamplingDialog
         });
         const result = await submit({
             collectionId: 'col-1',
             isSimilaritySupported: true,
-            selectionStrategy: 'class_balancing',
+            samplingStrategy: 'class_balancing',
             nSamplesToSelect: 20,
-            selectionResultTagName: 'balanced-tag',
+            samplingResultTagName: 'balanced-tag',
             queryTagId: '',
             balancingMode: 'uniform',
-            selectionFilter: null
+            samplingFilter: null
         });
 
         expect(result).toBe(true);
@@ -404,24 +404,24 @@ describe('useCreateSelection', () => {
         vi.mocked(createSampling).mockResolvedValue({ data: {}, error: null } as never);
         const loadTags = vi.fn().mockResolvedValue(undefined);
         const setTagSelected = vi.fn();
-        const closeSelectionDialog = vi.fn();
+        const closeSamplingDialog = vi.fn();
         const tagsStore = writable([]);
 
-        const { submit } = useCreateSelection({
+        const { submit } = useCreateSampling({
             tags: tagsStore,
             setTagSelected,
             loadTags,
-            closeSelectionDialog
+            closeSamplingDialog
         });
         const result = await submit({
             collectionId: 'col-1',
             isSimilaritySupported: true,
-            selectionStrategy: 'class_balancing',
+            samplingStrategy: 'class_balancing',
             nSamplesToSelect: 15,
-            selectionResultTagName: 'balanced-tag',
+            samplingResultTagName: 'balanced-tag',
             queryTagId: '',
             balancingMode: 'input',
-            selectionFilter: null
+            samplingFilter: null
         });
 
         expect(result).toBe(true);
@@ -443,28 +443,28 @@ describe('useCreateSelection', () => {
         } as never);
         const loadTags = vi.fn().mockResolvedValue(undefined);
         const setTagSelected = vi.fn();
-        const closeSelectionDialog = vi.fn();
+        const closeSamplingDialog = vi.fn();
         const tagsStore = writable([]);
 
-        const { submit } = useCreateSelection({
+        const { submit } = useCreateSampling({
             tags: tagsStore,
             setTagSelected,
             loadTags,
-            closeSelectionDialog
+            closeSamplingDialog
         });
         const result = await submit({
             collectionId: 'col-1',
             isSimilaritySupported: true,
-            selectionStrategy: 'class_balancing',
+            samplingStrategy: 'class_balancing',
             nSamplesToSelect: 20,
-            selectionResultTagName: 'balanced-tag',
+            samplingResultTagName: 'balanced-tag',
             queryTagId: '',
             balancingMode: 'uniform',
-            selectionFilter: null
+            samplingFilter: null
         });
 
         expect(result).toBe(false);
         expect(toast.error).toHaveBeenCalledWith('balance failed');
-        expect(closeSelectionDialog).not.toHaveBeenCalled();
+        expect(closeSamplingDialog).not.toHaveBeenCalled();
     });
 });

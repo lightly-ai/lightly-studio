@@ -16,7 +16,7 @@ describe('SimilarityForm', () => {
             }
         });
 
-        expect(screen.getByTestId('selection-dialog-query-tag-select')).toHaveTextContent(
+        expect(screen.getByTestId('sampling-dialog-query-tag-select')).toHaveTextContent(
             'Select tag'
         );
     });
@@ -30,7 +30,7 @@ describe('SimilarityForm', () => {
             }
         });
 
-        expect(screen.getByTestId('selection-dialog-query-tag-select')).toHaveTextContent('My Tag');
+        expect(screen.getByTestId('sampling-dialog-query-tag-select')).toHaveTextContent('My Tag');
     });
 
     it('shows an empty state when no tags are provided', async () => {
@@ -38,11 +38,11 @@ describe('SimilarityForm', () => {
             props: { queryTagId: '', tags: [], onQueryTagChange: vi.fn() }
         });
 
-        await fireEvent.keyDown(screen.getByTestId('selection-dialog-query-tag-select'), {
+        await fireEvent.keyDown(screen.getByTestId('sampling-dialog-query-tag-select'), {
             key: 'Enter'
         });
 
-        expect(await screen.findByTestId('selection-dialog-no-query-tags')).toHaveTextContent(
+        expect(await screen.findByTestId('sampling-dialog-no-query-tags')).toHaveTextContent(
             'No sample tags available.'
         );
     });
@@ -60,10 +60,10 @@ describe('SimilarityForm', () => {
             }
         });
 
-        await fireEvent.keyDown(screen.getByTestId('selection-dialog-query-tag-select'), {
+        await fireEvent.keyDown(screen.getByTestId('sampling-dialog-query-tag-select'), {
             key: 'Enter'
         });
-        await fireEvent.pointerUp(await screen.findByTestId('selection-query-tag-tag-2'));
+        await fireEvent.pointerUp(await screen.findByTestId('sampling-query-tag-tag-2'));
 
         expect(onQueryTagChange).toHaveBeenCalledWith('tag-2');
     });
@@ -80,11 +80,11 @@ describe('SimilarityForm', () => {
             }
         });
 
-        await fireEvent.keyDown(screen.getByTestId('selection-dialog-query-tag-select'), {
+        await fireEvent.keyDown(screen.getByTestId('sampling-dialog-query-tag-select'), {
             key: 'Enter'
         });
 
-        expect(await screen.findByTestId('selection-query-tag-tag-1')).toBeInTheDocument();
-        expect(screen.getByTestId('selection-query-tag-tag-2')).toBeInTheDocument();
+        expect(await screen.findByTestId('sampling-query-tag-tag-1')).toBeInTheDocument();
+        expect(screen.getByTestId('sampling-query-tag-tag-2')).toBeInTheDocument();
     });
 });

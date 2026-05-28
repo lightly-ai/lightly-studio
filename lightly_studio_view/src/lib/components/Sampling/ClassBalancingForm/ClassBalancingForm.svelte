@@ -4,7 +4,7 @@
     import {
         BALANCING_MODE_LABELS,
         type BalancingMode
-    } from '$lib/components/Selection/balancingMode';
+    } from '$lib/components/Sampling/balancingMode';
 
     interface Props {
         balancingMode: BalancingMode;
@@ -25,7 +25,7 @@
         <Select.Trigger
             id="balancing-mode"
             class="col-span-3"
-            data-testid="selection-dialog-balancing-mode-select"
+            data-testid="sampling-dialog-balancing-mode-select"
         >
             {BALANCING_MODE_LABELS[balancingMode]}
         </Select.Trigger>
@@ -34,7 +34,7 @@
                 <Select.Item
                     value="uniform"
                     label="Uniform"
-                    data-testid="selection-balancing-mode-uniform">Uniform</Select.Item
+                    data-testid="sampling-balancing-mode-uniform">Uniform</Select.Item
                 >
                 <Select.Item value="dictionary" label="Dictionary" disabled
                     >Dictionary (Coming soon)</Select.Item
@@ -42,7 +42,7 @@
                 <Select.Item
                     value="input"
                     label="Input"
-                    data-testid="selection-balancing-mode-input"
+                    data-testid="sampling-balancing-mode-input"
                     disabled>Input (Coming soon)</Select.Item
                 >
             </Select.Group>
