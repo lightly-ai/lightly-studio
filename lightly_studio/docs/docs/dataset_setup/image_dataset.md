@@ -354,8 +354,8 @@ GUI displays only a single dataset.
 When images are already in the dataset, the `add_annotations_from_*` methods attach
 annotations without re-loading the images. Each call stores its annotations under a named
 annotation source, so multiple sources (e.g. ground truth and model predictions) can be queried
-and compared independently. Re-running with the same `name` appends to that annotation source;
-a new `name` creates a new annotation source.
+and compared independently. Re-running with the same `annotation_source` appends to that annotation source;
+a new `annotation_source` creates a new annotation source.
 
 ```python title="Attach annotations from multiple sources"
 import lightly_studio as ls
