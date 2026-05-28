@@ -40,7 +40,7 @@ from lightly_studio.api.routes.api import (
     metadata,
     operator,
     sample,
-    selection,
+    sampling,
     settings,
     text_embedding,
     version,
@@ -151,7 +151,7 @@ api_router.include_router(embeddings2d.embeddings2d_router)
 api_router.include_router(features.features_router)
 api_router.include_router(evaluation.evaluation_router)
 api_router.include_router(metadata.metadata_router)
-api_router.include_router(selection.selection_router)
+api_router.include_router(sampling.sampling_router)
 api_router.include_router(operator.operator_router)
 api_router.include_router(frame.frame_router)
 api_router.include_router(video.video_router)

@@ -93,7 +93,7 @@ def test_to_match_expression__integer_unknown_field() -> None:
 
 def test_to_match_expression__integer_wrong_type_for_valid_field() -> None:
     expr = IntegerExpr(
-        field=FieldRef(table="classification", name="label"),
+        field=FieldRef(table="classification", name="class_name"),
         operator=OrdinalComparisonOperator.EQ,
         value=3,
     )
@@ -194,7 +194,7 @@ def test_to_match_expression__tags_unknown_field() -> None:
 
 def test_to_match_expression__classification_match() -> None:
     subexpr = StringExpr(
-        field=FieldRef(table="classification", name="label"),
+        field=FieldRef(table="classification", name="class_name"),
         operator=EqualityComparisonOperator.EQ,
         value="cat",
     )
@@ -220,7 +220,7 @@ def test_to_match_expression__object_detection_match() -> None:
 
 def test_to_match_expression__segmentation_mask_match() -> None:
     subexpr = StringExpr(
-        field=FieldRef(table="segmentation_mask", name="label"),
+        field=FieldRef(table="segmentation_mask", name="class_name"),
         operator=EqualityComparisonOperator.EQ,
         value="person",
     )

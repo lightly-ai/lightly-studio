@@ -288,6 +288,7 @@ describe('PlotColorByPopover', () => {
     });
 
     it('shows the empty state when no supported metadata fields exist and withTags is false', async () => {
+        const user = userEvent.setup();
         metadataInfoStore.set([{ name: 'payload', type: 'object' }]);
 
         render(PlotColorByPopover, {
@@ -298,8 +299,8 @@ describe('PlotColorByPopover', () => {
             withAnnotationLabels: false
         });
 
-        expect(screen.getByTestId('plot-color-by-button')).toBeDisabled();
-        expect(screen.getByTestId('plot-color-by-button')).toHaveTextContent('Nothing to color by');
-        expect(screen.queryByTestId('plot-color-by-options')).not.toBeInTheDocument();
+        await user.click(screen.getByTestId('plot-color-by-button'));
+
+        expect(screen.getByText('Nothing to color by')).toBeInTheDocument();
     });
 });

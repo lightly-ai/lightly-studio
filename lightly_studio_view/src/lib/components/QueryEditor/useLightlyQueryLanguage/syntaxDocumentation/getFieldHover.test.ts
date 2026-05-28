@@ -40,8 +40,8 @@ describe('getFieldHover', () => {
     it('returns object-detection field hover inside object_detection(...)', async () => {
         const { getFieldHover } = await import('./getFieldHover');
         const model = makeSyntaxDocModel({
-            text: 'object_detection(label = "cat")',
-            wordAtPosition: { word: 'label', startColumn: 18, endColumn: 23 },
+            text: 'object_detection(class_name = "cat")',
+            wordAtPosition: { word: 'class_name', startColumn: 18, endColumn: 28 },
             includeGetValue: true,
             includeGetOffsetAt: true
         });
@@ -49,14 +49,14 @@ describe('getFieldHover', () => {
 
         expect(hover).toEqual({
             contents: [
-                { value: '```\nObjectDetection.label: string\n```' },
-                { value: 'Class label of the detection.' }
+                { value: '```\nObjectDetection.class_name: string\n```' },
+                { value: 'Annotation class of the detection.' }
             ],
             range: expect.objectContaining({
                 startLineNumber: 1,
                 startColumn: 18,
                 endLineNumber: 1,
-                endColumn: 23
+                endColumn: 28
             })
         });
     });

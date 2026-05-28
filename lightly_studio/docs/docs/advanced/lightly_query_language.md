@@ -73,7 +73,7 @@ NOT "rejected" IN tags
 
 ## Annotation match functions
 
-Annotations are labels or shapes attached to an image.
+An annotation is a classification, bounding box, or segmentation mask attached to an image.
 
 The query language supports three annotation functions:
 
@@ -85,18 +85,18 @@ Each function contains another query inside the parentheses and matches an image
 
 ### Classification queries
 
-Use `classification(...)` when you want to match image-level labels. Example queries:
+Use `classification(...)` when you want to match image-level classifications. Example queries:
 
 ```sql
-classification(label = "cat")
-classification(label != "background")
+classification(class_name = "cat")
+classification(class_name != "background")
 ```
 
 ### Object detection queries
 
 Use `object_detection(...)` when you want to match bounding boxes. The following fields are supported:
 
-- `label`
+- `class_name`
 - `x`
 - `y`
 - `width`
@@ -106,9 +106,9 @@ Example queries:
 
 ```sql
 object_detection(x >= 10 AND y < 200)
-object_detection(label = "cat" AND width >= 50 AND height >= 40)
-object_detection(label = "cat" OR label = "dog")
-object_detection(label != "background")
+object_detection(class_name = "cat" AND width >= 50 AND height >= 40)
+object_detection(class_name = "cat" OR class_name = "dog")
+object_detection(class_name != "background")
 ```
 
 ### Segmentation mask queries
@@ -117,7 +117,7 @@ Use `segmentation_mask(...)` when you want to match segmentation annotations.
 
 It is part of the query grammar, uses the same boolean operators as `object_detection(...)`, and supports these fields:
 
-- `label`
+- `class_name`
 - `x`
 - `y`
 - `width`
@@ -126,10 +126,10 @@ It is part of the query grammar, uses the same boolean operators as `object_dete
 Example queries:
 
 ```sql
-segmentation_mask(label = "cat")
+segmentation_mask(class_name = "cat")
 segmentation_mask(x != 0)
 segmentation_mask(width > 80)
-segmentation_mask(label = "cat" AND width >= 50 AND height >= 40)
+segmentation_mask(class_name = "cat" AND width >= 50 AND height >= 40)
 ```
 
 ## Combining top-level and annotation expressions
@@ -137,9 +137,9 @@ segmentation_mask(label = "cat" AND width >= 50 AND height >= 40)
 You can combine image properties with annotation queries:
 
 ```sql
-height > 400 AND object_detection(label = "cat")
-width >= 640 AND classification(label = "approved")
-"reviewed" IN tags AND segmentation_mask(label = "road")
+height > 400 AND object_detection(class_name = "cat")
+width >= 640 AND classification(class_name = "approved")
+"reviewed" IN tags AND segmentation_mask(class_name = "road")
 ```
 
 ## Complex examples
@@ -148,13 +148,13 @@ width >= 640 AND classification(label = "approved")
 # Large reviewed sample with a matching object detection
 height > 400 AND width >= 640
 AND "reviewed" IN tags
-AND object_detection(label = "cat" AND width > 80 AND height > 80)
+AND object_detection(class_name = "cat" AND width > 80 AND height > 80)
 
 # Nested query with grouped sample filters and segmentation constraints
 (file_path_abs != "/datasets/archive/bad.jpg" AND created_at >= "2025-01-01T00:00:00Z")
 AND ("training" IN tags OR "validation" IN tags)
 AND segmentation_mask(
-    (label = "car" OR label = "truck")
+    (class_name = "car" OR class_name = "truck")
     AND width >= 100
     AND height >= 60
     AND NOT (x < 10 OR y < 10)
@@ -162,10 +162,10 @@ AND segmentation_mask(
 
 # Nested query combining multiple annotation functions
 "reviewed" IN tags
-AND classification(label = "urban-scene")
+AND classification(class_name = "urban-scene")
 AND (
-    object_detection(label = "person" AND height >= 120)
-    OR segmentation_mask(label = "road" AND width > 300)
+    object_detection(class_name = "person" AND height >= 120)
+    OR segmentation_mask(class_name = "road" AND width > 300)
 )
 ```
 

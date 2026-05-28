@@ -3,6 +3,15 @@ import { describe, expect, it, vi } from 'vitest';
 import type { EvaluationRunView } from '$lib/api/lightly_studio_local/types.gen';
 import EvaluationRunsPanel from './EvaluationRunsPanel.svelte';
 
+vi.mock(
+    './EvaluationRunItem/EvaluationRunConfusionMatrixSection/EvaluationRunConfusionMatrixSection.svelte',
+    async () => {
+        const module =
+            await import('./EvaluationRunItem/EvaluationRunConfusionMatrixSection/EvaluationRunConfusionMatrixSection.mock.svelte');
+        return { default: module.default };
+    }
+);
+
 const noop = () => {};
 
 type Props = {

@@ -4,7 +4,7 @@ import numpy as np
 import pytest
 from pytest_mock import MockerFixture
 
-from lightly_studio.selection.mundig import Mundig
+from lightly_studio.sampling.mundig import Mundig
 
 
 class TestMundig:
@@ -18,15 +18,15 @@ class TestMundig:
         """Test the diversity strategy."""
         mundig = Mundig()
         mundig.add_diversity([[1], [3], [5]])
-        selected = mundig.run(n_samples=2)
-        assert selected == [0, 2]
+        sampled = mundig.run(n_samples=2)
+        assert sampled == [0, 2]
 
     def test_diversity__pass_ndarray(self) -> None:
         """Test the diversity strategy with ndarray float64 input."""
         mundig = Mundig()
         mundig.add_diversity(np.array([[1], [3], [5]], dtype=np.float64))
-        selected = mundig.run(n_samples=2)
-        assert selected == [0, 2]
+        sampled = mundig.run(n_samples=2)
+        assert sampled == [0, 2]
 
     def test_diversity__pass_ndarray_zero_copy(self, mocker: MockerFixture) -> None:
         """Test that there is no ndarray copy if it already is np.float32.
@@ -56,27 +56,27 @@ class TestMundig:
         """Test the weighting strategy."""
         mundig = Mundig()
         mundig.add_weighting([1, 2, 3])
-        selected = mundig.run(n_samples=2)
-        assert selected == [2, 1]
+        sampled = mundig.run(n_samples=2)
+        assert sampled == [2, 1]
 
     def test_weighting__multiple(self) -> None:
         """Test the weighting strategy with multiple calls."""
         mundig = Mundig()
         mundig.add_weighting([1, 2, 3])
         mundig.add_weighting([6, 5, 3])
-        selected = mundig.run(n_samples=2)
-        assert selected == [1, 2]
+        sampled = mundig.run(n_samples=2)
+        assert sampled == [1, 2]
 
-    def test_similarity__selects_most_similar_samples(self) -> None:
-        """Test that similarity selects the samples closest to the query."""
+    def test_similarity__samples_most_similar_samples(self) -> None:
+        """Test that similarity samples the samples closest to the query."""
         mundig = Mundig()
         mundig.add_similarity(
             embeddings=[[1.0, 0.0], [0.0, 1.0], [0.9, 0.0]],
             query_embeddings=[[1.0, 0.0]],
         )
 
-        selected = mundig.run(n_samples=2)
-        assert selected == [0, 2]
+        sampled = mundig.run(n_samples=2)
+        assert sampled == [0, 2]
 
     def test_multiple__wrong_n_input_samples(self) -> None:
         """Check error is raised if input sample sizes differ."""
@@ -94,11 +94,11 @@ class TestMundig:
         # 5 samples, 2 classes
         class_distributions = [[1.0, 0.0], [0.3, 0.7], [0.0, 1.0], [0.0, 1.0], [1.0, 1.0]]
         mundig.add_class_balancing(class_distributions=class_distributions, target=[0.5, 0.5])
-        selected = mundig.run(n_samples=2)
+        sampled = mundig.run(n_samples=2)
 
         # Sample at index 4 with distribution [1.0, 1.0] is perfectly in balance with the target of
         # 50:50. Then sample at index 1 with distribution [0.3, 0.7] is the closest to 50:50.
-        assert selected == [4, 1]
+        assert sampled == [4, 1]
 
     def test_class_balancing_wrong_dimensions(self) -> None:
         """Test class balancing with wrong dimensions."""
