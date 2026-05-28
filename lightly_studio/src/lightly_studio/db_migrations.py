@@ -19,6 +19,7 @@ from sqlmodel import SQLModel
 
 import lightly_studio.api.db_tables  # noqa: F401
 from lightly_studio import db_url
+from lightly_studio.migrations.config_utils import ensure_script_location, find_alembic_ini
 
 
 def run_migrations(engine: Engine, engine_url: str) -> None:
@@ -29,23 +30,6 @@ def run_migrations(engine: Engine, engine_url: str) -> None:
         engine_url: Database URL (used for Alembic config).
     """
     config = get_alembic_config(engine_url=engine_url)
-
-    if _has_application_tables(engine=engine) and not _alembic_version_table_exists(
-        engine=engine,
-    ):
-        logging.info("Adopting pre-Alembic database schema (stamp head).")
-        logging.warning(
-            "Database has application tables but no alembic_version table. "
-            "Stamped head without running migrations; verify schema matches revision "
-            "fa45898e4138 before relying on Alembic upgrades."
-        )
-        _run_alembic_command(
-            engine=engine,
-            config=config,
-            fn=command.stamp,
-            revision="head",
-        )
-        return
 
     if _alembic_version_table_exists(engine=engine):
         logging.info("Applying pending Alembic migrations (upgrade head).")
@@ -93,32 +77,11 @@ def get_alembic_config(engine_url: str) -> Config:
 
 def _base_config() -> Config:
     """Load alembic.ini and point it at the migrations package."""
-    alembic_config = Config(str(_find_alembic_ini()))
-    _ensure_script_location(config=alembic_config)
-    return alembic_config
-
-
-def _find_alembic_ini() -> Path:
-    """Return the path to alembic.ini for development or installed layouts."""
     package_dir = Path(__file__).resolve().parent
-    installed_ini = package_dir / "alembic.ini"
-    if installed_ini.is_file():
-        return installed_ini
-
-    dev_ini = package_dir.parent.parent / "alembic.ini"
-    if dev_ini.is_file():
-        return dev_ini
-
-    raise FileNotFoundError("alembic.ini not found for Alembic migrations.")
-
-
-def _ensure_script_location(config: Config) -> None:
-    """Point Alembic at the migrations package (dev and wheel layouts differ in alembic.ini)."""
-    script_location = config.get_main_option(name="script_location")
-    if script_location is not None and Path(script_location).is_dir():
-        return
+    alembic_config = Config(str(find_alembic_ini(package_dir=package_dir)))
     migrations_dir = Path(__file__).resolve().parent / "migrations"
-    config.set_main_option(name="script_location", value=str(migrations_dir))
+    ensure_script_location(config=alembic_config, migrations_dir=migrations_dir)
+    return alembic_config
 
 
 def _run_alembic_command(
