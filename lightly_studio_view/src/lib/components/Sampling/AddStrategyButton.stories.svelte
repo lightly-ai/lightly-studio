@@ -7,6 +7,9 @@
         title: 'Components/Sampling/AddStrategyButton',
         component: AddStrategyButton,
         tags: ['autodocs'],
+        parameters: {
+            layout: 'centered'
+        },
         argTypes: {
             similarityDisabledReason: { control: 'text' },
             metadataWeightingDisabledReason: { control: 'text' },
@@ -15,12 +18,13 @@
     });
 </script>
 
-<Story
-    name="Default"
-    args={{
-        onAdd: fn()
-    }}
-/>
+<Story name="Default" args={{ onAdd: fn() }}>
+    {#snippet children({ args })}
+        <div style="width: 300px">
+            <AddStrategyButton {...args} />
+        </div>
+    {/snippet}
+</Story>
 
 <Story
     name="SimilarityDisabled"
@@ -28,7 +32,13 @@
         similarityDisabledReason: 'No query tag selected',
         onAdd: fn()
     }}
-/>
+>
+    {#snippet children({ args })}
+        <div style="width: 300px">
+            <AddStrategyButton {...args} />
+        </div>
+    {/snippet}
+</Story>
 
 <Story
     name="AllDisabled"
@@ -38,4 +48,10 @@
         classBalancingDisabledReason: 'No annotations available',
         onAdd: fn()
     }}
-/>
+>
+    {#snippet children({ args })}
+        <div style="width: 300px">
+            <AddStrategyButton {...args} />
+        </div>
+    {/snippet}
+</Story>
