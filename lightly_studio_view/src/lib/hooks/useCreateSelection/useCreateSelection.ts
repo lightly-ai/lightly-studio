@@ -1,5 +1,5 @@
 import {
-    createCombinationSelection,
+    createSampling,
     computeSimilarityMetadata,
     computeTypicalityMetadata
 } from '$lib/api/lightly_studio_local/sdk.gen';
@@ -45,7 +45,7 @@ export function useCreateSelection(params: UseCreateSelectionParams) {
         tagName: string
     ): Promise<boolean> {
         _loadingMessage.set('Creating selection...');
-        const response = await createCombinationSelection({
+        const response = await createSampling({
             path: { collection_id: collectionId },
             body: {
                 n_samples_to_select: n,

@@ -46,7 +46,7 @@ def test_create_combination_sampling__diversity_success(
         ],
     }
 
-    response = test_client.post(f"/api/collections/{collection_id}/selection", json=request_data)
+    response = test_client.post(f"/api/collections/{collection_id}/sampling", json=request_data)
 
     # Assert 204 No Content response
     assert response.status_code == 204
@@ -66,7 +66,7 @@ def test_create_combination_sampling__diversity_success(
     assert len(result.samples) == 3
 
 
-def test_create_combination_selection__passes_request_to_sampling(
+def test_create_sampling__passes_request_to_sampling(
     db_session: Session, mocker: MockerFixture
 ) -> None:
     """Test selection endpoint passes the request payload to sampling."""
@@ -77,7 +77,7 @@ def test_create_combination_selection__passes_request_to_sampling(
     spy = mocker.patch.object(sampling_api, "sampling_via_database")
     mocker.patch.object(image_resolver, "get_sample_ids", return_value=["a", "b", "c"])
 
-    sampling_api.create_combination_selection(
+    sampling_api.create_sampling(
         session=db_session,
         collection=collection,
         request=sampling_api.SamplingRequest(
@@ -115,7 +115,7 @@ def test_create_combination_sampling__diversity_success_videos(
         ],
     }
 
-    response = test_client.post(f"/api/collections/{collection_id}/selection", json=request_data)
+    response = test_client.post(f"/api/collections/{collection_id}/sampling", json=request_data)
 
     assert response.status_code == 204
     assert response.text == ""
@@ -151,7 +151,7 @@ def test_create_combination_sampling__insufficient_samples(
         ],
     }
 
-    response = test_client.post(f"/api/collections/{collection_id}/selection", json=request_data)
+    response = test_client.post(f"/api/collections/{collection_id}/sampling", json=request_data)
 
     assert response.status_code == 400
     assert "cannot select 5" in response.json()["detail"]
@@ -178,11 +178,11 @@ def test_create_combination_sampling__duplicate_tag_name(
     }
 
     # First request should succeed
-    response = test_client.post(f"/api/collections/{collection_id}/selection", json=request_data)
+    response = test_client.post(f"/api/collections/{collection_id}/sampling", json=request_data)
     assert response.status_code == 204
 
     # Second request with same tag name should fail
-    response = test_client.post(f"/api/collections/{collection_id}/selection", json=request_data)
+    response = test_client.post(f"/api/collections/{collection_id}/sampling", json=request_data)
     assert response.status_code == 400
     assert "already exists" in response.json()["error"]
 
@@ -232,7 +232,7 @@ def test_create_combination_sampling__metadata_weighting_success(
         ],
     }
 
-    response = test_client.post(f"/api/collections/{collection_id}/selection", json=request_data)
+    response = test_client.post(f"/api/collections/{collection_id}/sampling", json=request_data)
 
     # Assert 204 No Content response
     assert response.status_code == 204
@@ -309,7 +309,7 @@ def test_create_combination_sampling__metadata_weighting_success_videos(
         ],
     }
 
-    response = test_client.post(f"/api/collections/{collection_id}/selection", json=request_data)
+    response = test_client.post(f"/api/collections/{collection_id}/sampling", json=request_data)
 
     assert response.status_code == 204
     assert response.text == ""
@@ -349,7 +349,7 @@ def test_create_combination_sampling__embedding_similarity_success(
     )
 
     response = test_client.post(
-        f"/api/collections/{collection_id}/selection",
+        f"/api/collections/{collection_id}/sampling",
         json={
             "n_samples_to_select": 2,
             "sampling_result_tag_name": "similarity_sampling",
@@ -390,7 +390,7 @@ def test_create_combination_sampling__embedding_similarity_missing_query_tag(
     )
 
     response = test_client.post(
-        f"/api/collections/{collection_id}/selection",
+        f"/api/collections/{collection_id}/sampling",
         json={
             "n_samples_to_select": 2,
             "sampling_result_tag_name": "similarity_sampling",
@@ -420,7 +420,7 @@ def test_create_combination_sampling__embedding_similarity_query_tag_without_emb
     )
 
     response = test_client.post(
-        f"/api/collections/{collection_id}/selection",
+        f"/api/collections/{collection_id}/sampling",
         json={
             "n_samples_to_select": 2,
             "sampling_result_tag_name": "similarity_sampling",
@@ -491,7 +491,7 @@ def test_create_combination_sampling__annotation_class_balancing_success(
     )
 
     response = test_client.post(
-        f"/api/collections/{collection.collection_id}/selection",
+        f"/api/collections/{collection.collection_id}/sampling",
         json={
             "n_samples_to_select": 2,
             "sampling_result_tag_name": "balanced_sampling",
@@ -562,7 +562,7 @@ def test_create_combination_sampling__image_filter_success(
     spy_sample_resolver = mocker.spy(image_resolver, "get_sample_ids")
 
     response = test_client.post(
-        f"/api/collections/{collection_id}/selection",
+        f"/api/collections/{collection_id}/sampling",
         json={
             "n_samples_to_select": 2,
             "sampling_result_tag_name": "tag1",
@@ -636,7 +636,7 @@ def test_create_combination_sampling__video_filter_success(
     spy_video_resolver = mocker.spy(video_resolver, "get_sample_ids")
 
     response = test_client.post(
-        f"/api/collections/{collection_id}/selection",
+        f"/api/collections/{collection_id}/sampling",
         json={
             "n_samples_to_select": 2,
             "sampling_result_tag_name": "tag1",
@@ -666,7 +666,7 @@ def test_create_combination_sampling__image_collection_rejects_video_filter(
     )
 
     response = test_client.post(
-        f"/api/collections/{collection.collection_id}/selection",
+        f"/api/collections/{collection.collection_id}/sampling",
         json={
             "n_samples_to_select": 1,
             "sampling_result_tag_name": "tag1",
@@ -692,7 +692,7 @@ def test_create_combination_sampling__video_collection_rejects_image_filter(
     )
 
     response = test_client.post(
-        f"/api/collections/{collection.collection_id}/selection",
+        f"/api/collections/{collection.collection_id}/sampling",
         json={
             "n_samples_to_select": 1,
             "sampling_result_tag_name": "tag1",

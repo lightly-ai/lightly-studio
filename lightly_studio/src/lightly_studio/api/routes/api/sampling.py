@@ -49,13 +49,12 @@ class SamplingRequest(BaseModel):
     filter: CollectionFilter | None = None
 
 
-# TODO(lukas 5/2026): rename to /sampling
 @sampling_router.post(
-    "/collections/{collection_id}/selection",
+    "/collections/{collection_id}/sampling",
     status_code=204,
     response_model=None,
 )
-def create_combination_selection(
+def create_sampling(
     session: SessionDep,
     collection: Annotated[
         CollectionTable,
