@@ -1,7 +1,6 @@
 import { writable, type Writable } from 'svelte/store';
 
-/** Public surface of {@link useSelectClassDialog}. */
-export type SelectClassDialog = {
+interface SelectClassDialog {
     /** Reactive flag to bind to `<SelectClassDialog bind:open>`. */
     open: Writable<boolean>;
     /** Opens the dialog and resolves with the chosen label, or `null` if cancelled. */
@@ -10,7 +9,7 @@ export type SelectClassDialog = {
     handleConfirm: (label: string) => void;
     /** Wire to the dialog's `onCancel`. */
     handleCancel: () => void;
-};
+}
 
 /**
  * Hook for managing the state of a "select class" dialog.
