@@ -120,7 +120,9 @@ describe('CreateSamplingDialog', () => {
         const input = screen.getByTestId('sampling-dialog-n-samples-input');
         await fireEvent.input(input, { target: { value: '10' } });
 
-        expect(screen.getByTestId('sampling-dialog-not-enough-samples-warning')).toBeInTheDocument();
+        expect(
+            screen.getByTestId('sampling-dialog-not-enough-samples-warning')
+        ).toBeInTheDocument();
     });
 
     it('does not show the not enough samples warning when filteredSampleCount is 0', async () => {
@@ -131,7 +133,9 @@ describe('CreateSamplingDialog', () => {
         });
         await fireEvent.pointerUp(await screen.findByTestId('sampling-strategy-diversity'));
 
-        expect(screen.queryByTestId('sampling-dialog-not-enough-samples-warning')).not.toBeInTheDocument();
+        expect(
+            screen.queryByTestId('sampling-dialog-not-enough-samples-warning')
+        ).not.toBeInTheDocument();
     });
 
     it('shows the no samples warning when filteredSampleCount is 0', async () => {

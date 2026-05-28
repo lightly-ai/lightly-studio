@@ -51,7 +51,7 @@
     };
 
     const hasClassifier = $derived(isImages && hasEmbeddings);
-    const hasSelection = $derived(isImages || isVideos);
+    const hasSampling = $derived(isImages || isVideos);
     const hasExport = $derived(
         collection.sample_type == 'image' ||
             collection.sample_type == 'video' ||
@@ -72,7 +72,7 @@
             });
         }
 
-        if (hasSelection && isEditor) {
+        if (hasSampling && isEditor) {
             items.push({
                 icon: WandSparklesIcon,
                 label: 'Sampling',
