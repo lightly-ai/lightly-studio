@@ -1,16 +1,23 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { fireEvent, render, screen } from '@testing-library/svelte';
-import { readable, writable } from 'svelte/store';
+import { derived, readable, writable } from 'svelte/store';
 import '@testing-library/jest-dom';
 
 vi.mock('$lib/hooks/useGlobalStorage', () => {
-    const showPlot = writable<boolean>(false);
-    const setShowPlot = vi.fn((value: boolean) => showPlot.set(value));
-
-    const showEvaluationRuns = writable<boolean>(false);
-    const setShowEvaluationRuns = vi.fn((value: boolean) => showEvaluationRuns.set(value));
+    const activePanel = writable<string>('none');
+    const showPlot = derived(activePanel, ($p) => $p === 'plot');
+    const showEvaluationRuns = derived(activePanel, ($p) => $p === 'evaluationRuns');
+    const setShowPlot = vi.fn((value: boolean) =>
+        activePanel.update((p: string) => (value ? 'plot' : p === 'plot' ? 'none' : p))
+    );
+    const setShowEvaluationRuns = vi.fn((value: boolean) =>
+        activePanel.update((p: string) =>
+            value ? 'evaluationRuns' : p === 'evaluationRuns' ? 'none' : p
+        )
+    );
     return {
         useGlobalStorage: () => ({
+            activePanel,
             showPlot,
             setShowPlot,
             showEvaluationRuns,
@@ -66,9 +73,8 @@ const defaultProps = {
 describe('DatasetGridHeader', () => {
     beforeEach(() => {
         const storage = useGlobalStorage();
-        storage.showPlot.set(false);
+        storage.activePanel.set('none');
         (storage.setShowPlot as ReturnType<typeof vi.fn>).mockClear();
-        storage.showEvaluationRuns.set(false);
         (storage.setShowEvaluationRuns as ReturnType<typeof vi.fn>).mockClear();
         defaultProps.onSelectAll.mockClear();
     });

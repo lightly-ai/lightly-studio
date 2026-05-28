@@ -1,4 +1,4 @@
-"""Pydantic models for the Selection configuration."""
+"""Pydantic models for the Sampling configuration."""
 
 from __future__ import annotations
 
@@ -12,45 +12,45 @@ AnnotationsClassName = str
 AnnotationClassToTarget = dict[AnnotationsClassName, float]
 
 
-class SelectionConfig(BaseModel):
-    """Configuration for the selection process."""
+class SamplingConfig(BaseModel):
+    """Configuration for the sampling process."""
 
     collection_id: UUID
     n_samples_to_select: int
-    selection_result_tag_name: str
-    strategies: Sequence[SelectionStrategy]
+    sampling_result_tag_name: str
+    strategies: Sequence[SamplingStrategy]
 
 
-class SelectionStrategy(BaseModel):
-    """Base class for selection strategies."""
+class SamplingStrategy(BaseModel):
+    """Base class for sampling strategies."""
 
     strength: float = 1.0
 
 
-class EmbeddingDiversityStrategy(SelectionStrategy):
-    """Selection strategy based on embedding diversity."""
+class EmbeddingDiversityStrategy(SamplingStrategy):
+    """Sampling strategy based on embedding diversity."""
 
     strategy_name: Literal["diversity"] = "diversity"
     embedding_model_name: str | None = None
 
 
-class EmbeddingSimilarityStrategy(SelectionStrategy):
-    """Selection strategy based on embedding similarity to a tagged query set."""
+class EmbeddingSimilarityStrategy(SamplingStrategy):
+    """Sampling strategy based on embedding similarity to a tagged query set."""
 
     strategy_name: Literal["similarity"] = "similarity"
     query_tag_name: str
     embedding_model_name: str | None = None
 
 
-class MetadataWeightingStrategy(SelectionStrategy):
-    """Selection strategy based on metadata weighting."""
+class MetadataWeightingStrategy(SamplingStrategy):
+    """Sampling strategy based on metadata weighting."""
 
     strategy_name: Literal["weights"] = "weights"
     metadata_key: str
 
 
-class AnnotationClassBalancingStrategy(SelectionStrategy):
-    """Selection strategy based on class balancing."""
+class AnnotationClassBalancingStrategy(SamplingStrategy):
+    """Sampling strategy based on class balancing."""
 
     strategy_name: Literal["balance"] = "balance"
     target_distribution: AnnotationClassToTarget | Literal["uniform"] | Literal["input"]
