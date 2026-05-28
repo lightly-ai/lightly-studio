@@ -2,7 +2,7 @@
     import { Button } from '$lib/components/ui/button';
     import { Popover, PopoverContent, PopoverTrigger } from '$lib/components/ui/popover';
     import { useClassifiersMenu } from '$lib/hooks/useClassifiers/useClassifiersMenu';
-    import { useSelectionDialog } from '$lib/hooks/useSelectionDialog/useSelectionDialog';
+    import { useSamplingDialog } from '$lib/hooks/useSamplingDialog/useSamplingDialog';
     import { useExportDialog } from '$lib/hooks/useExportDialog/useExportDialog';
     import { useSettingsDialog } from '$lib/hooks/useSettingsDialog/useSettingsDialog';
     import { useOperatorsDialog } from '$lib/hooks/useOperatorsDialog/useOperatorsDialog';
@@ -35,7 +35,7 @@
     }>();
 
     const { openClassifiersMenu } = useClassifiersMenu();
-    const { openSelectionDialog } = useSelectionDialog();
+    const { openSamplingDialog } = useSamplingDialog();
     const { openExportDialog } = useExportDialog();
     const { openSettingsDialog } = useSettingsDialog();
     const { openOperatorsDialog } = useOperatorsDialog();
@@ -75,9 +75,9 @@
         if (hasSelection && isEditor) {
             items.push({
                 icon: WandSparklesIcon,
-                label: 'Selection',
-                onSelect: openSelectionDialog,
-                testId: 'menu-selection'
+                label: 'Sampling',
+                onSelect: openSamplingDialog,
+                testId: 'menu-sampling'
             });
         }
 

@@ -1,7 +1,7 @@
 import { expect, type Page } from '@playwright/test';
 import { pressButton, waitForRequestsToSettle } from '../utils';
 
-type SelectionStrategy = 'diversity' | 'typicality' | 'similarity';
+type SamplingStrategy = 'diversity' | 'typicality' | 'similarity';
 
 export class SamplesPage {
     constructor(public readonly page: Page) {
@@ -134,8 +134,8 @@ export class SamplesPage {
         return this.page.getByTestId('search-clear-button');
     }
 
-    async createSelection(
-        strategy: SelectionStrategy,
+    async createSampling(
+        strategy: SamplingStrategy,
         nSamples: number,
         tagName: string,
         queryTagId?: string
@@ -145,32 +145,32 @@ export class SamplesPage {
         }
 
         await this.page.getByTestId('menu-trigger').click();
-        await this.page.getByTestId('menu-selection').click();
+        await this.page.getByTestId('menu-sampling').click();
 
-        await this.page.getByTestId('selection-dialog-strategy-select').click();
-        await this.page.getByTestId(`selection-strategy-${strategy}`).click();
+        await this.page.getByTestId('sampling-dialog-strategy-select').click();
+        await this.page.getByTestId(`sampling-strategy-${strategy}`).click();
 
         if (strategy === 'similarity') {
-            await this.page.getByTestId('selection-dialog-query-tag-select').click();
-            await this.page.getByTestId(`selection-query-tag-${queryTagId}`).click();
+            await this.page.getByTestId('sampling-dialog-query-tag-select').click();
+            await this.page.getByTestId(`sampling-query-tag-${queryTagId}`).click();
         } else {
-            const nSamplesInput = this.page.getByTestId('selection-dialog-n-samples-input');
+            const nSamplesInput = this.page.getByTestId('sampling-dialog-n-samples-input');
             await nSamplesInput.clear();
             await nSamplesInput.fill(nSamples.toString());
 
-            const tagNameInput = this.page.getByTestId('selection-dialog-tag-name-input');
+            const tagNameInput = this.page.getByTestId('sampling-dialog-tag-name-input');
             await tagNameInput.fill(tagName);
         }
 
-        await pressButton(this.page, 'selection-dialog-submit');
+        await pressButton(this.page, 'sampling-dialog-submit');
     }
 
-    async createDiversitySelection(nSamples: number, tagName: string): Promise<void> {
-        return this.createSelection('diversity', nSamples, tagName);
+    async createDiversitySampling(nSamples: number, tagName: string): Promise<void> {
+        return this.createSampling('diversity', nSamples, tagName);
     }
 
-    async createTypicalitySelection(nSamples: number, tagName: string): Promise<void> {
-        return this.createSelection('typicality', nSamples, tagName);
+    async createTypicalitySampling(nSamples: number, tagName: string): Promise<void> {
+        return this.createSampling('typicality', nSamples, tagName);
     }
 
     async pressTag(tagName: string): Promise<void> {
