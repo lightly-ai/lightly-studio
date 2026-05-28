@@ -90,9 +90,9 @@ def test_to_match_expression__classification_field_inside_object_detection_match
 ) -> None:
     """classification.class_name inside ObjectDetectionMatchExpr mixes annotation contexts.
 
-    The annotation-class lookup goes through AnnotationBaseTable.annotation_label
+    The annotation class lookup goes through AnnotationBaseTable.annotation_label
     regardless of the field's declared context. Wrapped in
-    ObjectDetectionMatchExpr, the same annotation-class predicate is silently evaluated
+    ObjectDetectionMatchExpr, the same annotation class predicate is silently evaluated
     against object-detection annotations instead of classification ones.
     """
     dataset = create_collection(session=db_session)
@@ -148,7 +148,7 @@ def test_to_match_expression__classification_field_inside_object_detection_match
     results = DatasetQuery(dataset=dataset, session=db_session).match(match).to_list()
 
     # Wrong: the field says "classification.class_name", but the matcher's
-    # annotation_type filter makes it behave like a generic annotation-class predicate on
+    # annotation_type filter makes it behave like a generic annotation class predicate on
     # object detections. The object-detection sample matches, while the actual
     # classification sample does not.
     assert [result.sample_id for result in results] == [object_detection_image.sample_id]

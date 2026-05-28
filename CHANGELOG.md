@@ -17,7 +17,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
-- Renamed the annotation-class field `label` to `class_name` across the Python SDK and query language. Breaking change.
+- Renamed the annotation class field `label` to `class_name` across the Python SDK and query language. Breaking change.
 
 ### Deprecated
 
