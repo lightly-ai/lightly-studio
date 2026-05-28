@@ -9,6 +9,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+### Changed
+
+### Deprecated
+
+### Removed
+
+### Fixed
+
+### Security
+
+## [1.0.0rc1] - 2026-05-28
+
+### Added
+
 - Sample selection respects the current image or video filters.
 - Added sort-by support via GUI.
 - Added similarity selection option.
@@ -22,15 +36,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Renamed the `collection_name` and `name` arguments to `annotation_source`. Breaking change.
 - Renamed selection to sampling. Breaking change.
 
-### Deprecated
-
-### Removed
-
 ### Fixed
 
 - Fixed hovering over breadcrumb links on detail pages (annotations, video frames) triggering unwanted navigation.
-
-### Security
 
 ## \[0.4.14\] - 2026-05-18
 
