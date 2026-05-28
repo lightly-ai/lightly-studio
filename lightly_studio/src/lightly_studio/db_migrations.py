@@ -107,4 +107,3 @@ def _get_inspector(engine: Engine) -> Inspector:
 def _alembic_version_table_exists(engine: Engine) -> bool:
     """Return whether the Alembic version tracking table is present."""
     return bool(_get_inspector(engine=engine).has_table(table_name="alembic_version"))
-
