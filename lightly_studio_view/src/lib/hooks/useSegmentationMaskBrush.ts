@@ -23,7 +23,8 @@ export function useSegmentationMaskBrush({
     sample,
     annotations = [],
     refetch,
-    onAnnotationCreated
+    onAnnotationCreated,
+    requestLabel
 }: {
     collectionId: string;
     datasetId: string;
@@ -32,6 +33,9 @@ export function useSegmentationMaskBrush({
     annotations?: AnnotationView[];
     refetch: () => void;
     onAnnotationCreated?: () => void;
+    /** Called when no label is currently selected. Should show a class-picker and resolve with
+     *  the chosen label name, or null if the user cancelled. */
+    requestLabel?: () => Promise<string | null>;
 }) {
     const { createLabel } = useCreateLabel({ collectionId });
     const { createAnnotation } = useCreateAnnotation({ collectionId });
@@ -73,6 +77,18 @@ export function useSegmentationMaskBrush({
             refetch();
             toast.error('This annotation is locked');
             return;
+        }
+
+        let annotationLabelName = annotationLabelContext.annotationLabel;
+        if (!selectedAnnotation && !annotationLabelName) {
+            if (requestLabel) {
+                annotationLabelName = await requestLabel();
+            }
+            if (!annotationLabelName) {
+                toast.error('Please select a class before creating an annotation');
+                return;
+            }
+            setAnnotationLabel(annotationLabelName);
         }
 
         const overriddenAnnotations = await applySegmentationMaskConstraints({
@@ -138,15 +154,12 @@ export function useSegmentationMaskBrush({
             }
         }
 
-        let label =
-            labels?.find(
-                (l) => l.annotation_label_name === annotationLabelContext.annotationLabel
-            ) ?? labels?.find((l) => l.annotation_label_name === 'DEFAULT');
+        let label = labels?.find((l) => l.annotation_label_name === annotationLabelName);
 
         if (!label) {
             label = await createLabel({
                 dataset_id: datasetId,
-                annotation_label_name: 'DEFAULT'
+                annotation_label_name: annotationLabelName!
             });
         }
 

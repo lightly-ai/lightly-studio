@@ -167,7 +167,7 @@
                         </SettingsFieldRow>
                         <SettingsFieldRow
                             id="show-annotation-text-labels"
-                            label="Show Annotation Text Labels"
+                            label="Show Annotation Class Names"
                         >
                             <Switch
                                 id="show-annotation-text-labels"

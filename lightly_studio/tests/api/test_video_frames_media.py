@@ -15,14 +15,13 @@ from lightly_studio.api.routes.video_frames_media import (
     _CAP_CACHE_SIZE,
     _get_cached_capture,
 )
-from lightly_studio.db_manager import DatabaseEngine
 from lightly_studio.models.collection import SampleType
 from tests.helpers_resolvers import create_collection
 from tests.resolvers.video.helpers import VideoStub, create_video_file, create_video_with_frames
 
 
 def test_stream_frame_png_format(
-    test_client: TestClient,
+    media_test_client: TestClient,
     db_session: Session,
     tmp_path: Path,
 ) -> None:
@@ -54,7 +53,7 @@ def test_stream_frame_png_format(
 
     frame_sample_id = video_with_frames.frame_sample_ids[0]
 
-    response = test_client.get(f"/frames/media/{frame_sample_id}")
+    response = media_test_client.get(f"/frames/media/{frame_sample_id}")
 
     assert response.status_code == 200
     assert response.headers["content-type"] == "image/png"
@@ -67,7 +66,7 @@ def test_stream_frame_png_format(
 
 
 def test_stream_frame_high_returns_resized_jpeg(
-    test_client: TestClient,
+    media_test_client: TestClient,
     db_session: Session,
     tmp_path: Path,
 ) -> None:
@@ -94,7 +93,7 @@ def test_stream_frame_high_returns_resized_jpeg(
         ),
     )
 
-    response = test_client.get(
+    response = media_test_client.get(
         f"/frames/media/{video_with_frames.frame_sample_ids[0]}",
         params={"quality": "high", "max_width": 80, "max_height": 80},
     )
@@ -109,7 +108,7 @@ def test_stream_frame_high_returns_resized_jpeg(
 
 
 def test_stream_frame_high_requires_bounds(
-    test_client: TestClient,
+    media_test_client: TestClient,
     db_session: Session,
     tmp_path: Path,
 ) -> None:
@@ -136,7 +135,7 @@ def test_stream_frame_high_requires_bounds(
         ),
     )
 
-    response = test_client.get(
+    response = media_test_client.get(
         f"/frames/media/{video_with_frames.frame_sample_ids[0]}",
         params={"quality": "high"},
     )
@@ -266,40 +265,37 @@ def test_get_media_executor_has_workers() -> None:
 
 
 def test_stream_frame_multiple_frames_same_video(
-    streaming_media_test_client: TestClient,
-    _db_engine: DatabaseEngine,  # noqa: PT019
+    media_test_client: TestClient,
+    db_session: Session,
     tmp_path: Path,
 ) -> None:
     """Test streaming multiple frames from the same video uses caching."""
-    frame_ids = []
-    with _db_engine.session() as session:
-        collection = create_collection(session=session, sample_type=SampleType.VIDEO)
-        collection_id = collection.collection_id
+    collection = create_collection(session=db_session, sample_type=SampleType.VIDEO)
 
-        video_path = create_video_file(
-            output_path=tmp_path / "test_video.mp4",
+    video_path = create_video_file(
+        output_path=tmp_path / "test_video.mp4",
+        width=320,
+        height=240,
+        num_frames=5,
+        fps=1,
+    )
+
+    video_with_frames = create_video_with_frames(
+        session=db_session,
+        collection_id=collection.collection_id,
+        video=VideoStub(
+            path=str(video_path),
             width=320,
             height=240,
-            num_frames=5,
-            fps=1,
-        )
-
-        video_with_frames = create_video_with_frames(
-            session=session,
-            collection_id=collection_id,
-            video=VideoStub(
-                path=str(video_path),
-                width=320,
-                height=240,
-                duration_s=5.0,
-                fps=1.0,
-            ),
-        )
-        frame_ids = video_with_frames.frame_sample_ids[:3]
+            duration_s=5.0,
+            fps=1.0,
+        ),
+    )
+    frame_ids = video_with_frames.frame_sample_ids[:3]
 
     responses = []
     for frame_id in frame_ids:
-        response = streaming_media_test_client.get(
+        response = media_test_client.get(
             f"/frames/media/{frame_id}",
             params={"quality": "high", "max_width": 80, "max_height": 80},
         )

@@ -9,7 +9,7 @@
     const LIGHTLY_QUERY_DEFAULT_VALUE = `# Example query
 width < 500
 AND "reviewed" IN tags
-AND object_detection(label = "person" AND x > 10)
+AND object_detection(class_name = "person" AND x > 10)
 `;
 
     interface QueryEditorProps {
@@ -20,11 +20,13 @@ AND object_detection(label = "person" AND x > 10)
     }
 
     let {
-        value = $bindable(LIGHTLY_QUERY_DEFAULT_VALUE),
+        value: valueProp,
         height = '320px',
         readOnly = false,
         onSave
     }: QueryEditorProps = $props();
+
+    const initialValue = valueProp ?? LIGHTLY_QUERY_DEFAULT_VALUE;
 
     let containerEl: HTMLDivElement | null = null;
 
@@ -50,21 +52,23 @@ AND object_detection(label = "person" AND x > 10)
             return;
         }
         onSave?.(draftValue, translationResult);
+        lastAppliedValue = draftValue;
     }
 
-    let draftValue = $state(value);
+    let draftValue = $state(initialValue);
+    let lastAppliedValue = $state<string | null>(valueProp ?? null);
 
     onMount(() => {
         if (!containerEl) return;
         return mount(containerEl, {
-            value,
+            value: initialValue,
             readOnly,
             onChange: (next) => {
                 draftValue = next;
             }
         });
     });
-    const isModified = $derived(value !== draftValue);
+    const canApply = $derived(draftValue !== lastAppliedValue);
 </script>
 
 <!-- Prevent keypresses from triggering global shortcuts (e.g. 'E' toggling edit mode) -->
@@ -80,7 +84,7 @@ AND object_detection(label = "person" AND x > 10)
         <div
             class="flex items-center justify-end gap-2 border-b border-[#3c3c3c] bg-[#252526] px-4 py-2"
         >
-            <Button type="button" disabled={readOnly || !isModified} onclick={handleSave}
+            <Button type="button" disabled={readOnly || !canApply} onclick={handleSave}
                 >Apply</Button
             >
         </div>

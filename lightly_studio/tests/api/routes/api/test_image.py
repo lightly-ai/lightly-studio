@@ -190,7 +190,7 @@ def test_read_images__query_expr_filter(
         annotation_label_id=cat_label.annotation_label_id,
     )
 
-    # Query: width >= 500 OR has_object_detection(label == "cat")
+    # Query: width >= 500 OR has_object_detection(class_name == "cat")
     # Should match wide_image (via width) and annotated_image (via annotation).
     query_expr = {
         "match_expr": {
@@ -208,7 +208,7 @@ def test_read_images__query_expr_filter(
                         "type": "string_expr",
                         "field": {
                             "table": "object_detection",
-                            "name": "label",
+                            "name": "class_name",
                         },
                         "operator": "==",
                         "value": "cat",

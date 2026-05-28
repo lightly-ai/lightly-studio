@@ -168,7 +168,7 @@ via the navigation bar at the top.
 The Videos page shows a grid of video thumbnails. From here, you can perform multiple actions:
 
 - Hover with a mouse over a video to see a quick playback preview.
-- Use the left panel to filter the videos by tags, annotation labels or metadata (width, height, duration).
+- Use the left panel to filter the videos by tags, annotations or metadata (width, height, duration).
 - Use the search bar to do similarity search by text or another video from the dataset.
 - Use the `Show Embeddings` button to explore the data in embedding space.
 - Use the `Menu` dropdown for further actions like plugins, sampling, classification, export and more.
@@ -188,7 +188,7 @@ to the frame detail view of the currently shown frame.
 ### Frame Grid View
 
 The Frames page shows a grid of individual video frames extracted from all videos.
-You can use the left panel to filter frames by tags, annotation labels or metadata.
+You can use the left panel to filter frames by tags, annotations or metadata.
 
 ![Video Frame Grid](https://storage.googleapis.com/lightly-public/studio/video_dataset_frame_grid.png){ width="100%" }
 
@@ -261,4 +261,4 @@ on dedicated pages.
 
 ### Querying the Dataset
 
-Use [Dataset Query in Python](../concepts_and_tools/search_and_filter.md#query-in-python) when you need reusable subsets in code for filtering, sorting, slicing, export, or selection. Video query expressions use `VideoSampleField`.
+Use [Dataset Query in Python](../concepts_and_tools/search_and_filter.md#query-in-python) when you need reusable subsets in code for filtering, sorting, slicing, export, or sampling. Video query expressions use `VideoSampleField`.

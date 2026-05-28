@@ -12,14 +12,17 @@ from typing import Any, Literal, cast
 
 from alembic import context
 from alembic.autogenerate.api import AutogenContext
-from sqlalchemy import engine, pool, text
+from sqlalchemy import engine, pool
 from sqlalchemy.engine import Connection
 from sqlmodel import SQLModel
 
 import lightly_studio.api.db_tables  # noqa: F401
-from lightly_studio import db_url
 from lightly_studio.dataset.env import LIGHTLY_STUDIO_DATABASE_URL
 from lightly_studio.db_vector import VectorType
+from lightly_studio.migrations.config_utils import (
+    configure_database_url,
+    ensure_script_location,
+)
 
 config = context.config
 
@@ -28,41 +31,6 @@ if config.config_file_name is not None:
     _ini_parser.read(config.config_file_name)
     if _ini_parser.has_section("formatters"):
         fileConfig(config.config_file_name)
-
-
-def _ensure_script_location() -> None:
-    """Use the migrations package directory when the ini path is for source layouts."""
-    script_location = config.get_main_option(name="script_location")
-    if script_location is not None and Path(script_location).is_dir():
-        return
-    # Installed wheels place alembic.ini under lightly_studio/; the dev-only
-    # src/lightly_studio/migrations path from alembic.ini does not exist there.
-    config.set_main_option(name="script_location", value=str(Path(__file__).parent))
-
-
-def _database_url_configured() -> bool:
-    """Return whether migrations can run without reading LIGHTLY_STUDIO_DATABASE_URL."""
-    if config.attributes.get("connection") is not None:
-        return True
-    url = config.get_main_option(name="sqlalchemy.url")
-    return url is not None and url.strip() != ""
-
-
-def _configure_database_url() -> None:
-    """Set sqlalchemy.url from LIGHTLY_STUDIO_DATABASE_URL when not already configured."""
-    if _database_url_configured():
-        return
-
-    if LIGHTLY_STUDIO_DATABASE_URL is None:
-        raise RuntimeError(
-            "LIGHTLY_STUDIO_DATABASE_URL must be set for Alembic CLI migrations "
-            "(or pass sqlalchemy.url / a connection via Config).",
-        )
-
-    config.set_main_option(
-        name="sqlalchemy.url",
-        value=db_url.ensure_psycopg3_driver(engine_url=LIGHTLY_STUDIO_DATABASE_URL),
-    )
 
 
 def _render_item(
@@ -80,9 +48,8 @@ def _render_item(
     return False
 
 
-def _configure_context(connection: Connection) -> None:
+def _run_migrations_on(connection: Connection) -> None:
     """Configure Alembic and run migrations on the given connection."""
-    connection.execute(statement=text("CREATE EXTENSION IF NOT EXISTS vector"))
     context.configure(
         connection=connection,
         target_metadata=target_metadata,
@@ -98,7 +65,7 @@ def run_migrations() -> None:
     """Run migrations against Postgres using a shared connection or sqlalchemy.url."""
     shared_connection = config.attributes.get("connection")
     if shared_connection is not None:
-        _configure_context(connection=cast(Connection, shared_connection))
+        _run_migrations_on(connection=cast(Connection, shared_connection))
         return
 
     connectable = engine.engine_from_config(
@@ -108,23 +75,13 @@ def run_migrations() -> None:
     )
 
     with connectable.connect() as connection:
-        connection.execute(statement=text("CREATE EXTENSION IF NOT EXISTS vector"))
-        connection.commit()
-        context.configure(
-            connection=connection,
-            target_metadata=target_metadata,
-            compare_type=True,
-            render_item=_render_item,
-        )
-
-        with context.begin_transaction():
-            context.run_migrations()
+        _run_migrations_on(connection=connection)
 
 
-_ensure_script_location()
+ensure_script_location(config=config, migrations_dir=Path(__file__).parent)
 
 # Schema autogenerate diffs this metadata against the live Postgres catalog.
 target_metadata = SQLModel.metadata
 
-_configure_database_url()
+configure_database_url(config=config, engine_url=LIGHTLY_STUDIO_DATABASE_URL)
 run_migrations()

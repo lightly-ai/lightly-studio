@@ -13,8 +13,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Added sort-by support via GUI.
 - Added similarity selection option.
 - Show confusion matrix in evaluation results for object detection.
+- Added option to select annotation source for class balancing.
+- Added query editor for advanced filtering with custom queries.
 
 ### Changed
+
+- Renamed the annotation class field `label` to `class_name` across the Python SDK and query language. Breaking change.
 
 ### Deprecated
 

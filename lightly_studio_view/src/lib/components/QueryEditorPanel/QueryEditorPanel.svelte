@@ -65,7 +65,7 @@
                     <code>object_detection(…)</code>, <code>classification(…)</code>
                 </li>
             </ul>
-            <p>Tip: Completion hints will show as you type a space or a left parenthesis.</p>
+            <p>Tip: Completion hints will appear as you type a space or a left parenthesis.</p>
         </Typography>
     </div>
     <QueryEditor

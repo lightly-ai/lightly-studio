@@ -299,7 +299,7 @@ class TestImageSample:
         annotations = image.annotations
         assert len(annotations) == 1
         assert isinstance(annotations[0], ObjectDetectionAnnotation)
-        assert annotations[0].label == "zebra"
+        assert annotations[0].class_name == "zebra"
         assert annotations[0].confidence == pytest.approx(0.7)
         assert annotations[0].x == 47
         assert annotations[0].y == 64
@@ -340,7 +340,7 @@ class TestImageSample:
         annotations = image.annotations
         assert len(annotations) == 1
         assert isinstance(annotations[0], SegmentationMaskAnnotation)
-        assert annotations[0].label == "cat"
+        assert annotations[0].class_name == "cat"
         assert annotations[0].confidence == pytest.approx(0.9)
         assert annotations[0].x == 10
         assert annotations[0].y == 20
@@ -375,7 +375,7 @@ class TestImageSample:
         annotations = image.annotations
         assert len(annotations) == 1
         assert isinstance(annotations[0], ClassificationAnnotation)
-        assert annotations[0].label == "cat"
+        assert annotations[0].class_name == "cat"
         assert annotations[0].confidence == pytest.approx(0.8)
 
     def test_annotations_multiple_types(
@@ -441,7 +441,7 @@ class TestImageSample:
 
         # Add classification annotation.
         annotation_create = CreateClassification(
-            label="cat",
+            class_name="cat",
             confidence=0.75,
         )
         image.add_annotation(annotation_create)
@@ -450,7 +450,7 @@ class TestImageSample:
         annotations = image.annotations
         assert len(annotations) == 1
         assert isinstance(annotations[0], ClassificationAnnotation)
-        assert annotations[0].label == "cat"
+        assert annotations[0].class_name == "cat"
         assert annotations[0].confidence == pytest.approx(0.75)
 
     def test_add_annotation_object_detection(
@@ -466,7 +466,7 @@ class TestImageSample:
 
         # Add object detection annotation.
         annotation_create = CreateObjectDetection(
-            label="dog",
+            class_name="dog",
             confidence=0.9,
             x=10,
             y=20,
@@ -479,7 +479,7 @@ class TestImageSample:
         annotations = image.annotations
         assert len(annotations) == 1
         assert isinstance(annotations[0], ObjectDetectionAnnotation)
-        assert annotations[0].label == "dog"
+        assert annotations[0].class_name == "dog"
         assert annotations[0].confidence == pytest.approx(0.9)
         assert annotations[0].x == 10
         assert annotations[0].y == 20
@@ -499,7 +499,7 @@ class TestImageSample:
 
         # Add segmentation mask annotation.
         annotation_create = CreateSegmentationMask(
-            label="cat",
+            class_name="cat",
             confidence=0.95,
             x=5,
             y=15,
@@ -513,7 +513,7 @@ class TestImageSample:
         annotations = image.annotations
         assert len(annotations) == 1
         assert isinstance(annotations[0], SegmentationMaskAnnotation)
-        assert annotations[0].label == "cat"
+        assert annotations[0].class_name == "cat"
         assert annotations[0].confidence == pytest.approx(0.95)
         assert annotations[0].x == 5
         assert annotations[0].y == 15
@@ -534,22 +534,24 @@ class TestImageSample:
 
         # Add multiple annotations.
         annotations_create: list[CreateAnnotation] = [
-            CreateClassification(label="cat", confidence=0.75),
-            CreateObjectDetection(label="dog", confidence=0.9, x=10, y=20, width=30, height=40),
+            CreateClassification(class_name="cat", confidence=0.75),
+            CreateObjectDetection(
+                class_name="dog", confidence=0.9, x=10, y=20, width=30, height=40
+            ),
         ]
         image.add_annotations(annotations_create)
 
         annotations = image.annotations
         assert len(annotations) == 2
         # Use sorted to ensure stable comparison if order is not guaranteed.
-        labels = sorted([a.label for a in annotations])
+        labels = sorted([a.class_name for a in annotations])
         assert labels == ["cat", "dog"]
 
-        cat_ann = next(a for a in annotations if a.label == "cat")
+        cat_ann = next(a for a in annotations if a.class_name == "cat")
         assert isinstance(cat_ann, ClassificationAnnotation)
         assert cat_ann.confidence == pytest.approx(0.75)
 
-        dog_ann = next(a for a in annotations if a.label == "dog")
+        dog_ann = next(a for a in annotations if a.class_name == "dog")
         assert isinstance(dog_ann, ObjectDetectionAnnotation)
         assert dog_ann.confidence == pytest.approx(0.9)
         assert dog_ann.x == 10
@@ -570,7 +572,7 @@ class TestImageSample:
 
         # Add an annotation.
         annotation_create = CreateClassification(
-            label="cat",
+            class_name="cat",
             confidence=0.75,
         )
         image.add_annotation(annotation_create)

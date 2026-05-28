@@ -36,7 +36,7 @@ describe('buildSchemaCompletions', () => {
         const range = { startLineNumber: 1, endLineNumber: 1, startColumn: 1, endColumn: 1 };
         const items = buildSchemaCompletions('segmentation_mask', range as never);
         const labels = items.map((i) => i.label);
-        expect(labels).toContain('label');
+        expect(labels).toContain('class_name');
         expect(labels).toContain('width');
         expect(labels).toContain('height');
     });
