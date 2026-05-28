@@ -1,4 +1,4 @@
-"""Example of how to run selection class."""
+"""Example of how to run sampling class."""
 
 from environs import Env
 
@@ -19,10 +19,10 @@ dataset_path = env.path("EXAMPLES_DATASET_PATH", "/path/to/your/dataset")
 dataset = ls.ImageDataset.create()
 dataset.add_images_from_path(path=str(dataset_path))
 
-# Run selection via the dataset query
-dataset.query().selection().diverse(
+# Run sampling via the dataset query
+dataset.query().sampling().diverse(
     n_samples_to_select=10,
-    selection_result_tag_name="diverse_selection",
+    sampling_result_tag_name="diverse_sampling",
 )
 
 ls.start_gui()
