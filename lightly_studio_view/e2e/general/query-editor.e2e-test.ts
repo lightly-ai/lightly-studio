@@ -14,7 +14,7 @@ test.describe('query editor', () => {
         // Type the query into Monaco
         // Click the editor content area to focus Monaco, then select-all and type
         await page.locator('.monaco-editor .view-lines').first().click();
-        await page.keyboard.press('Meta+a');
+        await page.keyboard.press('ControlOrMeta+a');
         await page.keyboard.type(QUERY);
 
         // Click Apply and wait for the filtered image list response
@@ -26,9 +26,7 @@ test.describe('query editor', () => {
         await refetchPromise;
 
         // Verify the grid shows only airplane samples
-        await samplesPage.getSamples().first().waitFor({ state: 'attached' });
-        const sampleCount = await samplesPage.getSamples().count();
-        expect(sampleCount).toBe(cocoDataset.labels.airplane.sampleCount);
+        await expect(samplesPage.getSamples()).toHaveCount(cocoDataset.labels.airplane.sampleCount);
 
         // Apply button should be disabled (draft matches applied value)
         await expect(applyButton).toBeDisabled();
