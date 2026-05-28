@@ -5,15 +5,17 @@ import { load } from './+layout';
 import { routeHelpers } from '$lib/routes';
 import { SampleType } from '$lib/api/lightly_studio_local';
 
-const { gotoMock } = vi.hoisted(() => ({
-    gotoMock: vi.fn()
+vi.mock('$lib/api/lightly_studio_local/sdk.gen');
+vi.mock('@sveltejs/kit', () => ({
+    redirect: vi.fn((status: number, location: string) => {
+        const error = new Error('Redirect') as Error & { status: number; location: string };
+        error.status = status;
+        error.location = location;
+        throw error;
+    })
 }));
 
-// Mock the service imports
-vi.mock('$lib/api/lightly_studio_local/sdk.gen');
-vi.mock('$app/navigation', () => ({
-    goto: gotoMock
-}));
+type RedirectError = Error & { status: number; location: string };
 
 describe('+layout.ts', () => {
     const mockDatasetId = '123e4567-e89b-12d3-a456-426614174000';
@@ -36,8 +38,6 @@ describe('+layout.ts', () => {
 
     beforeEach(() => {
         vi.clearAllMocks();
-        gotoMock.mockClear();
-        // Reset all mocks to ensure no state leaks between tests
         vi.mocked(readCollection).mockReset();
         vi.mocked(readCollectionHierarchy).mockReset();
     });
@@ -77,33 +77,37 @@ describe('+layout.ts', () => {
     });
 
     it('should redirect when dataset_id is invalid UUID', async () => {
-        load({
-            params: {
-                dataset_id: 'invalid-uuid',
-                collection_type: mockCollectionType,
-                collection_id: mockCollectionId
-            }
-        } as LayoutLoadEvent);
-
-        // Give it a moment to call goto
-        await new Promise((resolve) => setTimeout(resolve, 0));
-
-        expect(gotoMock).toHaveBeenCalledWith(routeHelpers.toHome());
+        try {
+            await load({
+                params: {
+                    dataset_id: 'invalid-uuid',
+                    collection_type: mockCollectionType,
+                    collection_id: mockCollectionId
+                }
+            } as LayoutLoadEvent);
+            expect.fail('Should have thrown redirect');
+        } catch (error: unknown) {
+            const redirectError = error as RedirectError;
+            expect(redirectError.status).toBe(307);
+            expect(redirectError.location).toBe(routeHelpers.toHome());
+        }
     });
 
     it('should redirect when collection_id is invalid UUID', async () => {
-        load({
-            params: {
-                dataset_id: mockDatasetId,
-                collection_type: mockCollectionType,
-                collection_id: 'invalid-uuid'
-            }
-        } as LayoutLoadEvent);
-
-        // Give it a moment to call goto
-        await new Promise((resolve) => setTimeout(resolve, 0));
-
-        expect(gotoMock).toHaveBeenCalledWith(routeHelpers.toHome());
+        try {
+            await load({
+                params: {
+                    dataset_id: mockDatasetId,
+                    collection_type: mockCollectionType,
+                    collection_id: 'invalid-uuid'
+                }
+            } as LayoutLoadEvent);
+            expect.fail('Should have thrown redirect');
+        } catch (error: unknown) {
+            const redirectError = error as RedirectError;
+            expect(redirectError.status).toBe(307);
+            expect(redirectError.location).toBe(routeHelpers.toHome());
+        }
     });
 
     it('should throw error when collection not found', async () => {
@@ -132,20 +136,22 @@ describe('+layout.ts', () => {
             response: undefined
         });
 
-        load({
-            params: {
-                dataset_id: mockDatasetId,
-                collection_type: 'image', // Wrong type
-                collection_id: mockCollectionId
-            }
-        } as LayoutLoadEvent);
-
-        // Give it a moment to call goto
-        await new Promise((resolve) => setTimeout(resolve, 0));
-
-        expect(gotoMock).toHaveBeenCalledWith(
-            routeHelpers.toCollectionHome(mockDatasetId, 'video', mockCollectionId)
-        );
+        try {
+            await load({
+                params: {
+                    dataset_id: mockDatasetId,
+                    collection_type: 'image', // Wrong type
+                    collection_id: mockCollectionId
+                }
+            } as LayoutLoadEvent);
+            expect.fail('Should have thrown redirect');
+        } catch (error: unknown) {
+            const redirectError = error as RedirectError;
+            expect(redirectError.status).toBe(307);
+            expect(redirectError.location).toBe(
+                routeHelpers.toCollectionHome(mockDatasetId, 'video', mockCollectionId)
+            );
+        }
     });
 
     it('should throw error when collection does not belong to dataset', async () => {
