@@ -76,8 +76,17 @@ export type TextEmbedding = {
     queryText: string;
 };
 
-const showPlot = writable<boolean>(false);
-const showEvaluationRuns = writable<boolean>(false);
+export type PanelType = 'none' | 'plot' | 'evaluationRuns' | 'queryEditor';
+
+const activePanel = writable<PanelType>('none');
+const showPlot = derived(activePanel, ($p) => $p === 'plot');
+const showEvaluationRuns = derived(activePanel, ($p) => $p === 'evaluationRuns');
+
+/** Toggle a panel on or off, leaving unrelated panels untouched. */
+function togglePanel(current: PanelType, target: PanelType, show: boolean): PanelType {
+    if (show) return target;
+    return current === target ? 'none' : current;
+}
 const rangeSelectionBycollection = writable<Record<string, Point[] | null>>({});
 
 // Rewrite the hook to return values and methods
@@ -303,20 +312,13 @@ export const useGlobalStorage = () => {
 
         isEditingMode,
         setIsEditingMode,
+        activePanel,
+        setActivePanel: (panel: PanelType) => activePanel.set(panel),
         showPlot,
-        setShowPlot: (show: boolean) => {
-            showPlot.set(show);
-            if (show) {
-                showEvaluationRuns.set(false);
-            }
-        },
+        setShowPlot: (show: boolean) => activePanel.update((p) => togglePanel(p, 'plot', show)),
         showEvaluationRuns,
-        setShowEvaluationRuns: (show: boolean) => {
-            showEvaluationRuns.set(show);
-            if (show) {
-                showPlot.set(false);
-            }
-        },
+        setShowEvaluationRuns: (show: boolean) =>
+            activePanel.update((p) => togglePanel(p, 'evaluationRuns', show)),
         getRangeSelection,
         setRangeSelectionForCollection: (collectionId: string, selection: Point[] | null) => {
             rangeSelectionBycollection.update((state) => ({

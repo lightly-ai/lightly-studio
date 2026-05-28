@@ -8,7 +8,7 @@ At Lightly, we aim to simplify the complexities of active learning and data mana
 
 ## What We Offer
 
-- **Active Learning Pipelines:** Intelligent data selection to enhance model performance with minimal data.
+- **Active Learning Pipelines:** Intelligent data sampling to enhance model performance with minimal data.
 - **Efficient Data Management:** Tools and services that optimize data workflows for scalability and efficiency.
 - **Expert Support:** Dedicated support to help you integrate our solutions seamlessly into your projects.
 
