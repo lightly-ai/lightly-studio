@@ -235,7 +235,7 @@ test('Similarity sampling creates tag with correct number of samples', async ({
     expect(queryTagId).toBeTruthy();
 
     const similarityPromise = page.waitForResponse(
-        (response) => response.url().includes('/metadata/similarity') && response.status() === 204
+        (response) => response.url().includes('/metadata/similarity') && response.status() === 200
     );
     const samplingPromise = page.waitForResponse(
         (response) => response.url().includes('/sampling') && response.status() === 204
