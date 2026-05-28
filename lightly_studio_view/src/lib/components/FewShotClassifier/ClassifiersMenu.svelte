@@ -341,7 +341,7 @@
                                                 collection
                                             </h4>
                                             <Tooltip
-                                                content="The results will be added as new annotations to the collection. New labels with the format 'classifier_class_name' will be created for each class of the classifier after a successful run."
+                                                content="The results will be added as new annotations to the collection. New annotations with the format 'classifier_class_name' will be created for each class of the classifier after a successful run."
                                             >
                                                 <Info class="mt-0.5 size-4 text-muted-foreground" />
                                             </Tooltip>

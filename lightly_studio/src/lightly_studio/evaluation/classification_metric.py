@@ -29,7 +29,7 @@ def create_and_persist_classification_metrics_per_sample(
     binary 0/1.
 
     Each selected sample must have exactly one ground-truth annotation and
-    exactly one prediction annotation in their respective annotation collections.
+    exactly one prediction annotation in their respective annotation source.
     All validation runs and metric rows are built before any persistence, so
     nothing is written on error.
 
