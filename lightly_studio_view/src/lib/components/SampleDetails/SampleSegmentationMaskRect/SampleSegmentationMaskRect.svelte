@@ -17,6 +17,7 @@
     import { page } from '$app/state';
     import type { PendingChange } from '../pendingChange';
     import SampleAnnotationRect from '../SampleAnnotationRect/SampleAnnotationRect.svelte';
+    import SelectClassDialog from '$lib/components/SelectClassDialog/SelectClassDialog.svelte';
 
     type SampleSegmentationMaskRectProps = {
         sample: {
@@ -73,6 +74,37 @@
     const { refetch: refetchRootCollection } = $derived.by(() =>
         useCollectionWithChildren({ collectionId: datasetId })
     );
+
+    // --- Select-class dialog ---
+    let showSelectClassDialog = $state(false);
+    let pendingLabelRequest: Promise<string | null> | null = null;
+    let resolveRequestLabel: ((label: string | null) => void) | null = null;
+
+    const requestLabel = (): Promise<string | null> => {
+        // Single-flight: concurrent callers share the in-flight dialog promise so
+        // that resolveRequestLabel is never overwritten and earlier callers cannot
+        // be stranded waiting on a promise that will never settle.
+        if (pendingLabelRequest) return pendingLabelRequest;
+
+        showSelectClassDialog = true;
+        pendingLabelRequest = new Promise<string | null>((resolve) => {
+            resolveRequestLabel = resolve;
+        });
+        return pendingLabelRequest;
+    };
+
+    const settleRequestLabel = (label: string | null) => {
+        showSelectClassDialog = false;
+        resolveRequestLabel?.(label);
+        resolveRequestLabel = null;
+        pendingLabelRequest = null;
+    };
+
+    const handleClassSelected = (label: string) => settleRequestLabel(label);
+
+    const handleClassDialogCancel = () => settleRequestLabel(null);
+    // ---
+
     const brushApi = $derived.by(() =>
         useSegmentationMaskBrush({
             collectionId,
@@ -81,6 +113,7 @@
             sample,
             annotations: sample.annotations,
             refetch,
+            requestLabel,
             onAnnotationCreated: () => {
                 // Only refresh root collection if there were no annotations before
                 if (sample.annotations.length === 0) {
@@ -347,6 +380,13 @@
             isDrawing: Boolean(annotationLabelContext.isDrawing)
         });
     }}
+/>
+
+<SelectClassDialog
+    bind:open={showSelectClassDialog}
+    labels={labels.data?.map((l) => l.annotation_label_name ?? '').filter(Boolean) ?? []}
+    onConfirm={handleClassSelected}
+    onCancel={handleClassDialogCancel}
 />
 
 <style>

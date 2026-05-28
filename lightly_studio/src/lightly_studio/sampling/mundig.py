@@ -1,4 +1,4 @@
-"""Python interface to the Mundig selection algorithm."""
+"""Python interface to the Mundig sampling algorithm."""
 
 from __future__ import annotations
 
@@ -13,21 +13,24 @@ import numpy as np
 
 
 class Mundig:
-    """Python interface for the Mundig selection algorithm.
+    """Python interface for the Mundig sampling algorithm.
 
     This class provides a Python interface to the lightly_mundig Rust library
-    for sample selection. It allows combining different selection strategies
+    for data sampling. It allows combining different sampling strategies
     such as diversity and weighting.
     """
 
     def __init__(self) -> None:
-        """Initialize the Mundig selection interface."""
+        """Initialize the Mundig sampling interface."""
+        # TODO(Lukas, 05/2026): Rename `self.mundig` and its call sites to
+        # match the upstream `Selection` naming once the broader sampling API is
+        # cleaned up across repositories.
         self.mundig = lightly_mundig.Selection()
 
         self.n_input_samples: int | None = None
 
     def run(self, n_samples: int) -> list[int]:
-        """Run the selection algorithm and return selected sample indices.
+        """Run the sampling algorithm and return selected sample indices.
 
         Args:
             n_samples: The number of samples to select.
@@ -41,7 +44,7 @@ class Mundig:
         return selected
 
     def add_diversity(self, embeddings: Iterable[Iterable[float]], strength: float = 1.0) -> None:
-        """Add diversity-based selection using sample embeddings.
+        """Add diversity-based sampling using sample embeddings.
 
         Args:
             embeddings:
@@ -80,7 +83,7 @@ class Mundig:
         query_embeddings: Iterable[Iterable[float]],
         strength: float = 1.0,
     ) -> None:
-        """Add a similarity-based selection strategy.
+        """Add a similarity-based sampling strategy.
 
         Args:
             embeddings:
