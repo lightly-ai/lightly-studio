@@ -72,6 +72,13 @@ class ClassificationEvaluationConfig(BaseModel):
     """
 
 
+class SegmentationEvaluationConfig(BaseModel):
+    """Configuration for instance-segmentation evaluation runs.
+
+    Currently has no fields. Placeholder for future implementation.
+    """
+
+
 class ImageDatasetEvaluate:
     """Task-specific evaluation entry points for image datasets.
 
@@ -158,6 +165,35 @@ class ImageDatasetEvaluate:
         classification_metric.create_and_persist_classification_metrics_per_sample(
             session=self.session,
             data=data,
+        )
+        return EvaluationResult.from_evaluation_data(data)
+
+    def segmentation(
+        self,
+        name: str,
+        gt_collection_name: str,
+        pred_collection_name: str,
+        config: SegmentationEvaluationConfig | None = None,
+    ) -> EvaluationResult:
+        """Create an segmentation evaluation run and persist per-image metrics.
+
+        Args:
+            name: Display name of the evaluation run.
+            gt_collection_name: Name of the annotation collection containing ground truth labels.
+            pred_collection_name: Name of the annotation collection containing predictions.
+            config: Optional segmentation evaluation config. If omitted,
+                defaults are used.
+
+        Returns:
+            Summary of the samples and annotations used by the evaluation.
+        """
+        config = config or SegmentationEvaluationConfig()
+        data = self._prepare_evaluation_data(
+            name=name,
+            gt_collection_name=gt_collection_name,
+            pred_collection_name=pred_collection_name,
+            task_type=EvaluationTaskType.INSTANCE_SEGMENTATION,
+            config_json=config.model_dump(),
         )
         return EvaluationResult.from_evaluation_data(data)
 
