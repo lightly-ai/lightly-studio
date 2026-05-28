@@ -47,7 +47,7 @@ describe('QueryEditor', () => {
             queryExpr: {
                 match_expr: {
                     type: 'string_expr',
-                    field: { table: 'object_detection', name: 'label' },
+                    field: { table: 'object_detection', name: 'class_name' },
                     operator: '==',
                     value: 'cat'
                 }
@@ -115,7 +115,7 @@ describe('QueryEditor', () => {
             queryExpr: {
                 match_expr: {
                     type: 'string_expr',
-                    field: { table: 'object_detection', name: 'label' },
+                    field: { table: 'object_detection', name: 'class_name' },
                     operator: '==',
                     value: 'cat'
                 }

@@ -116,7 +116,7 @@ class TestSegmentationMaskExpressions:
             select(ImageTable)
             .join(ImageTable.sample)
             .where(SampleTable.collection_id == collection_id)
-            .where(SegmentationMaskQuery.match(SegmentationMaskField.label == "label1").get())
+            .where(SegmentationMaskQuery.match(SegmentationMaskField.class_name == "label1").get())
         )
         results = db_session.exec(query).all()
         # There are two annotations with this label but only one of the right type.
