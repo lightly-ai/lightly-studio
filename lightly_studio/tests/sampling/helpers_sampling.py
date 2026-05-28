@@ -1,4 +1,4 @@
-"""Helpers for setting up the selection tests."""
+"""Helpers for setting up the sampling tests."""
 
 from __future__ import annotations
 

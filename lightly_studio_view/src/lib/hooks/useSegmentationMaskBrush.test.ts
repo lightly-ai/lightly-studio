@@ -104,8 +104,8 @@ describe('useSegmentationMaskBrush', () => {
         });
 
         createLabel.mockResolvedValue({
-            annotation_label_id: 'default-label-id',
-            annotation_label_name: 'DEFAULT'
+            annotation_label_id: 'new-label-id',
+            annotation_label_name: 'car'
         });
     });
 
@@ -131,6 +131,8 @@ describe('useSegmentationMaskBrush', () => {
 
     it('shows toast error when bounding box is invalid', async () => {
         vi.mocked(computeBoundingBoxFromMask).mockReturnValue(null);
+
+        annotationLabelContext.annotationLabel = 'car';
 
         const refetch = vi.fn();
 
@@ -262,8 +264,34 @@ describe('useSegmentationMaskBrush', () => {
         expect(refetch).toHaveBeenCalled();
     });
 
-    it('creates default label when no label exists', async () => {
+    it('shows error and does not create annotation when no label is selected', async () => {
         const refetch = vi.fn();
+
+        annotationLabelContext.annotationLabel = null;
+
+        const { finishBrush } = useSegmentationMaskBrush({
+            collectionId: 'c1',
+            datasetId,
+            sampleId: 's1',
+            sample,
+            refetch
+        });
+
+        await finishBrush(mask, null, []);
+
+        expect(toast.error).toHaveBeenCalledWith(
+            'Please select a class before creating an annotation'
+        );
+        expect(applySegmentationMaskConstraints).not.toHaveBeenCalled();
+        expect(createLabel).not.toHaveBeenCalled();
+        expect(createAnnotation).not.toHaveBeenCalled();
+        expect(refetch).not.toHaveBeenCalled();
+    });
+
+    it('creates a new label with the selected name when label does not exist yet', async () => {
+        const refetch = vi.fn();
+
+        annotationLabelContext.annotationLabel = 'car';
 
         const { finishBrush } = useSegmentationMaskBrush({
             collectionId: 'c1',
@@ -277,7 +305,7 @@ describe('useSegmentationMaskBrush', () => {
 
         expect(createLabel).toHaveBeenCalledWith({
             dataset_id: datasetId,
-            annotation_label_name: 'DEFAULT'
+            annotation_label_name: 'car'
         });
 
         expect(createAnnotation).toHaveBeenCalled();

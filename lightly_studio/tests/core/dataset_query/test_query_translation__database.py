@@ -141,7 +141,7 @@ def test_to_match_expression__classification_match(db_session: Session) -> None:
 
     expr = ClassificationMatchExpr(
         subexpr=StringExpr(
-            field=FieldRef(table="classification", name="label"),
+            field=FieldRef(table="classification", name="class_name"),
             operator=EqualityComparisonOperator.EQ,
             value="cat",
         )
@@ -206,7 +206,7 @@ def test_to_match_expression__segmentation_mask_match(db_session: Session) -> No
 
     expr = SegmentationMaskMatchExpr(
         subexpr=StringExpr(
-            field=FieldRef(table="segmentation_mask", name="label"),
+            field=FieldRef(table="segmentation_mask", name="class_name"),
             operator=EqualityComparisonOperator.EQ,
             value="person",
         )

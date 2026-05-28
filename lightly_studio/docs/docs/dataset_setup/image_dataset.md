@@ -353,9 +353,9 @@ GUI displays only a single dataset.
 
 When images are already in the dataset, the `add_annotations_from_*` methods attach
 annotations without re-loading the images. Each call stores its annotations under a named
-collection, so multiple sources (e.g. ground truth and model predictions) can be queried
-and compared independently. Re-running with the same `name` appends to that collection;
-a new `name` creates a new collection.
+annotation source, so multiple sources (e.g. ground truth and model predictions) can be queried
+and compared independently. Re-running with the same `name` appends to that annotation source;
+a new `name` creates a new annotation source.
 
 ```python title="Attach annotations from multiple sources"
 import lightly_studio as ls
@@ -403,7 +403,7 @@ started from a Python script by calling `ls.start_gui()`.
 
 The main view shows a grid of images in your dataset. From here, you can perform multiple actions:
 
-- Use the left panel to filter the images by tags, annotation labels or metadata.
+- Use the left panel to filter the images by tags, annotations or metadata.
 - Use the search bar to do similarity search by text or an image.
 - Use the `Show Embeddings` button to explore the data in embedding space.
 - Use the `Menu` dropdown for further actions like plugins, sampling, classification, export and more.
@@ -473,7 +473,7 @@ print(image.metadata["my_key"])
 from lightly_studio.core.annotation import CreateObjectDetection
 image.add_annotation(
     CreateObjectDetection(
-        label="dog",
+        class_name="dog",
         x=10,
         y=20,
         width=30,
@@ -482,7 +482,7 @@ image.add_annotation(
     )
 )
 for annotation in image.annotations:
-    print(annotation.label)
+    print(annotation.class_name)
 ```
 
 <!-- TODO(Michal, 03/2026)
@@ -492,4 +492,4 @@ on dedicated pages.
 
 ### Querying the Dataset
 
-Use [Dataset Query in Python](../concepts_and_tools/search_and_filter.md#query-in-python) when you need reusable subsets in code for filtering, sorting, slicing, export, or selection. Image query expressions use `ImageSampleField`.
+Use [Dataset Query in Python](../concepts_and_tools/search_and_filter.md#query-in-python) when you need reusable subsets in code for filtering, sorting, slicing, export, or sampling. Image query expressions use `ImageSampleField`.
