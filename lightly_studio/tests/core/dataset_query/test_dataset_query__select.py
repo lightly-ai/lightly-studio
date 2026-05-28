@@ -22,9 +22,9 @@ class TestDatasetQuerySelect:
         assert dataset_table is not None
         query = DatasetQuery(dataset=dataset_table, session=db_session)
 
-        query.selection().diverse(
+        query.sampling().diverse(
             n_samples_to_select=2,
-            selection_result_tag_name="selection_tag",
+            sampling_result_tag_name="selection_tag",
         )
 
         tag = tag_resolver.get_by_name(

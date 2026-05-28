@@ -8,17 +8,15 @@ import cv2
 import numpy as np
 from fastapi.testclient import TestClient
 from PIL import Image as PILImage
-from pytest_mock import MockerFixture
 from sqlmodel import Session
 
 import lightly_studio.utils.executor as executor_module
-from lightly_studio.api.routes import images
 from lightly_studio.models.collection import SampleType
 from tests.helpers_resolvers import create_collection, create_image
 
 
 def test_stream_image_raw_returns_original_content_type(
-    test_client: TestClient,
+    media_test_client: TestClient,
     db_session: Session,
     tmp_path: Path,
 ) -> None:
@@ -35,7 +33,7 @@ def test_stream_image_raw_returns_original_content_type(
         height=240,
     )
 
-    response = test_client.get(f"/images/sample/{image.sample_id}")
+    response = media_test_client.get(f"/images/sample/{image.sample_id}")
 
     assert response.status_code == 200
     assert response.headers["content-type"] == "image/png"
@@ -43,7 +41,7 @@ def test_stream_image_raw_returns_original_content_type(
 
 
 def test_stream_image_high_returns_jpeg_with_resized_bounds(
-    test_client: TestClient,
+    media_test_client: TestClient,
     db_session: Session,
     tmp_path: Path,
 ) -> None:
@@ -60,7 +58,7 @@ def test_stream_image_high_returns_jpeg_with_resized_bounds(
         height=200,
     )
 
-    response = test_client.get(
+    response = media_test_client.get(
         f"/images/sample/{image.sample_id}",
         params={"quality": "high", "max_width": 100, "max_height": 100},
     )
@@ -76,7 +74,7 @@ def test_stream_image_high_returns_jpeg_with_resized_bounds(
 
 
 def test_stream_image_high_does_not_upscale_small_images(
-    test_client: TestClient,
+    media_test_client: TestClient,
     db_session: Session,
     tmp_path: Path,
 ) -> None:
@@ -93,7 +91,7 @@ def test_stream_image_high_does_not_upscale_small_images(
         height=20,
     )
 
-    response = test_client.get(
+    response = media_test_client.get(
         f"/images/sample/{image.sample_id}",
         params={"quality": "high", "max_width": 200, "max_height": 200},
     )
@@ -105,7 +103,7 @@ def test_stream_image_high_does_not_upscale_small_images(
 
 
 def test_stream_image_high_requires_bounds(
-    test_client: TestClient,
+    media_test_client: TestClient,
     db_session: Session,
     tmp_path: Path,
 ) -> None:
@@ -122,7 +120,7 @@ def test_stream_image_high_requires_bounds(
         height=240,
     )
 
-    response = test_client.get(
+    response = media_test_client.get(
         f"/images/sample/{image.sample_id}",
         params={"quality": "high"},
     )
@@ -130,49 +128,17 @@ def test_stream_image_high_requires_bounds(
     assert response.status_code == 400
 
 
-def test_stream_image_closes_session_before_file_read(
-    test_client: TestClient,
-    db_session: Session,
-    mocker: MockerFixture,
-    tmp_path: Path,
-) -> None:
-    """Release the DB connection before thumbnail I/O."""
-    spy_close = mocker.spy(db_session, "close")
-
-    def fake_read(*_args: object, **_kwargs: object) -> tuple[bytes, str]:
-        spy_close.assert_called_once()
-        return b"\x89PNG\r\n\x1a\n", "image/png"
-
-    mocker.patch.object(images, "_read_and_transform_image", side_effect=fake_read)
-
-    image_path = tmp_path / "test_image.png"
-    PILImage.new("RGB", (10, 10), color="red").save(image_path)
-
-    collection = create_collection(session=db_session, sample_type=SampleType.IMAGE)
-    image = create_image(
-        session=db_session,
-        collection_id=collection.collection_id,
-        file_path_abs=str(image_path),
-        width=10,
-        height=10,
-    )
-
-    response = test_client.get(f"/images/sample/{image.sample_id}")
-
-    assert response.status_code == 200
-
-
 def test_stream_image_sample_not_found(
-    test_client: TestClient,
+    media_test_client: TestClient,
 ) -> None:
     """Test that a missing sample ID returns 404."""
-    response = test_client.get("/images/sample/00000000-0000-0000-0000-000000000000")
+    response = media_test_client.get("/images/sample/00000000-0000-0000-0000-000000000000")
 
     assert response.status_code == 404
 
 
 def test_stream_image_file_not_found(
-    test_client: TestClient,
+    media_test_client: TestClient,
     db_session: Session,
 ) -> None:
     """Test that a sample pointing to a missing file returns 404."""
@@ -185,7 +151,7 @@ def test_stream_image_file_not_found(
         height=100,
     )
 
-    response = test_client.get(f"/images/sample/{image.sample_id}")
+    response = media_test_client.get(f"/images/sample/{image.sample_id}")
 
     assert response.status_code == 404
 

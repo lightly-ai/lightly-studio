@@ -20,7 +20,7 @@ from lightly_studio.models.image import ImageTable
 from lightly_studio.models.sample import SampleTable
 from lightly_studio.models.video import VideoTable
 from lightly_studio.resolvers import tag_resolver
-from lightly_studio.selection.select import Selection
+from lightly_studio.sampling.sample import Sampling
 
 _SliceType = slice  # to avoid shadowing built-in slice in type annotations
 
@@ -108,16 +108,16 @@ class DatasetQuery(Generic[T]):
     query.add_tag('my_tag')
     ```
 
-    ## Selecting a subset of samples using smart selection
-    A Selection interface can be created from the current query results. It will only
-    select the samples matching the current query at the time of calling selection().
+    ## Selecting a subset of samples using sampling
+    A Sampling interface can be created from the current query results. It will only
+    select the samples matching the current query at the time of calling sampling().
     ```python
     # Choosing 100 diverse samples from the 'cat' tag.
     # Save them under the tag name "diverse_cats".
-    selection = dataset.query().match(
+    sampling = dataset.query().match(
         ImageSampleField.tags.contains('cat')
-    ).selection()
-    selection.diverse(100, "diverse_cats")
+    ).sampling()
+    sampling.diverse(100, "diverse_cats")
     ```
 
     ## Exporting the query results
@@ -344,18 +344,18 @@ class DatasetQuery(Generic[T]):
             session=self.session, tag_id=tag.tag_id, sample_ids=sample_ids
         )
 
-    def selection(self) -> Selection:
-        """Selection interface for this query.
+    def sampling(self) -> Sampling:
+        """Sampling interface for this query.
 
-        The returned Selection snapshots the current query results immediately.
+        The returned Sampling snapshots the current query results immediately.
         Mutating the query after calling this method will therefore not affect
-        the samples used by that Selection instance.
+        the samples used by that Sampling instance.
 
         Returns:
-            Selection interface operating on the current query result snapshot.
+            Sampling interface operating on the current query result snapshot.
         """
         input_sample_ids = (sample.sample_id for sample in self)
-        return Selection(
+        return Sampling(
             dataset_id=self.dataset.collection_id,
             session=self.session,
             input_sample_ids=input_sample_ids,
