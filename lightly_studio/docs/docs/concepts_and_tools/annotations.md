@@ -57,7 +57,7 @@ dataset.add_samples_from_coco(
 dataset.add_annotations_from_coco(
     annotations_json="/path/to/predictions.json",
     images_root="/path/to/images",
-    name="predictions",
+    annotation_source="predictions",
 )
 ```
 
@@ -67,9 +67,9 @@ datasets via
 [`add_annotations_from_coco`](../api/dataset.md#lightly_studio.ImageDataset),
 [`add_annotations_from_yolo`](../api/dataset.md#lightly_studio.ImageDataset), and
 [`add_annotations_from_labelformat`](../api/dataset.md#lightly_studio.ImageDataset).
-All of these helpers take a `name` argument, which becomes the annotation source.
+All of these helpers take an `annotation_source` argument, which becomes the annotation source name.
 
-Reusing the same `name` appends annotations to the existing annotation source. Using a new `name` creates a new
+Reusing the same `annotation_source` appends annotations to the existing annotation source. Using a new `annotation_source` creates a new
 annotation source.
 
 ```python
@@ -81,18 +81,18 @@ dataset.add_images_from_path(path="./path/to/images")
 dataset.add_annotations_from_coco(
     annotations_json="./ground_truth.json",
     images_root="./path/to/images",
-    name="ground_truth",
+    annotation_source="ground_truth",
 )
 
 dataset.add_annotations_from_coco(
     annotations_json="./predictions_model_a.json",
     images_root="./path/to/images",
-    name="model_a",
+    annotation_source="model_a",
 )
 
 dataset.add_annotations_from_yolo(
     data_yaml="./yolo_dataset/data.yaml",
-    name="annotator_b",
+    annotation_source="annotator_b",
 )
 ```
 

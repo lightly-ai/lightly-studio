@@ -70,8 +70,8 @@ def test_object_detection_evaluation(
 
     result = dataset.evaluate().object_detection(
         name="run-1",
-        gt_collection_name="gt",
-        pred_collection_name="pred",
+        gt_annotation_source="gt",
+        pred_annotation_source="pred",
         config=ObjectDetectionEvaluationConfig(iou_threshold=0.5),
     )
     assert result.sample_count == 1
@@ -140,8 +140,8 @@ def test_object_detection_evaluation__raises_on_wrong_annotation_type(
     with pytest.raises(ValueError, match="object_detection"):
         dataset.evaluate().object_detection(
             name="run-1",
-            gt_collection_name="gt",
-            pred_collection_name="pred",
+            gt_annotation_source="gt",
+            pred_annotation_source="pred",
         )
 
 
@@ -187,8 +187,8 @@ def test_object_detection_evaluation__filters_to_samples_covered_by_both_collect
 
     result = dataset.evaluate().object_detection(
         name="run-1",
-        gt_collection_name="gt",
-        pred_collection_name="pred",
+        gt_annotation_source="gt",
+        pred_annotation_source="pred",
     )
     assert result.sample_count == 1
     assert result.gt_annotation_count == 1
@@ -267,8 +267,8 @@ def test_classification_evaluation(
 
     result = dataset.evaluate().classification(
         name="run-1",
-        gt_collection_name="gt",
-        pred_collection_name="pred",
+        gt_annotation_source="gt",
+        pred_annotation_source="pred",
         config=ClassificationEvaluationConfig(),
     )
     assert result.sample_count == 1
@@ -336,8 +336,8 @@ def test_classification_evaluation__raises_on_multiple_annotations(
     with pytest.raises(ValueError, match=f"exactly 1 {kind} annotation"):
         dataset.evaluate().classification(
             name="run-1",
-            gt_collection_name="gt",
-            pred_collection_name="pred",
+            gt_annotation_source="gt",
+            pred_annotation_source="pred",
         )
 
 
@@ -363,8 +363,8 @@ def test_classification_evaluation__raises_on_wrong_annotation_type(
     with pytest.raises(ValueError, match="classification"):
         dataset.evaluate().classification(
             name="run-1",
-            gt_collection_name="gt",
-            pred_collection_name="pred",
+            gt_annotation_source="gt",
+            pred_annotation_source="pred",
         )
 
 
