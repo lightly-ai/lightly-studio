@@ -185,6 +185,10 @@ code.doc-symbol-module {
   color: #13a6e6;
 }
 
+.md-content .md-typeset a code {
+  color: inherit;
+}
+
 .md-content .md-typeset > p a:hover,
 .md-content .md-typeset > ul a:hover,
 .md-content .md-typeset > ol a:hover,

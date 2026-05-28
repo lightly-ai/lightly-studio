@@ -40,7 +40,7 @@ nav:
     - Dataset: api/dataset.md
     - Sample: api/sample.md
     - DatasetQuery: api/dataset_query.md
-    - Selection: api/selection.md
+    - Sampling: api/sampling.md
     - Plugin: api/plugin.md
     - Annotation: api/annotation.md
   - Concepts & Tools:

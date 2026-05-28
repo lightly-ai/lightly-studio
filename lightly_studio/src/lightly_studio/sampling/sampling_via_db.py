@@ -1,4 +1,4 @@
-"""Database selection functions for the selection process."""
+"""Database sampling functions for the sampling process."""
 
 from __future__ import annotations
 
@@ -26,13 +26,13 @@ from lightly_studio.resolvers import (
     tag_resolver,
 )
 from lightly_studio.resolvers.sample_resolver.sample_filter import SampleFilter
-from lightly_studio.selection.mundig import Mundig
-from lightly_studio.selection.selection_config import (
+from lightly_studio.sampling.mundig import Mundig
+from lightly_studio.sampling.sampling_config import (
     AnnotationClassBalancingStrategy,
     EmbeddingDiversityStrategy,
     EmbeddingSimilarityStrategy,
     MetadataWeightingStrategy,
-    SelectionConfig,
+    SamplingConfig,
 )
 
 EPSILON = 1e-6
@@ -41,8 +41,8 @@ logger = logging.getLogger(__name__)
 
 
 @dataclass(frozen=True)
-class _SelectionContext:
-    """Shared inputs used while resolving selection strategies."""
+class _SamplingContext:
+    """Shared inputs used while resolving sampling strategies."""
 
     collection_id: UUID
     dataset_id: UUID
@@ -134,7 +134,7 @@ def _process_explicit_target_distribution(
 
     all_label_ids = set(annotation_label_ids)
     unused_label_ids = all_label_ids - set(label_id_to_target.keys())
-    # `total_targets` can be more or less than 1.0. Both can be ignored, selection will still
+    # `total_targets` can be more or less than 1.0. Both can be ignored, sampling will still
     # try correctly to reach the target.
     remaining_ratio = max(1.0 - total_targets, 0.0)
     return label_id_to_target, unused_label_ids, remaining_ratio
@@ -156,7 +156,7 @@ def _get_class_balancing_data(  # noqa: C901
     if strat.annotation_source_id is not None and not annotations:
         raise ValueError(
             "Annotation source with the given ID does not contain annotations "
-            "for the selected samples."
+            "for the sampled samples."
         )
 
     if annotation_label_ids is None:
@@ -215,31 +215,31 @@ def _get_class_balancing_data(  # noqa: C901
     return class_distributions, target_values
 
 
-def select_via_database(
-    session: Session, config: SelectionConfig, input_sample_ids: list[UUID]
+def sampling_via_database(
+    session: Session, config: SamplingConfig, input_sample_ids: list[UUID]
 ) -> None:
-    """Run selection using the provided candidate sample ids.
+    """Run sampling using the provided candidate sample ids.
 
-    First resolves the selection config to concrete database values.
-    Then calls Mundig to run the selection with pure values.
+    First resolves the sampling config to concrete database values.
+    Then calls Mundig to run the sampling with pure values.
     Finally creates a tag for the selected set.
     """
     # Check if the tag name is already used
     existing_tag = tag_resolver.get_by_name(
         session=session,
-        tag_name=config.selection_result_tag_name,
+        tag_name=config.sampling_result_tag_name,
         collection_id=config.collection_id,
     )
     if existing_tag:
         msg = (
-            f"Tag with name {config.selection_result_tag_name} already exists in the "
+            f"Tag with name {config.sampling_result_tag_name} already exists in the "
             f"collection {config.collection_id}. Please use a different tag name."
         )
         raise ValueError(msg)
 
     n_samples_to_select = min(config.n_samples_to_select, len(input_sample_ids))
     if n_samples_to_select == 0:
-        logger.warning("No samples available for selection.")
+        logger.warning("No samples available for sampling.")
         return
 
     # Get root dataset id for balancing strategies
@@ -247,7 +247,7 @@ def select_via_database(
         session=session, collection_id=config.collection_id
     )
     dataset_id = root_collection.dataset_id
-    context = _SelectionContext(
+    context = _SamplingContext(
         collection_id=config.collection_id,
         dataset_id=dataset_id,
         input_sample_ids=input_sample_ids,
@@ -269,7 +269,7 @@ def select_via_database(
         session=session,
         tag=TagCreate(
             collection_id=config.collection_id,
-            name=config.selection_result_tag_name,
+            name=config.sampling_result_tag_name,
             kind="sample",
         ),
     )
@@ -280,7 +280,7 @@ def select_via_database(
 
 def _get_embeddings_by_sample_ids(
     session: Session,
-    context: _SelectionContext,
+    context: _SamplingContext,
     embedding_model_name: str | None,
 ) -> list[list[float]]:
     """Resolve sample embeddings for the given model and sample ids."""
@@ -325,11 +325,11 @@ def _get_annotations_for_class_balancing(
 
 def _add_strategy_to_mundig(
     session: Session,
-    context: _SelectionContext,
+    context: _SamplingContext,
     strat: object,
     mundig: Mundig,
 ) -> None:
-    """Resolve one selection strategy and add it to Mundig."""
+    """Resolve one sampling strategy and add it to Mundig."""
     if isinstance(strat, EmbeddingDiversityStrategy):
         mundig.add_diversity(
             embeddings=_get_embeddings_by_sample_ids(
@@ -402,4 +402,4 @@ def _add_strategy_to_mundig(
             strength=strat.strength,
         )
     else:
-        raise ValueError(f"Selection strategy of type {type(strat)} is unknown.")
+        raise ValueError(f"Sampling strategy of type {type(strat)} is unknown.")
