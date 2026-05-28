@@ -88,9 +88,8 @@
     const {
         retrieveParentCollection,
         collections,
-        showPlot,
-        showEvaluationRuns,
-        setShowEvaluationRuns,
+        activePanel,
+        setActivePanel,
         filteredSampleCount,
         filteredAnnotationCount
     } = useGlobalStorage();
@@ -307,7 +306,7 @@
 
     let isQueryFilterEditing = $state(false);
 
-    const isSidePanelOpen = $derived($showPlot || $showEvaluationRuns);
+    const isSidePanelOpen = $derived($activePanel !== 'none');
 </script>
 
 <div class="flex-none">
@@ -402,7 +401,7 @@
                 </PaneResizer>
             {/snippet}
 
-            {#if $showEvaluationRuns}
+            {#if $activePanel === 'evaluationRuns'}
                 <PaneGroup direction="horizontal" class="flex-1">
                     <Pane defaultSize={65} minSize={35} class="flex">
                         <div
@@ -417,7 +416,7 @@
                     <Pane defaultSize={35} minSize={25} class="flex min-h-0 flex-col">
                         {#await import('$lib/components/EvaluationRunsPanel/EvaluationRunsPanel.svelte') then { default: EvaluationRunsPanel }}
                             <EvaluationRunsPanel
-                                onClose={() => setShowEvaluationRuns(false)}
+                                onClose={() => setActivePanel('none')}
                                 {evaluationRuns}
                                 isLoading={evaluationRunsQuery.isLoading}
                                 error={evaluationRunsQuery.error?.message}
@@ -425,7 +424,7 @@
                         {/await}
                     </Pane>
                 </PaneGroup>
-            {:else if (isImages || isVideos) && $showPlot}
+            {:else if $activePanel === 'plot' && (isImages || isVideos)}
                 <!-- When plot is shown, use PaneGroup for the main content + plot -->
                 <PaneGroup direction="horizontal" class="flex-1">
                     <Pane defaultSize={50} minSize={30} class="flex">
@@ -484,9 +483,14 @@
                     {@render paneResizer()}
 
                     <Pane defaultSize={35} minSize={25} class="flex min-h-0 flex-col">
-                        <QueryEditorPanel onClose={() => (isQueryFilterEditing = false)} />
+                        <QueryEditorPanel onClose={() => setActivePanel('none')} />
                     </Pane>
                 </PaneGroup>
+            {:else}
+                <!-- Normal layout (no side panel) -->
+                <div class="relative flex flex-1 flex-col space-y-4 rounded-[1vw] bg-card p-4 pb-2">
+                    {@render mainContent()}
+                </div>
             {/if}
             {#if hasEmbeddings}
                 {#await import('$lib/components/FewShotClassifier/CreateClassifierDialog.svelte') then { default: CreateClassifierDialog }}
