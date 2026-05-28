@@ -1,6 +1,7 @@
 # Lightly Query Language
 
-This document explains how to write queries in the LightlyStudio query editor.
+This document explains how to write queries in the
+[LightlyStudio query editor.](../concepts_and_tools/search_and_filter.md#query-in-gui)
 
 A query helps you find images that match certain rules. For example, you can search for:
 
@@ -14,19 +15,15 @@ A query helps you find images that match certain rules. For example, you can sea
 
 The query language is quite simple and resembles WHERE clauses in SQL. We recommend learning it from examples.
 
-```sql
-# Filter images that are taller than 400 pixels and at least 640 pixels wide.
-height >= 400 AND width >= 640
+```mysql
+# Images that are at least 640 pixels wide or 400 pixels tall
+width >= 640 OR height >= 400
 
-# If you replace AND with OR, an image is selected if either of these conditions is true.
-height >= 400 OR width >= 640
+# Images which do not have the tag "reviewed"
+NOT "reviewed" IN tags
 
-# You can create more complex queries by nesting sub-queries in parentheses.
-# The following matches either a large image or an image whose file name is "cover.jpg".
-(height >= 400 AND width >= 640) OR file_name = "cover.jpg"
-
-# The logical NOT operator is also supported.
-NOT (height >= 400 AND width >= 640)
+# Images with a "car" segmentation mask that is less than 100 pixels wide
+segmentation_mask(class_name = "car" AND width < 100)
 ```
 
 ## Supported image fields
@@ -41,7 +38,7 @@ These fields can be used directly in a query:
 
 Example queries:
 
-```sql
+```mysql
 height >= 400
 width >= 640
 file_name = "cat.jpg"
@@ -54,17 +51,17 @@ created_at >= "2025-01-01T00:00:00Z"
 
 Filtering for tags can be done using `"foo" IN tags`, which matches each image that has the tag `foo`:
 
-```sql
+```mysql
 "car" IN tags
 ```
 
 You can combine this with other criteria:
-```sql
+```mysql
 "car" IN tags OR (height >= 400 AND width >= 640)
 ```
 
 Other examples:
-```sql
+```mysql
 "training" IN tags
 NOT "rejected" IN tags
 "training" IN tags OR "validation" IN tags
@@ -87,7 +84,7 @@ Each function contains another query inside the parentheses and matches an image
 
 Use `classification(...)` when you want to match image-level classifications. Example queries:
 
-```sql
+```mysql
 classification(class_name = "cat")
 classification(class_name != "background")
 ```
@@ -104,7 +101,7 @@ Use `object_detection(...)` when you want to match bounding boxes. The following
 
 Example queries:
 
-```sql
+```mysql
 object_detection(x >= 10 AND y < 200)
 object_detection(class_name = "cat" AND width >= 50 AND height >= 40)
 object_detection(class_name = "cat" OR class_name = "dog")
@@ -125,7 +122,7 @@ It is part of the query grammar, uses the same boolean operators as `object_dete
 
 Example queries:
 
-```sql
+```mysql
 segmentation_mask(class_name = "cat")
 segmentation_mask(x != 0)
 segmentation_mask(width > 80)
@@ -136,7 +133,7 @@ segmentation_mask(class_name = "cat" AND width >= 50 AND height >= 40)
 
 You can combine image properties with annotation queries:
 
-```sql
+```mysql
 height > 400 AND object_detection(class_name = "cat")
 width >= 640 AND classification(class_name = "approved")
 "reviewed" IN tags AND segmentation_mask(class_name = "road")
@@ -144,7 +141,7 @@ width >= 640 AND classification(class_name = "approved")
 
 ## Complex examples
 
-```sql
+```mysql
 # Large reviewed sample with a matching object detection
 height > 400 AND width >= 640
 AND "reviewed" IN tags
@@ -185,14 +182,14 @@ Use parentheses whenever you want to make grouping explicit.
 
 Strings can use double quotes or single quotes:
 
-```sql
+```mysql
 file_name = "frame-0001.jpg"
 file_name = 'frame-0001.jpg'
 ```
 
 Comments start with `#` and continue to the end of the line:
 
-```sql
+```mysql
 height >= 400 # keep only large images
 ```
 
