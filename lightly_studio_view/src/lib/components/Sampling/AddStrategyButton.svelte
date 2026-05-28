@@ -60,19 +60,27 @@
     </Select.Trigger>
     <Select.Content>
         {#each STRATEGY_OPTIONS as strategy (strategy.type)}
+            {@const disabledReason = getDisabledReason(strategy.type)}
             <div
                 class="w-full"
                 role="none"
                 onmouseenter={(e) =>
                     handleMouseEnter(strategy.type, e.currentTarget as HTMLElement)}
                 onmouseleave={handleMouseLeave}
+                onfocusin={(e) =>
+                    handleMouseEnter(strategy.type, e.currentTarget as HTMLElement)}
+                onfocusout={handleMouseLeave}
             >
                 <Select.Item
                     value={strategy.type}
                     label={strategy.label}
-                    disabled={!!getDisabledReason(strategy.type)}
+                    disabled={!!disabledReason}
                     data-testid={`add-strategy-${strategy.type}`}
+                    aria-describedby="strategy-desc-{strategy.type}"
                 />
+                <span id="strategy-desc-{strategy.type}" class="sr-only">
+                    {strategy.description}{#if disabledReason}: {disabledReason}{/if}
+                </span>
             </div>
         {/each}
     </Select.Content>
@@ -81,6 +89,7 @@
 {#if hoveredType && tooltipRect && hoveredStrategy}
     <Portal>
         <div
+            id="strategy-tooltip-{hoveredType}"
             role="tooltip"
             style="position: fixed; left: {tooltipRect.right + 8}px; top: {tooltipRect.top +
                 tooltipRect.height / 2}px; transform: translateY(-50%);"
