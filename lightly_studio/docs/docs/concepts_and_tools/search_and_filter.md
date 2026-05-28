@@ -1,9 +1,9 @@
 # Search and Filter
 
 Search helps you find visually or semantically similar samples from a text or image. Filters narrow down the samples currently shown in the view by tags, annotations, dimensions, and other numeric metadata.
-Use the GUI for similarity search and quick filtering. 
-Use DatasetQuery in Python when you need reusable filtering, sorting, and slicing in code.
 
+For more complex filtering, use the query feature — either in the GUI
+in the query editor, or in Python when you need reusable filtering, sorting, and slicing.
 
 ## Search in GUI
 
@@ -39,6 +39,32 @@ The left sidebar combines the most common ways to narrow down the visible sample
 For videos, the sidebar adds `Duration`. If the videos in the current view contain varying frame rates, it also shows `FPS`.
 
 ![Video filters](https://storage.googleapis.com/lightly-public/studio/search_filter_videos_v4.jpg){ width="100%" }
+
+## Query in GUI
+
+!!! warning "Query in GUI is currently available for image datasets only."
+
+Your dataset can be filtered by a custom query written in an SQL-like language. Open the
+query editor by clicking the `Add query filter` button in the left sidebar.
+
+![Query filter](https://storage.googleapis.com/lightly-public/studio/search_filter_query_v1.png){ width="100%" }
+
+The language supports filtering by image fields such as dimensions or file name, tags, annotations,
+as well as logical combinations of these. For a full reference, see the
+[Lightly Query Language](../advanced/lightly_query_language.md) documentation.
+
+Example queries:
+
+```mysql
+# Images that are at least 640 pixels wide or 400 pixels tall
+width >= 640 OR height >= 400
+
+# Images which do not have the tag "reviewed"
+NOT "reviewed" IN tags
+
+# Images with a "car" segmentation mask that is less than 100 pixels wide
+segmentation_mask(class_name = "car" AND width < 100)
+```
 
 ## Query in Python
 
