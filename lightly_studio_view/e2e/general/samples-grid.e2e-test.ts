@@ -198,7 +198,7 @@ test('Typicality selection creates tag with correct number of samples', async ({
         (response) => response.url().includes('/metadata/typicality') && response.status() === 204
     );
     const selectionPromise = page.waitForResponse(
-        (response) => response.url().includes('/selection') && response.status() === 204
+        (response) => response.url().includes('/sampling') && response.status() === 204
     );
 
     // Create typicality selection.

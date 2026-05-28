@@ -1,12 +1,12 @@
 import {
-    createCombinationSelection,
+    createSampling,
     computeSimilarityMetadata,
     computeTypicalityMetadata
 } from '$lib/api/lightly_studio_local/sdk.gen';
 import { get, readonly, writable, type Readable } from 'svelte/store';
 import { toast } from 'svelte-sonner';
 import type { TagView } from '$lib/services/types';
-import type { SelectionRequest } from '$lib/api/lightly_studio_local/types.gen';
+import type { SamplingRequest } from '$lib/api/lightly_studio_local/types.gen';
 import type { BalancingMode } from '$lib/components/Selection/balancingMode';
 
 type SelectionError = { error: string };
@@ -30,7 +30,7 @@ interface SubmitParams {
     selectionResultTagName: string;
     queryTagId: string;
     balancingMode: BalancingMode;
-    selectionFilter: SelectionRequest['filter'];
+    selectionFilter: SamplingRequest['filter'];
 }
 
 export function useCreateSelection(params: UseCreateSelectionParams) {
@@ -39,17 +39,17 @@ export function useCreateSelection(params: UseCreateSelectionParams) {
 
     async function performSelection(
         collectionId: string,
-        strategies: SelectionRequest['strategies'],
-        selectionFilter: SelectionRequest['filter'],
+        strategies: SamplingRequest['strategies'],
+        selectionFilter: SamplingRequest['filter'],
         n: number,
         tagName: string
     ): Promise<boolean> {
         _loadingMessage.set('Creating selection...');
-        const response = await createCombinationSelection({
+        const response = await createSampling({
             path: { collection_id: collectionId },
             body: {
                 n_samples_to_select: n,
-                selection_result_tag_name: tagName,
+                sampling_result_tag_name: tagName,
                 strategies,
                 filter: selectionFilter ?? undefined
             }
