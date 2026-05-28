@@ -5,11 +5,11 @@ Executed on every Alembic CLI invocation (upgrade, revision --autogenerate, etc.
 
 from __future__ import annotations
 
-import configparser
 from logging.config import fileConfig
 from pathlib import Path
 from typing import Any, Literal, cast
 
+import alembic_postgresql_enum  # noqa: F401
 from alembic import context
 from alembic.autogenerate.api import AutogenContext
 from sqlalchemy import engine, pool
@@ -27,10 +27,7 @@ from lightly_studio.migrations.config_utils import (
 config = context.config
 
 if config.config_file_name is not None:
-    _ini_parser = configparser.ConfigParser()
-    _ini_parser.read(config.config_file_name)
-    if _ini_parser.has_section("formatters"):
-        fileConfig(config.config_file_name)
+    fileConfig(config.config_file_name)
 
 
 def _render_item(

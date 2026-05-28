@@ -64,6 +64,7 @@ dependencies = [
     "click>=8.0.0",
     "brotli-asgi>=1.4.0",
     "jinja2>=3.1.0",
+    "alembic-postgresql-enum>=1.10.0",
 ]
 
 [project.scripts]
