@@ -140,7 +140,7 @@ class ImageDatasetEvaluate:
         Args:
             name: Display name of the evaluation run.
             gt_annotation_source: Name of the annotation source containing ground-truth annotations.
-            pred_annotation_source: Name of the annotation source containing all annotations.
+            pred_annotation_source: Name of the annotation source containing predictions.
             config: Optional classification evaluation config. If omitted,
                 defaults are used.
 

@@ -189,7 +189,7 @@ class ImageDataset(BaseSampleDataset[ImageSample]):
 
         Images are matched by relative path under ``images_root``. Annotations are grouped
         under an annotation source identified by ``annotation_source``; reusing the same
-        name appends to that source.
+        annotation_source appends to that source.
 
         Args:
             input_labels: Labelformat input object (e.g. ``COCOObjectDetectionInput``).
