@@ -5,6 +5,7 @@ from __future__ import annotations
 from typing import Any
 from uuid import UUID
 
+from sqlalchemy.orm import Mapped
 from sqlmodel import Session, SQLModel, col, delete, select
 
 from lightly_studio.models.annotation.annotation_base import AnnotationBaseTable
@@ -123,7 +124,7 @@ def _get_sample_ids(session: Session, collection_ids: list[UUID]) -> list[UUID]:
 def _delete_where_column_in(
     session: Session,
     table: type[SQLModel],
-    column: Any,
+    column: Mapped[Any],
     values: list[UUID],
 ) -> None:
     """Delete rows of ``table`` where ``column`` is in ``values``, in batches.
@@ -132,66 +133,97 @@ def _delete_where_column_in(
     stays well below PostgreSQL's 65,535 limit. All statements run in the
     caller's open transaction; the caller is responsible for committing, which
     keeps the foreign-key-ordering phases in ``delete_dataset`` intact.
+
+    Args:
+        session: Database session.
+        table: SQLModel table to delete rows from.
+        column: Column to match against ``values`` (wrap the model attribute with
+            ``col(...)`` at the call site, e.g. ``col(SampleTable.sample_id)``).
+        values: Ids to delete; the IN-list is chunked across statements.
     """
     if not values:
         return
-    for batch in batching.batched(values, batching.IN_CLAUSE_BATCH_SIZE):
-        session.exec(delete(table).where(col(column).in_(batch)))
+    for batch in batching.batched(items=values, batch_size=batching.IN_CLAUSE_BATCH_SIZE):
+        session.exec(delete(table).where(column.in_(batch)))
 
 
 def _delete_sample_tag_links(session: Session, sample_ids: list[UUID]) -> None:
     """Delete sample-tag links for the given samples."""
-    _delete_where_column_in(session, SampleTagLinkTable, SampleTagLinkTable.sample_id, sample_ids)
+    _delete_where_column_in(
+        session=session,
+        table=SampleTagLinkTable,
+        column=col(SampleTagLinkTable.sample_id),
+        values=sample_ids,
+    )
 
 
 def _delete_sample_group_links(session: Session, sample_ids: list[UUID]) -> None:
     """Delete sample-group links for the given samples."""
     _delete_where_column_in(
-        session, SampleGroupLinkTable, SampleGroupLinkTable.sample_id, sample_ids
+        session=session,
+        table=SampleGroupLinkTable,
+        column=col(SampleGroupLinkTable.sample_id),
+        values=sample_ids,
     )
 
 
 def _delete_sample_embeddings(session: Session, sample_ids: list[UUID]) -> None:
     """Delete sample embeddings for the given samples."""
     _delete_where_column_in(
-        session, SampleEmbeddingTable, SampleEmbeddingTable.sample_id, sample_ids
+        session=session,
+        table=SampleEmbeddingTable,
+        column=col(SampleEmbeddingTable.sample_id),
+        values=sample_ids,
     )
 
 
 def _delete_sample_metadata(session: Session, sample_ids: list[UUID]) -> None:
     """Delete sample metadata for the given samples."""
-    _delete_where_column_in(session, SampleMetadataTable, SampleMetadataTable.sample_id, sample_ids)
+    _delete_where_column_in(
+        session=session,
+        table=SampleMetadataTable,
+        column=col(SampleMetadataTable.sample_id),
+        values=sample_ids,
+    )
 
 
 def _delete_object_detection_annotations(session: Session, sample_ids: list[UUID]) -> None:
     """Delete object detection annotation details."""
     _delete_where_column_in(
-        session,
-        ObjectDetectionAnnotationTable,
-        ObjectDetectionAnnotationTable.sample_id,
-        sample_ids,
+        session=session,
+        table=ObjectDetectionAnnotationTable,
+        column=col(ObjectDetectionAnnotationTable.sample_id),
+        values=sample_ids,
     )
 
 
 def _delete_segmentation_annotations(session: Session, sample_ids: list[UUID]) -> None:
     """Delete segmentation annotation details."""
     _delete_where_column_in(
-        session, SegmentationAnnotationTable, SegmentationAnnotationTable.sample_id, sample_ids
+        session=session,
+        table=SegmentationAnnotationTable,
+        column=col(SegmentationAnnotationTable.sample_id),
+        values=sample_ids,
     )
 
 
 def _delete_annotation_base(session: Session, sample_ids: list[UUID]) -> None:
     """Delete annotation base records."""
-    _delete_where_column_in(session, AnnotationBaseTable, AnnotationBaseTable.sample_id, sample_ids)
+    _delete_where_column_in(
+        session=session,
+        table=AnnotationBaseTable,
+        column=col(AnnotationBaseTable.sample_id),
+        values=sample_ids,
+    )
 
 
 def _delete_annotation_collection_coverage(session: Session, collection_ids: list[UUID]) -> None:
     """Delete annotation collection coverage rows scoped to the dataset's collections."""
     _delete_where_column_in(
-        session,
-        AnnotationCollectionCoverageTable,
-        AnnotationCollectionCoverageTable.annotation_collection_id,
-        collection_ids,
+        session=session,
+        table=AnnotationCollectionCoverageTable,
+        column=col(AnnotationCollectionCoverageTable.annotation_collection_id),
+        values=collection_ids,
     )
 
 
@@ -202,32 +234,62 @@ def _delete_object_tracks(session: Session, dataset_id: UUID) -> None:
 
 def _delete_captions(session: Session, sample_ids: list[UUID]) -> None:
     """Delete captions."""
-    _delete_where_column_in(session, CaptionTable, CaptionTable.sample_id, sample_ids)
+    _delete_where_column_in(
+        session=session,
+        table=CaptionTable,
+        column=col(CaptionTable.sample_id),
+        values=sample_ids,
+    )
 
 
 def _delete_video_frames(session: Session, sample_ids: list[UUID]) -> None:
     """Delete video frames."""
-    _delete_where_column_in(session, VideoFrameTable, VideoFrameTable.sample_id, sample_ids)
+    _delete_where_column_in(
+        session=session,
+        table=VideoFrameTable,
+        column=col(VideoFrameTable.sample_id),
+        values=sample_ids,
+    )
 
 
 def _delete_groups(session: Session, sample_ids: list[UUID]) -> None:
     """Delete group records."""
-    _delete_where_column_in(session, GroupTable, GroupTable.sample_id, sample_ids)
+    _delete_where_column_in(
+        session=session,
+        table=GroupTable,
+        column=col(GroupTable.sample_id),
+        values=sample_ids,
+    )
 
 
 def _delete_videos(session: Session, sample_ids: list[UUID]) -> None:
     """Delete videos."""
-    _delete_where_column_in(session, VideoTable, VideoTable.sample_id, sample_ids)
+    _delete_where_column_in(
+        session=session,
+        table=VideoTable,
+        column=col(VideoTable.sample_id),
+        values=sample_ids,
+    )
 
 
 def _delete_images(session: Session, sample_ids: list[UUID]) -> None:
     """Delete images."""
-    _delete_where_column_in(session, ImageTable, ImageTable.sample_id, sample_ids)
+    _delete_where_column_in(
+        session=session,
+        table=ImageTable,
+        column=col(ImageTable.sample_id),
+        values=sample_ids,
+    )
 
 
 def _delete_samples(session: Session, sample_ids: list[UUID]) -> None:
     """Delete samples."""
-    _delete_where_column_in(session, SampleTable, SampleTable.sample_id, sample_ids)
+    _delete_where_column_in(
+        session=session,
+        table=SampleTable,
+        column=col(SampleTable.sample_id),
+        values=sample_ids,
+    )
 
 
 def _delete_annotation_labels(session: Session, dataset_id: UUID) -> None:
@@ -244,13 +306,21 @@ def _delete_dataset(session: Session, dataset_id: UUID) -> None:
 
 def _delete_tags(session: Session, collection_ids: list[UUID]) -> None:
     """Delete tags for the given collections."""
-    _delete_where_column_in(session, TagTable, TagTable.collection_id, collection_ids)
+    _delete_where_column_in(
+        session=session,
+        table=TagTable,
+        column=col(TagTable.collection_id),
+        values=collection_ids,
+    )
 
 
 def _delete_embedding_models(session: Session, collection_ids: list[UUID]) -> None:
     """Delete embedding models for the given collections."""
     _delete_where_column_in(
-        session, EmbeddingModelTable, EmbeddingModelTable.collection_id, collection_ids
+        session=session,
+        table=EmbeddingModelTable,
+        column=col(EmbeddingModelTable.collection_id),
+        values=collection_ids,
     )
 
 

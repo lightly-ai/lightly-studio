@@ -3,10 +3,9 @@
 from __future__ import annotations
 
 from collections.abc import Sequence
-from uuid import UUID
+from uuid import UUID, uuid4
 
-from sqlalchemy import ScalarResult
-from sqlmodel import Session, col, insert
+from sqlmodel import Session, insert
 
 from lightly_studio.models.sample import SampleCreate, SampleTable
 from lightly_studio.utils import batching
@@ -16,17 +15,15 @@ def create_many(session: Session, samples: Sequence[SampleCreate]) -> list[UUID]
     """Create multiple samples in a single database commit."""
     if not samples:
         return []
-    # Bulk insert in batches so the bind-parameter count of any single statement
-    # stays under PostgreSQL's 65,535 limit. RETURNING yields ids in VALUES order
-    # and batches are iterated in order, so the result matches the input order
-    # that downstream callers rely on (do not collect into a set).
-    sample_ids: list[UUID] = []
-    for batch in batching.batched(samples, batching.INSERT_BATCH_SIZE):
-        statement = (
-            insert(SampleTable)
-            .values([sample.model_dump() for sample in batch])
-            .returning(col(SampleTable.sample_id))
-        )
-        result: ScalarResult[UUID] = session.execute(statement).scalars()
-        sample_ids.extend(result)
+    # Generate sample_ids client-side (matching SampleTable's uuid4 default) so the
+    # returned order does not depend on INSERT ... RETURNING preserving VALUES order,
+    # which PostgreSQL does not guarantee. Insert in batches so the bind-parameter
+    # count of any single statement stays under PostgreSQL's 65,535 limit.
+    sample_ids = [uuid4() for _ in samples]
+    rows = [
+        {**sample.model_dump(), "sample_id": sample_id}
+        for sample, sample_id in zip(samples, sample_ids)
+    ]
+    for batch in batching.batched(items=rows, batch_size=batching.INSERT_BATCH_SIZE):
+        session.execute(insert(SampleTable).values(batch))
     return sample_ids

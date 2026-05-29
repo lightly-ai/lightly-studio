@@ -49,7 +49,7 @@ def add_many(
     # PostgreSQL's 65,535 limit; the conflict clause is re-applied per batch, so
     # cross-batch duplicates still hit the unique constraint and are ignored.
     dialect_name = session.get_bind().dialect.name if session.get_bind() else None
-    for batch in batching.batched(rows, batching.INSERT_BATCH_SIZE):
+    for batch in batching.batched(items=rows, batch_size=batching.INSERT_BATCH_SIZE):
         if dialect_name == "postgresql":
             session.exec(
                 pg_insert(AnnotationCollectionCoverageTable).values(batch).on_conflict_do_nothing()
