@@ -51,8 +51,11 @@ test.describe('query filter chip toggle', () => {
         await page.getByRole('checkbox', { name: 'Disable query filter' }).click();
         await disableRefetch;
 
-        // Grid should show the default unfiltered page
-        await expect(samplesPage.getSamples()).toHaveCount(cocoDataset.defaultPageSize);
+        // Grid should show at least one full page of unfiltered results.
+        // (Infinite scroll may load additional pages, so we check ≥ rather than ===.)
+        await expect
+            .poll(() => samplesPage.getSamples().count())
+            .toBeGreaterThanOrEqual(cocoDataset.defaultPageSize);
 
         // Re-check to re-enable the query
         const enableRefetch = page.waitForResponse(
@@ -75,7 +78,8 @@ test.describe('query filter chip toggle', () => {
         // Click the chip body to reopen the editor
         await page
             .getByTestId('query-filter-chip')
-            .getByRole('button', { name: 'Query Filter' })
+            .locator('button:not([role="checkbox"])')
+            .first()
             .click();
         await expect(page.getByRole('heading', { name: 'Query Filter' })).toBeVisible();
 
@@ -104,8 +108,10 @@ test.describe('query filter chip toggle', () => {
         // "Add query filter" button should reappear
         await expect(page.getByTestId('query-filter-add-button')).toBeVisible();
 
-        // Grid should show the default unfiltered page
-        await expect(samplesPage.getSamples()).toHaveCount(cocoDataset.defaultPageSize);
+        // Grid should show at least one full page of unfiltered results
+        await expect
+            .poll(() => samplesPage.getSamples().count())
+            .toBeGreaterThanOrEqual(cocoDataset.defaultPageSize);
     });
 });
 
