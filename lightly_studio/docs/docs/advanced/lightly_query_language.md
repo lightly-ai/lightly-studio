@@ -1,6 +1,7 @@
 # Lightly Query Language
 
-This document explains how to write queries in the LightlyStudio query editor.
+This document explains how to write queries in the
+[LightlyStudio query editor.](../concepts_and_tools/search_and_filter.md#query-in-gui)
 
 A query helps you find images that match certain rules. For example, you can search for:
 
@@ -14,19 +15,15 @@ A query helps you find images that match certain rules. For example, you can sea
 
 The query language is quite simple and resembles WHERE clauses in SQL. We recommend learning it from examples.
 
-```sql
-# Filter images that are taller than 400 pixels and at least 640 pixels wide.
-height >= 400 AND width >= 640
+```mysql
+# Images that are at least 640 pixels wide or 400 pixels tall
+width >= 640 OR height >= 400
 
-# If you replace AND with OR, an image is selected if either of these conditions is true.
-height >= 400 OR width >= 640
+# Images which do not have the tag "reviewed"
+NOT "reviewed" IN tags
 
-# You can create more complex queries by nesting sub-queries in parentheses.
-# The following matches either a large image or an image whose file name is "cover.jpg".
-(height >= 400 AND width >= 640) OR file_name = "cover.jpg"
-
-# The logical NOT operator is also supported.
-NOT (height >= 400 AND width >= 640)
+# Images with a "car" segmentation mask that is less than 100 pixels wide
+segmentation_mask(class_name = "car" AND width < 100)
 ```
 
 ## Supported image fields
@@ -41,7 +38,7 @@ These fields can be used directly in a query:
 
 Example queries:
 
-```sql
+```mysql
 height >= 400
 width >= 640
 file_name = "cat.jpg"
@@ -54,17 +51,17 @@ created_at >= "2025-01-01T00:00:00Z"
 
 Filtering for tags can be done using `"foo" IN tags`, which matches each image that has the tag `foo`:
 
-```sql
+```mysql
 "car" IN tags
 ```
 
 You can combine this with other criteria:
-```sql
+```mysql
 "car" IN tags OR (height >= 400 AND width >= 640)
 ```
 
 Other examples:
-```sql
+```mysql
 "training" IN tags
 NOT "rejected" IN tags
 "training" IN tags OR "validation" IN tags
@@ -73,7 +70,7 @@ NOT "rejected" IN tags
 
 ## Annotation match functions
 
-Annotations are labels or shapes attached to an image.
+An annotation is a classification, bounding box, or segmentation mask attached to an image.
 
 The query language supports three annotation functions:
 
@@ -85,18 +82,18 @@ Each function contains another query inside the parentheses and matches an image
 
 ### Classification queries
 
-Use `classification(...)` when you want to match image-level labels. Example queries:
+Use `classification(...)` when you want to match image-level classifications. Example queries:
 
-```sql
-classification(label = "cat")
-classification(label != "background")
+```mysql
+classification(class_name = "cat")
+classification(class_name != "background")
 ```
 
 ### Object detection queries
 
 Use `object_detection(...)` when you want to match bounding boxes. The following fields are supported:
 
-- `label`
+- `class_name`
 - `x`
 - `y`
 - `width`
@@ -104,11 +101,11 @@ Use `object_detection(...)` when you want to match bounding boxes. The following
 
 Example queries:
 
-```sql
+```mysql
 object_detection(x >= 10 AND y < 200)
-object_detection(label = "cat" AND width >= 50 AND height >= 40)
-object_detection(label = "cat" OR label = "dog")
-object_detection(label != "background")
+object_detection(class_name = "cat" AND width >= 50 AND height >= 40)
+object_detection(class_name = "cat" OR class_name = "dog")
+object_detection(class_name != "background")
 ```
 
 ### Segmentation mask queries
@@ -117,7 +114,7 @@ Use `segmentation_mask(...)` when you want to match segmentation annotations.
 
 It is part of the query grammar, uses the same boolean operators as `object_detection(...)`, and supports these fields:
 
-- `label`
+- `class_name`
 - `x`
 - `y`
 - `width`
@@ -125,36 +122,36 @@ It is part of the query grammar, uses the same boolean operators as `object_dete
 
 Example queries:
 
-```sql
-segmentation_mask(label = "cat")
+```mysql
+segmentation_mask(class_name = "cat")
 segmentation_mask(x != 0)
 segmentation_mask(width > 80)
-segmentation_mask(label = "cat" AND width >= 50 AND height >= 40)
+segmentation_mask(class_name = "cat" AND width >= 50 AND height >= 40)
 ```
 
 ## Combining top-level and annotation expressions
 
 You can combine image properties with annotation queries:
 
-```sql
-height > 400 AND object_detection(label = "cat")
-width >= 640 AND classification(label = "approved")
-"reviewed" IN tags AND segmentation_mask(label = "road")
+```mysql
+height > 400 AND object_detection(class_name = "cat")
+width >= 640 AND classification(class_name = "approved")
+"reviewed" IN tags AND segmentation_mask(class_name = "road")
 ```
 
 ## Complex examples
 
-```sql
+```mysql
 # Large reviewed sample with a matching object detection
 height > 400 AND width >= 640
 AND "reviewed" IN tags
-AND object_detection(label = "cat" AND width > 80 AND height > 80)
+AND object_detection(class_name = "cat" AND width > 80 AND height > 80)
 
 # Nested query with grouped sample filters and segmentation constraints
 (file_path_abs != "/datasets/archive/bad.jpg" AND created_at >= "2025-01-01T00:00:00Z")
 AND ("training" IN tags OR "validation" IN tags)
 AND segmentation_mask(
-    (label = "car" OR label = "truck")
+    (class_name = "car" OR class_name = "truck")
     AND width >= 100
     AND height >= 60
     AND NOT (x < 10 OR y < 10)
@@ -162,10 +159,10 @@ AND segmentation_mask(
 
 # Nested query combining multiple annotation functions
 "reviewed" IN tags
-AND classification(label = "urban-scene")
+AND classification(class_name = "urban-scene")
 AND (
-    object_detection(label = "person" AND height >= 120)
-    OR segmentation_mask(label = "road" AND width > 300)
+    object_detection(class_name = "person" AND height >= 120)
+    OR segmentation_mask(class_name = "road" AND width > 300)
 )
 ```
 
@@ -185,14 +182,14 @@ Use parentheses whenever you want to make grouping explicit.
 
 Strings can use double quotes or single quotes:
 
-```sql
+```mysql
 file_name = "frame-0001.jpg"
 file_name = 'frame-0001.jpg'
 ```
 
 Comments start with `#` and continue to the end of the line:
 
-```sql
+```mysql
 height >= 400 # keep only large images
 ```
 

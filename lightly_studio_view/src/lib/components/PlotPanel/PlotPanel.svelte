@@ -27,14 +27,15 @@
     import { writable } from 'svelte/store';
 
     const collectionId = page.params.collection_id;
-    const { setShowPlot, getRangeSelection, setRangeSelectionForCollection } = useGlobalStorage();
+    const { setShowEmbeddingPlot, getRangeSelection, setRangeSelectionForCollection } =
+        useGlobalStorage();
     const rangeSelection = getRangeSelection(collectionId);
     const setRangeSelection = (selection: Point[] | null) => {
         setRangeSelectionForCollection(collectionId, selection);
     };
 
     function handleClose() {
-        setShowPlot(false);
+        setShowEmbeddingPlot(false);
     }
 
     // Detect if we're on the videos route
