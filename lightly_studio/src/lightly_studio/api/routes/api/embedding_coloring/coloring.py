@@ -51,7 +51,7 @@ def build_color_data(
     color_by: ColorBy | None,
     sample_ids: list[UUID],
     fulfils_filter: list[int],
-) -> tuple[list[int], dict[int, str]]:
+) -> tuple[list[list[int]], dict[int, str]]:
     """Build color categories and a legend for embedding coloring.
 
     Args:
@@ -63,8 +63,9 @@ def build_color_data(
 
     Returns:
         A tuple of `(color_categories, color_legend)` for the provided samples. The
-        length of `color_categories` is the number of samples. The `color_legend` is a mapping
-        from color ID to a human-readable string.
+        length of `color_categories` is the number of samples; each entry is the
+        list of that sample's categories in priority order. The `color_legend` is
+        a mapping from color ID to a human-readable string.
     """
     if isinstance(color_by, TagColorBy):
         return tags.build_tag_color_maps(
@@ -95,4 +96,4 @@ def build_color_data(
     if color_by is not None:
         assert_never(color_by)
 
-    return list(fulfils_filter), {}
+    return [[category] for category in fulfils_filter], {}

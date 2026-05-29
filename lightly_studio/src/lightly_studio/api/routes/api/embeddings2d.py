@@ -76,6 +76,10 @@ def get_2d_embeddings(
         sample_ids=sample_ids,
         fulfils_filter=fulfils_filter,
     )
+    # Scalar primary category (first match in priority order) kept for backward
+    # compatibility; the frontend resolves which category to display from the
+    # full `color_categories` list (e.g. when categories are toggled off).
+    primary_color_category = [categories[0] for categories in color_categories]
 
     schema = pa.schema(
         [
@@ -83,6 +87,7 @@ def get_2d_embeddings(
             pa.field("y", pa.float32()),
             pa.field("fulfils_filter", pa.uint8()),
             pa.field("color_category", pa.uint8()),
+            pa.field("color_categories", pa.list_(pa.uint8())),
             pa.field("sample_id", pa.string()),
         ],
         metadata={
@@ -94,7 +99,8 @@ def get_2d_embeddings(
             "x": pa.array(x_array, type=pa.float32()),
             "y": pa.array(y_array, type=pa.float32()),
             "fulfils_filter": pa.array(fulfils_filter, type=pa.uint8()),
-            "color_category": pa.array(color_categories, type=pa.uint8()),
+            "color_category": pa.array(primary_color_category, type=pa.uint8()),
+            "color_categories": pa.array(color_categories, type=pa.list_(pa.uint8())),
             "sample_id": pa.array([str(sample_id) for sample_id in sample_ids], type=pa.string()),
         },
         schema=schema,

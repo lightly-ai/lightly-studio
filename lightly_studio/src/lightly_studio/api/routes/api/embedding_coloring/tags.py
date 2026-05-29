@@ -16,13 +16,13 @@ def build_tag_color_maps(
     tag_ids: list[UUID],
     sample_ids: list[UUID],
     fulfils_filter: list[int],
-) -> tuple[list[int], dict[int, str]]:
+) -> tuple[list[list[int]], dict[int, str]]:
     """Build color categories and a legend for tag-based sample coloring.
 
     Each selected tag gets a consecutive color category (starting at 2) in the
-    order given by *tag_ids*.  When a sample belongs to multiple selected tags
-    the **first match wins** — it receives the category of the earliest tag in
-    the list.
+    order given by *tag_ids*.  When a sample belongs to multiple selected tags it
+    receives **all** their categories, ordered by priority (earliest tag in
+    *tag_ids* first).
 
     Args:
         session: Database session.
@@ -32,12 +32,13 @@ def build_tag_color_maps(
 
     Returns:
         A tuple of `(color_categories, color_legend)` for the provided samples. The
-        length of `color_categories` is the number of samples. The `color_legend` is a mapping
-        from color ID to a human-readable string.
+        length of `color_categories` is the number of samples; each entry is the
+        list of that sample's categories in priority order. The `color_legend` is
+        a mapping from color ID to a human-readable string.
     """
     names = tag_resolver.get_names_by_ids(session=session, tag_ids=tag_ids)
     sample_to_tags = tag_resolver.get_tags_by_sample(session=session, tag_ids=tag_ids)
-    sample_to_value = coloring_helpers.first_match_per_sample(
+    sample_to_values = coloring_helpers.all_matches_per_sample(
         sample_to_candidates=sample_to_tags, priority_order=tag_ids
     )
 
@@ -46,9 +47,9 @@ def build_tag_color_maps(
         format_fn=lambda tid: names.get(tid, str(tid)),
     )
 
-    return coloring_helpers.assign_color_categories(
+    return coloring_helpers.assign_color_category_lists(
         sample_ids=sample_ids,
         fulfils_filter=fulfils_filter,
-        sample_to_value=sample_to_value,
+        sample_to_values=sample_to_values,
         scale=scale,
     )

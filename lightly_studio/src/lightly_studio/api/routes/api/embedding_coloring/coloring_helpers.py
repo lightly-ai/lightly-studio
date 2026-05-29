@@ -135,60 +135,66 @@ class DiscreteColorScale(Generic[T]):
         return DiscreteColorScale[int](_lookup=lookup, legend=legend)
 
 
-def assign_color_categories(
+def assign_color_category_lists(
     sample_ids: Sequence[UUID],
     fulfils_filter: Sequence[int],
-    sample_to_value: Mapping[UUID, T],
+    sample_to_values: Mapping[UUID, Sequence[T]],
     scale: ColorScale[T],
-) -> tuple[list[int], dict[int, str]]:
-    """Return color categories and a legend for the given samples.
+) -> tuple[list[list[int]], dict[int, str]]:
+    """Return per-sample color category lists and a legend for the given samples.
+
+    Each sample maps to a list of categories in the order provided by
+    ``sample_to_values`` (callers supply values in priority order). This lets the
+    frontend resolve which category to display, e.g. when a category is toggled
+    off in the legend.
 
     Args:
         sample_ids: Sample IDs.
         fulfils_filter: Binary indicator per sample. 0 means filtered out.
-        sample_to_value: Mapping from sample ID to a value.
+        sample_to_values: Mapping from sample ID to its values in priority order.
         scale: Color scale used to map values to categories.
 
     Returns:
-        A tuple of `(color_categories, legend)`. Category 0 means filtered
-        out and 1 means unassigned (missing or unmapped value).
+        A tuple of `(color_categories, legend)`. Each per-sample list contains
+        `[0]` when filtered out and `[1]` when unassigned (no value, or no value
+        maps to a category).
     """
-    color_categories: list[int] = []
+    color_categories: list[list[int]] = []
     for i, sid in enumerate(sample_ids):
         if fulfils_filter[i] == 0:
-            cat = 0
-        elif sid in sample_to_value:
-            mapped = scale.value_to_category(sample_to_value[sid])
-            cat = mapped if mapped is not None else 1
+            cats = [0]
         else:
-            cat = 1
-        color_categories.append(cat)
+            mapped = (scale.value_to_category(value) for value in sample_to_values.get(sid, ()))
+            cats = [cat for cat in mapped if cat is not None]
+            if not cats:
+                cats = [1]
+        color_categories.append(cats)
 
     legend = {0: "Filtered out", 1: "Unassigned", **scale.legend}
     return color_categories, legend
 
 
-def first_match_per_sample(
+def all_matches_per_sample(
     sample_to_candidates: Mapping[UUID, Iterable[T]],
     priority_order: Sequence[T],
-) -> dict[UUID, T]:
-    """Map each sample to the first matching value from a priority-ordered list.
+) -> dict[UUID, list[T]]:
+    """Map each sample to all matching values, in priority order.
 
     Samples with no match are omitted from the result.
 
     Args:
         sample_to_candidates: Mapping from sample ID to the set (or any
             iterable) of candidate values the sample carries.
-        priority_order: Values in priority order — the first match wins.
+        priority_order: Values in priority order — matches are returned in this
+            order.
 
     Returns:
-        A mapping from sample ID to the winning value.
+        A mapping from sample ID to its matching values in priority order.
     """
-    result: dict[UUID, T] = {}
+    result: dict[UUID, list[T]] = {}
     for sid, candidates in sample_to_candidates.items():
         candidate_set = candidates if isinstance(candidates, set) else set(candidates)
-        for value in priority_order:
-            if value in candidate_set:
-                result[sid] = value
-                break
+        matches = [value for value in priority_order if value in candidate_set]
+        if matches:
+            result[sid] = matches
     return result
