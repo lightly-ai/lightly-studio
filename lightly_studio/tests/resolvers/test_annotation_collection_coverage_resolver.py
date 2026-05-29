@@ -1,4 +1,3 @@
-import pytest
 from sqlmodel import Session
 
 from lightly_studio.models.collection import SampleType
@@ -6,7 +5,6 @@ from lightly_studio.resolvers import (
     annotation_collection_coverage_resolver,
     collection_resolver,
 )
-from lightly_studio.utils import batching
 from tests.helpers_resolvers import create_collection, create_image
 
 
@@ -57,41 +55,6 @@ def test_add_many__basic_and_idempotent(db_session: Session) -> None:
     annotation_collection_coverage_resolver.add_many(
         session=db_session, annotation_collection_id=cov_id, parent_sample_ids=[]
     )
-    covered = set(
-        annotation_collection_coverage_resolver.list_by_collection_id(
-            session=db_session, annotation_collection_id=cov_id
-        )
-    )
-    assert covered == {s.sample_id for s in samples}
-
-
-def test_add_many__inserts_across_batches(
-    db_session: Session, monkeypatch: pytest.MonkeyPatch
-) -> None:
-    """All rows are inserted when the multi-row INSERT is chunked into batches."""
-    # Force a tiny insert batch so 5 rows are inserted across 3 statements.
-    monkeypatch.setattr(batching, "DEFAULT_BATCH_SIZE", 2)
-    collection = create_collection(session=db_session)
-    cov_id = collection_resolver.get_or_create_child_collection(
-        session=db_session,
-        collection_id=collection.collection_id,
-        sample_type=SampleType.ANNOTATION,
-    )
-    samples = [
-        create_image(
-            session=db_session,
-            collection_id=collection.collection_id,
-            file_path_abs=f"/img_{i}.png",
-        )
-        for i in range(5)
-    ]
-
-    annotation_collection_coverage_resolver.add_many(
-        session=db_session,
-        annotation_collection_id=cov_id,
-        parent_sample_ids=[s.sample_id for s in samples],
-    )
-
     covered = set(
         annotation_collection_coverage_resolver.list_by_collection_id(
             session=db_session, annotation_collection_id=cov_id

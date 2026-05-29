@@ -15,22 +15,10 @@ _T = TypeVar("_T")
 DEFAULT_BATCH_SIZE = 8_000
 
 
-def batched(items: Iterable[_T], batch_size: int | None = None) -> Iterator[list[_T]]:
-    """Yield successive lists of at most ``batch_size`` items.
-
-    Args:
-        items: Iterable to split into batches.
-        batch_size: Maximum items per batch; defaults to ``DEFAULT_BATCH_SIZE``. Must be >= 1.
-
-    Yields:
-        Lists of up to ``batch_size`` items; nothing if ``items`` is empty.
-
-    Raises:
-        ValueError: If the resolved batch size is less than 1.
-    """
-    size = DEFAULT_BATCH_SIZE if batch_size is None else batch_size
-    if size < 1:
-        raise ValueError(f"batch_size must be >= 1, got {size}.")
+def batched(items: Iterable[_T], batch_size: int = DEFAULT_BATCH_SIZE) -> Iterator[list[_T]]:
+    """Yield successive lists of at most ``batch_size`` items; raises ValueError if < 1."""
+    if batch_size < 1:
+        raise ValueError(f"batch_size must be >= 1, got {batch_size}.")
     iterator = iter(items)
-    while batch := list(itertools.islice(iterator, size)):
+    while batch := list(itertools.islice(iterator, batch_size)):
         yield batch
