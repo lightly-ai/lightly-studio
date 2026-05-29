@@ -206,14 +206,6 @@ else
 	LIGHTLY_STUDIO_DATABASE_URL=$(POSTGRES_URL) uv run alembic -c alembic.ini upgrade head
 endif
 
-.PHONY: migration-stamp-postgresql
-migration-stamp-postgresql: start-postgres mock-webapp-dist
-	@echo "Stamping Alembic version to head (dev only)..."
-ifeq ($(OS),Windows_NT)
-	@powershell -Command "$$env:LIGHTLY_STUDIO_DATABASE_URL='$(POSTGRES_URL)'; uv run alembic -c alembic.ini stamp head"
-else
-	LIGHTLY_STUDIO_DATABASE_URL=$(POSTGRES_URL) uv run alembic -c alembic.ini stamp head
-endif
 
 .PHONY: migration-downgrade-postgresql
 migration-downgrade-postgresql: start-postgres mock-webapp-dist

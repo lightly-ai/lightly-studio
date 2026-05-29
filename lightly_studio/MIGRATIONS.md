@@ -26,7 +26,7 @@ make start-postgres
 
 Set `LIGHTLY_STUDIO_DATABASE_URL` to the dev URL (the Makefile uses `postgresql://lightly:lightly@localhost:5433/lightly_studio` via `POSTGRES_URL`).
 
-Makefile targets: `migration-upgrade-postgresql`, `migration-revision-postgresql` (requires `MSG=...`), `migration-stamp-postgresql`, `migration-downgrade-postgresql` (dev only), `migration-check-postgresql` (empty DB: `upgrade head` + `alembic check`).
+Makefile targets: `migration-upgrade-postgresql`, `migration-revision-postgresql` (requires `MSG=...`), `migration-downgrade-postgresql` (dev only), `migration-check-postgresql` (empty DB: `upgrade head` + `alembic check`).
 
 ## Adding a schema change
 
