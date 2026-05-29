@@ -5,7 +5,8 @@ import { SampleType, type CollectionView } from '$lib/api/lightly_studio_local';
 const makeCollection = (
     id: string,
     sampleType: SampleType = SampleType.IMAGE,
-    children?: CollectionView[]
+    children?: CollectionView[],
+    overrides?: Partial<CollectionView>
 ): CollectionView => ({
     collection_id: id,
     dataset_id: 'test-dataset-id',
@@ -13,7 +14,8 @@ const makeCollection = (
     sample_type: sampleType,
     created_at: new Date(),
     updated_at: new Date(),
-    children
+    children,
+    ...overrides
 });
 
 describe('getMenuItem', () => {
@@ -39,6 +41,17 @@ describe('getMenuItem', () => {
             'Group Component Name'
         );
         expect(item.title).toBe('Group Component Name');
+    });
+
+    it('prefixes annotation title with "Annotations:" when groupComponentName is provided', () => {
+        const item = getMenuItem(
+            'dataset-id',
+            undefined,
+            'col-id',
+            SampleType.ANNOTATION,
+            'ground_truth'
+        );
+        expect(item.title).toBe('Annotations: ground_truth');
     });
 
     it('sets isSelected when collectionId matches currentCollectionId', () => {
@@ -140,5 +153,72 @@ describe('buildBreadcrumbLevels', () => {
         expect(sib1.isSelected).toBe(true);
         expect(sib2.id).toBe('image-img-2');
         expect(sib2.isSelected).toBe(false);
+    });
+
+    it('uses annotation name when root has multiple annotation collections', () => {
+        const ann1 = makeCollection('ann-1', SampleType.ANNOTATION, undefined, {
+            name: 'ground_truth',
+            group_component_name: 'gc-1'
+        });
+        const ann2 = makeCollection('ann-2', SampleType.ANNOTATION, undefined, {
+            name: 'predictions',
+            group_component_name: 'gc-2'
+        });
+        const root = makeCollection('root', SampleType.IMAGE, [ann1, ann2]);
+
+        const levels = buildBreadcrumbLevels([root, ann1], root, 'ann-1', 'dataset-id');
+
+        expect(levels[1].selected.title).toBe('Annotations: ground_truth');
+        expect(levels[1].siblings.map((s) => s.title)).toEqual([
+            'Annotations: ground_truth',
+            'Annotations: predictions'
+        ]);
+    });
+
+    it('uses group_component_name when root has a single annotation collection', () => {
+        const ann = makeCollection('ann-1', SampleType.ANNOTATION, undefined, {
+            name: 'ground_truth',
+            group_component_name: 'gc-1'
+        });
+        const root = makeCollection('root', SampleType.IMAGE, [ann]);
+
+        const levels = buildBreadcrumbLevels([root, ann], root, 'ann-1', 'dataset-id');
+
+        expect(levels[1].selected.title).toBe('Annotations: gc-1');
+    });
+
+    it('falls back to default "Annotations" title when single annotation has no group_component_name', () => {
+        const ann = makeCollection('ann-1', SampleType.ANNOTATION, undefined, {
+            name: 'ground_truth'
+        });
+        const root = makeCollection('root', SampleType.IMAGE, [ann]);
+
+        const levels = buildBreadcrumbLevels([root, ann], root, 'ann-1', 'dataset-id');
+
+        expect(levels[1].selected.title).toBe('Annotations');
+    });
+
+    it('keeps group_component_name for non-annotation siblings when multiple annotations exist', () => {
+        const img = makeCollection('img-1', SampleType.IMAGE, undefined, {
+            name: 'img-name',
+            group_component_name: 'Pictures'
+        });
+        const ann1 = makeCollection('ann-1', SampleType.ANNOTATION, undefined, {
+            name: 'ground_truth',
+            group_component_name: 'gc-1'
+        });
+        const ann2 = makeCollection('ann-2', SampleType.ANNOTATION, undefined, {
+            name: 'predictions',
+            group_component_name: 'gc-2'
+        });
+        const root = makeCollection('root', SampleType.GROUP, [img, ann1, ann2]);
+
+        const levels = buildBreadcrumbLevels([root, img], root, 'img-1', 'dataset-id');
+
+        expect(levels[1].siblings.map((s) => s.title)).toEqual([
+            'Pictures',
+            'Annotations: ground_truth',
+            'Annotations: predictions'
+        ]);
     });
 });
