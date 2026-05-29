@@ -100,7 +100,7 @@ class TestDiscreteColorScale:
         assert scale.legend == {2: "0", 3: "1", 4: "2"}
 
 
-def test_assign_color_category_lists() -> None:
+def test_assign_color_categories() -> None:
     ids = [uuid4(), uuid4()]
     scale = DiscreteColorScale.from_values(values=["cat", "dog"])
     sample_to_values = {ids[0]: ["cat"], ids[1]: ["dog"]}
@@ -116,7 +116,7 @@ def test_assign_color_category_lists() -> None:
     assert categories == [[2], [3]]
 
 
-def test_assign_color_category_lists__multiple_values_sorted_by_category() -> None:
+def test_assign_color_categories__multiple_values_sorted_by_category() -> None:
     """A sample with several values gets all categories, sorted ascending."""
     sid = uuid4()
     scale = DiscreteColorScale.from_values(values=["cat", "dog", "fish"])
@@ -132,7 +132,7 @@ def test_assign_color_category_lists__multiple_values_sorted_by_category() -> No
     assert categories == [[3, 4]]
 
 
-def test_assign_color_category_lists__missing_value_is_empty() -> None:
+def test_assign_color_categories__missing_value_is_empty() -> None:
     ids = [uuid4(), uuid4()]
     scale = DiscreteColorScale.from_values(values=["cat"])
     sample_to_values = {ids[0]: ["cat"]}  # ids[1] is missing
@@ -149,7 +149,7 @@ def test_assign_color_category_lists__missing_value_is_empty() -> None:
     assert categories == [[2], []]
 
 
-def test_assign_color_category_lists__mixed() -> None:
+def test_assign_color_categories__mixed() -> None:
     """Valued, multi-valued, and missing samples in one call."""
     ids = [uuid4(), uuid4(), uuid4()]
     scale = DiscreteColorScale.from_values(values=["London", "Paris"])
@@ -169,7 +169,7 @@ def test_assign_color_category_lists__mixed() -> None:
     assert categories == [[3], [], [2, 3]]
 
 
-def test_assign_color_category_lists__empty() -> None:
+def test_assign_color_categories__empty() -> None:
     scale = DiscreteColorScale.from_values(values=["x"])
 
     categories, legend = coloring_helpers.assign_color_categories(
@@ -182,7 +182,7 @@ def test_assign_color_category_lists__empty() -> None:
     assert categories == []
 
 
-def test_assign_color_category_lists__unmapped_value_is_empty() -> None:
+def test_assign_color_categories__unmapped_value_is_empty() -> None:
     """A sample whose value exists but isn't in the scale gets an empty list."""
     sid = uuid4()
     scale = DiscreteColorScale.from_values(values=["known"])

@@ -75,7 +75,7 @@ def get_2d_embeddings(
         color_by=color_by,
         sample_ids=sample_ids,
     )
-    # TODO(Michal: 05/2026): Remove color_category when the frontend is updated.
+    # TODO(Michal, 05/2026): Remove color_category when the frontend is updated.
     # `build_color_data` is filter-unaware and returns a list of color categories per sample.
     # Temporarily transform it back to a single category per sample.
     if color_by is not None:
