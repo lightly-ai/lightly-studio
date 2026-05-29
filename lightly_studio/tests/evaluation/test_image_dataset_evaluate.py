@@ -398,8 +398,8 @@ def test_segmentation_evaluation(
 
     result = dataset.evaluate().segmentation(
         name="seg-run-1",
-        gt_collection_name="gt",
-        pred_collection_name="pred",
+        gt_annotation_source="gt",
+        pred_annotation_source="pred",
     )
     assert result.sample_count == 1
     assert result.gt_annotation_count == 1
@@ -436,8 +436,8 @@ def test_segmentation_evaluation__raises_on_wrong_annotation_type(
     with pytest.raises(ValueError, match="segmentation_mask"):
         dataset.evaluate().segmentation(
             name="seg-run-1",
-            gt_collection_name="gt",
-            pred_collection_name="pred",
+            gt_annotation_source="gt",
+            pred_annotation_source="pred",
         )
 
 

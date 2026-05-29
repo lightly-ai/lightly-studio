@@ -171,16 +171,16 @@ class ImageDatasetEvaluate:
     def segmentation(
         self,
         name: str,
-        gt_collection_name: str,
-        pred_collection_name: str,
+        gt_annotation_source: str,
+        pred_annotation_source: str,
         config: SegmentationEvaluationConfig | None = None,
     ) -> EvaluationResult:
         """Create a segmentation evaluation run.
 
         Args:
             name: Display name of the evaluation run.
-            gt_collection_name: Name of the annotation collection containing ground truth labels.
-            pred_collection_name: Name of the annotation collection containing predictions.
+            gt_annotation_source: Name of the annotation source containing ground truth labels.
+            pred_annotation_source: Name of the annotation source containing predictions.
             config: Optional segmentation evaluation config. If omitted,
                 defaults are used.
 
@@ -190,8 +190,8 @@ class ImageDatasetEvaluate:
         config = config or SegmentationEvaluationConfig()
         data = self._prepare_evaluation_data(
             name=name,
-            gt_collection_name=gt_collection_name,
-            pred_collection_name=pred_collection_name,
+            gt_annotation_source=gt_annotation_source,
+            pred_annotation_source=pred_annotation_source,
             task_type=EvaluationTaskType.INSTANCE_SEGMENTATION,
             config_json=config.model_dump(),
         )
