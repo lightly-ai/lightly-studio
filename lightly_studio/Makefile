@@ -1,4 +1,4 @@
-# Postgres E2E test configuration (for local development only, not used in CI)
+# Postgres E2E test configuration
 POSTGRES_CONTAINER_NAME := lightly-studio-postgres
 POSTGRES_PORT := 5433
 POSTGRES_USER := lightly
@@ -197,8 +197,7 @@ else
 	@touch src/lightly_studio/dist_lightly_studio_view_app/index.html
 endif
 
-.PHONY: migration-upgrade-postgresql migration-revision-postgresql migration-stamp-postgresql migration-downgrade-postgresql migration-check-postgresql
-
+.PHONY: migration-upgrade-postgresql
 migration-upgrade-postgresql: start-postgres mock-webapp-dist
 	@echo "Applying Alembic migrations (upgrade head)..."
 ifeq ($(OS),Windows_NT)
@@ -207,6 +206,7 @@ else
 	LIGHTLY_STUDIO_DATABASE_URL=$(POSTGRES_URL) uv run alembic -c alembic.ini upgrade head
 endif
 
+.PHONY: migration-stamp-postgresql
 migration-stamp-postgresql: start-postgres mock-webapp-dist
 	@echo "Stamping Alembic version to head (dev only)..."
 ifeq ($(OS),Windows_NT)
@@ -215,6 +215,7 @@ else
 	LIGHTLY_STUDIO_DATABASE_URL=$(POSTGRES_URL) uv run alembic -c alembic.ini stamp head
 endif
 
+.PHONY: migration-downgrade-postgresql
 migration-downgrade-postgresql: start-postgres mock-webapp-dist
 	@echo "Downgrading Alembic by one revision (dev only)..."
 ifeq ($(OS),Windows_NT)
@@ -224,6 +225,7 @@ else
 endif
 
 # Autogenerate requires the database schema to match the current Alembic head.
+.PHONY: migration-revision-postgresql
 migration-revision-postgresql: migration-upgrade-postgresql
 ifndef MSG
 	$(error MSG is required. Example: make migration-revision-postgresql MSG=add_column)
@@ -235,6 +237,7 @@ else
 	LIGHTLY_STUDIO_DATABASE_URL=$(POSTGRES_URL) uv run alembic -c alembic.ini revision --autogenerate -m "$(MSG)"
 endif
 
+.PHONY: migration-check-postgresql
 migration-check-postgresql: start-postgres mock-webapp-dist
 	@echo "Checking Alembic migration chain on empty Postgres..."
 ifeq ($(OS),Windows_NT)

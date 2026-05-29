@@ -60,7 +60,7 @@ Thin endpoints may call resolvers directly. Services are mainly for cross-entity
 
 ### DuckDB
 
-Schema is created with `SQLModel.metadata.create_all()` on startup. No Alembic.
+Schema is created with `SQLModel.metadata.create_all()` on startup.
 
 ### PostgreSQL and Alembic
 
@@ -107,8 +107,6 @@ make test
 make migration-check-postgresql
 make test-postgres
 ```
-
-Enterprise on-prem: the Studio backend applies migrations automatically on startup; first adoption on a legacy `create_all` database stamps `head` once. See `docs/docs/enterprise/on-premise.md`.
 
 ## Build and generated artifacts
 
