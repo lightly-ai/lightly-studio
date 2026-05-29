@@ -14,6 +14,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 
 - Header menu: show collection name in Annotations entries
+- Embedding plot coloring now supports multiple categories per sample.
 
 ### Deprecated
 
