@@ -72,6 +72,13 @@ class ClassificationEvaluationConfig(BaseModel):
     """
 
 
+class SemanticSegmentationEvaluationConfig(BaseModel):
+    """Configuration for semantic-segmentation evaluation runs.
+
+    Currently has no fields. Placeholder for future implementation.
+    """
+
+
 class ImageDatasetEvaluate:
     """Task-specific evaluation entry points for image datasets.
 
@@ -158,6 +165,35 @@ class ImageDatasetEvaluate:
         classification_metric.create_and_persist_classification_metrics_per_sample(
             session=self.session,
             data=data,
+        )
+        return EvaluationResult.from_evaluation_data(data)
+
+    def semantic_segmentation(
+        self,
+        name: str,
+        gt_annotation_source: str,
+        pred_annotation_source: str,
+        config: SemanticSegmentationEvaluationConfig | None = None,
+    ) -> EvaluationResult:
+        """Create a semantic segmentation evaluation run.
+
+        Args:
+            name: Display name of the evaluation run.
+            gt_annotation_source: Name of the annotation source containing ground truth labels.
+            pred_annotation_source: Name of the annotation source containing predictions.
+            config: Optional semantic segmentation evaluation config. If omitted,
+                defaults are used.
+
+        Returns:
+            Summary of the samples and annotations used by the evaluation.
+        """
+        config = config or SemanticSegmentationEvaluationConfig()
+        data = self._prepare_evaluation_data(
+            name=name,
+            gt_annotation_source=gt_annotation_source,
+            pred_annotation_source=pred_annotation_source,
+            task_type=EvaluationTaskType.SEMANTIC_SEGMENTATION,
+            config_json=config.model_dump(),
         )
         return EvaluationResult.from_evaluation_data(data)
 
