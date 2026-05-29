@@ -1,6 +1,7 @@
 <script lang="ts">
     import { useAnnotationLabels } from '$lib/hooks/useAnnotationLabels/useAnnotationLabels';
     import { useAnnotationCollections } from '$lib/hooks/useAnnotationCollections/useAnnotationCollections';
+    import { useSelectClassDialog } from '$lib/hooks/useSelectClassDialog/useSelectClassDialog';
     import { useCreateAnnotation } from '$lib/hooks/useCreateAnnotation/useCreateAnnotation';
     import { useCreateLabel } from '$lib/hooks/useCreateLabel/useCreateLabel';
     import type { BoundingBox } from '$lib/types';
@@ -54,37 +55,13 @@
     let shouldDisableInteraction = $state(false);
     const labels = useAnnotationLabels(() => ({ collectionId }));
 
-    // --- Select-class dialog ---
-    type SelectClassResult = { label: string; source?: string };
-    let showSelectClassDialog = $state(false);
-    let pendingLabelRequest: Promise<SelectClassResult | null> | null = null;
-    let resolveRequestLabel: ((result: SelectClassResult | null) => void) | null = null;
+    const {
+        open: showSelectClassDialog,
+        requestLabel,
+        handleConfirm: handleClassSelected,
+        handleCancel: handleClassDialogCancel
+    } = useSelectClassDialog();
 
-    const requestLabel = (): Promise<SelectClassResult | null> => {
-        // Single-flight: concurrent callers share the in-flight dialog promise so
-        // that resolveRequestLabel is never overwritten and earlier callers cannot
-        // be stranded waiting on a promise that will never settle.
-        if (pendingLabelRequest) return pendingLabelRequest;
-
-        showSelectClassDialog = true;
-        pendingLabelRequest = new Promise<SelectClassResult | null>((resolve) => {
-            resolveRequestLabel = resolve;
-        });
-        return pendingLabelRequest;
-    };
-
-    const settleRequestLabel = (result: SelectClassResult | null) => {
-        showSelectClassDialog = false;
-        resolveRequestLabel?.(result);
-        resolveRequestLabel = null;
-        pendingLabelRequest = null;
-    };
-
-    const handleClassSelected = (label: string, source?: string) =>
-        settleRequestLabel({ label, source });
-
-    const handleClassDialogCancel = () => settleRequestLabel(null);
-    // ---
     const { createLabel } = useCreateLabel({ collectionId });
     const { createAnnotation } = useCreateAnnotation({
         collectionId
@@ -366,7 +343,7 @@
 
     onDestroy(() => {
         resetCreateBoundingBoxPending();
-        settleRequestLabel(null);
+        handleClassDialogCancel();
         detachSvgListeners?.();
     });
 
@@ -395,7 +372,7 @@
 />
 
 <SelectClassDialog
-    bind:open={showSelectClassDialog}
+    bind:open={$showSelectClassDialog}
     labels={labels.data?.map((l) => l.annotation_label_name ?? '').filter(Boolean) ?? []}
     {sourceNames}
     bind:selectedSource
