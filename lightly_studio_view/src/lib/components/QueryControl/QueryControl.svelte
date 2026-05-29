@@ -26,6 +26,7 @@
 <Segment title="Query">
     {#if lastQueryExpression}
         <FilterChip
+            testId="query-filter-chip"
             checked={!!$imageQueryExpression?.query_expr_str}
             title="Query Filter"
             checkboxLabel={$imageQueryExpression?.query_expr_str
@@ -58,6 +59,7 @@
             variant="outline"
             size="sm"
             class="w-full justify-start gap-2 text-muted-foreground"
+            data-testid="query-filter-add-button"
             onclick={onOpen}
         >
             <Pencil class="h-3.5 w-3.5" />

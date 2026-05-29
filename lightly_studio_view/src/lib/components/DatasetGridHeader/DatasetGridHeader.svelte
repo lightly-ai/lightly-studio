@@ -40,7 +40,8 @@
         collectionDatasetId
     }: Props = $props();
 
-    const { showPlot, setShowPlot, showEvaluationRuns, setShowEvaluationRuns } = useGlobalStorage();
+    const { showEmbeddingPlot, setShowEmbeddingPlot, showEvaluationRuns, setShowEvaluationRuns } =
+        useGlobalStorage();
 </script>
 
 <GridHeader>
@@ -55,14 +56,14 @@
         {/if}
         {#if hasMediaWithEmbeddings}
             <Tooltip
-                content={$showPlot ? 'Hide Embeddings plot' : 'Show Embeddings plot'}
+                content={$showEmbeddingPlot ? 'Hide Embeddings plot' : 'Show Embeddings plot'}
                 position="bottom"
             >
                 <Button
                     class="flex items-center space-x-1"
                     data-testid="toggle-plot-button"
-                    variant={$showPlot ? 'default' : 'ghost'}
-                    onclick={() => setShowPlot(!$showPlot)}
+                    variant={$showEmbeddingPlot ? 'default' : 'ghost'}
+                    onclick={() => setShowEmbeddingPlot(!$showEmbeddingPlot)}
                 >
                     <ChartNetwork class="size-4" />
                     {#if !compact}
