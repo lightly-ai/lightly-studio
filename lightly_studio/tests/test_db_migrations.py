@@ -79,6 +79,9 @@ def test_postgres_fresh_database__upgrade_head(
     postgres_url: str | None,
 ) -> None:
     """Fresh Postgres gets schema from Alembic upgrade and alembic_version at head."""
+    if postgres_url is None:
+        pytest.skip("Requires --postgres")
+
     _reset_postgres_database(engine_url=postgres_url)
 
     engine = DatabaseEngine(engine_url=postgres_url, single_threaded=True)

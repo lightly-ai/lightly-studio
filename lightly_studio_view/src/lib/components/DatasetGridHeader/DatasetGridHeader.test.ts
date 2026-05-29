@@ -5,10 +5,12 @@ import '@testing-library/jest-dom';
 
 vi.mock('$lib/hooks/useGlobalStorage', () => {
     const activePanel = writable<string>('none');
-    const showPlot = derived(activePanel, ($p) => $p === 'plot');
+    const showEmbeddingPlot = derived(activePanel, ($p) => $p === 'embeddingPlot');
     const showEvaluationRuns = derived(activePanel, ($p) => $p === 'evaluationRuns');
-    const setShowPlot = vi.fn((value: boolean) =>
-        activePanel.update((p: string) => (value ? 'plot' : p === 'plot' ? 'none' : p))
+    const setShowEmbeddingPlot = vi.fn((value: boolean) =>
+        activePanel.update((p: string) =>
+            value ? 'embeddingPlot' : p === 'embeddingPlot' ? 'none' : p
+        )
     );
     const setShowEvaluationRuns = vi.fn((value: boolean) =>
         activePanel.update((p: string) =>
@@ -18,8 +20,8 @@ vi.mock('$lib/hooks/useGlobalStorage', () => {
     return {
         useGlobalStorage: () => ({
             activePanel,
-            showPlot,
-            setShowPlot,
+            showEmbeddingPlot,
+            setShowEmbeddingPlot,
             showEvaluationRuns,
             setShowEvaluationRuns,
             sampleSize: writable({ width: 4, height: 4 }),
@@ -74,7 +76,7 @@ describe('DatasetGridHeader', () => {
     beforeEach(() => {
         const storage = useGlobalStorage();
         storage.activePanel.set('none');
-        (storage.setShowPlot as ReturnType<typeof vi.fn>).mockClear();
+        (storage.setShowEmbeddingPlot as ReturnType<typeof vi.fn>).mockClear();
         (storage.setShowEvaluationRuns as ReturnType<typeof vi.fn>).mockClear();
         defaultProps.onSelectAll.mockClear();
     });
@@ -126,7 +128,7 @@ describe('DatasetGridHeader', () => {
     });
 
     it('toggles the plot store when the embeddings button is clicked', async () => {
-        const { setShowPlot } = useGlobalStorage();
+        const { setShowEmbeddingPlot } = useGlobalStorage();
 
         render(DatasetGridHeader, {
             props: { ...defaultProps, isImages: true, hasMediaWithEmbeddings: true }
@@ -134,10 +136,10 @@ describe('DatasetGridHeader', () => {
 
         const toggle = screen.getByTestId('toggle-plot-button');
         await fireEvent.click(toggle);
-        expect(setShowPlot).toHaveBeenLastCalledWith(true);
+        expect(setShowEmbeddingPlot).toHaveBeenLastCalledWith(true);
 
         await fireEvent.click(toggle);
-        expect(setShowPlot).toHaveBeenLastCalledWith(false);
+        expect(setShowEmbeddingPlot).toHaveBeenLastCalledWith(false);
     });
 
     it('renders the search region when media has embeddings', () => {
