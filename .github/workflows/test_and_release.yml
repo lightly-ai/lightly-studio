@@ -153,6 +153,13 @@ jobs:
           UV_PYTHON: ${{ matrix.python }}
         run: make install-optional-deps
 
+      - name: Check Alembic migrations
+        if: matrix.database == 'Postgres'
+        working-directory: lightly_studio
+        env:
+          UV_PYTHON: ${{ matrix.python }}
+        run: make migration-check-postgresql
+
       - name: Run Tests for LightlyStudio
         working-directory: lightly_studio
         env:
