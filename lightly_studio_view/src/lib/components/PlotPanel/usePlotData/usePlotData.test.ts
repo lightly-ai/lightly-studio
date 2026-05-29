@@ -20,13 +20,14 @@ vi.mock('../getCategoryBySelection/getCategoryBySelection', () => ({
 const { usePlotData } = await import('./usePlotData');
 
 describe('usePlotData', () => {
-    // color_categories + fulfils_filter resolve to the primary categories [1, 2, 0, 3]:
-    // sample1 has no categories (-> unassigned 1), sample3 is filtered out (-> 0).
+    // color_categories + fulfils_filter resolve to categories [1, 2, 0, 3]: sample1 has no
+    // categories (-> unassigned 1), sample2 takes the first of its two categories (2),
+    // sample3 is filtered out (-> 0).
     const createMockArrowData = (): ArrowData => ({
         x: new Float32Array([1.0, 2.0, 3.0, 4.0]),
         y: new Float32Array([5.0, 6.0, 7.0, 8.0]),
         fulfils_filter: new Uint8Array([1, 1, 0, 1]),
-        color_categories: [[], [2], [], [3]],
+        color_categories: [[], [2, 5], [], [3]],
         sample_id: ['sample1', 'sample2', 'sample3', 'sample4']
     });
 

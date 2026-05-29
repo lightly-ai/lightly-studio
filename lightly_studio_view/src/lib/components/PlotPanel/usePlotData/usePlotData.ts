@@ -18,29 +18,6 @@ type UsePlotDataReturn = {
 type Selection = Point[] | null;
 
 /**
- * Resolves each point's displayed category from its full `color_categories` list, so a
- * multi-category sample falls back to its next visible category when one is toggled off.
- */
-function resolveBaseCategories(
-    data: ArrowData,
-    hiddenCategories: ReadonlySet<number>,
-    pointCount: number
-): Uint8Array {
-    const colorCategories = data.color_categories as number[][];
-    const fulfilsFilter = data.fulfils_filter as ArrayLike<number>;
-
-    const category = new Uint8Array(pointCount);
-    for (let index = 0; index < pointCount; index++) {
-        category[index] = resolveVisibleCategory(
-            colorCategories[index],
-            fulfilsFilter[index],
-            hiddenCategories
-        );
-    }
-    return category;
-}
-
-/**
  * Transforms Arrow data into plot-ready format with category assignments based on filters and selections.
  * Applies range selection to categorize points and tracks which sample IDs are selected.
  *
@@ -74,9 +51,24 @@ export function usePlotData({
     }
 
     const pointCount = (data.x as Float32Array).length;
-    let category = hasActiveFilter
-        ? resolveBaseCategories(data, hiddenCategories, pointCount)
-        : new Uint8Array(pointCount).fill(FILTERED_CATEGORY);
+    const colorCategories = data.color_categories as number[][];
+    const fulfilsFilter = data.fulfils_filter as ArrayLike<number>;
+
+    // Each point is displayed as its first visible category, so it falls back to the next
+    // one when a category is toggled off. Without an active filter every point starts as
+    // FILTERED_CATEGORY so range selection still works.
+    let category = new Uint8Array(pointCount);
+    if (hasActiveFilter) {
+        for (let index = 0; index < pointCount; index++) {
+            category[index] = resolveVisibleCategory(
+                colorCategories[index],
+                fulfilsFilter[index],
+                hiddenCategories
+            );
+        }
+    } else {
+        category.fill(FILTERED_CATEGORY);
+    }
     const sampleIds = data.sample_id as string[];
 
     if (rangeSelection) {

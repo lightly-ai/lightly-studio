@@ -1,12 +1,11 @@
 import { FILTERED_CATEGORY, NOT_FILTERED_CATEGORY } from '../plotCategories';
 
 /**
- * Resolves the category a point should be rendered as, given all categories it belongs to.
- *
- * Mirrors the backend's primary-category logic, with an extra hidden-aware step so a
- * multi-category sample falls back to its next visible category when one is toggled off:
+ * Resolves the category a point is displayed as, given every category it belongs to in
+ * priority order. Hidden categories are skipped so a multi-category point falls back to
+ * its next visible category:
  * - point does not fulfil the filter -> NOT_FILTERED_CATEGORY
- * - otherwise the first category (priority order) that is not hidden
+ * - otherwise the first category that is not hidden
  * - otherwise (no categories, or all hidden) -> FILTERED_CATEGORY (unassigned)
  *
  * @param colorCategories - All categories the point belongs to, in priority order

@@ -4,9 +4,8 @@ import { writable, type Writable } from 'svelte/store';
 const dataColumns = ['x', 'y', 'fulfils_filter', 'color_categories', 'sample_id'] as const;
 type TableColumn = (typeof dataColumns)[number];
 
-// `color_categories` is a list<uint8> column: each row holds all categories a sample belongs
-// to, in priority order. `toArray()` is meant for scalar columns, so we read it row by row
-// into a plain number[][] that the rest of the plot pipeline can index directly.
+// Reads a list<uint8> column row by row into a plain number[][], where each row holds all
+// the categories a sample belongs to, in priority order.
 const readListColumn = (column: Vector): number[][] => {
     const rows: number[][] = [];
     for (let row = 0; row < column.length; row++) {
