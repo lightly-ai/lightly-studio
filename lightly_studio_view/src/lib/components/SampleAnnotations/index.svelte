@@ -28,7 +28,8 @@
 
     const { isHidden } = useHideAnnotations();
     const { showBoundingBoxesForSegmentationStore } = useSettings();
-    const { selectedCollectionIds, collectionIdToName } = useAnnotationCollectionsFilter();
+    const { selectedCollectionIds, collectionIdToName, collectionIdToColor } =
+        useAnnotationCollectionsFilter();
 
     // Normalize backend annotation variants into the smaller canvas render contract.
     const mapToCanvasAnnotation = (
@@ -67,6 +68,7 @@
         const showInstanceSegmentationBoundingBoxes = $showBoundingBoxesForSegmentationStore;
         const selectedIds = $selectedCollectionIds;
         const idToName = $collectionIdToName;
+        const idToColor = $collectionIdToColor;
 
         return sample.annotations
             .filter(
@@ -83,7 +85,12 @@
                 if (!canvas) return null;
                 if (selectedIds.length > 1) {
                     const collectionName = idToName[annotation.annotation_collection_id];
-                    if (collectionName) return { ...canvas, annotation_label_name: collectionName };
+                    const collectionColor = idToColor[annotation.annotation_collection_id];
+                    return {
+                        ...canvas,
+                        annotation_label_name: collectionName ?? canvas.annotation_label_name,
+                        collectionColor
+                    };
                 }
                 return canvas;
             })

@@ -40,7 +40,8 @@
     } = $props();
 
     const { customLabelColorsStore } = useCustomLabelColors();
-    const { selectedCollectionIds, collectionIdToName } = useAnnotationCollectionsFilter();
+    const { selectedCollectionIds, collectionIdToName, collectionIdToColor } =
+        useAnnotationCollectionsFilter();
 
     const label = $derived(annotation.annotation_label.annotation_label_name);
 
@@ -53,19 +54,44 @@
 
     const annotationId = $derived(annotation.sample_id);
 
-    const colorText = $derived(getColorByLabel(colorLabel, 1));
+    // Resolve hex color string from collection store or fall back to label-based color.
+    const applyAlphaToColor = (color: string, alpha: number): string => {
+        if (color.startsWith('#')) {
+            const r = parseInt(color.slice(1, 3), 16);
+            const g = parseInt(color.slice(3, 5), 16);
+            const b = parseInt(color.slice(5, 7), 16);
+            return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+        }
+        return withAlpha(color, alpha);
+    };
+
+    // When in multi-collection mode, use the shared collection color; otherwise use label color.
+    const baseColor = $derived.by(() => {
+        if ($selectedCollectionIds.length > 1) {
+            const hexColor = $collectionIdToColor[annotation.annotation_collection_id];
+            if (hexColor) return hexColor;
+        }
+        return $customLabelColorsStore[colorLabel]?.color ?? getColorByLabel(colorLabel, 1).color;
+    });
+
+    const colorText = $derived.by(() => {
+        const color = applyAlphaToColor(baseColor, 1);
+        // Derive a contrast color by inverting the RGB components
+        const rgba = color.match(/rgba?\((\d+),\s*(\d+),\s*(\d+)/);
+        const contrastColor = rgba
+            ? `rgba(${255 - parseInt(rgba[1])}, ${255 - parseInt(rgba[2])}, ${255 - parseInt(rgba[3])}, 1)`
+            : color;
+        return { color, contrastColor };
+    });
 
     const colorStroke = $derived.by(() => {
-        const color =
-            $customLabelColorsStore[colorLabel]?.color ?? getColorByLabel(colorLabel, 1).color;
+        const color = applyAlphaToColor(baseColor, 1);
         if (highlight === 'disabled') return withAlpha(color, 0.1);
         return color;
     });
 
     const colorFill = $derived.by(() => {
-        const color =
-            $customLabelColorsStore[colorLabel]?.color ?? getColorByLabel(colorLabel, 0.4).color;
-
+        const color = applyAlphaToColor(baseColor, 0.4);
         if (highlight === 'disabled') return withAlpha(color, 0.1);
         if (highlight === 'active') return withAlpha(color, 0);
         return color;

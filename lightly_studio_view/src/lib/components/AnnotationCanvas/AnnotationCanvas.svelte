@@ -27,6 +27,8 @@
         annotation_label_name: string;
         segmentation_mask?: number[] | null;
         object_detection_details?: BoundingBox;
+        /** Optional hex color that overrides label-based color computation. */
+        collectionColor?: string;
     };
 
     type ObjectDetectionAnnotation = {
@@ -34,6 +36,8 @@
         annotation_label_name: string;
         object_detection_details: BoundingBox;
         segmentation_mask?: undefined;
+        /** Optional hex color that overrides label-based color computation. */
+        collectionColor?: string;
     };
 
     type AnnotationCanvasAnnotation = InstanceAnnotation | ObjectDetectionAnnotation;
@@ -104,11 +108,23 @@
 
     const clampAlpha = (value: number): number => Math.max(0, Math.min(value, 1));
 
+    const hexToRgba = (hex: string, colorAlpha: number): [number, number, number, number] => {
+        const r = parseInt(hex.slice(1, 3), 16);
+        const g = parseInt(hex.slice(3, 5), 16);
+        const b = parseInt(hex.slice(5, 7), 16);
+        return [r, g, b, Math.round(clampAlpha(colorAlpha) * 255)];
+    };
+
     const resolveLabelColor = (
         labelName: string,
         colorAlpha: number,
-        customLabelColors: CustomLabelColorMap
+        customLabelColors: CustomLabelColorMap,
+        collectionColor?: string
     ): [number, number, number, number] => {
+        if (collectionColor?.startsWith('#')) {
+            return hexToRgba(collectionColor, colorAlpha);
+        }
+
         const customColor = customLabelColors[labelName];
         if (!customColor) {
             return rgbaParser(getColorByLabel(labelName, colorAlpha).color);
@@ -141,12 +157,13 @@
 
         for (const annotation of annotations) {
             const labelName = annotation.annotation_label_name || 'label';
+            const collectionColor = annotation.collectionColor;
 
             const rle = toCloneableRLE(annotation.segmentation_mask);
             if (rle.length) {
                 masks.push({
                     rle,
-                    color: resolveLabelColor(labelName, alpha, customLabelColors)
+                    color: resolveLabelColor(labelName, alpha, customLabelColors, collectionColor)
                 });
             }
 
@@ -158,7 +175,7 @@
                     y: Math.round(bbox.y),
                     width: Math.round(bbox.width),
                     height: Math.round(bbox.height),
-                    color: resolveLabelColor(labelName, 1, customLabelColors)
+                    color: resolveLabelColor(labelName, 1, customLabelColors, collectionColor)
                 });
             }
         }

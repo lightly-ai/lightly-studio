@@ -8,6 +8,7 @@
         items: MenuItemType[];
         initialSelectedItemsIds?: string[];
         onChangeSelectedItems: (selectedItemsIds: string[]) => void;
+        onColorChange?: (id: string, color: string) => void;
         containerProps?: HTMLAttributes<HTMLDivElement>;
         showColorMarker?: boolean;
     }
@@ -16,6 +17,7 @@
         items,
         initialSelectedItemsIds,
         onChangeSelectedItems,
+        onColorChange,
         containerProps,
         showColorMarker
     }: SideMenuProps = $props();
@@ -32,12 +34,14 @@
 </script>
 
 <div {...containerProps} class={cn('w-full space-y-2 overflow-hidden', containerProps?.class)}>
-    {#each items as { id, name } (id)}
+    {#each items as { id, name, color } (id)}
         <MenuItem
             {name}
+            {color}
             {showColorMarker}
             checked={selectedItemsIds.includes(id)}
             onCheckedChange={() => handleCheckedChange(id)}
+            onColorChange={onColorChange ? (c) => onColorChange(id, c) : undefined}
         />
     {/each}
 </div>
