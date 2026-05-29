@@ -396,7 +396,7 @@ def test_segmentation_evaluation(
         annotation_collection_name="pred",
     )
 
-    result = dataset.evaluate().segmentation(
+    result = dataset.evaluate().semantic_segmentation(
         name="seg-run-1",
         gt_annotation_source="gt",
         pred_annotation_source="pred",
@@ -411,7 +411,7 @@ def test_segmentation_evaluation(
     )
     assert len(evaluation_runs) == 1
     assert evaluation_runs[0].name == "seg-run-1"
-    assert evaluation_runs[0].task_type == EvaluationTaskType.INSTANCE_SEGMENTATION
+    assert evaluation_runs[0].task_type == EvaluationTaskType.SEMANTIC_SEGMENTATION
 
 
 def test_segmentation_evaluation__raises_on_wrong_annotation_type(
@@ -434,7 +434,7 @@ def test_segmentation_evaluation__raises_on_wrong_annotation_type(
     )
 
     with pytest.raises(ValueError, match="segmentation_mask"):
-        dataset.evaluate().segmentation(
+        dataset.evaluate().semantic_segmentation(
             name="seg-run-1",
             gt_annotation_source="gt",
             pred_annotation_source="pred",

@@ -72,8 +72,8 @@ class ClassificationEvaluationConfig(BaseModel):
     """
 
 
-class SegmentationEvaluationConfig(BaseModel):
-    """Configuration for instance-segmentation evaluation runs.
+class SemanticSegmentationEvaluationConfig(BaseModel):
+    """Configuration for semantic-segmentation evaluation runs.
 
     Currently has no fields. Placeholder for future implementation.
     """
@@ -168,31 +168,31 @@ class ImageDatasetEvaluate:
         )
         return EvaluationResult.from_evaluation_data(data)
 
-    def segmentation(
+    def semantic_segmentation(
         self,
         name: str,
         gt_annotation_source: str,
         pred_annotation_source: str,
-        config: SegmentationEvaluationConfig | None = None,
+        config: SemanticSegmentationEvaluationConfig | None = None,
     ) -> EvaluationResult:
-        """Create a segmentation evaluation run.
+        """Create a semantic segmentation evaluation run.
 
         Args:
             name: Display name of the evaluation run.
             gt_annotation_source: Name of the annotation source containing ground truth labels.
             pred_annotation_source: Name of the annotation source containing predictions.
-            config: Optional segmentation evaluation config. If omitted,
+            config: Optional semantic segmentation evaluation config. If omitted,
                 defaults are used.
 
         Returns:
             Summary of the samples and annotations used by the evaluation.
         """
-        config = config or SegmentationEvaluationConfig()
+        config = config or SemanticSegmentationEvaluationConfig()
         data = self._prepare_evaluation_data(
             name=name,
             gt_annotation_source=gt_annotation_source,
             pred_annotation_source=pred_annotation_source,
-            task_type=EvaluationTaskType.INSTANCE_SEGMENTATION,
+            task_type=EvaluationTaskType.SEMANTIC_SEGMENTATION,
             config_json=config.model_dump(),
         )
         return EvaluationResult.from_evaluation_data(data)
