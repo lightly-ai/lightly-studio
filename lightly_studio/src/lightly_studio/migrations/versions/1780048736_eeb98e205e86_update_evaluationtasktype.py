@@ -41,6 +41,18 @@ def upgrade() -> None:
 
 def downgrade() -> None:
     """Downgrade schema."""
+    # SEMANTIC_SEGMENTATION cannot be represented by the previous enum, so drop
+    # any runs that use it. The child metric tables have no ON DELETE CASCADE,
+    # so delete them before the parent rows.
+    op.execute(
+        "DELETE FROM evaluation_sample_metric WHERE evaluation_run_id IN ("
+        "SELECT id FROM evaluation_run WHERE task_type = 'SEMANTIC_SEGMENTATION')"
+    )
+    op.execute(
+        "DELETE FROM evaluation_annotation_metric WHERE evaluation_run_id IN ("
+        "SELECT id FROM evaluation_run WHERE task_type = 'SEMANTIC_SEGMENTATION')"
+    )
+    op.execute("DELETE FROM evaluation_run WHERE task_type = 'SEMANTIC_SEGMENTATION'")
     op.sync_enum_values(  # type: ignore[attr-defined]
         enum_schema="public",
         enum_name="evaluationtasktype",
