@@ -70,7 +70,7 @@ def test_add_many__inserts_across_batches(
 ) -> None:
     """All rows are inserted when the multi-row INSERT is chunked into batches."""
     # Force a tiny insert batch so 5 rows are inserted across 3 statements.
-    monkeypatch.setattr(batching, "INSERT_BATCH_SIZE", 2)
+    monkeypatch.setattr(batching, "DEFAULT_BATCH_SIZE", 2)
     collection = create_collection(session=db_session)
     cov_id = collection_resolver.get_or_create_child_collection(
         session=db_session,

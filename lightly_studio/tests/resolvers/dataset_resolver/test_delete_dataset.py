@@ -407,20 +407,15 @@ def test_delete_dataset__raises_for_nonexistent_dataset(db_session: Session) -> 
         )
 
 
-def test_delete_where_column_in__exceeds_postgres_param_limit(db_session: Session) -> None:
+def test_delete_sample_tag_links__exceeds_postgres_param_limit(db_session: Session) -> None:
     # Arrange - more ids than PostgreSQL's 65,535 single-statement bind-param cap.
     # The param-count error fires at send time regardless of matching rows, so this
-    # reproduces LIG-9692 cheaply: pre-fix it raises under --postgres, post-fix it
+    # reproduces the bug cheaply: pre-fix it raises under --postgres, post-fix it
     # passes on both backends.
     sample_ids = [uuid.uuid4() for _ in range(70_000)]
 
     # Act
-    delete_dataset_module._delete_where_column_in(
-        session=db_session,
-        table=SampleTagLinkTable,
-        column=SampleTagLinkTable.sample_id,
-        values=sample_ids,
-    )
+    delete_dataset_module._delete_sample_tag_links(session=db_session, sample_ids=sample_ids)
     db_session.commit()
 
     # Assert - the chunked delete ran without exceeding the parameter limit.
@@ -428,11 +423,11 @@ def test_delete_where_column_in__exceeds_postgres_param_limit(db_session: Sessio
     assert remaining == []
 
 
-def test_delete_where_column_in__deletes_across_batches(
+def test_delete_images__deletes_across_batches(
     db_session: Session, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     # Arrange - 5 rows with batch size 2 -> 3 batches (2 + 2 + 1).
-    monkeypatch.setattr(batching, "IN_CLAUSE_BATCH_SIZE", 2)
+    monkeypatch.setattr(batching, "DEFAULT_BATCH_SIZE", 2)
     collection_id = create_collection(session=db_session, collection_name="batchy").collection_id
     images = create_images(
         db_session=db_session,
@@ -442,9 +437,7 @@ def test_delete_where_column_in__deletes_across_batches(
     sample_ids = [image.sample_id for image in images]
 
     # Act
-    delete_dataset_module._delete_where_column_in(
-        session=db_session, table=ImageTable, column=ImageTable.sample_id, values=sample_ids
-    )
+    delete_dataset_module._delete_images(session=db_session, sample_ids=sample_ids)
     db_session.commit()
 
     # Assert - all rows removed across every batch.

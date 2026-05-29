@@ -15,15 +15,13 @@ def create_many(session: Session, samples: Sequence[SampleCreate]) -> list[UUID]
     """Create multiple samples in a single database commit."""
     if not samples:
         return []
-    # Generate sample_ids client-side (matching SampleTable's uuid4 default) so the
-    # returned order does not depend on INSERT ... RETURNING preserving VALUES order,
-    # which PostgreSQL does not guarantee. Insert in batches so the bind-parameter
-    # count of any single statement stays under PostgreSQL's 65,535 limit.
+    # Generate sample_ids client-side so the returned order does not depend on
+    # INSERT ... RETURNING preserving VALUES order (not guaranteed by PostgreSQL).
     sample_ids = [uuid4() for _ in samples]
     rows = [
         {**sample.model_dump(), "sample_id": sample_id}
         for sample, sample_id in zip(samples, sample_ids)
     ]
-    for batch in batching.batched(items=rows, batch_size=batching.INSERT_BATCH_SIZE):
+    for batch in batching.batched(rows):
         session.execute(insert(SampleTable).values(batch))
     return sample_ids

@@ -59,7 +59,7 @@ def test_create_many_samples__preserves_order_across_batches(
 ) -> None:
     """Returned ids stay aligned with the input order when the insert spans batches."""
     # Force a tiny insert batch so 5 samples are inserted across 3 statements.
-    monkeypatch.setattr(batching, "INSERT_BATCH_SIZE", 2)
+    monkeypatch.setattr(batching, "DEFAULT_BATCH_SIZE", 2)
     collection_id = create_collection(session=db_session).collection_id
 
     samples_to_create = [
