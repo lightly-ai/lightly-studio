@@ -202,6 +202,24 @@ describe('useGlobalStorage', () => {
         });
     });
 
+    describe('Last annotation source', () => {
+        it('stores the selected source per collection', () => {
+            storage.updateLastAnnotationSource(testCollectionId, 'ground_truth');
+            storage.updateLastAnnotationSource(testCollectionId2, 'predictions');
+
+            expect(get(storage.lastAnnotationSource)[testCollectionId]).toBe('ground_truth');
+            expect(get(storage.lastAnnotationSource)[testCollectionId2]).toBe('predictions');
+        });
+
+        it('is independent from the last annotation label store', () => {
+            storage.updateLastAnnotationLabel(testCollectionId, 'new_source');
+            storage.updateLastAnnotationSource(testCollectionId, 'predictions');
+
+            expect(get(storage.lastAnnotationLabel)[testCollectionId]).toBe('new_source');
+            expect(get(storage.lastAnnotationSource)[testCollectionId]).toBe('predictions');
+        });
+    });
+
     describe('Text Embedding', () => {
         it('should store value', () => {
             storage.setTextEmbedding({
