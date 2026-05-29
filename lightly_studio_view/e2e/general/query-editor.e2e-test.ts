@@ -1,10 +1,10 @@
-import type { Page } from '@playwright/test';
+import type { Page, Response } from '@playwright/test';
 import { test, expect } from '../utils';
 import { cocoDataset } from './fixtures';
 
 const QUERY = 'segmentation_mask(class_name = "airplane")';
 
-function waitForImageListResponse(page: Page) {
+function waitForImageListResponse(page: Page): Promise<Response> {
     return page.waitForResponse((r) => r.url().includes('/images/list') && r.status() === 200);
 }
 
