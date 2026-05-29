@@ -18,6 +18,7 @@ describe('useArrowData', () => {
             y: [4, 5, 6],
             fulfils_filter: [true, false, true],
             color_category: [1, 2, 0],
+            color_categories: [[1], [2], [0]],
             sample_id: ['a', 'b', 'c']
         };
 
@@ -136,6 +137,7 @@ describe('useArrowData', () => {
             y: [],
             fulfils_filter: [],
             color_category: [],
+            color_categories: [],
             sample_id: []
         });
         expect(get(colorLegend)).toEqual(new Map());
@@ -149,6 +151,7 @@ describe('useArrowData', () => {
             y: [4, 5, 6],
             fulfils_filter: [true, false, true],
             color_category: [1, 2, 0],
+            color_categories: [[1], [2], [0]],
             sample_id: ['a', 'b', 'c']
         };
         const mockTable = {

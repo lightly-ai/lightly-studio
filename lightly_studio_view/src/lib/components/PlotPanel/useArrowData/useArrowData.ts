@@ -1,7 +1,17 @@
 import { tableFromIPC } from 'apache-arrow';
 import { writable, type Writable } from 'svelte/store';
 
-const dataColumns = ['x', 'y', 'fulfils_filter', 'color_category', 'sample_id'] as const;
+// `color_categories` carries every category a sample belongs to (in priority
+// order); `color_category` is the scalar primary still used for rendering. The
+// list column is ingested here for now; resolving it at render time is upcoming.
+const dataColumns = [
+    'x',
+    'y',
+    'fulfils_filter',
+    'color_category',
+    'color_categories',
+    'sample_id'
+] as const;
 type TableColumn = (typeof dataColumns)[number];
 
 export type ArrowData = Record<TableColumn, unknown>;

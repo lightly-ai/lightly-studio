@@ -25,6 +25,7 @@ describe('usePlotData', () => {
         y: new Float32Array([5.0, 6.0, 7.0, 8.0]),
         fulfils_filter: new Uint8Array([1, 1, 0, 1]),
         color_category: new Uint8Array([1, 2, 0, 3]),
+        color_categories: [[1], [2], [0], [3]],
         sample_id: ['sample1', 'sample2', 'sample3', 'sample4']
     });
 
