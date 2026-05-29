@@ -17,6 +17,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- Fixed deleting large datasets (more than ~65,535 samples) failing on PostgreSQL with
+  `number of parameters must be between 0 and 65535`. Bulk deletes and inserts are now
+  batched to stay under the parameter limit.
+
 ### Security
 
 ## \[1.0.0rc1\] - 2026-05-28

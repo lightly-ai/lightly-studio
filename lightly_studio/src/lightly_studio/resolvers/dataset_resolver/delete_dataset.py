@@ -2,9 +2,10 @@
 
 from __future__ import annotations
 
+from typing import Any
 from uuid import UUID
 
-from sqlmodel import Session, col, delete, select
+from sqlmodel import Session, SQLModel, col, delete, select
 
 from lightly_studio.models.annotation.annotation_base import AnnotationBaseTable
 from lightly_studio.models.annotation.object_detection import (
@@ -32,6 +33,7 @@ from lightly_studio.models.tag import TagTable
 from lightly_studio.models.video import VideoFrameTable, VideoTable
 from lightly_studio.resolvers import dataset_resolver
 from lightly_studio.resolvers.dataset_resolver import table_coverage_utils
+from lightly_studio.utils import batching
 
 
 def delete_dataset(
@@ -118,81 +120,78 @@ def _get_sample_ids(session: Session, collection_ids: list[UUID]) -> list[UUID]:
     return list(samples)
 
 
+def _delete_where_column_in(
+    session: Session,
+    table: type[SQLModel],
+    column: Any,
+    values: list[UUID],
+) -> None:
+    """Delete rows of ``table`` where ``column`` is in ``values``, in batches.
+
+    The id list is chunked so the bind-parameter count of any single statement
+    stays well below PostgreSQL's 65,535 limit. All statements run in the
+    caller's open transaction; the caller is responsible for committing, which
+    keeps the foreign-key-ordering phases in ``delete_dataset`` intact.
+    """
+    if not values:
+        return
+    for batch in batching.batched(values, batching.IN_CLAUSE_BATCH_SIZE):
+        session.exec(delete(table).where(col(column).in_(batch)))
+
+
 def _delete_sample_tag_links(session: Session, sample_ids: list[UUID]) -> None:
     """Delete sample-tag links for the given samples."""
-    if not sample_ids:
-        return
-    session.exec(
-        delete(SampleTagLinkTable).where(col(SampleTagLinkTable.sample_id).in_(sample_ids))
-    )
+    _delete_where_column_in(session, SampleTagLinkTable, SampleTagLinkTable.sample_id, sample_ids)
 
 
 def _delete_sample_group_links(session: Session, sample_ids: list[UUID]) -> None:
     """Delete sample-group links for the given samples."""
-    if not sample_ids:
-        return
-    session.exec(
-        delete(SampleGroupLinkTable).where(col(SampleGroupLinkTable.sample_id).in_(sample_ids))
+    _delete_where_column_in(
+        session, SampleGroupLinkTable, SampleGroupLinkTable.sample_id, sample_ids
     )
 
 
 def _delete_sample_embeddings(session: Session, sample_ids: list[UUID]) -> None:
     """Delete sample embeddings for the given samples."""
-    if not sample_ids:
-        return
-    session.exec(
-        delete(SampleEmbeddingTable).where(col(SampleEmbeddingTable.sample_id).in_(sample_ids))
+    _delete_where_column_in(
+        session, SampleEmbeddingTable, SampleEmbeddingTable.sample_id, sample_ids
     )
 
 
 def _delete_sample_metadata(session: Session, sample_ids: list[UUID]) -> None:
     """Delete sample metadata for the given samples."""
-    if not sample_ids:
-        return
-    session.exec(
-        delete(SampleMetadataTable).where(col(SampleMetadataTable.sample_id).in_(sample_ids))
-    )
+    _delete_where_column_in(session, SampleMetadataTable, SampleMetadataTable.sample_id, sample_ids)
 
 
 def _delete_object_detection_annotations(session: Session, sample_ids: list[UUID]) -> None:
     """Delete object detection annotation details."""
-    if not sample_ids:
-        return
-    session.exec(
-        delete(ObjectDetectionAnnotationTable).where(
-            col(ObjectDetectionAnnotationTable.sample_id).in_(sample_ids)
-        )
+    _delete_where_column_in(
+        session,
+        ObjectDetectionAnnotationTable,
+        ObjectDetectionAnnotationTable.sample_id,
+        sample_ids,
     )
 
 
 def _delete_segmentation_annotations(session: Session, sample_ids: list[UUID]) -> None:
     """Delete segmentation annotation details."""
-    if not sample_ids:
-        return
-    session.exec(
-        delete(SegmentationAnnotationTable).where(
-            col(SegmentationAnnotationTable.sample_id).in_(sample_ids)
-        )
+    _delete_where_column_in(
+        session, SegmentationAnnotationTable, SegmentationAnnotationTable.sample_id, sample_ids
     )
 
 
 def _delete_annotation_base(session: Session, sample_ids: list[UUID]) -> None:
     """Delete annotation base records."""
-    if not sample_ids:
-        return
-    session.exec(
-        delete(AnnotationBaseTable).where(col(AnnotationBaseTable.sample_id).in_(sample_ids))
-    )
+    _delete_where_column_in(session, AnnotationBaseTable, AnnotationBaseTable.sample_id, sample_ids)
 
 
 def _delete_annotation_collection_coverage(session: Session, collection_ids: list[UUID]) -> None:
     """Delete annotation collection coverage rows scoped to the dataset's collections."""
-    if not collection_ids:
-        return
-    session.exec(
-        delete(AnnotationCollectionCoverageTable).where(
-            col(AnnotationCollectionCoverageTable.annotation_collection_id).in_(collection_ids)
-        )
+    _delete_where_column_in(
+        session,
+        AnnotationCollectionCoverageTable,
+        AnnotationCollectionCoverageTable.annotation_collection_id,
+        collection_ids,
     )
 
 
@@ -203,44 +202,32 @@ def _delete_object_tracks(session: Session, dataset_id: UUID) -> None:
 
 def _delete_captions(session: Session, sample_ids: list[UUID]) -> None:
     """Delete captions."""
-    if not sample_ids:
-        return
-    session.exec(delete(CaptionTable).where(col(CaptionTable.sample_id).in_(sample_ids)))
+    _delete_where_column_in(session, CaptionTable, CaptionTable.sample_id, sample_ids)
 
 
 def _delete_video_frames(session: Session, sample_ids: list[UUID]) -> None:
     """Delete video frames."""
-    if not sample_ids:
-        return
-    session.exec(delete(VideoFrameTable).where(col(VideoFrameTable.sample_id).in_(sample_ids)))
+    _delete_where_column_in(session, VideoFrameTable, VideoFrameTable.sample_id, sample_ids)
 
 
 def _delete_groups(session: Session, sample_ids: list[UUID]) -> None:
     """Delete group records."""
-    if not sample_ids:
-        return
-    session.exec(delete(GroupTable).where(col(GroupTable.sample_id).in_(sample_ids)))
+    _delete_where_column_in(session, GroupTable, GroupTable.sample_id, sample_ids)
 
 
 def _delete_videos(session: Session, sample_ids: list[UUID]) -> None:
     """Delete videos."""
-    if not sample_ids:
-        return
-    session.exec(delete(VideoTable).where(col(VideoTable.sample_id).in_(sample_ids)))
+    _delete_where_column_in(session, VideoTable, VideoTable.sample_id, sample_ids)
 
 
 def _delete_images(session: Session, sample_ids: list[UUID]) -> None:
     """Delete images."""
-    if not sample_ids:
-        return
-    session.exec(delete(ImageTable).where(col(ImageTable.sample_id).in_(sample_ids)))
+    _delete_where_column_in(session, ImageTable, ImageTable.sample_id, sample_ids)
 
 
 def _delete_samples(session: Session, sample_ids: list[UUID]) -> None:
     """Delete samples."""
-    if not sample_ids:
-        return
-    session.exec(delete(SampleTable).where(col(SampleTable.sample_id).in_(sample_ids)))
+    _delete_where_column_in(session, SampleTable, SampleTable.sample_id, sample_ids)
 
 
 def _delete_annotation_labels(session: Session, dataset_id: UUID) -> None:
@@ -257,19 +244,13 @@ def _delete_dataset(session: Session, dataset_id: UUID) -> None:
 
 def _delete_tags(session: Session, collection_ids: list[UUID]) -> None:
     """Delete tags for the given collections."""
-    if not collection_ids:
-        return
-    session.exec(delete(TagTable).where(col(TagTable.collection_id).in_(collection_ids)))
+    _delete_where_column_in(session, TagTable, TagTable.collection_id, collection_ids)
 
 
 def _delete_embedding_models(session: Session, collection_ids: list[UUID]) -> None:
     """Delete embedding models for the given collections."""
-    if not collection_ids:
-        return
-    session.exec(
-        delete(EmbeddingModelTable).where(
-            col(EmbeddingModelTable.collection_id).in_(collection_ids)
-        )
+    _delete_where_column_in(
+        session, EmbeddingModelTable, EmbeddingModelTable.collection_id, collection_ids
     )
 
 

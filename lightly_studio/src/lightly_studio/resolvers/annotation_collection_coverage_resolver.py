@@ -12,6 +12,7 @@ from sqlmodel import Session, select
 from lightly_studio.models.annotation_collection_coverage import (
     AnnotationCollectionCoverageTable,
 )
+from lightly_studio.utils import batching
 
 
 def add_many(
@@ -44,16 +45,20 @@ def add_many(
     ]
 
     # Use database-level conflict handling (idempotent across both Postgres and DuckDB).
+    # Insert in batches so the bind-parameter count of any single statement stays under
+    # PostgreSQL's 65,535 limit; the conflict clause is re-applied per batch, so
+    # cross-batch duplicates still hit the unique constraint and are ignored.
     dialect_name = session.get_bind().dialect.name if session.get_bind() else None
-    if dialect_name == "postgresql":
-        session.exec(
-            pg_insert(AnnotationCollectionCoverageTable).values(rows).on_conflict_do_nothing()
-        )
-    else:
-        # DuckDB and SQLite: use OR IGNORE prefix.
-        session.exec(
-            insert(AnnotationCollectionCoverageTable).values(rows).prefix_with("OR IGNORE")
-        )
+    for batch in batching.batched(rows, batching.INSERT_BATCH_SIZE):
+        if dialect_name == "postgresql":
+            session.exec(
+                pg_insert(AnnotationCollectionCoverageTable).values(batch).on_conflict_do_nothing()
+            )
+        else:
+            # DuckDB and SQLite: use OR IGNORE prefix.
+            session.exec(
+                insert(AnnotationCollectionCoverageTable).values(batch).prefix_with("OR IGNORE")
+            )
     session.flush()
 
 
