@@ -12,12 +12,25 @@ describe('useArrowData', () => {
         vi.clearAllMocks();
     });
 
+    // Builds a getChild mock where color_categories behaves like an Arrow list<uint8> vector
+    // (read row by row via get/length) and other columns expose a flat toArray().
+    const createGetChild = (columns: Record<string, unknown>, colorCategories: number[][]) =>
+        vi.fn((col: string) => {
+            if (col === 'color_categories') {
+                return {
+                    length: colorCategories.length,
+                    get: (row: number) => colorCategories[row]
+                };
+            }
+            return { toArray: () => columns[col] };
+        });
+
     it('successfully reads Arrow data with all required columns', async () => {
+        const colorCategories = [[1], [2], []];
         const mockData = {
             x: [1, 2, 3],
             y: [4, 5, 6],
             fulfils_filter: [true, false, true],
-            color_category: [1, 2, 0],
             sample_id: ['a', 'b', 'c']
         };
 
@@ -25,9 +38,7 @@ describe('useArrowData', () => {
             schema: {
                 metadata: new Map([['color_legend', '{"1":"Filtered","2":"Train"}']])
             },
-            getChild: vi.fn((col: string) => ({
-                toArray: () => mockData[col as keyof typeof mockData]
-            }))
+            getChild: createGetChild(mockData, colorCategories)
         };
 
         vi.mocked(tableFromIPC).mockResolvedValue(mockTable as unknown as Table);
@@ -39,7 +50,7 @@ describe('useArrowData', () => {
 
         await new Promise((resolve) => setTimeout(resolve, 0));
 
-        expect(get(data)).toEqual(mockData);
+        expect(get(data)).toEqual({ ...mockData, color_categories: colorCategories });
         expect(get(colorLegend)).toEqual(
             new Map([
                 [1, 'Filtered'],
@@ -135,7 +146,7 @@ describe('useArrowData', () => {
             x: [],
             y: [],
             fulfils_filter: [],
-            color_category: [],
+            color_categories: [],
             sample_id: []
         });
         expect(get(colorLegend)).toEqual(new Map());
@@ -144,20 +155,18 @@ describe('useArrowData', () => {
 
     it('falls back to an empty color legend when metadata is malformed', async () => {
         const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+        const colorCategories = [[1], [2], []];
         const mockData = {
             x: [1, 2, 3],
             y: [4, 5, 6],
             fulfils_filter: [true, false, true],
-            color_category: [1, 2, 0],
             sample_id: ['a', 'b', 'c']
         };
         const mockTable = {
             schema: {
                 metadata: new Map([['color_legend', '{"1":"Filtered"']])
             },
-            getChild: vi.fn((col: string) => ({
-                toArray: () => mockData[col as keyof typeof mockData]
-            }))
+            getChild: createGetChild(mockData, colorCategories)
         };
 
         vi.mocked(tableFromIPC).mockResolvedValue(mockTable as unknown as Table);
@@ -169,7 +178,7 @@ describe('useArrowData', () => {
 
         await new Promise((resolve) => setTimeout(resolve, 0));
 
-        expect(get(data)).toEqual(mockData);
+        expect(get(data)).toEqual({ ...mockData, color_categories: colorCategories });
         expect(get(colorLegend)).toEqual(new Map());
         expect(get(error)).toBeUndefined();
         expect(warnSpy).toHaveBeenCalledWith(
