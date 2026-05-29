@@ -21,9 +21,9 @@ export function useSelectClassDialog(): SelectClassDialog {
     let resolveRequest: ((label: string | null) => void) | null = null;
 
     const requestLabel = (): Promise<string | null> => {
+        open.set(true);
         if (pendingRequest) return pendingRequest;
 
-        open.set(true);
         pendingRequest = new Promise<string | null>((resolve) => {
             resolveRequest = resolve;
         });
