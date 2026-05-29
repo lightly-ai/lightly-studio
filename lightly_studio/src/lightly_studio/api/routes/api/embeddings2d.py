@@ -75,14 +75,13 @@ def get_2d_embeddings(
         color_by=color_by,
         sample_ids=sample_ids,
     )
-    # `build_color_data` is filter-unaware and yields color categories (>= 2) per
-    # sample. Fold in the filter here to derive the scalar primary category,
-    # reserving 0 for filtered-out and 1 for unassigned samples. The frontend
-    # resolves which category to display from the full `color_categories` list.
+    # TODO(Michal: 05/2026): Remove color_category when the frontend is updated.
+    # `build_color_data` is filter-unaware and returns a list of color categories per sample.
+    # Temporarily transform it back to a single category per sample.
     if color_by is not None:
         color_legend = {0: "Filtered out", 1: "Unassigned", **color_legend}
     primary_color_category = [
-        _to_primary_color_category(categories, fulfils)
+        _to_primary_color_category(color_categories=categories, fulfils_filter=fulfils)
         for categories, fulfils in zip(color_categories, fulfils_filter)
     ]
 

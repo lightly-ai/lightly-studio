@@ -19,8 +19,7 @@ def build_tag_color_maps(
     """Build color categories and a legend for tag-based sample coloring.
 
     Each selected tag gets a consecutive color category (starting at 2) in the
-    order given by *tag_ids*.  When a sample belongs to multiple selected tags it
-    receives **all** their categories.
+    order given by `tag_ids`.
 
     Args:
         session: Database session.
@@ -30,8 +29,8 @@ def build_tag_color_maps(
     Returns:
         A tuple of `(color_categories, color_legend)` for the provided samples. The
         length of `color_categories` is the number of samples; each entry is the
-        list of that sample's color categories. The `color_legend` is a mapping
-        from color ID to a human-readable string.
+        list of that sample's color categories, sorted ascending. The `color_legend`
+        is a mapping from color ID to a human-readable string.
     """
     names = tag_resolver.get_names_by_ids(session=session, tag_ids=tag_ids)
     sample_to_tags = tag_resolver.get_tags_by_sample(session=session, tag_ids=tag_ids)

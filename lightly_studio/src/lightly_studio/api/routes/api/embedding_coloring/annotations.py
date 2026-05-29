@@ -19,12 +19,8 @@ def build_annotation_color_maps(
 ) -> tuple[list[list[int]], dict[int, str]]:
     """Build color categories and a legend for annotation-based sample coloring.
 
-    Each selected annotation label gets a consecutive color category (starting
-    at 2) in the order given by *annotation_label_ids*.  When a sample carries
-    multiple selected labels it receives **all** their categories.
-
-    All requested label categories appear in the legend even if no samples
-    match.
+    Each annotation label gets a consecutive color category (starting at 2). All requested
+    labels appear in the legend even if no samples match.
 
     Args:
         session: Database session.
@@ -34,8 +30,8 @@ def build_annotation_color_maps(
     Returns:
         A tuple of `(color_categories, color_legend)` for the provided samples.
         The length of `color_categories` is the number of samples; each entry is
-        the list of that sample's color categories. The `color_legend` is a
-        mapping from color ID to a human-readable string.
+        the list of that sample's color categories, sorted ascending. The `color_legend`
+        is a mapping from color ID to a human-readable string.
     """
     names = annotation_label_resolver.names_by_ids(session=session, ids=annotation_label_ids)
     annotations = annotation_resolver.get_all_by_parent_sample_ids(

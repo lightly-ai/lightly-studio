@@ -140,12 +140,11 @@ def assign_color_category_lists(
     sample_to_values: Mapping[UUID, Iterable[T]],
     scale: ColorScale[T],
 ) -> tuple[list[list[int]], dict[int, str]]:
-    """Return per-sample color category lists and a legend for the given samples.
+    """Return per-sample color category list and a legend for the given samples.
 
     Each sample maps to the color categories of its values, sorted by color
     category. A sample with no value (or no value that maps to a category) maps
-    to an empty list. Reserved categories for filtered-out and unassigned samples
-    are assigned downstream, where the filter is known.
+    to an empty list.
 
     Args:
         sample_ids: Sample IDs.
@@ -158,7 +157,9 @@ def assign_color_category_lists(
     """
     color_categories: list[list[int]] = []
     for sid in sample_ids:
-        mapped = (scale.value_to_category(value) for value in sample_to_values.get(sid, ()))
-        color_categories.append(sorted(cat for cat in mapped if cat is not None))
+        values = sample_to_values.get(sid, ())
+        categories = [scale.value_to_category(value) for value in values]
+        categories_not_none = [c for c in categories if c is not None]
+        color_categories.append(sorted(categories_not_none))
 
-    return color_categories, dict(scale.legend)
+    return color_categories, scale.legend

@@ -53,10 +53,6 @@ def build_color_data(
 ) -> tuple[list[list[int]], dict[int, str]]:
     """Build color categories and a legend for embedding coloring.
 
-    This is filter-unaware: it maps each sample to the color categories of its
-    values (starting at 2). Reserved categories for filtered-out (0) and
-    unassigned (1) samples are assigned by the caller, where the filter is known.
-
     Args:
         session: Database session used to resolve metadata values.
         collection_id: Collection whose samples are being colored.
@@ -66,8 +62,8 @@ def build_color_data(
     Returns:
         A tuple of `(color_categories, color_legend)` for the provided samples. The
         length of `color_categories` is the number of samples; each entry is the
-        list of that sample's color categories. The `color_legend` is a mapping
-        from color ID to a human-readable string.
+        list of that sample's color categories, sorted ascending. The `color_legend`
+        is a mapping from color ID to a human-readable string.
     """
     if isinstance(color_by, TagColorBy):
         return tags.build_tag_color_maps(

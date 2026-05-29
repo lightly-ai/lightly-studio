@@ -22,7 +22,7 @@ def build_metadata_color_maps(
 
     A metadata key holds a single value per sample, so each sample maps to a
     single-element category list. The list shape keeps this consistent with the
-    other coloring sources (tags, annotations).
+    other coloring sources (e.g. tags, annotations).
 
     Args:
         session: Database session.
