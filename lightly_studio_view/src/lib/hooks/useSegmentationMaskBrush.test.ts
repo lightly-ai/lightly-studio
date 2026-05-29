@@ -1,8 +1,10 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { get } from 'svelte/store';
 import type { AnnotationType, AnnotationView } from '$lib/api/lightly_studio_local';
 import type { AnnotationLabelContext } from '$lib/contexts/SampleDetailsAnnotation.svelte';
 
 import { useSegmentationMaskBrush } from './useSegmentationMaskBrush';
+import { useGlobalStorage } from './useGlobalStorage';
 import {
     computeBoundingBoxFromMask,
     encodeBinaryMaskToRLE
@@ -340,6 +342,11 @@ describe('useSegmentationMaskBrush', () => {
         expect(createAnnotation).toHaveBeenCalledWith(
             expect.objectContaining({ annotation_collection_name: 'predictions' })
         );
+
+        // The choice is persisted to the session store, keyed by collection id.
+        const { lastAnnotationLabel, lastAnnotationSource } = useGlobalStorage();
+        expect(get(lastAnnotationLabel)['c1']).toBe('car');
+        expect(get(lastAnnotationSource)['c1']).toBe('predictions');
     });
 
     it('omits annotation_collection_name when no source is selected', async () => {

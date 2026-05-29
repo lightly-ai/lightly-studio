@@ -212,10 +212,10 @@ describe('useGlobalStorage', () => {
         });
 
         it('is independent from the last annotation label store', () => {
-            storage.updateLastAnnotationLabel(testCollectionId, 'new_source');
+            storage.updateLastAnnotationLabel(testCollectionId, 'cat');
             storage.updateLastAnnotationSource(testCollectionId, 'predictions');
 
-            expect(get(storage.lastAnnotationLabel)[testCollectionId]).toBe('new_source');
+            expect(get(storage.lastAnnotationLabel)[testCollectionId]).toBe('cat');
             expect(get(storage.lastAnnotationSource)[testCollectionId]).toBe('predictions');
         });
     });
