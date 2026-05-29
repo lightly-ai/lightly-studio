@@ -129,6 +129,7 @@ export function buildBreadcrumbLevels(
             currentCollectionId,
             c.collection_id,
             c.sample_type,
+            // For annotation collections, show the collection name to distinguish them if there are several; otherwise, use the group component name or a generic title.
             c.sample_type === SampleType.ANNOTATION && hasSeveralAnnotationCollections
                 ? c.name
                 : c.group_component_name
