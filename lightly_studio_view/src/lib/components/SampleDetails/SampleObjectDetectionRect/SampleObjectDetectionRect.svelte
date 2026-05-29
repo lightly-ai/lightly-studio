@@ -287,19 +287,7 @@
     const annotationCollections = useAnnotationCollections({ collectionId });
     const sourceNames = $derived(annotationCollections.data?.map((c) => c.name) ?? []);
 
-    // Pre-select the source the modal opens with: the persisted/context source if still
-    // available, else the default "annotation" collection, else the first source.
     let selectedSource = $state<string | undefined>();
-    $effect(() => {
-        if (selectedSource && sourceNames.includes(selectedSource)) return;
-        const contextSource = annotationLabelContext.annotationSource;
-        selectedSource =
-            contextSource && sourceNames.includes(contextSource)
-                ? contextSource
-                : sourceNames.includes('annotation')
-                  ? 'annotation'
-                  : sourceNames[0];
-    });
 
     const interactionPointerEvents = $derived(shouldDisableInteraction ? 'none' : 'all');
 

@@ -120,6 +120,20 @@ describe('SelectClassDialog', () => {
         expect(trigger).toHaveTextContent('predictions');
     });
 
+    it('keeps Confirm disabled until both a class and a source are chosen', async () => {
+        const user = userEvent.setup();
+        renderDialog({ sourceNames: ['ground_truth', 'predictions'] });
+
+        // Neither class nor source chosen yet.
+        expect(screen.getByRole('button', { name: 'Confirm' })).toBeDisabled();
+
+        // Choosing only a class is not enough while a source must still be picked.
+        await user.click(screen.getByTestId('select-list-trigger'));
+        await user.click(await screen.findByRole('option', { name: 'cat' }));
+
+        await waitFor(() => expect(screen.getByRole('button', { name: 'Confirm' })).toBeDisabled());
+    });
+
     it('passes the selected source to onConfirm', async () => {
         const user = userEvent.setup();
         const { onConfirm } = renderDialog({

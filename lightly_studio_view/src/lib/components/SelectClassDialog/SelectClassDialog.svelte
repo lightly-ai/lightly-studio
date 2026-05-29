@@ -95,7 +95,12 @@
 
         <Dialog.Footer>
             <Button variant="outline" onclick={handleCancel}>Cancel</Button>
-            <Button onclick={handleConfirm} disabled={!selectedItem}>Confirm</Button>
+            <Button
+                onclick={handleConfirm}
+                disabled={!selectedItem || (showSourceSelect && !selectedSource)}
+            >
+                Confirm
+            </Button>
         </Dialog.Footer>
     </Dialog.Content>
 </Dialog.Root>
