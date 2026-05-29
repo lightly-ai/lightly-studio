@@ -175,7 +175,7 @@ class ImageDatasetEvaluate:
         pred_collection_name: str,
         config: SegmentationEvaluationConfig | None = None,
     ) -> EvaluationResult:
-        """Create an segmentation evaluation run and persist per-image metrics.
+        """Create a segmentation evaluation run.
 
         Args:
             name: Display name of the evaluation run.
