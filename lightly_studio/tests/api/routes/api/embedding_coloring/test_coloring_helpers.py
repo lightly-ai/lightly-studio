@@ -105,7 +105,7 @@ def test_assign_color_category_lists() -> None:
     scale = DiscreteColorScale.from_values(values=["cat", "dog"])
     sample_to_values = {ids[0]: ["cat"], ids[1]: ["dog"]}
 
-    categories, legend = coloring_helpers.assign_color_category_lists(
+    categories, legend = coloring_helpers.assign_color_categories(
         sample_ids=ids,
         sample_to_values=sample_to_values,
         scale=scale,
@@ -121,7 +121,7 @@ def test_assign_color_category_lists__multiple_values_sorted_by_category() -> No
     sid = uuid4()
     scale = DiscreteColorScale.from_values(values=["cat", "dog", "fish"])
 
-    categories, legend = coloring_helpers.assign_color_category_lists(
+    categories, legend = coloring_helpers.assign_color_categories(
         sample_ids=[sid],
         # Values out of order; the output is sorted by color category.
         sample_to_values={sid: {"fish", "dog"}},
@@ -137,7 +137,7 @@ def test_assign_color_category_lists__missing_value_is_empty() -> None:
     scale = DiscreteColorScale.from_values(values=["cat"])
     sample_to_values = {ids[0]: ["cat"]}  # ids[1] is missing
 
-    categories, legend = coloring_helpers.assign_color_category_lists(
+    categories, legend = coloring_helpers.assign_color_categories(
         sample_ids=ids,
         sample_to_values=sample_to_values,
         scale=scale,
@@ -159,7 +159,7 @@ def test_assign_color_category_lists__mixed() -> None:
         ids[2]: ["Paris", "London"],
     }
 
-    categories, legend = coloring_helpers.assign_color_category_lists(
+    categories, legend = coloring_helpers.assign_color_categories(
         sample_ids=ids,
         sample_to_values=sample_to_values,
         scale=scale,
@@ -172,7 +172,7 @@ def test_assign_color_category_lists__mixed() -> None:
 def test_assign_color_category_lists__empty() -> None:
     scale = DiscreteColorScale.from_values(values=["x"])
 
-    categories, legend = coloring_helpers.assign_color_category_lists(
+    categories, legend = coloring_helpers.assign_color_categories(
         sample_ids=[],
         sample_to_values={},
         scale=scale,
@@ -187,7 +187,7 @@ def test_assign_color_category_lists__unmapped_value_is_empty() -> None:
     sid = uuid4()
     scale = DiscreteColorScale.from_values(values=["known"])
 
-    categories, legend = coloring_helpers.assign_color_category_lists(
+    categories, legend = coloring_helpers.assign_color_categories(
         sample_ids=[sid],
         sample_to_values={sid: ["unknown"]},
         scale=scale,

@@ -50,7 +50,7 @@ def build_annotation_color_maps(
         format_fn=lambda lid: names.get(str(lid), str(lid)),
     )
 
-    return coloring_helpers.assign_color_category_lists(
+    return coloring_helpers.assign_color_categories(
         sample_ids=sample_ids,
         sample_to_values=sample_to_labels,
         scale=scale,

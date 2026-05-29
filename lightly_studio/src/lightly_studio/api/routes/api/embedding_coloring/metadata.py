@@ -46,7 +46,7 @@ def build_metadata_color_maps(
         sample_to_value=sample_to_value,
         metadata_type=metadata_type,
     )
-    return coloring_helpers.assign_color_category_lists(
+    return coloring_helpers.assign_color_categories(
         sample_ids=sample_ids,
         sample_to_values={sid: (value,) for sid, value in sample_to_value.items()},
         scale=scale,

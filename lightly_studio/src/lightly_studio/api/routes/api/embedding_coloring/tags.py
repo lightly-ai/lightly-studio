@@ -40,7 +40,7 @@ def build_tag_color_maps(
         format_fn=lambda tid: names.get(tid, str(tid)),
     )
 
-    return coloring_helpers.assign_color_category_lists(
+    return coloring_helpers.assign_color_categories(
         sample_ids=sample_ids,
         sample_to_values=sample_to_tags,
         scale=scale,

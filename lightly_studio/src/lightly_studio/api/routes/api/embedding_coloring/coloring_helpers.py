@@ -135,7 +135,7 @@ class DiscreteColorScale(Generic[T]):
         return DiscreteColorScale[int](_lookup=lookup, legend=legend)
 
 
-def assign_color_category_lists(
+def assign_color_categories(
     sample_ids: Sequence[UUID],
     sample_to_values: Mapping[UUID, Iterable[T]],
     scale: ColorScale[T],
