@@ -6,8 +6,8 @@
         sourceNames: string[];
         /** Currently selected source name. */
         selectedSource?: string;
-        /** Called with the chosen source name when the selection changes. */
-        onSelect: (source: string) => void;
+        /** Optional notification when the selection changes (the value also flows out via `bind:selectedSource`). */
+        onSelect?: (source: string) => void;
     }
 
     let { sourceNames, selectedSource = $bindable(), onSelect }: Props = $props();
@@ -18,7 +18,7 @@
     value={selectedSource}
     onValueChange={(value) => {
         selectedSource = value;
-        onSelect(value);
+        onSelect?.(value);
     }}
 >
     <Select.Trigger class="w-full" data-testid="annotation-source-trigger">
