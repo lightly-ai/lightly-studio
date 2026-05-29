@@ -371,7 +371,7 @@ def test_classification_evaluation__raises_on_wrong_annotation_type(
 def test_segmentation_evaluation(
     patch_collection: None,  # noqa: ARG001
 ) -> None:
-    """Creates an evaluation run for instance segmentation and returns sample counts."""
+    """Creates an evaluation run for semantic segmentation and returns sample counts."""
     dataset = ImageDataset.create(name="test_dataset")
     label = create_annotation_label(
         session=dataset.session,
