@@ -41,6 +41,7 @@
             onConfirm(selectedItem.value, showSourceSelect ? selectedSource : undefined);
             open = false;
             selectedItem = undefined;
+            selectedSource = undefined;
         }
     };
 
@@ -48,6 +49,7 @@
         onCancel();
         open = false;
         selectedItem = undefined;
+        selectedSource = undefined;
     };
 
     const handleOpenChange = (isOpen: boolean) => {
@@ -72,11 +74,7 @@
         {#if showSourceSelect}
             <div class="space-y-1 py-2">
                 <span class="text-sm text-muted-foreground">Annotation source</span>
-                <AnnotationSourceSelect
-                    {sourceNames}
-                    bind:selectedSource
-                    onSelect={(source) => (selectedSource = source)}
-                />
+                <AnnotationSourceSelect {sourceNames} bind:selectedSource />
             </div>
         {/if}
 

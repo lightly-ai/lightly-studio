@@ -64,8 +64,6 @@
     const annotationCollections = useAnnotationCollections({ collectionId });
     const sourceNames = $derived(annotationCollections.data?.map((c) => c.name) ?? []);
 
-    let selectedSource = $state<string | undefined>();
-
     const activeAnnotationId = $derived.by(() => {
         if (annotationLabelContext.annotationId) return annotationLabelContext.annotationId;
 
@@ -373,7 +371,6 @@
     bind:open={$selectClassDialogOpen}
     labels={labels.data?.map((l) => l.annotation_label_name ?? '').filter(Boolean) ?? []}
     {sourceNames}
-    bind:selectedSource
     onConfirm={handleSelectClassDialogConfirm}
     onCancel={handleSelectClassDialogCancel}
 />

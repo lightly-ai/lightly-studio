@@ -264,8 +264,6 @@
     const annotationCollections = useAnnotationCollections({ collectionId });
     const sourceNames = $derived(annotationCollections.data?.map((c) => c.name) ?? []);
 
-    let selectedSource = $state<string | undefined>();
-
     const interactionPointerEvents = $derived(shouldDisableInteraction ? 'none' : 'all');
 
     const isPointInsideExistingAnnotation = (x: number, y: number) => {
@@ -375,7 +373,6 @@
     bind:open={$showSelectClassDialog}
     labels={labels.data?.map((l) => l.annotation_label_name ?? '').filter(Boolean) ?? []}
     {sourceNames}
-    bind:selectedSource
     onConfirm={handleClassSelected}
     onCancel={handleClassDialogCancel}
 />
