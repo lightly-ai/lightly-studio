@@ -1,5 +1,6 @@
 <script lang="ts">
     import { useAnnotationLabels } from '$lib/hooks/useAnnotationLabels/useAnnotationLabels';
+    import { useAnnotationCollections } from '$lib/hooks/useAnnotationCollections/useAnnotationCollections';
     import { useCreateAnnotation } from '$lib/hooks/useCreateAnnotation/useCreateAnnotation';
     import { useCreateLabel } from '$lib/hooks/useCreateLabel/useCreateLabel';
     import type { BoundingBox } from '$lib/types';
@@ -54,31 +55,33 @@
     const labels = useAnnotationLabels(() => ({ collectionId }));
 
     // --- Select-class dialog ---
+    type SelectClassResult = { label: string; source?: string };
     let showSelectClassDialog = $state(false);
-    let pendingLabelRequest: Promise<string | null> | null = null;
-    let resolveRequestLabel: ((label: string | null) => void) | null = null;
+    let pendingLabelRequest: Promise<SelectClassResult | null> | null = null;
+    let resolveRequestLabel: ((result: SelectClassResult | null) => void) | null = null;
 
-    const requestLabel = (): Promise<string | null> => {
+    const requestLabel = (): Promise<SelectClassResult | null> => {
         // Single-flight: concurrent callers share the in-flight dialog promise so
         // that resolveRequestLabel is never overwritten and earlier callers cannot
         // be stranded waiting on a promise that will never settle.
         if (pendingLabelRequest) return pendingLabelRequest;
 
         showSelectClassDialog = true;
-        pendingLabelRequest = new Promise<string | null>((resolve) => {
+        pendingLabelRequest = new Promise<SelectClassResult | null>((resolve) => {
             resolveRequestLabel = resolve;
         });
         return pendingLabelRequest;
     };
 
-    const settleRequestLabel = (label: string | null) => {
+    const settleRequestLabel = (result: SelectClassResult | null) => {
         showSelectClassDialog = false;
-        resolveRequestLabel?.(label);
+        resolveRequestLabel?.(result);
         resolveRequestLabel = null;
         pendingLabelRequest = null;
     };
 
-    const handleClassSelected = (label: string) => settleRequestLabel(label);
+    const handleClassSelected = (label: string, source?: string) =>
+        settleRequestLabel({ label, source });
 
     const handleClassDialogCancel = () => settleRequestLabel(null);
     // ---
@@ -89,7 +92,8 @@
     const { deleteAnnotation } = useDeleteAnnotation({
         collectionId
     });
-    const { addReversibleAction } = useGlobalStorage();
+    const { addReversibleAction, updateLastAnnotationLabel, updateLastAnnotationSource } =
+        useGlobalStorage();
 
     const {
         startPending: startCreateBoundingBoxPending,
@@ -202,9 +206,18 @@
         try {
             let selectedLabelName = annotationLabelContext.annotationLabel;
             if (!selectedLabelName) {
-                selectedLabelName = await requestLabel();
-                if (!selectedLabelName) return;
+                const result = await requestLabel();
+                if (!result?.label) {
+                    toast.error('Please select a class before creating an annotation');
+                    return;
+                }
+                selectedLabelName = result.label;
                 setAnnotationLabel(selectedLabelName);
+                updateLastAnnotationLabel(collectionId, selectedLabelName);
+                if (result.source) {
+                    setAnnotationSource(result.source);
+                    updateLastAnnotationSource(collectionId, result.source);
+                }
             }
 
             let label = labels.data?.find(
@@ -226,7 +239,8 @@
                 y: Math.round(y),
                 width: Math.round(width),
                 height: Math.round(height),
-                annotation_label_id: label.annotation_label_id!
+                annotation_label_id: label.annotation_label_id!,
+                annotation_collection_name: annotationLabelContext.annotationSource ?? undefined
             });
 
             if (sample.annotations.length == 0) {
@@ -266,8 +280,26 @@
         setAnnotationId,
         setIsDrawing,
         setCurrentBoundingBox,
-        setAnnotationLabel
+        setAnnotationLabel,
+        setAnnotationSource
     } = useAnnotationLabelContext();
+
+    const annotationCollections = useAnnotationCollections({ collectionId });
+    const sourceNames = $derived(annotationCollections.data?.map((c) => c.name) ?? []);
+
+    // Pre-select the source the modal opens with: the persisted/context source if still
+    // available, else the default "annotation" collection, else the first source.
+    let selectedSource = $state<string | undefined>();
+    $effect(() => {
+        if (selectedSource && sourceNames.includes(selectedSource)) return;
+        const contextSource = annotationLabelContext.annotationSource;
+        selectedSource =
+            contextSource && sourceNames.includes(contextSource)
+                ? contextSource
+                : sourceNames.includes('annotation')
+                  ? 'annotation'
+                  : sourceNames[0];
+    });
 
     const interactionPointerEvents = $derived(shouldDisableInteraction ? 'none' : 'all');
 
@@ -377,6 +409,8 @@
 <SelectClassDialog
     bind:open={showSelectClassDialog}
     labels={labels.data?.map((l) => l.annotation_label_name ?? '').filter(Boolean) ?? []}
+    {sourceNames}
+    bind:selectedSource
     onConfirm={handleClassSelected}
     onCancel={handleClassDialogCancel}
 />
