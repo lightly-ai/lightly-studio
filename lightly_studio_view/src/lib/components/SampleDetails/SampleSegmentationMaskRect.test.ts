@@ -92,6 +92,10 @@ vi.mock('$lib/hooks/useAnnotationLabels/useAnnotationLabels', () => ({
         })
 }));
 
+vi.mock('$lib/hooks/useAnnotationCollections/useAnnotationCollections', () => ({
+    useAnnotationCollections: () => ({ data: [] })
+}));
+
 vi.mock('$lib/hooks/useCollection/useCollection', () => ({
     useCollectionWithChildren: () => ({
         refetch: vi.fn()
