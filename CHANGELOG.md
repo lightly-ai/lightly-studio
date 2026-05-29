@@ -9,6 +9,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Image details: select the annotation source when adding an annotation.
+
 ### Changed
 
 - Header menu: show collection name in Annotations entries
