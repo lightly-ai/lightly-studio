@@ -1,17 +1,20 @@
+import type { Page } from '@playwright/test';
 import { test, expect } from '../utils';
 import { cocoDataset } from './fixtures';
 
 const QUERY = 'segmentation_mask(class_name = "airplane")';
 
+function waitForImageListResponse(page: Page) {
+    return page.waitForResponse((r) => r.url().includes('/images/list') && r.status() === 200);
+}
+
 /** Select-all in Monaco, type a query, click Apply, and wait for the grid to update. */
-async function typeAndApply(page: import('@playwright/test').Page, query: string): Promise<void> {
+async function typeAndApply(page: Page, query: string): Promise<void> {
     await page.locator('.monaco-editor .view-lines').first().click();
     await page.keyboard.press('ControlOrMeta+a');
     await page.keyboard.type(query);
 
-    const refetchPromise = page.waitForResponse(
-        (r) => r.url().includes('/images/list') && r.status() === 200
-    );
+    const refetchPromise = waitForImageListResponse(page);
     await page.getByTestId('query-editor-apply-button').click();
     await refetchPromise;
 }
@@ -35,9 +38,7 @@ test.describe('query editor', () => {
         // Filter chip should be visible
         await expect(page.getByTestId('query-filter-chip')).toBeVisible();
     });
-});
 
-test.describe('query filter chip toggle', () => {
     test('toggling filter chip disables and re-enables query', async ({ samplesPage, page }) => {
         await page.getByTestId('query-filter-add-button').click();
         await typeAndApply(page, QUERY);
@@ -45,9 +46,7 @@ test.describe('query filter chip toggle', () => {
         await page.getByTestId('query-editor-close-button').click();
 
         // Uncheck the filter chip checkbox to disable the query
-        const disableRefetch = page.waitForResponse(
-            (r) => r.url().includes('/images/list') && r.status() === 200
-        );
+        const disableRefetch = waitForImageListResponse(page);
         await page.getByRole('checkbox', { name: 'Disable query filter' }).click();
         await disableRefetch;
 
@@ -58,9 +57,7 @@ test.describe('query filter chip toggle', () => {
             .toBeGreaterThanOrEqual(cocoDataset.defaultPageSize);
 
         // Re-check to re-enable the query
-        const enableRefetch = page.waitForResponse(
-            (r) => r.url().includes('/images/list') && r.status() === 200
-        );
+        const enableRefetch = waitForImageListResponse(page);
         await page.getByRole('checkbox', { name: 'Enable query filter' }).click();
         await enableRefetch;
 
@@ -76,11 +73,7 @@ test.describe('query filter chip toggle', () => {
         await page.getByTestId('query-editor-close-button').click();
 
         // Click the chip body to reopen the editor
-        await page
-            .getByTestId('query-filter-chip')
-            .locator('button:not([role="checkbox"])')
-            .first()
-            .click();
+        await page.getByTestId('query-filter-chip-body').click();
         await expect(page.getByRole('heading', { name: 'Query Filter' })).toBeVisible();
 
         // Editor should contain the previously applied query
@@ -99,9 +92,7 @@ test.describe('query filter chip toggle', () => {
         await page.getByTestId('query-editor-close-button').click();
 
         // Click the X button to clear the filter
-        const refetchPromise = page.waitForResponse(
-            (r) => r.url().includes('/images/list') && r.status() === 200
-        );
+        const refetchPromise = waitForImageListResponse(page);
         await page.getByRole('button', { name: 'Clear query filter' }).click();
         await refetchPromise;
 
@@ -113,9 +104,7 @@ test.describe('query filter chip toggle', () => {
             .poll(() => samplesPage.getSamples().count())
             .toBeGreaterThanOrEqual(cocoDataset.defaultPageSize);
     });
-});
 
-test.describe('query editor error handling', () => {
     test('syntax error shows toast and Apply stays enabled', async ({ samplesPage, page }) => {
         await page.getByTestId('query-filter-add-button').click();
         await typeAndApply(page, QUERY);
