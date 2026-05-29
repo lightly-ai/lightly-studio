@@ -74,12 +74,17 @@ def get_2d_embeddings(
         collection_id=collection_id,
         color_by=color_by,
         sample_ids=sample_ids,
-        fulfils_filter=fulfils_filter,
     )
-    # Scalar primary category (first match in priority order) kept for backward
-    # compatibility; the frontend resolves which category to display from the
-    # full `color_categories` list (e.g. when categories are toggled off).
-    primary_color_category = [categories[0] for categories in color_categories]
+    # `build_color_data` is filter-unaware and yields color categories (>= 2) per
+    # sample. Fold in the filter here to derive the scalar primary category,
+    # reserving 0 for filtered-out and 1 for unassigned samples. The frontend
+    # resolves which category to display from the full `color_categories` list.
+    if color_by is not None:
+        color_legend = {0: "Filtered out", 1: "Unassigned", **color_legend}
+    primary_color_category = [
+        _to_primary_color_category(categories, fulfils)
+        for categories, fulfils in zip(color_categories, fulfils_filter)
+    ]
 
     schema = pa.schema(
         [
@@ -120,6 +125,19 @@ def get_2d_embeddings(
             "X-Content-Type-Options": "nosniff",
         },
     )
+
+
+def _to_primary_color_category(color_categories: list[int], fulfils_filter: int) -> int:
+    """Pick the scalar color category for one sample.
+
+    Reserves 0 for filtered-out samples and 1 for samples with no color category;
+    otherwise returns the lowest color category.
+    """
+    if fulfils_filter == 0:
+        return 0
+    if not color_categories:
+        return 1
+    return color_categories[0]
 
 
 def _get_matching_sample_ids(

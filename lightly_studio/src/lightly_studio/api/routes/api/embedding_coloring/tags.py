@@ -15,32 +15,26 @@ def build_tag_color_maps(
     session: Session,
     tag_ids: list[UUID],
     sample_ids: list[UUID],
-    fulfils_filter: list[int],
 ) -> tuple[list[list[int]], dict[int, str]]:
     """Build color categories and a legend for tag-based sample coloring.
 
     Each selected tag gets a consecutive color category (starting at 2) in the
     order given by *tag_ids*.  When a sample belongs to multiple selected tags it
-    receives **all** their categories, ordered by priority (earliest tag in
-    *tag_ids* first).
+    receives **all** their categories.
 
     Args:
         session: Database session.
         tag_ids: Ordered tag IDs that define coloring priority.
         sample_ids: Sample IDs in the order for which to build color categories.
-        fulfils_filter: Per-sample filter flags where 0 means filtered out.
 
     Returns:
         A tuple of `(color_categories, color_legend)` for the provided samples. The
         length of `color_categories` is the number of samples; each entry is the
-        list of that sample's categories in priority order. The `color_legend` is
-        a mapping from color ID to a human-readable string.
+        list of that sample's color categories. The `color_legend` is a mapping
+        from color ID to a human-readable string.
     """
     names = tag_resolver.get_names_by_ids(session=session, tag_ids=tag_ids)
     sample_to_tags = tag_resolver.get_tags_by_sample(session=session, tag_ids=tag_ids)
-    sample_to_values = coloring_helpers.all_matches_per_sample(
-        sample_to_candidates=sample_to_tags, priority_order=tag_ids
-    )
 
     scale = DiscreteColorScale.from_values(
         values=tag_ids,
@@ -49,7 +43,6 @@ def build_tag_color_maps(
 
     return coloring_helpers.assign_color_category_lists(
         sample_ids=sample_ids,
-        fulfils_filter=fulfils_filter,
-        sample_to_values=sample_to_values,
+        sample_to_values=sample_to_tags,
         scale=scale,
     )

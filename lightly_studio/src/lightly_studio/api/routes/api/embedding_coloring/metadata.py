@@ -17,7 +17,6 @@ def build_metadata_color_maps(
     collection_id: UUID,
     key: str,
     sample_ids: list[UUID],
-    fulfils_filter: list[int],
 ) -> tuple[list[list[int]], dict[int, str]]:
     """Build color categories and a legend for metadata-based sample coloring.
 
@@ -30,8 +29,6 @@ def build_metadata_color_maps(
         collection_id: ID of the collection whose metadata should be used.
         key: Metadata field used for coloring.
         sample_ids: Sample IDs in the order for which to build color categories.
-        fulfils_filter: Per-sample filter flags where 0 means filtered out and 1
-            means the sample fulfils the filter.
 
     Returns:
         A tuple of `(color_categories, color_legend)` for the provided samples. The
@@ -51,8 +48,7 @@ def build_metadata_color_maps(
     )
     return coloring_helpers.assign_color_category_lists(
         sample_ids=sample_ids,
-        fulfils_filter=fulfils_filter,
-        sample_to_values={sid: [value] for sid, value in sample_to_value.items()},
+        sample_to_values={sid: (value,) for sid, value in sample_to_value.items()},
         scale=scale,
     )
 

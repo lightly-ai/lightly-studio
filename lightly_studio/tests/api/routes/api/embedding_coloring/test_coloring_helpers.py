@@ -107,68 +107,66 @@ def test_assign_color_category_lists() -> None:
 
     categories, legend = coloring_helpers.assign_color_category_lists(
         sample_ids=ids,
-        fulfils_filter=[1, 1],
         sample_to_values=sample_to_values,
         scale=scale,
     )
 
-    assert legend == {0: "Filtered out", 1: "Unassigned", 2: "cat", 3: "dog"}
+    # No reserved entries: the legend only describes the color scale.
+    assert legend == {2: "cat", 3: "dog"}
     assert categories == [[2], [3]]
 
 
-def test_assign_color_category_lists__multiple_values_keep_order() -> None:
-    """A sample with several values keeps all categories in the given order."""
+def test_assign_color_category_lists__multiple_values_sorted_by_category() -> None:
+    """A sample with several values gets all categories, sorted ascending."""
     sid = uuid4()
     scale = DiscreteColorScale.from_values(values=["cat", "dog", "fish"])
 
     categories, legend = coloring_helpers.assign_color_category_lists(
         sample_ids=[sid],
-        fulfils_filter=[1],
-        sample_to_values={sid: ["dog", "fish"]},
+        # Values out of order; the output is sorted by color category.
+        sample_to_values={sid: {"fish", "dog"}},
         scale=scale,
     )
 
-    assert legend == {0: "Filtered out", 1: "Unassigned", 2: "cat", 3: "dog", 4: "fish"}
+    assert legend == {2: "cat", 3: "dog", 4: "fish"}
     assert categories == [[3, 4]]
 
 
-def test_assign_color_category_lists__missing_and_filtered_out() -> None:
+def test_assign_color_category_lists__missing_value_is_empty() -> None:
     ids = [uuid4(), uuid4()]
     scale = DiscreteColorScale.from_values(values=["cat"])
     sample_to_values = {ids[0]: ["cat"]}  # ids[1] is missing
 
     categories, legend = coloring_helpers.assign_color_category_lists(
         sample_ids=ids,
-        fulfils_filter=[0, 1],
         sample_to_values=sample_to_values,
         scale=scale,
     )
 
-    assert legend == {0: "Filtered out", 1: "Unassigned", 2: "cat"}
-    assert categories == [[0], [1]]
+    assert legend == {2: "cat"}
+    # Samples without a value map to an empty list; the filter/unassigned
+    # reserved categories are assigned downstream.
+    assert categories == [[2], []]
 
 
 def test_assign_color_category_lists__mixed() -> None:
-    """Filtered-out, valued, and missing samples in one call."""
-    ids = [uuid4(), uuid4(), uuid4(), uuid4()]
+    """Valued, multi-valued, and missing samples in one call."""
+    ids = [uuid4(), uuid4(), uuid4()]
     scale = DiscreteColorScale.from_values(values=["London", "Paris"])
     sample_to_values: dict[UUID, list[str]] = {
         ids[0]: ["Paris"],
-        ids[1]: ["London"],
-        # ids[2] has no value
-        ids[3]: ["London", "Paris"],
+        # ids[1] has no value
+        ids[2]: ["Paris", "London"],
     }
 
     categories, legend = coloring_helpers.assign_color_category_lists(
         sample_ids=ids,
-        fulfils_filter=[1, 0, 1, 1],
         sample_to_values=sample_to_values,
         scale=scale,
     )
 
-    # Legend includes reserved entries + scale entries
-    assert legend == {0: "Filtered out", 1: "Unassigned", 2: "London", 3: "Paris"}
-    assert categories == [[3], [0], [1], [2, 3]]
+    assert legend == {2: "London", 3: "Paris"}
+    assert categories == [[3], [], [2, 3]]
 
 
 def test_assign_color_category_lists__empty() -> None:
@@ -176,45 +174,24 @@ def test_assign_color_category_lists__empty() -> None:
 
     categories, legend = coloring_helpers.assign_color_category_lists(
         sample_ids=[],
-        fulfils_filter=[],
         sample_to_values={},
         scale=scale,
     )
 
-    assert legend == {0: "Filtered out", 1: "Unassigned", 2: "x"}
+    assert legend == {2: "x"}
     assert categories == []
 
 
-def test_assign_color_category_lists__unmapped_value() -> None:
-    """A sample whose value exists but isn't in the scale gets category 1."""
+def test_assign_color_category_lists__unmapped_value_is_empty() -> None:
+    """A sample whose value exists but isn't in the scale gets an empty list."""
     sid = uuid4()
     scale = DiscreteColorScale.from_values(values=["known"])
 
     categories, legend = coloring_helpers.assign_color_category_lists(
         sample_ids=[sid],
-        fulfils_filter=[1],
         sample_to_values={sid: ["unknown"]},
         scale=scale,
     )
 
-    assert legend == {0: "Filtered out", 1: "Unassigned", 2: "known"}
-    assert categories == [[1]]
-
-
-def test_all_matches_per_sample() -> None:
-    """All matches are returned per priority order; unmatched samples are omitted."""
-    a, b, c = uuid4(), uuid4(), uuid4()
-    label_x, label_y, label_z = uuid4(), uuid4(), uuid4()
-
-    sample_to_candidates: dict[UUID, set[UUID]] = {
-        a: {label_y, label_x},  # Has both; returned in priority order
-        b: {label_z},  # label_z is not in priority list
-        c: {label_y},  # Matches label_y
-    }
-    priority_order = [label_x, label_y]
-
-    result = coloring_helpers.all_matches_per_sample(
-        sample_to_candidates=sample_to_candidates, priority_order=priority_order
-    )
-
-    assert result == {a: [label_x, label_y], c: [label_y]}
+    assert legend == {2: "known"}
+    assert categories == [[]]

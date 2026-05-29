@@ -660,16 +660,17 @@ def test_get_embeddings2d__with_tag_color_by(
     assert sample_id_to_color[str(samples[3].sample_id)] == 1  # Unassigned
     assert sample_id_to_color[str(samples[4].sample_id)] == 1  # Unassigned
 
-    # The full category list keeps every match in priority order so the frontend
-    # can resolve which one to display.
+    # The full category list keeps every match (sorted) so the frontend can
+    # resolve which one to display. It is filter-unaware: untagged samples get an
+    # empty list, and the reserved categories live only in the scalar column.
     assert table.schema.field("color_categories").type == pa.list_(pa.uint8())
     color_categories = table.column("color_categories").to_pylist()
     sample_id_to_colors = dict(zip(sample_ids_payload, color_categories))
     assert sample_id_to_colors[str(samples[0].sample_id)] == [2]  # alpha
     assert sample_id_to_colors[str(samples[1].sample_id)] == [3]  # beta
-    assert sample_id_to_colors[str(samples[2].sample_id)] == [2, 3]  # both, priority order
-    assert sample_id_to_colors[str(samples[3].sample_id)] == [1]  # Unassigned
-    assert sample_id_to_colors[str(samples[4].sample_id)] == [1]  # Unassigned
+    assert sample_id_to_colors[str(samples[2].sample_id)] == [2, 3]  # both, sorted
+    assert sample_id_to_colors[str(samples[3].sample_id)] == []  # untagged
+    assert sample_id_to_colors[str(samples[4].sample_id)] == []  # untagged
 
     legend = json.loads(table.schema.metadata[b"color_legend"])
     assert legend == {
@@ -838,14 +839,15 @@ def test_get_embeddings2d__with_annotation_color_by(
     assert sample_id_to_color[str(samples[3].sample_id)] == 1  # Unassigned
     assert sample_id_to_color[str(samples[4].sample_id)] == 1  # Unassigned
 
-    # The full category list keeps every match in priority order.
+    # The full category list keeps every match (sorted); unannotated samples get
+    # an empty list since it is filter-unaware.
     color_categories = table.column("color_categories").to_pylist()
     sample_id_to_colors = dict(zip(sample_ids_payload, color_categories))
     assert sample_id_to_colors[str(samples[0].sample_id)] == [2]  # cat
     assert sample_id_to_colors[str(samples[1].sample_id)] == [3]  # dog
-    assert sample_id_to_colors[str(samples[2].sample_id)] == [2, 3]  # both, priority order
-    assert sample_id_to_colors[str(samples[3].sample_id)] == [1]  # Unassigned
-    assert sample_id_to_colors[str(samples[4].sample_id)] == [1]  # Unassigned
+    assert sample_id_to_colors[str(samples[2].sample_id)] == [2, 3]  # both, sorted
+    assert sample_id_to_colors[str(samples[3].sample_id)] == []  # unannotated
+    assert sample_id_to_colors[str(samples[4].sample_id)] == []  # unannotated
 
     legend = json.loads(table.schema.metadata[b"color_legend"])
     assert legend == {
