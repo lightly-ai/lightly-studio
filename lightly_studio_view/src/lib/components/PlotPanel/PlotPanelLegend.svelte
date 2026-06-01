@@ -26,7 +26,7 @@
 </script>
 
 <div
-    class="absolute bottom-1 left-3 flex max-h-[calc(100%-0.5rem)] flex-col items-start gap-1 overflow-hidden rounded-md border border-white/10 bg-black/60 px-2 py-1 text-xs text-muted-foreground backdrop-blur-sm"
+    class="absolute bottom-1 left-3 flex max-h-[calc(100%-0.5rem)] max-w-48 flex-col items-start gap-1 overflow-hidden rounded-md border border-white/10 bg-black/60 px-2 py-1 text-xs text-muted-foreground backdrop-blur-sm"
     data-testid="plot-legend"
 >
     <div class="flex w-full flex-col gap-1 overflow-y-auto dark:[color-scheme:dark]">
@@ -44,7 +44,7 @@
                 ondblclick={() => onDoubleClickCategory?.(entry.cat)}
             >
                 <span class="legend-dot shrink-0" style={`background-color: ${entry.color}`}></span>
-                <span class="truncate">{entry.label}</span>
+                <span class="min-w-0 truncate" title={entry.label}>{entry.label}</span>
             </button>
         {/each}
         {#if legendEntries.length > 0}
