@@ -96,6 +96,7 @@
 
     const evaluationRunsQuery = useEvaluationRuns(() => ({ datasetId: collection.dataset_id }));
     const evaluationRuns = $derived(evaluationRunsQuery.data ?? []);
+    const hasEvaluationRuns = $derived(evaluationRuns.length > 0);
 
     const parentCollection = $derived.by(() =>
         retrieveParentCollection($collections, collectionId)
@@ -370,6 +371,7 @@
                     <DatasetGridHeader
                         {canSelectAll}
                         {isImages}
+                        {hasEvaluationRuns}
                         {hasMediaWithEmbeddings}
                         collectionDatasetId={collection.dataset_id}
                         compact={isSidePanelOpen}
@@ -436,6 +438,7 @@
                             <DatasetGridHeader
                                 {canSelectAll}
                                 {isImages}
+                                {hasEvaluationRuns}
                                 {hasMediaWithEmbeddings}
                                 collectionDatasetId={collection.dataset_id}
                                 compact={isSidePanelOpen}
