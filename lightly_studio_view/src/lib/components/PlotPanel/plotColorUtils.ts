@@ -64,16 +64,11 @@ export function getCategoryCount(colorLegend?: ReadonlyMap<number, string> | nul
 
 export function getCategoryColors(
     colorLegend?: ReadonlyMap<number, string> | null,
-    hiddenCategories: ReadonlySet<number> = new Set(),
     useLabelColors: boolean = false,
     isColorByActive: boolean = false
 ): string[] {
     const categoryCount = getCategoryCount(colorLegend);
     return Array.from({ length: categoryCount }, (_, category) => {
-        if (hiddenCategories.has(category)) {
-            return isColorByActive ? UNASSIGNED_COLOR : FILTERED_COLOR;
-        }
-
         const label = useLabelColors ? (colorLegend?.get(category) ?? '') : '';
         return getBaseCategoryColor(category, categoryCount, label, isColorByActive);
     });
