@@ -13,8 +13,11 @@ from uuid import UUID
 import fsspec
 import PIL
 from labelformat.model.image import Image
-from labelformat.model.instance_segmentation import InstanceSegmentationInput
-from labelformat.model.object_detection import ObjectDetectionInput
+from labelformat.model.instance_segmentation import (
+    ImageInstanceSegmentation,
+    InstanceSegmentationInput,
+)
+from labelformat.model.object_detection import ImageObjectDetection, ObjectDetectionInput
 from sqlmodel import Session
 from tqdm import tqdm
 
@@ -134,8 +137,9 @@ def load_into_dataset_from_labelformat(
         A list of UUIDs of the created samples.
     """
     images_root_abs = add_annotations.normalize_images_root(images_root=images_path)
+    labels: list[ImageObjectDetection | ImageInstanceSegmentation] = list(input_labels.get_labels())
     logging_context = LoadingLoggingContext(
-        n_samples_to_be_inserted=sum(1 for _ in input_labels.get_labels()),
+        n_samples_to_be_inserted=len(labels),
         n_samples_before_loading=sample_resolver.count_by_collection_id(
             session=session, collection_id=root_collection_id
         ),
@@ -145,8 +149,8 @@ def load_into_dataset_from_labelformat(
     samples_to_create: list[ImageCreate] = []
     created_sample_ids: list[UUID] = []
 
-    for image_data in tqdm(input_labels.get_labels(), desc="Processing images", unit=" images"):
-        image: Image = image_data.image  # type: ignore[attr-defined]
+    for image_data in tqdm(labels, desc="Processing images", unit=" images"):
+        image: Image = image_data.image
 
         sample = ImageCreate(
             file_name=str(image.filename),
@@ -180,6 +184,7 @@ def load_into_dataset_from_labelformat(
             images_root=images_root_abs,
             collection_name=collection_name,
             restrict_to_sample_ids=set(created_sample_ids),
+            labels=labels,
         )
 
     log_loading_results(
