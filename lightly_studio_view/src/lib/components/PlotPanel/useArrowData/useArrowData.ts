@@ -1,7 +1,7 @@
 import { tableFromIPC, type Vector } from 'apache-arrow';
 import { writable, type Writable } from 'svelte/store';
 
-const dataColumns = ['x', 'y', 'fulfils_filter', 'color_categories', 'sample_id'] as const;
+const dataColumns = ['x', 'y', 'fulfils_filter', 'color_categories', 'sample_id'];
 type TableColumn = (typeof dataColumns)[number];
 
 // Reads a list<uint8> column row by row into a plain number[][], where each row holds all
