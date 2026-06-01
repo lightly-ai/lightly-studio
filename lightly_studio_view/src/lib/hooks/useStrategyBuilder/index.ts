@@ -1,7 +1,7 @@
 export {
     STRATEGY_OPTIONS,
     type StrategyType,
-    type ClassBalancingAnnotationSource,
+    type ClassBalancingTargetDistributionMode,
     type ClassBalancingTargetRow,
     type ClassBalancingParams,
     type StrategyParams

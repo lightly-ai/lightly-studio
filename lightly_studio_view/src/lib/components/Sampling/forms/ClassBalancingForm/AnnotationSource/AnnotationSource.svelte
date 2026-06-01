@@ -2,16 +2,19 @@
     import { Label } from '$lib/components/ui/label';
     import * as Select from '$lib/components/ui/select';
     import FieldTooltip from '$lib/components/FieldTooltip/FieldTooltip.svelte';
-    import type { ClassBalancingAnnotationSource } from '$lib/hooks/useStrategyBuilder';
+    import type { ClassBalancingTargetDistributionMode } from '$lib/hooks/useStrategyBuilder';
 
     interface Props {
-        annotationSource: ClassBalancingAnnotationSource;
-        onUpdate: (source: ClassBalancingAnnotationSource) => void;
+        targetDistributionMode: ClassBalancingTargetDistributionMode;
+        onUpdate: (mode: ClassBalancingTargetDistributionMode) => void;
     }
 
-    let { annotationSource, onUpdate }: Props = $props();
+    let { targetDistributionMode, onUpdate }: Props = $props();
 
-    const ANNOTATION_SOURCE_OPTIONS: { value: ClassBalancingAnnotationSource; label: string }[] = [
+    const TARGET_DISTRIBUTION_MODE_OPTIONS: {
+        value: ClassBalancingTargetDistributionMode;
+        label: string;
+    }[] = [
         { value: 'uniform', label: 'Uniform' },
         { value: 'input', label: 'Input' },
         { value: 'dictionary', label: 'Dictionary' }
@@ -20,22 +23,21 @@
 
 <div class="grid gap-2">
     <div class="flex items-center gap-1.5">
-        <Label>Annotation source</Label>
-        <FieldTooltip
-            content="Where class labels come from. Choose how the target distribution is defined."
-        />
+        <Label>Target distribution</Label>
+        <FieldTooltip content="The target class distribution to optimize toward." />
     </div>
     <Select.Root
         type="single"
-        value={annotationSource}
-        onValueChange={(value) => onUpdate(value as ClassBalancingAnnotationSource)}
+        value={targetDistributionMode}
+        onValueChange={(value) => onUpdate(value as ClassBalancingTargetDistributionMode)}
     >
         <Select.Trigger class="w-full" data-testid="class-balancing-annotation-source">
-            {ANNOTATION_SOURCE_OPTIONS.find((o) => o.value === annotationSource)?.label}
+            {TARGET_DISTRIBUTION_MODE_OPTIONS.find((o) => o.value === targetDistributionMode)
+                ?.label}
         </Select.Trigger>
         <Select.Content>
             <Select.Group>
-                {#each ANNOTATION_SOURCE_OPTIONS as option (option.value)}
+                {#each TARGET_DISTRIBUTION_MODE_OPTIONS as option (option.value)}
                     <Select.Item
                         value={option.value}
                         label={option.label}

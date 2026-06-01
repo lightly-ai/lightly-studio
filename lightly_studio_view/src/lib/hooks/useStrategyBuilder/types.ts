@@ -21,10 +21,10 @@ export interface ClassBalancingTargetRow {
     weight: number;
 }
 
-export type ClassBalancingAnnotationSource = 'uniform' | 'input' | 'dictionary';
+export type ClassBalancingTargetDistributionMode = 'uniform' | 'input' | 'dictionary';
 
 export interface ClassBalancingParams {
-    annotation_source: ClassBalancingAnnotationSource;
+    target_distribution_mode: ClassBalancingTargetDistributionMode;
     target_distribution: ClassBalancingTargetRow[];
     strength: number;
 }

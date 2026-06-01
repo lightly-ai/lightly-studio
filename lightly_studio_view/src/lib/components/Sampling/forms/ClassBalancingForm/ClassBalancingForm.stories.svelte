@@ -17,7 +17,7 @@
 <Story
     name="Uniform"
     args={{
-        params: { annotation_source: 'uniform', target_distribution: [], strength: 1 },
+        params: { target_distribution_mode: 'uniform', target_distribution: [], strength: 1 },
         annotationLabels: ['cat', 'dog', 'bird'],
         onUpdate: fn()
     }}
@@ -26,7 +26,7 @@
 <Story
     name="Input"
     args={{
-        params: { annotation_source: 'input', target_distribution: [], strength: 1 },
+        params: { target_distribution_mode: 'input', target_distribution: [], strength: 1 },
         annotationLabels: ['cat', 'dog', 'bird'],
         onUpdate: fn()
     }}
@@ -35,7 +35,7 @@
 <Story
     name="DictionaryEmpty"
     args={{
-        params: { annotation_source: 'dictionary', target_distribution: [], strength: 1 },
+        params: { target_distribution_mode: 'dictionary', target_distribution: [], strength: 1 },
         annotationLabels: ['cat', 'dog', 'bird'],
         onUpdate: fn()
     }}
@@ -45,7 +45,7 @@
     name="DictionaryWithRows"
     args={{
         params: {
-            annotation_source: 'dictionary',
+            target_distribution_mode: 'dictionary',
             target_distribution: [
                 { class_name: 'cat', weight: 0.2 },
                 { class_name: 'dog', weight: 0.8 }

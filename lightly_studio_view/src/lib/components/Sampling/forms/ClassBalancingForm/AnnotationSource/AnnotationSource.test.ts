@@ -7,10 +7,10 @@ describe('AnnotationSource', () => {
         Element.prototype.scrollIntoView = vi.fn();
     });
 
-    it('shows the current annotation source label', () => {
+    it('shows the current target distribution mode label', () => {
         render(AnnotationSource, {
             props: {
-                annotationSource: 'uniform',
+                targetDistributionMode: 'uniform',
                 onUpdate: vi.fn()
             }
         });
@@ -20,10 +20,10 @@ describe('AnnotationSource', () => {
         );
     });
 
-    it('shows all annotation source options when the trigger is clicked', async () => {
+    it('shows all target distribution mode options when the trigger is clicked', async () => {
         render(AnnotationSource, {
             props: {
-                annotationSource: 'uniform',
+                targetDistributionMode: 'uniform',
                 onUpdate: vi.fn()
             }
         });
@@ -41,12 +41,12 @@ describe('AnnotationSource', () => {
         ).toBeInTheDocument();
     });
 
-    it('calls onUpdate with the selected annotation source', async () => {
+    it('calls onUpdate with the selected target distribution mode', async () => {
         const onUpdate = vi.fn();
 
         render(AnnotationSource, {
             props: {
-                annotationSource: 'uniform',
+                targetDistributionMode: 'uniform',
                 onUpdate
             }
         });

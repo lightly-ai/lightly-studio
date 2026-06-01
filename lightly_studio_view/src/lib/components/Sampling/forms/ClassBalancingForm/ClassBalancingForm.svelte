@@ -15,8 +15,8 @@
 
 <div class="grid gap-3" data-testid="class-balancing-form">
     <AnnotationSource
-        annotationSource={params.annotation_source}
-        onUpdate={(source) => onUpdate({ annotation_source: source })}
+        targetDistributionMode={params.target_distribution_mode}
+        onUpdate={(mode) => onUpdate({ target_distribution_mode: mode })}
     />
     <StrengthField
         strength={params.strength}
@@ -24,7 +24,7 @@
         testid="strategy-class-balancing-strength-input"
         onUpdate={(strength) => onUpdate({ strength })}
     />
-    {#if params.annotation_source === 'dictionary'}
+    {#if params.target_distribution_mode === 'dictionary'}
         <TargetDistribution
             targetDistribution={params.target_distribution}
             {annotationLabels}
