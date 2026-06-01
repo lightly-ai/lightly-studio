@@ -32,6 +32,7 @@ from lightly_studio.models.tag import TagTable
 from lightly_studio.models.video import VideoFrameTable, VideoTable
 from lightly_studio.resolvers import dataset_resolver
 from lightly_studio.resolvers.dataset_resolver import table_coverage_utils
+from lightly_studio.utils import batching
 
 
 def delete_dataset(
@@ -120,80 +121,70 @@ def _get_sample_ids(session: Session, collection_ids: list[UUID]) -> list[UUID]:
 
 def _delete_sample_tag_links(session: Session, sample_ids: list[UUID]) -> None:
     """Delete sample-tag links for the given samples."""
-    if not sample_ids:
-        return
-    session.exec(
-        delete(SampleTagLinkTable).where(col(SampleTagLinkTable.sample_id).in_(sample_ids))
-    )
+    for batch in batching.batched(items=sample_ids):
+        session.exec(delete(SampleTagLinkTable).where(col(SampleTagLinkTable.sample_id).in_(batch)))
 
 
 def _delete_sample_group_links(session: Session, sample_ids: list[UUID]) -> None:
     """Delete sample-group links for the given samples."""
-    if not sample_ids:
-        return
-    session.exec(
-        delete(SampleGroupLinkTable).where(col(SampleGroupLinkTable.sample_id).in_(sample_ids))
-    )
+    for batch in batching.batched(items=sample_ids):
+        session.exec(
+            delete(SampleGroupLinkTable).where(col(SampleGroupLinkTable.sample_id).in_(batch))
+        )
 
 
 def _delete_sample_embeddings(session: Session, sample_ids: list[UUID]) -> None:
     """Delete sample embeddings for the given samples."""
-    if not sample_ids:
-        return
-    session.exec(
-        delete(SampleEmbeddingTable).where(col(SampleEmbeddingTable.sample_id).in_(sample_ids))
-    )
+    for batch in batching.batched(items=sample_ids):
+        session.exec(
+            delete(SampleEmbeddingTable).where(col(SampleEmbeddingTable.sample_id).in_(batch))
+        )
 
 
 def _delete_sample_metadata(session: Session, sample_ids: list[UUID]) -> None:
     """Delete sample metadata for the given samples."""
-    if not sample_ids:
-        return
-    session.exec(
-        delete(SampleMetadataTable).where(col(SampleMetadataTable.sample_id).in_(sample_ids))
-    )
+    for batch in batching.batched(items=sample_ids):
+        session.exec(
+            delete(SampleMetadataTable).where(col(SampleMetadataTable.sample_id).in_(batch))
+        )
 
 
 def _delete_object_detection_annotations(session: Session, sample_ids: list[UUID]) -> None:
     """Delete object detection annotation details."""
-    if not sample_ids:
-        return
-    session.exec(
-        delete(ObjectDetectionAnnotationTable).where(
-            col(ObjectDetectionAnnotationTable.sample_id).in_(sample_ids)
+    for batch in batching.batched(items=sample_ids):
+        session.exec(
+            delete(ObjectDetectionAnnotationTable).where(
+                col(ObjectDetectionAnnotationTable.sample_id).in_(batch)
+            )
         )
-    )
 
 
 def _delete_segmentation_annotations(session: Session, sample_ids: list[UUID]) -> None:
     """Delete segmentation annotation details."""
-    if not sample_ids:
-        return
-    session.exec(
-        delete(SegmentationAnnotationTable).where(
-            col(SegmentationAnnotationTable.sample_id).in_(sample_ids)
+    for batch in batching.batched(items=sample_ids):
+        session.exec(
+            delete(SegmentationAnnotationTable).where(
+                col(SegmentationAnnotationTable.sample_id).in_(batch)
+            )
         )
-    )
 
 
 def _delete_annotation_base(session: Session, sample_ids: list[UUID]) -> None:
     """Delete annotation base records."""
-    if not sample_ids:
-        return
-    session.exec(
-        delete(AnnotationBaseTable).where(col(AnnotationBaseTable.sample_id).in_(sample_ids))
-    )
+    for batch in batching.batched(items=sample_ids):
+        session.exec(
+            delete(AnnotationBaseTable).where(col(AnnotationBaseTable.sample_id).in_(batch))
+        )
 
 
 def _delete_annotation_collection_coverage(session: Session, collection_ids: list[UUID]) -> None:
     """Delete annotation collection coverage rows scoped to the dataset's collections."""
-    if not collection_ids:
-        return
-    session.exec(
-        delete(AnnotationCollectionCoverageTable).where(
-            col(AnnotationCollectionCoverageTable.annotation_collection_id).in_(collection_ids)
+    for batch in batching.batched(items=collection_ids):
+        session.exec(
+            delete(AnnotationCollectionCoverageTable).where(
+                col(AnnotationCollectionCoverageTable.annotation_collection_id).in_(batch)
+            )
         )
-    )
 
 
 def _delete_object_tracks(session: Session, dataset_id: UUID) -> None:
@@ -203,44 +194,38 @@ def _delete_object_tracks(session: Session, dataset_id: UUID) -> None:
 
 def _delete_captions(session: Session, sample_ids: list[UUID]) -> None:
     """Delete captions."""
-    if not sample_ids:
-        return
-    session.exec(delete(CaptionTable).where(col(CaptionTable.sample_id).in_(sample_ids)))
+    for batch in batching.batched(items=sample_ids):
+        session.exec(delete(CaptionTable).where(col(CaptionTable.sample_id).in_(batch)))
 
 
 def _delete_video_frames(session: Session, sample_ids: list[UUID]) -> None:
     """Delete video frames."""
-    if not sample_ids:
-        return
-    session.exec(delete(VideoFrameTable).where(col(VideoFrameTable.sample_id).in_(sample_ids)))
+    for batch in batching.batched(items=sample_ids):
+        session.exec(delete(VideoFrameTable).where(col(VideoFrameTable.sample_id).in_(batch)))
 
 
 def _delete_groups(session: Session, sample_ids: list[UUID]) -> None:
     """Delete group records."""
-    if not sample_ids:
-        return
-    session.exec(delete(GroupTable).where(col(GroupTable.sample_id).in_(sample_ids)))
+    for batch in batching.batched(items=sample_ids):
+        session.exec(delete(GroupTable).where(col(GroupTable.sample_id).in_(batch)))
 
 
 def _delete_videos(session: Session, sample_ids: list[UUID]) -> None:
     """Delete videos."""
-    if not sample_ids:
-        return
-    session.exec(delete(VideoTable).where(col(VideoTable.sample_id).in_(sample_ids)))
+    for batch in batching.batched(items=sample_ids):
+        session.exec(delete(VideoTable).where(col(VideoTable.sample_id).in_(batch)))
 
 
 def _delete_images(session: Session, sample_ids: list[UUID]) -> None:
     """Delete images."""
-    if not sample_ids:
-        return
-    session.exec(delete(ImageTable).where(col(ImageTable.sample_id).in_(sample_ids)))
+    for batch in batching.batched(items=sample_ids):
+        session.exec(delete(ImageTable).where(col(ImageTable.sample_id).in_(batch)))
 
 
 def _delete_samples(session: Session, sample_ids: list[UUID]) -> None:
     """Delete samples."""
-    if not sample_ids:
-        return
-    session.exec(delete(SampleTable).where(col(SampleTable.sample_id).in_(sample_ids)))
+    for batch in batching.batched(items=sample_ids):
+        session.exec(delete(SampleTable).where(col(SampleTable.sample_id).in_(batch)))
 
 
 def _delete_annotation_labels(session: Session, dataset_id: UUID) -> None:
@@ -257,20 +242,16 @@ def _delete_dataset(session: Session, dataset_id: UUID) -> None:
 
 def _delete_tags(session: Session, collection_ids: list[UUID]) -> None:
     """Delete tags for the given collections."""
-    if not collection_ids:
-        return
-    session.exec(delete(TagTable).where(col(TagTable.collection_id).in_(collection_ids)))
+    for batch in batching.batched(items=collection_ids):
+        session.exec(delete(TagTable).where(col(TagTable.collection_id).in_(batch)))
 
 
 def _delete_embedding_models(session: Session, collection_ids: list[UUID]) -> None:
     """Delete embedding models for the given collections."""
-    if not collection_ids:
-        return
-    session.exec(
-        delete(EmbeddingModelTable).where(
-            col(EmbeddingModelTable.collection_id).in_(collection_ids)
+    for batch in batching.batched(items=collection_ids):
+        session.exec(
+            delete(EmbeddingModelTable).where(col(EmbeddingModelTable.collection_id).in_(batch))
         )
-    )
 
 
 def _delete_evaluation_sample_metrics(session: Session, dataset_id: UUID) -> None:
