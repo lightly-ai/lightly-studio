@@ -75,8 +75,6 @@ def get_2d_embeddings(
         color_by=color_by,
         sample_ids=sample_ids,
     )
-    if color_by is not None:
-        color_legend = {0: "Filtered out", 1: "Unassigned", **color_legend}
 
     schema = pa.schema(
         [
