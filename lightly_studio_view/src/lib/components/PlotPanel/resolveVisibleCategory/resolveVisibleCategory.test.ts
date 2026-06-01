@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest';
 import { resolveVisibleCategory } from './resolveVisibleCategory';
 
 describe('resolveVisibleCategory', () => {
-    it('returns NOT_FILTERED_CATEGORY (0) when the point does not fulfil the filter', () => {
+    it('returns EXCLUDED_BY_FILTERS_CATEGORY (0) when the point does not fulfil the filter', () => {
         expect(resolveVisibleCategory([2, 3], 0, new Set())).toBe(0);
     });
 
@@ -10,7 +10,7 @@ describe('resolveVisibleCategory', () => {
         expect(resolveVisibleCategory([2, 3], 1, new Set())).toBe(2);
     });
 
-    it('returns FILTERED_CATEGORY (1) when the point has no categories', () => {
+    it('returns INCLUDED_BY_FILTERS_CATEGORY (1) when the point has no categories', () => {
         expect(resolveVisibleCategory([], 1, new Set())).toBe(1);
     });
 
@@ -18,11 +18,11 @@ describe('resolveVisibleCategory', () => {
         expect(resolveVisibleCategory([2, 3], 1, new Set([2]))).toBe(3);
     });
 
-    it('falls back to FILTERED_CATEGORY (1) when the only category is hidden', () => {
+    it('falls back to INCLUDED_BY_FILTERS_CATEGORY (1) when the only category is hidden', () => {
         expect(resolveVisibleCategory([2], 1, new Set([2]))).toBe(1);
     });
 
-    it('falls back to FILTERED_CATEGORY (1) when all categories are hidden', () => {
+    it('falls back to INCLUDED_BY_FILTERS_CATEGORY (1) when all categories are hidden', () => {
         expect(resolveVisibleCategory([2, 3], 1, new Set([2, 3]))).toBe(1);
     });
 

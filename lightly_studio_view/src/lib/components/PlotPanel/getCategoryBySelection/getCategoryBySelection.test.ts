@@ -61,7 +61,7 @@ describe('getCategoryBySelection', () => {
         expect(isPointInPolygon).toHaveBeenCalledWith(1.0, 5.0, mockSelection);
     });
 
-    it('should return NOT_FILTERED_CATEGORY when point is not in selection', () => {
+    it('should return EXCLUDED_BY_FILTERS_CATEGORY when point is not in selection', () => {
         const mockData = createMockArrowData();
         vi.mocked(isPointInPolygon).mockReturnValue(false);
 
