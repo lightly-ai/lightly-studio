@@ -1,8 +1,18 @@
-import { tableFromIPC } from 'apache-arrow';
+import { tableFromIPC, type Vector } from 'apache-arrow';
 import { writable, type Writable } from 'svelte/store';
 
-const dataColumns = ['x', 'y', 'fulfils_filter', 'color_category', 'sample_id'] as const;
+const dataColumns = ['x', 'y', 'fulfils_filter', 'color_categories', 'sample_id'];
 type TableColumn = (typeof dataColumns)[number];
+
+// Reads a list<uint8> column row by row into a plain number[][], where each row holds all
+// the categories a sample belongs to, in priority order.
+const readListColumn = (column: Vector): number[][] => {
+    const rows: number[][] = [];
+    for (let row = 0; row < column.length; row++) {
+        rows.push(Array.from<number>(column.get(row) ?? []));
+    }
+    return rows;
+};
 
 export type ArrowData = Record<TableColumn, unknown>;
 
@@ -57,11 +67,15 @@ export function useArrowData({ blobData }: { blobData: Blob }): UseArrowDataRetu
             }
             const columnData = new Map<TableColumn, unknown>();
             for (const col of dataColumns) {
-                if (!table.getChild(col)) {
+                const child = table.getChild(col);
+                if (!child) {
                     error.set(`Missing required column "${col}" in Arrow data.`);
                     return;
                 }
-                columnData.set(col, table.getChild(col)?.toArray());
+                columnData.set(
+                    col,
+                    col === 'color_categories' ? readListColumn(child) : child.toArray()
+                );
             }
             data.set(Object.fromEntries(columnData) as Record<TableColumn, unknown>);
             colorLegend.set(parseColorLegend(table.schema?.metadata));
