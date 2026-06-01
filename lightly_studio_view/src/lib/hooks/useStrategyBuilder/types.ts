@@ -1,3 +1,55 @@
+export interface DiversityParams {
+    strength: number;
+}
+
+export interface TypicalityParams {
+    strength: number;
+}
+
+export interface SimilarityParams {
+    query_tag_id: string;
+    strength: number;
+}
+
+export interface MetadataWeightingParams {
+    metadata_key: string;
+    strength: number;
+}
+
+export interface ClassBalancingTargetRow {
+    class_name: string;
+    weight: number;
+}
+
+export type ClassBalancingTargetDistributionMode = 'uniform' | 'input' | 'dictionary';
+
+export interface ClassBalancingParams {
+    target_distribution_mode: ClassBalancingTargetDistributionMode;
+    target_distribution: ClassBalancingTargetRow[];
+    strength: number;
+}
+
+interface StrategyParamsByType {
+    diversity: DiversityParams;
+    typicality: TypicalityParams;
+    similarity: SimilarityParams;
+    metadata_weighting: MetadataWeightingParams;
+    class_balancing: ClassBalancingParams;
+}
+
+export type StrategyType = keyof StrategyParamsByType;
+
+export type StrategyInstance = {
+    [K in keyof StrategyParamsByType]: {
+        id: string;
+        type: K;
+        params: StrategyParamsByType[K];
+        isExpanded: boolean;
+    };
+}[keyof StrategyParamsByType];
+
+export type StrategyParams = StrategyInstance['params'];
+
 export const STRATEGY_OPTIONS = [
     {
         type: 'diversity',
@@ -29,6 +81,4 @@ export const STRATEGY_OPTIONS = [
         description:
             'Selects samples to reach a target class distribution using annotation labels. Use to fix class imbalance or enforce custom class proportions.'
     }
-];
-
-export type StrategyType = (typeof STRATEGY_OPTIONS)[number]['type'];
+] satisfies Array<{ type: StrategyType; label: string; description: string }>;
