@@ -196,7 +196,7 @@ def test_get_evaluation_confusion_matrix(test_client: TestClient, mocker: Mocker
         ),
     )
     mock_resolver = mocker.patch(
-        "lightly_studio.api.routes.api.evaluation.evaluation_annotation_metric_resolver.get_object_detection_confusion_matrix",
+        "lightly_studio.api.routes.api.evaluation.evaluation_annotation_metric_resolver.get_confusion_matrix",
         return_value=mock_matrix,
     )
 
@@ -306,7 +306,7 @@ def test_get_evaluation_confusion_matrix__empty_matrix(
         ),
     )
     mocker.patch(
-        "lightly_studio.api.routes.api.evaluation.evaluation_annotation_metric_resolver.get_object_detection_confusion_matrix",
+        "lightly_studio.api.routes.api.evaluation.evaluation_annotation_metric_resolver.get_confusion_matrix",
         return_value=ConfusionMatrix(
             row_labels=[],
             col_labels=[],
@@ -355,7 +355,7 @@ def test_get_evaluation_confusion_matrix__unsupported_task_type(
         ),
     )
     mock_resolver = mocker.patch(
-        "lightly_studio.api.routes.api.evaluation.evaluation_annotation_metric_resolver.get_object_detection_confusion_matrix",
+        "lightly_studio.api.routes.api.evaluation.evaluation_annotation_metric_resolver.get_confusion_matrix",
     )
 
     response = test_client.get(
