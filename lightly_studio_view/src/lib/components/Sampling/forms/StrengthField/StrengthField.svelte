@@ -17,7 +17,7 @@
     <div class="flex items-center gap-1.5">
         <Label for={id}>Strength</Label>
         <FieldTooltip
-            content="Relative weight of this strategy in the combination. A strength of 2 gives this strategy twice the influence of one with strength 1. Must be a positive number."
+            content="Relative weight of this strategy in the combination. A strength of 2 gives this strategy twice the influence of one with strength 1. Must be a non-negative number."
         />
     </div>
     <Input
