@@ -22,7 +22,12 @@
         const t = tooltipEl.getBoundingClientRect();
         const vw = window.innerWidth;
 
-        const top = r.top - t.height - 6 >= 0 ? r.top - t.height - 6 : r.bottom + 6;
+        const vh = window.innerHeight;
+        const margin = 6;
+        const preferredTop = r.top - t.height - margin;
+        const preferredBelow = r.bottom + margin;
+        const rawTop = preferredBelow + t.height + margin <= vh ? preferredBelow : preferredTop;
+        const top = Math.max(margin, Math.min(rawTop, vh - t.height - margin));
         const left = Math.max(8, Math.min(r.left + r.width / 2 - t.width / 2, vw - t.width - 8));
 
         tooltipStyle = `top: ${top}px; left: ${left}px;`;
