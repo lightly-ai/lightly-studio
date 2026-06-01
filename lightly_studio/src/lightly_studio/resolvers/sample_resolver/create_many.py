@@ -22,6 +22,6 @@ def create_many(session: Session, samples: Sequence[SampleCreate]) -> list[UUID]
         {**sample.model_dump(), "sample_id": sample_id}
         for sample, sample_id in zip(samples, sample_ids)
     ]
-    for batch in batching.batched(rows):
+    for batch in batching.batched(items=rows):
         session.execute(insert(SampleTable).values(batch))
     return sample_ids

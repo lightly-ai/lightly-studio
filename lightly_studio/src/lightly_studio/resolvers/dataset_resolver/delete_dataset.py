@@ -121,13 +121,13 @@ def _get_sample_ids(session: Session, collection_ids: list[UUID]) -> list[UUID]:
 
 def _delete_sample_tag_links(session: Session, sample_ids: list[UUID]) -> None:
     """Delete sample-tag links for the given samples."""
-    for batch in batching.batched(sample_ids):
+    for batch in batching.batched(items=sample_ids):
         session.exec(delete(SampleTagLinkTable).where(col(SampleTagLinkTable.sample_id).in_(batch)))
 
 
 def _delete_sample_group_links(session: Session, sample_ids: list[UUID]) -> None:
     """Delete sample-group links for the given samples."""
-    for batch in batching.batched(sample_ids):
+    for batch in batching.batched(items=sample_ids):
         session.exec(
             delete(SampleGroupLinkTable).where(col(SampleGroupLinkTable.sample_id).in_(batch))
         )
@@ -135,7 +135,7 @@ def _delete_sample_group_links(session: Session, sample_ids: list[UUID]) -> None
 
 def _delete_sample_embeddings(session: Session, sample_ids: list[UUID]) -> None:
     """Delete sample embeddings for the given samples."""
-    for batch in batching.batched(sample_ids):
+    for batch in batching.batched(items=sample_ids):
         session.exec(
             delete(SampleEmbeddingTable).where(col(SampleEmbeddingTable.sample_id).in_(batch))
         )
@@ -143,7 +143,7 @@ def _delete_sample_embeddings(session: Session, sample_ids: list[UUID]) -> None:
 
 def _delete_sample_metadata(session: Session, sample_ids: list[UUID]) -> None:
     """Delete sample metadata for the given samples."""
-    for batch in batching.batched(sample_ids):
+    for batch in batching.batched(items=sample_ids):
         session.exec(
             delete(SampleMetadataTable).where(col(SampleMetadataTable.sample_id).in_(batch))
         )
@@ -151,7 +151,7 @@ def _delete_sample_metadata(session: Session, sample_ids: list[UUID]) -> None:
 
 def _delete_object_detection_annotations(session: Session, sample_ids: list[UUID]) -> None:
     """Delete object detection annotation details."""
-    for batch in batching.batched(sample_ids):
+    for batch in batching.batched(items=sample_ids):
         session.exec(
             delete(ObjectDetectionAnnotationTable).where(
                 col(ObjectDetectionAnnotationTable.sample_id).in_(batch)
@@ -161,7 +161,7 @@ def _delete_object_detection_annotations(session: Session, sample_ids: list[UUID
 
 def _delete_segmentation_annotations(session: Session, sample_ids: list[UUID]) -> None:
     """Delete segmentation annotation details."""
-    for batch in batching.batched(sample_ids):
+    for batch in batching.batched(items=sample_ids):
         session.exec(
             delete(SegmentationAnnotationTable).where(
                 col(SegmentationAnnotationTable.sample_id).in_(batch)
@@ -171,7 +171,7 @@ def _delete_segmentation_annotations(session: Session, sample_ids: list[UUID]) -
 
 def _delete_annotation_base(session: Session, sample_ids: list[UUID]) -> None:
     """Delete annotation base records."""
-    for batch in batching.batched(sample_ids):
+    for batch in batching.batched(items=sample_ids):
         session.exec(
             delete(AnnotationBaseTable).where(col(AnnotationBaseTable.sample_id).in_(batch))
         )
@@ -179,7 +179,7 @@ def _delete_annotation_base(session: Session, sample_ids: list[UUID]) -> None:
 
 def _delete_annotation_collection_coverage(session: Session, collection_ids: list[UUID]) -> None:
     """Delete annotation collection coverage rows scoped to the dataset's collections."""
-    for batch in batching.batched(collection_ids):
+    for batch in batching.batched(items=collection_ids):
         session.exec(
             delete(AnnotationCollectionCoverageTable).where(
                 col(AnnotationCollectionCoverageTable.annotation_collection_id).in_(batch)
@@ -194,37 +194,37 @@ def _delete_object_tracks(session: Session, dataset_id: UUID) -> None:
 
 def _delete_captions(session: Session, sample_ids: list[UUID]) -> None:
     """Delete captions."""
-    for batch in batching.batched(sample_ids):
+    for batch in batching.batched(items=sample_ids):
         session.exec(delete(CaptionTable).where(col(CaptionTable.sample_id).in_(batch)))
 
 
 def _delete_video_frames(session: Session, sample_ids: list[UUID]) -> None:
     """Delete video frames."""
-    for batch in batching.batched(sample_ids):
+    for batch in batching.batched(items=sample_ids):
         session.exec(delete(VideoFrameTable).where(col(VideoFrameTable.sample_id).in_(batch)))
 
 
 def _delete_groups(session: Session, sample_ids: list[UUID]) -> None:
     """Delete group records."""
-    for batch in batching.batched(sample_ids):
+    for batch in batching.batched(items=sample_ids):
         session.exec(delete(GroupTable).where(col(GroupTable.sample_id).in_(batch)))
 
 
 def _delete_videos(session: Session, sample_ids: list[UUID]) -> None:
     """Delete videos."""
-    for batch in batching.batched(sample_ids):
+    for batch in batching.batched(items=sample_ids):
         session.exec(delete(VideoTable).where(col(VideoTable.sample_id).in_(batch)))
 
 
 def _delete_images(session: Session, sample_ids: list[UUID]) -> None:
     """Delete images."""
-    for batch in batching.batched(sample_ids):
+    for batch in batching.batched(items=sample_ids):
         session.exec(delete(ImageTable).where(col(ImageTable.sample_id).in_(batch)))
 
 
 def _delete_samples(session: Session, sample_ids: list[UUID]) -> None:
     """Delete samples."""
-    for batch in batching.batched(sample_ids):
+    for batch in batching.batched(items=sample_ids):
         session.exec(delete(SampleTable).where(col(SampleTable.sample_id).in_(batch)))
 
 
@@ -242,13 +242,13 @@ def _delete_dataset(session: Session, dataset_id: UUID) -> None:
 
 def _delete_tags(session: Session, collection_ids: list[UUID]) -> None:
     """Delete tags for the given collections."""
-    for batch in batching.batched(collection_ids):
+    for batch in batching.batched(items=collection_ids):
         session.exec(delete(TagTable).where(col(TagTable.collection_id).in_(batch)))
 
 
 def _delete_embedding_models(session: Session, collection_ids: list[UUID]) -> None:
     """Delete embedding models for the given collections."""
-    for batch in batching.batched(collection_ids):
+    for batch in batching.batched(items=collection_ids):
         session.exec(
             delete(EmbeddingModelTable).where(col(EmbeddingModelTable.collection_id).in_(batch))
         )

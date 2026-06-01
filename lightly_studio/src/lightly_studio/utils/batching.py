@@ -1,4 +1,4 @@
-"""Batch bulk database operations to stay under PostgreSQL's 65,535 bind-parameter limit."""
+"""Split an iterable into batches of a bounded size."""
 
 from __future__ import annotations
 
