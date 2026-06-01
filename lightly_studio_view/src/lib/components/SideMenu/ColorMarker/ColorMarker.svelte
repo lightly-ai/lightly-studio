@@ -1,5 +1,5 @@
 <script lang="ts">
-    import { useColorPicker } from '$lib/hooks/useColorPicker.svelte';
+    import { useColorPicker } from '$lib/hooks';
     import type { HTMLAttributes } from 'svelte/elements';
     import { ColorPicker } from '../../ui/color-picker';
 
