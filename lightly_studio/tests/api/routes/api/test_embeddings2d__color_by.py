@@ -404,7 +404,7 @@ def test_get_embeddings2d__with_tag_color_by(
     )
 
     # samples[0] in alpha only, samples[1] in beta only,
-    # samples[2] in both (first-match-wins → alpha), samples[3,4] untagged.
+    # samples[2] in both, samples[3,4] untagged.
     tag_resolver.add_tag_to_sample(
         session=db_session, tag_id=tag_a.tag_id, sample=samples[0].sample
     )
@@ -438,9 +438,18 @@ def test_get_embeddings2d__with_tag_color_by(
     sample_id_to_color = dict(zip(sample_ids_payload, color_category))
     assert sample_id_to_color[str(samples[0].sample_id)] == 2  # alpha
     assert sample_id_to_color[str(samples[1].sample_id)] == 3  # beta
-    assert sample_id_to_color[str(samples[2].sample_id)] == 2  # both → alpha (first match)
+    assert sample_id_to_color[str(samples[2].sample_id)] == 2  # both → alpha (primary)
     assert sample_id_to_color[str(samples[3].sample_id)] == 1  # Unassigned
     assert sample_id_to_color[str(samples[4].sample_id)] == 1  # Unassigned
+
+    assert table.schema.field("color_categories").type == pa.list_(pa.uint8())
+    color_categories = table.column("color_categories").to_pylist()
+    sample_id_to_colors = dict(zip(sample_ids_payload, color_categories))
+    assert sample_id_to_colors[str(samples[0].sample_id)] == [2]  # alpha
+    assert sample_id_to_colors[str(samples[1].sample_id)] == [3]  # beta
+    assert sample_id_to_colors[str(samples[2].sample_id)] == [2, 3]  # both, sorted
+    assert sample_id_to_colors[str(samples[3].sample_id)] == []  # untagged
+    assert sample_id_to_colors[str(samples[4].sample_id)] == []  # untagged
 
     legend = json.loads(table.schema.metadata[b"color_legend"])
     assert legend == {
@@ -556,7 +565,7 @@ def test_get_embeddings2d__with_annotation_color_by(
     )
 
     # samples[0] has "cat", samples[1] has "dog",
-    # samples[2] has both (first-match-wins → cat), samples[3,4] unannotated.
+    # samples[2] has both, samples[3,4] unannotated.
     create_annotation(
         session=db_session,
         collection_id=collection_id,
@@ -605,9 +614,17 @@ def test_get_embeddings2d__with_annotation_color_by(
     sample_id_to_color = dict(zip(sample_ids_payload, color_category))
     assert sample_id_to_color[str(samples[0].sample_id)] == 2  # cat
     assert sample_id_to_color[str(samples[1].sample_id)] == 3  # dog
-    assert sample_id_to_color[str(samples[2].sample_id)] == 2  # both → cat (first match)
+    assert sample_id_to_color[str(samples[2].sample_id)] == 2  # both → cat (primary)
     assert sample_id_to_color[str(samples[3].sample_id)] == 1  # Unassigned
     assert sample_id_to_color[str(samples[4].sample_id)] == 1  # Unassigned
+
+    color_categories = table.column("color_categories").to_pylist()
+    sample_id_to_colors = dict(zip(sample_ids_payload, color_categories))
+    assert sample_id_to_colors[str(samples[0].sample_id)] == [2]  # cat
+    assert sample_id_to_colors[str(samples[1].sample_id)] == [3]  # dog
+    assert sample_id_to_colors[str(samples[2].sample_id)] == [2, 3]  # both, sorted
+    assert sample_id_to_colors[str(samples[3].sample_id)] == []  # unannotated
+    assert sample_id_to_colors[str(samples[4].sample_id)] == []  # unannotated
 
     legend = json.loads(table.schema.metadata[b"color_legend"])
     assert legend == {
