@@ -4,7 +4,8 @@ import {
     rgbaToHex,
     rgbaFromBytes,
     withAlpha,
-    stripAlpha
+    stripAlpha,
+    oklchToRgb
 } from './colorConvert';
 
 describe('hexToRgb', () => {
@@ -61,6 +62,27 @@ describe('withAlpha', () => {
 
     test('returns input unchanged when no rgb(a) match is found', () => {
         expect(withAlpha('hsl(0, 100%, 50%)', 0.5)).toBe('hsl(0, 100%, 50%)');
+    });
+});
+
+describe('oklchToRgb', () => {
+    test('maps achromatic OKLCH to neutral sRGB', () => {
+        // Zero chroma at full lightness is white; at zero lightness, black.
+        expect(oklchToRgb(1, 0, 0)).toEqual({ r: 255, g: 255, b: 255 });
+        expect(oklchToRgb(0, 0, 0)).toEqual({ r: 0, g: 0, b: 0 });
+    });
+
+    test('produces an in-gamut hue at the palette lightness/chroma', () => {
+        // Hue 120° at L=0.8, C=0.22 is a yellow-green inside the sRGB gamut.
+        expect(oklchToRgb(0.8, 0.22, 120)).toEqual({ r: 173, g: 208, b: 0 });
+    });
+
+    test('clamps out-of-gamut channels to the 0-255 range', () => {
+        const { r, g, b } = oklchToRgb(0.8, 0.22, 0);
+        for (const channel of [r, g, b]) {
+            expect(channel).toBeGreaterThanOrEqual(0);
+            expect(channel).toBeLessThanOrEqual(255);
+        }
     });
 });
 
