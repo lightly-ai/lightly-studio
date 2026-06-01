@@ -12,6 +12,7 @@
         compact?: boolean;
         canSelectAll: boolean;
         isImages: boolean;
+        hasEvaluationRuns: boolean;
         hasMediaWithEmbeddings: boolean;
         collectionDatasetId: string;
         onSelectAll: () => Promise<void>;
@@ -28,6 +29,7 @@
         compact = false,
         canSelectAll,
         isImages,
+        hasEvaluationRuns,
         hasMediaWithEmbeddings,
         onSelectAll,
         searchImage,
@@ -72,7 +74,7 @@
                 </Button>
             </Tooltip>
         {/if}
-        {#if isImages}
+        {#if isImages && hasEvaluationRuns}
             <Tooltip
                 content={$showEvaluationRuns ? 'Hide Evaluation Runs' : 'Show Evaluation Runs'}
                 position="bottom"
