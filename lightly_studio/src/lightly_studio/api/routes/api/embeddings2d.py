@@ -74,8 +74,16 @@ def get_2d_embeddings(
         collection_id=collection_id,
         color_by=color_by,
         sample_ids=sample_ids,
-        fulfils_filter=fulfils_filter,
     )
+    # TODO(Michal, 05/2026): Remove color_category when the frontend is updated.
+    # `build_color_data` is filter-unaware and returns a list of color categories per sample.
+    # Temporarily transform it back to a single category per sample.
+    if color_by is not None:
+        color_legend = {0: "Filtered out", 1: "Unassigned", **color_legend}
+    primary_color_category = [
+        _to_primary_color_category(color_categories=categories, fulfils_filter=fulfils)
+        for categories, fulfils in zip(color_categories, fulfils_filter)
+    ]
 
     schema = pa.schema(
         [
@@ -83,6 +91,7 @@ def get_2d_embeddings(
             pa.field("y", pa.float32()),
             pa.field("fulfils_filter", pa.uint8()),
             pa.field("color_category", pa.uint8()),
+            pa.field("color_categories", pa.list_(pa.uint8())),
             pa.field("sample_id", pa.string()),
         ],
         metadata={
@@ -94,7 +103,8 @@ def get_2d_embeddings(
             "x": pa.array(x_array, type=pa.float32()),
             "y": pa.array(y_array, type=pa.float32()),
             "fulfils_filter": pa.array(fulfils_filter, type=pa.uint8()),
-            "color_category": pa.array(color_categories, type=pa.uint8()),
+            "color_category": pa.array(primary_color_category, type=pa.uint8()),
+            "color_categories": pa.array(color_categories, type=pa.list_(pa.uint8())),
             "sample_id": pa.array([str(sample_id) for sample_id in sample_ids], type=pa.string()),
         },
         schema=schema,
@@ -114,6 +124,19 @@ def get_2d_embeddings(
             "X-Content-Type-Options": "nosniff",
         },
     )
+
+
+def _to_primary_color_category(color_categories: list[int], fulfils_filter: int) -> int:
+    """Pick the scalar color category for one sample.
+
+    Reserves 0 for filtered-out samples and 1 for samples with no color category;
+    otherwise returns the lowest color category.
+    """
+    if fulfils_filter == 0:
+        return 0
+    if not color_categories:
+        return 1
+    return color_categories[0]
 
 
 def _get_matching_sample_ids(
