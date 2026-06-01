@@ -8,10 +8,10 @@
     import { useAnnotationCollectionsFilter } from '$lib/hooks/useAnnotationCollectionsFilter/useAnnotationCollectionsFilter';
     import type { Annotation } from '$lib/services/types';
     import type { BoundingBox } from '$lib/types';
-    import { getColorByLabel } from '$lib/utils';
+    import { getColorByLabel, withAlpha } from '$lib/utils';
     import { getConstrainedCoordinates } from '$lib/utils/getConstrainedCoordinates';
     import ResizableRectangle from '../ResizableRectangle/ResizableRectangle.svelte';
-    import { getBoundingBox, withAlpha } from './utils';
+    import { getBoundingBox } from './utils';
 
     const {
         annotation,
