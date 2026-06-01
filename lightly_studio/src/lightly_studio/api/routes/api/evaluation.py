@@ -6,9 +6,11 @@ from typing import Annotated
 from uuid import UUID
 
 from fastapi import APIRouter, HTTPException, Path
+from sqlmodel import col, select
 
 from lightly_studio.api.routes.api.status import HTTP_STATUS_NOT_FOUND, HTTP_STATUS_NOT_IMPLEMENTED
 from lightly_studio.db_manager import SessionDep
+from lightly_studio.models.collection import CollectionTable
 from lightly_studio.models.evaluation_confusion_matrix import ConfusionMatrix
 from lightly_studio.models.evaluation_run import EvaluationRunView, EvaluationTaskType
 from lightly_studio.models.evaluation_sample_metric import EvaluationRunMetricsInfoView
@@ -66,12 +68,25 @@ def get_evaluation_runs(
         session=session,
         dataset_id=dataset_id,
     )
+    # Batch-fetch collection names for GT and prediction annotation collections.
+    collection_ids = {run.gt_annotation_collection_id for run in runs} | {
+        run.pred_annotation_collection_id for run in runs
+    }
+    collections = session.exec(
+        select(CollectionTable).where(col(CollectionTable.collection_id).in_(collection_ids))
+    ).all()
+    collection_name_by_id = {c.collection_id: c.name for c in collections}
+
     return [
         EvaluationRunView(
             id=run.id,
             name=run.name,
             evaluation_run_configuration=run.config_json,
             created_at=run.created_at,
+            gt_label_source_name=collection_name_by_id.get(run.gt_annotation_collection_id),
+            prediction_label_source_name=collection_name_by_id.get(
+                run.pred_annotation_collection_id
+            ),
         )
         for run in runs
     ]

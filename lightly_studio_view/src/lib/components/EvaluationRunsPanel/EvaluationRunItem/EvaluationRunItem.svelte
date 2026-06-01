@@ -94,6 +94,39 @@
                 {/if}
             </section>
 
+            <!-- Label sources -->
+            {#if run.gt_label_source_name != null || run.prediction_label_source_name != null}
+                <section data-testid="evaluation-run-label-sources">
+                    <Typography variant="subtitle2" component="h3" className="mb-2">
+                        Label sources
+                    </Typography>
+                    <div class="flex flex-wrap gap-2">
+                        <div class="flex flex-col gap-0.5">
+                            <Typography variant="caption" className="text-muted-foreground">
+                                Ground truth
+                            </Typography>
+                            <span
+                                class="rounded-md border border-border bg-muted px-2 py-0.5 text-sm"
+                                data-testid="evaluation-run-gt-label-source"
+                            >
+                                {run.gt_label_source_name ?? '—'}
+                            </span>
+                        </div>
+                        <div class="flex flex-col gap-0.5">
+                            <Typography variant="caption" className="text-muted-foreground">
+                                Predictions
+                            </Typography>
+                            <span
+                                class="rounded-md border border-border bg-muted px-2 py-0.5 text-sm"
+                                data-testid="evaluation-run-prediction-label-source"
+                            >
+                                {run.prediction_label_source_name ?? '—'}
+                            </span>
+                        </div>
+                    </div>
+                </section>
+            {/if}
+
             <EvaluationRunConfusionMatrixSection evaluationRunId={run.id} />
         </div>
     {/if}

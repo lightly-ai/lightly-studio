@@ -57,3 +57,5 @@ class EvaluationRunView(BaseModel):
     name: str
     evaluation_run_configuration: dict[str, Any]
     created_at: datetime
+    gt_label_source_name: str | None = None
+    prediction_label_source_name: str | None = None

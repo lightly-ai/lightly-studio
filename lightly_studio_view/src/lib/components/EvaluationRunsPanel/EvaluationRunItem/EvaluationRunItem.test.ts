@@ -88,4 +88,42 @@ describe('EvaluationRunItem', () => {
         await fireEvent.click(screen.getByTestId('evaluation-run-item'));
         expect(onToggle).toHaveBeenCalledOnce();
     });
+
+    it('shows label sources section when both fields are present', () => {
+        const run: EvaluationRunView = {
+            ...baseRun,
+            gt_label_source_name: 'ground_truth_v1',
+            prediction_label_source_name: 'predictions_v2'
+        };
+        render(EvaluationRunItem, { props: { ...defaultProps, run, expanded: true } });
+
+        expect(screen.getByTestId('evaluation-run-label-sources')).toBeInTheDocument();
+        expect(screen.getByTestId('evaluation-run-gt-label-source')).toHaveTextContent(
+            'ground_truth_v1'
+        );
+        expect(screen.getByTestId('evaluation-run-prediction-label-source')).toHaveTextContent(
+            'predictions_v2'
+        );
+    });
+
+    it('shows label sources section with dash when one field is null', () => {
+        const run: EvaluationRunView = {
+            ...baseRun,
+            gt_label_source_name: 'ground_truth_v1',
+            prediction_label_source_name: null
+        };
+        render(EvaluationRunItem, { props: { ...defaultProps, run, expanded: true } });
+
+        expect(screen.getByTestId('evaluation-run-label-sources')).toBeInTheDocument();
+        expect(screen.getByTestId('evaluation-run-gt-label-source')).toHaveTextContent(
+            'ground_truth_v1'
+        );
+        expect(screen.getByTestId('evaluation-run-prediction-label-source')).toHaveTextContent('—');
+    });
+
+    it('omits label sources section when both fields are absent', () => {
+        render(EvaluationRunItem, { props: { ...defaultProps, expanded: true } });
+
+        expect(screen.queryByTestId('evaluation-run-label-sources')).not.toBeInTheDocument();
+    });
 });
