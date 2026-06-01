@@ -22,13 +22,3 @@
         onUpdate: fn()
     }}
 />
-
-<Story
-    name="HighStrength"
-    args={{
-        strength: 5,
-        id: 'strength-high',
-        testid: 'strength-field-high',
-        onUpdate: fn()
-    }}
-/>
