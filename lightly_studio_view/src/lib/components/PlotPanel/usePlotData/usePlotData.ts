@@ -3,6 +3,7 @@ import { EmbeddingView, type Point } from 'embedding-atlas/svelte';
 import type { ComponentProps } from 'svelte';
 import type { ArrowData } from '../useArrowData/useArrowData';
 import { getCategoryBySelection } from '../getCategoryBySelection/getCategoryBySelection';
+import { resolveVisibleCategory } from '../resolveVisibleCategory/resolveVisibleCategory';
 import { FILTERED_CATEGORY, NOT_FILTERED_CATEGORY } from '../plotCategories';
 
 type PlotColumn = 'x' | 'y' | 'category';
@@ -23,18 +24,21 @@ type Selection = Point[] | null;
  * @param arrowData - Parsed Arrow data containing x/y coordinates, filter status, and sample IDs
  * @param rangeSelection - Optional polygon selection to further categorize points within the range
  * @param hasActiveFilter - When false, all points start as FILTERED_CATEGORY so range selection still works without a pre-existing filter
+ * @param hiddenCategories - Categories toggled off in the legend; points fall back to their next visible category
  * @returns Object with formatted plot data, error store, and selected sample IDs store
  */
 export function usePlotData({
     arrowData,
     rangeSelection,
     highlightedSampleIds = [],
-    hasActiveFilter = true
+    hasActiveFilter = true,
+    hiddenCategories = new Set()
 }: {
     arrowData: ArrowData;
     rangeSelection: Selection;
     highlightedSampleIds?: string[];
     hasActiveFilter?: boolean;
+    hiddenCategories?: ReadonlySet<number>;
 }): UsePlotDataReturn {
     const error = writable<string | undefined>();
     const plotData = writable<Record<PlotColumn, unknown>>();
@@ -46,9 +50,25 @@ export function usePlotData({
         return { data: plotData, error, selectedSampleIds };
     }
 
-    let category = hasActiveFilter
-        ? (data.color_category as Uint8Array)
-        : new Uint8Array((data.x as Float32Array).length).fill(FILTERED_CATEGORY);
+    const pointCount = (data.x as Float32Array).length;
+    const colorCategories = data.color_categories as number[][];
+    const fulfilsFilter = data.fulfils_filter as ArrayLike<number>;
+
+    // Each point is displayed as its first visible category, so it falls back to the next
+    // one when a category is toggled off. Without an active filter every point starts as
+    // FILTERED_CATEGORY so range selection still works.
+    let category = new Uint8Array(pointCount);
+    if (hasActiveFilter) {
+        for (let index = 0; index < pointCount; index++) {
+            category[index] = resolveVisibleCategory(
+                colorCategories[index],
+                fulfilsFilter[index],
+                hiddenCategories
+            );
+        }
+    } else {
+        category.fill(FILTERED_CATEGORY);
+    }
     const sampleIds = data.sample_id as string[];
 
     if (rangeSelection) {
