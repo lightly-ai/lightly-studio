@@ -1,4 +1,5 @@
 <script lang="ts">
+    import { stripAlpha } from '$lib/utils';
     import calculateBinaryMaskFromRLE from './calculateBinaryMaskFromRLE/calculateBinaryMaskFromRLE';
 
     const {
@@ -27,12 +28,7 @@
             return { dataUrl: prerenderedDataUrl, height: prerenderedHeight };
         }
 
-        const opaqueColor = colorFill.replace(
-            /rgba?\((\d+,\s*\d+,\s*\d+)(?:,\s*[\d.]+)?\)/,
-            'rgb($1)'
-        );
-
-        return calculateBinaryMaskFromRLE(segmentation, width, opaqueColor);
+        return calculateBinaryMaskFromRLE(segmentation, width, stripAlpha(colorFill));
     });
 </script>
 
