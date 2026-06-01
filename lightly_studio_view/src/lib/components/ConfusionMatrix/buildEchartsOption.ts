@@ -30,6 +30,7 @@ export function buildEchartsOption(matrix: ConfusionMatrix): EChartsCoreOption {
         }
     }
 
+    const nameGap = 20;
     return {
         backgroundColor: 'transparent',
         tooltip: {
@@ -39,14 +40,14 @@ export function buildEchartsOption(matrix: ConfusionMatrix): EChartsCoreOption {
                 return `GT: <b>${gt}</b><br/>Pred: <b>${pred}</b><br/>Count: <b>${count}</b>`;
             }
         },
-        grid: { left: 180, right: 24, top: 16, bottom: 180 },
+        grid: { left: 0, right: 0, top: 0, bottom: 100 },
         xAxis: {
             type: 'category',
             data: xLabels,
             position: 'bottom',
             name: 'Prediction',
             nameLocation: 'middle',
-            nameGap: 150,
+            nameGap,
             nameTextStyle: { color: '#9ca3af', fontSize: 13, fontWeight: 'bold' },
             axisLabel: { rotate: 45, interval: 0, color: '#9ca3af', fontSize: 12 },
             axisLine: { lineStyle: { color: '#374151' } },
@@ -57,7 +58,7 @@ export function buildEchartsOption(matrix: ConfusionMatrix): EChartsCoreOption {
             data: yLabels,
             name: 'Ground Truth',
             nameLocation: 'middle',
-            nameGap: 150,
+            nameGap,
             nameRotate: 90,
             nameTextStyle: { color: '#9ca3af', fontSize: 13, fontWeight: 'bold' },
             axisLabel: { interval: 0, color: '#9ca3af', fontSize: 12 },
