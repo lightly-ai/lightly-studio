@@ -70,8 +70,8 @@ def test_object_detection_evaluation(
 
     result = dataset.evaluate().object_detection(
         name="run-1",
-        gt_collection_name="gt",
-        pred_collection_name="pred",
+        gt_annotation_source="gt",
+        pred_annotation_source="pred",
         config=ObjectDetectionEvaluationConfig(iou_threshold=0.5),
     )
     assert result.sample_count == 1
@@ -140,8 +140,8 @@ def test_object_detection_evaluation__raises_on_wrong_annotation_type(
     with pytest.raises(ValueError, match="object_detection"):
         dataset.evaluate().object_detection(
             name="run-1",
-            gt_collection_name="gt",
-            pred_collection_name="pred",
+            gt_annotation_source="gt",
+            pred_annotation_source="pred",
         )
 
 
@@ -187,8 +187,8 @@ def test_object_detection_evaluation__filters_to_samples_covered_by_both_collect
 
     result = dataset.evaluate().object_detection(
         name="run-1",
-        gt_collection_name="gt",
-        pred_collection_name="pred",
+        gt_annotation_source="gt",
+        pred_annotation_source="pred",
     )
     assert result.sample_count == 1
     assert result.gt_annotation_count == 1
@@ -267,8 +267,8 @@ def test_classification_evaluation(
 
     result = dataset.evaluate().classification(
         name="run-1",
-        gt_collection_name="gt",
-        pred_collection_name="pred",
+        gt_annotation_source="gt",
+        pred_annotation_source="pred",
         config=ClassificationEvaluationConfig(),
     )
     assert result.sample_count == 1
@@ -336,8 +336,8 @@ def test_classification_evaluation__raises_on_multiple_annotations(
     with pytest.raises(ValueError, match=f"exactly 1 {kind} annotation"):
         dataset.evaluate().classification(
             name="run-1",
-            gt_collection_name="gt",
-            pred_collection_name="pred",
+            gt_annotation_source="gt",
+            pred_annotation_source="pred",
         )
 
 
@@ -363,8 +363,81 @@ def test_classification_evaluation__raises_on_wrong_annotation_type(
     with pytest.raises(ValueError, match="classification"):
         dataset.evaluate().classification(
             name="run-1",
-            gt_collection_name="gt",
-            pred_collection_name="pred",
+            gt_annotation_source="gt",
+            pred_annotation_source="pred",
+        )
+
+
+def test_segmentation_evaluation(
+    patch_collection: None,  # noqa: ARG001
+) -> None:
+    """Creates an evaluation run for semantic segmentation and returns sample counts."""
+    dataset = ImageDataset.create(name="test_dataset")
+    label = create_annotation_label(
+        session=dataset.session,
+        root_collection_id=dataset.collection_id,
+    )
+    image = create_image(session=dataset.session, collection_id=dataset.collection_id)
+    _create_gt_and_pred_collections(session=dataset.session, collection_id=dataset.collection_id)
+    create_annotation(
+        session=dataset.session,
+        collection_id=dataset.collection_id,
+        sample_id=image.sample_id,
+        annotation_label_id=label.annotation_label_id,
+        annotation_type=AnnotationType.SEGMENTATION_MASK,
+        annotation_collection_name="gt",
+    )
+    create_annotation(
+        session=dataset.session,
+        collection_id=dataset.collection_id,
+        sample_id=image.sample_id,
+        annotation_label_id=label.annotation_label_id,
+        annotation_type=AnnotationType.SEGMENTATION_MASK,
+        annotation_collection_name="pred",
+    )
+
+    result = dataset.evaluate().semantic_segmentation(
+        name="seg-run-1",
+        gt_annotation_source="gt",
+        pred_annotation_source="pred",
+    )
+    assert result.sample_count == 1
+    assert result.gt_annotation_count == 1
+    assert result.pred_annotation_count == 1
+
+    evaluation_runs = evaluation_run_resolver.get_all_by_dataset_id(
+        session=dataset.session,
+        dataset_id=dataset.dataset_id,
+    )
+    assert len(evaluation_runs) == 1
+    assert evaluation_runs[0].name == "seg-run-1"
+    assert evaluation_runs[0].task_type == EvaluationTaskType.SEMANTIC_SEGMENTATION
+
+
+def test_segmentation_evaluation__raises_on_wrong_annotation_type(
+    patch_collection: None,  # noqa: ARG001
+) -> None:
+    """Raises ValueError when a collection contains non-segmentation annotations."""
+    dataset = ImageDataset.create(name="test_dataset")
+    label = create_annotation_label(
+        session=dataset.session, root_collection_id=dataset.collection_id
+    )
+    image = create_image(session=dataset.session, collection_id=dataset.collection_id)
+    _create_gt_and_pred_collections(session=dataset.session, collection_id=dataset.collection_id)
+    create_annotation(
+        session=dataset.session,
+        collection_id=dataset.collection_id,
+        sample_id=image.sample_id,
+        annotation_label_id=label.annotation_label_id,
+        annotation_type=AnnotationType.OBJECT_DETECTION,
+        annotation_collection_name="gt",
+    )
+
+    with pytest.raises(ValueError, match="segmentation_mask"):
+        dataset.evaluate().semantic_segmentation(
+            name="seg-run-1",
+            gt_annotation_source="gt",
+            pred_annotation_source="pred",
         )
 
 

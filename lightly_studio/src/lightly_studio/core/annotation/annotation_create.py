@@ -47,20 +47,20 @@ class CreateAnnotation(Protocol):
 class CreateAnnotationBase(BaseModel):
     """Base model for creating annotations."""
 
-    label: str
-    """Annotation label."""
+    class_name: str
+    """Annotation class name."""
     confidence: float | None = None
     """Confidence expressed as probability between 0.0 and 1.0 (inclusive)."""
 
     def _get_label_id(self, session: Session, dataset_id: UUID) -> UUID:
         label = annotation_label_resolver.get_by_label_name(
-            session=session, dataset_id=dataset_id, label_name=self.label
+            session=session, dataset_id=dataset_id, label_name=self.class_name
         )
         if label is None:
             label = annotation_label_resolver.create(
                 session=session,
                 label=AnnotationLabelCreate(
-                    dataset_id=dataset_id, annotation_label_name=self.label
+                    dataset_id=dataset_id, annotation_label_name=self.class_name
                 ),
             )
         return label.annotation_label_id
@@ -141,14 +141,14 @@ class CreateSegmentationMask(CreateAnnotationBase):
 
     @staticmethod
     def from_binary_mask(
-        label: str,
+        class_name: str,
         binary_mask: NDArray[np.int_],
         confidence: float | None = None,
     ) -> CreateSegmentationMask:
         """Create a segmentation mask annotation from a binary mask.
 
         Args:
-            label: Annotation label
+            class_name: Annotation class name
             binary_mask: Binary mask of the segmentation given as a 2D array. The dimensions of the
                 array must match the image.
             confidence: Optional annotation confidence, between 0.0 and 1.0 (inclusive).
@@ -165,13 +165,13 @@ class CreateSegmentationMask(CreateAnnotationBase):
             width=width,
             height=height,
             segmentation_mask=segmentation_mask,
-            label=label,
+            class_name=class_name,
             confidence=confidence,
         )
 
     @staticmethod
     def from_rle_mask(
-        label: str,
+        class_name: str,
         segmentation_mask: list[int],
         sample_2d: Sample2D,
         confidence: float | None = None,
@@ -179,7 +179,7 @@ class CreateSegmentationMask(CreateAnnotationBase):
         """Create a segmentation mask annotation from an RLE mask.
 
         Args:
-            label: Annotation label
+            class_name: Annotation class name
             segmentation_mask: A run-length encoded (RLE) segmentation mask.
             sample_2d: A sample having width and height in pixels (image, video frame, etc.).
             confidence: Optional annotation confidence, between 0.0 and 1.0 (inclusive).
@@ -191,7 +191,7 @@ class CreateSegmentationMask(CreateAnnotationBase):
             segmentation_mask=segmentation_mask, sample_2d=sample_2d
         )
         return CreateSegmentationMask(
-            label=label,
+            class_name=class_name,
             x=x,
             y=y,
             width=width,

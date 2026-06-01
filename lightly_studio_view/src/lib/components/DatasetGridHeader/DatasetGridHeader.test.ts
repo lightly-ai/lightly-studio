@@ -1,18 +1,27 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { fireEvent, render, screen } from '@testing-library/svelte';
-import { readable, writable } from 'svelte/store';
+import { derived, readable, writable } from 'svelte/store';
 import '@testing-library/jest-dom';
 
 vi.mock('$lib/hooks/useGlobalStorage', () => {
-    const showPlot = writable<boolean>(false);
-    const setShowPlot = vi.fn((value: boolean) => showPlot.set(value));
-
-    const showEvaluationRuns = writable<boolean>(false);
-    const setShowEvaluationRuns = vi.fn((value: boolean) => showEvaluationRuns.set(value));
+    const activePanel = writable<string>('none');
+    const showEmbeddingPlot = derived(activePanel, ($p) => $p === 'embeddingPlot');
+    const showEvaluationRuns = derived(activePanel, ($p) => $p === 'evaluationRuns');
+    const setShowEmbeddingPlot = vi.fn((value: boolean) =>
+        activePanel.update((p: string) =>
+            value ? 'embeddingPlot' : p === 'embeddingPlot' ? 'none' : p
+        )
+    );
+    const setShowEvaluationRuns = vi.fn((value: boolean) =>
+        activePanel.update((p: string) =>
+            value ? 'evaluationRuns' : p === 'evaluationRuns' ? 'none' : p
+        )
+    );
     return {
         useGlobalStorage: () => ({
-            showPlot,
-            setShowPlot,
+            activePanel,
+            showEmbeddingPlot,
+            setShowEmbeddingPlot,
             showEvaluationRuns,
             setShowEvaluationRuns,
             sampleSize: writable({ width: 4, height: 4 }),
@@ -66,9 +75,8 @@ const defaultProps = {
 describe('DatasetGridHeader', () => {
     beforeEach(() => {
         const storage = useGlobalStorage();
-        storage.showPlot.set(false);
-        (storage.setShowPlot as ReturnType<typeof vi.fn>).mockClear();
-        storage.showEvaluationRuns.set(false);
+        storage.activePanel.set('none');
+        (storage.setShowEmbeddingPlot as ReturnType<typeof vi.fn>).mockClear();
         (storage.setShowEvaluationRuns as ReturnType<typeof vi.fn>).mockClear();
         defaultProps.onSelectAll.mockClear();
     });
@@ -108,7 +116,7 @@ describe('DatasetGridHeader', () => {
         });
 
         expect(screen.getByTestId('toggle-plot-button')).toBeInTheDocument();
-        expect(screen.getByText('Show Embeddings')).toBeInTheDocument();
+        expect(screen.getByText('Embeddings')).toBeInTheDocument();
     });
 
     it('hides the embeddings toggle when media has no embeddings', () => {
@@ -120,7 +128,7 @@ describe('DatasetGridHeader', () => {
     });
 
     it('toggles the plot store when the embeddings button is clicked', async () => {
-        const { setShowPlot } = useGlobalStorage();
+        const { setShowEmbeddingPlot } = useGlobalStorage();
 
         render(DatasetGridHeader, {
             props: { ...defaultProps, isImages: true, hasMediaWithEmbeddings: true }
@@ -128,10 +136,10 @@ describe('DatasetGridHeader', () => {
 
         const toggle = screen.getByTestId('toggle-plot-button');
         await fireEvent.click(toggle);
-        expect(setShowPlot).toHaveBeenLastCalledWith(true);
+        expect(setShowEmbeddingPlot).toHaveBeenLastCalledWith(true);
 
         await fireEvent.click(toggle);
-        expect(setShowPlot).toHaveBeenLastCalledWith(false);
+        expect(setShowEmbeddingPlot).toHaveBeenLastCalledWith(false);
     });
 
     it('renders the search region when media has embeddings', () => {
@@ -156,7 +164,7 @@ describe('DatasetGridHeader', () => {
         });
 
         expect(screen.getByTestId('toggle-evaluation-runs-button')).toBeInTheDocument();
-        expect(screen.getByText('Evaluation Runs')).toBeInTheDocument();
+        expect(screen.getByText('Evaluation')).toBeInTheDocument();
     });
 
     it('hides the evaluation runs toggle for non-image collections', () => {
@@ -191,8 +199,8 @@ describe('DatasetGridHeader', () => {
         });
 
         expect(screen.getByTestId('toggle-plot-button')).toBeInTheDocument();
-        expect(screen.queryByText('Show Embeddings')).not.toBeInTheDocument();
+        expect(screen.queryByText('Embeddings')).not.toBeInTheDocument();
         expect(screen.getByTestId('toggle-evaluation-runs-button')).toBeInTheDocument();
-        expect(screen.queryByText('Evaluation Runs')).not.toBeInTheDocument();
+        expect(screen.queryByText('Evaluation')).not.toBeInTheDocument();
     });
 });

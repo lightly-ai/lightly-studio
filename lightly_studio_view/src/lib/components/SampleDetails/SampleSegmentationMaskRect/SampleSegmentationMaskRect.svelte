@@ -7,16 +7,20 @@
         withAlpha
     } from '$lib/components/SampleAnnotation/utils';
     import parseColor from '$lib/components/SampleAnnotation/SampleAnnotationSegmentationRLE/calculateBinaryMaskFromRLE/parseColor';
-    import { useAnnotationLabelContext } from '$lib/contexts/SampleDetailsAnnotation.svelte';
-    import { useAnnotation } from '$lib/hooks/useAnnotation/useAnnotation';
-    import { useAnnotationLabels } from '$lib/hooks/useAnnotationLabels/useAnnotationLabels';
-    import { useSegmentationMaskBrush } from '$lib/hooks/useSegmentationMaskBrush';
-    import { useSegmentationMaskPreview } from '$lib/hooks/useSegmentationMaskPreview';
-    import { usePendingOperations } from '$lib/hooks/usePendingOperations/usePendingOperations';
-    import { useCollectionWithChildren } from '$lib/hooks/useCollection/useCollection';
+    import {
+        useSelectClassDialog,
+        usePendingOperations,
+        useCollectionWithChildren,
+        useSegmentationMaskBrush,
+        useSegmentationMaskPreview,
+        useAnnotationLabels,
+        useAnnotation,
+        useAnnotationLabelContext
+    } from '$lib/hooks';
     import { page } from '$app/state';
     import type { PendingChange } from '../pendingChange';
     import SampleAnnotationRect from '../SampleAnnotationRect/SampleAnnotationRect.svelte';
+    import SelectClassDialog from '$lib/components/SelectClassDialog/SelectClassDialog.svelte';
 
     type SampleSegmentationMaskRectProps = {
         sample: {
@@ -73,6 +77,14 @@
     const { refetch: refetchRootCollection } = $derived.by(() =>
         useCollectionWithChildren({ collectionId: datasetId })
     );
+
+    const {
+        open: selectClassDialogOpen,
+        requestLabel,
+        handleConfirm: handleSelectClassDialogConfirm,
+        handleCancel: handleSelectClassDialogCancel
+    } = useSelectClassDialog();
+
     const brushApi = $derived.by(() =>
         useSegmentationMaskBrush({
             collectionId,
@@ -81,6 +93,7 @@
             sample,
             annotations: sample.annotations,
             refetch,
+            requestLabel,
             onAnnotationCreated: () => {
                 // Only refresh root collection if there were no annotations before
                 if (sample.annotations.length === 0) {
@@ -347,6 +360,13 @@
             isDrawing: Boolean(annotationLabelContext.isDrawing)
         });
     }}
+/>
+
+<SelectClassDialog
+    bind:open={$selectClassDialogOpen}
+    labels={labels.data?.map((l) => l.annotation_label_name ?? '').filter(Boolean) ?? []}
+    onConfirm={handleSelectClassDialogConfirm}
+    onCancel={handleSelectClassDialogCancel}
 />
 
 <style>

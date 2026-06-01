@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import contextlib
 from collections.abc import Generator, Sequence
 from typing import Any
 from uuid import UUID
@@ -148,26 +149,24 @@ def test_client(db_session: Session) -> Generator[TestClient, None, None]:
 
 
 @pytest.fixture
-def streaming_media_test_client(
-    _db_engine: DatabaseEngine,
-) -> Generator[TestClient, None, None]:
-    """Test client that yields a new ``Session`` per HTTP request (production-like).
+def media_test_client(
+    db_session: Session,
+    mocker: MockerFixture,
+) -> TestClient:
+    """Test client for media routes that open their own DB session.
 
-    Use for tests that hit routes which call ``session.close()`` after reading the
-    DB and then perform more requests: a shared ``db_session`` override would be
-    permanently closed on the first response.
+    Media endpoints call ``db_manager.session()`` directly instead of using the
+    session dependency. Patch it to yield the per-test ``db_session`` so requests
+    read the data the test creates: the in-memory DuckDB ``StaticPool`` has a
+    single connection, which cannot host two concurrent sessions.
     """
-    client = TestClient(app)
 
-    def get_session_override() -> Generator[Session, None, None]:
-        with _db_engine.session() as session:
-            yield session
+    @contextlib.contextmanager
+    def session_override() -> Generator[Session, None, None]:
+        yield db_session
 
-    app.dependency_overrides[db_manager._session_dependency] = get_session_override
-
-    yield client
-
-    app.dependency_overrides.clear()
+    mocker.patch.object(db_manager, "session", session_override)
+    return TestClient(app)
 
 
 @pytest.fixture

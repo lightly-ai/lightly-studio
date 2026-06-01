@@ -20,8 +20,10 @@
 
     let initialized = $state(false);
 
+    const isEnabled = $derived(items.length > 1);
+
     $effect(() => {
-        if (items.length > 0 && !initialized) {
+        if (isEnabled && !initialized) {
             initialized = true;
             setSelectedCollectionIds(items.map((i) => i.id));
             setCollectionIdToName(
@@ -31,8 +33,8 @@
     });
 </script>
 
-{#if items.length > 0}
-    <Segment title="Label Sources">
+{#if isEnabled}
+    <Segment title="Annotation Sources">
         <SideMenu
             showColorMarker={$selectedCollectionIds.length > 1}
             {items}

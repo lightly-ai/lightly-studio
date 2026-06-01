@@ -1,8 +1,7 @@
 <script lang="ts">
     import { Plus } from '@lucide/svelte';
-    import { Button } from '$lib/components/ui/button';
-    import * as Popover from '$lib/components/ui/popover';
-    import { cn } from '$lib/utils';
+    import { Portal } from 'bits-ui';
+    import * as Select from '$lib/components/ui/select';
     import { STRATEGY_OPTIONS, type StrategyType } from '$lib/hooks/useStrategyBuilder';
 
     interface Props {
@@ -17,72 +16,99 @@
         classBalancingDisabledReason,
         onAdd
     }: Props = $props();
-    let open = $state(false);
+
     let hoveredType = $state<StrategyType | null>(null);
+    let tooltipRect = $state<DOMRect | null>(null);
+    // wrapper element refs used to position the tooltip on keyboard highlight
+    let itemRefs: Partial<Record<StrategyType, HTMLElement>> = {};
+
     function getDisabledReason(type: StrategyType): string | undefined {
         if (type === 'similarity') return similarityDisabledReason;
         if (type === 'metadata_weighting') return metadataWeightingDisabledReason;
         if (type === 'class_balancing') return classBalancingDisabledReason;
         return undefined;
     }
+
+    function handleMouseEnter(type: StrategyType, el: HTMLElement) {
+        hoveredType = type;
+        tooltipRect = el.getBoundingClientRect();
+    }
+
+    function handleMouseLeave() {
+        hoveredType = null;
+        tooltipRect = null;
+    }
+
+    const hoveredStrategy = $derived(
+        hoveredType ? STRATEGY_OPTIONS.find((s) => s.type === hoveredType) : null
+    );
+    const hoveredDisabledReason = $derived(
+        hoveredType ? getDisabledReason(hoveredType) : undefined
+    );
 </script>
 
-<Popover.Root bind:open>
-    <Popover.Trigger class="w-full">
-        <Button variant="outline" class="w-full" data-testid="add-strategy-button">
-            <Plus class="size-4" />
-            Add strategy
-        </Button>
-    </Popover.Trigger>
-    <Popover.Content class="w-56 p-1" align="start">
-        <div class="flex flex-col gap-1">
-            {#each STRATEGY_OPTIONS as strategy (strategy.type)}
-                {@const disabledReason = getDisabledReason(strategy.type)}
-                <div
-                    class="relative w-full"
-                    role="none"
-                    onmouseenter={() => (hoveredType = strategy.type)}
-                    onmouseleave={() => (hoveredType = null)}
-                >
-                    {#if disabledReason}
-                        <button
-                            type="button"
-                            class={cn(
-                                'w-full cursor-not-allowed rounded-sm px-2 py-1.5 text-left text-sm opacity-50'
-                            )}
-                            disabled
-                            data-testid={`add-strategy-${strategy.type}`}
-                        >
-                            {strategy.label}
-                        </button>
-                    {:else}
-                        <button
-                            type="button"
-                            class="w-full rounded-sm px-2 py-1.5 text-left text-sm hover:bg-accent hover:text-accent-foreground"
-                            onclick={() => {
-                                onAdd(strategy.type);
-                                open = false;
-                            }}
-                            data-testid={`add-strategy-${strategy.type}`}
-                        >
-                            {strategy.label}
-                        </button>
-                    {/if}
-                    {#if hoveredType === strategy.type}
-                        <div
-                            class="absolute left-full top-1/2 z-[9999] ml-2 w-max max-w-[200px] -translate-y-1/2 rounded-md bg-popover px-3 py-1.5 text-xs text-popover-foreground shadow-md"
-                            role="tooltip"
-                        >
-                            <p>{strategy.description}</p>
-                            {#if disabledReason}
-                                <p class="mt-1.5 border-t border-border pt-1.5 text-destructive">
-                                    {disabledReason}
-                                </p>
-                            {/if}
-                        </div>
-                    {/if}
-                </div>
-            {/each}
+<Select.Root
+    type="single"
+    onValueChange={(v) => {
+        if (v) onAdd(v as StrategyType);
+    }}
+    onOpenChange={(open) => {
+        if (!open) handleMouseLeave();
+    }}
+>
+    <Select.Trigger class="w-full" data-testid="add-strategy-button">
+        <Plus class="mr-2 size-4" />
+        <span class="mr-2">Add strategy</span>
+    </Select.Trigger>
+    <Select.Content>
+        {#each STRATEGY_OPTIONS as strategy (strategy.type)}
+            {@const disabledReason = getDisabledReason(strategy.type)}
+            <div
+                class="w-full"
+                role="none"
+                bind:this={itemRefs[strategy.type]}
+                onmouseenter={(e) =>
+                    handleMouseEnter(strategy.type, e.currentTarget as HTMLElement)}
+                onmouseleave={handleMouseLeave}
+            >
+                <Select.Item
+                    value={strategy.type}
+                    label={strategy.label}
+                    disabled={!!disabledReason}
+                    data-testid={`add-strategy-${strategy.type}`}
+                    aria-describedby="strategy-desc-{strategy.type}"
+                    onHighlight={() => {
+                        const el = itemRefs[strategy.type];
+                        if (el) handleMouseEnter(strategy.type, el);
+                    }}
+                    onUnhighlight={() => {
+                        // guard against bits-ui firing onUnhighlight after onHighlight of another item
+                        if (hoveredType === strategy.type) handleMouseLeave();
+                    }}
+                />
+                <span id="strategy-desc-{strategy.type}" class="sr-only">
+                    {strategy.description}{#if disabledReason}: {disabledReason}{/if}
+                </span>
+            </div>
+        {/each}
+    </Select.Content>
+</Select.Root>
+
+{#if hoveredType && tooltipRect && hoveredStrategy}
+    <Portal>
+        <div
+            id="strategy-tooltip-{hoveredType}"
+            role="tooltip"
+            style="position: fixed; left: {tooltipRect.right + 8}px; top: {tooltipRect.top +
+                tooltipRect.height / 2}px; transform: translateY(-50%);"
+            class="z-[9999] w-max max-w-[200px] rounded-md bg-popover px-3 py-1.5 text-xs text-popover-foreground shadow-md"
+        >
+            <p>{hoveredStrategy.description}</p>
+            {#if hoveredDisabledReason}
+                <p class="mt-1.5 border-t border-border pt-1.5 text-destructive">
+                    {hoveredDisabledReason}
+                </p>
+            {/if}
         </div>
-    </Popover.Content>
-</Popover.Root>
+    </Portal>
+{/if}

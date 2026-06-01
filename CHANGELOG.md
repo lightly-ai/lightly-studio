@@ -9,11 +9,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
-- Sample selection respects the current image or video filters.
-- Added sort-by support via GUI.
-- Added similarity selection option.
+- Embedding plot: added a "No coloring" option to the "Color by" dropdown to disable coloring.
 
 ### Changed
+
+- Header menu: show collection name in Annotations entries
 
 ### Deprecated
 
@@ -23,11 +23,32 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Security
 
+## \[1.0.0rc1\] - 2026-05-28
+
+### Added
+
+- Sample selection respects the current image or video filters.
+- Added sort-by support via GUI.
+- Added similarity selection option.
+- Show confusion matrix in evaluation results for object detection.
+- Added option to select annotation source for class balancing.
+- Added query editor for advanced filtering with custom queries.
+
+### Changed
+
+- Renamed the annotation class field `label` to `class_name` across the Python SDK and query language. Breaking change.
+- Renamed the `collection_name` and `name` arguments to `annotation_source`. Breaking change.
+- Renamed selection to sampling. Breaking change.
+
+### Fixed
+
+- Fixed hovering over breadcrumb links on detail pages (annotations, video frames) triggering unwanted navigation.
+
 ## \[0.4.14\] - 2026-05-18
 
 ### Added
 
-- Added `ImageDataset.add_annotations_from_coco`, `add_annotations_from_yolo`, and `add_annotations_from_labelformat` methods to attach named annotation collections to images already in the dataset. Re-using the same `name` appends; a new `name` creates a new collection. Enables ingesting ground truth and predictions from multiple sources side-by-side.
+- Added `ImageDataset.add_annotations_from_coco`, `add_annotations_from_yolo`, and `add_annotations_from_labelformat` methods to attach annotations to images already in the dataset. Re-using the same `annotation_source` appends; a new `annotation_source` creates a new annotation source. Enables ingesting ground truth and predictions from multiple sources side-by-side.
 - Added `lt_train_script` to the Python API (`lightly_studio.lt_train_script`) to generate a LightlyTrain object detection script from split tags. The helper exports train/val COCO annotation files via `dataset.export(...).to_coco_object_detections(...)` and writes `train_object_detection.py` with the exported paths.
 - Image samples can be sorted in the grid using image attributes and metadata.
 - Added drag-and-drop from the image grid into the image search area.

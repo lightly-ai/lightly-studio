@@ -17,7 +17,7 @@ def test_update_annotations_labels(
     annotation_id = annotation.sample_id
     label = annotations_test_data.annotation_labels[1]
 
-    # Update the annotation label using the service
+    # Update the annotation class using the service
     response = test_client.put(
         f"/api/collections/{collection_id!s}/annotations",
         json=[
