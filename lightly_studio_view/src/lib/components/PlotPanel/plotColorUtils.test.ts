@@ -34,25 +34,11 @@ describe('plotColorUtils', () => {
             [3, 'Validation']
         ]);
 
-        expect(getCategoryColors(colorLegend, new Set(), true, true)).toEqual([
+        expect(getCategoryColors(colorLegend, true, true)).toEqual([
             NOT_FILTERED_COLOR,
             UNASSIGNED_COLOR,
             getColorByLabel('Train').color,
             getColorByLabel('Validation').color
-        ]);
-    });
-
-    it('renders hidden categories with the unassigned color when colorBy is active', () => {
-        const colorLegend = new Map([
-            [2, 'Train'],
-            [3, 'Validation']
-        ]);
-
-        expect(getCategoryColors(colorLegend, new Set([3]), true, true)).toEqual([
-            NOT_FILTERED_COLOR,
-            UNASSIGNED_COLOR,
-            getColorByLabel('Train').color,
-            UNASSIGNED_COLOR
         ]);
     });
 
@@ -93,27 +79,13 @@ describe('plotColorUtils', () => {
         ]);
     });
 
-    it('returns unassigned color for hidden categories when colorBy is active', () => {
-        const legend = new Map([
-            [0, ''],
-            [1, ''],
-            [2, '']
-        ]);
-        const hiddenCategories = new Set([0, 2]);
-        expect(getCategoryColors(legend, hiddenCategories, false, true)).toEqual([
-            UNASSIGNED_COLOR,
-            UNASSIGNED_COLOR,
-            UNASSIGNED_COLOR
-        ]);
-    });
-
     it('uses unassigned color for category 1 when colorBy is active', () => {
         const colorLegend = new Map([
             [2, 'Train'],
             [3, 'Validation']
         ]);
 
-        expect(getCategoryColors(colorLegend, new Set(), false, true)[1]).toBe(UNASSIGNED_COLOR);
+        expect(getCategoryColors(colorLegend, false, true)[1]).toBe(UNASSIGNED_COLOR);
         expect(getCategoryColors(colorLegend)[1]).toBe(FILTERED_COLOR);
     });
 
@@ -125,8 +97,8 @@ describe('plotColorUtils', () => {
         ]);
 
         const labelColor = getColorByLabel('labelName').color;
-        const defaultColors = getCategoryColors(legend, new Set(), false);
-        const labelColors = getCategoryColors(legend, new Set(), true, true);
+        const defaultColors = getCategoryColors(legend, false);
+        const labelColors = getCategoryColors(legend, true, true);
 
         expect(labelColors).toEqual([NOT_FILTERED_COLOR, UNASSIGNED_COLOR, labelColor]);
         expect(defaultColors[2]).not.toBe(labelColor);
