@@ -27,9 +27,21 @@ export function cloneStrategyParams<T extends StrategyType>(
     return { ...params };
 }
 
+let strategyInstanceCounter = 0;
+
+function generateStrategyInstanceId(): string {
+    if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
+        return crypto.randomUUID();
+    }
+
+    const fallback = strategyInstanceCounter;
+    strategyInstanceCounter += 1;
+    return String(fallback);
+}
+
 export function createStrategyInstance(type: StrategyType): StrategyInstance {
     return {
-        id: crypto.randomUUID(),
+        id: generateStrategyInstanceId(),
         type,
         params: cloneStrategyParams(type, STRATEGY_DEFAULTS[type]),
         isExpanded: true
