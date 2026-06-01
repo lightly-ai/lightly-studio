@@ -38,13 +38,13 @@ interface StrategyParamsByType {
 }
 
 export type StrategyInstance = {
-    [K in StrategyType]: {
+    [K in keyof StrategyParamsByType]: {
         id: string;
         type: K;
         params: StrategyParamsByType[K];
         isExpanded: boolean;
     };
-}[StrategyType];
+}[keyof StrategyParamsByType];
 
 export type StrategyParams = StrategyInstance['params'];
 
