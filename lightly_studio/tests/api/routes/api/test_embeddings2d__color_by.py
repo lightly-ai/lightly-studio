@@ -247,7 +247,7 @@ def test_get_embeddings2d__with_integer_metadata_color_by__buckets_when_more_tha
     legend = json.loads(table.schema.metadata[b"color_legend"])
     assert legend["2"] == "0-1"
     assert legend["51"] == "98-99"
-    assert len(legend) == 50  # 50 buckets; reserved categories 0/1 are not labeled
+    assert len(legend) == 50
 
     # score=0 and score=1 share bucket "0-1" -> same category.
     sample_id_to_color = dict(zip(sample_ids_payload, color_category))

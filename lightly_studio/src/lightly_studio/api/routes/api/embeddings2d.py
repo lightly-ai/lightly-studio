@@ -75,8 +75,6 @@ def get_2d_embeddings(
         color_by=color_by,
         sample_ids=sample_ids,
     )
-    # Categories 0 (excluded by filters) and 1 (no category) are reserved by index only;
-    # the frontend owns their legend labels. `color_legend` carries colored categories (>= 2).
     # TODO(Michal, 05/2026): Remove color_category when the frontend is updated.
     # `build_color_data` is filter-unaware and returns a list of color categories per sample.
     # Temporarily transform it back to a single category per sample.
