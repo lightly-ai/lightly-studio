@@ -10,6 +10,7 @@
     let wrapperEl: HTMLDivElement | undefined = $state();
     let tooltipEl: HTMLDivElement | undefined = $state();
     let tooltipStyle = $state('visibility: hidden');
+    const tooltipId = `field-tooltip-${Math.random().toString(36).slice(2)}`;
 
     $effect(() => {
         if (!visible || !wrapperEl || !tooltipEl) {
@@ -38,6 +39,7 @@
     tabindex="0"
     role="button"
     aria-label="More information"
+    aria-describedby={visible ? tooltipId : undefined}
 >
     <CircleHelp class="size-3 text-muted-foreground" aria-hidden="true" />
     {#if visible}
@@ -45,6 +47,7 @@
             bind:this={tooltipEl}
             style={tooltipStyle}
             class="fixed z-50 w-max max-w-[220px] rounded-md bg-popover px-3 py-1.5 text-xs text-popover-foreground shadow-md"
+            id={tooltipId}
             role="tooltip"
         >
             {content}
