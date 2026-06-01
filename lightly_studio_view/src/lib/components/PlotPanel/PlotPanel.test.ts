@@ -52,7 +52,7 @@ vi.mock('$lib/hooks/useEmbeddings/useEmbeddings');
 vi.mock('./useArrowData/useArrowData', () => ({
     useArrowData: () => ({
         data: arrowDataStore,
-        colorLegend: writable(new Map([[1, 'Filtered']])),
+        colorLegend: writable(new Map()),
         error: writable(null)
     })
 }));

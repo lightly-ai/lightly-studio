@@ -1,5 +1,6 @@
 <script lang="ts">
     import { cn } from '$lib/utils';
+    import { EXCLUDED_BY_FILTERS_LABEL, INCLUDED_BY_FILTERS_LABEL } from './plotCategories';
 
     interface LegendEntry {
         cat: number;
@@ -10,7 +11,8 @@
 
     interface Props {
         categoryColors: string[];
-        filteredLabel?: string;
+        excludedLabel?: string;
+        includedLabel?: string;
         legendEntries?: LegendEntry[];
         onToggleCategory?: (cat: number) => void;
         onDoubleClickCategory?: (cat: number) => void;
@@ -18,7 +20,8 @@
 
     let {
         categoryColors,
-        filteredLabel = 'Filtered',
+        excludedLabel = EXCLUDED_BY_FILTERS_LABEL,
+        includedLabel = INCLUDED_BY_FILTERS_LABEL,
         legendEntries = [],
         onToggleCategory,
         onDoubleClickCategory
@@ -52,11 +55,11 @@
         {/if}
         <span class="flex shrink-0 items-center gap-1.5">
             <span class="legend-dot" style={`background-color: ${categoryColors[0]}`}></span>
-            Not Filtered
+            {excludedLabel}
         </span>
         <span class="flex shrink-0 items-center gap-1.5">
             <span class="legend-dot" style={`background-color: ${categoryColors[1]}`}></span>
-            {filteredLabel}
+            {includedLabel}
         </span>
     </div>
 </div>

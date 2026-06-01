@@ -31,13 +31,13 @@ describe('useArrowData', () => {
             x: [1, 2, 3],
             y: [4, 5, 6],
             fulfils_filter: [true, false, true],
-            color_categories: [[1, 2], [2], []],
+            color_categories: [[2, 3], [2], []],
             sample_id: ['a', 'b', 'c']
         };
 
         const mockTable = {
             schema: {
-                metadata: new Map([['color_legend', '{"1":"Filtered","2":"Train"}']])
+                metadata: new Map([['color_legend', '{"2":"Train","3":"Validation"}']])
             },
             getChild: createGetChild(mockData)
         };
@@ -54,8 +54,8 @@ describe('useArrowData', () => {
         expect(get(data)).toEqual(mockData);
         expect(get(colorLegend)).toEqual(
             new Map([
-                [1, 'Filtered'],
-                [2, 'Train']
+                [2, 'Train'],
+                [3, 'Validation']
             ])
         );
         expect(get(error)).toBeUndefined();
@@ -160,12 +160,12 @@ describe('useArrowData', () => {
             x: [1, 2, 3],
             y: [4, 5, 6],
             fulfils_filter: [true, false, true],
-            color_categories: [[1, 2], [2], []],
+            color_categories: [[2, 3], [2], []],
             sample_id: ['a', 'b', 'c']
         };
         const mockTable = {
             schema: {
-                metadata: new Map([['color_legend', '{"1":"Filtered"']])
+                metadata: new Map([['color_legend', '{"2":"Train"']])
             },
             getChild: createGetChild(mockData)
         };
