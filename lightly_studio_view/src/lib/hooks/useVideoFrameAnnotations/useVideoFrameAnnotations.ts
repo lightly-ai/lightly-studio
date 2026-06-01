@@ -1,5 +1,5 @@
 import type { FrameView, SampleView, AnnotationView } from '$lib/api/lightly_studio_local';
-import { getColorByLabel } from '$lib/utils';
+import { getColorByLabel, stripAlpha } from '$lib/utils';
 import calculateBinaryMaskFromRLE from '$lib/components/SampleAnnotation/SampleAnnotationSegmentationRLE/calculateBinaryMaskFromRLE/calculateBinaryMaskFromRLE';
 
 interface FrameAnnotationDataURL {
@@ -56,13 +56,7 @@ export function useVideoFrameAnnotations({
             const label = segmentationAnnotation.annotation_label?.annotation_label_name;
 
             if (segmentationMask && label) {
-                const colorFill = getColorByLabel(label, 0.4).color;
-
-                // Convert to opaque color (same logic as SampleAnnotationSegmentationRLE)
-                const opaqueColor = colorFill.replace(
-                    /rgba?\((\d+,\s*\d+,\s*\d+)(?:,\s*[\d.]+)?\)/,
-                    'rgb($1)'
-                );
+                const opaqueColor = stripAlpha(getColorByLabel(label, 0.4).color);
 
                 try {
                     const { dataUrl, height } = calculateBinaryMaskFromRLE(

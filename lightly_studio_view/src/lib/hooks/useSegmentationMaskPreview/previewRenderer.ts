@@ -1,3 +1,4 @@
+import { rgbaFromBytes } from '$lib/utils';
 import type { ParsedColor } from './types';
 
 interface PreviewRendererParams {
@@ -56,7 +57,7 @@ export function createPreviewRenderer({ onPreviewVisibilityChange }: PreviewRend
         previewContext.drawImage(sourceMaskCanvas, 0, 0);
         // Keep only mask alpha, then tint it.
         previewContext.globalCompositeOperation = 'source-in';
-        previewContext.fillStyle = `rgba(${color.r}, ${color.g}, ${color.b}, ${color.a / 255})`;
+        previewContext.fillStyle = rgbaFromBytes([color.r, color.g, color.b, color.a]);
         previewContext.fillRect(0, 0, previewCanvas.width, previewCanvas.height);
         previewContext.globalCompositeOperation = 'source-over';
 
