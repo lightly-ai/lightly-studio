@@ -354,22 +354,11 @@ def test_classification_evaluation__persists_confusion_matrix_pairings(
         evaluation_run_id=evaluation_runs[0].id,
     )
 
-    assert [
-        (
-            metric.gt_annotation_id,
-            metric.pred_annotation_id,
-            metric.metric_name,
-            metric.value,
-        )
-        for metric in annotation_metrics
-    ] == [
-        (
-            gt_annotation.sample_id,
-            pred_annotation.sample_id,
-            "disagreement",
-            0.75,
-        )
-    ]
+    assert len(annotation_metrics) == 1
+    assert annotation_metrics[0].gt_annotation_id == gt_annotation.sample_id
+    assert annotation_metrics[0].pred_annotation_id == pred_annotation.sample_id
+    assert annotation_metrics[0].metric_name == "disagreement"
+    assert annotation_metrics[0].value == 0.75
 
 
 @pytest.mark.parametrize(
