@@ -2,21 +2,23 @@ import { describe, it, expect } from 'vitest';
 import { fireEvent, render, screen } from '@testing-library/svelte';
 import FieldTooltip from './FieldTooltip.svelte';
 
+const defaultProps = { content: 'Some info' };
+
 describe('FieldTooltip', () => {
     it('renders the help icon', () => {
-        render(FieldTooltip, { props: { content: 'Some info' } });
+        render(FieldTooltip, { props: defaultProps });
 
         expect(screen.getByRole('button', { name: 'More information' })).toBeInTheDocument();
     });
 
     it('does not show tooltip initially', () => {
-        render(FieldTooltip, { props: { content: 'Some info' } });
+        render(FieldTooltip, { props: defaultProps });
 
         expect(screen.queryByRole('tooltip')).not.toBeInTheDocument();
     });
 
     it('shows tooltip on mouse enter', async () => {
-        render(FieldTooltip, { props: { content: 'Some info' } });
+        render(FieldTooltip, { props: defaultProps });
 
         await fireEvent.mouseEnter(screen.getByRole('button', { name: 'More information' }));
 
@@ -25,7 +27,7 @@ describe('FieldTooltip', () => {
     });
 
     it('hides tooltip on mouse leave', async () => {
-        render(FieldTooltip, { props: { content: 'Some info' } });
+        render(FieldTooltip, { props: defaultProps });
 
         const wrapper = screen.getByRole('button', { name: 'More information' });
         await fireEvent.mouseEnter(wrapper);
