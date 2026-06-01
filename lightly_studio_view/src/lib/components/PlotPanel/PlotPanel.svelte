@@ -16,7 +16,6 @@
     import PlotColorByPopover from './PlotColorByPopover/PlotColorByPopover.svelte';
     import { useCategoryVisibility } from './useCategoryVisibility/useCategoryVisibility';
     import { isEqual } from 'lodash-es';
-    import { NOT_FILTERED_CATEGORY } from './plotCategories';
     import { getCategoryColors, getCategoryCount, getLegendEntries } from './plotColorUtils';
     import { page } from '$app/state';
     import { isVideosRoute } from '$lib/routes';
@@ -116,13 +115,14 @@
             arrowData: $arrowData,
             rangeSelection: $rangeSelection,
             highlightedSampleIds: activeSampleIds,
-            hasActiveFilter: hasActiveFilter
+            hasActiveFilter: hasActiveFilter,
+            hiddenCategories: $hiddenCategories
         })
     );
     const categoryCount = $derived.by(() => getCategoryCount($colorLegend));
     const useLabelColors = $derived($selectedColorByType !== 'metadata');
     const categoryColors = $derived.by(() =>
-        getCategoryColors($colorLegend, $hiddenCategories, useLabelColors, $colorBy !== null)
+        getCategoryColors($colorLegend, useLabelColors, $colorBy !== null)
     );
     const legendEntries = $derived.by(() =>
         getLegendEntries($colorLegend, $hiddenCategories, useLabelColors)
@@ -136,8 +136,8 @@
         const filter = isVideos ? $videoFilter : $imageFilter;
         const currentSampleIds = filter?.sample_filter?.sample_ids || [];
         const selectableCount =
-            ($arrowData?.color_category as Uint8Array | undefined)?.reduce((count, category) => {
-                return category !== NOT_FILTERED_CATEGORY ? count + 1 : count;
+            ($arrowData?.fulfils_filter as Uint8Array | undefined)?.reduce((count, fulfils) => {
+                return fulfils !== 0 ? count + 1 : count;
             }, 0) ?? null;
 
         if ($selectedSampleIds.length === 0) {
