@@ -109,7 +109,10 @@ def get_evaluation_confusion_matrix(
             status_code=HTTP_STATUS_NOT_FOUND,
             detail=f"Evaluation run {evaluation_run_id} not found.",
         )
-    if run.task_type == EvaluationTaskType.OBJECT_DETECTION:
+    if run.task_type in (
+        EvaluationTaskType.OBJECT_DETECTION,
+        EvaluationTaskType.CLASSIFICATION,
+    ):
         return evaluation_annotation_metric_resolver.get_object_detection_confusion_matrix(
             session=session,
             evaluation_run_id=evaluation_run_id,
