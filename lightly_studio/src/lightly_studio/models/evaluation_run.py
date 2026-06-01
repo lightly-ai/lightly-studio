@@ -18,6 +18,7 @@ class EvaluationTaskType(str, Enum):
     OBJECT_DETECTION = "object_detection"
     CLASSIFICATION = "classification"
     INSTANCE_SEGMENTATION = "instance_segmentation"
+    SEMANTIC_SEGMENTATION = "semantic_segmentation"
 
 
 class EvaluationRunBase(SQLModel):
