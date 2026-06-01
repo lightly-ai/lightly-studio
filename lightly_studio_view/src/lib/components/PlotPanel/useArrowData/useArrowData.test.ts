@@ -12,12 +12,26 @@ describe('useArrowData', () => {
         vi.clearAllMocks();
     });
 
+    // Builds a getChild mock where color_categories behaves like an Arrow list<uint8> vector
+    // (read row by row via get/length) and other columns expose a flat toArray().
+    const createGetChild = (columns: Record<string, unknown>) =>
+        vi.fn((col: string) => {
+            if (col === 'color_categories') {
+                const rows = columns[col] as number[][];
+                return {
+                    length: rows.length,
+                    get: (row: number) => rows[row]
+                };
+            }
+            return { toArray: () => columns[col] };
+        });
+
     it('successfully reads Arrow data with all required columns', async () => {
         const mockData = {
             x: [1, 2, 3],
             y: [4, 5, 6],
             fulfils_filter: [true, false, true],
-            color_category: [1, 2, 0],
+            color_categories: [[1, 2], [2], []],
             sample_id: ['a', 'b', 'c']
         };
 
@@ -25,9 +39,7 @@ describe('useArrowData', () => {
             schema: {
                 metadata: new Map([['color_legend', '{"1":"Filtered","2":"Train"}']])
             },
-            getChild: vi.fn((col: string) => ({
-                toArray: () => mockData[col as keyof typeof mockData]
-            }))
+            getChild: createGetChild(mockData)
         };
 
         vi.mocked(tableFromIPC).mockResolvedValue(mockTable as unknown as Table);
@@ -135,7 +147,7 @@ describe('useArrowData', () => {
             x: [],
             y: [],
             fulfils_filter: [],
-            color_category: [],
+            color_categories: [],
             sample_id: []
         });
         expect(get(colorLegend)).toEqual(new Map());
@@ -148,16 +160,14 @@ describe('useArrowData', () => {
             x: [1, 2, 3],
             y: [4, 5, 6],
             fulfils_filter: [true, false, true],
-            color_category: [1, 2, 0],
+            color_categories: [[1, 2], [2], []],
             sample_id: ['a', 'b', 'c']
         };
         const mockTable = {
             schema: {
                 metadata: new Map([['color_legend', '{"1":"Filtered"']])
             },
-            getChild: vi.fn((col: string) => ({
-                toArray: () => mockData[col as keyof typeof mockData]
-            }))
+            getChild: createGetChild(mockData)
         };
 
         vi.mocked(tableFromIPC).mockResolvedValue(mockTable as unknown as Table);
