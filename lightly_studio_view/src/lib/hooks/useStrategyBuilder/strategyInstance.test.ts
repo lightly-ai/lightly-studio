@@ -1,6 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { cloneStrategyParams, createStrategyInstance } from './strategyInstance';
-import { STRATEGY_DEFAULTS } from './types';
+import { cloneStrategyParams, createStrategyInstance, STRATEGY_DEFAULTS } from '.';
 
 describe('cloneStrategyParams', () => {
     it('shallow-clones non-class_balancing params', () => {
@@ -44,6 +43,7 @@ describe('createStrategyInstance', () => {
 
         expect(instance.type).toBe('diversity');
         expect(instance.params).toEqual(STRATEGY_DEFAULTS.diversity);
+        expect(instance.params).not.toBe(STRATEGY_DEFAULTS.diversity);
     });
 
     it('sets isExpanded to true', () => {
