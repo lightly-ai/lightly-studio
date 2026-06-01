@@ -113,7 +113,7 @@ def get_evaluation_confusion_matrix(
         EvaluationTaskType.OBJECT_DETECTION,
         EvaluationTaskType.CLASSIFICATION,
     ):
-        return evaluation_annotation_metric_resolver.get_object_detection_confusion_matrix(
+        return evaluation_annotation_metric_resolver.get_confusion_matrix(
             session=session,
             evaluation_run_id=evaluation_run_id,
         )

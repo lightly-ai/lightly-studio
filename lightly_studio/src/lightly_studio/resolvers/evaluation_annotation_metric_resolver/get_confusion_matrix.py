@@ -17,11 +17,11 @@ from lightly_studio.models.evaluation_confusion_matrix import (
 )
 
 
-def get_object_detection_confusion_matrix(
+def get_confusion_matrix(
     session: Session,
     evaluation_run_id: UUID,
 ) -> ConfusionMatrix:
-    """Aggregate persisted OD pairing metrics into a label-by-label matrix.
+    """Aggregate persisted annotation pairing metrics into a label-by-label matrix.
 
     Counts are computed in a single SQL query that joins
     ``evaluation_annotation_metric`` to ``annotation_base`` and ``annotation_label``

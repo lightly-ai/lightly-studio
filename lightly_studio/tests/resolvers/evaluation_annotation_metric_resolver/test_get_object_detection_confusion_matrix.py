@@ -30,7 +30,7 @@ def test_get_object_detection_confusion_matrix__empty_run(
         session=db_session,
         dataset_collection_id=dataset.collection_id,
     )
-    matrix = evaluation_annotation_metric_resolver.get_object_detection_confusion_matrix(
+    matrix = evaluation_annotation_metric_resolver.get_confusion_matrix(
         session=db_session,
         evaluation_run_id=run.id,
     )
@@ -106,7 +106,7 @@ def test_get_object_detection_confusion_matrix__aggregates_tp_fp_fn(
         ],
     )
 
-    matrix = evaluation_annotation_metric_resolver.get_object_detection_confusion_matrix(
+    matrix = evaluation_annotation_metric_resolver.get_confusion_matrix(
         session=db_session,
         evaluation_run_id=run.id,
     )
@@ -190,7 +190,7 @@ def test_get_object_detection_confusion_matrix__class_only_in_gt(
         ],
     )
 
-    matrix = evaluation_annotation_metric_resolver.get_object_detection_confusion_matrix(
+    matrix = evaluation_annotation_metric_resolver.get_confusion_matrix(
         session=db_session,
         evaluation_run_id=run.id,
     )
@@ -266,7 +266,7 @@ def test_get_object_detection_confusion_matrix__class_only_in_pred(
         ],
     )
 
-    matrix = evaluation_annotation_metric_resolver.get_object_detection_confusion_matrix(
+    matrix = evaluation_annotation_metric_resolver.get_confusion_matrix(
         session=db_session,
         evaluation_run_id=run.id,
     )
@@ -324,7 +324,7 @@ def test_get_object_detection_confusion_matrix__no_fp_or_fn_keeps_synthetic_axes
         ],
     )
 
-    matrix = evaluation_annotation_metric_resolver.get_object_detection_confusion_matrix(
+    matrix = evaluation_annotation_metric_resolver.get_confusion_matrix(
         session=db_session,
         evaluation_run_id=run.id,
     )
@@ -340,7 +340,7 @@ def test_get_object_detection_confusion_matrix__no_fp_or_fn_keeps_synthetic_axes
 def test_get_object_detection_confusion_matrix__unknown_run(
     db_session: Session,
 ) -> None:
-    matrix = evaluation_annotation_metric_resolver.get_object_detection_confusion_matrix(
+    matrix = evaluation_annotation_metric_resolver.get_confusion_matrix(
         session=db_session,
         evaluation_run_id=uuid.uuid4(),
     )
