@@ -1,7 +1,7 @@
 <script lang="ts">
     import { useColorPicker } from '$lib/hooks';
     import type { HTMLAttributes } from 'svelte/elements';
-    import { ColorPicker } from '../../ui/color-picker';
+    import { ColorPicker } from '$lib/components/ui/color-picker';
 
     interface Props {
         label: string;
