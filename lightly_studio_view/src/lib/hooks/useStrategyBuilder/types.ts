@@ -37,6 +37,8 @@ interface StrategyParamsByType {
     class_balancing: ClassBalancingParams;
 }
 
+export type StrategyType = keyof StrategyParamsByType;
+
 export type StrategyInstance = {
     [K in keyof StrategyParamsByType]: {
         id: string;
@@ -79,6 +81,4 @@ export const STRATEGY_OPTIONS = [
         description:
             'Selects samples to reach a target class distribution using annotation labels. Use to fix class imbalance or enforce custom class proportions.'
     }
-];
-
-export type StrategyType = (typeof STRATEGY_OPTIONS)[number]['type'];
+] satisfies Array<{ type: StrategyType; label: string; description: string }>;
