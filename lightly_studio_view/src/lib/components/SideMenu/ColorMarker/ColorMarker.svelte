@@ -1,20 +1,36 @@
 <script lang="ts">
-    import { computeColorByKey } from '$lib/utils';
+    import { useColorPicker } from '$lib/hooks/useColorPicker.svelte';
     import type { HTMLAttributes } from 'svelte/elements';
+    import { ColorPicker } from '../../ui/color-picker';
 
     interface Props {
         label: string;
         markerProps?: HTMLAttributes<HTMLSpanElement>;
+        /** When true, clicking the swatch opens a color picker. */
+        enableColorPicker?: boolean;
     }
 
-    let { label, markerProps }: Props = $props();
+    let { label, markerProps, enableColorPicker = false }: Props = $props();
 
-    const colorFaded = $derived(computeColorByKey(label, 0.35));
-    const color = $derived(computeColorByKey(label, 1));
+    const picker = useColorPicker(() => label);
 </script>
 
-<span
-    class="inline-block h-3 w-3 shrink-0 rounded-sm border"
-    style="background-color: {colorFaded.color}; border-color: {color.color};"
-    {...markerProps}
-></span>
+{#if enableColorPicker}
+    <ColorPicker
+        initialColor={picker.initialColor}
+        initialAlpha={picker.initialAlpha}
+        onChange={picker.setColor}
+    >
+        <span
+            class="inline-block h-3 w-3 shrink-0 cursor-pointer rounded-sm border"
+            style="background-color: {picker.backgroundColor}; border-color: {picker.borderColor};"
+            {...markerProps}
+        ></span>
+    </ColorPicker>
+{:else}
+    <span
+        class="inline-block h-3 w-3 shrink-0 rounded-sm border"
+        style="background-color: {picker.backgroundColor}; border-color: {picker.borderColor};"
+        {...markerProps}
+    ></span>
+{/if}
