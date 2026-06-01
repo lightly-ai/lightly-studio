@@ -61,13 +61,13 @@ def test_get_embeddings2d__with_metadata_field_color_by(
 
     table = ipc.open_stream(pa.BufferReader(response.content)).read_all()
     sample_ids_payload = table.column("sample_id").to_pylist()
-    color_category = table.column("color_category").to_numpy(zero_copy_only=False)
+    color_categories = table.column("color_categories").to_pylist()
 
-    sample_id_to_color = dict(zip(sample_ids_payload, color_category))
-    assert sample_id_to_color[str(samples[0].sample_id)] == 3  # Paris
-    assert sample_id_to_color[str(samples[1].sample_id)] == 2  # London
-    assert sample_id_to_color[str(samples[2].sample_id)] == 3  # Paris
-    assert sample_id_to_color[str(samples[3].sample_id)] == 1  # Unassigned
+    sample_id_to_colors = dict(zip(sample_ids_payload, color_categories))
+    assert sample_id_to_colors[str(samples[0].sample_id)] == [3]  # Paris
+    assert sample_id_to_colors[str(samples[1].sample_id)] == [2]  # London
+    assert sample_id_to_colors[str(samples[2].sample_id)] == [3]  # Paris
+    assert sample_id_to_colors[str(samples[3].sample_id)] == []  # Unassigned
 
     legend = json.loads(table.schema.metadata[b"color_legend"])
     assert legend["2"] == "London"
@@ -145,13 +145,13 @@ def test_get_embeddings2d__with_boolean_metadata_color_by(
 
     table = ipc.open_stream(pa.BufferReader(response.content)).read_all()
     sample_ids_payload = table.column("sample_id").to_pylist()
-    color_category = table.column("color_category").to_numpy(zero_copy_only=False)
+    color_categories = table.column("color_categories").to_pylist()
 
     # False is sorted before True, so False -> cat 2, True -> cat 3.
-    sample_id_to_color = dict(zip(sample_ids_payload, color_category))
-    assert sample_id_to_color[str(samples[0].sample_id)] == 2  # False -> cat 2
-    assert sample_id_to_color[str(samples[1].sample_id)] == 3  # True -> cat 3
-    assert sample_id_to_color[str(samples[2].sample_id)] == 2  # False -> cat 2
+    sample_id_to_colors = dict(zip(sample_ids_payload, color_categories))
+    assert sample_id_to_colors[str(samples[0].sample_id)] == [2]  # False -> cat 2
+    assert sample_id_to_colors[str(samples[1].sample_id)] == [3]  # True -> cat 3
+    assert sample_id_to_colors[str(samples[2].sample_id)] == [2]  # False -> cat 2
 
     legend = json.loads(table.schema.metadata[b"color_legend"])
     assert legend["2"] == "false"
@@ -193,13 +193,13 @@ def test_get_embeddings2d__with_integer_metadata_color_by(
 
     table = ipc.open_stream(pa.BufferReader(response.content)).read_all()
     sample_ids_payload = table.column("sample_id").to_pylist()
-    color_category = table.column("color_category").to_numpy(zero_copy_only=False)
+    color_categories = table.column("color_categories").to_pylist()
 
     # Values are sorted numerically: 10 -> cat 2, 20 -> cat 3, 30 -> cat 4.
-    sample_id_to_color = dict(zip(sample_ids_payload, color_category))
-    assert sample_id_to_color[str(samples[0].sample_id)] == 2  # score=10
-    assert sample_id_to_color[str(samples[1].sample_id)] == 4  # score=30
-    assert sample_id_to_color[str(samples[2].sample_id)] == 3  # score=20
+    sample_id_to_colors = dict(zip(sample_ids_payload, color_categories))
+    assert sample_id_to_colors[str(samples[0].sample_id)] == [2]  # score=10
+    assert sample_id_to_colors[str(samples[1].sample_id)] == [4]  # score=30
+    assert sample_id_to_colors[str(samples[2].sample_id)] == [3]  # score=20
 
     legend = json.loads(table.schema.metadata[b"color_legend"])
     assert legend["2"] == "10"
@@ -242,7 +242,7 @@ def test_get_embeddings2d__with_integer_metadata_color_by__buckets_when_more_tha
 
     table = ipc.open_stream(pa.BufferReader(response.content)).read_all()
     sample_ids_payload = table.column("sample_id").to_pylist()
-    color_category = table.column("color_category").to_numpy(zero_copy_only=False)
+    color_categories = table.column("color_categories").to_pylist()
 
     legend = json.loads(table.schema.metadata[b"color_legend"])
     assert legend["2"] == "0-1"
@@ -250,11 +250,11 @@ def test_get_embeddings2d__with_integer_metadata_color_by__buckets_when_more_tha
     assert len(legend) == 50
 
     # score=0 and score=1 share bucket "0-1" -> same category.
-    sample_id_to_color = dict(zip(sample_ids_payload, color_category))
-    assert sample_id_to_color[str(samples[0].sample_id)] == 2  # score=0 -> bucket "0-1"
-    assert sample_id_to_color[str(samples[1].sample_id)] == 2  # score=1 -> bucket "0-1"
-    assert sample_id_to_color[str(samples[2].sample_id)] == 3  # score=2 -> bucket "2-3"
-    assert sample_id_to_color[str(samples[99].sample_id)] == 51  # score=99 -> bucket "98-99"
+    sample_id_to_colors = dict(zip(sample_ids_payload, color_categories))
+    assert sample_id_to_colors[str(samples[0].sample_id)] == [2]  # score=0 -> bucket "0-1"
+    assert sample_id_to_colors[str(samples[1].sample_id)] == [2]  # score=1 -> bucket "0-1"
+    assert sample_id_to_colors[str(samples[2].sample_id)] == [3]  # score=2 -> bucket "2-3"
+    assert sample_id_to_colors[str(samples[99].sample_id)] == [51]  # score=99 -> bucket "98-99"
 
 
 def test_get_embeddings2d__with_metadata_field_color_by_and_sample_ids_filter(
@@ -300,10 +300,10 @@ def test_get_embeddings2d__with_metadata_field_color_by_and_sample_ids_filter(
     table = ipc.open_stream(pa.BufferReader(response.content)).read_all()
     sample_ids_payload = table.column("sample_id").to_pylist()
     fulfils_filter = table.column("fulfils_filter").to_numpy(zero_copy_only=False)
-    color_category = table.column("color_category").to_numpy(zero_copy_only=False)
+    color_categories = table.column("color_categories").to_pylist()
 
     assert len(sample_ids_payload) == len(fulfils_filter)
-    assert len(sample_ids_payload) == len(color_category)
+    assert len(sample_ids_payload) == len(color_categories)
 
     sample_id_to_filter = dict(zip(sample_ids_payload, fulfils_filter))
 
@@ -312,11 +312,12 @@ def test_get_embeddings2d__with_metadata_field_color_by_and_sample_ids_filter(
     assert sample_id_to_filter[str(samples[2].sample_id)] == 1
     assert sample_id_to_filter[str(samples[3].sample_id)] == 0
 
-    sample_id_to_color = dict(zip(sample_ids_payload, color_category))
-    assert sample_id_to_color[str(samples[0].sample_id)] == 4  # Paris
-    assert sample_id_to_color[str(samples[1].sample_id)] == 0  # London, filtered
-    assert sample_id_to_color[str(samples[2].sample_id)] == 5  # Rome
-    assert sample_id_to_color[str(samples[3].sample_id)] == 0  # Berlin, filtered
+    # Color categories are filter-unaware: every sample reports its own category.
+    sample_id_to_colors = dict(zip(sample_ids_payload, color_categories))
+    assert sample_id_to_colors[str(samples[0].sample_id)] == [4]  # Paris
+    assert sample_id_to_colors[str(samples[1].sample_id)] == [3]  # London
+    assert sample_id_to_colors[str(samples[2].sample_id)] == [5]  # Rome
+    assert sample_id_to_colors[str(samples[3].sample_id)] == [2]  # Berlin
 
     legend = json.loads(table.schema.metadata[b"color_legend"])
     assert legend["2"] == "Berlin"
@@ -423,14 +424,6 @@ def test_get_embeddings2d__with_tag_color_by(
 
     table = ipc.open_stream(pa.BufferReader(response.content)).read_all()
     sample_ids_payload = table.column("sample_id").to_pylist()
-    color_category = table.column("color_category").to_numpy(zero_copy_only=False)
-
-    sample_id_to_color = dict(zip(sample_ids_payload, color_category))
-    assert sample_id_to_color[str(samples[0].sample_id)] == 2  # alpha
-    assert sample_id_to_color[str(samples[1].sample_id)] == 3  # beta
-    assert sample_id_to_color[str(samples[2].sample_id)] == 2  # both → alpha (primary)
-    assert sample_id_to_color[str(samples[3].sample_id)] == 1  # Unassigned
-    assert sample_id_to_color[str(samples[4].sample_id)] == 1  # Unassigned
 
     assert table.schema.field("color_categories").type == pa.list_(pa.uint8())
     color_categories = table.column("color_categories").to_pylist()
@@ -508,15 +501,22 @@ def test_get_embeddings2d__with_tag_color_by_and_filter(
 
     table = ipc.open_stream(pa.BufferReader(response.content)).read_all()
     sample_ids_payload = table.column("sample_id").to_pylist()
-    color_category = table.column("color_category").to_numpy(zero_copy_only=False)
+    fulfils_filter = table.column("fulfils_filter").to_numpy(zero_copy_only=False)
+    color_categories = table.column("color_categories").to_pylist()
 
-    sample_id_to_color = dict(zip(sample_ids_payload, color_category))
-    # First two pass filter and have the color tag → category 2.
-    assert sample_id_to_color[str(samples[0].sample_id)] == 2
-    assert sample_id_to_color[str(samples[1].sample_id)] == 2
-    # Last two are filtered out → category 0.
-    assert sample_id_to_color[str(samples[2].sample_id)] == 0
-    assert sample_id_to_color[str(samples[3].sample_id)] == 0
+    # First two pass the filter, last two are filtered out.
+    sample_id_to_filter = dict(zip(sample_ids_payload, fulfils_filter))
+    assert sample_id_to_filter[str(samples[0].sample_id)] == 1
+    assert sample_id_to_filter[str(samples[1].sample_id)] == 1
+    assert sample_id_to_filter[str(samples[2].sample_id)] == 0
+    assert sample_id_to_filter[str(samples[3].sample_id)] == 0
+
+    # All samples have the color tag → category 2, independent of the filter.
+    sample_id_to_colors = dict(zip(sample_ids_payload, color_categories))
+    assert sample_id_to_colors[str(samples[0].sample_id)] == [2]
+    assert sample_id_to_colors[str(samples[1].sample_id)] == [2]
+    assert sample_id_to_colors[str(samples[2].sample_id)] == [2]
+    assert sample_id_to_colors[str(samples[3].sample_id)] == [2]
 
     legend = json.loads(table.schema.metadata[b"color_legend"])
     assert legend == {
@@ -595,14 +595,6 @@ def test_get_embeddings2d__with_annotation_color_by(
 
     table = ipc.open_stream(pa.BufferReader(response.content)).read_all()
     sample_ids_payload = table.column("sample_id").to_pylist()
-    color_category = table.column("color_category").to_numpy(zero_copy_only=False)
-
-    sample_id_to_color = dict(zip(sample_ids_payload, color_category))
-    assert sample_id_to_color[str(samples[0].sample_id)] == 2  # cat
-    assert sample_id_to_color[str(samples[1].sample_id)] == 3  # dog
-    assert sample_id_to_color[str(samples[2].sample_id)] == 2  # both → cat (primary)
-    assert sample_id_to_color[str(samples[3].sample_id)] == 1  # Unassigned
-    assert sample_id_to_color[str(samples[4].sample_id)] == 1  # Unassigned
 
     color_categories = table.column("color_categories").to_pylist()
     sample_id_to_colors = dict(zip(sample_ids_payload, color_categories))
@@ -672,15 +664,22 @@ def test_get_embeddings2d__with_annotation_color_by_and_filter(
 
     table = ipc.open_stream(pa.BufferReader(response.content)).read_all()
     sample_ids_payload = table.column("sample_id").to_pylist()
-    color_category = table.column("color_category").to_numpy(zero_copy_only=False)
+    fulfils_filter = table.column("fulfils_filter").to_numpy(zero_copy_only=False)
+    color_categories = table.column("color_categories").to_pylist()
 
-    sample_id_to_color = dict(zip(sample_ids_payload, color_category))
-    # First two pass filter and have the label → category 2.
-    assert sample_id_to_color[str(samples[0].sample_id)] == 2
-    assert sample_id_to_color[str(samples[1].sample_id)] == 2
-    # Last two are filtered out → category 0.
-    assert sample_id_to_color[str(samples[2].sample_id)] == 0
-    assert sample_id_to_color[str(samples[3].sample_id)] == 0
+    # First two pass the filter, last two are filtered out.
+    sample_id_to_filter = dict(zip(sample_ids_payload, fulfils_filter))
+    assert sample_id_to_filter[str(samples[0].sample_id)] == 1
+    assert sample_id_to_filter[str(samples[1].sample_id)] == 1
+    assert sample_id_to_filter[str(samples[2].sample_id)] == 0
+    assert sample_id_to_filter[str(samples[3].sample_id)] == 0
+
+    # All samples have the label → category 2, independent of the filter.
+    sample_id_to_colors = dict(zip(sample_ids_payload, color_categories))
+    assert sample_id_to_colors[str(samples[0].sample_id)] == [2]
+    assert sample_id_to_colors[str(samples[1].sample_id)] == [2]
+    assert sample_id_to_colors[str(samples[2].sample_id)] == [2]
+    assert sample_id_to_colors[str(samples[3].sample_id)] == [2]
 
     legend = json.loads(table.schema.metadata[b"color_legend"])
     assert legend == {"2": "cat"}

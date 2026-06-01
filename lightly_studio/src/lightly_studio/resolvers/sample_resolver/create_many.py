@@ -3,23 +3,25 @@
 from __future__ import annotations
 
 from collections.abc import Sequence
-from uuid import UUID
+from uuid import UUID, uuid4
 
-from sqlalchemy import ScalarResult
-from sqlmodel import Session, col, insert
+from sqlmodel import Session, insert
 
 from lightly_studio.models.sample import SampleCreate, SampleTable
+from lightly_studio.utils import batching
 
 
 def create_many(session: Session, samples: Sequence[SampleCreate]) -> list[UUID]:
     """Create multiple samples in a single database commit."""
     if not samples:
         return []
-    # Note: We are using bulk insert for SampleTable to get sample_ids efficiently.
-    statement = (
-        insert(SampleTable)
-        .values([sample.model_dump() for sample in samples])
-        .returning(col(SampleTable.sample_id))
-    )
-    sample_ids: ScalarResult[UUID] = session.execute(statement).scalars()
-    return list(sample_ids)
+    # Generate sample_ids client-side so the returned order does not depend on
+    # INSERT ... RETURNING preserving VALUES order (not guaranteed by PostgreSQL).
+    sample_ids = [uuid4() for _ in samples]
+    rows = [
+        {**sample.model_dump(), "sample_id": sample_id}
+        for sample, sample_id in zip(samples, sample_ids)
+    ]
+    for batch in batching.batched(items=rows):
+        session.execute(insert(SampleTable).values(batch))
+    return sample_ids
