@@ -13,7 +13,7 @@ describe('cloneStrategyParams', () => {
 
     it('deep-clones class_balancing target_distribution rows', () => {
         const original = {
-            annotation_source: 'dictionary' as const,
+            target_distribution_mode: 'dictionary' as const,
             target_distribution: [{ class_name: 'cat', weight: 1 }],
             strength: 1
         };
@@ -26,7 +26,7 @@ describe('cloneStrategyParams', () => {
 
     it('mutation of class_balancing source rows does not affect clone', () => {
         const original = {
-            annotation_source: 'dictionary' as const,
+            target_distribution_mode: 'dictionary' as const,
             target_distribution: [{ class_name: 'cat', weight: 1 }],
             strength: 1
         };

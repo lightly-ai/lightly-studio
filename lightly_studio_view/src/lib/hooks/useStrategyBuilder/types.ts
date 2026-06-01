@@ -83,7 +83,6 @@ export const STRATEGY_OPTIONS = [
     }
 ] satisfies Array<{ type: StrategyType; label: string; description: string }>;
 
-
 export const STRATEGY_LABELS: Record<StrategyType, string> = Object.fromEntries(
     STRATEGY_OPTIONS.map((strategy) => [strategy.type, strategy.label])
 ) as Record<StrategyType, string>;

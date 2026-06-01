@@ -146,22 +146,26 @@ describe('isStrategyInstanceValid', () => {
     });
 
     describe('class_balancing', () => {
-        it('returns true for uniform annotation_source regardless of distribution', () => {
+        it('returns true for uniform target_distribution_mode regardless of distribution', () => {
             const instance: StrategyInstance = {
                 id: '1',
                 type: 'class_balancing',
-                params: { annotation_source: 'uniform', target_distribution: [], strength: 1 },
+                params: {
+                    target_distribution_mode: 'uniform',
+                    target_distribution: [],
+                    strength: 1
+                },
                 isExpanded: true
             };
 
             expect(isStrategyInstanceValid(instance)).toBe(true);
         });
 
-        it('returns true for input annotation_source regardless of distribution', () => {
+        it('returns true for input target_distribution_mode regardless of distribution', () => {
             const instance: StrategyInstance = {
                 id: '1',
                 type: 'class_balancing',
-                params: { annotation_source: 'input', target_distribution: [], strength: 1 },
+                params: { target_distribution_mode: 'input', target_distribution: [], strength: 1 },
                 isExpanded: true
             };
 
@@ -172,7 +176,11 @@ describe('isStrategyInstanceValid', () => {
             const instance: StrategyInstance = {
                 id: '1',
                 type: 'class_balancing',
-                params: { annotation_source: 'dictionary', target_distribution: [], strength: 1 },
+                params: {
+                    target_distribution_mode: 'dictionary',
+                    target_distribution: [],
+                    strength: 1
+                },
                 isExpanded: true
             };
 
@@ -184,7 +192,7 @@ describe('isStrategyInstanceValid', () => {
                 id: '1',
                 type: 'class_balancing',
                 params: {
-                    annotation_source: 'dictionary',
+                    target_distribution_mode: 'dictionary',
                     target_distribution: [{ class_name: '', weight: 1 }],
                     strength: 1
                 },
@@ -199,7 +207,7 @@ describe('isStrategyInstanceValid', () => {
                 id: '1',
                 type: 'class_balancing',
                 params: {
-                    annotation_source: 'dictionary',
+                    target_distribution_mode: 'dictionary',
                     target_distribution: [{ class_name: '   ', weight: 1 }],
                     strength: 1
                 },
@@ -214,7 +222,7 @@ describe('isStrategyInstanceValid', () => {
                 id: '1',
                 type: 'class_balancing',
                 params: {
-                    annotation_source: 'dictionary',
+                    target_distribution_mode: 'dictionary',
                     target_distribution: [{ class_name: 'cat', weight: 0 }],
                     strength: 1
                 },
@@ -229,7 +237,7 @@ describe('isStrategyInstanceValid', () => {
                 id: '1',
                 type: 'class_balancing',
                 params: {
-                    annotation_source: 'dictionary',
+                    target_distribution_mode: 'dictionary',
                     target_distribution: [
                         { class_name: 'cat', weight: 2 },
                         { class_name: 'dog', weight: 1 }

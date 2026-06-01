@@ -18,7 +18,7 @@ export function isStrategyInstanceValid(instance: StrategyInstance): boolean {
     }
 
     if (instance.type === 'class_balancing') {
-        if (instance.params.annotation_source !== 'dictionary') {
+        if (instance.params.target_distribution_mode !== 'dictionary') {
             return true;
         }
         return (
