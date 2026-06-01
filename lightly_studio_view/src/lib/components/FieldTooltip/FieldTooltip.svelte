@@ -41,9 +41,16 @@
     onmouseleave={() => (visible = false)}
     onfocusin={() => (visible = true)}
     onfocusout={() => (visible = false)}
+    onkeydown={(e) => {
+        if (e.key === 'Enter' || e.key === ' ' || e.key === 'Spacebar') {
+            e.preventDefault();
+            visible = !visible;
+        }
+    }}
     tabindex="0"
     role="button"
     aria-label="More information"
+    aria-expanded={visible}
     aria-describedby={visible ? tooltipId : undefined}
 >
     <CircleHelp class="size-3 text-muted-foreground" aria-hidden="true" />
