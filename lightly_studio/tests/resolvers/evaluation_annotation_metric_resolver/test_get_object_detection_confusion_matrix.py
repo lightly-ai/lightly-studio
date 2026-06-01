@@ -133,8 +133,8 @@ def test_get_object_detection_confusion_matrix__class_only_in_gt(
 ) -> None:
     """GT contains a class that the predictions never produce.
 
-    The class still shows up as a row (because gt sees it) but never as a
-    column, and the unmatched gt is captured in the synthetic FN column. The
+    The class must still appear on both axes so GT and prediction labels stay
+    aligned. The unmatched gt is captured in the synthetic FN column. The
     synthetic FP row is also present even though it has no entries.
     """
     dataset = create_collection(session=db_session)
@@ -196,11 +196,11 @@ def test_get_object_detection_confusion_matrix__class_only_in_gt(
     )
 
     assert matrix.row_labels == ["class_a", "class_b", NO_GROUND_TRUTH_ROW_LABEL]
-    assert matrix.col_labels == ["class_a", NO_PREDICTION_COL_LABEL]
+    assert matrix.col_labels == ["class_a", "class_b", NO_PREDICTION_COL_LABEL]
     assert matrix.counts == [
-        [1, 0],
-        [0, 1],
-        [0, 0],
+        [1, 0, 0],
+        [0, 0, 1],
+        [0, 0, 0],
     ]
 
 
@@ -209,8 +209,8 @@ def test_get_object_detection_confusion_matrix__class_only_in_pred(
 ) -> None:
     """Predictions contain a class the ground truth never has.
 
-    The extra class shows up as a column (predictions see it) but never as a
-    row, and the unmatched prediction is captured in the synthetic FP row. The
+    The class must still appear on both axes so GT and prediction labels stay
+    aligned. The unmatched prediction is captured in the synthetic FP row. The
     synthetic FN column is also present even though it has no entries.
     """
     dataset = create_collection(session=db_session)
@@ -271,10 +271,11 @@ def test_get_object_detection_confusion_matrix__class_only_in_pred(
         evaluation_run_id=run.id,
     )
 
-    assert matrix.row_labels == ["class_a", NO_GROUND_TRUTH_ROW_LABEL]
+    assert matrix.row_labels == ["class_a", "class_b", NO_GROUND_TRUTH_ROW_LABEL]
     assert matrix.col_labels == ["class_a", "class_b", NO_PREDICTION_COL_LABEL]
     assert matrix.counts == [
         [1, 0, 0],
+        [0, 0, 0],
         [0, 1, 0],
     ]
 
