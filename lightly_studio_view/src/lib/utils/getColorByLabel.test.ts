@@ -39,15 +39,11 @@ describe('getColorByLabel', () => {
     });
 
     describe('with a custom color override', () => {
-        test('uses the override hex, mixing the override alpha with the requested alpha', () => {
+        test('uses the override hex with an RGB-inverted contrast, mixing the override alpha with the requested alpha', () => {
             useCustomLabelColors().setCustomColor('cat', '#ff8040', 0.8);
-
             expect(getColorByLabel('cat', 0.5).color).toBe('rgba(255, 128, 64, 0.4)');
-        });
 
-        test('contrast color is still the RGB inverse of the override', () => {
             useCustomLabelColors().setCustomColor('cat', '#ff8040', 1);
-
             const { color, contrastColor } = getColorByLabel('cat', 1);
             expect(color).toBe('rgba(255, 128, 64, 1)');
             expect(contrastColor).toBe('rgba(0, 127, 191, 1)');
