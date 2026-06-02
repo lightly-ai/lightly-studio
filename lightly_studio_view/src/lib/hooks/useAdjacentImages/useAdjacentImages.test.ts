@@ -151,7 +151,10 @@ describe('useAdjacentImages', () => {
         expect(useAdjacentSamplesMock).toHaveBeenCalledWith(
             expect.objectContaining({
                 params: expect.objectContaining({
-                    body: expect.objectContaining({ sort_by: undefined })
+                    body: expect.objectContaining({
+                        sort_by: undefined,
+                        text_embedding: [0.12, 0.34]
+                    })
                 })
             })
         );

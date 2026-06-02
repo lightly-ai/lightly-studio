@@ -1,7 +1,7 @@
 <script lang="ts">
     import { SortDirection } from '$lib/api/lightly_studio_local';
     import { useOrderBy } from '$lib/hooks/useOrderBy/useOrderBy';
-    import { useGlobalStorage } from '$lib/hooks/useGlobalStorage';
+    import { useGlobalStorage } from '$lib/hooks';
     import * as Select from '$lib/components/ui/select';
     import { Button } from '$lib/components/ui/button';
     import { ArrowDown, ArrowUp } from '@lucide/svelte';
