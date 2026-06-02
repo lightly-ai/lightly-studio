@@ -8,8 +8,12 @@ from sqlmodel import Session
 
 from lightly_studio.evaluation.evaluation_data import EvaluationData
 from lightly_studio.models.annotation.annotation_base import AnnotationBaseTable
+from lightly_studio.models.evaluation_annotation_metric import EvaluationAnnotationMetricCreate
 from lightly_studio.models.evaluation_sample_metric import EvaluationSampleMetricCreate
-from lightly_studio.resolvers import evaluation_sample_metric_resolver
+from lightly_studio.resolvers import (
+    evaluation_annotation_metric_resolver,
+    evaluation_sample_metric_resolver,
+)
 
 METRIC_BATCH_SIZE = 32  # Buffer size for evaluation_sample_metric_resolver.create_many
 
@@ -41,6 +45,7 @@ def create_and_persist_classification_metrics_per_sample(
     # happened yet — pass 2's batch commits would otherwise expire the ORM rows
     # (expire_on_commit=True) and force lazy reloads on later reads.
     metrics_to_persist: list[EvaluationSampleMetricCreate] = []
+    annotation_metrics_to_persist: list[EvaluationAnnotationMetricCreate] = []
     for sample_id in data.selected_sample_ids:
         gt = _require_single(
             annotations=data.gt_per_sample.get(sample_id, []),
@@ -63,12 +68,26 @@ def create_and_persist_classification_metrics_per_sample(
                 value=disagreement,
             )
         )
+        annotation_metrics_to_persist.append(
+            EvaluationAnnotationMetricCreate(
+                evaluation_run_id=data.evaluation_run_id,
+                sample_id=sample_id,
+                pred_annotation_id=pred.sample_id,
+                gt_annotation_id=gt.sample_id,
+                metric_name="disagreement",
+                value=disagreement,
+            )
+        )
 
     # Pass 2: persist in batches. No ORM reads here, so commits are safe.
     for batch_start in range(0, len(metrics_to_persist), METRIC_BATCH_SIZE):
         evaluation_sample_metric_resolver.create_many(
             session=session,
             records=metrics_to_persist[batch_start : batch_start + METRIC_BATCH_SIZE],
+        )
+        evaluation_annotation_metric_resolver.create_many(
+            session=session,
+            records=annotation_metrics_to_persist[batch_start : batch_start + METRIC_BATCH_SIZE],
         )
 
 
