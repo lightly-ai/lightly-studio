@@ -439,30 +439,37 @@ def test_classification_evaluation__raises_on_wrong_annotation_type(
 def test_segmentation_evaluation(
     patch_collection: None,  # noqa: ARG001
 ) -> None:
-    """Creates an evaluation run for semantic segmentation and returns sample counts."""
+    """Creates an evaluation run for semantic segmentation and persists per-image metrics."""
     dataset = ImageDataset.create(name="test_dataset")
-    label = create_annotation_label(
+    dog_label = create_annotation_label(
         session=dataset.session,
         root_collection_id=dataset.collection_id,
+        label_name="dog",
     )
-    image = create_image(session=dataset.session, collection_id=dataset.collection_id)
+    image = create_image(
+        session=dataset.session,
+        collection_id=dataset.collection_id,
+        width=4,
+        height=3,
+    )
     _create_gt_and_pred_collections(session=dataset.session, collection_id=dataset.collection_id)
-    create_annotation(
-        session=dataset.session,
-        collection_id=dataset.collection_id,
-        sample_id=image.sample_id,
-        annotation_label_id=label.annotation_label_id,
-        annotation_type=AnnotationType.SEGMENTATION_MASK,
-        annotation_collection_name="gt",
-    )
-    create_annotation(
-        session=dataset.session,
-        collection_id=dataset.collection_id,
-        sample_id=image.sample_id,
-        annotation_label_id=label.annotation_label_id,
-        annotation_type=AnnotationType.SEGMENTATION_MASK,
-        annotation_collection_name="pred",
-    )
+    mask_data = {
+        "x": 0,
+        "y": 0,
+        "width": 4,
+        "height": 3,
+        "segmentation_mask": [0, 4, 4, 4],
+    }
+    for collection_name in ("gt", "pred"):
+        create_annotation(
+            session=dataset.session,
+            collection_id=dataset.collection_id,
+            sample_id=image.sample_id,
+            annotation_label_id=dog_label.annotation_label_id,
+            annotation_type=AnnotationType.SEGMENTATION_MASK,
+            annotation_data=mask_data,
+            annotation_collection_name=collection_name,
+        )
 
     result = dataset.evaluate().semantic_segmentation(
         name="seg-run-1",
@@ -480,6 +487,16 @@ def test_segmentation_evaluation(
     assert len(evaluation_runs) == 1
     assert evaluation_runs[0].name == "seg-run-1"
     assert evaluation_runs[0].task_type == EvaluationTaskType.SEMANTIC_SEGMENTATION
+
+    sample_metrics = evaluation_sample_metric_resolver.get_all_by_evaluation_run_id(
+        session=dataset.session,
+        evaluation_run_id=evaluation_runs[0].id,
+    )
+    assert len(sample_metrics) == 1
+    metric = sample_metrics[0]
+    assert metric.sample_id == image.sample_id
+    assert metric.metric_name == "miou"
+    assert metric.value == pytest.approx(1.0)
 
 
 def test_segmentation_evaluation__raises_on_wrong_annotation_type(
