@@ -1,4 +1,4 @@
-import type { SelectionRequest } from '$lib/api/lightly_studio_local/types.gen';
+import type { SamplingRequest } from '$lib/api/lightly_studio_local/types.gen';
 import type { StrategyInstance } from '$lib/hooks/useStrategyBuilder';
 
 export function getMetadataKey(instance: StrategyInstance): string {
@@ -8,7 +8,7 @@ export function getMetadataKey(instance: StrategyInstance): string {
     return '';
 }
 
-export function toApiStrategy(instance: StrategyInstance): SelectionRequest['strategies'][number] {
+export function toApiStrategy(instance: StrategyInstance): SamplingRequest['strategies'][number] {
     if (instance.type === 'diversity') {
         return {
             strategy_name: 'diversity',
