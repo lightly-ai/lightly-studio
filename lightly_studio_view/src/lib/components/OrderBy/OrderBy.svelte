@@ -1,6 +1,7 @@
 <script lang="ts">
     import { SortDirection } from '$lib/api/lightly_studio_local';
     import { useOrderBy } from '$lib/hooks/useOrderBy/useOrderBy';
+    import { useGlobalStorage } from '$lib/hooks/useGlobalStorage';
     import * as Select from '$lib/components/ui/select';
     import { Button } from '$lib/components/ui/button';
     import { ArrowDown, ArrowUp } from '@lucide/svelte';
@@ -10,6 +11,9 @@
     }
 
     const { datasetId }: Props = $props();
+
+    const { textEmbedding } = useGlobalStorage();
+    const isSimilaritySearchActive = $derived(!!$textEmbedding);
 
     const {
         allSortFields,
@@ -42,7 +46,13 @@
 </script>
 
 <div class="flex items-center gap-1">
-    <Select.Root type="single" value={selectValue} allowDeselect onValueChange={handleValueChange}>
+    <Select.Root
+        type="single"
+        value={selectValue}
+        allowDeselect
+        onValueChange={handleValueChange}
+        disabled={isSimilaritySearchActive}
+    >
         <Select.Trigger
             class="h-8 w-[100px] min-w-20 gap-1 px-2.5 text-xs font-normal"
             data-testid="sort-by-trigger"
@@ -67,7 +77,7 @@
     <Button
         variant="ghost"
         size="icon"
-        disabled={!$selectedLabel}
+        disabled={!$selectedLabel || isSimilaritySearchActive}
         onclick={toggleDirection}
         class="size-auto p-0 hover:bg-transparent [&>svg]:text-foreground [&>svg]:hover:text-muted-foreground"
         data-testid="sort-direction-button"

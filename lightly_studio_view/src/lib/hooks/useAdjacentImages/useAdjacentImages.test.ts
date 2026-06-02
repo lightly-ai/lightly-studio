@@ -106,7 +106,8 @@ describe('useAdjacentImages', () => {
         });
     });
 
-    it('passes sort_by to useAdjacentSamples when imageSortBy is set', () => {
+    it('passes sort_by to useAdjacentSamples when imageSortBy is set and text embedding is inactive', () => {
+        textEmbeddingStore.set(undefined);
         const sort: SortFieldExpr[] = [
             { source: 'image', field_name: 'score', direction: 'desc', is_numeric: false }
         ];
@@ -124,7 +125,26 @@ describe('useAdjacentImages', () => {
     });
 
     it('passes sort_by as undefined when imageSortBy is null', () => {
+        textEmbeddingStore.set(undefined);
         imageSortByStore.set(null);
+
+        useAdjacentImages({ sampleId: 'sample-123', collectionId: 'collection-1' });
+
+        expect(useAdjacentSamplesMock).toHaveBeenCalledWith(
+            expect.objectContaining({
+                params: expect.objectContaining({
+                    body: expect.objectContaining({ sort_by: undefined })
+                })
+            })
+        );
+    });
+
+    it('passes sort_by as undefined when text embedding is active, even if imageSortBy is set', () => {
+        textEmbeddingStore.set({ embedding: [0.12, 0.34], queryText: 'cats' });
+        const sort: SortFieldExpr[] = [
+            { source: 'image', field_name: 'score', direction: 'desc', is_numeric: false }
+        ];
+        imageSortByStore.set(sort);
 
         useAdjacentImages({ sampleId: 'sample-123', collectionId: 'collection-1' });
 

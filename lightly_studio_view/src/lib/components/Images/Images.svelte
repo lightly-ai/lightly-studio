@@ -119,7 +119,7 @@
         ...$filterParams,
         collection_id: collection_id,
         query_expr: $imageQueryExpression?.query_expr,
-        sort_by: $imageSortBy ?? undefined
+        sort_by: $textEmbedding ? undefined : ($imageSortBy ?? undefined)
     }));
     // Derived list of samples from TanStack infinite query
     const samples: ImageView[] = $derived(
