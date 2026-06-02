@@ -10,7 +10,14 @@ describe('SelectClassDialog', () => {
         Element.prototype.scrollIntoView = vi.fn();
     });
 
-    const renderDialog = (propOverrides: { open?: boolean; labels?: string[] } = {}) => {
+    const renderDialog = (
+        propOverrides: {
+            open?: boolean;
+            labels?: string[];
+            sourceNames?: string[];
+            selectedSource?: string;
+        } = {}
+    ) => {
         const onConfirm = vi.fn();
         const onCancel = vi.fn();
 
@@ -66,7 +73,7 @@ describe('SelectClassDialog', () => {
         await user.click(confirmButton);
 
         expect(onConfirm).toHaveBeenCalledTimes(1);
-        expect(onConfirm).toHaveBeenCalledWith('cat');
+        expect(onConfirm).toHaveBeenCalledWith('cat', undefined);
         expect(onCancel).not.toHaveBeenCalled();
     });
 
@@ -91,6 +98,73 @@ describe('SelectClassDialog', () => {
         await waitFor(() => expect(confirmButton).toBeEnabled());
         await user.click(confirmButton);
 
-        expect(onConfirm).toHaveBeenCalledWith('fish');
+        expect(onConfirm).toHaveBeenCalledWith('fish', undefined);
+    });
+
+    it('hides the source selector with fewer than two sources', () => {
+        renderDialog({ sourceNames: [] });
+        expect(screen.queryByTestId('annotation-source-trigger')).not.toBeInTheDocument();
+
+        renderDialog({ sourceNames: ['ground_truth'] });
+        expect(screen.queryByTestId('annotation-source-trigger')).not.toBeInTheDocument();
+    });
+
+    it('adds to the only existing source when the selector is hidden', async () => {
+        const user = userEvent.setup();
+        const { onConfirm } = renderDialog({ sourceNames: ['predictions'] });
+
+        // Selector is hidden, but the lone source is used rather than creating a new one.
+        expect(screen.queryByTestId('annotation-source-trigger')).not.toBeInTheDocument();
+
+        await user.click(screen.getByTestId('select-list-trigger'));
+        await user.click(await screen.findByRole('option', { name: 'cat' }));
+
+        const confirmButton = screen.getByRole('button', { name: 'Confirm' });
+        await waitFor(() => expect(confirmButton).toBeEnabled());
+        await user.click(confirmButton);
+
+        expect(onConfirm).toHaveBeenCalledWith('cat', 'predictions');
+    });
+
+    it('shows the source selector with the pre-selected source when two or more exist', () => {
+        renderDialog({
+            sourceNames: ['ground_truth', 'predictions'],
+            selectedSource: 'predictions'
+        });
+
+        const trigger = screen.getByTestId('annotation-source-trigger');
+        expect(trigger).toBeInTheDocument();
+        expect(trigger).toHaveTextContent('predictions');
+    });
+
+    it('keeps Confirm disabled until both a class and a source are chosen', async () => {
+        const user = userEvent.setup();
+        renderDialog({ sourceNames: ['ground_truth', 'predictions'] });
+
+        // Neither class nor source chosen yet.
+        expect(screen.getByRole('button', { name: 'Confirm' })).toBeDisabled();
+
+        // Choosing only a class is not enough while a source must still be picked.
+        await user.click(screen.getByTestId('select-list-trigger'));
+        await user.click(await screen.findByRole('option', { name: 'cat' }));
+
+        await waitFor(() => expect(screen.getByRole('button', { name: 'Confirm' })).toBeDisabled());
+    });
+
+    it('passes the selected source to onConfirm', async () => {
+        const user = userEvent.setup();
+        const { onConfirm } = renderDialog({
+            sourceNames: ['ground_truth', 'predictions'],
+            selectedSource: 'predictions'
+        });
+
+        await user.click(screen.getByTestId('select-list-trigger'));
+        await user.click(await screen.findByRole('option', { name: 'cat' }));
+
+        const confirmButton = screen.getByRole('button', { name: 'Confirm' });
+        await waitFor(() => expect(confirmButton).toBeEnabled());
+        await user.click(confirmButton);
+
+        expect(onConfirm).toHaveBeenCalledWith('cat', 'predictions');
     });
 });

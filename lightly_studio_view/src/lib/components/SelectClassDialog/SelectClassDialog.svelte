@@ -3,15 +3,28 @@
     import { Button } from '$lib/components/ui/button/index.js';
     import SelectList from '$lib/components/SelectList/SelectList.svelte';
     import type { ListItem } from '$lib/components/SelectList/types';
+    import AnnotationSourceSelect from '$lib/components/AnnotationSourceSelect/AnnotationSourceSelect.svelte';
 
     type Props = {
         open: boolean;
         labels: string[];
-        onConfirm: (label: string) => void;
+        sourceNames?: string[];
+        selectedSource?: string;
+        onConfirm: (label: string, source?: string) => void;
         onCancel: () => void;
     };
 
-    let { open = $bindable(false), labels, onConfirm, onCancel }: Props = $props();
+    let {
+        open = $bindable(false),
+        labels,
+        sourceNames = [],
+        selectedSource = $bindable(),
+        onConfirm,
+        onCancel
+    }: Props = $props();
+
+    // Only let the user pick a source when there is more than one to choose between.
+    const showSourceSelect = $derived(sourceNames.length > 1);
 
     let selectedItem = $state<ListItem | undefined>(undefined);
     // Track close origin so the onOpenChange(false) that fires when we set
@@ -25,9 +38,10 @@
     const handleConfirm = () => {
         if (selectedItem) {
             closedByConfirm = true;
-            onConfirm(selectedItem.value);
+            onConfirm(selectedItem.value, showSourceSelect ? selectedSource : sourceNames[0]);
             open = false;
             selectedItem = undefined;
+            selectedSource = undefined;
         }
     };
 
@@ -35,6 +49,7 @@
         onCancel();
         open = false;
         selectedItem = undefined;
+        selectedSource = undefined;
     };
 
     const handleOpenChange = (isOpen: boolean) => {
@@ -56,7 +71,17 @@
             </Dialog.Description>
         </Dialog.Header>
 
-        <div class="py-2">
+        {#if showSourceSelect}
+            <div class="space-y-1 py-2">
+                <span class="text-sm text-muted-foreground">Annotation source</span>
+                <AnnotationSourceSelect {sourceNames} bind:selectedSource />
+            </div>
+        {/if}
+
+        <div class="space-y-1 py-2">
+            {#if showSourceSelect}
+                <span class="text-sm text-muted-foreground">Class</span>
+            {/if}
             <SelectList
                 bind:selectedItem
                 {items}
@@ -68,7 +93,12 @@
 
         <Dialog.Footer>
             <Button variant="outline" onclick={handleCancel}>Cancel</Button>
-            <Button onclick={handleConfirm} disabled={!selectedItem}>Confirm</Button>
+            <Button
+                onclick={handleConfirm}
+                disabled={!selectedItem || (showSourceSelect && !selectedSource)}
+            >
+                Confirm
+            </Button>
         </Dialog.Footer>
     </Dialog.Content>
 </Dialog.Root>
