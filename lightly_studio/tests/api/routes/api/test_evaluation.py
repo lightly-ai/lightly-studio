@@ -285,9 +285,9 @@ def test_get_evaluation_confusion_matrix__classification(
 
     assert response.status_code == HTTP_STATUS_OK
     assert response.json() == {
-        "row_labels": ["cat", NO_GROUND_TRUTH_ROW_LABEL],
-        "col_labels": ["dog", NO_PREDICTION_COL_LABEL],
-        "counts": [[1, 0], [0, 0]],
+        "row_labels": ["cat", "dog", NO_GROUND_TRUTH_ROW_LABEL],
+        "col_labels": ["cat", "dog", NO_PREDICTION_COL_LABEL],
+        "counts": [[0, 1, 0], [0, 0, 0], [0, 0, 0]],
     }
 
 
