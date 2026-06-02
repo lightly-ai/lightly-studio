@@ -94,7 +94,6 @@
                 {/if}
             </section>
 
-            <!-- Label sources -->
             <section data-testid="evaluation-run-label-sources">
                 <Typography variant="subtitle2" component="h3" className="mb-2">
                     Label sources
