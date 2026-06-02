@@ -34,8 +34,8 @@
             <div class="flex shrink-0 items-center gap-2">
                 <span class="text-xs text-muted-foreground">{count}</span>
                 <ChevronDown
-                    class="size-4 transition-transform duration-{duration}"
-                    style={`transform: ${open ? 'rotate(-180deg)' : 'rotate(0deg)'}`}
+                    class="size-4 transition-transform"
+                    style={`transform: ${open ? 'rotate(-180deg)' : 'rotate(0deg)'}; transition-duration: ${duration}ms`}
                 />
             </div>
         </CollapsibleTrigger>
