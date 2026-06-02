@@ -2,17 +2,13 @@
     import { Label } from '$lib/components/ui/label';
     import * as Select from '$lib/components/ui/select';
     import FieldTooltip from '$lib/components/FieldTooltip/FieldTooltip.svelte';
-    import type {
-        SimilarityParams,
-        StrategyParams,
-        StrategySummaryTag
-    } from '$lib/hooks/useStrategyBuilder';
+    import type { SimilarityParams, StrategySummaryTag } from '$lib/hooks/useStrategyBuilder';
     import StrengthField from '../StrengthField/StrengthField.svelte';
 
     interface Props {
         params: SimilarityParams;
         tags: StrategySummaryTag[];
-        onUpdate: (params: Partial<StrategyParams>) => void;
+        onUpdate: (params: Partial<SimilarityParams>) => void;
     }
     let { params, tags, onUpdate }: Props = $props();
     const selectedQueryTagName = $derived(
@@ -34,7 +30,11 @@
             value={params.query_tag_id}
             onValueChange={(queryTagId) => onUpdate({ query_tag_id: queryTagId })}
         >
-            <Select.Trigger class="w-full" data-testid="similarity-query-tag-select">
+            <Select.Trigger
+                id="similarity-query-tag"
+                class="w-full"
+                data-testid="similarity-query-tag-select"
+            >
                 {selectedQueryTagName}
             </Select.Trigger>
             <Select.Content>
