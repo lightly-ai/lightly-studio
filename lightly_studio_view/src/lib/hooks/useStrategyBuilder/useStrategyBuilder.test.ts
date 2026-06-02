@@ -1,7 +1,6 @@
 import { get } from 'svelte/store';
 import { beforeEach, describe, expect, it } from 'vitest';
-import { useStrategyBuilder } from './useStrategyBuilder';
-import { STRATEGY_DEFAULTS } from './types';
+import { useStrategyBuilder, STRATEGY_DEFAULTS } from '.';
 
 describe('useStrategyBuilder', () => {
     let builder: ReturnType<typeof useStrategyBuilder>;
