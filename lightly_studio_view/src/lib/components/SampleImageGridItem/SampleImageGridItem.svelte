@@ -1,5 +1,7 @@
 <script lang="ts">
     import type { ImageView } from '$lib/api/lightly_studio_local';
+    import { useImageFilters } from '$lib/hooks/useImageFilters/useImageFilters';
+    import { useSampleOrderValue } from '$lib/hooks/useSampleOrderValue/useSampleOrderValue';
     import { useSettings } from '$lib/hooks/useSettings';
     import { getSimilarityColor } from '$lib/utils';
     import { SampleAnnotations, SampleImage } from '..';
@@ -18,6 +20,21 @@
     } = $props();
 
     const { gridViewThumbnailQualityStore } = useSettings();
+    const { imageSortBy } = useImageFilters();
+    const sampleOrderValue = $derived(
+        useSampleOrderValue({
+            sample,
+            sortExpr: $imageSortBy?.[0]
+        })
+    );
+    const shouldShowOrderValue = $derived(sampleOrderValue !== undefined);
+    const orderValueLabel = $derived(
+        typeof sampleOrderValue === 'number'
+            ? Number.isInteger(sampleOrderValue)
+                ? String(sampleOrderValue)
+                : sampleOrderValue.toFixed(2)
+            : ''
+    );
 </script>
 
 <SampleImage
@@ -29,7 +46,15 @@
 />
 <SampleAnnotations {sample} {objectFit} />
 
-{#if sample.similarity_score !== undefined && sample.similarity_score !== null}
+{#if shouldShowOrderValue}
+    <div
+        class="absolute right-1 z-10 rounded bg-black/60 px-1.5 py-0.5 text-xs font-medium text-white backdrop-blur-sm {displayTextOnImage
+            ? 'bottom-8'
+            : 'bottom-1'}"
+    >
+        {orderValueLabel}
+    </div>
+{:else if sample.similarity_score !== undefined && sample.similarity_score !== null}
     <div
         class="absolute right-1 z-10 flex items-center rounded bg-black/60 px-1.5 py-0.5 text-xs font-medium text-white backdrop-blur-sm {displayTextOnImage
             ? 'bottom-8'
