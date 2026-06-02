@@ -90,15 +90,15 @@
             {#if instance.type === 'diversity'}
                 <StrengthField
                     strength={instance.params.strength}
-                    id="diversity-strength"
-                    testid="strategy-diversity-strength-input"
+                    id={`diversity-strength-${instance.id}`}
+                    testid={`strategy-diversity-strength-input-${instance.id}`}
                     onUpdate={(strength) => onUpdate({ strength })}
                 />
             {:else if instance.type === 'typicality'}
                 <StrengthField
                     strength={instance.params.strength}
-                    id="typicality-strength"
-                    testid="strategy-typicality-strength-input"
+                    id={`typicality-strength-${instance.id}`}
+                    testid={`strategy-typicality-strength-input-${instance.id}`}
                     onUpdate={(strength) => onUpdate({ strength })}
                 />
             {:else if instance.type === 'similarity'}

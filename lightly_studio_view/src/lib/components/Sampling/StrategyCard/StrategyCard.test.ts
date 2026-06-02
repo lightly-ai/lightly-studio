@@ -88,7 +88,7 @@ describe('StrategyCard', () => {
             render(StrategyCard, { props: { ...defaultProps, instance } });
 
             expect(
-                screen.queryByTestId('strategy-diversity-strength-input')
+                screen.queryByTestId('strategy-diversity-strength-input-abc')
             ).not.toBeInTheDocument();
         });
     });
@@ -104,7 +104,7 @@ describe('StrategyCard', () => {
 
             render(StrategyCard, { props: { ...defaultProps, instance } });
 
-            expect(screen.getByTestId('strategy-diversity-strength-input')).toBeInTheDocument();
+            expect(screen.getByTestId('strategy-diversity-strength-input-abc')).toBeInTheDocument();
         });
     });
 
@@ -119,7 +119,7 @@ describe('StrategyCard', () => {
 
             render(StrategyCard, { props: { ...defaultProps, instance } });
 
-            expect(screen.getByTestId('strategy-typicality-strength-input')).toBeInTheDocument();
+            expect(screen.getByTestId('strategy-typicality-strength-input-abc')).toBeInTheDocument();
         });
     });
 
