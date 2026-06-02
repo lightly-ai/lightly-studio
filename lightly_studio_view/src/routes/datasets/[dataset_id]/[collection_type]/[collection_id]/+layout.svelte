@@ -96,6 +96,7 @@
 
     const evaluationRunsQuery = useEvaluationRuns(() => ({ datasetId: collection.dataset_id }));
     const evaluationRuns = $derived(evaluationRunsQuery.data ?? []);
+    const hasEvaluationRuns = $derived(evaluationRuns.length > 0);
 
     const parentCollection = $derived.by(() =>
         retrieveParentCollection($collections, collectionId)
@@ -370,6 +371,7 @@
                     <DatasetGridHeader
                         {canSelectAll}
                         {isImages}
+                        {hasEvaluationRuns}
                         {hasMediaWithEmbeddings}
                         collectionDatasetId={collection.dataset_id}
                         compact={isSidePanelOpen}
@@ -403,7 +405,7 @@
                 </PaneResizer>
             {/snippet}
 
-            {#if $activePanel === 'evaluationRuns'}
+            {#if $activePanel === 'evaluationRuns' && hasEvaluationRuns}
                 <PaneGroup direction="horizontal" class="flex-1">
                     <Pane defaultSize={65} minSize={35} class="flex">
                         <div
@@ -436,6 +438,7 @@
                             <DatasetGridHeader
                                 {canSelectAll}
                                 {isImages}
+                                {hasEvaluationRuns}
                                 {hasMediaWithEmbeddings}
                                 collectionDatasetId={collection.dataset_id}
                                 compact={isSidePanelOpen}

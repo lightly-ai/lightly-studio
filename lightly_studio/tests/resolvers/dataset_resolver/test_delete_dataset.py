@@ -3,13 +3,14 @@
 import uuid
 
 import pytest
-from sqlmodel import Session
+from sqlmodel import Session, select
 
 from lightly_studio.models.annotation.annotation_base import AnnotationType
 from lightly_studio.models.collection import SampleType
 from lightly_studio.models.evaluation_annotation_metric import EvaluationAnnotationMetricCreate
 from lightly_studio.models.evaluation_run import EvaluationRunCreate, EvaluationTaskType
 from lightly_studio.models.evaluation_sample_metric import EvaluationSampleMetricCreate
+from lightly_studio.models.sample import SampleTagLinkTable
 from lightly_studio.resolvers import (
     annotation_label_resolver,
     collection_resolver,
@@ -22,6 +23,7 @@ from lightly_studio.resolvers import (
     sample_resolver,
     tag_resolver,
 )
+from lightly_studio.resolvers.dataset_resolver.delete_dataset import _delete_sample_tag_links
 from tests.helpers_resolvers import (
     AnnotationDetails,
     create_annotation,
@@ -393,3 +395,19 @@ def test_delete_dataset__raises_for_nonexistent_dataset(db_session: Session) -> 
             session=db_session,
             dataset_id=nonexistent_id,
         )
+
+
+def test_delete_sample_tag_links__exceeds_postgres_param_limit(db_session: Session) -> None:
+    # Arrange - more ids than PostgreSQL's 65,535 single-statement bind-param cap.
+    # The param-count error fires at send time regardless of matching rows, so this
+    # reproduces the bug cheaply: pre-fix it raises under --postgres, post-fix it
+    # passes on both backends (the delete is chunked across multiple statements).
+    sample_ids = [uuid.uuid4() for _ in range(70_000)]
+
+    # Act
+    _delete_sample_tag_links(session=db_session, sample_ids=sample_ids)
+    db_session.commit()
+
+    # Assert - the chunked delete ran without exceeding the parameter limit.
+    remaining = db_session.exec(select(SampleTagLinkTable)).all()
+    assert remaining == []

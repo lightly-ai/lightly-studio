@@ -8,15 +8,25 @@ describe('PlotPanelLegend', () => {
     it('renders the fixed entries and the custom legend list', () => {
         render(PlotPanelLegend, {
             categoryColors: [NOT_FILTERED_COLOR, FILTERED_COLOR, 'hsl(0, 70%, 55%)'],
-            filteredLabel: 'Unassigned',
+            includedLabel: 'No category',
             legendEntries: [
                 { cat: 2, label: 'metadata.split: train', color: 'hsl(0, 70%, 55%)', hidden: false }
             ]
         });
 
-        expect(screen.getByTestId('plot-legend')).toHaveTextContent('Not Filtered');
-        expect(screen.getByTestId('plot-legend')).toHaveTextContent('Unassigned');
+        // The excluded row uses its default label; the included row uses the passed-in label.
+        expect(screen.getByTestId('plot-legend')).toHaveTextContent('Excluded by filters');
+        expect(screen.getByTestId('plot-legend')).toHaveTextContent('No category');
         expect(screen.getByRole('button', { name: 'metadata.split: train' })).toBeInTheDocument();
+    });
+
+    it('defaults to the "Included by filters" label when none is passed', () => {
+        render(PlotPanelLegend, {
+            categoryColors: [NOT_FILTERED_COLOR, FILTERED_COLOR]
+        });
+
+        expect(screen.getByTestId('plot-legend')).toHaveTextContent('Excluded by filters');
+        expect(screen.getByTestId('plot-legend')).toHaveTextContent('Included by filters');
     });
 
     it('calls the single-click handler for custom legend entries', async () => {
