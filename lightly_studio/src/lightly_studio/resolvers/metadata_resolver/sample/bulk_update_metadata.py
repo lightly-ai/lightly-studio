@@ -9,6 +9,7 @@ from uuid import UUID
 from sqlmodel import Session, col, select
 
 from lightly_studio.models.metadata import SampleMetadataTable
+from lightly_studio.utils import batching
 
 
 def bulk_update_metadata(
@@ -31,10 +32,12 @@ def bulk_update_metadata(
 
     # Get all existing metadata rows for the given sample IDs.
     sample_ids = [s[0] for s in sample_metadata]
-    existing_metadata = session.exec(
-        select(SampleMetadataTable).where(col(SampleMetadataTable.sample_id).in_(sample_ids))
-    ).all()
-    sample_id_to_existing_metadata = {meta.sample_id: meta for meta in existing_metadata}
+    sample_id_to_existing_metadata: dict[UUID, SampleMetadataTable] = {}
+    for batch in batching.batched(items=sample_ids):
+        existing_metadata = session.exec(
+            select(SampleMetadataTable).where(col(SampleMetadataTable.sample_id).in_(batch))
+        ).all()
+        sample_id_to_existing_metadata.update({meta.sample_id: meta for meta in existing_metadata})
 
     for sample_id, new_metadata in sample_metadata:
         metadata = sample_id_to_existing_metadata.get(

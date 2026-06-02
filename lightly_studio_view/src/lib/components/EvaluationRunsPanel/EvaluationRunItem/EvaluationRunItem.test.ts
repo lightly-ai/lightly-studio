@@ -21,7 +21,9 @@ const baseRun: EvaluationRunView = {
         split: 'val',
         classwise: true
     },
-    created_at: new Date('2026-01-15T10:30:00Z')
+    created_at: new Date('2026-01-15T10:30:00Z'),
+    gt_annotation_source: 'ground_truth_v1',
+    pred_annotation_source: 'predictions_v2'
 };
 
 const defaultProps = {
@@ -87,5 +89,17 @@ describe('EvaluationRunItem', () => {
 
         await fireEvent.click(screen.getByTestId('evaluation-run-item'));
         expect(onToggle).toHaveBeenCalledOnce();
+    });
+
+    it('renders the GT and prediction annotation sources when expanded', () => {
+        render(EvaluationRunItem, { props: { ...defaultProps, expanded: true } });
+
+        expect(screen.getByTestId('evaluation-run-annotation-sources')).toBeInTheDocument();
+        expect(screen.getByTestId('evaluation-run-gt-annotation-source')).toHaveTextContent(
+            'ground_truth_v1'
+        );
+        expect(screen.getByTestId('evaluation-run-prediction-annotation-source')).toHaveTextContent(
+            'predictions_v2'
+        );
     });
 });
