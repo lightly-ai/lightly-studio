@@ -5,8 +5,10 @@
     interface GridHeaderProps {
         showImageSizeControl?: boolean;
         children?: Snippet;
-        selectionControls?: Snippet;
-        auxControls?: Snippet;
+        // The snippets receive whether the toolbar is currently compact, so the
+        // controls they render can drop their text labels when space runs out.
+        selectionControls?: Snippet<[boolean]>;
+        auxControls?: Snippet<[boolean]>;
     }
 
     let {
@@ -15,16 +17,44 @@
         selectionControls,
         auxControls
     }: GridHeaderProps = $props();
+
+    let barEl = $state<HTMLDivElement | null>(null);
+    let compact = $state(false);
+    // The width the toolbar needs to show every control with its labels. It is
+    // captured from scrollWidth while the (expanded) bar is overflowing, then used
+    // as a stable threshold for re-expanding — so toggling compact can't oscillate.
+    let expandedWidth = 0;
+
+    function measure(el: HTMLDivElement) {
+        if (!compact) {
+            // Collapse the moment the full-width layout no longer fits.
+            if (el.scrollWidth > el.clientWidth) {
+                expandedWidth = el.scrollWidth;
+                compact = true;
+            }
+        } else if (expandedWidth > 0 && el.clientWidth >= expandedWidth) {
+            // Re-expand only once the full layout is known to fit again.
+            compact = false;
+        }
+    }
+
+    $effect(() => {
+        const el = barEl;
+        if (!el) return;
+        const observer = new ResizeObserver(() => measure(el));
+        observer.observe(el);
+        return () => observer.disconnect();
+    });
 </script>
 
-<div class="my-2 flex items-center space-x-4">
-    <div class="flex-1">
+<div bind:this={barEl} class="my-2 flex items-center space-x-4">
+    <div class="min-w-0 flex-1">
         {@render children?.()}
     </div>
 
-    {@render selectionControls?.()}
+    {@render selectionControls?.(compact)}
     {#if showImageSizeControl}
-        <ImageSizeControl />
+        <ImageSizeControl {compact} />
     {/if}
-    {@render auxControls?.()}
+    {@render auxControls?.(compact)}
 </div>

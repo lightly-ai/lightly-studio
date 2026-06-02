@@ -304,8 +304,6 @@
     const isCollectionGrid = $derived(
         isImages || isAnnotations || isVideos || isVideoFrames || isGroups
     );
-
-    const isSidePanelOpen = $derived($activePanel !== 'none');
 </script>
 
 <div class="flex-none">
@@ -374,7 +372,6 @@
                         {hasEvaluationRuns}
                         {hasMediaWithEmbeddings}
                         collectionDatasetId={collection.dataset_id}
-                        compact={isSidePanelOpen}
                         onSelectAll={selectAllHandle.handleSelectAll}
                         searchImage={$searchImage}
                         searchPending={$searchPending}
@@ -409,7 +406,7 @@
                 <PaneGroup direction="horizontal" class="flex-1">
                     <Pane defaultSize={65} minSize={35} class="flex">
                         <div
-                            class="relative flex flex-1 flex-col space-y-4 rounded-[1vw] bg-card p-4 pb-2"
+                            class="relative flex min-w-0 flex-1 flex-col space-y-4 rounded-[1vw] bg-card p-4 pb-2"
                         >
                             {@render mainContent()}
                         </div>
@@ -433,7 +430,7 @@
                 <PaneGroup direction="horizontal" class="flex-1">
                     <Pane defaultSize={50} minSize={30} class="flex">
                         <div
-                            class="relative flex flex-1 flex-col space-y-4 rounded-[1vw] bg-card p-4"
+                            class="relative flex min-w-0 flex-1 flex-col space-y-4 rounded-[1vw] bg-card p-4"
                         >
                             <DatasetGridHeader
                                 {canSelectAll}
@@ -441,7 +438,6 @@
                                 {hasEvaluationRuns}
                                 {hasMediaWithEmbeddings}
                                 collectionDatasetId={collection.dataset_id}
-                                compact={isSidePanelOpen}
                                 onSelectAll={selectAllHandle.handleSelectAll}
                                 searchImage={$searchImage}
                                 searchPending={$searchPending}
@@ -474,7 +470,7 @@
                 <PaneGroup direction="horizontal" class="flex-1">
                     <Pane defaultSize={65} minSize={35} class="flex">
                         <div
-                            class="relative flex flex-1 flex-col space-y-4 rounded-[1vw] bg-card p-4 pb-2"
+                            class="relative flex min-w-0 flex-1 flex-col space-y-4 rounded-[1vw] bg-card p-4 pb-2"
                         >
                             {@render mainContent()}
                         </div>
@@ -488,7 +484,9 @@
                 </PaneGroup>
             {:else}
                 <!-- Normal layout (no side panel) -->
-                <div class="relative flex flex-1 flex-col space-y-4 rounded-[1vw] bg-card p-4 pb-2">
+                <div
+                    class="relative flex min-w-0 flex-1 flex-col space-y-4 rounded-[1vw] bg-card p-4 pb-2"
+                >
                     {@render mainContent()}
                 </div>
             {/if}

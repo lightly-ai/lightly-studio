@@ -41,7 +41,7 @@
     };
 </script>
 
-<div class="flex items-center gap-1">
+<div class="flex shrink-0 items-center gap-1">
     <Select.Root type="single" value={selectValue} allowDeselect onValueChange={handleValueChange}>
         <Select.Trigger
             class="h-8 w-[100px] min-w-20 gap-1 px-2.5 text-xs font-normal"

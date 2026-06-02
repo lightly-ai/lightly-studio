@@ -20,6 +20,16 @@ vi.mock('$env/static/public', () => ({
     PUBLIC_LIGHTLY_STUDIO_API_URL: 'http://mock-url.com/api'
 }));
 
+// jsdom does not implement ResizeObserver; components that observe element size
+// (e.g. GridHeader's overflow detection) need a no-op stand-in to render in tests.
+if (typeof globalThis.ResizeObserver === 'undefined') {
+    globalThis.ResizeObserver = class {
+        observe() {}
+        unobserve() {}
+        disconnect() {}
+    } as unknown as typeof ResizeObserver;
+}
+
 Object.defineProperty(Element.prototype, 'animate', {
     writable: true,
     value: vi.fn().mockImplementation(() => {

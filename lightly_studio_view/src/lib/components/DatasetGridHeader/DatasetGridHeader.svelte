@@ -9,7 +9,6 @@
     type SearchImage = { name: string; previewUrl: string };
 
     interface Props {
-        compact?: boolean;
         canSelectAll: boolean;
         isImages: boolean;
         hasEvaluationRuns: boolean;
@@ -26,7 +25,6 @@
     }
 
     const {
-        compact = false,
         canSelectAll,
         isImages,
         hasEvaluationRuns,
@@ -47,12 +45,12 @@
 </script>
 
 <GridHeader>
-    {#snippet selectionControls()}
+    {#snippet selectionControls(compact: boolean)}
         {#if canSelectAll}
-            <GridHeaderSelectAllButton onclick={onSelectAll} />
+            <GridHeaderSelectAllButton onclick={onSelectAll} {compact} />
         {/if}
     {/snippet}
-    {#snippet auxControls()}
+    {#snippet auxControls(compact: boolean)}
         {#if isImages}
             <OrderBy datasetId={collectionDatasetId} />
         {/if}
@@ -62,7 +60,7 @@
                 position="bottom"
             >
                 <Button
-                    class="flex items-center space-x-1"
+                    class="flex shrink-0 items-center space-x-1"
                     data-testid="toggle-plot-button"
                     variant={$showEmbeddingPlot ? 'default' : 'ghost'}
                     onclick={() => setShowEmbeddingPlot(!$showEmbeddingPlot)}
@@ -80,7 +78,7 @@
                 position="bottom"
             >
                 <Button
-                    class="flex items-center space-x-1"
+                    class="flex shrink-0 items-center space-x-1"
                     data-testid="toggle-evaluation-runs-button"
                     variant={$showEvaluationRuns ? 'default' : 'ghost'}
                     onclick={() => setShowEvaluationRuns(!$showEvaluationRuns)}
@@ -94,7 +92,7 @@
         {/if}
     {/snippet}
     {#if hasMediaWithEmbeddings}
-        <div class="relative" role="region" data-grid-search-drop-target>
+        <div class="relative min-w-48" role="region" data-grid-search-drop-target>
             <CollectionSearch
                 image={searchImage}
                 isPending={searchPending}
