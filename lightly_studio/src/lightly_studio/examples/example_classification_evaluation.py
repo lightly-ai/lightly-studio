@@ -138,7 +138,7 @@ def main() -> None:
     images_path = env.path("EXAMPLES_COCO_IMAGES_PATH", "/path/to/your/images")
 
     dataset = ImageDataset.create(name=DATASET_NAME)
-    dataset.add_images_from_path(path=images_path, embed=False)
+    dataset.add_images_from_path(path=images_path)
     create_classification_annotations(dataset=dataset)
 
     tag_name = "evaluated_samples"
