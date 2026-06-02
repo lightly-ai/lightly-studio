@@ -28,7 +28,7 @@ class in_array(ColumnElement[bool]):  # noqa: N801
     ordinary expanding IN. Callers must ensure ``values`` is non-empty.
     """
 
-    # Holds a raw Python list, which is not safely cache-keyable (cf. db_json.json_extract).
+    # Holds a raw Python list, which is not safely cache-keyable (like db_json.json_extract).
     inherit_cache = False
     type = Boolean()
 
