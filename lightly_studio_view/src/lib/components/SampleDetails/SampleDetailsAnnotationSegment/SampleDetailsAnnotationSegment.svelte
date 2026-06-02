@@ -49,8 +49,12 @@
     const { selectAnnotation } = useAnnotationSelection();
 
     const annotationCollectionsQuery = useAnnotationCollections({ collectionId });
-    const { selectedCollectionIds, setSelectedCollectionIds, setCollectionIdToName } =
-        useAnnotationCollectionsFilter();
+    const {
+        selectedCollectionIds,
+        isSelectionInitialized,
+        setSelectedCollectionIds,
+        setCollectionIdToName
+    } = useAnnotationCollectionsFilter();
 
     const annotationsSort = $derived.by(() => {
         return annotations
@@ -74,9 +78,10 @@
 
     // Initialize the global annotation source stores when landing directly on the
     // details page (browser refresh / deep link), so annotations are colored by
-    // source.
+    // source. A selection explicitly made in the grid sidebar is never overridden,
+    // even when it is empty.
     $effect(() => {
-        if (annotationSources.length > 1 && $selectedCollectionIds.length === 0) {
+        if (annotationSources.length > 1 && !$isSelectionInitialized) {
             setSelectedCollectionIds(annotationSources.map((source) => source.collection_id));
             setCollectionIdToName(
                 Object.fromEntries(
