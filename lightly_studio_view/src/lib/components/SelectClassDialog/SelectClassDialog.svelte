@@ -38,7 +38,7 @@
     const handleConfirm = () => {
         if (selectedItem) {
             closedByConfirm = true;
-            onConfirm(selectedItem.value, showSourceSelect ? selectedSource : undefined);
+            onConfirm(selectedItem.value, showSourceSelect ? selectedSource : sourceNames[0]);
             open = false;
             selectedItem = undefined;
             selectedSource = undefined;

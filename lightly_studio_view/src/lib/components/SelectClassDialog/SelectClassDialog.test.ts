@@ -109,6 +109,23 @@ describe('SelectClassDialog', () => {
         expect(screen.queryByTestId('annotation-source-trigger')).not.toBeInTheDocument();
     });
 
+    it('adds to the only existing source when the selector is hidden', async () => {
+        const user = userEvent.setup();
+        const { onConfirm } = renderDialog({ sourceNames: ['predictions'] });
+
+        // Selector is hidden, but the lone source is used rather than creating a new one.
+        expect(screen.queryByTestId('annotation-source-trigger')).not.toBeInTheDocument();
+
+        await user.click(screen.getByTestId('select-list-trigger'));
+        await user.click(await screen.findByRole('option', { name: 'cat' }));
+
+        const confirmButton = screen.getByRole('button', { name: 'Confirm' });
+        await waitFor(() => expect(confirmButton).toBeEnabled());
+        await user.click(confirmButton);
+
+        expect(onConfirm).toHaveBeenCalledWith('cat', 'predictions');
+    });
+
     it('shows the source selector with the pre-selected source when two or more exist', () => {
         renderDialog({
             sourceNames: ['ground_truth', 'predictions'],
