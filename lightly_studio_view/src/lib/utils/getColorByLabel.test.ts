@@ -20,8 +20,8 @@ describe('getColorByLabel', () => {
 
     test('returns an rgba color and an RGB-inverted contrast color', () => {
         expect(getColorByLabel('cat')).toEqual({
-            color: 'rgba(0, 184, 0, 1)',
-            contrastColor: 'rgba(255, 71, 255, 1)'
+            color: 'rgba(60, 225, 93, 1)',
+            contrastColor: 'rgba(195, 30, 162, 1)'
         });
     });
 

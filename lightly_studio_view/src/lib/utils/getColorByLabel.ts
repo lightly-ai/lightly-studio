@@ -1,5 +1,5 @@
 import { useCustomLabelColors } from '$lib/hooks/useCustomLabelColors';
-import { hexToRgb, oklchToRgb } from './colorConvert';
+import { hexToRgb, oklchHueWheelColor } from './colorConvert';
 import { getColorPair } from './getColorPair';
 
 // 32 perceptually-uniform colors: the union of two equal-hue OKLCH wheels. Each
@@ -17,8 +17,13 @@ const WHEELS: Array<{ lightness: number; chroma: number; hueOffset: number }> = 
 const COLOR_PALETTE: Array<[number, number, number]> = WHEELS.flatMap(
     ({ lightness, chroma, hueOffset }) =>
         Array.from({ length: COLORS_PER_WHEEL }, (_, i) => {
-            const hue = hueOffset + HUE_STEP * i;
-            const { r, g, b } = oklchToRgb(lightness, chroma, hue);
+            const { r, g, b } = oklchHueWheelColor({
+                index: i,
+                count: COLORS_PER_WHEEL,
+                lightness,
+                chroma,
+                hueOffset
+            });
             return [r, g, b] as [number, number, number];
         })
 );

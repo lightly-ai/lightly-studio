@@ -5,7 +5,8 @@ import {
     rgbaFromBytes,
     withAlpha,
     stripAlpha,
-    oklchToRgb
+    oklchToRgb,
+    oklchHueWheelColor
 } from './colorConvert';
 
 describe('hexToRgb', () => {
@@ -83,6 +84,29 @@ describe('oklchToRgb', () => {
             expect(channel).toBeGreaterThanOrEqual(0);
             expect(channel).toBeLessThanOrEqual(255);
         }
+    });
+});
+
+describe('oklchHueWheelColor', () => {
+    test('places index 0 at the start of the hue circle', () => {
+        // Same as oklchToRgb at hue 0 for the given lightness/chroma.
+        expect(oklchHueWheelColor({ index: 0, count: 4, lightness: 0.65, chroma: 0.3 })).toEqual(
+            oklchToRgb(0.65, 0.3, 0)
+        );
+    });
+
+    test('spreads hues evenly: index i sits at i/count around the circle', () => {
+        // index 1 of 4 → hue 90°.
+        expect(oklchHueWheelColor({ index: 1, count: 4, lightness: 0.65, chroma: 0.3 })).toEqual(
+            oklchToRgb(0.65, 0.3, 90)
+        );
+    });
+
+    test('hueOffset rotates the wheel and wraps past 360°', () => {
+        // index 3 of 4 → 270°, +120° offset → 390° wraps to 30°.
+        expect(
+            oklchHueWheelColor({ index: 3, count: 4, lightness: 0.65, chroma: 0.3, hueOffset: 120 })
+        ).toEqual(oklchToRgb(0.65, 0.3, 30));
     });
 });
 

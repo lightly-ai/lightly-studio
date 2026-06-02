@@ -83,3 +83,26 @@ export function oklchToRgb(l: number, c: number, h: number): RGB {
 
     return { r: toByte(rLin), g: toByte(gLin), b: toByte(bLin) };
 }
+
+/**
+ * Returns the sRGB color for the `index`-th of `count` hues spread evenly around
+ * the OKLCH hue circle, at a fixed lightness and chroma. `hueOffset` (degrees)
+ * rotates the whole wheel — pass it to interleave several wheels so their hues
+ * land in each other's gaps.
+ */
+export function oklchHueWheelColor({
+    index,
+    count,
+    lightness,
+    chroma,
+    hueOffset = 0
+}: {
+    index: number;
+    count: number;
+    lightness: number;
+    chroma: number;
+    hueOffset?: number;
+}): RGB {
+    const hue = (hueOffset + (360 * index) / count) % 360;
+    return oklchToRgb(lightness, chroma, hue);
+}

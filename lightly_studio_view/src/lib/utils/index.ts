@@ -28,5 +28,6 @@ export {
     rgbaFromBytes,
     withAlpha,
     stripAlpha,
-    oklchToRgb
+    oklchToRgb,
+    oklchHueWheelColor
 } from './colorConvert';

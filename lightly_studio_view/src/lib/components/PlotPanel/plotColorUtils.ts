@@ -1,13 +1,13 @@
-import { getColorByLabel, oklchToRgb } from '$lib/utils';
+import { getColorByLabel, oklchHueWheelColor } from '$lib/utils';
 
 const OKLCH_LIGHTNESS = 0.65;
 const OKLCH_CHROMA = 0.3;
-const SINGLE_CATEGORY_HUE = 264;
+
 const RESERVED_CATEGORY_COUNT = 2;
 
-export const NOT_FILTERED_COLOR = '#9CA3AF';
-export const FILTERED_COLOR = '#F59E0B';
-export const UNASSIGNED_COLOR = '#CAAC78';
+export const NOT_FILTERED_COLOR = '#222222';
+export const FILTERED_COLOR = '#FF7220';
+export const UNASSIGNED_COLOR = '#666666';
 
 interface LegendEntry {
     cat: number;
@@ -25,8 +25,14 @@ function getMaxCategoryFromLegend(colorLegend?: ReadonlyMap<number, string> | nu
 }
 
 function getDiscreteOklchColor(index: number, total: number): string {
-    const hue = total <= 1 ? SINGLE_CATEGORY_HUE : ((index * 360) / total) % 360;
-    const { r, g, b } = oklchToRgb(OKLCH_LIGHTNESS, OKLCH_CHROMA, hue);
+    // A lone category has no neighbours to space against, so pin it to a fixed
+    // hue instead of the wheel's first slot.
+    const { r, g, b } = oklchHueWheelColor({
+        index,
+        count: total,
+        lightness: OKLCH_LIGHTNESS,
+        chroma: OKLCH_CHROMA
+    });
     return `rgb(${r}, ${g}, ${b})`;
 }
 
