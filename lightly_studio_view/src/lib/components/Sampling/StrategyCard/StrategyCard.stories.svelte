@@ -13,6 +13,7 @@
                 { tag_id: 'tag-2', name: 'Curated Set' }
             ],
             annotationLabels: ['cat', 'dog', 'bird'],
+            metadataFieldNames: ['sharpness', 'brightness', 'contrast'],
             onRemove: fn(),
             onDuplicate: fn(),
             onUpdate: fn(),

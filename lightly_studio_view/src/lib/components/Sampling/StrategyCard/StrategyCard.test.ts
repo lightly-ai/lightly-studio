@@ -157,6 +157,25 @@ describe('StrategyCard', () => {
 
             expect(screen.getByText('Metadata Weighting')).toBeInTheDocument();
         });
+
+        it('forwards metadataFieldNames to the metadata weighting form', () => {
+            const instance: StrategyInstance = {
+                id: 'abc',
+                type: 'metadata_weighting',
+                params: { metadata_key: '', strength: 1 },
+                isExpanded: true
+            };
+
+            render(StrategyCard, {
+                props: {
+                    ...defaultProps,
+                    instance,
+                    metadataFieldNames: ['sharpness', 'brightness']
+                }
+            });
+
+            expect(screen.getByTestId('strategy-metadata-key-input')).toBeInTheDocument();
+        });
     });
 
     describe('class_balancing', () => {

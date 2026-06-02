@@ -19,6 +19,7 @@
         instance: StrategyInstance;
         tags: StrategySummaryTag[];
         annotationLabels: string[];
+        metadataFieldNames?: string[];
         onRemove: () => void;
         onDuplicate: () => void;
         onUpdate: (params: Partial<StrategyParams>) => void;
@@ -28,6 +29,7 @@
         instance,
         tags,
         annotationLabels,
+        metadataFieldNames = [],
         onRemove,
         onDuplicate,
         onUpdate,
@@ -104,6 +106,7 @@
             {:else if instance.type === 'metadata_weighting'}
                 <MetadataWeightingForm
                     params={instance.params as MetadataWeightingParams}
+                    {metadataFieldNames}
                     {onUpdate}
                 />
             {:else}
