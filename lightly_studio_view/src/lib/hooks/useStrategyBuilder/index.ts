@@ -9,6 +9,8 @@ export {
     STRATEGY_DEFAULTS,
     STRATEGY_LABELS,
     type SimilarityParams,
-    type StrategySummaryTag
+    type StrategySummaryTag,
+    type MetadataWeightingParams
 } from './types';
 export { cloneStrategyParams, createStrategyInstance } from './strategyInstance';
+export { isStrategyInstanceValid } from './strategyValidation';

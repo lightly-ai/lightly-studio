@@ -14,6 +14,16 @@ vi.mock(
 
 const noop = () => {};
 
+const makeRun = (
+    overrides: Partial<EvaluationRunView> & Pick<EvaluationRunView, 'id' | 'name'>
+): EvaluationRunView => ({
+    evaluation_run_configuration: {},
+    created_at: new Date('2026-01-01T00:00:00Z'),
+    gt_annotation_source: 'gt_v1',
+    pred_annotation_source: 'pred_v1',
+    ...overrides
+});
+
 type Props = {
     onClose: () => void;
     evaluationRuns: EvaluationRunView[];
@@ -56,18 +66,8 @@ describe('EvaluationRunsPanel', () => {
 
     it('renders one item per run', () => {
         const runs: EvaluationRunView[] = [
-            {
-                id: 'run-a',
-                name: 'Run A',
-                evaluation_run_configuration: {},
-                created_at: new Date('2026-01-01T00:00:00Z')
-            },
-            {
-                id: 'run-b',
-                name: 'Run B',
-                evaluation_run_configuration: {},
-                created_at: new Date('2026-02-01T00:00:00Z')
-            }
+            makeRun({ id: 'run-a', name: 'Run A' }),
+            makeRun({ id: 'run-b', name: 'Run B' })
         ];
         renderPanel({ evaluationRuns: runs });
 
@@ -79,18 +79,16 @@ describe('EvaluationRunsPanel', () => {
 
     it('shows only the expanded run and collapses it on a second click', async () => {
         const runs: EvaluationRunView[] = [
-            {
+            makeRun({
                 id: 'run-a',
                 name: 'Run A',
-                evaluation_run_configuration: { iou_threshold: 0.5 },
-                created_at: new Date('2026-01-01T00:00:00Z')
-            },
-            {
+                evaluation_run_configuration: { iou_threshold: 0.5 }
+            }),
+            makeRun({
                 id: 'run-b',
                 name: 'Run B',
-                evaluation_run_configuration: { iou_threshold: 0.75 },
-                created_at: new Date('2026-02-01T00:00:00Z')
-            }
+                evaluation_run_configuration: { iou_threshold: 0.75 }
+            })
         ];
         renderPanel({ evaluationRuns: runs });
 
@@ -111,18 +109,8 @@ describe('EvaluationRunsPanel', () => {
 
     it('renders a back button when a run is expanded and collapses on click', async () => {
         const runs: EvaluationRunView[] = [
-            {
-                id: 'run-a',
-                name: 'Run A',
-                evaluation_run_configuration: {},
-                created_at: new Date('2026-01-01T00:00:00Z')
-            },
-            {
-                id: 'run-b',
-                name: 'Run B',
-                evaluation_run_configuration: {},
-                created_at: new Date('2026-02-01T00:00:00Z')
-            }
+            makeRun({ id: 'run-a', name: 'Run A' }),
+            makeRun({ id: 'run-b', name: 'Run B' })
         ];
         renderPanel({ evaluationRuns: runs });
 

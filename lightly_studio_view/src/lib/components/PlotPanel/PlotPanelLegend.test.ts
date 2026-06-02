@@ -7,10 +7,10 @@ import { getColorByLabel } from '$lib/utils';
 describe('PlotPanelLegend', () => {
     it('renders the fixed entries and the custom legend list', () => {
         render(PlotPanelLegend, {
-            categoryColors: [NOT_FILTERED_COLOR, FILTERED_COLOR, 'hsl(0, 70%, 55%)'],
+            categoryColors: [NOT_FILTERED_COLOR, FILTERED_COLOR, 'rgb(255, 0, 136)'],
             includedLabel: 'No category',
             legendEntries: [
-                { cat: 2, label: 'metadata.split: train', color: 'hsl(0, 70%, 55%)', hidden: false }
+                { cat: 2, label: 'metadata.split: train', color: 'rgb(255, 0, 136)', hidden: false }
             ]
         });
 
@@ -33,8 +33,8 @@ describe('PlotPanelLegend', () => {
         const onToggleCategory = vi.fn();
 
         render(PlotPanelLegend, {
-            categoryColors: [NOT_FILTERED_COLOR, FILTERED_COLOR, 'hsl(0, 70%, 55%)'],
-            legendEntries: [{ cat: 2, label: 'Train', color: 'hsl(0, 70%, 55%)', hidden: false }],
+            categoryColors: [NOT_FILTERED_COLOR, FILTERED_COLOR, 'rgb(255, 0, 136)'],
+            legendEntries: [{ cat: 2, label: 'Train', color: 'rgb(255, 0, 136)', hidden: false }],
             onToggleCategory
         });
 
@@ -47,8 +47,8 @@ describe('PlotPanelLegend', () => {
         const onDoubleClickCategory = vi.fn();
 
         render(PlotPanelLegend, {
-            categoryColors: [NOT_FILTERED_COLOR, FILTERED_COLOR, 'hsl(0, 70%, 55%)'],
-            legendEntries: [{ cat: 2, label: 'Train', color: 'hsl(0, 70%, 55%)', hidden: false }],
+            categoryColors: [NOT_FILTERED_COLOR, FILTERED_COLOR, 'rgb(255, 0, 136)'],
+            legendEntries: [{ cat: 2, label: 'Train', color: 'rgb(255, 0, 136)', hidden: false }],
             onDoubleClickCategory
         });
 

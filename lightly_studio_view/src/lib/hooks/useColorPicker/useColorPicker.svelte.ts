@@ -1,5 +1,5 @@
 import { useCustomLabelColors } from '$lib/hooks/useCustomLabelColors';
-import { computeColorByKey, hexToRgba, rgbaToHex } from '$lib/utils';
+import { getColorByLabel, hexToRgba, rgbaToHex } from '$lib/utils';
 import { fromStore } from 'svelte/store';
 
 /**
@@ -13,8 +13,8 @@ export function useColorPicker(getLabel: () => string) {
     const colors = fromStore(customLabelColorsStore);
 
     const customColor = $derived(colors.current[getLabel()]);
-    const defaultBorder = $derived(computeColorByKey(getLabel(), 1).color);
-    const defaultBackground = $derived(computeColorByKey(getLabel(), 0.35).color);
+    const defaultBorder = $derived(getColorByLabel(getLabel(), 1).color);
+    const defaultBackground = $derived(getColorByLabel(getLabel(), 0.35).color);
 
     const borderColor = $derived(customColor?.color ?? defaultBorder);
     const backgroundColor = $derived.by(() => {
