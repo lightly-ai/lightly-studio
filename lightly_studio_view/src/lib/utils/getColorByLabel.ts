@@ -28,6 +28,17 @@ const COLOR_PALETTE: Array<[number, number, number]> = WHEELS.flatMap(
         })
 );
 
+// FNV-1a 32-bit hash. Mixes each byte into all 32 bits, so the result distributes
+// well even when reduced modulo a power-of-two table length.
+const fnv1aHash = (value: string) => {
+    let hash = 0x811c9dc5; // FNV-1a 32-bit offset basis
+    for (let i = 0; i < value.length; i++) {
+        hash ^= value.charCodeAt(i);
+        hash = Math.imul(hash, 0x01000193); // FNV-1a 32-bit prime
+    }
+    return hash >>> 0; // coerce to unsigned 32-bit
+};
+
 export const getColorByLabel = (label: string, alpha: number = 1) => {
     alpha = Math.max(0, Math.min(alpha, 1));
 
@@ -43,8 +54,7 @@ export const getColorByLabel = (label: string, alpha: number = 1) => {
 
     // Hash the label deterministically into the palette so a given label always maps
     // to the same color across sessions.
-    const hash = Array.from(label).reduce((h, char) => (h << 5) - h + char.charCodeAt(0), 0);
-    const index = Math.abs(hash) % COLOR_PALETTE.length;
+    const index = fnv1aHash(label) % COLOR_PALETTE.length;
     const [r, g, b] = COLOR_PALETTE[index];
 
     return getColorPair({ r, g, b }, alpha);
