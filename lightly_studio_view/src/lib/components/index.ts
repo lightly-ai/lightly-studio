@@ -20,6 +20,7 @@ export { default as AnnotationCanvas } from '$lib/components/AnnotationCanvas/An
 export { default as SampleAnnotations } from '$lib/components/SampleAnnotations/index.svelte';
 export { default as ImageDetails } from '$lib/components/SampleDetails/ImageDetails.svelte';
 export { default as SampleDetailsSidePanel } from '$lib/components/SampleDetails/SampleDetailsSidePanel/SampleDetailsSidePanel.svelte';
+export { default as SampleDetailsAnnotationSourceGroup } from '$lib/components/SampleDetails/SampleDetailsAnnotationSourceGroup/SampleDetailsAnnotationSourceGroup.svelte';
 export { default as SampleImage } from '$lib/components/SampleImage/index.svelte';
 export { default as Images } from '$lib/components/Images/Images.svelte';
 export { default as SelectableBox } from '$lib/components/SelectableBox/SelectableBox.svelte';
