@@ -125,7 +125,7 @@
         })
     );
     const categoryCount = $derived.by(() => getCategoryCount($colorLegend));
-    const useLabelColors = $derived($selectedColorByType !== 'metadata');
+    const useLabelColors = $derived($selectedColorByType === 'annotation_label');
     const categoryColors = $derived.by(() =>
         getCategoryColors($colorLegend, useLabelColors, $colorBy !== null)
     );
