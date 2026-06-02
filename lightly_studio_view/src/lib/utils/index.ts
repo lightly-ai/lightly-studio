@@ -20,7 +20,6 @@ export { getVideoURLById } from './getVideoURLById/getVideoURLById';
 export { getURL } from './getURL/getURL';
 export { fetchCollection } from './fetchCollection';
 export { fetchCollectionHierarchy } from './fetchCollectionHierarchy';
-export { computeColorByKey } from './computeColorByKey';
 export {
     hexToRgb,
     hexToRgba,
