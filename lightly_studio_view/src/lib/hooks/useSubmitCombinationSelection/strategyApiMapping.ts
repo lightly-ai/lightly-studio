@@ -33,7 +33,7 @@ export function toApiStrategy(instance: StrategyInstance): SamplingRequest['stra
         };
     }
 
-    const target_distribution =
+    const targetDistribution =
         instance.params.target_distribution_mode === 'dictionary'
             ? Object.fromEntries(
                   instance.params.target_distribution.map((row) => [row.class_name, row.weight])
@@ -42,7 +42,7 @@ export function toApiStrategy(instance: StrategyInstance): SamplingRequest['stra
 
     return {
         strategy_name: 'balance',
-        target_distribution,
+        target_distribution: targetDistribution,
         strength: instance.params.strength
     };
 }
