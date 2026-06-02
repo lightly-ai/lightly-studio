@@ -21,3 +21,11 @@ export { getURL } from './getURL/getURL';
 export { fetchCollection } from './fetchCollection';
 export { fetchCollectionHierarchy } from './fetchCollectionHierarchy';
 export { computeColorByKey } from './computeColorByKey';
+export {
+    hexToRgb,
+    hexToRgba,
+    rgbaToHex,
+    rgbaFromBytes,
+    withAlpha,
+    stripAlpha
+} from './colorConvert';
