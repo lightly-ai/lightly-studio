@@ -23,8 +23,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Fixed
 
 - Fixed operations on large datasets (more than ~65,535 samples) failing on PostgreSQL with
-  `number of parameters must be between 0 and 65535` — including deleting datasets, tagging,
-  embedding and metadata lookups, and adding large image or video sets.
+  `number of parameters must be between 0 and 65535`.
 
 ### Security
 

@@ -40,8 +40,6 @@ def test_get_many_by_id(
 
 
 def test_get_many_by_id__exceeds_postgres_param_limit(db_session: Session) -> None:
-    # More ids than PostgreSQL's 65,535 single-statement bind-param cap. The chunked
-    # query must not raise; none match, so the result is empty. (Raises pre-fix under
-    # --postgres; passes on both backends post-fix.)
+    # More ids than PostgreSQL's 65,535-parameter cap; the chunked query must not raise.
     sample_ids = [uuid.uuid4() for _ in range(70_000)]
     assert image_resolver.get_many_by_id(session=db_session, sample_ids=sample_ids) == []
