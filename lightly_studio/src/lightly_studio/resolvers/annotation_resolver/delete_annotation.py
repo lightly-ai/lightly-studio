@@ -18,6 +18,7 @@ from lightly_studio.models.evaluation_annotation_metric import EvaluationAnnotat
 from lightly_studio.models.evaluation_sample_metric import EvaluationSampleMetricTable
 from lightly_studio.models.sample import SampleTable, SampleTagLinkTable
 from lightly_studio.resolvers import annotation_resolver
+from lightly_studio.utils import batching
 
 
 def delete_annotation(
@@ -96,32 +97,47 @@ def _delete_evaluation_metrics(
     if not annotation_ids and not parent_sample_ids:
         return
 
-    affected_evaluation_run_ids = list(
-        session.exec(
-            select(EvaluationAnnotationMetricTable.evaluation_run_id)
-            .where(
-                sqlalchemy.or_(
-                    col(EvaluationAnnotationMetricTable.pred_annotation_id).in_(annotation_ids),
-                    col(EvaluationAnnotationMetricTable.gt_annotation_id).in_(annotation_ids),
+    affected_evaluation_run_ids: set[UUID] = set()
+    for annotation_id_batch in batching.batched(items=annotation_ids):
+        affected_evaluation_run_ids.update(
+            session.exec(
+                select(EvaluationAnnotationMetricTable.evaluation_run_id)
+                .where(
+                    sqlalchemy.or_(
+                        col(EvaluationAnnotationMetricTable.pred_annotation_id).in_(
+                            annotation_id_batch
+                        ),
+                        col(EvaluationAnnotationMetricTable.gt_annotation_id).in_(
+                            annotation_id_batch
+                        ),
+                    )
                 )
-            )
-            .distinct()
-        ).all()
-    )
+                .distinct()
+            ).all()
+        )
 
     if annotation_ids:
-        session.exec(
-            delete(EvaluationAnnotationMetricTable).where(
-                sqlalchemy.or_(
-                    col(EvaluationAnnotationMetricTable.pred_annotation_id).in_(annotation_ids),
-                    col(EvaluationAnnotationMetricTable.gt_annotation_id).in_(annotation_ids),
+        for annotation_id_batch in batching.batched(items=annotation_ids):
+            session.exec(
+                delete(EvaluationAnnotationMetricTable).where(
+                    sqlalchemy.or_(
+                        col(EvaluationAnnotationMetricTable.pred_annotation_id).in_(
+                            annotation_id_batch
+                        ),
+                        col(EvaluationAnnotationMetricTable.gt_annotation_id).in_(
+                            annotation_id_batch
+                        ),
+                    )
                 )
             )
-        )
     if parent_sample_ids and affected_evaluation_run_ids:
-        session.exec(
-            delete(EvaluationSampleMetricTable).where(
-                col(EvaluationSampleMetricTable.sample_id).in_(parent_sample_ids),
-                col(EvaluationSampleMetricTable.evaluation_run_id).in_(affected_evaluation_run_ids),
-            )
-        )
+        for parent_sample_id_batch in batching.batched(items=parent_sample_ids):
+            for evaluation_run_id_batch in batching.batched(items=affected_evaluation_run_ids):
+                session.exec(
+                    delete(EvaluationSampleMetricTable).where(
+                        col(EvaluationSampleMetricTable.sample_id).in_(parent_sample_id_batch),
+                        col(EvaluationSampleMetricTable.evaluation_run_id).in_(
+                            evaluation_run_id_batch
+                        ),
+                    )
+                )
