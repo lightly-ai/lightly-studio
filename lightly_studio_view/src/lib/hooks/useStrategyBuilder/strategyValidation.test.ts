@@ -73,6 +73,15 @@ describe('isStrategyInstanceValid', () => {
 
             expect(isStrategyInstanceValid(instance)).toBe(false);
         });
+
+        it('returns false when strength is -Infinity', () => {
+            const instance: StrategyInstance = {
+                ...defaultDiversity,
+                params: { strength: -Infinity }
+            };
+
+            expect(isStrategyInstanceValid(instance)).toBe(false);
+        });
     });
 
     describe('diversity', () => {
@@ -195,6 +204,45 @@ describe('isStrategyInstanceValid', () => {
                     ...defaultClassBalancing.params,
                     target_distribution_mode: 'dictionary',
                     target_distribution: [{ class_name: 'cat', weight: 0 }]
+                }
+            };
+
+            expect(isStrategyInstanceValid(instance)).toBe(false);
+        });
+
+        it('returns false for dictionary when a row has a negative weight', () => {
+            const instance: StrategyInstance = {
+                ...defaultClassBalancing,
+                params: {
+                    ...defaultClassBalancing.params,
+                    target_distribution_mode: 'dictionary',
+                    target_distribution: [{ class_name: 'cat', weight: -1 }]
+                }
+            };
+
+            expect(isStrategyInstanceValid(instance)).toBe(false);
+        });
+
+        it('returns false for dictionary when a row has a NaN weight', () => {
+            const instance: StrategyInstance = {
+                ...defaultClassBalancing,
+                params: {
+                    ...defaultClassBalancing.params,
+                    target_distribution_mode: 'dictionary',
+                    target_distribution: [{ class_name: 'cat', weight: Number.NaN }]
+                }
+            };
+
+            expect(isStrategyInstanceValid(instance)).toBe(false);
+        });
+
+        it('returns false for dictionary when a row has an Infinity weight', () => {
+            const instance: StrategyInstance = {
+                ...defaultClassBalancing,
+                params: {
+                    ...defaultClassBalancing.params,
+                    target_distribution_mode: 'dictionary',
+                    target_distribution: [{ class_name: 'cat', weight: Number.POSITIVE_INFINITY }]
                 }
             };
 
