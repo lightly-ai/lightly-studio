@@ -25,8 +25,6 @@ function getMaxCategoryFromLegend(colorLegend?: ReadonlyMap<number, string> | nu
 }
 
 function getDiscreteOklchColor(index: number, total: number): string {
-    // A lone category has no neighbours to space against, so pin it to a fixed
-    // hue instead of the wheel's first slot.
     const { r, g, b } = oklchHueWheelColor({
         index,
         count: total,

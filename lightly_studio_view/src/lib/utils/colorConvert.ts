@@ -4,6 +4,14 @@ export interface RGB {
     b: number;
 }
 
+interface OklchHueWheelColorParams {
+    index: number;
+    count: number;
+    lightness: number;
+    chroma: number;
+    hueOffset?: number;
+}
+
 export function hexToRgb(hex: string): RGB {
     return {
         r: parseInt(hex.slice(1, 3), 16),
@@ -96,13 +104,7 @@ export function oklchHueWheelColor({
     lightness,
     chroma,
     hueOffset = 0
-}: {
-    index: number;
-    count: number;
-    lightness: number;
-    chroma: number;
-    hueOffset?: number;
-}): RGB {
+}: OklchHueWheelColorParams): RGB {
     const hue = (hueOffset + (360 * index) / count) % 360;
     return oklchToRgb(lightness, chroma, hue);
 }
