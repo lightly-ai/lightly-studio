@@ -95,7 +95,7 @@
             </section>
 
             <!-- Label sources -->
-            {#if run.gt_label_source_name != null || run.prediction_label_source_name != null}
+            {#if run.gt_annotation_source != null || run.pred_annotation_source != null}
                 <section data-testid="evaluation-run-label-sources">
                     <Typography variant="subtitle2" component="h3" className="mb-2">
                         Label sources
@@ -109,7 +109,7 @@
                                 class="rounded-md border border-border bg-muted px-2 py-0.5 text-sm"
                                 data-testid="evaluation-run-gt-label-source"
                             >
-                                {run.gt_label_source_name ?? '—'}
+                                {run.gt_annotation_source ?? '—'}
                             </span>
                         </div>
                         <div class="flex flex-col gap-0.5">
@@ -120,7 +120,7 @@
                                 class="rounded-md border border-border bg-muted px-2 py-0.5 text-sm"
                                 data-testid="evaluation-run-prediction-label-source"
                             >
-                                {run.prediction_label_source_name ?? '—'}
+                                {run.pred_annotation_source ?? '—'}
                             </span>
                         </div>
                     </div>

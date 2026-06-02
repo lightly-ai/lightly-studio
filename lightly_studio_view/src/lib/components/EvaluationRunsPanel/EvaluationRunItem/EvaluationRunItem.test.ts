@@ -92,8 +92,8 @@ describe('EvaluationRunItem', () => {
     it('shows label sources section when both fields are present', () => {
         const run: EvaluationRunView = {
             ...baseRun,
-            gt_label_source_name: 'ground_truth_v1',
-            prediction_label_source_name: 'predictions_v2'
+            gt_annotation_source: 'ground_truth_v1',
+            pred_annotation_source: 'predictions_v2'
         };
         render(EvaluationRunItem, { props: { ...defaultProps, run, expanded: true } });
 
@@ -109,8 +109,8 @@ describe('EvaluationRunItem', () => {
     it('shows label sources section with dash when one field is null', () => {
         const run: EvaluationRunView = {
             ...baseRun,
-            gt_label_source_name: 'ground_truth_v1',
-            prediction_label_source_name: null
+            gt_annotation_source: 'ground_truth_v1',
+            pred_annotation_source: null
         };
         render(EvaluationRunItem, { props: { ...defaultProps, run, expanded: true } });
 
