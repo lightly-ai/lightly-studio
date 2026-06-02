@@ -17,7 +17,6 @@ from typing_extensions import TypeAlias
 from lightly_studio.api.routes.api.validators import Paginated
 from lightly_studio.core.dataset_query.image_sample_field import ImageSampleField
 from lightly_studio.core.dataset_query.order_by import (
-    OrderByEvaluationMetricField,
     OrderByExpression,
     OrderByField,
     OrderByMetadataField,

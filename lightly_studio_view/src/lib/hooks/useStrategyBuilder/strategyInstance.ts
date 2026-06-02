@@ -29,7 +29,7 @@ export function cloneStrategyParams<T extends StrategyType>(
 
 let strategyInstanceCounter = 0;
 
-function generateStrategyInstanceId(): string {
+export function generateStrategyInstanceId(): string {
     if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
         return crypto.randomUUID();
     }

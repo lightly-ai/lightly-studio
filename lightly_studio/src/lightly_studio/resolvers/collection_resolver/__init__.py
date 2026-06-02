@@ -30,6 +30,9 @@ from lightly_studio.resolvers.collection_resolver.get_collections_overview impor
 from lightly_studio.resolvers.collection_resolver.get_group_components import (
     get_group_components,
 )
+from lightly_studio.resolvers.collection_resolver.get_names_by_ids import (
+    get_names_by_ids,
+)
 from lightly_studio.resolvers.collection_resolver.get_or_create_child_collection import (
     get_or_create_child_collection,
 )
@@ -55,6 +58,7 @@ __all__ = [
     "get_collections_overview",
     "get_filtered_samples_count",
     "get_group_components",
+    "get_names_by_ids",
     "get_or_create_child_collection",
     "get_parent_collection_by_sample_id",
     "get_parent_collection_id",

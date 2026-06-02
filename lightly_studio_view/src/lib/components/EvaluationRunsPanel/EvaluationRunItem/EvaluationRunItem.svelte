@@ -94,6 +94,36 @@
                 {/if}
             </section>
 
+            <section data-testid="evaluation-run-annotation-sources">
+                <Typography variant="subtitle2" component="h3" className="mb-2">
+                    Annotation sources
+                </Typography>
+                <div class="flex flex-wrap gap-2">
+                    <div class="flex flex-col gap-0.5">
+                        <Typography variant="caption" className="text-muted-foreground">
+                            Ground truth
+                        </Typography>
+                        <span
+                            class="rounded-md border border-border bg-muted px-2 py-0.5 text-sm"
+                            data-testid="evaluation-run-gt-annotation-source"
+                        >
+                            {run.gt_annotation_source}
+                        </span>
+                    </div>
+                    <div class="flex flex-col gap-0.5">
+                        <Typography variant="caption" className="text-muted-foreground">
+                            Predictions
+                        </Typography>
+                        <span
+                            class="rounded-md border border-border bg-muted px-2 py-0.5 text-sm"
+                            data-testid="evaluation-run-prediction-annotation-source"
+                        >
+                            {run.pred_annotation_source}
+                        </span>
+                    </div>
+                </div>
+            </section>
+
             <EvaluationRunConfusionMatrixSection evaluationRunId={run.id} />
         </div>
     {/if}
