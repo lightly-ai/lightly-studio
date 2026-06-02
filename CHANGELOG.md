@@ -8,16 +8,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- enable picker for annotation source menu
+
+- Embedding plot: added a "No coloring" option to the "Color by" dropdown to disable coloring.
 
 ### Changed
 
 - Header menu: show collection name in Annotations entries
+- Embedding plot coloring now supports multiple categories per sample, resolving issues with toggling visibility of categories in the legend.
 
 ### Deprecated
 
 ### Removed
 
 ### Fixed
+
+- Fixed deleting large datasets (more than ~65,535 samples) failing on PostgreSQL with
+  `number of parameters must be between 0 and 65535`.
 
 ### Security
 

@@ -1,3 +1,5 @@
+import { rgbaFromBytes } from '$lib/utils/colorConvert';
+
 export type MaskInput = {
     rle: ReadonlyArray<number>;
     color: [number, number, number, number]; // RGBA 0-255
@@ -65,8 +67,7 @@ export const drawBoxesOnContext = (
     const clamp = (value: number, min: number, max: number) => Math.min(Math.max(value, min), max);
 
     for (const box of boxes) {
-        const color = `rgba(${box.color[0]}, ${box.color[1]}, ${box.color[2]}, ${box.color[3] / 255})`;
-        ctx.strokeStyle = color;
+        ctx.strokeStyle = rgbaFromBytes(box.color);
 
         const x = clamp(box.x, 0, width);
         const y = clamp(box.y, 0, height);

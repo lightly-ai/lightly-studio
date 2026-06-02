@@ -40,8 +40,8 @@ def get_object_detection_confusion_matrix(
         evaluation_run_id: Evaluation run whose pairing metrics should be aggregated.
 
     Returns:
-        Matrix with sorted class labels followed by the synthetic FP row and FN column;
-        the synthetic axes are always present (with zero counts when unused) unless the
+        Matrix with a shared, sorted class axis for rows and columns. Synthetic
+        FP/FN axes are always present (with zero counts when unused) unless the
         run has no pairing metrics at all, in which case all three fields are empty.
     """
     grouped_rows = _fetch_pair_counts(session=session, evaluation_run_id=evaluation_run_id)
@@ -127,7 +127,7 @@ def _fetch_pair_counts(
 def _build_axis_labels(
     grouped_rows: list[tuple[str | None, str | None, int]],
 ) -> tuple[list[str], list[str]]:
-    """Build sorted row and column label lists, always appending synthetic FP/FN labels.
+    """Build shared class axes, always appending synthetic FP/FN labels.
 
     The synthetic ground-truth row and prediction column are always included so that
     consumers can rely on a stable axis shape; their cells are simply zero when no
@@ -139,10 +139,14 @@ def _build_axis_labels(
     Returns:
         ``(row_labels, col_labels)`` ready for dense matrix construction.
     """
-    row_labels = sorted({gt_name for gt_name, _, _ in grouped_rows if gt_name is not None})
+    gt_labels = {gt_name for gt_name, _, _ in grouped_rows if gt_name is not None}
+    pred_labels = {pred_name for _, pred_name, _ in grouped_rows if pred_name is not None}
+    class_labels = sorted(gt_labels | pred_labels)
+
+    row_labels = [*class_labels]
     row_labels.append(NO_GROUND_TRUTH_ROW_LABEL)
 
-    col_labels = sorted({pred_name for _, pred_name, _ in grouped_rows if pred_name is not None})
+    col_labels = [*class_labels]
     col_labels.append(NO_PREDICTION_COL_LABEL)
 
     return row_labels, col_labels
