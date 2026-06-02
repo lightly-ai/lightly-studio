@@ -7,6 +7,7 @@ export {
     type StrategyParams,
     type StrategyInstance,
     STRATEGY_DEFAULTS,
-    STRATEGY_LABELS
+    STRATEGY_LABELS,
+    type MetadataWeightingParams
 } from './types';
 export { cloneStrategyParams, createStrategyInstance } from './strategyInstance';
