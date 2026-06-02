@@ -27,5 +27,7 @@ export {
     rgbaToHex,
     rgbaFromBytes,
     withAlpha,
-    stripAlpha
+    stripAlpha,
+    oklchToRgb,
+    oklchHueWheelColor
 } from './colorConvert';
