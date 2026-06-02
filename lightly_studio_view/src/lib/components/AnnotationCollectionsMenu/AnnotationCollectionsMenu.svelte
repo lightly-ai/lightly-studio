@@ -37,6 +37,7 @@
     <Segment title="Annotation Sources">
         <SideMenu
             showColorMarker={$selectedCollectionIds.length > 1}
+            enableColorPicker
             {items}
             initialSelectedItemsIds={items.map((i) => i.id)}
             onChangeSelectedItems={setSelectedCollectionIds}

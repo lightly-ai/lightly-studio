@@ -10,6 +10,8 @@
         onChangeSelectedItems: (selectedItemsIds: string[]) => void;
         containerProps?: HTMLAttributes<HTMLDivElement>;
         showColorMarker?: boolean;
+        /** When `true`, color swatches open a color picker on click. */
+        enableColorPicker?: boolean;
     }
 
     let {
@@ -17,7 +19,8 @@
         initialSelectedItemsIds,
         onChangeSelectedItems,
         containerProps,
-        showColorMarker
+        showColorMarker,
+        enableColorPicker
     }: SideMenuProps = $props();
     let selectedItemsIds = $state(initialSelectedItemsIds ?? []);
 
@@ -36,6 +39,7 @@
         <MenuItem
             {name}
             {showColorMarker}
+            {enableColorPicker}
             checked={selectedItemsIds.includes(id)}
             onCheckedChange={() => handleCheckedChange(id)}
         />
