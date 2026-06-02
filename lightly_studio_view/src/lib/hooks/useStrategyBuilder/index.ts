@@ -8,6 +8,8 @@ export {
     type StrategyInstance,
     STRATEGY_DEFAULTS,
     STRATEGY_LABELS,
+    type SimilarityParams,
+    type StrategySummaryTag,
     type MetadataWeightingParams
 } from './types';
 export { cloneStrategyParams, createStrategyInstance } from './strategyInstance';
