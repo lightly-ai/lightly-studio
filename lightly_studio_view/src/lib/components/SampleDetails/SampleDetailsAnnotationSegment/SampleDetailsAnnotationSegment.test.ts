@@ -6,7 +6,6 @@ import SampleDetailsAnnotationSegment from './SampleDetailsAnnotationSegment.sve
 const mocks = vi.hoisted(() => ({
     collections: [] as { collection_id: string; name: string }[],
     selectedCollectionIds: [] as string[],
-    isSelectionInitialized: false,
     setSelectedCollectionIds: vi.fn(),
     setCollectionIdToName: vi.fn()
 }));
@@ -30,7 +29,6 @@ vi.mock('$lib/hooks/useAnnotationCollectionsFilter/useAnnotationCollectionsFilte
     return {
         useAnnotationCollectionsFilter: vi.fn(() => ({
             selectedCollectionIds: readable(mocks.selectedCollectionIds),
-            isSelectionInitialized: readable(mocks.isSelectionInitialized),
             setSelectedCollectionIds: mocks.setSelectedCollectionIds,
             setCollectionIdToName: mocks.setCollectionIdToName
         }))
@@ -102,7 +100,6 @@ describe('SampleDetailsAnnotationSegment', () => {
         vi.clearAllMocks();
         mocks.collections = [];
         mocks.selectedCollectionIds = [];
-        mocks.isSelectionInitialized = false;
     });
 
     it('renders a flat list without source groups when there is a single source', () => {
@@ -161,9 +158,9 @@ describe('SampleDetailsAnnotationSegment', () => {
         expect(screen.getAllByTestId('mock-annotation-row')).toHaveLength(1);
     });
 
-    it('initializes the annotation source filter stores when the selection was never set', () => {
+    it('initializes the annotation source filter stores when they are empty', () => {
         mocks.collections = [groundTruthSource, predictionsSource];
-        mocks.isSelectionInitialized = false;
+        mocks.selectedCollectionIds = [];
 
         render(SampleDetailsAnnotationSegment, { props: defaultProps });
 
@@ -177,21 +174,9 @@ describe('SampleDetailsAnnotationSegment', () => {
         });
     });
 
-    it('does not override an annotation source selection made in the grid', () => {
+    it('does not override an existing annotation source selection', () => {
         mocks.collections = [groundTruthSource, predictionsSource];
-        mocks.isSelectionInitialized = true;
         mocks.selectedCollectionIds = [groundTruthSource.collection_id];
-
-        render(SampleDetailsAnnotationSegment, { props: defaultProps });
-
-        expect(mocks.setSelectedCollectionIds).not.toHaveBeenCalled();
-        expect(mocks.setCollectionIdToName).not.toHaveBeenCalled();
-    });
-
-    it('does not override a selection the user deliberately cleared', () => {
-        mocks.collections = [groundTruthSource, predictionsSource];
-        mocks.isSelectionInitialized = true;
-        mocks.selectedCollectionIds = [];
 
         render(SampleDetailsAnnotationSegment, { props: defaultProps });
 
