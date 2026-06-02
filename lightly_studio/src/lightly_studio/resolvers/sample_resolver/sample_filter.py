@@ -47,7 +47,7 @@ class SampleFilter(BaseModel):
 
     def _apply_sample_ids_filter(self, query: QueryType) -> QueryType:
         if self.sample_ids:
-            return query.where(in_array(col(SampleTable.sample_id), self.sample_ids))
+            return query.where(in_array(column=col(SampleTable.sample_id), values=self.sample_ids))
         return query
 
     def _apply_annotation_filters(self, query: QueryType) -> QueryType:

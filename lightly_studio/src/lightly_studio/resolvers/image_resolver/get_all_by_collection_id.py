@@ -183,8 +183,12 @@ def _get_all_with_similarity(  # noqa: PLR0913
 
     # TODO(Michal, 06/2025): Consider adding sample_ids to the filters.
     if sample_ids:
-        samples_query = samples_query.where(in_array(col(ImageTable.sample_id), sample_ids))
-        total_count_query = total_count_query.where(in_array(col(ImageTable.sample_id), sample_ids))
+        samples_query = samples_query.where(
+            in_array(column=col(ImageTable.sample_id), values=sample_ids)
+        )
+        total_count_query = total_count_query.where(
+            in_array(column=col(ImageTable.sample_id), values=sample_ids)
+        )
 
     if order_by:
         samples_query = _apply_similarity_joins_for_order_by(samples_query, order_by, filters)
@@ -247,8 +251,12 @@ def _get_all_without_similarity(  # noqa: PLR0913
 
     # TODO(Michal, 06/2025): Consider adding sample_ids to the filters.
     if sample_ids:
-        samples_query = samples_query.where(in_array(col(ImageTable.sample_id), sample_ids))
-        total_count_query = total_count_query.where(in_array(col(ImageTable.sample_id), sample_ids))
+        samples_query = samples_query.where(
+            in_array(column=col(ImageTable.sample_id), values=sample_ids)
+        )
+        total_count_query = total_count_query.where(
+            in_array(column=col(ImageTable.sample_id), values=sample_ids)
+        )
 
     if order_by:
         metadata_already_joined = _has_metadata_join(filters)

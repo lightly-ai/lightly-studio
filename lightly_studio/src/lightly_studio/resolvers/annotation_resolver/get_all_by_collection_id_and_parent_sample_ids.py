@@ -42,7 +42,7 @@ def get_all_by_collection_id_and_parent_sample_ids(
             SampleTable,
             col(SampleTable.sample_id) == col(AnnotationBaseTable.sample_id),
         )
-        .where(in_array(col(AnnotationBaseTable.parent_sample_id), parent_sample_ids))
+        .where(in_array(column=col(AnnotationBaseTable.parent_sample_id), values=parent_sample_ids))
         .where(col(AnnotationBaseTable.annotation_type) == annotation_type)
         .where(col(SampleTable.collection_id) == annotation_collection_id)
     )

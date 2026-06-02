@@ -160,8 +160,12 @@ def _get_all_with_similarity(  # noqa: PLR0913
     )
 
     if sample_ids:
-        samples_query = samples_query.where(in_array(col(VideoTable.sample_id), sample_ids))
-        total_count_query = total_count_query.where(in_array(col(VideoTable.sample_id), sample_ids))
+        samples_query = samples_query.where(
+            in_array(column=col(VideoTable.sample_id), values=sample_ids)
+        )
+        total_count_query = total_count_query.where(
+            in_array(column=col(VideoTable.sample_id), values=sample_ids)
+        )
 
     if filters:
         samples_query = filters.apply(samples_query)
@@ -228,8 +232,12 @@ def _get_all_without_similarity(
     )
 
     if sample_ids:
-        samples_query = samples_query.where(in_array(col(VideoTable.sample_id), sample_ids))
-        total_count_query = total_count_query.where(in_array(col(VideoTable.sample_id), sample_ids))
+        samples_query = samples_query.where(
+            in_array(column=col(VideoTable.sample_id), values=sample_ids)
+        )
+        total_count_query = total_count_query.where(
+            in_array(column=col(VideoTable.sample_id), values=sample_ids)
+        )
 
     if filters:
         samples_query = filters.apply(samples_query)
