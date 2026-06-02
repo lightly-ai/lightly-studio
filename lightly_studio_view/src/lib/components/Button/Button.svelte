@@ -45,7 +45,14 @@
         isPending = false,
         children
     }: Props = $props();
-    const { class: className, disabled, ...restButtonProps } = buttonProps;
+    const className = $derived(buttonProps.class);
+    const disabled = $derived(buttonProps.disabled);
+    const restButtonProps = $derived.by(() => {
+        const rest = { ...buttonProps };
+        delete rest.class;
+        delete rest.disabled;
+        return rest;
+    });
 
     const labelCollapseClass: Record<CollapseAt, string> = {
         sm: 'max-sm:hidden',
