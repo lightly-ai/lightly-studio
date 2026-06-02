@@ -164,7 +164,11 @@ describe('StrategyCard', () => {
             const instance: StrategyInstance = {
                 id: 'abc',
                 type: 'class_balancing',
-                params: { annotation_source: 'uniform', target_distribution: [], strength: 1 },
+                params: {
+                    target_distribution_mode: 'uniform',
+                    target_distribution: [],
+                    strength: 1
+                },
                 isExpanded: true
             };
 
