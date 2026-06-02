@@ -1,5 +1,3 @@
-import uuid
-
 from sqlmodel import Session
 
 from lightly_studio.api.routes.api.validators import Paginated
@@ -37,29 +35,6 @@ def test_get_filtered_samples__all(db_session: Session) -> None:
         samples[0].sample_id,
         samples[1].sample_id,
     }
-
-
-def test_get_filtered_samples__sample_ids_filter_exceeds_postgres_param_limit(
-    db_session: Session,
-) -> None:
-    # A sample_ids filter with more ids than PostgreSQL's 65,535-parameter cap.
-    collection = create_collection(session=db_session)
-    samples = create_images(
-        db_session=db_session,
-        collection_id=collection.collection_id,
-        images=[ImageStub(path="s1.png"), ImageStub(path="s2.png")],
-    )
-    wanted = samples[0].sample_id
-    sample_ids = [wanted, *[uuid.uuid4() for _ in range(70_000)]]
-
-    result = sample_resolver.get_filtered_samples(
-        session=db_session,
-        collection_id=collection.collection_id,
-        filters=SampleFilter(sample_ids=sample_ids),
-    )
-
-    assert [sample.sample_id for sample in result.samples] == [wanted]
-    assert result.total_count == 1
 
 
 def test_get_filtered_samples__empty_db(

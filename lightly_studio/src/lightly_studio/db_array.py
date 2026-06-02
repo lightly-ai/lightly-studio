@@ -1,15 +1,8 @@
-"""Dialect-aware membership test that avoids PostgreSQL's expanding-IN bind cap.
+"""Dialect-aware ``in_array`` membership test for UUID columns.
 
-Provides ``in_array(column, values)`` which compiles to:
-
-- PostgreSQL: ``column = ANY(:array)`` -- a single bound array parameter, so it is
-  not subject to PostgreSQL's 65,535 expanding-IN bind-parameter limit.
-- DuckDB:     an ordinary expanding ``column.in_(values)``.
-
-It is resolved at compile time (via ``@compiles``) so query builders that have no
-session/engine in scope (e.g. ``SampleFilter.apply``) can use it. Callers must guard
-against empty ``values``: ``= ANY(ARRAY[])`` is an untyped empty array that
-PostgreSQL rejects at execution time.
+Compiles to ``column = ANY(:array)`` (one bound array parameter) on PostgreSQL to dodge the
+65,535 expanding-IN bind cap, and to expanding ``IN`` on DuckDB. Callers must guard against
+empty ``values`` (``= ANY(ARRAY[])`` errors on PostgreSQL).
 """
 
 from __future__ import annotations

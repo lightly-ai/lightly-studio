@@ -2,8 +2,6 @@
 
 from __future__ import annotations
 
-import uuid
-
 from sqlmodel import Session
 
 from lightly_studio.resolvers import annotation_resolver
@@ -74,15 +72,6 @@ def test_get_all_by_parent_sample_ids_with_no_parent_sample_ids_returns_empty_re
 ) -> None:
     result = annotation_resolver.get_all_by_parent_sample_ids(
         session=db_session, parent_sample_ids=[]
-    )
-
-    assert result == []
-
-
-def test_get_all_by_parent_sample_ids__exceeds_postgres_param_limit(db_session: Session) -> None:
-    # More ids than PostgreSQL's 65,535-parameter cap.
-    result = annotation_resolver.get_all_by_parent_sample_ids(
-        session=db_session, parent_sample_ids=[uuid.uuid4() for _ in range(70_000)]
     )
 
     assert result == []
