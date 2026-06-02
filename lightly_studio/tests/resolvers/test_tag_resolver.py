@@ -17,7 +17,7 @@ def test_create_tag(db_session: Session) -> None:
 
 
 def test_remove_sample_ids_from_tag_id__exceeds_postgres_param_limit(db_session: Session) -> None:
-    # More sample ids than PostgreSQL's 65,535-parameter cap; the chunked delete must not raise.
+    # More sample ids than PostgreSQL's 65,535-parameter cap.
     collection_id = create_collection(session=db_session).collection_id
     tag = create_tag(session=db_session, collection_id=collection_id, tag_name="t")
     sample_ids = [uuid4() for _ in range(70_000)]

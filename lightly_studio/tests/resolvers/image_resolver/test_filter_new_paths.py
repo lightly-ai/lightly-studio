@@ -60,7 +60,7 @@ def test_filter_new_paths(db_session: Session) -> None:
 
 
 def test_filter_new_paths__exceeds_postgres_param_limit(db_session: Session) -> None:
-    # More paths than PostgreSQL's 65,535-parameter cap; the chunked query must not raise.
+    # More paths than PostgreSQL's 65,535-parameter cap.
     collection = create_collection(session=db_session)
     file_paths_abs = [f"/p/{i}.png" for i in range(70_000)]
 

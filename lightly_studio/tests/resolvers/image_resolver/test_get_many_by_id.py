@@ -40,6 +40,6 @@ def test_get_many_by_id(
 
 
 def test_get_many_by_id__exceeds_postgres_param_limit(db_session: Session) -> None:
-    # More ids than PostgreSQL's 65,535-parameter cap; the chunked query must not raise.
+    # More ids than PostgreSQL's 65,535-parameter cap.
     sample_ids = [uuid.uuid4() for _ in range(70_000)]
     assert image_resolver.get_many_by_id(session=db_session, sample_ids=sample_ids) == []
