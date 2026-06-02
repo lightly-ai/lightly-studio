@@ -1,5 +1,6 @@
 <script lang="ts">
     import type { ImageView } from '$lib/api/lightly_studio_local';
+    import SampleClassificationPills from '$lib/components/SampleClassificationPills/SampleClassificationPills.svelte';
     import { useSettings } from '$lib/hooks/useSettings';
     import { getSimilarityColor } from '$lib/utils';
     import { SampleAnnotations, SampleImage } from '..';
@@ -26,6 +27,11 @@
     thumbnailQuality={$gridViewThumbnailQualityStore}
     thumbnailWidth={sampleSize}
     thumbnailHeight={sampleSize}
+/>
+<SampleClassificationPills
+    {sample}
+    hasBottomOverlay={Boolean(displayTextOnImage)}
+    hasRightOverlay={sample.similarity_score !== undefined && sample.similarity_score !== null}
 />
 <SampleAnnotations {sample} {objectFit} />
 
