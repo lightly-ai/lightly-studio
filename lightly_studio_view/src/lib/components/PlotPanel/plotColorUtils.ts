@@ -1,7 +1,8 @@
-import { getColorByLabel } from '$lib/utils';
+import { getColorByLabel, oklchToRgb } from '$lib/utils';
 
-const HSL_SATURATION = 70;
-const HSL_LIGHTNESS = 55;
+const OKLCH_LIGHTNESS = 0.65;
+const OKLCH_CHROMA = 0.3;
+const SINGLE_CATEGORY_HUE = 264;
 const RESERVED_CATEGORY_COUNT = 2;
 
 export const NOT_FILTERED_COLOR = '#9CA3AF';
@@ -23,18 +24,15 @@ function getMaxCategoryFromLegend(colorLegend?: ReadonlyMap<number, string> | nu
     return Math.max(...colorLegend.keys());
 }
 
-function getDiscreteHslColor(index: number, total: number): string {
-    if (total <= 1) {
-        return 'hsl(220, 70%, 55%)';
-    }
-
-    const hue = Math.round((index * 360) / total) % 360;
-    return `hsl(${hue}, ${HSL_SATURATION}%, ${HSL_LIGHTNESS}%)`;
+function getDiscreteOklchColor(index: number, total: number): string {
+    const hue = total <= 1 ? SINGLE_CATEGORY_HUE : ((index * 360) / total) % 360;
+    const { r, g, b } = oklchToRgb(OKLCH_LIGHTNESS, OKLCH_CHROMA, hue);
+    return `rgb(${r}, ${g}, ${b})`;
 }
 
 function getDiscreteCategoryColor(category: number, categoryCount: number): string {
     const totalColoredCategories = Math.max(1, categoryCount - RESERVED_CATEGORY_COUNT);
-    return getDiscreteHslColor(category - RESERVED_CATEGORY_COUNT, totalColoredCategories);
+    return getDiscreteOklchColor(category - RESERVED_CATEGORY_COUNT, totalColoredCategories);
 }
 
 function getBaseCategoryColor(
