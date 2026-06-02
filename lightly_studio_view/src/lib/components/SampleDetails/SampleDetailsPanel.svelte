@@ -77,7 +77,7 @@
 
     const { handleKeyEvent } = useHideAnnotations();
     const { settingsStore } = useSettings();
-    const { isEditingMode, lastAnnotationLabel } = useGlobalStorage();
+    const { isEditingMode, lastAnnotationLabel, lastAnnotationSource } = useGlobalStorage();
 
     // Annotation details must use the first annotation from sample.annotations
     const annotationLabelContext = createAnnotationLabelContext({
@@ -220,6 +220,7 @@
 
     onMount(() => {
         annotationLabelContext.annotationLabel = $lastAnnotationLabel[collectionId];
+        annotationLabelContext.annotationSource = $lastAnnotationSource[collectionId];
     });
 </script>
 

@@ -14,6 +14,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Show ground truth and prediction annotation sources in run details panel
 - Image details view: Annotations are now grouped by annotation source.
 
+- Image details: select the annotation source when adding an annotation.
+
 ### Changed
 
 - Header menu: show collection name in Annotations entries
