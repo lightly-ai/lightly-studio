@@ -12,6 +12,7 @@ from sqlalchemy.orm.interfaces import LoaderOption
 from sqlmodel import Session, col, func, select
 from sqlmodel.sql.expression import Select
 
+from lightly_studio import db_array
 from lightly_studio.api.routes.api.validators import Paginated
 from lightly_studio.core.dataset_query.image_sample_field import ImageSampleField
 from lightly_studio.core.dataset_query.order_by import (
@@ -20,7 +21,6 @@ from lightly_studio.core.dataset_query.order_by import (
     OrderByField,
     OrderByMetadataField,
 )
-from lightly_studio.db_array import in_array
 from lightly_studio.models.annotation.annotation_base import AnnotationBaseTable
 from lightly_studio.models.image import ImageTable
 from lightly_studio.models.metadata import SampleMetadataTable
@@ -184,10 +184,10 @@ def _get_all_with_similarity(  # noqa: PLR0913
     # TODO(Michal, 06/2025): Consider adding sample_ids to the filters.
     if sample_ids:
         samples_query = samples_query.where(
-            in_array(column=col(ImageTable.sample_id), values=sample_ids)
+            db_array.in_array(column=col(ImageTable.sample_id), values=sample_ids)
         )
         total_count_query = total_count_query.where(
-            in_array(column=col(ImageTable.sample_id), values=sample_ids)
+            db_array.in_array(column=col(ImageTable.sample_id), values=sample_ids)
         )
 
     if order_by:
@@ -252,10 +252,10 @@ def _get_all_without_similarity(  # noqa: PLR0913
     # TODO(Michal, 06/2025): Consider adding sample_ids to the filters.
     if sample_ids:
         samples_query = samples_query.where(
-            in_array(column=col(ImageTable.sample_id), values=sample_ids)
+            db_array.in_array(column=col(ImageTable.sample_id), values=sample_ids)
         )
         total_count_query = total_count_query.where(
-            in_array(column=col(ImageTable.sample_id), values=sample_ids)
+            db_array.in_array(column=col(ImageTable.sample_id), values=sample_ids)
         )
 
     if order_by:

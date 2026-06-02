@@ -7,7 +7,7 @@ from uuid import UUID
 
 from sqlmodel import Session, col, func, select
 
-from lightly_studio.db_array import in_array
+from lightly_studio import db_array
 from lightly_studio.models.annotation.annotation_base import AnnotationBaseTable
 from lightly_studio.models.image import ImageTable
 from lightly_studio.models.video import VideoFrameTable, VideoTable
@@ -31,7 +31,11 @@ def get_all_by_parent_sample_ids(
             col(VideoFrameTable.sample_id) == col(AnnotationBaseTable.parent_sample_id),
         )
         .outerjoin(VideoTable, col(VideoTable.sample_id) == col(VideoFrameTable.parent_sample_id))
-        .where(in_array(column=col(AnnotationBaseTable.parent_sample_id), values=parent_sample_ids))
+        .where(
+            db_array.in_array(
+                column=col(AnnotationBaseTable.parent_sample_id), values=parent_sample_ids
+            )
+        )
         .order_by(
             func.coalesce(ImageTable.file_path_abs, VideoTable.file_path_abs, "").asc(),
             col(AnnotationBaseTable.created_at).asc(),
