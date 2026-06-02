@@ -5,7 +5,8 @@
         CollapsibleTrigger
     } from '$lib/components/ui/collapsible';
     import { ColorMarker } from '$lib/components/SideMenu';
-    import { ChevronDown } from '@lucide/svelte';
+    import { ChevronDown, Eye, EyeOff } from '@lucide/svelte';
+    import { Tooltip } from '$lib/components/ui/tooltip';
     import type { Snippet } from 'svelte';
     import { slide } from 'svelte/transition';
 
@@ -13,10 +14,12 @@
         name: string;
         count: number;
         showColorMarker: boolean;
+        allHidden: boolean;
+        onToggleVisibility: (e: MouseEvent) => void;
         children: Snippet;
     }
 
-    let { name, count, showColorMarker, children }: Props = $props();
+    let { name, count, showColorMarker, allHidden, onToggleVisibility, children }: Props = $props();
 
     let open = $state(true);
 
@@ -39,6 +42,25 @@
                 />
             </div>
         </CollapsibleTrigger>
+        <div class="flex shrink-0 items-center">
+            {#if allHidden}
+                <Tooltip content="Show all annotations from this source">
+                    <EyeOff
+                        data-testid="source-group-eye-off"
+                        class="size-4 text-muted-foreground"
+                        onclick={onToggleVisibility}
+                    />
+                </Tooltip>
+            {:else}
+                <Tooltip content="Hide all annotations from this source">
+                    <Eye
+                        data-testid="source-group-eye"
+                        class="size-4"
+                        onclick={onToggleVisibility}
+                    />
+                </Tooltip>
+            {/if}
+        </div>
     </div>
     <CollapsibleContent forceMount>
         {#if open}
