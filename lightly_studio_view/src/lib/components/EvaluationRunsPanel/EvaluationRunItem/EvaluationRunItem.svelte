@@ -95,37 +95,35 @@
             </section>
 
             <!-- Label sources -->
-            {#if run.gt_annotation_source != null || run.pred_annotation_source != null}
-                <section data-testid="evaluation-run-label-sources">
-                    <Typography variant="subtitle2" component="h3" className="mb-2">
-                        Label sources
-                    </Typography>
-                    <div class="flex flex-wrap gap-2">
-                        <div class="flex flex-col gap-0.5">
-                            <Typography variant="caption" className="text-muted-foreground">
-                                Ground truth
-                            </Typography>
-                            <span
-                                class="rounded-md border border-border bg-muted px-2 py-0.5 text-sm"
-                                data-testid="evaluation-run-gt-label-source"
-                            >
-                                {run.gt_annotation_source ?? '—'}
-                            </span>
-                        </div>
-                        <div class="flex flex-col gap-0.5">
-                            <Typography variant="caption" className="text-muted-foreground">
-                                Predictions
-                            </Typography>
-                            <span
-                                class="rounded-md border border-border bg-muted px-2 py-0.5 text-sm"
-                                data-testid="evaluation-run-prediction-label-source"
-                            >
-                                {run.pred_annotation_source ?? '—'}
-                            </span>
-                        </div>
+            <section data-testid="evaluation-run-label-sources">
+                <Typography variant="subtitle2" component="h3" className="mb-2">
+                    Label sources
+                </Typography>
+                <div class="flex flex-wrap gap-2">
+                    <div class="flex flex-col gap-0.5">
+                        <Typography variant="caption" className="text-muted-foreground">
+                            Ground truth
+                        </Typography>
+                        <span
+                            class="rounded-md border border-border bg-muted px-2 py-0.5 text-sm"
+                            data-testid="evaluation-run-gt-label-source"
+                        >
+                            {run.gt_annotation_source}
+                        </span>
                     </div>
-                </section>
-            {/if}
+                    <div class="flex flex-col gap-0.5">
+                        <Typography variant="caption" className="text-muted-foreground">
+                            Predictions
+                        </Typography>
+                        <span
+                            class="rounded-md border border-border bg-muted px-2 py-0.5 text-sm"
+                            data-testid="evaluation-run-prediction-label-source"
+                        >
+                            {run.pred_annotation_source}
+                        </span>
+                    </div>
+                </div>
+            </section>
 
             <EvaluationRunConfusionMatrixSection evaluationRunId={run.id} />
         </div>
