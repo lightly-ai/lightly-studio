@@ -10,6 +10,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 
 - Embedding plot: added a "No coloring" option to the "Color by" dropdown to disable coloring.
+- show gt and prediction annotation sources in run details panel
 
 ### Changed
 
