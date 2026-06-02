@@ -31,5 +31,6 @@
             if (raw !== '' && !Number.isNaN(parsed)) onUpdate(parsed);
         }}
         data-testid={testid}
+        class="[appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
     />
 </div>
