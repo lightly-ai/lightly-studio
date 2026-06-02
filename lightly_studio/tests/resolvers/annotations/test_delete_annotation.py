@@ -3,10 +3,19 @@ from uuid import UUID
 import pytest
 from sqlmodel import Session, col, select
 
+from lightly_studio.models.evaluation_annotation_metric import EvaluationAnnotationMetricCreate
+from lightly_studio.models.evaluation_sample_metric import EvaluationSampleMetricCreate
 from lightly_studio.models.sample import SampleTable, SampleTagLinkTable
-from lightly_studio.resolvers import annotation_resolver
+from lightly_studio.resolvers import (
+    annotation_resolver,
+    evaluation_annotation_metric_resolver,
+    evaluation_sample_metric_resolver,
+)
 from tests.conftest import AnnotationsTestData
-from tests.helpers_resolvers import create_tag
+from tests.helpers_resolvers import create_annotation, create_annotation_label, create_tag
+from tests.resolvers.evaluation_sample_metric_resolver import (
+    helpers as evaluation_sample_metric_helpers,
+)
 
 
 def test_delete_annotation__success(
@@ -73,3 +82,62 @@ def test_delete_annotation__deletes_sample_tag_links(
     ).all()
     assert not links_after
     assert db_session.get(SampleTable, annotation.sample_id) is None
+
+
+def test_delete_annotation__deletes_evaluation_annotation_metrics(
+    db_session: Session,
+) -> None:
+    """Test deleting an annotation removes invalidated evaluation rows."""
+    run, image = evaluation_sample_metric_helpers.create_run_and_image(session=db_session)
+    collection_id = image.sample.collection_id
+    label = create_annotation_label(session=db_session, root_collection_id=collection_id)
+    pred_annotation = create_annotation(
+        session=db_session,
+        collection_id=collection_id,
+        sample_id=image.sample_id,
+        annotation_label_id=label.annotation_label_id,
+    )
+    gt_annotation = create_annotation(
+        session=db_session,
+        collection_id=collection_id,
+        sample_id=image.sample_id,
+        annotation_label_id=label.annotation_label_id,
+    )
+
+    evaluation_annotation_metric_resolver.create_many(
+        session=db_session,
+        records=[
+            EvaluationAnnotationMetricCreate(
+                evaluation_run_id=run.id,
+                sample_id=image.sample_id,
+                pred_annotation_id=pred_annotation.sample_id,
+                gt_annotation_id=gt_annotation.sample_id,
+                metric_name="iou",
+                value=0.75,
+            )
+        ],
+    )
+    evaluation_sample_metric_resolver.create_many(
+        session=db_session,
+        records=[
+            EvaluationSampleMetricCreate(
+                evaluation_run_id=run.id,
+                sample_id=image.sample_id,
+                metric_name="score",
+                value=0.5,
+            )
+        ],
+    )
+
+    annotation_resolver.delete_annotation(db_session, gt_annotation.sample_id)
+
+    annotation_metrics = evaluation_annotation_metric_resolver.get_all_by_evaluation_run_id(
+        session=db_session,
+        evaluation_run_id=run.id,
+    )
+    sample_metrics = evaluation_sample_metric_resolver.get_all_by_evaluation_run_id(
+        session=db_session,
+        evaluation_run_id=run.id,
+    )
+    assert annotation_metrics == []
+    assert sample_metrics == []

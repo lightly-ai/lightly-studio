@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from uuid import UUID
 
+from sqlalchemy import or_
 from sqlmodel import Session, col, delete
 
 from lightly_studio.models.annotation.annotation_base import AnnotationBaseTable
@@ -13,6 +14,8 @@ from lightly_studio.models.annotation.object_detection import (
 from lightly_studio.models.annotation.segmentation import (
     SegmentationAnnotationTable,
 )
+from lightly_studio.models.evaluation_annotation_metric import EvaluationAnnotationMetricTable
+from lightly_studio.models.evaluation_sample_metric import EvaluationSampleMetricTable
 from lightly_studio.models.sample import SampleTable, SampleTagLinkTable
 from lightly_studio.resolvers import annotation_resolver
 
@@ -41,6 +44,13 @@ def delete_annotation(
     # Store the annotation's sample_id before deletion
     annotation_sample_id = annotation.sample_id
 
+    # TODO(Jonas, 06/2026): Replace eager deletion with explicit evaluation invalidation once
+    # evaluation results can be recomputed or marked stale independently from annotation updates.
+    _delete_evaluation_metrics(
+        session=session,
+        annotation_ids=[annotation.sample_id],
+        parent_sample_ids=[annotation.parent_sample_id],
+    )
     session.exec(
         delete(ObjectDetectionAnnotationTable).where(
             col(ObjectDetectionAnnotationTable.sample_id) == annotation.sample_id
@@ -75,3 +85,29 @@ def delete_annotation(
         if annotation_sample:
             session.delete(annotation_sample)
             session.commit()
+
+
+def _delete_evaluation_metrics(
+    session: Session,
+    annotation_ids: list[UUID],
+    parent_sample_ids: list[UUID],
+) -> None:
+    """Delete evaluation data invalidated by annotation deletion or mutation."""
+    if not annotation_ids and not parent_sample_ids:
+        return
+
+    if annotation_ids:
+        session.exec(
+            delete(EvaluationAnnotationMetricTable).where(
+                or_(
+                    col(EvaluationAnnotationMetricTable.pred_annotation_id).in_(annotation_ids),
+                    col(EvaluationAnnotationMetricTable.gt_annotation_id).in_(annotation_ids),
+                )
+            )
+        )
+    if parent_sample_ids:
+        session.exec(
+            delete(EvaluationSampleMetricTable).where(
+                col(EvaluationSampleMetricTable.sample_id).in_(parent_sample_ids)
+            )
+        )
