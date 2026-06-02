@@ -61,7 +61,7 @@ def test_get_embeddings2d__2d(
     assert table.schema.field("x").type == pa.float32()
     assert table.schema.field("y").type == pa.float32()
     assert table.schema.field("fulfils_filter").type == pa.uint8()
-    assert table.schema.field("color_category").type == pa.uint8()
+    assert table.schema.field("color_categories").type == pa.list_(pa.uint8())
     assert table.schema.field("sample_id").type == pa.string()
 
     x = table.column("x").to_numpy(zero_copy_only=False)
@@ -73,8 +73,9 @@ def test_get_embeddings2d__2d(
     assert fulfils_filter.shape == (n_samples,)
     np.testing.assert_array_equal(fulfils_filter, np.ones(n_samples, dtype=np.uint8))
 
-    color_category = table.column("color_category").to_numpy(zero_copy_only=False)
-    np.testing.assert_array_equal(color_category, np.ones(n_samples, dtype=np.uint8))
+    # Without `color_by`, every sample has an empty list of color categories.
+    color_categories = table.column("color_categories").to_pylist()
+    assert color_categories == [[]] * n_samples
     assert json.loads(table.schema.metadata[b"color_legend"]) == {}
 
     sample_ids = table.column("sample_id").to_pylist()
@@ -146,8 +147,9 @@ def test_get_embeddings2d__2d__with_tag_filter(
     }
     assert sample_ids_payload_fulfils_filter == {str(s.sample_id) for s in tagged_samples}
 
-    color_category = table.column("color_category").to_numpy(zero_copy_only=False)
-    np.testing.assert_array_equal(color_category, fulfils_filter)
+    # Without `color_by`, color categories are empty regardless of filter state.
+    color_categories = table.column("color_categories").to_pylist()
+    assert color_categories == [[]] * n_samples
 
     assert spy_sample_resolver.call_args is not None
     assert spy_sample_resolver.call_args.kwargs["filters"] == image_filter
@@ -234,8 +236,9 @@ def test_get_embeddings2d__with_video_filter(
     }
     assert filtered_ids == {str(tagged_video.sample_id)}
 
-    color_category = table.column("color_category").to_numpy(zero_copy_only=False)
-    np.testing.assert_array_equal(color_category, fulfils_filter)
+    # Without `color_by`, color categories are empty regardless of filter state.
+    color_categories = table.column("color_categories").to_pylist()
+    assert color_categories == [[]] * len(sample_ids_payload)
 
     # Verify the resolver was called with the correct filters
     assert spy_video_resolver.call_args.kwargs["filters"] == video_filter
