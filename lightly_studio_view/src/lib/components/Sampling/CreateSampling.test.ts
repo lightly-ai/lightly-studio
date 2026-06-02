@@ -94,7 +94,7 @@ describe('CreateSamplingDialog', () => {
 
         render(CreateSamplingDialog);
 
-        expect(screen.getByText(/Create a sampling of the/)).toBeInTheDocument();
+        expect(screen.getByText(/Sample from the/)).toBeInTheDocument();
         expect(screen.getByText('42 samples')).toBeInTheDocument();
     });
 

@@ -134,7 +134,7 @@
                 <Dialog.Header>
                     <Dialog.Title class="text-foreground">Create Sampling</Dialog.Title>
                     <Dialog.Description class="text-foreground">
-                        Create a sampling of the <strong class="font-semibold text-primary"
+                        Sample from the <strong class="font-semibold text-primary"
                             >{sampleCountLabel}</strong
                         > currently matching your filters.
                     </Dialog.Description>
