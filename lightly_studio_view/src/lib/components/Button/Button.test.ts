@@ -86,22 +86,59 @@ describe('Button', () => {
 
         const span = container.querySelector(labelSelector);
         expect(span).toBeInTheDocument();
-        expect(span?.className).not.toMatch(/max-\w+:hidden/);
+        expect(span?.className).not.toMatch(/max-\w+:(?:sr-only|hidden)/);
     });
 
     it.each([
-        ['sm', 'max-sm:hidden'],
-        ['md', 'max-md:hidden'],
-        ['lg', 'max-lg:hidden'],
-        ['xl', 'max-xl:hidden'],
-        ['2xl', 'max-2xl:hidden']
-    ] as const)('applies the %s collapse class when collapseAt="%s"', (collapseAt, expected) => {
-        const { container } = render(ButtonTestWrapper, {
-            props: { label: 'Edit', collapseAt }
+        ['sm', 'max-sm:sr-only'],
+        ['md', 'max-md:sr-only'],
+        ['lg', 'max-lg:sr-only'],
+        ['xl', 'max-xl:sr-only'],
+        ['2xl', 'max-2xl:sr-only']
+    ] as const)(
+        'visually hides the label with sr-only at the %s breakpoint',
+        (collapseAt, expected) => {
+            const { container } = render(ButtonTestWrapper, {
+                props: { label: 'Edit', collapseAt }
+            });
+
+            const span = container.querySelector(labelSelector);
+            expect(span?.className).toContain(expected);
+            expect(span?.className).not.toContain('max-' + collapseAt + ':hidden');
+        }
+    );
+
+    describe('accessible name', () => {
+        it('uses the visible children as the accessible name by default', () => {
+            render(ButtonTestWrapper, { props: { label: 'Save changes', icon: Pencil } });
+
+            expect(screen.getByRole('button', { name: 'Save changes' })).toBeInTheDocument();
         });
 
-        const span = container.querySelector(labelSelector);
-        expect(span?.className).toContain(expected);
+        it('forwards ariaLabel to the underlying button', () => {
+            const { container } = render(ButtonTestWrapper, {
+                props: { label: 'Save', ariaLabel: 'Save the document' }
+            });
+
+            expect(container.querySelector('button')).toHaveAttribute(
+                'aria-label',
+                'Save the document'
+            );
+        });
+
+        it('requires ariaLabel on icon-only buttons to provide an accessible name', () => {
+            render(ButtonTestWrapper, { props: { icon: Pencil, ariaLabel: 'Edit annotations' } });
+
+            expect(screen.getByRole('button', { name: 'Edit annotations' })).toBeInTheDocument();
+        });
+
+        it('keeps the label in the accessibility tree even when visually collapsed', () => {
+            render(ButtonTestWrapper, {
+                props: { label: 'Edit annotations', icon: Pencil, collapseAt: 'md' }
+            });
+
+            expect(screen.getByRole('button', { name: 'Edit annotations' })).toBeInTheDocument();
+        });
     });
 
     describe('isPending', () => {

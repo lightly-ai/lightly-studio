@@ -47,6 +47,11 @@
             children: {
                 description: 'Button label content. Omit for an icon-only button.',
                 control: false
+            },
+            ariaLabel: {
+                description:
+                    'Accessible name for the button. Required for icon-only buttons (no `children`); optional when a label is provided.',
+                control: 'text'
             }
         }
     });
@@ -58,4 +63,7 @@
     Edit Annotations
 </Story>
 
-<Story name="IconOnly" args={{ icon: Plus, buttonProps: { onclick: fn() } }} />
+<Story
+    name="IconOnly"
+    args={{ icon: Plus, ariaLabel: 'Add item', buttonProps: { onclick: fn() } }}
+/>

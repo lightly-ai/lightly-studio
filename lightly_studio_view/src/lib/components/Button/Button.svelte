@@ -10,7 +10,7 @@
 
     type CollapseAt = 'sm' | 'md' | 'lg' | 'xl' | '2xl' | 'never';
 
-    interface Props {
+    interface BaseProps {
         /** Lucide icon component rendered before the label. */
         icon?: Component<IconProps>;
         /**
@@ -25,7 +25,9 @@
         buttonProps?: ButtonProps;
         /**
          * Hide the label at and below the given Tailwind breakpoint while
-         * keeping the icon visible. `never` (default) keeps the label at all sizes.
+         * keeping the icon visible. The label remains in the DOM as visually
+         * hidden text so screen readers still announce it. `never` (default)
+         * keeps the label visible at all sizes.
          */
         collapseAt?: CollapseAt;
         /**
@@ -33,9 +35,16 @@
          * progress bar at the bottom.
          */
         isPending?: boolean;
-        /** Button label content. Omit for an icon-only button. */
-        children?: Snippet;
     }
+
+    /**
+     * `ariaLabel` is required for icon-only buttons (no `children`) so the
+     * button always has an accessible name. When `children` are provided
+     * it is optional and overrides the visible label as the accessible name.
+     */
+    type Props =
+        | (BaseProps & { children: Snippet; ariaLabel?: string })
+        | (BaseProps & { children?: undefined; ariaLabel: string });
 
     let {
         icon: Icon,
@@ -43,6 +52,7 @@
         buttonProps = {},
         collapseAt = 'never',
         isPending = false,
+        ariaLabel,
         children
     }: Props = $props();
     const className = $derived(buttonProps.class);
@@ -55,11 +65,11 @@
     });
 
     const labelCollapseClass: Record<CollapseAt, string> = {
-        sm: 'max-sm:hidden',
-        md: 'max-md:hidden',
-        lg: 'max-lg:hidden',
-        xl: 'max-xl:hidden',
-        '2xl': 'max-2xl:hidden',
+        sm: 'max-sm:sr-only',
+        md: 'max-md:sr-only',
+        lg: 'max-lg:sr-only',
+        xl: 'max-xl:sr-only',
+        '2xl': 'max-2xl:sr-only',
         never: ''
     };
 </script>
@@ -68,6 +78,7 @@
     {variant}
     class={cn('relative', isPending && 'overflow-hidden', className)}
     disabled={isPending || disabled}
+    aria-label={ariaLabel}
     {...restButtonProps}
 >
     {#if Icon}

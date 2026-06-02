@@ -12,7 +12,8 @@
         variant,
         buttonProps,
         collapseAt,
-        isPending
+        isPending,
+        ariaLabel
     }: {
         label?: string;
         icon?: Component<IconProps>;
@@ -20,13 +21,21 @@
         buttonProps?: ButtonProps;
         collapseAt?: CollapseAt;
         isPending?: boolean;
+        ariaLabel?: string;
     } = $props();
 </script>
 
 {#if label !== undefined}
-    <Button {icon} {variant} {buttonProps} {collapseAt} {isPending}>
+    <Button {icon} {variant} {buttonProps} {collapseAt} {isPending} {ariaLabel}>
         {label}
     </Button>
 {:else}
-    <Button {icon} {variant} {buttonProps} {collapseAt} {isPending} />
+    <Button
+        {icon}
+        {variant}
+        {buttonProps}
+        {collapseAt}
+        {isPending}
+        ariaLabel={ariaLabel ?? 'Icon button'}
+    />
 {/if}
