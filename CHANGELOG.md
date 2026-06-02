@@ -9,7 +9,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 - enable picker for annotation source menu
-
 - Embedding plot: added a "No coloring" option to the "Color by" dropdown to disable coloring.
 
 ### Changed
@@ -25,6 +24,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Fixed deleting large datasets (more than ~65,535 samples) failing on PostgreSQL with
   `number of parameters must be between 0 and 65535`.
+- Fixed cascaded delete for annotations linked by calculated metrics.
 
 ### Security
 
