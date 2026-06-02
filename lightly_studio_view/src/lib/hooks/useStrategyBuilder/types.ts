@@ -1,3 +1,4 @@
+import type { TagView } from '$lib/services/types';
 export interface DiversityParams {
     strength: number;
 }
@@ -50,7 +51,9 @@ export type StrategyInstance = {
 
 export type StrategyParams = StrategyInstance['params'];
 
-export const STRATEGY_OPTIONS = [
+export type StrategySummaryTag = Pick<TagView, 'tag_id' | 'name'>;
+
+export const STRATEGY_OPTIONS: { type: StrategyType; label: string; description: string }[] = [
     {
         type: 'diversity',
         label: 'Diversity',
