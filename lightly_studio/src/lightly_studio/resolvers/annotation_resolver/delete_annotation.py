@@ -4,8 +4,8 @@ from __future__ import annotations
 
 from uuid import UUID
 
-from sqlalchemy import or_
-from sqlmodel import Session, col, delete
+import sqlalchemy
+from sqlmodel import Session, col, delete, select
 
 from lightly_studio.models.annotation.annotation_base import AnnotationBaseTable
 from lightly_studio.models.annotation.object_detection import (
@@ -96,18 +96,32 @@ def _delete_evaluation_metrics(
     if not annotation_ids and not parent_sample_ids:
         return
 
+    affected_evaluation_run_ids = list(
+        session.exec(
+            select(EvaluationAnnotationMetricTable.evaluation_run_id)
+            .where(
+                sqlalchemy.or_(
+                    col(EvaluationAnnotationMetricTable.pred_annotation_id).in_(annotation_ids),
+                    col(EvaluationAnnotationMetricTable.gt_annotation_id).in_(annotation_ids),
+                )
+            )
+            .distinct()
+        ).all()
+    )
+
     if annotation_ids:
         session.exec(
             delete(EvaluationAnnotationMetricTable).where(
-                or_(
+                sqlalchemy.or_(
                     col(EvaluationAnnotationMetricTable.pred_annotation_id).in_(annotation_ids),
                     col(EvaluationAnnotationMetricTable.gt_annotation_id).in_(annotation_ids),
                 )
             )
         )
-    if parent_sample_ids:
+    if parent_sample_ids and affected_evaluation_run_ids:
         session.exec(
             delete(EvaluationSampleMetricTable).where(
-                col(EvaluationSampleMetricTable.sample_id).in_(parent_sample_ids)
+                col(EvaluationSampleMetricTable.sample_id).in_(parent_sample_ids),
+                col(EvaluationSampleMetricTable.evaluation_run_id).in_(affected_evaluation_run_ids),
             )
         )

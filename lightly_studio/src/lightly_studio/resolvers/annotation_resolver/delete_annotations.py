@@ -4,15 +4,15 @@ from __future__ import annotations
 
 from uuid import UUID
 
-from sqlalchemy import or_
 from sqlmodel import Session, col, delete
 
 from lightly_studio.models.annotation.annotation_base import (
     AnnotationBaseTable,
 )
-from lightly_studio.models.evaluation_annotation_metric import EvaluationAnnotationMetricTable
-from lightly_studio.models.evaluation_sample_metric import EvaluationSampleMetricTable
 from lightly_studio.resolvers import annotation_resolver
+from lightly_studio.resolvers.annotation_resolver.delete_annotation import (
+    _delete_evaluation_metrics,
+)
 from lightly_studio.resolvers.annotations.annotations_filter import (
     AnnotationsFilter,
 )
@@ -49,18 +49,10 @@ def delete_annotations(
     if annotation_ids:
         # TODO(Jonas, 06/2026): Replace eager deletion with explicit evaluation invalidation
         # once evaluation results can be recomputed or marked stale independently.
-        session.exec(
-            delete(EvaluationAnnotationMetricTable).where(
-                or_(
-                    col(EvaluationAnnotationMetricTable.pred_annotation_id).in_(annotation_ids),
-                    col(EvaluationAnnotationMetricTable.gt_annotation_id).in_(annotation_ids),
-                )
-            )
-        )
-        session.exec(
-            delete(EvaluationSampleMetricTable).where(
-                col(EvaluationSampleMetricTable.sample_id).in_(parent_sample_ids)
-            )
+        _delete_evaluation_metrics(
+            session=session,
+            annotation_ids=annotation_ids,
+            parent_sample_ids=parent_sample_ids,
         )
         session.exec(
             delete(AnnotationBaseTable).where(
