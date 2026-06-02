@@ -15,7 +15,8 @@
         useSegmentationMaskPreview,
         useAnnotationLabels,
         useAnnotation,
-        useAnnotationLabelContext
+        useAnnotationLabelContext,
+        useAnnotationCollections
     } from '$lib/hooks';
     import { page } from '$app/state';
     import type { PendingChange } from '../pendingChange';
@@ -59,6 +60,10 @@
     } = useAnnotationLabelContext();
 
     const labels = useAnnotationLabels(() => ({ collectionId }));
+
+    const annotationCollections = useAnnotationCollections({ collectionId });
+    const sourceNames = $derived(annotationCollections.data?.map((c) => c.name) ?? []);
+
     const activeAnnotationId = $derived.by(() => {
         if (annotationLabelContext.annotationId) return annotationLabelContext.annotationId;
 
@@ -365,6 +370,7 @@
 <SelectClassDialog
     bind:open={$selectClassDialogOpen}
     labels={labels.data?.map((l) => l.annotation_label_name ?? '').filter(Boolean) ?? []}
+    {sourceNames}
     onConfirm={handleSelectClassDialogConfirm}
     onCancel={handleSelectClassDialogCancel}
 />
