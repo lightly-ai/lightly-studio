@@ -81,12 +81,23 @@ class ImageView(BaseModel):
     metadata_dict: Optional["SampleMetadataView"] = None
     captions: list[CaptionView] = []
     similarity_score: Optional[float] = None
+    order_value: Optional[float] = None
 
     @classmethod
     def from_image_table(
-        cls, image: "ImageTable", similarity_score: Optional[float] = None
+        cls,
+        image: "ImageTable",
+        similarity_score: Optional[float] = None,
+        order_value: Optional[float] = None,
     ) -> "ImageView":
-        """Convert an ImageTable to an ImageView."""
+        """Convert an ImageTable to an ImageView.
+
+        Args:
+            image: The image row to convert.
+            similarity_score: Similarity to a text/embedding query, when search is active.
+            order_value: Primary sort value for the current grid sort, when provided by the
+                resolver. Mutually exclusive with using ``similarity_score`` for overlays.
+        """
         return cls(
             file_name=image.file_name,
             file_path_abs=image.file_path_abs,
@@ -113,6 +124,7 @@ class ImageView(BaseModel):
             height=image.height,
             sample=SampleView.model_validate(image.sample),
             similarity_score=similarity_score,
+            order_value=order_value,
         )
 
 

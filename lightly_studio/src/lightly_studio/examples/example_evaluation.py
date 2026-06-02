@@ -143,5 +143,6 @@ def main() -> None:
     print_evaluation_metrics(dataset=dataset, name=ALL_SAMPLES_EVALUATION_NAME)
     ls.start_gui()
 
+
 if __name__ == "__main__":
     main()
