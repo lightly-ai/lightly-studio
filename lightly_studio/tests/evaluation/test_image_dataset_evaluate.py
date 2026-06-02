@@ -424,9 +424,11 @@ def test_segmentation_evaluation(
         session=dataset.session,
         evaluation_run_id=evaluation_runs[0].id,
     )
-    assert {(metric.sample_id, metric.metric_name): metric.value for metric in sample_metrics} == {
-        (image.sample_id, "miou"): 1.0,
-    }
+    assert len(sample_metrics) == 1
+    metric = sample_metrics[0]
+    assert metric.sample_id == image.sample_id
+    assert metric.metric_name == "miou"
+    assert metric.value == pytest.approx(1.0)
 
 
 def test_segmentation_evaluation__raises_on_wrong_annotation_type(
