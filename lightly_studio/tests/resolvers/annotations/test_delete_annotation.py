@@ -206,6 +206,7 @@ def test_delete_annotation__preserves_other_run_sample_metrics(
     assert len(other_run_annotation_metrics) == 1
     assert len(other_run_sample_metrics) == 1
 
+
 def _create_evaluation_metrics(
     db_session: Session,
     run_id: UUID,
