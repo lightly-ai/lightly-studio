@@ -40,6 +40,12 @@ const lastAnnotationLabel = useSessionStorage<Record<string, string>>(
     {}
 );
 
+// Store the most recently selected annotation source.
+const lastAnnotationSource = useSessionStorage<Record<string, string>>(
+    'lightlyStudio_last_annotation_source',
+    {}
+);
+
 // Store the most recently selected annotation brush size.
 const lastAnnotationBrushSize = useSessionStorage<Record<string, number>>(
     'lightlyStudio_last_annotation_brush_size',
@@ -339,6 +345,13 @@ export const useGlobalStorage = () => {
         updateLastAnnotationLabel: (collectionId: string, label: string) => {
             lastAnnotationLabel.update((value) => {
                 value[collectionId] = label;
+                return value;
+            });
+        },
+        lastAnnotationSource,
+        updateLastAnnotationSource: (collectionId: string, source: string) => {
+            lastAnnotationSource.update((value) => {
+                value[collectionId] = source;
                 return value;
             });
         },
