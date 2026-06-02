@@ -10,3 +10,4 @@ export {
     STRATEGY_LABELS
 } from './types';
 export { cloneStrategyParams, createStrategyInstance } from './strategyInstance';
+export { isStrategyInstanceValid } from './strategyValidation';
