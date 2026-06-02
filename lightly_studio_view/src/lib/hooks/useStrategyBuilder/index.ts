@@ -4,5 +4,9 @@ export {
     type ClassBalancingTargetDistributionMode,
     type ClassBalancingTargetRow,
     type ClassBalancingParams,
-    type StrategyParams
+    type StrategyParams,
+    type StrategyInstance,
+    STRATEGY_DEFAULTS,
+    STRATEGY_LABELS
 } from './types';
+export { cloneStrategyParams, createStrategyInstance } from './strategyInstance';
