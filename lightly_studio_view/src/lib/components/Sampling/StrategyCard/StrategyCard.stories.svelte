@@ -1,7 +1,8 @@
-<script module>
+<script module lang="ts">
     import { defineMeta } from '@storybook/addon-svelte-csf';
     import { fn } from 'storybook/test';
     import StrategyCard from './StrategyCard.svelte';
+    import type { StrategyInstance } from '$lib/hooks/useStrategyBuilder';
 
     const { Story } = defineMeta({
         title: 'Components/Sampling/StrategyCard',
@@ -30,7 +31,7 @@
             type: 'diversity',
             params: { strength: 1 },
             isExpanded: true
-        }
+        } satisfies StrategyInstance
     }}
 />
 
@@ -42,7 +43,7 @@
             type: 'typicality',
             params: { strength: 1 },
             isExpanded: true
-        }
+        } satisfies StrategyInstance
     }}
 />
 
@@ -54,7 +55,7 @@
             type: 'similarity',
             params: { query_tag_id: 'tag-1', strength: 1 },
             isExpanded: true
-        }
+        } satisfies StrategyInstance
     }}
 />
 
@@ -66,7 +67,7 @@
             type: 'metadata_weighting',
             params: { metadata_key: 'sharpness', strength: 1 },
             isExpanded: true
-        }
+        } satisfies StrategyInstance
     }}
 />
 
@@ -77,7 +78,7 @@
             id: 'story-5',
             type: 'class_balancing',
             params: {
-                annotation_source: 'dictionary',
+                target_distribution_mode: 'dictionary',
                 target_distribution: [
                     { class_name: 'cat', weight: 2 },
                     { class_name: 'dog', weight: 1 }
@@ -85,7 +86,7 @@
                 strength: 1
             },
             isExpanded: true
-        }
+        } satisfies StrategyInstance
     }}
 />
 
@@ -97,6 +98,6 @@
             type: 'diversity',
             params: { strength: 1 },
             isExpanded: false
-        }
+        } satisfies StrategyInstance
     }}
 />
