@@ -11,11 +11,29 @@
     type CollapseAt = 'sm' | 'md' | 'lg' | 'xl' | '2xl' | 'never';
 
     interface Props {
+        /** Lucide icon component rendered before the label. */
         icon?: Component<IconProps>;
+        /**
+         * Visual style of the button. One of:
+         * `default` | `destructive` | `outline` | `secondary` | `ghost` | `link`.
+         */
         variant?: ButtonVariant;
+        /**
+         * Props forwarded to the underlying shadcn button element
+         * (e.g. `onclick`, `disabled`, `title`, `type`, `class`).
+         */
         buttonProps?: ButtonProps;
+        /**
+         * Hide the label at and below the given Tailwind breakpoint while
+         * keeping the icon visible. `never` (default) keeps the label at all sizes.
+         */
         collapseAt?: CollapseAt;
+        /**
+         * When true, disables the button and shows an indeterminate linear
+         * progress bar at the bottom.
+         */
         isPending?: boolean;
+        /** Button label content. Omit for an icon-only button. */
         children?: Snippet;
     }
 
