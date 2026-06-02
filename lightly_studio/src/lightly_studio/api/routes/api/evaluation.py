@@ -13,6 +13,7 @@ from lightly_studio.models.evaluation_confusion_matrix import ConfusionMatrix
 from lightly_studio.models.evaluation_run import EvaluationRunView, EvaluationTaskType
 from lightly_studio.models.evaluation_sample_metric import EvaluationRunMetricsInfoView
 from lightly_studio.resolvers import (
+    collection_resolver,
     evaluation_annotation_metric_resolver,
     evaluation_run_resolver,
     evaluation_sample_metric_resolver,
@@ -66,12 +67,20 @@ def get_evaluation_runs(
         session=session,
         dataset_id=dataset_id,
     )
+    collection_name_by_id = collection_resolver.get_names_by_ids(
+        session=session,
+        collection_ids={run.gt_annotation_collection_id for run in runs}
+        | {run.pred_annotation_collection_id for run in runs},
+    )
+
     return [
         EvaluationRunView(
             id=run.id,
             name=run.name,
             evaluation_run_configuration=run.config_json,
             created_at=run.created_at,
+            gt_annotation_source=collection_name_by_id[run.gt_annotation_collection_id],
+            pred_annotation_source=collection_name_by_id[run.pred_annotation_collection_id],
         )
         for run in runs
     ]

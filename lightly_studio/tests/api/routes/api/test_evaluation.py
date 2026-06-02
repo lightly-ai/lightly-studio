@@ -14,7 +14,8 @@ from lightly_studio.api.routes.api.status import (
     HTTP_STATUS_OK,
 )
 from lightly_studio.models.annotation.annotation_base import AnnotationType
-from lightly_studio.models.collection import SampleType
+from lightly_studio.models.collection import CollectionTable, SampleType
+from lightly_studio.models.dataset import DatasetTable
 from lightly_studio.models.evaluation_annotation_metric import EvaluationAnnotationMetricCreate
 from lightly_studio.models.evaluation_confusion_matrix import (
     NO_GROUND_TRUTH_ROW_LABEL,
@@ -39,23 +40,37 @@ from tests.helpers_resolvers import (
 )
 
 
-def _make_evaluation_run(
+def _make_evaluation_run(  # noqa: PLR0913
     *,
     run_id: UUID,
     name: str,
     config_json: dict[str, Any],
     created_at: datetime,
+    gt_annotation_collection_id: UUID | None = None,
+    pred_annotation_collection_id: UUID | None = None,
     task_type: EvaluationTaskType = EvaluationTaskType.OBJECT_DETECTION,
 ) -> EvaluationRunTable:
     return EvaluationRunTable(
         id=run_id,
         name=name,
-        gt_annotation_collection_id=uuid4(),
-        pred_annotation_collection_id=uuid4(),
+        gt_annotation_collection_id=gt_annotation_collection_id or uuid4(),
+        pred_annotation_collection_id=pred_annotation_collection_id or uuid4(),
         task_type=task_type,
         config_json=config_json,
         created_at=created_at,
     )
+
+
+def _insert_collection(session: Session, dataset_id: UUID, name: str) -> UUID:
+    collection = CollectionTable(
+        name=name,
+        dataset_id=dataset_id,
+        sample_type=SampleType.ANNOTATION,
+    )
+    session.add(collection)
+    session.commit()
+    session.refresh(collection)
+    return collection.collection_id
 
 
 def test_get_evaluation_sample_metrics_info(test_client: TestClient, mocker: MockerFixture) -> None:
@@ -118,8 +133,19 @@ def test_get_evaluation_sample_metrics_info__empty_response(
     assert response.json() == []
 
 
-def test_get_evaluation_runs(test_client: TestClient, mocker: MockerFixture) -> None:
-    dataset_id = uuid4()
+def test_get_evaluation_runs(
+    test_client: TestClient, db_session: Session, mocker: MockerFixture
+) -> None:
+    dataset = DatasetTable()
+    db_session.add(dataset)
+    db_session.commit()
+    db_session.refresh(dataset)
+
+    gt_1_id = _insert_collection(db_session, dataset.dataset_id, "gt_v1")
+    pred_1_id = _insert_collection(db_session, dataset.dataset_id, "pred_v1")
+    gt_2_id = _insert_collection(db_session, dataset.dataset_id, "gt_v2")
+    pred_2_id = _insert_collection(db_session, dataset.dataset_id, "pred_v2")
+
     run_1_id = uuid4()
     run_2_id = uuid4()
     run_1_created_at = datetime(2026, 5, 18, 10, 0, 0, tzinfo=timezone.utc)
@@ -130,12 +156,16 @@ def test_get_evaluation_runs(test_client: TestClient, mocker: MockerFixture) -> 
             name="run_1",
             config_json={"iou_threshold": 0.5, "classwise": True},
             created_at=run_1_created_at,
+            gt_annotation_collection_id=gt_1_id,
+            pred_annotation_collection_id=pred_1_id,
         ),
         _make_evaluation_run(
             run_id=run_2_id,
             name="run_2",
             config_json={},
             created_at=run_2_created_at,
+            gt_annotation_collection_id=gt_2_id,
+            pred_annotation_collection_id=pred_2_id,
         ),
     ]
     mocker.patch(
@@ -143,7 +173,7 @@ def test_get_evaluation_runs(test_client: TestClient, mocker: MockerFixture) -> 
         return_value=mock_runs,
     )
 
-    response = test_client.get(f"/api/datasets/{dataset_id}/evaluation/runs")
+    response = test_client.get(f"/api/datasets/{dataset.dataset_id}/evaluation/runs")
 
     assert response.status_code == HTTP_STATUS_OK
     data = response.json()
@@ -153,12 +183,16 @@ def test_get_evaluation_runs(test_client: TestClient, mocker: MockerFixture) -> 
             "name": "run_1",
             "evaluation_run_configuration": {"iou_threshold": 0.5, "classwise": True},
             "created_at": "2026-05-18T10:00:00Z",
+            "gt_annotation_source": "gt_v1",
+            "pred_annotation_source": "pred_v1",
         },
         {
             "id": str(run_2_id),
             "name": "run_2",
             "evaluation_run_configuration": {},
             "created_at": "2026-05-17T09:30:00Z",
+            "gt_annotation_source": "gt_v2",
+            "pred_annotation_source": "pred_v2",
         },
     ]
 
