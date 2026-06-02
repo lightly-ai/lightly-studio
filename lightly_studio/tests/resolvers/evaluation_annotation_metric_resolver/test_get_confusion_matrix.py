@@ -22,7 +22,7 @@ from tests.resolvers.evaluation_sample_metric_resolver import (
 )
 
 
-def test_get_object_detection_confusion_matrix__empty_run(
+def test_get_confusion_matrix__empty_run(
     db_session: Session,
 ) -> None:
     dataset = create_collection(session=db_session)
@@ -30,7 +30,7 @@ def test_get_object_detection_confusion_matrix__empty_run(
         session=db_session,
         dataset_collection_id=dataset.collection_id,
     )
-    matrix = evaluation_annotation_metric_resolver.get_object_detection_confusion_matrix(
+    matrix = evaluation_annotation_metric_resolver.get_confusion_matrix(
         session=db_session,
         evaluation_run_id=run.id,
     )
@@ -39,7 +39,7 @@ def test_get_object_detection_confusion_matrix__empty_run(
     assert matrix.counts == []
 
 
-def test_get_object_detection_confusion_matrix__aggregates_tp_fp_fn(
+def test_get_confusion_matrix__aggregates_tp_fp_fn(
     db_session: Session,
 ) -> None:
     dataset = create_collection(session=db_session)
@@ -106,7 +106,7 @@ def test_get_object_detection_confusion_matrix__aggregates_tp_fp_fn(
         ],
     )
 
-    matrix = evaluation_annotation_metric_resolver.get_object_detection_confusion_matrix(
+    matrix = evaluation_annotation_metric_resolver.get_confusion_matrix(
         session=db_session,
         evaluation_run_id=run.id,
     )
@@ -128,7 +128,7 @@ def test_get_object_detection_confusion_matrix__aggregates_tp_fp_fn(
     ]
 
 
-def test_get_object_detection_confusion_matrix__class_only_in_gt(
+def test_get_confusion_matrix__class_only_in_gt(
     db_session: Session,
 ) -> None:
     """GT contains a class that the predictions never produce.
@@ -190,7 +190,7 @@ def test_get_object_detection_confusion_matrix__class_only_in_gt(
         ],
     )
 
-    matrix = evaluation_annotation_metric_resolver.get_object_detection_confusion_matrix(
+    matrix = evaluation_annotation_metric_resolver.get_confusion_matrix(
         session=db_session,
         evaluation_run_id=run.id,
     )
@@ -204,7 +204,7 @@ def test_get_object_detection_confusion_matrix__class_only_in_gt(
     ]
 
 
-def test_get_object_detection_confusion_matrix__class_only_in_pred(
+def test_get_confusion_matrix__class_only_in_pred(
     db_session: Session,
 ) -> None:
     """Predictions contain a class the ground truth never has.
@@ -266,7 +266,7 @@ def test_get_object_detection_confusion_matrix__class_only_in_pred(
         ],
     )
 
-    matrix = evaluation_annotation_metric_resolver.get_object_detection_confusion_matrix(
+    matrix = evaluation_annotation_metric_resolver.get_confusion_matrix(
         session=db_session,
         evaluation_run_id=run.id,
     )
@@ -280,7 +280,7 @@ def test_get_object_detection_confusion_matrix__class_only_in_pred(
     ]
 
 
-def test_get_object_detection_confusion_matrix__no_fp_or_fn_keeps_synthetic_axes(
+def test_get_confusion_matrix__no_fp_or_fn_keeps_synthetic_axes(
     db_session: Session,
 ) -> None:
     """All ground truths are matched perfectly with no extras on either side.
@@ -325,7 +325,7 @@ def test_get_object_detection_confusion_matrix__no_fp_or_fn_keeps_synthetic_axes
         ],
     )
 
-    matrix = evaluation_annotation_metric_resolver.get_object_detection_confusion_matrix(
+    matrix = evaluation_annotation_metric_resolver.get_confusion_matrix(
         session=db_session,
         evaluation_run_id=run.id,
     )
@@ -338,10 +338,10 @@ def test_get_object_detection_confusion_matrix__no_fp_or_fn_keeps_synthetic_axes
     ]
 
 
-def test_get_object_detection_confusion_matrix__unknown_run(
+def test_get_confusion_matrix__unknown_run(
     db_session: Session,
 ) -> None:
-    matrix = evaluation_annotation_metric_resolver.get_object_detection_confusion_matrix(
+    matrix = evaluation_annotation_metric_resolver.get_confusion_matrix(
         session=db_session,
         evaluation_run_id=uuid.uuid4(),
     )
