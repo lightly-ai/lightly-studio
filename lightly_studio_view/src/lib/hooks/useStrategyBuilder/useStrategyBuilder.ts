@@ -10,7 +10,11 @@ import {
     type TypicalityParams,
     STRATEGY_OPTIONS
 } from './types';
-import { cloneStrategyParams, createStrategyInstance } from './strategyInstance';
+import {
+    cloneStrategyParams,
+    createStrategyInstance,
+    generateStrategyInstanceId
+} from './strategyInstance';
 
 const STRATEGY_TYPE_ORDER: Record<StrategyType, number> = Object.fromEntries(
     STRATEGY_OPTIONS.map((opt, i) => [opt.type, i])
@@ -79,7 +83,7 @@ export function useStrategyBuilder() {
             const source = currentInstances[index];
             const copy: StrategyInstance = {
                 ...source,
-                id: crypto.randomUUID(),
+                id: generateStrategyInstanceId(),
                 params: cloneStrategyParams(source.type, source.params),
                 isExpanded: true
             } as StrategyInstance;
