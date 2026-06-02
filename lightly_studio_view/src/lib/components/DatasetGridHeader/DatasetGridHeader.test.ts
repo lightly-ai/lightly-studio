@@ -60,6 +60,7 @@ const defaultProps = {
     compact: false,
     canSelectAll: false,
     isImages: false,
+    hasEvaluationRuns: true,
     hasMediaWithEmbeddings: false,
     collectionDatasetId: 'dataset-1',
     onSelectAll: vi.fn().mockResolvedValue(undefined),
@@ -158,9 +159,9 @@ describe('DatasetGridHeader', () => {
         expect(container.querySelector('[data-grid-search-drop-target]')).not.toBeInTheDocument();
     });
 
-    it('shows the evaluation runs toggle for image collections', () => {
+    it('shows the evaluation runs toggle for image collections with evaluations', () => {
         render(DatasetGridHeader, {
-            props: { ...defaultProps, isImages: true }
+            props: { ...defaultProps, isImages: true, hasEvaluationRuns: true }
         });
 
         expect(screen.getByTestId('toggle-evaluation-runs-button')).toBeInTheDocument();
@@ -177,7 +178,7 @@ describe('DatasetGridHeader', () => {
         const { setShowEvaluationRuns } = useGlobalStorage();
 
         render(DatasetGridHeader, {
-            props: { ...defaultProps, isImages: true }
+            props: { ...defaultProps, isImages: true, hasEvaluationRuns: true }
         });
 
         const toggle = screen.getByTestId('toggle-evaluation-runs-button');
@@ -186,6 +187,14 @@ describe('DatasetGridHeader', () => {
 
         await fireEvent.click(toggle);
         expect(setShowEvaluationRuns).toHaveBeenLastCalledWith(false);
+    });
+
+    it('hides the evaluation runs toggle when no evaluations exist', () => {
+        render(DatasetGridHeader, {
+            props: { ...defaultProps, isImages: true, hasEvaluationRuns: false }
+        });
+
+        expect(screen.queryByTestId('toggle-evaluation-runs-button')).not.toBeInTheDocument();
     });
 
     it('hides the embeddings and evaluation runs labels in compact mode', () => {
