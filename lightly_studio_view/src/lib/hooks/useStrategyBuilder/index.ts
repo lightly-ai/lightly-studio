@@ -14,3 +14,4 @@ export {
 } from './types';
 export { cloneStrategyParams, createStrategyInstance } from './strategyInstance';
 export { isStrategyInstanceValid } from './strategyValidation';
+export { useStrategyBuilder } from './useStrategyBuilder';
