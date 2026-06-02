@@ -5,6 +5,7 @@ import { beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import { SortDirection } from '$lib/api/lightly_studio_local';
 import type { MetadataInfoView } from '$lib/api/lightly_studio_local';
 import type { EvaluationRunMetricsInfoView } from '$lib/api/lightly_studio_local/types.gen';
+import type { TextEmbedding } from '$lib/hooks/useGlobalStorage';
 import OrderBy from './OrderBy.svelte';
 import type { SortExpr } from '$lib/hooks/useImagesInfinite/types';
 
@@ -12,7 +13,8 @@ const mocks = vi.hoisted(() => ({
     imageSortByValue: null as SortExpr[] | null,
     updateSortBy: vi.fn(),
     metadataInfoValue: [] as MetadataInfoView[],
-    metricsProxy: { data: null as EvaluationRunMetricsInfoView[] | null, dataUpdatedAt: 0 }
+    metricsProxy: { data: null as EvaluationRunMetricsInfoView[] | null, dataUpdatedAt: 0 },
+    textEmbeddingValue: undefined as TextEmbedding | undefined
 }));
 
 vi.mock('$lib/hooks/useImageFilters/useImageFilters', () => ({
@@ -32,6 +34,12 @@ vi.mock('$lib/hooks/useEvaluationSampleMetricsInfo/useEvaluationSampleMetricsInf
     useEvaluationSampleMetricsInfo: () => mocks.metricsProxy
 }));
 
+vi.mock('$lib/hooks/useGlobalStorage', () => ({
+    useGlobalStorage: () => ({
+        textEmbedding: readable(mocks.textEmbeddingValue)
+    })
+}));
+
 describe('OrderBy', () => {
     beforeAll(() => {
         Element.prototype.hasPointerCapture = vi.fn(() => false);
@@ -46,6 +54,7 @@ describe('OrderBy', () => {
         mocks.metadataInfoValue = [];
         mocks.metricsProxy.data = null;
         mocks.metricsProxy.dataUpdatedAt = 0;
+        mocks.textEmbeddingValue = undefined;
     });
 
     it('shows placeholder text when no field is selected', () => {
@@ -398,6 +407,32 @@ describe('OrderBy', () => {
         ];
         render(OrderBy, { props: { datasetId: 'ds1' } });
         expect(screen.getByTestId('sort-by-trigger')).toHaveTextContent('run1.precision');
+    });
+
+    it('disables the sort select when text embedding is active', () => {
+        mocks.textEmbeddingValue = { embedding: [0.1, 0.2], queryText: 'dogs' };
+        render(OrderBy, { props: { datasetId: 'ds1' } });
+        expect(screen.getByTestId('sort-by-trigger')).toBeDisabled();
+    });
+
+    it('disables the direction button when text embedding is active', () => {
+        mocks.textEmbeddingValue = { embedding: [0.1, 0.2], queryText: 'dogs' };
+        mocks.imageSortByValue = [
+            {
+                source: 'image',
+                field_name: 'file_name',
+                direction: SortDirection.ASC,
+                is_numeric: false
+            }
+        ];
+        render(OrderBy, { props: { datasetId: 'ds1' } });
+        expect(screen.getByTestId('sort-direction-button')).toBeDisabled();
+    });
+
+    it('enables the sort select when text embedding is inactive', () => {
+        mocks.textEmbeddingValue = undefined;
+        render(OrderBy, { props: { datasetId: 'ds1' } });
+        expect(screen.getByTestId('sort-by-trigger')).not.toBeDisabled();
     });
 
     it('toggles direction for an evaluation metric field', async () => {
