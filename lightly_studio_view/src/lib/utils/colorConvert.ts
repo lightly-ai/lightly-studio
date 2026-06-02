@@ -105,6 +105,9 @@ export function oklchHueWheelColor({
     chroma,
     hueOffset = 0
 }: OklchHueWheelColorParams): RGB {
+    if (index < 0 || index >= count) {
+        throw new RangeError(`index must be in [0, ${count}), got ${index}`);
+    }
     const hue = (hueOffset + (360 * index) / count) % 360;
     return oklchToRgb(lightness, chroma, hue);
 }
