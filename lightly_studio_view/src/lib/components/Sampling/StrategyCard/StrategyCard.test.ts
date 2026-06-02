@@ -119,7 +119,9 @@ describe('StrategyCard', () => {
 
             render(StrategyCard, { props: { ...defaultProps, instance } });
 
-            expect(screen.getByTestId('strategy-typicality-strength-input-abc')).toBeInTheDocument();
+            expect(
+                screen.getByTestId('strategy-typicality-strength-input-abc')
+            ).toBeInTheDocument();
         });
     });
 

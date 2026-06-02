@@ -47,6 +47,8 @@
             class="flex min-w-0 flex-1 items-start gap-2 text-left"
             onclick={onToggleExpand}
             data-testid={`strategy-card-toggle-${instance.id}`}
+            aria-expanded={instance.isExpanded}
+            aria-controls={`strategy-card-content-${instance.id}`}
         >
             {#if instance.isExpanded}
                 <ChevronDown class="mt-0.5 size-4 shrink-0" />
@@ -86,7 +88,7 @@
     </div>
 
     {#if instance.isExpanded}
-        <div class="mt-3 border-t border-border pt-3">
+        <div id={`strategy-card-content-${instance.id}`} class="mt-3 border-t border-border pt-3">
             {#if instance.type === 'diversity'}
                 <StrengthField
                     strength={instance.params.strength}
