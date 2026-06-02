@@ -8,6 +8,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- enable picker for annotation source menu
 
 - Embedding plot: added a "No coloring" option to the "Color by" dropdown to disable coloring.
 
