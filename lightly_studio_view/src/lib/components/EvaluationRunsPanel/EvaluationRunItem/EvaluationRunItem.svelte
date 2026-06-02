@@ -94,9 +94,9 @@
                 {/if}
             </section>
 
-            <section data-testid="evaluation-run-label-sources">
+            <section data-testid="evaluation-run-annotation-sources">
                 <Typography variant="subtitle2" component="h3" className="mb-2">
-                    Label sources
+                    Annotation sources
                 </Typography>
                 <div class="flex flex-wrap gap-2">
                     <div class="flex flex-col gap-0.5">
@@ -105,7 +105,7 @@
                         </Typography>
                         <span
                             class="rounded-md border border-border bg-muted px-2 py-0.5 text-sm"
-                            data-testid="evaluation-run-gt-label-source"
+                            data-testid="evaluation-run-gt-annotation-source"
                         >
                             {run.gt_annotation_source}
                         </span>
@@ -116,7 +116,7 @@
                         </Typography>
                         <span
                             class="rounded-md border border-border bg-muted px-2 py-0.5 text-sm"
-                            data-testid="evaluation-run-prediction-label-source"
+                            data-testid="evaluation-run-prediction-annotation-source"
                         >
                             {run.pred_annotation_source}
                         </span>

@@ -91,14 +91,14 @@ describe('EvaluationRunItem', () => {
         expect(onToggle).toHaveBeenCalledOnce();
     });
 
-    it('renders the GT and prediction label sources when expanded', () => {
+    it('renders the GT and prediction annotation sources when expanded', () => {
         render(EvaluationRunItem, { props: { ...defaultProps, expanded: true } });
 
-        expect(screen.getByTestId('evaluation-run-label-sources')).toBeInTheDocument();
-        expect(screen.getByTestId('evaluation-run-gt-label-source')).toHaveTextContent(
+        expect(screen.getByTestId('evaluation-run-annotation-sources')).toBeInTheDocument();
+        expect(screen.getByTestId('evaluation-run-gt-annotation-source')).toHaveTextContent(
             'ground_truth_v1'
         );
-        expect(screen.getByTestId('evaluation-run-prediction-label-source')).toHaveTextContent(
+        expect(screen.getByTestId('evaluation-run-prediction-annotation-source')).toHaveTextContent(
             'predictions_v2'
         );
     });
