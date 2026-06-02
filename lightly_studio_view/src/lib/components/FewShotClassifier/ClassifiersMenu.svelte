@@ -3,7 +3,8 @@
     import { writable, derived, get } from 'svelte/store';
     import type { ClassifierExportType } from '$lib/services/types';
     import { Tooltip } from '$lib/components/ui/tooltip';
-    import { Button, Checkbox, Alert } from '$lib/components';
+    import { Button } from '$lib/components';
+    import { Checkbox, Alert } from '$lib/components';
     import * as Select from '$lib/components/ui/select';
     import * as Dialog from '$lib/components/ui/dialog';
     import { Tabs, TabsContent, TabsList, TabsTrigger } from '$lib/components/ui/tabs';

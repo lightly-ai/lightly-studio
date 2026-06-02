@@ -75,18 +75,17 @@ interface UseClassifiersReturn {
     ) => void;
 }
 
-const { classifiers: classifiersData } = useGlobalStorage();
-
-const {
-    classifierSamples,
-    setClassifierSamples,
-    clearClassifierSamples,
-    classifierSelectedSampleIds,
-    clearClassifierSelectedSamples,
-    toggleClassifierSampleSelection
-} = useClassifierState();
-
 export function useClassifiers(): UseClassifiersReturn {
+    const { classifiers: classifiersData } = useGlobalStorage();
+    const {
+        classifierSamples,
+        setClassifierSamples,
+        clearClassifierSamples,
+        classifierSelectedSampleIds,
+        clearClassifierSelectedSamples,
+        toggleClassifierSampleSelection
+    } = useClassifierState();
+
     // Use the utility functions
     const utils = useClassifierUtils();
     const error = writable<Error | null>(null);

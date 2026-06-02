@@ -1,5 +1,6 @@
 <script lang="ts">
-    import { Button, Logo } from '$lib/components';
+    import { Logo } from '$lib/components';
+    import { Button } from '$lib/components';
     import { useHasEmbeddings } from '$lib/hooks/useHasEmbeddings/useHasEmbeddings';
     import { useSettings } from '$lib/hooks/useSettings';
     import { isInputElement } from '$lib/utils';
