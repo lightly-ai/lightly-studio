@@ -34,4 +34,42 @@ describe('StrengthField', () => {
 
         expect(onUpdate).toHaveBeenCalledWith(3);
     });
+
+    it('calls onUpdate with a negative strength value', async () => {
+        const onUpdate = vi.fn();
+
+        render(StrengthField, {
+            props: {
+                strength: 1,
+                id: 'test-strength',
+                testid: 'test-strength-input',
+                onUpdate
+            }
+        });
+
+        await fireEvent.input(screen.getByTestId('test-strength-input'), {
+            target: { value: '-1' }
+        });
+
+        expect(onUpdate).toHaveBeenCalledWith(-1);
+    });
+
+    it('does not call onUpdate when the input is empty', async () => {
+        const onUpdate = vi.fn();
+
+        render(StrengthField, {
+            props: {
+                strength: 1,
+                id: 'test-strength',
+                testid: 'test-strength-input',
+                onUpdate
+            }
+        });
+
+        await fireEvent.input(screen.getByTestId('test-strength-input'), {
+            target: { value: '' }
+        });
+
+        expect(onUpdate).not.toHaveBeenCalled();
+    });
 });

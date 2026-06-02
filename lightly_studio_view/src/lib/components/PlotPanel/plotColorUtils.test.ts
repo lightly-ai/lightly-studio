@@ -16,7 +16,6 @@ describe('plotColorUtils', () => {
 
     it('returns the highest legend category plus one', () => {
         const colorLegend = new Map([
-            [1, 'Filtered'],
             [2, 'Train'],
             [4, 'Validation']
         ]);
@@ -34,7 +33,7 @@ describe('plotColorUtils', () => {
             [3, 'Validation']
         ]);
 
-        expect(getCategoryColors(colorLegend, new Set(), true, true)).toEqual([
+        expect(getCategoryColors(colorLegend, true, true)).toEqual([
             NOT_FILTERED_COLOR,
             UNASSIGNED_COLOR,
             getColorByLabel('Train').color,
@@ -42,25 +41,12 @@ describe('plotColorUtils', () => {
         ]);
     });
 
-    it('renders hidden categories with the unassigned color when colorBy is active', () => {
-        const colorLegend = new Map([
-            [2, 'Train'],
-            [3, 'Validation']
-        ]);
-
-        expect(getCategoryColors(colorLegend, new Set([3]), true, true)).toEqual([
-            NOT_FILTERED_COLOR,
-            UNASSIGNED_COLOR,
-            getColorByLabel('Train').color,
-            UNASSIGNED_COLOR
-        ]);
-    });
-
     it('builds legend entries from categories above the reserved slots', () => {
         expect(
             getLegendEntries(
+                // A reserved category (1) is included here to verify it is excluded from the entries.
                 new Map([
-                    [1, 'Filtered'],
+                    [1, 'should be excluded'],
                     [3, 'Validation'],
                     [2, 'Train']
                 ]),
@@ -93,40 +79,22 @@ describe('plotColorUtils', () => {
         ]);
     });
 
-    it('returns unassigned color for hidden categories when colorBy is active', () => {
-        const legend = new Map([
-            [0, ''],
-            [1, ''],
-            [2, '']
-        ]);
-        const hiddenCategories = new Set([0, 2]);
-        expect(getCategoryColors(legend, hiddenCategories, false, true)).toEqual([
-            UNASSIGNED_COLOR,
-            UNASSIGNED_COLOR,
-            UNASSIGNED_COLOR
-        ]);
-    });
-
     it('uses unassigned color for category 1 when colorBy is active', () => {
         const colorLegend = new Map([
             [2, 'Train'],
             [3, 'Validation']
         ]);
 
-        expect(getCategoryColors(colorLegend, new Set(), false, true)[1]).toBe(UNASSIGNED_COLOR);
+        expect(getCategoryColors(colorLegend, false, true)[1]).toBe(UNASSIGNED_COLOR);
         expect(getCategoryColors(colorLegend)[1]).toBe(FILTERED_COLOR);
     });
 
     it('uses label colors for labeled categories when requested', () => {
-        const legend = new Map([
-            [0, 'none'],
-            [1, 'filtered'],
-            [2, 'labelName']
-        ]);
+        const legend = new Map([[2, 'labelName']]);
 
         const labelColor = getColorByLabel('labelName').color;
-        const defaultColors = getCategoryColors(legend, new Set(), false);
-        const labelColors = getCategoryColors(legend, new Set(), true, true);
+        const defaultColors = getCategoryColors(legend, false);
+        const labelColors = getCategoryColors(legend, true, true);
 
         expect(labelColors).toEqual([NOT_FILTERED_COLOR, UNASSIGNED_COLOR, labelColor]);
         expect(defaultColors[2]).not.toBe(labelColor);

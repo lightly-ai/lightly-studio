@@ -17,16 +17,20 @@
     <div class="flex items-center gap-1.5">
         <Label for={id}>Strength</Label>
         <FieldTooltip
-            content="Relative weight of this strategy in the combination. A strength of 2 gives this strategy twice the influence of one with strength 1. Must be a non-negative number."
+            content="Relative weight of this strategy in the combination. A strength of 2 gives this strategy twice the influence of one with strength 1. Negative values invert the scoring direction."
         />
     </div>
     <Input
         {id}
         type="number"
-        min="0"
         step="0.1"
         value={strength}
-        oninput={(event) => onUpdate(Number((event.currentTarget as HTMLInputElement).value))}
+        oninput={(event) => {
+            const raw = (event.currentTarget as HTMLInputElement).value;
+            const parsed = Number(raw);
+            if (raw !== '' && !Number.isNaN(parsed)) onUpdate(parsed);
+        }}
         data-testid={testid}
+        class="[appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
     />
 </div>

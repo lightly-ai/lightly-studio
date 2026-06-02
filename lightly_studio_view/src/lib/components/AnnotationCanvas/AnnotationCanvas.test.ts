@@ -3,7 +3,8 @@ import { render } from '@testing-library/svelte';
 import { tick } from 'svelte';
 import AnnotationCanvas from './AnnotationCanvas.svelte';
 
-vi.mock('$lib/utils', () => ({
+vi.mock('$lib/utils', async (importOriginal) => ({
+    ...(await importOriginal<typeof import('$lib/utils')>()),
     getColorByLabel: vi.fn(() => ({
         color: 'rgba(10, 20, 30, 0.5)',
         contrastColor: 'rgba(245, 235, 225, 1)'

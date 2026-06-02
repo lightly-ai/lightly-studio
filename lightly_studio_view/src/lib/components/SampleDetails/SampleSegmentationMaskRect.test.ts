@@ -60,7 +60,11 @@ vi.mock('$app/state', () => ({
 
 vi.mock('$lib/components/SampleAnnotation/utils', () => ({
     decodeRLEToBinaryMask: decodeRLEToBinaryMaskMock,
-    getImageCoordsFromMouse: getImageCoordsFromMouseMock,
+    getImageCoordsFromMouse: getImageCoordsFromMouseMock
+}));
+
+vi.mock('$lib/utils/colorConvert', async (importOriginal) => ({
+    ...(await importOriginal<typeof import('$lib/utils/colorConvert')>()),
     withAlpha: withAlphaMock
 }));
 
