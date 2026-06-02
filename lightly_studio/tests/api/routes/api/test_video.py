@@ -260,7 +260,7 @@ def test_count_video_frame_annotations_by_video_collection(
     video_frame_id = video_frames_data.frame_sample_ids[0]
     video_frame_id_1 = video_frames_data_1.frame_sample_ids[0]
 
-    # Create annotations labels
+    # Create annotation classes
     car_label = create_annotation_label(
         session=db_session,
         root_collection_id=collection_id,

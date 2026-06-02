@@ -242,7 +242,7 @@ export function useClassifiers(): UseClassifiersReturn {
                     // Show toast for each classifier run
                     toast.success(
                         `Classifier "${classifier.classifier_name}" completed successfully. ` +
-                            `New labels added: ${generatedLabels.join(', ')}. ` +
+                            `New annotation classes added: ${generatedLabels.join(', ')}. ` +
                             `Annotations have been added to your collection.`,
                         {
                             duration: 10000

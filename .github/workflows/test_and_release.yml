@@ -20,25 +20,25 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout Code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         with:
           submodules: recursive
 
       # Authenticate to download dev versions of lightly-mundig.
       - name: Authenticate with GCP
-        uses: 'google-github-actions/auth@v2'
+        uses: 'google-github-actions/auth@v3'
         with:
           project_id: boris-250909
           credentials_json: ${{ secrets.GCP_LIGHTLY_STUDIO_CI_READONLY }}
 
       - name: Set Up uv
-        uses: astral-sh/setup-uv@v6
+        uses: astral-sh/setup-uv@v8.1.0
         with:
           version: "0.8.17"
           enable-cache: true
 
       - name: Set Up Python
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v6
         with:
           python-version: "3.9"
 
@@ -55,23 +55,23 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout Code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         with:
           submodules: recursive
 
       - name: Authenticate with GCP
-        uses: 'google-github-actions/auth@v2'
+        uses: 'google-github-actions/auth@v3'
         with:
           project_id: boris-250909
           credentials_json: ${{ secrets.GCP_LIGHTLY_STUDIO_CI_READONLY }}
 
       - name: Set Up Python
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v6
         with:
           python-version: "3.9"
 
       - name: Set Up uv
-        uses: astral-sh/setup-uv@v6
+        uses: astral-sh/setup-uv@v8.1.0
         with:
           version: "0.8.17"
           python-version: "3.9"
@@ -125,25 +125,25 @@ jobs:
             run_view_tests: false
     steps:
       - name: Checkout Code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         with:
           submodules: recursive
 
       # Authenticate to download dev versions of lightly-mundig.
       - name: Authenticate with GCP
-        uses: 'google-github-actions/auth@v2'
+        uses: 'google-github-actions/auth@v3'
         with:
           project_id: boris-250909
           credentials_json: ${{ secrets.GCP_LIGHTLY_STUDIO_CI_READONLY }}
 
       - name: Set Up uv
-        uses: astral-sh/setup-uv@v6
+        uses: astral-sh/setup-uv@v8.1.0
         with:
           version: "0.8.17"
           enable-cache: true
 
       - name: Set Up Python
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v6
         with:
           python-version: ${{ matrix.python }}
 
@@ -152,6 +152,13 @@ jobs:
         env:
           UV_PYTHON: ${{ matrix.python }}
         run: make install-optional-deps
+
+      - name: Check Alembic migrations
+        if: matrix.database == 'Postgres'
+        working-directory: lightly_studio
+        env:
+          UV_PYTHON: ${{ matrix.python }}
+        run: make migration-check-postgresql
 
       - name: Run Tests for LightlyStudio
         working-directory: lightly_studio

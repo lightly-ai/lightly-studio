@@ -157,7 +157,7 @@ test('text search stays active until submit or explicit clear', async ({ page, s
     await expect(searchInput).toHaveValue('');
 });
 
-test('Diversity selection creates tag with correct number of samples', async ({
+test('Diversity sampling creates tag with correct number of samples', async ({
     page,
     samplesPage
 }) => {
@@ -165,26 +165,24 @@ test('Diversity selection creates tag with correct number of samples', async ({
 
     // Generate unique tag name to avoid conflicts.
     const timestamp = Date.now();
-    const selectionTagName = `diversity_selection_${timestamp}`;
+    const samplingTagName = `diversity_sampling_${timestamp}`;
     const nSamples = 10;
 
-    // Create diversity selection.
-    await samplesPage.createDiversitySelection(nSamples, selectionTagName);
+    // Create diversity sampling.
+    await samplesPage.createDiversitySampling(nSamples, samplingTagName);
 
     // Verify success toast appears.
-    await expect(page.getByText('Selection created successfully')).toBeVisible({ timeout: 10000 });
+    await expect(page.getByText('Sampling created successfully')).toBeVisible({ timeout: 10000 });
 
     // Verify the new tag appears in the tags list.
     const tagNames = await samplesPage.getTagNames();
-    expect(tagNames).toContain(selectionTagName);
+    expect(tagNames).toContain(samplingTagName);
 
-    // Filter by the new tag and verify the correct number of samples.
-    await samplesPage.pressTag(selectionTagName);
-    const sampleCount = await samplesPage.getSamples().count();
-    expect(sampleCount).toBe(nSamples);
+    // The newly created sampling tag is already applied, so the grid should show the subset.
+    await expect(samplesPage.getSamples()).toHaveCount(nSamples, { timeout: 10000 });
 });
 
-test('Typicality selection creates tag with correct number of samples', async ({
+test('Typicality sampling creates tag with correct number of samples', async ({
     page,
     samplesPage
 }) => {
@@ -192,38 +190,76 @@ test('Typicality selection creates tag with correct number of samples', async ({
 
     // Generate unique tag name to avoid conflicts.
     const timestamp = Date.now();
-    const selectionTagName = `typicality_selection_${timestamp}`;
+    const samplingTagName = `typicality_sampling_${timestamp}`;
     const nSamples = 10;
 
     // Setup API response listeners to validate the two-step flow.
     const typicalityPromise = page.waitForResponse(
         (response) => response.url().includes('/metadata/typicality') && response.status() === 204
     );
-    const selectionPromise = page.waitForResponse(
-        (response) => response.url().includes('/selection') && response.status() === 204
+    const samplingPromise = page.waitForResponse(
+        (response) => response.url().includes('/sampling') && response.status() === 204
     );
 
-    // Create typicality selection.
-    await samplesPage.createTypicalitySelection(nSamples, selectionTagName);
+    // Create typicality sampling.
+    await samplesPage.createTypicalitySampling(nSamples, samplingTagName);
 
     // Verify both API calls happened in sequence.
     await typicalityPromise;
-    await selectionPromise;
+    await samplingPromise;
 
     // Verify success toast appears.
-    await expect(page.getByText('Selection created successfully')).toBeVisible({ timeout: 10000 });
+    await expect(page.getByText('Sampling created successfully')).toBeVisible({ timeout: 10000 });
 
     // Verify the new tag appears in the tags list.
     const tagNames = await samplesPage.getTagNames();
-    expect(tagNames).toContain(selectionTagName);
+    expect(tagNames).toContain(samplingTagName);
 
-    // Filter by the new tag and verify the correct number of samples.
-    await samplesPage.pressTag(selectionTagName);
-    const sampleCount = await samplesPage.getSamples().count();
-    expect(sampleCount).toBe(nSamples);
+    // The newly created sampling tag is already applied, so the grid should show the subset.
+    await expect(samplesPage.getSamples()).toHaveCount(nSamples, { timeout: 10000 });
 });
 
-test('Selection shows error toast when tag already exists', async ({ page, samplesPage }) => {
+test('Similarity sampling creates tag with correct number of samples', async ({
+    page,
+    samplesPage
+}) => {
+    const timestamp = Date.now();
+    const queryTagName = `similarity_query_tag_${timestamp}`;
+    const samplingTagName = `similarity_sampling_${timestamp}`;
+    const nSamples = 5;
+
+    await samplesPage.getSampleByIndex(0).click();
+    await samplesPage.createTag(queryTagName);
+
+    const queryTagId = await samplesPage.getTagIdByName(queryTagName);
+    expect(queryTagId).toBeTruthy();
+
+    const similarityPromise = page.waitForResponse(
+        (response) => response.url().includes('/metadata/similarity') && response.status() === 200
+    );
+    const samplingPromise = page.waitForResponse(
+        (response) => response.url().includes('/sampling') && response.status() === 204
+    );
+
+    await samplesPage.createSampling(
+        'similarity',
+        nSamples,
+        samplingTagName,
+        queryTagId ?? undefined
+    );
+
+    await similarityPromise;
+    await samplingPromise;
+
+    await expect(page.getByText('Sampling created successfully')).toBeVisible({ timeout: 10000 });
+
+    const tagNames = await samplesPage.getTagNames();
+    expect(tagNames).toContain(samplingTagName);
+
+    await expect(samplesPage.getSamples()).toHaveCount(nSamples, { timeout: 10000 });
+});
+
+test('Sampling shows error toast when tag already exists', async ({ page, samplesPage }) => {
     // samplesPage fixture automatically navigates and loads samples
 
     // Generate unique tag name to avoid conflicts.
@@ -232,10 +268,10 @@ test('Selection shows error toast when tag already exists', async ({ page, sampl
     const nSamples = 5;
 
     // Create the tag once (using diversity).
-    await samplesPage.createDiversitySelection(nSamples, duplicateTagName);
+    await samplesPage.createDiversitySampling(nSamples, duplicateTagName);
 
     // Wait for success toast.
-    await expect(page.getByText('Selection created successfully')).toBeVisible({ timeout: 10000 });
+    await expect(page.getByText('Sampling created successfully')).toBeVisible({ timeout: 10000 });
 
     // Verify the new tag appears in the tags list.
     const tagNames = await samplesPage.getTagNames();
@@ -245,16 +281,16 @@ test('Selection shows error toast when tag already exists', async ({ page, sampl
     const strategies = ['diversity', 'typicality'] as const;
 
     for (const strategy of strategies) {
-        // Try to create selection with the duplicate tag name.
-        await samplesPage.createSelection(strategy, nSamples, duplicateTagName);
+        // Try to create sampling with the duplicate tag name.
+        await samplesPage.createSampling(strategy, nSamples, duplicateTagName);
 
         // Verify error toast appears with tag name in message.
         await expect(
             page.getByText(`Tag with name ${duplicateTagName} already exists`)
         ).toBeVisible({ timeout: 10000 });
 
-        // Close the selection dialog to reset for the next iteration.
-        await pressButton(page, 'selection-dialog-cancel');
+        // Close the sampling dialog to reset for the next iteration.
+        await pressButton(page, 'sampling-dialog-cancel');
     }
 });
 

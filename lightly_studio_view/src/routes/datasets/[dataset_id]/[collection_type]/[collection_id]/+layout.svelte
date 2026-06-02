@@ -11,13 +11,12 @@
     } from '$lib/components';
     import QueryEditorPanel from '$lib/components/QueryEditorPanel/QueryEditorPanel.svelte';
     import Separator from '$lib/components/ui/separator/separator.svelte';
-    import { SlidersHorizontal, GripVertical } from '@lucide/svelte';
+    import { GripVertical, SlidersHorizontal } from '@lucide/svelte';
     import { onDestroy, onMount } from 'svelte';
     import { toStore } from 'svelte/store';
     import { Header } from '$lib/components';
     import MenuDialogHost from '$lib/components/Header/MenuDialogHost.svelte';
 
-    import Segment from '$lib/components/Segment/Segment.svelte';
     import { useHasEmbeddings } from '$lib/hooks/useHasEmbeddings/useHasEmbeddings';
     import { useHideAnnotations } from '$lib/hooks/useHideAnnotations';
     import { useAnnotationLabels } from '$lib/hooks/useAnnotationLabels/useAnnotationLabels';
@@ -58,7 +57,7 @@
         buildVideoFrameAnnotationCountsFilter
     } from '$lib/utils/buildAnnotationCountsFilters';
     import EmbeddingSelectionFilterItem from '$lib/components/EmbeddingSelectionFilterItem/EmbeddingSelectionFilterItem.svelte';
-    import { useSelectionSummary, useFeatureFlags } from '$lib/hooks';
+    import { useSelectionSummary } from '$lib/hooks';
     import { useSelectAll } from '$lib/hooks/useSelectAll/useSelectAll';
     import { isInputElement } from '$lib/utils';
     import { shutdownMaskRendererPool } from '$lib/workers/maskRendererPool';
@@ -76,6 +75,7 @@
         }
     } = $derived(data);
 
+    // The dataset ID actually contains the collection ID.
     const datasetId = $derived(page.params.dataset_id!);
     const collectionId = $derived(page.params.collection_id!);
     const collectionIdStore = toStore(() => collectionId);
@@ -88,15 +88,15 @@
     const {
         retrieveParentCollection,
         collections,
-        showPlot,
-        showEvaluationRuns,
-        setShowEvaluationRuns,
+        activePanel,
+        setActivePanel,
         filteredSampleCount,
         filteredAnnotationCount
     } = useGlobalStorage();
 
     const evaluationRunsQuery = useEvaluationRuns(() => ({ datasetId: collection.dataset_id }));
     const evaluationRuns = $derived(evaluationRunsQuery.data ?? []);
+    const hasEvaluationRuns = $derived(evaluationRuns.length > 0);
 
     const parentCollection = $derived.by(() =>
         retrieveParentCollection($collections, collectionId)
@@ -305,11 +305,7 @@
         isImages || isAnnotations || isVideos || isVideoFrames || isGroups
     );
 
-    const { featureFlags } = useFeatureFlags();
-    const isQueryFilterEnabled = $derived($featureFlags.includes('query_filter'));
-    let isQueryFilterEditing = $state(false);
-
-    const isSidePanelOpen = $derived($showPlot || $showEvaluationRuns);
+    const isSidePanelOpen = $derived($activePanel !== 'none');
 </script>
 
 <div class="flex-none">
@@ -328,10 +324,17 @@
                         <div
                             class="min-h-0 flex-1 space-y-2 overflow-y-auto px-4 pb-2 dark:[color-scheme:dark]"
                         >
-                            {#if isQueryFilterEnabled}
+                            <h2 class="flex items-center space-x-2 py-2 text-lg font-semibold">
+                                <SlidersHorizontal class="size-5" />
+                                <span>Filters</span>
+                            </h2>
+
+                            {#if isImages}
                                 <QueryControl
-                                    onToggle={() => {
-                                        isQueryFilterEditing = !isQueryFilterEditing;
+                                    onOpen={() => {
+                                        setActivePanel(
+                                            $activePanel === 'queryEditor' ? 'none' : 'queryEditor'
+                                        );
                                     }}
                                 />
                             {/if}
@@ -339,31 +342,25 @@
                             <div>
                                 <TagsMenu collection_id={collectionId} {gridType} />
                             </div>
-                            <Segment title="Filters" icon={SlidersHorizontal}>
-                                <div class="space-y-2">
-                                    <EmbeddingSelectionFilterItem
-                                        {collectionIdStore}
-                                        {isVideos}
-                                        {isImages}
-                                    />
-                                    {#if isImages}
-                                        <AnnotationCollectionsMenu {collectionId} />
-                                    {/if}
-                                    <LabelsMenu
-                                        {annotationFilterRows}
-                                        onToggleAnnotationFilter={toggleAnnotationFilterSelection}
-                                    />
 
-                                    {#if isImages || isVideos || isVideoFrames}
-                                        {#key collectionId}
-                                            <CombinedMetadataDimensionsFilters
-                                                {isVideos}
-                                                {isVideoFrames}
-                                            />
-                                        {/key}
-                                    {/if}
-                                </div>
-                            </Segment>
+                            <EmbeddingSelectionFilterItem
+                                {collectionIdStore}
+                                {isVideos}
+                                {isImages}
+                            />
+                            {#if isImages}
+                                <AnnotationCollectionsMenu {collectionId} />
+                            {/if}
+                            <LabelsMenu
+                                {annotationFilterRows}
+                                onToggleAnnotationFilter={toggleAnnotationFilterSelection}
+                            />
+
+                            {#if isImages || isVideos || isVideoFrames}
+                                {#key collectionId}
+                                    <CombinedMetadataDimensionsFilters {isVideos} {isVideoFrames} />
+                                {/key}
+                            {/if}
                         </div>
                     </div>
                 </div>
@@ -374,8 +371,9 @@
                     <DatasetGridHeader
                         {canSelectAll}
                         {isImages}
+                        {hasEvaluationRuns}
                         {hasMediaWithEmbeddings}
-                        {datasetId}
+                        collectionDatasetId={collection.dataset_id}
                         compact={isSidePanelOpen}
                         onSelectAll={selectAllHandle.handleSelectAll}
                         searchImage={$searchImage}
@@ -407,7 +405,7 @@
                 </PaneResizer>
             {/snippet}
 
-            {#if $showEvaluationRuns}
+            {#if $activePanel === 'evaluationRuns' && hasEvaluationRuns}
                 <PaneGroup direction="horizontal" class="flex-1">
                     <Pane defaultSize={65} minSize={35} class="flex">
                         <div
@@ -422,7 +420,7 @@
                     <Pane defaultSize={35} minSize={25} class="flex min-h-0 flex-col">
                         {#await import('$lib/components/EvaluationRunsPanel/EvaluationRunsPanel.svelte') then { default: EvaluationRunsPanel }}
                             <EvaluationRunsPanel
-                                onClose={() => setShowEvaluationRuns(false)}
+                                onClose={() => setActivePanel('none')}
                                 {evaluationRuns}
                                 isLoading={evaluationRunsQuery.isLoading}
                                 error={evaluationRunsQuery.error?.message}
@@ -430,7 +428,7 @@
                         {/await}
                     </Pane>
                 </PaneGroup>
-            {:else if (isImages || isVideos) && $showPlot}
+            {:else if $activePanel === 'embeddingPlot' && (isImages || isVideos)}
                 <!-- When plot is shown, use PaneGroup for the main content + plot -->
                 <PaneGroup direction="horizontal" class="flex-1">
                     <Pane defaultSize={50} minSize={30} class="flex">
@@ -440,8 +438,9 @@
                             <DatasetGridHeader
                                 {canSelectAll}
                                 {isImages}
+                                {hasEvaluationRuns}
                                 {hasMediaWithEmbeddings}
-                                {datasetId}
+                                collectionDatasetId={collection.dataset_id}
                                 compact={isSidePanelOpen}
                                 onSelectAll={selectAllHandle.handleSelectAll}
                                 searchImage={$searchImage}
@@ -471,12 +470,7 @@
                         {/await}
                     </Pane>
                 </PaneGroup>
-            {:else if !isQueryFilterEnabled || !isQueryFilterEditing}
-                <!-- When plot is hidden or not samples view, show normal layout -->
-                <div class="relative flex flex-1 flex-col space-y-4 rounded-[1vw] bg-card p-4 pb-2">
-                    {@render mainContent()}
-                </div>
-            {:else}
+            {:else if $activePanel === 'queryEditor' && isImages}
                 <PaneGroup direction="horizontal" class="flex-1">
                     <Pane defaultSize={65} minSize={35} class="flex">
                         <div
@@ -489,9 +483,14 @@
                     {@render paneResizer()}
 
                     <Pane defaultSize={35} minSize={25} class="flex min-h-0 flex-col">
-                        <QueryEditorPanel />
+                        <QueryEditorPanel onClose={() => setActivePanel('none')} />
                     </Pane>
                 </PaneGroup>
+            {:else}
+                <!-- Normal layout (no side panel) -->
+                <div class="relative flex flex-1 flex-col space-y-4 rounded-[1vw] bg-card p-4 pb-2">
+                    {@render mainContent()}
+                </div>
             {/if}
             {#if hasEmbeddings}
                 {#await import('$lib/components/FewShotClassifier/CreateClassifierDialog.svelte') then { default: CreateClassifierDialog }}

@@ -32,7 +32,7 @@ class ObjectDetectionEvaluationConfig(BaseModel):
         iou_threshold: IoU threshold used by object-detection evaluators.
             Stored in the run config for reproducibility.
         classwise: If True, match predictions and ground truths only within the
-            same class label. If False, match globally across all labels.
+            same annotation class. If False, match globally across all annotation classes.
     """
 
     iou_threshold: float = Field(default=0.5, ge=0.0, le=1.0)
@@ -47,7 +47,7 @@ class EvaluationResult(BaseModel):
 
     Attributes:
         sample_count: Number of samples included in the evaluation.
-        gt_annotation_count: Number of ground-truth annotations used.
+        gt_annotation_count: Number of ground truth annotations used.
         pred_annotation_count: Number of prediction annotations used.
     """
 
@@ -69,6 +69,13 @@ class ClassificationEvaluationConfig(BaseModel):
     """Configuration for classification evaluation runs.
 
     Currently has no fields. Placeholder for future task-specific options.
+    """
+
+
+class SemanticSegmentationEvaluationConfig(BaseModel):
+    """Configuration for semantic-segmentation evaluation runs.
+
+    Currently has no fields. Placeholder for future implementation.
     """
 
 
@@ -96,16 +103,16 @@ class ImageDatasetEvaluate:
     def object_detection(
         self,
         name: str,
-        gt_collection_name: str,
-        pred_collection_name: str,
+        gt_annotation_source: str,
+        pred_annotation_source: str,
         config: ObjectDetectionEvaluationConfig | None = None,
     ) -> EvaluationResult:
         """Create an object-detection evaluation run and persist per-image metrics.
 
         Args:
             name: Display name of the evaluation run.
-            gt_collection_name: Name of the annotation collection containing ground truth labels.
-            pred_collection_name: Name of the annotation collection containing predictions.
+            gt_annotation_source: Name of the annotation source containing ground truth annotations.
+            pred_annotation_source: Name of the annotation source containing predictions.
             config: Optional object-detection evaluation config. If omitted,
                 defaults are used.
 
@@ -115,8 +122,8 @@ class ImageDatasetEvaluate:
         config = config or ObjectDetectionEvaluationConfig()
         data = self._prepare_evaluation_data(
             name=name,
-            gt_collection_name=gt_collection_name,
-            pred_collection_name=pred_collection_name,
+            gt_annotation_source=gt_annotation_source,
+            pred_annotation_source=pred_annotation_source,
             task_type=EvaluationTaskType.OBJECT_DETECTION,
             config_json=config.model_dump(),
         )
@@ -131,16 +138,16 @@ class ImageDatasetEvaluate:
     def classification(
         self,
         name: str,
-        gt_collection_name: str,
-        pred_collection_name: str,
+        gt_annotation_source: str,
+        pred_annotation_source: str,
         config: ClassificationEvaluationConfig | None = None,
     ) -> EvaluationResult:
         """Create a classification evaluation run and persist per-image metrics.
 
         Args:
             name: Display name of the evaluation run.
-            gt_collection_name: Name of the annotation collection containing ground truth labels.
-            pred_collection_name: Name of the annotation collection containing predictions.
+            gt_annotation_source: Name of the annotation source containing ground truth annotations.
+            pred_annotation_source: Name of the annotation source containing predictions.
             config: Optional classification evaluation config. If omitted,
                 defaults are used.
 
@@ -150,8 +157,8 @@ class ImageDatasetEvaluate:
         config = config or ClassificationEvaluationConfig()
         data = self._prepare_evaluation_data(
             name=name,
-            gt_collection_name=gt_collection_name,
-            pred_collection_name=pred_collection_name,
+            gt_annotation_source=gt_annotation_source,
+            pred_annotation_source=pred_annotation_source,
             task_type=EvaluationTaskType.CLASSIFICATION,
             config_json=config.model_dump(),
         )
@@ -161,11 +168,40 @@ class ImageDatasetEvaluate:
         )
         return EvaluationResult.from_evaluation_data(data)
 
+    def semantic_segmentation(
+        self,
+        name: str,
+        gt_annotation_source: str,
+        pred_annotation_source: str,
+        config: SemanticSegmentationEvaluationConfig | None = None,
+    ) -> EvaluationResult:
+        """Create a semantic segmentation evaluation run.
+
+        Args:
+            name: Display name of the evaluation run.
+            gt_annotation_source: Name of the annotation source containing ground truth labels.
+            pred_annotation_source: Name of the annotation source containing predictions.
+            config: Optional semantic segmentation evaluation config. If omitted,
+                defaults are used.
+
+        Returns:
+            Summary of the samples and annotations used by the evaluation.
+        """
+        config = config or SemanticSegmentationEvaluationConfig()
+        data = self._prepare_evaluation_data(
+            name=name,
+            gt_annotation_source=gt_annotation_source,
+            pred_annotation_source=pred_annotation_source,
+            task_type=EvaluationTaskType.SEMANTIC_SEGMENTATION,
+            config_json=config.model_dump(),
+        )
+        return EvaluationResult.from_evaluation_data(data)
+
     def _prepare_evaluation_data(
         self,
         name: str,
-        gt_collection_name: str,
-        pred_collection_name: str,
+        gt_annotation_source: str,
+        pred_annotation_source: str,
         task_type: EvaluationTaskType,
         config_json: dict[str, Any],
     ) -> EvaluationData:
@@ -177,8 +213,8 @@ class ImageDatasetEvaluate:
         annotation_type = validators.get_annotation_type_for_task(task_type)
         gt_collection_id, pred_collection_id, evaluation_run = self._create_evaluation_run(
             name=name,
-            gt_collection_name=gt_collection_name,
-            pred_collection_name=pred_collection_name,
+            gt_annotation_source=gt_annotation_source,
+            pred_annotation_source=pred_annotation_source,
             task_type=task_type,
             config_json=config_json,
         )
@@ -221,8 +257,8 @@ class ImageDatasetEvaluate:
     def _create_evaluation_run(
         self,
         name: str,
-        gt_collection_name: str,
-        pred_collection_name: str,
+        gt_annotation_source: str,
+        pred_annotation_source: str,
         task_type: EvaluationTaskType,
         config_json: dict[str, Any],
     ) -> tuple[UUID, UUID, EvaluationRunTable]:
@@ -230,9 +266,9 @@ class ImageDatasetEvaluate:
 
         Args:
             name: Display name of the evaluation run.
-            gt_collection_name: Name of the annotation collection containing ground
-                truth labels.
-            pred_collection_name: Name of the annotation collection containing
+            gt_annotation_source: Name of the annotation source containing
+                ground truth annotations.
+            pred_annotation_source: Name of the annotation source containing
                 predictions.
             task_type: Evaluation task type; determines the expected annotation type
                 for both collections and is stored on the run.
@@ -244,13 +280,13 @@ class ImageDatasetEvaluate:
         gt_collection_id = validators.resolve_and_validate_collection(
             session=self.session,
             collection_id=self.collection_id,
-            collection_name=gt_collection_name,
+            collection_name=gt_annotation_source,
             task_type=task_type,
         )
         pred_collection_id = validators.resolve_and_validate_collection(
             session=self.session,
             collection_id=self.collection_id,
-            collection_name=pred_collection_name,
+            collection_name=pred_annotation_source,
             task_type=task_type,
         )
         evaluation_run = evaluation_run_resolver.create(

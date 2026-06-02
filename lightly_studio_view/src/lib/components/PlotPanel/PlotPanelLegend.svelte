@@ -1,5 +1,6 @@
 <script lang="ts">
     import { cn } from '$lib/utils';
+    import { EXCLUDED_BY_FILTERS_LABEL, INCLUDED_BY_FILTERS_LABEL } from './plotCategories';
 
     interface LegendEntry {
         cat: number;
@@ -10,7 +11,8 @@
 
     interface Props {
         categoryColors: string[];
-        filteredLabel?: string;
+        excludedLabel?: string;
+        includedLabel?: string;
         legendEntries?: LegendEntry[];
         onToggleCategory?: (cat: number) => void;
         onDoubleClickCategory?: (cat: number) => void;
@@ -18,7 +20,8 @@
 
     let {
         categoryColors,
-        filteredLabel = 'Filtered',
+        excludedLabel = EXCLUDED_BY_FILTERS_LABEL,
+        includedLabel = INCLUDED_BY_FILTERS_LABEL,
         legendEntries = [],
         onToggleCategory,
         onDoubleClickCategory
@@ -26,20 +29,11 @@
 </script>
 
 <div
-    class="absolute bottom-1 left-3 flex max-h-[calc(100%-0.5rem)] flex-col items-start gap-1 overflow-y-auto rounded-md border border-white/10 bg-black/60 px-2 py-1 text-xs text-muted-foreground backdrop-blur-sm"
+    class="absolute bottom-1 left-3 flex max-h-[calc(100%-0.5rem)] max-w-48 flex-col items-start gap-1 overflow-hidden rounded-md border border-white/10 bg-black/60 px-2 py-1 text-xs text-muted-foreground backdrop-blur-sm"
     data-testid="plot-legend"
 >
-    <span class="flex items-center gap-1.5">
-        <span class="legend-dot" style={`background-color: ${categoryColors[0]}`}></span>
-        Not Filtered
-    </span>
-    <span class="flex items-center gap-1.5">
-        <span class="legend-dot" style={`background-color: ${categoryColors[1]}`}></span>
-        {filteredLabel}
-    </span>
-    {#if legendEntries.length > 0}
-        <span class="my-0.5 w-full border-t border-white/10"></span>
-        {#each legendEntries as entry (entry.cat)}
+    <div class="flex w-full flex-col gap-1 overflow-y-auto dark:[color-scheme:dark]">
+        {#each legendEntries.toSorted( (a, b) => a.label.localeCompare(b.label) ) as entry (entry.cat)}
             <button
                 type="button"
                 class={cn(
@@ -53,10 +47,21 @@
                 ondblclick={() => onDoubleClickCategory?.(entry.cat)}
             >
                 <span class="legend-dot shrink-0" style={`background-color: ${entry.color}`}></span>
-                <span class="truncate">{entry.label}</span>
+                <span class="min-w-0 truncate" title={entry.label}>{entry.label}</span>
             </button>
         {/each}
-    {/if}
+        {#if legendEntries.length > 0}
+            <span class="my-0.5 w-full shrink-0 border-t border-white/10"></span>
+        {/if}
+        <span class="flex shrink-0 items-center gap-1.5">
+            <span class="legend-dot" style={`background-color: ${categoryColors[0]}`}></span>
+            {excludedLabel}
+        </span>
+        <span class="flex shrink-0 items-center gap-1.5">
+            <span class="legend-dot" style={`background-color: ${categoryColors[1]}`}></span>
+            {includedLabel}
+        </span>
+    </div>
 </div>
 
 <style>

@@ -13,7 +13,7 @@ LightlyStudio has a powerful Python interface. You can not only index datasets b
 - **Evaluation** — [Evaluation](../concepts_and_tools/evaluation.md) covers evaluation runs, per-sample metrics, and GUI visualizations.
 
 The full API reference for each module is available in the navigation sidebar:
-[Dataset](dataset.md), [Sample](sample.md), [DatasetQuery](dataset_query.md), [Selection](selection.md), [Plugin](plugin.md), [Annotation](annotation.md), [Evaluation](evaluation.md).
+[Dataset](dataset.md), [Sample](sample.md), [DatasetQuery](dataset_query.md), [Sampling](sampling.md), [Plugin](plugin.md), [Annotation](annotation.md), [Evaluation](evaluation.md).
 
 ## API Reference
 

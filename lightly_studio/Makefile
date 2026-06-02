@@ -1,4 +1,4 @@
-# Postgres E2E test configuration (for local development only, not used in CI)
+# Postgres E2E test configuration
 POSTGRES_CONTAINER_NAME := lightly-studio-postgres
 POSTGRES_PORT := 5433
 POSTGRES_USER := lightly
@@ -38,12 +38,31 @@ build: clean build-lightly_studio_view
 .PHONY: build-lightly_studio_view
 build-lightly_studio_view: export-schema export-version
 ifeq ($(OS),Windows_NT)
-	@powershell -Command "$$env:PUBLIC_POSTHOG_KEY='$(PUBLIC_POSTHOG_KEY)'; make -C ../lightly_studio_view build"
+	@powershell -Command "$$env:PUBLIC_POSTHOG_KEY='$(PUBLIC_POSTHOG_KEY)'; $(MAKE) -C ../lightly_studio_view build"
 	@powershell -Command "New-Item -ItemType Directory -Path src\\lightly_studio\\dist_lightly_studio_view_app -Force -ErrorAction SilentlyContinue | Out-Null"
 	@powershell -Command "Copy-Item -Path ..\lightly_studio_view\build\* -Destination src\lightly_studio\dist_lightly_studio_view_app\ -Recurse -Force"
 	@powershell -Command "Copy-Item -Path ..\lightly_studio_view\src\lib\version.json -Destination src\lightly_studio\dist_lightly_studio_view_app\version-info.json -Force"
 else
-	PUBLIC_POSTHOG_KEY=$(PUBLIC_POSTHOG_KEY) make -C ../lightly_studio_view build
+	PUBLIC_POSTHOG_KEY=$(PUBLIC_POSTHOG_KEY) $(MAKE) -C ../lightly_studio_view build
+	cp -r ../lightly_studio_view/build/ src/lightly_studio/dist_lightly_studio_view_app
+	cp ../lightly_studio_view/src/lib/version.json src/lightly_studio/dist_lightly_studio_view_app/version-info.json
+endif
+
+# Fast build: skips npm ci, nvm install, and langium generate in the frontend.
+.PHONY: build-dirty
+build-dirty: clean build-dirty-lightly_studio_view
+	@echo "Building a distribution package..."
+	uv build
+
+.PHONY: build-dirty-lightly_studio_view
+build-dirty-lightly_studio_view: export-schema export-version
+ifeq ($(OS),Windows_NT)
+	@powershell -Command "$$env:PUBLIC_POSTHOG_KEY='$(PUBLIC_POSTHOG_KEY)'; $(MAKE) -C ../lightly_studio_view build-dirty"
+	@powershell -Command "New-Item -ItemType Directory -Path src\\lightly_studio\\dist_lightly_studio_view_app -Force -ErrorAction SilentlyContinue | Out-Null"
+	@powershell -Command "Copy-Item -Path ..\lightly_studio_view\build\* -Destination src\lightly_studio\dist_lightly_studio_view_app\ -Recurse -Force"
+	@powershell -Command "Copy-Item -Path ..\lightly_studio_view\src\lib\version.json -Destination src\lightly_studio\dist_lightly_studio_view_app\version-info.json -Force"
+else
+	PUBLIC_POSTHOG_KEY=$(PUBLIC_POSTHOG_KEY) $(MAKE) -C ../lightly_studio_view build-dirty
 	cp -r ../lightly_studio_view/build/ src/lightly_studio/dist_lightly_studio_view_app
 	cp ../lightly_studio_view/src/lib/version.json src/lightly_studio/dist_lightly_studio_view_app/version-info.json
 endif
@@ -167,6 +186,61 @@ test-ci:
 test-postgres: build
 	@echo "Running tests against Postgres..."
 	uv run pytest --postgres
+
+# Alembic loads lightly_studio package code that expects dist_lightly_studio_view_app.
+.PHONY: mock-webapp-dist
+mock-webapp-dist:
+ifeq ($(OS),Windows_NT)
+	@powershell -Command "if (-not (Test-Path src\lightly_studio\dist_lightly_studio_view_app)) { New-Item -ItemType Directory -Path src\lightly_studio\dist_lightly_studio_view_app | Out-Null }; New-Item -ItemType File -Path src\lightly_studio\dist_lightly_studio_view_app\index.html -Force | Out-Null"
+else
+	@mkdir -p src/lightly_studio/dist_lightly_studio_view_app
+	@touch src/lightly_studio/dist_lightly_studio_view_app/index.html
+endif
+
+.PHONY: migration-upgrade-postgresql
+migration-upgrade-postgresql: start-postgres mock-webapp-dist
+	@echo "Applying Alembic migrations (upgrade head)..."
+ifeq ($(OS),Windows_NT)
+	@powershell -Command "$$env:LIGHTLY_STUDIO_DATABASE_URL='$(POSTGRES_URL)'; uv run alembic -c alembic.ini upgrade head"
+else
+	LIGHTLY_STUDIO_DATABASE_URL=$(POSTGRES_URL) uv run alembic -c alembic.ini upgrade head
+endif
+
+
+.PHONY: migration-downgrade-postgresql
+migration-downgrade-postgresql: start-postgres mock-webapp-dist
+	@echo "Downgrading Alembic by one revision (dev only)..."
+ifeq ($(OS),Windows_NT)
+	@powershell -Command "$$env:LIGHTLY_STUDIO_DATABASE_URL='$(POSTGRES_URL)'; uv run alembic -c alembic.ini downgrade -1"
+else
+	LIGHTLY_STUDIO_DATABASE_URL=$(POSTGRES_URL) uv run alembic -c alembic.ini downgrade -1
+endif
+
+# Autogenerate requires the database schema to match the current Alembic head.
+.PHONY: migration-revision-postgresql
+migration-revision-postgresql: migration-upgrade-postgresql
+ifndef MSG
+	$(error MSG is required. Example: make migration-revision-postgresql MSG=add_column)
+endif
+	@echo "Autogenerating Alembic revision..."
+ifeq ($(OS),Windows_NT)
+	@powershell -Command "$$env:LIGHTLY_STUDIO_DATABASE_URL='$(POSTGRES_URL)'; uv run alembic -c alembic.ini revision --autogenerate -m '$(MSG)'"
+else
+	LIGHTLY_STUDIO_DATABASE_URL=$(POSTGRES_URL) uv run alembic -c alembic.ini revision --autogenerate -m "$(MSG)"
+endif
+
+.PHONY: migration-check-postgresql
+migration-check-postgresql: start-postgres mock-webapp-dist
+	@echo "Checking Alembic migration chain on empty Postgres..."
+ifeq ($(OS),Windows_NT)
+	@powershell -Command "docker exec $(POSTGRES_CONTAINER_NAME) psql -U $(POSTGRES_USER) -d $(POSTGRES_DB) -c \"DROP SCHEMA public CASCADE; CREATE SCHEMA public; GRANT ALL ON SCHEMA public TO $(POSTGRES_USER); GRANT ALL ON SCHEMA public TO public;\""
+	@powershell -Command "$$env:LIGHTLY_STUDIO_DATABASE_URL='$(POSTGRES_URL)'; uv run alembic -c alembic.ini upgrade head"
+	@powershell -Command "$$env:LIGHTLY_STUDIO_DATABASE_URL='$(POSTGRES_URL)'; uv run alembic -c alembic.ini check"
+else
+	docker exec $(POSTGRES_CONTAINER_NAME) psql -U $(POSTGRES_USER) -d $(POSTGRES_DB) -c "DROP SCHEMA public CASCADE; CREATE SCHEMA public; GRANT ALL ON SCHEMA public TO $(POSTGRES_USER); GRANT ALL ON SCHEMA public TO public;"
+	LIGHTLY_STUDIO_DATABASE_URL=$(POSTGRES_URL) uv run alembic -c alembic.ini upgrade head
+	LIGHTLY_STUDIO_DATABASE_URL=$(POSTGRES_URL) uv run alembic -c alembic.ini check
+endif
 
 .PHONY: check-uv-lock
 check-uv-lock:

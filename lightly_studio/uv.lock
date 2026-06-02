@@ -288,6 +288,65 @@ wheels = [
 ]
 
 [[package]]
+name = "alembic"
+version = "1.16.5"
+source = { registry = "https://pypi.org/simple" }
+resolution-markers = [
+    "python_full_version >= '3.9.2' and python_full_version < '3.10' and platform_machine == 'arm64' and sys_platform == 'darwin'",
+    "python_full_version < '3.9.2' and platform_machine == 'arm64' and sys_platform == 'darwin'",
+    "python_full_version >= '3.9.2' and python_full_version < '3.10' and platform_machine == 'aarch64' and sys_platform == 'linux'",
+    "python_full_version < '3.9.2' and platform_machine == 'aarch64' and sys_platform == 'linux'",
+    "(python_full_version >= '3.9.2' and python_full_version < '3.10' and platform_machine != 'arm64' and sys_platform == 'darwin') or (python_full_version >= '3.9.2' and python_full_version < '3.10' and platform_machine != 'aarch64' and sys_platform == 'linux') or (python_full_version >= '3.9.2' and python_full_version < '3.10' and sys_platform != 'darwin' and sys_platform != 'linux')",
+    "(python_full_version < '3.9.2' and platform_machine != 'arm64' and sys_platform == 'darwin') or (python_full_version < '3.9.2' and platform_machine != 'aarch64' and sys_platform == 'linux') or (python_full_version < '3.9.2' and sys_platform != 'darwin' and sys_platform != 'linux')",
+]
+dependencies = [
+    { name = "mako", marker = "python_full_version < '3.10'" },
+    { name = "sqlalchemy", marker = "python_full_version < '3.10'" },
+    { name = "tomli", marker = "python_full_version < '3.10'" },
+    { name = "typing-extensions", marker = "python_full_version < '3.10'" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/9a/ca/4dc52902cf3491892d464f5265a81e9dff094692c8a049a3ed6a05fe7ee8/alembic-1.16.5.tar.gz", hash = "sha256:a88bb7f6e513bd4301ecf4c7f2206fe93f9913f9b48dac3b78babde2d6fe765e", size = 1969868, upload-time = "2025-08-27T18:02:05.668Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/39/4a/4c61d4c84cfd9befb6fa08a702535b27b21fff08c946bc2f6139decbf7f7/alembic-1.16.5-py3-none-any.whl", hash = "sha256:e845dfe090c5ffa7b92593ae6687c5cb1a101e91fa53868497dbd79847f9dbe3", size = 247355, upload-time = "2025-08-27T18:02:07.37Z" },
+]
+
+[[package]]
+name = "alembic"
+version = "1.18.4"
+source = { registry = "https://pypi.org/simple" }
+resolution-markers = [
+    "python_full_version >= '3.14'",
+    "python_full_version == '3.13.*'",
+    "python_full_version == '3.12.*'",
+    "python_full_version == '3.11.*'",
+    "python_full_version == '3.10.*'",
+]
+dependencies = [
+    { name = "mako", marker = "python_full_version >= '3.10'" },
+    { name = "sqlalchemy", marker = "python_full_version >= '3.10'" },
+    { name = "tomli", marker = "python_full_version == '3.10.*'" },
+    { name = "typing-extensions", marker = "python_full_version >= '3.10'" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/94/13/8b084e0f2efb0275a1d534838844926f798bd766566b1375174e2448cd31/alembic-1.18.4.tar.gz", hash = "sha256:cb6e1fd84b6174ab8dbb2329f86d631ba9559dd78df550b57804d607672cedbc", size = 2056725, upload-time = "2026-02-10T16:00:47.195Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/d2/29/6533c317b74f707ea28f8d633734dbda2119bbadfc61b2f3640ba835d0f7/alembic-1.18.4-py3-none-any.whl", hash = "sha256:a5ed4adcf6d8a4cb575f3d759f071b03cd6e5c7618eb796cb52497be25bfe19a", size = 263893, upload-time = "2026-02-10T16:00:49.997Z" },
+]
+
+[[package]]
+name = "alembic-postgresql-enum"
+version = "1.10.0"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "alembic", version = "1.16.5", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.10'" },
+    { name = "alembic", version = "1.18.4", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.10'" },
+    { name = "sqlalchemy" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/63/cf/b5147b926441e7cdc12f306465dac488ff22364b1467a09a5d43743b8cfc/alembic_postgresql_enum-1.10.0.tar.gz", hash = "sha256:ea23481de3d6a00d68d369f92a46ff4fa27b2575e39c583145f1e23ea9c7511d", size = 18557, upload-time = "2026-02-23T16:15:04.148Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/58/8a/4db3821584824ac68df00a6ca27331d3f41f40105f22a8dc1b30b1ec83af/alembic_postgresql_enum-1.10.0-py3-none-any.whl", hash = "sha256:39297cb5dc0e71a3e08df1feeab9ffcc1b6aac0be02bf578748d74c442cd3fbf", size = 27774, upload-time = "2026-02-23T16:15:02.789Z" },
+]
+
+[[package]]
 name = "annotated-doc"
 version = "0.0.4"
 source = { registry = "https://pypi.org/simple" }
@@ -2637,7 +2696,7 @@ wheels = [
 
 [[package]]
 name = "labelformat"
-version = "0.1.14"
+version = "0.1.15"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "fsspec", version = "2025.10.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.10'" },
@@ -2652,9 +2711,9 @@ dependencies = [
     { name = "pyyaml" },
     { name = "tqdm" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/af/a1/7d7c617ec5eaf00dd57b8d8164accd488db398a7045dfed5a2ac412e1669/labelformat-0.1.14.tar.gz", hash = "sha256:af45538ef71925c91adc4322068e8693cc573d96ed90f308175578c505579bf2", size = 39804, upload-time = "2026-04-21T06:28:36.594Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/7f/42/c9ed31d4bb11e46c11fa138c219c797ef426434bbd5a1b90d4793155d5b5/labelformat-0.1.15.tar.gz", hash = "sha256:3dee2d7cc81c181934583107306ad3f5242c433832a0f011ada873993d0a880c", size = 38683, upload-time = "2026-06-01T13:49:17.897Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/9c/90/4736e3b4157354792e2eacd1786e0236d6391bcef96d5362063259ecbf65/labelformat-0.1.14-py3-none-any.whl", hash = "sha256:fa574e403bb6d13ac6a5d8308ee9ca78a7bd732537de260109666bbc54b833ed", size = 57133, upload-time = "2026-04-21T06:28:37.852Z" },
+    { url = "https://files.pythonhosted.org/packages/9f/32/ca2581132308d6386892b645ec754090e70d431e1de1b001507f9776c387/labelformat-0.1.15-py3-none-any.whl", hash = "sha256:3813c67037289bbc8f718e81a3cae83d73deedda5b31c05750bab2500eab315d", size = 56908, upload-time = "2026-06-01T13:49:16.204Z" },
 ]
 
 [[package]]
@@ -2818,9 +2877,12 @@ wheels = [
 
 [[package]]
 name = "lightly-studio"
-version = "0.4.14"
+version = "1.0.0rc1"
 source = { editable = "." }
 dependencies = [
+    { name = "alembic", version = "1.16.5", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.10'" },
+    { name = "alembic", version = "1.18.4", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.10'" },
+    { name = "alembic-postgresql-enum" },
     { name = "av", version = "15.1.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.10'" },
     { name = "av", version = "17.0.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.10'" },
     { name = "brotli-asgi" },
@@ -2914,6 +2976,8 @@ docs = [
 [package.metadata]
 requires-dist = [
     { name = "adlfs", marker = "extra == 'cloud-storage'", specifier = ">=2023.1.0" },
+    { name = "alembic", specifier = ">=1.14.0,<2.0" },
+    { name = "alembic-postgresql-enum", specifier = ">=1.10.0" },
     { name = "av", specifier = ">=10.0.0" },
     { name = "brotli-asgi", specifier = ">=1.4.0" },
     { name = "click", specifier = ">=8.0.0" },
@@ -2926,7 +2990,7 @@ requires-dist = [
     { name = "fsspec", specifier = ">=2023.1.0" },
     { name = "gcsfs", marker = "extra == 'cloud-storage'", specifier = ">=2023.1.0" },
     { name = "jinja2", specifier = ">=3.1.0" },
-    { name = "labelformat", specifier = ">=0.1.14" },
+    { name = "labelformat", specifier = ">=0.1.15" },
     { name = "lightly-mundig", specifier = "==0.1.12" },
     { name = "open-clip-torch", specifier = ">=2.20.0" },
     { name = "opencv-python-headless", specifier = ">=4.11.0.86" },
@@ -2973,6 +3037,18 @@ docs = [
     { name = "mkdocstrings", extras = ["python"], specifier = ">=0.24.0" },
     { name = "mkdocstrings-python", specifier = ">=1.8.0" },
     { name = "pymdown-extensions", specifier = ">=10.0.0" },
+]
+
+[[package]]
+name = "mako"
+version = "1.3.12"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "markupsafe" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/00/62/791b31e69ae182791ec67f04850f2f062716bbd205483d63a215f3e062d3/mako-1.3.12.tar.gz", hash = "sha256:9f778e93289bd410bb35daadeb4fc66d95a746f0b75777b942088b7fd7af550a", size = 400219, upload-time = "2026-04-28T19:01:08.512Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/bc/b1/a0ec7a5a9db730a08daef1fdfb8090435b82465abbf758a596f0ea88727e/mako-1.3.12-py3-none-any.whl", hash = "sha256:8f61569480282dbf557145ce441e4ba888be453c30989f879f0d652e39f53ea9", size = 78521, upload-time = "2026-04-28T19:01:10.393Z" },
 ]
 
 [[package]]

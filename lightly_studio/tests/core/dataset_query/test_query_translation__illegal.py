@@ -88,11 +88,11 @@ def test_to_match_expression__image_field_inside_classification_matcher(
 def test_to_match_expression__classification_field_inside_object_detection_matcher(
     db_session: Session,
 ) -> None:
-    """classification.label inside ObjectDetectionMatchExpr mixes annotation contexts.
+    """classification.class_name inside ObjectDetectionMatchExpr mixes annotation contexts.
 
-    The label lookup goes through AnnotationBaseTable.annotation_label
+    The annotation class lookup goes through AnnotationBaseTable.annotation_label
     regardless of the field's declared context. Wrapped in
-    ObjectDetectionMatchExpr, the same label predicate is silently evaluated
+    ObjectDetectionMatchExpr, the same annotation class predicate is silently evaluated
     against object-detection annotations instead of classification ones.
     """
     dataset = create_collection(session=db_session)
@@ -139,7 +139,7 @@ def test_to_match_expression__classification_field_inside_object_detection_match
 
     expr = ObjectDetectionMatchExpr(
         subexpr=StringExpr(
-            field=FieldRef(table="classification", name="label"),
+            field=FieldRef(table="classification", name="class_name"),
             operator=EqualityComparisonOperator.EQ,
             value="dog",
         )
@@ -147,21 +147,21 @@ def test_to_match_expression__classification_field_inside_object_detection_match
     match = query_translation.to_match_expression(expr)
     results = DatasetQuery(dataset=dataset, session=db_session).match(match).to_list()
 
-    # Wrong: the field says "classification.label", but the matcher's
-    # annotation_type filter makes it behave like a generic label predicate on
+    # Wrong: the field says "classification.class_name", but the matcher's
+    # annotation_type filter makes it behave like a generic annotation class predicate on
     # object detections. The object-detection sample matches, while the actual
     # classification sample does not.
     assert [result.sample_id for result in results] == [object_detection_image.sample_id]
 
 
-def test_to_match_expression__classification_label_at_top_level(
+def test_to_match_expression__classification_class_name_at_top_level(
     db_session: Session,
 ) -> None:
-    """classification.label at the top level without ClassificationMatchExpr.
+    """classification.class_name at the top level without ClassificationMatchExpr.
 
     The ForeignComparableField generates an EXISTS through .has(), so the
     query executes without error.  However, it matches *any* annotation whose
-    label equals the value, regardless of annotation type.
+    annotation class equals the value, regardless of annotation type.
     """
     dataset = create_collection(session=db_session)
     cid = dataset.collection_id
@@ -197,7 +197,7 @@ def test_to_match_expression__classification_label_at_top_level(
     )
 
     expr = StringExpr(
-        field=FieldRef(table="classification", name="label"),
+        field=FieldRef(table="classification", name="class_name"),
         operator=EqualityComparisonOperator.EQ,
         value="cat",
     )

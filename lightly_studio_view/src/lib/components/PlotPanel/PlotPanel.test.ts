@@ -13,7 +13,12 @@ let imageFilterStore: Writable<Record<string, unknown>>;
 let arrowDataStore: Writable<Record<string, unknown> | undefined>;
 let metadataInfoStore: Writable<Array<{ name: string; type: string }>>;
 
-const mockSetShowPlot = vi.fn();
+const tagsStore = writable([
+    { tag_id: 'tag-a', name: 'alpha', kind: 'sample' },
+    { tag_id: 'tag-b', name: 'beta', kind: 'sample' }
+]);
+
+const mockSetShowEmbeddingPlot = vi.fn();
 const mockSetRangeSelectionForCollection = vi.fn();
 const mockUpdateSampleIds = vi.fn();
 
@@ -47,7 +52,7 @@ vi.mock('$lib/hooks/useEmbeddings/useEmbeddings');
 vi.mock('./useArrowData/useArrowData', () => ({
     useArrowData: () => ({
         data: arrowDataStore,
-        colorLegend: writable(new Map([[1, 'Filtered']])),
+        colorLegend: writable(new Map()),
         error: writable(null)
     })
 }));
@@ -77,11 +82,19 @@ vi.mock('$lib/hooks/useMetadataFilters/useMetadataFilters', () => ({
         metadataInfo: metadataInfoStore
     })
 }));
+vi.mock('$lib/hooks/useTags/useTags', () => ({
+    useTags: () => ({
+        tags: tagsStore
+    })
+}));
+vi.mock('$lib/hooks/useAnnotationLabels/useAnnotationLabels', () => ({
+    useAnnotationLabels: () => ({ data: [] })
+}));
 
 vi.mock('$lib/hooks/useGlobalStorage', () => {
     return {
         useGlobalStorage: () => ({
-            setShowPlot: mockSetShowPlot,
+            setShowEmbeddingPlot: mockSetShowEmbeddingPlot,
             getRangeSelection: vi.fn(() => rangeSelectionStore),
             setRangeSelectionForCollection: mockSetRangeSelectionForCollection
         })
@@ -113,6 +126,10 @@ describe('PlotPanel.svelte', () => {
         imageFilterStore = writable({ sample_filter: { sample_ids: [] } });
         arrowDataStore = writable(undefined);
         metadataInfoStore = writable([{ name: 'split', type: 'string' }]);
+        tagsStore.set([
+            { tag_id: 'tag-a', name: 'alpha', kind: 'sample' },
+            { tag_id: 'tag-b', name: 'beta', kind: 'sample' }
+        ]);
         (useEmbeddings as vi.Mock).mockReturnValue(
             writable({
                 isError: false,
@@ -225,7 +242,7 @@ describe('PlotPanel.svelte', () => {
             x: new Float32Array([1, 2, 3]),
             y: new Float32Array([1, 2, 3]),
             fulfils_filter: new Uint8Array([1, 1, 0]),
-            color_category: new Uint8Array([1, 1, 0]),
+            color_categories: [[2], [2], []],
             sample_id: ['sample-1', 'sample-2', 'sample-3']
         });
 
@@ -255,6 +272,21 @@ describe('PlotPanel.svelte', () => {
         expect(useEmbeddings).toHaveBeenLastCalledWith('test-collection-id', expect.anything(), {
             type: 'metadata_field',
             key: 'split'
+        });
+    });
+
+    it('passes tag_ids colorBy to useEmbeddings when tags type is selected', async () => {
+        const user = userEvent.setup();
+
+        render(PlotPanel);
+
+        await user.click(screen.getByTestId('plot-color-by-button'));
+        await user.click(await screen.findByRole('option', { name: 'tags' }));
+        await tick();
+
+        expect(useEmbeddings).toHaveBeenLastCalledWith('test-collection-id', expect.anything(), {
+            type: 'tag',
+            tag_ids: ['tag-a', 'tag-b']
         });
     });
 });

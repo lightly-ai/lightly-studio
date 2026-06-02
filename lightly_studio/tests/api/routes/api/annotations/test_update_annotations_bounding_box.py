@@ -27,7 +27,7 @@ def test_update_annotations_object_detection_bounding_box(
         "lightly_studio.services.annotations_service.update_annotations"
     ) as mock_update_annotations:
         mock_update_annotations.return_value = [object_detection_annotation]
-        # Update the annotation label using the service
+        # Update the annotation class using the service
         response = test_client.put(
             f"/api/collections/{collection_id!s}/annotations",
             json=[

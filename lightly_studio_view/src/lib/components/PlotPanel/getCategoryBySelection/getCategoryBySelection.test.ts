@@ -16,7 +16,7 @@ describe('getCategoryBySelection', () => {
         x: new Float32Array([1.0, 2.0, 3.0, 4.0]),
         y: new Float32Array([5.0, 6.0, 7.0, 8.0]),
         fulfils_filter: new Uint8Array([1, 1, 0, 1]),
-        color_category: new Uint8Array([1, 1, 0, 1]),
+        color_categories: [[2, 3], [2], [], [3]],
         sample_id: ['sample1', 'sample2', 'sample3', 'sample4']
     });
 
@@ -61,7 +61,7 @@ describe('getCategoryBySelection', () => {
         expect(isPointInPolygon).toHaveBeenCalledWith(1.0, 5.0, mockSelection);
     });
 
-    it('should return NOT_FILTERED_CATEGORY when point is not in selection', () => {
+    it('should return EXCLUDED_BY_FILTERS_CATEGORY when point is not in selection', () => {
         const mockData = createMockArrowData();
         vi.mocked(isPointInPolygon).mockReturnValue(false);
 

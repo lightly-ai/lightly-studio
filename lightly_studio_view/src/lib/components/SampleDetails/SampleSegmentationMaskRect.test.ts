@@ -60,7 +60,11 @@ vi.mock('$app/state', () => ({
 
 vi.mock('$lib/components/SampleAnnotation/utils', () => ({
     decodeRLEToBinaryMask: decodeRLEToBinaryMaskMock,
-    getImageCoordsFromMouse: getImageCoordsFromMouseMock,
+    getImageCoordsFromMouse: getImageCoordsFromMouseMock
+}));
+
+vi.mock('$lib/utils/colorConvert', async (importOriginal) => ({
+    ...(await importOriginal<typeof import('$lib/utils/colorConvert')>()),
     withAlpha: withAlphaMock
 }));
 
@@ -381,6 +385,39 @@ describe('SampleSegmentationMaskRect', () => {
         expect(cancelAnimationFrame).toHaveBeenCalledTimes(1);
         expect(cancelAnimationFrame).toHaveBeenCalledWith(1);
         expect(scheduledFrames).toHaveLength(0);
+    });
+
+    it('returns the same in-flight promise for concurrent requestLabel calls', async () => {
+        let capturedRequestLabel: (() => Promise<string | null>) | undefined;
+
+        useSegmentationMaskBrushMock.mockImplementation((params) => {
+            capturedRequestLabel = (params as { requestLabel?: () => Promise<string | null> })
+                .requestLabel;
+            return { finishBrush: vi.fn() };
+        });
+
+        const { container } = render(SampleSegmentationMaskRect, {
+            props: {
+                ...baseProps,
+                sampleId: 'sample-1',
+                sample: { width: 100, height: 100, annotations: [] }
+            }
+        });
+
+        const drawingRect = getDrawingRect(container);
+        await fireEvent.pointerDown(drawingRect, {
+            pointerId: 1,
+            clientX: 20,
+            clientY: 20
+        });
+        await fireEvent.pointerUp(drawingRect, { pointerId: 1 });
+
+        expect(capturedRequestLabel).toBeDefined();
+
+        const first = capturedRequestLabel!();
+        const second = capturedRequestLabel!();
+
+        expect(second).toBe(first);
     });
 
     it('notifies pending state while finishBrush is in flight', async () => {

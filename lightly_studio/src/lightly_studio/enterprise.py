@@ -106,7 +106,7 @@ def _fetch_connect_config(api_url: str, token: str) -> _EnterpriseConnectRespons
         Parsed and validated response from the enterprise connect endpoint.
 
     Raises:
-        ConnectionError: If the server is unreachable.
+        ConnectionError: If the server is unreachable or SSL verification fails.
         PermissionError: If authentication or authorization fails.
         RuntimeError: If the server returns an unexpected error.
     """
@@ -118,6 +118,12 @@ def _fetch_connect_config(api_url: str, token: str) -> _EnterpriseConnectRespons
             headers={"Authorization": f"Bearer {token}"},
             timeout=10,
         )
+    except requests.exceptions.SSLError:
+        raise ConnectionError(
+            f"SSL error connecting to {api_url}. "
+            "Verify the server's TLS certificate is trusted "
+            "by your Python environment."
+        ) from None
     except requests.ConnectionError:
         raise ConnectionError(
             f"Could not reach LightlyStudio at {api_url}. "

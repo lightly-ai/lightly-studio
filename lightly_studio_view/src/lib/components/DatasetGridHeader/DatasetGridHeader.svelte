@@ -12,8 +12,9 @@
         compact?: boolean;
         canSelectAll: boolean;
         isImages: boolean;
+        hasEvaluationRuns: boolean;
         hasMediaWithEmbeddings: boolean;
-        datasetId: string;
+        collectionDatasetId: string;
         onSelectAll: () => Promise<void>;
         searchImage: SearchImage | undefined;
         searchPending: boolean;
@@ -28,8 +29,8 @@
         compact = false,
         canSelectAll,
         isImages,
+        hasEvaluationRuns,
         hasMediaWithEmbeddings,
-        datasetId,
         onSelectAll,
         searchImage,
         searchPending,
@@ -37,10 +38,12 @@
         onSubmitText,
         onSubmitFile,
         onSearchClear,
-        onSearchError
+        onSearchError,
+        collectionDatasetId
     }: Props = $props();
 
-    const { showPlot, setShowPlot, showEvaluationRuns, setShowEvaluationRuns } = useGlobalStorage();
+    const { showEmbeddingPlot, setShowEmbeddingPlot, showEvaluationRuns, setShowEvaluationRuns } =
+        useGlobalStorage();
 </script>
 
 <GridHeader>
@@ -51,27 +54,27 @@
     {/snippet}
     {#snippet auxControls()}
         {#if isImages}
-            <OrderBy {datasetId} />
+            <OrderBy datasetId={collectionDatasetId} />
         {/if}
         {#if hasMediaWithEmbeddings}
             <Tooltip
-                content={$showPlot ? 'Hide Embeddings plot' : 'Show Embeddings plot'}
+                content={$showEmbeddingPlot ? 'Hide Embeddings plot' : 'Show Embeddings plot'}
                 position="bottom"
             >
                 <Button
                     class="flex items-center space-x-1"
                     data-testid="toggle-plot-button"
-                    variant={$showPlot ? 'default' : 'ghost'}
-                    onclick={() => setShowPlot(!$showPlot)}
+                    variant={$showEmbeddingPlot ? 'default' : 'ghost'}
+                    onclick={() => setShowEmbeddingPlot(!$showEmbeddingPlot)}
                 >
                     <ChartNetwork class="size-4" />
                     {#if !compact}
-                        <span>Show Embeddings</span>
+                        <span>Embeddings</span>
                     {/if}
                 </Button>
             </Tooltip>
         {/if}
-        {#if isImages}
+        {#if isImages && hasEvaluationRuns}
             <Tooltip
                 content={$showEvaluationRuns ? 'Hide Evaluation Runs' : 'Show Evaluation Runs'}
                 position="bottom"
@@ -84,7 +87,7 @@
                 >
                     <Gauge class="size-4" />
                     {#if !compact}
-                        <span>Evaluation Runs</span>
+                        <span>Evaluation</span>
                     {/if}
                 </Button>
             </Tooltip>
