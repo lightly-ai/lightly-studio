@@ -10,6 +10,7 @@ from sqlmodel import Session, col, select
 from lightly_studio.models.group import GroupTable, SampleGroupLinkTable
 from lightly_studio.models.sample import SampleCreate, SampleTable
 from lightly_studio.resolvers import collection_resolver, sample_resolver
+from lightly_studio.utils import batching
 
 
 def create_many(
@@ -81,11 +82,12 @@ def _validate_groups(
 
     # Get sample_id to collection_id mapping
     all_sample_ids = {sid for sample_ids in groups for sid in sample_ids}
-    statement = select(SampleTable.sample_id, SampleTable.collection_id).where(
-        col(SampleTable.sample_id).in_(all_sample_ids)
-    )
-    results = session.exec(statement).all()
-    sample_id_to_collection_id = dict(results)
+    sample_id_to_collection_id: dict[UUID, UUID] = {}
+    for batch in batching.batched(items=all_sample_ids):
+        statement = select(SampleTable.sample_id, SampleTable.collection_id).where(
+            col(SampleTable.sample_id).in_(batch)
+        )
+        sample_id_to_collection_id.update(session.exec(statement).all())
 
     for sample_ids in groups:
         component_ids_in_group = [sample_id_to_collection_id[sid] for sid in sample_ids]

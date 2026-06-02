@@ -59,6 +59,23 @@ def test_filter_new_paths(db_session: Session) -> None:
     assert file_paths_old == []
 
 
+def test_filter_new_paths__exceeds_postgres_param_limit(db_session: Session) -> None:
+    # More paths than PostgreSQL's 65,535 single-statement bind-param cap; the chunked
+    # query must not raise. On an empty collection every path is new. (This is the
+    # 163k-image COCO ingestion crash path.)
+    collection = create_collection(session=db_session)
+    file_paths_abs = [f"/p/{i}.png" for i in range(70_000)]
+
+    file_paths_new, file_paths_old = image_resolver.filter_new_paths(
+        session=db_session,
+        collection_id=collection.collection_id,
+        file_paths_abs=file_paths_abs,
+    )
+
+    assert len(file_paths_new) == 70_000
+    assert file_paths_old == []
+
+
 def test_filter_new_paths_same_path_different_collections(db_session: Session) -> None:
     """The same file_path_abs can be added to different collections independently."""
     collection_a = create_collection(collection_name="collection_a", session=db_session)
