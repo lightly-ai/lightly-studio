@@ -494,6 +494,82 @@ def test_get_all_by_collection_id_with_embedding_sort(
     assert result.samples[2].sample_id == image2.sample_id
 
 
+def test_get_all_by_collection_id__similarity_pagination_with_tied_distances(
+    db_session: Session,
+) -> None:
+    """Pagination must not duplicate or skip samples when all distances are equal."""
+    collection = create_collection(session=db_session)
+    collection_id = collection.collection_id
+
+    embedding_model = create_embedding_model(
+        session=db_session,
+        collection_id=collection_id,
+        embedding_model_name="tied-embeddings-model",
+        embedding_dimension=2,
+    )
+    image_a = create_image(
+        session=db_session,
+        collection_id=collection_id,
+        file_path_abs="/images/a.png",
+    )
+    image_b = create_image(
+        session=db_session,
+        collection_id=collection_id,
+        file_path_abs="/images/b.png",
+    )
+    image_c = create_image(
+        session=db_session,
+        collection_id=collection_id,
+        file_path_abs="/images/c.png",
+    )
+    # Identical embeddings → all distances to the query are equal (tied).
+    identical_embedding = [1.0, 0.0]
+    create_sample_embedding(
+        session=db_session,
+        sample_id=image_a.sample_id,
+        embedding_model_id=embedding_model.embedding_model_id,
+        embedding=identical_embedding,
+    )
+    create_sample_embedding(
+        session=db_session,
+        sample_id=image_b.sample_id,
+        embedding_model_id=embedding_model.embedding_model_id,
+        embedding=identical_embedding,
+    )
+    create_sample_embedding(
+        session=db_session,
+        sample_id=image_c.sample_id,
+        embedding_model_id=embedding_model.embedding_model_id,
+        embedding=identical_embedding,
+    )
+
+    page1 = image_resolver.get_all_by_collection_id(
+        session=db_session,
+        collection_id=collection_id,
+        text_embedding=[1.0, 0.0],
+        pagination=Paginated(offset=0, limit=2),
+    )
+    page2 = image_resolver.get_all_by_collection_id(
+        session=db_session,
+        collection_id=collection_id,
+        text_embedding=[1.0, 0.0],
+        pagination=Paginated(offset=2, limit=2),
+    )
+
+    page1_ids = [s.sample_id for s in page1.samples]
+    page2_ids = [s.sample_id for s in page2.samples]
+
+    # No duplicates across pages.
+    assert len(set(page1_ids) & set(page2_ids)) == 0
+    # All three samples are covered exactly once.
+    assert sorted(page1_ids + page2_ids) == sorted(
+        [image_a.sample_id, image_b.sample_id, image_c.sample_id]
+    )
+    # file_path_abs tiebreaker → page 1 is a, b; page 2 is c.
+    assert page1_ids == [image_a.sample_id, image_b.sample_id]
+    assert page2_ids == [image_c.sample_id]
+
+
 def test_get_all_by_collection_id__returns_total_count(db_session: Session) -> None:
     """Test that get_all_by_collection_id returns correct total_count with pagination."""
     collection = create_collection(session=db_session)

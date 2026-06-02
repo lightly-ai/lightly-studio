@@ -161,7 +161,7 @@ def _get_all_with_similarity(  # noqa: PLR0913
         samples_query = samples_query.where(col(ImageTable.sample_id).in_(sample_ids))
         total_count_query = total_count_query.where(col(ImageTable.sample_id).in_(sample_ids))
 
-    samples_query = samples_query.order_by(distance_expr)
+    samples_query = samples_query.order_by(distance_expr, col(ImageTable.file_path_abs).asc())
 
     if pagination is not None:
         samples_query = samples_query.offset(pagination.offset).limit(pagination.limit)
