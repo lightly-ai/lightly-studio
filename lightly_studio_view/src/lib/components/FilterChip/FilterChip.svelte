@@ -30,7 +30,12 @@
     <div class="flex items-center gap-2">
         <Checkbox {checked} aria-label={checkboxLabel} {onCheckedChange} />
         {#if onclick}
-            <button type="button" class="min-w-0 flex-1 cursor-pointer text-left" {onclick}>
+            <button
+                type="button"
+                class="min-w-0 flex-1 cursor-pointer text-left"
+                data-testid={testId ? `${testId}-body` : undefined}
+                {onclick}
+            >
                 <div class="truncate text-sm font-medium">{title}</div>
                 {#if subtitle}{@render subtitle()}{/if}
             </button>

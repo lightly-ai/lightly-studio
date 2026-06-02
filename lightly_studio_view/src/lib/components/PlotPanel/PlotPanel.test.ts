@@ -52,7 +52,7 @@ vi.mock('$lib/hooks/useEmbeddings/useEmbeddings');
 vi.mock('./useArrowData/useArrowData', () => ({
     useArrowData: () => ({
         data: arrowDataStore,
-        colorLegend: writable(new Map([[1, 'Filtered']])),
+        colorLegend: writable(new Map()),
         error: writable(null)
     })
 }));
@@ -242,7 +242,7 @@ describe('PlotPanel.svelte', () => {
             x: new Float32Array([1, 2, 3]),
             y: new Float32Array([1, 2, 3]),
             fulfils_filter: new Uint8Array([1, 1, 0]),
-            color_category: new Uint8Array([1, 1, 0]),
+            color_categories: [[2], [2], []],
             sample_id: ['sample-1', 'sample-2', 'sample-3']
         });
 

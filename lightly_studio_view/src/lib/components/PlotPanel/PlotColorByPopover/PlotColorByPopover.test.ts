@@ -287,6 +287,61 @@ describe('PlotColorByPopover', () => {
         expect(screen.getByTestId('plot-color-by-button')).toHaveTextContent('annotations');
     });
 
+    it('renders a No coloring option when there is something to color by', async () => {
+        const user = userEvent.setup();
+
+        render(PlotColorByPopover, {
+            collectionId: 'test-collection-id',
+            selectedKey: null,
+            onSelectedKeyChange: vi.fn(),
+            withTags: false,
+            withAnnotationLabels: false
+        });
+
+        await user.click(screen.getByTestId('plot-color-by-button'));
+
+        expect(screen.getByRole('option', { name: 'No coloring' })).toBeInTheDocument();
+    });
+
+    it('selecting No coloring clears the selected type', async () => {
+        const user = userEvent.setup();
+        const onSelectedKeyChange = vi.fn();
+        const colorByType = usePlotColorByType('test-collection-id');
+
+        colorByType.setSelectedColorByType('metadata');
+
+        render(PlotColorByPopover, {
+            collectionId: 'test-collection-id',
+            selectedKey: 'split',
+            onSelectedKeyChange,
+            withTags: false,
+            withAnnotationLabels: false
+        });
+
+        await user.click(screen.getByTestId('plot-color-by-button'));
+        await user.click(screen.getByRole('option', { name: 'No coloring' }));
+
+        expect(onSelectedKeyChange).toHaveBeenCalledWith(null);
+        expect(get(colorByType.selectedColorByType)).toBeNull();
+    });
+
+    it('does not render a No coloring option when there is nothing to color by', async () => {
+        const user = userEvent.setup();
+        metadataInfoStore.set([{ name: 'payload', type: 'object' }]);
+
+        render(PlotColorByPopover, {
+            collectionId: 'test-collection-id',
+            selectedKey: null,
+            onSelectedKeyChange: vi.fn(),
+            withTags: false,
+            withAnnotationLabels: false
+        });
+
+        await user.click(screen.getByTestId('plot-color-by-button'));
+
+        expect(screen.queryByRole('option', { name: 'No coloring' })).not.toBeInTheDocument();
+    });
+
     it('shows the empty state when no supported metadata fields exist and withTags is false', async () => {
         const user = userEvent.setup();
         metadataInfoStore.set([{ name: 'payload', type: 'object' }]);

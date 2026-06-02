@@ -3,9 +3,9 @@
     import type { AnnotationUpdateInput, AnnotationView } from '$lib/api/lightly_studio_local';
     import {
         decodeRLEToBinaryMask,
-        getImageCoordsFromMouse,
-        withAlpha
+        getImageCoordsFromMouse
     } from '$lib/components/SampleAnnotation/utils';
+    import { withAlpha } from '$lib/utils';
     import parseColor from '$lib/components/SampleAnnotation/SampleAnnotationSegmentationRLE/calculateBinaryMaskFromRLE/parseColor';
     import {
         useSelectClassDialog,
