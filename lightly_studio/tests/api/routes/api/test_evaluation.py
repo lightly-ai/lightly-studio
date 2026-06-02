@@ -13,20 +13,30 @@ from lightly_studio.api.routes.api.status import (
     HTTP_STATUS_NOT_IMPLEMENTED,
     HTTP_STATUS_OK,
 )
+from lightly_studio.models.annotation.annotation_base import AnnotationType
 from lightly_studio.models.collection import CollectionTable, SampleType
 from lightly_studio.models.dataset import DatasetTable
+from lightly_studio.models.evaluation_annotation_metric import EvaluationAnnotationMetricCreate
 from lightly_studio.models.evaluation_confusion_matrix import (
     NO_GROUND_TRUTH_ROW_LABEL,
     NO_PREDICTION_COL_LABEL,
     ConfusionMatrix,
 )
 from lightly_studio.models.evaluation_run import (
+    EvaluationRunCreate,
     EvaluationRunTable,
     EvaluationTaskType,
 )
 from lightly_studio.models.evaluation_sample_metric import (
     EvaluationRunMetricsInfoView,
     EvaluationSampleMetricBoundsView,
+)
+from lightly_studio.resolvers import evaluation_annotation_metric_resolver, evaluation_run_resolver
+from tests.helpers_resolvers import (
+    create_annotation,
+    create_annotation_label,
+    create_collection,
+    create_image,
 )
 
 
@@ -220,7 +230,7 @@ def test_get_evaluation_confusion_matrix(test_client: TestClient, mocker: Mocker
         ),
     )
     mock_resolver = mocker.patch(
-        "lightly_studio.api.routes.api.evaluation.evaluation_annotation_metric_resolver.get_object_detection_confusion_matrix",
+        "lightly_studio.api.routes.api.evaluation.evaluation_annotation_metric_resolver.get_confusion_matrix",
         return_value=mock_matrix,
     )
 
@@ -240,6 +250,81 @@ def test_get_evaluation_confusion_matrix(test_client: TestClient, mocker: Mocker
     )
 
 
+def test_get_evaluation_confusion_matrix__classification(
+    db_session: Session,
+    test_client: TestClient,
+) -> None:
+    dataset = create_collection(session=db_session)
+    gt_collection = create_collection(
+        session=db_session,
+        parent_collection_id=dataset.collection_id,
+        sample_type=SampleType.ANNOTATION,
+    )
+    pred_collection = create_collection(
+        session=db_session,
+        parent_collection_id=dataset.collection_id,
+        sample_type=SampleType.ANNOTATION,
+    )
+    evaluation_run = evaluation_run_resolver.create(
+        session=db_session,
+        evaluation_run_input=EvaluationRunCreate(
+            name="run_1",
+            gt_annotation_collection_id=gt_collection.collection_id,
+            pred_annotation_collection_id=pred_collection.collection_id,
+            task_type=EvaluationTaskType.CLASSIFICATION,
+        ),
+    )
+    image = create_image(session=db_session, collection_id=dataset.collection_id)
+    gt_label = create_annotation_label(
+        session=db_session,
+        root_collection_id=dataset.collection_id,
+        label_name="cat",
+    )
+    pred_label = create_annotation_label(
+        session=db_session,
+        root_collection_id=dataset.collection_id,
+        label_name="dog",
+    )
+    gt_annotation = create_annotation(
+        session=db_session,
+        collection_id=dataset.collection_id,
+        sample_id=image.sample_id,
+        annotation_label_id=gt_label.annotation_label_id,
+        annotation_type=AnnotationType.CLASSIFICATION,
+        annotation_collection_name=gt_collection.name,
+    )
+    pred_annotation = create_annotation(
+        session=db_session,
+        collection_id=dataset.collection_id,
+        sample_id=image.sample_id,
+        annotation_label_id=pred_label.annotation_label_id,
+        annotation_type=AnnotationType.CLASSIFICATION,
+        annotation_collection_name=pred_collection.name,
+    )
+    evaluation_annotation_metric_resolver.create_many(
+        session=db_session,
+        records=[
+            EvaluationAnnotationMetricCreate(
+                evaluation_run_id=evaluation_run.id,
+                sample_id=image.sample_id,
+                pred_annotation_id=pred_annotation.sample_id,
+                gt_annotation_id=gt_annotation.sample_id,
+            )
+        ],
+    )
+
+    response = test_client.get(
+        f"/api/datasets/{dataset.collection_id}/evaluation/runs/{evaluation_run.id}/confusion-matrix"
+    )
+
+    assert response.status_code == HTTP_STATUS_OK
+    assert response.json() == {
+        "row_labels": ["cat", "dog", NO_GROUND_TRUTH_ROW_LABEL],
+        "col_labels": ["cat", "dog", NO_PREDICTION_COL_LABEL],
+        "counts": [[0, 1, 0], [0, 0, 0], [0, 0, 0]],
+    }
+
+
 def test_get_evaluation_confusion_matrix__empty_matrix(
     test_client: TestClient, mocker: MockerFixture
 ) -> None:
@@ -255,7 +340,7 @@ def test_get_evaluation_confusion_matrix__empty_matrix(
         ),
     )
     mocker.patch(
-        "lightly_studio.api.routes.api.evaluation.evaluation_annotation_metric_resolver.get_object_detection_confusion_matrix",
+        "lightly_studio.api.routes.api.evaluation.evaluation_annotation_metric_resolver.get_confusion_matrix",
         return_value=ConfusionMatrix(
             row_labels=[],
             col_labels=[],
@@ -300,11 +385,11 @@ def test_get_evaluation_confusion_matrix__unsupported_task_type(
             name="run_1",
             config_json={},
             created_at=datetime(2026, 5, 18, 10, 0, 0, tzinfo=timezone.utc),
-            task_type=EvaluationTaskType.CLASSIFICATION,
+            task_type=EvaluationTaskType.SEMANTIC_SEGMENTATION,
         ),
     )
     mock_resolver = mocker.patch(
-        "lightly_studio.api.routes.api.evaluation.evaluation_annotation_metric_resolver.get_object_detection_confusion_matrix",
+        "lightly_studio.api.routes.api.evaluation.evaluation_annotation_metric_resolver.get_confusion_matrix",
     )
 
     response = test_client.get(
@@ -313,6 +398,6 @@ def test_get_evaluation_confusion_matrix__unsupported_task_type(
 
     assert response.status_code == HTTP_STATUS_NOT_IMPLEMENTED
     assert response.json() == {
-        "detail": "Evaluation task type 'classification' is not supported yet.",
+        "detail": "Evaluation task type 'semantic_segmentation' is not supported yet.",
     }
     mock_resolver.assert_not_called()
