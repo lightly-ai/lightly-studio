@@ -28,10 +28,8 @@ def create_and_persist_semantic_segmentation_metrics_per_sample(
     """Create and persist per-sample semantic-segmentation metrics.
 
     For each selected sample, decodes GT and prediction segmentation masks at
-    pixel level (ignoring bounding-box geometry except for mask placement),
-    computes per-annotation-class IoU, and writes ``miou``: mean IoU over all
-    classes present in GT or predictions on that image, with equal weight per
-    class.
+    pixel level, computes per-annotation-class IoU, and writes ``miou``: mean IoU over all
+    classes present in GT or predictions on that image, with equal weight per class.
 
     Raises:
         ValueError: If a sample has no image dimensions or no class masks to score.
@@ -104,16 +102,14 @@ def compute_class_ious(
     Returns:
         Mapping from annotation label id to IoU in ``[0, 1]``.
     """
+    empty_mask = _empty_mask(gt_masks, pred_masks)
     class_ids = {
         label_id
         for label_id in gt_masks | pred_masks
-        if gt_masks.get(label_id, _empty_mask(gt_masks, pred_masks)).any()
-        or pred_masks.get(label_id, _empty_mask(gt_masks, pred_masks)).any()
+        if gt_masks.get(label_id, empty_mask).any() or pred_masks.get(label_id, empty_mask).any()
     }
     if not class_ids:
         return {}
-
-    empty_mask = _empty_mask(gt_masks, pred_masks)
     return {
         label_id: compute_iou(
             gt_mask=gt_masks.get(label_id, empty_mask),
@@ -193,6 +189,7 @@ def _empty_mask(
     gt_masks: dict[UUID, NDArray[np.bool_]],
     pred_masks: dict[UUID, NDArray[np.bool_]],
 ) -> NDArray[np.bool_]:
+    """Return an all-false mask matching existing mask shapes, or (0, 0) if none exist."""
     for masks in (gt_masks, pred_masks):
         if masks:
             reference = next(iter(masks.values()))
