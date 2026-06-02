@@ -15,6 +15,7 @@ from lightly_studio.models.sample_embedding import (
     SampleEmbeddingTable,
 )
 from lightly_studio.resolvers.sample_resolver.sample_filter import SampleFilter
+from lightly_studio.utils import batching
 
 
 def create(session: Session, sample_embedding: SampleEmbeddingCreate) -> SampleEmbeddingTable:
@@ -50,14 +51,16 @@ def get_by_sample_ids(
     Returns:
         List of sample embeddings associated with the provided IDs.
     """
-    string_ids = [str(id_) for id_ in sample_ids]
-    results = list(
-        session.exec(
-            select(SampleEmbeddingTable)
-            .where(cast(SampleEmbeddingTable.sample_id, String).in_(string_ids))
-            .where(SampleEmbeddingTable.embedding_model_id == embedding_model_id)
-        ).all()
-    )
+    results: list[SampleEmbeddingTable] = []
+    for batch in batching.batched(items=sample_ids):
+        string_ids = [str(id_) for id_ in batch]
+        results.extend(
+            session.exec(
+                select(SampleEmbeddingTable)
+                .where(cast(SampleEmbeddingTable.sample_id, String).in_(string_ids))
+                .where(SampleEmbeddingTable.embedding_model_id == embedding_model_id)
+            ).all()
+        )
     # Return embeddings in the same order as the input IDs
     embedding_map = {embedding.sample_id: embedding for embedding in results}
     return [embedding_map[id_] for id_ in sample_ids if id_ in embedding_map]
