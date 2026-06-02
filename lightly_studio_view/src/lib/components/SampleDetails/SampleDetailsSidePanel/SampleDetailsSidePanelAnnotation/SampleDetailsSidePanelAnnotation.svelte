@@ -13,6 +13,7 @@
     import { useUpdateAnnotationsMutation } from '$lib/hooks/useUpdateAnnotationsMutation/useUpdateAnnotationsMutation';
     import AnnotationColorLegend from '$lib/components/AnnotationColorLegend/AnnotationColorLegend.svelte';
     import { Tooltip } from '$lib/components/ui/tooltip';
+    import { useAnnotationCollectionsFilter } from '$lib/hooks/useAnnotationCollectionsFilter/useAnnotationCollectionsFilter';
 
     const {
         annotation: annotationProp,
@@ -71,6 +72,11 @@
     const items = $derived(getSelectionItems(result.data || []));
     const { addReversibleAction } = useGlobalStorage();
 
+    // Label colors only match the boxes on the image while fewer than two
+    // annotation sources are selected; otherwise boxes are colored by source.
+    // Mirrors the behavior of LabelsMenu.
+    const { selectedCollectionIds } = useAnnotationCollectionsFilter();
+
     const annotationId = $derived(annotationProp.sample_id);
 
     const {
@@ -117,13 +123,15 @@
                         class="flex w-full min-w-0 items-center gap-2 text-sm font-medium leading-5"
                         data-testid="sample-details-pannel-annotation-name"
                     >
-                        <div class="h-4 shrink-0">
-                            <AnnotationColorLegend
-                                labelName={annotationLabelName}
-                                className="h-4 w-4"
-                                selected={isSelected}
-                            />
-                        </div>
+                        {#if $selectedCollectionIds.length < 2}
+                            <div class="h-4 shrink-0">
+                                <AnnotationColorLegend
+                                    labelName={annotationLabelName}
+                                    className="h-4 w-4"
+                                    selected={isSelected}
+                                />
+                            </div>
+                        {/if}
                         <div class="flex min-w-0 flex-1 flex-col justify-center gap-1">
                             {#if $isEditingMode}
                                 <div
