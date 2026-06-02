@@ -59,3 +59,7 @@
 >
     Finish Editing
 </Story>
+
+<Story name="Pending" args={{ icon: Check, isPending: true, buttonProps: { onclick: fn() } }}>
+    Saving
+</Story>
