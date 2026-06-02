@@ -8,8 +8,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- Show confusion matrix in evaluation results for classification.
 - enable picker for annotation source menu
 - Embedding plot: added a "No coloring" option to the "Color by" dropdown to disable coloring.
+- Show ground truth and prediction annotation sources in run details panel
+
+- Image details: select the annotation source when adding an annotation.
 
 ### Changed
 
@@ -22,7 +26,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
-- Fixed deleting large datasets (more than ~65,535 samples) failing on PostgreSQL with
+- Fixed operations on large datasets (more than ~65,535 samples) failing on PostgreSQL with
   `number of parameters must be between 0 and 65535`.
 - Fixed cascaded delete for annotations linked by calculated metrics.
 

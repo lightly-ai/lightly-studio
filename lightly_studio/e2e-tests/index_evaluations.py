@@ -10,8 +10,8 @@ GT_ANNOTATIONS_JSON = "dataset_examples/coco_subset_128_images/instances_train20
 PRED_ANNOTATIONS_JSON = "dataset_examples/coco_subset_128_images/predictions_train2017.json"
 
 DATASET_NAME = "evaluation_example_dataset"
-GT_ANNOTATION_SOURCE = "Ground truth"
-PRED_ANNOTATION_SOURCE = "Predictions"
+GT_ANNOTATION_SOURCE = "COCO annotations"
+PRED_ANNOTATION_SOURCE = "YOLOv8-m inferences"
 
 TAGGED_SAMPLES_EVALUATION_NAME = "evaluation-example-tagged-samples"
 ALL_SAMPLES_EVALUATION_NAME = "evaluation-example-all-samples"

@@ -16,6 +16,7 @@ from lightly_studio.resolvers.annotation_resolver.delete_annotation import (
 from lightly_studio.resolvers.annotations.annotations_filter import (
     AnnotationsFilter,
 )
+from lightly_studio.utils import batching
 
 
 def delete_annotations(
@@ -54,9 +55,8 @@ def delete_annotations(
             annotation_ids=annotation_ids,
             parent_sample_ids=parent_sample_ids,
         )
+    for batch in batching.batched(items=annotation_ids):
         session.exec(
-            delete(AnnotationBaseTable).where(
-                col(AnnotationBaseTable.sample_id).in_(annotation_ids)
-            )
+            delete(AnnotationBaseTable).where(col(AnnotationBaseTable.sample_id).in_(batch))
         )
-        session.commit()
+    session.commit()
