@@ -36,7 +36,10 @@ def create_and_persist_semantic_segmentation_metrics_per_sample(
     Raises:
         ValueError: If a sample has no image dimensions or no class masks to score.
     """
-    images = image_resolver.get_many_by_id(session=session, sample_ids=data.selected_sample_ids)
+    images = image_resolver.get_many_by_id(
+        session=session,
+        sample_ids=list(data.selected_sample_ids),
+    )
     image_by_sample_id = {image.sample_id: image for image in images}
 
     metrics_to_persist: list[EvaluationSampleMetricCreate] = []
