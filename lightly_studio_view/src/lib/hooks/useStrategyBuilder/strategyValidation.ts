@@ -1,11 +1,15 @@
 import { type StrategyInstance } from './types';
 
+function isNonZeroFiniteNumber(value: number): boolean {
+    return Number.isFinite(value) && value !== 0;
+}
+
 function isPositiveNumber(value: number): boolean {
     return Number.isFinite(value) && value > 0;
 }
 
 export function isStrategyInstanceValid(instance: StrategyInstance): boolean {
-    if (!isPositiveNumber(instance.params.strength)) {
+    if (!isNonZeroFiniteNumber(instance.params.strength)) {
         return false;
     }
 

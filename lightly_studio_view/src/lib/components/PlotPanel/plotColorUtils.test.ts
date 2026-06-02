@@ -16,7 +16,6 @@ describe('plotColorUtils', () => {
 
     it('returns the highest legend category plus one', () => {
         const colorLegend = new Map([
-            [1, 'Filtered'],
             [2, 'Train'],
             [4, 'Validation']
         ]);
@@ -45,8 +44,9 @@ describe('plotColorUtils', () => {
     it('builds legend entries from categories above the reserved slots', () => {
         expect(
             getLegendEntries(
+                // A reserved category (1) is included here to verify it is excluded from the entries.
                 new Map([
-                    [1, 'Filtered'],
+                    [1, 'should be excluded'],
                     [3, 'Validation'],
                     [2, 'Train']
                 ]),
@@ -74,8 +74,8 @@ describe('plotColorUtils', () => {
                 false
             )
         ).toEqual([
-            { cat: 2, label: 'Train', color: 'hsl(0, 70%, 55%)', hidden: false },
-            { cat: 3, label: 'Validation', color: 'hsl(180, 70%, 55%)', hidden: false }
+            { cat: 2, label: 'Train', color: 'rgb(255, 0, 136)', hidden: false },
+            { cat: 3, label: 'Validation', color: 'rgb(0, 193, 150)', hidden: false }
         ]);
     });
 
@@ -90,11 +90,7 @@ describe('plotColorUtils', () => {
     });
 
     it('uses label colors for labeled categories when requested', () => {
-        const legend = new Map([
-            [0, 'none'],
-            [1, 'filtered'],
-            [2, 'labelName']
-        ]);
+        const legend = new Map([[2, 'labelName']]);
 
         const labelColor = getColorByLabel('labelName').color;
         const defaultColors = getCategoryColors(legend, false);

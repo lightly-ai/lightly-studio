@@ -8,6 +8,7 @@ from sqlmodel import Session, col, select
 
 from lightly_studio.models.sample import SampleTable
 from lightly_studio.models.video import VideoTable
+from lightly_studio.utils import batching
 
 
 def filter_new_paths(
@@ -24,16 +25,18 @@ def filter_new_paths(
         A tuple of (new_paths, existing_paths) where new_paths are file paths
         not yet in the collection and existing_paths are already present.
     """
-    existing_file_paths_abs = set(
-        session.exec(
-            select(col(VideoTable.file_path_abs))
-            .join(SampleTable)
-            .where(
-                col(SampleTable.collection_id) == collection_id,
-                col(VideoTable.file_path_abs).in_(file_paths_abs),
-            )
-        ).all()
-    )
+    existing_file_paths_abs: set[str] = set()
+    for batch in batching.batched(items=file_paths_abs):
+        existing_file_paths_abs.update(
+            session.exec(
+                select(col(VideoTable.file_path_abs))
+                .join(SampleTable)
+                .where(
+                    col(SampleTable.collection_id) == collection_id,
+                    col(VideoTable.file_path_abs).in_(batch),
+                )
+            ).all()
+        )
     file_paths_abs_set = set(file_paths_abs)
     return (
         list(file_paths_abs_set - existing_file_paths_abs),  # paths not in the collection

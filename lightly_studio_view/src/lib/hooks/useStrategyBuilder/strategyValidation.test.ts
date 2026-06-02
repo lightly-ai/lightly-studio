@@ -1,37 +1,65 @@
 import { describe, expect, it } from 'vitest';
-import { isStrategyInstanceValid } from './strategyValidation';
-import { type StrategyInstance } from './types';
+import { isStrategyInstanceValid, type StrategyInstance } from '.';
+
+const defaultDiversity: StrategyInstance = {
+    id: '1',
+    type: 'diversity',
+    params: { strength: 1 },
+    isExpanded: true
+};
+
+const defaultTypicality: StrategyInstance = {
+    id: '1',
+    type: 'typicality',
+    params: { strength: 1 },
+    isExpanded: true
+};
+
+const defaultSimilarity: StrategyInstance = {
+    id: '1',
+    type: 'similarity',
+    params: { query_tag_id: 'tag-abc', strength: 1 },
+    isExpanded: true
+};
+
+const defaultMetadataWeighting: StrategyInstance = {
+    id: '1',
+    type: 'metadata_weighting',
+    params: { metadata_key: 'sharpness', strength: 1 },
+    isExpanded: true
+};
+
+const defaultClassBalancing: StrategyInstance = {
+    id: '1',
+    type: 'class_balancing',
+    params: { target_distribution_mode: 'uniform', target_distribution: [], strength: 1 },
+    isExpanded: true
+};
 
 describe('isStrategyInstanceValid', () => {
     describe('strength validation', () => {
         it('returns false when strength is 0', () => {
             const instance: StrategyInstance = {
-                id: '1',
-                type: 'diversity',
-                params: { strength: 0 },
-                isExpanded: true
+                ...defaultDiversity,
+                params: { strength: 0 }
             };
 
             expect(isStrategyInstanceValid(instance)).toBe(false);
         });
 
-        it('returns false when strength is negative', () => {
+        it('returns true when strength is negative', () => {
             const instance: StrategyInstance = {
-                id: '1',
-                type: 'diversity',
-                params: { strength: -1 },
-                isExpanded: true
+                ...defaultTypicality,
+                params: { strength: -1 }
             };
 
-            expect(isStrategyInstanceValid(instance)).toBe(false);
+            expect(isStrategyInstanceValid(instance)).toBe(true);
         });
 
         it('returns false when strength is NaN', () => {
             const instance: StrategyInstance = {
-                id: '1',
-                type: 'diversity',
-                params: { strength: NaN },
-                isExpanded: true
+                ...defaultDiversity,
+                params: { strength: NaN }
             };
 
             expect(isStrategyInstanceValid(instance)).toBe(false);
@@ -39,10 +67,17 @@ describe('isStrategyInstanceValid', () => {
 
         it('returns false when strength is Infinity', () => {
             const instance: StrategyInstance = {
-                id: '1',
-                type: 'diversity',
-                params: { strength: Infinity },
-                isExpanded: true
+                ...defaultDiversity,
+                params: { strength: Infinity }
+            };
+
+            expect(isStrategyInstanceValid(instance)).toBe(false);
+        });
+
+        it('returns false when strength is -Infinity', () => {
+            const instance: StrategyInstance = {
+                ...defaultDiversity,
+                params: { strength: -Infinity }
             };
 
             expect(isStrategyInstanceValid(instance)).toBe(false);
@@ -51,37 +86,21 @@ describe('isStrategyInstanceValid', () => {
 
     describe('diversity', () => {
         it('returns true when strength is valid', () => {
-            const instance: StrategyInstance = {
-                id: '1',
-                type: 'diversity',
-                params: { strength: 1 },
-                isExpanded: true
-            };
-
-            expect(isStrategyInstanceValid(instance)).toBe(true);
+            expect(isStrategyInstanceValid(defaultDiversity)).toBe(true);
         });
     });
 
     describe('typicality', () => {
         it('returns true when strength is valid', () => {
-            const instance: StrategyInstance = {
-                id: '1',
-                type: 'typicality',
-                params: { strength: 1 },
-                isExpanded: true
-            };
-
-            expect(isStrategyInstanceValid(instance)).toBe(true);
+            expect(isStrategyInstanceValid(defaultTypicality)).toBe(true);
         });
     });
 
     describe('similarity', () => {
         it('returns false when query_tag_id is empty', () => {
             const instance: StrategyInstance = {
-                id: '1',
-                type: 'similarity',
-                params: { query_tag_id: '', strength: 1 },
-                isExpanded: true
+                ...defaultSimilarity,
+                params: { ...defaultSimilarity.params, query_tag_id: '' }
             };
 
             expect(isStrategyInstanceValid(instance)).toBe(false);
@@ -89,34 +108,23 @@ describe('isStrategyInstanceValid', () => {
 
         it('returns false when query_tag_id is whitespace', () => {
             const instance: StrategyInstance = {
-                id: '1',
-                type: 'similarity',
-                params: { query_tag_id: '   ', strength: 1 },
-                isExpanded: true
+                ...defaultSimilarity,
+                params: { ...defaultSimilarity.params, query_tag_id: '   ' }
             };
 
             expect(isStrategyInstanceValid(instance)).toBe(false);
         });
 
         it('returns true when query_tag_id is set', () => {
-            const instance: StrategyInstance = {
-                id: '1',
-                type: 'similarity',
-                params: { query_tag_id: 'tag-abc', strength: 1 },
-                isExpanded: true
-            };
-
-            expect(isStrategyInstanceValid(instance)).toBe(true);
+            expect(isStrategyInstanceValid(defaultSimilarity)).toBe(true);
         });
     });
 
     describe('metadata_weighting', () => {
         it('returns false when metadata_key is empty', () => {
             const instance: StrategyInstance = {
-                id: '1',
-                type: 'metadata_weighting',
-                params: { metadata_key: '', strength: 1 },
-                isExpanded: true
+                ...defaultMetadataWeighting,
+                params: { ...defaultMetadataWeighting.params, metadata_key: '' }
             };
 
             expect(isStrategyInstanceValid(instance)).toBe(false);
@@ -124,49 +132,27 @@ describe('isStrategyInstanceValid', () => {
 
         it('returns false when metadata_key is whitespace', () => {
             const instance: StrategyInstance = {
-                id: '1',
-                type: 'metadata_weighting',
-                params: { metadata_key: '   ', strength: 1 },
-                isExpanded: true
+                ...defaultMetadataWeighting,
+                params: { ...defaultMetadataWeighting.params, metadata_key: '   ' }
             };
 
             expect(isStrategyInstanceValid(instance)).toBe(false);
         });
 
         it('returns true when metadata_key is set', () => {
-            const instance: StrategyInstance = {
-                id: '1',
-                type: 'metadata_weighting',
-                params: { metadata_key: 'sharpness', strength: 1 },
-                isExpanded: true
-            };
-
-            expect(isStrategyInstanceValid(instance)).toBe(true);
+            expect(isStrategyInstanceValid(defaultMetadataWeighting)).toBe(true);
         });
     });
 
     describe('class_balancing', () => {
         it('returns true for uniform target_distribution_mode regardless of distribution', () => {
-            const instance: StrategyInstance = {
-                id: '1',
-                type: 'class_balancing',
-                params: {
-                    target_distribution_mode: 'uniform',
-                    target_distribution: [],
-                    strength: 1
-                },
-                isExpanded: true
-            };
-
-            expect(isStrategyInstanceValid(instance)).toBe(true);
+            expect(isStrategyInstanceValid(defaultClassBalancing)).toBe(true);
         });
 
         it('returns true for input target_distribution_mode regardless of distribution', () => {
             const instance: StrategyInstance = {
-                id: '1',
-                type: 'class_balancing',
-                params: { target_distribution_mode: 'input', target_distribution: [], strength: 1 },
-                isExpanded: true
+                ...defaultClassBalancing,
+                params: { ...defaultClassBalancing.params, target_distribution_mode: 'input' }
             };
 
             expect(isStrategyInstanceValid(instance)).toBe(true);
@@ -174,14 +160,12 @@ describe('isStrategyInstanceValid', () => {
 
         it('returns false for dictionary with empty target_distribution', () => {
             const instance: StrategyInstance = {
-                id: '1',
-                type: 'class_balancing',
+                ...defaultClassBalancing,
                 params: {
+                    ...defaultClassBalancing.params,
                     target_distribution_mode: 'dictionary',
-                    target_distribution: [],
-                    strength: 1
-                },
-                isExpanded: true
+                    target_distribution: []
+                }
             };
 
             expect(isStrategyInstanceValid(instance)).toBe(false);
@@ -189,14 +173,12 @@ describe('isStrategyInstanceValid', () => {
 
         it('returns false for dictionary when a row has an empty class_name', () => {
             const instance: StrategyInstance = {
-                id: '1',
-                type: 'class_balancing',
+                ...defaultClassBalancing,
                 params: {
+                    ...defaultClassBalancing.params,
                     target_distribution_mode: 'dictionary',
-                    target_distribution: [{ class_name: '', weight: 1 }],
-                    strength: 1
-                },
-                isExpanded: true
+                    target_distribution: [{ class_name: '', weight: 1 }]
+                }
             };
 
             expect(isStrategyInstanceValid(instance)).toBe(false);
@@ -204,14 +186,12 @@ describe('isStrategyInstanceValid', () => {
 
         it('returns false for dictionary when a row has a whitespace class_name', () => {
             const instance: StrategyInstance = {
-                id: '1',
-                type: 'class_balancing',
+                ...defaultClassBalancing,
                 params: {
+                    ...defaultClassBalancing.params,
                     target_distribution_mode: 'dictionary',
-                    target_distribution: [{ class_name: '   ', weight: 1 }],
-                    strength: 1
-                },
-                isExpanded: true
+                    target_distribution: [{ class_name: '   ', weight: 1 }]
+                }
             };
 
             expect(isStrategyInstanceValid(instance)).toBe(false);
@@ -219,14 +199,51 @@ describe('isStrategyInstanceValid', () => {
 
         it('returns false for dictionary when a row has a non-positive weight', () => {
             const instance: StrategyInstance = {
-                id: '1',
-                type: 'class_balancing',
+                ...defaultClassBalancing,
                 params: {
+                    ...defaultClassBalancing.params,
                     target_distribution_mode: 'dictionary',
-                    target_distribution: [{ class_name: 'cat', weight: 0 }],
-                    strength: 1
-                },
-                isExpanded: true
+                    target_distribution: [{ class_name: 'cat', weight: 0 }]
+                }
+            };
+
+            expect(isStrategyInstanceValid(instance)).toBe(false);
+        });
+
+        it('returns false for dictionary when a row has a negative weight', () => {
+            const instance: StrategyInstance = {
+                ...defaultClassBalancing,
+                params: {
+                    ...defaultClassBalancing.params,
+                    target_distribution_mode: 'dictionary',
+                    target_distribution: [{ class_name: 'cat', weight: -1 }]
+                }
+            };
+
+            expect(isStrategyInstanceValid(instance)).toBe(false);
+        });
+
+        it('returns false for dictionary when a row has a NaN weight', () => {
+            const instance: StrategyInstance = {
+                ...defaultClassBalancing,
+                params: {
+                    ...defaultClassBalancing.params,
+                    target_distribution_mode: 'dictionary',
+                    target_distribution: [{ class_name: 'cat', weight: Number.NaN }]
+                }
+            };
+
+            expect(isStrategyInstanceValid(instance)).toBe(false);
+        });
+
+        it('returns false for dictionary when a row has an Infinity weight', () => {
+            const instance: StrategyInstance = {
+                ...defaultClassBalancing,
+                params: {
+                    ...defaultClassBalancing.params,
+                    target_distribution_mode: 'dictionary',
+                    target_distribution: [{ class_name: 'cat', weight: Number.POSITIVE_INFINITY }]
+                }
             };
 
             expect(isStrategyInstanceValid(instance)).toBe(false);
@@ -234,17 +251,15 @@ describe('isStrategyInstanceValid', () => {
 
         it('returns true for dictionary with a valid distribution', () => {
             const instance: StrategyInstance = {
-                id: '1',
-                type: 'class_balancing',
+                ...defaultClassBalancing,
                 params: {
+                    ...defaultClassBalancing.params,
                     target_distribution_mode: 'dictionary',
                     target_distribution: [
                         { class_name: 'cat', weight: 2 },
                         { class_name: 'dog', weight: 1 }
-                    ],
-                    strength: 1
-                },
-                isExpanded: true
+                    ]
+                }
             };
 
             expect(isStrategyInstanceValid(instance)).toBe(true);

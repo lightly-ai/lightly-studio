@@ -94,10 +94,10 @@ describe('usePlotData', () => {
 
         // First two points are in polygon (keep previous categories), last two are outside (demoted to 0)
         const categoryArray = Array.from(data?.category as Uint8Array);
-        expect(categoryArray[0]).toBe(1); // in polygon, keeps FILTERED_CATEGORY
+        expect(categoryArray[0]).toBe(1); // in polygon, keeps INCLUDED_BY_FILTERS_CATEGORY
         expect(categoryArray[1]).toBe(2); // in polygon, preserves color category
-        expect(categoryArray[2]).toBe(0); // outside polygon, demoted to NOT_FILTERED_CATEGORY
-        expect(categoryArray[3]).toBe(0); // outside polygon, demoted to NOT_FILTERED_CATEGORY
+        expect(categoryArray[2]).toBe(0); // outside polygon, demoted to EXCLUDED_BY_FILTERS_CATEGORY
+        expect(categoryArray[3]).toBe(0); // outside polygon, demoted to EXCLUDED_BY_FILTERS_CATEGORY
     });
 
     it('should collect selected sample ids when range selection is applied', () => {
