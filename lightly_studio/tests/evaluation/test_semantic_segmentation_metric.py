@@ -116,7 +116,7 @@ def test_class_masks_from_annotations__accumulates_same_label(db_session: Sessio
         sample_id=image.sample_id,
         annotation_label_id=label.annotation_label_id,
         annotation_type=AnnotationType.SEGMENTATION_MASK,
-        annotation_data={"x": 0, "y": 0, "width": 2, "height": 1, "segmentation_mask": [0, 2]},
+        annotation_data={"x": 0, "y": 0, "width": 2, "height": 1, "segmentation_mask": [0, 2, 2]},
     )
     ann2 = create_annotation(
         session=db_session,
@@ -124,7 +124,7 @@ def test_class_masks_from_annotations__accumulates_same_label(db_session: Sessio
         sample_id=image.sample_id,
         annotation_label_id=label.annotation_label_id,
         annotation_type=AnnotationType.SEGMENTATION_MASK,
-        annotation_data={"x": 0, "y": 1, "width": 2, "height": 1, "segmentation_mask": [0, 2]},
+        annotation_data={"x": 0, "y": 1, "width": 2, "height": 1, "segmentation_mask": [2, 2]},
     )
 
     masks = semantic_segmentation_metric._class_masks_from_annotations(
