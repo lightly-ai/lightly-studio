@@ -74,7 +74,6 @@ def get_2d_embeddings(
         collection_id=collection_id,
         color_by=color_by,
         sample_ids=sample_ids,
-        fulfils_filter=fulfils_filter,
     )
 
     schema = pa.schema(
@@ -82,7 +81,7 @@ def get_2d_embeddings(
             pa.field("x", pa.float32()),
             pa.field("y", pa.float32()),
             pa.field("fulfils_filter", pa.uint8()),
-            pa.field("color_category", pa.uint8()),
+            pa.field("color_categories", pa.list_(pa.uint8())),
             pa.field("sample_id", pa.string()),
         ],
         metadata={
@@ -94,7 +93,7 @@ def get_2d_embeddings(
             "x": pa.array(x_array, type=pa.float32()),
             "y": pa.array(y_array, type=pa.float32()),
             "fulfils_filter": pa.array(fulfils_filter, type=pa.uint8()),
-            "color_category": pa.array(color_categories, type=pa.uint8()),
+            "color_categories": pa.array(color_categories, type=pa.list_(pa.uint8())),
             "sample_id": pa.array([str(sample_id) for sample_id in sample_ids], type=pa.string()),
         },
         schema=schema,

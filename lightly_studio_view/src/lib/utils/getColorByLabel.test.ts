@@ -19,18 +19,10 @@ describe('getColorByLabel', () => {
     });
 
     test('returns an rgba color and an RGB-inverted contrast color', () => {
-        const { color, contrastColor } = getColorByLabel('cat');
-        expect(color).toMatch(/^rgba\(\d+, \d+, \d+, [\d.]+\)$/);
-        expect(contrastColor).toMatch(/^rgba\(\d+, \d+, \d+, [\d.]+\)$/);
-
-        const parse = (s: string) =>
-            s
-                .match(/rgba\((\d+), (\d+), (\d+)/)!
-                .slice(1)
-                .map(Number);
-        const [r, g, b] = parse(color);
-        const [cr, cg, cb] = parse(contrastColor);
-        expect([cr, cg, cb]).toEqual([255 - r, 255 - g, 255 - b]);
+        expect(getColorByLabel('cat')).toEqual({
+            color: 'rgba(0, 0, 255, 1)',
+            contrastColor: 'rgba(255, 255, 0, 1)'
+        });
     });
 
     test('clamps alpha below 0 to 0 and above 1 to 1', () => {
@@ -39,15 +31,11 @@ describe('getColorByLabel', () => {
     });
 
     describe('with a custom color override', () => {
-        test('uses the override hex, mixing the override alpha with the requested alpha', () => {
+        test('uses the override hex with an RGB-inverted contrast, mixing the override alpha with the requested alpha', () => {
             useCustomLabelColors().setCustomColor('cat', '#ff8040', 0.8);
-
             expect(getColorByLabel('cat', 0.5).color).toBe('rgba(255, 128, 64, 0.4)');
-        });
 
-        test('contrast color is still the RGB inverse of the override', () => {
             useCustomLabelColors().setCustomColor('cat', '#ff8040', 1);
-
             const { color, contrastColor } = getColorByLabel('cat', 1);
             expect(color).toBe('rgba(255, 128, 64, 1)');
             expect(contrastColor).toBe('rgba(0, 127, 191, 1)');
