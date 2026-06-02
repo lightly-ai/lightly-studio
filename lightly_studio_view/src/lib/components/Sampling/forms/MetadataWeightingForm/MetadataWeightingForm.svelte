@@ -2,7 +2,7 @@
     import { Label } from '$lib/components/ui/label';
     import FieldTooltip from '$lib/components/FieldTooltip/FieldTooltip.svelte';
     import type { MetadataWeightingParams, StrategyParams } from '$lib/hooks/useStrategyBuilder';
-    import StrengthField from '../StrengthField/StrengthField.svelte';
+    import { StrengthField } from '$lib/components/Sampling/forms/StrengthField';
     import MetadataKeySelect from './MetadataKeySelect.svelte';
     interface Props {
         params: MetadataWeightingParams;

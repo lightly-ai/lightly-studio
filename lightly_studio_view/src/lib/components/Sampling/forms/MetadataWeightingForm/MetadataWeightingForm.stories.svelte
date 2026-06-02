@@ -17,7 +17,7 @@
 <Story
     name="WithNoMetadataFieldKey"
     args={{
-        params: { metadata_key: null, strength: 1 },
+        params: { metadata_key: '', strength: 1 },
         metadataFieldNames: ['brightness', 'contrast', 'sharpness'],
         onUpdate: fn()
     }}
