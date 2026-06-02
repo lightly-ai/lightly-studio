@@ -1,13 +1,8 @@
 import { writable } from 'svelte/store';
 import {
-    type ClassBalancingParams,
-    type DiversityParams,
-    type MetadataWeightingParams,
-    type SimilarityParams,
     type StrategyInstance,
     type StrategyParams,
     type StrategyType,
-    type TypicalityParams,
     STRATEGY_OPTIONS
 } from './types';
 import {
@@ -24,35 +19,7 @@ function updateStrategyInstance(
     instance: StrategyInstance,
     params: Partial<StrategyParams>
 ): StrategyInstance {
-    if (instance.type === 'diversity') {
-        return {
-            ...instance,
-            params: { ...instance.params, ...(params as Partial<DiversityParams>) }
-        };
-    }
-    if (instance.type === 'typicality') {
-        return {
-            ...instance,
-            params: { ...instance.params, ...(params as Partial<TypicalityParams>) }
-        };
-    }
-    if (instance.type === 'similarity') {
-        return {
-            ...instance,
-            params: { ...instance.params, ...(params as Partial<SimilarityParams>) }
-        };
-    }
-    if (instance.type === 'metadata_weighting') {
-        return {
-            ...instance,
-            params: { ...instance.params, ...(params as Partial<MetadataWeightingParams>) }
-        };
-    }
-
-    return {
-        ...instance,
-        params: { ...instance.params, ...(params as Partial<ClassBalancingParams>) }
-    };
+    return { ...instance, params: { ...instance.params, ...params } } as StrategyInstance;
 }
 
 export function useStrategyBuilder() {
