@@ -10,6 +10,13 @@ interface SelectionError {
     error: string;
 }
 
+function handleComputeError(response: { error: unknown }, prefix: string): boolean {
+    if (!response.error) return false;
+    const detail = (response.error as SelectionError).error ?? 'Unknown error';
+    toast.error(`${prefix}: ${detail}`);
+    return true;
+}
+
 interface ComputeStrategyMetadataParams {
     instance: StrategyInstance;
     collectionId: string;
@@ -30,13 +37,7 @@ export async function computeStrategyMetadata(
                 metadata_name: getMetadataKey(instance)
             }
         });
-        if (response.error) {
-            toast.error(
-                'Failed to compute typicality metadata: ' +
-                    ((response.error as SelectionError).error ?? 'Unknown error')
-            );
-            return false;
-        }
+        if (handleComputeError(response, 'Failed to compute typicality metadata')) return false;
     }
 
     if (instance.type === 'similarity') {
@@ -55,13 +56,7 @@ export async function computeStrategyMetadata(
                 metadata_name: getMetadataKey(instance)
             }
         });
-        if (response.error) {
-            toast.error(
-                'Failed to compute similarity metadata: ' +
-                    ((response.error as SelectionError).error ?? 'Unknown error')
-            );
-            return false;
-        }
+        if (handleComputeError(response, 'Failed to compute similarity metadata')) return false;
     }
 
     return true;

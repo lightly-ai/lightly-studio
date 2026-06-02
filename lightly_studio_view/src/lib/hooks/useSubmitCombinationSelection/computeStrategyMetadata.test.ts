@@ -16,6 +16,12 @@ vi.mock('svelte-sonner', () => ({
 
 const { toast } = await import('svelte-sonner');
 
+const defaultParams = {
+    collectionId: 'col-1',
+    isVideoCollection: false,
+    onProgress: vi.fn()
+};
+
 describe('computeStrategyMetadata', () => {
     beforeEach(() => {
         vi.clearAllMocks();
@@ -26,14 +32,13 @@ describe('computeStrategyMetadata', () => {
         const onProgress = vi.fn();
 
         const result = await computeStrategyMetadata({
+            ...defaultParams,
             instance: {
                 id: 'typ-1',
                 type: 'typicality',
                 params: { strength: 1 },
                 isExpanded: true
             },
-            collectionId: 'col-1',
-            isVideoCollection: false,
             onProgress
         });
 
@@ -50,14 +55,13 @@ describe('computeStrategyMetadata', () => {
         const onProgress = vi.fn();
 
         const result = await computeStrategyMetadata({
+            ...defaultParams,
             instance: {
                 id: 'sim-1',
                 type: 'similarity',
                 params: { query_tag_id: 'qtag-1', strength: 1 },
                 isExpanded: true
             },
-            collectionId: 'col-1',
-            isVideoCollection: false,
             onProgress
         });
 
@@ -73,23 +77,22 @@ describe('computeStrategyMetadata', () => {
         const onProgress = vi.fn();
 
         const r1 = await computeStrategyMetadata({
+            ...defaultParams,
             instance: { id: 'd', type: 'diversity', params: { strength: 1 }, isExpanded: true },
-            collectionId: 'col-1',
-            isVideoCollection: false,
             onProgress
         });
         const r2 = await computeStrategyMetadata({
+            ...defaultParams,
             instance: {
                 id: 'm',
                 type: 'metadata_weighting',
                 params: { metadata_key: 'k', strength: 1 },
                 isExpanded: true
             },
-            collectionId: 'col-1',
-            isVideoCollection: false,
             onProgress
         });
         const r3 = await computeStrategyMetadata({
+            ...defaultParams,
             instance: {
                 id: 'b',
                 type: 'class_balancing',
@@ -100,8 +103,6 @@ describe('computeStrategyMetadata', () => {
                 },
                 isExpanded: true
             },
-            collectionId: 'col-1',
-            isVideoCollection: false,
             onProgress
         });
 
@@ -120,15 +121,8 @@ describe('computeStrategyMetadata', () => {
         } as never);
 
         const result = await computeStrategyMetadata({
-            instance: {
-                id: 'typ-2',
-                type: 'typicality',
-                params: { strength: 1 },
-                isExpanded: true
-            },
-            collectionId: 'col-1',
-            isVideoCollection: false,
-            onProgress: vi.fn()
+            ...defaultParams,
+            instance: { id: 'typ-2', type: 'typicality', params: { strength: 1 }, isExpanded: true }
         });
 
         expect(result).toBe(false);
@@ -144,15 +138,13 @@ describe('computeStrategyMetadata', () => {
         } as never);
 
         const result = await computeStrategyMetadata({
+            ...defaultParams,
             instance: {
                 id: 'sim-2',
                 type: 'similarity',
                 params: { query_tag_id: 'qt', strength: 1 },
                 isExpanded: true
-            },
-            collectionId: 'col-1',
-            isVideoCollection: false,
-            onProgress: vi.fn()
+            }
         });
 
         expect(result).toBe(false);
@@ -163,15 +155,14 @@ describe('computeStrategyMetadata', () => {
 
     it('blocks similarity on video collections without calling the API', async () => {
         const result = await computeStrategyMetadata({
+            ...defaultParams,
             instance: {
                 id: 'sim-3',
                 type: 'similarity',
                 params: { query_tag_id: 'qt', strength: 1 },
                 isExpanded: true
             },
-            collectionId: 'col-1',
-            isVideoCollection: true,
-            onProgress: vi.fn()
+            isVideoCollection: true
         });
 
         expect(result).toBe(false);
