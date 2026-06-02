@@ -63,7 +63,7 @@
                 {@const pillColor = getPillColor(pill, 0.9)}
                 {@const pillBorderColor = getPillColor(pill, 1)}
                 <span
-                    class="min-w-0 max-w-32 truncate rounded-md border px-1.5 py-0.5 text-[11px] font-medium leading-none shadow-sm backdrop-blur-sm"
+                    class="min-w-0 max-w-32 truncate rounded border px-1.5 py-0.5 text-xs font-medium backdrop-blur-sm"
                     style={`background-color: ${pillColor.color}; border-color: ${pillBorderColor.color}; color: ${pillColor.contrastColor};`}
                     title={pill.title}
                 >
@@ -72,7 +72,7 @@
             {/each}
             {#if overflowCount > 0}
                 <span
-                    class="shrink-0 rounded-md border border-black/10 bg-white px-1.5 py-0.5 text-[11px] font-medium leading-none text-black shadow-sm"
+                    class="shrink-0 rounded bg-black/60 px-1.5 py-0.5 text-xs font-medium text-white backdrop-blur-sm"
                     title={`${overflowCount} more classification labels`}
                 >
                     +{overflowCount}
@@ -86,7 +86,7 @@
                 {@const pillColor = getPillColor(pill, 0.9)}
                 {@const pillBorderColor = getPillColor(pill, 1)}
                 <span
-                    class="max-w-32 truncate rounded-md border px-1.5 py-0.5 text-[11px] font-medium leading-none shadow-sm"
+                    class="max-w-32 truncate rounded border px-1.5 py-0.5 text-xs font-medium backdrop-blur-sm"
                     style={`background-color: ${pillColor.color}; border-color: ${pillBorderColor.color}; color: ${pillColor.contrastColor};`}
                 >
                     {pill.displayLabel}
