@@ -14,6 +14,10 @@
 
     const supportedTypes = new Set(['string', 'boolean']);
 
+    // Sentinel value for the explicit "no coloring" option. Kept distinct from
+    // both the numeric option indices and the empty-string deselect signal.
+    const NO_COLOR_BY = 'no_color_by';
+
     let { collectionId, selectedKey, onSelectedKeyChange, withTags, withAnnotationLabels }: Props =
         $props();
 
@@ -51,7 +55,7 @@
             }
             return !selectedKey && opt.type === $selectedColorByType;
         });
-        return idx >= 0 ? String(idx) : '';
+        return idx >= 0 ? String(idx) : NO_COLOR_BY;
     });
     const triggerLabel = $derived.by(() => {
         if (selectedKey) {
@@ -67,7 +71,7 @@
     });
 
     const handleValueChange = (value: string) => {
-        if (value === '') {
+        if (value === '' || value === NO_COLOR_BY) {
             clearSelectedColorByType();
             onSelectedKeyChange(null);
             return;
@@ -99,11 +103,13 @@
     <Select.Content class="max-h-64" data-testid="plot-color-by-options">
         {#if colorByOptions.length === 0}
             <p class="px-2 py-1.5 text-sm text-muted-foreground">Nothing to color by</p>
+        {:else}
+            <Select.Item value={NO_COLOR_BY} label="No coloring">No coloring</Select.Item>
+            {#each colorByOptions as option, i (option.type === 'metadata' ? `metadata:${option.fieldName}` : `type:${option.type}`)}
+                <Select.Item value={String(i)} label={option.label}>
+                    {option.label}
+                </Select.Item>
+            {/each}
         {/if}
-        {#each colorByOptions as option, i (option.type === 'metadata' ? `metadata:${option.fieldName}` : `type:${option.type}`)}
-            <Select.Item value={String(i)} label={option.label}>
-                {option.label}
-            </Select.Item>
-        {/each}
     </Select.Content>
 </Select.Root>
