@@ -15,7 +15,8 @@ export const useAdjacentImages = ({
     const { textEmbedding } = useGlobalStorage();
 
     const filter = get(imageFilter);
-    const sortBy = get(imageSortBy);
+    const embedding = get(textEmbedding);
+    const sortBy = embedding ? undefined : (get(imageSortBy) ?? undefined);
     return useAdjacentSamples({
         params: {
             sampleId,
@@ -23,8 +24,8 @@ export const useAdjacentImages = ({
                 sample_type: SampleType.IMAGE,
                 collection_id: collectionId,
                 filters: filter ? { ...filter, filter_type: 'image' } : { filter_type: 'image' },
-                text_embedding: get(textEmbedding)?.embedding,
-                sort_by: sortBy ?? undefined
+                text_embedding: embedding?.embedding,
+                sort_by: sortBy
             }
         }
     });
