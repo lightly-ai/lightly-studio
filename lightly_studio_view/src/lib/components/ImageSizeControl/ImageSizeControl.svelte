@@ -3,7 +3,14 @@
     import { throttle } from 'lodash-es';
     import { ZoomIn, ZoomOut } from '@lucide/svelte';
     import { useGlobalStorage } from '$lib/hooks/useGlobalStorage';
-    const { min = 1, max = 16, compact = false } = $props();
+
+    interface Props {
+        min?: number;
+        max?: number;
+        compact?: boolean;
+    }
+
+    const { min = 1, max = 16, compact = false }: Props = $props();
 
     const { updateSampleSize, sampleSize } = useGlobalStorage();
 

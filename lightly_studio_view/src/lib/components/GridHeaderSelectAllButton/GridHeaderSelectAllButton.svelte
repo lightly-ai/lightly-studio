@@ -2,8 +2,12 @@
     import { SquareCheck } from '@lucide/svelte';
     import Button from '../ui/button/button.svelte';
 
-    const { onclick, compact = false }: { onclick: () => Promise<void>; compact?: boolean } =
-        $props();
+    interface Props {
+        onclick: () => Promise<void>;
+        compact?: boolean;
+    }
+
+    const { onclick, compact = false }: Props = $props();
 </script>
 
 <Button

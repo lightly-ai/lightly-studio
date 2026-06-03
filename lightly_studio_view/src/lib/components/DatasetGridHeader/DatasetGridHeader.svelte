@@ -63,6 +63,7 @@
                     class="flex items-center space-x-1"
                     data-testid="toggle-plot-button"
                     variant={$showEmbeddingPlot ? 'default' : 'ghost'}
+                    aria-label="Embeddings"
                     onclick={() => setShowEmbeddingPlot(!$showEmbeddingPlot)}
                 >
                     <ChartNetwork class="size-4" />
@@ -81,6 +82,7 @@
                     class="flex items-center space-x-1"
                     data-testid="toggle-evaluation-runs-button"
                     variant={$showEvaluationRuns ? 'default' : 'ghost'}
+                    aria-label="Evaluation"
                     onclick={() => setShowEvaluationRuns(!$showEvaluationRuns)}
                 >
                     <Gauge class="size-4" />

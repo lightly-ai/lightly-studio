@@ -210,4 +210,21 @@ describe('DatasetGridHeader', () => {
         expect(screen.getByText('Embeddings')).toBeInTheDocument();
         expect(screen.getByText('Evaluation')).toBeInTheDocument();
     });
+
+    it('gives the embeddings and evaluation toggles a stable accessible name', () => {
+        // aria-label is unconditional, so the buttons keep their name once compaction hides
+        // the visible text label.
+        render(DatasetGridHeader, {
+            props: {
+                ...defaultProps,
+                isImages: true,
+                hasMediaWithEmbeddings: true
+            }
+        });
+
+        expect(screen.getByTestId('toggle-plot-button')).toHaveAccessibleName('Embeddings');
+        expect(screen.getByTestId('toggle-evaluation-runs-button')).toHaveAccessibleName(
+            'Evaluation'
+        );
+    });
 });
