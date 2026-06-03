@@ -116,7 +116,7 @@ describe('GridHeader', () => {
         expect(childrenContainer).toBeInTheDocument();
     });
 
-    it('compacts, then wraps, then re-expands as the row resizes', async () => {
+    it('compacts (allowing wrap) when the row overflows and re-expands when wide again', async () => {
         const { container } = render(GridHeaderTest, {
             props: {
                 testCase: 'compact-probe'
@@ -124,27 +124,27 @@ describe('GridHeader', () => {
         });
 
         const bar = container.querySelector('.my-2')!;
+        // Full layout: measured flex-nowrap so overflow is observable.
         expect(screen.getByTestId('compact-state')).toHaveTextContent('full');
+        expect(bar).toHaveClass('flex-nowrap');
         expect(bar).not.toHaveClass('flex-wrap');
 
-        // Row no longer fits on one line -> compact (records expanded width 600).
+        // Full layout no longer fits (records expanded width 600) -> compact + allow wrapping.
+        // flex-nowrap and flex-wrap are conflicting utilities, so only one may be applied.
         await resizeTo(bar, 600, 400);
         expect(screen.getByTestId('compact-state')).toHaveTextContent('compact');
-        expect(bar).not.toHaveClass('flex-wrap');
-
-        // Even compacted it still overflows -> wrap onto a second row (records width 500).
-        // flex-nowrap and flex-wrap are conflicting utilities, so only one may be applied.
-        await resizeTo(bar, 500, 400);
         expect(bar).toHaveClass('flex-wrap');
         expect(bar).not.toHaveClass('flex-nowrap');
 
-        // Wide enough for the compact layout again -> stop wrapping.
-        await resizeTo(bar, 500, 520);
-        expect(bar).not.toHaveClass('flex-wrap');
+        // Wider, but still narrower than the recorded full width -> stays compact (CSS decides
+        // one vs two rows; un-compacting is threshold-based, not overflow-based).
+        await resizeTo(bar, 420, 520);
         expect(screen.getByTestId('compact-state')).toHaveTextContent('compact');
 
-        // Wide enough for the full layout again -> re-expand.
-        await resizeTo(bar, 500, 620);
+        // Wide enough for the full layout again (>= 600) -> re-expand.
+        await resizeTo(bar, 420, 620);
         expect(screen.getByTestId('compact-state')).toHaveTextContent('full');
+        expect(bar).toHaveClass('flex-nowrap');
+        expect(bar).not.toHaveClass('flex-wrap');
     });
 });

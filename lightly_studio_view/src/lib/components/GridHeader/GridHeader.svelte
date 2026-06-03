@@ -18,32 +18,25 @@
 
     let barEl = $state<HTMLDivElement>();
 
-    // Drop button labels / the zoom slider as soon as the row stops fitting on one line; only
-    // wrap onto a second row once even the compact layout overflows.
+    // Drop button labels / the zoom slider once the full row stops fitting on one line. While
+    // compact the row is allowed to wrap, so CSS spills it onto a second row only if even the
+    // compacted controls overflow.
     let compact = $state(false);
-    let wrap = $state(false);
 
-    // Widths recorded at each transition so we can reverse it from clientWidth alone — once the
-    // row wraps it no longer overflows, so scrollWidth can't tell us when to expand again.
+    // The full-layout width that triggered compaction, recorded while the row was flex-nowrap
+    // (the only state where overflow is observable). We re-expand once the bar is at least this
+    // wide again — using the threshold instead of a live measurement, since a wrapped row never
+    // reports overflow.
     let compactThreshold = 0;
-    let wrapThreshold = 0;
 
     function measure(el: HTMLDivElement): void {
-        const overflows = el.scrollWidth > el.clientWidth;
         if (!compact) {
-            if (overflows) {
+            if (el.scrollWidth > el.clientWidth) {
                 compactThreshold = el.scrollWidth;
                 compact = true;
             }
-        } else if (!wrap) {
-            if (overflows) {
-                wrapThreshold = el.scrollWidth;
-                wrap = true;
-            } else if (el.clientWidth >= compactThreshold) {
-                compact = false;
-            }
-        } else if (el.clientWidth >= wrapThreshold) {
-            wrap = false;
+        } else if (el.clientWidth >= compactThreshold) {
+            compact = false;
         }
     }
 
@@ -54,26 +47,13 @@
         observer.observe(el);
         return () => observer.disconnect();
     });
-
-    $effect(() => {
-        // Compacting / wrapping resizes the bar's children, not the bar itself, so the
-        // ResizeObserver won't fire again. Re-measure once the change has reflowed so the
-        // full -> compact -> wrap sequence can complete within a single resize. The machine
-        // is monotonic per direction, so this converges (a settled measure changes nothing).
-        void compact;
-        void wrap;
-        const el = barEl;
-        if (!el) return;
-        const frame = requestAnimationFrame(() => measure(el));
-        return () => cancelAnimationFrame(frame);
-    });
 </script>
 
 <div
     bind:this={barEl}
     class="my-2 flex min-w-0 items-center gap-x-4 gap-y-2"
-    class:flex-nowrap={!wrap}
-    class:flex-wrap={wrap}
+    class:flex-nowrap={!compact}
+    class:flex-wrap={compact}
 >
     {#if children}
         <div class="min-w-[12rem] flex-1">
