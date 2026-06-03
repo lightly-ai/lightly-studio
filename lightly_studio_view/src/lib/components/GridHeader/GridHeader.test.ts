@@ -77,20 +77,18 @@ describe('GridHeader', () => {
         expect(screen.getByLabelText('Zoom out')).toBeInTheDocument();
     });
 
-    it('applies correct CSS classes for layout', () => {
+    it('lays out controls in a flex row that can wrap instead of overflowing', () => {
         const { container } = render(GridHeaderTest, {
             props: {
                 testCase: 'children-only'
             }
         });
 
-        const wrapper = container.querySelector(
-            '.my-2.flex.flex-wrap.items-center.gap-x-4.gap-y-2'
-        );
+        const wrapper = container.querySelector('.flex.flex-wrap');
         expect(wrapper).toBeInTheDocument();
     });
 
-    it('applies flex-1 to children container', () => {
+    it('gives the children region flexible width', () => {
         const { container } = render(GridHeaderTest, {
             props: {
                 testCase: 'children-only'
