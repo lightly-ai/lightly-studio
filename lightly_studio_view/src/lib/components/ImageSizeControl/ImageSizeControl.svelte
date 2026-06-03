@@ -34,7 +34,12 @@
     }
 </script>
 
-<div class="flex shrink-0 items-center space-x-2 text-diffuse-foreground" class:w-40={!compact}>
+<div
+    class="flex shrink-0 items-center text-diffuse-foreground"
+    class:w-40={!compact}
+    class:space-x-2={!compact}
+    class:space-x-4={compact}
+>
     <button
         onclick={zoomOut}
         disabled={width >= max}
