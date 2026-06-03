@@ -34,6 +34,7 @@ from lightly_studio.sampling.sampling_config import (
     MetadataWeightingStrategy,
     SamplingConfig,
 )
+from lightly_studio.utils import batching
 
 EPSILON = 1e-6
 
@@ -311,16 +312,19 @@ def _get_annotations_for_class_balancing(
             )
         )
 
-    annotations_statement = (
-        select(AnnotationBaseTable)
-        .join(
-            SampleTable,
-            col(SampleTable.sample_id) == col(AnnotationBaseTable.sample_id),
+    annotations: list[AnnotationBaseTable] = []
+    for batch in batching.batched(items=parent_sample_ids):
+        annotations_statement = (
+            select(AnnotationBaseTable)
+            .join(
+                SampleTable,
+                col(SampleTable.sample_id) == col(AnnotationBaseTable.sample_id),
+            )
+            .where(col(AnnotationBaseTable.parent_sample_id).in_(batch))
+            .where(col(SampleTable.collection_id) == annotation_source_id)
         )
-        .where(col(AnnotationBaseTable.parent_sample_id).in_(parent_sample_ids))
-        .where(col(SampleTable.collection_id) == annotation_source_id)
-    )
-    return list(session.exec(annotations_statement).all())
+        annotations.extend(session.exec(annotations_statement).all())
+    return annotations
 
 
 def _add_strategy_to_mundig(
