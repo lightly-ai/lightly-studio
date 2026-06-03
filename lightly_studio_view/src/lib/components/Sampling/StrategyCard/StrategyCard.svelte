@@ -15,6 +15,7 @@
     import SimilarityForm from '../forms/SimilarityForm/SimilarityForm.svelte';
     import ClassBalancingForm from '../forms/ClassBalancingForm/ClassBalancingForm.svelte';
     import StrengthField from '../forms/StrengthField/StrengthField.svelte';
+    import Typography from '$lib/components/Typography/Typography.svelte';
     interface Props {
         instance: StrategyInstance;
         tags: StrategySummaryTag[];
@@ -57,9 +58,13 @@
             {/if}
 
             <div class="min-w-0">
-                <p class="truncate text-sm font-medium text-foreground">
+                <Typography
+                    variant="subtitle2"
+                    component="span"
+                    className="block truncate text-foreground"
+                >
                     {STRATEGY_LABELS[instance.type]}
-                </p>
+                </Typography>
             </div>
         </button>
 
