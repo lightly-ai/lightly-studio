@@ -8,6 +8,7 @@ from uuid import UUID
 from sqlalchemy import Select, select
 from sqlmodel import Session, col, func
 
+from lightly_studio import db_array
 from lightly_studio.models.annotation.annotation_base import AnnotationBaseTable
 from lightly_studio.models.range import FloatRange, IntRange
 from lightly_studio.models.sample import SampleTable
@@ -50,7 +51,12 @@ def get_table_fields_bounds(
                 AnnotationBaseTable,
                 col(AnnotationBaseTable.parent_sample_id) == col(SampleTable.sample_id),
             )
-            .where(col(AnnotationBaseTable.annotation_label_id).in_(annotations_frames_labels_id))
+            .where(
+                db_array.in_array(
+                    column=col(AnnotationBaseTable.annotation_label_id),
+                    values=annotations_frames_labels_id,
+                )
+            )
             .distinct()
         )
 

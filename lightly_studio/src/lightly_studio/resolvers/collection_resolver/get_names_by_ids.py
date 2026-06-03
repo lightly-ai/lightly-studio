@@ -7,6 +7,7 @@ from uuid import UUID
 
 from sqlmodel import Session, col, select
 
+from lightly_studio import db_array
 from lightly_studio.models.collection import CollectionTable
 
 
@@ -24,6 +25,8 @@ def get_names_by_ids(session: Session, collection_ids: Iterable[UUID]) -> dict[U
     if not ids:
         return {}
     collections = session.exec(
-        select(CollectionTable).where(col(CollectionTable.collection_id).in_(ids))
+        select(CollectionTable).where(
+            db_array.in_array(column=col(CollectionTable.collection_id), values=list(ids))
+        )
     ).all()
     return {c.collection_id: c.name for c in collections}
