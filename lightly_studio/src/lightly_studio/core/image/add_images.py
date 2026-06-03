@@ -14,10 +14,9 @@ import fsspec
 import PIL
 from labelformat.model.image import Image
 from labelformat.model.instance_segmentation import (
-    ImageInstanceSegmentation,
     InstanceSegmentationInput,
 )
-from labelformat.model.object_detection import ImageObjectDetection, ObjectDetectionInput
+from labelformat.model.object_detection import ObjectDetectionInput
 from sqlmodel import Session
 from tqdm import tqdm
 
@@ -146,12 +145,10 @@ def load_into_dataset_from_labelformat(
 
     samples_to_create: list[ImageCreate] = []
     created_sample_ids: list[UUID] = []
-    labels: list[ImageInstanceSegmentation | ImageObjectDetection] = []
 
     # Phase 1: Sample creation
     for image_data in tqdm(input_labels.get_labels(), desc="Processing images", unit=" images"):
         image: Image = image_data.image  # type: ignore[attr-defined]
-        labels.append(image_data)  # type: ignore[arg-type]
         logging_context.n_samples_to_be_inserted += 1
 
         sample = ImageCreate(
