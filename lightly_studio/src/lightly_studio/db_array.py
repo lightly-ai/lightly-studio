@@ -22,10 +22,14 @@ from sqlalchemy.sql.elements import ColumnElement
 class in_array(ColumnElement[bool]):  # noqa: N801
     """Membership test over a UUID column, compiled per dialect.
 
-    Use like ``column.in_(values)`` inside ``.where(...)``. On PostgreSQL it binds
-    ``values`` as a single ``UUID[]`` array parameter (``column = ANY(:array)``),
-    avoiding the 65,535 expanding-IN parameter cap; on DuckDB it falls back to an
-    ordinary expanding IN. Callers must ensure ``values`` is non-empty.
+    Usage in code:
+    Replace `.where(col(some_column_element).in_(some_list))` with
+    `in_array(column=col(some_column_element), values=some_list)`.
+
+    This is intended for cases where ``some_list`` may exceed PostgreSQL's 65,535 bind
+    parameter limit for expanding IN clauses. For PostgreSQL, this compiles to a single
+    bound array parameter with ``= ANY(:array)``. For DuckDB, it compiles to an ordinary
+     expanding IN clause, which DuckDB handles efficiently.
     """
 
     # Holds a raw Python list, which is not safely cache-keyable (like db_json.json_extract).
