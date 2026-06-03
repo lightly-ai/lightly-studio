@@ -302,7 +302,7 @@
                 <div class="text-lg">Error loading embeddings: {errorText}</div>
             </div>
         {:else if isReady}
-            <div class="relative min-h-0 flex-1 overflow-hidden bg-black" bind:this={plotContainer}>
+            <div class="embedding-plot-wrapper relative min-h-0 flex-1 overflow-hidden bg-black" bind:this={plotContainer}>
                 {#if $plotData && width >= MIN_RENDER_SIZE && height >= MIN_RENDER_SIZE}
                     <EmbeddingView
                         class="h-full w-full"
@@ -369,3 +369,19 @@
 </div>
 
 <svelte:window onmouseup={handleMouseUp} onkeydown={onWindowKeyDown} />
+
+<style>
+    :global(.embedding-plot-wrapper button) {
+        width: 20px !important;
+        height: 20px !important;
+    }
+    :global(.embedding-plot-wrapper button svg) {
+        width: 18px !important;
+        height: 18px !important;
+    }
+    :global(.embedding-plot-wrapper div[style*="bottom: 0px"][style*="position: absolute"]) {
+        font-size: 15px !important;
+        height: 25px !important;
+        line-height: 25px !important;
+    }
+</style>
