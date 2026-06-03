@@ -64,6 +64,27 @@ export const areAllAnnotationsHidden = (
     annotations.every((annotation) => hiddenAnnotationIds.has(annotation.sample_id));
 
 /**
+ * Returns the next hidden set after toggling a source's visibility: hides all of the
+ * source's annotations unless they are already all hidden, in which case it shows
+ * them all. The given hidden set is not mutated.
+ */
+export const toggleSourceVisibility = (
+    sourceAnnotations: AnnotationView[],
+    hiddenAnnotationIds: Set<string>
+): Set<string> => {
+    const hideAll = !areAllAnnotationsHidden(sourceAnnotations, hiddenAnnotationIds);
+    const next = new Set(hiddenAnnotationIds);
+    for (const annotation of sourceAnnotations) {
+        if (hideAll) {
+            next.add(annotation.sample_id);
+        } else {
+            next.delete(annotation.sample_id);
+        }
+    }
+    return next;
+};
+
+/**
  * Computes the initially hidden annotations when entering the details page:
  * annotations whose source is not selected in the grid's source filter start hidden.
  *

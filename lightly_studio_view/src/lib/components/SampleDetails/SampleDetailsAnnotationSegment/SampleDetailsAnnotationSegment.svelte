@@ -15,7 +15,8 @@
     import {
         areAllAnnotationsHidden,
         computeSeededHiddenIds,
-        groupAnnotationsBySource
+        groupAnnotationsBySource,
+        toggleSourceVisibility
     } from './SampleDetailsAnnotationSegment.helpers';
 
     type SampleDetailsAnnotationSegmentProps = {
@@ -183,19 +184,8 @@
         );
     };
 
-    // Bulk-toggles the visibility of all annotations of one source. Hides them all
-    // unless they are already all hidden, in which case it shows them all.
-    const onToggleSourceVisibility = (groupAnnotations: AnnotationView[]) => {
-        const hideAll = !areAllAnnotationsHidden(groupAnnotations, annotationsIdsToHide);
-        const next = new Set(annotationsIdsToHide);
-        for (const annotation of groupAnnotations) {
-            if (hideAll) {
-                next.add(annotation.sample_id);
-            } else {
-                next.delete(annotation.sample_id);
-            }
-        }
-        annotationsIdsToHide = next;
+    const onToggleSourceVisibility = (sourceAnnotations: AnnotationView[]) => {
+        annotationsIdsToHide = toggleSourceVisibility(sourceAnnotations, annotationsIdsToHide);
     };
 </script>
 

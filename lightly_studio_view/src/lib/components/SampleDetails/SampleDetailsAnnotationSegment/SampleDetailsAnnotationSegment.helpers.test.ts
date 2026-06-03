@@ -4,7 +4,8 @@ import {
     UNKNOWN_SOURCE_NAME,
     areAllAnnotationsHidden,
     computeSeededHiddenIds,
-    groupAnnotationsBySource
+    groupAnnotationsBySource,
+    toggleSourceVisibility
 } from './SampleDetailsAnnotationSegment.helpers';
 
 const createAnnotation = (sampleId: string, sourceId: string, labelName: string): AnnotationView =>
@@ -118,6 +119,37 @@ describe('areAllAnnotationsHidden', () => {
 
     it('returns false when there are no annotations', () => {
         expect(areAllAnnotationsHidden([], new Set(['a1']))).toBe(false);
+    });
+});
+
+describe('toggleSourceVisibility', () => {
+    const annotations = [
+        createAnnotation('gt-1', groundTruthSource.collection_id, 'cat'),
+        createAnnotation('gt-2', groundTruthSource.collection_id, 'dog')
+    ];
+
+    it('hides all annotations of the source when at least one is visible', () => {
+        expect(toggleSourceVisibility(annotations, new Set(['gt-1']))).toEqual(
+            new Set(['gt-1', 'gt-2'])
+        );
+    });
+
+    it('shows all annotations of the source when all are hidden', () => {
+        expect(toggleSourceVisibility(annotations, new Set(['gt-1', 'gt-2']))).toEqual(new Set());
+    });
+
+    it('does not affect hidden annotations of other sources', () => {
+        expect(toggleSourceVisibility(annotations, new Set(['other-1']))).toEqual(
+            new Set(['other-1', 'gt-1', 'gt-2'])
+        );
+    });
+
+    it('does not mutate the given hidden set', () => {
+        const hiddenAnnotationIds = new Set(['gt-1']);
+
+        toggleSourceVisibility(annotations, hiddenAnnotationIds);
+
+        expect(hiddenAnnotationIds).toEqual(new Set(['gt-1']));
     });
 });
 
