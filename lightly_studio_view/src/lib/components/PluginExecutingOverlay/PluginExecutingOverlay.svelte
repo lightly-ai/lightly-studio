@@ -1,6 +1,6 @@
 <script lang="ts">
     import Spinner from '$lib/components/Spinner/Spinner.svelte';
-    import { useOperatorsDialog } from '$lib/hooks/useOperatorsDialog/useOperatorsDialog';
+    import { useOperatorsDialog } from '$lib/hooks';
 
     const { isPluginExecuting } = useOperatorsDialog();
 </script>
