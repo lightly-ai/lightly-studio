@@ -6,6 +6,7 @@ from uuid import UUID
 from pydantic import BaseModel
 from sqlmodel import col, select
 
+from lightly_studio import db_array
 from lightly_studio.core.dataset_query import query_translation
 from lightly_studio.models.metadata import SampleMetadataTable
 from lightly_studio.models.query_expr import QueryExpr
@@ -46,7 +47,9 @@ class SampleFilter(BaseModel):
 
     def _apply_sample_ids_filter(self, query: QueryType) -> QueryType:
         if self.sample_ids:
-            return query.where(col(SampleTable.sample_id).in_(self.sample_ids))
+            return query.where(
+                db_array.in_array(column=col(SampleTable.sample_id), values=self.sample_ids)
+            )
         return query
 
     def _apply_annotation_filters(self, query: QueryType) -> QueryType:
@@ -64,7 +67,7 @@ class SampleFilter(BaseModel):
         sample_ids_subquery = (
             select(SampleTable.sample_id)
             .join(SampleTable.tags)
-            .where(col(TagTable.tag_id).in_(self.tag_ids))
+            .where(db_array.in_array(column=col(TagTable.tag_id), values=self.tag_ids))
             .distinct()
         )
         return query.where(col(SampleTable.sample_id).in_(sample_ids_subquery))

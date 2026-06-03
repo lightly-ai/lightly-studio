@@ -8,10 +8,12 @@ Run this script with `uv run tests/benchmarks/gui_benchmark.py` from the
 from __future__ import annotations
 
 import argparse
+import os
 import time
 from dataclasses import dataclass
 from pathlib import Path
 from tempfile import TemporaryDirectory
+from typing import Any
 from uuid import UUID
 
 import numpy as np
@@ -56,6 +58,7 @@ DEFAULT_DATASET_NAME = "gui_benchmark"
 DEFAULT_ANNOTATION_COLLECTION_NAME = "benchmark_annotations"
 DEFAULT_ANNOTATION_LABEL_NAMES = ["car", "person", "bicycle", "truck", "bus"]
 DEFAULT_EMBEDDING_MODEL_NAME = "benchmark_embeddings"
+DEFAULT_POSTGRES_URL = "postgresql://lightly:lightly@localhost:5433/lightly_studio"
 
 
 def _make_uuid_str(i: int) -> str:
@@ -78,6 +81,7 @@ class BenchmarkConfig:
     seed: int
     host: str | None
     port: int | None
+    postgres: bool
 
 
 def main() -> None:
@@ -94,6 +98,7 @@ def main() -> None:
         seed=args.seed,
         host=args.host,
         port=args.port,
+        postgres=args.postgres,
     )
     _validate_config(config=config)
 
@@ -108,7 +113,7 @@ def main() -> None:
             image_width=config.image_width,
             image_height=config.image_height,
         )
-        _initialize_database(db_path=db_path)
+        db_target = _initialize_database(db_path=db_path, use_postgres=config.postgres)
         root_collection_id = _populate_database(config=config, image_path=image_path)
         _verify_annotation_counts(
             collection_id=root_collection_id,
@@ -120,7 +125,7 @@ def main() -> None:
         print(
             "Benchmark ready: "
             f"setup_time={setup_elapsed:.3f}s "
-            f"db={db_path} "
+            f"db={db_target} "
             f"url={preview_server.url}",
             flush=True,
         )
@@ -149,6 +154,15 @@ def _parse_args() -> argparse.Namespace:
     parser.add_argument("--seed", type=int, default=DEFAULT_SEED)
     parser.add_argument("--host", type=str, default=None)
     parser.add_argument("--port", type=int, default=None)
+    parser.add_argument(
+        "--postgres",
+        action="store_true",
+        help=(
+            "Populate a PostgreSQL (pgvector) database instead of a temporary DuckDB file. "
+            "Uses $LIGHTLY_STUDIO_DATABASE_URL if set, otherwise "
+            f"{DEFAULT_POSTGRES_URL}."
+        ),
+    )
     return parser.parse_args()
 
 
@@ -173,10 +187,19 @@ def _create_shared_image(image_path: Path, image_width: int, image_height: int) 
     Image.new("RGB", (image_width, image_height), color=(120, 120, 120)).save(image_path)
 
 
-def _initialize_database(db_path: Path) -> None:
-    """Connect to a fresh on-disk DuckDB database."""
+def _initialize_database(db_path: Path, use_postgres: bool) -> str:
+    """Connect to a fresh database and return a description of its target.
+
+    Uses a temporary on-disk DuckDB by default, or PostgreSQL when ``use_postgres`` is
+    set (``$LIGHTLY_STUDIO_DATABASE_URL`` if defined, otherwise ``DEFAULT_POSTGRES_URL``).
+    """
     db_manager.close()
+    if use_postgres:
+        database_url = os.environ.get("LIGHTLY_STUDIO_DATABASE_URL", DEFAULT_POSTGRES_URL)
+        db_manager.connect(db_url=database_url, cleanup_existing=True)
+        return database_url
     db_manager.connect(db_file=str(db_path), cleanup_existing=True)
+    return str(db_path)
 
 
 def _populate_database(config: BenchmarkConfig, image_path: Path) -> UUID:
@@ -592,10 +615,22 @@ def _insert_arrow_table(
     table: pa.Table,
     spec: ArrowInsertSpec,
 ) -> None:
-    """Register an Arrow table in DuckDB and INSERT it into the target table."""
+    """Insert an Arrow table into the target table, dispatching on the active backend."""
     if len(table) == 0:
         return
+    # DuckDB connections expose zero-copy Arrow registration; psycopg (PostgreSQL) does not.
+    if hasattr(connection, "register"):
+        _insert_arrow_table_duckdb(connection=connection, table=table, spec=spec)
+    else:
+        _insert_arrow_table_postgres(connection=connection, table=table, spec=spec)
 
+
+def _insert_arrow_table_duckdb(
+    connection: object,
+    table: pa.Table,
+    spec: ArrowInsertSpec,
+) -> None:
+    """Register an Arrow table in DuckDB and INSERT it into the target table."""
     source_cols = table.column_names
     insert_cols = spec.insert_columns or tuple(source_cols)
     select_sql = spec.select_columns_sql or ", ".join(source_cols)
@@ -609,6 +644,74 @@ def _insert_arrow_table(
         )
     finally:
         connection.unregister(temp_name)  # type: ignore[attr-defined]
+
+
+# UUID-typed columns inserted by the benchmark; psycopg binds real UUID objects, not strings.
+_UUID_INSERT_COLUMNS = frozenset(
+    {
+        "sample_id",
+        "collection_id",
+        "embedding_model_id",
+        "annotation_label_id",
+        "parent_sample_id",
+    }
+)
+
+
+def _insert_arrow_table_postgres(
+    connection: object,
+    table: pa.Table,
+    spec: ArrowInsertSpec,
+) -> None:
+    """Insert an Arrow table into PostgreSQL via ``executemany`` (psycopg has no Arrow path)."""
+    source_cols = table.column_names
+    insert_cols = spec.insert_columns or tuple(source_cols)
+    select_terms = (
+        [term.strip() for term in spec.select_columns_sql.split(",")]
+        if spec.select_columns_sql
+        else list(source_cols)
+    )
+
+    placeholders: list[str] = []
+    bound_columns: list[str] = []
+    for term in select_terms:
+        if term not in source_cols:
+            placeholders.append(term)  # SQL literal carried over verbatim (e.g. current_timestamp).
+            continue
+        placeholders.append(_postgres_placeholder(column=term))
+        bound_columns.append(term)
+
+    statement = (
+        f"INSERT INTO {spec.table_name} ({', '.join(insert_cols)}) "
+        f"VALUES ({', '.join(placeholders)})"
+    )
+    params = [
+        tuple(_to_postgres_value(column=column, value=row[column]) for column in bound_columns)
+        for row in table.to_pylist()
+    ]
+    cursor = connection.cursor()  # type: ignore[attr-defined]
+    try:
+        cursor.executemany(statement, params)
+    finally:
+        cursor.close()
+
+
+def _postgres_placeholder(column: str) -> str:
+    """Return the VALUES placeholder for a column, casting the enum and vector columns."""
+    if column == "embedding":
+        return "%s::vector"
+    if column == "annotation_type":
+        return "%s::annotationtype"
+    return "%s"
+
+
+def _to_postgres_value(column: str, value: Any) -> Any:
+    """Adapt an Arrow cell to the value psycopg binds for the target column."""
+    if column in _UUID_INSERT_COLUMNS:
+        return UUID(str(value))
+    if column == "embedding":
+        return "[" + ",".join(str(component) for component in value) + "]"
+    return value
 
 
 if __name__ == "__main__":

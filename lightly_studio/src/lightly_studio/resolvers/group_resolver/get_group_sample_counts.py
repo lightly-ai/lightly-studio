@@ -7,6 +7,7 @@ from uuid import UUID
 
 from sqlmodel import Session, col, func, select
 
+from lightly_studio import db_array
 from lightly_studio.models.group import SampleGroupLinkTable
 
 
@@ -32,7 +33,12 @@ def get_group_sample_counts(
             SampleGroupLinkTable.parent_sample_id,
             func.count(col(SampleGroupLinkTable.sample_id)).label("sample_count"),
         )
-        .where(col(SampleGroupLinkTable.parent_sample_id).in_(group_sample_ids))
+        .where(
+            db_array.in_array(
+                column=col(SampleGroupLinkTable.parent_sample_id),
+                values=group_sample_ids,
+            )
+        )
         .group_by(col(SampleGroupLinkTable.parent_sample_id))
     )
 
