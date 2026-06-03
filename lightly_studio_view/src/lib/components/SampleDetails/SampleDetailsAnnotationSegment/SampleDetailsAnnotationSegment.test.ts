@@ -1,5 +1,6 @@
 import type { AnnotationView } from '$lib/api/lightly_studio_local';
-import { render, screen } from '@testing-library/svelte';
+import { render, screen, within } from '@testing-library/svelte';
+import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import SampleDetailsAnnotationSegment from './SampleDetailsAnnotationSegment.svelte';
 
@@ -90,9 +91,18 @@ const createAnnotation = (sampleId: string, sourceId: string, labelName: string)
 const defaultProps = {
     annotationsIdsToHide: new Set<string>(),
     collectionId: 'collection-1',
+    sampleId: 'sample-1',
     annotations: [] as AnnotationView[],
     isPanModeEnabled: false,
     refetch: vi.fn()
+};
+
+const getRow = (annotationId: string) => {
+    const row = screen
+        .getAllByTestId('mock-annotation-row')
+        .find((row) => row.getAttribute('data-annotation-id') === annotationId);
+    expect(row).toBeDefined();
+    return row!;
 };
 
 describe('SampleDetailsAnnotationSegment', () => {
@@ -191,5 +201,143 @@ describe('SampleDetailsAnnotationSegment', () => {
 
         expect(mocks.setSelectedCollectionIds).not.toHaveBeenCalled();
         expect(mocks.setCollectionIdToName).not.toHaveBeenCalled();
+    });
+
+    describe('source visibility toggle', () => {
+        beforeEach(() => {
+            mocks.collections = [groundTruthSource, predictionsSource];
+            mocks.selectedCollectionIds = [
+                groundTruthSource.collection_id,
+                predictionsSource.collection_id
+            ];
+        });
+
+        const annotations = [
+            createAnnotation('gt-1', groundTruthSource.collection_id, 'cat'),
+            createAnnotation('gt-2', groundTruthSource.collection_id, 'dog'),
+            createAnnotation('pred-1', predictionsSource.collection_id, 'cat')
+        ];
+
+        it('hides and shows all annotations of a source when clicking its eye', async () => {
+            const user = userEvent.setup();
+            render(SampleDetailsAnnotationSegment, { props: { ...defaultProps, annotations } });
+
+            // Groups are rendered in source order: Ground truth first.
+            await user.click(screen.getAllByTestId('source-group-eye')[0]);
+
+            expect(getRow('gt-1')).toHaveAttribute('data-hidden', 'true');
+            expect(getRow('gt-2')).toHaveAttribute('data-hidden', 'true');
+            expect(getRow('pred-1')).not.toHaveAttribute('data-hidden', 'true');
+            expect(screen.getAllByTestId('source-group-eye-off')).toHaveLength(1);
+
+            await user.click(screen.getByTestId('source-group-eye-off'));
+
+            expect(getRow('gt-1')).not.toHaveAttribute('data-hidden', 'true');
+            expect(getRow('gt-2')).not.toHaveAttribute('data-hidden', 'true');
+            expect(screen.queryByTestId('source-group-eye-off')).not.toBeInTheDocument();
+        });
+
+        it('flips the source eye depending on whether all of its annotations are hidden', async () => {
+            const user = userEvent.setup();
+            render(SampleDetailsAnnotationSegment, { props: { ...defaultProps, annotations } });
+
+            // Hide both Ground truth annotations through their row toggles.
+            await user.click(within(getRow('gt-1')).getByTestId('mock-annotation-row-toggle'));
+            await user.click(within(getRow('gt-2')).getByTestId('mock-annotation-row-toggle'));
+
+            expect(screen.getAllByTestId('source-group-eye-off')).toHaveLength(1);
+
+            // Showing a single annotation again flips the source eye back to open.
+            await user.click(within(getRow('gt-1')).getByTestId('mock-annotation-row-toggle'));
+
+            expect(screen.queryByTestId('source-group-eye-off')).not.toBeInTheDocument();
+            expect(screen.getAllByTestId('source-group-eye')).toHaveLength(2);
+        });
+    });
+
+    describe('seeding from the grid source filter', () => {
+        const annotations = [
+            createAnnotation('gt-1', groundTruthSource.collection_id, 'cat'),
+            createAnnotation('pred-1', predictionsSource.collection_id, 'cat'),
+            createAnnotation('pred-2', predictionsSource.collection_id, 'dog')
+        ];
+
+        beforeEach(() => {
+            mocks.collections = [groundTruthSource, predictionsSource];
+        });
+
+        it('starts with annotations of unselected sources hidden', () => {
+            mocks.selectedCollectionIds = [groundTruthSource.collection_id];
+
+            render(SampleDetailsAnnotationSegment, { props: { ...defaultProps, annotations } });
+
+            expect(getRow('gt-1')).not.toHaveAttribute('data-hidden', 'true');
+            expect(getRow('pred-1')).toHaveAttribute('data-hidden', 'true');
+            expect(getRow('pred-2')).toHaveAttribute('data-hidden', 'true');
+            // The fully hidden Predictions group shows a closed eye.
+            expect(screen.getAllByTestId('source-group-eye-off')).toHaveLength(1);
+        });
+
+        it('starts with all annotations visible when all sources are selected', () => {
+            mocks.selectedCollectionIds = [
+                groundTruthSource.collection_id,
+                predictionsSource.collection_id
+            ];
+
+            render(SampleDetailsAnnotationSegment, { props: { ...defaultProps, annotations } });
+
+            expect(getRow('gt-1')).not.toHaveAttribute('data-hidden', 'true');
+            expect(getRow('pred-1')).not.toHaveAttribute('data-hidden', 'true');
+            expect(screen.queryByTestId('source-group-eye-off')).not.toBeInTheDocument();
+        });
+
+        it('ignores a selection that belongs to another dataset', () => {
+            mocks.selectedCollectionIds = ['source-from-another-dataset'];
+
+            render(SampleDetailsAnnotationSegment, { props: { ...defaultProps, annotations } });
+
+            expect(getRow('gt-1')).not.toHaveAttribute('data-hidden', 'true');
+            expect(getRow('pred-1')).not.toHaveAttribute('data-hidden', 'true');
+            expect(getRow('pred-2')).not.toHaveAttribute('data-hidden', 'true');
+            expect(screen.queryByTestId('source-group-eye-off')).not.toBeInTheDocument();
+        });
+    });
+
+    describe('coloring by visible sources', () => {
+        const annotations = [
+            createAnnotation('gt-1', groundTruthSource.collection_id, 'cat'),
+            createAnnotation('pred-1', predictionsSource.collection_id, 'cat')
+        ];
+
+        const getSourceColorMarker = (header: HTMLElement) =>
+            header.querySelector('span[style*="background-color"]');
+
+        beforeEach(() => {
+            mocks.collections = [groundTruthSource, predictionsSource];
+            mocks.selectedCollectionIds = [
+                groundTruthSource.collection_id,
+                predictionsSource.collection_id
+            ];
+        });
+
+        it('colors by source only while annotations from multiple sources are visible', async () => {
+            const user = userEvent.setup();
+            render(SampleDetailsAnnotationSegment, { props: { ...defaultProps, annotations } });
+
+            // Both sources visible: source color markers in the headers, no label
+            // legends in the rows.
+            let headers = screen.getAllByTestId('annotation-source-group-header');
+            expect(getSourceColorMarker(headers[0])).toBeInTheDocument();
+            expect(getSourceColorMarker(headers[1])).toBeInTheDocument();
+            expect(getRow('gt-1')).toHaveAttribute('data-color-by-source', 'true');
+
+            // Hiding one source leaves a single visible source: label colors again.
+            await user.click(screen.getAllByTestId('source-group-eye')[1]);
+
+            headers = screen.getAllByTestId('annotation-source-group-header');
+            expect(getSourceColorMarker(headers[0])).not.toBeInTheDocument();
+            expect(getSourceColorMarker(headers[1])).not.toBeInTheDocument();
+            expect(getRow('gt-1')).toHaveAttribute('data-color-by-source', 'false');
+        });
     });
 });
