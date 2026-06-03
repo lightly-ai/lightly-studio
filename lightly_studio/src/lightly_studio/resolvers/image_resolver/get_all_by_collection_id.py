@@ -302,7 +302,7 @@ def _get_all_without_similarity(  # noqa: PLR0913
     total_count = session.exec(total_count_query).one()
     results: Sequence[object]
     if order_value_index is not None:
-        results = list(session.execute(samples_query).unique().all())
+        results = list(session.execute(samples_query).all())
     else:
         results = session.exec(samples_query).all()
     samples, order_values = _split_query_results(results, order_value_index)

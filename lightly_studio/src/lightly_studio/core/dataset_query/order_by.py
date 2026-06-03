@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from abc import ABC, abstractmethod
 from typing import Any, Union, cast
 
 from sqlalchemy import ColumnElement, and_
@@ -22,7 +23,7 @@ T = TypeVar("T", default=ImageTable)
 SelectQuery: TypeAlias = Union[Select[Any], SelectOfScalar[Any]]
 
 
-class OrderByExpression:
+class OrderByExpression(ABC):
     """Base class for all order by expressions that can be applied to database queries."""
 
     def __init__(self, *, ascending: bool = True) -> None:
@@ -33,12 +34,12 @@ class OrderByExpression:
         """
         self.ascending = ascending
 
+    @abstractmethod
     def _sort_value_expression(self) -> ColumnElement[Any] | None:
         """Return the undirected SQL expression used for sorting, if selectable.
 
         Used for ``ImageView.order_value`` when exposed via ``apply_select_join``.
         """
-        return None
 
     def _apply_joins(self, query: SelectQuery) -> SelectQuery:
         """Apply joins required before sort expressions are valid in SQL."""
