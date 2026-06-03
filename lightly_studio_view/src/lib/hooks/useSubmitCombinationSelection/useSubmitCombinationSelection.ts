@@ -25,6 +25,35 @@ interface SubmitParams {
     selectionFilter: SamplingRequest['filter'];
 }
 
+async function computeAllStrategiesMetadata(
+    instances: StrategyInstance[],
+    collectionId: string,
+    isVideoCollection: boolean,
+    onProgress: (message: string) => void
+): Promise<boolean> {
+    for (const instance of instances) {
+        const ok = await computeStrategyMetadata({
+            instance,
+            collectionId,
+            isVideoCollection,
+            onProgress
+        });
+        if (!ok) return false;
+    }
+    return true;
+}
+
+async function handleSelectionSuccess(
+    selectionResultTagName: string,
+    params: UseSubmitCombinationSelectionParams
+): Promise<void> {
+    toast.success('Selection created successfully');
+    await params.loadTags();
+    const newTag = get(params.tags).find((tag) => tag.name === selectionResultTagName);
+    if (newTag) params.setTagSelected(newTag.tag_id, true);
+    params.closeSelectionDialog();
+}
+
 export function useSubmitCombinationSelection(params: UseSubmitCombinationSelectionParams) {
     const _isSubmitting = writable(false);
     const _loadingMessage = writable('');
@@ -43,15 +72,13 @@ export function useSubmitCombinationSelection(params: UseSubmitCombinationSelect
         _isSubmitting.set(true);
 
         try {
-            for (const instance of instances) {
-                const ok = await computeStrategyMetadata({
-                    instance,
-                    collectionId,
-                    isVideoCollection,
-                    onProgress: (message) => _loadingMessage.set(message)
-                });
-                if (!ok) return false;
-            }
+            const metadataOk = await computeAllStrategiesMetadata(
+                instances,
+                collectionId,
+                isVideoCollection,
+                (message) => _loadingMessage.set(message)
+            );
+            if (!metadataOk) return false;
 
             _loadingMessage.set('Creating selection...');
             const response = await createSampling({
@@ -71,11 +98,7 @@ export function useSubmitCombinationSelection(params: UseSubmitCombinationSelect
                 return false;
             }
 
-            toast.success('Selection created successfully');
-            await params.loadTags();
-            const newTag = get(params.tags).find((tag) => tag.name === selectionResultTagName);
-            if (newTag) params.setTagSelected(newTag.tag_id, true);
-            params.closeSelectionDialog();
+            await handleSelectionSuccess(selectionResultTagName, params);
             return true;
         } catch (error) {
             console.error('Unexpected error in useSubmitCombinationSelection.submit:', error);
