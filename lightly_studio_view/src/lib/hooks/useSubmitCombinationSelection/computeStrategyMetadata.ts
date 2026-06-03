@@ -6,14 +6,28 @@ import type { StrategyInstance } from '$lib/hooks/useStrategyBuilder';
 import { toast } from 'svelte-sonner';
 import { getMetadataKey } from './strategyApiMapping';
 
-type SelectionError = { error: string };
+interface SelectionError {
+    error: string;
+}
+
+function handleComputeError(response: { error: unknown }, prefix: string): boolean {
+    if (!response.error) return false;
+    const detail = (response.error as SelectionError).error ?? 'Unknown error';
+    toast.error(`${prefix}: ${detail}`);
+    return true;
+}
+
+interface ComputeStrategyMetadataParams {
+    instance: StrategyInstance;
+    collectionId: string;
+    isVideoCollection: boolean;
+    onProgress: (message: string) => void;
+}
 
 export async function computeStrategyMetadata(
-    instance: StrategyInstance,
-    collectionId: string,
-    isVideoCollection: boolean,
-    onProgress: (message: string) => void
+    params: ComputeStrategyMetadataParams
 ): Promise<boolean> {
+    const { instance, collectionId, isVideoCollection, onProgress } = params;
     if (instance.type === 'typicality') {
         onProgress('Computing typicality metadata...');
         const response = await computeTypicalityMetadata({
@@ -23,13 +37,7 @@ export async function computeStrategyMetadata(
                 metadata_name: getMetadataKey(instance)
             }
         });
-        if (response.error) {
-            toast.error(
-                'Failed to compute typicality metadata: ' +
-                    ((response.error as SelectionError).error ?? 'Unknown error')
-            );
-            return false;
-        }
+        if (handleComputeError(response, 'Failed to compute typicality metadata')) return false;
     }
 
     if (instance.type === 'similarity') {
@@ -48,13 +56,7 @@ export async function computeStrategyMetadata(
                 metadata_name: getMetadataKey(instance)
             }
         });
-        if (response.error) {
-            toast.error(
-                'Failed to compute similarity metadata: ' +
-                    ((response.error as SelectionError).error ?? 'Unknown error')
-            );
-            return false;
-        }
+        if (handleComputeError(response, 'Failed to compute similarity metadata')) return false;
     }
 
     return true;

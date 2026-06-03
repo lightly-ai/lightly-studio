@@ -1,4 +1,4 @@
-import type { SelectionRequest } from '$lib/api/lightly_studio_local/types.gen';
+import type { SamplingRequest } from '$lib/api/lightly_studio_local/types.gen';
 import type { StrategyInstance } from '$lib/hooks/useStrategyBuilder';
 
 export function getMetadataKey(instance: StrategyInstance): string {
@@ -8,7 +8,7 @@ export function getMetadataKey(instance: StrategyInstance): string {
     return '';
 }
 
-export function toApiStrategy(instance: StrategyInstance): SelectionRequest['strategies'][number] {
+export function toApiStrategy(instance: StrategyInstance): SamplingRequest['strategies'][number] {
     if (instance.type === 'diversity') {
         return {
             strategy_name: 'diversity',
@@ -33,16 +33,16 @@ export function toApiStrategy(instance: StrategyInstance): SelectionRequest['str
         };
     }
 
-    const target_distribution =
-        instance.params.annotation_source === 'dictionary'
+    const targetDistribution =
+        instance.params.target_distribution_mode === 'dictionary'
             ? Object.fromEntries(
                   instance.params.target_distribution.map((row) => [row.class_name, row.weight])
               )
-            : instance.params.annotation_source;
+            : instance.params.target_distribution_mode;
 
     return {
         strategy_name: 'balance',
-        target_distribution,
+        target_distribution: targetDistribution,
         strength: instance.params.strength
     };
 }

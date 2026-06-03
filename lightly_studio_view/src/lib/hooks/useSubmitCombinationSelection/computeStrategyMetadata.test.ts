@@ -16,6 +16,12 @@ vi.mock('svelte-sonner', () => ({
 
 const { toast } = await import('svelte-sonner');
 
+const defaultParams = {
+    collectionId: 'col-1',
+    isVideoCollection: false,
+    onProgress: vi.fn()
+};
+
 describe('computeStrategyMetadata', () => {
     beforeEach(() => {
         vi.clearAllMocks();
@@ -25,12 +31,16 @@ describe('computeStrategyMetadata', () => {
         vi.mocked(computeTypicalityMetadata).mockResolvedValue({ data: {}, error: null } as never);
         const onProgress = vi.fn();
 
-        const result = await computeStrategyMetadata(
-            { id: 'typ-1', type: 'typicality', params: { strength: 1 }, isExpanded: true },
-            'col-1',
-            false,
+        const result = await computeStrategyMetadata({
+            ...defaultParams,
+            instance: {
+                id: 'typ-1',
+                type: 'typicality',
+                params: { strength: 1 },
+                isExpanded: true
+            },
             onProgress
-        );
+        });
 
         expect(result).toBe(true);
         expect(onProgress).toHaveBeenCalledWith('Computing typicality metadata...');
@@ -44,17 +54,16 @@ describe('computeStrategyMetadata', () => {
         vi.mocked(computeSimilarityMetadata).mockResolvedValue({ data: {}, error: null } as never);
         const onProgress = vi.fn();
 
-        const result = await computeStrategyMetadata(
-            {
+        const result = await computeStrategyMetadata({
+            ...defaultParams,
+            instance: {
                 id: 'sim-1',
                 type: 'similarity',
                 params: { query_tag_id: 'qtag-1', strength: 1 },
                 isExpanded: true
             },
-            'col-1',
-            false,
             onProgress
-        );
+        });
 
         expect(result).toBe(true);
         expect(onProgress).toHaveBeenCalledWith('Computing similarity metadata...');
@@ -67,34 +76,35 @@ describe('computeStrategyMetadata', () => {
     it('returns true without calling any API for diversity, metadata_weighting, and class_balancing', async () => {
         const onProgress = vi.fn();
 
-        const r1 = await computeStrategyMetadata(
-            { id: 'd', type: 'diversity', params: { strength: 1 }, isExpanded: true },
-            'col-1',
-            false,
+        const r1 = await computeStrategyMetadata({
+            ...defaultParams,
+            instance: { id: 'd', type: 'diversity', params: { strength: 1 }, isExpanded: true },
             onProgress
-        );
-        const r2 = await computeStrategyMetadata(
-            {
+        });
+        const r2 = await computeStrategyMetadata({
+            ...defaultParams,
+            instance: {
                 id: 'm',
                 type: 'metadata_weighting',
                 params: { metadata_key: 'k', strength: 1 },
                 isExpanded: true
             },
-            'col-1',
-            false,
             onProgress
-        );
-        const r3 = await computeStrategyMetadata(
-            {
+        });
+        const r3 = await computeStrategyMetadata({
+            ...defaultParams,
+            instance: {
                 id: 'b',
                 type: 'class_balancing',
-                params: { annotation_source: 'uniform', target_distribution: [], strength: 1 },
+                params: {
+                    target_distribution_mode: 'uniform',
+                    target_distribution: [],
+                    strength: 1
+                },
                 isExpanded: true
             },
-            'col-1',
-            false,
             onProgress
-        );
+        });
 
         expect(r1).toBe(true);
         expect(r2).toBe(true);
@@ -110,12 +120,10 @@ describe('computeStrategyMetadata', () => {
             error: { error: 'Embedding not found' }
         } as never);
 
-        const result = await computeStrategyMetadata(
-            { id: 'typ-2', type: 'typicality', params: { strength: 1 }, isExpanded: true },
-            'col-1',
-            false,
-            vi.fn()
-        );
+        const result = await computeStrategyMetadata({
+            ...defaultParams,
+            instance: { id: 'typ-2', type: 'typicality', params: { strength: 1 }, isExpanded: true }
+        });
 
         expect(result).toBe(false);
         expect(toast.error).toHaveBeenCalledWith(
@@ -129,17 +137,15 @@ describe('computeStrategyMetadata', () => {
             error: { error: 'Tag not found' }
         } as never);
 
-        const result = await computeStrategyMetadata(
-            {
+        const result = await computeStrategyMetadata({
+            ...defaultParams,
+            instance: {
                 id: 'sim-2',
                 type: 'similarity',
                 params: { query_tag_id: 'qt', strength: 1 },
                 isExpanded: true
-            },
-            'col-1',
-            false,
-            vi.fn()
-        );
+            }
+        });
 
         expect(result).toBe(false);
         expect(toast.error).toHaveBeenCalledWith(
@@ -148,17 +154,16 @@ describe('computeStrategyMetadata', () => {
     });
 
     it('blocks similarity on video collections without calling the API', async () => {
-        const result = await computeStrategyMetadata(
-            {
+        const result = await computeStrategyMetadata({
+            ...defaultParams,
+            instance: {
                 id: 'sim-3',
                 type: 'similarity',
                 params: { query_tag_id: 'qt', strength: 1 },
                 isExpanded: true
             },
-            'col-1',
-            true,
-            vi.fn()
-        );
+            isVideoCollection: true
+        });
 
         expect(result).toBe(false);
         expect(computeSimilarityMetadata).not.toHaveBeenCalled();

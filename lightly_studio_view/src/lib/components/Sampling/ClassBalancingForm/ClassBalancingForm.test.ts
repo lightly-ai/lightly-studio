@@ -9,7 +9,13 @@ describe('ClassBalancingForm', () => {
 
     it('shows the current balancing mode label', () => {
         render(ClassBalancingForm, {
-            props: { balancingMode: 'uniform', onBalancingModeChange: vi.fn() }
+            props: {
+                balancingMode: 'uniform',
+                annotationCollections: [],
+                annotationSourceId: '',
+                onBalancingModeChange: vi.fn(),
+                onAnnotationSourceChange: vi.fn()
+            }
         });
 
         expect(screen.getByTestId('sampling-dialog-balancing-mode-select')).toHaveTextContent(
@@ -19,7 +25,13 @@ describe('ClassBalancingForm', () => {
 
     it('shows the uniform option in the dropdown', async () => {
         render(ClassBalancingForm, {
-            props: { balancingMode: 'uniform', onBalancingModeChange: vi.fn() }
+            props: {
+                balancingMode: 'uniform',
+                annotationCollections: [],
+                annotationSourceId: '',
+                onBalancingModeChange: vi.fn(),
+                onAnnotationSourceChange: vi.fn()
+            }
         });
 
         await fireEvent.keyDown(screen.getByTestId('sampling-dialog-balancing-mode-select'), {
@@ -31,7 +43,13 @@ describe('ClassBalancingForm', () => {
 
     it('shows input balancing mode as disabled and coming soon', async () => {
         render(ClassBalancingForm, {
-            props: { balancingMode: 'uniform', onBalancingModeChange: vi.fn() }
+            props: {
+                balancingMode: 'uniform',
+                annotationCollections: [],
+                annotationSourceId: '',
+                onBalancingModeChange: vi.fn(),
+                onAnnotationSourceChange: vi.fn()
+            }
         });
 
         await fireEvent.keyDown(screen.getByTestId('sampling-dialog-balancing-mode-select'), {
