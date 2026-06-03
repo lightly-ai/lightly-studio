@@ -61,9 +61,9 @@ class OrderByExpression(ABC):
         return None
 
     def apply_order_value_joins(self, query: SelectOfScalar[T]) -> SelectOfScalar[T]:
-        """Apply joins required for :meth:`order_value_column` without adding ORDER BY.
+        """Apply joins required for ``order_value_column`` without adding ORDER BY.
 
-        Lets resolvers join once, then use :meth:`to_column_element` for ordering
+        Lets resolvers join once, then use ``to_column_element`` for ordering
         separately from the SELECT list.
         """
         return query

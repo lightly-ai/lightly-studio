@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import pytest
 from pydantic_core._pydantic_core import ValidationError
 from sqlmodel import Session
@@ -18,6 +20,9 @@ from lightly_studio.resolvers.annotations.annotations_filter import AnnotationsF
 from lightly_studio.resolvers.image_filter import (
     FilterDimensions,
     ImageFilter,
+)
+from lightly_studio.resolvers.image_resolver.get_all_by_collection_id import (
+    _coerce_order_value,
 )
 from lightly_studio.resolvers.sample_resolver.sample_filter import SampleFilter
 from tests.helpers_resolvers import (
@@ -926,3 +931,18 @@ def test_get_all_by_collection_id__sort_by_height_asc_is_reverse_of_desc(
     assert asc_paths == list(reversed(desc_paths))
     assert result_asc.order_values == [100.0, 200.0, 200.0, 300.0]
     assert result_desc.order_values == [300.0, 200.0, 200.0, 100.0]
+
+
+@pytest.mark.parametrize(
+    ("value", "expected"),
+    [
+        (None, None),
+        (True, None),
+        (False, None),
+        (1, 1.0),
+        (1.5, 1.5),
+        ("text", None),
+    ],
+)
+def test_coerce_order_value(value: object, expected: float | None) -> None:
+    assert _coerce_order_value(value) == expected

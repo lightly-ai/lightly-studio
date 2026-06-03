@@ -111,6 +111,16 @@ def _primary_order_value_column(
     return primary_order_by.order_value_column()
 
 
+def _apply_file_path_tiebreaker(
+    samples_query: ImageSamplesQuery,
+    ascending: bool,
+) -> ImageSamplesQuery:
+    """Append a ``file_path_abs`` ORDER BY tiebreaker in the given direction."""
+    file_path_col = col(ImageTable.file_path_abs)
+    tiebreaker = file_path_col.asc() if ascending else file_path_col.desc()
+    return samples_query.order_by(tiebreaker)
+
+
 def _apply_order_by_clauses(
     samples_query: ImageSamplesQuery,
     order_by: list[OrderByExpression],
@@ -122,17 +132,8 @@ def _apply_order_by_clauses(
     join ``SampleMetadataTable``, a second metadata join is skipped. A ``file_path_abs``
     tiebreaker is appended unless it is already present in ``order_by``.
     """
-    metadata_already_joined = _has_metadata_join(filters)
     evaluation_metric_joined = False
-    metadata_joined = metadata_already_joined
-
-    primary_order_by = order_by[0]
-    if isinstance(primary_order_by, OrderByEvaluationMetricField):
-        samples_query = primary_order_by.apply_order_value_joins(samples_query)  # type: ignore[arg-type]
-        evaluation_metric_joined = True
-    elif isinstance(primary_order_by, OrderByMetadataField) and not metadata_already_joined:
-        samples_query = primary_order_by.apply_order_value_joins(samples_query)  # type: ignore[arg-type]
-        metadata_joined = True
+    metadata_joined = _has_metadata_join(filters)
 
     for expr in order_by:
         if isinstance(expr, OrderByEvaluationMetricField):
@@ -149,9 +150,7 @@ def _apply_order_by_clauses(
             samples_query = expr.apply(samples_query)  # type: ignore[arg-type]
 
     if not _file_path_abs_in_order_by(order_by):
-        file_path_col = col(ImageTable.file_path_abs)
-        tiebreaker = file_path_col.asc() if order_by[0].ascending else file_path_col.desc()
-        samples_query = samples_query.order_by(tiebreaker)
+        samples_query = _apply_file_path_tiebreaker(samples_query, ascending=order_by[0].ascending)
 
     return samples_query
 
@@ -178,8 +177,8 @@ def _split_query_results(
     """
     if not results:
         return [], None
-    if isinstance(results[0], ImageTable):
-        return list(results), None  # type: ignore[arg-type]
+    if order_value_index is None:
+        return cast(list[ImageTable], list(results)), None
     samples = [row[0] for row in results]  # type: ignore[index]
     return samples, _extract_order_values(results, order_value_index)  # type: ignore[arg-type]
 
@@ -229,11 +228,7 @@ def _get_all_with_similarity(  # noqa: PLR0913
     filters: ImageFilter | None,
     sample_ids: list[UUID] | None,
 ) -> GetAllSamplesByCollectionIdResult:
-    """Get samples with similarity search.
-
-    Returns ``(ImageTable, distance)`` rows ordered by distance. ``order_values`` is
-    always ``None``; the UI uses ``similarity_scores`` for the grid overlay instead.
-    """
+    """Get samples with similarity search - returns (ImageTable, float) tuples."""
     load_options = _get_load_options()
 
     samples_query = (
@@ -277,8 +272,8 @@ def _get_all_with_similarity(  # noqa: PLR0913
     total_count = session.exec(total_count_query).one()
     results = session.exec(samples_query).all()
 
-    samples = [row[0] for row in results]
-    similarity_scores = [distance_to_similarity(row[1]) for row in results]
+    samples = [r[0] for r in results]
+    similarity_scores = [distance_to_similarity(r[1]) for r in results]
 
     return GetAllSamplesByCollectionIdResult(
         samples=samples,

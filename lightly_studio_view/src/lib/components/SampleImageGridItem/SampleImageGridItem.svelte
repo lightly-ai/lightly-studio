@@ -21,7 +21,7 @@
     const sampleOrderValue = $derived(sample.order_value ?? undefined);
     const shouldShowOrderValue = $derived(sampleOrderValue !== undefined);
     const orderValueLabel = $derived(
-        typeof sampleOrderValue === 'number'
+        sampleOrderValue !== undefined
             ? Number.isInteger(sampleOrderValue)
                 ? String(sampleOrderValue)
                 : sampleOrderValue.toFixed(2)
