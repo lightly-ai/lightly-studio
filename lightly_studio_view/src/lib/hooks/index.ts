@@ -22,6 +22,7 @@ export { useEmbedText } from '$lib/hooks/useEmbedText/useEmbedText';
 export { useTextEmbedding } from '$lib/hooks/useTextEmbedding/useTextEmbedding';
 export { useSearchEmbedding } from '$lib/hooks/useSearchEmbedding/useSearchEmbedding';
 export { useAnnotationCollections } from '$lib/hooks/useAnnotationCollections/useAnnotationCollections';
+export { useAnnotationCollectionsFilter } from '$lib/hooks/useAnnotationCollectionsFilter/useAnnotationCollectionsFilter';
 export { useEvaluationSampleMetricsInfo } from '$lib/hooks/useEvaluationSampleMetricsInfo/useEvaluationSampleMetricsInfo';
 export { useEvaluationRuns } from '$lib/hooks/useEvaluationRuns/useEvaluationRuns';
 export { useEvaluationConfusionMatrix } from '$lib/hooks/useEvaluationConfusionMatrix/useEvaluationConfusionMatrix.svelte';
