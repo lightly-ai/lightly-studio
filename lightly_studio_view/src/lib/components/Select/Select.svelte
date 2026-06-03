@@ -86,6 +86,7 @@
 <SelectPrimitive.Root
     type="single"
     {value}
+    {items}
     {allowDeselect}
     {disabled}
     bind:open
