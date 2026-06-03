@@ -9,6 +9,7 @@ from pydantic import BaseModel, Field
 from sqlalchemy.orm import Mapped, aliased
 from sqlmodel import col, select
 
+from lightly_studio import db_array
 from lightly_studio.models.annotation.annotation_base import AnnotationBaseTable, AnnotationType
 from lightly_studio.models.sample import SampleTable
 from lightly_studio.models.tag import TagTable
@@ -83,17 +84,29 @@ class AnnotationsFilter(BaseModel):
         """
         # Filter by collection
         if self.collection_ids:
-            query = query.where(col(annotation_sample.collection_id).in_(self.collection_ids))
+            query = query.where(
+                db_array.in_array(
+                    column=col(annotation_sample.collection_id),
+                    values=self.collection_ids,
+                )
+            )
 
         # Filter by annotation label
         if self.annotation_label_ids:
             query = query.where(
-                col(AnnotationBaseTable.annotation_label_id).in_(self.annotation_label_ids)
+                db_array.in_array(
+                    column=col(AnnotationBaseTable.annotation_label_id),
+                    values=self.annotation_label_ids,
+                )
             )
 
         # Filter by tags
         if self.tag_ids:
-            query = query.where(annotation_sample.tags.any(col(TagTable.tag_id).in_(self.tag_ids)))
+            query = query.where(
+                annotation_sample.tags.any(
+                    db_array.in_array(column=col(TagTable.tag_id), values=self.tag_ids)
+                )
+            )
 
         # Filter by annotation type
         if self.annotation_types:

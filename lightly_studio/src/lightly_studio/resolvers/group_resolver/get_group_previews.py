@@ -7,6 +7,7 @@ from uuid import UUID
 
 from sqlmodel import Session, col, select
 
+from lightly_studio import db_array
 from lightly_studio.models.collection import SampleType
 from lightly_studio.models.group import SampleGroupLinkTable
 from lightly_studio.models.image import ImageView
@@ -56,7 +57,12 @@ def get_group_previews(
             SampleGroupLinkTable.parent_sample_id,
         )
         .join(SampleTable, col(SampleTable.sample_id) == col(SampleGroupLinkTable.sample_id))
-        .where(col(SampleGroupLinkTable.parent_sample_id).in_(group_sample_ids))
+        .where(
+            db_array.in_array(
+                column=col(SampleGroupLinkTable.parent_sample_id),
+                values=group_sample_ids,
+            )
+        )
         .where(col(SampleTable.collection_id) == first_component.collection_id)
     )
     links: Sequence[tuple[UUID, UUID]] = session.exec(link_query).all()

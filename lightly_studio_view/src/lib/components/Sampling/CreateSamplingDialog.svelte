@@ -4,6 +4,7 @@
     import * as Dialog from '$lib/components/ui/dialog';
     import { Input } from '$lib/components/ui/input';
     import { Label } from '$lib/components/ui/label';
+    import { useAnnotationCollections } from '$lib/hooks/useAnnotationCollections/useAnnotationCollections';
     import { useTags } from '$lib/hooks/useTags/useTags';
     import { useSamplingDialog } from '$lib/hooks/useSamplingDialog/useSamplingDialog';
     import { useImageFilters } from '$lib/hooks/useImageFilters/useImageFilters';
@@ -24,6 +25,7 @@
     );
 
     const { isSamplingDialogOpen, openSamplingDialog, closeSamplingDialog } = useSamplingDialog();
+    const annotationCollectionsQuery = $derived(useAnnotationCollections({ collectionId }));
 
     const isVideoCollection = $derived(
         page.data.collection?.sample_type === 'video' ||
@@ -35,6 +37,7 @@
     const { filteredSampleCount } = useGlobalStorage();
 
     const currentFilter = $derived(isVideoCollection ? $videoFilter : $imageFilter);
+    const annotationCollections = $derived(annotationCollectionsQuery.data ?? []);
     const samplingFilter = $derived<SamplingRequest['filter']>(
         isVideoCollection
             ? currentFilter
@@ -58,6 +61,7 @@
     let balancingMode = $state<BalancingMode>('uniform');
     let nSamplesToSelect = $state<number>(10);
     let queryTagId = $state('');
+    let annotationSourceId = $state('');
     let samplingResultTagName = $state<string>('');
 
     // Form validation
@@ -109,6 +113,7 @@
             samplingResultTagName,
             queryTagId,
             balancingMode,
+            annotationSourceId,
             samplingFilter
         });
 
@@ -119,6 +124,7 @@
         samplingStrategy = '';
         nSamplesToSelect = 10;
         queryTagId = '';
+        annotationSourceId = '';
         samplingResultTagName = '';
     }
 </script>
@@ -151,7 +157,10 @@
                     {#if samplingStrategy === 'class_balancing'}
                         <ClassBalancingForm
                             {balancingMode}
+                            {annotationCollections}
+                            {annotationSourceId}
                             onBalancingModeChange={(mode) => (balancingMode = mode)}
+                            onAnnotationSourceChange={(sourceId) => (annotationSourceId = sourceId)}
                         />
                     {/if}
 
