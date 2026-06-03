@@ -1,10 +1,10 @@
-import { createCombinationSelection } from '$lib/api/lightly_studio_local/sdk.gen';
+import { createSampling } from '$lib/api/lightly_studio_local/sdk.gen';
 import { get, writable } from 'svelte/store';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { useSubmitCombinationSelection } from './useSubmitCombinationSelection';
 
 vi.mock('$lib/api/lightly_studio_local/sdk.gen', () => ({
-    createCombinationSelection: vi.fn()
+    createSampling: vi.fn()
 }));
 
 vi.mock('./computeStrategyMetadata', () => ({
@@ -29,7 +29,7 @@ describe('useSubmitCombinationSelection', () => {
     });
 
     it('calls computeStrategyMetadata for each instance with collectionId and isVideoCollection', async () => {
-        vi.mocked(createCombinationSelection).mockResolvedValue({ data: {}, error: null } as never);
+        vi.mocked(createSampling).mockResolvedValue({ data: {}, error: null } as never);
         const tagsStore = writable([]);
 
         const { submit } = useSubmitCombinationSelection({
@@ -52,20 +52,24 @@ describe('useSubmitCombinationSelection', () => {
 
         expect(computeStrategyMetadata).toHaveBeenCalledTimes(2);
         expect(computeStrategyMetadata).toHaveBeenCalledWith(
-            expect.objectContaining({ id: 'inst-a' }),
-            'col-1',
-            false,
-            expect.any(Function)
+            expect.objectContaining({
+                instance: expect.objectContaining({ id: 'inst-a' }),
+                collectionId: 'col-1',
+                isVideoCollection: false,
+                onProgress: expect.any(Function)
+            })
         );
         expect(computeStrategyMetadata).toHaveBeenCalledWith(
-            expect.objectContaining({ id: 'inst-b' }),
-            'col-1',
-            false,
-            expect.any(Function)
+            expect.objectContaining({
+                instance: expect.objectContaining({ id: 'inst-b' }),
+                collectionId: 'col-1',
+                isVideoCollection: false,
+                onProgress: expect.any(Function)
+            })
         );
     });
 
-    it('stops and returns false without calling createCombinationSelection when metadata computation fails', async () => {
+    it('stops and returns false without calling createSampling when metadata computation fails', async () => {
         vi.mocked(computeStrategyMetadata).mockResolvedValue(false);
         const tagsStore = writable([]);
 
@@ -87,11 +91,11 @@ describe('useSubmitCombinationSelection', () => {
         });
 
         expect(result).toBe(false);
-        expect(createCombinationSelection).not.toHaveBeenCalled();
+        expect(createSampling).not.toHaveBeenCalled();
     });
 
-    it('calls createCombinationSelection with mapped strategies, count, tag name, and filter', async () => {
-        vi.mocked(createCombinationSelection).mockResolvedValue({ data: {}, error: null } as never);
+    it('calls createSampling with mapped strategies, count, tag name, and filter', async () => {
+        vi.mocked(createSampling).mockResolvedValue({ data: {}, error: null } as never);
         const selectionFilter = {
             filter_type: 'image' as const,
             sample_filter: { tag_ids: ['tag-1'] }
@@ -115,19 +119,19 @@ describe('useSubmitCombinationSelection', () => {
             selectionFilter
         });
 
-        expect(createCombinationSelection).toHaveBeenCalledWith({
+        expect(createSampling).toHaveBeenCalledWith({
             path: { collection_id: 'col-1' },
             body: {
                 n_samples_to_select: 20,
-                selection_result_tag_name: 'result-tag',
+                sampling_result_tag_name: 'result-tag',
                 strategies: [{ strategy_name: 'diversity', _id: 'inst-1' }],
                 filter: selectionFilter
             }
         });
     });
 
-    it('returns false and toasts error when createCombinationSelection fails', async () => {
-        vi.mocked(createCombinationSelection).mockResolvedValue({
+    it('returns false and toasts error when createSampling fails', async () => {
+        vi.mocked(createSampling).mockResolvedValue({
             data: undefined,
             error: { error: 'Server error' }
         } as never);
@@ -159,7 +163,7 @@ describe('useSubmitCombinationSelection', () => {
     });
 
     it('on success: reloads tags, selects matching new tag, closes dialog, shows toast', async () => {
-        vi.mocked(createCombinationSelection).mockResolvedValue({ data: {}, error: null } as never);
+        vi.mocked(createSampling).mockResolvedValue({ data: {}, error: null } as never);
         const loadTags = vi.fn().mockResolvedValue(undefined);
         const setTagSelected = vi.fn();
         const closeSelectionDialog = vi.fn();
@@ -199,7 +203,7 @@ describe('useSubmitCombinationSelection', () => {
 
     it('sets isSubmitting to true while running and false when done', async () => {
         let resolveApi!: (value: unknown) => void;
-        vi.mocked(createCombinationSelection).mockReturnValueOnce(
+        vi.mocked(createSampling).mockReturnValueOnce(
             new Promise((resolve) => {
                 resolveApi = resolve;
             }) as never
@@ -232,13 +236,11 @@ describe('useSubmitCombinationSelection', () => {
     });
 
     it('forwards the onProgress callback to computeStrategyMetadata which updates loadingMessage', async () => {
-        vi.mocked(computeStrategyMetadata).mockImplementationOnce(
-            async (_instance, _collectionId, _isVideo, onProgress) => {
-                onProgress('Computing typicality metadata...');
-                return true;
-            }
-        );
-        vi.mocked(createCombinationSelection).mockResolvedValue({ data: {}, error: null } as never);
+        vi.mocked(computeStrategyMetadata).mockImplementationOnce(async ({ onProgress }) => {
+            onProgress('Computing typicality metadata...');
+            return true;
+        });
+        vi.mocked(createSampling).mockResolvedValue({ data: {}, error: null } as never);
         const tagsStore = writable([]);
 
         const { loadingMessage, submit } = useSubmitCombinationSelection({
@@ -267,7 +269,7 @@ describe('useSubmitCombinationSelection', () => {
 
     it('concurrent submit guard: second call while submitting returns false immediately', async () => {
         let resolveFirst!: (value: unknown) => void;
-        vi.mocked(createCombinationSelection).mockReturnValueOnce(
+        vi.mocked(createSampling).mockReturnValueOnce(
             new Promise((resolve) => {
                 resolveFirst = resolve;
             }) as never
@@ -300,7 +302,7 @@ describe('useSubmitCombinationSelection', () => {
         const secondResult = await submit(submitParams);
 
         expect(secondResult).toBe(false);
-        expect(createCombinationSelection).toHaveBeenCalledTimes(1);
+        expect(createSampling).toHaveBeenCalledTimes(1);
 
         resolveFirst({ data: {}, error: null });
         await firstCall;

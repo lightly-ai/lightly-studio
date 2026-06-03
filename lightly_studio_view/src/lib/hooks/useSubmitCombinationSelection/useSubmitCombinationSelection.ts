@@ -1,5 +1,5 @@
-import { createCombinationSelection } from '$lib/api/lightly_studio_local/sdk.gen';
-import type { SelectionRequest } from '$lib/api/lightly_studio_local/types.gen';
+import { createSampling } from '$lib/api/lightly_studio_local/sdk.gen';
+import type { SamplingRequest } from '$lib/api/lightly_studio_local/types.gen';
 import { get, readonly, writable, type Readable } from 'svelte/store';
 import { toast } from 'svelte-sonner';
 import type { TagView } from '$lib/services/types';
@@ -22,7 +22,7 @@ interface SubmitParams {
     instances: StrategyInstance[];
     nSamplesToSelect: number;
     selectionResultTagName: string;
-    selectionFilter: SelectionRequest['filter'];
+    selectionFilter: SamplingRequest['filter'];
 }
 
 export function useSubmitCombinationSelection(params: UseSubmitCombinationSelectionParams) {
@@ -44,21 +44,21 @@ export function useSubmitCombinationSelection(params: UseSubmitCombinationSelect
 
         try {
             for (const instance of instances) {
-                const ok = await computeStrategyMetadata(
+                const ok = await computeStrategyMetadata({
                     instance,
                     collectionId,
                     isVideoCollection,
-                    (message) => _loadingMessage.set(message)
-                );
+                    onProgress: (message) => _loadingMessage.set(message)
+                });
                 if (!ok) return false;
             }
 
             _loadingMessage.set('Creating selection...');
-            const response = await createCombinationSelection({
+            const response = await createSampling({
                 path: { collection_id: collectionId },
                 body: {
                     n_samples_to_select: nSamplesToSelect,
-                    selection_result_tag_name: selectionResultTagName,
+                    sampling_result_tag_name: selectionResultTagName,
                     strategies: instances.map(toApiStrategy),
                     filter: selectionFilter ?? undefined
                 }
