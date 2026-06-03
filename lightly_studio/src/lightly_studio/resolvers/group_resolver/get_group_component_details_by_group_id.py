@@ -39,7 +39,7 @@ def get_group_component_details_by_group_id(
         select(CollectionTable).where(
             db_array.in_array(
                 column=col(CollectionTable.collection_id),
-                values=collection_ids,
+                values=list(collection_ids),
             )
         )
     ).all()
