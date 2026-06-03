@@ -23,6 +23,24 @@ const { toast } = await import('svelte-sonner');
 const { computeStrategyMetadata } = await import('./computeStrategyMetadata');
 
 describe('useSubmitCombinationSelection', () => {
+    const defaultHookParams = {
+        tags: writable([]),
+        setTagSelected: vi.fn(),
+        loadTags: vi.fn().mockResolvedValue(undefined),
+        closeSelectionDialog: vi.fn()
+    };
+
+    const defaultSubmitParams = {
+        collectionId: 'col-1',
+        isVideoCollection: false,
+        instances: [
+            { id: 'inst-1', type: 'diversity' as const, params: { strength: 1 }, isExpanded: true }
+        ],
+        nSamplesToSelect: 10,
+        selectionResultTagName: 'my-tag',
+        selectionFilter: null
+    };
+
     beforeEach(() => {
         vi.clearAllMocks();
         vi.mocked(computeStrategyMetadata).mockResolvedValue(true);
@@ -30,24 +48,14 @@ describe('useSubmitCombinationSelection', () => {
 
     it('calls computeStrategyMetadata for each instance with collectionId and isVideoCollection', async () => {
         vi.mocked(createSampling).mockResolvedValue({ data: {}, error: null } as never);
-        const tagsStore = writable([]);
 
-        const { submit } = useSubmitCombinationSelection({
-            tags: tagsStore,
-            setTagSelected: vi.fn(),
-            loadTags: vi.fn().mockResolvedValue(undefined),
-            closeSelectionDialog: vi.fn()
-        });
+        const { submit } = useSubmitCombinationSelection({ ...defaultHookParams });
         await submit({
-            collectionId: 'col-1',
-            isVideoCollection: false,
+            ...defaultSubmitParams,
             instances: [
                 { id: 'inst-a', type: 'diversity', params: { strength: 1 }, isExpanded: true },
                 { id: 'inst-b', type: 'typicality', params: { strength: 1 }, isExpanded: true }
-            ],
-            nSamplesToSelect: 10,
-            selectionResultTagName: 'my-tag',
-            selectionFilter: null
+            ]
         });
 
         expect(computeStrategyMetadata).toHaveBeenCalledTimes(2);
@@ -71,24 +79,9 @@ describe('useSubmitCombinationSelection', () => {
 
     it('stops and returns false without calling createSampling when metadata computation fails', async () => {
         vi.mocked(computeStrategyMetadata).mockResolvedValue(false);
-        const tagsStore = writable([]);
 
-        const { submit } = useSubmitCombinationSelection({
-            tags: tagsStore,
-            setTagSelected: vi.fn(),
-            loadTags: vi.fn(),
-            closeSelectionDialog: vi.fn()
-        });
-        const result = await submit({
-            collectionId: 'col-1',
-            isVideoCollection: false,
-            instances: [
-                { id: 'inst-1', type: 'typicality', params: { strength: 1 }, isExpanded: true }
-            ],
-            nSamplesToSelect: 5,
-            selectionResultTagName: 'fail-tag',
-            selectionFilter: null
-        });
+        const { submit } = useSubmitCombinationSelection({ ...defaultHookParams });
+        const result = await submit({ ...defaultSubmitParams, selectionResultTagName: 'fail-tag' });
 
         expect(result).toBe(false);
         expect(createSampling).not.toHaveBeenCalled();
@@ -100,20 +93,10 @@ describe('useSubmitCombinationSelection', () => {
             filter_type: 'image' as const,
             sample_filter: { tag_ids: ['tag-1'] }
         };
-        const tagsStore = writable([]);
 
-        const { submit } = useSubmitCombinationSelection({
-            tags: tagsStore,
-            setTagSelected: vi.fn(),
-            loadTags: vi.fn().mockResolvedValue(undefined),
-            closeSelectionDialog: vi.fn()
-        });
+        const { submit } = useSubmitCombinationSelection({ ...defaultHookParams });
         await submit({
-            collectionId: 'col-1',
-            isVideoCollection: false,
-            instances: [
-                { id: 'inst-1', type: 'diversity', params: { strength: 1 }, isExpanded: true }
-            ],
+            ...defaultSubmitParams,
             nSamplesToSelect: 20,
             selectionResultTagName: 'result-tag',
             selectionFilter
@@ -137,24 +120,13 @@ describe('useSubmitCombinationSelection', () => {
         } as never);
         const loadTags = vi.fn();
         const closeSelectionDialog = vi.fn();
-        const tagsStore = writable([]);
 
         const { submit } = useSubmitCombinationSelection({
-            tags: tagsStore,
-            setTagSelected: vi.fn(),
+            ...defaultHookParams,
             loadTags,
             closeSelectionDialog
         });
-        const result = await submit({
-            collectionId: 'col-1',
-            isVideoCollection: false,
-            instances: [
-                { id: 'inst-1', type: 'diversity', params: { strength: 1 }, isExpanded: true }
-            ],
-            nSamplesToSelect: 5,
-            selectionResultTagName: 'fail-tag',
-            selectionFilter: null
-        });
+        const result = await submit({ ...defaultSubmitParams, selectionResultTagName: 'fail-tag' });
 
         expect(result).toBe(false);
         expect(toast.error).toHaveBeenCalledWith('Server error');
@@ -167,7 +139,7 @@ describe('useSubmitCombinationSelection', () => {
         const loadTags = vi.fn().mockResolvedValue(undefined);
         const setTagSelected = vi.fn();
         const closeSelectionDialog = vi.fn();
-        const tagsStore = writable([
+        const tags = writable([
             {
                 tag_id: 'tag-abc',
                 name: 'new-tag',
@@ -178,21 +150,13 @@ describe('useSubmitCombinationSelection', () => {
         ]);
 
         const { submit } = useSubmitCombinationSelection({
-            tags: tagsStore,
-            setTagSelected,
+            ...defaultHookParams,
+            tags,
             loadTags,
+            setTagSelected,
             closeSelectionDialog
         });
-        const result = await submit({
-            collectionId: 'col-1',
-            isVideoCollection: false,
-            instances: [
-                { id: 'inst-1', type: 'diversity', params: { strength: 1 }, isExpanded: true }
-            ],
-            nSamplesToSelect: 10,
-            selectionResultTagName: 'new-tag',
-            selectionFilter: null
-        });
+        const result = await submit({ ...defaultSubmitParams, selectionResultTagName: 'new-tag' });
 
         expect(result).toBe(true);
         expect(toast.success).toHaveBeenCalledWith('Selection created successfully');
@@ -208,25 +172,14 @@ describe('useSubmitCombinationSelection', () => {
                 resolveApi = resolve;
             }) as never
         );
-        const tagsStore = writable([]);
 
-        const { isSubmitting, submit } = useSubmitCombinationSelection({
-            tags: tagsStore,
-            setTagSelected: vi.fn(),
-            loadTags: vi.fn().mockResolvedValue(undefined),
-            closeSelectionDialog: vi.fn()
-        });
+        const { isSubmitting, submit } = useSubmitCombinationSelection({ ...defaultHookParams });
 
         expect(get(isSubmitting)).toBe(false);
         const call = submit({
-            collectionId: 'col-1',
-            isVideoCollection: false,
-            instances: [
-                { id: 'inst-1', type: 'diversity', params: { strength: 1 }, isExpanded: true }
-            ],
+            ...defaultSubmitParams,
             nSamplesToSelect: 5,
-            selectionResultTagName: 'tag',
-            selectionFilter: null
+            selectionResultTagName: 'tag'
         });
         expect(get(isSubmitting)).toBe(true);
 
@@ -241,27 +194,19 @@ describe('useSubmitCombinationSelection', () => {
             return true;
         });
         vi.mocked(createSampling).mockResolvedValue({ data: {}, error: null } as never);
-        const tagsStore = writable([]);
 
-        const { loadingMessage, submit } = useSubmitCombinationSelection({
-            tags: tagsStore,
-            setTagSelected: vi.fn(),
-            loadTags: vi.fn().mockResolvedValue(undefined),
-            closeSelectionDialog: vi.fn()
-        });
+        const { loadingMessage, submit } = useSubmitCombinationSelection({ ...defaultHookParams });
 
         const messages: string[] = [];
         loadingMessage.subscribe((msg) => messages.push(msg));
 
         await submit({
-            collectionId: 'col-1',
-            isVideoCollection: false,
+            ...defaultSubmitParams,
             instances: [
                 { id: 'inst-1', type: 'typicality', params: { strength: 1 }, isExpanded: true }
             ],
             nSamplesToSelect: 5,
-            selectionResultTagName: 'tag',
-            selectionFilter: null
+            selectionResultTagName: 'tag'
         });
 
         expect(messages).toContain('Computing typicality metadata...');
@@ -274,17 +219,10 @@ describe('useSubmitCombinationSelection', () => {
                 resolveFirst = resolve;
             }) as never
         );
-        const tagsStore = writable([]);
 
-        const { submit } = useSubmitCombinationSelection({
-            tags: tagsStore,
-            setTagSelected: vi.fn(),
-            loadTags: vi.fn(),
-            closeSelectionDialog: vi.fn()
-        });
+        const { submit } = useSubmitCombinationSelection({ ...defaultHookParams });
         const submitParams = {
-            collectionId: 'col-1',
-            isVideoCollection: false,
+            ...defaultSubmitParams,
             instances: [
                 {
                     id: 'inst-1',
@@ -294,8 +232,7 @@ describe('useSubmitCombinationSelection', () => {
                 }
             ],
             nSamplesToSelect: 5,
-            selectionResultTagName: 'tag',
-            selectionFilter: null
+            selectionResultTagName: 'tag'
         };
 
         const firstCall = submit(submitParams);

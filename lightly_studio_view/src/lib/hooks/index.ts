@@ -37,3 +37,4 @@ export { useAnnotationLabels } from '$lib/hooks/useAnnotationLabels/useAnnotatio
 export { useSegmentationMaskPreview } from '$lib/hooks/useSegmentationMaskPreview';
 export { useCreateSampling } from '$lib/hooks/useCreateSampling/useCreateSampling';
 export { useColorPicker } from '$lib/hooks/useColorPicker/useColorPicker.svelte';
+export { useSubmitCombinationSelection } from '$lib/hooks/useSubmitCombinationSelection/useSubmitCombinationSelection';
