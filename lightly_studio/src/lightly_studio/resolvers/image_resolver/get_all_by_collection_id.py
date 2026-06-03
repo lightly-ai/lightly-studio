@@ -16,12 +16,7 @@ from typing_extensions import TypeAlias
 
 from lightly_studio.api.routes.api.validators import Paginated
 from lightly_studio.core.dataset_query.image_sample_field import ImageSampleField
-from lightly_studio.core.dataset_query.order_by import (
-    OrderByEvaluationMetricField,
-    OrderByExpression,
-    OrderByField,
-    OrderByMetadataField,
-)
+from lightly_studio.core.dataset_query.order_by import OrderByExpression, OrderByField
 from lightly_studio.models.annotation.annotation_base import AnnotationBaseTable
 from lightly_studio.models.image import ImageTable
 from lightly_studio.models.sample import SampleTable
@@ -40,15 +35,6 @@ def _file_path_abs_in_order_by(order_by: list[OrderByExpression]) -> bool:
     return any(
         isinstance(expr, OrderByField) and expr.field is ImageSampleField.file_path_abs
         for expr in order_by
-    )
-
-
-def _has_metadata_join(filters: ImageFilter | None) -> bool:
-    """Return True if filters already join SampleMetadataTable."""
-    return (
-        filters is not None
-        and filters.sample_filter is not None
-        and bool(filters.sample_filter.metadata_filters)
     )
 
 
@@ -93,22 +79,11 @@ def _coerce_order_value(value: object) -> float | None:
 
     Only numeric values are converted; booleans return ``None``.
     """
-    if value is None:
-        return None
     if isinstance(value, bool):
         return None
     if isinstance(value, (int, float)):
         return float(value)
     return None
-
-
-def _primary_order_value_column(
-    primary_order_by: OrderByExpression | None,
-) -> ColumnElement[Any] | None:
-    """Return the SQL expression for the primary sort value, if selectable."""
-    if primary_order_by is None:
-        return None
-    return primary_order_by.order_value_column()
 
 
 def _apply_file_path_tiebreaker(
@@ -124,34 +99,28 @@ def _apply_file_path_tiebreaker(
 def _apply_order_by_clauses(
     samples_query: ImageSamplesQuery,
     order_by: list[OrderByExpression],
-    filters: ImageFilter | None,
-) -> ImageSamplesQuery:
-    """Apply joins and ORDER BY clauses for all sort expressions.
+) -> tuple[ImageSamplesQuery, int | None]:
+    """Apply joins, optional primary sort column, and ORDER BY for all sort expressions.
 
-    Each ``OrderByEvaluationMetricField`` owns per-instance table aliases, so its joins
-    are applied individually for every expression. Metadata joins, which reuse the shared
-    ``SampleMetadataTable``, are added at most once: when filters already join it, a second
-    metadata join is skipped. A ``file_path_abs`` tiebreaker is appended unless it is
-    already present in ``order_by``.
+    Each metadata and evaluation metric expression uses a per-instance table alias, so
+    joins are applied for every expression without conflicting with filter joins.
+    A ``file_path_abs`` tiebreaker is appended unless it is already present in ``order_by``.
     """
-    metadata_joined = _has_metadata_join(filters)
+    order_value_index: int | None = None
 
-    for expr in order_by:
-        if isinstance(expr, OrderByEvaluationMetricField):
-            samples_query = expr.apply_order_value_joins(samples_query)  # type: ignore[arg-type]
-            samples_query = samples_query.order_by(expr.to_column_element())
-        elif isinstance(expr, OrderByMetadataField):
-            if not metadata_joined:
-                samples_query = expr.apply_order_value_joins(samples_query)  # type: ignore[arg-type]
-                metadata_joined = True
-            samples_query = samples_query.order_by(expr.to_column_element())
-        else:
-            samples_query = expr.apply(samples_query)  # type: ignore[arg-type]
+    for i, expr in enumerate(order_by):
+        samples_query, idx = expr.apply_select_join(
+            samples_query,
+            add_order_value=(i == 0),
+        )
+        if i == 0:
+            order_value_index = idx
+        samples_query = samples_query.order_by(expr.to_column_element())
 
     if not _file_path_abs_in_order_by(order_by):
         samples_query = _apply_file_path_tiebreaker(samples_query, ascending=order_by[0].ascending)
 
-    return samples_query
+    return samples_query, order_value_index
 
 
 def _extract_order_values(
@@ -298,17 +267,12 @@ def _get_all_without_similarity(  # noqa: PLR0913
     results default to ``file_path_abs`` ascending and ``order_values`` is ``None``.
     """
     load_options = _get_load_options()
-    primary_order_by = order_by[0] if order_by else None
-    order_value_col = _primary_order_value_column(primary_order_by)
-    order_value_index = 1 if order_value_col is not None else None
+    order_value_index: int | None = None
 
-    samples_query: ImageSamplesQuery
-    if order_value_col is not None:
-        samples_query = select(ImageTable, order_value_col).options(load_options)
-    else:
-        samples_query = select(ImageTable).options(load_options)
-    samples_query = samples_query.join(ImageTable.sample).where(
-        SampleTable.collection_id == collection_id
+    samples_query: ImageSamplesQuery = (
+        select(ImageTable).options(load_options).join(ImageTable.sample).where(
+            SampleTable.collection_id == collection_id
+        )
     )
 
     total_count_query = (
@@ -319,10 +283,7 @@ def _get_all_without_similarity(  # noqa: PLR0913
     )
 
     if filters:
-        if order_value_col is not None:
-            samples_query = filters.apply(cast(Select[tuple[ImageTable, Any]], samples_query))
-        else:
-            samples_query = filters.apply(cast(SelectOfScalar[ImageTable], samples_query))
+        samples_query = filters.apply(cast(SelectOfScalar[ImageTable], samples_query))
         total_count_query = filters.apply(total_count_query)
 
     # TODO(Michal, 06/2025): Consider adding sample_ids to the filters.
@@ -331,7 +292,7 @@ def _get_all_without_similarity(  # noqa: PLR0913
         total_count_query = total_count_query.where(col(ImageTable.sample_id).in_(sample_ids))
 
     if order_by:
-        samples_query = _apply_order_by_clauses(samples_query, order_by, filters)
+        samples_query, order_value_index = _apply_order_by_clauses(samples_query, order_by)
     else:
         samples_query = samples_query.order_by(col(ImageTable.file_path_abs).asc())
 
@@ -339,7 +300,11 @@ def _get_all_without_similarity(  # noqa: PLR0913
         samples_query = samples_query.offset(pagination.offset).limit(pagination.limit)
 
     total_count = session.exec(total_count_query).one()
-    results = session.exec(samples_query).all()
+    results: Sequence[object]
+    if order_value_index is not None:
+        results = list(session.execute(samples_query).unique().all())
+    else:
+        results = session.exec(samples_query).all()
     samples, order_values = _split_query_results(results, order_value_index)
 
     return GetAllSamplesByCollectionIdResult(
