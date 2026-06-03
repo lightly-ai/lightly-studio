@@ -1,4 +1,4 @@
-<script module>
+<script module lang="ts">
     import { defineMeta } from '@storybook/addon-svelte-csf';
     import { fn } from 'storybook/test';
     import { Crosshair, Plus, Sigma, Target, TrendingUp } from '@lucide/svelte';
