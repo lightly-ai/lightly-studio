@@ -44,7 +44,8 @@
                 control: false
             },
             iconAfterClass: {
-                description: 'Additional class applied to the trailing icon (merged with `size-4`).',
+                description:
+                    'Additional class applied to the trailing icon (merged with `size-4`).',
                 control: 'text'
             },
             buttonProps: {
