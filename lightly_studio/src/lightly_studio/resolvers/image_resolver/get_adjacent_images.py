@@ -51,8 +51,6 @@ def get_adjacent_images(  # noqa: PLR0913
         base_query = similarity_utils.apply_similarity_join(
             query=_base_query(
                 ordering_expression=[distance_expr],
-                order_by=order_by,
-                skip_metadata_join=metadata_already_joined,
             ).where(col(SampleTable.collection_id) == collection_id),
             sample_id_column=col(ImageTable.sample_id),
             embedding_model_id=embedding_model_id,

@@ -1,3 +1,4 @@
+import type { TagView } from '$lib/services/types';
 export interface DiversityParams {
     strength: number;
 }
@@ -29,7 +30,7 @@ export interface ClassBalancingParams {
     strength: number;
 }
 
-interface StrategyParamsByType {
+export interface StrategyParamsByType {
     diversity: DiversityParams;
     typicality: TypicalityParams;
     similarity: SimilarityParams;
@@ -50,7 +51,9 @@ export type StrategyInstance = {
 
 export type StrategyParams = StrategyInstance['params'];
 
-export const STRATEGY_OPTIONS = [
+export type StrategySummaryTag = Pick<TagView, 'tag_id' | 'name'>;
+
+export const STRATEGY_OPTIONS: { type: StrategyType; label: string; description: string }[] = [
     {
         type: 'diversity',
         label: 'Diversity',
@@ -82,3 +85,15 @@ export const STRATEGY_OPTIONS = [
             'Selects samples to reach a target class distribution using annotation labels. Use to fix class imbalance or enforce custom class proportions.'
     }
 ] satisfies Array<{ type: StrategyType; label: string; description: string }>;
+
+export const STRATEGY_LABELS: Record<StrategyType, string> = Object.fromEntries(
+    STRATEGY_OPTIONS.map((strategy) => [strategy.type, strategy.label])
+) as Record<StrategyType, string>;
+
+export const STRATEGY_DEFAULTS: { [K in StrategyType]: StrategyParamsByType[K] } = {
+    diversity: { strength: 1 },
+    typicality: { strength: 1 },
+    similarity: { query_tag_id: '', strength: 1 },
+    metadata_weighting: { metadata_key: '', strength: 1 },
+    class_balancing: { target_distribution_mode: 'uniform', target_distribution: [], strength: 1 }
+};

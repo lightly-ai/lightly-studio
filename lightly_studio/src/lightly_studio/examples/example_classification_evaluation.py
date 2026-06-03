@@ -27,7 +27,11 @@ TAGGED_SAMPLES_EVALUATION_NAME = "cls-evaluation-tagged-samples"
 ALL_SAMPLES_EVALUATION_NAME = "cls-evaluation-all-samples"
 
 TAGGED_SAMPLE_COUNT = 10
+<<<<<<< HEAD
 CLASS_NAMES = ("cat very long name", "dog", "bird")
+=======
+CLASS_NAMES = ("cat", "dog", "bird")
+>>>>>>> origin/main
 RANDOM_SEED = 42
 
 

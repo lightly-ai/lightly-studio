@@ -1,8 +1,10 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { get } from 'svelte/store';
 import type { AnnotationType, AnnotationView } from '$lib/api/lightly_studio_local';
 import type { AnnotationLabelContext } from '$lib/contexts/SampleDetailsAnnotation.svelte';
 
 import { useSegmentationMaskBrush } from './useSegmentationMaskBrush';
+import { useGlobalStorage } from './useGlobalStorage';
 import {
     computeBoundingBoxFromMask,
     encodeBinaryMaskToRLE
@@ -14,6 +16,7 @@ const annotationLabelContext: AnnotationLabelContext = {
     isDrawing: true,
     annotationId: null,
     annotationLabel: null,
+    annotationSource: null,
     lastCreatedAnnotationId: null,
     annotationType: null
 };
@@ -27,6 +30,9 @@ vi.mock('$lib/contexts/SampleDetailsAnnotation.svelte', () => ({
 
         setAnnotationLabel(label: string | null) {
             annotationLabelContext.annotationLabel = label;
+        },
+        setAnnotationSource(source: string | null) {
+            annotationLabelContext.annotationSource = source;
         },
         setLastCreatedAnnotationId(id: string | null) {
             annotationLabelContext.lastCreatedAnnotationId = id;
@@ -91,6 +97,7 @@ describe('useSegmentationMaskBrush', () => {
         annotationLabelContext.isDrawing = true;
         annotationLabelContext.annotationId = null;
         annotationLabelContext.annotationLabel = null;
+        annotationLabelContext.annotationSource = null;
         annotationLabelContext.lastCreatedAnnotationId = null;
 
         vi.clearAllMocks();
@@ -286,6 +293,83 @@ describe('useSegmentationMaskBrush', () => {
         expect(createLabel).not.toHaveBeenCalled();
         expect(createAnnotation).not.toHaveBeenCalled();
         expect(refetch).not.toHaveBeenCalled();
+    });
+
+    it('sends annotation_collection_name from the selected source in the context', async () => {
+        const refetch = vi.fn();
+
+        annotationLabelContext.annotationLabel = 'car';
+        annotationLabelContext.annotationSource = 'predictions';
+
+        const labels = [{ annotation_label_id: 'car-label-id', annotation_label_name: 'car' }];
+
+        const { finishBrush } = useSegmentationMaskBrush({
+            collectionId: 'c1',
+            datasetId,
+            sampleId: 's1',
+            sample,
+            refetch
+        });
+
+        await finishBrush(mask, null, labels);
+
+        expect(createAnnotation).toHaveBeenCalledWith(
+            expect.objectContaining({ annotation_collection_name: 'predictions' })
+        );
+    });
+
+    it('persists the label and source chosen via requestLabel and uses the source', async () => {
+        const refetch = vi.fn();
+
+        annotationLabelContext.annotationLabel = null;
+        annotationLabelContext.annotationSource = null;
+
+        const requestLabel = vi.fn().mockResolvedValue({ label: 'car', source: 'predictions' });
+
+        const { finishBrush } = useSegmentationMaskBrush({
+            collectionId: 'c1',
+            datasetId,
+            sampleId: 's1',
+            sample,
+            refetch,
+            requestLabel
+        });
+
+        await finishBrush(mask, null, []);
+
+        expect(annotationLabelContext.annotationLabel).toBe('car');
+        expect(annotationLabelContext.annotationSource).toBe('predictions');
+        expect(createAnnotation).toHaveBeenCalledWith(
+            expect.objectContaining({ annotation_collection_name: 'predictions' })
+        );
+
+        // The choice is persisted to the session store, keyed by collection id.
+        const { lastAnnotationLabel, lastAnnotationSource } = useGlobalStorage();
+        expect(get(lastAnnotationLabel)['c1']).toBe('car');
+        expect(get(lastAnnotationSource)['c1']).toBe('predictions');
+    });
+
+    it('omits annotation_collection_name when no source is selected', async () => {
+        const refetch = vi.fn();
+
+        annotationLabelContext.annotationLabel = 'car';
+        annotationLabelContext.annotationSource = null;
+
+        const labels = [{ annotation_label_id: 'car-label-id', annotation_label_name: 'car' }];
+
+        const { finishBrush } = useSegmentationMaskBrush({
+            collectionId: 'c1',
+            datasetId,
+            sampleId: 's1',
+            sample,
+            refetch
+        });
+
+        await finishBrush(mask, null, labels);
+
+        expect(createAnnotation).toHaveBeenCalledWith(
+            expect.objectContaining({ annotation_collection_name: undefined })
+        );
     });
 
     it('creates a new label with the selected name when label does not exist yet', async () => {

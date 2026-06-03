@@ -10,7 +10,12 @@ from pydantic import BaseModel, Field
 from sqlmodel import Session
 
 from lightly_studio.core.image.image_sample import ImageSample
-from lightly_studio.evaluation import classification_metric, object_detection_metric, validators
+from lightly_studio.evaluation import (
+    classification_metric,
+    object_detection_metric,
+    semantic_segmentation_metric,
+    validators,
+)
 from lightly_studio.evaluation.evaluation_data import EvaluationData
 from lightly_studio.models.annotation.annotation_base import AnnotationBaseTable
 from lightly_studio.models.evaluation_run import (
@@ -75,7 +80,7 @@ class ClassificationEvaluationConfig(BaseModel):
 class SemanticSegmentationEvaluationConfig(BaseModel):
     """Configuration for semantic-segmentation evaluation runs.
 
-    Currently has no fields. Placeholder for future implementation.
+    Currently has no fields. Placeholder for future task-specific options.
     """
 
 
@@ -175,7 +180,7 @@ class ImageDatasetEvaluate:
         pred_annotation_source: str,
         config: SemanticSegmentationEvaluationConfig | None = None,
     ) -> EvaluationResult:
-        """Create a semantic segmentation evaluation run.
+        """Create a semantic segmentation evaluation run and persist per-image metrics.
 
         Args:
             name: Display name of the evaluation run.
@@ -194,6 +199,10 @@ class ImageDatasetEvaluate:
             pred_annotation_source=pred_annotation_source,
             task_type=EvaluationTaskType.SEMANTIC_SEGMENTATION,
             config_json=config.model_dump(),
+        )
+        semantic_segmentation_metric.create_and_persist_semantic_segmentation_metrics_per_sample(
+            session=self.session,
+            data=data,
         )
         return EvaluationResult.from_evaluation_data(data)
 
