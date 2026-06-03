@@ -133,9 +133,7 @@
     {#snippet template(args)}
         <div class="flex items-center gap-2">
             <Select {...args} />
-            <Button variant="ghost" icon={Plus} vari buttonProps={{ onclick: fn() }}
-                >Add metric</Button
-            >
+            <Button variant="ghost" icon={Plus} buttonProps={{ onclick: fn() }}>Add metric</Button>
         </div>
     {/snippet}
 </Story>
