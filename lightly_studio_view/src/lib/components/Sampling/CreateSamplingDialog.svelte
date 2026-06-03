@@ -4,6 +4,7 @@
     import * as Dialog from '$lib/components/ui/dialog';
     import { Input } from '$lib/components/ui/input';
     import { Label } from '$lib/components/ui/label';
+    import { Tooltip } from '$lib/components/ui/tooltip';
     import { useAnnotationCollections } from '$lib/hooks/useAnnotationCollections/useAnnotationCollections';
     import { useTags } from '$lib/hooks/useTags/useTags';
     import { useSamplingDialog } from '$lib/hooks/useSamplingDialog/useSamplingDialog';
@@ -62,15 +63,34 @@
     let nSamplesToSelect = $state<number>(10);
     let queryTagId = $state('');
     let annotationSourceId = $state('');
+    let classTargets = $state<Record<string, number>>({});
     let samplingResultTagName = $state<string>('');
 
     // Form validation
     const isFormValid = $derived(
         samplingStrategy !== '' &&
             (samplingStrategy === 'similarity' ? queryTagId !== '' : true) &&
+            (samplingStrategy === 'class_balancing' && balancingMode === 'dictionary'
+                ? Object.keys(classTargets).length > 0
+                : true) &&
             nSamplesToSelect > 0 &&
             samplingResultTagName.trim().length > 0
     );
+
+    const validationErrorMessage = $derived.by(() => {
+        if (samplingStrategy === '') return 'Select a sampling strategy';
+        if (samplingStrategy === 'similarity' && queryTagId === '') return 'Select a query tag';
+        if (
+            samplingStrategy === 'class_balancing' &&
+            balancingMode === 'dictionary' &&
+            Object.keys(classTargets).length === 0
+        ) {
+            return 'Add at least one class target';
+        }
+        if (nSamplesToSelect <= 0) return 'Number of samples must be greater than 0';
+        if (samplingResultTagName.trim().length === 0) return 'Enter a tag name';
+        return '';
+    });
 
     const isSimilaritySupported = $derived(!isVideoCollection);
 
@@ -114,6 +134,7 @@
             queryTagId,
             balancingMode,
             annotationSourceId,
+            classTargets,
             samplingFilter
         });
 
@@ -126,6 +147,7 @@
         nSamplesToSelect = 10;
         queryTagId = '';
         annotationSourceId = '';
+        classTargets = {};
         samplingResultTagName = '';
     }
 </script>
@@ -157,10 +179,13 @@
 
                     {#if samplingStrategy === 'class_balancing'}
                         <ClassBalancingForm
+                            {collectionId}
                             {balancingMode}
+                            {classTargets}
                             {annotationCollections}
                             {annotationSourceId}
                             onBalancingModeChange={(mode) => (balancingMode = mode)}
+                            onClassTargetsChange={(targets) => (classTargets = targets)}
                             onAnnotationSourceChange={(sourceId) => (annotationSourceId = sourceId)}
                         />
                     {/if}
@@ -236,13 +261,15 @@
                     >
                         Cancel
                     </Button>
-                    <Button
-                        type="submit"
-                        disabled={!isFormValid || $isSubmitting || notEnoughSamples || noSamples}
-                        data-testid="sampling-dialog-submit"
-                    >
-                        {$isSubmitting ? $loadingMessage || 'Creating...' : 'Create Sampling'}
-                    </Button>
+                    <Tooltip content={!isFormValid ? validationErrorMessage : ''}>
+                        <Button
+                            type="submit"
+                            disabled={!isFormValid || $isSubmitting || notEnoughSamples || noSamples}
+                            data-testid="sampling-dialog-submit"
+                        >
+                            {$isSubmitting ? $loadingMessage || 'Creating...' : 'Create Sampling'}
+                        </Button>
+                    </Tooltip>
                 </Dialog.Footer>
             </form>
         </Dialog.Content>

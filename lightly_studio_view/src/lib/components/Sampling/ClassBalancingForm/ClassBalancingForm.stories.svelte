@@ -10,7 +10,7 @@
         argTypes: {
             balancingMode: {
                 control: 'select',
-                options: ['uniform', 'input']
+                options: ['uniform', 'input', 'dictionary']
             }
         }
     });
@@ -19,7 +19,13 @@
 <Story
     name="Default"
     args={{
+        collectionId: 'collection-1',
         balancingMode: 'uniform',
-        onBalancingModeChange: fn()
+        classTargets: {},
+        annotationCollections: [],
+        annotationSourceId: '',
+        onBalancingModeChange: fn(),
+        onClassTargetsChange: fn(),
+        onAnnotationSourceChange: fn()
     }}
 />

@@ -6,7 +6,10 @@ import {
 import { get, readonly, writable, type Readable } from 'svelte/store';
 import { toast } from 'svelte-sonner';
 import type { TagView } from '$lib/services/types';
-import type { SamplingRequest } from '$lib/api/lightly_studio_local/types.gen';
+import type {
+    AnnotationClassBalancingStrategy,
+    SamplingRequest
+} from '$lib/api/lightly_studio_local/types.gen';
 import type { BalancingMode } from '$lib/components/Sampling/balancingMode';
 
 type SamplingError = { error: string };
@@ -32,6 +35,15 @@ interface SubmitParams {
     balancingMode: BalancingMode;
     annotationSourceId?: string;
     samplingFilter: SamplingRequest['filter'];
+    classTargets?: Record<string, number>;
+}
+
+function getTargetDistribution(
+    balancingMode: BalancingMode,
+    classTargets: Record<string, number> | undefined
+): AnnotationClassBalancingStrategy['target_distribution'] {
+    if (balancingMode === 'dictionary') return classTargets ?? {};
+    return balancingMode;
 }
 
 export function useCreateSampling(params: UseCreateSamplingParams) {
@@ -80,7 +92,8 @@ export function useCreateSampling(params: UseCreateSamplingParams) {
             queryTagId,
             balancingMode,
             annotationSourceId,
-            samplingFilter
+            samplingFilter,
+            classTargets
         } = submitParams;
         _isSubmitting.set(true);
 
@@ -91,7 +104,7 @@ export function useCreateSampling(params: UseCreateSamplingParams) {
                     [
                         {
                             strategy_name: 'balance',
-                            target_distribution: balancingMode,
+                            target_distribution: getTargetDistribution(balancingMode, classTargets),
                             annotation_source_id: annotationSourceId || undefined
                         }
                     ],

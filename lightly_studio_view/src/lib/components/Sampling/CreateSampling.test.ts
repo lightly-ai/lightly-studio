@@ -15,6 +15,12 @@ type MockAnnotationCollection = {
     name: string;
 };
 
+type MockAnnotationLabel = {
+    dataset_id: string;
+    annotation_label_name: string;
+    annotation_label_id: string;
+};
+
 const pageMock = vi.hoisted(() => ({
     params: { collection_id: 'test-collection-id' },
     data: { collection: { sample_type: 'image' as string } }
@@ -26,6 +32,7 @@ vi.mock('$app/state', () => ({
 
 let tagsStore: Writable<MockTag[]>;
 let annotationCollectionsData: MockAnnotationCollection[];
+let annotationLabelsData: MockAnnotationLabel[];
 const loadTagsMock = vi.fn();
 const setTagSelectedMock = vi.fn();
 
@@ -40,6 +47,12 @@ vi.mock('$lib/hooks/useTags/useTags', () => ({
 vi.mock('$lib/hooks/useAnnotationCollections/useAnnotationCollections', () => ({
     useAnnotationCollections: () => ({
         data: annotationCollectionsData
+    })
+}));
+
+vi.mock('$lib/hooks/useAnnotationLabels/useAnnotationLabels', () => ({
+    useAnnotationLabels: () => ({
+        data: annotationLabelsData
     })
 }));
 
@@ -101,6 +114,18 @@ describe('CreateSamplingDialog', () => {
         annotationCollectionsData = [
             { collection_id: 'annotation-source-1', name: 'Source 1' },
             { collection_id: 'annotation-source-2', name: 'Source 2' }
+        ];
+        annotationLabelsData = [
+            {
+                dataset_id: 'dataset-1',
+                annotation_label_name: 'cat',
+                annotation_label_id: 'label-1'
+            },
+            {
+                dataset_id: 'dataset-1',
+                annotation_label_name: 'dog',
+                annotation_label_id: 'label-2'
+            }
         ];
         submitMock.mockResolvedValue(undefined);
     });
@@ -369,7 +394,7 @@ describe('CreateSamplingDialog', () => {
         await fireEvent.keyDown(screen.getByTestId('annotation-source-trigger'), {
             key: 'Enter'
         });
-        await fireEvent.pointerUp(await screen.findByTestId('annotation-source-option-Source 2'));
+        await fireEvent.pointerUp(await screen.findByText('Source 2'));
 
         await fireEvent.input(screen.getByTestId('sampling-dialog-tag-name-input'), {
             target: { value: 'source-filtered-tag' }

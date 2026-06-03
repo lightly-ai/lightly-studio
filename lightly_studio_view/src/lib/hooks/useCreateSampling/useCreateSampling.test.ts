@@ -479,6 +479,48 @@ describe('useCreateSampling', () => {
         });
     });
 
+    it('submit with class_balancing and dictionary mode passes class targets as target_distribution', async () => {
+        vi.mocked(createSampling).mockResolvedValue({ data: {}, error: null } as never);
+        const loadTags = vi.fn().mockResolvedValue(undefined);
+        const setTagSelected = vi.fn();
+        const closeSamplingDialog = vi.fn();
+        const tagsStore = writable([]);
+
+        const { submit } = useCreateSampling({
+            tags: tagsStore,
+            setTagSelected,
+            loadTags,
+            closeSamplingDialog
+        });
+        const result = await submit({
+            collectionId: 'col-1',
+            isSimilaritySupported: true,
+            samplingStrategy: 'class_balancing',
+            nSamplesToSelect: 15,
+            samplingResultTagName: 'balanced-tag',
+            queryTagId: '',
+            balancingMode: 'dictionary',
+            classTargets: { cat: 1, dog: 0.5 },
+            samplingFilter: null
+        });
+
+        expect(result).toBe(true);
+        expect(createSampling).toHaveBeenCalledWith({
+            path: { collection_id: 'col-1' },
+            body: {
+                n_samples_to_select: 15,
+                sampling_result_tag_name: 'balanced-tag',
+                strategies: [
+                    {
+                        strategy_name: 'balance',
+                        target_distribution: { cat: 1, dog: 0.5 }
+                    }
+                ],
+                filter: undefined
+            }
+        });
+    });
+
     it('API error in createSampling for class_balancing toasts error and returns false', async () => {
         vi.mocked(createSampling).mockResolvedValue({
             data: null,
