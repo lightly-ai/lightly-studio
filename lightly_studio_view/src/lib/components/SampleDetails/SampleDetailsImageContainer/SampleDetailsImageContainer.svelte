@@ -19,7 +19,7 @@
     import { getBoundingBox } from '$lib/components/SampleAnnotation/utils';
     import { onDestroy, onMount } from 'svelte';
     import { usePendingState } from '../usePendingState';
-    import { useAnnotationCollectionsFilter } from '$lib/hooks/useAnnotationCollectionsFilter/useAnnotationCollectionsFilter';
+    import { countVisibleSources } from '../SampleDetailsAnnotationSegment/SampleDetailsAnnotationSegment.helpers';
 
     type SampleDetailsImageContainerProps = {
         sample: {
@@ -58,7 +58,6 @@
 
     const { isEditingMode, imageBrightness, imageContrast } = useGlobalStorage();
     const { isHidden } = useHideAnnotations();
-    const { selectedCollectionIds } = useAnnotationCollectionsFilter();
 
     let resetZoomTransform: (() => void) | undefined = $state();
     let mousePosition = $state<{ x: number; y: number } | null>(null);
@@ -67,20 +66,23 @@
     const { isPending, handlePendingChange } = usePendingState();
 
     let sampleId = $derived(sample.sampleId);
+    // The local hidden set is the single source of truth for visibility on the
+    // details page; the grid's annotation source filter only seeds it.
     const actualAnnotationsToShow = $derived.by(() => {
         return sample.annotations
             .filter((annotation) => !hideAnnotationsIds.has(annotation.sample_id))
-            .filter(
-                (annotation) =>
-                    $selectedCollectionIds.length === 0 ||
-                    $selectedCollectionIds.includes(annotation.annotation_collection_id)
-            )
             .sort((a, b) => {
                 if (a.sample_id === annotationLabelContext.annotationId) return 1;
                 if (b.sample_id === annotationLabelContext.annotationId) return -1;
                 return 0;
             });
     });
+
+    // Color boxes by source only while annotations from multiple sources are visible,
+    // mirroring the side panel (sample.annotations is already classification-free).
+    const colorBySource = $derived(
+        countVisibleSources(sample.annotations, hideAnnotationsIds) >= 2
+    );
 
     const drawerStrokeColor = $derived(
         annotationLabel !== 'default' && annotationLabel
@@ -250,6 +252,7 @@
                         {toggleAnnotationSelection}
                         {sample}
                         {scale}
+                        {colorBySource}
                         highlight={annotationLabelContext.isDrawing
                             ? 'disabled'
                             : determineHighlightForAnnotation(annotation.sample_id)}
