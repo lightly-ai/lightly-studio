@@ -12,8 +12,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - enable picker for annotation source menu
 - Embedding plot: added a "No coloring" option to the "Color by" dropdown to disable coloring.
 - Show ground truth and prediction annotation sources in run details panel
-
 - Image details: select the annotation source when adding an annotation.
+- When sorting the image grid by a numeric field, the sort value is now shown as an overlay on each sample.
 
 ### Changed
 
