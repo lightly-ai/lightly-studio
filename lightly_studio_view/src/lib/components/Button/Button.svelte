@@ -48,7 +48,7 @@
 
     let {
         icon: Icon,
-        variant,
+        variant = 'ghost',
         buttonProps = {},
         collapseAt = 'never',
         isPending = false,

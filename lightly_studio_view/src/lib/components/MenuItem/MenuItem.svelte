@@ -1,6 +1,6 @@
 <script lang="ts">
+    import { Button } from '$lib/components';
     import { cn } from '$lib/utils/shadcn';
-    import Button from '../ui/button/button.svelte';
     import { ChevronDown } from '@lucide/svelte';
     import type { NavigationMenuItem } from '../NavigationMenu/types';
 
@@ -20,18 +20,14 @@
     role={'button'}
 >
     <Button
-        variant="ghost"
-        class={cn('flex items-center justify-between', item.isSelected && 'bg-accent')}
-        href={item.href}
-        data-testid={`navigation-menu-${item.title.toLowerCase()}`}
+        icon={item.icon}
+        buttonProps={{
+            href: item.href,
+            'data-testid': `navigation-menu-${item.title.toLowerCase()}`,
+            class: cn(item.isSelected && 'bg-accent')
+        }}
     >
-        <div class="flex items-center gap-2">
-            {#if item.icon}
-                <item.icon class="size-4 shrink-0" />
-            {/if}
-            <span>{item.title}</span>
-        </div>
-
+        {item.title}
         {#if hasSiblings}
             <ChevronDown
                 class={cn(
@@ -47,18 +43,15 @@
             <div class="w-full min-w-[200px] rounded-md border bg-popover p-1 shadow-md">
                 {#each siblings as sibling (sibling.id)}
                     <Button
+                        icon={sibling.icon}
                         variant="ghost"
-                        class={cn(
-                            'flex w-full items-center justify-start gap-2',
-                            sibling.isSelected && 'bg-accent'
-                        )}
-                        href={sibling.href}
-                        data-testid={`navigation-dropdown-${sibling.title.toLowerCase()}`}
+                        buttonProps={{
+                            href: sibling.href,
+                            'data-testid': `navigation-dropdown-${sibling.title.toLowerCase()}`,
+                            class: cn('w-full justify-start', sibling.isSelected && 'bg-accent')
+                        }}
                     >
-                        {#if sibling.icon}
-                            <sibling.icon class="size-4 shrink-0" />
-                        {/if}
-                        <span>{sibling.title}</span>
+                        {sibling.title}
                     </Button>
                 {/each}
             </div>
