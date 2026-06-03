@@ -67,7 +67,7 @@ class SampleFilter(BaseModel):
         sample_ids_subquery = (
             select(SampleTable.sample_id)
             .join(SampleTable.tags)
-            .where(col(TagTable.tag_id).in_(self.tag_ids))
+            .where(db_array.in_array(column=col(TagTable.tag_id), values=self.tag_ids))
             .distinct()
         )
         return query.where(col(SampleTable.sample_id).in_(sample_ids_subquery))
