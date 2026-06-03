@@ -1,7 +1,7 @@
 <script lang="ts">
+    import { Button } from '$lib/components';
     import FilterChip from '$lib/components/FilterChip/FilterChip.svelte';
     import Segment from '$lib/components/Segment/Segment.svelte';
-    import { Button } from '$lib/components/ui/index.js';
     import {
         useImageFilters,
         type QueryExpression
@@ -56,14 +56,15 @@
         </FilterChip>
     {:else}
         <Button
+            icon={Pencil}
             variant="outline"
-            size="sm"
-            class="w-full justify-start gap-2 text-muted-foreground"
-            data-testid="query-filter-add-button"
-            onclick={onOpen}
+            buttonProps={{
+                onclick: onOpen,
+                'data-testid': 'query-filter-add-button',
+                class: 'w-full'
+            }}
         >
-            <Pencil class="h-3.5 w-3.5" />
-            <span>Add query filter</span>
+            Add query filter
         </Button>
     {/if}
 </Segment>

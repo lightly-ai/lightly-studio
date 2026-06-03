@@ -6,7 +6,7 @@
     import { useRefineClassifiersPanel } from '$lib/hooks/useClassifiers/useRefineClassifiersPanel';
     import { useClassifiers } from '$lib/hooks/useClassifiers/useClassifiers';
     import { useSessionStorage } from '$lib/hooks/useSessionStorage/useSessionStorage';
-    import { Alert } from '$lib/components/index.js';
+    import { Alert, Button } from '$lib/components';
     import ClassifierSamplesGrid from './ClassifierSamplesGrid.svelte';
     import { Network as NetworkIcon } from '@lucide/svelte';
     import { handleRefineClassifierClose } from './classifierDialogHelpers';
@@ -201,40 +201,47 @@
                 <!-- Action Buttons -->
                 <div class="flex flex-nowrap gap-2">
                     {#if $currentMode === 'temp'}
-                        <button
-                            type="button"
-                            class="inline-flex h-10 flex-shrink-0 items-center justify-center whitespace-nowrap rounded-md border border-input bg-background px-4 py-2 text-sm font-medium ring-offset-background transition-colors hover:bg-accent hover:text-accent-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50"
-                            onclick={handleCommitTempClassifier}
-                            disabled={isSubmitting}
-                            data-testid="commit-temp-classifier-button"
+                        <Button
+                            variant="outline"
+                            isPending={isSubmitting}
+                            buttonProps={{
+                                onclick: handleCommitTempClassifier,
+                                disabled: isSubmitting,
+                                'data-testid': 'commit-temp-classifier-button',
+                                class: 'shrink-0'
+                            }}
                         >
                             {isSubmitting ? 'Committing...' : 'Save Classifier'}
-                        </button>
+                        </Button>
                     {/if}
 
-                    <button
-                        type="button"
-                        class="inline-flex h-10 flex-shrink-0 items-center justify-center whitespace-nowrap rounded-md border border-input bg-background px-4 py-2 text-sm font-medium ring-offset-background transition-colors hover:bg-accent hover:text-accent-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50"
-                        onclick={handleClose}
-                        disabled={isSubmitting}
-                        data-testid="refine-dialog-cancel"
+                    <Button
+                        variant="outline"
+                        buttonProps={{
+                            onclick: handleClose,
+                            disabled: isSubmitting,
+                            'data-testid': 'refine-dialog-cancel',
+                            class: 'shrink-0'
+                        }}
                     >
                         {#if $currentMode === 'temp'}
                             Cancel
                         {:else}
                             Done
                         {/if}
-                    </button>
+                    </Button>
 
-                    <button
-                        type="button"
-                        class="inline-flex h-10 flex-shrink-0 items-center justify-center whitespace-nowrap rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground ring-offset-background transition-colors hover:bg-primary/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50"
-                        onclick={handleRefineClassifier}
-                        disabled={isSubmitting}
-                        data-testid="refine-classifier-button"
+                    <Button
+                        isPending={isSubmitting}
+                        buttonProps={{
+                            onclick: handleRefineClassifier,
+                            disabled: isSubmitting,
+                            'data-testid': 'refine-classifier-button',
+                            class: 'shrink-0'
+                        }}
                     >
                         {isSubmitting ? 'Refining...' : 'Refine Classifier'}
-                    </button>
+                    </Button>
                 </div>
             </Dialog.Footer>
         </Dialog.Content>
