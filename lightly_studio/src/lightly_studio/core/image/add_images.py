@@ -7,6 +7,7 @@ import logging
 import posixpath
 from collections import defaultdict
 from collections.abc import Iterable, Mapping
+from dataclasses import dataclass
 from pathlib import Path
 from uuid import UUID
 
@@ -137,20 +138,32 @@ def load_into_dataset_from_labelformat(
         A list of UUIDs of the created samples.
     """
     images_root_abs = add_annotations.normalize_images_root(images_root=images_path)
-    labels: list[ImageObjectDetection | ImageInstanceSegmentation] = list(input_labels.get_labels())
     logging_context = LoadingLoggingContext(
-        n_samples_to_be_inserted=len(labels),
+        n_samples_to_be_inserted=0,
         n_samples_before_loading=sample_resolver.count_by_collection_id(
             session=session, collection_id=root_collection_id
         ),
     )
 
-    # Phase 1: Image creation
     samples_to_create: list[ImageCreate] = []
     created_sample_ids: list[UUID] = []
+    labels_batch: list[ImageInstanceSegmentation | ImageObjectDetection] = []
+    n_labels_to_be_inserted = 0
+    labels_iter: Iterable[object] = input_labels.get_labels()
+    batch_context = _ImageBatchContext(
+        session=session,
+        root_collection_id=root_collection_id,
+        created_sample_ids=created_sample_ids,
+        logging_context=logging_context,
+        input_labels=input_labels,
+        images_root_abs=images_root_abs,
+        collection_name=collection_name,
+    )
 
-    for image_data in tqdm(labels, desc="Processing images", unit=" images"):
-        image: Image = image_data.image
+    for image_data in tqdm(labels_iter, desc="Processing images", unit=" images"):
+        image: Image = image_data.image  # type: ignore[attr-defined]
+        labels_batch.append(image_data)  # type: ignore[arg-type]
+        n_labels_to_be_inserted += 1
 
         sample = ImageCreate(
             file_name=str(image.filename),
@@ -161,31 +174,11 @@ def load_into_dataset_from_labelformat(
         samples_to_create.append(sample)
 
         if len(samples_to_create) >= SAMPLE_BATCH_SIZE:
-            created_path_to_id, paths_not_inserted = _create_batch_samples(
-                session=session, collection_id=root_collection_id, samples=samples_to_create
-            )
-            created_sample_ids.extend(created_path_to_id.values())
-            logging_context.update_example_paths(paths_not_inserted)
-            samples_to_create.clear()
+            _add_annotations_for_image_batch(batch_context, samples_to_create, labels_batch)
 
-    if samples_to_create:
-        created_path_to_id, paths_not_inserted = _create_batch_samples(
-            session=session, collection_id=root_collection_id, samples=samples_to_create
-        )
-        created_sample_ids.extend(created_path_to_id.values())
-        logging_context.update_example_paths(paths_not_inserted)
+    _add_annotations_for_image_batch(batch_context, samples_to_create, labels_batch)
 
-    # Phase 2: Annotation creation (only if samples were created)
-    if created_sample_ids:
-        add_annotations.add_annotations_from_labelformat(
-            session=session,
-            root_collection_id=root_collection_id,
-            input_labels=input_labels,
-            images_root=images_root_abs,
-            collection_name=collection_name,
-            restrict_to_sample_ids=set(created_sample_ids),
-            labels=labels,
-        )
+    logging_context.n_samples_to_be_inserted = n_labels_to_be_inserted
 
     log_loading_results(
         session=session,
@@ -405,3 +398,44 @@ def _process_batch_captions(
     caption_resolver.create_many(
         session=session, parent_collection_id=collection_id, captions=captions_to_create
     )
+
+
+@dataclass
+class _ImageBatchContext:
+    session: Session
+    root_collection_id: UUID
+    created_sample_ids: list[UUID]
+    logging_context: LoadingLoggingContext
+    input_labels: ObjectDetectionInput | InstanceSegmentationInput
+    images_root_abs: str
+    collection_name: str | None
+
+
+def _add_annotations_for_image_batch(
+    batch_context: _ImageBatchContext,
+    samples_to_create: list[ImageCreate],
+    labels_batch: list[ImageInstanceSegmentation | ImageObjectDetection],
+) -> None:
+    """Create a batch of samples and add matching annotations for that batch."""
+    if not samples_to_create:
+        return
+
+    created_path_to_id, paths_not_inserted = _create_batch_samples(
+        session=batch_context.session,
+        collection_id=batch_context.root_collection_id,
+        samples=samples_to_create,
+    )
+    batch_context.created_sample_ids.extend(created_path_to_id.values())
+    batch_context.logging_context.update_example_paths(paths_not_inserted)
+    if batch_context.created_sample_ids:
+        add_annotations.add_annotations_from_labelformat(
+            session=batch_context.session,
+            root_collection_id=batch_context.root_collection_id,
+            input_labels=batch_context.input_labels,
+            images_root=batch_context.images_root_abs,
+            collection_name=batch_context.collection_name,
+            restrict_to_sample_ids=set(batch_context.created_sample_ids),
+            labels=labels_batch,
+        )
+    samples_to_create.clear()
+    labels_batch.clear()
