@@ -304,8 +304,6 @@
     const isCollectionGrid = $derived(
         isImages || isAnnotations || isVideos || isVideoFrames || isGroups
     );
-
-    const isSidePanelOpen = $derived($activePanel !== 'none');
 </script>
 
 <div class="flex-none">
@@ -374,7 +372,6 @@
                         {hasEvaluationRuns}
                         {hasMediaWithEmbeddings}
                         collectionDatasetId={collection.dataset_id}
-                        compact={isSidePanelOpen}
                         onSelectAll={selectAllHandle.handleSelectAll}
                         searchImage={$searchImage}
                         searchPending={$searchPending}
@@ -441,7 +438,6 @@
                                 {hasEvaluationRuns}
                                 {hasMediaWithEmbeddings}
                                 collectionDatasetId={collection.dataset_id}
-                                compact={isSidePanelOpen}
                                 onSelectAll={selectAllHandle.handleSelectAll}
                                 searchImage={$searchImage}
                                 searchPending={$searchPending}

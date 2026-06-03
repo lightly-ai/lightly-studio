@@ -2,7 +2,8 @@
     import { SquareCheck } from '@lucide/svelte';
     import Button from '../ui/button/button.svelte';
 
-    const { onclick }: { onclick: () => Promise<void> } = $props();
+    const { onclick, compact = false }: { onclick: () => Promise<void>; compact?: boolean } =
+        $props();
 </script>
 
 <Button
@@ -14,5 +15,7 @@
     {onclick}
 >
     <SquareCheck class="size-4" />
-    <span>Select all</span>
+    {#if !compact}
+        <span>Select all</span>
+    {/if}
 </Button>

@@ -9,7 +9,6 @@
     type SearchImage = { name: string; previewUrl: string };
 
     interface Props {
-        compact?: boolean;
         canSelectAll: boolean;
         isImages: boolean;
         hasEvaluationRuns: boolean;
@@ -26,7 +25,6 @@
     }
 
     const {
-        compact = false,
         canSelectAll,
         isImages,
         hasEvaluationRuns,
@@ -47,12 +45,12 @@
 </script>
 
 <GridHeader>
-    {#snippet selectionControls()}
+    {#snippet selectionControls(compact)}
         {#if canSelectAll}
-            <GridHeaderSelectAllButton onclick={onSelectAll} />
+            <GridHeaderSelectAllButton onclick={onSelectAll} {compact} />
         {/if}
     {/snippet}
-    {#snippet auxControls()}
+    {#snippet auxControls(compact)}
         {#if isImages}
             <OrderBy datasetId={collectionDatasetId} />
         {/if}

@@ -57,7 +57,6 @@ import DatasetGridHeader from './DatasetGridHeader.svelte';
 import { useGlobalStorage } from '$lib/hooks/useGlobalStorage';
 
 const defaultProps = {
-    compact: false,
     canSelectAll: false,
     isImages: false,
     hasEvaluationRuns: true,
@@ -197,19 +196,18 @@ describe('DatasetGridHeader', () => {
         expect(screen.queryByTestId('toggle-evaluation-runs-button')).not.toBeInTheDocument();
     });
 
-    it('hides the embeddings and evaluation runs labels in compact mode', () => {
+    it('shows the embeddings and evaluation runs labels at full width', () => {
+        // Compaction is driven by GridHeader's overflow measurement (covered in
+        // GridHeader.test.ts); jsdom reports zero widths, so the labels stay visible here.
         render(DatasetGridHeader, {
             props: {
                 ...defaultProps,
-                compact: true,
                 isImages: true,
                 hasMediaWithEmbeddings: true
             }
         });
 
-        expect(screen.getByTestId('toggle-plot-button')).toBeInTheDocument();
-        expect(screen.queryByText('Embeddings')).not.toBeInTheDocument();
-        expect(screen.getByTestId('toggle-evaluation-runs-button')).toBeInTheDocument();
-        expect(screen.queryByText('Evaluation')).not.toBeInTheDocument();
+        expect(screen.getByText('Embeddings')).toBeInTheDocument();
+        expect(screen.getByText('Evaluation')).toBeInTheDocument();
     });
 });
