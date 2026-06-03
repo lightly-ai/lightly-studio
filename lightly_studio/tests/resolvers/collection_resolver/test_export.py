@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from uuid import uuid4
 
 import pytest
 from sqlmodel import Session
@@ -28,6 +29,95 @@ class TestcollectionExport:
     tags: dict[str, TagTable]
     samples_total: int
     annotations_total: int
+
+
+def test_export__include_sample_ids__exceeds_postgres_param_limit(db_session: Session) -> None:
+    # More sample ids than PostgreSQL's 65,535-parameter cap.
+    collection_id = create_collection(session=db_session).collection_id
+    image = create_image(
+        session=db_session, collection_id=collection_id, file_path_abs="/path/to/match.png"
+    )
+    sample_ids = [uuid4() for _ in range(70_000)]
+    sample_ids.append(image.sample_id)
+
+    samples_exported = collection_resolver.export(
+        session=db_session,
+        collection_id=collection_id,
+        include=ExportFilter(sample_ids=sample_ids),
+    )
+
+    assert samples_exported == [image.file_path_abs]
+
+
+def test_export__include_annotation_ids__exceeds_postgres_param_limit(
+    db_session: Session,
+) -> None:
+    # More annotation ids than PostgreSQL's 65,535-parameter cap.
+    collection_id = create_collection(session=db_session).collection_id
+    image = create_image(
+        session=db_session, collection_id=collection_id, file_path_abs="/path/to/match.png"
+    )
+    label = create_annotation_label(session=db_session, root_collection_id=collection_id)
+    annotation = create_annotation(
+        session=db_session,
+        collection_id=collection_id,
+        sample_id=image.sample_id,
+        annotation_label_id=label.annotation_label_id,
+    )
+    annotation_ids = [uuid4() for _ in range(70_000)]
+    annotation_ids.append(annotation.sample_id)
+
+    samples_exported = collection_resolver.export(
+        session=db_session,
+        collection_id=collection_id,
+        include=ExportFilter(annotation_ids=annotation_ids),
+    )
+
+    assert samples_exported == [image.file_path_abs]
+
+
+def test_export__exclude_sample_ids__exceeds_postgres_param_limit(db_session: Session) -> None:
+    # More sample ids than PostgreSQL's 65,535-parameter cap.
+    collection_id = create_collection(session=db_session).collection_id
+    image = create_image(
+        session=db_session, collection_id=collection_id, file_path_abs="/path/to/match.png"
+    )
+    sample_ids = [uuid4() for _ in range(70_000)]
+
+    samples_exported = collection_resolver.export(
+        session=db_session,
+        collection_id=collection_id,
+        exclude=ExportFilter(sample_ids=sample_ids),
+    )
+
+    assert samples_exported == [image.file_path_abs]
+
+
+def test_export__exclude_annotation_ids__exceeds_postgres_param_limit(
+    db_session: Session,
+) -> None:
+    # More annotation ids than PostgreSQL's 65,535-parameter cap.
+    collection_id = create_collection(session=db_session).collection_id
+    image = create_image(
+        session=db_session, collection_id=collection_id, file_path_abs="/path/to/match.png"
+    )
+    label = create_annotation_label(session=db_session, root_collection_id=collection_id)
+    annotation = create_annotation(
+        session=db_session,
+        collection_id=collection_id,
+        sample_id=image.sample_id,
+        annotation_label_id=label.annotation_label_id,
+    )
+    annotation_ids = [uuid4() for _ in range(70_000)]
+    annotation_ids.append(annotation.sample_id)
+
+    samples_exported = collection_resolver.export(
+        session=db_session,
+        collection_id=collection_id,
+        exclude=ExportFilter(annotation_ids=annotation_ids),
+    )
+
+    assert samples_exported == []
 
 
 @pytest.fixture

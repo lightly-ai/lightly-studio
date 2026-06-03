@@ -7,6 +7,7 @@ from uuid import UUID
 from sqlmodel import Session, col, func, select
 from sqlmodel.sql.expression import Select
 
+from lightly_studio import db_array
 from lightly_studio.models.annotation.annotation_base import AnnotationBaseTable
 from lightly_studio.models.annotation_label import AnnotationLabelTable
 from lightly_studio.models.image import ImageTable
@@ -32,7 +33,7 @@ def get_dimension_bounds(
 
     if annotation_label_ids:
         # Subquery to filter samples matching all annotation labels
-        label_filter = (
+        label_filter_subquery = (
             select(ImageTable.sample_id)
             .join(ImageTable.sample)
             .join(
@@ -46,7 +47,10 @@ def get_dimension_bounds(
             )
             .where(
                 SampleTable.collection_id == collection_id,
-                col(AnnotationLabelTable.annotation_label_id).in_(annotation_label_ids),
+                db_array.in_array(
+                    column=col(AnnotationLabelTable.annotation_label_id),
+                    values=annotation_label_ids,
+                ),
             )
             .group_by(col(ImageTable.sample_id))
             .having(
@@ -55,7 +59,7 @@ def get_dimension_bounds(
             )
         )
         # Filter the dimension query based on the subquery
-        query = query.where(col(ImageTable.sample_id).in_(label_filter))
+        query = query.where(col(ImageTable.sample_id).in_(label_filter_subquery))
     else:
         # If no labels specified, filter dimensions
         # for all samples in the collection
@@ -64,7 +68,9 @@ def get_dimension_bounds(
     if tag_ids:
         query = (
             query.join(SampleTable.tags)
-            .where(SampleTable.tags.any(col(TagTable.tag_id).in_(tag_ids)))
+            .where(
+                SampleTable.tags.any(db_array.in_array(column=col(TagTable.tag_id), values=tag_ids))
+            )
             .distinct()
         )
 
