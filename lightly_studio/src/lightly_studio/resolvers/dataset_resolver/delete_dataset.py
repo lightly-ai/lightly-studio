@@ -6,6 +6,7 @@ from uuid import UUID
 
 from sqlmodel import Session, col, delete, select
 
+from lightly_studio import db_array
 from lightly_studio.models.annotation.annotation_base import AnnotationBaseTable
 from lightly_studio.models.annotation.object_detection import (
     ObjectDetectionAnnotationTable,
@@ -114,7 +115,9 @@ def _get_sample_ids(session: Session, collection_ids: list[UUID]) -> list[UUID]:
     if not collection_ids:
         return []
     samples = session.exec(
-        select(SampleTable.sample_id).where(col(SampleTable.collection_id).in_(collection_ids))
+        select(SampleTable.sample_id).where(
+            db_array.in_array(column=col(SampleTable.collection_id), values=collection_ids)
+        )
     ).all()
     return list(samples)
 
