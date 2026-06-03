@@ -4,7 +4,6 @@ import {
     UNKNOWN_SOURCE_NAME,
     areAllAnnotationsHidden,
     computeSeededHiddenIds,
-    countVisibleSources,
     groupAnnotationsBySource
 } from './SampleDetailsAnnotationSegment.helpers';
 
@@ -100,34 +99,6 @@ describe('groupAnnotationsBySource', () => {
 
     it('returns no groups when there are no annotations', () => {
         expect(groupAnnotationsBySource([], [groundTruthSource, predictionsSource])).toEqual([]);
-    });
-});
-
-describe('countVisibleSources', () => {
-    const annotations = [
-        createAnnotation('gt-1', groundTruthSource.collection_id, 'cat'),
-        createAnnotation('gt-2', groundTruthSource.collection_id, 'dog'),
-        createAnnotation('pred-1', predictionsSource.collection_id, 'cat')
-    ];
-
-    it('counts the distinct sources when nothing is hidden', () => {
-        expect(countVisibleSources(annotations, new Set())).toBe(2);
-    });
-
-    it('does not count a source whose annotations are all hidden', () => {
-        expect(countVisibleSources(annotations, new Set(['gt-1', 'gt-2']))).toBe(1);
-    });
-
-    it('counts a source while at least one of its annotations is visible', () => {
-        expect(countVisibleSources(annotations, new Set(['gt-1']))).toBe(2);
-    });
-
-    it('returns 0 when all annotations are hidden', () => {
-        expect(countVisibleSources(annotations, new Set(['gt-1', 'gt-2', 'pred-1']))).toBe(0);
-    });
-
-    it('returns 0 when there are no annotations', () => {
-        expect(countVisibleSources([], new Set())).toBe(0);
     });
 });
 

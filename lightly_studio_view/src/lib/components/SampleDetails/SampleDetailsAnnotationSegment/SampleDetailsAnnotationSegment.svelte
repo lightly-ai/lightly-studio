@@ -11,10 +11,10 @@
     import { useDeleteAnnotation } from '$lib/hooks/useDeleteAnnotation/useDeleteAnnotation';
     import { useAnnotationLabelContext } from '$lib/contexts/SampleDetailsAnnotation.svelte';
     import { useAnnotationSelection } from '$lib/hooks/useAnnotationSelection/useAnnotationSelection';
+    import { countVisibleSources } from '$lib/utils';
     import {
         areAllAnnotationsHidden,
         computeSeededHiddenIds,
-        countVisibleSources,
         groupAnnotationsBySource
     } from './SampleDetailsAnnotationSegment.helpers';
 

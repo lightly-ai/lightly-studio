@@ -10,7 +10,7 @@
     import SampleSegmentationMaskRect from '../SampleSegmentationMaskRect/SampleSegmentationMaskRect.svelte';
     import SampleObjectDetectionRect from '../SampleObjectDetectionRect/SampleObjectDetectionRect.svelte';
     import { select } from 'd3-selection';
-    import { getColorByLabel } from '$lib/utils';
+    import { countVisibleSources, getColorByLabel } from '$lib/utils';
     import { throttle } from 'lodash-es';
     import BrushToolPopUp from '../BrushToolPopUp/BrushToolPopUp.svelte';
     import SampleDetailsToolbar from '../SampleDetailsToolbar/SampleDetailsToolbar.svelte';
@@ -19,7 +19,6 @@
     import { getBoundingBox } from '$lib/components/SampleAnnotation/utils';
     import { onDestroy, onMount } from 'svelte';
     import { usePendingState } from '../usePendingState';
-    import { countVisibleSources } from '../SampleDetailsAnnotationSegment/SampleDetailsAnnotationSegment.helpers';
 
     type SampleDetailsImageContainerProps = {
         sample: {
