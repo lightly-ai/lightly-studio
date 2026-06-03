@@ -41,19 +41,19 @@
     class="rounded-md border border-border bg-background p-3"
     data-testid={`strategy-card-${instance.id}`}
 >
-    <div class="flex items-start justify-between gap-3">
+    <div class="flex items-center justify-between gap-3">
         <button
             type="button"
-            class="flex min-w-0 flex-1 items-start gap-2 text-left"
+            class="flex min-w-0 flex-1 items-center gap-2 text-left"
             onclick={onToggleExpand}
             data-testid={`strategy-card-toggle-${instance.id}`}
             aria-expanded={instance.isExpanded}
             aria-controls={`strategy-card-content-${instance.id}`}
         >
             {#if instance.isExpanded}
-                <ChevronDown class="mt-0.5 size-4 shrink-0" />
+                <ChevronDown class="size-4 shrink-0" />
             {:else}
-                <ChevronRight class="mt-0.5 size-4 shrink-0" />
+                <ChevronRight class="size-4 shrink-0" />
             {/if}
 
             <div class="min-w-0">
