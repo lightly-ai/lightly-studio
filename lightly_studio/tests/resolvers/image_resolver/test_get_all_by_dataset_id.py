@@ -894,6 +894,43 @@ def test_get_all_by_collection_id__sort_by_evaluation_metric_desc(db_session: Se
     assert result.order_values == [3.0, 2.0, 1.0]
 
 
+def test_get_all_by_collection_id__sort_by_two_evaluation_metrics(db_session: Session) -> None:
+    # Each OrderByEvaluationMetricField owns per-instance table aliases, so both joins must
+    # be applied; the second metric breaks ties left by the first.
+    collection = create_collection(session=db_session)
+    collection_id = collection.collection_id
+
+    run, image_a = create_run_and_image(session=db_session, dataset_collection_id=collection_id)
+    image_b = create_image(
+        session=db_session, collection_id=collection_id, file_path_abs="/images/b.png"
+    )
+    image_c = create_image(
+        session=db_session, collection_id=collection_id, file_path_abs="/images/c.png"
+    )
+
+    # score ties a and b at 1.0; rank breaks the tie so b precedes a.
+    insert_metrics(db_session, run.id, image_a.sample_id, {"score": 1.0, "rank": 2.0})
+    insert_metrics(db_session, run.id, image_b.sample_id, {"score": 1.0, "rank": 1.0})
+    insert_metrics(db_session, run.id, image_c.sample_id, {"score": 2.0, "rank": 3.0})
+
+    result = image_resolver.get_all_by_collection_id(
+        session=db_session,
+        collection_id=collection_id,
+        order_by=[
+            OrderByEvaluationMetricField("test_run", "score"),
+            OrderByEvaluationMetricField("test_run", "rank"),
+        ],
+    )
+
+    assert [s.sample_id for s in result.samples] == [
+        image_b.sample_id,
+        image_a.sample_id,
+        image_c.sample_id,
+    ]
+    # order_values reflects the primary sort key (score).
+    assert result.order_values == [1.0, 1.0, 2.0]
+
+
 def test_get_all_by_collection_id__sort_by_height_asc_is_reverse_of_desc(
     db_session: Session,
 ) -> None:

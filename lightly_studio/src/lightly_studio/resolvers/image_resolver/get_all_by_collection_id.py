@@ -128,18 +128,17 @@ def _apply_order_by_clauses(
 ) -> ImageSamplesQuery:
     """Apply joins and ORDER BY clauses for all sort expressions.
 
-    Metadata and evaluation-metric joins are added at most once. When filters already
-    join ``SampleMetadataTable``, a second metadata join is skipped. A ``file_path_abs``
-    tiebreaker is appended unless it is already present in ``order_by``.
+    Each ``OrderByEvaluationMetricField`` owns per-instance table aliases, so its joins
+    are applied individually for every expression. Metadata joins, which reuse the shared
+    ``SampleMetadataTable``, are added at most once: when filters already join it, a second
+    metadata join is skipped. A ``file_path_abs`` tiebreaker is appended unless it is
+    already present in ``order_by``.
     """
-    evaluation_metric_joined = False
     metadata_joined = _has_metadata_join(filters)
 
     for expr in order_by:
         if isinstance(expr, OrderByEvaluationMetricField):
-            if not evaluation_metric_joined:
-                samples_query = expr.apply_order_value_joins(samples_query)  # type: ignore[arg-type]
-                evaluation_metric_joined = True
+            samples_query = expr.apply_order_value_joins(samples_query)  # type: ignore[arg-type]
             samples_query = samples_query.order_by(expr.to_column_element())
         elif isinstance(expr, OrderByMetadataField):
             if not metadata_joined:
