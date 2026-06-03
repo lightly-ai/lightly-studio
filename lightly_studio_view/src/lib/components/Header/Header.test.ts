@@ -123,7 +123,7 @@ describe('Header', () => {
             const editButton = screen.getByTestId('header-editing-mode-button');
 
             expect(editButton).toBeInTheDocument();
-            expect(editButton).toHaveTextContent('Edit Annotations');
+            expect(editButton).toHaveTextContent('Edit annotations');
         });
 
         it('renders Finish Editing button when in editing mode', () => {
