@@ -133,8 +133,10 @@ describe('GridHeader', () => {
         expect(bar).not.toHaveClass('flex-wrap');
 
         // Even compacted it still overflows -> wrap onto a second row (records width 500).
+        // flex-nowrap and flex-wrap are conflicting utilities, so only one may be applied.
         await resizeTo(bar, 500, 400);
         expect(bar).toHaveClass('flex-wrap');
+        expect(bar).not.toHaveClass('flex-nowrap');
 
         // Wide enough for the compact layout again -> stop wrapping.
         await resizeTo(bar, 500, 520);

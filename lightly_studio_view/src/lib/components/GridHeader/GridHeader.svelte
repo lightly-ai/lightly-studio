@@ -54,11 +54,25 @@
         observer.observe(el);
         return () => observer.disconnect();
     });
+
+    $effect(() => {
+        // Compacting / wrapping resizes the bar's children, not the bar itself, so the
+        // ResizeObserver won't fire again. Re-measure once the change has reflowed so the
+        // full -> compact -> wrap sequence can complete within a single resize. The machine
+        // is monotonic per direction, so this converges (a settled measure changes nothing).
+        void compact;
+        void wrap;
+        const el = barEl;
+        if (!el) return;
+        const frame = requestAnimationFrame(() => measure(el));
+        return () => cancelAnimationFrame(frame);
+    });
 </script>
 
 <div
     bind:this={barEl}
-    class="my-2 flex min-w-0 flex-nowrap items-center gap-x-4 gap-y-2"
+    class="my-2 flex min-w-0 items-center gap-x-4 gap-y-2"
+    class:flex-nowrap={!wrap}
     class:flex-wrap={wrap}
 >
     {#if children}
