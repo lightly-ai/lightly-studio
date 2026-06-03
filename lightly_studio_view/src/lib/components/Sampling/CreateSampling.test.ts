@@ -94,17 +94,22 @@ describe('CreateSamplingDialog', () => {
 
         render(CreateSamplingDialog);
 
-        expect(
-            screen.getByText('Create a subset of the 42 samples fulfilling the current filters.')
-        ).toBeInTheDocument();
+        expect(screen.getByText(/Sample from the/)).toBeInTheDocument();
+        expect(screen.getByText('42 samples')).toBeInTheDocument();
     });
 
-    it('shows the fallback header text when filteredSampleCount is 0', () => {
+    it('uses the singular noun when exactly one sample matches the filters', () => {
+        filteredSampleCountStore.set(1);
+
         render(CreateSamplingDialog);
 
-        expect(
-            screen.getByText('Create a subset of the samples fulfilling the current filters.')
-        ).toBeInTheDocument();
+        expect(screen.getByText('1 sample')).toBeInTheDocument();
+    });
+
+    it('shows the count even when no samples match the filters', () => {
+        render(CreateSamplingDialog);
+
+        expect(screen.getByText('0 samples')).toBeInTheDocument();
     });
 
     it('shows the not enough samples warning when requested count exceeds available', async () => {

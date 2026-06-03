@@ -76,10 +76,8 @@
         $filteredSampleCount > 0 && nSamplesToSelect > $filteredSampleCount
     );
 
-    const samplingDescription = $derived(
-        $filteredSampleCount > 0
-            ? `Create a subset of the ${$filteredSampleCount} samples fulfilling the current filters.`
-            : 'Create a subset of the samples fulfilling the current filters.'
+    const sampleCountLabel = $derived(
+        `${$filteredSampleCount} ${$filteredSampleCount === 1 ? 'sample' : 'samples'}`
     );
 
     const { isSubmitting, loadingMessage, submit } = useCreateSampling({
@@ -136,7 +134,9 @@
                 <Dialog.Header>
                     <Dialog.Title class="text-foreground">Create Sampling</Dialog.Title>
                     <Dialog.Description class="text-foreground">
-                        {samplingDescription}
+                        Sample from the <strong class="font-semibold text-primary"
+                            >{sampleCountLabel}</strong
+                        > currently matching your filters.
                     </Dialog.Description>
                 </Dialog.Header>
 

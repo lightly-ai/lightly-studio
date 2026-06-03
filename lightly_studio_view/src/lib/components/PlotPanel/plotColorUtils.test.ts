@@ -74,8 +74,8 @@ describe('plotColorUtils', () => {
                 false
             )
         ).toEqual([
-            { cat: 2, label: 'Train', color: 'hsl(0, 70%, 55%)', hidden: false },
-            { cat: 3, label: 'Validation', color: 'hsl(180, 70%, 55%)', hidden: false }
+            { cat: 2, label: 'Train', color: 'rgb(255, 0, 136)', hidden: false },
+            { cat: 3, label: 'Validation', color: 'rgb(0, 193, 150)', hidden: false }
         ]);
     });
 
