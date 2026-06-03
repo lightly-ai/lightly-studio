@@ -239,9 +239,10 @@ describe('useSubmitCombinationSelection', () => {
         const secondResult = await submit(submitParams);
 
         expect(secondResult).toBe(false);
-        expect(createSampling).toHaveBeenCalledTimes(1);
 
         resolveFirst({ data: {}, error: null });
         await firstCall;
+
+        expect(createSampling).toHaveBeenCalledTimes(1);
     });
 });
