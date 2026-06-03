@@ -264,7 +264,10 @@
                     <Tooltip content={!isFormValid ? validationErrorMessage : ''}>
                         <Button
                             type="submit"
-                            disabled={!isFormValid || $isSubmitting || notEnoughSamples || noSamples}
+                            disabled={!isFormValid ||
+                                $isSubmitting ||
+                                notEnoughSamples ||
+                                noSamples}
                             data-testid="sampling-dialog-submit"
                         >
                             {$isSubmitting ? $loadingMessage || 'Creating...' : 'Create Sampling'}
