@@ -206,8 +206,8 @@
     );
 </script>
 
-<div class="flex h-full flex-1">
-    <div class="flex-1">
+<div class="flex h-full min-w-0 flex-1">
+    <div class="min-w-0 flex-1">
         <GridContainer
             itemCount={annotations.length}
             message={{
