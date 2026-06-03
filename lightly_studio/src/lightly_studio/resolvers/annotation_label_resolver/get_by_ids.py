@@ -16,18 +16,17 @@ def get_by_ids(session: Session, ids: Sequence[UUID]) -> list[AnnotationLabelTab
 
     Output order matches the input order.
     """
-    ids_list = list(ids)
-    if not ids_list:
+    if not ids:
         return []
 
     results = session.exec(
         select(AnnotationLabelTable).where(
             db_array.in_array(
                 column=col(AnnotationLabelTable.annotation_label_id),
-                values=ids_list,
+                values=ids,
             )
         )
     ).all()
     # Return labels in the same order as the input ids.
     label_map = {label.annotation_label_id: label for label in results}
-    return [label_map[id_] for id_ in ids_list if id_ in label_map]
+    return [label_map[id_] for id_ in ids if id_ in label_map]

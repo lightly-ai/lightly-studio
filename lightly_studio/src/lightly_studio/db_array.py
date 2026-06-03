@@ -1,8 +1,7 @@
 """Dialect-aware ``in_array`` membership test for UUID columns.
 
-Compiles to ``column = ANY(:array)`` (one bound array parameter) on PostgreSQL to dodge the
-65,535 expanding-IN bind cap, and to expanding ``IN`` on DuckDB. Callers must guard against
-empty ``values`` (``= ANY(ARRAY[])`` errors on PostgreSQL).
+Compiles to ``column = ANY(:array)`` (one bound array parameter) on PostgreSQL to dodge
+the 65,535 expanding-IN bind cap, and to expanding ``IN`` on DuckDB.
 """
 
 from __future__ import annotations
