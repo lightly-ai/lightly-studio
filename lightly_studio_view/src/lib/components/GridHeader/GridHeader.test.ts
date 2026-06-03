@@ -84,7 +84,9 @@ describe('GridHeader', () => {
             }
         });
 
-        const wrapper = container.querySelector('.my-2.flex.items-center.space-x-4');
+        const wrapper = container.querySelector(
+            '.my-2.flex.flex-wrap.items-center.gap-x-4.gap-y-2'
+        );
         expect(wrapper).toBeInTheDocument();
     });
 
