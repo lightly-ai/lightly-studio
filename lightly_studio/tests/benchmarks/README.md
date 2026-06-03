@@ -44,11 +44,18 @@ Open the printed URL in your browser.
 | `--seed` | 0 | Random seed for reproducibility |
 | `--host` | auto | Host to bind the server to |
 | `--port` | auto | Port to bind the server to |
+| `--postgres` | off | Populate PostgreSQL (pgvector) instead of the temporary DuckDB |
 
 Example with a smaller dataset for a quick smoke-test:
-
 ```bash
 uv run tests/benchmarks/gui_benchmark.py --num-images 10000
+```
+
+Same for postgres:
+```bash
+make start-postgres
+uv run tests/benchmarks/gui_benchmark.py --num-images 10000 --postgres
+make stop-postgres
 ```
 
 ## Measuring performance
