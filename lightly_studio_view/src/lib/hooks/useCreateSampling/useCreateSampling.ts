@@ -30,6 +30,7 @@ interface SubmitParams {
     samplingResultTagName: string;
     queryTagId: string;
     balancingMode: BalancingMode;
+    annotationSourceId?: string;
     samplingFilter: SamplingRequest['filter'];
 }
 
@@ -78,6 +79,7 @@ export function useCreateSampling(params: UseCreateSamplingParams) {
             samplingResultTagName,
             queryTagId,
             balancingMode,
+            annotationSourceId,
             samplingFilter
         } = submitParams;
         _isSubmitting.set(true);
@@ -86,7 +88,13 @@ export function useCreateSampling(params: UseCreateSamplingParams) {
             if (samplingStrategy === 'class_balancing') {
                 return await performSampling(
                     collectionId,
-                    [{ strategy_name: 'balance', target_distribution: balancingMode }],
+                    [
+                        {
+                            strategy_name: 'balance',
+                            target_distribution: balancingMode,
+                            annotation_source_id: annotationSourceId || undefined
+                        }
+                    ],
                     samplingFilter,
                     nSamplesToSelect,
                     samplingResultTagName
