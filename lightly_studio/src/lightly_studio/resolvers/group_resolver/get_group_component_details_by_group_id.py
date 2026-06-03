@@ -6,6 +6,7 @@ from uuid import UUID
 
 from sqlmodel import Session, col, select
 
+from lightly_studio import db_array
 from lightly_studio.models.collection import CollectionTable, ComponentCollectionView
 from lightly_studio.models.group import GroupComponentView
 from lightly_studio.resolvers import group_resolver, image_resolver, video_resolver
@@ -35,7 +36,12 @@ def get_group_component_details_by_group_id(
 
     # Fetch all collections at once
     collections = session.exec(
-        select(CollectionTable).where(col(CollectionTable.collection_id).in_(collection_ids))
+        select(CollectionTable).where(
+            db_array.in_array(
+                column=col(CollectionTable.collection_id),
+                values=list(collection_ids),
+            )
+        )
     ).all()
     collection_id_to_view = {
         collection.collection_id: ComponentCollectionView.from_collection_table(

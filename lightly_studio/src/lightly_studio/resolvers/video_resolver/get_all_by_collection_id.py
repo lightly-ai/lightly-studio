@@ -11,6 +11,7 @@ from sqlalchemy.orm import joinedload, selectinload
 from sqlalchemy.orm.interfaces import LoaderOption
 from sqlmodel import Session, col, func, select
 
+from lightly_studio import db_array
 from lightly_studio.api.routes.api.frame import build_frame_view
 from lightly_studio.api.routes.api.validators import Paginated
 from lightly_studio.models.annotation.annotation_base import AnnotationBaseTable
@@ -159,8 +160,12 @@ def _get_all_with_similarity(  # noqa: PLR0913
     )
 
     if sample_ids:
-        samples_query = samples_query.where(col(VideoTable.sample_id).in_(sample_ids))
-        total_count_query = total_count_query.where(col(VideoTable.sample_id).in_(sample_ids))
+        samples_query = samples_query.where(
+            db_array.in_array(column=col(VideoTable.sample_id), values=sample_ids)
+        )
+        total_count_query = total_count_query.where(
+            db_array.in_array(column=col(VideoTable.sample_id), values=sample_ids)
+        )
 
     if filters:
         samples_query = filters.apply(samples_query)
@@ -227,8 +232,12 @@ def _get_all_without_similarity(
     )
 
     if sample_ids:
-        samples_query = samples_query.where(col(VideoTable.sample_id).in_(sample_ids))
-        total_count_query = total_count_query.where(col(VideoTable.sample_id).in_(sample_ids))
+        samples_query = samples_query.where(
+            db_array.in_array(column=col(VideoTable.sample_id), values=sample_ids)
+        )
+        total_count_query = total_count_query.where(
+            db_array.in_array(column=col(VideoTable.sample_id), values=sample_ids)
+        )
 
     if filters:
         samples_query = filters.apply(samples_query)
