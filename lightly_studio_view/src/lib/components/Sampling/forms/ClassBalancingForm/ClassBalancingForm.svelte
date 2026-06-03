@@ -1,6 +1,6 @@
 <script lang="ts">
     import type { ClassBalancingParams, StrategyParams } from '$lib/hooks/useStrategyBuilder';
-    import AnnotationSource from './AnnotationSource/AnnotationSource.svelte';
+    import TargetDistributionModeSelect from './TargetDistributionModeSelect/TargetDistributionModeSelect.svelte';
     import StrengthField from '$lib/components/Sampling/forms/StrengthField/StrengthField.svelte';
     import TargetDistribution from './TargetDistribution/TargetDistribution.svelte';
 
@@ -14,7 +14,7 @@
 </script>
 
 <div class="grid gap-3" data-testid="class-balancing-form">
-    <AnnotationSource
+    <TargetDistributionModeSelect
         targetDistributionMode={params.target_distribution_mode}
         onUpdate={(mode) => onUpdate({ target_distribution_mode: mode })}
     />

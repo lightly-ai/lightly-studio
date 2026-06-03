@@ -1,14 +1,14 @@
 import { fireEvent, render, screen } from '@testing-library/svelte';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import AnnotationSource from './AnnotationSource.svelte';
+import TargetDistributionModeSelect from './TargetDistributionModeSelect.svelte';
 
-describe('AnnotationSource', () => {
+describe('TargetDistributionModeSelect', () => {
     beforeEach(() => {
         Element.prototype.scrollIntoView = vi.fn();
     });
 
     it('shows the current target distribution mode label', () => {
-        render(AnnotationSource, {
+        render(TargetDistributionModeSelect, {
             props: {
                 targetDistributionMode: 'uniform',
                 onUpdate: vi.fn()
@@ -21,7 +21,7 @@ describe('AnnotationSource', () => {
     });
 
     it('shows all target distribution mode options when the trigger is clicked', async () => {
-        render(AnnotationSource, {
+        render(TargetDistributionModeSelect, {
             props: {
                 targetDistributionMode: 'uniform',
                 onUpdate: vi.fn()
@@ -44,7 +44,7 @@ describe('AnnotationSource', () => {
     it('calls onUpdate with the selected target distribution mode', async () => {
         const onUpdate = vi.fn();
 
-        render(AnnotationSource, {
+        render(TargetDistributionModeSelect, {
             props: {
                 targetDistributionMode: 'uniform',
                 onUpdate
