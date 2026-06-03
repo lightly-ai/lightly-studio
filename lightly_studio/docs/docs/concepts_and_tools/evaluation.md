@@ -21,7 +21,7 @@ Select an evaluation run in the **Evaluation** panel to see the configuration fo
 
 ### Creating an evaluation run
 
-An evaluation run requires two annotation collections: one holding ground truth labels and one
+An evaluation run requires two annotation sources: one holding ground truth labels and one
 holding model predictions. Use `dataset.evaluate()` to get the evaluation facade and then call the
 task-specific method. Both return an [`EvaluationResult`](../api/evaluation.md#evaluationresult)
 summary.
@@ -82,7 +82,7 @@ result = dataset.evaluate(query=val_query).object_detection(
 )
 ```
 
-Only samples that appear in both annotation collections **and** in the query are included. Samples
-missing from either collection are silently skipped.
+Only samples that appear in both annotation sources **and** in the query are included. Samples
+missing from either source are silently skipped.
 
 See [Evaluation API Reference](../api/evaluation.md) for the full API surface.
