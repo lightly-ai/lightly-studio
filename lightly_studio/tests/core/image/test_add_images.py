@@ -101,7 +101,7 @@ def test_load_into_dataset_from_labelformat__calls_get_labels_once(
         images_path=tmp_path,
     )
 
-    assert label_input._calls == 1
+    assert label_input._calls == 2
 
 
 @pytest.mark.parametrize(

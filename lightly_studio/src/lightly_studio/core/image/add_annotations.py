@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import posixpath
-from collections.abc import Iterable, Mapping
+from collections.abc import Mapping
 from pathlib import Path
 from uuid import UUID
 
@@ -43,7 +43,6 @@ def add_annotations_from_labelformat(  # noqa: PLR0913
     images_root: PathLike,
     collection_name: str | None = None,
     restrict_to_sample_ids: set[UUID] | None = None,
-    labels: Iterable[ImageInstanceSegmentation | ImageObjectDetection] | None = None,
 ) -> list[str]:
     """Add annotations from a labelformat input to images already in a collection.
 
@@ -61,15 +60,12 @@ def add_annotations_from_labelformat(  # noqa: PLR0913
         restrict_to_sample_ids: When provided, only annotate images whose resolved sample ID
             is in this set. Used internally to restrict to newly-created images in the
             combined image+annotation path.
-        labels: Optional preloaded label list to reuse instead of calling ``get_labels()`` again.
 
     Returns:
         A list of file_path_abs values from input_labels that had no matching sample in
         the collection. An empty list means all images were found.
     """
     images_root_abs = normalize_images_root(images_root=images_root)
-    if labels is None:
-        labels = input_labels.get_labels()
     label_map = labelformat_helpers.create_label_map(
         session=session,
         root_collection_id=root_collection_id,
@@ -79,8 +75,10 @@ def add_annotations_from_labelformat(  # noqa: PLR0913
     path_to_anno_data: dict[str, ImageInstanceSegmentation | ImageObjectDetection] = {}
     missing_paths: list[str] = []
 
-    for image_data in tqdm(labels, desc="Processing annotations", unit=" images"):
-        annotation_data = image_data
+    for image_data in tqdm(
+        input_labels.get_labels(), desc="Processing annotations", unit=" images"
+    ):
+        annotation_data: ImageInstanceSegmentation | ImageObjectDetection = image_data  # type: ignore[assignment]
         file_path_abs = posixpath.join(images_root_abs, str(annotation_data.image.filename))
         path_to_anno_data[file_path_abs] = annotation_data
 
