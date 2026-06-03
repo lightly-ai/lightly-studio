@@ -17,10 +17,14 @@
     }: GridHeaderProps = $props();
 </script>
 
-<div class="my-2 flex items-center space-x-4">
-    <div class="flex-1">
-        {@render children?.()}
-    </div>
+<div class="my-2 flex flex-wrap items-center gap-x-4 gap-y-2">
+    {#if children}
+        <div class="min-w-[12rem] flex-1">
+            {@render children()}
+        </div>
+    {:else}
+        <div class="flex-1"></div>
+    {/if}
 
     {@render selectionControls?.()}
     {#if showImageSizeControl}
