@@ -301,6 +301,20 @@ describe('SampleDetailsAnnotationSegment', () => {
             expect(getRow('pred-2')).not.toHaveAttribute('data-hidden', 'true');
             expect(screen.queryByTestId('source-group-eye-off')).not.toBeInTheDocument();
         });
+
+        it('seeds once the annotations become available', async () => {
+            mocks.selectedCollectionIds = [groundTruthSource.collection_id];
+
+            const { rerender } = render(SampleDetailsAnnotationSegment, {
+                props: { ...defaultProps, annotations: [] }
+            });
+
+            await rerender({ annotations });
+
+            expect(getRow('gt-1')).not.toHaveAttribute('data-hidden', 'true');
+            expect(getRow('pred-1')).toHaveAttribute('data-hidden', 'true');
+            expect(getRow('pred-2')).toHaveAttribute('data-hidden', 'true');
+        });
     });
 
     describe('coloring by visible sources', () => {

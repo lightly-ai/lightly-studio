@@ -107,8 +107,16 @@
     // per sample. Annotations of unselected sources start hidden
     // but stay re-showable locally without touching the global grid filter.
     // Refetches (same sample) keep manual changes; navigating to a sample re-seeds.
+    // Waits until both the sources query and the annotations are available so an
+    // empty hidden set is never locked in prematurely.
     $effect(() => {
-        if (seededSampleId === sampleId || annotationSources.length === 0) return;
+        if (
+            seededSampleId === sampleId ||
+            annotationSources.length === 0 ||
+            annotationsSort.length === 0
+        ) {
+            return;
+        }
 
         seededSampleId = sampleId;
         annotationsIdsToHide = computeSeededHiddenIds(
