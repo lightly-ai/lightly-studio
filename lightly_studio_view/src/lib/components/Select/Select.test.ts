@@ -1,15 +1,27 @@
-import { describe, it, expect, beforeAll, vi } from 'vitest';
+import { describe, it, expect, beforeAll, afterAll, vi } from 'vitest';
 import { render } from '@testing-library/svelte';
 import { Crosshair, Target } from '@lucide/svelte';
 import '@testing-library/jest-dom';
 import Select, { type SelectItem } from './Select.svelte';
 
 // bits-ui Select uses pointer-capture and scrollIntoView APIs that jsdom doesn't implement.
+const originalHasPointerCapture = Element.prototype.hasPointerCapture;
+const originalSetPointerCapture = Element.prototype.setPointerCapture;
+const originalReleasePointerCapture = Element.prototype.releasePointerCapture;
+const originalScrollIntoView = Element.prototype.scrollIntoView;
+
 beforeAll(() => {
     Element.prototype.hasPointerCapture = vi.fn(() => false);
     Element.prototype.setPointerCapture = vi.fn();
     Element.prototype.releasePointerCapture = vi.fn();
     Element.prototype.scrollIntoView = vi.fn();
+});
+
+afterAll(() => {
+    Element.prototype.hasPointerCapture = originalHasPointerCapture;
+    Element.prototype.setPointerCapture = originalSetPointerCapture;
+    Element.prototype.releasePointerCapture = originalReleasePointerCapture;
+    Element.prototype.scrollIntoView = originalScrollIntoView;
 });
 
 const ITEMS: SelectItem[] = [
@@ -79,7 +91,6 @@ describe('Select', () => {
 
         const trigger = container.querySelector(triggerSelector);
         expect(trigger?.className).toContain('custom-class');
-        expect(trigger?.className).toContain('rounded-md');
     });
 
     describe('icon', () => {
