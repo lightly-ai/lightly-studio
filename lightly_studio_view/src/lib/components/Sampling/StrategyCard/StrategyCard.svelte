@@ -1,6 +1,11 @@
 <script lang="ts">
     import { ChevronDown, ChevronRight, Copy, Trash2 } from '@lucide/svelte';
     import { Button } from '$lib/components/ui/button';
+    import {
+        Collapsible,
+        CollapsibleContent,
+        CollapsibleTrigger
+    } from '$lib/components/ui/collapsible';
 
     import {
         STRATEGY_LABELS,
@@ -42,87 +47,91 @@
     class="rounded-md border border-border bg-background p-3"
     data-testid={`strategy-card-${instance.id}`}
 >
-    <div class="flex items-center justify-between gap-3">
-        <button
-            type="button"
-            class="flex min-w-0 flex-1 items-center gap-2 text-left"
-            onclick={onToggleExpand}
-            data-testid={`strategy-card-toggle-${instance.id}`}
-            aria-expanded={instance.isExpanded}
-            aria-controls={`strategy-card-content-${instance.id}`}
-        >
-            {#if instance.isExpanded}
-                <ChevronDown class="size-4 shrink-0" />
-            {:else}
-                <ChevronRight class="size-4 shrink-0" />
-            {/if}
+    <Collapsible open={instance.isExpanded} onOpenChange={() => onToggleExpand()}>
+        <div class="flex items-center justify-between gap-3">
+            <CollapsibleTrigger
+                class="flex min-w-0 flex-1 items-center gap-2 text-left"
+                data-testid={`strategy-card-toggle-${instance.id}`}
+            >
+                {#if instance.isExpanded}
+                    <ChevronDown class="size-4 shrink-0" />
+                {:else}
+                    <ChevronRight class="size-4 shrink-0" />
+                {/if}
 
-            <div class="min-w-0">
-                <Typography
-                    variant="subtitle2"
-                    component="span"
-                    className="block truncate text-foreground"
+                <div class="min-w-0">
+                    <Typography
+                        variant="subtitle2"
+                        component="span"
+                        className="block truncate text-foreground"
+                    >
+                        {STRATEGY_LABELS[instance.type]}
+                    </Typography>
+                </div>
+            </CollapsibleTrigger>
+
+            <div class="flex shrink-0 gap-1">
+                <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon"
+                    aria-label="Duplicate strategy"
+                    onclick={onDuplicate}
+                    data-testid={`strategy-card-duplicate-${instance.id}`}
                 >
-                    {STRATEGY_LABELS[instance.type]}
-                </Typography>
+                    <Copy class="size-4" />
+                </Button>
+                <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon"
+                    aria-label="Remove strategy"
+                    onclick={onRemove}
+                    data-testid={`strategy-card-remove-${instance.id}`}
+                >
+                    <Trash2 class="size-4" />
+                </Button>
             </div>
-        </button>
-
-        <div class="flex shrink-0 gap-1">
-            <Button
-                type="button"
-                variant="ghost"
-                size="icon"
-                aria-label="Duplicate strategy"
-                onclick={onDuplicate}
-                data-testid={`strategy-card-duplicate-${instance.id}`}
-            >
-                <Copy class="size-4" />
-            </Button>
-            <Button
-                type="button"
-                variant="ghost"
-                size="icon"
-                aria-label="Remove strategy"
-                onclick={onRemove}
-                data-testid={`strategy-card-remove-${instance.id}`}
-            >
-                <Trash2 class="size-4" />
-            </Button>
         </div>
-    </div>
 
-    {#if instance.isExpanded}
-        <div id={`strategy-card-content-${instance.id}`} class="mt-3 border-t border-border pt-3">
-            {#if instance.type === 'diversity'}
-                <StrengthField
-                    strength={instance.params.strength}
-                    id={`diversity-strength-${instance.id}`}
-                    testid={`strategy-diversity-strength-input-${instance.id}`}
-                    onUpdate={(strength) => onUpdate({ strength })}
-                />
-            {:else if instance.type === 'typicality'}
-                <StrengthField
-                    strength={instance.params.strength}
-                    id={`typicality-strength-${instance.id}`}
-                    testid={`strategy-typicality-strength-input-${instance.id}`}
-                    onUpdate={(strength) => onUpdate({ strength })}
-                />
-            {:else if instance.type === 'similarity'}
-                <SimilarityForm params={instance.params as SimilarityParams} {tags} {onUpdate} />
-            {:else if instance.type === 'metadata_weighting'}
-                <MetadataWeightingForm
-                    params={instance.params as MetadataWeightingParams}
-                    {metadataFieldNames}
-                    {onUpdate}
-                />
-            {:else}
-                <ClassBalancingForm
-                    params={instance.params as ClassBalancingParams}
-                    {annotationLabels}
-                    {onUpdate}
-                />
+        <CollapsibleContent forceMount>
+            {#if instance.isExpanded}
+                <div class="mt-3 border-t border-border pt-3">
+                    {#if instance.type === 'diversity'}
+                        <StrengthField
+                            strength={instance.params.strength}
+                            id={`diversity-strength-${instance.id}`}
+                            testid={`strategy-diversity-strength-input-${instance.id}`}
+                            onUpdate={(strength) => onUpdate({ strength })}
+                        />
+                    {:else if instance.type === 'typicality'}
+                        <StrengthField
+                            strength={instance.params.strength}
+                            id={`typicality-strength-${instance.id}`}
+                            testid={`strategy-typicality-strength-input-${instance.id}`}
+                            onUpdate={(strength) => onUpdate({ strength })}
+                        />
+                    {:else if instance.type === 'similarity'}
+                        <SimilarityForm
+                            params={instance.params as SimilarityParams}
+                            {tags}
+                            {onUpdate}
+                        />
+                    {:else if instance.type === 'metadata_weighting'}
+                        <MetadataWeightingForm
+                            params={instance.params as MetadataWeightingParams}
+                            {metadataFieldNames}
+                            {onUpdate}
+                        />
+                    {:else}
+                        <ClassBalancingForm
+                            params={instance.params as ClassBalancingParams}
+                            {annotationLabels}
+                            {onUpdate}
+                        />
+                    {/if}
+                </div>
             {/if}
-        </div>
-    {/if}
+        </CollapsibleContent>
+    </Collapsible>
 </div>
