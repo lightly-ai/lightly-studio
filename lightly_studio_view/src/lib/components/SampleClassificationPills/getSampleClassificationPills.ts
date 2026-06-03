@@ -30,10 +30,7 @@ export interface SampleClassificationPill {
     title: string;
 }
 
-function isVisibleAnnotation(
-    annotation: AnnotationView,
-    selectedCollectionIds: string[]
-): boolean {
+function isVisibleAnnotation(annotation: AnnotationView, selectedCollectionIds: string[]): boolean {
     return (
         selectedCollectionIds.length === 0 ||
         selectedCollectionIds.includes(annotation.annotation_collection_id)
