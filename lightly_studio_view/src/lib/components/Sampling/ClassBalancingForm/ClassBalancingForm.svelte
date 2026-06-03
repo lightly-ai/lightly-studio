@@ -20,13 +20,18 @@
         onAnnotationSourceChange
     }: Props = $props();
 
-    const sourceNames = $derived(annotationCollections.map((collection) => collection.name));
+    const sourceOptions = $derived(
+        annotationCollections.map((collection) => ({
+            id: collection.collection_id,
+            name: collection.name
+        }))
+    );
 </script>
 
 <BalancingModeSelect {balancingMode} {onBalancingModeChange} />
 
 <AnnotationSourceSelect
-    {sourceNames}
+    {sourceOptions}
     selectedSource={annotationSourceId}
     onSelect={onAnnotationSourceChange}
 />

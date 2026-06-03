@@ -366,12 +366,10 @@ describe('CreateSamplingDialog', () => {
         });
         await fireEvent.pointerUp(await screen.findByTestId('sampling-strategy-class-balancing'));
 
-        await fireEvent.keyDown(screen.getByTestId('sampling-dialog-annotation-source-select'), {
+        await fireEvent.keyDown(screen.getByTestId('annotation-source-trigger'), {
             key: 'Enter'
         });
-        await fireEvent.pointerUp(
-            await screen.findByTestId('sampling-annotation-source-annotation-source-2')
-        );
+        await fireEvent.pointerUp(await screen.findByTestId('annotation-source-option-Source 2'));
 
         await fireEvent.input(screen.getByTestId('sampling-dialog-tag-name-input'), {
             target: { value: 'source-filtered-tag' }
