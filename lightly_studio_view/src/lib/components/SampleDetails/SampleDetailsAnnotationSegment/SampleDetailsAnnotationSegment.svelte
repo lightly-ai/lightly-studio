@@ -79,6 +79,12 @@
         isGrouped ? groupAnnotationsBySource(annotationsSort, annotationSources) : []
     );
 
+    // Hidden set implied by the grid filter, as a derived so it's readable at mount (unlike
+    // the effect-written `annotationsIdsToHide`); drives the seed and the initial collapse.
+    const seededHiddenIds = $derived(
+        computeSeededHiddenIds(annotationsSort, $selectedCollectionIds, annotationSources)
+    );
+
     // Annotations are colored by source only while multiple sources are visible,
     // matching the details canvas. Swatches are shown only when they match the
     // colors drawn on the image: source markers in the group headers when coloring
@@ -117,11 +123,7 @@
         }
 
         seededSampleId = sampleId;
-        annotationsIdsToHide = computeSeededHiddenIds(
-            annotationsSort,
-            $selectedCollectionIds,
-            annotationSources
-        );
+        annotationsIdsToHide = new Set(seededHiddenIds);
     });
 
     const toggleAnnotationSelection = (annotationId: string) => {
@@ -229,6 +231,8 @@
                 <SampleDetailsAnnotationSourceGroup
                     name={group.name}
                     count={group.annotations.length}
+                    {sampleId}
+                    initiallyOpen={!areAllAnnotationsHidden(group.annotations, seededHiddenIds)}
                     showColorMarker={colorBySource}
                     allHidden={areAllAnnotationsHidden(group.annotations, annotationsIdsToHide)}
                     onToggleVisibility={(e) => {
