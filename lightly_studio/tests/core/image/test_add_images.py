@@ -34,6 +34,33 @@ from tests.helpers_resolvers import (
 )
 
 
+class CountingLabelInput(LabelformatObjectDetectionInput):
+    def __init__(self) -> None:
+        self._calls = 0
+        self.categories = [Category(id=0, name="dog")]
+        self.images = [Image(id=0, filename="image.jpg", width=100, height=200)]
+        self.labels = [
+            ImageObjectDetection(
+                image=self.images[0],
+                objects=[],
+            ),
+        ]
+
+    @staticmethod
+    def add_cli_arguments(parser: ArgumentParser) -> None:
+        raise NotImplementedError()
+
+    def get_categories(self) -> Iterable[Category]:
+        return self.categories
+
+    def get_images(self) -> Iterable[Image]:
+        return self.images
+
+    def get_labels(self) -> Iterable[ImageObjectDetection]:
+        self._calls += 1
+        return self.labels
+
+
 def test_load_into_collection_from_paths(db_session: Session, tmp_path: Path) -> None:
     # Arrange
     collection = helpers_resolvers.create_collection(db_session)
@@ -59,6 +86,22 @@ def test_load_into_collection_from_paths(db_session: Session, tmp_path: Path) ->
     assert samples[0].width == 100
     assert samples[0].height == 100
     assert samples[0].sample.collection_id == collection.collection_id
+
+
+def test_load_into_dataset_from_labelformat__calls_get_labels_once(
+    db_session: Session, tmp_path: Path
+) -> None:
+    collection = helpers_resolvers.create_collection(db_session)
+    label_input = CountingLabelInput()
+
+    add_images.load_into_dataset_from_labelformat(
+        session=db_session,
+        root_collection_id=collection.collection_id,
+        input_labels=label_input,
+        images_path=tmp_path,
+    )
+
+    assert label_input._calls == 2
 
 
 @pytest.mark.parametrize(
