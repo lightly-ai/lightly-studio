@@ -42,6 +42,14 @@ vi.mock('$lib/hooks/useGlobalStorage', async () => {
     };
 });
 
+// The component reads annotationLabelContext.annotationSource to tag the source a new
+// classification is created in; the real hook throws when rendered without a provider.
+vi.mock('$lib/contexts/SampleDetailsAnnotation.svelte', () => ({
+    useAnnotationLabelContext: vi.fn(() => ({
+        context: { annotationSource: null }
+    }))
+}));
+
 vi.mock('$lib/hooks/useAnnotationLabels/useAnnotationLabels', () => ({
     useAnnotationLabels: vi.fn(() => ({ data: [] }))
 }));
