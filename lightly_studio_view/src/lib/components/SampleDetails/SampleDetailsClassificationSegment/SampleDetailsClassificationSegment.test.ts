@@ -6,6 +6,7 @@ import SampleDetailsClassificationSegment from './SampleDetailsClassificationSeg
 
 const mocks = vi.hoisted(() => ({
     collections: [] as { collection_id: string; name: string }[],
+    selectedCollectionIds: [] as string[],
     isEditingMode: undefined as unknown as { set: (value: boolean) => void }
 }));
 
@@ -18,6 +19,16 @@ vi.mock('$app/state', () => ({
 vi.mock('$lib/hooks/useAnnotationCollections/useAnnotationCollections', () => ({
     useAnnotationCollections: vi.fn(() => ({ data: mocks.collections }))
 }));
+
+// Drives the grid-filter seeded collapse: sources missing from the selection start collapsed.
+vi.mock('$lib/hooks/useAnnotationCollectionsFilter/useAnnotationCollectionsFilter', async () => {
+    const { readable } = await import('svelte/store');
+    return {
+        useAnnotationCollectionsFilter: vi.fn(() => ({
+            selectedCollectionIds: readable(mocks.selectedCollectionIds)
+        }))
+    };
+});
 
 vi.mock('$lib/hooks/useGlobalStorage', async () => {
     const { writable } = await import('svelte/store');
@@ -87,6 +98,7 @@ describe('SampleDetailsClassificationSegment', () => {
     beforeEach(() => {
         vi.clearAllMocks();
         mocks.collections = [];
+        mocks.selectedCollectionIds = [];
         mocks.isEditingMode.set(false);
     });
 
@@ -135,6 +147,41 @@ describe('SampleDetailsClassificationSegment', () => {
         expect(screen.getAllByTestId('annotation-source-group-header')).toHaveLength(2);
         expect(screen.queryByTestId('source-group-eye')).not.toBeInTheDocument();
         expect(screen.queryByTestId('source-group-eye-off')).not.toBeInTheDocument();
+    });
+
+    it('collapses a source left unselected on the grid', () => {
+        mocks.collections = [groundTruthSource, predictionsSource];
+        mocks.selectedCollectionIds = [groundTruthSource.collection_id];
+        const annotations = [
+            createClassification('c1', groundTruthSource.collection_id, 'cat'),
+            createClassification('c2', predictionsSource.collection_id, 'zebra')
+        ];
+
+        render(SampleDetailsClassificationSegment, { props: { ...defaultProps, annotations } });
+
+        // Both headers render, but the unselected Predictions group starts collapsed,
+        // hiding its classifications; the selected Ground truth group stays expanded.
+        expect(screen.getAllByTestId('annotation-source-group-header')).toHaveLength(2);
+        expect(screen.getByText('cat')).toBeInTheDocument();
+        expect(screen.queryByText('zebra')).not.toBeInTheDocument();
+    });
+
+    it('expands a collapsed source when its header is clicked', async () => {
+        const user = userEvent.setup();
+        mocks.collections = [groundTruthSource, predictionsSource];
+        mocks.selectedCollectionIds = [groundTruthSource.collection_id];
+        const annotations = [
+            createClassification('c1', groundTruthSource.collection_id, 'cat'),
+            createClassification('c2', predictionsSource.collection_id, 'zebra')
+        ];
+
+        render(SampleDetailsClassificationSegment, { props: { ...defaultProps, annotations } });
+
+        expect(screen.queryByText('zebra')).not.toBeInTheDocument();
+
+        await user.click(screen.getByText(predictionsSource.name));
+
+        expect(screen.getByText('zebra')).toBeInTheDocument();
     });
 
     it('renders editable rows inside groups with a single add button below', async () => {

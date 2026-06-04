@@ -23,6 +23,7 @@ const defaultProps = {
 const propsWithoutEye = {
     name: 'Ground truth',
     count: 3,
+    sampleId: 'sample-1',
     showColorMarker: true,
     children
 };
