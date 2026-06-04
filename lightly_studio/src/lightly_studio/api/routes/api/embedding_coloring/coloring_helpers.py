@@ -11,6 +11,11 @@ from uuid import UUID
 T = TypeVar("T")
 T_contra = TypeVar("T_contra", contravariant=True)
 
+# The plotting library renders at most this many legend slots, indexed [0, MAX_LEGEND_SLOTS).
+MAX_LEGEND_SLOTS = 256
+# Number of category names listed inside an "Other" bucket label before truncating with an ellipsis.
+MAX_OTHER_NAMES = 5
+
 
 class ColorScale(Protocol[T_contra]):
     """Protocol for mapping values to color categories.
@@ -57,6 +62,14 @@ class DiscreteColorScale(Generic[T]):
         providing them in the desired sequence (e.g. sorted alphabetically or
         in priority order).
 
+        The plotting library can render at most ``MAX_LEGEND_SLOTS`` legend
+        slots. Categories occupy the slots ``[start_cat, MAX_LEGEND_SLOTS)``;
+        the slots below ``start_cat`` are reserved (e.g. filtered-out and
+        unassigned samples). When the values fit in those slots, each value gets
+        its own category. Otherwise the values that fit are listed individually
+        and every remaining value is grouped into a trailing "Other" category in
+        the final slot.
+
         Args:
             values: Values to assign color categories to, in the desired order.
                 Values must be unique.
@@ -66,17 +79,35 @@ class DiscreteColorScale(Generic[T]):
                 Defaults to ``str``.
 
         Returns:
-            A DiscreteColorScale with one category per value.
+            A DiscreteColorScale with one category per value, or — when the
+            values exceed the available slots — one category per value that fits
+            plus a final "Other" category grouping the remainder.
         """
         value_list = list(values)
         assert len(set(value_list)) == len(value_list), "Color legend values must be unique"
 
+        # Slots [start_cat, MAX_LEGEND_SLOTS) are available for categories.
+        max_individual = MAX_LEGEND_SLOTS - start_cat
+
         lookup: dict[T, int] = {}
         legend: dict[int, str] = {}
-        for i, value in enumerate(value_list):
+
+        # When values overflow the slots, reserve the final slot for an "Other"
+        # bucket; otherwise every value gets its own slot.
+        fits = len(value_list) <= max_individual
+        individual = value_list if fits else value_list[: max_individual - 1]
+        for i, value in enumerate(individual):
             cat = start_cat + i
             lookup[value] = cat
             legend[cat] = format_fn(value)
+
+        if not fits:
+            other = value_list[max_individual - 1 :]
+            other_cat = start_cat + max_individual - 1
+            for value in other:
+                lookup[value] = other_cat
+            legend[other_cat] = _format_other_label(other, format_fn)
+
         return cls(_lookup=lookup, legend=legend)
 
     @classmethod
@@ -163,3 +194,11 @@ def assign_color_categories(
         color_categories.append(sorted(categories_not_none))
 
     return color_categories, scale.legend
+
+
+def _format_other_label(values: Sequence[T], format_fn: Callable[[T], str]) -> str:
+    """Build the legend label for an "Other" bucket, e.g. ``Other (class1, class2, …)``."""
+    names = [format_fn(value) for value in values[:MAX_OTHER_NAMES]]
+    if len(values) > MAX_OTHER_NAMES:
+        names.append("…")
+    return f"Other ({', '.join(names)})"
