@@ -11,7 +11,7 @@ from lightly_studio.models.annotation.annotation_base import (
 )
 from lightly_studio.resolvers import annotation_resolver
 from lightly_studio.resolvers.annotation_resolver.delete_annotation import (
-    _delete_evaluation_metrics,
+    delete_evaluation_metrics,
 )
 from lightly_studio.resolvers.annotations.annotations_filter import (
     AnnotationsFilter,
@@ -50,7 +50,7 @@ def delete_annotations(
     if annotation_ids:
         # TODO(Jonas, 06/2026): Replace eager deletion with explicit evaluation invalidation
         # once evaluation results can be recomputed or marked stale independently.
-        _delete_evaluation_metrics(
+        delete_evaluation_metrics(
             session=session,
             annotation_ids=annotation_ids,
             parent_sample_ids=parent_sample_ids,

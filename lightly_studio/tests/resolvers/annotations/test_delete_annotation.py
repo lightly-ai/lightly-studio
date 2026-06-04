@@ -3,9 +3,6 @@ from uuid import UUID
 import pytest
 from sqlmodel import Session, col, select
 
-from lightly_studio.models.annotation.annotation_base import AnnotationBaseTable
-from lightly_studio.models.evaluation_annotation_metric import EvaluationAnnotationMetricCreate
-from lightly_studio.models.evaluation_sample_metric import EvaluationSampleMetricCreate
 from lightly_studio.models.sample import SampleTable, SampleTagLinkTable
 from lightly_studio.resolvers import (
     annotation_resolver,
@@ -105,7 +102,7 @@ def test_delete_annotation__deletes_evaluation_annotation_metrics(
         annotation_label_id=label.annotation_label_id,
     )
 
-    _create_evaluation_metrics(
+    evaluation_sample_metric_helpers.create_evaluation_metrics(
         db_session,
         run.id,
         pred_annotation,
@@ -165,13 +162,13 @@ def test_delete_annotation__preserves_other_run_sample_metrics(
         annotation_label_id=label.annotation_label_id,
     )
 
-    _create_evaluation_metrics(
+    evaluation_sample_metric_helpers.create_evaluation_metrics(
         db_session,
         run.id,
         pred_annotation,
         gt_annotation,
     )
-    _create_evaluation_metrics(
+    evaluation_sample_metric_helpers.create_evaluation_metrics(
         db_session,
         other_run.id,
         other_pred_annotation,
@@ -205,35 +202,3 @@ def test_delete_annotation__preserves_other_run_sample_metrics(
     assert deleted_run_sample_metrics == []
     assert len(other_run_annotation_metrics) == 1
     assert len(other_run_sample_metrics) == 1
-
-
-def _create_evaluation_metrics(
-    db_session: Session,
-    run_id: UUID,
-    pred_annotation: AnnotationBaseTable,
-    gt_annotation: AnnotationBaseTable,
-) -> None:
-    evaluation_annotation_metric_resolver.create_many(
-        session=db_session,
-        records=[
-            EvaluationAnnotationMetricCreate(
-                evaluation_run_id=run_id,
-                sample_id=pred_annotation.parent_sample_id,
-                pred_annotation_id=pred_annotation.sample_id,
-                gt_annotation_id=gt_annotation.sample_id,
-                metric_name="iou",
-                value=0.75,
-            )
-        ],
-    )
-    evaluation_sample_metric_resolver.create_many(
-        session=db_session,
-        records=[
-            EvaluationSampleMetricCreate(
-                evaluation_run_id=run_id,
-                sample_id=pred_annotation.parent_sample_id,
-                metric_name="score",
-                value=0.5,
-            )
-        ],
-    )

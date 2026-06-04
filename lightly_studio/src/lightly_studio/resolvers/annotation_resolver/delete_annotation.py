@@ -47,7 +47,7 @@ def delete_annotation(
 
     # TODO(Jonas, 06/2026): Replace eager deletion with explicit evaluation invalidation once
     # evaluation results can be recomputed or marked stale independently from annotation updates.
-    _delete_evaluation_metrics(
+    delete_evaluation_metrics(
         session=session,
         annotation_ids=[annotation.sample_id],
         parent_sample_ids=[annotation.parent_sample_id],
@@ -88,7 +88,7 @@ def delete_annotation(
             session.commit()
 
 
-def _delete_evaluation_metrics(
+def delete_evaluation_metrics(
     session: Session,
     annotation_ids: list[UUID],
     parent_sample_ids: list[UUID],
@@ -116,20 +116,17 @@ def _delete_evaluation_metrics(
             ).all()
         )
 
-    if annotation_ids:
-        for annotation_id_batch in batching.batched(items=annotation_ids):
-            session.exec(
-                delete(EvaluationAnnotationMetricTable).where(
-                    sqlalchemy.or_(
-                        col(EvaluationAnnotationMetricTable.pred_annotation_id).in_(
-                            annotation_id_batch
-                        ),
-                        col(EvaluationAnnotationMetricTable.gt_annotation_id).in_(
-                            annotation_id_batch
-                        ),
-                    )
+    for annotation_id_batch in batching.batched(items=annotation_ids):
+        session.exec(
+            delete(EvaluationAnnotationMetricTable).where(
+                sqlalchemy.or_(
+                    col(EvaluationAnnotationMetricTable.pred_annotation_id).in_(
+                        annotation_id_batch
+                    ),
+                    col(EvaluationAnnotationMetricTable.gt_annotation_id).in_(annotation_id_batch),
                 )
             )
+        )
     if parent_sample_ids and affected_evaluation_run_ids:
         for parent_sample_id_batch in batching.batched(items=parent_sample_ids):
             for evaluation_run_id_batch in batching.batched(items=affected_evaluation_run_ids):

@@ -205,7 +205,7 @@ def test_update_annotation_label_raise_error_on_wrong_annotation_id(
         )
 
 
-def test_update_annotation_label__invalidates_evaluation_metrics(
+def test_update_annotation_label__deletes_evaluation_metrics(
     db_session: Session,
 ) -> None:
     """Test label updates remove invalidated evaluation annotation and sample metrics."""
