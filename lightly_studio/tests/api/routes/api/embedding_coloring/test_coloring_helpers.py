@@ -78,7 +78,7 @@ class TestDiscreteColorScale:
     def test_from_values__overflow_other_label_truncated(self) -> None:
         values = [f"v{i:03d}" for i in range(260)]
         scale = DiscreteColorScale.from_values(values=values)
-        # More grouped values than _MAX_OTHER_NAMES -> ellipsis appended.
+        # More grouped values than MAX_OTHER_NAMES -> ellipsis appended.
         assert scale.legend[255] == "Other (v253, v254, v255, v256, v257, …)"
 
     def test_from_integers__few_values(self) -> None:

@@ -344,6 +344,16 @@ def demonstrate_dictionary_like_access(samples: list[ImageSample]) -> None:
         print(" ✅ Correctly raised ValueError for invalid type")
 
 
+def add_some_tags(samples: list[ImageSample]) -> None:
+    """Adds some tags."""
+    for sample in samples[:20]:
+        sample.add_tag("aaa")
+    for sample in samples[20:40]:
+        sample.add_tag("bbb")
+    for sample in samples[40:60]:
+        sample.add_tag("ccc")
+
+
 def main() -> None:
     """Main function to demonstrate  metadata functionality."""
     try:
@@ -364,6 +374,8 @@ def main() -> None:
         demonstrate_individual_metadata_filters(dataset)
         demonstrate_combined_filters(dataset)
         demonstrate_dictionary_like_access(samples)
+
+        add_some_tags(samples)
 
         ls.start_gui()
 

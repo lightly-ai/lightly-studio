@@ -14,7 +14,7 @@ T_contra = TypeVar("T_contra", contravariant=True)
 # The plotting library renders at most this many legend slots, indexed [0, MAX_LEGEND_SLOTS).
 MAX_LEGEND_SLOTS = 256
 # Number of category names listed inside an "Other" bucket label before truncating with an ellipsis.
-_MAX_OTHER_NAMES = 5
+MAX_OTHER_NAMES = 5
 
 
 class ColorScale(Protocol[T_contra]):
@@ -198,7 +198,7 @@ def assign_color_categories(
 
 def _format_other_label(values: Sequence[T], format_fn: Callable[[T], str]) -> str:
     """Build the legend label for an "Other" bucket, e.g. ``Other (class1, class2, …)``."""
-    names = [format_fn(value) for value in values[:_MAX_OTHER_NAMES]]
-    if len(values) > _MAX_OTHER_NAMES:
+    names = [format_fn(value) for value in values[:MAX_OTHER_NAMES]]
+    if len(values) > MAX_OTHER_NAMES:
         names.append("…")
     return f"Other ({', '.join(names)})"

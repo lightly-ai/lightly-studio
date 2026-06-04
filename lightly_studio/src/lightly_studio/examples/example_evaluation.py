@@ -16,7 +16,7 @@ from lightly_studio.resolvers import (
 )
 
 DATASET_NAME = "evaluation_example_dataset"
-GT_ANNOTATION_SOURCE = "gt"
+GT_ANNOTATION_SOURCE = "ground_truth"
 PRED_ANNOTATION_SOURCE = "pred"
 
 TAGGED_SAMPLES_EVALUATION_NAME = "evaluation-example-tagged-samples"
