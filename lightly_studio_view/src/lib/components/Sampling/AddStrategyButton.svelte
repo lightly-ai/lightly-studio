@@ -1,7 +1,7 @@
 <script lang="ts">
     import { Plus } from '@lucide/svelte';
     import { Portal } from 'bits-ui';
-    import * as Select from '$lib/components/ui/select';
+    import { Select, SelectMenuItem } from '$lib/components/Select';
     import { STRATEGY_OPTIONS, type StrategyType } from '$lib/hooks/useStrategyBuilder';
 
     interface Props {
@@ -47,8 +47,11 @@
     );
 </script>
 
-<Select.Root
-    type="single"
+<Select
+    icon={Plus}
+    triggerLabel="Add strategy"
+    class="w-full"
+    testId="add-strategy-button"
     onValueChange={(v) => {
         if (v) onAdd(v as StrategyType);
     }}
@@ -56,11 +59,7 @@
         if (!open) handleMouseLeave();
     }}
 >
-    <Select.Trigger class="w-full" data-testid="add-strategy-button">
-        <Plus class="mr-2 size-4" />
-        <span class="mr-2">Add strategy</span>
-    </Select.Trigger>
-    <Select.Content>
+    {#snippet children()}
         {#each STRATEGY_OPTIONS as strategy (strategy.type)}
             {@const disabledReason = getDisabledReason(strategy.type)}
             <div
@@ -71,7 +70,7 @@
                     handleMouseEnter(strategy.type, e.currentTarget as HTMLElement)}
                 onmouseleave={handleMouseLeave}
             >
-                <Select.Item
+                <SelectMenuItem
                     value={strategy.type}
                     label={strategy.label}
                     disabled={!!disabledReason}
@@ -91,8 +90,8 @@
                 </span>
             </div>
         {/each}
-    </Select.Content>
-</Select.Root>
+    {/snippet}
+</Select>
 
 {#if hoveredType && tooltipRect && hoveredStrategy}
     <Portal>

@@ -1,52 +1,34 @@
 <script lang="ts">
-    import * as Select from '$lib/components/ui/select';
-
-    type SourceOption = {
-        id: string;
-        name: string;
-    };
+    import { Select } from '$lib/components/Select';
 
     interface Props {
-        /** Annotation sources (collections) to choose from. */
-        sourceOptions?: SourceOption[];
-        /** Backward-compatible list of source names where the value is also the display label. */
-        sourceNames?: string[];
+        /** Names of the annotation sources (collections) to choose from. */
+        sourceNames: string[];
         /** Currently selected source name. */
         selectedSource?: string;
         /** Optional notification when the selection changes (the value also flows out via `bind:selectedSource`). */
         onSelect?: (source: string) => void;
     }
 
-    let { sourceOptions, sourceNames, selectedSource = $bindable(), onSelect }: Props = $props();
+    let { sourceNames, selectedSource = $bindable(), onSelect }: Props = $props();
 
-    const options = $derived(
-        sourceOptions ??
-            sourceNames?.map((name) => ({
-                id: name,
-                name
-            })) ??
-            []
+    const items = $derived(
+        sourceNames.map((name) => ({
+            value: name,
+            label: name,
+            testId: `annotation-source-option-${name}`
+        }))
     );
 </script>
 
-<Select.Root
-    type="single"
+<Select
+    {items}
     value={selectedSource}
+    placeholder="Select a source..."
+    class="w-full"
+    testId="annotation-source-trigger"
     onValueChange={(value) => {
         selectedSource = value;
         onSelect?.(value);
     }}
->
-    <Select.Trigger class="w-full" data-testid="annotation-source-trigger">
-        {options.find((source) => source.id === selectedSource)?.name ?? 'Select a source...'}
-    </Select.Trigger>
-    <Select.Content>
-        {#each options as source (source.id)}
-            <Select.Item
-                value={source.id}
-                label={source.name}
-                data-testid={`annotation-source-option-${source.name}`}
-            />
-        {/each}
-    </Select.Content>
-</Select.Root>
+/>

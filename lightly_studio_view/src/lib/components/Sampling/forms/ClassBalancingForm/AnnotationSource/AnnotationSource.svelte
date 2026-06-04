@@ -1,6 +1,6 @@
 <script lang="ts">
     import { Label } from '$lib/components/ui/label';
-    import * as Select from '$lib/components/ui/select';
+    import { Select } from '$lib/components/Select';
     import FieldTooltip from '$lib/components/FieldTooltip/FieldTooltip.svelte';
     import type { ClassBalancingTargetDistributionMode } from '$lib/hooks/useStrategyBuilder';
 
@@ -11,14 +11,15 @@
 
     let { targetDistributionMode, onUpdate }: Props = $props();
 
-    const TARGET_DISTRIBUTION_MODE_OPTIONS: {
-        value: ClassBalancingTargetDistributionMode;
-        label: string;
-    }[] = [
-        { value: 'uniform', label: 'Uniform' },
-        { value: 'input', label: 'Input' },
-        { value: 'dictionary', label: 'Dictionary' }
-    ];
+    const items = [
+        { value: 'uniform', label: 'Uniform', testId: 'class-balancing-annotation-source-uniform' },
+        { value: 'input', label: 'Input', testId: 'class-balancing-annotation-source-input' },
+        {
+            value: 'dictionary',
+            label: 'Dictionary',
+            testId: 'class-balancing-annotation-source-dictionary'
+        }
+    ] satisfies { value: ClassBalancingTargetDistributionMode; label: string; testId: string }[];
 </script>
 
 <div class="grid gap-2">
@@ -26,27 +27,11 @@
         <Label>Target distribution</Label>
         <FieldTooltip content="The target class distribution to optimize toward." />
     </div>
-    <Select.Root
-        type="single"
+    <Select
+        {items}
         value={targetDistributionMode}
+        class="w-full"
+        testId="class-balancing-annotation-source"
         onValueChange={(value) => onUpdate(value as ClassBalancingTargetDistributionMode)}
-    >
-        <Select.Trigger class="w-full" data-testid="class-balancing-annotation-source">
-            {TARGET_DISTRIBUTION_MODE_OPTIONS.find((o) => o.value === targetDistributionMode)
-                ?.label}
-        </Select.Trigger>
-        <Select.Content>
-            <Select.Group>
-                {#each TARGET_DISTRIBUTION_MODE_OPTIONS as option (option.value)}
-                    <Select.Item
-                        value={option.value}
-                        label={option.label}
-                        data-testid={`class-balancing-annotation-source-${option.value}`}
-                    >
-                        {option.label}
-                    </Select.Item>
-                {/each}
-            </Select.Group>
-        </Select.Content>
-    </Select.Root>
+    />
 </div>
