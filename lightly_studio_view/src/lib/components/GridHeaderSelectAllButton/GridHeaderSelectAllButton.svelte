@@ -6,9 +6,10 @@
         checked: boolean;
         onSelectAll: () => Promise<void>;
         onDeselectAll: () => void;
+        compact?: boolean;
     }
 
-    const { checked, onSelectAll, onDeselectAll }: Props = $props();
+    const { checked, onSelectAll, onDeselectAll, compact = false }: Props = $props();
 
     const handleCheckedChange = (next: boolean) => {
         if (next) {
@@ -27,10 +28,12 @@
         data-testid="select-all-button"
         aria-label={checked ? 'Deselect all' : 'Select all'}
     />
-    <Label
-        for="select-all-checkbox"
-        class="cursor-pointer text-sm font-normal text-diffuse-foreground hover:text-foreground"
-    >
-        Select all
-    </Label>
+    {#if !compact}
+        <Label
+            for="select-all-checkbox"
+            class="cursor-pointer text-sm font-normal text-diffuse-foreground hover:text-foreground"
+        >
+            Select all
+        </Label>
+    {/if}
 </div>
