@@ -273,6 +273,28 @@ describe('SampleDetailsAnnotationSegment', () => {
             expect(getRow('pred-2')).toHaveAttribute('data-hidden', 'true');
         });
 
+        it('re-collapses a seeded-hidden source after navigating to another sample', async () => {
+            const user = userEvent.setup();
+            mocks.selectedCollectionIds = [groundTruthSource.collection_id];
+
+            const { rerender } = render(SampleDetailsAnnotationSegment, {
+                props: { ...defaultProps, annotations }
+            });
+
+            // Expand the initially collapsed Predictions group on the first sample.
+            await user.click(screen.getByText(predictionsSource.name));
+            expect(getRow('pred-1')).toBeDefined();
+
+            // Navigating to another sample re-applies the seeded collapse.
+            await rerender({ ...defaultProps, annotations, sampleId: 'sample-2' });
+
+            const visibleRowIds = screen
+                .queryAllByTestId('mock-annotation-row')
+                .map((row) => row.getAttribute('data-annotation-id'));
+            expect(visibleRowIds).not.toContain('pred-1');
+            expect(visibleRowIds).not.toContain('pred-2');
+        });
+
         it('starts with all annotations visible when all sources are selected', () => {
             mocks.selectedCollectionIds = [
                 groundTruthSource.collection_id,
