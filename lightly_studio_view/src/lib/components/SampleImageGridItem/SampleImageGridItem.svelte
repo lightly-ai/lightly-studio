@@ -1,5 +1,6 @@
 <script lang="ts">
     import type { ImageView } from '$lib/api/lightly_studio_local';
+    import SampleClassificationPills from '$lib/components/SampleClassificationPills/SampleClassificationPills.svelte';
     import { useSettings } from '$lib/hooks/useSettings';
     import { getSimilarityColor } from '$lib/utils';
     import { SampleAnnotations, SampleImage } from '..';
@@ -27,11 +28,16 @@
     thumbnailWidth={sampleSize}
     thumbnailHeight={sampleSize}
 />
+<SampleClassificationPills
+    {sample}
+    hasBottomOverlay={Boolean(displayTextOnImage)}
+    hasRightOverlay={sample.similarity_score !== undefined && sample.similarity_score !== null}
+/>
 <SampleAnnotations {sample} {objectFit} />
 
 {#if sample.similarity_score !== undefined && sample.similarity_score !== null}
     <div
-        class="absolute right-1 z-10 flex items-center rounded bg-black/60 px-1.5 py-0.5 text-xs font-medium text-white backdrop-blur-sm {displayTextOnImage
+        class="absolute right-1 z-10 box-border flex h-5 items-center rounded bg-black/60 px-1.5 text-xs font-medium text-white backdrop-blur-sm {displayTextOnImage
             ? 'bottom-8'
             : 'bottom-1'}"
     >

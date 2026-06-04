@@ -26,6 +26,7 @@
     import type { SampleType } from '$lib/api/lightly_studio_local';
     import { useTags } from '$lib/hooks/useTags/useTags';
     import { useQueryClient } from '@tanstack/svelte-query';
+    import { useOperatorsDialog } from '$lib/hooks/useOperatorsDialog/useOperatorsDialog';
 
     interface Props {
         operatorMetadata: RegisteredOperatorMetadata | null;
@@ -55,6 +56,7 @@
     );
 
     const queryClient = useQueryClient();
+    const { setPluginExecuting } = useOperatorsDialog();
 
     const collectionId = $page.params.collection_id;
 
@@ -123,6 +125,7 @@
         }
 
         isExecuting = true;
+        setPluginExecuting(true);
         executionError = undefined;
         executionSuccess = undefined;
 
@@ -157,6 +160,7 @@
             toast.error('Operator execution failed', { description: message });
         } finally {
             isExecuting = false;
+            setPluginExecuting(false);
         }
     }
 
