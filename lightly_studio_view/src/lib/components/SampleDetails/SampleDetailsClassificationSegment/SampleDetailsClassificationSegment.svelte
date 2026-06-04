@@ -11,9 +11,9 @@
     import { addAnnotationLabelChangeToUndoStack } from '$lib/services/addAnnotationLabelChangeToUndoStack';
     import { useAnnotationCollections, useAnnotationCollectionsFilter } from '$lib/hooks';
     import {
-        areAllAnnotationsHidden,
         computeSeededHiddenIds,
-        groupAnnotationsBySource
+        groupAnnotationsBySource,
+        isSourceGroupInitiallyOpen
     } from '../SampleDetailsAnnotationSegment/SampleDetailsAnnotationSegment.helpers';
     import { useAnnotationLabels } from '$lib/hooks/useAnnotationLabels/useAnnotationLabels';
     import { useCreateAnnotation } from '$lib/hooks/useCreateAnnotation/useCreateAnnotation';
@@ -43,7 +43,8 @@
     const { deleteAnnotation } = useDeleteAnnotation({ collectionId });
     const { createLabel } = useCreateLabel({ collectionId });
     const { updateAnnotations } = useUpdateAnnotationsMutation({ collectionId });
-    const { context: annotationLabelContext } = useAnnotationLabelContext();
+    const { context: annotationLabelContext, setLastCreatedAnnotationId } =
+        useAnnotationLabelContext();
     const datasetId = $derived(page.params.dataset_id!);
     const { refetch: refetchRootCollection } = $derived.by(() =>
         useCollectionWithChildren({ collectionId: datasetId })
@@ -137,6 +138,9 @@
             });
 
             refetch();
+            // Keep the (possibly brand-new) source group expanded for the just-created
+            // classification instead of letting the grid-filter seed collapse it.
+            setLastCreatedAnnotationId(newAnnotation.sample_id);
             toast.success('Classification created successfully');
             return true;
         } catch (error) {
@@ -265,9 +269,10 @@
                             name={group.name}
                             count={group.annotations.length}
                             {sampleId}
-                            initiallyOpen={!areAllAnnotationsHidden(
+                            initiallyOpen={isSourceGroupInitiallyOpen(
                                 group.annotations,
-                                seededHiddenIds
+                                seededHiddenIds,
+                                annotationLabelContext.lastCreatedAnnotationId
                             )}
                             showColorMarker={true}
                         >
