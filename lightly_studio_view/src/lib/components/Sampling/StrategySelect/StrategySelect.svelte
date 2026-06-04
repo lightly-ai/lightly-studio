@@ -1,6 +1,6 @@
 <script lang="ts">
     import { Label } from '$lib/components/ui/label';
-    import * as Select from '$lib/components/ui/select';
+    import { Select, type SelectItem } from '$lib/components/Select';
 
     type Strategy = 'diversity' | 'typicality' | 'similarity' | 'class_balancing' | '';
 
@@ -10,7 +10,9 @@
         onValueChange: (value: Strategy) => void;
     }
 
-    const STRATEGIES: { value: Strategy; label: string; testId: string }[] = [
+    let { value, isSimilaritySupported, onValueChange }: Props = $props();
+
+    const items = $derived<SelectItem[]>([
         { value: 'diversity', label: 'Diversity', testId: 'sampling-strategy-diversity' },
         { value: 'typicality', label: 'Typicality', testId: 'sampling-strategy-typicality' },
         {
@@ -18,41 +20,24 @@
             label: 'Class Balancing',
             testId: 'sampling-strategy-class-balancing'
         },
-        { value: 'similarity', label: 'Similarity', testId: 'sampling-strategy-similarity' }
-    ];
-
-    const STRATEGY_LABELS = Object.fromEntries(STRATEGIES.map((s) => [s.value, s.label]));
-
-    let { value, isSimilaritySupported, onValueChange }: Props = $props();
+        {
+            value: 'similarity',
+            label: 'Similarity',
+            testId: 'sampling-strategy-similarity',
+            disabled: !isSimilaritySupported
+        }
+    ]);
 </script>
 
 <div class="grid grid-cols-4 items-center gap-4">
     <Label for="strategy" class="text-right text-foreground">Strategy</Label>
-    <Select.Root
-        type="single"
-        name="strategy"
+    <Select
+        {items}
         {value}
+        placeholder="Select strategy"
+        class="col-span-3"
+        testId="sampling-dialog-strategy-select"
+        selectProps={{ id: 'strategy' }}
         onValueChange={(v) => onValueChange(v as Strategy)}
-    >
-        <Select.Trigger
-            id="strategy"
-            class="col-span-3"
-            data-testid="sampling-dialog-strategy-select"
-        >
-            {STRATEGY_LABELS[value] ?? 'Select strategy'}
-        </Select.Trigger>
-        <Select.Content>
-            <Select.Group>
-                {#each STRATEGIES as strategy}
-                    <Select.Item
-                        value={strategy.value}
-                        label={strategy.label}
-                        data-testid={strategy.testId}
-                        disabled={strategy.value === 'similarity' && !isSimilaritySupported}
-                        >{strategy.label}</Select.Item
-                    >
-                {/each}
-            </Select.Group>
-        </Select.Content>
-    </Select.Root>
+    />
 </div>

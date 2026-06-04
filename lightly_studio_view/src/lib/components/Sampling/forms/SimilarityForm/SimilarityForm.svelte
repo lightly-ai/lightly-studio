@@ -1,6 +1,6 @@
 <script lang="ts">
     import { Label } from '$lib/components/ui/label';
-    import * as Select from '$lib/components/ui/select';
+    import { Select, SelectMenuItem } from '$lib/components/Select';
     import FieldTooltip from '$lib/components/FieldTooltip/FieldTooltip.svelte';
     import type { SimilarityParams, StrategySummaryTag } from '$lib/hooks/useStrategyBuilder';
     import StrengthField from '../StrengthField/StrengthField.svelte';
@@ -24,42 +24,35 @@
                 content="Samples in this tag serve as the similarity reference. The strategy selects samples most similar to them."
             />
         </div>
-        <Select.Root
-            type="single"
-            name="similarity-query-tag"
+        <Select
             value={params.query_tag_id}
+            triggerLabel={selectedQueryTagName}
+            class="w-full"
+            testId="similarity-query-tag-select"
+            selectProps={{ id: 'similarity-query-tag' }}
             onValueChange={(queryTagId) => onUpdate({ query_tag_id: queryTagId })}
         >
-            <Select.Trigger
-                id="similarity-query-tag"
-                class="w-full"
-                data-testid="similarity-query-tag-select"
-            >
-                {selectedQueryTagName}
-            </Select.Trigger>
-            <Select.Content>
-                <Select.Group>
-                    {#if tags.length === 0}
-                        <div
-                            class="py-1.5 pl-8 pr-2 text-sm italic text-muted-foreground"
-                            data-testid="similarity-no-query-tags"
+            {#snippet children()}
+                {#if tags.length === 0}
+                    <div
+                        class="py-1.5 pl-8 pr-2 text-sm italic text-muted-foreground"
+                        data-testid="similarity-no-query-tags"
+                    >
+                        No sample tags available.
+                    </div>
+                {:else}
+                    {#each tags as tag (tag.tag_id)}
+                        <SelectMenuItem
+                            value={tag.tag_id}
+                            label={tag.name}
+                            data-testid={`similarity-query-tag-${tag.tag_id}`}
                         >
-                            No sample tags available.
-                        </div>
-                    {:else}
-                        {#each tags as tag (tag.tag_id)}
-                            <Select.Item
-                                value={tag.tag_id}
-                                label={tag.name}
-                                data-testid={`similarity-query-tag-${tag.tag_id}`}
-                            >
-                                {tag.name}
-                            </Select.Item>
-                        {/each}
-                    {/if}
-                </Select.Group>
-            </Select.Content>
-        </Select.Root>
+                            {tag.name}
+                        </SelectMenuItem>
+                    {/each}
+                {/if}
+            {/snippet}
+        </Select>
     </div>
 
     <StrengthField

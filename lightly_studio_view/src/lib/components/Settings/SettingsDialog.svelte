@@ -1,7 +1,7 @@
 <script lang="ts">
     import { Button } from '$lib/components/ui/button';
     import * as Dialog from '$lib/components/ui/dialog';
-    import { Select, SelectContent, SelectItem, SelectTrigger } from '$lib/components/ui/select';
+    import { Select } from '$lib/components/Select';
     import { Switch } from '$lib/components/ui/switch';
     import { useSettings } from '$lib/hooks/useSettings';
     import { useSettingsDialog } from '$lib/hooks/useSettingsDialog/useSettingsDialog';
@@ -96,25 +96,16 @@
                     <div class="space-y-4">
                         <h3 class="text-lg font-medium text-foreground">Display Settings</h3>
                         <SettingsFieldRow id="grid-view-rendering" label="Grid View Rendering">
-                            <div class="relative">
-                                <Select
-                                    type="single"
-                                    value={dialogState.gridViewRendering}
-                                    onValueChange={(v) =>
-                                        (dialogState.gridViewRendering =
-                                            v as typeof dialogState.gridViewRendering)}
-                                >
-                                    <SelectTrigger id="grid-view-rendering">
-                                        {dialogState.gridViewRendering === 'cover'
-                                            ? 'Cover'
-                                            : 'Contain'}
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                        <SelectItem value="cover">Cover</SelectItem>
-                                        <SelectItem value="contain">Contain</SelectItem>
-                                    </SelectContent>
-                                </Select>
-                            </div>
+                            <Select
+                                items={[
+                                    { value: 'cover', label: 'Cover' },
+                                    { value: 'contain', label: 'Contain' }
+                                ]}
+                                value={dialogState.gridViewRendering}
+                                onValueChange={(v) =>
+                                    (dialogState.gridViewRendering =
+                                        v as typeof dialogState.gridViewRendering)}
+                            />
                         </SettingsFieldRow>
                         <SettingsFieldRow
                             id="show-sample-filenames"
@@ -130,25 +121,16 @@
                             id="grid-view-thumbnail-quality"
                             label="Thumbnail Quality in Grid View"
                         >
-                            <div class="relative">
-                                <Select
-                                    type="single"
-                                    value={dialogState.gridViewThumbnailQuality}
-                                    onValueChange={(v) =>
-                                        (dialogState.gridViewThumbnailQuality =
-                                            v as typeof dialogState.gridViewThumbnailQuality)}
-                                >
-                                    <SelectTrigger id="grid-view-thumbnail-quality">
-                                        {dialogState.gridViewThumbnailQuality === 'high'
-                                            ? 'High'
-                                            : 'Original'}
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                        <SelectItem value="raw">Original</SelectItem>
-                                        <SelectItem value="high">High</SelectItem>
-                                    </SelectContent>
-                                </Select>
-                            </div>
+                            <Select
+                                items={[
+                                    { value: 'raw', label: 'Original' },
+                                    { value: 'high', label: 'High' }
+                                ]}
+                                value={dialogState.gridViewThumbnailQuality}
+                                onValueChange={(v) =>
+                                    (dialogState.gridViewThumbnailQuality =
+                                        v as typeof dialogState.gridViewThumbnailQuality)}
+                            />
                         </SettingsFieldRow>
                     </div>
 
