@@ -2,7 +2,7 @@
 
 Evaluation runs let you compare model predictions against ground truth
 [annotations](annotations.md) and surface per-sample quality metrics in LightlyStudio. Supported
-task types are object detection and classification.
+task types are object detection, classification and semantic segmentation.
 
 ## Evaluation in the GUI
 
@@ -14,7 +14,7 @@ Evaluation results are accessible in the **Evaluation** panel of the GUI once a 
 
 - Sort by `fp`, `fn`, or `tp` for object detection runs.
 - Sort by `disagreement` for classification runs.
-- Sort by `mIoU` for semantic segmentation.
+- Sort by `miou` for semantic segmentation.
 - Filter to the affected classes and inspect the hardest samples in detail view.
 
 !!! hint "Reading the confusion matrix"
@@ -59,7 +59,7 @@ summary.
 
     config = ObjectDetectionEvaluationConfig(
         iou_threshold=0.5,  # minimum IoU to count a detection as a true positive
-        classwise=True,     # match predictions only within the same class label
+        classwise=True,     # match predictions only within the same annotation class
     )
 
     dataset.evaluate().object_detection(
@@ -122,12 +122,12 @@ summary.
     Semantic segmentation evaluation populates the confusion matrix from the per-pixel ground truth
     and predicted class labels.
 
-    Per-sample metric stored: `mIoU` (mean Intersection over Union). It is computed per image by
+    Per-sample metric stored: `miou` (mean Intersection over Union). It is computed per image by
     calculating the IoU for each class present in either the ground truth or the prediction, then
     averaging those values across all classes. Higher values indicate better pixel-level agreement
     between the ground truth mask and the predicted mask.
 
-    You can sort samples by `iou` to surface the images with the worst segmentation quality first.
+    You can sort samples by `miou` to surface the images with the worst segmentation quality first.
 
 ### Evaluating a subset of samples
 
