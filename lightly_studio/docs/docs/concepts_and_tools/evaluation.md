@@ -6,7 +6,9 @@ task types are object detection and classification.
 
 ## Evaluation in the GUI
 
-PLACEHOLDER GIF OR VIDEO 
+<video autoplay loop muted playsinline controls style="width: 100%;">
+  <source src="https://storage.googleapis.com/lightly-public/studio/evaluation_overview.mp4" type="video/mp4">
+</video>
 
 Evaluation results are accessible in the **Evaluation** panel of the GUI once a run has been created via the [Python API](#evaluation-in-python). Select an evaluation run in the **Evaluation** panel to inspect its configuration and confusion matrix. Then use the sample grid to drill into the underlying samples:
 
@@ -33,23 +35,42 @@ summary.
 === "Object detection"
 
     ```python
+    import lightly_studio as ls
     from lightly_studio.evaluation.image_dataset_evaluate import ObjectDetectionEvaluationConfig
+
+    IMAGES_PATH = "path/to/your/images/"
+    GROUND_TRUTH_JSON = "path/to/your/GT_annotations.json"
+    PREDICTIONS_JSON = "path/to/your/pred_annotations.json"
+    
+    dataset = ls.ImageDataset.create()
+    dataset.add_images_from_path(path=IMAGES_PATH)
+    # Add ground truth annotations
+    dataset.add_annotations_from_coco(
+        annotations_json=GROUND_TRUTH_JSON,
+        images_root=IMAGES_PATH,
+        annotation_source="ground_truth",
+    )
+    # Add prediction annotations
+    dataset.add_annotations_from_coco(
+        annotations_json=PREDICTIONS_JSON,
+        images_root=IMAGES_PATH,
+        annotation_source="predictions",
+    )
 
     config = ObjectDetectionEvaluationConfig(
         iou_threshold=0.5,  # minimum IoU to count a detection as a true positive
         classwise=True,     # match predictions only within the same class label
     )
 
-    result = dataset.evaluate().object_detection(
+    dataset.evaluate().object_detection(
         name="my-od-eval",
-        gt_source_name="ground_truth",
-        pred_source_name="predictions",
+        gt_annotation_source="ground_truth",
+        pred_annotation_source="predictions",
         config=config,
     )
 
-    print(f"Evaluated {result.sample_count} samples")
-    print(f"GT annotations: {result.gt_annotation_count}")
-    print(f"Prediction annotations: {result.pred_annotation_count}")
+    ls.start_gui()
+
     ```
 
     Matching between predicted and ground truth boxes is based on intersection over union (IoU).
@@ -69,13 +90,12 @@ summary.
 === "Classification"
 
     ```python
-    result = dataset.evaluate().classification(
+    dataset.evaluate().classification(
         name="my-cls-eval",
-        gt_source_name="ground_truth",
-        pred_source_name="predictions",
+        gt_annotation_source="ground_truth",
+        pred_annotation_source="predictions",
     )
 
-    print(f"Evaluated {result.sample_count} samples")
     ```
 
     Classification evaluation populates the confusion matrix directly from the ground truth and
@@ -87,6 +107,27 @@ summary.
 
     You can sort samples by `disagreement` to inspect the most uncertain correct predictions or the
     most confident wrong predictions first.
+
+=== "Semantic Segmentation"
+
+    ```python
+    dataset.evaluate().semantic_segmentation(
+        name="my-semseg-eval",
+        gt_annotation_source="ground_truth",
+        pred_annotation_source="predictions",
+    )
+
+    ```
+
+    Semantic segmentation evaluation populates the confusion matrix from the per-pixel ground truth
+    and predicted class labels.
+
+    Per-sample metric stored: `mIoU` (mean Intersection over Union). It is computed per image by
+    calculating the IoU for each class present in either the ground truth or the prediction, then
+    averaging those values across all classes. Higher values indicate better pixel-level agreement
+    between the ground truth mask and the predicted mask.
+
+    You can sort samples by `iou` to surface the images with the worst segmentation quality first.
 
 ### Evaluating a subset of samples
 
@@ -100,8 +141,8 @@ val_query = dataset.query().match(ImageSampleField.tags.contains("val"))
 
 result = dataset.evaluate(query=val_query).object_detection(
     name="val-eval",
-    gt_source_name="ground_truth",
-    pred_source_name="predictions",
+    gt_annotation_source="ground_truth",
+    pred_annotation_source="predictions",
 )
 ```
 
