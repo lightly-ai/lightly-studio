@@ -92,26 +92,22 @@ class DiscreteColorScale(Generic[T]):
         lookup: dict[T, int] = {}
         legend: dict[int, str] = {}
 
-        if len(value_list) <= max_individual:
-            for i, value in enumerate(value_list):
-                cat = start_cat + i
-                lookup[value] = cat
-                legend[cat] = format_fn(value)
-            return cls(_lookup=lookup, legend=legend)
-
-        # Too many values: list the ones that fit individually and reserve the
-        # final slot for an "Other" category grouping the rest.
-        listed = value_list[: max_individual - 1]
-        other = value_list[max_individual - 1 :]
-        for i, value in enumerate(listed):
+        # When values overflow the slots, reserve the final slot for an "Other"
+        # bucket; otherwise every value gets its own slot.
+        fits = len(value_list) <= max_individual
+        individual = value_list if fits else value_list[: max_individual - 1]
+        for i, value in enumerate(individual):
             cat = start_cat + i
             lookup[value] = cat
             legend[cat] = format_fn(value)
 
-        other_cat = start_cat + max_individual - 1
-        for value in other:
-            lookup[value] = other_cat
-        legend[other_cat] = _format_other_label(other, format_fn)
+        if not fits:
+            other = value_list[max_individual - 1 :]
+            other_cat = start_cat + max_individual - 1
+            for value in other:
+                lookup[value] = other_cat
+            legend[other_cat] = _format_other_label(other, format_fn)
+
         return cls(_lookup=lookup, legend=legend)
 
     @classmethod
