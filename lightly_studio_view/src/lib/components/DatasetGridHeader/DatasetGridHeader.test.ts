@@ -59,11 +59,13 @@ import { useGlobalStorage } from '$lib/hooks/useGlobalStorage';
 const defaultProps = {
     compact: false,
     canSelectAll: false,
+    isSelectionActive: false,
     isImages: false,
     hasEvaluationRuns: true,
     hasMediaWithEmbeddings: false,
     collectionDatasetId: 'dataset-1',
     onSelectAll: vi.fn().mockResolvedValue(undefined),
+    onDeselectAll: vi.fn(),
     searchImage: undefined,
     searchPending: false,
     initialQueryText: '',
@@ -80,6 +82,7 @@ describe('DatasetGridHeader', () => {
         (storage.setShowEmbeddingPlot as ReturnType<typeof vi.fn>).mockClear();
         (storage.setShowEvaluationRuns as ReturnType<typeof vi.fn>).mockClear();
         defaultProps.onSelectAll.mockClear();
+        defaultProps.onDeselectAll.mockClear();
     });
 
     it('renders the select-all button when canSelectAll is true', async () => {
@@ -98,6 +101,17 @@ describe('DatasetGridHeader', () => {
         render(DatasetGridHeader, { props: { ...defaultProps, canSelectAll: false } });
 
         expect(screen.queryByTestId('select-all-button')).not.toBeInTheDocument();
+    });
+
+    it('calls onDeselectAll when the select-all checkbox is toggled off', async () => {
+        render(DatasetGridHeader, {
+            props: { ...defaultProps, canSelectAll: true, isSelectionActive: true }
+        });
+
+        const checkbox = screen.getByTestId('select-all-button');
+        await fireEvent.click(checkbox);
+        expect(defaultProps.onDeselectAll).toHaveBeenCalledTimes(1);
+        expect(defaultProps.onSelectAll).not.toHaveBeenCalled();
     });
 
     it('renders the OrderBy control only for image collections', () => {
