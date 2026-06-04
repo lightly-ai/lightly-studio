@@ -11,6 +11,7 @@ from sqlalchemy.orm import joinedload, selectinload
 from sqlalchemy.orm.interfaces import LoaderOption
 from sqlmodel import Session, col, func, select
 
+from lightly_studio import db_array
 from lightly_studio.api.routes.api.validators import Paginated
 from lightly_studio.core.dataset_query.image_sample_field import ImageSampleField
 from lightly_studio.core.dataset_query.order_by import (
@@ -158,8 +159,12 @@ def _get_all_with_similarity(  # noqa: PLR0913
 
     # TODO(Michal, 06/2025): Consider adding sample_ids to the filters.
     if sample_ids:
-        samples_query = samples_query.where(col(ImageTable.sample_id).in_(sample_ids))
-        total_count_query = total_count_query.where(col(ImageTable.sample_id).in_(sample_ids))
+        samples_query = samples_query.where(
+            db_array.in_array(column=col(ImageTable.sample_id), values=sample_ids)
+        )
+        total_count_query = total_count_query.where(
+            db_array.in_array(column=col(ImageTable.sample_id), values=sample_ids)
+        )
 
     samples_query = samples_query.order_by(distance_expr, col(ImageTable.file_path_abs).asc())
 
@@ -211,8 +216,12 @@ def _get_all_without_similarity(  # noqa: PLR0913
 
     # TODO(Michal, 06/2025): Consider adding sample_ids to the filters.
     if sample_ids:
-        samples_query = samples_query.where(col(ImageTable.sample_id).in_(sample_ids))
-        total_count_query = total_count_query.where(col(ImageTable.sample_id).in_(sample_ids))
+        samples_query = samples_query.where(
+            db_array.in_array(column=col(ImageTable.sample_id), values=sample_ids)
+        )
+        total_count_query = total_count_query.where(
+            db_array.in_array(column=col(ImageTable.sample_id), values=sample_ids)
+        )
 
     if order_by:
         metadata_already_joined = _has_metadata_join(filters)

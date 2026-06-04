@@ -7,6 +7,7 @@ from uuid import UUID
 
 from sqlmodel import Session, col, select
 
+from lightly_studio import db_array
 from lightly_studio.models.annotation_label import AnnotationLabelTable
 
 
@@ -15,9 +16,15 @@ def get_by_ids(session: Session, ids: Sequence[UUID]) -> list[AnnotationLabelTab
 
     Output order matches the input order.
     """
+    if not ids:
+        return []
+
     results = session.exec(
         select(AnnotationLabelTable).where(
-            col(AnnotationLabelTable.annotation_label_id).in_(list(ids))
+            db_array.in_array(
+                column=col(AnnotationLabelTable.annotation_label_id),
+                values=ids,
+            )
         )
     ).all()
     # Return labels in the same order as the input ids.
