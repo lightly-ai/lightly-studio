@@ -76,9 +76,11 @@ def get_alembic_config(engine_url: str) -> Config:
 
 def _base_config() -> Config:
     """Load alembic.ini and point it at the migrations package."""
-    package_dir = Path(__file__).resolve().parent
+    # db_migrations.py lives in the `database` subpackage, so go up one level to
+    # reach the package root where alembic.ini and the migrations package live.
+    package_dir = Path(__file__).resolve().parent.parent
     alembic_config = Config(str(find_alembic_ini(package_dir=package_dir)))
-    migrations_dir = Path(__file__).resolve().parent / "migrations"
+    migrations_dir = package_dir / "migrations"
     ensure_script_location(config=alembic_config, migrations_dir=migrations_dir)
     return alembic_config
 
