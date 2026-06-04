@@ -15,6 +15,7 @@
     import { useGlobalStorage } from '$lib/hooks/useGlobalStorage';
     import { useUpdateAnnotationsMutation } from '$lib/hooks/useUpdateAnnotationsMutation/useUpdateAnnotationsMutation';
     import { useCollectionWithChildren } from '$lib/hooks/useCollection/useCollection';
+    import { useAnnotationLabelContext } from '$lib/contexts/SampleDetailsAnnotation.svelte';
     import { page } from '$app/state';
     import { Trash2 } from '@lucide/svelte';
     import { toast } from 'svelte-sonner';
@@ -35,6 +36,7 @@
     const { deleteAnnotation } = useDeleteAnnotation({ collectionId });
     const { createLabel } = useCreateLabel({ collectionId });
     const { updateAnnotations } = useUpdateAnnotationsMutation({ collectionId });
+    const { context: annotationLabelContext } = useAnnotationLabelContext();
     const datasetId = $derived(page.params.dataset_id!);
     const { refetch: refetchRootCollection } = $derived.by(() =>
         useCollectionWithChildren({ collectionId: datasetId })
@@ -98,7 +100,8 @@
             const newAnnotation = await createAnnotation({
                 parent_sample_id: sampleId,
                 annotation_type: AnnotationType.CLASSIFICATION,
-                annotation_label_id: label.annotation_label_id!
+                annotation_label_id: label.annotation_label_id!,
+                annotation_collection_name: annotationLabelContext.annotationSource ?? undefined
             });
 
             if (annotations.length === 0) {
