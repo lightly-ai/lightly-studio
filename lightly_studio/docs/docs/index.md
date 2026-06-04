@@ -220,6 +220,10 @@ directly use your own image, video, or YOLO/COCO dataset.
 
     [![Plugins](https://storage.googleapis.com/lightly-public/studio/docs_cards/plugins.png)](concepts_and_tools/plugins.md)
 
+-   **[Model Evaluation](concepts_and_tools/evaluation.md)**
+
+    [![Model Evaluation](https://storage.googleapis.com/lightly-public/studio/docs_cards/model_evaluation.png)](concepts_and_tools/evaluation.md)
+
 </div>
 
 ## Python API
