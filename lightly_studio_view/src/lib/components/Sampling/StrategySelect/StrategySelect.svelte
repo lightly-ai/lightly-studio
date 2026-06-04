@@ -37,6 +37,7 @@
         placeholder="Select strategy"
         class="col-span-3"
         testId="sampling-dialog-strategy-select"
+        selectProps={{ id: 'strategy' }}
         onValueChange={(v) => onValueChange(v as Strategy)}
     />
 </div>

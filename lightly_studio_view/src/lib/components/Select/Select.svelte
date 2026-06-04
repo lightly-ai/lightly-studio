@@ -1,8 +1,14 @@
 <script lang="ts">
     import type { Component, Snippet } from 'svelte';
+    import { Select as SelectBits, type WithoutChild } from 'bits-ui';
     import type { IconProps } from '@lucide/svelte';
     import * as SelectPrimitive from '$lib/components/ui/select';
     import { cn } from '$lib/utils/shadcn';
+
+    type SelectTriggerProps = Omit<
+        WithoutChild<SelectBits.TriggerProps>,
+        'class' | 'data-testid' | 'ref'
+    >;
 
     export interface SelectItem {
         value: string;
@@ -39,6 +45,8 @@
         class?: string;
         /** `data-testid` for the trigger element. */
         testId?: string;
+        /** Additional attributes forwarded to the trigger button (e.g. `id` for `<Label for>`). */
+        selectProps?: SelectTriggerProps;
         /** Called when the selected value changes. */
         onValueChange?: (value: string) => void;
         /** Called when the dropdown open state changes. */
@@ -62,6 +70,7 @@
         size = 'md',
         class: className,
         testId,
+        selectProps,
         onValueChange,
         onOpenChange,
         children
@@ -108,6 +117,7 @@
     {onOpenChange}
 >
     <SelectPrimitive.Trigger
+        {...selectProps}
         data-testid={testId}
         class={cn(
             // Ghost-style: no border, no background, height matches the Button primitive

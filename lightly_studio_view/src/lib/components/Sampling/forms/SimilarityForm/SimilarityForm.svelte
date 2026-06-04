@@ -29,6 +29,7 @@
             triggerLabel={selectedQueryTagName}
             class="w-full"
             testId="similarity-query-tag-select"
+            selectProps={{ id: 'similarity-query-tag' }}
             onValueChange={(queryTagId) => onUpdate({ query_tag_id: queryTagId })}
         >
             {#snippet children()}
