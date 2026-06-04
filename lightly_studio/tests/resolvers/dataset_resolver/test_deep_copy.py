@@ -629,6 +629,7 @@ def test_deep_copy__with_annotations(db_session: Session) -> None:
     assert is_detail.height == 8
     assert is_detail.segmentation_mask == [1, 0, 0, 1]
 
+
 @pytest.mark.skip(reason="On an M4 Pro, it takes 47s for duckdb and 38s for postgres.")
 def test_deep_copy__exceeds_postgres_param_limit(db_session: Session) -> None:
     # More samples than PostgreSQL's 65,535-parameter cap, so the in-memory id lists that
