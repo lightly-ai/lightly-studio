@@ -14,6 +14,7 @@ from lightly_studio.models.collection import SampleType
 from lightly_studio.models.evaluation_annotation_metric import EvaluationAnnotationMetricCreate
 from lightly_studio.models.evaluation_run import EvaluationRunCreate, EvaluationTaskType
 from lightly_studio.models.evaluation_sample_metric import EvaluationSampleMetricCreate
+from lightly_studio.models.image import ImageCreate
 from lightly_studio.resolvers import (
     annotation_resolver,
     collection_resolver,
@@ -30,8 +31,10 @@ from lightly_studio.resolvers import (
 )
 from lightly_studio.resolvers.annotations.annotations_filter import AnnotationsFilter
 from tests.helpers_resolvers import (
+    AnnotationDetails,
     create_annotation,
     create_annotation_label,
+    create_annotations,
     create_collection,
     create_embedding_model,
     create_image,
@@ -625,6 +628,62 @@ def test_deep_copy__with_annotations(db_session: Session) -> None:
     assert is_detail.width == 6
     assert is_detail.height == 8
     assert is_detail.segmentation_mask == [1, 0, 0, 1]
+
+
+@pytest.mark.skip(reason="On an M4 Pro, it takes 47s for duckdb and 38s for postgres.")
+def test_deep_copy__exceeds_postgres_param_limit(db_session: Session) -> None:
+    # More samples than PostgreSQL's 65,535-parameter cap, so the in-memory id lists that
+    # deep_copy feeds into its membership queries overflow an expanding IN clause.
+    n_samples = 70_000
+    original = create_collection(session=db_session, collection_name="original")
+    sample_ids = image_resolver.create_many(
+        session=db_session,
+        collection_id=original.collection_id,
+        samples=[
+            ImageCreate(
+                file_path_abs=f"/sample_{i}.png",
+                file_name=f"sample_{i}.png",
+                width=640,
+                height=480,
+            )
+            for i in range(n_samples)
+        ],
+    )
+    label = create_annotation_label(session=db_session, root_collection_id=original.collection_id)
+    create_annotations(
+        session=db_session,
+        collection_id=original.collection_id,
+        annotations=[
+            AnnotationDetails(
+                sample_id=sample_id,
+                annotation_label_id=label.annotation_label_id,
+                annotation_type=AnnotationType.OBJECT_DETECTION,
+            )
+            for sample_id in sample_ids
+        ],
+    )
+
+    # Act
+    copied = dataset_resolver.deep_copy(
+        session=db_session,
+        dataset_id=original.dataset_id,
+        copy_name="copied",
+    )
+
+    # Assert - copied collection is distinct and holds all images.
+    assert copied.collection_id != original.collection_id
+    copied_samples = sample_resolver.get_filtered_samples(
+        session=db_session,
+        collection_id=copied.collection_id,
+    )
+    assert copied_samples.total_count == n_samples
+
+    # Assert - all annotations were copied into the new annotation child collection.
+    copied_annotations = annotation_resolver.get_all(
+        session=db_session,
+        filters=AnnotationsFilter(collection_ids=[copied.children[0].collection_id]),
+    )
+    assert copied_annotations.total_count == n_samples
 
 
 def test_deep_copy__with_evaluation_runs(db_session: Session) -> None:
