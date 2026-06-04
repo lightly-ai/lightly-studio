@@ -410,14 +410,14 @@ The main view shows a grid of images in your dataset. From here, you can perform
 
 Refer to dedicated pages in this documentation on every feature for more details.
 
-![Image Dataset Grid](https://storage.googleapis.com/lightly-public/studio_v1.0.0/image_dataset_grid.png){ width="100%" }
+![Image Dataset Grid](https://storage.googleapis.com/lightly-public/studio/docs/image_dataset_grid_v1.0.0.png){ width="100%" }
 
 ### Detail View
 
 Double-clicking on an image opens the image detail view. Here you can annotate the image,
 add captions or view metadata.
 
-![Image Detail View](https://storage.googleapis.com/lightly-public/studio_v1.0.0/image_dataset_detail.png){ width="100%" }
+![Image Detail View](https://storage.googleapis.com/lightly-public/studio/docs/image_dataset_detail_v1.0.0.png){ width="100%" }
 
 
 ## Image Dataset in the Python API
